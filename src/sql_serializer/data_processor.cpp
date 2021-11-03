@@ -2,6 +2,7 @@
 
 #include <fc/exception/exception.hpp>
 #include <fc/log/logger.hpp>
+#include <appbase/application.hpp>
 
 #include <boost/exception/diagnostic_information.hpp>
 
@@ -92,20 +93,32 @@ data_processor::data_processor( std::string description, const data_processing_f
     }
     catch(const pqxx::sql_error& ex)
     {
-      //elog("Data processor ${d} detected SQL statement execution failure. Failing statement: `${q}', SQLState: ${s}.", ("d", _description)("q", ex.query())("s", ex.sqlstate()));
       elog("Data processor ${d} detected SQL statement execution failure. Failing statement: `${q}'.", ("d", _description)("q", ex.query()));
+      appbase::app().generate_interrupt_request();
+      throw;
     }
     catch(const pqxx::pqxx_exception& ex)
     {
       elog("Data processor ${d} detected SQL execution failure: ${e}", ("d", _description)("e", ex.base().what()));
+      appbase::app().generate_interrupt_request();
+      throw;
     }
     catch(const fc::exception& ex)
     {
       elog("Data processor ${d} execution failed: ${e}", ("d", _description)("e", ex.what()));
+      appbase::app().generate_interrupt_request();
+      throw;
     }
     catch(const std::exception& ex)
     {
       elog("Data processor ${d} execution failed: ${e}", ("d", _description)("e", ex.what()));
+      appbase::app().generate_interrupt_request();
+      throw;
+    }
+    catch(...) {
+      elog("Data processor ${d} execution failed: unknown exception", ("d", _description));
+      appbase::app().generate_interrupt_request();
+      throw;
     }
 
     ilog("Leaving data processor thread: ${d}", ("d", _description));
@@ -116,13 +129,11 @@ data_processor::data_processor( std::string description, const data_processing_f
 
 data_processor::~data_processor()
 {
+  ilog("~data_processor: ${d}", ("d", _description));
 }
 
 void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
 {
-  if(!_future.valid())
-    return;
-
   /// Set immediately data processing flag
   _is_processing_data = true;
 
@@ -141,7 +152,6 @@ void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
     std::unique_lock<std::mutex> lk(_mtx);
     _cv.wait(lk, [this] {return _dataPtr.valid() == false; });
   }
-
 
   dlog("Leaving trigger of data data processor: ${d}...", ("d", _description));
 }
@@ -184,13 +194,11 @@ void data_processor::join()
   }
   _cv.notify_one();
 
-  ilog("Waiting for data processor: ${d} worker thread finish...", ("d", _description));
-
   try {
-    if( _future.valid() )
       _future.get();
   } catch (...) {
     elog( "Caught unhandled exception ${diagnostic}", ("diagnostic", boost::current_exception_diagnostic_information()) );
+    throw;
   }
 
   ilog("Data processor: ${d} finished execution...", ("d", _description));

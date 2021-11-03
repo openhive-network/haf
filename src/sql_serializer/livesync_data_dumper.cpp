@@ -78,13 +78,15 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       [this]( uint32_t block_num ){ on_switch_fork( block_num ); }
       , plugin
     );
-
+    ilog( "livesync dumper created" );
   }
 
   livesync_data_dumper::~livesync_data_dumper() {
+    ilog( "livesync dumper is closing..." );
     _on_irreversible_block_conn.disconnect();
     _on_switch_fork_conn.disconnect();
     livesync_data_dumper::join();
+    ilog( "livesync dumper closed" );
   }
 
   void livesync_data_dumper::trigger_data_flush( cached_data_t& cached_data, int last_block_num ) {
@@ -104,12 +106,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void livesync_data_dumper::join() {
-    _block_writer->join();
-    _transaction_writer->join();
-    _transaction_multisig_writer->join();
-    _operation_writer->join();
-    _account_writer->join();
-    _account_operations_writer->join();
+    join_writers(
+        *_block_writer
+      , *_transaction_writer
+      , *_transaction_multisig_writer
+      , *_operation_writer
+      , *_account_writer
+      , *_account_operations_writer
+    );
   }
 
   void livesync_data_dumper::wait_for_data_processing_finish()

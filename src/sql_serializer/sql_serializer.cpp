@@ -405,8 +405,6 @@ using chain::reindex_notification;
               ("s", op_sequence_id + 1)("pbn", psql_block_number));
           }
 
-          void join_data_processors() { _dumper->join(); }
-
           void wait_for_data_processing_finish();
 
           void process_cached_data();
@@ -418,7 +416,6 @@ using chain::reindex_notification;
             ilog("Flushing rest of data, wait a moment...");
 
             process_cached_data();
-            join_data_processors();
 
             ilog("Done, cleanup complete");
           }
@@ -623,6 +620,7 @@ void sql_serializer_plugin_impl::on_pre_reindex(const reindex_notification& note
   if(_on_pre_apply_block_con.connected())
     chain::util::disconnect_signal(_on_pre_apply_block_con);
 
+  _dumper.reset();
   _dumper = std::make_unique< reindex_data_dumper >(
       db_url
     , psql_operations_threads_number
@@ -643,6 +641,7 @@ void sql_serializer_plugin_impl::on_post_reindex(const reindex_notification& not
   if(note.last_block_number >= note.max_block_number)
     switch_db_items(true/*mode*/);
 
+  _dumper.reset();
   _dumper = std::make_unique< livesync_data_dumper >( db_url, main_plugin, chain_db );
 }
 
@@ -777,7 +776,6 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
       void sql_serializer_plugin::plugin_shutdown()
       {
         ilog("Flushing left data...");
-        my->join_data_processors();
 
         my->disconnect_signals();
 

@@ -23,17 +23,18 @@ namespace hive::plugins::sql_serializer {
       , uint32_t account_operation_threads
     );
 
-    ~reindex_data_dumper() { join(); }
+    ~reindex_data_dumper();
     reindex_data_dumper(reindex_data_dumper&) = delete;
     reindex_data_dumper(reindex_data_dumper&&) = delete;
     reindex_data_dumper& operator=(reindex_data_dumper&&) = delete;
     reindex_data_dumper& operator=(reindex_data_dumper&) = delete;
 
     void trigger_data_flush( cached_data_t& cached_data, int last_block_num ) override;
-    void join() override;
     void wait_for_data_processing_finish() override;
     uint32_t blocks_per_flush() const override { return 1000; }
   private:
+    void join();
+
     using block_data_container_t_writer = table_data_writer<hive_blocks>;
     using transaction_data_container_t_writer = chunks_for_writers_splitter<
       table_data_writer<

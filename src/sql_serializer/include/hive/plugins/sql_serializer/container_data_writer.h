@@ -164,4 +164,35 @@ namespace hive::plugins::sql_serializer {
     return processingStatus;
   }
 
+  template< typename Writer >
+  inline std::exception_ptr
+  join_writers_impl( Writer& writer ) try {
+    try{
+      writer.join();
+    }
+    FC_CAPTURE_AND_RETHROW()
+    return nullptr;
+  } catch( ... ) {
+    return std::current_exception();
+  }
+
+  template< typename Writer, typename... Writers >
+  inline std::exception_ptr
+  join_writers_impl( Writer& writer, Writers& ...writers ) {
+    std::exception_ptr current_exception = join_writers_impl( writer );;
+    auto next_exception = join_writers_impl( writers... );
+    if ( current_exception != nullptr ) {
+      return current_exception;
+    }
+    return next_exception;
+  }
+
+  template< typename... Writers >
+  inline void
+  join_writers( Writers& ...writers ) {
+    auto exception = join_writers_impl( writers... );
+    if ( exception != nullptr ) {
+      std::rethrow_exception( exception );
+    }
+  }
 } // namespace hive::plugins::sql_serializer

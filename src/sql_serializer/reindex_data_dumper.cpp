@@ -1,5 +1,7 @@
 #include <hive/plugins/sql_serializer/reindex_data_dumper.h>
 
+#include <exception>
+
 
 namespace hive{ namespace plugins{ namespace sql_serializer {
   reindex_data_dumper::reindex_data_dumper(
@@ -27,6 +29,12 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >( account_operation_threads, db_url, "Account operations data writer", api_trigger);
   }
 
+  reindex_data_dumper::~reindex_data_dumper() {
+    ilog( "Reindex dumper is closing...." );
+    reindex_data_dumper::join();
+    ilog( "Reindex dumper closed" );
+  }
+
   void reindex_data_dumper::trigger_data_flush( cached_data_t& cached_data, int last_block_num ) {
     _block_writer->trigger( std::move( cached_data.blocks ), false, last_block_num );
     _transaction_writer->trigger( std::move( cached_data.transactions ), last_block_num);
@@ -37,14 +45,15 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void reindex_data_dumper::join() {
-    _block_writer->join();
-    _transaction_writer->join();
-    _transaction_multisig_writer->join();
-    _operation_writer->join();
-    _account_writer->join();
-    _account_operations_writer->join();
-
-    _end_massive_sync_processor->join();
+    join_writers(
+        *_block_writer
+      , *_transaction_writer
+      , *_transaction_multisig_writer
+      , *_operation_writer
+      , *_account_writer
+      , *_account_operations_writer
+      , *_end_massive_sync_processor
+    );
   }
 
   void reindex_data_dumper::wait_for_data_processing_finish()
