@@ -13,6 +13,7 @@ def make_fork(world, main_chain_trxs=[], fork_chain_trxs=[]):
     beta_net = world.network('Beta')
     alpha_witness_node = alpha_net.node('WitnessNode0')
     beta_witness_node = beta_net.node(name='WitnessNode0')
+    node_under_test = world.network('Beta').node('NodeUnderTest')
 
     logger.info(f'Making fork at block {get_head_block(alpha_witness_node)}')
 
@@ -29,11 +30,11 @@ def make_fork(world, main_chain_trxs=[], fork_chain_trxs=[]):
 
     for node in [alpha_witness_node, beta_witness_node]:
         node.wait_for_block_with_number(head_block + BLOCKS_IN_FORK)
-    alpha_net.connect_with(beta_net)
-    for node in [alpha_witness_node, beta_witness_node]:
-        node.wait_for_block_with_number(head_block + BLOCKS_IN_FORK + BLOCKS_AFTER_FORK)
 
-    head_block = get_head_block(beta_witness_node)
+    alpha_net.connect_with(beta_net)
+    node_under_test.wait_for_fork()
+
+    head_block = get_head_block(alpha_witness_node)
     return head_block
 
 
