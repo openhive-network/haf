@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from test_tools import logger, Asset, Wallet
-from local_tools import make_fork, wait_for_irreversible_progress, run_networks, create_node_with_database
+from local_tools import make_fork, back_from_fork, wait_for_irreversible_progress, run_networks, create_node_with_database
 
 
 START_TEST_BLOCK = 108
@@ -29,11 +29,12 @@ def test_compare_forked_node_database(world_with_witnesses_and_database, databas
     wallet = Wallet(attach_to=node_under_test)
     transaction1 = wallet.api.transfer('initminer', 'null', Asset.Test(1234), 'memo', broadcast=False)
     transaction2 = wallet.api.transfer_to_vesting('initminer', 'null', Asset.Test(1234), broadcast=False)
-    after_fork_block = make_fork(
+    make_fork(
         world,
         main_chain_trxs = [transaction1],
         fork_chain_trxs = [transaction2],
     )
+    after_fork_block = back_from_fork(world)
 
     # THEN
     wait_for_irreversible_progress(node_under_test, after_fork_block)

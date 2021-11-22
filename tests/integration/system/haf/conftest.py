@@ -52,9 +52,13 @@ def database():
         Session = sessionmaker(bind=engine)
         session = Session()
 
+        # using this function that returns None prevents Automap from generating relationships
+        def generate_relationships(base, direction, return_fn, attrname, local_cls, referred_cls, **kw):
+            return None
+
         metadata = sqlalchemy.MetaData(schema="hive")
         Base = automap_base(bind=engine, metadata=metadata)
-        Base.prepare(reflect=True)
+        Base.prepare(reflect=True, generate_relationship=generate_relationships)
 
         return session, Base
 

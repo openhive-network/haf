@@ -2,7 +2,7 @@ from pathlib import Path
 import json
 
 from test_tools import logger, Asset, Wallet
-from local_tools import make_fork, wait_for_irreversible_progress, run_networks
+from local_tools import make_fork, back_from_fork, wait_for_irreversible_progress, run_networks
 
 
 START_TEST_BLOCK = 108
@@ -24,12 +24,12 @@ def test_operations_after_switchng_fork(world_with_witnesses_and_database):
     transaction1 = wallet.api.transfer('initminer', 'null', Asset.Test(1234), 'memo', broadcast=False)
     transaction2 = wallet.api.transfer_to_vesting('initminer', 'null', Asset.Test(1234), broadcast=False)
 
-    logger.info(f'Making fork at block {START_TEST_BLOCK}')
-    after_fork_block = make_fork(
+    make_fork(
         world,
         main_chain_trxs = [transaction1],
         fork_chain_trxs = [transaction2],
     )
+    after_fork_block = back_from_fork(world)
 
     # THEN
     wait_for_irreversible_progress(node_under_test, after_fork_block)

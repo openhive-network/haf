@@ -1,9 +1,8 @@
-
 from pathlib import Path
 import unittest
 
-from test_tools import logger, Asset
-from local_tools import make_fork, wait_for_irreversible_progress, run_networks
+from test_tools import logger
+from local_tools import make_fork, back_from_fork, wait_for_irreversible_progress, run_networks
 
 
 START_TEST_BLOCK = 108
@@ -20,7 +19,8 @@ def test_blocks_reversible(world_with_witnesses_and_database):
     # WHEN
     run_networks(world, Path().resolve())
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
-    after_fork_block = make_fork(world)
+    make_fork(world)
+    after_fork_block = back_from_fork(world)
 
     # THEN
     irreversible_block_num, head_block_number = wait_for_irreversible_progress(node_under_test, after_fork_block+1)

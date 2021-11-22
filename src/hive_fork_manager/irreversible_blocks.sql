@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS hive.account_operations
       account_id INTEGER NOT NULL --- Identifier of account involved in given operation.
     , account_op_seq_no INTEGER NOT NULL --- Operation sequence number specific to given account.
     , operation_id BIGINT NOT NULL --- Id of operation held in hive_opreations table.
+    , CONSTRAINT hive_account_operations_pk PRIMARY KEY (account_id, account_op_seq_no)
     , CONSTRAINT hive_account_operations_fk_1 FOREIGN KEY (account_id) REFERENCES hive.accounts(id)
     , CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hive.operations(id)
     , CONSTRAINT hive_account_operations_uq_1 UNIQUE( account_id, account_op_seq_no )
