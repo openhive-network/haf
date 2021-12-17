@@ -46,5 +46,5 @@ The macro add call [test_authorization.sh](test_authorization.sh) with passing g
 ## EXAMPLES
 The tests check if examples from folder 'src/hive_fork_manager/doc/examples' work correctly. The macro `ADD_EXAMPLES_FUNCTIONAL_TESTS( <relative_path_to_script> )`
 adds test which calls [test_examples.sh]( ./test_examples.sh ) to do operations in order:
-1. prepares database for application - blocks data and events queue with [./examples/prepare_data.sql](./examples/prepare_data.sql) 
+1. prepares database for application - blocks data and events queue with [./data/prepare_data.sql](./data/prepare_data.sql) 
 2. executes the test script with passing it a directory with the examples

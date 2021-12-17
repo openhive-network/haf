@@ -12,7 +12,7 @@ evaluate_result() {
   exit 1;
 }
 
-examples_folder=$1
+applications_folder=$1
 test_path=$2;
 
 psql -d postgres -a -f  ./create_db.sql;
@@ -27,5 +27,5 @@ fi
 psql postgresql://hived:test@localhost/psql_tools_test_db --username=hived -a -v ON_ERROR_STOP=on -f ./data/prepare_data.sql
 evaluate_result $?;
 
-( $test_path $examples_folder )
+( $test_path $applications_folder )
 evaluate_result $?;

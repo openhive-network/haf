@@ -43,6 +43,21 @@ MACRO( ADD_EXAMPLES_FUNCTIONAL_TESTS example_test_path)
     MESSAGE( STATUS "Added functional authorization tests '${test_target}'" )
 ENDMACRO()
 
+MACRO( ADD_APPLICATIONS_FUNCTIONAL_TESTS example_test_path)
+    STRING( REGEX MATCH "^(([^\\/]*)\\/)?(.*)\\.[^.]*$" dummy ${example_test_path} ) # remove py extension
+    SET( test_name ${CMAKE_MATCH_3})
+    IF( CMAKE_MATCH_2 )
+        SET( test_name ${CMAKE_MATCH_2}.${test_name} )
+    ENDIF()
+    SET( test_target test.functional.hive_fork_manager.${test_name} )
+    SET( sources_under_tests_path ${CMAKE_SOURCE_DIR}/src/hive_fork_manager/doc/applications )
+    ADD_TEST( NAME ${test_target}
+            COMMAND test_applications.sh ${sources_under_tests_path} ${example_test_path}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            )
+    MESSAGE( STATUS "Added functional authorization tests '${test_target}'" )
+ENDMACRO()
+
 ADD_SQL_FUNCTIONAL_TESTS( context_rewind/schema_test.sql )
 
 ADD_SQL_FUNCTIONAL_TESTS( context_rewind/register_table_test.sql )
@@ -245,3 +260,8 @@ ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/accounts_provider_application.py )
 ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/accounts_provider_non_fork_application.py )
 
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_accounts.sql )
+
+ADD_APPLICATIONS_FUNCTIONAL_TESTS( applications/haf_new_account_collector.py )
+ADD_APPLICATIONS_FUNCTIONAL_TESTS( applications/haf_memo_scanner.py )
+ADD_APPLICATIONS_FUNCTIONAL_TESTS( applications/haf_account_creation_fee_follower.py )
+ADD_APPLICATIONS_FUNCTIONAL_TESTS( applications/haf_account_creation_fee_follower_threads.py )
