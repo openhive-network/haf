@@ -21,9 +21,9 @@ class haf_query:
     self.next_block                       = "SELECT * FROM hive.app_next_block('{}');".format( self.application_context )
 
 class haf_sql:
-  def __init__(self, application_context):
+  def __init__(self, application_context, db_url):
     helper.info("Initialization of a new database connection...")
-    self.db         = Db(helper.args.url, "root db creation")
+    self.db         = Db(db_url, "root db creation")
     helper.info("The database has been connected...")
 
     self.text_query = haf_query(application_context)

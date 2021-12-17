@@ -273,7 +273,7 @@ class application:
 
     self.app_context  = app_context
     self.sql_app      = sql_app
-    self.sql_app.sql  = haf_sql(self.app_context)
+    self.sql_app.sql  = haf_sql(self.app_context, helper.args.url)
     self.sql_app.app  = self
 
   def exec_query(self, query, **kwargs):
