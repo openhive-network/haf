@@ -4,7 +4,7 @@ stages:
 variables:
   GIT_DEPTH: 1
   GIT_SUBMODULE_STRATEGY: recursive
-  BUILDER_IMAGE_TAG: "@sha256:c299b6f2d0928adbf02bd40158cd8acd0b32187686b97e88303182ba82d12647"
+  BUILDER_IMAGE_TAG: "@sha256:947bc6ca01b4e739bcee7c3a82a1430258ff139d8f725b1e3534b9b7a1036fc7"
 
 hive_fork_manager:
   stage: build_and_test
