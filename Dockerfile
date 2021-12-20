@@ -30,7 +30,8 @@ RUN \
         pexpect \
         psycopg2 \
         sqlalchemy \
-        jinja2
+        jinja2 \
+        funcy
 
 
 
