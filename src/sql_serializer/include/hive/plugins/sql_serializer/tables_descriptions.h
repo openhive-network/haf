@@ -80,7 +80,6 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        // deserialization
         fc::variant opVariant;
         fc::to_variant(data.op, opVariant);
         fc::string deserialized_op = fc::json::to_string(opVariant);

@@ -16,6 +16,7 @@ psql-operations-threads-number = 5
 psql-transactions-threads-number = 2
 psql-account-operations-threads-number = 2
 psql-enable-accounts-dump = true
+psql-force-open-inconsistent = false
 ```
 
 ### Example command

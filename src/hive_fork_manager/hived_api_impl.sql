@@ -413,7 +413,7 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.remove_inconsistend_irreversible_data()
+CREATE OR REPLACE FUNCTION hive.remove_inconsistent_irreversible_data()
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -421,8 +421,13 @@ AS
 $BODY$
 DECLARE
     __consistent_block INTEGER := NULL;
+    __is_dirty BOOL := TRUE;
 BEGIN
-    SELECT consistent_block INTO __consistent_block FROM hive.irreversible_data;
+    SELECT consistent_block, is_dirty INTO __consistent_block, __is_dirty FROM hive.irreversible_data;
+
+    IF ( __is_dirty = FALSE ) THEN
+        RETURN;
+    END IF;
 
     DELETE FROM hive.account_operations hao
     WHERE hao.block_num > __consistent_block;
@@ -438,6 +443,8 @@ BEGIN
     DELETE FROM hive.accounts WHERE block_num > __consistent_block;
 
     DELETE FROM hive.blocks WHERE num > __consistent_block;
+
+    UPDATE hive.irreversible_data SET is_dirty = FALSE;
 END;
 $BODY$
 ;

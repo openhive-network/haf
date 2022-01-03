@@ -173,6 +173,7 @@ BEGIN
         AND fork_id = 1
     ) = 1 ,'No bob operation';
 
+    ASSERT( SELECT is_dirty FROM hive.irreversible_data ) = FALSE, 'Irreversible data are dirty';
 END
 $BODY$
 ;

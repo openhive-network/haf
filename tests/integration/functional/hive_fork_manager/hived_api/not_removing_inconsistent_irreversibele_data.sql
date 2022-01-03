@@ -51,7 +51,7 @@ BEGIN
     -- block 2 was not claimed, and it is possible not all information about it was dumped - maybe hived crashes
     PERFORM hive.end_massive_sync( 1 );
 
-    UPDATE hive.irreversible_data SET is_dirty = TRUE;
+    UPDATE hive.irreversible_data SET is_dirty = FALSE;
 END;
 $BODY$
 ;
@@ -77,19 +77,12 @@ STABLE
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM hive.blocks ) = 1, 'Unexpected number of blocks';
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions ) = 1, 'Unexpected number of transactions';
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig ) = 1, 'Unexpected number of signatures';
-    ASSERT ( SELECT COUNT(*) FROM hive.operations ) = 1, 'Unexpected number of operations';
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts ) = 1, 'Unexpected number of accounts';
-    ASSERT ( SELECT COUNT(*) FROM hive.account_operations ) = 1, 'Unexpected number of account_operations';
-
-    ASSERT ( SELECT COUNT(*) FROM hive.blocks WHERE num = 1 ) = 1, 'No blocks with num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions WHERE block_num = 1 ) = 1, 'No transaction with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.operations WHERE block_num = 1 ) = 1, 'No operations with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts WHERE block_num = 1 ) = 1, 'No account with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig WHERE trx_hash = '\xDEED10'::bytea ) = 1, 'No signatures with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.account_operations WHERE account_id = 1 ) = 1, 'No account_operations with account_id = 1';
+    ASSERT ( SELECT COUNT(*) FROM hive.blocks ) = 2, 'Unexpected number of blocks';
+    ASSERT ( SELECT COUNT(*) FROM hive.transactions ) = 2, 'Unexpected number of transactions';
+    ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig ) = 2, 'Unexpected number of signatures';
+    ASSERT ( SELECT COUNT(*) FROM hive.operations ) = 2, 'Unexpected number of operations';
+    ASSERT ( SELECT COUNT(*) FROM hive.accounts ) = 2, 'Unexpected number of accounts';
+    ASSERT ( SELECT COUNT(*) FROM hive.account_operations ) = 2, 'Unexpected number of account_operations';
 END
 $BODY$
 ;

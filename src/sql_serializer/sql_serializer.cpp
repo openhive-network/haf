@@ -44,6 +44,61 @@ using chain::reindex_notification;
   {
     namespace sql_serializer
     {
+    bool is_database_correct( const std::string& database_url, bool force_open_inconsistant ) {
+      ilog( "Checking correctness of database..." );
+
+      bool is_extension_created = false;
+      bool is_irreversible_dirty = false;
+      queries_commit_data_processor db_checker(
+        database_url
+        , "Check correctness"
+        , [&is_extension_created](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+          pqxx::result data = tx.exec("select 1 as _result from pg_extension where extname='hive_fork_manager';");
+          is_extension_created = !data.empty();
+          return data_processor::data_processing_status();
+          }
+          , nullptr
+          );
+
+      db_checker.trigger(data_processor::data_chunk_ptr(), 0);
+      db_checker.join();
+
+      if ( !is_extension_created ) {
+        elog( "The exstenion 'hive_fork_manager' is not created" );
+        return false;
+      }
+
+      queries_commit_data_processor db_consistency_checker(
+        database_url
+        , "Check consistency of irreversible data"
+        , [&is_irreversible_dirty](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+          pqxx::result data = tx.exec("select hive.is_irreversible_dirty() as _result;");
+          FC_ASSERT( !data.empty(), "No response from database" );
+          FC_ASSERT( data.size() == 1, "Wrong data size" );
+          const auto& record = data[0];
+          is_irreversible_dirty = record[ "_result" ].as<bool>();
+          return data_processor::data_processing_status();
+          }
+          , nullptr
+          );
+
+      db_consistency_checker.trigger(data_processor::data_chunk_ptr(), 0);
+      db_consistency_checker.join();
+
+      if ( !is_irreversible_dirty ) {
+        return true;
+      }
+
+      wlog( "The irreversible data are in inconsistent state" );
+
+      if ( !force_open_inconsistant ) {
+        elog( "Cannot open database because irreversible data are inconsistent. Removing inconsistancy may last long time, please use 'psql-force-open-inconsistent' switch to force open." );
+        return false;
+      }
+
+      wlog( "Switch 'psql-force-open-inconsistent' was used, inconsistent database will be rapaired what may last long time" );
+      return true;
+    }
 
     inline std::string get_operation_name(const hive::protocol::operation& op)
     {
@@ -152,7 +207,6 @@ using chain::reindex_notification;
               psql_operations_threads_number( _psql_operations_threads_number ),
               psql_account_operations_threads_number( _psql_account_operations_threads_number )
           {
-            FC_ASSERT( is_database_correct(), "SQL database is in invalid state" );
             HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
           }
 
@@ -338,27 +392,6 @@ using chain::reindex_notification;
             switch_db_items( false/*mode*/ );
           }
 
-          bool is_database_correct() {
-            ilog( "Checking correctness of database..." );
-
-            bool is_extension_created = false;
-            queries_commit_data_processor db_checker(
-                  db_url
-                , "Check correctness"
-                , [&is_extension_created](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status {
-                    pqxx::result data = tx.exec("select 1 as _result from pg_extension where extname='hive_fork_manager';");
-                    is_extension_created = !data.empty();
-                    return data_processing_status();
-                }
-              , nullptr
-              );
-
-            db_checker.trigger(data_processor::data_chunk_ptr(), 0);
-            db_checker.join();
-
-            return is_extension_created;
-          }
-
           void inform_hfm_about_starting(hive::chain::database& _chaindb) {
             using namespace std::string_literals;
             ilog( "Inform Hive Fork Manager about starting..." );
@@ -387,7 +420,7 @@ using chain::reindex_notification;
                 pqxx::result data = tx.exec("SELECT hb.num AS _max_block FROM hive.blocks hb ORDER BY hb.num DESC LIMIT 1;");
                 if( !data.empty() )
                 {
-                  FC_ASSERT( data.size() == 1, "Data size 1" );
+                  FC_ASSERT( data.size() == 1, "Data size" );
                   const auto& record = data[0];
                   psql_block_number = record["_max_block"].as<uint64_t>();
                   _last_block_num = psql_block_number;
@@ -729,6 +762,7 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
                          ("psql-transactions-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump transactions to database during reindexing")
                          ("psql-account-operations-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump account operations to database during reindexing")
                          ("psql-enable-accounts-dump", appbase::bpo::value<bool>()->default_value( true ), "enable collect data to accounts and account_operations table")
+                         ("psql-force-open-inconsistent", appbase::bpo::bool_switch()->default_value( false ), "force open database even when irreversible data are inconsistent")
                          ;
       }
 
@@ -738,6 +772,10 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
         FC_ASSERT(options.count("psql-url"), "`psql-url` is required argument");
 
         auto& db = appbase::app().get_plugin<hive::plugins::chain::chain_plugin>().db();
+
+        FC_ASSERT( is_database_correct( options["psql-url"].as<fc::string>(), options["psql-force-open-inconsistent"].as<bool>() )
+                   , "SQL database is in invalid state"
+       );
 
         my = std::make_unique<detail::sql_serializer_plugin_impl>(
           options["psql-url"].as<fc::string>()

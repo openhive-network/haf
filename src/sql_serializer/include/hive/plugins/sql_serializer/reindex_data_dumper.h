@@ -32,6 +32,7 @@ namespace hive::plugins::sql_serializer {
     void trigger_data_flush( cached_data_t& cached_data, int last_block_num ) override;
   private:
     void join();
+    void mark_irreversible_data_as_dirty( bool is_dirty );
 
     using block_data_container_t_writer = table_data_writer<hive_blocks>;
     using transaction_data_container_t_writer = chunks_for_sql_writers_splitter<
@@ -71,6 +72,7 @@ namespace hive::plugins::sql_serializer {
     std::unique_ptr< account_operations_data_container_t_writer > _account_operations_writer;
 
     std::unique_ptr<end_massive_sync_processor> _end_massive_sync_processor;
+    std::shared_ptr< transaction_controllers::transaction_controller > _transactions_controller;
   };
 
 } // namespace hive::plugins::sql_serializer

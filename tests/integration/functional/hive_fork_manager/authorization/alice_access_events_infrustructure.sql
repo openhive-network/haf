@@ -231,6 +231,18 @@ BEGIN
         ASSERT FALSE, 'Alice can drop hive.account_operations_view';
     EXCEPTION WHEN OTHERS THEN
     END;
+
+    BEGIN
+        PERFORM hive.set_irreversible_dirty();
+        ASSERT FALSE, 'Alice can call hive.set_irreversible_dirty';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.set_irreversible_not_dirty();
+        ASSERT FALSE, 'Alice can call hive.set_irreversible_not_dirty';
+    EXCEPTION WHEN OTHERS THEN
+    END;
 END;
 $BODY$
 ;

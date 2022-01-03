@@ -364,6 +364,15 @@ saves information about the connection occurence into table hived_connections.
 - **_git_sha** - is a GIT version of hived code
 - **_block_num** - head block number for which the hived is synchronized
 
+#### hive.set_irreversible_dirty()
+Sets 'dirty' flag, what marks irreversible data as inconistent 
+
+#### hive.set_irreversible_not_dirty()
+Unsets 'dirty' flag, what marks irreversible data as conistent
+
+#### hive.is_irreversible_dirty()
+Read the 'dirty' flag
+
 #### APP API
 The functions which should be used by an application
 

@@ -18,7 +18,9 @@ public:
   using NUMBER_OF_COMPLETED_THREADS = uint32_t;
   using TRIGGERRED_FUNCTION = std::function< void(BLOCK_NUM) >;
 
-  block_num_rendezvous_trigger( NUMBER_OF_COMPLETED_THREADS _number_of_threads, TRIGGERRED_FUNCTION _triggered_function );
+  block_num_rendezvous_trigger(
+    NUMBER_OF_COMPLETED_THREADS _number_of_threads,
+    TRIGGERRED_FUNCTION _triggered_function );
   block_num_rendezvous_trigger( block_num_rendezvous_trigger&& ) = delete;
   block_num_rendezvous_trigger( block_num_rendezvous_trigger& ) = delete;
   block_num_rendezvous_trigger& operator=( block_num_rendezvous_trigger& ) = delete;

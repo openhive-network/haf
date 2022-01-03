@@ -89,9 +89,12 @@ GRANT EXECUTE ON FUNCTION
     , hive.app_state_providers_update( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
     , hive.app_state_provider_import( _state_provider hive.state_providers, _context hive.context_name )
     , hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE )
-    , hive.remove_inconsistend_irreversible_data()
+    , hive.remove_inconsistent_irreversible_data()
     , hive.disable_indexes_of_reversible()
     , hive.enable_indexes_of_reversible()
+    , hive.set_irreversible_dirty()
+    , hive.set_irreversible_not_dirty()
+    , hive.is_irreversible_dirty()
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION

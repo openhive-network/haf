@@ -9,11 +9,12 @@ CREATE TABLE IF NOT EXISTS hive.blocks (
 CREATE TABLE IF NOT EXISTS hive.irreversible_data (
       id integer,
       consistent_block integer,
+      is_dirty bool NOT NULL,
       CONSTRAINT pk_irreversible_data PRIMARY KEY ( id ),
       CONSTRAINT fk_1_hive_irreversible_data FOREIGN KEY (consistent_block) REFERENCES hive.blocks (num)
 );
 
-INSERT INTO hive.irreversible_data VALUES(1,NULL) ON CONFLICT DO NOTHING;
+INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS hive.transactions (
     block_num integer NOT NULL,

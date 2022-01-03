@@ -3,7 +3,10 @@
 #include "fc/exception/exception.hpp"
 
 namespace hive { namespace plugins { namespace sql_serializer {
-  block_num_rendezvous_trigger::block_num_rendezvous_trigger( uint32_t _number_of_threads, TRIGGERRED_FUNCTION _triggered_function )
+  block_num_rendezvous_trigger::block_num_rendezvous_trigger(
+      uint32_t _number_of_threads
+    , TRIGGERRED_FUNCTION _triggered_function
+  )
   : m_number_of_threads( _number_of_threads )
   , m_triggered_function( std::move( _triggered_function ) )
   {
@@ -16,7 +19,6 @@ namespace hive { namespace plugins { namespace sql_serializer {
       FC_THROW( "No trigger function" );
     }
   }
-
 
   void
   block_num_rendezvous_trigger::report_complete_thread_stage( BLOCK_NUM _stage_block_num ) {
@@ -34,6 +36,7 @@ namespace hive { namespace plugins { namespace sql_serializer {
     if ( ( stage_it->second + 1 ) == m_number_of_threads ) {
       m_completed_threads.erase( stage_it );
       m_triggered_function( _stage_block_num );
+
       ilog( "Dump whole block ${i}", ("i", _stage_block_num) );
       return;
     }

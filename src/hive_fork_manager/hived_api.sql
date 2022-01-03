@@ -102,6 +102,45 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.set_irreversible_dirty()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    UPDATE hive.irreversible_data SET is_dirty = TRUE;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.set_irreversible_not_dirty()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    UPDATE hive.irreversible_data SET is_dirty = FALSE;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.is_irreversible_dirty()
+    RETURNS BOOL
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __is_dirty BOOL := FALSE;
+BEGIN
+    SELECT is_dirty INTO __is_dirty FROM hive.irreversible_data;
+    RETURN __is_dirty;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.disable_indexes_of_irreversible()
     RETURNS void
     LANGUAGE plpgsql
@@ -211,7 +250,7 @@ CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.n
 AS
 $BODY$
 BEGIN
-    PERFORM hive.remove_inconsistend_irreversible_data();
+    PERFORM hive.remove_inconsistent_irreversible_data();
     PERFORM hive.back_from_fork( _block_num );
     INSERT INTO hive.hived_connections( block_num, git_sha, time )
     VALUES( _block_num, _git_sha, now() );
