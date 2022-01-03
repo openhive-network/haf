@@ -62,6 +62,8 @@ BEGIN
     PERFORM hive.remove_unecessary_events( _block_num );
     SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hive.blocks;
 
+    ASSERT _block_num >= __irreversible_head_block, 'irreversible block back to lower than current value';
+
     -- application contexts will use the event to clear data in shadow tables
     INSERT INTO hive.events_queue( event, block_num )
     VALUES( 'NEW_IRREVERSIBLE', _block_num );
