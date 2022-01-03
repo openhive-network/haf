@@ -1,0 +1,30 @@
+1. SQL Serializer data flow
+
+`sql_serializer_plugin_impl` is the main class where data processing starts. It communicates to the hived services using signals:
+- pre_apply_block_handler - method `on_pre_apply_block` where initial connection to the database is established. This is called once and then this signal disconnects
+- pre_apply_operation_handler/post_apply_operation_handler - main data consumer, methods `on_pre_apply_operation`/`on_post_apply_operation`. Required for backward compatibility of operations ordering (with AH impl). PRE- Handles all operations except hardfork virtual operation, which is handled by post_apply_operation_handler (and vice versa).
+Main purpose of such methods is to gather data specific to processed operation (like operation data itself like also list of its impacted accounts) and store them in the cache layer. IMPORTANT NOTE: some virtual operations must be supplemented (what is intentionally not performed during regular state evaluation to limit overhead), just to provide full data required for 3rd party services (like Hivemind). The same step was done in old AH-RocksDB plugin. See `hive::util::supplement_operation` call.
+- post_apply_block - method `on_post_apply_block` is a place when block and transactions data are put into a cache like also potentially flush trigger starts (to persistently save all collected informations into SQL database)
+
+Beside all above handlers being responsible for main data processing, following hived signals are used to switch SQL Serializer processing mode:
+- pre_reindex - method `on_pre_reindex` useful (similary to on_pre_apply_block) to establish initial database setup (like also load already processed partial data in case of replay resume). Also it switches SQL serializer processing mode into MASSIVE one (all incoming data are also IMPLICITLY irreversible)
+- post_reindex - method `on_post_reindex` useful to switches SQL serializer processing mode into default one (P2P-SYNC)
+- end_of_syncing - method `on_end_of_syncing` useful to switch SQL serializer into LIVE-SYNC modes
+
+2. Data flush:
+  The method `indexation_state::trigger_data_flush` is responsible for **POTENTIAL** start of data trigger, depending on SQL Serializer working mode. This class holds two its components to perform a data flush:
+  a) `_trigger` member pointing an instance of `indexation_state::flush_trigger` class, having subcasses implementing trigger logic for all working modes:
+    - `reindex_flush_trigger` where data are flushed to storage every `BLOCKS_PER_FLUSH` number of blocks,
+    - `p2p_flush_trigger` where data are flushed to the storage once per `MINIMUM_BLOCKS_PER_FLUSH` of processed blocks (that also implies to call set_irreversible block handler)
+    - `live_flush_trigger`, where data flush occurs for every block, like also irreversible block will immediately follow blockchain irreversible block) 
+  b) `_dumper` being responsible for physical dump of data held in the memory cache to the SQL storage.
+    Both dumpers are responsible for flushing data into a SQL specific entity (i.e. block cache into blocks data etc) and store them using the method specific to dumper kind.
+    
+    `livesync_data_dumper` - performs cached data conversion into SQL representation compatible to the `hive.push_block` procedure. Also, all data are written into database using one transaction. What important, there is possible to use multiple threads during converting cached data into a strings being next concatnated into final query.
+    `reindex_data_dumper` - responsible for cached data conversion to the format compatible to direct table INSERTs. Also allows multithreaded conversion (every kind of data is processed concurrently), but some of cached data (like transactions, operations and account-operations) can be also dumped in multithreaded way (using number of threads specific in the config file).
+
+    Classes responsible for data flushing:
+    - `chunks_for_sql_writers_splitter` - helper class responsible for splitting conversion and write into multiple threads (embedds "standard" - `table_data_writer` - writers processing specified chunk of original cached data).
+    - `table_data_writer` - type specific to direct conversion of cached data into SQL representation. Actually an alias to `container_data_writer` doing most of the work
+    - `container_view` - responsible for providing to its "client" only a data subset (really usefull at multithreaded writers which have to split input into separate chunks)
+

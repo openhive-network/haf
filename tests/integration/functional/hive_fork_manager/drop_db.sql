@@ -1,0 +1,1 @@
+DROP DATABASE IF EXISTS psql_tools_test_db;

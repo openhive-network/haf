@@ -1,0 +1,41 @@
+**********Description**********
+- non forking application: lack of tables that inherit from a context. Only irreversible blocks could be taken.
+- a forking application: There are tables that inherit from a context. All blocks could be taken(irreversible and reversible)
+
+
+
+
+***************haf_new_account_collector.py***************
+Retrieved data: [block_number;creator of new account;new_account]
+All creators + new accounts are saved in table.
+
+a) non forking application
+b) data is retrieved in 1 thread
+
+
+
+***************haf_memo_scanner.py***************
+Retrieved data: [block_number;transaction number in in_block;position_of operation in given transaction; memo]
+Every memo from transaction is scanned in order to find desired word. This word is given in command line.
+
+a) forking application
+b) data is retrieved in 1 thread
+
+
+
+***************haf_account_creation_fee_follower.py***************
+Retrieved data: [block_num;witness:fee]
+There is saved every change of account creation fee.
+
+a) forking application
+b) data is retrieved in 1 thread
+
+
+
+***************haf_account_creation_fee_follower_threads.py***************
+Extension of `haf_account_creation_fee_follower.py` application. The same data is retrieved, but N threads are used.
+
+a) forking application
+b) data is retrieved in N threads
+
+

@@ -1,0 +1,42 @@
+CREATE OR REPLACE FUNCTION hive.start_provider_<provider_name>( _context hive.context_name )
+    RETURNS TEXT[]
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+BEGIN
+    -- HERE YOU NEED TO CREATE A TABLE/TABLES NAMED WITH PATTERN:
+    -- hive.<_context>_table_name
+    -- FOR EXAMPLE hive.app1_accounts WHERE app1 is a context name and accoutns is a provider's table
+    -- ARRAY OF tables names MUST BE RETURNED
+    RETURN ARRAY[ 'hive.context_templatetable' ];
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.update_state_provider_<provider_name>( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    -- HERE THE PROVIDER'S TBALES OWNED BY A GIVEN CONTEXT HAVE TO BE UPDATED
+    -- NAME OF THE TABLES ARE KNOWN FROM hive.start_provider_template, WHERE THEY ARE CREATED
+END;
+$BODY$
+;
+
+
+CREATE OR REPLACE FUNCTION hive.drop_state_provider_<provider_name>( _context hive.context_name )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    -- HERE THE PROVIDER'S TBALES OWNED BY A GIVEN CONTEXT HAVE TO BE DROPPED
+END;
+$BODY$
+;

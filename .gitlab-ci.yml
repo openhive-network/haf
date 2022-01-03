@@ -1,0 +1,142 @@
+stages:
+  - build_and_test
+
+variables:
+  GIT_DEPTH: 1
+  GIT_SUBMODULE_STRATEGY: recursive
+  BUILDER_IMAGE_TAG: "@sha256:c299b6f2d0928adbf02bd40158cd8acd0b32187686b97e88303182ba82d12647"
+
+hive_fork_manager:
+  stage: build_and_test
+  image: "$CI_REGISTRY_IMAGE/builder$BUILDER_IMAGE_TAG"
+  script:
+    - /etc/init.d/postgresql start
+    - mkdir -p "$CI_JOB_NAME"/build
+    - cd "$CI_JOB_NAME"/build
+    - cmake -DCMAKE_BUILD_TYPE=Release -DHIVE_LINT=ON ../..
+    - make extension.hive_fork_manager -j10
+    - make install
+    - ctest --output-on-failure  -R test.functional.hive_fork_manager.*
+  artifacts:
+    paths:
+    - "$CI_JOB_NAME"
+    expire_in: 6 hours
+  tags:
+    - public-runner-docker
+
+hived:
+  stage: build_and_test
+  image: "$CI_REGISTRY_IMAGE/builder$BUILDER_IMAGE_TAG"
+  script:
+    - /etc/init.d/postgresql start
+    - mkdir -p "$CI_JOB_NAME"/build
+    - cd "$CI_JOB_NAME"/build
+    - cmake -DCMAKE_BUILD_TYPE=Release -DCLEAR_VOTES=ON -DENABLE_MIRA=OFF -DBUILD_HIVE_TESTNET=OFF -DHIVE_LINT=ON ../..
+    - make hived truncate_block_log -j10
+    # check if sql_serializer compiles with hived
+    - test -f hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a
+    # check if sql_serializer plugin is included in hived plugins
+    - cd ./hive/programs/hived
+    - ./hived --help | grep psql-url
+  artifacts:
+    paths:
+    - "$CI_JOB_NAME"
+    expire_in: 6 hours
+  tags:
+    - public-runner-docker
+
+hived_testnet:
+  stage: build_and_test
+  image: "$CI_REGISTRY_IMAGE/builder$BUILDER_IMAGE_TAG"
+  script:
+    - /etc/init.d/postgresql start
+    - mkdir -p "$CI_JOB_NAME"/build
+    - cd "$CI_JOB_NAME"/build
+    - cmake -DCMAKE_BUILD_TYPE=Release -DCLEAR_VOTES=ON -DENABLE_MIRA=OFF -DBUILD_HIVE_TESTNET=ON -DHIVE_LINT=OFF ../..
+    - make hived cli_wallet get_dev_key truncate_block_log -j10
+    # check if sql_serializer compiles with hived
+    - test -f hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a
+    # check if sql_serializer plugin is included in hived plugins
+    - cd ./hive/programs/hived
+    - ./hived --help | grep psql-url
+  artifacts:
+    paths:
+    - "$CI_JOB_NAME"
+    expire_in: 6 hours
+  tags:
+    - public-runner-docker
+
+haf_system:
+  stage: build_and_test
+  needs:
+    - job: hive_fork_manager
+      artifacts: true
+    - job: hived_testnet
+      artifacts: true
+  image: "$CI_REGISTRY_IMAGE/builder$BUILDER_IMAGE_TAG"
+  variables:
+    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package"
+    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
+  script:
+    - apt-get install tox -y
+    # use newest libfaketime version, version 0.97 is not enough
+    - git clone --branch master https://github.com/wolfcw/libfaketime.git
+    - cd libfaketime && make
+    - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
+    # install hive_fork_manager extension built in previous stage
+    - /etc/init.d/postgresql start
+    - cd $CI_PROJECT_DIR/hive_fork_manager/build
+    - make install
+    # prepare environment and run tests
+    - cd $CI_PROJECT_DIR/tests/integration/system/haf
+    - source env.sh
+    - tox
+  artifacts:
+    paths:
+    - "**/generated_during_*"
+    - "**/generated_by_package_fixtures"
+    reports:
+      junit: tests/integration/system/haf/report.xml
+    when: always
+    expire_in: 1 week
+  tags:
+    - public-runner-docker
+
+replay_node_with_haf:
+  stage: build_and_test
+  needs:
+    - job: hive_fork_manager
+      artifacts: true
+    - job: hived
+      artifacts: true
+  image: "$CI_REGISTRY_IMAGE/builder$BUILDER_IMAGE_TAG"
+  variables:
+    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package"
+    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
+    BLOCK_LOG_PATH: "/blockchain/block_log"
+  script:
+    - apt-get install tox -y
+    - /etc/init.d/postgresql start
+    - cd $CI_PROJECT_DIR/hive_fork_manager/build
+    - make install
+    - psql -d postgres -c 'CREATE DATABASE haf_block_log'
+    - psql -d haf_block_log -c 'CREATE EXTENSION hive_fork_manager CASCADE'
+    # tests
+    - cd $CI_PROJECT_DIR/tests/integration/replay
+    - mkdir blockchain
+    - $HIVE_BUILD_ROOT_PATH/programs/util/truncate_block_log $BLOCK_LOG_PATH blockchain/block_log 5000000
+    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir . --config config.ini --force-replay --exit-before-sync > node_logs.log 2>&1
+    - tox
+  artifacts:
+    paths:
+    - "**/node_logs.log"
+    - "**/generated_during_*"
+    - "**/generated_by_package_fixtures"
+    reports:
+      junit: tests/integration/replay/report.xml
+    when: always
+    expire_in: 1 week
+  tags:
+    - public-runner-docker
+    - hived-for-tests
+

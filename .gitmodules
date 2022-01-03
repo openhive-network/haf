@@ -1,0 +1,3 @@
+[submodule "hive"]
+	path = hive
+	url = https://gitlab.syncad.com/hive/hive.git

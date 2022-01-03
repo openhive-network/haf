@@ -1,0 +1,48 @@
+# docker build -f Dockerfile.postgres12  -t psql-tools12 .
+FROM phusion/baseimage:focal-1.0.0
+
+ENV LANG=en_US.UTF-8
+
+RUN \
+    apt-get update \
+    && apt-get install -y \
+            systemd \
+            postgresql \
+            postgresql-contrib \
+            build-essential \
+            cmake \
+            libboost-all-dev \
+            postgresql-server-dev-12 \
+            git \
+            python3-pip \
+            libssl-dev \
+            libreadline-dev \
+    && \
+        apt-get clean
+
+RUN \
+    python3 -mpip install \
+        pexpect \
+        psycopg2 \
+        sqlalchemy
+
+
+
+ADD . /usr/local/src
+WORKDIR /usr/local/src
+
+RUN git submodule update --init --recursive
+
+RUN mkdir build \
+    && cd build \
+    && cmake .. \
+    && make \
+    && make install
+
+USER postgres
+RUN  /etc/init.d/postgresql start \
+    && psql --command "SELECT version();" \
+    && psql --command "CREATE USER root WITH SUPERUSER CREATEDB;" \
+    && cd build \
+    && ctest --debug -R test.functional.hive_fork_manager.*
+
