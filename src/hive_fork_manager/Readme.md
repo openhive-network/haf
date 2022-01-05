@@ -1,11 +1,6 @@
 # HIVE_FORK_MANAGER
 The fork manager is composed of SQL scripts to create a Postgres extension that provides an API that simplifies reverting application data when a fork switch occurs on the Hive blockchain.
 
-## Requirements for postgres
-Extension is intended to run on postgres version 12 or higher, database used with extension should use parameters
-ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' and LC_CTYPE = 'en_US.UTF-8' (this is default for american english locale,
-it's not tested on other locale configurations).
-
 ## Installation
 It is possible to install the fork manager in two forms - as a regular Postgres extension or as a simple set of tables and functions.
 
@@ -15,28 +10,11 @@ It is possible to install the fork manager in two forms - as a regular Postgres 
 3. `make extension.hive_fork_manager`
 4. `make install`
 
-The extension will be installed in the directory `<postgres_shareddir>/extension`. You can check the directory with `pg_config --sharedir`.
-
 To start using the extension in a database, execute psql command: `CREATE EXTENSION hive_fork_manager CASCADE;`. The CASCADE phrase is needed, to automatically install extensions the hive_fork_manager depends on.
 
 ### Alternatively, you can manually execute the SQL scripts to directly install the fork manager
 The required ordering of the sql scripts is included in the cmake file [src/hive_fork_manager/CMakeLists.txt](./CMakeLists.txt).
 Execute each script one-by-one with `psql` as in this example: `psql -d my_db_name -a -f  context_rewind/data_schema.sql`
-
-### Authorization
-During its creation the extension introduces two new roles (groups): `hived_group` and `hive_applications_group`. The maintainer of
-the PostgreSQL cluster server needs to create roles ( users ) which inherits from one of these groups.
-```
-   CREATE ROLE hived LOGIN PASSWORD 'hivedpass' INHERIT IN ROLE hived_group;
-   CREATE ROLE application LOGIN PASSWORD 'applicationpass' INHERIT IN ROLE hive_applications_group;
-```
-The roles which inherits
-from `hived_groups` must be used by `hived` process to login into the database, roles which inherit from `hive_application_group` shall
-be used by the applications. Each application role does not have access to internal data created by other application roles and cannot
-modify data modified by the 'hived'. 'Hived' roles cannot modify the applications data.
-
-More about roles in PostgreSQL documentaion: [CREATE ROLE](https://www.postgresql.org/docs/10/sql-createrole.html)
-
 
 ## Architecture
 All elements of the fork manager are placed in a schema called 'hive'.
