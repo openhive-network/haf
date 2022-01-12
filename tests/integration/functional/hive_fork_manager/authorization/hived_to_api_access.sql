@@ -32,8 +32,10 @@ VOLATILE
 AS
 $BODY$
 BEGIN
+    PERFORM hive.disable_fk_of_irreversible();
     PERFORM hive.disable_indexes_of_irreversible();
     PERFORM hive.enable_indexes_of_irreversible();
+    PERFORM hive.enable_fk_of_irreversible();
     PERFORM hive.disable_indexes_of_reversible();
     PERFORM hive.enable_indexes_of_reversible();
     PERFORM hive.connect( 'sha', 0 );

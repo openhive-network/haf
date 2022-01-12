@@ -7,7 +7,6 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.disable_fk_of_irreversible();
-    PERFORM hive.disable_indexes_of_irreversible();
 END;
 $BODY$
 ;
@@ -20,7 +19,7 @@ CREATE FUNCTION test_when()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.enable_indexes_of_irreversible();
+    PERFORM hive.enable_fk_of_irreversible();
 END;
 $BODY$
 ;
@@ -94,19 +93,15 @@ STABLE
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT is_any_index_for_table( 'hive.blocks'::regclass::oid ) ) , 'Index hive.blocks not exists';
-    ASSERT ( SELECT is_any_index_for_table( 'hive.transactions'::regclass::oid ) ) , 'Index hive.transactions not exists';
-    ASSERT ( SELECT is_any_index_for_table( 'hive.operations'::regclass::oid ) ) , 'Index hive.operations not exists';
-    ASSERT ( SELECT is_any_index_for_table( 'hive.transactions_multisig'::regclass::oid ) ) , 'Index hive.transactions_multisig not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions') ), 'FK for hive.transactions not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'operations') ), 'FK for hive.operations not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hive.transactions_multisig not exists';
 
-    ASSERT ( SELECT is_constraint_exists( 'pk_hive_blocks', 'PRIMARY KEY' ) ), 'PK pk_hive_blocks not exists';
-    ASSERT ( SELECT is_constraint_exists( 'pk_hive_transactions', 'PRIMARY KEY' ) ), 'PK pk_hive_transactions not exists';
-    ASSERT ( SELECT is_constraint_exists( 'pk_hive_transactions_multisig', 'PRIMARY KEY' ) ), 'PK pk_hive_transactions_multisig not exists';
-    ASSERT ( SELECT is_constraint_exists( 'pk_hive_operations', 'PRIMARY KEY' ) ), 'PK pk_hive_operations not exists';
-    ASSERT ( SELECT is_constraint_exists( 'pk_irreversible_data', 'PRIMARY KEY' ) ), 'PK pk_hive_irreversible_data not exists';
-
-    ASSERT EXISTS( SELECT 1 FROM pg_index pgi WHERE pgi.indrelid = 'hive.transactions'::regclass::oid ), 'No index for table hive.transactions';
-    ASSERT EXISTS( SELECT 1 FROM pg_index pgi WHERE pgi.indrelid = 'hive.operations'::regclass::oid ), 'No index for table hive.operations';
+    ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_transactions', 'FOREIGN KEY' ) ), 'FK fk_1_hive_transactions not exists';
+    ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_transactions_multisig', 'FOREIGN KEY' ) ), 'FK fk_1_hive_transactions_multisig not exists';
+    ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_operations', 'FOREIGN KEY' ) ), 'FK fk_1_hive_operations not exists';
+    ASSERT ( SELECT is_constraint_exists( 'fk_2_hive_operations', 'FOREIGN KEY' ) ), 'FK fk_2_hive_operations not exists';
+    ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_irreversible_data', 'FOREIGN KEY' ) ), 'FK fk_1_hive_irreversible_data not exists';
 END;
 $BODY$
 ;

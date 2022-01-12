@@ -7,6 +7,7 @@ AS
 $BODY$
 BEGIN
     -- nothing to do here
+    PERFORM hive.disable_fk_of_irreversible();
 END;
 $BODY$
 ;

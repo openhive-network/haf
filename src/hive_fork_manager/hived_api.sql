@@ -148,14 +148,6 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'irreversible_data' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'blocks' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_multisig' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations' );
-
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'irreversible_data' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'blocks' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions' );
@@ -167,6 +159,24 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.disable_fk_of_irreversible()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'irreversible_data' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'blocks' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_multisig' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations' );
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.enable_indexes_of_irreversible()
     RETURNS void
     LANGUAGE plpgsql
@@ -174,14 +184,24 @@ CREATE OR REPLACE FUNCTION hive.enable_indexes_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.restore_indexes_constraints( 'hive.blocks' );
-    PERFORM hive.restore_indexes_constraints( 'hive.transactions' );
-    PERFORM hive.restore_indexes_constraints( 'hive.transactions_multisig' );
-    PERFORM hive.restore_indexes_constraints( 'hive.operations' );
-    PERFORM hive.restore_indexes_constraints( 'hive.accounts' );
-    PERFORM hive.restore_indexes_constraints( 'hive.account_operations' );
-    PERFORM hive.restore_indexes_constraints( 'hive.irreversible_data' );
+    PERFORM hive.restore_indexes( 'hive.blocks' );
+    PERFORM hive.restore_indexes( 'hive.transactions' );
+    PERFORM hive.restore_indexes( 'hive.transactions_multisig' );
+    PERFORM hive.restore_indexes( 'hive.operations' );
+    PERFORM hive.restore_indexes( 'hive.accounts' );
+    PERFORM hive.restore_indexes( 'hive.account_operations' );
+    PERFORM hive.restore_indexes( 'hive.irreversible_data' );
+END;
+$BODY$
+;
 
+CREATE OR REPLACE FUNCTION hive.enable_fk_of_irreversible()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
     PERFORM hive.restore_foreign_keys( 'hive.blocks' );
     PERFORM hive.restore_foreign_keys( 'hive.transactions' );
     PERFORM hive.restore_foreign_keys( 'hive.transactions_multisig' );
@@ -224,12 +244,12 @@ CREATE OR REPLACE FUNCTION hive.enable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.restore_indexes_constraints( 'hive.blocks_reversible' );
-    PERFORM hive.restore_indexes_constraints( 'hive.transactions_reversible' );
-    PERFORM hive.restore_indexes_constraints( 'hive.transactions_multisig_reversible' );
-    PERFORM hive.restore_indexes_constraints( 'hive.operations_reversible' );
-    PERFORM hive.restore_indexes_constraints( 'hive.accounts_reversible' );
-    PERFORM hive.restore_indexes_constraints( 'hive.account_operations_reversible' );
+    PERFORM hive.restore_indexes( 'hive.blocks_reversible' );
+    PERFORM hive.restore_indexes( 'hive.transactions_reversible' );
+    PERFORM hive.restore_indexes( 'hive.transactions_multisig_reversible' );
+    PERFORM hive.restore_indexes( 'hive.operations_reversible' );
+    PERFORM hive.restore_indexes( 'hive.accounts_reversible' );
+    PERFORM hive.restore_indexes( 'hive.account_operations_reversible' );
 
     PERFORM hive.restore_foreign_keys( 'hive.blocks_reversible' );
     PERFORM hive.restore_foreign_keys( 'hive.transactions_reversible' );

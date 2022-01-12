@@ -81,3 +81,16 @@ In each mode of indexation (serialization), there is a different combination of 
 - **p2_psync** : p2p_flush_trigger + reindex_data_dumper
 - **reindex** : reindex_flush_trigger + reindex_data_dumper
 - **live** : live_flush_trigger + livesync_data_dumper
+
+#### Indexes and Foreign Keys
+Idexes are very important to performance of the SQL queries, but they add significant overhead for inserting new rows to tables.
+Whole process of syncing blocks to HAF is a process of massively inserting new rows into SQL tables, so good managment of indexes is very important.
+Indexes and constrains are enabled or disabled depending on synchronization state:
+- **p2_psync** : indexes are enabled, FK are disabled
+        <p>idexes do not limit the performance of the sync (network connection limits it) so they may stay enabled.
+        Because reindex dumper is used then FK constraints may be violated during sync, so FK are disabled
+- **reindex** : indexes are disabled, FK are disabled
+        <p>Idexes drasicly slow down reindex process and have to be disabled, no indexes means also no FK.
+- **live** : indexes are enabled, FK are enabled
+        <p>Blocks are inserting for every 3s, so inserting speed is not important, instead queries performance is crucial
+        because tha applications need it during its normal work.

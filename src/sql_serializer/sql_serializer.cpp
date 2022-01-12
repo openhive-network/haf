@@ -193,12 +193,13 @@ using chain::reindex_notification;
             , uint32_t _psql_operations_threads_number
             , uint32_t _psql_transactions_threads_number
             , uint32_t _psql_account_operations_threads_number
+            , uint32_t _psql_index_threshold
           )
           : _indexation_state( _main_plugin, _chain_db, url,
-                                  [this](){ switch_db_items(true); },
                                  _psql_transactions_threads_number,
                                  _psql_operations_threads_number,
-                                 _psql_account_operations_threads_number
+                                 _psql_account_operations_threads_number,
+                                 _psql_index_threshold
                                  ),
               db_url{url},
               chain_db{_chain_db},
@@ -290,86 +291,6 @@ using chain::reindex_notification;
               return function;
           }
 
-          std::unique_ptr<queries_commit_data_processor> switch_db_items(bool mode, const std::string& sql_function_call, const std::string& objects_name ) const
-          {
-            ilog("${mode} ${objects_name}...", ("objects_name", objects_name )("mode", ( mode ? "Creating" : "Dropping" ) ) );
-
-            std::string query = std::string("SELECT ") + sql_function_call + ";";
-            std::string description = "Query processor: `" + query + "'";
-            auto processor=std::make_unique< queries_commit_data_processor >(db_url, description, [query, &objects_name, mode, description](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
-                          {
-                            ilog("Attempting to execute query: `${query}`...", ("query", query ) );
-                            const auto start_time = fc::time_point::now();
-                            tx.exec( query );
-                            ilog(
-                              "${d} ${mode} of ${mod_type} done in ${time} ms",
-                              ("d", description)("mode", (mode ? "Creating" : "Saving and dropping")) ("mod_type", objects_name) ("time", (fc::time_point::now() - start_time).count() / 1000.0 )
-                            );
-                            ilog("The ${objects_name} have been ${mode}...", ("objects_name", objects_name )("mode", ( mode ? "created" : "dropped" ) ) );
-                            return data_processing_status();
-                          } , nullptr);
-
-            processor->trigger(data_processor::data_chunk_ptr(), 0);
-            return processor;
-          }
-
-          void switch_db_items( bool create ) const
-          {
-            if( psql_block_number == 0 || ( psql_block_number + psql_index_threshold <= head_block_number ) )
-            {
-              ilog("Switching indexes and constraints is allowed: psql block number: `${pbn}` psql index threshold: `${pit}` head block number: `${hbn}` ...",
-              ("pbn", psql_block_number)("pit", psql_index_threshold)("hbn", head_block_number));
-
-              if(create)
-              {
-                auto restore_blocks_idxs = switch_db_items( create, "hive.restore_indexes_constraints( 'hive.blocks' )", "enable indexes" );
-                auto restore_irreversible_idxs = switch_db_items( create, "hive.restore_indexes_constraints( 'hive.irreversible_data' )", "enable indexes" );
-                auto restore_transactions_idxs = switch_db_items( create, "hive.restore_indexes_constraints( 'hive.transactions' )", "enable indexes" );
-                auto restore_transactions_sigs_idxs = switch_db_items( create, "hive.restore_indexes_constraints( 'hive.transactions_multisig' )", "enable indexes" );
-                auto restore_operations_idxs = switch_db_items( create, "hive.restore_indexes_constraints( 'hive.operations' )", "enable indexes" );
-                auto restore_accounts_idxs = switch_db_items( create, "hive.restore_indexes_constraints( 'hive.accounts' )", "enable indexes" );
-                auto restore_account_operations_idxs = switch_db_items( create, "hive.restore_indexes_constraints( 'hive.account_operations' )", "enable indexes" );
-                restore_blocks_idxs->join();
-                restore_irreversible_idxs->join();
-                restore_transactions_idxs->join();
-                restore_transactions_sigs_idxs->join();
-                restore_operations_idxs->join();
-                restore_account_operations_idxs->join();
-                restore_accounts_idxs->join();
-
-                ilog( "All irreversible blocks tables indexes are re-created" );
-
-                auto restore_blocks_fks = switch_db_items( create, "hive.restore_foreign_keys( 'hive.blocks' )", "enable indexes" );
-                auto restore_irreversible_fks = switch_db_items( create, "hive.restore_foreign_keys( 'hive.irreversible_data' )", "enable indexes" );
-                auto restore_transactions_fks = switch_db_items( create, "hive.restore_foreign_keys( 'hive.transactions' )", "enable indexes" );
-                auto restore_transactions_sigs_fks = switch_db_items( create, "hive.restore_foreign_keys( 'hive.transactions_multisig' )", "enable indexes" );
-                auto restore_operations_fks = switch_db_items( create, "hive.restore_foreign_keys( 'hive.operations' )", "enable indexes" );
-                auto restore_accounts_fks = switch_db_items( create, "hive.restore_foreign_keys( 'hive.accounts' )", "enable indexes" );
-                auto restore_account_operations_fks = switch_db_items( create, "hive.restore_foreign_keys( 'hive.account_operations' )", "enable indexes" );
-                restore_blocks_fks->join();
-                restore_irreversible_fks->join();
-                restore_transactions_fks->join();
-                restore_transactions_sigs_fks->join();
-                restore_operations_fks->join();
-                restore_accounts_fks->join();
-                restore_account_operations_fks->join();
-
-                ilog( "All irreversible blocks tables foreighn keys are re-created" );
-              }
-              else
-              {
-                auto processor = switch_db_items(create, "hive.disable_indexes_of_irreversible()", "disable indexes" );
-                processor->join();
-                ilog( "All irreversible blocks tables indexes and foreighn keys are dropped" );
-              }
-            }
-            else
-            {
-              ilog("Switching indexes and constraints isn't allowed: psql block number: `${pbn}` psql index threshold: `${pit}` head block number: `${hbn}` ...",
-              ("pbn", psql_block_number)("pit", psql_index_threshold)("hbn", head_block_number));
-            }
-          }
-
           void init_database(bool freshDb, uint32_t max_block_number )
           {
             head_block_number = max_block_number;
@@ -389,8 +310,6 @@ using chain::reindex_notification;
               processor.trigger( nullptr, 0 );
               processor.join();
             }
-
-            switch_db_items( false/*mode*/ );
           }
 
           void inform_hfm_about_starting(hive::chain::database& _chaindb) {
@@ -686,7 +605,7 @@ void sql_serializer_plugin_impl::on_pre_reindex(const reindex_notification& note
   if(__on_pre_apply_block_con_initialization.connected())
     chain::util::disconnect_signal(__on_pre_apply_block_con_initialization);
 
-  _indexation_state.on_pre_reindex( *currently_caching_data, _last_block_num );
+  _indexation_state.on_pre_reindex( *currently_caching_data, _last_block_num, ( note.max_block_number - _last_block_num ) );
   ilog("Leaving a reindex init...");
 }
 
@@ -773,6 +692,7 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
           , options["psql-operations-threads-number"].as<uint32_t>()
           , options["psql-transactions-threads-number"].as<uint32_t>()
           , options["psql-account-operations-threads-number"].as<uint32_t>()
+          , options["psql-index-threshold"].as<uint32_t>()
         );
 
         // settings

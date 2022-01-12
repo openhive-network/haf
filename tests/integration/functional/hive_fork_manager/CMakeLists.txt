@@ -153,6 +153,7 @@ ADD_SQL_FUNCTIONAL_TESTS( hived_api/disable_indexes_reversible_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( hived_api/enable_indexes_reversible_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( hived_api/mark_irreversible_dirty_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( hived_api/mark_irreversible_not_dirty_test.sql )
+ADD_SQL_FUNCTIONAL_TESTS( hived_api/enable_fk_test.sql )
 
 ADD_SQL_FUNCTIONAL_TESTS( app_api/create_context_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( app_api/app_context_remove_test.sql )

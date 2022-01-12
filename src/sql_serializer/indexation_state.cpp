@@ -128,19 +128,19 @@ indexation_state::indexation_state(
     const sql_serializer_plugin& main_plugin
   , hive::chain::database& chain_db
   , std::string db_url
-  , enable_indexes_callback enable_indexes
   , uint32_t psql_transactions_threads_number
   , uint32_t psql_operations_threads_number
   , uint32_t psql_account_operations_threads_number
+  , uint32_t psql_index_threshold
 )
   : _main_plugin( main_plugin )
   , _chain_db( chain_db )
-  , _db_url( std::move( db_url ) )
+  , _db_url( db_url )
   , _psql_transactions_threads_number( psql_transactions_threads_number )
   , _psql_operations_threads_number( psql_operations_threads_number )
   , _psql_account_operations_threads_number( psql_account_operations_threads_number )
   , _irreversible_block_num( NO_IRREVERSIBLE_BLOCK )
-  , _enable_indexes_callback( enable_indexes )
+  , _indexes_controler( db_url, psql_index_threshold )
 {
   cached_data_t empty_data{0};
   update_state( INDEXATION::P2P, empty_data, 0 );
@@ -152,25 +152,29 @@ indexation_state::indexation_state(
 }
 
 void
-indexation_state::on_pre_reindex( cached_data_t& cached_data, int last_block_num ) {
+indexation_state::on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t number_of_blocks_to_add ) {
   FC_ASSERT( _state == INDEXATION::P2P, "REINDEX state is only possible after P2P" );
-  update_state( INDEXATION::REINDEX, cached_data, last_block_num );
+  update_state( INDEXATION::REINDEX, cached_data, last_block_num, number_of_blocks_to_add );
 }
 
 void
 indexation_state::on_post_reindex( cached_data_t& cached_data, int last_block_num ) {
   FC_ASSERT( _state == INDEXATION::REINDEX, "Only REINDEX can be set when call on_post_reindex" );
-  update_state( INDEXATION::P2P, cached_data, last_block_num );
+  update_state( INDEXATION::P2P, cached_data, last_block_num, UNKNOWN );
 }
 
 void
 indexation_state::on_end_of_syncing( cached_data_t& cached_data, int last_block_num ) {
   FC_ASSERT( _state == INDEXATION::P2P, "Only P2P can be set before end of syncing" );
-  update_state( INDEXATION::LIVE, cached_data, last_block_num );
+  update_state( INDEXATION::LIVE, cached_data, last_block_num, UNKNOWN );
 }
 
 void
-indexation_state::update_state( INDEXATION state, cached_data_t& cached_data, uint32_t last_block_num  ) {
+indexation_state::update_state(
+    INDEXATION state
+  , cached_data_t& cached_data
+  , uint32_t last_block_num, uint32_t number_of_blocks_to_add
+) {
   FC_ASSERT( _state != INDEXATION::LIVE, "Move from LIVE state is illegal" );
   switch ( state ) {
     case INDEXATION::P2P:
@@ -178,6 +182,11 @@ indexation_state::update_state( INDEXATION state, cached_data_t& cached_data, ui
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
+      if ( _state == INDEXATION::REINDEX ) {
+        // indexes are only enabled when reindex is finished to do not enable it and then disable in the next stage
+        _indexes_controler.enable_indexes();
+      }
+      _indexes_controler.disable_constraints();
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , _psql_operations_threads_number
@@ -201,6 +210,8 @@ indexation_state::update_state( INDEXATION state, cached_data_t& cached_data, ui
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
+      _indexes_controler.disable_indexes_depends_on_blocks( number_of_blocks_to_add );
+      _indexes_controler.disable_constraints();
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , _psql_operations_threads_number
@@ -222,6 +233,8 @@ indexation_state::update_state( INDEXATION state, cached_data_t& cached_data, ui
         force_trigger_flush_with_all_data( irreversible_cached_data, _irreversible_block_num );
         _trigger.reset();
         _dumper.reset();
+        _indexes_controler.enable_indexes();
+        _indexes_controler.enable_constrains();
         _dumper = std::make_unique< livesync_data_dumper >(
           _db_url
           , _main_plugin
@@ -236,7 +249,6 @@ indexation_state::update_state( INDEXATION state, cached_data_t& cached_data, ui
           }
           );
         flush_all_data_to_reversible( cached_data );
-        enable_irreversible_indexes();
         ilog("Entered LIVE sync");
         break;
       }
@@ -301,11 +313,6 @@ indexation_state::on_switch_fork( cached_data_t& cached_data, uint32_t block_num
   erase_items_greater_than_block( cached_data.accounts, block_num );
   erase_items_greater_than_block( cached_data.account_operations, block_num );
   ilog( "Cached reversible data removed" );
-}
-
-void
-indexation_state::enable_irreversible_indexes() {
-  _enable_indexes_callback();
 }
 
 }}} // namespace hive{ namespace plugins{ namespace sql_serializer

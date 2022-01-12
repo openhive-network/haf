@@ -73,7 +73,7 @@ GRANT EXECUTE ON FUNCTION
     , enable_indexes_of_irreversible()
     , hive.save_and_drop_indexes_constraints( in _schema TEXT, in _table TEXT )
     , hive.save_and_drop_indexes_foreign_keys( in _table_schema TEXT, in _table_name TEXT )
-    , hive.restore_indexes_constraints( in _table_name TEXT )
+    , hive.restore_indexes( in _table_name TEXT )
     , hive.restore_foreign_keys( in _table_name TEXT )
     , hive.copy_blocks_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
     , hive.copy_transactions_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
@@ -95,6 +95,9 @@ GRANT EXECUTE ON FUNCTION
     , hive.set_irreversible_dirty()
     , hive.set_irreversible_not_dirty()
     , hive.is_irreversible_dirty()
+    , hive.disable_fk_of_irreversible()
+    , hive.enable_fk_of_irreversible()
+    , hive.save_and_drop_constraints( in _table_schema TEXT, in _table_name TEXT )
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION

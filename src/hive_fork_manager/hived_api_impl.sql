@@ -279,6 +279,7 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
+    PERFORM hive.save_and_drop_constraints( _schema, _table );
 
     INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
@@ -335,13 +336,13 @@ BEGIN
           DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
         , 'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name || ' ADD CONSTRAINT ' || pgc.conname || ' ' || pg_get_constraintdef(pgc.oid) as command
-        , tc.constraint_type = 'PRIMARY KEY' OR tc.constraint_type = 'UNIQUE' as is_constraint
+        , FALSE as is_constraint
         , FALSE AS is_index
-        , tc.constraint_type = 'FOREIGN KEY' as is_foreign_key
+        , TRUE as is_foreign_key
     FROM pg_constraint pgc
     JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
     JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
-    WHERE tc.table_schema = _table_schema AND tc.table_name = _table_name;
+    WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name;
 
     OPEN __cursor FOR (
         SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
@@ -360,7 +361,45 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.restore_indexes_constraints( in _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.save_and_drop_constraints( in _table_schema TEXT, in _table_name TEXT )
+RETURNS VOID
+AS
+$function$
+DECLARE
+__command TEXT;
+__cursor REFCURSOR;
+BEGIN
+    INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    SELECT
+        DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
+        , _table_schema || '.' || _table_name as table_name
+        , 'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name || ' ADD CONSTRAINT ' || pgc.conname || ' ' || pg_get_constraintdef(pgc.oid) as command
+        , tc.constraint_type = 'PRIMARY KEY' OR tc.constraint_type = 'UNIQUE' as is_constraint
+        , FALSE AS is_index
+        , FALSE as is_foreign_key
+    FROM pg_constraint pgc
+        JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
+        JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
+    WHERE tc.constraint_type != 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name;
+
+    OPEN __cursor FOR (
+            SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
+            FROM hive.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
+        );
+
+        LOOP
+    FETCH __cursor INTO __command;
+                EXIT WHEN NOT FOUND;
+                EXECUTE __command;
+    END LOOP;
+
+        CLOSE __cursor;
+    END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT )
     RETURNS VOID
 AS
 $function$

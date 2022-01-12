@@ -6,7 +6,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    PERFORM hive.disable_indexes_of_irreversible();
+    PERFORM hive.disable_indexes_of_reversible();
 END;
 $BODY$
 ;
@@ -19,7 +19,7 @@ CREATE FUNCTION test_when()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.enable_indexes_of_irreversible();
+    PERFORM hive.enable_indexes_of_reversible();
 END;
 $BODY$
 ;

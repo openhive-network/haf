@@ -17,6 +17,7 @@ ADD_LIBRARY(
     string_data_processor.cpp
     indexation_state.cpp
     accounts_collector.cpp
+    indexes_controler.cpp
     ${HEADERS}
 )
 
