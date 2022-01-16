@@ -1,16 +1,20 @@
 # HIVE_FORK_MANAGER
-The fork manager is composed of SQL scripts to create a Postgres extension that provides an API that simplifies reverting application data when a fork switch occurs on the Hive blockchain.
+The fork manager is composed of SQL scripts to create a Postgres extension that provides an API that simplifies reverting app data when a fork switch occurs on the Hive blockchain.
 
 ## Installation
-It is possible to install the fork manager in two forms - as a regular Postgres extension or as a simple set of tables and functions.
+It is possible to install the fork manager in two forms - as a regular Postgres extension or as a simple set of tables and functions, but installation as an extension is recommended.
 
-### Install fork manager as an extension
-1. create somwhere on a filesystem directory `build` and change terminal directory to it
+### Install fork manager as a postgres extension
+1. Create a `build` directory somewhere and make it the current working directory.
 2. `cmake <path to root of the project psql_tools>`
 3. `make extension.hive_fork_manager`
 4. `make install`
 
-To start using the extension in a database, execute psql command: `CREATE EXTENSION hive_fork_manager CASCADE;`. The CASCADE phrase is needed, to automatically install extensions the hive_fork_manager depends on.
+To start using the extension in a new database, create a database and execute the psql command to install the extension:
+1. `createdb -O hive my_db_name`
+2. `psql -d my_db_name -c "CREATE EXTENSION hive_fork_manager CASCADE;"`
+The CASCADE option is needed to automatically install extensions that the hive_fork_manager depends on.
+
 
 ### Alternatively, you can manually execute the SQL scripts to directly install the fork manager
 The required ordering of the sql scripts is included in the cmake file [src/hive_fork_manager/CMakeLists.txt](./CMakeLists.txt).
@@ -19,73 +23,73 @@ Execute each script one-by-one with `psql` as in this example: `psql -d my_db_na
 ## Architecture
 All elements of the fork manager are placed in a schema called 'hive'.
 
-The fork manager is written using an "events source" architecture style. This means that during live sync, hived only schedules events (by writing to the database), and then applications process them at their own pace (by using fork manager API queries to get alerted whenever hived has modified the block data).
+The fork manager is written using an "events source" architecture style. This means that during live sync, hived only schedules new events (by writing block data to the database), and then HAF apps process them at their own pace (by using fork manager API queries to get alerted whenever hived has modified the block data).
 
 The fork manager is designed to work with [transaction isolation level](https://www.postgresql.org/docs/10/transaction-iso.html) `READ COMMITTED`, which is the default for PostgreSQL.
 
-The fork manager enables multiple Hive applications to use a single block database and process blocks completely independently of each other (applications do not need to place locks on the share blockchain data tables).
+The fork manager enables multiple Hive apps to use a single block database and process blocks completely independently of each other (apps do not need to place locks on the shared blockchain data tables).
 
-Hive block data is stored in two separated, but similar tables: irreversible and reversible blocks.
+Hive block data is stored in two separated, but similar tables: irreversible and reversible blocks. Whenever a block becomes irreversible, hived uses the hive_fork_manager api to signal that the associated data should be moved from the reversible tables to the irreversible tables.
 
-An application groups its tables into a named context. A context name can only be composed of alphanumerical characters and underscores. An application's context holds information about its processed events, blocks, and the fork which is now being processed by the application. These pieces of information
-are enough to automatically create views which combine irreversible and reversible blocks data seamlessly for application queries. The auto-constructed view names use the following template: 'hive.{context_name}_{blocks|transactions|multi_signatures|operations}_view'.
+A HAF app groups its tables into a named "context". A context name can only be composed of alphanumerical characters and underscores. An app's context holds information about its processed events, blocks, and the fork which is now being processed by the app. These pieces of information
+are enough to automatically create views which combine irreversible and reversible block data seamlessly for queries by the app. The auto-constructed view names use the following template: 'hive.{context_name}_{blocks|transactions|multi_signatures|operations}_view'.
 
-### Overview of the fork manager and its interactions with applications and hived
+### Overview of the fork manager and its interactions with hived and HAF apps
 ![alt text](./doc/evq_c3.png )
 
 ### Hived block-processing algorithm
 ![alt text](./doc/evq_hived_process_blocks.png)
 
 
-### Requirements for an application algorithm using the fork manager API
+### Requirements for an HAF app algorithm using the fork manager API
 ![alt text](./doc/evq_app_process_block.png)
 
-Only roles ( users ) which inherits from 'hive_applications_group' have access to 'The APP API', and only these roles allow
-applications to work with 'hive_fork_menager'
+Only roles ( users ) which inherits from 'hive_apps_group' have access to 'The App API', and only these roles allow apps to work with 'hive_fork_manager'
 
-Any application must first create a context, then create its tables which inherit from `hive.<context_name>`. The context is owned
-and can be accessed only by the role which created it.
+Any HAF app must first create a context, then create its tables which inherit from `hive.<context_name>`. The context is owned and can be accessed only by the role which created it.
 
-An application calls `hive.app_next_block` to get the next block number to process. If NULL was returned, an application must immediatly call `hive.app_next_block` again. Note: the application will automatically be blocked when it calls `hive.app_next_block` if there are no blocks to process. 
+A HAF app calls `hive.app_next_block` to get the next block number to process. If NULL was returned, the app must immediatly call `hive.app_next_block` again. Note: the app will automatically be blocked when it calls `hive.app_next_block` if there are no blocks to process. 
 
-When a range of block numbers is returned by app_next_block, the application may edit its own tables and use the appropriate snapshot of the blocks
-data by querying the 'hive.{context_name}_{ blocks | transactions | operations | transactions_multisig }' views. These view present a data snapshot for the first block in the returned block range. If the number of blocks in the returned range is large, then it may be more efficient for the application to do a "massive sync" instead of syncing block-by-block.
+When a range of block numbers is returned by app_next_block, the app may edit its own tables and use the appropriate snapshot of the blocks
+data by querying the 'hive.{context_name}_{ blocks | transactions | operations | transactions_multisig }' views. These view present a data snapshot for the first block in the returned block range. If the number of blocks in the returned range is large, then it may be more efficient for the app to do a "massive sync" instead of syncing block-by-block.
 
-To perform a massive sync, the application should detach the context, execute its sync algorithm using the block data, then reattach the context. This will eliminate the performance overhead associated with the  triggers installed by the fork manager that monitor changes to the application's tables.
+To perform a massive sync, the app should detach the context, execute its sync algorithm using the block data, then reattach the context. This will eliminate the performance overhead associated with the  triggers installed by the fork manager that monitor changes to the app's tables.
 
-There is possible that application will break during massive sync - in the detached state. In such case during restart the application has to
-check if its context is attached `hive.app_context_is_attached`, and if not then it has to attach it `hive.app_context_attach`. To attach the context
-the application has to know num of last processed block, to save and get it there are functions `app_context_detached_save_block_num` and 'app_context_detached_get_block_num'. The
-functions may be used only in the datached state, otherwise they will throw exceptions.
+It is possible that an app's operation will be stopped for some reason during a massive sync (i.e. when its context is detached). To deal with this potential scenario, when an app is restarted it should check if its context is attached using `hive.app_context_is_attached`, and if not then it needs to attach again using `hive.app_context_attach`.
 
-### Non-forking applications
-It is expected that some applications will only want to process irreversible blocks, and therefore don't require the overhead associating with fork switching. Such an application should not register any table in its context. A context without registered tables (aka an 'irreversible context') will traverse only irreversible block data. This means that calls to `hive.app_next_block` will return only the range of irreversible blocks which are not already processed or NULL. Similarly, the set of views for an irreversible context only deliver a snapshot of irreversible data up to the block already processed by the application.
+To attach the context, the app has to know the block number of the last processed block. To save and get it, use: `app_context_detached_save_block_num` and `app_context_detached_get_block_num`. These functions may only be used in the datached state, otherwise they will throw exceptions.
 
-In summary, a non-forking application is coded in much the same way as a forking application (making it relatively easy to change between these two modes), but a non-forking app does not register its tables with its context and it is only served up information about irreversible blocks.
+### Non-forking apps
+It is expected that some apps will only want to process blocks after they become irreversible. 
 
-### Sharing tables with other applications
-If an application wants to expose some of its tables for reading by other applications, then it is enaugh to grant
-SELECT privilege on the tables to hive_applications_group.
+For example, some apps perform irreversible external operations such as a transfer of funds on a blockchain which could result in a financial loss to the app's operator or users in the case of a blockchain fork. One of the most common examples of such an app would be be a transaction scanner used by an exchange to detect cryptocurrency deposits. 
+
+Other apps require very high performance, and don't want to incur the extra performance overhead associated with maintaining the data required to rollback blocks in the case of a fork. In such case, it may make sense to trade off the responsiveness of presenting the most recent blockchain data in order to create an app that can respond to api queries faster and support more users.
+
+An "irreversible-only" app of this sort should avoid registering any of its tables in its context. HAF is designed so that any context without registered any tables (aka an 'irreversible context') will only traverse irreversible block data. This means that calls to `hive.app_next_block` will return only the range of irreversible blocks which are not already processed or NULL (blocks that are not yet marked as irreversible will be excluded). Similarly, the set of views for an irreversible context only deliver a snapshot of irreversible data up to the block already processed by the app.
+
+In summary, a non-forking HAF appl is coded in much the same way as a forking app (making it relatively easy to change the app's code to operate in either of these two modes), but a non-forking app does not register its tables with its context, and it is only served up information about irreversible blocks.
+
+### Sharing tables with other HAF apps
+If an app wants to expose some of its tables for reading by other apps, then it  only needs to grant the SELECT privilege on such tables to hive_apps_group.
 ```
 GRANT SELECT ON my_table TO hive_applications_group;
 ```
-:warning: An application which uses tables exposed by other application must be written taking into account that applications
-works at different speed, and they may contain data computed for different forks and blocks range.
+:warning: An app which uses tables exposed by another app must be written taking into account that apps work at different speeds, and they may contain data computed for different forks and block ranges.
 
 ### Important notice about irreversible data
-:warning: **Although reversible and irreversible block tables are directly visible to aplications, these tables should not be queried directly. It is expected that the structure of the underlying tables may change in the future, but the structure of a context's views will likely stay constant. This means that the applications which directly read the tables instead of the views may need to be refactored in the future to use newer versions of the fork manager.**
+:warning: **Although reversible and irreversible block tables are directly visible to apps, these tables should not be queried directly. It is expected that the structure of the underlying tables may change in the future, but the structure of a context's views will likely stay constant. This means that any app which ignores this warning and directly reads the blockchain tables instead of the views may need to be refactored in the future to use newer versions of the fork manager.**
 
-### Examples of the application
-Two application examples written in Python3 were prapared. Both programs use `sqlalchemy` package as a databae engine. Programs
-are very simple, both of them collect number of transaction per day - they prepare histograms in a table named `trx_histogram`.
-One of the program is a non-forking application - it operates only on irreversible blocks and second application utilizes
-support for blockchain forks. Applications are available here:
-- forking application [doc/examples/hive_fork_app.py](./doc/examples/hive_fork_app.py)
-- non-forking application [doc/examples/hive_non_fork_app.py](./doc/examples/hive_non_fork_app.py)
-- forking application with a state provider [doc/examples/hive_accounts_state_provider.py](./doc/examples/hive_accounts_state_provider.py)
+### Examples of the app
+Two app examples written in Python3 were prapared. Both programs use `sqlalchemy` package as a database engine. The apps are very simple: both of them collect the number of transaction per day and prepare histograms in a table named `trx_histogram`.
 
-Actually both programs are different only in lines which create a 'trx_histogram' table - the table in forking application
-inherits from`hive.trx_histogram` to register it into the context 'trx_histogram'. Look at the differences in diff format:
+One is a non-forking app: it only operates on blocks after they become irreversible. The second app works on the most recent blocks in the blockchain and supports rolling back its data whenever there is a blockchain fork.These example apps are here:
+- forking app [doc/examples/hive_fork_app.py](./doc/examples/hive_fork_app.py)
+- non-forking app [doc/examples/hive_non_fork_app.py](./doc/examples/hive_non_fork_app.py)
+- forking app with a state provider [doc/examples/hive_accounts_state_provider.py](./doc/examples/hive_accounts_state_provider.py)
+
+The forking and non-forking app are very similar, the only difference is in the lines which create a 'trx_histogram' table: the table in the forking app
+inherits from`hive.trx_histogram` to register it into the context 'trx_histogram'. Here is a diff of the two apps:
 ```diff
 --- hive_non_fork_app.py
 +++ hive_fork_app.py
@@ -101,13 +105,12 @@ inherits from`hive.trx_histogram` to register it into the context 'trx_histogram
 +        db_connection.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE )
 ```
 
-To switch from non-forking application to forking one all the applications' tables have to be registered in contexts using
-'hive.app_register_table' method.
+To switch from non-forking app to a forking one, all the app's tables have to be registered in contexts using the `hive.app_register_table` method.
 
-### Applications without their own tables
-It turned out that some applications may not require to collect data into their own specific tables, because tables of the Hive Fork Manager
-contain all the data. Those applications do not require to create contexts and implement "the Application algorithm".
-It is enaught to read the data for the current HEAD BLOCK using the views:
+### apps without their own tables
+It turns out that some apps may not need to collect data into their own specific tables, because tables of the Hive Fork Manager
+contain all the data the need. One example of such an app is the `HAF Account History (aka hafah)` app. Such apps do not need to create contexts and implement "the HAF app algorithm".
+Instead such apps can just read the data for the current HEAD BLOCK using the views:
 * hive.account_operations_view
 * hive.accounts_view
 * hive.blocks_view
@@ -115,39 +118,38 @@ It is enaught to read the data for the current HEAD BLOCK using the views:
 * hive.operations_view
 * hive.transactions_multisig_view
 
-#### It is possible to get only irreversible blocks data
-The applications without their own tables may be interested only in irreversible blocks data. The views listed above return
-both reversible and irreversible blocks, and there is no method to distinguish which block is reversible and which is not. To get
-access only to irreversible block tha pplication has to:
+#### It is possible to get only irreversible block data
+The apps without their own tables may be interested only in data from blocks that have become irreversible. 
+
+The views listed above return both reversible and irreversible blocks, and there is no method to distinguish which block is reversible and which is not using those views. To get access only to irreversible block an app has to:
 1. create its own context
-2. immediatly detach the context
-3. use the context's view -  they will return only all irreversible blocks up to the head block
+2. immediately detach the context
+3. use the context's view -  these views will only return the irreversible blocks up to the head block.
 
 ## Shared lib
-There are some functions that can be done efficiently only with low-level code as C/C++. Moreover, there is a need to
-get some code already working in hived, and execute it by Hive Fork Manager or its applications. One example is a parsing operation JSON to get the list
-of accounts impacted by the operation. Such functionality was already implemented in hived and there is no sense to implement its copy.
+There are some functions that can be done efficiently only with low-level code such as C/C++. Moreover, sometimes there is a need to
+reuse some code already working in hived, and execute it inside Hive Fork Manager or a HAF app. One example is parsing an operation's JSON to get the list
+of accounts impacted by the operation. Such functionality was already implemented in hived and there is no sense to implement this code again in a new language.
 The folder 'shared_lib' contains an implementation of a shared library which is loaded and used by Hive Fork Manger extension.
-The applications may call functions from this library with SQL interface prepared by the extension.
+The apps may call functions from this library with the SQL interface prepared by the extension.
 
-## States Providers Library
-There are examples of applications that are generic and theirs tables could be used by a wide range of more specific applications.
-The tables present in a more conviniet way some part of the blockchain state included in blocks data.
-Some of the common applications are embedded inside hive_fork_manager in form of state providers: tables definitions and code which fill them.
+## State Providers Library
+There are examples of HAF apps that generated generic data such that their tables could be used by a wide range of other HAF apps.
+The tables present in a more convenient way some part of the blockchain state included in the original block data.
+Some of the common apps are embedded inside hive_fork_manager in the form of state providers: tables definitions and the code which fill these tables with data.
 
 ### Basic concept
-A state provider is a SQL code that contains tables definitions and methods which fill that tables. A user's application
-may import a provider with SQL command `hive.app_state_provider_import( _state_name, _context )`. During import, new tables
-are created and registered in the application's context. The application needs to call `hive.app_state_provider_import( range_of_blocks )`
-to update tables created by imported states providers.
-The import of 'state providers' must be called by the application before any call of its massive sync or hive.app_next_block. Repeating
-the same import does nothing.
+A state provider is a SQL code that contains tables definitions and methods which fill those tables. An app may import a state provider with the SQL command `hive.app_state_provider_import( _state_name, _context )`. 
+
+During import, new tables are created and registered in the app's context. Next, during block processing, the app needs to call `hive.app_state_provider_import( range_of_blocks )` to update the tables created by imported states providers.
+
+The import of 'state providers' must be done by an app before any call of its massive sync or hive.app_next_block (in other words, the state providers must be imported before any blocks are processed). Repeating an import more than once does nothing.
 
 ### A state provider structure
-Each state provider is a SQL file placed in `state_providers' folder and contains functions:
+Each state provider is a SQL file placed in the `state_providers` folder and defines these functions:
 
 * `hive.start_provider_<provider_name>( context )`
-  The function gests application context name and creates tables to hold the state.
+  The function gets app context name and creates tables to hold the state.
   The tables name have format `hive.<context_name>_<base table_name>` and returns list of created tables names.
 
 * `hive.update_state_provider_<provider_name>( first_block, last_block, context )`
@@ -158,25 +160,23 @@ Each state provider is a SQL file placed in `state_providers' folder and contain
 
 ### How to add a new state provider
 The template for creating a new state provider is here: [state_providers/state_provider.template](state_providers/state_provider.template).
-You may copy it, change extension to .sql add to the CMakeLists.txt and change in the new file '<provider_name>' to a new state provider name.
-After this the enum `hive.state_providers` has to be extended for the new provider name.
+You may copy the template, change the file extension to .sql,  add it to the CMakeLists.txt, and change '<provider_name>' in the new file to a new state provider name.
+After this, the enum `hive.state_providers` has to be extended with the new provider name.
 
-### State provider and forks
-When the context is a non-forking one, then the tables are not registered to rewind during a fork servicing. When the context
-is forking one then the tables are registered in the forking mechanism and will be rewind during forks. When the context
-is changing from non-forking to forking one, then the provider's tables being also registered.
+### State providers and forks
+When the context is a non-forking one, then the state provider's tables are not registered to be rewound during a fork servicing. When the context
+is a forking one, the state provider's tables are registered with the forking mechanism and will be rewound during forks, just like the app's tables. When the context is changing from a non-forking to a forking one, then the provider's tables are registered to be rewound in the case of a fork.
 
 ### State providers API
-Applicat can import, update and drop state providers with functions:
+Apps can import, update and drop state providers with these functions:
 * `hive.app_state_provider_import( state_provider, _context )`
 * `hive.app_state_providers_update( _first_block, _last_block, _context )`
 * `hive.app_state_provider_drop( state_provider, _context )`
 
 
-### Why we introduced The States Providers instead of preparing regular applications?
-The problem is that applications work with different speeds and so they work on data snapshots from different blockchain times.
-If we would deliver regular applications, then all user applications won't be synchronized with delivered applications.
-The user's applications may read data from prepared applications which are not fit to theirs states.
+### Why we introduced States Providers instead of delivering regular apps?
+The problem is that HAF apps work with different speeds, so they work on data snapshots from different blockchain times.
+If we delivered state providers as regular apps, then all user apps won't be synchronized with the delivered apps, and the user's apps might read data from prepared apps which is not synced to their own blockchain time.
 
 ### Why we introduced The States Providers instead of extending the set of reversible/irreversible tables?
 There is one big difference between reversible data and other tables - reversible data are only inserted or removed ( whole rows are inserted or removed )
@@ -184,23 +184,24 @@ There is one big difference between reversible data and other tables - reversibl
 that the rows are only inserted or removed when a fork is serviced. 
 
 ### Disadvantages
-Each application which imports any 'state provider' got the tables exclusively for its PostgreSQL Role. A lot of data may be
-redundant in the case when a few applications use the same state provider because each of them has its own private instance of its tables.
+Each app which imports any 'state provider' gets the tables exclusively for its PostgreSQL Role. A lot of data may be
+redundant in the case when a few apps use the same state provider because each of them has its own private instance of its tables.
 It may look redundant for some cases, but indeed there is no other method to guarantee consistency between the provider's
-state and other application's tables. Even small differences between head blocks of two applications may result in large differences between contents of their provider's tables
+state and other app's tables. Even small differences between head blocks of two apps may result in large differences between contents of their provider's tables
 
 ## Important implementation details
 ### REVERSIBLE AND IRREVERSIBLE BLOCKS
 IRREVERSIBLE BLOCKS is a set of database tables for blocks which the blockchain considers irreversible - they will never change (i.e. they can no longer be reverted by a fork switch).
-These tables are defined in [src/hive_fork_manager/irreversible_blocks.sql](./irreversible_blocks.sql). Hived may push massivly blocs data into irreversible tables and the date may be inconsistant.
-Hived pushe MASSIVE_SYNC_EVENT and NEW_IRREVERSIBLE_EVENT to mark the block num which is consistend and can be read directly from the irreversible tables.
+These tables are defined in [src/hive_fork_manager/irreversible_blocks.sql](./irreversible_blocks.sql). Hived may push massivly block data into irreversible tables and the data may be temporarily inconsistant.
+
+Hived pushes MASSIVE_SYNC_EVENT and NEW_IRREVERSIBLE_EVENT to mark the block number for which data is consistent so that it can be read directly from the irreversible tables.
 
 REVERSIBLE BLOCKS is a set of database tables for blocks which could still be reverted by a fork switch.
 These tables are defined in [src/hive_fork_manager/reversible_blocks.sql](./reversible_blocks.sql)
 
-Each application should work on a snapshot of block information, which is a combination of reversible and irreversible information based on the current status of the application's context (status being the state of the application's last processed block and the associated fork for that block).
+Each app should work on a snapshot of block information, which is a combination of reversible and irreversible information based on the current status of the app's context (status being the state of the app's last processed block and the associated fork for that block).
 
-Because applications may work at different speeds, the fork manager has to hold reversible blocks information for every block and fork not already processed by any of the applications. This requires an efficient data structure. Fortunately the solution is quite simple - it is enough to add
+Because apps may work at different speeds, the fork manager has to hold reversible blocks information for every block and fork not already processed by any of the apps. This requires an efficient data structure. Fortunately the solution is quite simple - it is enough to add
 a fork id to the block data inserted by hived to the irreversible blocks table. The fork manager manages forks ids - 
 information about each fork is stored in the hive.fork table. When 'hived' pushes a new block with a call to `hive.push_block`, the fork manager adds information about the current fork to a new reversible data row. Reversible data tables are presented in a generalised form in the example below:
 
@@ -214,7 +215,7 @@ information about each fork is stored in the hive.fork table. When 'hived' pushe
 |    4     |    2    |  DATA_42  |
 |    4     |    3    |  DATA_43  |
 
-If an application is working on fork=2 and block_num=3 (this information is held by `hive.contexts` ), then its snapshot of data for the example above is:
+If an app is working on fork=2 and block_num=3 (this information is held by `hive.contexts` ), then its snapshot of data for the example above is:
 
 | block_num| fork id | data      |
 |----------|---------|-----------|
@@ -222,7 +223,7 @@ If an application is working on fork=2 and block_num=3 (this information is held
 |    2     |    2    |  DATA_22  |
 |    3     |    2    |  DATA_32  |
 
-This means that the snaphot of data for an application with context `app_context` can be obtained by filtering  blocks and forks with a relativly simple SQL query like:
+This means that the snaphot of data for an app with context `app_context` can be obtained by filtering blocks and forks with a relativly simple SQL query like:
 ```
 SELECT
       DISTINCT ON (block_num) block_num
@@ -233,7 +234,7 @@ JOIN hive.contexts hc ON fork_id <= hc.fork_id AND block_num <= hc.current_block
 WHERE hc.name = 'app_context'
 ORDER BY block_num DESC, fork_id DESC
 ```
-Remark: The fork_id is not a part of the real blockchain data, it is an artifact created by the fork manager, and may differ across instances of an application running in different databases.
+Remark: The fork_id is not a part of the real blockchain data, it is an artifact created by the fork manager, and may differ across instances of an app running in different HAF databases.
 
 ### EVENTS QUEUE
 The events queue is a table defined in [src/hive_fork_manager/events_queue.sql](./events_queue.sql). Each row in the table represents an event. Each event is defined with its **id**, **type** and BIGINT **block_num** value. The `block_num` value has different meaning for different types of events:
@@ -245,53 +246,49 @@ The events queue is a table defined in [src/hive_fork_manager/events_queue.sql](
 | NEW_IRREVERSIBLE | number of the latest irreversible block                     |
 | MASSIVE_SYNC     | the highest number of blocks pushed massively by hived node |
 
-Events are ordered by the **id**, thus events that happen earlier have lower ids than subsequent events. The events queue is traversed by an application when it calls `hive.app_next_block` - the lowest event from all events with an id higher than the `event_id` stored in the application's context is chosen and processed, and at the end the context's 'event_id' is updated.
+Events are ordered by the **id**, thus events that happen earlier have lower ids than subsequent events. The events queue is traversed by an app when it calls `hive.app_next_block` - the lowest event from all events with an id higher than the `event_id` stored in the app's context is chosen and processed, and at the end the context's 'event_id' is updated.
 
 #### Optimizaton of forks
-There are situations when an application doesn't have to traverse the events queue and process all the events. When there are `BACK_FROM_FORK` events ahead of a context's `event_id`, then the application can ignore all events before the fork with lower `block_num` (because all such blocks have been reverted by a fork switch). Here is a diagram to show this situation:
+There are situations when an app doesn't have to traverse the events queue and process all the events. When there are `BACK_FROM_FORK` events ahead of a context's `event_id`, then the app can ignore all events before the fork with lower `block_num` (because all such blocks have been reverted by a fork switch). Here is a diagram to show this situation:
 ![](./doc/evq_events_optimization.png)
 
 The optimization above is implemented in [src/hive_fork_manager/app_api_impl.sql](./app_api_impl.sql) in function `hive.squash_events` (which is automatically called by the `hive.app_next_block` function).
 
 #### Optimizations of MASSIVE_SYNC_EVENTs
 MASSIVE_SYNC_EVENTs are squashed - it means that the context is moved to the newest MASSIVE_SYNC_EVENT. MASSIVE_SYNC_EVENTS ensures that older blocks
-are irreversible, so there is no sens to process lowest events
+are irreversible, so there is no sense to process lowest events.
 
 #### Removing obsolete events
-Once a block becomes irreversible, events related to that block which have been processed by all contexts (applications) are no longer needed by applications. These events are automatcially removed from the events queue by the function `hive.set_irreversible` (this function is periodically called by hived when the last irreversible block number changes).
+Once a block becomes irreversible, events related to that block which have been processed by all contexts (apps) are no longer needed by apps. These events are automatcially removed from the events queue by the function `hive.set_irreversible` (this function is periodically called by hived when the last irreversible block number changes).
 
 
 ### CONTEXT REWIND
-Context_rewind is the part of the fork manager which is responsible for registering application tables and the saving/rewinding  operation on the tables to handle fork switching.
+Context_rewind is the part of the fork manager which is responsible for registering app tables and the saving/rewinding operation on the tables to handle fork switching.
 
-Applications and hived shall not use directly any function from the [src/hive_fork_manager/context_rewind](./context_rewind/) directory.
+Apps and hived shall not directly use any function from the [src/hive_fork_manager/context_rewind](./context_rewind/) directory.
 
-An application must register any of its tables which are dependant on changes to hive blocks.
-Any table is automatically registered during its creation into context only when it inherits from hive.<context_name> table. Base table hive.<context_name> is created
-always when a context is created.
+An app must register any of its tables which are dependant on changes to hive blocks. Any table is automatically registered during its creation into context only when it inherits from hive.<context_name> table. Base table `hive.<context_name>` is always created when a context is created.
 
 ```
 CREATE TABLE table1( id INTEGER ) INHERITS( hive.context )
 ```
 
-Data from 'hive.<conext_name>' is used by the fork manager to rewind operations. Column 'hive_rowid'
-is used by the system to distinguish between edited rows. During registration, a set of triggers are
-enabled on a table that record any changes. 
+Data from 'hive.<context_name>' is used by the fork manager to rewind operations. Column 'hive_rowid' is used by the system to distinguish between edited rows. During table registration, a set of triggers are enabled on the table that record any changes. 
 
-Moreover a new table is created - a shadow table whose structure is a copy of the registered table + columns for operation registered tables. A shadow table is the place where triggers record changes to the associated application table. A shadow table is created in the 'hive' schema and its name is created using the rule below:
+Moreover a new table is created - a shadow table whose structure is a copy of the registered table + columns for operation registered tables. A shadow table is the place where triggers record the changes to the associated app table. A shadow table is created in the 'hive' schema and its name is created using the rule below:
 ```
 hive.shadow_<table_schema>_<table_name>
 ```
-It is possible to rewind all operations registered in shadow tables with `hive.context_back_from_fork`
+It is possible to rewind all operations stored in shadow tables with `hive.context_back_from_fork`
 
-Because the triggers add some significant overhead when modifying application tables, in some situations it may be necessary to temporary disable the triggers for the sake of better performance. To do this there are functions: 
+Because the triggers add some significant overhead when modifying app tables, in some situations it may be necessary to temporarally disable the triggers for the sake of better performance. To do this there are functions: 
 * `hive.detach_table` to remove triggers
 * 'hive.attach_table' to add triggers. 
 
 When triggers are disabled, no support for fork management is enabled for a table,
-so the application should solve the situation. In most cases this should only be done when blocks older than the last irreversible block are being processed, so no forks can happen there.
+so the app should solve the situation. In most cases this should only be done when irreversible blocks being processed, in which case no forks can happen there.
 
-It is quite possible that applications which use the fork system will want to change the structure of the registered tables. This is possible only when coresponding shadow tables are empty. This means, before an upgrade, the application must be in a state in which there is no pending fork. The system will block ( raise an exception ) 'ALTER TABLE' command if the corresponding shadow table is not empty.
+It is quite possible that apps which use the fork system will want to change the structure of its registered tables. This is possible only when coresponding shadow tables are empty. This means, that before an upgrade to the schema, the app must be in a state in which there is no pending fork. The system will block ( raise an exception ) 'ALTER TABLE' command if the corresponding shadow table for the table which is being altered is not empty.
 
 When a table is edited, its shadow table is automatically adapted to the new structure (the old shadow table is dropped and a new one is created with the new structure).
 
@@ -310,7 +307,7 @@ Tables for reversible blocks are copies of irreveersible + columns for fork_id
 ![alt text](./doc/evq_context_rewind_db.png)
 
 ## SQL API
-The set of scripts implements an API for the applications:
+The set of scripts implements an API for the apps:
 ### Public - for the user
 #### HIVED API
 The functions which are used by hived
@@ -321,97 +318,88 @@ Schedules back from fork
 Push new block with its transactions, their operations and signatures
 
 ##### hive.set_irreversible( _block_num )
-Set new irreversible block
+Marks a block as irreversible
 
 #### hive.end_massive_sync(block_num)
-After finishing a massive push of blocks, hived will invoke this method to schedlue MASSIVE_SYNC event. The parameter `_block_num`
-is a last massivly synced block - head or irreversible blocks.
+After finishing a massive push of blocks, hived will invoke this method to schedule a MASSIVE_SYNC event. The parameter `_block_num`
+is the last massively synced block - head or irreversible blocks.
 
 #### hive.disable_indexes_of_irreversible()
-There are some indexes created by the extension on irreversible blocks data. Those indexes may slows down massive dumps
-of blocks data by hived. The function drops and saves description of indexes and FK constraints created on irreversible blocks table.
-Hived nay use this function before start massive sync of blocks.
+There are some indexes created by the extension on irreversible block data. Those indexes may slow down massive dumps of blocks data by hived. This function drops and saves description of indexes and FK constraints created on irreversible blocks table. Hived will use this function before starting massive sync of blocks.
 
 #### hive.enable_indexes_of_irreversible()
 It restores indexes and FK constarint dropped and saved by the function above.
 
 #### hive.connect( _git_sha, _block_num )
-The Hive node (hived) call this function each time it starts synchronization with the database. The function
+The Hive node (hived) calls this function each time it starts synchronization with the database. This function
 clear irreversible data from inconsistent blocks (blocks which are not fully dumped during previous connection) and
 saves information about the connection occurence into table hived_connections.
 - **_git_sha** - is a GIT version of hived code
 - **_block_num** - head block number for which the hived is synchronized
 
 #### hive.set_irreversible_dirty()
-Sets 'dirty' flag, what marks irreversible data as inconistent 
+Sets 'dirty' flag, what marks irreversible data as inconsistent.
 
 #### hive.set_irreversible_not_dirty()
-Unsets 'dirty' flag, what marks irreversible data as conistent
+Unsets 'dirty' flag, what marks irreversible data as consistent.
 
 #### hive.is_irreversible_dirty()
-Read the 'dirty' flag
+Reads the 'dirty' flag.
 
 #### APP API
-The functions which should be used by an application
+The functions which should be used by a HAF app
 
 ##### hive.app_create_context( _name )
-Creates a new context. Context name can contains only characters from set: `a-zA-Z0-9_`
+Creates a new context. Context name can contains only characters from the set: `a-zA-Z0-9_`
 
 ##### hive.app_remove_context( _name hive.context_name )
 Remove the context and unregister all its tables.
 
 ##### hive.app_next_block( _context_name )
-Returns `hive.blocks_range` -range of blocks numbers to process or NULL
-It is a most important function for any application.
-To ensure correct work of fork rewind mechanism any application must process returned blocks and modify their tables according to block chain state on time where the returned block is a head block.
+Returns `hive.blocks_range` -range of blocks numbers to process (or NULL if no blocks to process).
+It is the most important function for any app.
+To ensure correct work of the fork rewind mechanism, any app must process returned blocks and modify their tables according to blockchain state on time where the returned block is a head block.
 
-If NULL is returned, then there is no block to process or events which did not delivery blocks were processed. 
+If NULL is returned, then there is no block to process, or events which did not deliver blocks were processed. 
 
-Returns range of blocks to process, if range is empty ( first and last blocks are the same ), then an application
-must process the one returned block num, if range is grater than 0, (last_block -first_block) > 0, it means that hived
-executed massive sync - a large number of irreversible blocks are added, and an application can process them massively without
-fork control (detach context is required), or still process them one by one ( process the first_block in range and then back to `hive.app_next_block` to get
-next block, but it will  be slower because of triggers overhead ).
+Returns range of blocks to process. If first and last blocks in the range are the same, then an app must process the one returned block. If more than one block is returned (i.e. last_block -first_block > 0), it means that hived
+executed a massive sync (or that the app has been started later than HAF server started receiving blocks) and a large number of irreversible blocks have been added to the HAF database that the app has not yet processed. The app can opt to process these blocks massively without
+fork control (detach of context is required first) or it can still process them one by one (process the first_block in the range and then again call `hive.app_next_block` to get the next block, but such blocks will be processed slower than processing them in massive sync mode because of the overhead from the triggers on the app's tables that support block rewinding).
 
-hive.app_next_block cannot be used when context is detached - in such case an exception is thrown.
+hive.app_next_block cannot be used when a context is detached - in such case an exception is thrown.
 
 ##### hive.app_context_detach( context_name )
-Detaches triggers atatched to register tables in a given context, It allow to do a massive sync of irreversible
-blocks without triggers overhead. The context's views are recreated to return only all irreversible data.
+Detaches triggers attached to tables registered in a given context. It allows to do a massive sync of irreversible blocks without overhead from triggers. The context's views are recreated to return only all irreversible data.
 
 ##### hive.app_context_attach( context_name, block_num )
-Enables triggers attached to registered tables in a given context and set current context block num. The `block_num` cannot
-be greater than top of irreversible block. The context's views are recreated to return both reversible and irreversible
-data limited to the context's current block.
+Enables triggers attached to registered tables in a given context and sets current context block number. The `block_num` cannot
+be greater than the latest irreversible block. The context's views are recreated to return both reversible and irreversible data limited to the context's current block.
 
 ##### hive.app_context_is_attached( context_name )
-Returns TRUE when a given context is attached. It may thrown an exception when there is no a context with the given context_name
+Returns TRUE when a given context is attached. It will thrown an exception when there is no a context with the given context_name.
 
 ##### hive.app_context_detached_save_block_num( _context_name )
-The application may use the function to temporary save block num which was recently processed in the datached state. The function
-will throw when is call on an attached context. The saved value is set to NULL when a context is being detached.
+The app may use this function to temporarily save the block number which was recently processed in the detached state. This function
+will throw when it is call on an attached context. The saved value is set to NULL when a context is being detached.
 
 ##### hive.app_context_detached_get_block_num( _context_name )
 Returns block num recently saved in a detached state. The function will throw when the context is attached. 
 
 #### hive.app_context_exists( context_name )
-Returns TRUE when context with given name exists
+Returns TRUE when a context with the given name exists.
 
 #### hive.app_register_table( table_name, context_name );
-Register not already registered table with name 'table_name' into context. It allow to move from 'non-forking application'
-to application which support forks.
+Register a not-already-registered table with name 'table_name' into context. It enables creation of app which automatically supports forks.
 
-#### hive.app_get_irreversible_block( context_name DEFUALT '' )
+#### hive.app_get_irreversible_block( context_name DEFAULT '' )
 Returns last irreversible block number, or 0 if there is no irreversible block.
-When the defualt is passed (hive.app_get_irreversible_block() ), then it returns current top irreversible block num
-known by hive fork manager.
+When the default is passed (hive.app_get_irreversible_block() ), then it returns the current top irreversible block num known by the hive fork manager.
 
 #### hive.app_is_forking( context_name )
 Returns boolean information if a given context is forking ( returns TRUE ) or non-forking ( returns FALSE )
 
 #### hive.app_state_provider_import( state_provider, context )
-Imports state provider into contexts - the state provider tables are created and registered
-in `HIVE.STATE_PROVIDERS_REGISTERED` table.
+Imports state provider into contexts - the state provider tables are created and registered in `HIVE.STATE_PROVIDERS_REGISTERED` table.
 
 #### hive.app_state_providers_update( _first_block, _last_block, _context )
 All state provider registerd by the contexts are updated.
@@ -423,7 +411,7 @@ State provider become unregistered from contexts, and its tables are dropped.
 All state providers become unregistered from contexts,and their tables are dropped.
 
 #### CONTEXT REWIND
-Context rewind function shall not be used by hived and applications.
+Context rewind functions shall not be used by hived and apps.
 
 ##### hive.context_detach( context_name )
 Detaches triggers atatched to register tables in a given context
@@ -433,7 +421,7 @@ Enables triggers attached to register tables in a given context and set current 
 
 ##### hive.context_create( context_name, forkid, irreversible_block )
 Creates the context with controll block number on which the registered tables are working. The 'fork_id' and
-'irreversible_block' are used only by application api.
+'irreversible_block' are used only by app api.
 
 ##### hive.context_create( context_name )
 Removes the context: removes triggers, remove hive_row id columns from registered tables, unregister all tables, removes
@@ -455,8 +443,7 @@ Creates shadow table for given table
 Enables triggers atatched to a register table.
 
 ##### hive.detach_table( schema, table )
-Disables triggers atatched to a register table. It is usefull for operation below irreversible block
-when fork is impossible, then we don't want have trigger overhead for each edition of a table.
+Disables triggers attached to a register table. It is useful for processing irreversible block when forks are impossible, so we don't want to have trigger overhead for each modification of a table.
 
 #### SHARED_LIB API
 
@@ -464,26 +451,21 @@ when fork is impossible, then we don't want have trigger overhead for each editi
 Returns list of accounts ( their names ) impacted by the operation. 
 
 ## Known Problems
-1. Constraints FOREIGN KEY must be DEFERRABLE, otherwise we cannot guarnteen success or rewinding changes - the process may temporary violates tables constraints.
-   More informations about DEFERRABLE constraint can be found in PosgreSQL documentaion for [CREATE TABLE](https://www.postgresql.org/docs/10/sql-createtable.html)
+1. FOREIGN KEY constraints must be DEFERRABLE, otherwise we cannot guarantee success rewinding changes - the process may temporarily violate tables constraints.
+   More informations about DEFERRABLE constraint can be found in PosgreSQL documentation for [CREATE TABLE](https://www.postgresql.org/docs/10/sql-createtable.html)
    and [SET CONSTRAINTS](https://www.postgresql.org/docs/10/sql-set-constraints.html)
-2. The applications usually are divided for two parts: a part which synchronizes data with blockchain, and a server
-   part which responses for remote queries and reads already synchronized data. In case of micro-fork occurence, during rewinding data
-   a race conditions is possible between synchronization process and the server, for example the server may make some action
-   when some 'Account' exsits, but the 'Account' is being removing by the micro-fork rewind code:
+2. HAF apps usually are divided into two separate processes: an `indexer` which processes the block data written to the HAF database and generates auxiliary table data for the app, and an `API server` which responds to remote queries by formatting and returning the data generated by the indexer. In the case of a micro-fork, a race condition during a rewind of data is possible between the indexer and the API server. For example, the API server may make some action
+   when some 'Account' exists, but the 'Account' is being removing by the micro-fork rewind code:
    ![race conditions](doc/race_conditions.png)
-   In a such case as at the picture above the server response for a query will fail . At the moment there is an assumption
-   that we can accept this situation because next query will be serviced normally. If it won't be acceptable, then we
-   can make exclusive lock on registered tables for a time of back from micro-fork, but the consequences would be dramatic,
-   including possibility of stopping whole HAF node by a wrongly written application. 
+   In a such case as at the picture above, the server response for a query will fail. For most apps, there is an assumption that we can accept this situation, because the next query will be serviced properly. If this behavior isn't acceptable for an app, then it can make an exclusive lock on registered tables for a time of back from micro-fork, but the consequences would be dramatic, including the possibility of that a buggy HAF app might lock up the the whole HAF server.
       
 
     
 ## Other architectures which were abandoned
 ### C++-based extension for fork management
-There was a hope that an extension written in C/C++ can be more performant and that access to a lower level of PostgreSQL could give some benefits.
+There was a hope that an extension written in C/C++ might be more performant and that access to a lower level of PostgreSQL could give some benefits.
 
-The most important problem faced by the fork manager is to rewind reversible changes in a way which does not violate constraints on the application tables. The C++-based extension was implemented by encoding changed blobs of rows from the registered tables into byte arrays and saving them in a separated table in the order in which the changes occurred (actually a stack of changed rows was implemented). The extension was
+The most important problem faced by the fork manager is to rewind reversible changes in a way which does not violate constraints on the app tables. The C++-based extension was implemented by encoding changed blobs of rows from the registered tables into byte arrays and saving them in a separated table in the order in which the changes occurred (actually a stack of changed rows was implemented). This extension was
 implemented and then abandoned with the [commit](https://gitlab.syncad.com/hive/psql_tools/-/commit/e6ac13be5d137fe0de5d7fe916905a9b97a11bdc).
 
 There were a few reasons to retreat from the C/C++-based fork manager extension:
@@ -499,10 +481,9 @@ It turned out that it is impossible to implement with SQL a similar stack of cha
 
 There is no method to take and save a blob of a table's row in a generic form, so it is not possible to have a common table for all changes from different tables.
 
-
 ### SQL extension without events queue
-When the SQL method of rewinding reversible tables was implemented (this part is now named `context_rewind`), there was a noble idea to use it for rewinding both the applications tables and the tables filled directly by hived. This would make for a relatively simple implementation of the whole extension - hived would have its tables registered in its context and in case of a fork switch, the block tables would be reverted.
+When the SQL method of rewinding reversible tables was implemented (this part is now named `context_rewind`), there was a noble idea to use it for rewinding both the apps tables and the tables filled directly by hived. This would make for a relatively simple implementation of the whole extension - hived would have its tables registered in its context and in case of a fork switch, the block tables would be reverted.
 
-Unfortunately, during analysis, it was found that this kind of architecture will require the use of locks on hived's tables to solve race condition between reading of hived tables by the applications and modifications to them by hived. 
+Unfortunately, during analysis, it was found that this kind of architecture will require the use of locks on hived's tables to solve a race condition between reading of hived tables by the apps and modifications to those tables by hived. 
 
-Introducing locking would make hived's operation dependent on the quality of the applications operating on the data - how fast they will commit transactions to release their locks on the data being written by hived. Moreover, the applications become dependant on each other, because one application may block hived and other applications would then not get new live blocks while that application blocked hived.
+Introducing locking would make hived's operation dependent on the quality of the apps operating on the data - how fast they will commit transactions to release their locks on the data being written by hived. Moreover, the apps become dependant on each other, because one app may block hived and other apps would then not get new live blocks during the time that app blocked hived from adding new blocks.
