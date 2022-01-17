@@ -1,5 +1,5 @@
 # SQL_SERIALIZER
-The sql_serializer is a hived plugin which is resposible for dumping block data to the hive_fork_manager and informs it about the occurence of important events related to processing of the blocks (for example, when a block becomes irreversible or when a micro-fork occurs that reverts blocks that have been added to the HAF database).
+The sql_serializer is a hived plugin which is responsible for dumping block data to the hive_fork_manager and informs it about the occurence of important events related to block processing (for example, when a block becomes irreversible or when a micro-fork occurs that reverts blocks that have been added to the HAF database).
 
 ## Build
 Like other hived plugins, the sql_serializer is compiled during compilation of the hived program itself.
@@ -7,7 +7,7 @@ There is a trick which allows for this: cmake scripts create a symbolic
 link to sql_serializer sources in `hive/libraries/plugins`, then the cmake script of the hive submodule finds the plugin's sources together with sql_serializer by following the symbolic link.
 
 ## Setup
-You need to add the sql_serializer plugin and associated parameters to the hived node's `config.ini` file:
+You need to add the sql_serializer plugin and associated parameters to the hived node's `config.ini` file to enable the plugin.
 
 ```
 plugin = sql_serializer
@@ -32,7 +32,7 @@ The sql_serializer extends hived with these new parameters:
   Example:
   psql-url = dbname=block_log user=postgres password=pass hostaddr=127.0.0.1 port=5432
   ```
-* **psql-index-threshold** [default: 1'000'000] tells the sql_serializer to enter massive sync mode if more than this number of blocks need to be processed when hived is restarted. The sql_serializer can process blocks much faster in massive sync mode, but there is a potential performance tradeoff in live sync or massive sync modes, because the sql indexes in the HAF database must be deleted to enter massive sync mode and they must be rebuilt when the sql_serializer exits massive sync mode (and rebuilding these indexes takes a significant amount of time). In other words, psql-index-threshold is the limit of the number of unprocessed blocks that will be synchronized slowly with enabled indexes. *Question: how is the number of unprocessed blocks determined?*
+* **psql-index-threshold** [default: 1'000'000] tells the sql_serializer to enter massive sync mode if more than this number of blocks need to be processed when hived is restarted. The sql_serializer can process blocks much faster in massive sync mode, but there is a potential performance tradeoff in operating in massive sync mode versus live sync mode, because the sql indexes in the HAF database must be deleted to enter massive sync mode and they must be rebuilt when the sql_serializer exits massive sync mode (and rebuilding these indexes takes a significant amount of time). In other words, psql-index-threshold is the limit of the number of unprocessed blocks that will be synchronized slowly with enabled indexes. *Question: how is the number of unprocessed blocks determined?*
 * **psql-operations-threads-number**[default: 5] the number of threads used to dump blockchain operations to the database. Operations are the biggest part of the blockchain data, so by default more threads are assigned to process them. Operations are grouped into tuples which are dumped concurrently to the HAF database.
 * **psql-transactions-threads-number**[default: 2] the number of threads used to dump transactions to the database.
 * **psql-account-operations-threads-number**[default: 2] the number of threads used to dump account operations to the database.
@@ -44,7 +44,8 @@ The sql_serializer extends hived with these new parameters:
 	./hived --replay-blockchain --stop-replay-at-block 5000000 --exit-after-replay -d ../../../datadir --force-replay --psql-index-threshold 65432
 
 ## How the sql_serializer serializes blockchain data
-The sql_serializer is connected to the internal database of the hived node (aka chainbase) by event notifications (boost signals).These signals notify the sql_serializer about the starting/ending of the reindex process (i.e. replay of a block_log file) and when new block data has been added to the state of chainbase.
+The sql_serializer is connected to the internal database of the hived node (aka chainbase) by event notifications (boost signals). These signals notify the sql_serializer about the starting/ending of the reindex process (i.e. replay of a block_log file) and when new block data has been added to the state of chainbase from the peer-to-peer network.
+
 ### Serialization modes
 The sql_serializer works in different modes when the node is: reindexing blocks from the block_log, syncing old blocks from the P2P network, and when it is live syncing recently generated blocks (i.e. it is processing blocks that are no more than 1 minute older than the network's head block). This is an important aspect of the sql_serializer's operation because it is strongly connected with the speed at which blocks can be added to the HAF database. Below is a state machine diagram for how the sql_serializer transitions between each of these modes:
 
@@ -53,19 +54,19 @@ The sql_serializer works in different modes when the node is: reindexing blocks 
 The current mode of the serializer is controlled by a singleton object of class [indexation_state](./include/hive/plugins/sql_serializer/indexation_state.hpp).
 
 ### Collect data from hived's chainbase
-In each mode of the serializer, block data is cached to the [cached_data_t](./include/hive/plugins/sql_serializer/cached_data.h). 
+In each mode of the serializer, the block data that will be written to the HAF database is cached inside [cached_data_t](./include/hive/plugins/sql_serializer/cached_data.h). 
 
 ![](./doc/collecting_block_in_cache.png)
 
-At the end of ```sql_serializer_plugin_impl::on_post_apply_block``` method ```indexation_state::trigger_data_flush```
-the cached data from the block may or may not be dumped to the HAF database depending on the serialization mode. * THIS SENTENCE NEEDS FIXING *
+At the end of the ```sql_serializer_plugin_impl::on_post_apply_block``` method,  ```indexation_state::trigger_data_flush``` is called to determine if
+the data cached so far should be dumped yet to the HAF database (the triggering condition depends on the serialization mode).
 
 ### Dumping cached block data to PostgreSQL database
 There are two class which are responsible for dumping block data to the hive_fork_manager.
-- [reindex_data_dumper](./include/hive/plugins/sql_serializer/reindex_data_dumper.h) is used to massively dump only irreversible blocks to the database directly to irrevesible tables in hive_fork_manager. This dumper is optimized to dump a large number of blocks in a single batch operation. The different types of data in each batch is dumped using several threads with separate conections to the database. These writing threads do not wait for each other, so FOREIGN KEY constraint checks have to be disabled before operating with this dumper. Because its threads do no wait for each other, the content of the irreversible tables managed by the hive fork manager may be temporarily inconsistent. The rendevouz pattern is used to inform the database which block is known as the head of the fully dumped (consistent) blocks.
+- [reindex_data_dumper](./include/hive/plugins/sql_serializer/reindex_data_dumper.h) is used to massively dump only irreversible blocks to the database directly to irreversible tables in hive_fork_manager. This dumper is optimized to dump a large number of blocks in a single batch operation. The different types of data in each batch is dumped using several threads with separate conections to the database. These writing threads do not wait for each other, so FOREIGN KEY constraint checks have to be disabled before operating with this dumper. Because its threads do not wait for each other, the content of the irreversible tables managed by the hive fork manager may be temporarily inconsistent. When all the threads of the batch have completed, the rendevouz pattern is used to inform the database which block is known as the head of the fully dumped (consistent) blocks.
   
   ![](./doc/reindex_dumper.png)
-- [livesync_data_dumper](./include/hive/plugins/sql_serializer/livesync_data_dumper.h) is used to dump one block at a time using the `hive.push_block` hive_fork_manager function. Both reversible and irreversible blocks can be dumped. Each block is processed by a few threads that convert the block data into SQL-formatted std::string-s. When all the threads have finished processing the block, a rendevouz object makes a SQL query to call `hive.push_block` with the prepared strings as its parameters.
+- [livesync_data_dumper](./include/hive/plugins/sql_serializer/livesync_data_dumper.h) is used to dump one block at a time using the `hive.push_block` function (defined in hive_fork_manager). Both reversible and irreversible blocks can be dumped. Each block is processed by several threads that convert the block data into SQL-formatted std::strings. When all the threads have finished processing the block, a rendevouz object makes a SQL query to call `hive.push_block` with the prepared strings as its parameters.
   ![](./doc/livesync_dumper.png)
 
 The dumpers are triggered by the implementation of `indexation_state::flush_trigger`. This trigger makes the decision if cached data can be dumped or not. There are 3 implementation of this trigger:
