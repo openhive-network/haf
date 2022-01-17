@@ -72,7 +72,7 @@ def get_time_offset_from_file(name):
     return time_offset
 
 
-def run_networks(world, blocklog_directory):
+def run_networks(world, blocklog_directory, replay_all_nodes=True):
     time_offset = get_time_offset_from_file(blocklog_directory/'timestamp')
 
     block_log = BlockLog(None, blocklog_directory/'block_log', include_index=False)
@@ -84,7 +84,10 @@ def run_networks(world, blocklog_directory):
     endpoint = nodes[0].get_p2p_endpoint()
     for node in nodes[1:]:
         node.config.p2p_seed_node.append(endpoint)
-        node.run(wait_for_live=False, replay_from=block_log, time_offset=time_offset)
+        if replay_all_nodes:
+            node.run(wait_for_live=False, replay_from=block_log, time_offset=time_offset)
+        else:
+            node.run(wait_for_live=False, time_offset=time_offset)
 
     for network in world.networks():
         network.is_running = True
