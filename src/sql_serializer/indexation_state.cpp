@@ -132,6 +132,7 @@ indexation_state::indexation_state(
   , uint32_t psql_operations_threads_number
   , uint32_t psql_account_operations_threads_number
   , uint32_t psql_index_threshold
+  , uint32_t psql_livesync_threshold
 )
   : _main_plugin( main_plugin )
   , _chain_db( chain_db )
@@ -139,11 +140,12 @@ indexation_state::indexation_state(
   , _psql_transactions_threads_number( psql_transactions_threads_number )
   , _psql_operations_threads_number( psql_operations_threads_number )
   , _psql_account_operations_threads_number( psql_account_operations_threads_number )
+  , _psql_livesync_threshold( psql_livesync_threshold )
   , _irreversible_block_num( NO_IRREVERSIBLE_BLOCK )
   , _indexes_controler( db_url, psql_index_threshold )
 {
   cached_data_t empty_data{0};
-  update_state( INDEXATION::P2P, empty_data, 0 );
+  update_state( INDEXATION::START, empty_data, 0 );
 
   _on_irreversible_block_conn = _chain_db.add_irreversible_block_handler(
       [this]( uint32_t block_num ){ on_irreversible_block( block_num ); }
@@ -153,20 +155,55 @@ indexation_state::indexation_state(
 
 void
 indexation_state::on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t number_of_blocks_to_add ) {
-  FC_ASSERT( _state == INDEXATION::P2P, "REINDEX state is only possible after P2P" );
+  if ( _state != INDEXATION::START ) {
+    // on_end_of_syncing may already change the state
+    return;
+  }
+
+  if ( can_move_to_livesync() ) {
+    cached_data_t empty_cache{0};
+    update_state( INDEXATION::LIVE, empty_cache, 0 );
+    return;
+  }
+
   update_state( INDEXATION::REINDEX, cached_data, last_block_num, number_of_blocks_to_add );
 }
 
 void
 indexation_state::on_post_reindex( cached_data_t& cached_data, int last_block_num ) {
-  FC_ASSERT( _state == INDEXATION::REINDEX, "Only REINDEX can be set when call on_post_reindex" );
+  if ( _state != INDEXATION::REINDEX ) {
+    // on_end_of_syncing may already change the state
+    return;
+  }
   update_state( INDEXATION::P2P, cached_data, last_block_num, UNKNOWN );
 }
 
 void
 indexation_state::on_end_of_syncing( cached_data_t& cached_data, int last_block_num ) {
-  FC_ASSERT( _state == INDEXATION::P2P, "Only P2P can be set before end of syncing" );
+  if ( _state == INDEXATION::LIVE ) {
+    return;
+  }
   update_state( INDEXATION::LIVE, cached_data, last_block_num, UNKNOWN );
+}
+
+void
+indexation_state::on_first_block() {
+  if ( _state != INDEXATION::START ) {
+    // end_of_syncing may already change the state
+    return;
+  }
+  cached_data_t empty_cache{0};
+  if ( can_move_to_livesync() ) {
+    update_state( INDEXATION::LIVE, empty_cache, 0 );
+    return;
+  }
+
+  update_state( INDEXATION::P2P, empty_cache, 0 );
+}
+
+bool
+indexation_state::can_move_to_livesync() const {
+  return fc::time_point::now() - _chain_db.head_block_time() < fc::seconds( _psql_livesync_threshold * 3 );
 }
 
 void
@@ -177,6 +214,9 @@ indexation_state::update_state(
 ) {
   FC_ASSERT( _state != INDEXATION::LIVE, "Move from LIVE state is illegal" );
   switch ( state ) {
+    case INDEXATION::START:
+      ilog( "Entered START sync state" );
+      break;
     case INDEXATION::P2P:
       ilog("Entering P2P sync...");
       force_trigger_flush_with_all_data( cached_data, last_block_num );
@@ -205,13 +245,12 @@ indexation_state::update_state(
       break;
     case INDEXATION::REINDEX:
       ilog("Entering REINDEX sync...");
-      FC_ASSERT( _dumper, "On REINDEX state data dumper must be created before on P2P state" );
-      FC_ASSERT( _state == INDEXATION::P2P, "Reindex always starts after P2P syncing" );
+      FC_ASSERT( _state == INDEXATION::START, "Reindex always starts after P2P syncing" );
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
-      _indexes_controler.disable_indexes_depends_on_blocks( number_of_blocks_to_add );
       _indexes_controler.disable_constraints();
+      _indexes_controler.disable_indexes_depends_on_blocks( number_of_blocks_to_add );
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , _psql_operations_threads_number
@@ -227,10 +266,10 @@ indexation_state::update_state(
       break;
       case INDEXATION::LIVE: {
         ilog("Entering LIVE sync...");
-        FC_ASSERT( _dumper, "On LIVE state data dumper must be created before on P2P state" );
-        FC_ASSERT( _state == INDEXATION::P2P, "Live always starts after P2P syncing" );
-        auto irreversible_cached_data = move_irreveresible_blocks(cached_data, _irreversible_block_num );
-        force_trigger_flush_with_all_data( irreversible_cached_data, _irreversible_block_num );
+        if ( _state != INDEXATION::START ) {
+          auto irreversible_cached_data = move_irreveresible_blocks(cached_data, _irreversible_block_num );
+          force_trigger_flush_with_all_data( irreversible_cached_data, _irreversible_block_num );
+        }
         _trigger.reset();
         _dumper.reset();
         _indexes_controler.enable_indexes();

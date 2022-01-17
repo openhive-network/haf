@@ -194,12 +194,14 @@ using chain::reindex_notification;
             , uint32_t _psql_transactions_threads_number
             , uint32_t _psql_account_operations_threads_number
             , uint32_t _psql_index_threshold
+            , uint32_t _psql_livesync_threshold
           )
           : _indexation_state( _main_plugin, _chain_db, url,
                                  _psql_transactions_threads_number,
                                  _psql_operations_threads_number,
                                  _psql_account_operations_threads_number,
-                                 _psql_index_threshold
+                                 _psql_index_threshold,
+                                 _psql_livesync_threshold
                                  ),
               db_url{url},
               chain_db{_chain_db},
@@ -441,6 +443,7 @@ void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& no
   /// Let's init our database before applying first block (resync case)...
   inform_hfm_about_starting();
   init_database(note.block_num == 1, note.block_num);
+  _indexation_state.on_first_block();
 
   /// And disconnect to avoid subsequent inits
   if(__on_pre_apply_block_con_initialization.connected())
@@ -671,6 +674,7 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
                          ("psql-account-operations-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump account operations to database during reindexing")
                          ("psql-enable-accounts-dump", appbase::bpo::value<bool>()->default_value( true ), "enable collect data to accounts and account_operations table")
                          ("psql-force-open-inconsistent", appbase::bpo::bool_switch()->default_value( false ), "force open database even when irreversible data are inconsistent")
+                         ("psql-livesync-threshold", appbase::bpo::value<uint32_t>()->default_value( 10000 ), "threshold to move synchronization state during start immediatly to live")
                          ;
       }
 
@@ -693,6 +697,7 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
           , options["psql-transactions-threads-number"].as<uint32_t>()
           , options["psql-account-operations-threads-number"].as<uint32_t>()
           , options["psql-index-threshold"].as<uint32_t>()
+          , options["psql-livesync-threshold"].as<uint32_t>()
         );
 
         // settings
