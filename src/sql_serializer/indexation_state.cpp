@@ -206,6 +206,11 @@ indexation_state::can_move_to_livesync() const {
   return fc::time_point::now() - _chain_db.head_block_time() < fc::seconds( _psql_livesync_threshold * 3 );
 }
 
+uint32_t
+indexation_state::expected_number_of_blocks_to_sync() const {
+  return ( fc::time_point::now() - _chain_db.head_block_time() ).to_seconds() / 3;
+}
+
 void
 indexation_state::update_state(
     INDEXATION state
@@ -222,11 +227,8 @@ indexation_state::update_state(
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
-      if ( _state == INDEXATION::REINDEX ) {
-        // indexes are only enabled when reindex is finished to do not enable it and then disable in the next stage
-        _indexes_controler.enable_indexes();
-      }
       _indexes_controler.disable_constraints();
+      _indexes_controler.disable_indexes_depends_on_blocks( expected_number_of_blocks_to_sync() );
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , _psql_operations_threads_number

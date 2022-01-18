@@ -27,6 +27,7 @@ indexes_controler::disable_indexes_depends_on_blocks( uint32_t number_of_blocks_
     return;
   }
 
+  ilog( "Number of blocks to sync is greater than threshold for disabling indexes. Indexes will be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
   auto processor = start_commit_sql(false, "hive.disable_indexes_of_irreversible()", "disable indexes" );
   processor->join();
   ilog( "All irreversible blocks tables indexes are dropped" );
