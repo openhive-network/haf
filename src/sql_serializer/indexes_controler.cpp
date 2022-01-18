@@ -70,13 +70,13 @@ indexes_controler::enable_constrains() {
   if (appbase::app().is_interrupt_request())
     return;
 
-  auto restore_blocks_fks = start_commit_sql( false, "hive.restore_foreign_keys( 'hive.blocks' )", "enable indexes" );
-  auto restore_irreversible_fks = start_commit_sql( false, "hive.restore_foreign_keys( 'hive.irreversible_data' )", "enable indexes" );
-  auto restore_transactions_fks = start_commit_sql( false, "hive.restore_foreign_keys( 'hive.transactions' )", "enable indexes" );
-  auto restore_transactions_sigs_fks = start_commit_sql( false, "hive.restore_foreign_keys( 'hive.transactions_multisig' )", "enable indexes" );
-  auto restore_operations_fks = start_commit_sql( false, "hive.restore_foreign_keys( 'hive.operations' )", "enable indexes" );
-  auto restore_accounts_fks = start_commit_sql( false, "hive.restore_foreign_keys( 'hive.accounts' )", "enable indexes" );
-  auto restore_account_operations_fks = start_commit_sql( false, "hive.restore_foreign_keys( 'hive.account_operations' )", "enable indexes" );
+  auto restore_blocks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.blocks' )", "enable indexes" );
+  auto restore_irreversible_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.irreversible_data' )", "enable indexes" );
+  auto restore_transactions_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.transactions' )", "enable indexes" );
+  auto restore_transactions_sigs_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.transactions_multisig' )", "enable indexes" );
+  auto restore_operations_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.operations' )", "enable indexes" );
+  auto restore_accounts_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.accounts' )", "enable indexes" );
+  auto restore_account_operations_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.account_operations' )", "enable indexes" );
   restore_blocks_fks->join();
   restore_irreversible_fks->join();
   restore_transactions_fks->join();
