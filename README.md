@@ -188,14 +188,20 @@ Warning: 'make install' will install all already built project items in the buil
 ### HAF Versioning
 HAF Postgres extensions are versioned - the extension control file contains `default_version` configuration entry. The build system fills the entry with the repository git sha. The corresponding SQL script file is also named with the same version, as is required by postgres.
 
-### How to use pg_dump with a postgres extension
-Tables which are parts of a postgres extension are not dumped by pg_dump, to solve this problem
-they must be removed from the extension for the time of running pg_dump. To do this tables must be removed
-wit command:`ALTER EXTENSION <extension name> DROP TABLE <tabel name>;`.
+### Using pg_dump/pg_restore to backup/restore a HAF database
+When setting up a new HAF server for production or testing purposes, you may want to load data from an existing HAF database using `pg_dump` and `pg_restore` commands, instead of filling it from scratch using hived with a replay of the blockchain data in a block_log.
 
-After finishing dump the tables have to be moved to extension with command: `ALTER EXTENSION <extension name> ADD TABLE <tabel name>;`
+One problem that arises is that pg_dump doesn't dump tables which are part of a postgres extension, and some tables in HAF are associated with the hive_fork_manager extension. So to use pg_dump to dump a HAF database, you must first temporarily disassociate these tables from the extension, then reassociate them after completing the dump of the database.
 
+Tables can be temporarily disassociated from an extension using the command:
+`ALTER EXTENSION <extension name> DROP TABLE <tabel name>;`.
 
-Hive Fork Manager has prepared scripts which remove from and add to extension its tables :[./src/hive_fork_manager/tools/pg_dump](./src/hive_fork_manager/tools/pg_dump/readme.md)
+*It is important to note that this command does not drop the tables from the database itself: despite the use of the term "drop" in this command, the tables themselves continue to exist and contain the same data. They are simply no longer associated with the extension, so pg_dump can now dump them to the dump file.*
+
+After the database has been dumped, the tables can be reassociated with an extension using the command: 
+`ALTER EXTENSION <extension name> ADD TABLE <tabel name>;`
+This reassociation needs to be done to the original database that was dumped, and also to any database that is restored from the dumpfile using `pg_rstore`.
+
+Hive_fork_manager has prepared scripts which disassociate and reassociate its tables: [./src/hive_fork_manager/tools/pg_dump](./src/hive_fork_manager/tools/pg_dump/readme.md). 
 
 # Known problems
