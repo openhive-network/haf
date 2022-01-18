@@ -188,4 +188,14 @@ Warning: 'make install' will install all already built project items in the buil
 ### HAF Versioning
 HAF Postgres extensions are versioned - the extension control file contains `default_version` configuration entry. The build system fills the entry with the repository git sha. The corresponding SQL script file is also named with the same version, as is required by postgres.
 
+### How to use pg_dump with a postgres extension
+Tables which are parts of a postgres extension are not dumped by pg_dump, to solve this problem
+they must be removed from the extension for the time of running pg_dump. To do this tables must be removed
+wit command:`ALTER EXTENSION <extension name> DROP TABLE <tabel name>;`.
+
+After finishing dump the tables have to be moved to extension with command: `ALTER EXTENSION <extension name> ADD TABLE <tabel name>;`
+
+
+Hive Fork Manager has prepared scripts which remove from and add to extension its tables :[./src/hive_fork_manager/tools/pg_dump](./src/hive_fork_manager/tools/pg_dump/readme.md)
+
 # Known problems
