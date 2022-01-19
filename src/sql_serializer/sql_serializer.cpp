@@ -620,7 +620,7 @@ void sql_serializer_plugin_impl::on_post_reindex(const reindex_notification& not
 {
   ilog("finishing from post reindex");
 
-  _indexation_state.on_post_reindex( *currently_caching_data, _last_block_num );
+  _indexation_state.on_post_reindex( *currently_caching_data, _last_block_num, note.args.stop_replay_at );
 }
 
 void sql_serializer_plugin_impl::on_end_of_syncing()

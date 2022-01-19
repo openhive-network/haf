@@ -49,7 +49,7 @@ namespace hive::plugins::sql_serializer {
        * LIVE     | -               | -               | -                 | -              |
        */
       void on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t number_of_blocks_to_add );
-      void on_post_reindex( cached_data_t& cached_data, int last_block_num );
+      void on_post_reindex( cached_data_t& cached_data, uint32_t last_block_num, uint32_t _stop_replay_at );
       void on_end_of_syncing( cached_data_t& cached_data, int last_block_num );
       void on_first_block();
 

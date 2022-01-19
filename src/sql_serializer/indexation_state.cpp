@@ -170,11 +170,22 @@ indexation_state::on_pre_reindex( cached_data_t& cached_data, int last_block_num
 }
 
 void
-indexation_state::on_post_reindex( cached_data_t& cached_data, int last_block_num ) {
+indexation_state::on_post_reindex( cached_data_t& cached_data, uint32_t last_block_num, uint32_t _stop_replay_at ) {
   if ( _state != INDEXATION::REINDEX ) {
     // on_end_of_syncing may already change the state
     return;
   }
+
+  // when option stop-replay-at is used then we finish synchronization when limit block is reached
+  if ( _stop_replay_at && _stop_replay_at == last_block_num ) {
+    force_trigger_flush_with_all_data( cached_data, last_block_num );
+    _trigger.reset();
+    _dumper.reset();
+    _indexes_controler.enable_indexes();
+    _indexes_controler.enable_constrains();
+    return;
+  }
+
   update_state( INDEXATION::P2P, cached_data, last_block_num, UNKNOWN );
 }
 
@@ -247,7 +258,7 @@ indexation_state::update_state(
       break;
     case INDEXATION::REINDEX:
       ilog("Entering REINDEX sync...");
-      FC_ASSERT( _state == INDEXATION::START, "Reindex always starts after P2P syncing" );
+      FC_ASSERT( _state == INDEXATION::START, "Reindex always starts after START" );
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
