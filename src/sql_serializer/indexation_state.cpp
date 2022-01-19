@@ -156,7 +156,7 @@ indexation_state::indexation_state(
 void
 indexation_state::on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t number_of_blocks_to_add ) {
   if ( _state != INDEXATION::START ) {
-    // on_end_of_syncing may already change the state
+    // on_end_of_syncing may already change the state to live
     return;
   }
 
@@ -252,7 +252,11 @@ indexation_state::update_state(
       _trigger.reset();
       _dumper.reset();
       _indexes_controler.disable_constraints();
-      _indexes_controler.disable_indexes_depends_on_blocks( number_of_blocks_to_add );
+      _indexes_controler.disable_indexes_depends_on_blocks(
+        number_of_blocks_to_add == 0 // stop_replay_at_block = 0
+        ? expected_number_of_blocks_to_sync()
+        : number_of_blocks_to_add
+      );
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , _psql_operations_threads_number
