@@ -4,7 +4,8 @@
 #include <memory>
 
 namespace {
-    std::weak_ptr< PqMock > PQ_MOCK;
+  // NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
+  std::weak_ptr< PqMock > PQ_MOCK;
 } // namespace
 
 std::shared_ptr<PqMock> PqMock::create_and_get() {
@@ -40,7 +41,7 @@ void PQfinish(PGconn* _connection ) {
 char* PQerrorMessage(const PGconn* _connection) {
   assert(PQ_MOCK.lock() && "No mock created, plese execute first PqMock::create_and_get");
   ::testing::DefaultValue<char*>::Set( const_cast< char* >( "test error" ) );
-  auto res = PQ_MOCK.lock()->PQerrorMessage( _connection );
+  auto *res = PQ_MOCK.lock()->PQerrorMessage( _connection );
   return res;
 }
 

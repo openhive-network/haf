@@ -7,6 +7,7 @@ SPITupleTable *SPI_tuptable;
 uint64 SPI_processed;
 
 namespace {
+  // NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
     std::weak_ptr< SpiMock > SPI_MOCK;
 } // namespace
 
