@@ -51,11 +51,15 @@ The sql_serializer extends hived with these new parameters:
 The sql_serializer is connected to the internal database of the hived node (aka chainbase) by event notifications (boost signals). These signals notify the sql_serializer about the starting/ending of the reindex process (i.e. replay of a block_log file) and when new block data has been added to the state of chainbase from the peer-to-peer network.
 
 ### Serialization modes
-The sql_serializer works in different modes when the node is: reindexing blocks from the block_log, syncing old blocks from the P2P network, and when it is live syncing recently generated blocks (i.e. it is processing blocks that are no more than 1 minute older than the network's head block). This is an important aspect of the sql_serializer's operation because it is strongly connected with the speed at which blocks can be added to the HAF database. Below is a state machine diagram for how the sql_serializer transitions between each of these modes:
+The sql_serializer works in different modes when the node is: reindexing blocks from the block_log, syncing old blocks from the P2P network, and when it is live syncing recently generated blocks (i.e. it is processing blocks that are no more than 1 minute older than the network's head block). This is an important aspect of the sql_serializer's operation because it is strongly connected with the speed at which blocks can be added to the HAF database.
+Because of synchronization performance in each state SQL indexes and foreign keys may be disabled or enabled.
+Below is a state machine diagram for how the sql_serializer transitions between each of these modes:
 
 ![](./doc/sync_state_machine.png)
 
 The current mode of the serializer is controlled by a singleton object of class [indexation_state](./include/hive/plugins/sql_serializer/indexation_state.hpp).
+
+Remark: enabling already enabled indexes or foreign keys does not take time because nothing is changing in the database.
 
 ### Collect data from hived's chainbase
 In each mode of the serializer, the block data that will be written to the HAF database is cached inside [cached_data_t](./include/hive/plugins/sql_serializer/cached_data.h). 
@@ -84,18 +88,7 @@ The dumpers are triggered by the implementation of `indexation_state::flush_trig
   <p>Each block is dumped immediately after it is cached.
 
 In each mode of indexation (serialization), there is a different combination of the flush_trigger and a dumper:
-- **p2_psync** : p2p_flush_trigger + reindex_data_dumper
+- **start** : no flush trigger nor dumper
+- **p2** : p2p_flush_trigger + reindex_data_dumper
 - **reindex** : reindex_flush_trigger + reindex_data_dumper
 - **live** : live_flush_trigger + livesync_data_dumper
-
-#### Indexes and Foreign Keys
-Idexes are very important to performance of the SQL queries, but they add significant overhead for inserting new rows to tables.
-Whole process of syncing blocks to HAF is a process of massively inserting new rows into SQL tables, so good managment of indexes is very important.
-Indexes and constrains are enabled or disabled depending on synchronization state:
-- **p2_psync** : indexes are disabled, FK are disabled
-        <p>Idexes drasicly slow down reindex process and have to be disabled, no indexes means also no FK.
-- **reindex** : indexes are disabled, FK are disabled
-        <p>Idexes drasicly slow down reindex process and have to be disabled, no indexes means also no FK.
-- **live** : indexes are enabled, FK are enabled
-        <p>Blocks are inserting for every 3s, so inserting speed is not important, instead queries performance is crucial
-        because tha applications need it during its normal work.
