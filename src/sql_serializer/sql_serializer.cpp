@@ -226,7 +226,6 @@ using chain::reindex_notification;
           void on_end_of_syncing();
 
           void on_pre_apply_operation(const operation_notification& note);
-          void on_post_apply_operation(const operation_notification& note);
           void on_pre_apply_block(const block_notification& note);
           void on_post_apply_block(const block_notification& note);
 
@@ -238,9 +237,7 @@ using chain::reindex_notification;
           void collect_account_operations(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
 
           boost::signals2::connection _on_pre_apply_operation_con;
-          boost::signals2::connection _on_post_apply_operation_con;
           std::unique_ptr< boost::signals2::shared_connection_block > _pre_apply_operation_blocker;
-          std::unique_ptr< boost::signals2::shared_connection_block > _post_apply_operation_blocker;
           boost::signals2::connection __on_pre_apply_block_con_initialization;
           boost::signals2::connection _on_pre_apply_block_con_unblock_operations;
           boost::signals2::connection _on_post_apply_block_con_block_operations;
@@ -399,9 +396,7 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
 void sql_serializer_plugin_impl::connect_signals()
 {
   _on_pre_apply_operation_con = chain_db.add_pre_apply_operation_handler([&](const operation_notification& note) { on_pre_apply_operation(note); }, main_plugin);
-  _on_post_apply_operation_con = chain_db.add_post_apply_operation_handler([&](const operation_notification& note) { on_post_apply_operation(note); }, main_plugin);
   _pre_apply_operation_blocker = std::make_unique< boost::signals2::shared_connection_block >( _on_pre_apply_operation_con );
-  _post_apply_operation_blocker = std::make_unique< boost::signals2::shared_connection_block >( _on_post_apply_operation_con );
 
   __on_pre_apply_block_con_initialization = chain_db.add_pre_apply_block_handler([&](const block_notification& note) { on_pre_apply_block(note); }, main_plugin);
   _on_finished_reindex = chain_db.add_post_reindex_handler([&](const reindex_notification& note) { on_post_reindex(note); }, main_plugin);
@@ -420,8 +415,6 @@ void sql_serializer_plugin_impl::disconnect_signals()
     chain::util::disconnect_signal(__on_pre_apply_block_con_initialization);
   if(_on_pre_apply_operation_con.connected())
     chain::util::disconnect_signal(_on_pre_apply_operation_con);
-  if(_on_post_apply_operation_con.connected())
-    chain::util::disconnect_signal(_on_post_apply_operation_con);
   if(_on_starting_reindex.connected())
     chain::util::disconnect_signal(_on_starting_reindex);
   if(_on_finished_reindex.connected())
@@ -432,8 +425,6 @@ void sql_serializer_plugin_impl::disconnect_signals()
     chain::util::disconnect_signal(_on_switch_fork_conn);
   if ( _on_pre_apply_operation_con.connected() )
     chain::util::disconnect_signal(_on_pre_apply_operation_con);
-  if( _on_post_apply_operation_con.connected() )
-    chain::util::disconnect_signal(_on_post_apply_operation_con);
 }
 
 void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& note)
@@ -478,37 +469,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
     op_sequence_id,
     note.block,
     note.trx_in_block,
-    is_virtual && note.trx_in_block < 0 ? note.virtual_op : note.op_in_trx,
-    chain_db.head_block_time(),
-    note.op
-  );
-
-  collect_account_operations( op_sequence_id, note.op, note.block );
-}
-
-void sql_serializer_plugin_impl::on_post_apply_operation(const operation_notification& note)
-{
-  if( note.op.which() != hive::protocol::operation::tag<hive::protocol::hardfork_operation>::value )
-    return;
-
-  if(chain_db.is_producing())
-  {
-    dlog("Skipping operation processing coming from incoming transaction - waiting for already produced incoming block...");
-    return;
-  }
-
-  if(skip_reversible_block(note.block))
-    return;
-
-  const bool is_virtual = hive::protocol::is_virtual_operation(note.op);
-  FC_ASSERT( is_virtual || note.trx_in_block >= 0, "Non is_producing real operation with trx_in_block = -1" );
-
-  ++op_sequence_id;
-  currently_caching_data->operations.emplace_back(
-    op_sequence_id,
-    note.block,
-    note.trx_in_block,
-    note.trx_in_block < 0 ? note.virtual_op : note.op_in_trx,
+    note.op_in_trx,
     chain_db.head_block_time(),
     note.op
   );
@@ -544,7 +505,6 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
 void sql_serializer_plugin_impl::unblock_operation_handlers(const block_notification& note)
 {
   _pre_apply_operation_blocker->unblock();
-  _post_apply_operation_blocker->unblock();
 }
 
 void sql_serializer_plugin_impl::block_operation_handlers(const block_notification& note)
@@ -554,7 +514,6 @@ void sql_serializer_plugin_impl::block_operation_handlers(const block_notificati
 
   /// block operations signals
   _pre_apply_operation_blocker->block();
-  _post_apply_operation_blocker->block();
 }
 
 void sql_serializer_plugin_impl::handle_transactions(const vector<hive::protocol::signed_transaction>& transactions, const int64_t block_num)
