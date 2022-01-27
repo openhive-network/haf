@@ -444,9 +444,6 @@ void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& no
 
 void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notification& note)
 {
-  if( note.op.which() == hive::protocol::operation::tag<hive::protocol::hardfork_operation>::value )
-    return;
-
   if(chain_db.is_producing())
   {
     dlog("Skipping operation processing coming from incoming transaction - waiting for already produced incoming block...");
