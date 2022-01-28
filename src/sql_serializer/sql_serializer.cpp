@@ -360,6 +360,8 @@ using chain::reindex_notification;
                   FC_ASSERT( data.size() == 1, "Data size 2" );
                   const auto& record = data[0];
                   op_sequence_id = record["_max"].as<int64_t>();
+                  //because newly created operation has to have subsequent number
+                  ++op_sequence_id;
                 }
                 return data_processing_status();
               }
@@ -372,7 +374,7 @@ using chain::reindex_notification;
             block_loader.join();
 
             ilog("Next operation id: ${s} psql block number: ${pbn}.",
-              ("s", op_sequence_id + 1)("pbn", psql_block_number));
+              ("s", op_sequence_id)("pbn", psql_block_number));
           }
 
           bool skip_reversible_block(uint32_t block);
@@ -460,8 +462,6 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
 
   cached_containter_t& cdtf = currently_caching_data; // alias
 
-  ++op_sequence_id;
-
   cdtf->operations.emplace_back(
     op_sequence_id,
     note.block,
@@ -472,6 +472,8 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   );
 
   collect_account_operations( op_sequence_id, note.op, note.block );
+
+  ++op_sequence_id;
 }
 
 void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& note)
