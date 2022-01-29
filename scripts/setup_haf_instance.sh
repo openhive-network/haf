@@ -85,6 +85,9 @@ process_option() {
     --hived-data-dir=*)
         HIVED_DATADIR="${o#*=}"
         ;;
+    --haf-database-store=*)
+        HAF_TABLESPACE_LOCATION="${o#*=}"
+	;;
     --hived-option=*)
         option="${o#*=}"
         add_hived_arg "$option"
