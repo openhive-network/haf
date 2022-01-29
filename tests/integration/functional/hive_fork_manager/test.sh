@@ -2,6 +2,8 @@
 
 extension_path=$1
 test_path=$2;
+setup_scripts_dir_path=$3;
+postgres_port=$4;
 
 evaluate_result() {
   local result=$1;
@@ -15,23 +17,25 @@ evaluate_result() {
   exit 1;
 }
 
-psql -d postgres -a -f  ./create_db.sql;
+sudo -nu postgres psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -a -f  ./create_db_roles.sql;
 
-psql -d psql_tools_test_db -v ON_ERROR_STOP=on -c 'CREATE EXTENSION hive_fork_manager CASCADE;'
+$setup_scripts_dir_path/setup_db.sh --port=$postgres_port  \
+  --haf-db-admin="haf_admin"  --haf-db-name="psql_tools_test_db" --haf-db-owner="alice" --haf-db-owner="bob"
+
 if [ $? -ne 0 ]
 then
-  echo "FAILED. Cannot create extension"
+  echo "FAILED. Cannot setup database"
   exit 1;
 fi
 
-psql -d psql_tools_test_db -a -v ON_ERROR_STOP=on -f  ${test_path};
+psql -p $postgres_port -d psql_tools_test_db -a -v ON_ERROR_STOP=on -f  ${test_path};
 evaluate_result $?;
 
-psql -d psql_tools_test_db -v ON_ERROR_STOP=on -c 'SELECT test_given()';
+psql -p $postgres_port -d psql_tools_test_db -v ON_ERROR_STOP=on -c 'SELECT test_given()';
 evaluate_result $?;
-psql -d psql_tools_test_db -v ON_ERROR_STOP=on -c 'SELECT test_when()';
+psql -p $postgres_port -d psql_tools_test_db -v ON_ERROR_STOP=on -c 'SELECT test_when()';
 evaluate_result $?;
-psql -d psql_tools_test_db -v ON_ERROR_STOP=on -c 'SELECT test_then()';
+psql -p $postgres_port -d psql_tools_test_db -v ON_ERROR_STOP=on -c 'SELECT test_then()';
 evaluate_result $?;
 
 # psql -d postgres -a -f ./drop_db.sql;

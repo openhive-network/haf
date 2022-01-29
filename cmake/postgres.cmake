@@ -5,6 +5,7 @@ MACRO( GET_RUNTIME_POSTGRES_VARIABLES )
     SET( POSTGRES_LIBDIR "NOTFOUND" )
     SET( POSTGRES_SHAREDIR "NOTFOUND" )
     SET( SERVER_INCLUDE_LIST_DIR "NOTFOUND" )
+    SET( POSTGRES_PORT "NOTFOUND" )
 
     EXECUTE_PROCESS(
             COMMAND ${POSTGRES_INSTALLATION_DIR}/pg_config --version
@@ -50,11 +51,19 @@ MACRO( GET_RUNTIME_POSTGRES_VARIABLES )
     )
     LIST( APPEND SERVER_INCLUDE_LIST_DIR ${SERVER_INCLUDE_DIR} )
 
+    EXECUTE_PROCESS(
+            COMMAND /bin/bash ${PROJECT_SOURCE_DIR}/scripts/get_postgres_port.sh ${POSTGRES_VERSION}
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+            OUTPUT_VARIABLE POSTGRES_PORT
+            ERROR_QUIET
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
 
     MESSAGE( STATUS "Postgres version: ${POSTGRES_VERSION}" )
     MESSAGE( STATUS "Postgres libdir: ${POSTGRES_LIBDIR}" )
     MESSAGE( STATUS "Postgres sharedir: ${POSTGRES_SHAREDIR}" )
-    MESSAGE( STATUS "Postgres serverer include dirs: ${SERVER_INCLUDE_LIST_DIR}" )
+    MESSAGE( STATUS "Postgres server include dirs: ${SERVER_INCLUDE_LIST_DIR}" )
+    MESSAGE( STATUS "Postgres server port: ${POSTGRES_PORT}" )
 
     IF ( NOT POSTGRES_LIBDIR )
         MESSAGE( FATAL_ERROR "Unknown postgres libdir" )
@@ -66,6 +75,10 @@ MACRO( GET_RUNTIME_POSTGRES_VARIABLES )
 
     IF ( NOT SERVER_INCLUDE_DIR )
         MESSAGE( FATAL_ERROR "Unknown postgres include dir" )
+    ENDIF()
+
+    IF ( NOT POSTGRES_PORT )
+        MESSAGE( FATAL_ERROR "Unknown postgres port" )
     ENDIF()
 
 ENDMACRO()

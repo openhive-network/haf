@@ -1,0 +1,180 @@
+#! /bin/bash
+
+SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+
+LOG_FILE=setup_postgres.log
+source "$SCRIPTPATH/common.sh"
+
+log_exec_params "$@"
+
+# Script reponsible for setup of specified postgres instance. This script execution requires root priviledges.
+# 
+# - installs (previously built !!) hive_fork_manager PostgreSQL extension 
+# - creates all builtin HAF roles on pointed PostgreSQL server instance
+# - creates (if missing) and associates specified user to the builtin haf_admin role.
+
+print_help () {
+    echo "Usage: $0 [OPTION[=VALUE]]..."
+    echo
+    echo "Allows to setup a pointed PostgreSQL instance for HAF installation"
+    echo "OPTIONS:"
+    echo "  --host=VALUE         Allows to specify a PostgreSQL host location (defaults to /var/run/postgresql)"
+    echo "  --port=NUMBER        Allows to specify a PostgreSQL operating port (defaults to 5432)"
+    echo "  --haf-binaries-dir=DIRECTORY_PATH"
+    echo "                       Allows to specify a directory containing a built HAF binaries."
+    echo "                       Usually it is a \`build\` subdirectory in the HAF source tree."
+    echo "                       Required to execute an installation step there and put HAF binaries"
+    echo "                       to the PostgreSQL directories"
+    echo "  --haf-admin-account=NAME  Allows to specify an account name to be added to the `haf_administrators_group` group."
+    echo "  --haf-database-store=DIRECTORY_PATH"
+    echo "                       Allows to specify a directory where Postgres SQL data specific to the HAF database will be stored. "
+    echo "                       Specified role is created on the server if needed."
+    echo "  --help               Display this help screen and exit"
+    echo
+}
+
+deploy_builtin_roles() {
+  local pg_access="$1"
+  echo "Attempting to deploy HAF builtin roles..."
+  sudo -nu postgres psql -d postgres -aw $pg_access -v ON_ERROR_STOP=on -f $SCRIPTPATH/haf_builtin_roles.sql
+}
+
+create_haf_admin_account() {
+  local pg_access="$1"
+  local haf_admin_account="$2"
+ 
+  # sad, but superuser is required to set different role as a database owner...
+
+  sudo -nu postgres psql -d postgres -aw $pg_access -v ON_ERROR_STOP=on -f - <<EOF
+DO \$$
+BEGIN
+    CREATE ROLE $haf_admin_account WITH
+      LOGIN
+      SUPERUSER
+      INHERIT
+      CREATEDB
+      NOCREATEROLE
+      NOREPLICATION
+      IN ROLE haf_administrators_group
+      ;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+    RAISE NOTICE '$haf_admin_account already exists';
+END
+\$$;
+
+EOF
+
+}
+
+setup_haf_storage_tablespace() {
+  local pg_access="$1"
+  local haf_tablespace_name="$2"
+  local haf_tablespace_path="$3"
+
+  haf_tablespace_abs_path=`realpath -m "$haf_tablespace_path"` 
+  
+  TABLESPACE_PATH=$(sudo -nu postgres psql -qtAX -d postgres -w $pg_access -v ON_ERROR_STOP=on -f - <<EOF
+  SELECT COALESCE((SELECT pg_tablespace_location(oid)
+                   FROM pg_tablespace where spcname = '$haf_tablespace_name'
+                  ),
+                  ''
+                 ) AS TABLESPACE_PATH;
+EOF
+)
+
+if [[ -n "$TABLESPACE_PATH" ]]; then
+  if [ "$TABLESPACE_PATH" = "$haf_tablespace_abs_path" ]; then
+      if [[ ! -d "$haf_tablespace_abs_path" || -z $(ls -A "$haf_tablespace_abs_path") ]]; then
+        echo "WARNING: Tablespace $haf_tablespace_name already exists, points to the same location, but target directory does not exists or is empty. Enforcing another tablespace creation"
+        sudo -nu postgres psql -d postgres -aw $pg_access -v ON_ERROR_STOP=on -f - <<EOF
+          DROP TABLESPACE $haf_tablespace_name;
+EOF
+      else
+        echo "WARNING: Tablespace $haf_tablespace_name already exists, and points to the same location. Skipping another creation"
+        return 0
+      fi
+    else
+      echo "ERROR: Tablespace $haf_tablespace_name already exists, but points to different location: $TABLESPACE_PATH. Aborting"
+      exit 2
+  fi
+fi
+
+  sudo -n mkdir -p "$haf_tablespace_abs_path"
+  sudo -n chown postgres:postgres -Rc "$haf_tablespace_abs_path"
+
+sudo -nu postgres psql -d postgres -aw $pg_access -v ON_ERROR_STOP=on -f - <<EOF
+  CREATE TABLESPACE $haf_tablespace_name OWNER $HAF_ADMIN_ACCOUNT LOCATION '$haf_tablespace_abs_path';
+EOF
+
+}
+
+install_extension() {
+  echo "Script path is: $SCRIPTPATH"
+  local build_dir=`realpath -e --relative-base="$SCRIPTPATH" "$1"`
+  build_dir=${build_dir%%[[:space:]]}
+  echo "Attempting to install hive_fork_manager extenstion into PostgreSQL directories..."
+  pushd "$build_dir"
+  make install 
+  popd
+}
+
+HAF_ADMIN_ACCOUNT="haf_admin"
+HAF_TABLESPACE_NAME="haf_tablespace"
+HAF_TABLESPACE_LOCATION="./haf_database_store"
+
+HAF_BINARY_DIR="../build"
+POSTGRES_HOST="/var/run/postgresql"
+POSTGRES_PORT=5432
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --host=*)
+        POSTGRES_HOST="${1#*=}"
+        ;;
+    --port=*)
+        POSTGRES_PORT="${1#*=}"
+        ;;
+    --haf-binaries-dir=*)
+        HAF_BINARY_DIR="${1#*=}"
+        ;;
+    --haf-admin-account=*)
+        HAF_ADMIN_ACCOUNT="${1#*=}"
+        ;;
+    --haf-database-store=*)
+        HAF_TABLESPACE_LOCATION="${1#*=}"
+        ;;
+    --help)
+        print_help
+        exit 0
+        ;;
+    -*)
+        echo "ERROR: '$1' is not a valid option"
+        echo
+        print_help
+        exit 1
+        ;;
+    *)
+        echo "ERROR: '$1' is not a valid argument"
+        echo
+        print_help
+        exit 2
+        ;;
+    esac
+    shift
+done
+
+POSTGRES_ACCESS="--host $POSTGRES_HOST --port $POSTGRES_PORT"
+
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit 1
+fi
+
+install_extension "$HAF_BINARY_DIR"
+
+# Be sure PostgreSQL is started.
+/etc/init.d/postgresql start
+
+deploy_builtin_roles "$POSTGRES_ACCESS"
+create_haf_admin_account "$POSTGRES_ACCESS" "$HAF_ADMIN_ACCOUNT"
+setup_haf_storage_tablespace "$POSTGRES_ACCESS" "$HAF_TABLESPACE_NAME" "$HAF_TABLESPACE_LOCATION"

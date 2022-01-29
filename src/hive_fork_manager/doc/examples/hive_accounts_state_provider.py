@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import sqlalchemy
 
 APPLICATION_CONTEXT = "accounts_ctx"
@@ -11,9 +12,9 @@ SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE = """
     INHERITS( hive.{} )
     """.format( APPLICATION_CONTEXT )
 
-def create_db_engine():
+def create_db_engine(pg_port):
     return sqlalchemy.create_engine(
-                "postgresql://alice:test@localhost:5432/psql_tools_test_db", # this is only example of db
+                "postgresql://alice:test@localhost:{}/psql_tools_test_db".format(pg_port), # this is only example of db
                 isolation_level="READ COMMITTED",
                 pool_size=1,
                 pool_recycle=3600,
@@ -65,15 +66,16 @@ def main_loop( db_connection ):
             # process the first block in range - one commit after each block
             db_connection.execute( "SELECT hive.app_state_providers_update( {}, {}, '{}' )".format( first_block, first_block, APPLICATION_CONTEXT ) )
 
-def start_application():
-    engine = create_db_engine()
+def start_application(pg_port):
+    engine = create_db_engine(pg_port)
     with engine.connect() as db_connection:
         prepare_application_data( db_connection )
         main_loop( db_connection )
 
 if __name__ == '__main__':
     try:
-        start_application()
+        pg_port = sys.argv[1] if (len(sys.argv) > 1) else 5432
+        start_application(pg_port)
     except KeyboardInterrupt:
         print( "Break by the user request" )
         pass

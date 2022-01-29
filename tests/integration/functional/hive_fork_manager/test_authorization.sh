@@ -14,10 +14,14 @@ evaluate_result() {
 
 extension_path=$1
 test_path=$2;
+setup_scripts_dir_path=$3;
+postgres_port=$4;
 
-psql -d postgres -a -f  ./create_db.sql;
+sudo -nu postgres psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -a -f  ./create_db_roles.sql;
 
-psql -d psql_tools_test_db -v ON_ERROR_STOP=on -c 'CREATE EXTENSION hive_fork_manager CASCADE;'
+$setup_scripts_dir_path/setup_db.sh --port=$postgres_port  \
+  --haf-db-admin="haf_admin" --haf-db-name="psql_tools_test_db" --haf-db-owner="alice" --haf-db-owner="bob"
+
 if [ $? -ne 0 ]
 then
   echo "FAILED. Cannot create extension"
@@ -26,30 +30,30 @@ fi
 
 # add test functions:
 # load tests function
-psql -d psql_tools_test_db -a -v ON_ERROR_STOP=on -f  ${test_path};
+psql -p $postgres_port -d psql_tools_test_db -a -v ON_ERROR_STOP=on -f  ${test_path};
 
 # GIVEN
-psql postgresql://hived:test@localhost/psql_tools_test_db --username=hived -a -v ON_ERROR_STOP=on -c 'SELECT hived_test_given()';
+psql postgresql://test_hived:test@localhost:$postgres_port/psql_tools_test_db --username=test_hived -a -v ON_ERROR_STOP=on -c 'SELECT hived_test_given()';
 evaluate_result $?;
-psql postgresql://alice:test@localhost/psql_tools_test_db --username=alice -a -v ON_ERROR_STOP=on -c 'SELECT alice_test_given()';
+psql postgresql://alice:test@localhost:$postgres_port/psql_tools_test_db --username=alice -a -v ON_ERROR_STOP=on -c 'SELECT alice_test_given()';
 evaluate_result $?;
-psql postgresql://bob:test@localhost/psql_tools_test_db --username=bob -a -v ON_ERROR_STOP=on -c 'SELECT bob_test_given()';
+psql postgresql://bob:test@localhost:$postgres_port/psql_tools_test_db --username=bob -a -v ON_ERROR_STOP=on -c 'SELECT bob_test_given()';
 evaluate_result $?;
 
 # WHEN
-psql postgresql://hived:test@localhost/psql_tools_test_db --username=hived -a -v ON_ERROR_STOP=on -c 'SELECT hived_test_when()';
+psql postgresql://test_hived:test@localhost:$postgres_port/psql_tools_test_db --username=test_hived -a -v ON_ERROR_STOP=on -c 'SELECT hived_test_when()';
 evaluate_result $?;
-psql postgresql://alice:test@localhost/psql_tools_test_db --username=alice -a -v ON_ERROR_STOP=on -c 'SELECT alice_test_when()';
+psql postgresql://alice:test@localhost:$postgres_port/psql_tools_test_db --username=alice -a -v ON_ERROR_STOP=on -c 'SELECT alice_test_when()';
 evaluate_result $?;
-psql postgresql://bob:test@localhost/psql_tools_test_db --username=bob -a -v ON_ERROR_STOP=on -c 'SELECT bob_test_when()';
+psql postgresql://bob:test@localhost:$postgres_port/psql_tools_test_db --username=bob -a -v ON_ERROR_STOP=on -c 'SELECT bob_test_when()';
 evaluate_result $?;
 
 # THEN
-psql postgresql://hived:test@localhost/psql_tools_test_db --username=hived -a -v ON_ERROR_STOP=on -c 'SELECT hived_test_then()';
+psql postgresql://test_hived:test@localhost:$postgres_port/psql_tools_test_db --username=test_hived -a -v ON_ERROR_STOP=on -c 'SELECT hived_test_then()';
 evaluate_result $?;
-psql postgresql://alice:test@localhost/psql_tools_test_db --username=alice -a -v ON_ERROR_STOP=on -c 'SELECT alice_test_then()';
+psql postgresql://alice:test@localhost:$postgres_port/psql_tools_test_db --username=alice -a -v ON_ERROR_STOP=on -c 'SELECT alice_test_then()';
 evaluate_result $?;
-psql postgresql://bob:test@localhost/psql_tools_test_db --username=bob -a -v ON_ERROR_STOP=on -c 'SELECT bob_test_then()';
+psql postgresql://bob:test@localhost:$postgres_port/psql_tools_test_db --username=bob -a -v ON_ERROR_STOP=on -c 'SELECT bob_test_then()';
 evaluate_result $?;
 
 echo "PASSED";

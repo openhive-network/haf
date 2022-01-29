@@ -1,19 +1,4 @@
-DO $$
-BEGIN
-    CREATE ROLE hived_group WITH NOLOGIN;
-    EXCEPTION WHEN DUPLICATE_OBJECT THEN
-    RAISE NOTICE 'hived_group role already exists';
-END
-$$;
-
-DO $$
-BEGIN
-    CREATE ROLE hive_applications_group WITH NOLOGIN;
-    EXCEPTION WHEN DUPLICATE_OBJECT THEN
-    RAISE NOTICE 'hive_applications_group role already exists';
-END
-$$;
-
+ALTER TABLE hive.operation_types OWNER TO hived_group;
 ALTER TABLE hive.blocks OWNER TO hived_group;
 ALTER TABLE hive.transactions OWNER TO hived_group;
 ALTER TABLE hive.operations OWNER TO hived_group;
