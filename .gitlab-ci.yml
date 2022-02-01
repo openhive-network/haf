@@ -4,8 +4,8 @@ stages:
 variables:
   GIT_DEPTH: 1
   GIT_SUBMODULE_STRATEGY: recursive
-  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-2
-  BUILDER_IMAGE_TAG: "@sha256:0ffb811e495c09f2b7986b9bbb7ef1c2f9a451dd7126b935c63c67a50cc37f6b"
+  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-3
+  BUILDER_IMAGE_TAG: "@sha256:a701abca3cdd31bc3a5c7e58a8a2a9ea752e7f30e100aa41bcfe9c56b777883f"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
 
 hive_fork_manager:
