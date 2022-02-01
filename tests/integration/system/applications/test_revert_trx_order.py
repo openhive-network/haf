@@ -33,11 +33,22 @@ def test_revert_trx_order(world_with_witnesses_and_database):
     logger.info("Sending trx")
 
 
-    alpha_wallet.api.transfer_nonblocking('initminer', 'initminer', Asset.Test(1000), 'dummy transfer operation', broadcast=False)
-    alpha_wallet.api.transfer_to_vesting_nonblocking('initminer', 'initminer', Asset.Test(1000), broadcast=False)
 
+    try:
+        alpha_wallet.api.transfer_nonblocking('initminer', 'null', Asset.Test(1000), 'dummy transfer operation2', )
+    except: pass
+    try:
+        alpha_wallet.api.transfer_nonblocking('initminer', 'null', Asset.Test(1000), 'dummy transfer operation1', )
+    except: pass
 
+    try:
+        beta_wallet.api.transfer_nonblocking('initminer', 'null', Asset.Test(1000), 'dummy transfer operation1')
+    except: pass
+    try:
+        beta_wallet.api.transfer_nonblocking('initminer', 'null', Asset.Test(1000), 'dummy transfer operation2')
+    except: pass
 
-    beta_wallet.api.transfer_to_vesting_nonblocking('initminer', 'initminer', Asset.Test(1000), broadcast=False)
-    beta_wallet.api.transfer_nonblocking('initminer', 'initminer', Asset.Test(1000), 'dummy transfer operation', broadcast=False)
-
+    head_block = get_head_block(node_under_test)
+    logger.info(f"transfers done at block {head_block}")
+    while True:
+        pass
