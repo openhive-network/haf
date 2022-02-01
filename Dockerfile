@@ -9,7 +9,7 @@ USER root
 WORKDIR /usr/local/src
 ADD ./scripts /usr/local/src/scripts
 
-RUN ./scripts/setup_ubuntu.sh --haf_admin_account="haf_admin" --hived_account="hived"
+RUN ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived"
 
 USER haf_admin
 
