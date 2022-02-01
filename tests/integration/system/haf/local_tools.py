@@ -1,7 +1,9 @@
+from datetime import datetime, timezone
 import json
+import time
 
 from test_tools import logger, Wallet, BlockLog
-from datetime import datetime, timezone
+from test_tools.private.wait_for import wait_for_event
 
 
 BLOCKS_IN_FORK = 5
@@ -91,8 +93,14 @@ def run_networks(world, blocklog_directory, replay_all_nodes=True):
 
     for network in world.networks():
         network.is_running = True
+
+    deadline = time.time() + 20
     for node in nodes:
-        node.wait_for_live()
+        wait_for_event(
+            node._Node__notifications.live_mode_entered_event,
+            deadline=deadline,
+            exception_message='Live mode not activated on time.'
+        )
 
 
 def create_node_with_database(network, url):
