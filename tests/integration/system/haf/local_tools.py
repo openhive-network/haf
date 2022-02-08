@@ -45,7 +45,12 @@ def wait_for_irreversible_progress(node, block_num):
     irreversible_block = get_irreversible_block(node)
     logger.info(f"Current head_block_number: {head_block}, irreversible_block_num: {irreversible_block}")
     while irreversible_block < block_num:
-        node.wait_for_block_with_number(head_block+1)
+        try:
+            node.wait_for_block_with_number(head_block+1, timeout=30)
+        except TimeoutError:
+            node.api.network_node.set_allowed_peers(allowed_peers=[node.get_id()])
+            node.api.network_node.set_allowed_peers(allowed_peers=[])
+
         head_block = get_head_block(node)
         irreversible_block = get_irreversible_block(node)
         logger.info(f"Current head_block_number: {head_block}, irreversible_block_num: {irreversible_block}")
