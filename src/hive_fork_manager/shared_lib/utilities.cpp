@@ -16,6 +16,14 @@ using hive::app::impacted_balance_data;
 namespace // anonymous
 {
 
+std::string get_legacy_style_operation_impl( const std::string& operation_body )
+{
+  //hive::protocol::operation _op;
+  //from_variant( fc::json::from_string( operation_body ), _op );
+
+  return "TEST";
+}
+
 flat_set<account_name_type> get_accounts( const std::string& operation_body )
 {
   hive::protocol::operation _op;
@@ -74,6 +82,86 @@ void issue_error(const char* msg)
 
 
 PG_MODULE_MAGIC;
+
+PG_FUNCTION_INFO_V1(get_legacy_style_operation);
+
+Datum get_legacy_style_operation(PG_FUNCTION_ARGS)
+{
+  #define NR_RETURN_ELEMENTS 1
+  #define BODY_LEGACY_OP_IDX 0
+
+  TupleDesc            retvalDescription;
+  Tuplestorestate*     tupstore = nullptr;
+  
+  MemoryContext per_query_ctx;
+  MemoryContext oldcontext;
+
+  Datum tuple_values[NR_RETURN_ELEMENTS] = {0};
+  bool  nulls[NR_RETURN_ELEMENTS] = {false};
+
+  ReturnSetInfo* rsinfo = reinterpret_cast<ReturnSetInfo*>(fcinfo->resultinfo); //NOLINT
+
+  /* check to see if caller supports us returning a tuplestore */
+  if(rsinfo == nullptr || !IsA(rsinfo, ReturnSetInfo))
+  {
+    issue_error("set-valued function called in context that cannot accept a set");
+  }
+
+  if((rsinfo->allowedModes & SFRM_Materialize) == 0) //NOLINT
+  {
+    issue_error("materialize mode required, but it is not allowed in this context");
+  }
+
+/* Build a tuple descriptor for our result type */
+  if(get_call_result_type(fcinfo, nullptr, &retvalDescription) != TYPEFUNC_COMPOSITE)
+  {
+    issue_error("return type must be a row type");
+  }
+
+  fc::string _body_legacy_op;
+  const char* operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+  try
+  {
+    _body_legacy_op = get_legacy_style_operation_impl( operation_body );
+  }
+  catch(const fc::exception& ex)
+  {
+    std::string exception_info = ex.to_string();
+    issue_error(std::string("Broken get_impacted_balances() input argument: `") + operation_body + std::string("'. Error: ") + exception_info);
+    return (Datum)0;
+  }
+  catch(const std::exception& ex)
+  {
+    issue_error(std::string("Broken get_impacted_balances() input argument: `") + operation_body + std::string("'. Error: ") + ex.what());
+    return (Datum)0;
+  }
+  catch(...)
+  {
+    issue_error(std::string("Unknown error during processing get_impacted_balances(") + operation_body + std::string(")"));
+    return (Datum)0;
+  }
+
+  per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
+  oldcontext = MemoryContextSwitchTo(per_query_ctx);
+
+  tupstore = tuplestore_begin_heap(true, false, work_mem);
+
+  /* let the caller know we're sending back a tuplestore */
+  rsinfo->returnMode = SFRM_Materialize;
+  rsinfo->setResult = tupstore;
+  rsinfo->setDesc = retvalDescription;
+
+  MemoryContextSwitchTo(oldcontext);
+
+  tuple_values[BODY_LEGACY_OP_IDX] = CStringGetTextDatum(_body_legacy_op.c_str());
+  tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
+
+/* clean up and return the tuplestore */
+  tuplestore_donestoring(tupstore);
+
+  return (Datum)0;
+}
 
 PG_FUNCTION_INFO_V1(get_impacted_accounts);
 
