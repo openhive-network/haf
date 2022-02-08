@@ -1,5 +1,6 @@
 
 #include <hive/protocol/forward_impacted.hpp>
+#include <hive/protocol/legacy_operations.hpp>
 
 #include <fc/io/json.hpp>
 #include <fc/string.hpp>
@@ -18,10 +19,15 @@ namespace // anonymous
 
 std::string get_legacy_style_operation_impl( const std::string& operation_body )
 {
-  //hive::protocol::operation _op;
-  //from_variant( fc::json::from_string( operation_body ), _op );
+  hive::protocol::operation _op;
+  from_variant( fc::json::from_string( operation_body ), _op );
 
-  return "TEST";
+  hive::protocol::legacy_operation _l_op;
+  hive::protocol::legacy_operation_conversion_visitor _visitor( _l_op );
+
+  _op.visit( _visitor );
+
+  return fc::json::to_string( _l_op );
 }
 
 flat_set<account_name_type> get_accounts( const std::string& operation_body )
