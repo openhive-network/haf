@@ -14,7 +14,6 @@ def test_event_new_and_irreversible(world_with_witnesses_and_database):
     # GIVEN
     world, session = world_with_witnesses_and_database
     run_networks(world, Path().resolve(), replay_all_nodes=False)
-
     node_under_test = world.network('Beta').node('NodeUnderTest')
 
     # WHEN
@@ -27,6 +26,7 @@ def test_event_new_and_irreversible(world_with_witnesses_and_database):
         node_under_test.wait_number_of_blocks(1)
         head_block = get_head_block(node_under_test)
         irreversible_block = get_irreversible_block(node_under_test)
+        logger.info(f'head: {head_block} irrevesible: {irreversible_block}')
 
         if irreversible_block > previous_irreversible:
             session.query(EventsQueue).\

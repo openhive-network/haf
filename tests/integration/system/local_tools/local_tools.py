@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import time
 import json
-from threading import Thread
+from threading import Thread, Event
 
 from test_tools import logger, Wallet, BlockLog, Account, Asset
 from test_tools.private.wait_for import wait_for_event
@@ -37,14 +37,20 @@ def make_fork(world, at_block=None, main_chain_trxs=[], fork_chain_trxs=[]):
 
     alpha_net.disconnect_from(beta_net)
 
+    threads = []
     if main_chain_trxs:
         main_chain_wallet = Wallet(attach_to=world.network('Alpha').node('WitnessNode0'))
         import_witnesses_keys(main_chain_wallet)
-        send_transactions_asynchronously(main_chain_wallet, main_chain_trxs)
+        t1 = send_transactions_asynchronously(main_chain_wallet, main_chain_trxs)
+        threads.append(t1)
     if fork_chain_trxs:
         fork_chain_wallet = Wallet(attach_to=world.network('Beta').node('WitnessNode0'))
         import_witnesses_keys(fork_chain_wallet)
-        send_transactions_asynchronously(fork_chain_wallet, fork_chain_trxs)
+        t2 = send_transactions_asynchronously(fork_chain_wallet, fork_chain_trxs)
+        threads.append(t2)
+
+    for t in threads:
+        t.join()
 
     for node in [alpha_witness_node, beta_witness_node]:
         node.wait_for_block_with_number(fork_block + BLOCKS_IN_FORK)
@@ -55,7 +61,9 @@ def send_transactions_asynchronously(wallet, trxs):
     def sign_and_send():
         for trx in trxs:
             wallet.api.sign_transaction(trx)
-    Thread(target=sign_and_send, daemon=True).start()
+    t = Thread(target=sign_and_send, daemon=True)
+    t.start()
+    return t
 
 
 def back_from_fork(world):
@@ -74,16 +82,10 @@ def back_from_fork(world):
 
 
 def wait_for_back_from_fork(node, timeout=WAIT_FOR_FORK_TIMEOUT):
-    already_waited = 0
-    while not switched_fork(node):
-        if timeout - already_waited <= 0:
-            raise TimeoutError('Waited too long for switching forks')
+    started_waiting = time.time()
+    node.wait_for_fork(timeout)
 
-        sleep_time = min(1.0, timeout)
-        time.sleep(sleep_time)
-        already_waited += sleep_time
-
-    return already_waited
+    return time.time() - started_waiting
 
 
 def switched_fork(node):
@@ -128,6 +130,8 @@ def get_time_offset_from_file(name):
 
 
 def run_networks(world, blocklog_directory, replay_all_nodes=True):
+    world.run_all_nodes(prepared_block_log=True, replay_all_nodes=replay_all_nodes)
+    return
     time_offset = get_time_offset_from_file(blocklog_directory/'timestamp')
 
     block_log = BlockLog(None, blocklog_directory/'block_log', include_index=False)
@@ -225,3 +229,90 @@ def prepare_transaction2_multisig(wallet):
             wallet.api.transfer(name, "initminer", Asset.Test(1), 'memo')
     transaction2 = context2.get_response()
     return transaction2
+
+
+SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE = """
+    CREATE TABLE IF NOT EXISTS public.trx_histogram(
+          day DATE
+        , trx INT
+        , CONSTRAINT pk_trx_histogram PRIMARY KEY( day ) )
+    INHERITS( hive.{} )
+    """
+SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION = """
+    CREATE OR REPLACE FUNCTION public.update_histogram( _first_block INT, _last_block INT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+    AS
+     $function$
+     BEGIN
+        INSERT INTO public.trx_histogram as th( day, trx )
+        SELECT
+              DATE(hb.created_at) as date
+            , COUNT(1) as trx
+        FROM hive.trx_histogram_blocks_view hb
+        JOIN hive.trx_histogram_transactions_view ht ON ht.block_num = hb.num
+        WHERE hb.num >= _first_block AND hb.num <= _last_block
+        GROUP BY DATE(hb.created_at)
+        ON CONFLICT ON CONSTRAINT pk_trx_histogram DO UPDATE
+        SET
+            trx = EXCLUDED.trx + th.trx
+        WHERE th.day = EXCLUDED.day;
+     END;
+     $function$
+    """
+
+def create_app(session, application_context):
+    session.execute( "SELECT hive.app_create_context( '{}' )".format( application_context ) )
+    session.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE.format( application_context ) )
+    session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION )
+    session.commit()
+
+
+def update_app_continuously(session, application_context):
+    class HafApp(Thread):
+        def __init__(self, session, application_context):
+            Thread.__init__(self, name='haf application')
+            self.stop_event = Event()
+            self.session = session
+            self.application_context = application_context
+
+        def run(self):
+            while not self.stop_event.is_set():
+                blocks_range = session.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( application_context ) ).fetchone()
+                (first_block, last_block) = blocks_range
+                if last_block is None:
+                    continue
+                logger.info( "next blocks_range: {}\n".format( blocks_range ) )
+                session.execute( "SELECT public.update_histogram( {}, {} )".format( first_block, last_block ) )
+                session.commit()
+
+        def stop(self):
+            self.stop_event.set()
+
+        def __enter__(self):
+            self.start()
+            return self
+
+        def __exit__(self, *args, **kwargs):
+            self.stop()
+            self.join()
+
+    return HafApp(session, application_context)
+
+
+def wait_for_application_context(session, timeout=20):
+    head_block = session.execute( "SELECT MAX(num) FROM hive.blocks_reversible").fetchone()[0]
+    fork_id = session.execute( f"SELECT fork_id FROM hive.blocks_reversible WHERE num={head_block}").fetchone()[0]
+    already_waited = 0
+    while True:
+        if session.execute( "SELECT current_block_num FROM hive.contexts").fetchone()[0] > head_block:
+            if session.execute( f"SELECT fork_id FROM hive.contexts").fetchone()[0] == fork_id:
+                break
+        if timeout - already_waited <= 0:
+            raise TimeoutError('Waited too long for switching forks')
+        sleep_time = min(1.0, timeout)
+        time.sleep(sleep_time)
+        already_waited += sleep_time
+
+    return already_waited
