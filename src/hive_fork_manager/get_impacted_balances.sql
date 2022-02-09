@@ -77,4 +77,4 @@ UNION ALL
 SELECT 'hive::protocol::sps_convert_operation'
 ;
 END
-$$
+$$;
