@@ -6,5 +6,5 @@ set -euo pipefail
 
 POSTGRES_VERSION=$1
 
-pg_lsclusters -h | grep -E --regexp="^${POSTGRES_VERSION}\s\w+\s(([[:digit:]])+)" | cut -d ' ' -f 3
+pg_lsclusters -h | tr -s ' ' | grep ${POSTGRES_VERSION} | cut -d ' ' -f 3
 
