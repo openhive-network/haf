@@ -3,7 +3,7 @@ $$
 BEGIN
   CREATE TYPE hive.legacy_style_operation_return AS
   (
-    body VARCHAR --Body of operation in legacy style
+    body JSON --Body of operation in legacy style
   );
 END
 $$;
