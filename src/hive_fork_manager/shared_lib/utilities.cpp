@@ -1,6 +1,6 @@
 
 #include <hive/protocol/forward_impacted.hpp>
-#include <hive/protocol/legacy_operations.hpp>
+#include <hive/protocol/misc_utilities.hpp>
 
 #include <fc/io/json.hpp>
 #include <fc/string.hpp>
@@ -9,6 +9,7 @@
 
 using hive::protocol::account_name_type;
 using hive::protocol::asset;
+using hive::protocol::legacy_switcher;
 
 using hive::app::impacted_balance_data;
 
@@ -22,12 +23,9 @@ std::string get_legacy_style_operation_impl( const std::string& operation_body )
   hive::protocol::operation _op;
   from_variant( fc::json::from_string( operation_body ), _op );
 
-  hive::protocol::legacy_operation _l_op;
-  hive::protocol::legacy_operation_conversion_visitor _visitor( _l_op );
+  legacy_switcher switcher( true );
 
-  _op.visit( _visitor );
-
-  return fc::json::to_string( _l_op );
+  return fc::json::to_string( _op );
 }
 
 flat_set<account_name_type> get_accounts( const std::string& operation_body )
@@ -134,17 +132,17 @@ Datum get_legacy_style_operation(PG_FUNCTION_ARGS)
   catch(const fc::exception& ex)
   {
     std::string exception_info = ex.to_string();
-    issue_error(std::string("Broken get_impacted_balances() input argument: `") + operation_body + std::string("'. Error: ") + exception_info);
+    issue_error(std::string("Broken get_legacy_style_operation() input argument: `") + operation_body + std::string("'. Error: ") + exception_info);
     return (Datum)0;
   }
   catch(const std::exception& ex)
   {
-    issue_error(std::string("Broken get_impacted_balances() input argument: `") + operation_body + std::string("'. Error: ") + ex.what());
+    issue_error(std::string("Broken get_legacy_style_operation() input argument: `") + operation_body + std::string("'. Error: ") + ex.what());
     return (Datum)0;
   }
   catch(...)
   {
-    issue_error(std::string("Unknown error during processing get_impacted_balances(") + operation_body + std::string(")"));
+    issue_error(std::string("Unknown error during processing get_legacy_style_operation(") + operation_body + std::string(")"));
     return (Datum)0;
   }
 
