@@ -102,20 +102,23 @@ replay_node_with_haf:
     PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
     BLOCK_LOG_PATH: "/blockchain/block_log"
+    DB_NAME: haf_block_log
+    DB_URL: "postgresql:///$DB_NAME"
   script:
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
-    - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="haf_block_log" --haf-db-owner="hive"
+    - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-db-owner="hive"
     # tests
     - cd $CI_PROJECT_DIR/tests/integration/replay
     - mkdir blockchain
     - $HIVE_BUILD_ROOT_PATH/programs/util/truncate_block_log $BLOCK_LOG_PATH blockchain/block_log 5000000
-    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir . --config config.ini --force-replay --exit-before-sync > node_logs.log 2>&1
+    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir . --config config.ini --force-replay --exit-before-sync --psql-url $DB_URL > node_logs.log 2>&1
     - tox
   artifacts:
     paths:
     - "**/node_logs.log"
     - "**/generated_during_*"
     - "**/generated_by_package_fixtures"
+    - "**/*.out.csv"
     reports:
       junit: tests/integration/replay/report.xml
     when: always

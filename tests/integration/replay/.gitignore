@@ -4,3 +4,4 @@ GeneratedInWorld
 .tox
 report.xml
 Testing
+*.out
