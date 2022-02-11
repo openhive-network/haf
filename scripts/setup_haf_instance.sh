@@ -1,9 +1,20 @@
 #! /bin/bash
 
-LOG_FILE=setup_haf_instance.log
-SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+set -euo pipefail 
 
-source "$SCRIPTPATH/common.sh"
+LOG_FILE=setup_haf_instance.log
+
+# Because this script should work as standalone script being just downloaded from gitlab repo, and next use internal
+# scripts from a cloned repo, logging code is duplicated. 
+
+exec > >(tee "${LOG_FILE}") 2>&1
+
+log_exec_params() {
+  echo
+  echo -n "$0 parameters: "
+  for arg in "$@"; do echo -n "$arg "; done
+  echo
+} 
 
 log_exec_params "$@"
 
@@ -189,10 +200,13 @@ if [ "$EUID" -eq 0 ]
   exit 1
 fi
 
-sudo -n "$SCRIPTPATH/setup_ubuntu.sh" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --hived-account="$HIVED_ACCOUNT"
-
 do_cleanup
 do_clone "$HAF_BRANCH" "$HAF_SOURCE_DIR"
+
+SCRIPTPATH="$HAF_SOURCE_DIR/scripts"
+
+sudo -n "$SCRIPTPATH/setup_ubuntu.sh" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --hived-account="$HIVED_ACCOUNT"
+
 time "$SCRIPTPATH/build.sh" --haf-source-dir="$HAF_SOURCE_DIR" --haf-binaries-dir="$HAF_BINARY_DIR" "$@" hived extension.hive_fork_manager
 
 time sudo -n "$SCRIPTPATH/setup_postgres.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --haf-binaries-dir="$HAF_BINARY_DIR" --haf-database-store="$HAF_TABLESPACE_LOCATION"
