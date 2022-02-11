@@ -4,7 +4,7 @@ import os
 
 from test_tools import logger, constants, Account, World, Asset, Wallet
 
-from witnesses import alpha_witness_names, beta_witness_names
+from witnesses import alpha_witness_names, beta_witness_names, all_witness_names
 
 
 class bcolors:
@@ -22,8 +22,6 @@ class bcolors:
 def prepare_block_log(world, length):
     world.set_clean_up_policy(constants.WorldCleanUpPolicy.DO_NOT_REMOVE_FILES)
 
-    all_witness_names = alpha_witness_names + beta_witness_names
-
     # Create first network
     alpha_net = world.create_network('Alpha')
     beta_net = world.create_network('Beta')
@@ -39,7 +37,7 @@ def prepare_block_log(world, length):
         first = int(i * len(beta_witness_names) / 4)
         last = int((i+1) * len(beta_witness_names) / 4)
         beta_net.create_witness_node(witnesses=beta_witness_names[first:last])
-        
+
     # Run
     alpha_net.connect_with(beta_net)
 
@@ -58,19 +56,10 @@ def prepare_block_log(world, length):
     init_node.wait_for_block_with_number(43)
 
     # Prepare witnesses on blockchain
-    with wallet.in_single_transaction():
-        for name in all_witness_names:
-            wallet.api.create_account('initminer', name, '')
-    with wallet.in_single_transaction():
-        for name in all_witness_names:
-            wallet.api.transfer_to_vesting("initminer", name, Asset.Test(1000))
-    with wallet.in_single_transaction():
-        for name in all_witness_names:
-            wallet.api.update_witness(
-                name, "https://" + name,
-                Account(name).public_key,
-                {"account_creation_fee": Asset.Test(3), "maximum_block_size": 65536, "sbd_interest_rate": 0}
-            )
+    create_accounts(wallet)
+    make_transfers(wallet)
+    make_transfers_to_vesting(wallet)
+    update_witnesses(wallet)
 
     logger.info('Wait 21 blocks to schedule newly created witnesses')
     init_node.wait_number_of_blocks(21)
@@ -108,6 +97,39 @@ def prepare_block_log(world, length):
     timestamp = init_node.api.block.get_block(block_num = length)['block']['timestamp']
 
     return timestamp
+
+
+def create_accounts(wallet):
+    with wallet.in_single_transaction():
+        for name in all_witness_names:
+            public_key = Account(name).public_key
+            wallet.api.create_account_with_keys(
+                'initminer', name, '',
+                public_key, public_key, public_key, public_key
+            )
+    for name in all_witness_names:
+        wallet.api.import_key(Account(name).private_key)
+
+
+def make_transfers(wallet):
+    with wallet.in_single_transaction():
+        for name in all_witness_names:
+            wallet.api.transfer("initminer", name, Asset.Test(1000), 'memo')
+
+
+def make_transfers_to_vesting(wallet):
+    with wallet.in_single_transaction():
+        for name in all_witness_names:
+            wallet.api.transfer_to_vesting("initminer", name, Asset.Test(1000))
+
+
+def update_witnesses(wallet):
+    with wallet.in_single_transaction():
+        for name in all_witness_names:
+            wallet.api.update_witness(
+                name, "https://" + name, Account(name).public_key,
+                {"account_creation_fee": Asset.Test(3), "maximum_block_size": 65536, "sbd_interest_rate": 0}
+            )
 
 
 if __name__ == "__main__":
