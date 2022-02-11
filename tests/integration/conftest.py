@@ -1,9 +1,9 @@
 import pytest
 import sqlalchemy
 from sqlalchemy_utils import database_exists, create_database, drop_database
-from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker, close_all_sessions
 from sqlalchemy.pool import NullPool
+import time
 from uuid import uuid4
 
 from test_tools import logger, constants, World
@@ -44,19 +44,31 @@ def database():
 
         engine = sqlalchemy.create_engine(url, echo=False, poolclass=NullPool)
         with engine.connect() as connection:
-            connection.execute('CREATE EXTENSION hive_fork_manager CASCADE;')
+            max_tries = 10
+            for i in range(max_tries):
+                try:
+                    time.sleep(0.3)
+                    connection.execute('CREATE EXTENSION hive_fork_manager CASCADE;')
+                    break
+                except Exception:
+                    logger.info('retrying to execute query CREATE EXTENSION hive_fork_manager')
+                    continue
 
         with engine.connect() as connection:
-            connection.execute('SET ROLE hived_group')
+            max_tries = 10
+            for i in range(max_tries):
+                try:
+                    time.sleep(0.3)
+                    connection.execute('SET ROLE hived_group')
+                    break
+                except Exception:
+                    logger.info('retrying to execute query SET ROLE hived_group')
+                    continue
 
         Session = sessionmaker(bind=engine)
         session = Session()
 
-        metadata = sqlalchemy.MetaData(schema="hive")
-        Base = automap_base(bind=engine, metadata=metadata)
-        Base.prepare(reflect=True)
-
-        return session, Base
+        return session
 
     yield make_database
 
@@ -66,15 +78,18 @@ def database():
 @pytest.fixture(scope="function")
 def world_with_witnesses_and_database(world, database, witness_names):
     alpha_witness_names, beta_witness_names = witness_names
-    session, Base = database('postgresql:///haf_block_log')
+    session = database('postgresql:///haf_block_log')
 
     alpha_net = world.create_network('Alpha')
-    alpha_net.create_witness_node(witnesses=alpha_witness_names)
+    alpha_witness_node = alpha_net.create_witness_node(witnesses=alpha_witness_names)
+    alpha_net.create_api_node()
+
     beta_net = world.create_network('Beta')
-    beta_net.create_witness_node(witnesses=beta_witness_names)
+    beta_witness_node = beta_net.create_witness_node(witnesses=beta_witness_names)
     node_under_test = beta_net.create_api_node(name = 'NodeUnderTest')
     node_under_test.config.plugin.append('sql_serializer')
     node_under_test.config.psql_url = str(session.get_bind().url)
+    beta_net.create_api_node()
 
     for node in world.nodes():
         node.config.log_logger = '{"name":"default","level":"debug","appender":"stderr,p2p"} '\
@@ -83,4 +98,4 @@ def world_with_witnesses_and_database(world, database, witness_names):
                                  '{"name":"sync","level":"debug","appender":"p2p"} '\
                                  '{"name":"p2p","level":"debug","appender":"p2p"}'
 
-    yield world, session, Base
+    yield world, session

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, DateTime, Integer, LargeBinary, SmallInteger, String, Text, MetaData
+from sqlalchemy import Column, BigInteger, DateTime, Integer, LargeBinary, SmallInteger, String, Text, MetaData, Boolean
 from sqlalchemy.orm import declarative_base
 
 
@@ -130,3 +130,11 @@ class EventsQueue(Base):
     id = Column(BigInteger, primary_key=True)
     event = Column(String)
     block_num = Column(BigInteger)
+
+
+class IrreversibleData(Base):
+    __tablename__ = "irreversible_data"
+
+    id = Column(Integer, primary_key=True)
+    consistent_block = Column(Integer)
+    is_dirty = Column(Boolean)

@@ -2,19 +2,19 @@ from pathlib import Path
 
 from test_tools import logger
 from local_tools import get_head_block, get_irreversible_block, run_networks
+from tables import EventsQueue
 
 
-START_TEST_BLOCK = 108
+START_TEST_BLOCK = 111
 
 
 def test_event_new_and_irreversible(world_with_witnesses_and_database):
     logger.info(f'Start test_event_new_and_irreversible')
 
     # GIVEN
-    world, session, Base = world_with_witnesses_and_database
-    node_under_test = world.network('Beta').node('NodeUnderTest')
+    world, session = world_with_witnesses_and_database
 
-    events_queue = Base.classes.events_queue
+    node_under_test = world.network('Beta').node('NodeUnderTest')
 
     # WHEN
     run_networks(world, replay_all_nodes=False)
@@ -29,33 +29,33 @@ def test_event_new_and_irreversible(world_with_witnesses_and_database):
         irreversible_block = get_irreversible_block(node_under_test)
 
         if irreversible_block > previous_irreversible:
-            session.query(events_queue).\
-                filter(events_queue.event == 'NEW_IRREVERSIBLE').\
-                filter(events_queue.block_num == irreversible_block).\
+            session.query(EventsQueue).\
+                filter(EventsQueue.event == 'NEW_IRREVERSIBLE').\
+                filter(EventsQueue.block_num == irreversible_block).\
                 one()
 
             previous_irreversible = irreversible_block
 
-        session.query(events_queue).\
-            filter(events_queue.event == 'NEW_BLOCK').\
-            filter(events_queue.block_num == head_block).\
+        session.query(EventsQueue).\
+            filter(EventsQueue.event == 'NEW_BLOCK').\
+            filter(EventsQueue.block_num == head_block).\
             one()
 
         # now check that old events were removed
-        old_block_events = session.query(events_queue).\
-            filter(events_queue.event == 'NEW_BLOCK').\
-            filter(events_queue.block_num <= irreversible_block).\
+        old_block_events = session.query(EventsQueue).\
+            filter(EventsQueue.event == 'NEW_BLOCK').\
+            filter(EventsQueue.block_num <= irreversible_block).\
             all()
         assert old_block_events == []
 
-        lower_bound_event = session.query(events_queue).\
-            filter(events_queue.event == 'NEW_BLOCK').\
-            order_by(events_queue.id).\
+        lower_bound_event = session.query(EventsQueue).\
+            filter(EventsQueue.event == 'NEW_BLOCK').\
+            order_by(EventsQueue.id).\
             first()
 
-        old_irreversible_events = session.query(events_queue).\
-            filter(events_queue.event == 'NEW_IRREVERSIBLE').\
-            filter(events_queue.id < lower_bound_event.id).\
-            filter(events_queue.id > 0).\
+        old_irreversible_events = session.query(EventsQueue).\
+            filter(EventsQueue.event == 'NEW_IRREVERSIBLE').\
+            filter(EventsQueue.id < lower_bound_event.id).\
+            filter(EventsQueue.id > 0).\
             all()
         assert old_irreversible_events == []

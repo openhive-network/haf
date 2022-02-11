@@ -2,6 +2,7 @@ from sqlalchemy.orm.session import sessionmaker
 
 from test_tools import logger
 from local_tools import run_networks, run_networks, wait_for_irreversible_progress, get_irreversible_block, create_app
+from tables import BlocksReversible, IrreversibleData
 
 
 START_TEST_BLOCK = 108
@@ -20,6 +21,7 @@ def update_app_continuously(session, application_context, cycles):
         session.commit()
         ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hive.contexts WHERE NAME = '{}'".format( application_context ) ).fetchone()
         logger.info(f'ctx_stats-update-app: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
+
 
 def test_application_broken(world_with_witnesses_and_database):
     logger.info(f'Start test_application_broken')
@@ -41,11 +43,9 @@ def test_application_broken(world_with_witnesses_and_database):
     #Finally a value of `irreversible_block` for given context has to be equal to current value of `irreversible_block` in HAF.
 
     # GIVEN
-    world, session, Base = world_with_witnesses_and_database
+    world, session = world_with_witnesses_and_database
     second_session = sessionmaker()(bind = session.get_bind())
     node_under_test = world.network('Beta').node('NodeUnderTest')
-    irreversible_data = Base.classes.irreversible_data
-    blocks_reversible = Base.classes.blocks_reversible
 
     # WHEN
     run_networks(world, replay_all_nodes=False)
@@ -85,7 +85,7 @@ def test_application_broken(world_with_witnesses_and_database):
     irreversible_block = get_irreversible_block(node_under_test)
     logger.info(f'irreversible_block {irreversible_block}')
 
-    haf_irreversible = session.query(irreversible_data).one()
+    haf_irreversible = session.query(IrreversibleData).one()
     logger.info(f'consistent_block {haf_irreversible.consistent_block}')
 
     context_irreversible_block = session.execute( "SELECT irreversible_block FROM hive.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()[0]
@@ -94,7 +94,7 @@ def test_application_broken(world_with_witnesses_and_database):
     assert irreversible_block == haf_irreversible.consistent_block
     assert irreversible_block == context_irreversible_block
 
-    blks = session.query(blocks_reversible).order_by(blocks_reversible.num).all()
+    blks = session.query(BlocksReversible).order_by(BlocksReversible.num).all()
     block_min = min([block.num for block in blks])
     logger.info(f'min of blocks_reversible is {block_min}')
 
