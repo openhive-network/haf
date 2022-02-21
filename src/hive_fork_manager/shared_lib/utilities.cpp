@@ -91,80 +91,34 @@ PG_FUNCTION_INFO_V1(get_legacy_style_operation);
 
 Datum get_legacy_style_operation(PG_FUNCTION_ARGS)
 {
-  #define NR_RETURN_ELEMENTS 1
-  #define BODY_LEGACY_OP_IDX 0
-
-  TupleDesc            retvalDescription;
-  Tuplestorestate*     tupstore = nullptr;
-  
-  MemoryContext per_query_ctx;
-  MemoryContext oldcontext;
-
-  Datum tuple_values[NR_RETURN_ELEMENTS] = {0};
-  bool  nulls[NR_RETURN_ELEMENTS] = {false};
-
-  ReturnSetInfo* rsinfo = reinterpret_cast<ReturnSetInfo*>(fcinfo->resultinfo); //NOLINT
-
-  /* check to see if caller supports us returning a tuplestore */
-  if(rsinfo == nullptr || !IsA(rsinfo, ReturnSetInfo))
-  {
-    issue_error("set-valued function called in context that cannot accept a set");
-  }
-
-  if((rsinfo->allowedModes & SFRM_Materialize) == 0) //NOLINT
-  {
-    issue_error("materialize mode required, but it is not allowed in this context");
-  }
-
-/* Build a tuple descriptor for our result type */
-  if(get_call_result_type(fcinfo, nullptr, &retvalDescription) != TYPEFUNC_COMPOSITE)
-  {
-    issue_error("return type must be a row type");
-  }
-
-  fc::string _body_legacy_op;
-  const char* operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  const char* _operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  Datum _result = (Datum)0;
 
   try
   {
-    _body_legacy_op = get_legacy_style_operation_impl( operation_body );
+
+    fc::string _legacy_operation_body = get_legacy_style_operation_impl( _operation_body );
+
+    _result = CStringGetTextDatum( _legacy_operation_body.c_str() );
   }
   catch(const fc::exception& ex)
   {
     std::string exception_info = ex.to_string();
-    issue_error(std::string("Broken get_legacy_style_operation() input argument: `") + operation_body + std::string("'. Error: ") + exception_info);
+    issue_error(std::string("Broken get_legacy_style_operation() input argument: `") + _operation_body + std::string("'. Error: ") + exception_info);
     return (Datum)0;
   }
   catch(const std::exception& ex)
   {
-    issue_error(std::string("Broken get_legacy_style_operation() input argument: `") + operation_body + std::string("'. Error: ") + ex.what());
+    issue_error(std::string("Broken get_legacy_style_operation() input argument: `") + _operation_body + std::string("'. Error: ") + ex.what());
     return (Datum)0;
   }
   catch(...)
   {
-    issue_error(std::string("Unknown error during processing get_legacy_style_operation(") + operation_body + std::string(")"));
+    issue_error(std::string("Unknown error during processing get_legacy_style_operation(") + _operation_body + std::string(")"));
     return (Datum)0;
   }
 
-  per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
-  oldcontext = MemoryContextSwitchTo(per_query_ctx);
-
-  tupstore = tuplestore_begin_heap(true, false, work_mem);
-
-  /* let the caller know we're sending back a tuplestore */
-  rsinfo->returnMode = SFRM_Materialize;
-  rsinfo->setResult = tupstore;
-  rsinfo->setDesc = retvalDescription;
-
-  MemoryContextSwitchTo(oldcontext);
-
-  tuple_values[BODY_LEGACY_OP_IDX] = CStringGetTextDatum(_body_legacy_op.c_str());
-  tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
-
-/* clean up and return the tuplestore */
-  tuplestore_donestoring(tupstore);
-
-  return (Datum)0;
+  return _result;
 }
 
 PG_FUNCTION_INFO_V1(get_impacted_accounts);
