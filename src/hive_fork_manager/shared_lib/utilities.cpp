@@ -92,7 +92,7 @@ PG_FUNCTION_INFO_V1(get_legacy_style_operation);
 Datum get_legacy_style_operation(PG_FUNCTION_ARGS)
 {
   const char* _operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
-  Datum _result = (Datum)0;
+  auto _result = (Datum)0;
 
   try
   {
