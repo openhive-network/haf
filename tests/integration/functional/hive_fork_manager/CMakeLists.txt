@@ -252,3 +252,4 @@ ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/accounts_provider_non_fork_application.p
 
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_accounts.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_balances.sql )
+ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_legacy_style_operation.sql )
