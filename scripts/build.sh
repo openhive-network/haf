@@ -3,15 +3,10 @@
 set -euo pipefail 
 
 LOG_FILE=build.log
-exec > >(tee ${LOG_FILE}) 2>&1
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
-log_exec_params() {
-  echo -n "$0 parameters: "
-  for arg in "$@"; do echo -n "$arg"; done
-  echo
-}
+source "$SCRIPTPATH/../hive/scripts/common.sh"
 
 log_exec_params "$@"
 
@@ -43,7 +38,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --cmake-arg=*)
         arg="${1#*=}"
-        add_cmake_arg "$arg"
+        add_cmake_arg --cmake-arg="$arg"
         ;;
     --haf-binaries-dir=*)
         HAF_BINARY_DIR="${1#*=}"
@@ -71,11 +66,6 @@ done
 abs_src_dir=`realpath -e --relative-base="$SCRIPTPATH" "$HAF_SOURCE_DIR"` 
 abs_build_dir=`realpath -m --relative-base="$SCRIPTPATH" "$HAF_BINARY_DIR"` 
 
-pwd 
-mkdir -vp "$abs_build_dir"
-pushd "$abs_build_dir"
-pwd
-cmake -DCMAKE_BUILD_TYPE=Release "${CMAKE_ARGS[@]}" "$abs_src_dir"
-make -j10 "$@"
-popd
+"$SCRIPTPATH/../hive/scripts/build.sh" --source-dir="$abs_src_dir" --binary-dir="$abs_build_dir" "${CMAKE_ARGS[@]}"
+
 
