@@ -100,6 +100,7 @@ DECLARE
   fill_recurrent_transfer_operation               VARCHAR := '{"type":"fill_recurrent_transfer_operation","value":{"from":"deathwing","to":"rishi556","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"test","remaining_executions":4}}';
   failed_recurrent_transfer_operation             VARCHAR := '{"type":"failed_recurrent_transfer_operation","value":{"from":"blackknight1423","to":"aa111","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"","consecutive_failures":1,"remaining_executions":0,"deleted":false}}';
   limit_order_cancelled_operation                 VARCHAR := '{"type":"limit_order_cancelled_operation","value":{"seller":"linouxis9","amount_back":{"amount":"9950","precision":3,"nai":"@@000000021"}}}';
+  expired_account_notification_operation          VARCHAR := '{"type":"expired_account_notification_operation","value":{"account":"abit"}}';
 
 BEGIN
 
@@ -347,6 +348,7 @@ BEGIN
   ASSERT (SELECT hive.get_legacy_style_operation(limit_order_cancelled_operation)->>0) = 'limit_order_cancelled', 'operation "limit_order_cancelled_operation" error';
   ASSERT (SELECT hive.get_legacy_style_operation(limit_order_cancelled_operation)#>>'{1,amount_back}') = '9.950 HIVE', 'operation "limit_order_cancelled_operation/amount_back" error';
 
+  ASSERT (SELECT hive.get_legacy_style_operation(expired_account_notification_operation)->>0) = 'expired_account_notification', 'operation "expired_account_notification_operation" error';
 END;
 $BODY$
 ;
