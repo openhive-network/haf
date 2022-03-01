@@ -20,8 +20,8 @@ AS
 $BODY$
 DECLARE
   vote_operation                                  VARCHAR := '{"type":"vote_operation","value":{"voter":"andzzz","author":"signalandnoise","permlink":"hello-","weight":-10000}}';
-  comment_operation                               VARCHAR := '{"type":"comment_operation","value":{"parent_author":"steemit","parent_permlink":"firstpost","author":"admin","permlink":"firstpost","title":"","body":"First Reply! Lets get this **party** started","json_metadata":""}}';
-  transfer_operation                              VARCHAR := '{"type":"transfer_operation","value":{"from":"faddy3","to":"faddy","amount":{"amount":"40000","precision":3,"nai":"@@000000021"},"memo":""}}';
+  comment_operation                               VARCHAR := '{"type":"comment_operation","value":{"parent_author":"steemit","parent_permlink":"firstpost","author":"admin","permlink":"firstpost","title":"TITLE","body":"First Reply! Lets get this **party** started","json_metadata":"{}"}}';
+  transfer_operation                              VARCHAR := '{"type":"transfer_operation","value":{"from":"faddy3","to":"faddy","amount":{"amount":"40000","precision":3,"nai":"@@000000021"},"memo":"this is a test"}}';
   transfer_to_vesting_operation                   VARCHAR := '{"type":"transfer_to_vesting_operation","value":{"from":"steemit70","to":"steemit","amount":{"amount":"100000","precision":3,"nai":"@@000000021"}}}';
   withdraw_vesting_operation                      VARCHAR := '{"type":"withdraw_vesting_operation","value":{"account":"randaletouri","vesting_shares":{"amount":"2753463","precision":6,"nai":"@@000000037"}}}';
   limit_order_create_operation                    VARCHAR := '{"type":"limit_order_create_operation","value":{"owner":"adm","orderid":1,"amount_to_sell":{"amount":"1000","precision":3,"nai":"@@000000021"},"min_to_receive":{"amount":"1000","precision":3,"nai":"@@000000013"},"fill_or_kill":false,"expiration":"2016-05-31T21:44:00"}}';
@@ -104,10 +104,21 @@ DECLARE
 BEGIN
 
   ASSERT (SELECT hive.get_legacy_style_operation(vote_operation)->>0) = 'vote', 'operation "vote_operation" error';
+
   ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)->>0) = 'comment', 'operation "comment_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,parent_author}') = 'steemit', 'operation "comment_operation/parent_author" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,parent_permlink}') = 'firstpost', 'operation "comment_operation/parent_permlink" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,author}') = 'admin', 'operation "comment_operation/author" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,permlink}') = 'firstpost', 'operation "comment_operation/permlink" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,title}') = 'TITLE', 'operation "comment_operation/title" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,body}') = 'First Reply! Lets get this **party** started', 'operation "comment_operation/body" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,json_metadata}') = '{}', 'operation "comment_operation/json_metadata" error';
   
   ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)->>0) = 'transfer', 'operation "transfer_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,from}') = 'faddy3', 'operation "transfer_operation/from" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,to}') = 'faddy', 'operation "transfer_operation/to" error';
   ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,amount}') = '40.000 HIVE', 'operation "transfer_operation/amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,memo}') = 'this is a test', 'operation "transfer_operation/memo" error';
 
   ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_vesting_operation)->>0) = 'transfer_to_vesting', 'operation "transfer_to_vesting_operation" error';
   ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_vesting_operation)#>>'{1,amount}') = '100.000 HIVE', 'operation "transfer_to_vesting_operation/amount" error';
