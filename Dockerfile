@@ -36,9 +36,9 @@ RUN LOG_FILE=build.log source ./scripts/common.sh && do_clone "$BRANCH" ./haf ht
   find . -name *.o  -type f -delete && \
   find . -name *.a  -type f -delete
 
-FROM $CI_REGISTRY_IMAGE/build$IMAGE_TAG AS built_binaries
 # Here we could use a smaller image without packages specific to build requirements
-FROM built_binaries as instance
+FROM $CI_REGISTRY_IMAGE/build$IMAGE_TAG as built_binaries
+FROM $CI_REGISTRY_IMAGE/build$IMAGE_TAG as instance
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
@@ -49,12 +49,15 @@ ENV WS_PORT=${WS_PORT}
 ARG HTTP_PORT=8090
 ENV HTTP_PORT=${HTTP_PORT}
 
+ENV HAF_DB_STORE=/home/hived/datadir/haf_db_store
+ENV PGDATA=/home/hived/datadir/haf_db_store/pgdata
+
 SHELL ["/bin/bash", "-c"] 
 
 USER hived
 WORKDIR /home/hived
 
-RUN mkdir -p /home/hived/bin && mkdir -p /home/hived/datadir && mkdir -p /home/hived/shm_dir 
+RUN mkdir -p /home/hived/bin && mkdir -p /home/hived/shm_dir 
 
 COPY --from=built_binaries /home/haf_admin/build/hive/programs/hived/hived /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet /home/haf_admin/build/hive/programs/util/truncate_block_log /home/hived/bin/
 
@@ -63,11 +66,8 @@ COPY --from=built_binaries /home/haf_admin/build/src/hive_fork_manager ./hive_fo
 USER haf_admin
 WORKDIR /home/haf_admin
 
-RUN sudo -n ./haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/hived/hive_fork_manager" --haf-database-store="/home/hived/datadir" && \
-    ./haf/scripts/setup_db.sh --haf-db-admin=haf_admin --haf-db-name=haf_block_log --haf-db-owner=hive
-
-USER hived
-WORKDIR /home/hived
+ADD ./docker_entrypoint.sh .
+#ADD --chown=postgres:postgres ./docker_postgresql.conf /etc/postgresql/12/main/postgresql.conf
 
 VOLUME [/home/hived/datadir, /home/hived/shm_dir]
 
@@ -81,6 +81,7 @@ EXPOSE ${HTTP_PORT}
 # Embedded postgres service
 EXPOSE 5432
 
-ENTRYPOINT ["/bin/bash", "-c"]
-CMD ['"ls -laR /home/haf_admin/"']
+STOPSIGNAL SIGINT 
+
+ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
 
