@@ -2,7 +2,7 @@
 # docker build -t registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-xxx -f Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE
-ARG IMAGE_TAG=:ubuntu20.04-2 
+ARG IMAGE_TAG=:ubuntu20.04-3 
 
 FROM phusion/baseimage:focal-1.0.0 AS ci-base-image
 
@@ -14,7 +14,7 @@ USER root
 WORKDIR /usr/local/src
 ADD ./scripts /usr/local/src/scripts
 
-RUN ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived"
+RUN ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived" 
 
 USER haf_admin
 
@@ -67,7 +67,7 @@ USER haf_admin
 WORKDIR /home/haf_admin
 
 ADD ./docker_entrypoint.sh .
-#ADD --chown=postgres:postgres ./docker_postgresql.conf /etc/postgresql/12/main/postgresql.conf
+ADD --chown=postgres:postgres ./docker_postgresql.conf /etc/postgresql/12/main/postgresql.conf
 
 VOLUME [/home/hived/datadir, /home/hived/shm_dir]
 
