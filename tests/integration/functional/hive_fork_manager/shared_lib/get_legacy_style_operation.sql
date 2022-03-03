@@ -114,12 +114,14 @@ BEGIN
   ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,title}') = 'TITLE', 'operation "comment_operation/title" error';
   ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,body}') = 'First Reply! Lets get this **party** started', 'operation "comment_operation/body" error';
   ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,json_metadata}') = '{}', 'operation "comment_operation/json_metadata" error';
+  ASSERT ((SELECT hive.get_legacy_style_operation(comment_operation)::VARCHAR) = '["comment",{"parent_author":"steemit","parent_permlink":"firstpost","author":"admin","permlink":"firstpost","title":"TITLE","body":"First Reply! Lets get this **party** started","json_metadata":"{}"}]'), 'operation "comment_operation/whole-body" error';
   
   ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)->>0) = 'transfer', 'operation "transfer_operation" error';
   ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,from}') = 'faddy3', 'operation "transfer_operation/from" error';
   ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,to}') = 'faddy', 'operation "transfer_operation/to" error';
   ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,amount}') = '40.000 HIVE', 'operation "transfer_operation/amount" error';
   ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,memo}') = 'this is a test', 'operation "transfer_operation/memo" error';
+  ASSERT ((SELECT hive.get_legacy_style_operation(transfer_operation)::VARCHAR) = '["transfer",{"from":"faddy3","to":"faddy","amount":"40.000 HIVE","memo":"this is a test"}]'), 'operation "transfer_operation/whole-body" error';
 
   ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_vesting_operation)->>0) = 'transfer_to_vesting', 'operation "transfer_to_vesting_operation" error';
   ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_vesting_operation)#>>'{1,amount}') = '100.000 HIVE', 'operation "transfer_to_vesting_operation/amount" error';
