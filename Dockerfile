@@ -74,6 +74,7 @@ COPY --from=build /home/haf_admin/haf /home/haf_admin/haf/
 
 ADD ./docker/docker_entrypoint.sh .
 ADD --chown=postgres:postgres ./docker/postgresql.conf /etc/postgresql/12/main/postgresql.conf
+ADD --chown=postgres:postgres ./docker/pg_hba.conf /etc/postgresql/12/main/pg_hba.conf
 
 RUN sudo -n mkdir -p /home/hived/bin && sudo -n mkdir -p /home/hived/shm_dir && \
   sudo -n mkdir -p /home/hived/datadir && sudo -n chown -Rc hived:hived /home/hived/
