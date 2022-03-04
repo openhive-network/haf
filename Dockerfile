@@ -62,8 +62,6 @@ SHELL ["/bin/bash", "-c"]
 USER hived
 WORKDIR /home/hived
 
-RUN mkdir -p /home/hived/bin && mkdir -p /home/hived/shm_dir && mkdir -p /home/hived/datadir
-
 COPY --from=build /home/haf_admin/build/hive/programs/hived/hived /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet /home/haf_admin/build/hive/programs/util/truncate_block_log /home/hived/bin/
 
 COPY --from=build /home/haf_admin/build/src/hive_fork_manager ./hive_fork_manager
@@ -76,6 +74,9 @@ COPY --from=build /home/haf_admin/haf /home/haf_admin/haf/
 
 ADD ./docker/docker_entrypoint.sh .
 ADD --chown=postgres:postgres ./docker/postgresql.conf /etc/postgresql/12/main/postgresql.conf
+
+RUN sudo -n mkdir -p /home/hived/bin && sudo -n mkdir -p /home/hived/shm_dir && \
+  sudo -n mkdir -p /home/hived/datadir && sudo -n chown -Rc hived:hived /home/hived/
 
 VOLUME [/home/hived/datadir, /home/hived/shm_dir]
 
