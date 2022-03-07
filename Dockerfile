@@ -1,8 +1,11 @@
 # Base docker file having defined environment for build and run of HAF instance.
 # docker build --target=ci-base-image -t registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-xxx -f Dockerfile .
 # To be started from cloned haf source directory.
-ARG CI_REGISTRY_IMAGE
-ARG CI_IMAGE_TAG=:ubuntu20.04-3 
+ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf
+ARG CI_IMAGE_TAG=:ubuntu20.04-4 
+ARG BLOCK_LOG_SUFFIX=-5m
+
+ARG BUILD_IMAGE_TAG
 
 FROM phusion/baseimage:focal-1.0.0 AS ci-base-image
 
@@ -20,6 +23,13 @@ USER haf_admin
 
 WORKDIR /home/haf_admin
 
+#docker build --target=ci-base-image-5m -t registry.gitlab.syncad.com/hive/haf/ci-base-image-5m:ubuntu20.04-xxx -f Dockerfile .
+FROM $CI_REGISTRY_IMAGE/ci-base-image$CI_IMAGE_TAG AS ci-base-image-5m
+
+RUN sudo -n mkdir -p /home/hived/datadir/blockchain && cd /home/hived/datadir/blockchain && \
+  sudo -n wget -c https://gtg.openhive.network/get/blockchain/block_log.5M && \
+    sudo -n mv block_log.5M block_log && sudo -n chown -Rc hived:hived /home/hived/datadir/
+
 FROM $CI_REGISTRY_IMAGE/ci-base-image$CI_IMAGE_TAG AS build
 ARG BRANCH=master
 ENV BRANCH=${BRANCH:-master}
@@ -31,7 +41,7 @@ USER haf_admin
 WORKDIR /home/haf_admin
 SHELL ["/bin/bash", "-c"] 
 
-ADD ./scripts /home/haf_admin/scripts
+ADD ./scripts/common.sh /home/haf_admin/scripts/common.sh
 
 RUN LOG_FILE=build.log source ./scripts/common.sh && do_clone "$BRANCH" ./haf https://gitlab.syncad.com/hive/haf.git "$COMMIT" && \
   ./haf/scripts/build.sh --haf-source-dir="./haf" --haf-binaries-dir="./build" hived cli_wallet truncate_block_log extension.hive_fork_manager && \
@@ -40,10 +50,10 @@ RUN LOG_FILE=build.log source ./scripts/common.sh && do_clone "$BRANCH" ./haf ht
   find . -name *.a  -type f -delete
 
 # Here we could use a smaller image without packages specific to build requirements
-FROM $CI_REGISTRY_IMAGE/ci-base-image$CI_IMAGE_TAG as instance
+FROM $CI_REGISTRY_IMAGE/ci-base-image$BLOCK_LOG_SUFFIX$CI_IMAGE_TAG as instance
 
-ARG BUILD_IMAGE_TAG
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu20.04-3}
+#ARG BUILD_IMAGE_TAG
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu20.04-4}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
@@ -94,4 +104,15 @@ EXPOSE 5432
 STOPSIGNAL SIGINT 
 
 ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
+
+FROM $CI_REGISTRY_IMAGE/instance-5m$BUILD_IMAGE_TAG as data
+
+ADD --chown=hived:hived ./docker/config_5M.ini /home/hived/datadir/config.ini
+
+RUN "/home/haf_admin/docker_entrypoint.sh" --force-replay --stop-replay-at-block=5000000 --exit-before-sync
+
+ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
+
+# default command line to be passed for this version (which should be stopped at 5M)
+CMD ["--replay-blockchain", "--stop-replay-at-block=5000000"]
 
