@@ -59,6 +59,7 @@ apt-get update \
   && DEBIAN_FRONTEND=noniteractive apt-get install -y \
         systemd \
         autoconf \
+        wget \
         postgresql \
         postgresql-contrib \
         build-essential \
