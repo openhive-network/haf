@@ -33,13 +33,12 @@ echo $CI_IMG_BUILDER_PASSWORD | docker login -u $CI_IMG_BUILDER_USER $REGISTRY -
 
 if [ "$( docker_image_exists \"$IMGNAME\" \"$commit\" \"$REGISTRY\" )" == 1 ];
 then
-  echo "${img} image exists. Exiting..."
-  exit 0
+  echo "${img} image exists. Pulling..."
+  docker pull "$img"
+else
+  # Here continue an image build.
+  "$SCRIPTPATH/build_data4commit.sh" "$commit"
+  docker push "$img"
 fi
 
-# Here continue an image build.
-
-"$SCRIPTPATH/build_data4commit.sh" "$commit"
-
-docker push "$IMGNAME"
-
+echo $img > haf_docked_image.txt

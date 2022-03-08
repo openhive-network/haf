@@ -4,7 +4,7 @@ SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
 SRCROOTDIR="$SCRIPTSDIR/.."
 
-LOG_FILE=build_insance4commit.log
+LOG_FILE=build_instance4commit.log
 source "$SCRIPTSDIR/common.sh"
 
 COMMIT="$1"
