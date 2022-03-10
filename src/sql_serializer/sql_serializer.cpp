@@ -17,6 +17,7 @@
 #include <hive/protocol/operations.hpp>
 
 #include <hive/utilities/plugin_utilities.hpp>
+#include <hive/utilities/data_filter.hpp>
 
 #include <fc/git_revision.hpp>
 #include <fc/io/json.hpp>
@@ -208,7 +209,8 @@ using chain::reindex_notification;
               main_plugin{_main_plugin},
               psql_transactions_threads_number( _psql_transactions_threads_number ),
               psql_operations_threads_number( _psql_operations_threads_number ),
-              psql_account_operations_threads_number( _psql_account_operations_threads_number )
+              psql_account_operations_threads_number( _psql_account_operations_threads_number ),
+              filter("sql")
           {
             HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
           }
@@ -267,6 +269,7 @@ using chain::reindex_notification;
           cached_containter_t currently_caching_data;
           std::unique_ptr<accounts_collector> collector;
           stats_group current_stats;
+          data_filter filter;
 
           void log_statistics()
           {
@@ -637,6 +640,7 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
                          ("psql-enable-accounts-dump", appbase::bpo::value<bool>()->default_value( true ), "enable collect data to accounts and account_operations table")
                          ("psql-force-open-inconsistent", appbase::bpo::bool_switch()->default_value( false ), "force open database even when irreversible data are inconsistent")
                          ("psql-livesync-threshold", appbase::bpo::value<uint32_t>()->default_value( 10000 ), "threshold to move synchronization state during start immediatly to live")
+                         ("psql-track-account-range", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "Defines a range of accounts to track as a json pair [\"from\",\"to\"] [from,to] Can be specified multiple times.")
                          ;
       }
 
@@ -668,7 +672,9 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
 
         my->currently_caching_data = std::make_unique<cached_data_t>( default_reservation_size );
 
-        my->collector = std::make_unique<accounts_collector>( db, *my->currently_caching_data );
+        my->filter.fill( options, "psql-track-account-range" );
+
+        my->collector = std::make_unique<accounts_collector>( db, *my->currently_caching_data, my->filter );
 
         // signals
         my->connect_signals();

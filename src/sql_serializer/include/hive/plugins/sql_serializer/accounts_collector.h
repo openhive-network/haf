@@ -2,6 +2,7 @@
 
 #include <hive/plugins/sql_serializer/sql_serializer_objects.hpp>
 #include <hive/plugins/sql_serializer/cached_data.h>
+#include <hive/utilities/data_filter.hpp>
 
 #include <hive/chain/database.hpp>
 
@@ -10,13 +11,13 @@
 
 namespace hive::plugins::sql_serializer {
 
-
+  using hive::plugins::data_filter;
   struct accounts_collector
     {
     typedef void result_type;
 
-    accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data )
-      : _chain_db(chain_db), _cached_data(cached_data) {}
+    accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, data_filter& filter )
+      : _chain_db(chain_db), _cached_data(cached_data), _filter(filter) {}
 
     void collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
 
@@ -49,6 +50,7 @@ namespace hive::plugins::sql_serializer {
     private:
       hive::chain::database& _chain_db;
       cached_data_t& _cached_data;
+      data_filter& _filter;
       int64_t _processed_operation_id = -1;
       uint32_t _block_num = 0;
 

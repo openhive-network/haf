@@ -81,6 +81,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::on_new_account(const hive::protocol::account_name_type& account_name)
   {
+    if( !_filter.is_tracked_account( account_name ) )
+      return;
+
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
     FC_ASSERT(account_ptr!=nullptr, "account with name ${name} does not exist in chain database", ("name", account_name));
     account_ops_seq_object::id_type account_id(account_ptr->get_id());
@@ -91,6 +94,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id)
   {
+    if( !_filter.is_tracked_account( account_name ) )
+      return;
+
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
     FC_ASSERT(account_ptr!=nullptr, "account with name ${name} does not exist in chain database", ("name", account_name));
     account_ops_seq_object::id_type account_id(account_ptr->get_id());
