@@ -11,6 +11,27 @@
 
 namespace hive::plugins::sql_serializer {
 
+  class filter_mgr
+  {
+    private:
+
+      bool                _is_operation_accepted = false;
+      bool                _is_block_accepted     = false;
+      int32_t             _current_trx_in_block  = 0;
+
+      std::set<uint32_t>  _trx_in_block_filter_accepted;
+
+    public:
+
+      void op_start( uint32_t trx_in_block );
+      void remember();
+
+      void clear();
+      bool is_op_accepted();
+      bool is_trx_accepted( uint32_t trx_in_block );
+      bool is_block_accepted();
+  };
+
   using hive::plugins::data_filter;
   struct accounts_collector
     {
@@ -19,7 +40,7 @@ namespace hive::plugins::sql_serializer {
     accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, data_filter& filter )
       : _chain_db(chain_db), _cached_data(cached_data), _filter(filter) {}
 
-    void collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
+    void collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num, uint32_t trx_in_block);
 
     void operator()(const hive::protocol::account_create_operation& op);
 
@@ -40,6 +61,11 @@ namespace hive::plugins::sql_serializer {
         on_new_operation(account_name, _processed_operation_id);
     }
 
+    void clear();
+    bool is_op_accepted();
+    bool is_trx_accepted( uint32_t trx_in_block );
+    bool is_block_accepted();
+
     private:
       void process_account_creation_op(fc::optional<hive::protocol::account_name_type> impacted_account);
 
@@ -51,6 +77,7 @@ namespace hive::plugins::sql_serializer {
       hive::chain::database& _chain_db;
       cached_data_t& _cached_data;
       data_filter& _filter;
+      filter_mgr   _filter_mgr;
       int64_t _processed_operation_id = -1;
       uint32_t _block_num = 0;
 
