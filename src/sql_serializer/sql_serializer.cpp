@@ -236,7 +236,7 @@ using chain::reindex_notification;
 
           void handle_transactions(const vector<hive::protocol::signed_transaction>& transactions, const int64_t block_num);
           void inform_hfm_about_starting();
-          void collect_account_operations(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
+          void collect_account_operations(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num, uint32_t trx_in_block);
 
           boost::signals2::connection _on_pre_apply_operation_con;
           std::unique_ptr< boost::signals2::shared_connection_block > _pre_apply_operation_blocker;
@@ -463,19 +463,21 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   const bool is_virtual = hive::protocol::is_virtual_operation(note.op);
   FC_ASSERT( is_virtual || note.trx_in_block >= 0,  "Non is_producing real operation with trx_in_block = -1" );
 
-  cached_containter_t& cdtf = currently_caching_data; // alias
+  collect_account_operations( op_sequence_id, note.op, note.block, note.trx_in_block );
 
-  cdtf->operations.emplace_back(
-    op_sequence_id,
-    note.block,
-    note.trx_in_block,
-    note.op_in_trx,
-    chain_db.head_block_time(),
-    note.op
-  );
+  if( collector->is_op_accepted() )
+  {
+    cached_containter_t& cdtf = currently_caching_data; // alias
 
-  collect_account_operations( op_sequence_id, note.op, note.block );
-
+    cdtf->operations.emplace_back(
+      op_sequence_id,
+      note.block,
+      note.trx_in_block,
+      note.op_in_trx,
+      chain_db.head_block_time(),
+      note.op
+    );
+  }
   ++op_sequence_id;
 }
 
@@ -488,15 +490,19 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
 
   handle_transactions(note.block.transactions, note.block_num);
 
-  currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
-  currently_caching_data->blocks.emplace_back(
-    note.block_id,
-    note.block_num,
-    note.block.timestamp,
-    note.prev_block_id);
-  _last_block_num = note.block_num;
+  if( collector->is_block_accepted() )
+  {
+    currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
+    currently_caching_data->blocks.emplace_back(
+      note.block_id,
+      note.block_num,
+      note.block.timestamp,
+      note.prev_block_id);
+    _last_block_num = note.block_num;
 
-  _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
+    _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
+  }
+  collector->clear();
 
   if(note.block_num % 100'000 == 0)
   {
@@ -524,6 +530,12 @@ void sql_serializer_plugin_impl::handle_transactions(const vector<hive::protocol
 
   for(auto& trx : transactions)
   {
+    if( !collector->is_trx_accepted( trx_in_block ) )
+    {
+      ++trx_in_block;
+      continue;
+    }
+
     auto hash = trx.id();
     size_t sig_size = trx.signatures.size();
 
@@ -615,13 +627,14 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
             int64_t operation_id
           , const hive::protocol::operation& op
           , uint32_t block_num
+          , uint32_t trx_in_block
         )
         {
           if ( !psql_dump_accounts ) {
             return;
           }
 
-          collector->collect(operation_id, op, block_num);
+          collector->collect(operation_id, op, block_num, trx_in_block);
         }
 
       } // namespace detail
