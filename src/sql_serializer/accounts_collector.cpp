@@ -35,19 +35,12 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::operator()(const hive::protocol::pow_operation& op)
   {
-    fc::optional<hive::protocol::account_name_type> impacted_account;
-
     // check if pow_operation is creating new account
-    if( _chain_db.find_account(op.get_worker_account()) != nullptr )
-      impacted_account = op.get_worker_account();
-
-    process_account_creation_op(impacted_account);
+    prepare_account_creation_op( op.get_worker_account() );
   }
 
   void accounts_collector::operator()(const hive::protocol::pow2_operation& op)
   {
-    fc::optional<hive::protocol::account_name_type> impacted_account;
-
     // check if pow_operation is creating new account
     hive::protocol::account_name_type worker_account;
     if( op.work.which() == hive::protocol::pow2_work::tag<hive::protocol::pow2>::value )
@@ -55,10 +48,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     else if( op.work.which() == hive::protocol::pow2_work::tag<hive::protocol::equihash_pow>::value )
       worker_account = op.work.get<hive::protocol::equihash_pow>().input.worker_account;
 
-    if( _chain_db.find_account(worker_account) != nullptr )
-      impacted_account = worker_account;
-
-    process_account_creation_op(impacted_account);
+    prepare_account_creation_op( worker_account );
   }
 
   void accounts_collector::operator()(const hive::protocol::account_created_operation& op)
@@ -74,19 +64,30 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       set_op_accepted( op.creator );
   }
 
+  void accounts_collector::prepare_account_creation_op( const hive::protocol::account_name_type& account)
+  {
+    fc::optional<hive::protocol::account_name_type> impacted_account;
+
+    if( _chain_db.find_account(account) != nullptr )
+      impacted_account = account;
+    else
+      set_op_accepted( account );
+
+    process_account_creation_op(impacted_account);
+  }
+
   void accounts_collector::process_account_creation_op(fc::optional<hive::protocol::account_name_type> impacted_account)
   {
     _creation_operation_id = _processed_operation_id;
 
     if( impacted_account.valid() )
       on_new_operation(*impacted_account, _processed_operation_id);
-    else
-      set_op_accepted( hive::protocol::account_name_type() );
   }
 
   void accounts_collector::set_op_accepted(const hive::protocol::account_name_type& account_name)
   {
-    _is_op_accepted = _filter.is_tracked_account( account_name );
+    if( !_is_op_accepted )
+      _is_op_accepted = _filter.is_tracked_account( account_name );
   }
 
   void accounts_collector::on_new_account(const hive::protocol::account_name_type& account_name)
