@@ -196,6 +196,7 @@ using chain::reindex_notification;
             , uint32_t _psql_account_operations_threads_number
             , uint32_t _psql_index_threshold
             , uint32_t _psql_livesync_threshold
+            , bool     _psql_enable_filter
           )
           : _indexation_state( _main_plugin, _chain_db, url,
                                  _psql_transactions_threads_number,
@@ -209,7 +210,8 @@ using chain::reindex_notification;
               main_plugin{_main_plugin},
               psql_transactions_threads_number( _psql_transactions_threads_number ),
               psql_operations_threads_number( _psql_operations_threads_number ),
-              psql_account_operations_threads_number( _psql_account_operations_threads_number )
+              psql_account_operations_threads_number( _psql_account_operations_threads_number ),
+              filter( _psql_enable_filter )
           {
             HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
           }
@@ -652,6 +654,7 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
                          ("psql-force-open-inconsistent", appbase::bpo::bool_switch()->default_value( false ), "force open database even when irreversible data are inconsistent")
                          ("psql-livesync-threshold", appbase::bpo::value<uint32_t>()->default_value( 10000 ), "threshold to move synchronization state during start immediatly to live")
                          ("psql-track-account-range", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "Defines a range of accounts to track as a json pair [\"from\",\"to\"] [from,to] Can be specified multiple times.")
+                         ("psql-enable-filter", appbase::bpo::value<bool>()->default_value( true ), "enable filtering accounts and operations")
                          ;
       }
 
@@ -675,6 +678,7 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
           , options["psql-account-operations-threads-number"].as<uint32_t>()
           , options["psql-index-threshold"].as<uint32_t>()
           , options["psql-livesync-threshold"].as<uint32_t>()
+          , options["psql-enable-filter"].as<bool>()
         );
 
         // settings
