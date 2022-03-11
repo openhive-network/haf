@@ -42,7 +42,12 @@ namespace hive::plugins::sql_serializer {
 
     bool is_op_accepted() const
     {
-      return _is_op_accepted;
+      return !_accounts_accepted.empty();
+    }
+
+    bool is_account_accepted( const hive::protocol::account_name_type& account ) const
+    {
+      return _accounts_accepted.find( account ) != _accounts_accepted.end();
     }
 
     void set_op_accepted(const hive::protocol::account_name_type& account_name);
@@ -60,7 +65,7 @@ namespace hive::plugins::sql_serializer {
       cached_data_t& _cached_data;
       int64_t _processed_operation_id = -1;
       uint32_t _block_num = 0;
-      bool     _is_op_accepted = false;
+      flat_set<hive::protocol::account_name_type> _accounts_accepted;
 
       fc::optional<int64_t> _creation_operation_id;
       flat_set<hive::protocol::account_name_type> _impacted;
