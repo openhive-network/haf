@@ -466,7 +466,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
 
   collect_account_operations( op_sequence_id, note.op, note.block );
 
-  if( collector->is_any_data_added() )
+  if( collector->is_op_accepted() )
   {
     filter.remember_trx_id( note.trx_in_block );
 
