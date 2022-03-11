@@ -8,7 +8,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     _processed_operation_id = operation_id;
     _block_num = block_num;
-    _is_any_data_added = false;
+    _is_op_accepted = false;
     _impacted.clear();
     hive::app::operation_get_impacted_accounts(op, _impacted);
 
@@ -70,6 +70,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
     if( op.creator != hive::protocol::account_name_type() )
       on_new_operation(op.creator, _processed_operation_id);
+    else
+      set_op_accepted( op.creator );
   }
 
   void accounts_collector::process_account_creation_op(fc::optional<hive::protocol::account_name_type> impacted_account)
@@ -78,32 +80,39 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
     if( impacted_account.valid() )
       on_new_operation(*impacted_account, _processed_operation_id);
+    else
+      set_op_accepted( hive::protocol::account_name_type() );
+  }
+
+  void accounts_collector::set_op_accepted(const hive::protocol::account_name_type& account_name)
+  {
+    _is_op_accepted = _filter.is_tracked_account( account_name );
   }
 
   void accounts_collector::on_new_account(const hive::protocol::account_name_type& account_name)
   {
-    if( !_filter.is_tracked_account( account_name ) )
+    set_op_accepted( account_name );
+    if( !is_op_accepted() )
       return;
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
     FC_ASSERT(account_ptr!=nullptr, "account with name ${name} does not exist in chain database", ("name", account_name));
     account_ops_seq_object::id_type account_id(account_ptr->get_id());
 
-    _is_any_data_added = true;
     _chain_db.create< account_ops_seq_object >( *account_ptr );
     _cached_data.accounts.emplace_back(account_id, std::string(account_name), _block_num);
   }
 
   void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id)
   {
-    if( !_filter.is_tracked_account( account_name ) )
+    set_op_accepted( account_name );
+    if( !is_op_accepted() )
       return;
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
     FC_ASSERT(account_ptr!=nullptr, "account with name ${name} does not exist in chain database", ("name", account_name));
     account_ops_seq_object::id_type account_id(account_ptr->get_id());
 
-    _is_any_data_added = true;
     const account_ops_seq_object& op_seq_obj = _chain_db.get< account_ops_seq_object, hive::chain::by_id >( account_id );
     _cached_data.account_operations.emplace_back(_block_num, operation_id, account_id, op_seq_obj.operation_count);
     _chain_db.modify( op_seq_obj, [&]( account_ops_seq_object& o)

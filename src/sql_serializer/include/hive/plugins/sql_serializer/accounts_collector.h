@@ -40,10 +40,12 @@ namespace hive::plugins::sql_serializer {
         on_new_operation(account_name, _processed_operation_id);
     }
 
-    bool is_any_data_added() const
+    bool is_op_accepted() const
     {
-      return _is_any_data_added;
+      return _is_op_accepted;
     }
+
+    void set_op_accepted(const hive::protocol::account_name_type& account_name);
 
     private:
       void process_account_creation_op(fc::optional<hive::protocol::account_name_type> impacted_account);
@@ -57,7 +59,7 @@ namespace hive::plugins::sql_serializer {
       cached_data_t& _cached_data;
       int64_t _processed_operation_id = -1;
       uint32_t _block_num = 0;
-      bool     _is_any_data_added = false;
+      bool     _is_op_accepted = false;
 
       fc::optional<int64_t> _creation_operation_id;
       flat_set<hive::protocol::account_name_type> _impacted;
