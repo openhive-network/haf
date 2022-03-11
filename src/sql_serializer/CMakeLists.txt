@@ -18,6 +18,7 @@ ADD_LIBRARY(
     indexation_state.cpp
     accounts_collector.cpp
     indexes_controler.cpp
+    blockchain_data_filter.cpp
     ${HEADERS}
 )
 

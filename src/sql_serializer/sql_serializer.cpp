@@ -17,7 +17,7 @@
 #include <hive/protocol/operations.hpp>
 
 #include <hive/utilities/plugin_utilities.hpp>
-#include <hive/utilities/data_filter.hpp>
+#include <hive/plugins/sql_serializer/blockchain_data_filter.hpp>
 
 #include <fc/git_revision.hpp>
 #include <fc/io/json.hpp>
@@ -209,8 +209,7 @@ using chain::reindex_notification;
               main_plugin{_main_plugin},
               psql_transactions_threads_number( _psql_transactions_threads_number ),
               psql_operations_threads_number( _psql_operations_threads_number ),
-              psql_account_operations_threads_number( _psql_account_operations_threads_number ),
-              filter("sql")
+              psql_account_operations_threads_number( _psql_account_operations_threads_number )
           {
             HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
           }
@@ -236,7 +235,7 @@ using chain::reindex_notification;
 
           void handle_transactions(const vector<hive::protocol::signed_transaction>& transactions, const int64_t block_num);
           void inform_hfm_about_starting();
-          void collect_account_operations(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num, uint32_t trx_in_block);
+          void collect_account_operations(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
 
           boost::signals2::connection _on_pre_apply_operation_con;
           std::unique_ptr< boost::signals2::shared_connection_block > _pre_apply_operation_blocker;
@@ -269,7 +268,7 @@ using chain::reindex_notification;
           cached_containter_t currently_caching_data;
           std::unique_ptr<accounts_collector> collector;
           stats_group current_stats;
-          data_filter filter;
+          blockchain_account_filter filter;
 
           void log_statistics()
           {
@@ -463,10 +462,12 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   const bool is_virtual = hive::protocol::is_virtual_operation(note.op);
   FC_ASSERT( is_virtual || note.trx_in_block >= 0,  "Non is_producing real operation with trx_in_block = -1" );
 
-  collect_account_operations( op_sequence_id, note.op, note.block, note.trx_in_block );
+  collect_account_operations( op_sequence_id, note.op, note.block );
 
-  if( collector->is_op_accepted() )
+  if( collector->is_any_data_added() )
   {
+    filter.remember_trx_id( note.trx_in_block );
+
     cached_containter_t& cdtf = currently_caching_data; // alias
 
     cdtf->operations.emplace_back(
@@ -490,19 +491,17 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
 
   handle_transactions(note.block.transactions, note.block_num);
 
-  if( collector->is_block_accepted() )
-  {
-    currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
-    currently_caching_data->blocks.emplace_back(
-      note.block_id,
-      note.block_num,
-      note.block.timestamp,
-      note.prev_block_id);
-    _last_block_num = note.block_num;
+  currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
+  currently_caching_data->blocks.emplace_back(
+    note.block_id,
+    note.block_num,
+    note.block.timestamp,
+    note.prev_block_id);
+  _last_block_num = note.block_num;
 
-    _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
-  }
-  collector->clear();
+  _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
+
+  filter.clear();
 
   if(note.block_num % 100'000 == 0)
   {
@@ -526,11 +525,11 @@ void sql_serializer_plugin_impl::block_operation_handlers(const block_notificati
 
 void sql_serializer_plugin_impl::handle_transactions(const vector<hive::protocol::signed_transaction>& transactions, const int64_t block_num)
 {
-  uint trx_in_block = 0;
+  int64_t trx_in_block = 0;
 
   for(auto& trx : transactions)
   {
-    if( !collector->is_trx_accepted( trx_in_block ) )
+    if( !filter.is_trx_accepted( trx_in_block ) )
     {
       ++trx_in_block;
       continue;
@@ -627,14 +626,13 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
             int64_t operation_id
           , const hive::protocol::operation& op
           , uint32_t block_num
-          , uint32_t trx_in_block
         )
         {
           if ( !psql_dump_accounts ) {
             return;
           }
 
-          collector->collect(operation_id, op, block_num, trx_in_block);
+          collector->collect(operation_id, op, block_num);
         }
 
       } // namespace detail
