@@ -17,12 +17,14 @@ namespace hive::plugins::sql_serializer {
   {
     private:
 
-      std::set<int64_t>  trx_in_block_filter_accepted;
-      data_filter         filter;
+      bool              enabled;
+
+      std::set<int64_t> trx_in_block_filter_accepted;
+      data_filter       filter;
 
     public:
 
-      blockchain_account_filter(): filter("sql"){}
+      blockchain_account_filter( bool _enabled ): enabled( _enabled ), filter("sql") {}
 
       bool is_trx_accepted( int64_t trx_in_block ) const;
       bool is_tracked_account( const account_name_type& name ) const override;
