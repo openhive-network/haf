@@ -48,6 +48,7 @@ namespace hive::plugins::sql_serializer {
     void set_op_accepted(const hive::protocol::account_name_type& account_name);
 
     private:
+      void prepare_account_creation_op(const hive::protocol::account_name_type& account);
       void process_account_creation_op(fc::optional<hive::protocol::account_name_type> impacted_account);
 
       void on_new_account(const hive::protocol::account_name_type& account_name);
