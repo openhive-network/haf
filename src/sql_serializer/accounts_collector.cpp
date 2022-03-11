@@ -8,7 +8,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     _processed_operation_id = operation_id;
     _block_num = block_num;
-    _is_op_accepted = false;
+    _accounts_accepted.clear();
     _impacted.clear();
     hive::app::operation_get_impacted_accounts(op, _impacted);
 
@@ -86,14 +86,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::set_op_accepted(const hive::protocol::account_name_type& account_name)
   {
-    if( !_is_op_accepted )
-      _is_op_accepted = _filter.is_tracked_account( account_name );
+    if( _filter.is_tracked_account( account_name ) )
+      _accounts_accepted.insert( account_name );
   }
 
   void accounts_collector::on_new_account(const hive::protocol::account_name_type& account_name)
   {
     set_op_accepted( account_name );
-    if( !is_op_accepted() )
+    if( !is_account_accepted( account_name ) )
       return;
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
@@ -107,7 +107,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id)
   {
     set_op_accepted( account_name );
-    if( !is_op_accepted() )
+    if( !is_account_accepted( account_name ) )
       return;
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
