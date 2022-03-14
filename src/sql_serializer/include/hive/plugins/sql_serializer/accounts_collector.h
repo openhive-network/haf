@@ -11,13 +11,30 @@
 
 namespace hive::plugins::sql_serializer {
 
+  class filter_collector
+  {
+    private:
+
+      flat_set<hive::protocol::account_name_type> _accounts_accepted;
+      const blockchain_data_filter& _filter;
+
+    public:
+
+      filter_collector( const blockchain_data_filter& filter );
+
+      bool exists_any_tracked_account() const;
+      bool is_account_tracked( const hive::protocol::account_name_type& account ) const;
+
+      void grab_tracked_account(const hive::protocol::account_name_type& account_name);
+      void clear();
+  };
 
   struct accounts_collector
     {
     typedef void result_type;
 
     accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, const blockchain_data_filter& filter )
-      : _chain_db(chain_db), _cached_data(cached_data), _filter(filter) {}
+      : _chain_db(chain_db), _cached_data(cached_data), _filter_collector(filter) {}
 
     void collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
 
@@ -42,15 +59,8 @@ namespace hive::plugins::sql_serializer {
 
     bool is_op_accepted() const
     {
-      return !_accounts_accepted.empty();
+      return _filter_collector.exists_any_tracked_account();
     }
-
-    bool is_account_accepted( const hive::protocol::account_name_type& account ) const
-    {
-      return _accounts_accepted.find( account ) != _accounts_accepted.end();
-    }
-
-    void set_op_accepted(const hive::protocol::account_name_type& account_name);
 
     private:
       void prepare_account_creation_op(const hive::protocol::account_name_type& account);
@@ -65,12 +75,11 @@ namespace hive::plugins::sql_serializer {
       cached_data_t& _cached_data;
       int64_t _processed_operation_id = -1;
       uint32_t _block_num = 0;
-      flat_set<hive::protocol::account_name_type> _accounts_accepted;
 
       fc::optional<int64_t> _creation_operation_id;
       flat_set<hive::protocol::account_name_type> _impacted;
 
-      const blockchain_data_filter& _filter;
+      filter_collector              _filter_collector;
     };
 
 } // namespace hive::plugins::sql_serializer
