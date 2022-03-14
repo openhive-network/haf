@@ -2,6 +2,9 @@
 
 #include <hive/chain/util/impacted.hpp>
 
+#define DIAGNOSTIC(s)
+//#define DIAGNOSTIC(s) s
+
 namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num)
@@ -19,18 +22,21 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     fc::optional<hive::protocol::account_name_type> impacted_account = op.creator;
     process_account_creation_op(impacted_account);
+    set_op_accepted( op.new_account_name );
   }
 
   void accounts_collector::operator()(const hive::protocol::account_create_with_delegation_operation& op)
   {
     fc::optional<hive::protocol::account_name_type> impacted_account = op.creator;
     process_account_creation_op(impacted_account);
+    set_op_accepted( op.new_account_name );
   }
 
   void accounts_collector::operator()(const hive::protocol::create_claimed_account_operation& op)
   {
     fc::optional<hive::protocol::account_name_type> impacted_account = op.creator;
     process_account_creation_op(impacted_account);
+    set_op_accepted( op.new_account_name );
   }
 
   void accounts_collector::operator()(const hive::protocol::pow_operation& op)
@@ -94,7 +100,12 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     set_op_accepted( account_name );
     if( !is_account_accepted( account_name ) )
+    {
+      DIAGNOSTIC( ilog("no [${_block_num}] account: ${account_name}", ("_block_num", _block_num)("account_name", account_name) ); )
       return;
+    }
+
+    DIAGNOSTIC( ilog("[${_block_num}] account: ${account_name}", ("_block_num", _block_num)("account_name", account_name) ); )
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
     FC_ASSERT(account_ptr!=nullptr, "account with name ${name} does not exist in chain database", ("name", account_name));
@@ -108,7 +119,12 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     set_op_accepted( account_name );
     if( !is_account_accepted( account_name ) )
+    {
+      DIAGNOSTIC( ilog("no [${_block_num}] account: ${account_name} op_id: ${operation_id}", ("_block_num", _block_num)("account_name", account_name)("operation_id", operation_id) ); )
       return;
+    }
+
+    DIAGNOSTIC( ilog("[${_block_num}] account: ${account_name} op_id: ${operation_id}", ("_block_num", _block_num)("account_name", account_name)("operation_id", operation_id) ); )
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
     FC_ASSERT(account_ptr!=nullptr, "account with name ${name} does not exist in chain database", ("name", account_name));
