@@ -7,11 +7,36 @@
 
 namespace hive{ namespace plugins{ namespace sql_serializer {
 
+  filter_collector::filter_collector( const blockchain_data_filter& filter ): _filter( filter )
+  {
+  }
+
+  bool filter_collector::exists_any_tracked_account() const
+  {
+    return !_accounts_accepted.empty();
+  }
+
+  bool filter_collector::is_account_tracked( const hive::protocol::account_name_type& account ) const
+  {
+    return _accounts_accepted.find( account ) != _accounts_accepted.end();
+  }
+
+  void filter_collector::grab_tracked_account(const hive::protocol::account_name_type& account_name)
+  {
+    if( _filter.is_tracked_account( account_name ) )
+      _accounts_accepted.insert( account_name );
+  }
+
+  void filter_collector::clear()
+  {
+    _accounts_accepted.clear();
+  }
+
   void accounts_collector::collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num)
   {
     _processed_operation_id = operation_id;
     _block_num = block_num;
-    _accounts_accepted.clear();
+    _filter_collector.clear();
     _impacted.clear();
     hive::app::operation_get_impacted_accounts(op, _impacted);
 
@@ -22,21 +47,21 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     fc::optional<hive::protocol::account_name_type> impacted_account = op.creator;
     process_account_creation_op(impacted_account);
-    set_op_accepted( op.new_account_name );
+    _filter_collector.grab_tracked_account( op.new_account_name );
   }
 
   void accounts_collector::operator()(const hive::protocol::account_create_with_delegation_operation& op)
   {
     fc::optional<hive::protocol::account_name_type> impacted_account = op.creator;
     process_account_creation_op(impacted_account);
-    set_op_accepted( op.new_account_name );
+    _filter_collector.grab_tracked_account( op.new_account_name );
   }
 
   void accounts_collector::operator()(const hive::protocol::create_claimed_account_operation& op)
   {
     fc::optional<hive::protocol::account_name_type> impacted_account = op.creator;
     process_account_creation_op(impacted_account);
-    set_op_accepted( op.new_account_name );
+    _filter_collector.grab_tracked_account( op.new_account_name );
   }
 
   void accounts_collector::operator()(const hive::protocol::pow_operation& op)
@@ -67,7 +92,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     if( op.creator != hive::protocol::account_name_type() )
       on_new_operation(op.creator, _processed_operation_id);
     else
-      set_op_accepted( op.creator );
+      _filter_collector.grab_tracked_account( op.creator );
   }
 
   void accounts_collector::prepare_account_creation_op( const hive::protocol::account_name_type& account)
@@ -77,7 +102,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     if( _chain_db.find_account(account) != nullptr )
       impacted_account = account;
     else
-      set_op_accepted( account );
+      _filter_collector.grab_tracked_account( account );
 
     process_account_creation_op(impacted_account);
   }
@@ -90,16 +115,10 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       on_new_operation(*impacted_account, _processed_operation_id);
   }
 
-  void accounts_collector::set_op_accepted(const hive::protocol::account_name_type& account_name)
-  {
-    if( _filter.is_tracked_account( account_name ) )
-      _accounts_accepted.insert( account_name );
-  }
-
   void accounts_collector::on_new_account(const hive::protocol::account_name_type& account_name)
   {
-    set_op_accepted( account_name );
-    if( !is_account_accepted( account_name ) )
+    _filter_collector.grab_tracked_account( account_name );
+    if( !_filter_collector.is_account_tracked( account_name ) )
     {
       DIAGNOSTIC( ilog("no [${_block_num}] account: ${account_name}", ("_block_num", _block_num)("account_name", account_name) ); )
       return;
@@ -117,8 +136,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id)
   {
-    set_op_accepted( account_name );
-    if( !is_account_accepted( account_name ) )
+    _filter_collector.grab_tracked_account( account_name );
+    if( !_filter_collector.is_account_tracked( account_name ) )
     {
       DIAGNOSTIC( ilog("no [${_block_num}] account: ${account_name} op_id: ${operation_id}", ("_block_num", _block_num)("account_name", account_name)("operation_id", operation_id) ); )
       return;
