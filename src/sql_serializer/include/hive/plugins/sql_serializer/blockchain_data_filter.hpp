@@ -10,6 +10,7 @@ namespace hive::plugins::sql_serializer {
 
   struct blockchain_data_filter
   {
+    virtual bool is_enabled() const = 0;
     virtual bool is_tracked_account( const account_name_type& name ) const = 0;
   };
 
@@ -26,6 +27,7 @@ namespace hive::plugins::sql_serializer {
 
       blockchain_account_filter( bool _enabled ): enabled( _enabled ), filter("sql") {}
 
+      bool is_enabled() const override;
       bool is_trx_accepted( int64_t trx_in_block ) const;
       bool is_tracked_account( const account_name_type& name ) const override;
 
