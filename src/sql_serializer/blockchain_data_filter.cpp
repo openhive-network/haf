@@ -2,6 +2,11 @@
 
 namespace hive{ namespace plugins{ namespace sql_serializer {
 
+  bool blockchain_account_filter::is_enabled() const
+  {
+    return enabled;
+  }
+
   bool blockchain_account_filter::is_trx_accepted( int64_t trx_in_block ) const
   {
     return !enabled || trx_in_block_filter_accepted.find( trx_in_block ) != trx_in_block_filter_accepted.end();
