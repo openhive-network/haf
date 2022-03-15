@@ -92,7 +92,8 @@ RUN sudo -n mkdir -p /home/hived/bin && sudo -n mkdir -p /home/hived/shm_dir && 
 VOLUME [/home/hived/datadir, /home/hived/shm_dir]
 
 #p2p service
-EXPOSE ${P2P_PORT}
+# Don't expose the p2p port for data images, nobody is listening and it breaks gitlabs service health checks
+# EXPOSE ${P2P_PORT}
 # websocket service
 EXPOSE ${WS_PORT}
 # JSON rpc service
