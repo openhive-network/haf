@@ -655,6 +655,7 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
                          ("psql-livesync-threshold", appbase::bpo::value<uint32_t>()->default_value( 10000 ), "threshold to move synchronization state during start immediatly to live")
                          ("psql-track-account-range", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "Defines a range of accounts to track as a json pair [\"from\",\"to\"] [from,to] Can be specified multiple times.")
                          ("psql-enable-filter", appbase::bpo::value<bool>()->default_value( true ), "enable filtering accounts and operations")
+                         ("psql-track-operations", boost::program_options::value< std::vector<std::string> >()->composing(), "Defines operations' types to track. Can be specified multiple times.")
                          ;
       }
 
@@ -687,7 +688,7 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
 
         my->currently_caching_data = std::make_unique<cached_data_t>( default_reservation_size );
 
-        my->filter.fill( options, "psql-track-account-range" );
+        my->filter.fill( options, "psql-track-account-range", "psql-track-operations" );
 
         my->collector = std::make_unique<accounts_collector>( db, *my->currently_caching_data, my->filter );
 
