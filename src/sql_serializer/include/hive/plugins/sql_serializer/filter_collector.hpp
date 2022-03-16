@@ -20,10 +20,10 @@ namespace hive::plugins::sql_serializer {
       bool is_op_accepted() const;
 
       bool is_account_tracked( const hive::protocol::account_name_type& account ) const;
-      void grab_tracked_account( const hive::protocol::account_name_type& account_name );
+      void collect_tracked_account( const hive::protocol::account_name_type& account_name );
 
       bool is_operation_tracked() const;
-      void grab_tracked_operation( const hive::protocol::operation& op );
+      void collect_tracked_operation( const hive::protocol::operation& op );
 
       void clear();
   };

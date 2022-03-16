@@ -6,46 +6,48 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num)
   {
-    _filter_collector.clear();
-    _filter_collector.grab_tracked_operation( op );
-
     _processed_operation_id = operation_id;
     _block_num = block_num;
     _impacted.clear();
     hive::app::operation_get_impacted_accounts(op, _impacted);
 
     op.visit(*this);
+    on_collect( _impacted, op );
   }
 
   void accounts_collector::operator()(const hive::protocol::account_create_operation& op)
   {
     fc::optional<hive::protocol::account_name_type> impacted_account = op.creator;
     process_account_creation_op(impacted_account);
-    _filter_collector.grab_tracked_account( op.new_account_name );
   }
 
   void accounts_collector::operator()(const hive::protocol::account_create_with_delegation_operation& op)
   {
     fc::optional<hive::protocol::account_name_type> impacted_account = op.creator;
     process_account_creation_op(impacted_account);
-    _filter_collector.grab_tracked_account( op.new_account_name );
   }
 
   void accounts_collector::operator()(const hive::protocol::create_claimed_account_operation& op)
   {
     fc::optional<hive::protocol::account_name_type> impacted_account = op.creator;
     process_account_creation_op(impacted_account);
-    _filter_collector.grab_tracked_account( op.new_account_name );
   }
 
   void accounts_collector::operator()(const hive::protocol::pow_operation& op)
   {
+    fc::optional<hive::protocol::account_name_type> impacted_account;
+
     // check if pow_operation is creating new account
-    prepare_account_creation_op( op.get_worker_account() );
+    if( _chain_db.find_account(op.get_worker_account()) != nullptr )
+      impacted_account = op.get_worker_account();
+
+    process_account_creation_op(impacted_account);
   }
 
   void accounts_collector::operator()(const hive::protocol::pow2_operation& op)
   {
+    fc::optional<hive::protocol::account_name_type> impacted_account;
+
     // check if pow_operation is creating new account
     hive::protocol::account_name_type worker_account;
     if( op.work.which() == hive::protocol::pow2_work::tag<hive::protocol::pow2>::value )
@@ -53,7 +55,10 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     else if( op.work.which() == hive::protocol::pow2_work::tag<hive::protocol::equihash_pow>::value )
       worker_account = op.work.get<hive::protocol::equihash_pow>().input.worker_account;
 
-    prepare_account_creation_op( worker_account );
+    if( _chain_db.find_account(worker_account) != nullptr )
+      impacted_account = worker_account;
+
+    process_account_creation_op(impacted_account);
   }
 
   void accounts_collector::operator()(const hive::protocol::account_created_operation& op)
@@ -65,20 +70,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
     if( op.creator != hive::protocol::account_name_type() )
       on_new_operation(op.creator, _processed_operation_id);
-    else
-      _filter_collector.grab_tracked_account( op.creator );
-  }
-
-  void accounts_collector::prepare_account_creation_op( const hive::protocol::account_name_type& account)
-  {
-    fc::optional<hive::protocol::account_name_type> impacted_account;
-
-    if( _chain_db.find_account(account) != nullptr )
-      impacted_account = account;
-    else
-      _filter_collector.grab_tracked_account( account );
-
-    process_account_creation_op(impacted_account);
   }
 
   void accounts_collector::process_account_creation_op(fc::optional<hive::protocol::account_name_type> impacted_account)
@@ -91,8 +82,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::on_new_account(const hive::protocol::account_name_type& account_name)
   {
-    _filter_collector.grab_tracked_account( account_name );
-    if( !_filter_collector.is_account_tracked( account_name ) )
+    if( !on_before_new_account( account_name ) )
       return;
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
@@ -105,8 +95,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id)
   {
-    _filter_collector.grab_tracked_account( account_name );
-    if( !(_filter_collector.is_account_tracked( account_name ) && _filter_collector.is_operation_tracked() ) )
+    if( !on_before_new_operation( account_name ) )
       return;
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
@@ -119,6 +108,35 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     {
       o.operation_count++;
     } );
+  }
+
+  filtered_accounts_collector::filtered_accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, const blockchain_data_filter& filter )
+                              :accounts_collector( chain_db, cached_data ), _filter_collector( filter )
+  {
+  }
+
+  void filtered_accounts_collector::on_collect( const flat_set<hive::protocol::account_name_type>& impacted, const hive::protocol::operation& op )
+  {
+    _filter_collector.clear();
+    _filter_collector.collect_tracked_operation( op );
+
+    for( auto& name : impacted )
+      _filter_collector.collect_tracked_account( name );
+  }
+
+  bool filtered_accounts_collector::on_before_new_account( const hive::protocol::account_name_type& account_name )
+  {
+    return _filter_collector.is_account_tracked( account_name );
+  }
+
+  bool filtered_accounts_collector::on_before_new_operation( const hive::protocol::account_name_type& account_name )
+  {
+    return _filter_collector.is_account_tracked( account_name ) && _filter_collector.is_operation_tracked();
+  }
+  
+  bool filtered_accounts_collector::is_op_accepted() const
+  {
+    return _filter_collector.is_op_accepted();
   }
 
 }}} // namespace hive::plugins::sql_serializer

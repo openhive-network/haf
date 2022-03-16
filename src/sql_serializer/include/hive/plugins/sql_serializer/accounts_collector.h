@@ -11,13 +11,23 @@
 
 namespace hive::plugins::sql_serializer {
 
+  struct accounts_collector_base
+  {
+    protected:
+      virtual void on_collect( const flat_set<hive::protocol::account_name_type>& impacted, const hive::protocol::operation& op ){}
+      virtual bool on_before_new_account( const hive::protocol::account_name_type& account_name ){ return true; }
+      virtual bool on_before_new_operation( const hive::protocol::account_name_type& account_name ){ return true; }
 
-  struct accounts_collector
+    public:
+      virtual bool is_op_accepted() const { return true; }
+  };
+
+  struct accounts_collector: public accounts_collector_base
     {
     typedef void result_type;
 
-    accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, const blockchain_data_filter& filter )
-      : _chain_db(chain_db), _cached_data(cached_data), _filter_collector(filter) {}
+    accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data )
+      : _chain_db(chain_db), _cached_data(cached_data) {}
 
     void collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
 
@@ -40,13 +50,7 @@ namespace hive::plugins::sql_serializer {
         on_new_operation(account_name, _processed_operation_id);
     }
 
-    bool is_op_accepted() const
-    {
-      return _filter_collector.is_op_accepted();
-    }
-
     private:
-      void prepare_account_creation_op(const hive::protocol::account_name_type& account);
       void process_account_creation_op(fc::optional<hive::protocol::account_name_type> impacted_account);
 
       void on_new_account(const hive::protocol::account_name_type& account_name);
@@ -61,8 +65,21 @@ namespace hive::plugins::sql_serializer {
 
       fc::optional<int64_t> _creation_operation_id;
       flat_set<hive::protocol::account_name_type> _impacted;
+    };
 
-      filter_collector              _filter_collector;
+    struct filtered_accounts_collector: public accounts_collector
+    {
+      private:
+        filter_collector _filter_collector;
+
+      protected:
+        void on_collect( const flat_set<hive::protocol::account_name_type>& impacted, const hive::protocol::operation& op ) override;
+        bool on_before_new_account( const hive::protocol::account_name_type& account_name ) override;
+        bool on_before_new_operation( const hive::protocol::account_name_type& account_name ) override;
+
+      public:
+        filtered_accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, const blockchain_data_filter& filter );
+        bool is_op_accepted() const override;
     };
 
 } // namespace hive::plugins::sql_serializer
