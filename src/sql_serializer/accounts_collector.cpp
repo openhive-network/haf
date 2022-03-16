@@ -8,8 +8,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     _filter_collector.clear();
     _filter_collector.grab_tracked_operation( op );
-    if( !_filter_collector.is_operation_tracked() )
-      return;
 
     _processed_operation_id = operation_id;
     _block_num = block_num;
@@ -108,7 +106,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id)
   {
     _filter_collector.grab_tracked_account( account_name );
-    if( !_filter_collector.is_account_tracked( account_name ) )
+    if( !(_filter_collector.is_account_tracked( account_name ) && _filter_collector.is_operation_tracked() ) )
       return;
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
