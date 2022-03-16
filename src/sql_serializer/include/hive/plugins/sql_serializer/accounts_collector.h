@@ -1,7 +1,7 @@
 #pragma once
 
 #include <hive/plugins/sql_serializer/sql_serializer_objects.hpp>
-#include <hive/plugins/sql_serializer/blockchain_data_filter.hpp>
+#include <hive/plugins/sql_serializer/filter_collector.hpp>
 #include <hive/plugins/sql_serializer/cached_data.h>
 
 #include <hive/chain/database.hpp>
@@ -11,23 +11,6 @@
 
 namespace hive::plugins::sql_serializer {
 
-  class filter_collector
-  {
-    private:
-
-      flat_set<hive::protocol::account_name_type> _accounts_accepted;
-      const blockchain_data_filter& _filter;
-
-    public:
-
-      filter_collector( const blockchain_data_filter& filter );
-
-      bool exists_any_tracked_account() const;
-      bool is_account_tracked( const hive::protocol::account_name_type& account ) const;
-
-      void grab_tracked_account(const hive::protocol::account_name_type& account_name);
-      void clear();
-  };
 
   struct accounts_collector
     {
@@ -59,7 +42,7 @@ namespace hive::plugins::sql_serializer {
 
     bool is_op_accepted() const
     {
-      return _filter_collector.exists_any_tracked_account();
+      return _filter_collector.is_op_accepted();
     }
 
     private:
