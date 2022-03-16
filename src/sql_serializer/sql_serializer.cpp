@@ -690,7 +690,10 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
 
         my->filter.fill( options, "psql-track-account-range", "psql-track-operations" );
 
-        my->collector = std::make_unique<accounts_collector>( db, *my->currently_caching_data, my->filter );
+        if( my->filter.is_enabled() )
+          my->collector = std::make_unique<filtered_accounts_collector>( db, *my->currently_caching_data, my->filter );
+        else
+          my->collector = std::make_unique<accounts_collector>( db, *my->currently_caching_data );
 
         // signals
         my->connect_signals();

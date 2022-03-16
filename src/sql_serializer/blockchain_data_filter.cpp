@@ -35,6 +35,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     {
       accounts_filter.fill( options, tracked_accounts );
       operations_filter.fill( options, tracked_operations );
+
+      if( accounts_filter.empty() && operations_filter.empty() )
+        enabled = false;
     }
   }
 
