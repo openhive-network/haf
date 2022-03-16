@@ -50,7 +50,7 @@ RUN LOG_FILE=build.log source ./scripts/common.sh && do_clone "$BRANCH" ./haf ht
   find . -name *.a  -type f -delete
 
 # Here we could use a smaller image without packages specific to build requirements
-FROM $CI_REGISTRY_IMAGE/ci-base-image$BLOCK_LOG_SUFFIX$CI_IMAGE_TAG as instance
+FROM $CI_REGISTRY_IMAGE/ci-base-image$BLOCK_LOG_SUFFIX$CI_IMAGE_TAG as base_instance
 
 #ARG BUILD_IMAGE_TAG
 ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu20.04-4}
@@ -91,19 +91,21 @@ RUN sudo -n mkdir -p /home/hived/bin && sudo -n mkdir -p /home/hived/shm_dir && 
 
 VOLUME [/home/hived/datadir, /home/hived/shm_dir]
 
+STOPSIGNAL SIGINT 
+
+ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
+
+FROM $CI_REGISTRY_IMAGE/base_instance$BLOCK_LOG_SUFFIX$BUILD_IMAGE_TAG as instance
+
+# Embedded postgres service
+EXPOSE 5432
+
 #p2p service
 EXPOSE ${P2P_PORT}
 # websocket service
 EXPOSE ${WS_PORT}
 # JSON rpc service
 EXPOSE ${HTTP_PORT}
-
-# Embedded postgres service
-EXPOSE 5432
-
-STOPSIGNAL SIGINT 
-
-ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
 
 FROM $CI_REGISTRY_IMAGE/instance-5m$BUILD_IMAGE_TAG as data
 
@@ -115,4 +117,7 @@ ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
 
 # default command line to be passed for this version (which should be stopped at 5M)
 CMD ["--replay-blockchain", "--stop-replay-at-block=5000000"]
+
+# Embedded postgres service
+EXPOSE 5432
 

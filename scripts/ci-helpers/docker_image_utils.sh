@@ -3,7 +3,7 @@
 function build_image_name() {
   local image=$1
   local tag=$2
-  local registry=${3:-registry.gitlab.syncad.com/hive/hafah/}
+  local registry=${3:-registry.gitlab.syncad.com/hive/haf/}
   echo "${registry}${image}:${tag}"
 }
 
