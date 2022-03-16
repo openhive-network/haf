@@ -9,30 +9,38 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   bool blockchain_account_filter::is_trx_accepted( int64_t trx_in_block ) const
   {
-    return !enabled || trx_in_block_filter_accepted.find( trx_in_block ) != trx_in_block_filter_accepted.end();
+    return !is_enabled() || trx_in_block_filter_accepted.find( trx_in_block ) != trx_in_block_filter_accepted.end();
   }
 
   bool blockchain_account_filter::is_tracked_account( const account_name_type& name ) const
   {
-    return !enabled || filter.is_tracked_account( name );
+    return !is_enabled() || accounts_filter.is_tracked_account( name );
+  }
+
+  bool blockchain_account_filter::is_tracked_operation( const operation& op ) const
+  {
+    return !is_enabled() || operations_filter.is_tracked_operation( op );
   }
 
   void blockchain_account_filter::remember_trx_id( int64_t trx_in_block )
   {
     //Remember number of transaction that will be included into a database.
-    if( enabled && trx_in_block != -1 )
+    if( is_enabled() && trx_in_block != -1 )
       trx_in_block_filter_accepted.insert( trx_in_block );
   }
 
-  void blockchain_account_filter::fill( const boost::program_options::variables_map& options, const std::string& option_name )
+  void blockchain_account_filter::fill( const boost::program_options::variables_map& options, const std::string& tracked_accounts, const std::string& tracked_operations )
   {
-    if( enabled )
-      filter.fill( options, option_name );
+    if( is_enabled() )
+    {
+      accounts_filter.fill( options, tracked_accounts );
+      operations_filter.fill( options, tracked_operations );
+    }
   }
 
   void blockchain_account_filter::clear()
   {
-    if( enabled )
+    if( is_enabled() )
       trx_in_block_filter_accepted.clear();
   }
 
