@@ -2,42 +2,17 @@
 
 #include <hive/chain/util/impacted.hpp>
 
-#define DIAGNOSTIC(s)
-//#define DIAGNOSTIC(s) s
-
 namespace hive{ namespace plugins{ namespace sql_serializer {
-
-  filter_collector::filter_collector( const blockchain_data_filter& filter ): _filter( filter )
-  {
-  }
-
-  bool filter_collector::exists_any_tracked_account() const
-  {
-    return !_filter.is_enabled() || !_accounts_accepted.empty();
-  }
-
-  bool filter_collector::is_account_tracked( const hive::protocol::account_name_type& account ) const
-  {
-    return !_filter.is_enabled() || ( _accounts_accepted.find( account ) != _accounts_accepted.end() );
-  }
-
-  void filter_collector::grab_tracked_account(const hive::protocol::account_name_type& account_name)
-  {
-    if( _filter.is_tracked_account( account_name ) )
-      _accounts_accepted.insert( account_name );
-  }
-
-  void filter_collector::clear()
-  {
-    if( _filter.is_enabled() )
-      _accounts_accepted.clear();
-  }
 
   void accounts_collector::collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num)
   {
+    _filter_collector.clear();
+    _filter_collector.grab_tracked_operation( op );
+    if( !_filter_collector.is_operation_tracked() )
+      return;
+
     _processed_operation_id = operation_id;
     _block_num = block_num;
-    _filter_collector.clear();
     _impacted.clear();
     hive::app::operation_get_impacted_accounts(op, _impacted);
 
@@ -120,12 +95,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     _filter_collector.grab_tracked_account( account_name );
     if( !_filter_collector.is_account_tracked( account_name ) )
-    {
-      DIAGNOSTIC( ilog("no [${_block_num}] account: ${account_name}", ("_block_num", _block_num)("account_name", account_name) ); )
       return;
-    }
-
-    DIAGNOSTIC( ilog("[${_block_num}] account: ${account_name}", ("_block_num", _block_num)("account_name", account_name) ); )
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
     FC_ASSERT(account_ptr!=nullptr, "account with name ${name} does not exist in chain database", ("name", account_name));
@@ -139,12 +109,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     _filter_collector.grab_tracked_account( account_name );
     if( !_filter_collector.is_account_tracked( account_name ) )
-    {
-      DIAGNOSTIC( ilog("no [${_block_num}] account: ${account_name} op_id: ${operation_id}", ("_block_num", _block_num)("account_name", account_name)("operation_id", operation_id) ); )
       return;
-    }
-
-    DIAGNOSTIC( ilog("[${_block_num}] account: ${account_name} op_id: ${operation_id}", ("_block_num", _block_num)("account_name", account_name)("operation_id", operation_id) ); )
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
     FC_ASSERT(account_ptr!=nullptr, "account with name ${name} does not exist in chain database", ("name", account_name));

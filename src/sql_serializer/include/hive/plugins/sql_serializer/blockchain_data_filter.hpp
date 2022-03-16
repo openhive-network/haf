@@ -19,11 +19,11 @@ namespace hive::plugins::sql_serializer {
   {
     private:
 
-      bool              enabled;
+      bool              enabled = false;
 
       std::set<int64_t> trx_in_block_filter_accepted;
-      account_filter       accounts_filter;
-      operation_filter      operations_filter;
+      account_filter    accounts_filter;
+      operation_filter  operations_filter;
 
     public:
 
