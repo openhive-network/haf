@@ -19,6 +19,8 @@ namespace hive::plugins::sql_serializer {
       virtual bool on_before_new_operation( const hive::protocol::account_name_type& account_name ){ return true; }
 
     public:
+
+      virtual ~accounts_collector_base(){}
       virtual bool is_op_accepted() const { return true; }
   };
 
@@ -28,6 +30,8 @@ namespace hive::plugins::sql_serializer {
 
     accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data )
       : _chain_db(chain_db), _cached_data(cached_data) {}
+
+    virtual ~accounts_collector(){}
 
     void collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
 
@@ -79,6 +83,8 @@ namespace hive::plugins::sql_serializer {
 
       public:
         filtered_accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, const blockchain_data_filter& filter );
+        virtual ~filtered_accounts_collector(){}
+
         bool is_op_accepted() const override;
     };
 
