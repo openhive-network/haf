@@ -201,3 +201,40 @@ replay_accounts_operations_filtered_node_with_haf:
   tags:
     - public-runner-docker
     - hived-for-tests
+
+replay_operations_filtered_node_with_haf:
+  stage: build_and_test
+  needs:
+    - job: hive_fork_manager
+      artifacts: true
+    - job: hived
+      artifacts: true
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  variables:
+    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package"
+    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
+    BLOCK_LOG_PATH: "/blockchain/block_log"
+    DB_NAME: haf_block_log
+    DB_URL: "postgresql:///$DB_NAME"
+  script:
+    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+    - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-db-owner="hive"
+    # tests
+    - cd $CI_PROJECT_DIR/tests/integration/replay_operations_filtered
+    - mkdir blockchain
+    - $HIVE_BUILD_ROOT_PATH/programs/util/truncate_block_log $BLOCK_LOG_PATH blockchain/block_log 5000000
+    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir . --config config.ini --force-replay --exit-before-sync --psql-url $DB_URL > node_logs.log 2>&1
+    - tox
+  artifacts:
+    paths:
+    - "**/node_logs.log"
+    - "**/generated_during_*"
+    - "**/generated_by_package_fixtures"
+    - "**/*.out.csv"
+    reports:
+      junit: tests/integration/replay_operations_filtered/report.xml
+    when: always
+    expire_in: 1 week
+  tags:
+    - public-runner-docker
+    - hived-for-tests
