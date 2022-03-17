@@ -131,7 +131,7 @@ replay_node_with_haf:
     - public-runner-docker
     - hived-for-tests
 
-replay_filtered_node_with_haf:
+replay_accounts_filtered_node_with_haf:
   stage: build_and_test
   needs:
     - job: hive_fork_manager
@@ -149,7 +149,7 @@ replay_filtered_node_with_haf:
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
     - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-db-owner="hive"
     # tests
-    - cd $CI_PROJECT_DIR/tests/integration/replay_filtered
+    - cd $CI_PROJECT_DIR/tests/integration/replay_accounts_filtered
     - mkdir blockchain
     - $HIVE_BUILD_ROOT_PATH/programs/util/truncate_block_log $BLOCK_LOG_PATH blockchain/block_log 5000000
     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir . --config config.ini --force-replay --exit-before-sync --psql-url $DB_URL > node_logs.log 2>&1
@@ -161,7 +161,7 @@ replay_filtered_node_with_haf:
     - "**/generated_by_package_fixtures"
     - "**/*.out.csv"
     reports:
-      junit: tests/integration/replay_filtered/report.xml
+      junit: tests/integration/replay_accounts_filtered/report.xml
     when: always
     expire_in: 1 week
   tags:
