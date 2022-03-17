@@ -11,15 +11,15 @@ from tables import EventsQueue, Blocks, Operations, Transactions, TransactionsMu
 BLOCK_LOG_LENGTH = 5_000_000
 
 BLOCKS_COUNT = 5_000_000
-OPERATIONS_COUNT = 77_129 
-TRANSACTIONS_COUNT = 35_100
-TRANSACTIONS_MULTISIG_COUNT = 2
+OPERATIONS_COUNT = 24_000
+TRANSACTIONS_COUNT = 23_808
+TRANSACTIONS_MULTISIG_COUNT = 0
 ACCOUNTS_COUNT = 196
-ACCOUNT_OPERATIONS_COUNT = 78_126
+ACCOUNT_OPERATIONS_COUNT = 24_180
 
 
-def test_replay_accounts_filtered_5milion():
-    logger.info(f'Start test_replay_accounts_filtered_5milion')
+def test_replay_accounts_operations_filtered_5milion():
+    logger.info(f'Start test_replay_accounts_operations_filtered_5milion')
 
     if "DB_URL" not in os.environ:
         raise Exception('DB_URL environment variable not set')
