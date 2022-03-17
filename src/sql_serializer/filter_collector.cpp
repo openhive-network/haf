@@ -16,7 +16,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     return !_filter.is_enabled() || ( _accounts_accepted.find( account ) != _accounts_accepted.end() );
   }
 
-  void filter_collector::collect_tracked_account(const hive::protocol::account_name_type& account_name)
+  void filter_collector::collect_tracked_account( const hive::protocol::account_name_type& account_name )
   {
     if( _filter.is_enabled() && _filter.is_tracked_account( account_name ) )
       _accounts_accepted.insert( account_name );
@@ -29,16 +29,10 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void filter_collector::collect_tracked_operation( const hive::protocol::operation& op )
   {
-    if( _filter.is_enabled() && _filter.is_tracked_operation( op ) )
-      _operation_accepted = true;
-  }
-
-  void filter_collector::clear()
-  {
     if( _filter.is_enabled() )
     {
-      _operation_accepted = false;
       _accounts_accepted.clear();
+      _operation_accepted = _filter.is_tracked_operation( op );
     }
   }
 

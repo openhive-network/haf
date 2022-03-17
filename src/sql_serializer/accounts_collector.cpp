@@ -11,8 +11,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _impacted.clear();
     hive::app::operation_get_impacted_accounts(op, _impacted);
 
+    on_collect( op, _impacted );
+
     op.visit(*this);
-    on_collect( _impacted, op );
   }
 
   void accounts_collector::operator()(const hive::protocol::account_create_operation& op)
@@ -115,9 +116,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
   }
 
-  void filtered_accounts_collector::on_collect( const flat_set<hive::protocol::account_name_type>& impacted, const hive::protocol::operation& op )
+  void filtered_accounts_collector::on_collect( const hive::protocol::operation& op, const flat_set<hive::protocol::account_name_type>& impacted )
   {
-    _filter_collector.clear();
     _filter_collector.collect_tracked_operation( op );
 
     for( auto& name : impacted )

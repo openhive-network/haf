@@ -14,7 +14,7 @@ namespace hive::plugins::sql_serializer {
   struct accounts_collector_base
   {
     protected:
-      virtual void on_collect( const flat_set<hive::protocol::account_name_type>& impacted, const hive::protocol::operation& op ){}
+      virtual void on_collect( const hive::protocol::operation& op, const flat_set<hive::protocol::account_name_type>& impacted ){}
       virtual bool on_before_new_account( const hive::protocol::account_name_type& account_name ){ return true; }
       virtual bool on_before_new_operation( const hive::protocol::account_name_type& account_name ){ return true; }
 
@@ -77,7 +77,7 @@ namespace hive::plugins::sql_serializer {
         filter_collector _filter_collector;
 
       protected:
-        void on_collect( const flat_set<hive::protocol::account_name_type>& impacted, const hive::protocol::operation& op ) override;
+        void on_collect( const hive::protocol::operation& op, const flat_set<hive::protocol::account_name_type>& impacted ) override;
         bool on_before_new_account( const hive::protocol::account_name_type& account_name ) override;
         bool on_before_new_operation( const hive::protocol::account_name_type& account_name ) override;
 

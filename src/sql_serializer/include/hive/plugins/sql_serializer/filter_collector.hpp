@@ -24,8 +24,6 @@ namespace hive::plugins::sql_serializer {
 
       bool is_operation_tracked() const;
       void collect_tracked_operation( const hive::protocol::operation& op );
-
-      void clear();
   };
 
 } // namespace hive::plugins::sql_serializer
