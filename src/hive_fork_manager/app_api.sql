@@ -201,7 +201,7 @@ BEGIN
         FROM hive.contexts hc
         WHERE hc.name = _context_name;
     ELSE
-        SELECT COALESCE( MAX( hb.num ), 0 ) INTO __result FROM hive.blocks hb;
+        __result := COALESCE((SELECT hb.num from hive.blocks hb ORDER BY num DESC LIMIT 1), 0);
     END IF;
 
     RETURN __result;
