@@ -653,9 +653,10 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
                          ("psql-enable-accounts-dump", appbase::bpo::value<bool>()->default_value( true ), "enable collect data to accounts and account_operations table")
                          ("psql-force-open-inconsistent", appbase::bpo::bool_switch()->default_value( false ), "force open database even when irreversible data are inconsistent")
                          ("psql-livesync-threshold", appbase::bpo::value<uint32_t>()->default_value( 10000 ), "threshold to move synchronization state during start immediatly to live")
-                         ("psql-track-account-range", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "Defines a range of accounts to track as a json pair [\"from\",\"to\"] [from,to] Can be specified multiple times.")
-                         ("psql-enable-filter", appbase::bpo::value<bool>()->default_value( true ), "enable filtering accounts and operations")
+                         ("psql-track-account-range", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "Defines a range of accounts to track as a json pair [\"from\",\"to\"] [from,to]. Can be specified multiple times.")
                          ("psql-track-operations", boost::program_options::value< std::vector<std::string> >()->composing(), "Defines operations' types to track. Can be specified multiple times.")
+                         ("psql-track-body-operations", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "For a type of operation it's defined a regex that filters body of operation and decides if it's excluded. Can be specified multiple times.")
+                         ("psql-enable-filter", appbase::bpo::value<bool>()->default_value( true ), "enable filtering accounts and operations")
                          ;
       }
 
@@ -688,7 +689,7 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
 
         my->currently_caching_data = std::make_unique<cached_data_t>( default_reservation_size );
 
-        my->filter.fill( options, "psql-track-account-range", "psql-track-operations" );
+        my->filter.fill( options, "psql-track-account-range", "psql-track-operations", "psql-track-body-operations" );
 
         if( my->filter.is_enabled() )
           my->collector = std::make_unique<filtered_accounts_collector>( db, *my->currently_caching_data, my->filter );

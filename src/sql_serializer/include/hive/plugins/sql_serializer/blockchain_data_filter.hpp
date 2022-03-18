@@ -22,12 +22,16 @@ namespace hive::plugins::sql_serializer {
       bool              enabled = false;
 
       std::set<int64_t> trx_in_block_filter_accepted;
-      account_filter    accounts_filter;
-      operation_filter  operations_filter;
+
+      account_filter        accounts_filter;
+      operation_filter      operations_filter;
+      operation_body_filter operations_body_filter;
 
     public:
 
-      blockchain_account_filter( bool _enabled ): enabled( _enabled ), accounts_filter("acc-sql"), operations_filter("op-sql") {}
+      blockchain_account_filter( bool _enabled )
+                                : enabled( _enabled ), accounts_filter("acc-sql"), operations_filter("op-sql"), operations_body_filter("opb-sql")
+      {}
 
       bool is_enabled() const override;
       bool is_trx_accepted( int64_t trx_in_block ) const;
@@ -36,7 +40,10 @@ namespace hive::plugins::sql_serializer {
       bool is_tracked_operation( const operation& op ) const override;
 
       void remember_trx_id( int64_t trx_in_block );
-      void fill( const boost::program_options::variables_map& options, const std::string& tracked_accounts, const std::string& tracked_operations );
+      void fill(  const boost::program_options::variables_map& options,
+                  const std::string& tracked_accounts,
+                  const std::string& tracked_operations,
+                  const std::string& tracked_operation_body_filters );
       void clear();
   };
 

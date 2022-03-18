@@ -29,14 +29,18 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       trx_in_block_filter_accepted.insert( trx_in_block );
   }
 
-  void blockchain_account_filter::fill( const boost::program_options::variables_map& options, const std::string& tracked_accounts, const std::string& tracked_operations )
+  void blockchain_account_filter::fill( const boost::program_options::variables_map& options,
+                                        const std::string& tracked_accounts,
+                                        const std::string& tracked_operations,
+                                        const std::string& tracked_body_operations )
   {
     if( is_enabled() )
     {
       accounts_filter.fill( options, tracked_accounts );
       operations_filter.fill( options, tracked_operations );
+      operations_body_filter.fill( options, tracked_body_operations );
 
-      if( accounts_filter.empty() && operations_filter.empty() )
+      if( accounts_filter.empty() && operations_filter.empty() && operations_body_filter.empty() )
         enabled = false;
     }
   }
