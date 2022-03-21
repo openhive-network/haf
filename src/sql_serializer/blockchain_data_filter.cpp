@@ -19,7 +19,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   bool blockchain_filter::is_tracked_operation( const operation& op ) const
   {
-    return !is_enabled() || operations_filter.is_tracked_operation( op );
+    return !is_enabled() || ( operations_filter.is_tracked_operation( op ) && operations_body_filter.is_tracked_operation( op ) );
   }
 
   void blockchain_filter::remember_trx_id( int64_t trx_in_block )
