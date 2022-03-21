@@ -270,7 +270,7 @@ using chain::reindex_notification;
           cached_containter_t currently_caching_data;
           std::unique_ptr<accounts_collector> collector;
           stats_group current_stats;
-          blockchain_account_filter filter;
+          blockchain_filter filter;
 
           void log_statistics()
           {

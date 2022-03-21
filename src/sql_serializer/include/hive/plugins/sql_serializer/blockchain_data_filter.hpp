@@ -15,7 +15,7 @@ namespace hive::plugins::sql_serializer {
     virtual bool is_tracked_operation( const operation& op ) const = 0;
   };
 
-  struct blockchain_account_filter: public blockchain_data_filter
+  struct blockchain_filter: public blockchain_data_filter
   {
     private:
 
@@ -29,7 +29,7 @@ namespace hive::plugins::sql_serializer {
 
     public:
 
-      blockchain_account_filter( bool _enabled )
+      blockchain_filter( bool _enabled )
                                 : enabled( _enabled ), accounts_filter("acc-sql"), operations_filter("op-sql"), operations_body_filter("opb-sql")
       {}
 
