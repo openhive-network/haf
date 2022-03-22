@@ -96,16 +96,24 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id)
   {
-    if( !on_before_new_operation( account_name ) )
-      return;
+    bool _allow_add_operation = on_before_new_operation( account_name );
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
-    FC_ASSERT(account_ptr!=nullptr, "account with name ${name} does not exist in chain database", ("name", account_name));
+
+    if( account_ptr == nullptr )
+      return;
+
     account_ops_seq_object::id_type account_id(account_ptr->get_id());
 
-    const account_ops_seq_object& op_seq_obj = _chain_db.get< account_ops_seq_object, hive::chain::by_id >( account_id );
-    _cached_data.account_operations.emplace_back(_block_num, operation_id, account_id, op_seq_obj.operation_count);
-    _chain_db.modify( op_seq_obj, [&]( account_ops_seq_object& o)
+    const account_ops_seq_object* op_seq_obj = _chain_db.find< account_ops_seq_object, hive::chain::by_id >( account_id );
+
+    if( op_seq_obj == nullptr )
+      return;
+
+    if( _allow_add_operation )
+      _cached_data.account_operations.emplace_back(_block_num, operation_id, account_id, op_seq_obj->operation_count);
+
+    _chain_db.modify( *op_seq_obj, [&]( account_ops_seq_object& o)
     {
       o.operation_count++;
     } );
