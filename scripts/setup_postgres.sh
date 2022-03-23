@@ -8,8 +8,8 @@ source "$SCRIPTPATH/common.sh"
 log_exec_params "$@"
 
 # Script reponsible for setup of specified postgres instance. This script execution requires root priviledges.
-# 
-# - installs (previously built !!) hive_fork_manager PostgreSQL extension 
+#
+# - installs (previously built !!) hive_fork_manager PostgreSQL extension
 # - creates all builtin HAF roles on pointed PostgreSQL server instance
 # - creates (if missing) and associates specified user to the builtin haf_admin role.
 
@@ -42,7 +42,7 @@ deploy_builtin_roles() {
 create_haf_admin_account() {
   local pg_access="$1"
   local haf_admin_account="$2"
- 
+
   # sad, but superuser is required to set different role as a database owner...
 
   sudo -nu postgres psql -d postgres -aw $pg_access -v ON_ERROR_STOP=on -f - <<EOF
@@ -71,8 +71,8 @@ setup_haf_storage_tablespace() {
   local haf_tablespace_name="$2"
   local haf_tablespace_path="$3"
 
-  haf_tablespace_abs_path=`realpath -m "$haf_tablespace_path"` 
-  
+  haf_tablespace_abs_path=`realpath -m "$haf_tablespace_path"`
+
   TABLESPACE_PATH=$(sudo -nu postgres psql -qtAX -d postgres -w $pg_access -v ON_ERROR_STOP=on -f - <<EOF
   SELECT COALESCE((SELECT pg_tablespace_location(oid)
                    FROM pg_tablespace where spcname = '$haf_tablespace_name'
@@ -114,7 +114,7 @@ install_extension() {
   build_dir=${build_dir%%[[:space:]]}
   echo "Attempting to install hive_fork_manager extenstion into PostgreSQL directories..."
   pushd "$build_dir"
-  make install 
+  ninja install
   popd
 }
 
