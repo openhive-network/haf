@@ -1,6 +1,6 @@
 #! /bin/bash
 
-set -euo pipefail 
+set -euo pipefail
 
 # Script purpose is an installation of all packages required to build and run HAF instance.
 # After changing it, please also update and push to the registry a docker image defined in https://gitlab.syncad.com/hive/haf/-/blob/develop/Dockerfile
@@ -80,6 +80,7 @@ apt-get update \
         joe \
         sudo \
         ca-certificates \
+        ninja-build \
   && \
     apt-get clean
 
