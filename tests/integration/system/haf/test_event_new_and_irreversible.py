@@ -12,6 +12,12 @@ def test_event_new_and_irreversible(world_with_witnesses_and_database):
 
     # GIVEN
     world, session, Base = world_with_witnesses_and_database
+    for node in world.nodes():
+        node.config.log_logger = '{"name":"default","level":"info","appender":"stderr"} '\
+                                 '{"name":"user","level":"debug","appender":"stderr"} '\
+                                 '{"name":"chainlock","level":"debug","appender":"stderr"} '\
+                                 '{"name":"sync","level":"debug","appender":"stderr"} '\
+                                 '{"name":"p2p","level":"debug","appender":"p2p"} '
     node_under_test = world.network('Beta').node('NodeUnderTest')
 
     events_queue = Base.classes.events_queue
