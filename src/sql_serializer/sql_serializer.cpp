@@ -270,6 +270,7 @@ using chain::reindex_notification;
           cached_containter_t currently_caching_data;
           std::unique_ptr<accounts_collector> collector;
           stats_group current_stats;
+          type_extractor::operation_extractor op_extractor;
           blockchain_filter filter;
 
           void log_statistics()
@@ -301,8 +302,8 @@ using chain::reindex_notification;
             load_initial_db_data();
             if(freshDb)
             {
-              auto get_type_definitions = [](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx){
-                auto types = PSQL::get_all_type_definitions();
+              auto get_type_definitions = [ this ](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx){
+                auto types = PSQL::get_all_type_definitions( op_extractor );
                 if ( types.empty() )
                   return data_processing_status();;
 

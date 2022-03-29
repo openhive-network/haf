@@ -7,14 +7,7 @@
 #include <functional>
 
 // Boost
-#include <boost/mpl/for_each.hpp>
-#include <boost/mpl/copy_if.hpp>
-#include <boost/mpl/not.hpp>
-#include <boost/type.hpp>
-#include <boost/type_index.hpp>
-#include <boost/tuple/tuple.hpp>
 #include <boost/thread/sync_queue.hpp>
-#include <boost/spirit/include/karma.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/mem_fun.hpp>
@@ -24,7 +17,7 @@
 #include <hive/chain/util/extractors.hpp>
 #include <hive/chain/hive_object_types.hpp>
 #include <hive/chain/account_object.hpp>
-#include "type_extractor_processor.hpp"
+#include <hive/chain/util/operation_extractor.hpp>
 
 #ifndef HIVE_SQL_SERIALIZER_SPACE_ID
 #define HIVE_SQL_SERIALIZER_SPACE_ID 20
@@ -39,19 +32,6 @@ namespace hive
 
       namespace PSQL
       {
-        using operation_types_container_t = std::map<int64_t, std::pair<fc::string, bool>>;
-
-        struct typename_gatherer
-        {
-          operation_types_container_t &names;
-
-          template <typename T, typename SV>
-          void operator()(boost::type<boost::tuple<T, SV>> t) const
-          {
-            names[names.size()] = std::pair<fc::string, bool>(boost::typeindex::type_id<T>().pretty_name(), T{}.is_virtual());
-          }
-        };
-
         template <typename T>
         using queue = boost::concurrent::sync_queue<T>;
         using escape_function_t = std::function<fc::string(const char *)>;
@@ -190,14 +170,9 @@ namespace hive
 
         constexpr const char *SQL_bool(const bool val) { return (val ? "TRUE" : "FALSE"); }
 
-        inline fc::string get_all_type_definitions()
+        inline fc::string get_all_type_definitions( const type_extractor::operation_extractor& op_extractor )
         {
-          namespace te = type_extractor;
-          typedef te::sv_processor<hive::protocol::operation> processor;
-
-          operation_types_container_t result;
-          typename_gatherer p{result};
-          boost::mpl::for_each<processor::transformed_type_list, boost::type<boost::mpl::_>>(p);
+          type_extractor::operation_extractor::operation_details_container_t result = op_extractor.get_operation_details();
 
           if (result.empty())
             return fc::string{};
