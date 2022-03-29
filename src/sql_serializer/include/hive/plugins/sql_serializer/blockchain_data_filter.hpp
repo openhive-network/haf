@@ -14,7 +14,7 @@ namespace hive::plugins::sql_serializer {
     virtual bool empty() = 0;
     virtual bool is_tracked_account( const account_name_type& name ) = 0;
   };
-  template<bool empty>
+  template<bool is_empty>
   struct account_tracker: public account_tracker_base
   {
     account_filter filter;
@@ -50,7 +50,7 @@ namespace hive::plugins::sql_serializer {
     virtual bool empty() = 0;
     virtual bool is_tracked_operation( const operation& op ) = 0;
   };
-  template<bool empty, typename filter_type>
+  template<bool is_empty, typename filter_type>
   struct operation_tracker: public operation_tracker_base
   {
     filter_type filter;
