@@ -14,14 +14,15 @@
   extends: .docker_image_builder_job
 
   variables:
-    HAF_SUBMODULE_DIR: "$CI_PROJECT_DIR/haf"
-    SCRIPTS_PATH: "$HAF_SUBMODULE_DIR/scripts"
+    SUBMODULE_DIR: "$CI_PROJECT_DIR/haf"
+    REGISTRY_USER: "$CI_IMG_BUILDER_USER"
+    REGISTRY_PASS: $CI_IMG_BUILDER_PASSWORD
+
+    SCRIPTS_PATH: "$SUBMODULE_DIR/scripts"
   script:
-    - $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh "$HAF_SUBMODULE_DIR"
-    - HAF_IMAGE_NAME=$(cat haf_docked_image.txt)
-    - "echo HAF_IMAGE_NAME=$HAF_IMAGE_NAME > haf_docker_image_name.env"
+    - $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh "$SUBMODULE_DIR" registry.gitlab.syncad.com/hive/haf/ "HAF_IMAGE_NAME" "$REGISTRY_USER" "$REGISTRY_PASS"
 
   artifacts:
     reports:
-      dotenv: haf_docker_image_name.env
+      dotenv: docker_image_name.env
     expire_in: 6 hours

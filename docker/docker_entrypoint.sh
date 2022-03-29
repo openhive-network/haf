@@ -62,7 +62,7 @@ then
   # Here is an exception against using /etc/init.d/postgresql script to manage postgres - maybe there is some better way to force initdb using regular script.
   sudo -nu postgres PGDATA=$PGDATA /usr/lib/postgresql/12/bin/pg_ctl initdb
 
-  sudo -n ./haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/hived/hive_fork_manager" --haf-database-store="$HAF_DB_STORE/tablespace"
+  sudo -n ./haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="$HAF_DB_STORE/tablespace"
 
   echo "Postgres instance setup completed."
 
