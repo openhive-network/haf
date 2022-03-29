@@ -211,7 +211,7 @@ using chain::reindex_notification;
               psql_transactions_threads_number( _psql_transactions_threads_number ),
               psql_operations_threads_number( _psql_operations_threads_number ),
               psql_account_operations_threads_number( _psql_account_operations_threads_number ),
-              filter( _psql_enable_filter )
+              filter( _psql_enable_filter, op_extractor )
           {
             HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
           }

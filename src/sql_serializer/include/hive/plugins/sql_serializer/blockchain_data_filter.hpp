@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hive/utilities/data_filter.hpp>
+#include <hive/chain/util/data_filter.hpp>
 #include<set>
 
 namespace hive::plugins::sql_serializer {
@@ -19,9 +19,11 @@ namespace hive::plugins::sql_serializer {
   {
     private:
 
-      bool              enabled = false;
+      bool                  enabled = false;
 
-      std::set<int64_t> trx_in_block_filter_accepted;
+      std::set<int64_t>     trx_in_block_filter_accepted;
+
+      operation_helper      op_helper;
 
       account_filter        accounts_filter;
       operation_filter      operations_filter;
@@ -29,8 +31,11 @@ namespace hive::plugins::sql_serializer {
 
     public:
 
-      blockchain_filter( bool _enabled )
-                                : enabled( _enabled ), accounts_filter("acc-sql"), operations_filter("op-sql"), operations_body_filter("opb-sql")
+      blockchain_filter( bool _enabled, const type_extractor::operation_extractor& op_extractor )
+                                : enabled( _enabled ), op_helper( op_extractor ),
+                                  accounts_filter( "acc-sql" ),
+                                  operations_filter( "op-sql", op_helper ),
+                                  operations_body_filter( "opb-sql", op_helper )
       {}
 
       bool is_enabled() const override;
