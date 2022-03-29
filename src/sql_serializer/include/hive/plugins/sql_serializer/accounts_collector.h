@@ -51,7 +51,7 @@ namespace hive::plugins::sql_serializer {
     void operator()(const T& op)
     {
       for( const auto& account_name : _impacted )
-        on_new_operation(account_name, _processed_operation_id);
+        on_new_operation(account_name, _processed_operation_id, _processed_operation_type_id);
     }
 
     private:
@@ -59,15 +59,20 @@ namespace hive::plugins::sql_serializer {
 
       void on_new_account(const hive::protocol::account_name_type& account_name);
 
-      void on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id);
+      void on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id, int64_t operation_type_id);
 
     private:
       hive::chain::database& _chain_db;
       cached_data_t& _cached_data;
+
       int64_t _processed_operation_id = -1;
+      int64_t _processed_operation_type_id = -1;
+
       uint32_t _block_num = 0;
 
+      int64_t _creation_operation_type_id = -1;
       fc::optional<int64_t> _creation_operation_id;
+
       flat_set<hive::protocol::account_name_type> _impacted;
     };
 

@@ -24,10 +24,10 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   const char hive_accounts::COLS[] = "id, name, block_num";
 
   template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::TABLE[] = "hive.account_operations";
-  template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::COLS[] = "block_num, account_id, account_op_seq_no, operation_id";
+  template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::COLS[] = "block_num, account_id, account_op_seq_no, operation_id, op_type_id";
 
   template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::TABLE[] = "hive.account_operations";
-  template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::COLS[] = "block_num, account_id, account_op_seq_no, operation_id";
+  template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::COLS[] = "block_num, account_id, account_op_seq_no, operation_id, op_type_id";
 
 }}} // namespace hive::plugins::sql_serializer
 

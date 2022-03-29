@@ -7,6 +7,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   void accounts_collector::collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num)
   {
     _processed_operation_id = operation_id;
+    _processed_operation_type_id = op.which();
     _block_num = block_num;
     _impacted.clear();
     hive::app::operation_get_impacted_accounts(op, _impacted);
@@ -66,19 +67,20 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     on_new_account(op.new_account_name);
     if( _creation_operation_id.valid() )
-      on_new_operation(op.new_account_name, *_creation_operation_id);
-    on_new_operation(op.new_account_name, _processed_operation_id);
+      on_new_operation(op.new_account_name, *_creation_operation_id, _creation_operation_type_id);
+    on_new_operation(op.new_account_name, _processed_operation_id, _processed_operation_type_id);
 
     if( op.creator != hive::protocol::account_name_type() )
-      on_new_operation(op.creator, _processed_operation_id);
+      on_new_operation(op.creator, _processed_operation_id, _processed_operation_type_id);
   }
 
   void accounts_collector::process_account_creation_op(fc::optional<hive::protocol::account_name_type> impacted_account)
   {
     _creation_operation_id = _processed_operation_id;
+    _creation_operation_type_id = _processed_operation_type_id;
 
     if( impacted_account.valid() )
-      on_new_operation(*impacted_account, _processed_operation_id);
+      on_new_operation(*impacted_account, _processed_operation_id, _processed_operation_type_id);
   }
 
   void accounts_collector::on_new_account(const hive::protocol::account_name_type& account_name)
@@ -94,7 +96,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _cached_data.accounts.emplace_back(account_id, std::string(account_name), _block_num);
   }
 
-  void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id)
+  void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id, int64_t operation_type_id)
   {
     bool _allow_add_operation = on_before_new_operation( account_name );
 
@@ -111,7 +113,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       return;
 
     if( _allow_add_operation )
-      _cached_data.account_operations.emplace_back(_block_num, operation_id, account_id, op_seq_obj->operation_count);
+      _cached_data.account_operations.emplace_back(_block_num, operation_id, account_id, op_seq_obj->operation_count, static_cast<int32_t>(operation_type_id));
 
     _chain_db.modify( *op_seq_obj, [&]( account_ops_seq_object& o)
     {

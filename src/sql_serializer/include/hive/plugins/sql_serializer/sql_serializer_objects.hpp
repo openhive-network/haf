@@ -139,12 +139,14 @@ namespace hive
             int64_t operation_id;
             int32_t account_id;
             int32_t operation_seq_no;
+            int32_t op_type_id;
 
-            account_operation_data_t(int32_t _block_number, int64_t _operation_id, int32_t _account_id, int32_t _operation_seq_no)
+            account_operation_data_t(int32_t _block_number, int64_t _operation_id, int32_t _account_id, int32_t _operation_seq_no, int32_t _op_type_id)
             : block_data_base( _block_number )
             , operation_id{ _operation_id }
             , account_id{ _account_id }
             , operation_seq_no{ _operation_seq_no }
+            , op_type_id( _op_type_id )
             {}
           };
         }; // namespace processing_objects
