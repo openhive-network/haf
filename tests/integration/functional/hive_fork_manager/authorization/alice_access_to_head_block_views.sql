@@ -111,31 +111,31 @@ BEGIN
          , ( 11, 'alice103', 10, 3 )
     ;
 
-    INSERT INTO hive.account_operations(block_num, account_id, account_op_seq_no, operation_id)
+    INSERT INTO hive.account_operations(block_num, account_id, account_op_seq_no, operation_id, op_type_id)
     VALUES
-           ( 1, 1, 1, 1 )
-         , ( 2, 1, 2, 2 )
-         , ( 2, 2, 1, 2 )
-         , ( 3, 3, 1, 3 )
-         , ( 4, 4, 1, 4 )
+           ( 1, 1, 1, 1, 1 )
+         , ( 2, 1, 2, 2, 1 )
+         , ( 2, 2, 1, 2, 1 )
+         , ( 3, 3, 1, 3, 1 )
+         , ( 4, 4, 1, 4, 1 )
     ;
 
     INSERT INTO hive.account_operations_reversible
     VALUES
-           ( 4, 4, 1, 4, 1 ) -- it pretends that some slow app prevent to remove this
-         , ( 5, 5, 1, 5, 1 )
-         , ( 6, 6, 1, 6, 1 )
-         , ( 7, 7, 1, 7, 1 ) -- must be overriden by fork 2
-         , ( 7, 8, 1, 7, 1 ) -- must be overriden by fork 2
-         , ( 7, 9, 1, 9, 1 ) -- must be overriden by fork 2
-         , ( 7, 7, 2, 7, 2 )
-         , ( 7, 8, 2, 8, 2 )
-         , ( 8, 9, 2, 9, 2 )
-         , ( 7, 9, 3, 8, 2 )
-         , ( 9, 10, 2, 10, 2 )
-         , ( 9, 9, 3, 9, 3 )
-         , ( 10, 10, 3, 10, 3 )
-         , ( 10, 11, 3, 10, 3 )
+           ( 4, 4, 1, 4, 1, 1 ) -- it pretends that some slow app prevent to remove this
+         , ( 5, 5, 1, 5, 1, 1 )
+         , ( 6, 6, 1, 6, 1, 1 )
+         , ( 7, 7, 1, 7, 1, 1 ) -- must be overriden by fork 2
+         , ( 7, 8, 1, 7, 1, 1 ) -- must be overriden by fork 2
+         , ( 7, 9, 1, 9, 1, 1 ) -- must be overriden by fork 2
+         , ( 7, 7, 2, 7, 1, 2 )
+         , ( 7, 8, 2, 8, 1, 2 )
+         , ( 8, 9, 2, 9, 1, 2 )
+         , ( 7, 9, 3, 8, 1, 2 )
+         , ( 9, 10, 2, 10, 1, 2 )
+         , ( 9, 9, 3, 9, 1, 3 )
+         , ( 10, 10, 3, 10, 1, 3 )
+         , ( 10, 11, 3, 10, 1, 3 )
     ;
 
     UPDATE hive.irreversible_data SET consistent_block = 4;

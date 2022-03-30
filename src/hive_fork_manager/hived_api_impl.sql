@@ -180,6 +180,7 @@ BEGIN
          , haor.account_id
          , haor.account_op_seq_no
          , haor.operation_id
+         , haor.op_type_id
     FROM
         hive.account_operations_reversible haor
         JOIN (

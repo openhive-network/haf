@@ -43,8 +43,8 @@ BEGIN
 
     INSERT INTO hive.account_operations
     VALUES
-        ( 1, 1, 1, 1)
-      , ( 2, 2, 1, 2)
+        ( 1, 1, 1, 1, 1)
+      , ( 2, 2, 1, 2, 1)
     ;
 
     -- here we simulate situation when hived claims recently only block 1

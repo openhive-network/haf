@@ -45,8 +45,8 @@ BEGIN
     __signatures2 = ( '\xBEEF', '\xBABE' );
     __account1 = ( 1, 'alice', 101 );
     __account2 = ( 2, 'bob', 101 );
-    __account_operation1 = ( 101, 1, 1, 1 );
-    __account_operation2 = ( 102, 2, 1, 2 );
+    __account_operation1 = ( 101, 1, 1, 1, 1 );
+    __account_operation2 = ( 102, 2, 1, 2, 2 );
     PERFORM hive.push_block(
           __block
         , ARRAY[ __transaction1, __transaction2 ]
