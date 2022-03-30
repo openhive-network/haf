@@ -4,5 +4,5 @@ GeneratedInWorld
 .tox
 report.xml
 Testing
-*.out
+*.out.csv
 .hived
