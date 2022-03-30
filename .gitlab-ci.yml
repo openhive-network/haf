@@ -70,7 +70,7 @@ haf_system:
       artifacts: true
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
-    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package"
+    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/local_tools"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
   script:
     # use newest libfaketime version, version 0.97 is not enough
@@ -81,8 +81,7 @@ haf_system:
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf
-    - source env.sh
-    - tox
+    - tox .
   artifacts:
     paths:
     - "**/generated_during_*"
@@ -103,7 +102,7 @@ replay_node_with_haf:
       artifacts: true
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
-    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package"
+    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/local_tools"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
     BLOCK_LOG_PATH: "/blockchain/block_log"
     DB_NAME: haf_block_log
@@ -116,7 +115,7 @@ replay_node_with_haf:
     - mkdir blockchain
     - $HIVE_BUILD_ROOT_PATH/programs/util/truncate_block_log $BLOCK_LOG_PATH blockchain/block_log 5000000
     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir . --config config.ini --force-replay --exit-before-sync --psql-url $DB_URL > node_logs.log 2>&1
-    - tox
+    - tox .
   artifacts:
     paths:
     - "**/node_logs.log"

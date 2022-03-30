@@ -18,7 +18,7 @@ def test_blocks_reversible(world_with_witnesses_and_database):
     blocks_reversible = Base.classes.blocks_reversible
 
     # WHEN
-    run_networks(world, Path().resolve())
+    run_networks(world)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     after_fork_block = make_fork(world)
 

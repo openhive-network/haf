@@ -19,7 +19,7 @@ def test_event_massive_sync(world_with_witnesses_and_database):
     events_queue = Base.classes.events_queue
 
     # WHEN
-    run_networks(world, Path().resolve())
+    run_networks(world)
     # TODO get_p2p_endpoint is workaround to check if replay is finished
     node_under_test.get_p2p_endpoint()
 

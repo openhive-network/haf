@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-import json
+from pathlib import Path
 import time
 
 from test_tools import logger, Wallet, BlockLog
@@ -74,7 +74,10 @@ def get_time_offset_from_file(name):
     return time_offset
 
 
-def run_networks(world, blocklog_directory, replay_all_nodes=True):
+def run_networks(world, blocklog_directory=None, replay_all_nodes=True):
+    if blocklog_directory is None:
+        blocklog_directory = Path(__file__).parent.resolve()
+
     time_offset = get_time_offset_from_file(blocklog_directory/'timestamp')
 
     block_log = BlockLog(None, blocklog_directory/'block_log', include_index=False)

@@ -22,7 +22,7 @@ def test_live_sync(world_with_witnesses_and_database):
     operations = Base.classes.operations
 
     # WHEN
-    run_networks(world, Path().resolve())
+    run_networks(world)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     wallet = Wallet(attach_to=witness_node)
     wallet.api.transfer('initminer', 'initminer', Asset.Test(1000), 'dummy transfer operation')

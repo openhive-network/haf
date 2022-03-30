@@ -17,7 +17,7 @@ def test_event_after_replay(world_with_witnesses_and_database):
     events_queue = Base.classes.events_queue
 
     # WHEN
-    run_networks(world, Path().resolve(), replay_all_nodes=True)
+    run_networks(world, replay_all_nodes=True)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     previous_irreversible = get_irreversible_block(node_under_test)
     massive_sync_block = session.query(events_queue).\

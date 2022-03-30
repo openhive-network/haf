@@ -16,7 +16,7 @@ def test_undo_transactions(world_with_witnesses_and_database):
     transactions = Base.classes.transactions
 
     # WHEN
-    run_networks(world, Path().resolve())
+    run_networks(world)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     wallet = Wallet(attach_to=node_under_test)
     transaction = wallet.api.transfer_to_vesting('initminer', 'null', Asset.Test(1234), broadcast=False)
