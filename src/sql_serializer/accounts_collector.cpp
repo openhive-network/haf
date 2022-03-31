@@ -7,7 +7,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   void accounts_collector::collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num)
   {
     _processed_operation_id = operation_id;
-    _processed_operation_type_id = op.which();
+    
+    FC_ASSERT(op.which() >= 0, "Negative value of operation type-id: ${t}", ("t", op.which()));
+    FC_ASSERT(op.which() < std::numeric_limits<short>::max(), "Too big value of operation type-id: ${t}", ("t", op.which()));
+
+    _processed_operation_type_id = static_cast<int32_t>(op.which());
     _block_num = block_num;
     _impacted.clear();
     hive::app::operation_get_impacted_accounts(op, _impacted);
@@ -96,7 +100,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _cached_data.accounts.emplace_back(account_id, std::string(account_name), _block_num);
   }
 
-  void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id, int64_t operation_type_id)
+  void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id, int32_t operation_type_id)
   {
     bool _allow_add_operation = on_before_new_operation( account_name );
 
@@ -113,7 +117,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       return;
 
     if( _allow_add_operation )
-      _cached_data.account_operations.emplace_back(_block_num, operation_id, account_id, op_seq_obj->operation_count, static_cast<int32_t>(operation_type_id));
+      _cached_data.account_operations.emplace_back(_block_num, operation_id, account_id, op_seq_obj->operation_count, operation_type_id);
 
     _chain_db.modify( *op_seq_obj, [&]( account_ops_seq_object& o)
     {
