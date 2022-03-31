@@ -477,7 +477,8 @@ EXECUTE format(
            t.block_num,
            t.account_id,
            t.account_op_seq_no,
-           t.operation_id
+           t.operation_id,
+           t.op_type_id
         FROM hive.%s_context_data_view c,
         LATERAL
         (
@@ -485,7 +486,8 @@ EXECUTE format(
                  ha.block_num,
                  ha.account_id,
                  ha.account_op_seq_no,
-                 ha.operation_id
+                 ha.operation_id,
+                 ha.op_type_id
                 FROM hive.account_operations ha
                 WHERE ha.block_num <= c.min_block
                 UNION ALL
@@ -493,12 +495,14 @@ EXECUTE format(
                     reversible.block_num,
                     reversible.account_id,
                     reversible.account_op_seq_no,
-                    reversible.operation_id
+                    reversible.operation_id,
+                    reversible.op_type_id
                 FROM ( SELECT
                     har.block_num,
                     har.account_id,
                     har.account_op_seq_no,
                     har.operation_id,
+                    har.op_type_id,
                     har.fork_id
                 FROM hive.account_operations_reversible har
                 JOIN (
@@ -529,7 +533,8 @@ EXECUTE format(
            ha.block_num,
            ha.account_id,
            ha.account_op_seq_no,
-           ha.operation_id
+           ha.operation_id,
+           ha.op_type_id
         FROM hive.account_operations ha
         ;'
     , _context_name, _context_name, _context_name
