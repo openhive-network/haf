@@ -149,21 +149,22 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='account_operations_view' ), 'No blocks view';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.account_operations_view
+        SELECT aov.block_num, aov.account_id, aov.account_op_seq_no, aov.operation_id, aov.op_type_id 
+        FROM hive.account_operations_view aov
         EXCEPT SELECT * FROM ( VALUES
-              ( 100, 1, 1, 1 )
-            , ( 100, 2, 2, 1 )
-            , ( 200, 1, 2, 1 )
-            , ( 300, 1, 3, 1 )
-            , ( 400, 1, 4, 1 )
-            , ( 500, 1, 5, 1 )
-            , ( 600, 1, 6, 1 )
-            , ( 700, 2, 7, 1 )
-            , ( 800, 2, 8, 1 )
-            , ( 900, 3, 8, 1 )
-            , ( 900, 3, 9, 1 )
-            , ( 100, 3, 10, 1 )
-            , ( 1100, 3, 10, 1 )
+              ( 1,  100, 1,  1, 1 )
+            , ( 2,  100, 2,  2, 1 )
+            , ( 2,  200, 1,  2, 1 )
+            , ( 3,  300, 1,  3, 1 )
+            , ( 4,  400, 1,  4, 1 )
+            , ( 5,  500, 1,  5, 1 )
+            , ( 6,  600, 1,  6, 1 )
+            , ( 7,  700, 2,  7, 1 )
+            , ( 7,  800, 2,  8, 1 )
+            , ( 7,  900, 3,  8, 1 )
+            , ( 9,  900, 3,  9, 1 )
+            , (10,  100, 3, 10, 1 )
+            , (10, 1100, 3, 10, 1 )
         ) as pattern
     ) , 'Unexpected rows in the view';
 

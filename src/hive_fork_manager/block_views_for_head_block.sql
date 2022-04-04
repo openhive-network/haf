@@ -3,7 +3,8 @@ CREATE OR REPLACE VIEW hive.account_operations_view AS
   SELECT ha.account_id,
          ha.account_op_seq_no,
          ha.operation_id,
-         ha.op_type_id
+         ha.op_type_id,
+         ha.block_num
   FROM account_operations ha
  )
 UNION ALL
@@ -21,7 +22,8 @@ consistent_block AS
 SELECT har.account_id,
        har.account_op_seq_no,
        har.operation_id,
-       har.op_type_id
+       har.op_type_id,
+       har.block_num
 FROM forks 
 JOIN operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hor.block_num
 JOIN account_operations_reversible har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
