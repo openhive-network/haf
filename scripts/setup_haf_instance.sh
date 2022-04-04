@@ -1,11 +1,11 @@
 #! /bin/bash
 
-set -euo pipefail 
+set -euo pipefail
 
 LOG_FILE=setup_haf_instance.log
 
 # Because this script should work as standalone script being just downloaded from gitlab repo, and next use internal
-# scripts from a cloned repo, logging code is duplicated. 
+# scripts from a cloned repo, logging code is duplicated.
 
 exec > >(tee "${LOG_FILE}") 2>&1
 
@@ -14,7 +14,7 @@ log_exec_params() {
   echo -n "$0 parameters: "
   for arg in "$@"; do echo -n "$arg "; done
   echo
-} 
+}
 
 log_exec_params "$@"
 
@@ -31,6 +31,7 @@ print_help () {
     echo "  --haf-database-store=DIRECTORY_PATH"
     echo "                         Optionally specify a directory where Postgres SQL data specific to the HAF database will be stored. "
     echo "  --branch=branch        Optionally specify a branch to checkout and build."
+    echo "  --skip-build      Don't execute the clean & build steps."
     echo "  --help                 Display this help screen and exit"
     echo
 }
@@ -51,13 +52,15 @@ HAF_BRANCH=develop
 HAF_REPO_URL="https://gitlab.syncad.com/hive/haf.git"
 HAF_CMAKE_ARGS=()
 
+SKIP_BUILD=0
+
 POSTGRES_HOST="/var/run/postgresql"
 POSTGRES_PORT=5432
 
 add_hived_arg() {
   local arg="$1"
 #  echo "Processing hived argument: ${arg}"
-  
+
   case "$arg" in
     -d[\ ]*)
     echo "Explicit d directory specified to: ${arg#*[\ ]}"
@@ -103,6 +106,9 @@ process_option() {
         option="${o#*=}"
         add_hived_arg "$option"
         ;;
+    --skip-build)
+        SKIP_BUILD=1
+        ;;
     --help)
         print_help
         exit 0
@@ -129,7 +135,7 @@ process_option_file() {
   IFS=
 
   mapfile -t <"$option_file" READ_OPTIONS
-  echo "Read options: ${READ_OPTIONS[@]}" 
+  echo "Read options: ${READ_OPTIONS[@]}"
   for o in ${READ_OPTIONS[@]}; do
 #    echo "Processing a file option: $o"
     process_option "$o"
@@ -166,7 +172,7 @@ do_clone() {
 
 spawn_hived() {
   local hived_binary_path="$1"
-  
+
   local data_dir="$HIVED_DATADIR"
   local db_name="$HAF_DB_NAME"
   local pg_host="$POSTGRES_HOST"
@@ -200,14 +206,16 @@ if [ "$EUID" -eq 0 ]
   exit 1
 fi
 
-do_cleanup
-do_clone "$HAF_BRANCH" "$HAF_SOURCE_DIR"
-
 SCRIPTPATH="$HAF_SOURCE_DIR/scripts"
 
-sudo -n "$SCRIPTPATH/setup_ubuntu.sh" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --hived-account="$HIVED_ACCOUNT"
+if [ "$SKIP_BUILD" = 0 ]; then
+  do_cleanup
+  do_clone "$HAF_BRANCH" "$HAF_SOURCE_DIR"
 
-time "$SCRIPTPATH/build.sh" --haf-source-dir="$HAF_SOURCE_DIR" --haf-binaries-dir="$HAF_BINARY_DIR" "$@" hived extension.hive_fork_manager
+  sudo -n "$SCRIPTPATH/setup_ubuntu.sh" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --hived-account="$HIVED_ACCOUNT"
+
+  time "$SCRIPTPATH/build.sh" --haf-source-dir="$HAF_SOURCE_DIR" --haf-binaries-dir="$HAF_BINARY_DIR" "$@" hived extension.hive_fork_manager
+fi
 
 time sudo -n "$SCRIPTPATH/setup_postgres.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --haf-binaries-dir="$HAF_BINARY_DIR" --haf-database-store="$HAF_TABLESPACE_LOCATION"
 
