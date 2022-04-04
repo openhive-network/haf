@@ -14,15 +14,13 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   bool blockchain_filter::is_tracked_account( const account_name_type& name ) const
   {
-    return !is_enabled() || ( !accounts_filter_tracker || accounts_filter_tracker->is_tracked_account( name ) );
+    return !accounts_filter_tracker || accounts_filter_tracker->is_tracked_account( name );
   }
 
   bool blockchain_filter::is_tracked_operation( const operation& op ) const
   {
-    return !is_enabled() || (
-                              ( !operations_filter_tracker || operations_filter_tracker->is_tracked_operation( op ) ) &&
-                              ( !operations_body_filter_tracker || operations_body_filter_tracker->is_tracked_operation( op ) )
-                            );
+    return ( !operations_filter_tracker       ||  operations_filter_tracker->is_tracked_operation( op ) ) &&
+           ( !operations_body_filter_tracker  ||  operations_body_filter_tracker->is_tracked_operation( op ) );
   }
 
   void blockchain_filter::remember_trx_id( int64_t trx_in_block )
