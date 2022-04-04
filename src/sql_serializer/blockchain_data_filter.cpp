@@ -14,12 +14,15 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   bool blockchain_filter::is_tracked_account( const account_name_type& name ) const
   {
-    return !is_enabled() || accounts_filter_tracker->is_tracked_account( name );
+    return !is_enabled() || ( !accounts_filter_tracker || accounts_filter_tracker->is_tracked_account( name ) );
   }
 
   bool blockchain_filter::is_tracked_operation( const operation& op ) const
   {
-    return !is_enabled() || ( operations_filter_tracker->is_tracked_operation( op ) && operations_body_filter_tracker->is_tracked_operation( op ) );
+    return !is_enabled() || (
+                              ( !operations_filter_tracker || operations_filter_tracker->is_tracked_operation( op ) ) &&
+                              ( !operations_body_filter_tracker || operations_body_filter_tracker->is_tracked_operation( op ) )
+                            );
   }
 
   void blockchain_filter::remember_trx_id( int64_t trx_in_block )
@@ -36,9 +39,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     if( is_enabled() )
     {
-      ptr_account_tracker_base    _af   = ptr_account_tracker_base( new account_tracker<false>("acc-sql") );
-      ptr_operation_tracker_base  _of   = ptr_operation_tracker_base( new operation_tracker<false, operation_filter>( "op-sql", op_helper ) );
-      ptr_operation_tracker_base  _obf  = ptr_operation_tracker_base( new operation_tracker<false, operation_body_filter>( "opb-sql", op_helper ) );
+      ptr_account_tracker         _af   = ptr_account_tracker( new account_filter("acc-sql") );
+      ptr_operations_tracker      _of   = ptr_operations_tracker( new operation_filter( "op-sql", op_helper ) );
+      ptr_operations_body_tracker _obf  = ptr_operations_body_tracker( new operation_body_filter( "opb-sql", op_helper ) );
 
       _af->fill( options, tracked_accounts );
       _of->fill( options, tracked_operations );
@@ -47,9 +50,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       if( _af->empty() && _of->empty() && _obf->empty() )
         enabled = false;
 
-      accounts_filter_tracker         = _af->empty()   ? ptr_account_tracker_base( new account_tracker<true>() )                             : std::move( _af );
-      operations_filter_tracker       = _of->empty()   ? ptr_operation_tracker_base( new operation_tracker<true, operation_filter>() )       : std::move( _of );
-      operations_body_filter_tracker  = _obf->empty()  ? ptr_operation_tracker_base( new operation_tracker<true, operation_body_filter>() )  : std::move( _obf );
+      if( !_af->empty() )
+        accounts_filter_tracker = std::move( _af );
+
+      if( !_of->empty() )
+        operations_filter_tracker = std::move( _of );
+
+      if( !_obf->empty() )
+        operations_body_filter_tracker = std::move( _obf );
     }
   }
 
