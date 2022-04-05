@@ -8,8 +8,11 @@ from test_tools import logger
 def test_blocks_day_stats():
     logger.info(f'Start test_blocks_day_stats')
 
-    if "DB_URL" not in os.environ:
+    if not os.environ.get('DB_URL'):
         raise Exception('DB_URL environment variable not set')
+    if not os.environ.get('PATTERNS_PATH'):
+        raise Exception('PATTERNS_PATH environment variable not set')
+
     url = os.environ.get('DB_URL')
     patterns_root = Path(os.environ.get('PATTERNS_PATH'))
 

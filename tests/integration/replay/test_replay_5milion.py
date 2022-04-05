@@ -12,8 +12,10 @@ from tables import EventsQueue, Blocks, Operations, Transactions, TransactionsMu
 def test_replay_5milion():
     logger.info(f'Start test_replay_5milion')
 
-    if "DB_URL" not in os.environ:
+    if not os.environ.get('DB_URL'):
         raise Exception('DB_URL environment variable not set')
+    if not os.environ.get('PATTERNS_PATH'):
+        raise Exception('PATTERNS_PATH environment variable not set')
 
     url = os.environ.get('DB_URL')
     patterns_root = Path(os.environ.get('PATTERNS_PATH'))
