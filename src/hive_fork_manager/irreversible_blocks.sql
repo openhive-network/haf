@@ -91,7 +91,7 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hive.
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_type_trx_in_block_idx ON hive.operations ( block_num, op_type_id, trx_in_block );
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hive.operations USING btree(block_num, id);
 
-CREATE INDEX IF NOT EXISTS hive_account_operations_type_account_id_op_seq_idx ON hive.account_operations( op_type_id, account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
+CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_type_account_id_op_seq_idx ON hive.account_operations( op_type_id, account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
 --CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_seq_idx ON hive.account_operations( account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
 -- Commented out due to:
 -- ERROR:  index "hive_account_operations_account_id_op_seq_idx" column number 2 does not have default sorting behavior
