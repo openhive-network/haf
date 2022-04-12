@@ -284,14 +284,19 @@ BEGIN
 
     INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
-           indexname
-         , _schema || '.' || _table
-         , indexdef
-         , indexdef ~* '^CREATE\s+UNIQUE\s+INDEX' as is_constraint
-         , NOT indexdef ~* '^CREATE\s+UNIQUE\s+INDEX' as is_index
-         , FALSE as is_foreign_key
-    FROM pg_indexes
-    WHERE schemaname = _schema AND tablename = _table
+        T.indexname
+      , _schema || '.' || _table
+      , T.indexdef
+      , FALSE as is_constraint
+      , TRUE as is_index
+      , FALSE as is_foreign_key
+    FROM
+    (
+      SELECT indexname, indexdef
+      FROM pg_indexes
+      WHERE schemaname = _schema AND tablename = _table
+    ) T LEFT JOIN hive.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
+    WHERE ic.table_name is NULL
     ON CONFLICT DO NOTHING;
 
     --dropping indexes
