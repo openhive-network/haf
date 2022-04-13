@@ -196,6 +196,7 @@ BEGIN
     PERFORM hive.restore_indexes( 'hive.irreversible_data' );
 END;
 $BODY$
+SET maintenance_work_mem TO '6GB';
 ;
 
 CREATE OR REPLACE FUNCTION hive.enable_fk_of_irreversible()
