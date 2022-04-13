@@ -282,6 +282,9 @@ DECLARE
 BEGIN
     PERFORM hive.save_and_drop_constraints( _schema, _table );
 
+    --LEFT JOIN is needed in situation when PRIMARY KEY exists in a `_table`.
+    --A method `hive.save_and_drop_constraints` finds it, but following code finds an index related to given PK as well.
+    --Since dropping/restoring PK automatically drops/restores an index, then it's better to avoid storing a record with index related to PK.
     INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
         T.indexname
