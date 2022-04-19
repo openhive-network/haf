@@ -11,14 +11,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   std::string
   data2_sql_tuple_base::escape_raw(const fc::ripemd160& hash) const
   {
-    return '\'' + fc::to_hex(hash.data(), hash.data_size()) + '\'';
+    return "\'\\x" + fc::to_hex(hash.data(), hash.data_size()) + '\'';
   }
 
   std::string
   data2_sql_tuple_base::escape_raw(const fc::optional<signature_type>& sign) const
   {
     if( sign.valid() )
-      return '\'' + fc::to_hex(reinterpret_cast<const char*>( sign->begin() ), sign->size()) + '\'';
+      return "\'\\x" + fc::to_hex(reinterpret_cast<const char*>( sign->begin() ), sign->size()) + '\'';
     else
       return "NULL";
   }
