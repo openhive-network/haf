@@ -8,7 +8,7 @@ $$;
 
 DO $$
 BEGIN
-    CREATE ROLE hive_applications_group WITH NOLOGIN;
+    CREATE ROLE hive_applications_group WITH NOLOGIN CREATEROLE;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE 'hive_applications_group role already exists';
 END
@@ -28,7 +28,7 @@ $$;
 
 DO $$
 BEGIN
-    CREATE ROLE hive WITH LOGIN CREATEDB INHERIT IN ROLE hive_applications_group;
+    CREATE ROLE hive WITH LOGIN CREATEDB CREATEROLE INHERIT IN ROLE hive_applications_group;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE 'hive role already exists';
 END
