@@ -250,18 +250,11 @@ BEGIN
     ), 'Unexpected rows in hive.operations_reversible'
     ;
 
-    ASSERT ( SELECT COUNT(*) FROM hive.account_operations_reversible ) = 12, 'Wrong number of account_operations';
+    ASSERT ( SELECT COUNT(*) FROM hive.account_operations_reversible ) = 5, 'Wrong number of account_operations';
     ASSERT NOT EXISTS (
     SELECT * FROM hive.account_operations_reversible
     EXCEPT SELECT * FROM ( VALUES
-               ( 6, 6, 1, 6, 1, 1 )
-             , ( 7, 7, 1, 7, 1, 1 )
-             , ( 7, 8, 1, 7, 1, 1 )
-             , ( 7, 9, 1, 9, 1, 1 )
-             , ( 7, 7, 2, 7, 1, 2 )
-             , ( 7, 8, 2, 8, 1, 2 )
-             , ( 8, 9, 2, 9, 1, 2 )
-             , ( 7, 9, 3, 8, 1, 2 )
+               ( 8, 9, 2, 9, 1, 2 )
              , ( 9, 10, 2, 10, 1, 2 )
              , ( 8, 9, 3, 9, 1, 3 )
              , ( 9, 10, 3, 10, 1, 3 )

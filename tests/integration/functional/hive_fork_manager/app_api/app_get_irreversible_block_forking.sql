@@ -41,7 +41,7 @@ BEGIN
 
         --hived ends massive sync - irreversible = 1
         PERFORM hive.end_massive_sync( 1 );
-        ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 0, 'hive.app_get_irreversible_block !=0 (3)';
+        ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 1, 'hive.app_get_irreversible_block !=1 (3)';
         ASSERT ( SELECT hive.app_get_irreversible_block() ) = 1, 'global irreversible block is not 1';
 
         SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- massive sync event
@@ -70,7 +70,7 @@ BEGIN
         ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 1, 'hive.app_get_irreversible_block !=1 (3)';
 
         PERFORM hive.set_irreversible( 2 );
-        ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 1, 'hive.app_get_irreversible_block !=1 (4)';
+        ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 2, 'hive.app_get_irreversible_block !=2 (4)';
         ASSERT ( SELECT hive.app_get_irreversible_block() ) = 2, 'global irreversible block is not 2';
 
         -- we are next after massive sync
