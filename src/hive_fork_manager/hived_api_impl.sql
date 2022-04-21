@@ -207,6 +207,14 @@ $BODY$
 DECLARE
     __lowest_contexts_irreversible_block INT;
 BEGIN
+
+    --Increasing `irreversible_block` for every context except contexts that already processed blocks higher than `_new_irreversible_block` value.
+    --Is no need to hold the same data in both types of tables (`reversible*`/`irreversible*`),
+    --because every context retrieves data using a view, that returns data from both types of tables using UNION ALL operator.
+    UPDATE hive.contexts
+    SET irreversible_block = _new_irreversible_block
+    WHERE current_block_num <= irreversible_block;
+
     SELECT MIN( hac.irreversible_block )
     INTO __lowest_contexts_irreversible_block
     FROM hive.contexts hac
