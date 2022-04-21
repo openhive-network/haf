@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from pathlib import Path
 import time
+from threading import Thread, Event
 
 from test_tools import logger, Wallet, BlockLog
 from test_tools.private.wait_for import wait_for_event
@@ -8,6 +9,7 @@ from test_tools.private.wait_for import wait_for_event
 
 BLOCKS_IN_FORK = 5
 BLOCKS_AFTER_FORK = 5
+WAIT_FOR_CONTEXT_TIMEOUT = 90.0
 
 
 def make_fork(world, main_chain_trxs=[], fork_chain_trxs=[]):
@@ -111,3 +113,91 @@ def create_node_with_database(network, url):
     api_node.config.plugin.append('sql_serializer')
     api_node.config.psql_url = str(url)
     return api_node
+
+
+SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE = """
+    CREATE TABLE IF NOT EXISTS public.trx_histogram(
+          day DATE
+        , trx INT
+        , CONSTRAINT pk_trx_histogram PRIMARY KEY( day ) )
+    INHERITS( hive.{} )
+    """
+SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION = """
+    CREATE OR REPLACE FUNCTION public.update_histogram( _first_block INT, _last_block INT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+    AS
+     $function$
+     BEGIN
+        INSERT INTO public.trx_histogram as th( day, trx )
+        SELECT
+              DATE(hb.created_at) as date
+            , COUNT(1) as trx
+        FROM hive.trx_histogram_blocks_view hb
+        JOIN hive.trx_histogram_transactions_view ht ON ht.block_num = hb.num
+        WHERE hb.num >= _first_block AND hb.num <= _last_block
+        GROUP BY DATE(hb.created_at)
+        ON CONFLICT ON CONSTRAINT pk_trx_histogram DO UPDATE
+        SET
+            trx = EXCLUDED.trx + th.trx
+        WHERE th.day = EXCLUDED.day;
+     END;
+     $function$
+    """
+
+
+def create_app(session, application_context):
+    session.execute( "SELECT hive.app_create_context( '{}' )".format( application_context ) )
+    session.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE.format( application_context ) )
+    session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION )
+    session.commit()
+
+
+def update_app_continuously(session, application_context):
+    class HafApp(Thread):
+        def __init__(self, session, application_context):
+            Thread.__init__(self, name='haf application')
+            self.stop_event = Event()
+            self.session = session
+            self.application_context = application_context
+
+        def run(self):
+            while not self.stop_event.is_set():
+                blocks_range = session.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( application_context ) ).fetchone()
+                (first_block, last_block) = blocks_range
+                if last_block is None:
+                    continue
+                logger.info( "next blocks_range: {}\n".format( blocks_range ) )
+                session.execute( "SELECT public.update_histogram( {}, {} )".format( first_block, last_block ) )
+                session.commit()
+
+        def stop(self):
+            self.stop_event.set()
+
+        def __enter__(self):
+            self.start()
+            return self
+
+        def __exit__(self, *args, **kwargs):
+            self.stop()
+            self.join()
+
+    return HafApp(session, application_context)
+
+
+def wait_for_application_context(session, timeout=WAIT_FOR_CONTEXT_TIMEOUT):
+    head_block = session.execute( "SELECT MAX(num) FROM hive.blocks_reversible").fetchone()[0]
+    fork_id = session.execute( f"SELECT fork_id FROM hive.blocks_reversible WHERE num={head_block}").fetchone()[0]
+    already_waited = 0
+    while True:
+        if session.execute( "SELECT current_block_num FROM hive.contexts").fetchone()[0] > head_block:
+            if session.execute( f"SELECT fork_id FROM hive.contexts").fetchone()[0] == fork_id:
+                break
+        if timeout - already_waited <= 0:
+            raise TimeoutError('Waited too long for application context')
+        sleep_time = min(1.0, timeout)
+        time.sleep(sleep_time)
+        already_waited += sleep_time
+
+    return already_waited
