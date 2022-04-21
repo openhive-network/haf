@@ -38,7 +38,7 @@ STABLE
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM hive.contexts WHERE name = 'context' AND current_block_num = 0 AND irreversible_block = 0 AND events_id = 0 AND is_attached = TRUE ), 'No context context';
+    ASSERT EXISTS ( SELECT FROM hive.contexts WHERE name = 'context' AND current_block_num = 0 AND irreversible_block = 101 AND events_id = 0 AND is_attached = TRUE ), 'No context context';
     ASSERT EXISTS ( SELECT FROM hive.contexts WHERE name = 'context2' AND current_block_num = 0 AND irreversible_block = 101  AND events_id = 0 AND is_attached = TRUE ), 'No context context2';
 
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_blocks_view' ), 'No context blocks view';
