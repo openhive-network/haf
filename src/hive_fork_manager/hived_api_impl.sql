@@ -304,7 +304,7 @@ BEGIN
 
     --dropping indexes
     OPEN __cursor FOR (
-        SELECT ('DROP INDEX IF EXISTS '::TEXT || 'hive.' || index_constraint_name || ';')
+        SELECT ('DROP INDEX IF EXISTS '::TEXT || _schema || '.' || index_constraint_name || ';')
         FROM hive.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_index = TRUE
     );
 
