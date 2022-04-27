@@ -55,8 +55,8 @@ if [ "$EUID" -ne 0 ]
   exit 1
 fi
 
-apt-get update \
-  && DEBIAN_FRONTEND=noniteractive apt-get install -y \
+apt-get update
+DEBIAN_FRONTEND=noniteractive apt-get install -y \
         systemd \
         autoconf \
         wget \
@@ -65,7 +65,6 @@ apt-get update \
         build-essential \
         cmake \
         libboost-all-dev \
-        postgresql-server-dev-12 \
         git \
         python3-pip \
         python3.8-venv \
@@ -80,9 +79,18 @@ apt-get update \
         joe \
         sudo \
         ca-certificates \
-        ninja-build \
-  && \
-    apt-get clean
+        ninja-build
+
+python_version=$(python3 -c 'import sys; print("{}.{}".format(sys.version_info.major, sys.version_info.minor))')
+DEBIAN_FRONTEND=noniteractive apt-get install -y \
+        python${python_version}-venv
+
+postgres_major_version=$(pg_config --version | sed 's/PostgreSQL \([0-9]*\)\..*/\1/g')
+DEBIAN_FRONTEND=noniteractive apt-get install -y \
+        postgresql-server-dev-$postgres_major_version
+apt-get clean
+
+
 
 # Unfortunetely haf_admin must be able to su as root, because it must be able to write into /usr/share/postgresql/12/extension directory, being owned by root (it could be owned by postgres)
 if id "$haf_admin_unix_account" &>/dev/null; then
