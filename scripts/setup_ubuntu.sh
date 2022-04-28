@@ -67,7 +67,6 @@ DEBIAN_FRONTEND=noniteractive apt-get install -y \
         libboost-all-dev \
         git \
         python3-pip \
-        python3.8-venv \
         python3-jinja2 \
         libssl-dev \
         libreadline-dev \
