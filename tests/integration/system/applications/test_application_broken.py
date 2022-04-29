@@ -69,7 +69,7 @@ def test_application_broken(world_with_witnesses_and_database):
     logger.info(f'ctx_stats-after-attach: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
 
     # THEN
-    nr_cycles = 10
+    nr_cycles = 50
     update_app_continuously(second_session, APPLICATION_CONTEXT, nr_cycles)
     wait_for_irreversible_progress(node_under_test, START_TEST_BLOCK)
 

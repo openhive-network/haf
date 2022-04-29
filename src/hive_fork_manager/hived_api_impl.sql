@@ -204,8 +204,6 @@ CREATE OR REPLACE FUNCTION hive.remove_obsolete_reversible_data( _new_irreversib
     VOLATILE
 AS
 $BODY$
-DECLARE
-    __lowest_contexts_irreversible_block INT;
 BEGIN
 
     --Increasing `irreversible_block` for every context except contexts that already processed blocks higher than `_new_irreversible_block` value.
@@ -216,42 +214,33 @@ BEGIN
     SET irreversible_block = _new_irreversible_block
     WHERE current_block_num <= irreversible_block;
 
-    SELECT MIN( hac.irreversible_block )
-    INTO __lowest_contexts_irreversible_block
-    FROM hive.contexts hac
-    WHERE hac.is_attached = True;
-
-    IF __lowest_contexts_irreversible_block IS NULL THEN
-        __lowest_contexts_irreversible_block = _new_irreversible_block;
-    END IF;
-
     DELETE FROM hive.account_operations_reversible har
     USING hive.operations_reversible hor
     WHERE
             har.operation_id = hor.id
         AND har.fork_id = hor.fork_id
-        AND hor.block_num < __lowest_contexts_irreversible_block
+        AND hor.block_num < _new_irreversible_block
     ;
 
     DELETE FROM hive.operations_reversible hor
-    WHERE hor.block_num < __lowest_contexts_irreversible_block;
+    WHERE hor.block_num < _new_irreversible_block;
 
     DELETE FROM hive.transactions_multisig_reversible htmr
     USING hive.transactions_reversible htr
     WHERE
             htr.fork_id = htmr.fork_id
         AND htr.trx_hash = htmr.trx_hash
-        AND htr.block_num < __lowest_contexts_irreversible_block
+        AND htr.block_num < _new_irreversible_block
     ;
 
     DELETE FROM hive.transactions_reversible htr
-    WHERE htr.block_num < __lowest_contexts_irreversible_block;
+    WHERE htr.block_num < _new_irreversible_block;
 
     DELETE FROM hive.accounts_reversible har
-    WHERE har.block_num < __lowest_contexts_irreversible_block;
+    WHERE har.block_num < _new_irreversible_block;
 
     DELETE FROM hive.blocks_reversible hbr
-    WHERE hbr.num < __lowest_contexts_irreversible_block;
+    WHERE hbr.num < _new_irreversible_block;
 END;
 $BODY$
 ;
