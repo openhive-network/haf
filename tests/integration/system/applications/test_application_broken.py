@@ -48,7 +48,7 @@ def test_application_broken(world_with_witnesses_and_database):
     blocks_reversible = Base.classes.blocks_reversible
 
     # WHEN
-    run_networks(world)
+    run_networks(world, replay_all_nodes=False)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
 
     # system under test
