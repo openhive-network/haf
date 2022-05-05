@@ -205,15 +205,6 @@ CREATE OR REPLACE FUNCTION hive.remove_obsolete_reversible_data( _new_irreversib
 AS
 $BODY$
 BEGIN
-
-    --Increasing `irreversible_block` for every context except contexts that already processed blocks higher than `_new_irreversible_block` value.
-    --so as to remove redundant records from `irreversible` tables,
-    --because it's no need to hold the same records in both types of tables `reversible`/`irreversible`,
-    --(every context retrieves records using a view, that finally returns data from both types of tables using UNION ALL operator).
-    UPDATE hive.contexts
-    SET irreversible_block = _new_irreversible_block
-    WHERE current_block_num <= irreversible_block;
-
     DELETE FROM hive.account_operations_reversible har
     USING hive.operations_reversible hor
     WHERE

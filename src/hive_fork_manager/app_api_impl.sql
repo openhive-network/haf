@@ -405,3 +405,20 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.refresh_irreversible_block_for_all_contexts( _new_irreversible_block INT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    --Increasing `irreversible_block` for every context except contexts that already processed blocks higher than `_new_irreversible_block` value.
+    --so as to remove redundant records from `irreversible` tables,
+    --because it's no need to hold the same records in both types of tables `reversible`/`irreversible`,
+    --(every context retrieves records using a view, that finally returns data from both types of tables using UNION ALL operator).
+    UPDATE hive.contexts
+    SET irreversible_block = _new_irreversible_block
+    WHERE current_block_num <= irreversible_block AND _new_irreversible_block > irreversible_block;
+END;
+$BODY$
+;

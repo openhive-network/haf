@@ -137,6 +137,7 @@ AS
 $BODY$
 BEGIN
     -- block 8 from current top fork (nr 3 ) become irreversible
+    PERFORM hive.refresh_irreversible_block_for_all_contexts( 8 );
     PERFORM hive.remove_obsolete_reversible_data( 8 );
 END
 $BODY$

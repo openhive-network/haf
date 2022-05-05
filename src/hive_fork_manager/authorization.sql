@@ -83,6 +83,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.disable_fk_of_irreversible()
     , hive.enable_fk_of_irreversible()
     , hive.save_and_drop_constraints( in _table_schema TEXT, in _table_name TEXT )
+    , hive.refresh_irreversible_block_for_all_contexts( _new_irreversible_block INT )
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION
@@ -96,5 +97,6 @@ REVOKE EXECUTE ON FUNCTION
     , hive.copy_signatures_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
     , hive.remove_obsolete_reversible_data( _new_irreversible_block INT )
     , hive.remove_unecessary_events( _new_irreversible_block INT )
+    , hive.refresh_irreversible_block_for_all_contexts( _new_irreversible_block INT )
 FROM hive_applications_group;
 

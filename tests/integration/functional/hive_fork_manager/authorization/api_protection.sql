@@ -182,6 +182,12 @@ BEGIN
         ASSERT FALSE, 'An app can call hive.remove_unecessary_events';
     EXCEPTION WHEN OTHERS THEN
     END;
+
+    BEGIN
+        PERFORM hive.refresh_irreversible_block_for_all_contexts( 8 );
+        ASSERT FALSE, 'An app can call hive.refresh_irreversible_block_for_all_contexts';
+    EXCEPTION WHEN OTHERS THEN
+    END;
 END;
 $BODY$
 ;

@@ -77,6 +77,9 @@ BEGIN
     PERFORM hive.copy_accounts_to_irreversible( __irreversible_head_block, _block_num );
     PERFORM hive.copy_account_operations_to_irreversible( __irreversible_head_block, _block_num );
 
+    --try to increase irreversible blocks for every context
+    PERFORM hive.refresh_irreversible_block_for_all_contexts( _block_num );
+
     -- remove unneeded blocks and events
     PERFORM hive.remove_obsolete_reversible_data( _block_num );
 
@@ -97,6 +100,9 @@ BEGIN
 
     INSERT INTO hive.events_queue( event, block_num )
     VALUES ( 'MASSIVE_SYNC'::hive.event_type, _block_num );
+
+    --try to increase irreversible blocks for every context
+    PERFORM hive.refresh_irreversible_block_for_all_contexts( _block_num );
 
     PERFORM hive.remove_obsolete_reversible_data( _block_num );
 
