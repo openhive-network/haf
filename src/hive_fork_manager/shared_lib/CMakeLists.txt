@@ -10,7 +10,7 @@ TARGET_INCLUDE_DIRECTORIES( ${target_name} PRIVATE "${PROJECT_SOURCE_DIR}/hive/l
 TARGET_LINK_LIBRARIES( ${target_name} PUBLIC hive_protocol fc equihash )
 
 INSTALL( TARGETS
-  ${target_name} fc hive_protocol equihash
+  ${target_name}
 
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION ./
