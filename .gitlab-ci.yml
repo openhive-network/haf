@@ -141,7 +141,7 @@ applications_system:
     DB_URL: "postgresql:///$DB_NAME"
   before_script:
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
-    - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-db-owner="hive"
+    - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
     # replay
     - test -n "$PATTERNS_PATH"
     - cd $CI_PROJECT_DIR/tests/integration/replay

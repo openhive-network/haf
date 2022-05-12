@@ -66,7 +66,7 @@ then
 
   echo "Postgres instance setup completed."
 
-  ./haf/scripts/setup_db.sh --haf-db-admin=haf_admin --haf-db-name=haf_block_log --haf-db-owner=hive
+  ./haf/scripts/setup_db.sh --haf-db-admin=haf_admin --haf-db-name=haf_block_log --haf-app-user=haf_app_admin
 fi
 
 cd /home/hived/datadir
