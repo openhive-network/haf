@@ -22,10 +22,10 @@ print_help () {
     echo "  --host=VALUE         Allows to specify a PostgreSQL host location (defaults to /var/run/postgresql)"
     echo "  --port=NUMBER        Allows to specify a PostgreSQL operating port (defaults to 5432)"
     echo "  --haf-db-name=NAME   Allows to specify a name of database to store a HAF data"
-    echo "  --haf-db-owner=NAME  Allows to specify a name of database role to be specified as an owner of HAF database."
+    echo "  --haf-app-user=NAME  Allows to specify a name of database role to be specified as an APP user of HAF database."
     echo "                       Can be specified multiple times, if user would like to add multiple roles."
     echo "                       Role MUST be earlier created on pointed Postgres instance !!!"
-    echo "                       If omitted, defaults to hive role."
+    echo "                       If omitted, defaults to haf_app_admin role."
     echo "  --haf-db-admin=NAME  Allows to specify a name of database admin role having permission to create the database"
     echo "                       and install an exension inside."
     echo "                       Role MUST be earlier created on pointed Postgres instance !!!"
@@ -38,8 +38,8 @@ DB_NAME="haf_block_log"
 DB_ADMIN="haf_admin"
 HAF_TABLESPACE_NAME="haf_tablespace"
 
-DEFAULT_DB_OWNERS=("hive")
-DB_OWNERS=()
+DEFAULT_DB_USERS=("haf_app_admin")
+DB_USERS=()
 POSTGRES_HOST="/var/run/postgresql"
 POSTGRES_PORT=5432
 
@@ -54,10 +54,10 @@ while [ $# -gt 0 ]; do
     --haf-db-name=*)
         DB_NAME="${1#*=}"
         ;;
-    --haf-db-owner=*)
-        OWNER="${1#*=}"
-        DB_OWNERS+=($OWNER)
-        DEFAULT_DB_OWNERS=() # clear all default owners.
+    --haf-app-user=*)
+        USER="${1#*=}"
+        DB_USERS+=($USER)
+        DEFAULT_DB_USERS=() # clear all default users.
         ;;
     --haf-db-admin=*)
         DB_ADMIN="${1#*=}"
@@ -84,21 +84,20 @@ done
 
 POSTGRES_ACCESS="--host $POSTGRES_HOST --port $POSTGRES_PORT"
 
-DB_OWNERS+=("${DEFAULT_DB_OWNERS[@]}")
+DB_USERS+=("${DEFAULT_DB_USERS[@]}")
 
 # Seems that -v does not work correctly together with -c. Altough it works fine when -f is used (variable substitution works then)
   
 psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
- DROP DATABASE IF EXISTS $DB_NAME;
- ALTER TABLESPACE ${HAF_TABLESPACE_NAME} OWNER TO ${DB_OWNERS[0]};
-  CREATE DATABASE $DB_NAME WITH OWNER ${DB_OWNERS[0]} TABLESPACE ${HAF_TABLESPACE_NAME};
+  DROP DATABASE IF EXISTS $DB_NAME;
+  CREATE DATABASE $DB_NAME WITH OWNER $DB_ADMIN TABLESPACE ${HAF_TABLESPACE_NAME};
 EOF
 
 psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE EXTENSION hive_fork_manager CASCADE;' 
 
-for o in "${DB_OWNERS[@]}"; do
+for u in "${DB_USERS[@]}"; do
   psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
-    GRANT CREATE ON DATABASE $DB_NAME TO $o;
+    GRANT CREATE ON DATABASE $DB_NAME TO $u;
 EOF
 
 done
