@@ -28,9 +28,9 @@ $$;
 
 DO $$
 BEGIN
-    CREATE ROLE hive WITH LOGIN CREATEDB CREATEROLE INHERIT IN ROLE hive_applications_group;
+    CREATE ROLE haf_app_admin WITH LOGIN CREATEDB CREATEROLE INHERIT IN ROLE hive_applications_group;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
-    RAISE NOTICE 'hive role already exists';
+    RAISE NOTICE 'haf_app_admin role already exists';
 END
 $$;
 
