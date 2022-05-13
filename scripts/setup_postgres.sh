@@ -39,33 +39,6 @@ deploy_builtin_roles() {
   sudo -nu postgres psql -d postgres -aw $pg_access -v ON_ERROR_STOP=on -f $SCRIPTPATH/haf_builtin_roles.sql
 }
 
-create_haf_admin_account() {
-  local pg_access="$1"
-  local haf_admin_account="$2"
-
-  # sad, but superuser is required to set different role as a database owner...
-
-  sudo -nu postgres psql -d postgres -aw $pg_access -v ON_ERROR_STOP=on -f - <<EOF
-DO \$$
-BEGIN
-    CREATE ROLE $haf_admin_account WITH
-      LOGIN
-      SUPERUSER
-      INHERIT
-      CREATEDB
-      NOCREATEROLE
-      NOREPLICATION
-      IN ROLE haf_administrators_group
-      ;
-    EXCEPTION WHEN DUPLICATE_OBJECT THEN
-    RAISE NOTICE '$haf_admin_account already exists';
-END
-\$$;
-
-EOF
-
-}
-
 setup_haf_storage_tablespace() {
   local pg_access="$1"
   local haf_tablespace_name="$2"
@@ -119,6 +92,8 @@ install_extension() {
 }
 
 HAF_ADMIN_ACCOUNT="haf_admin"
+HAF_APP_ADMIN_ACCOUNT="haf_app_admin"
+
 HAF_TABLESPACE_NAME="haf_tablespace"
 HAF_TABLESPACE_LOCATION="./haf_database_store"
 
@@ -176,5 +151,5 @@ install_extension "$HAF_BINARY_DIR"
 /etc/init.d/postgresql start
 
 deploy_builtin_roles "$POSTGRES_ACCESS"
-create_haf_admin_account "$POSTGRES_ACCESS" "$HAF_ADMIN_ACCOUNT"
+"$SCRIPTPATH/create_haf_admin_role.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-admin-account="$HAF_ADMIN_ACCOUNT"
 setup_haf_storage_tablespace "$POSTGRES_ACCESS" "$HAF_TABLESPACE_NAME" "$HAF_TABLESPACE_LOCATION"

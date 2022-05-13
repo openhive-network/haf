@@ -8,7 +8,7 @@ $$;
 
 DO $$
 BEGIN
-    CREATE ROLE hive_applications_group WITH NOLOGIN CREATEROLE;
+    CREATE ROLE hive_applications_group WITH NOLOGIN;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE 'hive_applications_group role already exists';
 END
@@ -19,7 +19,7 @@ BEGIN
     CREATE ROLE haf_administrators_group WITH NOLOGIN SUPERUSER
     INHERIT
       CREATEDB
-      NOCREATEROLE
+      CREATEROLE
       NOREPLICATION;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE 'haf_administrators_group role already exists';
@@ -28,7 +28,7 @@ $$;
 
 DO $$
 BEGIN
-    CREATE ROLE haf_app_admin WITH LOGIN CREATEDB CREATEROLE INHERIT IN ROLE hive_applications_group;
+    CREATE ROLE haf_app_admin WITH LOGIN CREATEROLE INHERIT IN ROLE hive_applications_group;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE 'haf_app_admin role already exists';
 END
