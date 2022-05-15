@@ -42,7 +42,7 @@ HIVED_ARGS=() # Set of options to be directly passed to the spawned hived.
 HIVED_SHARED_MEM_FILE_SIZE=24G
 
 HAF_DB_NAME="haf_block_log"
-HAF_DB_OWNER="hive"
+HAF_DB_OWNER="haf_app_admin"
 HAF_ADMIN_ACCOUNT="haf_admin"
 HAF_TABLESPACE_LOCATION="./haf_database_store"
 
