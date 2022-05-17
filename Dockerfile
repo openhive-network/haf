@@ -40,11 +40,13 @@ ENV COMMIT=${COMMIT:-""}
 
 USER haf_admin
 WORKDIR /home/haf_admin
+
 SHELL ["/bin/bash", "-c"] 
 
-ADD ./scripts/common.sh /home/haf_admin/scripts/common.sh
+# Get everything from cwd as sources to be built.
+COPY --chown=haf_admin:haf_admin . /home/haf_admin/haf
 
-RUN LOG_FILE=build.log source ./scripts/common.sh && do_clone "$BRANCH" ./haf https://gitlab.syncad.com/hive/haf.git "$COMMIT" && \
+RUN ls -la /home/haf_admin/haf/hive/libraries/plugins/* && \
   ./haf/scripts/build.sh --haf-source-dir="./haf" --haf-binaries-dir="./build" hived cli_wallet truncate_block_log extension.hive_fork_manager && \
   cd ./build && \
   find . -name *.o  -type f -delete && \
