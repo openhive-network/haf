@@ -100,7 +100,7 @@ applications_system:
       artifacts: true
     - job: hived_testnet
       artifacts: true
-  image: "$CI_REGISTRY_IMAGE/builder$BUILDER_IMAGE_TAG"
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
     PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
