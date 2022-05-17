@@ -29,7 +29,7 @@ hived:
   stage: build_and_test
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
-    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" hived truncate_block_log
+    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" hived compress_block_log
     # check if sql_serializer compiles with hived
     - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
     # check if sql_serializer plugin is included in hived plugins
@@ -47,7 +47,7 @@ hived_testnet:
   stage: build_and_test
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
-    - $SETUP_SCRIPTS_PATH/build.sh --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=ON" --cmake-arg="-DHIVE_LINT=OFF" hived cli_wallet get_dev_key truncate_block_log
+    - $SETUP_SCRIPTS_PATH/build.sh --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=ON" --cmake-arg="-DHIVE_LINT=OFF" hived cli_wallet get_dev_key compress_block_log
     # check if sql_serializer compiles with hived
     - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
     # check if sql_serializer plugin is included in hived plugins
@@ -136,7 +136,7 @@ applications_system:
   variables:
     PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
-    BLOCK_LOG_PATH: "/blockchain/block_log"
+    BLOCK_LOG_DIRECTORY: "/blockchain"
     DB_NAME: haf_block_log
     DB_URL: "postgresql:///$DB_NAME"
   before_script:
@@ -146,7 +146,9 @@ applications_system:
     - test -n "$PATTERNS_PATH"
     - cd $CI_PROJECT_DIR/tests/integration/replay
     - mkdir $PATTERNS_PATH/blockchain
-    - $HIVE_BUILD_ROOT_PATH/programs/util/truncate_block_log $BLOCK_LOG_PATH $PATTERNS_PATH/blockchain/block_log 5000000
+    - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
+
+    - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --exit-before-sync --psql-url $DB_URL > node_logs.log 2>&1
   artifacts:
     paths:
