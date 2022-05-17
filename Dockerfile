@@ -46,14 +46,14 @@ SHELL ["/bin/bash", "-c"]
 # Get everything from cwd as sources to be built.
 COPY --chown=haf_admin:haf_admin . /home/haf_admin/haf
 
-RUN ls -la /home/haf_admin/haf/hive/libraries/plugins/* && \
+RUN \
   ./haf/scripts/build.sh --haf-source-dir="./haf" --haf-binaries-dir="./build" hived cli_wallet truncate_block_log extension.hive_fork_manager && \
   cd ./build && \
   find . -name *.o  -type f -delete && \
   find . -name *.a  -type f -delete
 
 # Here we could use a smaller image without packages specific to build requirements
-FROM ${CI_REGISTRY_IMAGE}ci-base-image$BLOCK_LOG_SUFFIX$CI_IMAGE_TAG as base_instance
+FROM ${CI_REGISTRY_IMAGE}ci-base-image${BLOCK_LOG_SUFFIX}${CI_IMAGE_TAG} as base_instance
 
 #ARG BUILD_IMAGE_TAG
 ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu20.04-5}
@@ -96,7 +96,7 @@ STOPSIGNAL SIGINT
 
 ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
 
-FROM ${CI_REGISTRY_IMAGE}base_instance$BLOCK_LOG_SUFFIX$BUILD_IMAGE_TAG as instance
+FROM ${CI_REGISTRY_IMAGE}base_instance${BLOCK_LOG_SUFFIX}${BUILD_IMAGE_TAG} as instance
 
 # Embedded postgres service
 EXPOSE 5432
