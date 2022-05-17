@@ -147,8 +147,7 @@ applications_system:
     - cd $CI_PROJECT_DIR/tests/integration/replay
     - mkdir $PATTERNS_PATH/blockchain
     - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
-
-    - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
+    - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --read-only-mode --block-count 5000000
     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --exit-before-sync --psql-url $DB_URL > node_logs.log 2>&1
   artifacts:
     paths:
