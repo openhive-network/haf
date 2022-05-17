@@ -39,6 +39,8 @@ build-*/
 build_*/
 /.vs
 
+CMakeSettings.json
+
 #clion build directories
 cmake-build-*/
 .idea/
