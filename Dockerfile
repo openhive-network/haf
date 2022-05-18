@@ -2,7 +2,7 @@
 # docker build --target=ci-base-image -t registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-xxx -f Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=:ubuntu20.04-4 
+ARG CI_IMAGE_TAG=:ubuntu20.04-5 
 
 ARG BLOCK_LOG_SUFFIX=-5m
 
@@ -32,11 +32,15 @@ RUN sudo -n mkdir -p /home/hived/datadir/blockchain && cd /home/hived/datadir/bl
     sudo -n mv block_log.5M block_log && sudo -n chown -Rc hived:hived /home/hived/datadir/
 
 FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG AS build
-ARG BRANCH=master
-ENV BRANCH=${BRANCH:-master}
 
-ARG COMMIT
-ENV COMMIT=${COMMIT:-""}
+ARG BUILD_HIVE_TESTNET=OFF
+ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
+
+ARG HIVE_CONVERTER_BUILD=OFF
+ENV HIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}
+
+ARG HIVE_LINT=ON
+ENV HIVE_LINT=${HIVE_LINT}
 
 USER haf_admin
 WORKDIR /home/haf_admin
@@ -47,7 +51,11 @@ SHELL ["/bin/bash", "-c"]
 COPY --chown=haf_admin:haf_admin . /home/haf_admin/haf
 
 RUN \
-  ./haf/scripts/build.sh --haf-source-dir="./haf" --haf-binaries-dir="./build" hived cli_wallet truncate_block_log extension.hive_fork_manager && \
+  ./haf/scripts/build.sh --haf-source-dir="./haf" --haf-binaries-dir="./build" \
+  --cmake-arg="-DBUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}" \
+  --cmake-arg="-DHIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}" \
+  --cmake-arg="-DHIVE_LINT=ON" \
+  hived cli_wallet truncate_block_log extension.hive_fork_manager && \
   cd ./build && \
   find . -name *.o  -type f -delete && \
   find . -name *.a  -type f -delete
