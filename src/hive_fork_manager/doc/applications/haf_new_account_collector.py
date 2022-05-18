@@ -82,9 +82,8 @@ class sql_accounts(haf_base):
         _value = _op['value']
         if 'new_account_name' in _value:
           _new_account_name = _value['new_account_name']
-          if 'creator' in _value:
-            _creator = _value['creator']
-            _values.append(self.insert_into_history[1].format(record[0], _creator, _new_account_name))
+          _creator = _value['creator']
+          _values.append(self.insert_into_history[1].format(record[0], _creator, _new_account_name))
 
     helper.execute_complex_query(self.app, _values, self.insert_into_history)
 
