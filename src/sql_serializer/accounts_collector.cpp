@@ -74,7 +74,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       on_new_operation(op.new_account_name, *_creation_operation_id, _creation_operation_type_id);
     on_new_operation(op.new_account_name, _processed_operation_id, _processed_operation_type_id);
 
-    on_new_operation(op.creator, _processed_operation_id, _processed_operation_type_id);
+    if( op.creator != op.new_account_name )
+      on_new_operation(op.creator, _processed_operation_id, _processed_operation_type_id);
   }
 
   void accounts_collector::process_account_creation_op(fc::optional<hive::protocol::account_name_type> impacted_account)
