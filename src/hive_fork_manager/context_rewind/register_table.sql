@@ -381,7 +381,7 @@ BEGIN
 
     -- remove inheritance and sequence
     EXECUTE format( 'ALTER TABLE %I.%s NO INHERIT hive.%s', lower(_table_schema), lower(_table_name), __context_name );
-    EXECUTE format( 'ALTER TABLE %I.%s DROP COLUMN hive_rowid', lower(_table_schema), lower(_table_name)  );
+    EXECUTE format( 'ALTER TABLE %I.%s DROP COLUMN hive_rowid CASCADE', lower(_table_schema), lower(_table_name)  );
 END;
 $BODY$
 ;
