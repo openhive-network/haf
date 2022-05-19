@@ -3,8 +3,9 @@ from pathlib import Path
 import time
 from threading import Thread, Event
 
-from test_tools import logger, Wallet, BlockLog
-from test_tools.private.wait_for import wait_for_event
+import test_tools as tt
+from test_tools.__private.user_handles.get_implementation import get_implementation
+from test_tools.__private.wait_for import wait_for_event
 
 
 BLOCKS_IN_FORK = 5
@@ -12,16 +13,16 @@ BLOCKS_AFTER_FORK = 5
 WAIT_FOR_CONTEXT_TIMEOUT = 90.0
 
 
-def make_fork(world, main_chain_trxs=[], fork_chain_trxs=[]):
-    alpha_net = world.network('Alpha')
-    beta_net = world.network('Beta')
+def make_fork(networks, main_chain_trxs=[], fork_chain_trxs=[]):
+    alpha_net = networks['Alpha']
+    beta_net = networks['Beta']
     alpha_witness_node = alpha_net.node('WitnessNode0')
-    beta_witness_node = beta_net.node(name='WitnessNode0')
+    beta_witness_node = beta_net.node('WitnessNode1')
 
-    logger.info(f'Making fork at block {get_head_block(alpha_witness_node)}')
+    tt.logger.info(f'Making fork at block {get_head_block(alpha_witness_node)}')
 
-    main_chain_wallet = Wallet(attach_to=alpha_witness_node)
-    fork_chain_wallet = Wallet(attach_to=beta_witness_node)
+    main_chain_wallet = tt.Wallet(attach_to=alpha_witness_node)
+    fork_chain_wallet = tt.Wallet(attach_to=beta_witness_node)
     fork_block = get_head_block(beta_witness_node)
     head_block = fork_block
     alpha_net.disconnect_from(beta_net)
@@ -42,15 +43,15 @@ def make_fork(world, main_chain_trxs=[], fork_chain_trxs=[]):
 
 
 def wait_for_irreversible_progress(node, block_num):
-    logger.info(f'Waiting for progress of irreversible block')
+    tt.logger.info(f'Waiting for progress of irreversible block')
     head_block = get_head_block(node)
     irreversible_block = get_irreversible_block(node)
-    logger.info(f"Current head_block_number: {head_block}, irreversible_block_num: {irreversible_block}")
+    tt.logger.info(f"Current head_block_number: {head_block}, irreversible_block_num: {irreversible_block}")
     while irreversible_block < block_num:
         node.wait_for_block_with_number(head_block+1)
         head_block = get_head_block(node)
         irreversible_block = get_irreversible_block(node)
-        logger.info(f"Current head_block_number: {head_block}, irreversible_block_num: {irreversible_block}")
+        tt.logger.info(f"Current head_block_number: {head_block}, irreversible_block_num: {irreversible_block}")
     return irreversible_block, head_block
 
 
@@ -76,19 +77,19 @@ def get_time_offset_from_file(name):
     return time_offset
 
 
-def run_networks(world, blocklog_directory=None, replay_all_nodes=True):
+def run_networks(networks, blocklog_directory=None, replay_all_nodes=True):
     if blocklog_directory is None:
         blocklog_directory = Path(__file__).parent.resolve()
 
     time_offset = get_time_offset_from_file(blocklog_directory/'timestamp')
 
-    block_log = BlockLog(None, blocklog_directory/'block_log', include_index=False)
+    block_log = tt.BlockLog(None, blocklog_directory/'block_log', include_index=False)
 
-    logger.info('Running nodes...')
+    tt.logger.info('Running nodes...')
 
-    nodes = world.nodes()
+    nodes = [node for network in networks.values() for node in network.nodes]
     nodes[0].run(wait_for_live=False, replay_from=block_log, time_offset=time_offset)
-    endpoint = nodes[0].get_p2p_endpoint()
+    endpoint = get_implementation(nodes[0]).get_p2p_endpoint()
     for node in nodes[1:]:
         node.config.p2p_seed_node.append(endpoint)
         if replay_all_nodes:
@@ -96,20 +97,20 @@ def run_networks(world, blocklog_directory=None, replay_all_nodes=True):
         else:
             node.run(wait_for_live=False, time_offset=time_offset)
 
-    for network in world.networks():
+    for network in networks.values():
         network.is_running = True
 
     deadline = time.time() + 20
     for node in nodes:
         wait_for_event(
-            node._Node__notifications.live_mode_entered_event,
+            get_implementation(node)._Node__notifications.live_mode_entered_event,
             deadline=deadline,
             exception_message='Live mode not activated on time.'
         )
 
 
 def create_node_with_database(network, url):
-    api_node = network.create_api_node()
+    api_node = tt.ApiNode(network=network)
     api_node.config.plugin.append('sql_serializer')
     api_node.config.psql_url = str(url)
     return api_node

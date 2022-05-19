@@ -1,18 +1,19 @@
 from pathlib import Path
 
-from test_tools import logger, Asset, Wallet
+import test_tools as tt
+
 from local_tools import make_fork, wait_for_irreversible_progress, run_networks, create_node_with_database
 
 
 START_TEST_BLOCK = 108
 
 
-def test_compare_forked_node_database(world_with_witnesses_and_database, database):
-    logger.info(f'Start test_compare_forked_node_database')
+def test_compare_forked_node_database(prepared_networks_and_database, database):
+    tt.logger.info(f'Start test_compare_forked_node_database')
 
     # GIVEN
-    world, session, Base = world_with_witnesses_and_database
-    node_under_test = world.network('Beta').node('NodeUnderTest')
+    networks, session, Base = prepared_networks_and_database
+    node_under_test = networks['Beta'].node('ApiNode0')
 
     session_ref, Base_ref = database('postgresql:///haf_block_log_ref')
 
@@ -20,17 +21,17 @@ def test_compare_forked_node_database(world_with_witnesses_and_database, databas
     transactions = Base.classes.transactions
     operations = Base.classes.operations
 
-    reference_node = create_node_with_database(world.network('Alpha'), session_ref.get_bind().url)
-    node_under_test = world.network('Beta').node('NodeUnderTest')
+    reference_node = create_node_with_database(networks['Alpha'], session_ref.get_bind().url)
+    node_under_test = networks['Beta'].node('ApiNode0')
 
     # WHEN
-    run_networks(world)
+    run_networks(networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
-    wallet = Wallet(attach_to=node_under_test)
-    transaction1 = wallet.api.transfer('initminer', 'null', Asset.Test(1234), 'memo', broadcast=False)
-    transaction2 = wallet.api.transfer_to_vesting('initminer', 'null', Asset.Test(1234), broadcast=False)
+    wallet = tt.Wallet(attach_to=node_under_test)
+    transaction1 = wallet.api.transfer('initminer', 'null', tt.Asset.Test(1234), 'memo', broadcast=False)
+    transaction2 = wallet.api.transfer_to_vesting('initminer', 'null', tt.Asset.Test(1234), broadcast=False)
     after_fork_block = make_fork(
-        world,
+        networks,
         main_chain_trxs = [transaction1],
         fork_chain_trxs = [transaction2],
     )

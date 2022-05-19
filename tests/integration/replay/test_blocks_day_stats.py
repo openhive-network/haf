@@ -1,12 +1,13 @@
 import os
-import pandas as pd
 from pathlib import Path
 
-from test_tools import logger
+import pandas as pd
+
+import test_tools as tt
 
 
 def test_blocks_day_stats():
-    logger.info(f'Start test_blocks_day_stats')
+    tt.logger.info(f'Start test_blocks_day_stats')
 
     if not os.environ.get('DB_URL'):
         raise Exception('DB_URL environment variable not set')

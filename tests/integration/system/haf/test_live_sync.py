@@ -2,30 +2,31 @@ import json
 from pathlib import Path
 import unittest
 
-from test_tools import logger, Wallet, Asset
+import test_tools as tt
+
 from local_tools import get_irreversible_block, wait_for_irreversible_progress, run_networks
 
 
 START_TEST_BLOCK = 108
 
 
-def test_live_sync(world_with_witnesses_and_database):
-    logger.info(f'Start test_live_sync')
+def test_live_sync(prepared_networks_and_database):
+    tt.logger.info(f'Start test_live_sync')
 
     # GIVEN
-    world, session, Base = world_with_witnesses_and_database
-    witness_node = world.network('Alpha').node('WitnessNode0')
-    node_under_test = world.network('Beta').node('NodeUnderTest')
+    networks, session, Base = prepared_networks_and_database
+    witness_node = networks['Alpha'].node('WitnessNode0')
+    node_under_test = networks['Beta'].node('ApiNode0')
 
     blocks = Base.classes.blocks
     transactions = Base.classes.transactions
     operations = Base.classes.operations
 
     # WHEN
-    run_networks(world)
+    run_networks(networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
-    wallet = Wallet(attach_to=witness_node)
-    wallet.api.transfer('initminer', 'initminer', Asset.Test(1000), 'dummy transfer operation')
+    wallet = tt.Wallet(attach_to=witness_node)
+    wallet.api.transfer('initminer', 'initminer', tt.Asset.Test(1000), 'dummy transfer operation')
     transaction_block_num = START_TEST_BLOCK + 1
 
     # THEN

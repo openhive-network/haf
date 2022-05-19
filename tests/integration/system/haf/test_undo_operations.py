@@ -1,33 +1,35 @@
 from pathlib import Path
+
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.exc import MultipleResultsFound
 
-from test_tools import logger, Asset, Wallet
+import test_tools as tt
+
 from local_tools import make_fork, wait_for_irreversible_progress, run_networks
 
 
 START_TEST_BLOCK = 108
 
 
-def test_undo_operations(world_with_witnesses_and_database):
-    logger.info(f'Start test_undo_operations')
+def test_undo_operations(prepared_networks_and_database):
+    tt.logger.info(f'Start test_undo_operations')
 
     # GIVEN
-    world, session, Base = world_with_witnesses_and_database
-    node_under_test = world.network('Beta').node('NodeUnderTest')
+    networks, session, Base = prepared_networks_and_database
+    node_under_test = networks['Beta'].node('ApiNode0')
     operations = Base.classes.operations
 
     # WHEN
-    run_networks(world)
+    run_networks(networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
-    wallet = Wallet(attach_to=node_under_test)
-    transaction = wallet.api.transfer_to_vesting('initminer', 'null', Asset.Test(1234), broadcast=False)
+    wallet = tt.Wallet(attach_to=node_under_test)
+    transaction = wallet.api.transfer_to_vesting('initminer', 'null', tt.Asset.Test(1234), broadcast=False)
 
-    logger.info(f'Making fork at block {START_TEST_BLOCK}')
+    tt.logger.info(f'Making fork at block {START_TEST_BLOCK}')
     fork_block = START_TEST_BLOCK
     after_fork_block = make_fork(
-        world,
-        fork_chain_trxs = [transaction],
+        networks,
+        fork_chain_trxs=[transaction],
     )
 
     # THEN
@@ -38,8 +40,8 @@ def test_undo_operations(world_with_witnesses_and_database):
             session.query(operations).filter(operations.block_num == i).one()
         
         except MultipleResultsFound:
-            logger.error(f'Multiple operations in block {i}.')
+            tt.logger.error(f'Multiple operations in block {i}.')
             raise
         except NoResultFound:
-            logger.error(f'No producer_reward_operation in block {i}.')
+            tt.logger.error(f'No producer_reward_operation in block {i}.')
             raise

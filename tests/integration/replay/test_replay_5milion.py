@@ -1,16 +1,18 @@
 import json
 from pathlib import Path
 import os
+
 import sqlalchemy
 from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import sessionmaker
 
-from test_tools import logger
+import test_tools as tt
+
 from tables import EventsQueue, Blocks, Operations, Transactions, TransactionsMultisig, Accounts, AccountOperations
 
 
 def test_replay_5milion():
-    logger.info(f'Start test_replay_5milion')
+    tt.logger.info(f'Start test_replay_5milion')
 
     if not os.environ.get('DB_URL'):
         raise Exception('DB_URL environment variable not set')
