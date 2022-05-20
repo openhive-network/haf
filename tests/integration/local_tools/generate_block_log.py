@@ -104,8 +104,10 @@ def prepare_block_log(world, length):
 
     if os.path.exists('block_log'):
         os.remove('block_log')
-    init_node.get_block_log().truncate('block_log', length)
+
     timestamp = init_node.api.block.get_block(block_num = length)['block']['timestamp']
+    init_node.close()
+    init_node.get_block_log().truncate('block_log', length)
 
     return timestamp
 
@@ -115,9 +117,9 @@ if __name__ == "__main__":
     parser.add_argument('--length', type=int, default=105, help='Desired blocklog length')
     args = parser.parse_args()
 
-    world = World()
-    timestamp = prepare_block_log(world, args.length)
-    logger.info(f'{bcolors.OKGREEN}timestamp: {timestamp}{bcolors.ENDC}')
+    with World() as world:
+        timestamp = prepare_block_log(world, args.length)
+        logger.info(f'{bcolors.OKGREEN}timestamp: {timestamp}{bcolors.ENDC}')
 
     with open('timestamp', 'w') as f:
         f.write(f'{timestamp}')
