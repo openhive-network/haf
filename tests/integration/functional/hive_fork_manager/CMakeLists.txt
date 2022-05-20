@@ -62,6 +62,7 @@ ADD_SQL_FUNCTIONAL_TESTS( context_rewind/attach_negative_unregistered_table_test
 ADD_SQL_FUNCTIONAL_TESTS( context_rewind/attach_all_tables_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( context_rewind/attach_all_negative_tables_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( context_rewind/drop_registered_table_test.sql )
+ADD_SQL_FUNCTIONAL_TESTS( context_rewind/drop_registered_table_with_constraints_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( context_rewind/register_table_no_context_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( context_rewind/register_table_public_schema_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( context_rewind/register_table_to_two_contexts_negative_test.sql )
