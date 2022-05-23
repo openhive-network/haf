@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-LOG_FILE=setup_haf_instance.log
+LOG_FILE=build_and_setup_haf_instance.log
 
 # Because this script should work as standalone script being just downloaded from gitlab repo, and next use internal
 # scripts from a cloned repo, logging code is duplicated.
@@ -30,7 +30,8 @@ print_help () {
     echo "  --option-file=FILE     Optionally specify a file containing other options specific to this script's arguments. This file cannot contain another --option-file option within it."
     echo "  --haf-database-store=DIRECTORY_PATH"
     echo "                         Optionally specify a directory where Postgres SQL data specific to the HAF database will be stored. "
-    echo "  --haf-binaries-dir=PATH  Allows to specify a directory containing already built HAF binaries to be used as HAF instance setup. build. Defaults to ./build path"
+    echo "  --branch=branch        Optionally specify a branch to checkout and build. Defaults to develop branch."
+    echo "  --use-source-dir=PATH  Allows to specify explicit source directory instead of performing git checkout."
     echo "  --help                 Display this help screen and exit"
     echo
 }
@@ -38,13 +39,17 @@ print_help () {
 HIVED_ACCOUNT="hived"
 HIVED_DATADIR=""
 HIVED_ARGS=() # Set of options to be directly passed to the spawned hived.
-HIVED_SHARED_MEM_FILE_SIZE=24G
 
 HAF_DB_NAME="haf_block_log"
+HAF_DB_OWNER="hive"
 HAF_ADMIN_ACCOUNT="haf_admin"
 HAF_TABLESPACE_LOCATION="./haf_database_store"
 
 HAF_BINARY_DIR="./build"
+HAF_SOURCE_DIR=""
+HAF_BRANCH=develop
+HAF_REPO_URL="https://gitlab.syncad.com/hive/haf.git"
+HAF_CMAKE_ARGS=()
 
 POSTGRES_HOST="/var/run/postgresql"
 POSTGRES_PORT=5432
@@ -52,29 +57,8 @@ POSTGRES_PORT=5432
 add_hived_arg() {
   local arg="$1"
 #  echo "Processing hived argument: ${arg}"
-
-  case "$arg" in
-    -d[\ ]*)
-    echo "Explicit d directory specified to: ${arg#*[\ ]}"
-    HIVED_DATADIR="${arg#*[\ ]}"
-    ;;
-  --data-dir=*)
-    echo "Explicit data directory specified to: ${arg#*=}"
-    HIVED_DATADIR="${arg#*=}"
-    ;;
-  --data-dir[\ ]*)
-    echo "Explicit data directory specified to: ${arg#*[\ ]}"
-    HIVED_DATADIR="${arg#*[\ ]}"
-    ;;
-    --shared-file-size=*)
-    HIVED_SHARED_MEM_FILE_SIZE=${arg#*=}
-    ;;
-  *)
-      HIVED_ARGS+=("$arg")
-    ;;
-  esac
+  HIVED_ARGS+=("--hived-option=${arg}")
 }
-
 
 process_option() {
   o="$1"
@@ -85,6 +69,12 @@ process_option() {
     --port=*)
         POSTGRES_PORT="${o#*=}"
         ;;
+    --branch=*)
+        HAF_BRANCH="${o#*=}"
+        ;;
+    --use-source-dir=*)
+        HAF_SOURCE_DIR="${o#*=}"
+        ;;
     --hived-data-dir=*)
         HIVED_DATADIR="${o#*=}"
         ;;
@@ -94,9 +84,6 @@ process_option() {
     --hived-option=*)
         option="${o#*=}"
         add_hived_arg "$option"
-        ;;
-    --haf-binaries-dir=*)
-        HAF_BINARY_DIR="${o#*=}"
         ;;
     --help)
         print_help
@@ -145,35 +132,17 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-spawn_hived() {
-  local hived_binary_path="$1"
+do_cleanup() {
+  echo "Performing cleanup of build directory..."
+  rm -vrf "$HAF_BINARY_DIR"
+  echo "Cleanup done."
+}
 
-  local data_dir="$HIVED_DATADIR"
-  local db_name="$HAF_DB_NAME"
-  local pg_host="$POSTGRES_HOST"
-  local pg_port="$POSTGRES_PORT"
-
-  if [ -z "$data_dir" ]
-  then
-    echo "Using default data directory for hived node..."
-  else
-    if [ -d "$HIVED_DATADIR" ]
-    then
-      data_dir=`realpath -e "$HIVED_DATADIR"`
-      echo "Changing an ownership of hived data directory: $data_dir..."
-      sudo -n chown -Rc $HIVED_ACCOUNT:$HIVED_ACCOUNT "$data_dir"
-    fi
-    echo "Using explicit hived data directory: $data_dir"
-
-    data_dir="--data-dir=$data_dir"
-
-  fi
-
-  echo "Attempting to start hived process..."
-  # Use hived account for peer authentication.
-  sudo -nu $HIVED_ACCOUNT \
-    "$hived_binary_path" "$data_dir" --shared-file-size="$HIVED_SHARED_MEM_FILE_SIZE" --plugin=sql_serializer \
-      --psql-url="dbname=$db_name host=$pg_host port=$pg_port" --replay "${HIVED_ARGS[@]}"
+do_clone() {
+  local branch=$1
+  local src_dir="$2"
+  echo "Cloning branch: $branch from $HAF_REPO_URL ..."
+  git clone --recurse-submodules --shallow-submodules --single-branch --depth=1 --branch "$branch" -- "$HAF_REPO_URL" "$src_dir"
 }
 
 if [ "$EUID" -eq 0 ]
@@ -181,11 +150,23 @@ if [ "$EUID" -eq 0 ]
   exit 1
 fi
 
-SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+do_cleanup
 
-time sudo -n "$SCRIPTPATH/setup_postgres.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --haf-binaries-dir="$HAF_BINARY_DIR" --haf-database-store="$HAF_TABLESPACE_LOCATION"
+if [ -z "$HAF_SOURCE_DIR" ] 
+then
+  HAF_SOURCE_DIR="./haf-$HAF_BRANCH"
 
-sudo -nu "$HAF_ADMIN_ACCOUNT" "$SCRIPTPATH"/setup_db.sh --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-db-admin="$HAF_ADMIN_ACCOUNT" --haf-db-name="$HAF_DB_NAME"
+  echo "Performing cleanup of source directory: '$HAF_SOURCE_DIR' ..."
+  rm -vrf "$HAF_SOURCE_DIR"
+  echo "Cleanup done."
 
-spawn_hived "$HAF_BINARY_DIR/hive/programs/hived/hived" 2>&1 | tee -i replay.log
+  do_clone "$HAF_BRANCH" "$HAF_SOURCE_DIR"
+fi
+
+SCRIPTPATH="$HAF_SOURCE_DIR/scripts"
+
+sudo -n "$SCRIPTPATH/setup_ubuntu.sh" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --hived-account="$HIVED_ACCOUNT"
+time "$SCRIPTPATH/build.sh" --haf-source-dir="$HAF_SOURCE_DIR" --haf-binaries-dir="$HAF_BINARY_DIR" "$@" hived extension.hive_fork_manager
+
+"$SCRIPTPATH/setup_haf_instance.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-binaries-dir="$HAF_BINARY_DIR" "${HIVED_ARGS[@]}"
 
