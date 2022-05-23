@@ -9,7 +9,7 @@
 
 using hive::protocol::account_name_type;
 using hive::protocol::asset;
-using hive::protocol::legacy_switcher;
+using mode_guard = hive::protocol::serialization_mode_controller::mode_guard;
 
 using hive::app::impacted_balance_data;
 
@@ -23,7 +23,7 @@ std::string get_legacy_style_operation_impl( const std::string& operation_body )
   hive::protocol::operation _op;
   from_variant( fc::json::from_string( operation_body ), _op );
 
-  legacy_switcher switcher( true );
+  mode_guard guard( hive::protocol::transaction_serialization_type::legacy );
 
   return fc::json::to_string( _op );
 }
