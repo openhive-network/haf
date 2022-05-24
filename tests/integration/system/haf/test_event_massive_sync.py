@@ -22,8 +22,6 @@ def test_event_massive_sync(prepared_networks_and_database):
 
     # WHEN
     run_networks(networks)
-    # TODO get_p2p_endpoint is workaround to check if replay is finished
-    node_under_test.get_p2p_endpoint()
 
     # THEN
     tt.logger.info(f'Checking that event MASSIVE_SYNC is in database')
