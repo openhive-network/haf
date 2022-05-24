@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from threading import Thread, Event
 import time
+from typing import Dict
 
 import test_tools as tt
 from test_tools.__private.user_handles.get_implementation import get_implementation
@@ -13,7 +14,7 @@ BLOCKS_AFTER_FORK = 5
 WAIT_FOR_CONTEXT_TIMEOUT = 90.0
 
 
-def make_fork(networks, main_chain_trxs=[], fork_chain_trxs=[]):
+def make_fork(networks: Dict[str, tt.Network], main_chain_trxs=[], fork_chain_trxs=[]):
     alpha_net = networks['Alpha']
     beta_net = networks['Beta']
     alpha_witness_node = alpha_net.node('WitnessNode0')
@@ -77,7 +78,7 @@ def get_time_offset_from_file(name):
     return time_offset
 
 
-def run_networks(networks, blocklog_directory=None, replay_all_nodes=True):
+def run_networks(networks: Dict[str, tt.Network], blocklog_directory=None, replay_all_nodes=True):
     if blocklog_directory is None:
         blocklog_directory = Path(__file__).parent.resolve()
 
@@ -109,7 +110,7 @@ def run_networks(networks, blocklog_directory=None, replay_all_nodes=True):
         )
 
 
-def create_node_with_database(network, url):
+def create_node_with_database(network: tt.Network, url):
     api_node = tt.ApiNode(network=network)
     api_node.config.plugin.append('sql_serializer')
     api_node.config.psql_url = str(url)

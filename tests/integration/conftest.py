@@ -1,3 +1,4 @@
+from typing import Any, Dict, Tuple
 from uuid import uuid4
 
 import pytest
@@ -57,7 +58,7 @@ def database():
 
 
 @pytest.fixture()
-def prepared_networks_and_database(database, witness_names):
+def prepared_networks_and_database(database, witness_names) -> Tuple[Dict[str, tt.Network], Any, Any]:
     alpha_witness_names, beta_witness_names = witness_names
     session, Base = database('postgresql:///haf_block_log')
 
