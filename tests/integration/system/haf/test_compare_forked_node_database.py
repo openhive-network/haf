@@ -22,7 +22,6 @@ def test_compare_forked_node_database(prepared_networks_and_database, database):
     operations = Base.classes.operations
 
     reference_node = create_node_with_database(networks['Alpha'], session_ref.get_bind().url)
-    node_under_test = networks['Beta'].node('ApiNode0')
 
     # WHEN
     run_networks(networks)
