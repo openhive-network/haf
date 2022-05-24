@@ -61,7 +61,7 @@ hived_testnet:
     - public-runner-docker
     - hived
 
-haf_system:
+haf_system_tests:
   stage: build_and_test
   needs:
     - job: hive_fork_manager
@@ -93,7 +93,7 @@ haf_system:
   tags:
     - public-runner-docker
 
-applications_system:
+applications_system_tests:
   stage: build_and_test
   needs:
     - job: hive_fork_manager
