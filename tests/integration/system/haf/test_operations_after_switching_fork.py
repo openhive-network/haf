@@ -1,5 +1,5 @@
-from pathlib import Path
 import json
+from pathlib import Path
 
 import test_tools as tt
 
@@ -28,8 +28,8 @@ def test_operations_after_switchng_fork(prepared_networks_and_database):
     tt.logger.info(f'Making fork at block {START_TEST_BLOCK}')
     after_fork_block = make_fork(
         networks,
-        main_chain_trxs = [transaction1],
-        fork_chain_trxs = [transaction2],
+        main_chain_trxs=[transaction1],
+        fork_chain_trxs=[transaction2],
     )
 
     # THEN

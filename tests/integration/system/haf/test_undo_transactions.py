@@ -25,7 +25,7 @@ def test_undo_transactions(prepared_networks_and_database):
     tt.logger.info(f'Making fork at block {START_TEST_BLOCK}')
     after_fork_block = make_fork(
         networks,
-        fork_chain_trxs = [transaction],
+        fork_chain_trxs=[transaction],
     )
 
     # THEN

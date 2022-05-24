@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from pathlib import Path
-import time
 from threading import Thread, Event
+import time
 
 import test_tools as tt
 from test_tools.__private.user_handles.get_implementation import get_implementation

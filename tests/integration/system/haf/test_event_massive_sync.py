@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.exc import MultipleResultsFound
 
@@ -29,7 +30,7 @@ def test_event_massive_sync(prepared_networks_and_database):
     try:
         event = session.query(events_queue).filter(events_queue.event == 'MASSIVE_SYNC').one()
         assert event.block_num == MASSIVE_SYNC_BLOCK_NUM
-        
+
     except MultipleResultsFound:
         tt.logger.error(f'Multiple events MASSIVE_SYNC in database.')
         raise

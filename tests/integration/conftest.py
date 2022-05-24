@@ -1,10 +1,11 @@
+from uuid import uuid4
+
 import pytest
 import sqlalchemy
 from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker, close_all_sessions
 from sqlalchemy.pool import NullPool
-from uuid import uuid4
 
 from test_tools.__private.scope.scope_fixtures import *  # pylint: disable=wildcard-import, unused-wildcard-import
 import test_tools as tt

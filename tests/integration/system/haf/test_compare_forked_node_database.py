@@ -32,8 +32,8 @@ def test_compare_forked_node_database(prepared_networks_and_database, database):
     transaction2 = wallet.api.transfer_to_vesting('initminer', 'null', tt.Asset.Test(1234), broadcast=False)
     after_fork_block = make_fork(
         networks,
-        main_chain_trxs = [transaction1],
-        fork_chain_trxs = [transaction2],
+        main_chain_trxs=[transaction1],
+        fork_chain_trxs=[transaction2],
     )
 
     # THEN
