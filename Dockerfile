@@ -55,7 +55,7 @@ RUN \
   --cmake-arg="-DBUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}" \
   --cmake-arg="-DHIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}" \
   --cmake-arg="-DHIVE_LINT=ON" \
-  hived cli_wallet truncate_block_log extension.hive_fork_manager && \
+  hived cli_wallet compress_block_log extension.hive_fork_manager && \
   cd ./build && \
   find . -name *.o  -type f -delete && \
   find . -name *.a  -type f -delete
@@ -83,7 +83,7 @@ SHELL ["/bin/bash", "-c"]
 USER hived
 WORKDIR /home/hived
 
-COPY --from=build /home/haf_admin/build/hive/programs/hived/hived /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet /home/haf_admin/build/hive/programs/util/truncate_block_log /home/hived/bin/
+COPY --from=build /home/haf_admin/build/hive/programs/hived/hived /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet /home/haf_admin/build/hive/programs/util/compress_block_log /home/hived/bin/
 
 USER haf_admin
 WORKDIR /home/haf_admin
