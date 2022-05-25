@@ -152,7 +152,7 @@ fi
 
 do_cleanup
 
-if [ -z "$HAF_SOURCE_DIR" ] 
+if [ -z "$HAF_SOURCE_DIR" ]
 then
   HAF_SOURCE_DIR="./haf-$HAF_BRANCH"
 
@@ -168,5 +168,5 @@ SCRIPTPATH="$HAF_SOURCE_DIR/scripts"
 sudo -n "$SCRIPTPATH/setup_ubuntu.sh" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --hived-account="$HIVED_ACCOUNT"
 time "$SCRIPTPATH/build.sh" --haf-source-dir="$HAF_SOURCE_DIR" --haf-binaries-dir="$HAF_BINARY_DIR" "$@" hived extension.hive_fork_manager
 
-"$SCRIPTPATH/setup_haf_instance.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-binaries-dir="$HAF_BINARY_DIR" "${HIVED_ARGS[@]}"
+"$SCRIPTPATH/setup_haf_instance.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-binaries-dir="$HAF_BINARY_DIR" --haf-database-store="$HAF_TABLESPACE_LOCATION" "${HIVED_ARGS[@]}"
 
