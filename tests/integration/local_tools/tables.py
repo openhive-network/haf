@@ -47,6 +47,7 @@ class Blocks(Base):
     hash = Column(LargeBinary)
     prev = Column(LargeBinary)
     created_at = Column(DateTime)
+    producer_account_id = Column(Integer)
 
 
 class BlocksReversible(Base):
@@ -56,6 +57,7 @@ class BlocksReversible(Base):
     hash = Column(LargeBinary)
     prev = Column(LargeBinary)
     created_at = Column(DateTime)
+    producer_account_id = Column(Integer)
     fork_id = Column(BigInteger, primary_key=True)
 
 

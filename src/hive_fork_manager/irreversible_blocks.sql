@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS hive.blocks (
        hash bytea NOT NULL,
        prev bytea NOT NULL,
        created_at timestamp without time zone NOT NULL,
+       producer_account_id INTEGER NOT NULL,
        CONSTRAINT pk_hive_blocks PRIMARY KEY( num )
 );
 

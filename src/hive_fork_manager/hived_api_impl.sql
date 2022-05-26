@@ -24,6 +24,7 @@ BEGIN
         , hbr.hash
         , hbr.prev
         , hbr.created_at
+        , hbr.producer_account_id
     FROM
         hive.blocks_reversible hbr
     WHERE

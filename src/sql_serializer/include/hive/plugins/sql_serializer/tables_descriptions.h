@@ -22,7 +22,7 @@ namespace hive::plugins::sql_serializer {
       std::string operator()(typename container_t::const_reference data) const
       {
         return std::to_string(data.block_number) + "," + escape_raw(data.hash) + "," +
-        escape_raw(data.prev_hash) + ", '" + data.created_at.to_iso_string() + '\'';
+        escape_raw(data.prev_hash) + ", '" + data.created_at.to_iso_string() + "' ," + std::to_string(data.producer_account_id);
       }
       };
     };

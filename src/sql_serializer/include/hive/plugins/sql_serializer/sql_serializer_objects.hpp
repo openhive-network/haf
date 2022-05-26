@@ -63,9 +63,10 @@ namespace hive
             using block_data_with_hash::hash_t;
             fc::time_point_sec created_at;
             hash_t prev_hash;
+            int32_t producer_account_id = 0;
 
-            process_block_t(const hash_t &_hash, const int _block_number, const fc::time_point_sec _tp, const hash_t &_prev)
-            : block_data_with_hash{_hash, _block_number}, created_at{_tp}, prev_hash{_prev} {}
+            process_block_t(const hash_t &_hash, const int _block_number, const fc::time_point_sec _tp, const hash_t &_prev, const int _producer_account_id)
+            : block_data_with_hash{_hash, _block_number}, created_at{_tp}, prev_hash{_prev}, producer_account_id{_producer_account_id} {}
           };
 
           struct process_transaction_t
