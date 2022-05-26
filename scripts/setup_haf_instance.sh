@@ -91,7 +91,7 @@ process_option() {
         ;;
     --haf-database-store=*)
         HAF_TABLESPACE_LOCATION="${o#*=}"
-	;;
+  ;;
     --hived-option=*)
         option="${o#*=}"
         add_hived_arg "$option"
@@ -147,7 +147,7 @@ while [ $# -gt 0 ]; do
 done
 
 spawn_hived() {
-  local hived_binary_path="$1"
+  local hived_binary_path=`realpath -e "$1"`
 
   local data_dir="$HIVED_DATADIR"
   local db_name="$HAF_DB_NAME"
@@ -166,15 +166,18 @@ spawn_hived() {
     fi
     echo "Using explicit hived data directory: $data_dir"
 
-    data_dir="--data-dir=$data_dir"
+    data_dir="--data-dir=\"$data_dir\""
 
   fi
 
   echo "Attempting to start hived process..."
+
+  set -x # to allow logging of every spawned cmd
+
   # Use hived account for peer authentication.
-  sudo -Enu $HIVED_ACCOUNT \
-    "$hived_binary_path" "$data_dir" --shared-file-size="$HIVED_SHARED_MEM_FILE_SIZE" --plugin=sql_serializer \
-      --psql-url="dbname=$db_name host=$pg_host port=$pg_port" --replay "${HIVED_ARGS[@]}"
+  sudo -HEnu $HIVED_ACCOUNT "$hived_binary_path" $data_dir --shared-file-size=$HIVED_SHARED_MEM_FILE_SIZE --plugin=sql_serializer --psql-url="dbname=$db_name host=$pg_host port=$pg_port" --replay ${HIVED_ARGS[@]}
+
+  set -x
 }
 
 if [ "$EUID" -eq 0 ]
@@ -184,9 +187,9 @@ fi
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
-time sudo -En "$SCRIPTPATH/setup_postgres.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --haf-binaries-dir="$HAF_BINARY_DIR" --haf-database-store="$HAF_TABLESPACE_LOCATION"
+sudo -En "$SCRIPTPATH/setup_postgres.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --haf-binaries-dir="$HAF_BINARY_DIR" --haf-database-store="$HAF_TABLESPACE_LOCATION"
 
-sudo -Enu "$HAF_ADMIN_ACCOUNT" "$SCRIPTPATH"/setup_db.sh --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-db-admin="$HAF_ADMIN_ACCOUNT" --haf-db-name="$HAF_DB_NAME" --haf-app-user="$HAF_DB_OWNER"
+"$SCRIPTPATH"/setup_db.sh --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-db-admin="$HAF_ADMIN_ACCOUNT" --haf-db-name="$HAF_DB_NAME" --haf-app-user="$HAF_DB_OWNER"
 
 spawn_hived "$HAF_BINARY_DIR/hive/programs/hived/hived" 2>&1 | tee -i replay.log
 

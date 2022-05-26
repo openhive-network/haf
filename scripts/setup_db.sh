@@ -88,15 +88,15 @@ DB_USERS+=("${DEFAULT_DB_USERS[@]}")
 
 # Seems that -v does not work correctly together with -c. Altough it works fine when -f is used (variable substitution works then)
   
-psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
+sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
   DROP DATABASE IF EXISTS $DB_NAME;
   CREATE DATABASE $DB_NAME WITH OWNER $DB_ADMIN TABLESPACE ${HAF_TABLESPACE_NAME};
 EOF
 
-psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE EXTENSION hive_fork_manager CASCADE;' 
+sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE EXTENSION hive_fork_manager CASCADE;' 
 
 for u in "${DB_USERS[@]}"; do
-  psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
+  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
     GRANT CREATE ON DATABASE $DB_NAME TO $u;
 EOF
 

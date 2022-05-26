@@ -153,3 +153,7 @@ install_extension "$HAF_BINARY_DIR"
 deploy_builtin_roles "$POSTGRES_ACCESS"
 "$SCRIPTPATH/create_haf_admin_role.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-admin-account="$HAF_ADMIN_ACCOUNT"
 setup_haf_storage_tablespace "$POSTGRES_ACCESS" "$HAF_TABLESPACE_NAME" "$HAF_TABLESPACE_LOCATION"
+
+# Allow everyone to overwrite/remove our log
+chmod a+w "$LOG_FILE"
+

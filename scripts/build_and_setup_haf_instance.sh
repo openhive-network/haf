@@ -40,19 +40,16 @@ HIVED_ACCOUNT="hived"
 HIVED_DATADIR=""
 HIVED_ARGS=() # Set of options to be directly passed to the spawned hived.
 
-HAF_DB_NAME="haf_block_log"
-HAF_DB_OWNER="haf_app_admin"
+FORWARDED_ARGS=() # set of parameters to be forwarded to setup_haf_instance script
+
 HAF_ADMIN_ACCOUNT="haf_admin"
-HAF_TABLESPACE_LOCATION="./haf_database_store"
+HAF_TABLESPACE_LOCATION=""
 
 HAF_BINARY_DIR="./build"
 HAF_SOURCE_DIR=""
 HAF_BRANCH=develop
 HAF_REPO_URL="https://gitlab.syncad.com/hive/haf.git"
 HAF_CMAKE_ARGS=()
-
-POSTGRES_HOST="/var/run/postgresql"
-POSTGRES_PORT=5432
 
 add_hived_arg() {
   local arg="$1"
@@ -65,9 +62,11 @@ process_option() {
   case "$o" in
     --host=*)
         POSTGRES_HOST="${o#*=}"
+        FORWARDED_ARGS+=("--host=\"$POSTGRES_HOST\"")
         ;;
     --port=*)
         POSTGRES_PORT="${o#*=}"
+        FORWARDED_ARGS+=("--port=$POSTGRES_PORT")
         ;;
     --branch=*)
         HAF_BRANCH="${o#*=}"
@@ -77,9 +76,11 @@ process_option() {
         ;;
     --hived-data-dir=*)
         HIVED_DATADIR="${o#*=}"
+        FORWARDED_ARGS+=("--hived-data-dir=\"$HIVED_DATADIR\"")
         ;;
     --haf-database-store=*)
         HAF_TABLESPACE_LOCATION="${o#*=}"
+        FORWARDED_ARGS+=("--haf-database-store=\"$HAF_TABLESPACE_LOCATION\"")
 	;;
     --hived-option=*)
         option="${o#*=}"
@@ -168,5 +169,5 @@ SCRIPTPATH="$HAF_SOURCE_DIR/scripts"
 sudo -n "$SCRIPTPATH/setup_ubuntu.sh" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --hived-account="$HIVED_ACCOUNT"
 time "$SCRIPTPATH/build.sh" --haf-source-dir="$HAF_SOURCE_DIR" --haf-binaries-dir="$HAF_BINARY_DIR" "$@" hived extension.hive_fork_manager
 
-"$SCRIPTPATH/setup_haf_instance.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-binaries-dir="$HAF_BINARY_DIR" --haf-database-store="$HAF_TABLESPACE_LOCATION" "${HIVED_ARGS[@]}"
+"$SCRIPTPATH/setup_haf_instance.sh" --haf-binaries-dir="$HAF_BINARY_DIR" ${FORWARDED_ARGS[@]} "${HIVED_ARGS[@]}"
 
