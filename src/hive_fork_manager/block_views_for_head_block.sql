@@ -68,18 +68,21 @@ AS
 SELECT t.num,
        t.hash,
        t.prev,
-       t.created_at
+       t.created_at,
+       t.producer_account_id
 FROM (
     SELECT hb.num,
         hb.hash,
         hb.prev,
-        hb.created_at
+        hb.created_at,
+        hb.producer_account_id
     FROM hive.blocks hb
     UNION ALL
     SELECT hbr.num,
         hbr.hash,
         hbr.prev,
-        hbr.created_at
+        hbr.created_at,
+        hbr.producer_account_id
     FROM hive.blocks_reversible hbr
     JOIN
     (

@@ -50,19 +50,22 @@ BEGIN
         SELECT t.num,
             t.hash,
             t.prev,
-            t.created_at
+            t.created_at,
+            t.producer_account_id
         FROM hive.%s_context_data_view c,
         LATERAL ( SELECT hb.num,
             hb.hash,
             hb.prev,
-            hb.created_at
+            hb.created_at,
+            hb.producer_account_id
            FROM hive.blocks hb
           WHERE hb.num <= c.min_block
         UNION ALL
          SELECT hbr.num,
             hbr.hash,
             hbr.prev,
-            hbr.created_at
+            hbr.created_at,
+            hbr.producer_account_id
            FROM hive.blocks_reversible hbr
            JOIN
            (
@@ -92,7 +95,8 @@ EXECUTE format(
         SELECT hb.num,
             hb.hash,
             hb.prev,
-            hb.created_at
+            hb.created_at,
+            hb.producer_account_id
         FROM hive.blocks hb
         ;', _context_name
     );
