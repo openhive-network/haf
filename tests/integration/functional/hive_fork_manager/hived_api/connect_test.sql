@@ -13,8 +13,14 @@ BEGIN
 
     INSERT INTO hive.blocks
     VALUES
-       ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
-     , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp )
+       ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+     , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5 )
+    ;
+
+    INSERT INTO hive.accounts( id, name, block_num )
+    VALUES (5, 'initminer', 1)
+         , (6, 'alice', 1)
+         , (7, 'bob', 1)
     ;
 
     INSERT INTO hive.transactions
@@ -81,14 +87,14 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hive.transactions ) = 1, 'Unexpected number of transactions';
     ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig ) = 1, 'Unexpected number of signatures';
     ASSERT ( SELECT COUNT(*) FROM hive.operations ) = 1, 'Unexpected number of operations';
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts ) = 1, 'Unexpected number of accounts';
+    ASSERT ( SELECT COUNT(*) FROM hive.accounts ) = 4, 'Unexpected number of accounts';
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations ) = 1, 'Unexpected number of account_operations';
 
     ASSERT ( SELECT COUNT(*) FROM hive.blocks WHERE num = 1 ) = 1, 'No blocks with num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive.transactions WHERE block_num = 1 ) = 1, 'No transaction with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive.operations WHERE block_num = 1 ) = 1, 'No operations with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig WHERE trx_hash = '\xDEED10'::bytea ) = 1, 'No signatures with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts WHERE block_num = 1 ) = 1, 'No account with block_num = 1';
+    ASSERT ( SELECT COUNT(*) FROM hive.accounts WHERE block_num = 1 ) = 4, 'No account with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations WHERE account_id = 1 ) = 1, 'No account_operations with block_num = 1';
 
     ASSERT( SELECT COUNT(*) FROM hive.hived_connections ) = 1, 'No connection saved';

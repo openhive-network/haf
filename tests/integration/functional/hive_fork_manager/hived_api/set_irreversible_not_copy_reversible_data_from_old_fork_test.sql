@@ -14,13 +14,19 @@ BEGIN
     ;
 
     INSERT INTO hive.blocks
-    VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
+    VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+    ;
+
+    INSERT INTO hive.accounts( id, name, block_num )
+    VALUES (5, 'initminer', 1)
+         , (6, 'alice', 1)
+         , (7, 'bob', 1)
     ;
 
     PERFORM hive.end_massive_sync( 1 );
 
     PERFORM hive.push_block(
-         ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp )
+         ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp, 6 )
         , NULL
         , NULL
         , NULL
@@ -53,7 +59,7 @@ BEGIN
     PERFORM hive.back_from_fork( 1 );
 
     PERFORM hive.push_block(
-         ( 2, '\xBADD22', '\xCAFE22', '2016-06-22 19:10:25-07'::timestamp )
+         ( 2, '\xBADD22', '\xCAFE22', '2016-06-22 19:10:25-07'::timestamp, 7 )
         , NULL
         , NULL
         , NULL
@@ -88,7 +94,7 @@ BEGIN
     ASSERT NOT EXISTS ( SELECT * FROM hive.transactions ), 'Transaction from abandoned block has landed in irreversible table';
     ASSERT NOT EXISTS ( SELECT * FROM hive.operations ), 'Operations from abandoned block has landed in irreversible table';
     ASSERT NOT EXISTS ( SELECT * FROM hive.transactions_multisig ), 'Signatures from abandoned block has landed in irreversible table';
-    ASSERT NOT EXISTS ( SELECT * FROM hive.accounts ), 'Accounts abandoned block has landed in irreversible table';
+    ASSERT NOT EXISTS ( SELECT * FROM hive.accounts WHERE id = 1 ), 'Accounts abandoned block has landed in irreversible table';
     ASSERT NOT EXISTS ( SELECT * FROM hive.account_operations ), 'Account_operations is not empty';
     ASSERT NOT EXISTS ( SELECT * FROM hive.blocks WHERE hash = '\xBADD20'::bytea ), 'Abandoned block has landed in irreversible table';
 END;

@@ -7,12 +7,16 @@ AS
 $BODY$
 BEGIN
     INSERT INTO hive.blocks VALUES
-          ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
-        , ( 2, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
-        , ( 3, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
-        , ( 4, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
-        , ( 5, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
-        , ( 6, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
+          ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+        , ( 2, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+        , ( 3, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+        , ( 4, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+        , ( 5, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+        , ( 6, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+    ;
+
+    INSERT INTO hive.accounts( id, name, block_num )
+    VALUES (5, 'initminer', 1)
     ;
 
     PERFORM hive.end_massive_sync( 1 );

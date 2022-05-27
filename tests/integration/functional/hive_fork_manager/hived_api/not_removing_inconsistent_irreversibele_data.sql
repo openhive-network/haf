@@ -13,8 +13,14 @@ BEGIN
 
     INSERT INTO hive.blocks
     VALUES
-       ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
-     , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp )
+       ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+     , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5 )
+    ;
+
+    INSERT INTO hive.accounts( id, name, block_num )
+    VALUES (5, 'initminer', 1)
+         , (6, 'alice', 1)
+         , (7, 'bob', 1)
     ;
 
     INSERT INTO hive.transactions
@@ -81,7 +87,7 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hive.transactions ) = 2, 'Unexpected number of transactions';
     ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig ) = 2, 'Unexpected number of signatures';
     ASSERT ( SELECT COUNT(*) FROM hive.operations ) = 2, 'Unexpected number of operations';
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts ) = 2, 'Unexpected number of accounts';
+    ASSERT ( SELECT COUNT(*) FROM hive.accounts ) = 5, 'Unexpected number of accounts';
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations ) = 2, 'Unexpected number of account_operations';
 END
 $BODY$

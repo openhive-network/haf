@@ -36,7 +36,7 @@ DECLARE
     __account_operation1 hive.account_operations%ROWTYPE;
     __account_operation2 hive.account_operations%ROWTYPE;
 BEGIN
-    __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp );
+    __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 5 );
     __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
     __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED' );
     __operation1_1 = ( 1, 101, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'ZERO OPERATION' );
@@ -81,6 +81,7 @@ BEGIN
                     AND hash='\xBADD'
                     AND prev='\xCAFE'
                     AND created_at='2016-06-22 19:10:25-07'::timestamp
+                    AND producer_account_id=5
                     AND fork_id = 1
     ) = 1, 'Wrong block data'
     ;

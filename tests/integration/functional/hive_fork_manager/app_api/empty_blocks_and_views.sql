@@ -22,7 +22,11 @@ BEGIN
 
     INSERT INTO hive.blocks
     VALUES
-           ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
+           ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+    ;
+
+    INSERT INTO hive.accounts( id, name, block_num )
+    VALUES (5, 'initminer', 1)
     ;
 
     INSERT INTO hive.transactions
@@ -43,8 +47,8 @@ BEGIN
 
     INSERT INTO hive.blocks_reversible
     VALUES
-           ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 2 )
-         , ( 2, '\xBADD23', '\xCAFE23', '2016-06-22 19:10:23-07'::timestamp, 3 )
+           ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, 2 )
+         , ( 2, '\xBADD23', '\xCAFE23', '2016-06-22 19:10:23-07'::timestamp, 5, 3 )
     ;
 
     -- block 2 on fork 3 has no transactions

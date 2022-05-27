@@ -8,10 +8,15 @@ $BODY$
 BEGIN
     PERFORM hive.app_create_context( 'context' );
 
--- hived inserts once irreversible block
-INSERT INTO hive.blocks
-VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
-;
+    -- hived inserts once irreversible block
+    INSERT INTO hive.blocks
+    VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+    ;
+
+    INSERT INTO hive.accounts( id, name, block_num )
+    VALUES (5, 'initminer', 1)
+         , (6, 'alice', 1)
+    ;
 END;
 $BODY$
 ;
@@ -39,7 +44,7 @@ BEGIN
     ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 1, 'hive.app_get_irreversible_block !=1 (4)';
 
     PERFORM hive.push_block(
-        ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp )
+        ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp, 5 )
         , NULL
         , NULL
         , NULL
@@ -49,7 +54,7 @@ BEGIN
     ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 1, 'hive.app_get_irreversible_block !=1 (4)';
 
     PERFORM hive.push_block(
-        ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp )
+        ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp, 5 )
         , NULL
         , NULL
         , NULL

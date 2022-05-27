@@ -7,13 +7,17 @@ AS
 $BODY$
 BEGIN
     INSERT INTO hive.blocks
-    VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp )
+    VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5 )
+    ;
+
+    INSERT INTO hive.accounts( id, name, block_num )
+    VALUES (5, 'initminer', 1)
     ;
 
     PERFORM hive.end_massive_sync( 1 );
 
     PERFORM hive.push_block(
-         ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp )
+         ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp, 5 )
         , NULL
         , NULL
         , NULL
@@ -22,7 +26,7 @@ BEGIN
     );
 
     PERFORM hive.push_block(
-         ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp )
+         ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp, 5 )
         , NULL
         , NULL
         , NULL
@@ -33,7 +37,7 @@ BEGIN
     PERFORM hive.back_from_fork( 2 );
 
     PERFORM hive.push_block(
-         ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp )
+         ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 5 )
         , NULL
         , NULL
         , NULL

@@ -5,32 +5,26 @@ CREATE FUNCTION test_given()
 VOLATILE
 AS
 $BODY$
+DECLARE
+    __account hive.accounts%ROWTYPE;
 BEGIN
     PERFORM hive.app_create_context( 'context' );
     CREATE SCHEMA A;
     CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
 
+    __account = ( 5, 'initminer', 1 );
     PERFORM hive.push_block(
-         ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:25-07'::timestamp )
+         ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:25-07'::timestamp, 5 )
         , NULL
         , NULL
         , NULL
-        , NULL
+        , ARRAY[ __account ]
         , NULL
     );
 
 
     PERFORM hive.push_block(
-         ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp )
-        , NULL
-        , NULL
-        , NULL
-        , NULL
-        , NULL
-    );
-
-    PERFORM hive.push_block(
-         ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp )
+         ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp, 5 )
         , NULL
         , NULL
         , NULL
@@ -39,7 +33,16 @@ BEGIN
     );
 
     PERFORM hive.push_block(
-         ( 4, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp )
+         ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp, 5 )
+        , NULL
+        , NULL
+        , NULL
+        , NULL
+        , NULL
+    );
+
+    PERFORM hive.push_block(
+         ( 4, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp, 5 )
         , NULL
         , NULL
         , NULL
