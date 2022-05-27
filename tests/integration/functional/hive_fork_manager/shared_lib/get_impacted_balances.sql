@@ -19,6 +19,7 @@ CREATE FUNCTION test_when()
 AS
 $BODY$
 DECLARE 
+  --POSITIVE PATTERN TESTS VARIABLES
   _pattern1 hive.impacted_balances_return[] = '{"(gregory.latinier,-1,3,21)","(gregory.latinier,-1,3,13)"}';
   _test1 hive.impacted_balances_return[];
 
@@ -96,9 +97,15 @@ DECLARE
 
   _pattern26 hive.impacted_balances_return[] = '{"(steem.dao,157,3,13)","(steem.dao,-157,3,13)"}';
   _test26 hive.impacted_balances_return[];
-  
+
+  --NEGATIVE TESTS VARIABLES
+  _pattern27 INT;
+  _test27 hive.impacted_balances_return[];
+
+
 BEGIN
 
+-- POSITIVE TESTS
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return) 
 INTO _test1
 FROM hive.get_impacted_balances('{"type":"escrow_transfer_operation","value":{"from":"gregory.latinier","to":"ekitcho","hbd_amount":{"amount":"1","precision":3,"nai":"@@000000013"},"hive_amount":{"amount":"0","precision":3,"nai":"@@000000021"},"escrow_id":1,"agent":"fabien","fee":{"amount":"1","precision":3,"nai":"@@000000021"},"json_meta":"{\"terms\":\"test\"}","ratification_deadline":"2018-04-25T19:08:45","escrow_expiration":"2018-04-26T19:08:45"}}') f
@@ -229,7 +236,6 @@ INTO _test26
 FROM hive.get_impacted_balances('{"type":"proposal_pay_operation","value":{"proposal_id":0,"receiver":"steem.dao","payer":"steem.dao","payment":{"amount":"157","precision":3,"nai":"@@000000013"},"trx_id":"0000000000000000000000000000000000000000","op_in_trx":37184}}') f
 ;
 
-
 ASSERT _pattern1 = _test1, 'Broken impacted balances result in "escrow_transfer_operation" method';
 ASSERT _pattern2 = _test2, 'Broken impacted balances result in "fill_vesting_withdraw_operation" method';
 ASSERT _pattern3 = _test3, 'Broken impacted balances result in "producer_reward_operation" method';
@@ -257,6 +263,13 @@ ASSERT _pattern24 = _test24, 'Broken impacted balances result in "fill_collatera
 ASSERT _pattern25 = _test25, 'Broken impacted balances result in "sps_convert_operation" method';
 ASSERT _pattern26 = _test26, 'Broken impacted balances result in "proposal_pay_operation" method';
 
+--NEGATIVE TESTS
+SELECT COUNT(*) 
+INTO _test27
+FROM hive.get_impacted_balances('{"type":"account_witness_vote_operation","value":{"account":"donalddrumpf","witness":"berniesanders","approve":true}}') f
+;
+
+ASSERT _test27=0, 'Broken impacted balances result in "account_witness_vote_operation" method - should return null';
 
 END;
 $BODY$
