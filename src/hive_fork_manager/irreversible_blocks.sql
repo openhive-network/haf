@@ -102,3 +102,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_type_account_id_op_seq
 
 CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hive.accounts USING btree (block_num);
 
+ALTER TABLE hive.blocks ADD CONSTRAINT fk_1_hive_blocks FOREIGN KEY (producer_account_id) REFERENCES hive.accounts (id) DEFERRABLE INITIALLY DEFERRED;
