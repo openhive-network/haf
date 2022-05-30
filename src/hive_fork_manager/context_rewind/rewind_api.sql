@@ -28,7 +28,7 @@ BEGIN
     SELECT hc.id INTO __context_id FROM hive.contexts hc WHERE hc.name = _name;
 
     IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'Context %s does not exist', _name;
+        RAISE EXCEPTION 'Context % does not exist', _name;
     END IF;
 
     PERFORM hive.unregister_table( hrt.origin_table_schema, hrt.origin_table_name )
