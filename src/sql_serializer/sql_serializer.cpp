@@ -451,11 +451,7 @@ void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& no
 
 void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notification& note)
 {
-  if(chain_db.is_in_control())
-  {
-    dlog("Skipping operation processing coming from incoming transaction - waiting for already produced incoming block...");
-    return;
-  }
+  FC_ASSERT((chain_db.is_processing_block() && chain_db.is_producing_block()==false), "SQL serializer shall process only operations contained by finished blocks");
 
   if(skip_reversible_block(note.block))
     return;
@@ -487,8 +483,6 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
 
 void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& note)
 {
-  FC_ASSERT(chain_db.is_processing_block(), "Post apply block");
-
   if(skip_reversible_block(note.block_num))
     return;
 
