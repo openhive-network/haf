@@ -15,7 +15,6 @@ namespace hive::plugins::sql_serializer {
   {
     protected:
       virtual void on_collect( const hive::protocol::operation& op, const flat_set<hive::protocol::account_name_type>& impacted ){}
-      virtual bool on_before_new_account( const hive::protocol::account_name_type& account_name ){ return true; }
       virtual bool on_before_new_operation( const hive::protocol::account_name_type& account_name ){ return true; }
 
     public:
@@ -28,8 +27,8 @@ namespace hive::plugins::sql_serializer {
     {
     typedef void result_type;
 
-    accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data )
-      : _chain_db(chain_db), _cached_data(cached_data) {}
+    accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, bool psql_dump_account_operations )
+      : _chain_db(chain_db), _cached_data(cached_data), _psql_dump_account_operations(psql_dump_account_operations) {}
 
     virtual ~accounts_collector(){}
 
@@ -64,7 +63,6 @@ namespace hive::plugins::sql_serializer {
     private:
       hive::chain::database& _chain_db;
       cached_data_t& _cached_data;
-
       int64_t _processed_operation_id = -1;
       int32_t _processed_operation_type_id = -1;
 
@@ -74,6 +72,7 @@ namespace hive::plugins::sql_serializer {
       fc::optional<int64_t> _creation_operation_id;
 
       flat_set<hive::protocol::account_name_type> _impacted;
+      bool _psql_dump_account_operations;
     };
 
     struct filtered_accounts_collector: public accounts_collector
@@ -83,11 +82,10 @@ namespace hive::plugins::sql_serializer {
 
       protected:
         void on_collect( const hive::protocol::operation& op, const flat_set<hive::protocol::account_name_type>& impacted ) override;
-        bool on_before_new_account( const hive::protocol::account_name_type& account_name ) override;
         bool on_before_new_operation( const hive::protocol::account_name_type& account_name ) override;
 
       public:
-        filtered_accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, const blockchain_data_filter& filter );
+        filtered_accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, bool psql_dump_account_operations, const blockchain_data_filter& filter );
         virtual ~filtered_accounts_collector(){}
 
         bool is_op_accepted() const override;

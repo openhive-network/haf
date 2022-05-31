@@ -89,9 +89,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::on_new_account(const hive::protocol::account_name_type& account_name)
   {
-    if( !on_before_new_account( account_name ) )
-      return;
-
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
     FC_ASSERT(account_ptr!=nullptr, "account with name ${name} does not exist in chain database", ("name", account_name));
     account_ops_seq_object::id_type account_id(account_ptr->get_id());
@@ -116,7 +113,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     if( op_seq_obj == nullptr )
       return;
 
-    if( _allow_add_operation )
+    if( _psql_dump_account_operations && _allow_add_operation )
       _cached_data.account_operations.emplace_back(_block_num, operation_id, account_id, op_seq_obj->operation_count, operation_type_id);
 
     _chain_db.modify( *op_seq_obj, [&]( account_ops_seq_object& o)
@@ -125,8 +122,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     } );
   }
 
-  filtered_accounts_collector::filtered_accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, const blockchain_data_filter& filter )
-                              :accounts_collector( chain_db, cached_data ), _filter_collector( filter )
+  filtered_accounts_collector::filtered_accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, bool psql_dump_account_operations, const blockchain_data_filter& filter )
+                              :accounts_collector( chain_db, cached_data, psql_dump_account_operations ), _filter_collector( filter )
   {
   }
 
@@ -136,11 +133,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
     for( auto& name : impacted )
       _filter_collector.collect_tracked_account( name );
-  }
-
-  bool filtered_accounts_collector::on_before_new_account( const hive::protocol::account_name_type& account_name )
-  {
-    return _filter_collector.is_account_tracked( account_name );
   }
 
   bool filtered_accounts_collector::on_before_new_operation( const hive::protocol::account_name_type& account_name )

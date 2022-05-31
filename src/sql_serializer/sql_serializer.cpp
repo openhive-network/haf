@@ -262,7 +262,7 @@ using chain::reindex_notification;
           uint32_t psql_transactions_threads_number = 2;
           uint32_t psql_operations_threads_number = 5;
           uint32_t psql_account_operations_threads_number = 2;
-          bool     psql_dump_accounts = true;
+          bool     psql_dump_account_operations = true;
           uint32_t head_block_number = 0;
 
           int64_t op_sequence_id = 0;
@@ -627,10 +627,6 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
           , uint32_t block_num
         )
         {
-          if ( !psql_dump_accounts ) {
-            return;
-          }
-
           collector->collect(operation_id, op, block_num);
         }
 
@@ -647,7 +643,7 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
                          ("psql-operations-threads-number", appbase::bpo::value<uint32_t>()->default_value( 5 ), "number of threads which dump operations to database during reindexing")
                          ("psql-transactions-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump transactions to database during reindexing")
                          ("psql-account-operations-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump account operations to database during reindexing")
-                         ("psql-enable-accounts-dump", appbase::bpo::value<bool>()->default_value( true ), "enable collect data to accounts and account_operations table")
+                         ("psql-enable-account-operations-dump", appbase::bpo::value<bool>()->default_value( true ), "enable collect data to account_operations table")
                          ("psql-force-open-inconsistent", appbase::bpo::bool_switch()->default_value( false ), "force open database even when irreversible data are inconsistent")
                          ("psql-livesync-threshold", appbase::bpo::value<uint32_t>()->default_value( 10000 ), "threshold to move synchronization state during start immediatly to live")
                          ("psql-track-account-range", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "Defines a range of accounts to track as a json pair [\"from\",\"to\"] [from,to]. Can be specified multiple times.")
@@ -682,16 +678,16 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
 
         // settings
         my->psql_index_threshold = options["psql-index-threshold"].as<uint32_t>();
-        my->psql_dump_accounts = options["psql-enable-accounts-dump"].as<bool>();
+        my->psql_dump_account_operations = options["psql-enable-account-operations-dump"].as<bool>();
 
         my->currently_caching_data = std::make_unique<cached_data_t>( default_reservation_size );
 
         my->filter.fill( options, "psql-track-account-range", "psql-track-operations", "psql-track-body-operations" );
 
         if( my->filter.is_enabled() )
-          my->collector = std::make_unique<filtered_accounts_collector>( db, *my->currently_caching_data, my->filter );
+          my->collector = std::make_unique<filtered_accounts_collector>( db, *my->currently_caching_data, my->psql_dump_account_operations, my->filter );
         else
-          my->collector = std::make_unique<accounts_collector>( db, *my->currently_caching_data );
+          my->collector = std::make_unique<accounts_collector>( db, *my->currently_caching_data, my->psql_dump_account_operations );
 
         // signals
         my->connect_signals();
