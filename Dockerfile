@@ -104,7 +104,7 @@ STOPSIGNAL SIGINT
 
 ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
 
-FROM ${CI_REGISTRY_IMAGE}base_instance${BLOCK_LOG_SUFFIX}${BUILD_IMAGE_TAG} as instance
+FROM ${CI_REGISTRY_IMAGE}base_instance${BLOCK_LOG_SUFFIX}:base_instance-${BUILD_IMAGE_TAG} as instance
 
 # Embedded postgres service
 EXPOSE 5432
@@ -116,7 +116,7 @@ EXPOSE ${WS_PORT}
 # JSON rpc service
 EXPOSE ${HTTP_PORT}
 
-FROM ${CI_REGISTRY_IMAGE}instance-5m$BUILD_IMAGE_TAG as data
+FROM ${CI_REGISTRY_IMAGE}instance-5m:instance-${BUILD_IMAGE_TAG} as data
 
 ADD --chown=hived:hived ./docker/config_5M.ini /home/hived/datadir/config.ini
 
