@@ -71,7 +71,7 @@ def get_time_offset_from_file(name):
     timestamp = timestamp.strip()
     current_time = datetime.now(timezone.utc)
     new_time = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc)
-    difference = round(new_time.timestamp()-current_time.timestamp()) - 5 #reduce node start delay from 10s, caused test fails
+    difference = round(new_time.timestamp()-current_time.timestamp())
     time_offset = str(difference) + 's'
     return time_offset
 

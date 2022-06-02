@@ -69,7 +69,8 @@ def world_with_witnesses_and_database(world, database, witness_names):
     session, Base = database('postgresql:///haf_block_log')
 
     alpha_net = world.create_network('Alpha')
-    alpha_net.create_witness_node(witnesses=alpha_witness_names)
+    alpha_witness_node = alpha_net.create_witness_node(witnesses=alpha_witness_names)
+    alpha_witness_node.config.enable_stale_production = True
     beta_net = world.create_network('Beta')
     beta_net.create_witness_node(witnesses=beta_witness_names)
     node_under_test = beta_net.create_api_node(name = 'NodeUnderTest')
