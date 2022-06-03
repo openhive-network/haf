@@ -104,3 +104,4 @@ CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hive.accounts USING bt
 
 CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hive.blocks (producer_account_id);
 ALTER TABLE hive.blocks ADD CONSTRAINT fk_1_hive_blocks FOREIGN KEY (producer_account_id) REFERENCES hive.accounts (id) DEFERRABLE INITIALLY DEFERRED;
+

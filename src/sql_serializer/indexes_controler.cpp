@@ -38,8 +38,20 @@ indexes_controler::enable_indexes() {
   if (appbase::app().is_interrupt_request())
     return;
 
-  auto processor = start_commit_sql(false, "hive.enable_indexes_of_irreversible()", "disable indexes" );
-  processor->join();
+  auto restore_blocks_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.blocks' )", "enable indexes" );
+  auto restore_irreversible_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.irreversible_data' )", "enable indexes" );
+  auto restore_transactions_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.transactions' )", "enable indexes" );
+  auto restore_transactions_sigs_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.transactions_multisig' )", "enable indexes" );
+  auto restore_operations_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.operations' )", "enable indexes" );
+  auto restore_accounts_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.accounts' )", "enable indexes" );
+  auto restore_account_operations_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.account_operations' )", "enable indexes" );
+  restore_blocks_idxs->join();
+  restore_irreversible_idxs->join();
+  restore_transactions_idxs->join();
+  restore_transactions_sigs_idxs->join();
+  restore_operations_idxs->join();
+  restore_account_operations_idxs->join();
+  restore_accounts_idxs->join();
 
   ilog( "All irreversible blocks tables indexes are re-created" );
 }
@@ -59,8 +71,21 @@ indexes_controler::enable_constrains() {
   if (appbase::app().is_interrupt_request())
     return;
 
-  auto processor = start_commit_sql(false, "hive.enable_fk_of_irreversible()", "disable fk-s" );
-  processor->join();
+  auto restore_irreversible_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.irreversible_data' )", "enable indexes" );
+  auto restore_transactions_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.transactions' )", "enable indexes" );
+  auto restore_transactions_sigs_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.transactions_multisig' )", "enable indexes" );
+  auto restore_operations_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.operations' )", "enable indexes" );
+  auto restore_account_operations_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.account_operations' )", "enable indexes" );
+  auto restore_accounts_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.accounts' )", "enable indexes" );
+  restore_irreversible_fks->join();
+  restore_transactions_fks->join();
+  restore_transactions_sigs_fks->join();
+  restore_operations_fks->join();
+  restore_account_operations_fks->join();
+  restore_accounts_fks->join();
+
+  auto restore_blocks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.blocks' )", "enable indexes" );
+  restore_blocks_fks->join();
 
   ilog( "All irreversible blocks tables foreign keys are re-created" );
 }
