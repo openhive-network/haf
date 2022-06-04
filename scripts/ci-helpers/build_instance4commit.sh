@@ -6,18 +6,59 @@ SCRIPTSDIR="$SCRIPTPATH/.."
 LOG_FILE=build_instance4commit.log
 source "$SCRIPTSDIR/common.sh"
 
-COMMIT="$1"
+COMMIT=""
+
+REGISTRY=""
+
+BRANCH="master"
+
+NETWORK_TYPE_ARG=""
+
+print_help () {
+    echo "Usage: $0 <commit> <registry_url> [OPTION[=VALUE]]..."
+    echo
+    echo "Allows to build docker image containing HAF installation built from pointed COMMIT"
+    echo "OPTIONS:"
+    echo "  --network-type=TYPE       Allows to specify type of blockchain network supported by built hived. Allowed values: mainnet, testnet, mirrornet"
+    echo "  --help                    Display this help screen and exit"
+    echo
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --network-type=*)
+        type="${1#*=}"
+        NETWORK_TYPE_ARG="--network-type=${type}"
+        ;;
+    -*)
+        echo "ERROR: '$1' is not a valid option"
+        exit 1
+        ;;
+    *)
+        if [ -z "$COMMIT" ];
+        then
+          COMMIT="$1"
+        elif [ -z "$REGISTRY" ];
+        then
+          REGISTRY=$1
+        else
+          echo "ERROR: '$1' is not a valid positional argument"
+          echo
+          print_help
+          exit 2
+        fi
+        ;;
+    esac
+    shift
+done
+
+TST_COMMIT=${COMMIT:?"Missing arg #1 to specify a COMMIT"}
+TST_REGISTRY=${REGISTRY:?"Missing arg #2 to specify target container registry"}
 
 BUILD_IMAGE_TAG=$COMMIT
 
-REGISTRY=${2:-registry.gitlab.syncad.com/hive/haf/}
+do_clone "$BRANCH" "./haf-${COMMIT}" https://gitlab.syncad.com/hive/haf.git "$COMMIT"
 
-BRANCH=${3:-master}
-
-CI_IMAGE_TAG=${4:-:ubuntu20.04-5}
-
-do_clone "$BRANCH" ./haf https://gitlab.syncad.com/hive/haf.git "$COMMIT"
-
-"$SCRIPTSDIR/ci-helpers/build_instance.sh" "$BUILD_IMAGE_TAG" "$REGISTRY"
+"$SCRIPTSDIR/ci-helpers/build_instance.sh" "${BUILD_IMAGE_TAG}" "./haf-${COMMIT}" "${REGISTRY}" ${NETWORK_TYPE_ARG}
 
 
