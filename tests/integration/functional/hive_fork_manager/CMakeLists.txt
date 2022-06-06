@@ -196,6 +196,7 @@ ADD_SQL_FUNCTIONAL_TESTS( app_api/register_already_registered_table_negative.sql
 ADD_SQL_FUNCTIONAL_TESTS( app_api/app_get_irreversible_block_forking.sql )
 ADD_SQL_FUNCTIONAL_TESTS( app_api/app_get_irreversible_block_non_forking.sql )
 ADD_SQL_FUNCTIONAL_TESTS( app_api/app_unregister_table.sql )
+ADD_SQL_FUNCTIONAL_TESTS( app_api/app_unregister_table_with_dependency.sql )
 ADD_SQL_FUNCTIONAL_TESTS( app_api/context_blocks_view_nonforking_detach_context_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( app_api/context_blocks_view_detach_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( app_api/context_signatures_view_non_forking_detach_test.sql )
