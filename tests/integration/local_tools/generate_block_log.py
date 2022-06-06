@@ -98,6 +98,7 @@ def prepare_block_log(length):
     while irreversible < length:
         init_node.wait_number_of_blocks(1)
         result = wallet.api.info()
+        irreversible = result['last_irreversible_block_num']
         tt.logger.info(
             f'Generating block_log of length: {length}, '
             f'current irreversible: {result["last_irreversible_block_num"]}, '
