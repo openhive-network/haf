@@ -4,7 +4,7 @@
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
 ARG CI_IMAGE_TAG=:ubuntu20.04-5 
 
-ARG BLOCK_LOG_SUFFIX=-5m
+ARG BLOCK_LOG_SUFFIX
 
 ARG BUILD_IMAGE_TAG
 
@@ -39,7 +39,7 @@ ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
 ARG HIVE_CONVERTER_BUILD=OFF
 ENV HIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}
 
-ARG HIVE_LINT=ON
+ARG HIVE_LINT=OFF
 ENV HIVE_LINT=${HIVE_LINT}
 
 USER haf_admin
@@ -54,7 +54,7 @@ RUN \
   ./haf/scripts/build.sh --haf-source-dir="./haf" --haf-binaries-dir="./build" \
   --cmake-arg="-DBUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}" \
   --cmake-arg="-DHIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}" \
-  --cmake-arg="-DHIVE_LINT=ON" \
+  --cmake-arg="-DHIVE_LINT=${HIVE_LINT}" \
   hived cli_wallet compress_block_log extension.hive_fork_manager && \
   cd ./build && \
   find . -name *.o  -type f -delete && \
@@ -63,7 +63,6 @@ RUN \
 # Here we could use a smaller image without packages specific to build requirements
 FROM ${CI_REGISTRY_IMAGE}ci-base-image${BLOCK_LOG_SUFFIX}${CI_IMAGE_TAG} as base_instance
 
-#ARG BUILD_IMAGE_TAG
 ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu20.04-5}
 
 ARG P2P_PORT=2001
