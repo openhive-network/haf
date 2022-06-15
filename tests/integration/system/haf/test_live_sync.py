@@ -26,8 +26,8 @@ def test_live_sync(prepared_networks_and_database):
     run_networks(networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     wallet = tt.Wallet(attach_to=witness_node)
-    wallet.api.transfer('initminer', 'initminer', tt.Asset.Test(1000), 'dummy transfer operation')
-    transaction_block_num = START_TEST_BLOCK + 1
+    trx = wallet.api.transfer('initminer', 'initminer', tt.Asset.Test(1000), 'dummy transfer operation')
+    transaction_block_num = trx['block_num']
 
     # THEN
     wait_for_irreversible_progress(node_under_test, transaction_block_num)

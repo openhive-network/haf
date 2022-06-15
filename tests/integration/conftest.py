@@ -77,6 +77,7 @@ def prepared_networks_and_database(database, witness_names) -> Tuple[Dict[str, t
                                  '{"name":"chainlock","level":"debug","appender":"p2p"} '\
                                  '{"name":"sync","level":"debug","appender":"p2p"} '\
                                  '{"name":"p2p","level":"debug","appender":"p2p"}'
+        node.config.schedule_production_at_startup = False
 
     networks = {
         'Alpha': alpha_net,
