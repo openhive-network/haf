@@ -97,7 +97,7 @@ The database should use these parameters:
 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' and LC_CTYPE = 'en_US.UTF-8' 
 (this is default for american english locale, it's not tested on other locale configurations).
 
-# Testing a HAF installation
+# Overview of automated tests for HAF
 ## 1. Integrations ```tests/integrations```
 Integrations tests are tests that are running on a module of the project or on a system of the project's modules.
 The tests do not use mock-ups to run modules/system under tests in isolation from their environment, instead
@@ -139,10 +139,11 @@ Unit tests are used to test parts of modules in isolation from their surrounding
 
 There is also a `generated` directory inside the build directory that contains autmatically generated headers which can be included in the code with ```#include "gen/header_file_name.hpp"```
 
-# Predefined cmake targetes
+# Internal docs for HAF's cmake files
+## Predefined cmake targets
 To simplify adding new modules to the project, the build system introduces macros which defines few types of project items. 
 
-## 1. Static C++ library
+### 1. Static C++ library
 To setup compiler and linker setting to generate static library use macro:
 
 `ADD_STATIC_LIB` with parameter
@@ -150,7 +151,7 @@ To setup compiler and linker setting to generate static library use macro:
 
 The macro adds all *.cpp files from the directory in which the `CMakeLists.txt` file is placed ( `${CMAKE_CURRENT_SOURCE_DIR}` ) 
 
-## 2. Run-time loaded C++ library
+### 2. Run-time loaded C++ library
 To setup compiler and linker setting to generate dynamicaly loaded library which will be opened
 during program run-time with dlopen, use macro:
 
@@ -159,7 +160,7 @@ during program run-time with dlopen, use macro:
 
 The macro adds to compilation all *.cpp files from the directory in which the `CMakeLists.txt` file is placed ( `${CMAKE_CURRENT_SOURCE_DIR}` )
 
-## 3. Load-time loaded C++ library
+### 3. Load-time loaded C++ library
 To setup compiler and linker setting to generate dynamicaly loaded library which will be loaded
 by the loader during startin a program please use macro:
 
@@ -168,7 +169,7 @@ by the loader during startin a program please use macro:
 
 The macro adds to compilation all *.cpp files from the directory in which the `CMakeLists.txt` file is placed ( `${CMAKE_CURRENT_SOURCE_DIR}` )
 
-## 4. GTest unit test target
+### 4. GTest unit test target
 To add unit test based on gtest and gmoc frameworks, use macro:
 
 `ADD_UNIT_TESTS` wit parameter
@@ -177,7 +178,7 @@ To add unit test based on gtest and gmoc frameworks, use macro:
 The macro adds to compilation all *.cpp files from the directory in which the `CMakeLists.txt` file is placed ( `${CMAKE_CURRENT_SOURCE_DIR}` ).
 The test `test.unit.<module_name>` is added to ctest.
 
-## 5. PSQL extension based on sql script
+### 5. PSQL extension based on sql script
 If there is a need to create psql extension ( to use CREATE EXTENSION psql command ) a cmake macro is added to cmake:
 `ADD_PSQL_EXTENSION` with parameters:
 - NAME - name of extension, in current source directory file <name>.control (see https://www.postgresql.org/docs/12/extend-extensions.html#id-1.8.3.18.11 ) 
@@ -189,22 +190,21 @@ To install the extension please execute 'make install'.
 
 Warning: 'make install' will install all already built project items in the build dir. To install only one of them please build it in a separate build directory, making only the desired target. For example: `make extension.hive_fork_manager; make install;` 
 
-# Dockerized HAF setup
+# Building and deploying HAF inside a docker container
 
-HAF project supports build and start of docker images containing prepared HAF installation for use cases:
+Unless you are developing HAF itself, you will probably find it easiest to use docker containers to deploy and manage your HAF server. 
 
-1. using a docker to start your local HAF `instance`, storing its data on host (docker container will contain built hived, configured PostgreSQL - all what you need is providing a data store location for started container).
-   This usecase is mostly intended to users who want to start own HAF instance and supply it by ourselve done replay or even provided (i.e. by some Hive vendors) matching hived memory snapshot, SQL database dump and matching block_log.
-2. fast start to develop own HAF application or just quickly take a look on working, already configured and ready for use HAF installation. This use case is supported by a  `data` image containing a built HAF instance together with generated data for 5M blocks taken from Hive mainnet and allows some "sanboxing". This image is a monolith - contains all items required to start HAF instance: hived binaries, Hive mainnet block_log cut up to 5M blocks and SQL database already filled by hived replay with enabled sql_serializer plugin.
-   Such image can be useful for people who would like fast start playing with HAF by creating own HAF application or (probably rare case) develop HAF itself. 
+There are currently two docker files available for deploying HAF:
 
-## Ad 1. Building a local `instance` image.
+1. In the "standard" `instance` configuration, both the hived node that collects data from the blockchain and the postgres database server itself are located inside the docker container, but the HAF database data itself is stored outside the docker container on the host, with a docker binding used to map this external location to an internal filesystem location known to the database server. This keeps configuration keeps the docker container itself relatively lightweight, since all the state data is persistently stored on the host system itself. This standard configuration is the one that should be used by API nodes and other production systems. Note: dince the standard configuration doesn't come with a pre-filled database, one of several methods must be used to fill it with already-produced blockchain blocks. There are three available options for filling it: 1) the fastest method is to download and import a HAF database dump from an existing HAF server, 2) the second fastest method is to point the hived process inside the container to a datadir on the host system with downloaded block_log and start hived with the replay option, and 3) the slowest (but least trusting) method is to let the hived process sync from all the blockchain blocks directly from the p2p network.
 
-Build local instance image supports also 2 modes: build for specified commit like also using already checked out sources.
+2. In the "sandbox" `data` configuration, the HAF docker container holds not only the hived process and the database process, it also directly stores the database data itself. In other words, a sandbox container is monolithic and contains all portions of the HAF server. Typically a sandbox container will contain a "filled" version of the HAF database with a fixed number of blocks of data already processed from the blockchain data into HAF table form. The sandbox configuration was designed primarily for Hive app developers who want to quickly deploy a simple HAF server containing some real data so that they can experiment with what can be done with HAF. Currently, the sandbox container for HAF is filled from a block_log file with the first 5 million blockchain blocks.
 
-### Building from pointed source directory
+## Ad 1. Building an `instance` image.
 
-To build instance image using already checked out HAF sources you can use following commandline:
+### Building a HAF docker image from a local git repository
+
+To build an `instance` docker image from a local git repo of haf, run the `build_instance.sh` script with a commandline similar to the example below:
 
 ```
 ../haf/scripts/ci-helpers/build_instance.sh local ../haf registry.gitlab.syncad.com/hive/haf/
@@ -212,105 +212,88 @@ To build instance image using already checked out HAF sources you can use follow
 ```
 
 where:
-`local` is specific to the image tag to be put onto built docker image
-`../haf` points source directory
-`registry.gitlab.syncad.com/hive/haf/` specifies a docker registry where built image can be potentially pushed (push requires additional steps)
+`local` is a suffix to the image tag that will be created for the docker image being built
+`../haf` points to the source directory from which to build the docker image
+`registry.gitlab.syncad.com/hive/haf/` specifies a docker registry where the built image can potentially be pushed (actualling pushing the image to the registry requires additional steps).
 
-Above command will result in creation a local docker image: `registry.gitlab.syncad.com/hive/haf/instance:instance-local`
+The above command will result in creation of a local docker image: `registry.gitlab.syncad.com/hive/haf/instance:instance-local`
 
-### Building a version pointed by commit
+### Building a HAF docker image from a specific git commit hash
 
-This procedure allows to build an `instance` image by checking out given commit from source repository and next following regular `instance` imaage build (using just checked out source directory) described in previous point.
-To run it, you just need to execute following statements:
+A HAF `instance` image can also be built from a specific git commit hash in the HAF repo using the `build_instance4commit.sh` script below:
 
 ```
-build_instance4commit.sh <commit>
-
-i.e.:
-
 build_instance4commit.sh fdebe397498f814920e959d5d11863d8fe51be22 registry.gitlab.syncad.com/hive/haf/
 
 ```
-Above statement will generate an image called: `registry.gitlab.syncad.com/hive/haf/instance:instance-fdebe397498f814920e959d5d11863d8fe51be22` 
+This will create an image called: `registry.gitlab.syncad.com/hive/haf/instance:instance-fdebe397498f814920e959d5d11863d8fe51be22` 
 
-## Ad 2. Sandoboxing/using or building a `data` image.
+## Ad 2. Building a sandboxed `data` image.
 
-You can use one of prebuilt `data` images stored at https://gitlab.syncad.com/hive/haf/container_registry/
+If you want to experiment with a sandboxed HAF docker image, then mostly likely you can just use of the prebuilt `data` images stored at https://gitlab.syncad.com/hive/haf/container_registry/
 
-Of course you also can built given image `data` locally by using scripts:
-- build_data4commit.sh which is able to checkout specified commit and prepare a data image for it
-- build_data.sh script, which performs the same, but for pointed HAF source directory.
+But if do want to build your own image instead, you can use one of the two scripts below:
+- `build_data.sh` which builds the image from a local HAF source directory.
+- `build_data4commit.sh` which checks out a specific commit hash and builds the image from that commit.
 
-Examples below assume following directory structure:
+The examples below assume the following directory structure:
 
 ```
 +--- /home/haf-tester
 |
-+----/home/haf-tester/haf     # Already checked out Haf sources
++----/home/haf-tester/haf     # Already checked out haf sources
 |
-+----/home/haf-tester/workdir # Working directory, where commands described below are executed
++----/home/haf-tester/workdir # A working directory where the commands described below are executed
 
 ```
 
-To build image at your local machine, you should execute following command line:
-
-### Building from pointed source directory
+### Building a HAF `data` image from a source directory
 
 ```
 ../haf/scripts/ci-helpers/build_data.sh local ../haf registry.gitlab.syncad.com/hive/haf/
 ```
 where:
-`local` is specific to the image tag to be put onto built docker image
-`../haf` points source directory
-`registry.gitlab.syncad.com/hive/haf/` specifies a docker registry where built image can be potentially pushed (push requires additional steps)
+`local` is a suffix to the tag for the docker image
+`../haf` points to the source directory to build the docker image from
+`registry.gitlab.syncad.com/hive/haf/` specifies a docker registry where the built image can be potentially pushed (push requires additional steps)
 
-Above command will result in creation a local docker image: `registry.gitlab.syncad.com/hive/haf/data:data-local`
+The command above will create a local docker image called `registry.gitlab.syncad.com/hive/haf/data:data-local`.
 
-### Building a version pointed by commit
-
-This procedure allows to build an `data` image by checking out given commit from source repository and next following regular `data` imaage build (using just checked out source directory) described in previous point.
-To run it, you just need to execute following statements:
+### Building a HAF `data` image from a specified commit
 
 ```
-../haf/scripts/ci-helpers/build_data4commit.sh <commit>
-
-i.e.:
-
 ../haf/scripts/ci-helpers/build_data4commit.sh fdebe397498f814920e959d5d11863d8fe51be22 registry.gitlab.syncad.com/hive/haf/
 
 ```
 
-Above command will result in creation a local docker image: `registry.gitlab.syncad.com/hive/haf/data:data-fdebe397498f814920e959d5d11863d8fe51be22`
+The command above will create a local docker image called `registry.gitlab.syncad.com/hive/haf/data:data-fdebe397498f814920e959d5d11863d8fe51be22`
 
-## Starting already built HAF instance
+## Starting a HAF docker `instance` container
+Before you start your HAF instance, you will need to configurate a hived datadir on your host system. For full details on how to do this, you can refer to the docs in the `hive` repo. 
 
-To start own HAF instance you must have prepared a directory to store a data specific to given instance like:
-a) a `config.ini` file containing all settings specific to your instance. Spawning a prebuilt HAF instance image, implies some settings like: 
-  - enabled a `sql_serializer_plugin` 
-  - some predefined locations of hived datadir and its shared memory file location
+Inside your hived datadir, you will need to create a `config.ini` file. Note that the command-line launch of hived forces the sql_serializer plugin to be enabled (HAF depends on it), but you may want to set some of the other options that control how the sql_serializer operates in your config file.
 
-  Above options are passed directly to hived command line and will override your settings specified in config.ini file. Of course other settings will be respected.
-  Next paragraphs will clarify how to customize i.e. shared memory file location (i.e. if someone would like to store it on ramdisk mounted on host machine)
 
-b) blockchain directory providing a valid blockchain file(s), to be used at initial node replay
-c) a directory `haf_db_store` holding data specific to docker-internal PostgreSQL instance. Thus such data will be persistent across given image restarts.
+You will probably also want to create a `blockchain` subdirectory with a valid block_log file to reduce the time that would otherwise be required to sync the entire blockchain history from the p2p network.
 
-Now it should be possible to run prebuild `instance` image and to peform it, following command line could be useful:
+And finally, you will need to specify a `haf_db_store` directory on your host that the docker container will map the HAF database to. Since this data is stored on the docker container host, it will persist even when the HAF docker container is stopped and restarted.
+
+With these preliminaries out of the way, you can start your `instance` container using a command like the one below:
 
 ```
 ../haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf/instance:instance-local --data-dir=/storage1/mainnet-5M-haf --name=haf-instance-5M --replay --stop-replay-at-block=5000000
 ```
 
-Above command line is an example and can be explained as follows:
-- `registry.gitlab.syncad.com/hive/haf/instance:instance-local` points your built image (in previous steps)
-- `--data-dir=/storage1/mainnet-5M-haf` option enforces proper volume mapping from your host machine to started docker container, and points a data directory where hived node shall put its data
-- `--name=haf-instance-5M`- is an option which allows to easy indentify your instance
+This example works as follows:
+- `registry.gitlab.syncad.com/hive/haf/instance:instance-local` points to the HAF image you built in previous steps
+- `--data-dir=/storage1/mainnet-5M-haf` option enforces proper volume mapping from your host machine to the docker container you are starting and points to a data directory where the hived node shall put its data.
+- `--name=haf-instance-5M`- names your docker container for docker commands.
 - other options `--replay --stop-replay-at-block=5000000` are passed directly to hived command line
 
-Instance starts in detached mode, (similary to service) so you can see no output directly on your console.
+The container starts in detached mode (similar to a service), so you can see no output directly on your console.
 
-To inspect what your instance does, you can use a `docker logs haf-instance-5M` command.
-To stop your instance you can use a `docker container stop haf-instance-5M` command.
+To inspect what the above instance does, you would type `docker logs haf-instance-5M`.
+To stop the instance, you would type `docker container stop haf-instance-5M`.
 
 ## Accessing already started HAF instance service(s)
 
