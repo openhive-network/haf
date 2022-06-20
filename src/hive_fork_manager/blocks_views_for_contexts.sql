@@ -12,7 +12,6 @@ EXECUTE format(
         hc.irreversible_block,
         hc.is_attached,
         hc.fork_id,
-        LEAST(hc.irreversible_block, hc.current_block_num) AS min_block,
         hc.current_block_num > hc.irreversible_block and exists (SELECT NULL::text FROM hive.registered_tables hrt
                                               WHERE hrt.context_id = hc.id)
         AS reversible_range
@@ -59,7 +58,7 @@ BEGIN
             hb.created_at,
             hb.producer_account_id
            FROM hive.blocks hb
-          WHERE hb.num <= c.min_block
+          WHERE hb.num <= c.irreversible_block
         UNION ALL
          SELECT hbr.num,
             hbr.hash,
@@ -143,7 +142,7 @@ BEGIN
                    ht.expiration,
                    ht.signature
                 FROM hive.transactions ht
-                WHERE ht.block_num <= c.min_block
+                WHERE ht.block_num <= c.irreversible_block
                 UNION ALL
                 SELECT reversible.block_num,
                     reversible.trx_in_block,
@@ -242,7 +241,7 @@ EXECUTE format(
               ho.timestamp,
               ho.body
               FROM hive.operations ho
-              WHERE ho.block_num <= c.min_block
+              WHERE ho.block_num <= c.irreversible_block
             UNION ALL
               SELECT
                 o.id,
@@ -327,7 +326,7 @@ EXECUTE format(
                 , htm.signature
         FROM hive.transactions_multisig htm
         JOIN hive.transactions ht ON ht.trx_hash = htm.trx_hash
-        WHERE ht.block_num <= c.min_block
+        WHERE ht.block_num <= c.irreversible_block
         UNION ALL
         SELECT
                reversible.trx_hash
@@ -408,7 +407,7 @@ EXECUTE format(
                  ha.id,
                  ha.name
                 FROM hive.accounts ha
-                WHERE ha.block_num <= c.min_block
+                WHERE ha.block_num <= c.irreversible_block
                 UNION ALL
                 SELECT
                     reversible.block_num,
@@ -493,7 +492,7 @@ EXECUTE format(
                  ha.operation_id,
                  ha.op_type_id
                 FROM hive.account_operations ha
-                WHERE ha.block_num <= c.min_block
+                WHERE ha.block_num <= c.irreversible_block
                 UNION ALL
                 SELECT
                     reversible.block_num,
