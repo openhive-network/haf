@@ -1,0 +1,1 @@
+../../hive/scripts/ci-helpers/export-binaries.sh
