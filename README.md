@@ -308,15 +308,18 @@ To stop the instance, you would type `docker container stop haf-instance-5M`.
 
   ## Access permissions specific to internal PostgreSQL instance
 
-  1. Roles/Unix account predefined in Docker instance:
+1.  Roles/Unix account predefined in Docker instance:
     HAF Docker image creates following unix accounts/database roles:
     - haf_admin - unix account (also able to perform sudo). It also contains a database role (called the same) which has configured SUPERUSER permissions. This role shall be used only in exceptional cases, when some administration steps really requiring SUPERUSER permission shall be performed
     - hived - unix account and also database role, which is used to spawn internal hived process. This unix account has limited rights (can't do sudo), but database role has specific rights needed to perform data write to haf_block_log database. Such role is dedicated only to hived usage and shall be not used in other cases.
     - haf_app_admin - this account is only specific to PostgreSQL database role. It has granted limited rights, which are sufficient to regular HAF application actions like creation of other application specific roles, private database scheme like also tables, views and functions defined in this scheme. Given role has declined write access to the `hive` schema (mostly internal HAF data).
 
-  2. Accessing internal PostgreSQL held by dockerized HAF instance:
-    By default internal PostgreSQL instance allows trusted connections performed by `haf_app_admin` account incoming from network class: `172.0.0.0/0` (this is default IP address range specific to docker bridge network). To connect your application to HAF instance (assuming its contaier has address: 172.17.0.2) , you should connect to: `postgresql://haf_app_admin@172.17.0.2/haf_block_log`.
-    
+1. Accessing internal PostgreSQL held by dockerized HAF instance:
+  By default internal PostgreSQL instance allows trusted connections performed by `haf_app_admin` account incoming from network class: `172.0.0.0/8` (this is default IP address range specific to docker bridge network). To connect your application to HAF instance (assuming its container has address: `172.17.0.2`) , you should connect to: `postgresql://haf_app_admin@172.17.0.2/haf_block_log`.<br/><br/>
+To override default authorization rules (defined in PostgreSQL pg_hba.conf file), `PG_ACCESS` environment variable can used (it can be overrided by passing `docker run -e PG_ACCESS=value <other-args> <docker-image>` parameter). As its value, whole pg_hba.conf entry should be defined (reflecting PostgreSQL configuration rules), i.e.:<br/>`PG_ACCESS="host    haf_block_log    haf_app_admin  0.0.0.0/0    trust"`<br/>
+what can override default rules and allow any netork to access docker internal PostgreSQL service using haf_app_admin account.
+There is a way to specify multiple entries - they must be separated by newline character, i.e.: <br/>`PG_ACCESS="host    haf_block_log    haf_app_admin  0.0.0.0/0    trust\n host    haf_block_log    haf_admin  0.0.0.0/0    trust"`
+
     To perform SQL administration access to the database, most prefered way is to connect directly into docker container using bash, and by operating on haf_admin account (default one after access it) using psql tool any action specific to PostgreSQL instance can be performed. Below is specified example command line which could be used for this operation:
     ```
     docker container exec -it haf-instance-5M /bin/bash
