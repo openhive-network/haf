@@ -76,6 +76,8 @@ ENV HTTP_PORT=${HTTP_PORT}
 
 ENV HAF_DB_STORE=/home/hived/datadir/haf_db_store
 ENV PGDATA=/home/hived/datadir/haf_db_store/pgdata
+# Environment variable which allows to override default postgres access specification in pg_hba.conf
+ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust"
 
 SHELL ["/bin/bash", "-c"] 
 
@@ -92,7 +94,7 @@ COPY --from=build /home/haf_admin/haf /home/haf_admin/haf/
 
 ADD ./docker/docker_entrypoint.sh .
 ADD --chown=postgres:postgres ./docker/postgresql.conf /etc/postgresql/12/main/postgresql.conf
-ADD --chown=postgres:postgres ./docker/pg_hba.conf /etc/postgresql/12/main/pg_hba.conf
+ADD --chown=postgres:postgres ./docker/pg_hba.conf /etc/postgresql/12/main/pg_hba.conf.default
 
 RUN sudo -n mkdir -p /home/hived/bin && sudo -n mkdir -p /home/hived/shm_dir && \
   sudo -n mkdir -p /home/hived/datadir && sudo -n chown -Rc hived:hived /home/hived/

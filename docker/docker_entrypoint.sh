@@ -40,10 +40,20 @@ cleanup () {
   echo "Cleanup actions done."
 }
 
+prepare_pg_hba_file() {
+  sudo -En /bin/bash << EOF
+  echo -e "${PG_ACCESS}" > /etc/postgresql/12/main/pg_hba.conf
+  cat /etc/postgresql/12/main/pg_hba.conf.default >> /etc/postgresql/12/main/pg_hba.conf
+  cat /etc/postgresql/12/main/pg_hba.conf
+EOF
+}
+
 # What can be a difference to catch EXIT instead of SIGINT ? Found here: https://gist.github.com/CMCDragonkai/e2cde09b688170fb84268cafe7a2b509
 #trap 'exit' INT QUIT TERM
 #trap cleanup EXIT
 trap cleanup INT QUIT TERM
+
+prepare_pg_hba_file
 
 if [ ! -d /home/hived/datadir ]
 then
