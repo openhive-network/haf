@@ -71,7 +71,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     on_new_account(op.new_account_name);
     if( _creation_operation_id.valid() )
-      on_new_operation(op.new_account_name, *_creation_operation_id, _creation_operation_type_id);
+      on_new_operation(op.new_account_name, *_creation_operation_id, _creation_operation_type_id, false/*is_current_operation*/ );
     on_new_operation(op.new_account_name, _processed_operation_id, _processed_operation_type_id);
 
     if( op.creator != op.new_account_name )
@@ -97,9 +97,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _cached_data.accounts.emplace_back(account_id, std::string(account_name), _block_num);
   }
 
-  void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id, int32_t operation_type_id)
+  void accounts_collector::on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id, int32_t operation_type_id, bool is_current_operation)
   {
-    bool _allow_add_operation = on_before_new_operation( account_name );
+    bool _allow_add_operation = on_before_new_operation( account_name, is_current_operation );
 
     const hive::chain::account_object* account_ptr = _chain_db.find_account(account_name);
 
@@ -135,9 +135,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       _filter_collector.collect_tracked_account( name );
   }
 
-  bool filtered_accounts_collector::on_before_new_operation( const hive::protocol::account_name_type& account_name )
+  bool filtered_accounts_collector::on_before_new_operation( const hive::protocol::account_name_type& account_name, bool is_current_operation )
   {
-    return _filter_collector.is_account_tracked( account_name ) && _filter_collector.is_operation_tracked();
+    return _filter_collector.is_account_tracked( account_name ) && _filter_collector.is_operation_tracked( is_current_operation );
   }
   
   bool filtered_accounts_collector::is_op_accepted() const

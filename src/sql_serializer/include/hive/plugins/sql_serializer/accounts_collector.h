@@ -15,7 +15,7 @@ namespace hive::plugins::sql_serializer {
   {
     protected:
       virtual void on_collect( const hive::protocol::operation& op, const flat_set<hive::protocol::account_name_type>& impacted ){}
-      virtual bool on_before_new_operation( const hive::protocol::account_name_type& account_name ){ return true; }
+      virtual bool on_before_new_operation( const hive::protocol::account_name_type& account_name, bool is_current_operation ){ return true; }
 
     public:
 
@@ -58,7 +58,7 @@ namespace hive::plugins::sql_serializer {
 
       void on_new_account(const hive::protocol::account_name_type& account_name);
 
-      void on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id, int32_t operation_type_id);
+      void on_new_operation(const hive::protocol::account_name_type& account_name, int64_t operation_id, int32_t operation_type_id, bool is_current_operation = true);
 
     private:
       hive::chain::database& _chain_db;
@@ -82,7 +82,7 @@ namespace hive::plugins::sql_serializer {
 
       protected:
         void on_collect( const hive::protocol::operation& op, const flat_set<hive::protocol::account_name_type>& impacted ) override;
-        bool on_before_new_operation( const hive::protocol::account_name_type& account_name ) override;
+        bool on_before_new_operation( const hive::protocol::account_name_type& account_name, bool is_current_operation ) override;
 
       public:
         filtered_accounts_collector( hive::chain::database& chain_db , cached_data_t& cached_data, bool psql_dump_account_operations, const blockchain_data_filter& filter );

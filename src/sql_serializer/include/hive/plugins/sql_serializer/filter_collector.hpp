@@ -8,7 +8,12 @@ namespace hive::plugins::sql_serializer {
   {
     private:
 
-      bool _operation_accepted = false;
+      struct
+      {
+        bool previous = false;
+        bool current  = false;
+      } _operation_accepted;
+
       flat_set<hive::protocol::account_name_type> _accounts_accepted;
 
       const blockchain_data_filter& _filter;
@@ -22,7 +27,7 @@ namespace hive::plugins::sql_serializer {
       bool is_account_tracked( const hive::protocol::account_name_type& account ) const;
       void collect_tracked_account( const hive::protocol::account_name_type& account_name );
 
-      bool is_operation_tracked() const;
+      bool is_operation_tracked( bool is_current_operation ) const;
       void collect_tracked_operation( const hive::protocol::operation& op );
   };
 
