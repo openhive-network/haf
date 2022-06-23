@@ -45,6 +45,23 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.app_reset_data( _name hive.context_name )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+  IF hive.app_context_exists( _name ) THEN
+    PERFORM hive.app_remove_context(_name);
+  END IF;
+
+  EXECUTE format( 'DROP SCHEMA IF EXISTS %s CASCADE;', _name );
+END;
+$BODY$
+;
+
+
 CREATE OR REPLACE FUNCTION hive.app_context_exists( _name TEXT )
     RETURNS BOOL
     LANGUAGE plpgsql
