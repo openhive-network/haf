@@ -4,6 +4,10 @@ CREATE TABLE IF NOT EXISTS hive.blocks (
        prev bytea NOT NULL,
        created_at timestamp without time zone NOT NULL,
        producer_account_id INTEGER NOT NULL,
+       transaction_merkle_root bytea NOT NULL,
+       extensions jsonb DEFAULT NULL,
+       witness_signature bytea NOT NULL,
+       signing_key text NOT NULL,
        CONSTRAINT pk_hive_blocks PRIMARY KEY( num )
 );
 

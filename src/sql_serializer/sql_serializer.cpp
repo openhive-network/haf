@@ -488,6 +488,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
 
   handle_transactions(note.block.transactions, note.block_num);
   const hive::chain::account_object* account_ptr = chain_db.find_account(note.block.witness);
+  const hive::chain::witness_object* witness_ptr = chain_db.find_witness( note.block.witness );
 
   currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
   currently_caching_data->blocks.emplace_back(
@@ -495,7 +496,11 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
     note.block_num,
     note.block.timestamp,
     note.prev_block_id,
-    account_ptr->get_id());
+    account_ptr->get_id(),
+    note.block.transaction_merkle_root,
+    fc::json::to_string( note.block.extensions ),
+    note.block.witness_signature,
+    witness_ptr->signing_key);
   _last_block_num = note.block_num;
 
   _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );

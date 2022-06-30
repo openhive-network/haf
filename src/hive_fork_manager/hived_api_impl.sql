@@ -25,6 +25,10 @@ BEGIN
         , hbr.prev
         , hbr.created_at
         , hbr.producer_account_id
+        , hbr.transaction_merkle_root
+        , hbr.extensions
+        , hbr.witness_signature
+        , hbr.signing_key
     FROM
         hive.blocks_reversible hbr
     WHERE

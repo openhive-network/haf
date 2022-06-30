@@ -60,13 +60,21 @@ BEGIN
             t.hash,
             t.prev,
             t.created_at,
-            t.producer_account_id
+            t.producer_account_id,
+            t.transaction_merkle_root,
+            t.extensions,
+            t.witness_signature,
+            t.signing_key
         FROM hive.%s_context_data_view c,
         LATERAL ( SELECT hb.num,
             hb.hash,
             hb.prev,
             hb.created_at,
-            hb.producer_account_id
+            hb.producer_account_id,
+            hb.transaction_merkle_root,
+            hb.extensions,
+            hb.witness_signature,
+            hb.signing_key
            FROM hive.blocks hb
           WHERE hb.num <= c.min_block
         UNION ALL
@@ -74,7 +82,11 @@ BEGIN
             hbr.hash,
             hbr.prev,
             hbr.created_at,
-            hbr.producer_account_id
+            hbr.producer_account_id,
+            hbr.transaction_merkle_root,
+            hbr.extensions,
+            hbr.witness_signature,
+            hbr.signing_key
            FROM hive.blocks_reversible hbr
            JOIN
            (
@@ -105,7 +117,11 @@ EXECUTE format(
             hb.hash,
             hb.prev,
             hb.created_at,
-            hb.producer_account_id
+            hb.producer_account_id,
+            hb.transaction_merkle_root,
+            hb.extensions,
+            hb.witness_signature,
+            hb.signing_key
         FROM hive.blocks hb
         ;', _context_name
     );

@@ -289,3 +289,51 @@ $BODY$
 ;
 
 
+
+DROP TYPE IF EXISTS hive.block_header_type;
+CREATE TYPE hive.block_header_type AS (
+      previous bytea
+    , timestamp TIMESTAMP
+    , witness VARCHAR(16)
+    , transaction_merkle_root bytea
+    , extensions jsonb
+    , witness_signature bytea
+    );
+
+CREATE OR REPLACE FUNCTION hive.get_block_header( _block_num INT )
+    RETURNS hive.block_header_type
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __witness_account_id INTEGER;
+    __witness_name VARCHAR(16);
+    __result hive.block_header_type;
+BEGIN
+    SELECT
+           hb.prev
+         , hb.created_at
+         , hb.transaction_merkle_root
+         , hb.witness_signature
+         , hb.extensions
+         , hb.producer_account_id
+    FROM hive.blocks_view hb
+    WHERE hb.num = _block_num
+    INTO
+         __result.previous
+       , __result.timestamp
+       , __result.transaction_merkle_root
+       , __result.witness_signature
+       , __result.extensions
+       , __witness_account_id;
+
+    SELECT ha.name
+    FROM hive.accounts_view ha
+    WHERE ha.id = __witness_account_id
+    INTO __result.witness;
+
+    RETURN __result;
+END;
+$BODY$
+;

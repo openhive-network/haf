@@ -3,7 +3,7 @@
 namespace hive{ namespace plugins{ namespace sql_serializer {
 
   const char hive_blocks::TABLE[] = "hive.blocks";
-  const char hive_blocks::COLS[] = "num, hash, prev, created_at, producer_account_id";
+  const char hive_blocks::COLS[] = "num, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key";
 
   template<> const char hive_transactions< std::vector<PSQL::processing_objects::process_transaction_t> >::TABLE[] = "hive.transactions";
   template<> const char hive_transactions< std::vector<PSQL::processing_objects::process_transaction_t> >::COLS[] = "block_num, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature";

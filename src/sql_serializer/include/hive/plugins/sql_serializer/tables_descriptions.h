@@ -22,7 +22,8 @@ namespace hive::plugins::sql_serializer {
       std::string operator()(typename container_t::const_reference data) const
       {
         return std::to_string(data.block_number) + "," + escape_raw(data.hash) + "," +
-        escape_raw(data.prev_hash) + ", '" + data.created_at.to_iso_string() + "' ," + std::to_string(data.producer_account_id);
+        escape_raw(data.prev_hash) + ", '" + data.created_at.to_iso_string() + "' ," + std::to_string(data.producer_account_id) + "," +
+        escape_raw(data.transaction_merkle_root) + "," + escape(data.extensions) + "," + escape_raw(data.witness_signature) + ", '" + static_cast<std::string>(data.signing_key) + "'";
       }
       };
     };
