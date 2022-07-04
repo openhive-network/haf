@@ -184,6 +184,13 @@ replay_accounts_operations_filtered_with_haf:
   script:
     - tox .
 
+replay_virtual_operations_filtered_with_haf:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/virtual_operations_filtered"
+  script:
+    - tox .
+
 replay_operations_filtered_with_haf:
   extends: .replay_step
   variables:
