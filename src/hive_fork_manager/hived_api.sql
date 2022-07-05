@@ -289,11 +289,10 @@ $BODY$
 ;
 
 
-
 DROP TYPE IF EXISTS hive.block_header_type;
 CREATE TYPE hive.block_header_type AS (
       previous bytea
-    , timestamp TIMESTAMP
+    , timestamp TIMESTAMP WITHOUT TIME ZONE
     , witness VARCHAR(16)
     , transaction_merkle_root bytea
     , extensions jsonb
@@ -308,8 +307,7 @@ AS
 $BODY$
 DECLARE
     __witness_account_id INTEGER;
-    __witness_name VARCHAR(16);
-    __result hive.block_header_type;
+    __result hive.block_header_type := NULL;
 BEGIN
     SELECT
            hb.prev
@@ -332,6 +330,47 @@ BEGIN
     FROM hive.accounts_view ha
     WHERE ha.id = __witness_account_id
     INTO __result.witness;
+
+    RETURN __result;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.get_block( _block_num INT )
+    RETURNS hive.block_type
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __irreversible_head_block hive.blocks.num%TYPE;
+BEGIN
+    SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hive.blocks;
+    IF ( _block_num < __irreversible_head_block ) THEN
+        RETURN hive.get_block_irreversible( _block_num );
+    END IF;
+
+    RETURN hive.get_block_reversible( _block_num );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.get_block_range( _starting_block_num INT, _count INT )
+    RETURNS hive.block_type[]
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __result hive.block_type[] := NULL;
+BEGIN
+    ASSERT _starting_block_num  > 0, "Invalid starting block number";
+    ASSERT _count > 0, "Why ask for zero blocks?";
+    ASSERT _count <= 1000, "You can only ask for 1000 blocks at a time";
+
+    SELECT ARRAY_AGG( hive.get_block(num) )
+    FROM generate_series(_starting_block_num, _starting_block_num + _count - 1) num
+    INTO __result;
 
     RETURN __result;
 END;
