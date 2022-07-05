@@ -498,7 +498,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
     note.prev_block_id,
     account_ptr->get_id(),
     note.block.transaction_merkle_root,
-    fc::json::to_string( note.block.extensions ),
+    (note.block.extensions.size() == 0) ? fc::optional<std::string>() : fc::optional<std::string>(fc::json::to_string( note.block.extensions )),
     note.block.witness_signature,
     witness_ptr->signing_key);
   _last_block_num = note.block_num;

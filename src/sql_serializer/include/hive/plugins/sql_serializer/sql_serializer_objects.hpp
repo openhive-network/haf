@@ -67,12 +67,12 @@ namespace hive
             hash_t prev_hash;
             int32_t producer_account_id = 0;
             checksum_type transaction_merkle_root;
-            std::string extensions;
+            fc::optional<std::string> extensions;
             signature_type witness_signature;
             public_key_type signing_key;
 
             process_block_t(const hash_t &_hash, const int _block_number, const fc::time_point_sec _tp, const hash_t &_prev, const int _producer_account_id,
-                            const checksum_type& _transaction_merkle_root, const std::string& _extensions, const signature_type& _witness_signature, const public_key_type& _signing_key)
+                            const checksum_type& _transaction_merkle_root, const fc::optional<std::string>& _extensions, const signature_type& _witness_signature, const public_key_type& _signing_key)
             : block_data_with_hash{_hash, _block_number}, created_at{_tp}, prev_hash{_prev}, producer_account_id{_producer_account_id},
             transaction_merkle_root{_transaction_merkle_root}, extensions{_extensions}, witness_signature{_witness_signature}, signing_key{_signing_key}
             {}

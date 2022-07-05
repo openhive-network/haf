@@ -9,6 +9,15 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   std::string
+  data2_sql_tuple_base::escape(const fc::optional<std::string>& source) const
+  {
+    if( source.valid() )
+      return escape_sql(*source);
+    else
+      return "NULL";
+  }
+
+  std::string
   data2_sql_tuple_base::escape_raw(const fc::ripemd160& hash) const
   {
     return "\'\\x" + fc::to_hex(hash.data(), hash.data_size()) + '\'';
