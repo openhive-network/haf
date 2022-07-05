@@ -23,7 +23,8 @@ def test_blocks_day_stats():
         block_day_file = pd.read_csv(file)
 
     try:
-        pd.testing.assert_frame_equal(block_day_database, block_day_file)
+        if not( block_day_database.empty and block_day_file.empty ):
+            pd.testing.assert_frame_equal(block_day_database, block_day_file)
     except:
         block_day_database.to_csv(patterns_root.joinpath('block_day_stats_view.out.csv'), index=False)
         raise
