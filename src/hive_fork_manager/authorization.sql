@@ -85,6 +85,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.save_and_drop_constraints( in _table_schema TEXT, in _table_name TEXT )
     , hive.refresh_irreversible_block_for_all_contexts( _new_irreversible_block INT )
     , hive.get_block_header( _block_num INT )
+    , hive.get_block( _block_num INT )
+    , hive.get_block_range( _starting_block_num INT, _count INT )
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION

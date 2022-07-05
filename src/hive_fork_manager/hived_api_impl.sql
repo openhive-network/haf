@@ -491,3 +491,184 @@ END;
 $BODY$
 ;
 
+DROP TYPE IF EXISTS hive.transaction_type;
+CREATE TYPE hive.transaction_type AS (
+      ref_block_num integer
+    , ref_block_prefix bigint
+    , expiration TIMESTAMP WITHOUT TIME ZONE
+    , operations text[]
+    , extensions jsonb
+    , signatures bytea[]
+    );
+
+DROP TYPE IF EXISTS hive.block_type;
+CREATE TYPE hive.block_type AS (
+      previous bytea
+    , timestamp TIMESTAMP WITHOUT TIME ZONE
+    , witness VARCHAR(16)
+    , transaction_merkle_root bytea
+    , extensions jsonb
+    , witness_signature bytea
+    , transactions hive.transaction_type[]
+    , block_id bytea
+    , signing_key text
+    , transaction_ids bytea[]
+    );
+
+CREATE OR REPLACE FUNCTION hive.get_block_irreversible( _block_num INT )
+    RETURNS hive.block_type
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __witness_account_id INTEGER;
+    __result hive.block_type := NULL;
+BEGIN
+    SELECT
+           hb.prev
+         , hb.created_at
+         , hb.transaction_merkle_root
+         , hb.witness_signature
+         , hb.extensions
+         , hb.producer_account_id
+         , hb.hash
+         , hb.signing_key
+    FROM hive.blocks hb
+    WHERE hb.num = _block_num
+    INTO
+         __result.previous
+       , __result.timestamp
+       , __result.transaction_merkle_root
+       , __result.witness_signature
+       , __result.extensions
+       , __witness_account_id
+       , __result.block_id
+       , __result.signing_key;
+
+    SELECT ha.name
+    FROM hive.accounts ha
+    WHERE ha.id = __witness_account_id
+    INTO __result.witness;
+
+
+    WITH ht AS (
+            SELECT *
+            FROM hive.transactions
+            WHERE block_num = _block_num
+            ORDER BY trx_in_block
+    ), operations AS (
+            SELECT ho.block_num, ho.trx_in_block, ARRAY_AGG(ho.body) bodies
+            FROM hive.operations ho
+            WHERE
+                ho.op_type_id < (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = TRUE ORDER BY ot.id LIMIT 1)
+                AND ho.block_num = _block_num
+            GROUP BY ho.block_num, ho.trx_in_block
+    ), multisig AS (
+            SELECT trx_hash, ARRAY_AGG(signature) signatures
+            FROM hive.transactions_multisig
+            WHERE trx_hash = ANY(
+                SELECT trx_hash FROM ht
+            )
+            GROUP BY trx_hash
+    ), transactions AS (
+            SELECT
+                ht.ref_block_num ref_block_num, ht.ref_block_prefix ref_block_prefix
+              , ht.expiration expiration, operations.bodies operations
+              , NULL extensions, ht.signature || multisig.signatures signatures
+              , ht.trx_hash trx_hash
+            FROM ht
+            LEFT JOIN operations ON ht.block_num = operations.block_num AND ht.trx_in_block = operations.trx_in_block
+            LEFT JOIN multisig ON ht.trx_hash = multisig.trx_hash
+            ORDER BY ht.trx_in_block
+    )
+    SELECT
+        ARRAY_AGG( ROW(ref_block_num, ref_block_prefix, expiration, operations, extensions, signatures)::hive.transaction_type )
+      , ARRAY_AGG(trx_hash)
+    FROM transactions
+    INTO __result.transactions, __result.transaction_ids;
+
+
+    RETURN __result;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.get_block_reversible( _block_num INT )
+    RETURNS hive.block_type
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __witness_account_id INTEGER;
+    __result hive.block_type := NULL;
+BEGIN
+    SELECT
+           hb.prev
+         , hb.created_at
+         , hb.transaction_merkle_root
+         , hb.witness_signature
+         , hb.extensions
+         , hb.producer_account_id
+         , hb.hash
+         , hb.signing_key
+    FROM hive.blocks_view hb
+    WHERE hb.num = _block_num
+    INTO
+         __result.previous
+       , __result.timestamp
+       , __result.transaction_merkle_root
+       , __result.witness_signature
+       , __result.extensions
+       , __witness_account_id
+       , __result.block_id
+       , __result.signing_key;
+
+    SELECT ha.name
+    FROM hive.accounts_view ha
+    WHERE ha.id = __witness_account_id
+    INTO __result.witness;
+
+
+    WITH ht AS (
+            SELECT *
+            FROM hive.transactions_view
+            WHERE block_num = _block_num
+            ORDER BY trx_in_block
+    ), operations AS (
+            SELECT ho.block_num, ho.trx_in_block, ARRAY_AGG(ho.body) bodies
+            FROM hive.operations_view ho
+            WHERE
+                ho.op_type_id < (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = TRUE ORDER BY ot.id LIMIT 1)
+                AND ho.block_num = _block_num
+            GROUP BY ho.block_num, ho.trx_in_block
+    ), multisig AS (
+            SELECT trx_hash, ARRAY_AGG(signature) signatures
+            FROM hive.transactions_multisig_view
+            WHERE trx_hash = ANY(
+                SELECT trx_hash FROM ht
+            )
+            GROUP BY trx_hash
+    ), transactions AS (
+            SELECT
+                ht.ref_block_num ref_block_num, ht.ref_block_prefix ref_block_prefix
+              , ht.expiration expiration, operations.bodies operations
+              , NULL extensions, ht.signature || multisig.signatures signatures
+              , ht.trx_hash trx_hash
+            FROM ht
+            LEFT JOIN operations ON ht.block_num = operations.block_num AND ht.trx_in_block = operations.trx_in_block
+            LEFT JOIN multisig ON ht.trx_hash = multisig.trx_hash
+            ORDER BY ht.trx_in_block
+    )
+    SELECT
+        ARRAY_AGG( ROW(ref_block_num, ref_block_prefix, expiration, operations, extensions, signatures)::hive.transaction_type )
+      , ARRAY_AGG(trx_hash)
+    FROM transactions
+    INTO __result.transactions, __result.transaction_ids;
+
+
+    RETURN __result;
+END;
+$BODY$
+;
