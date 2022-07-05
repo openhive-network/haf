@@ -1,5 +1,6 @@
 from sqlalchemy import Column, BigInteger, DateTime, Integer, LargeBinary, SmallInteger, String, Text, MetaData
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 # declarative base class
@@ -48,6 +49,10 @@ class Blocks(Base):
     prev = Column(LargeBinary)
     created_at = Column(DateTime)
     producer_account_id = Column(Integer)
+    transaction_merkle_root = Column(LargeBinary)
+    extensions = Column(JSONB)
+    witness_signature = Column(LargeBinary)
+    signing_key = Column(Text)
 
 
 class BlocksReversible(Base):
@@ -58,6 +63,10 @@ class BlocksReversible(Base):
     prev = Column(LargeBinary)
     created_at = Column(DateTime)
     producer_account_id = Column(Integer)
+    transaction_merkle_root = Column(LargeBinary)
+    extensions = Column(JSONB)
+    witness_signature = Column(LargeBinary)
+    signing_key = Column(Text)
     fork_id = Column(BigInteger, primary_key=True)
 
 
