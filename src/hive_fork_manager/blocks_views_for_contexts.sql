@@ -13,11 +13,15 @@ EXECUTE format(
         hc.is_attached,
         hc.fork_id,
         /*
-            Definition of `min_block` (from least(current_block_num, irrecersible_block)) has been changed because of creation of gap, between app irreversible block
-            and app reversibble blocks which are no longer in hive.reversible blocks, because of delay of processing blocks,
-            which can be long enough, that blocks are no longer avaiable in previously mentioned table, but are in hive.blocks.
+            Definition of `min_block` (from least(current_block_num, irrecersible_block)) has been changed because of creation of gap,
+            between app irreversible block and app reversibble blocks which are no longer in hive.reversible blocks,
+            because of delay of processing blocks, which can be long enough, that blocks are no longer avaiable in previously mentioned table,
+            but are in hive.blocks.
         */
-        hc.current_block_num AS min_block,
+        LEAST(
+            (SELECT num FROM hive.blocks_reversible ORDER BY num ASC LIMIT 1), -- thanks to this, there will be no duplicates
+            hc.current_block_num
+        ) AS min_block,
         hc.current_block_num > hc.irreversible_block and exists (SELECT NULL::text FROM hive.registered_tables hrt
                                               WHERE hrt.context_id = hc.id)
         AS reversible_range
