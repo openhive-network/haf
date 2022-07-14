@@ -1,0 +1,5 @@
+# variant extension
+comment = 'Variant data type for PostgreSQL'
+default_version = '@GIT_REVISION@'
+relocatable = false
+schema = 'variant'
