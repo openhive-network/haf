@@ -66,6 +66,21 @@ namespace hive::plugins::sql_serializer {
       };
     };
 
+  struct variant_operation_deserializer : public data2_sql_tuple_base
+  {
+    using data2_sql_tuple_base::data2_sql_tuple_base;
+
+    template< typename T >
+    std::string operator()( const T& op )
+    {
+      fc::variant opVariant;
+      fc::to_variant(op, opVariant);
+      fc::string deserialized_op = fc::json::to_string(opVariant);
+
+      return escape(deserialized_op);
+    }
+  };
+
   template< typename Container >
   struct hive_operations
     {
@@ -74,20 +89,6 @@ namespace hive::plugins::sql_serializer {
 
     static const char TABLE[];
     static const char COLS[];
-
-    struct variant_operation_deserializer
-    {
-    public:
-      template< typename T >
-      std::string operator()( const T& op )
-      {
-        fc::variant opVariant;
-        fc::to_variant(op, opVariant);
-        fc::string deserialized_op = fc::json::to_string(opVariant);
-
-        return escape(deserialized_op);
-      }
-    };
 
     struct data2sql_tuple : public data2_sql_tuple_base
       {
