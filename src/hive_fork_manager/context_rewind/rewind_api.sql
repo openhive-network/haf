@@ -115,12 +115,20 @@ AS
 $BODY$
 DECLARE
     __context_id INTEGER := NULL;
+    __current_block_num INTEGER := NULL;
 BEGIN
-    SELECT ct.id FROM hive.contexts ct WHERE ct.name=_context INTO __context_id;
+    SELECT ct.id, ct.current_block_num FROM hive.contexts ct WHERE ct.name=_context INTO __context_id, __current_block_num;
 
     IF __context_id IS NULL THEN
         RAISE EXCEPTION 'Unknown context %', _context;
     END IF;
+
+    PERFORM
+    hive.remove_obsolete_operations( hrt.shadow_table_name, __current_block_num )
+            FROM hive.registered_tables hrt
+            JOIN hive.contexts hc ON hc.id = hrt.context_id
+            WHERE hc.name = _context
+            ORDER BY hrt.id;
 
     PERFORM hive.detach_table( hrt.origin_table_schema, hrt.origin_table_name )
     FROM hive.registered_tables hrt
