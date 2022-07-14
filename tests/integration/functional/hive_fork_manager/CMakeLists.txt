@@ -226,6 +226,7 @@ ADD_SQL_FUNCTIONAL_TESTS( app_api/app_next_block_after_attach_2.sql )
 ADD_SQL_FUNCTIONAL_TESTS( app_api/get_block_header_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( app_api/get_block_header_2_test.sql )
 ADD_SQL_FUNCTIONAL_TESTS( app_api/get_block_header_negative_test.sql )
+ADD_SQL_FUNCTIONAL_TESTS( app_api/app_context_detach_after_next_block.sql )
 
 ADD_SQL_FUNCTIONAL_TESTS( scenarios/massive_sync_live_blocks_and_fork.sql )
 ADD_SQL_FUNCTIONAL_TESTS( scenarios/massive_sync_live_blocks_and_fork_non_forking_app.sql )
