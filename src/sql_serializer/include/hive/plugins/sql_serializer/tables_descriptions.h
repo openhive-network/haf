@@ -75,19 +75,29 @@ namespace hive::plugins::sql_serializer {
     static const char TABLE[];
     static const char COLS[];
 
+    struct variant_operation_deserializer
+    {
+    public:
+      template< typename T >
+      std::string operator()( const T& op )
+      {
+        fc::variant opVariant;
+        fc::to_variant(op, opVariant);
+        fc::string deserialized_op = fc::json::to_string(opVariant);
+
+        return escape(deserialized_op);
+      }
+    };
+
     struct data2sql_tuple : public data2_sql_tuple_base
       {
       using data2_sql_tuple_base::data2_sql_tuple_base;
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        fc::variant opVariant;
-        fc::to_variant(data.op, opVariant);
-        fc::string deserialized_op = fc::json::to_string(opVariant);
-
         return std::to_string(data.operation_id) + ',' + std::to_string(data.block_number) + ',' +
         std::to_string(data.trx_in_block) + ',' + std::to_string(data.op_in_trx) + ',' +
-        std::to_string(data.op.which()) + ",'" + data.timestamp.to_iso_string() + "'," + escape(deserialized_op);
+        std::to_string(data.op.which()) + ",'" + data.timestamp.to_iso_string() + "'," + variant_operation_deserializer{}( data.op );
       }
       };
     };
