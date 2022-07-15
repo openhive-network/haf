@@ -66,7 +66,7 @@ done
 abs_src_dir=`realpath -e --relative-base="$SCRIPTPATH" "$HAF_SOURCE_DIR"`
 abs_build_dir=`realpath -m --relative-base="$SCRIPTPATH" "$HAF_BINARY_DIR"`
 
-"$SCRIPTPATH/../hive/scripts/build.sh" --source-dir="$abs_src_dir" --binary-dir="$abs_build_dir" "${CMAKE_ARGS[@]}"
+"$SCRIPTPATH/../hive/scripts/build.sh" --source-dir="$abs_src_dir" --binary-dir="$abs_build_dir" "${CMAKE_ARGS[@]}" "$@"
 
 
 

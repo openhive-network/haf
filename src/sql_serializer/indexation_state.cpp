@@ -186,6 +186,7 @@ indexation_state::on_post_reindex( cached_data_t& cached_data, uint32_t last_blo
     return;
   }
 
+  elog("indexation_state::on_post_reindex update_state");
   update_state( INDEXATION::P2P, cached_data, last_block_num, UNKNOWN );
 }
 
@@ -209,6 +210,7 @@ indexation_state::on_first_block() {
     return;
   }
 
+  elog("indexation_state::on_first_block update_state");
   update_state( INDEXATION::P2P, empty_cache, 0 );
 }
 

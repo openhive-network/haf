@@ -17,10 +17,11 @@
     SUBMODULE_DIR: "$CI_PROJECT_DIR/haf"
     REGISTRY_USER: "$CI_IMG_BUILDER_USER"
     REGISTRY_PASS: $CI_IMG_BUILDER_PASSWORD
-
+    BINARY_CACHE_PATH: "hived-mainnet-binaries"
     SCRIPTS_PATH: "$SUBMODULE_DIR/scripts"
   script:
-    - $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh "$SUBMODULE_DIR" registry.gitlab.syncad.com/hive/haf/ "HAF_IMAGE_NAME" "$REGISTRY_USER" "$REGISTRY_PASS" "hived-mainnet-binaries"
+    - $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh "$SUBMODULE_DIR" registry.gitlab.syncad.com/hive/haf/ "HAF_IMAGE_NAME" "$REGISTRY_USER" "$REGISTRY_PASS" "$BINARY_CACHE_PATH" --network-type="$HIVE_NETWORK_TYPE"
+    - ls -la ./$BINARY_CACHE_PATH/*
 
   artifacts:
     reports:
