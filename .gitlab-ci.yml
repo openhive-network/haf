@@ -1,6 +1,13 @@
 stages:
-  - build_and_test
+  - build
+  - test
   - deploy
+  - cleanup
+
+include:
+  - project: 'hive/haf'
+    ref: ms_setup_ci
+    file: '/scripts/ci-helpers/prepare_data_image_job.yml'
 
 variables:
   GIT_DEPTH: 1
@@ -10,213 +17,601 @@ variables:
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
 
-hive_fork_manager:
-  stage: build_and_test
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  script:
-    - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
-    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" extension.hive_fork_manager
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build"
-    - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build" && ctest --output-on-failure  -R test.functional.hive_fork_manager.*
-  artifacts:
-    paths:
-    - "$CI_JOB_NAME"
-    expire_in: 6 hours
-  interruptible: true
-  tags:
-    - public-runner-docker
-    - hived
+  DATA_AND_SHM_CACHE_MAINNET: /cache/replay_data_haf_${CI_COMMIT_SHORT_SHA}/mainnet
+  DATA_AND_SHM_CACHE_MIRRORNET: /cache/replay_data_haf_${CI_COMMIT_SHORT_SHA}/mirrornet
+  BLOCK_LOG_SOURCE_PATH_5M: /cache/block_log_5m/block_log
+  BLOCK_LOG_SOURCE_PATH_5M_MIRRORNET: /cache/block_log_5m/block_log.mirrornet
 
-# job resonsible for hived build in mainnet config.
-hived:
-  stage: build_and_test
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  script:
-    - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
-    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" hived compress_block_log
-    # check if sql_serializer compiles with hived
-    - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
-    # check if sql_serializer plugin is included in hived plugins
-    - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/programs/hived"
-    - ./hived --help | grep psql-url
-  artifacts:
-    paths:
-    - "$CI_JOB_NAME"
-    expire_in: 6 hours
-  tags:
-    - public-runner-docker
-    - hived
 
-hived_testnet:
-  stage: build_and_test
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  script:
-    - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
-    - $SETUP_SCRIPTS_PATH/build.sh --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=ON" --cmake-arg="-DHIVE_LINT=OFF" hived cli_wallet get_dev_key compress_block_log
-    # check if sql_serializer compiles with hived
-    - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
-    # check if sql_serializer plugin is included in hived plugins
-    - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/programs/hived"
-    - ./hived --help | grep psql-url
-  artifacts:
-    paths:
-    - "$CI_JOB_NAME"
-    expire_in: 6 hours
-  interruptible: true
-  tags:
-    - public-runner-docker
-    - hived
+.run_haf_instance: &run_haf_instance
+  - set -x
+  - mkdir -p $DATA_AND_SHM_CACHE/datadir; mkdir -p $DATA_AND_SHM_CACHE/shm_dir
+  - |
+      docker run -d \
+      -v $DATA_AND_SHM_CACHE/shm_dir:/home/hived/shm_dir \
+      -v $DATA_AND_SHM_CACHE/datadir:/home/hived/datadir \
+      -p 5432:5432 \
+      -p 8090:8090 \
+      -p 8091:8091 \
+      --name haf_instance \
+      $HAF_IMAGE_NAME \
+      --replay-blockchain --stop-replay-at-block=5000000
+  - timeout 1200 bash -c -- 'until nc -z docker 5432; do echo "waiting for port 5432";  sleep 10; done' || true
+  - timeout 1200 bash -c -- 'until nc -z docker 8090; do echo "waiting for port 8090";  sleep 10; done' || true
+  - timeout 1200 bash -c -- 'until nc -z docker 8091; do echo "waiting for port 8091";  sleep 10; done' || true
 
-haf_system_tests:
-  stage: build_and_test
-  needs:
-    - job: hive_fork_manager
-      artifacts: true
-    - job: hived_testnet
-      artifacts: true
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+.stop_haf_instance: &stop_haf_instance
+  - docker stop -t 30 haf_instance
+  - cp $DATA_AND_SHM_CACHE/datadir/hived.log hived.log
+  - cp $DATA_AND_SHM_CACHE/datadir/config.ini config.ini
+
+# hive_fork_manager:
+#   stage: build
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   script:
+#     - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
+#     - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" extension.hive_fork_manager
+#     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build"
+#     - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build" && ctest --output-on-failure  -R test.functional.hive_fork_manager.*
+#   artifacts:
+#     paths:
+#     - "$CI_JOB_NAME"
+#     expire_in: 6 hours
+#   interruptible: true
+#   tags:
+#     - public-runner-docker
+#     - hived
+
+# # job resonsible for hived build in mainnet config.
+# hived:
+#   stage: build
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   script:
+#     - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
+#     - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" hived compress_block_log
+#     # check if sql_serializer compiles with hived
+#     - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
+#     # check if sql_serializer plugin is included in hived plugins
+#     - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/programs/hived"
+#     - ./hived --help | grep psql-url
+#   artifacts:
+#     paths:
+#     - "$CI_JOB_NAME"
+#     expire_in: 6 hours
+#   tags:
+#     - public-runner-docker
+#     - hived
+
+# hived_testnet:
+#   stage: build
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   script:
+#     - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
+#     - $SETUP_SCRIPTS_PATH/build.sh --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=ON" --cmake-arg="-DHIVE_LINT=OFF" hived cli_wallet get_dev_key compress_block_log
+#     # check if sql_serializer compiles with hived
+#     - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
+#     # check if sql_serializer plugin is included in hived plugins
+#     - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/programs/hived"
+#     - ./hived --help | grep psql-url
+#   artifacts:
+#     paths:
+#     - "$CI_JOB_NAME"
+#     expire_in: 6 hours
+#   interruptible: true
+#   tags:
+#     - public-runner-docker
+#     - hived
+
+# haf_system_tests:
+#   stage: test
+#   needs:
+#     - job: hive_fork_manager
+#       artifacts: true
+#     - job: hived_testnet
+#       artifacts: true
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   variables:
+#     PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
+#     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
+#   script:
+#     # use newest libfaketime version, version 0.97 is not enough
+#     - git clone --branch master https://github.com/wolfcw/libfaketime.git
+#     - cd libfaketime && make
+#     - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
+#     # install hive_fork_manager extension built in previous stage
+#     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+#     # prepare environment and run tests
+#     - cd $CI_PROJECT_DIR/tests/integration/system/haf
+#     - tox .
+#   artifacts:
+#     paths:
+#     - "**/generated_during_*"
+#     - "**/generated_by_package_fixtures"
+#     reports:
+#       junit: tests/integration/system/haf/report.xml
+#     when: always
+#     expire_in: 1 week
+#   interruptible: true
+#   tags:
+#     - public-runner-docker
+
+# applications_system_tests:
+#   stage: test
+#   needs:
+#     - job: hive_fork_manager
+#       artifacts: true
+#     - job: hived_testnet
+#       artifacts: true
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   variables:
+#     PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
+#     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
+#   script:
+#     # use newest libfaketime version, version 0.97 is not enough
+#     - git clone --branch master https://github.com/wolfcw/libfaketime.git
+#     - cd libfaketime && make
+#     - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
+#     # install hive_fork_manager extension built in previous stage
+#     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+#     # prepare environment and run tests
+#     - cd $CI_PROJECT_DIR/tests/integration/system/applications
+#     - tox .
+#   artifacts:
+#     paths:
+#     - "**/generated_during_*"
+#     - "**/generated_by_package_fixtures"
+#     reports:
+#       junit: tests/integration/system/haf/report.xml
+#     when: always
+#     expire_in: 1 week
+#   interruptible: true
+#   tags:
+#     - public-runner-docker
+
+# .replay_step:
+#   stage: test
+#   needs:
+#     - job: hive_fork_manager
+#       artifacts: true
+#     - job: hived
+#       artifacts: true
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   variables:
+#     PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
+#     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
+#     BLOCK_LOG_DIRECTORY: "/blockchain"
+#     DB_NAME: haf_block_log
+#     DB_URL: "postgresql:///$DB_NAME"
+#   before_script:
+#     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+#     - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
+#     # replay
+#     - test -n "$PATTERNS_PATH"
+#     - cd $CI_PROJECT_DIR/tests/integration/replay
+#     - mkdir $PATTERNS_PATH/blockchain
+#     - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
+#     - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
+#     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --exit-before-sync --psql-url $DB_URL > node_logs.log 2>&1
+#   artifacts:
+#     paths:
+#     - "**/node_logs.log"
+#     - "**/generated_during_*"
+#     - "**/generated_by_package_fixtures"
+#     - "**/*.out.csv"
+#     reports:
+#       junit: tests/integration/replay/report.xml
+#     when: always
+#     expire_in: 1 week
+#   interruptible: true
+#   tags:
+#     - public-runner-docker
+#     - hived-for-tests
+
+# replay_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
+#   script:
+#     - tox .
+
+# replay_accounts_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_filtered"
+#   script:
+#     - tox .
+
+# replay_accounts_operations_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_operations_filtered"
+#   script:
+#     - tox .
+
+# replay_virtual_operations_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/virtual_operations_filtered"
+#   script:
+#     - tox .
+
+# replay_operations_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/operations_filtered"
+#   script:
+#     - tox .
+
+# replay_body_operations_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/body_operations_filtered"
+#   script:
+#     - tox .
+
+# replay_accounts_body_operations_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
+#   script:
+#     - tox .
+
+prepare_haf_data_image:
+  extends: .prepare_haf_data_5m_image
+  stage: build
   variables:
-    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
-    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
-  script:
-    # use newest libfaketime version, version 0.97 is not enough
-    - git clone --branch master https://github.com/wolfcw/libfaketime.git
-    - cd libfaketime && make
-    - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
-    # install hive_fork_manager extension built in previous stage
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
-    # prepare environment and run tests
-    - cd $CI_PROJECT_DIR/tests/integration/system/haf
-    - tox .
-  artifacts:
-    paths:
-    - "**/generated_during_*"
-    - "**/generated_by_package_fixtures"
-    reports:
-      junit: tests/integration/system/haf/report.xml
-    when: always
-    expire_in: 1 week
-  interruptible: true
+    BINARY_CACHE_PATH: "haf-mainnet-binaries"
+    HIVE_NETWORK_TYPE: mainnet
+    DATA_AND_SHM_CACHE: $DATA_AND_SHM_CACHE_MAINNET
+    BLOCK_LOG_SOURCE_PATH: $BLOCK_LOG_SOURCE_PATH_5M
   tags:
-    - public-runner-docker
+    - hive-builder-4
+  resource_group: ${CI_COMMIT_SHORT_SHA}_mainnet
 
-applications_system_tests:
-  stage: build_and_test
-  needs:
-    - job: hive_fork_manager
-      artifacts: true
-    - job: hived_testnet
-      artifacts: true
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+prepare_haf_data_image_mirrornet:
+  extends: .prepare_haf_data_5m_image
+  stage: build
   variables:
-    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
-    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
-  script:
-    # use newest libfaketime version, version 0.97 is not enough
-    - git clone --branch master https://github.com/wolfcw/libfaketime.git
-    - cd libfaketime && make
-    - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
-    # install hive_fork_manager extension built in previous stage
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
-    # prepare environment and run tests
-    - cd $CI_PROJECT_DIR/tests/integration/system/applications
-    - tox .
-  artifacts:
-    paths:
-    - "**/generated_during_*"
-    - "**/generated_by_package_fixtures"
-    reports:
-      junit: tests/integration/system/haf/report.xml
-    when: always
-    expire_in: 1 week
-  interruptible: true
+    BINARY_CACHE_PATH: "haf-mirrornet-binaries"
+    HIVE_NETWORK_TYPE: mirrornet
+    DATA_AND_SHM_CACHE: $DATA_AND_SHM_CACHE_MIRRORNET
+    BLOCK_LOG_SOURCE_PATH: $BLOCK_LOG_SOURCE_PATH_5M_MIRRORNET
   tags:
-    - public-runner-docker
+    - hive-builder-4
+  resource_group: ${CI_COMMIT_SHORT_SHA}_mirrornet
 
-.replay_step:
-  stage: build_and_test
-  needs:
-    - job: hive_fork_manager
-      artifacts: true
-    - job: hived
-      artifacts: true
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+.cleanup_haf_data_image:
+  extends: .docker_image_cleanup_job
+  stage: cleanup
+  dependencies:
+    - prepare_haf_data_image
+#  needs: []
   variables:
-    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
-    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
-    BLOCK_LOG_DIRECTORY: "/blockchain"
-    DB_NAME: haf_block_log
-    DB_URL: "postgresql:///$DB_NAME"
+    REGISTRY: $CI_REGISTRY_IMAGE
+    REGISTRY_USER: "$HAF_CI_IMGBUILDER_USER"
+    REGISTRY_PASS: $HAF_REGISTRY_CLEANUP_TOKEN
+    IMAGE_PATH: $HAF_IMAGE_NAME_REGISTRY_PATH
+    IMAGE_TAG: $HAF_IMAGE_NAME_REGISTRY_TAG
+  when: always
+  tags:
+    - hive-builder-4
+
+cleanup_haf_data_image_mirrornet:
+  extends: .cleanup_haf_data_image
+  dependencies:
+    - prepare_haf_data_image_mirrornet
+  when: always
+
+cleanup_cache_automatic:
+  extends: .docker_image_cleanup_job
+  stage: cleanup
+  script:
+    - ls -lath /cache
+    - rm /cache/replay_data_haf_${CI_COMMIT_SHORT_SHA} -rf
+  tags:
+    - hive-builder-4
+  when: always
+
+cleanup_cache_manual:
+  stage: cleanup
+  needs: []
+  script:
+    - env
+    - ls -lath /cache || true
+    - cat /cache/replay_data_haf_${CI_COMMIT_SHORT_SHA}/mirrornet/datadir/log || true
+    - du -d 1 -h /cache || true
+    - rm /cache/replay_data_haf_${CI_COMMIT_SHORT_SHA} -rf || true
+    - ls -lath /cache/hive/haf || true
+    - ls -lath /cache/hive/hive || true
+    - env
+    - ls -lath /cache/hive || true
+    - ls -lath /cache/hive/haf || true
+  tags:
+    - hive-builder-4
+  when: manual
+
+job_using_cache:
+  extends: .docker_image_builder_job
+  stage: test
+  needs:
+    - job: prepare_haf_data_image_mirrornet
+      artifacts: true
+  variables:
+    REGISTRY: $CI_REGISTRY_IMAGE
+    REGISTRY_USER: "$CI_IMG_BUILDER_USER"
+    REGISTRY_PASS: $CI_IMG_BUILDER_PASSWORD
+    IMAGE_PATH: $HAF_IMAGE_NAME_REGISTRY_PATH
+    IMAGE_TAG: $HAF_IMAGE_NAME_REGISTRY_TAG
+    DATA_AND_SHM_CACHE: $DATA_AND_SHM_CACHE_MIRRORNET
+    HAF_ADMIN_POSTGRES_URL: postgresql://haf_admin@docker:5432/haf_block_log
   before_script:
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
-    - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
-    # replay
-    - test -n "$PATTERNS_PATH"
-    - cd $CI_PROJECT_DIR/tests/integration/replay
-    - mkdir $PATTERNS_PATH/blockchain
-    - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
-    - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
-    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --exit-before-sync --psql-url $DB_URL > node_logs.log 2>&1
+    - apk update && apk add bash git ca-certificates curl tree
+    - *run_haf_instance
+  script:
+    - env
+    - set -x
+    - cat $HAF_IMAGE_NAME_CACHE/datadir/config.ini || true
+    - echo $HAF_IMAGE_NAME
+    - echo $HAF_IMAGE_NAME_CACHE
+    - ls /cache -lath || true
+    - ls /cache/replay_haf_$CI_COMMIT_SHORT_SHA -lath || true
+    - ls $HAF_IMAGE_NAME_CACHE -lath || true
+    - ls $HAF_IMAGE_NAME_CACHE/shm_dir -lath || true
+    - ls $HAF_IMAGE_NAME_CACHE/datadir -lath || true
+    - timeout 900 bash -c -- 'while ! nc -z docker 8090; do echo "waiting for port 8090";  sleep 1; done' || true
+    - docker logs haf_instance
+    - docker ps || true
+    - docker volume ls || true
+    - ls /cache -lath || true
+    - ls /cache/replay_data_haf_$CI_COMMIT_SHORT_SHA -lath || true
+    - ls /cache/replay_data_haf_$CI_COMMIT_SHORT_SHA/mirrornet -lath || true
+    - ls /cache/replay_data_haf_$CI_COMMIT_SHORT_SHA/mirrornet/datadir -lath || true
+    - ls /cache/replay_data_haf_$CI_COMMIT_SHORT_SHA/mirrornet/shm_dir -lath || true
+    - sleep 60 || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' docker:8090 || true
+    - sleep 60 || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' docker:8090 || true
+    - apk update && apk add postgresql || true
+    - psql "${HAF_ADMIN_POSTGRES_URL}" -c '\d hive.blocks' || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' docker:8090 || true
+    - sleep 60 || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' docker:8090 || true
+    - sleep 60
+  after_script:
+    - *stop_haf_instance
+    - docker logs haf_instance
+    - docker ps || true
   artifacts:
     paths:
-    - "**/node_logs.log"
-    - "**/generated_during_*"
-    - "**/generated_by_package_fixtures"
-    - "**/*.out.csv"
-    reports:
-      junit: tests/integration/replay/report.xml
-    when: always
-    expire_in: 1 week
-  interruptible: true
+    - hived.log
+    - config.ini
   tags:
-    - public-runner-docker
-    - hived-for-tests
+    - hive-builder-4
+  resource_group: ${CI_COMMIT_SHORT_SHA}_mirrornet
 
-replay_with_haf:
-  extends: .replay_step
+job_using_cache2:
+  extends: .docker_image_builder_job
+  stage: test
+  needs:
+    - job: prepare_haf_data_image_mirrornet
+      artifacts: true
   variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
+    REGISTRY: $CI_REGISTRY_IMAGE
+    REGISTRY_USER: "$CI_IMG_BUILDER_USER"
+    REGISTRY_PASS: $CI_IMG_BUILDER_PASSWORD
+    IMAGE_PATH: $HAF_IMAGE_NAME_REGISTRY_PATH
+    IMAGE_TAG: $HAF_IMAGE_NAME_REGISTRY_TAG
+    DATA_AND_SHM_CACHE: $DATA_AND_SHM_CACHE_MIRRORNET
+    HAF_ADMIN_POSTGRES_URL: postgresql://haf_admin@docker:5432/haf_block_log
+  before_script:
+    - apk update && apk add bash git ca-certificates curl tree
+    - *run_haf_instance
   script:
-    - tox .
+    - env
+    - set -x
+    - cat $HAF_IMAGE_NAME_CACHE/datadir/config.ini || true
+    - echo $HAF_IMAGE_NAME
+    - echo $HAF_IMAGE_NAME_CACHE
+    - mkdir -p $HAF_IMAGE_NAME_CACHE/datadir; mkdir -p $HAF_IMAGE_NAME_CACHE/shm_dir
+    - ls -lath $HAF_IMAGE_NAME_CACHE/datadir || true
+    - ls -lath $HAF_IMAGE_NAME_CACHE/shm_dir || true
+    #- echo $REGISTRY_PASSWORD | docker login -u $REGISTRY_USER $REGISTRY --password-stdin
+    - ls /cache -lath || true
+    - ls /cache/replay_haf_$CI_COMMIT_SHORT_SHA -lath || true
+    - ls /cache/replay_haf_$CI_COMMIT_SHORT_SHA/mirrornet -lath || true
+    - ls /cache/replay_haf_$CI_COMMIT_SHORT_SHA/mirrornet/datadir -lath || true
+    - ls /cache/replay_haf_$CI_COMMIT_SHORT_SHA/mirrornet/shm_dir -lath || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' docker:8090 || true
+    - sleep 60 || true
+    - docker ps || true
+    - docker volume ls || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' docker:8090 || true
+    - sleep 60 || true
+    - docker ps || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' docker:8090 || true
+    - sleep 60 || true
+    - docker ps || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' docker:8090 || true
+    - sleep 60 || true
+    - docker ps || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' docker:8090 || true
+    - apk update && apk add postgresql || true
+    - psql "${HAF_ADMIN_POSTGRES_URL}" -c '\d hive.blocks' || true
+    - sleep 60
+  after_script:
+    - *stop_haf_instance
+    - docker logs haf_instance
+    - docker ps || true
+  artifacts:
+    paths:
+    - hived.log
+    - config.ini
+  tags:
+    - hive-builder-4
+  resource_group: ${CI_COMMIT_SHORT_SHA}_mirrornet
 
-replay_accounts_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_filtered"
-  script:
-    - tox .
-
-replay_accounts_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_operations_filtered"
-  script:
-    - tox .
-
-replay_virtual_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/virtual_operations_filtered"
-  script:
-    - tox .
-
-replay_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/operations_filtered"
-  script:
-    - tox .
-
-replay_body_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/body_operations_filtered"
-  script:
-    - tox .
-
-replay_accounts_body_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
-  script:
-    - tox .
+# job_using_cache3:
+#   extends: .docker_image_builder_job
+#   stage: test
+#   needs:
+#     - job: prepare_haf_data_image_mirrornet
+#       artifacts: true
+#   variables:
+#     REGISTRY: $CI_REGISTRY_IMAGE
+#     REGISTRY_USER: "$CI_IMG_BUILDER_USER"
+#     REGISTRY_PASS: $CI_IMG_BUILDER_PASSWORD
+#     IMAGE_PATH: $HAF_IMAGE_NAME_REGISTRY_PATH
+#     IMAGE_TAG: $HAF_IMAGE_NAME_REGISTRY_TAG
+#     DATA_AND_SHM_CACHE: $DATA_AND_SHM_CACHE_MIRRORNET
+#     HAF_ADMIN_POSTGRES_URL: postgresql://haf_admin@docker:5432/haf_block_log
+#   before_script:
+#     - apk update && apk add bash git ca-certificates curl tree
+#     - *run_haf_instance
+#   script:
+#     - set -x
+#     - echo $HAF_IMAGE_NAME
+#     - echo $HAF_IMAGE_NAME_CACHE
+#     - mkdir -p $HAF_IMAGE_NAME_CACHE/datadir; mkdir -p $HAF_IMAGE_NAME_CACHE/shm_dir
+#     - ls -lath $HAF_IMAGE_NAME_CACHE/datadir || true
+#     - ls -lath $HAF_IMAGE_NAME_CACHE/shm_dir || true
+#     #- echo $REGISTRY_PASSWORD | docker login -u $REGISTRY_USER $REGISTRY --password-stdin
+#     - |
+#         docker run -d \
+#         -v $HAF_IMAGE_NAME_CACHE/shm_dir:/home/hived/shm_dir \
+#         -v $HAF_IMAGE_NAME_CACHE/datadir:/home/hived/datadir \
+#         -p 8090:8090 \
+#         -p 5432:5432 \
+#         --name haf_instance \
+#         $HAF_IMAGE_NAME \
+#         --replay-blockchain || true
+#     - timeout 900 bash -c -- 'while ! nc -z haf_instance 8090; do echo "waiting for port 8090";  sleep 1; done' || true
+#     - timeout 900 bash -c -- 'while ! nc -z docker 8090; do echo "waiting for port 8090";  sleep 1; done' || true
+#     - ls /cache -lath || true
+#     - ls /cache/replay_haf_$CI_COMMIT_SHORT_SHA -lath || true
+#     - ls /cache/replay_haf_$CI_COMMIT_SHORT_SHA/mirrornet -lath || true
+#     - ls /cache/replay_haf_$CI_COMMIT_SHORT_SHA/mirrornet/datadir -lath || true
+#     - ls /cache/replay_haf_$CI_COMMIT_SHORT_SHA/mirrornet/shm_dir -lath || true
+#     - |
+#         curl -XPOST -d '{
+#         "jsonrpc": "2.0",
+#         "method": "database_api.get_dynamic_global_properties",
+#         "params": {
+#         },
+#         "id": 2
+#         }' docker:8090 || true
+#     - sleep 60 || true
+#     - docker ps || true
+#     - |
+#         curl -XPOST -d '{
+#         "jsonrpc": "2.0",
+#         "method": "database_api.get_dynamic_global_properties",
+#         "params": {
+#         },
+#         "id": 2
+#         }' docker:8090 || true
+#     - sleep 60 || true
+#     - docker ps || true
+#     - |
+#         curl -XPOST -d '{
+#         "jsonrpc": "2.0",
+#         "method": "database_api.get_dynamic_global_properties",
+#         "params": {
+#         },
+#         "id": 2
+#         }' docker:8090 || true
+#     - sleep 60 || true
+#     - docker ps || true
+#     - |
+#         curl -XPOST -d '{
+#         "jsonrpc": "2.0",
+#         "method": "database_api.get_dynamic_global_properties",
+#         "params": {
+#         },
+#         "id": 2
+#         }' docker:8090 || true
+#     - sleep 60 || true
+#     - |
+#         curl -XPOST -d '{
+#         "jsonrpc": "2.0",
+#         "method": "database_api.get_dynamic_global_properties",
+#         "params": {
+#         },
+#         "id": 2
+#         }' docker:8090 || true
+#     - apk update && apk add postgresql || true
+#     - psql "${HAF_ADMIN_POSTGRES_URL}" -c '\d hive.blocks' || true
+#     - sleep 60
+#   after_script:
+#     - *stop_haf_instance
+#     - docker logs haf_instance
+#     - docker ps || true
+#   artifacts:
+#     paths:
+#     - hived.log
+#     - config.ini
+#   tags:
+#     - hive-builder-4
+#   resource_group: ${CI_COMMIT_SHORT_SHA}_mirrornet

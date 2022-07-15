@@ -3,28 +3,60 @@
     DOCKER_BUILDKIT: 1
     DOCKER_DRIVER: overlay2
     DOCKER_TLS_CERTDIR: "/certs"
+    FF_USE_FASTZIP: "true"
+    ARTIFACT_COMPRESSION_LEVEL: "fast"
   image: docker:20.10.10
+  interruptible: true
   services:
     - docker:20.10.10-dind
-
   before_script:
-    - apk update && apk add bash git ca-certificates curl
+    - apk update && apk add bash git ca-certificates curl tree
+
+.docker_image_cleanup_job:
+  image: alpine:3.16
+  before_script:
+    - apk update && apk add bash curl jq
+  variables:
+    # Interface variables (to be overrided by derived jobs)
+    REGISTRY: $CI_REGISTRY_IMAGE
+    REGISTRY_USER: ""
+    REGISTRY_PASS: ""
+    IMAGE_PATH: ""
+    IMAGE_TAG: ""
+  script:
+    - echo "Attempting to cleanup an image $IMAGE_PATH using tag $IMAGE_TAG from $REGISTRY"
+    - "$CI_PROJECT_DIR/hive/scripts/ci-helpers/delete-image.sh"
+  when: always
 
 .prepare_haf_data_5m_image:
   extends: .docker_image_builder_job
 
   variables:
-    SUBMODULE_DIR: "$CI_PROJECT_DIR/haf"
+    SUBMODULE_DIR: "$CI_PROJECT_DIR"
     REGISTRY_USER: "$CI_IMG_BUILDER_USER"
     REGISTRY_PASS: $CI_IMG_BUILDER_PASSWORD
-
+    BINARY_CACHE_PATH: "haf-mainnet-binaries"
+    HIVE_NETWORK_TYPE: mainnet
     SCRIPTS_PATH: "$SUBMODULE_DIR/scripts"
   script:
-    - $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh "$SUBMODULE_DIR" registry.gitlab.syncad.com/hive/haf/ "HAF_IMAGE_NAME" "$REGISTRY_USER" "$REGISTRY_PASS" "hived-mainnet-binaries"
+    - ls -lath $BLOCK_LOG_SOURCE_PATH
+    - mkdir -p $DATA_AND_SHM_CACHE/datadir/blockchain
+    - cp $BLOCK_LOG_SOURCE_PATH $DATA_AND_SHM_CACHE/datadir/blockchain/block_log
+    - |
+        $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh \
+        "$SUBMODULE_DIR" \
+        registry.gitlab.syncad.com/hive/haf/ \
+        "HAF_IMAGE_NAME" \
+        "$REGISTRY_USER" \
+        "$REGISTRY_PASS" \
+        "$BINARY_CACHE_PATH" \
+        "$HIVE_NETWORK_TYPE" \
+        "$DATA_AND_SHM_CACHE"
+    - ls -la ./$BINARY_CACHE_PATH/*
 
   artifacts:
     reports:
       dotenv: docker_image_name.env
     paths:
-      - ./hived-mainnet-binaries/*
+      - ./${BINARY_CACHE_PATH}/*
     expire_in: 6 hours
