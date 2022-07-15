@@ -13,7 +13,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body text)
+CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body text, IN _is_hf01 bool)
 RETURNS SETOF impacted_balances_return
 AS '$libdir/libhfm-@GIT_REVISION@.so', 'get_impacted_balances' LANGUAGE C;
 

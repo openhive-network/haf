@@ -40,12 +40,12 @@ flat_set<account_name_type> get_accounts( const std::string& operation_body )
   return _impacted;
 }
 
-impacted_balance_data collect_impacted_balances(const char* operation_body)
+impacted_balance_data collect_impacted_balances(const char* operation_body, const bool is_hf01)
 {
   hive::protocol::operation op;
   from_variant(fc::json::from_string(operation_body), op);
 
-  return hive::app::operation_get_impacted_balances(op);
+  return hive::app::operation_get_impacted_balances(op, is_hf01);
 }
 
 extern "C" void issue_error(const char* msg);
@@ -241,7 +241,7 @@ PG_FUNCTION_INFO_V1(get_impacted_balances);
 	asset_symbol_nai INT -- Type of asset symbol used in the operation
 );
 
-FUNCTION get_impacted_balances(_operation_body text) RETURNS SETOF impacted_balances_return
+FUNCTION get_impacted_balances(_operation_body text, IN _is_hf01 bool) RETURNS SETOF impacted_balances_return
 */
 
 Datum get_impacted_balances(PG_FUNCTION_ARGS)
@@ -282,10 +282,11 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
   impacted_balance_data collected_data;
   const char* operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  const bool is_hf01 = PG_GETARG_BOOL(1);
 
   try
   {
-    collected_data = collect_impacted_balances(operation_body);
+    collected_data = collect_impacted_balances(operation_body, is_hf01);
   }
   catch(const fc::exception& ex)
   {
