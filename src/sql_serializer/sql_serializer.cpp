@@ -235,7 +235,7 @@ using chain::reindex_notification;
           void unblock_operation_handlers(const block_notification& note);
           void block_operation_handlers(const block_notification& note);
 
-          void handle_transactions(const vector<hive::protocol::signed_transaction>& transactions, const int64_t block_num);
+          void handle_transactions(const vector<std::shared_ptr<hive::chain::full_transaction_type>>& transactions, const int64_t block_num);
           void inform_hfm_about_starting();
           void collect_account_operations(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
 
@@ -486,20 +486,22 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
   if(skip_reversible_block(note.block_num))
     return;
 
-  handle_transactions(note.block.transactions, note.block_num);
-  const hive::chain::account_object* account_ptr = chain_db.find_account(note.block.witness);
-  const hive::chain::witness_object* witness_ptr = chain_db.find_witness( note.block.witness );
+  handle_transactions(note.full_block->get_full_transactions(), note.block_num);
+
+  const hive::chain::signed_block_header& block_header = note.full_block->get_block_header();
+  const hive::chain::account_object* account_ptr = chain_db.find_account(block_header.witness);
+  const hive::chain::witness_object* witness_ptr = chain_db.find_witness(block_header.witness);
 
   currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
   currently_caching_data->blocks.emplace_back(
     note.block_id,
     note.block_num,
-    note.block.timestamp,
+    block_header.timestamp,
     note.prev_block_id,
     account_ptr->get_id(),
-    note.block.transaction_merkle_root,
-    (note.block.extensions.size() == 0) ? fc::optional<std::string>() : fc::optional<std::string>(fc::json::to_string( note.block.extensions )),
-    note.block.witness_signature,
+    block_header.transaction_merkle_root,
+    (block_header.extensions.size() == 0) ? fc::optional<std::string>() : fc::optional<std::string>(fc::json::to_string( block_header.extensions )),
+    block_header.witness_signature,
     witness_ptr->signing_key);
   _last_block_num = note.block_num;
 
@@ -527,7 +529,7 @@ void sql_serializer_plugin_impl::block_operation_handlers(const block_notificati
   _pre_apply_operation_blocker->block();
 }
 
-void sql_serializer_plugin_impl::handle_transactions(const vector<hive::protocol::signed_transaction>& transactions, const int64_t block_num)
+void sql_serializer_plugin_impl::handle_transactions(const vector<std::shared_ptr<hive::chain::full_transaction_type>>& transactions, const int64_t block_num)
 {
   int64_t trx_in_block = 0;
 
@@ -539,26 +541,27 @@ void sql_serializer_plugin_impl::handle_transactions(const vector<hive::protocol
       continue;
     }
 
-    auto hash = trx.id();
-    size_t sig_size = trx.signatures.size();
+    auto hash = trx->get_transaction_id();
+    const hive::protocol::signed_transaction& signed_trx = trx->get_transaction();
+    size_t sig_size = signed_trx.signatures.size();
 
     currently_caching_data->total_size += sizeof(hash) + sizeof(block_num) + sizeof(trx_in_block) +
-      sizeof(trx.ref_block_num) + sizeof(trx.ref_block_prefix) + sizeof(trx.expiration) + sizeof(trx.signatures[0]);
+      sizeof(signed_trx.ref_block_num) + sizeof(signed_trx.ref_block_prefix) + sizeof(signed_trx.expiration) + sizeof(signed_trx.signatures[0]);
 
     currently_caching_data->transactions.emplace_back(
       hash,
       block_num,
       trx_in_block,
-      trx.ref_block_num,
-      trx.ref_block_prefix,
-      trx.expiration,
-      (sig_size == 0) ? fc::optional<signature_type>() : fc::optional<signature_type>(trx.signatures[0])
+      signed_trx.ref_block_num,
+      signed_trx.ref_block_prefix,
+      signed_trx.expiration,
+      (sig_size == 0) ? fc::optional<signature_type>() : fc::optional<signature_type>(signed_trx.signatures[0])
     );
 
     if(sig_size > 1)
     {
-      auto itr = trx.signatures.begin() + 1;
-      while(itr != trx.signatures.end())
+      auto itr = signed_trx.signatures.begin() + 1;
+      while(itr != signed_trx.signatures.end())
       {
         currently_caching_data->transactions_multisig.emplace_back(
           hash,

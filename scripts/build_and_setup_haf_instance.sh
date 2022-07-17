@@ -30,8 +30,8 @@ print_help () {
     echo "  --option-file=FILE     Optionally specify a file containing other options specific to this script's arguments. This file cannot contain another --option-file option within it."
     echo "  --haf-database-store=DIRECTORY_PATH"
     echo "                         Optionally specify a directory where Postgres SQL data specific to the HAF database will be stored. "
-    echo "  --branch=branch        Optionally specify a branch to checkout and build. Defaults to develop branch."
-    echo "  --use-source-dir=PATH  Allows to specify explicit source directory instead of performing git checkout."
+    echo "  --branch=branch        Optionally specify a branch of HAF to checkout and build. Defaults to develop branch."
+    echo "  --use-source-dir=PATH  Allows to specify explicit HAF source directory instead of performing git checkout."
     echo "  --help                 Display this help screen and exit"
     echo
 }
