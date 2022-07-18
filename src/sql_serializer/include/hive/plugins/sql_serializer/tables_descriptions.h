@@ -4,6 +4,8 @@
 #include <hive/plugins/sql_serializer/data_container_view.h>
 #include <hive/plugins/sql_serializer/data_2_sql_tuple_base.h>
 
+#include <hive/plugins/sql_serializer/variant_operation_deserializer.hpp>
+
 #include <fc/io/json.hpp>
 
 namespace hive::plugins::sql_serializer {
@@ -66,21 +68,6 @@ namespace hive::plugins::sql_serializer {
       };
     };
 
-  struct variant_operation_deserializer : public data2_sql_tuple_base
-  {
-    using data2_sql_tuple_base::data2_sql_tuple_base;
-
-    template< typename T >
-    std::string operator()( const T& op )
-    {
-      fc::variant opVariant;
-      fc::to_variant(op, opVariant);
-      fc::string deserialized_op = fc::json::to_string(opVariant);
-
-      return escape(deserialized_op);
-    }
-  };
-
   template< typename Container >
   struct hive_operations
     {
@@ -98,7 +85,7 @@ namespace hive::plugins::sql_serializer {
       {
         return std::to_string(data.operation_id) + ',' + std::to_string(data.block_number) + ',' +
         std::to_string(data.trx_in_block) + ',' + std::to_string(data.op_in_trx) + ',' +
-        std::to_string(data.op.which()) + ",'" + data.timestamp.to_iso_string() + "'," + variant_operation_deserializer{}( data.op );
+        std::to_string(data.op.which()) + ",'" + data.timestamp.to_iso_string() + "'," + data.op.visit(variant_operation_deserializer{});
       }
       };
     };
