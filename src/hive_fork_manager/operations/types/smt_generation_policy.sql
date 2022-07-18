@@ -1,6 +1,11 @@
+CREATE TYPE hive._unit_smt_generation_unit AS (
+  "first" hive.account_name_type,
+  second int4
+);
+
 CREATE TYPE hive.smt_generation_unit AS (
-  hive_unit hstore, -- hive.account_name_type => int4
-  token_unit hstore -- hive.account_name_type => int4
+  hive_unit hive._unit_smt_generation_unit[],
+  token_unit hive._unit_smt_generation_unit[]
 );
 
 CREATE TYPE hive.smt_capped_generation_policy AS (

@@ -4,5 +4,5 @@ default_version = '@GIT_REVISION@'
 relocatable = false
 schema = hive
 # this extension is required by block_day_stats views performing a PIVOT operation
-requires = 'tablefunc, variant, hstore'
+requires = 'tablefunc, variant'
 

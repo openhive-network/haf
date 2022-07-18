@@ -34,6 +34,11 @@ SELECT variant.register('hive_required_automated_action', '{ hive.example_requir
 CREATE DOMAIN hive.required_automated_actions AS hive_required_automated_action[];
 CREATE DOMAIN hive.optional_automated_actions AS hive_optional_automated_action[];
 
+SELECT _variant.create_cast_in( 'hive.hive_required_automated_action[]' );
+SELECT _variant.create_cast_out( 'hive.hive_required_automated_action[]' );
+SELECT _variant.create_cast_in( 'hive.hive_optional_automated_action[]' );
+SELECT _variant.create_cast_out( 'hive.hive_optional_automated_action[]' );
+
 -- TODO: Move to hive schema
 CREATE DOMAIN hive_block_header_extension AS variant.variant;
 

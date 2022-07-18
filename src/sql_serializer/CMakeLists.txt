@@ -20,6 +20,7 @@ ADD_LIBRARY(
     indexes_controler.cpp
     blockchain_data_filter.cpp
     filter_collector.cpp
+    variant_operation_deserializer.cpp
     ${HEADERS}
 )
 
