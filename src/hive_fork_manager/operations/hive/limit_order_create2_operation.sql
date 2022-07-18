@@ -1,5 +1,5 @@
 CREATE TYPE hive.limit_order_create2_operation AS (
-  owner hive.account_name_type,
+  "owner" hive.account_name_type,
   orderid int8, -- uint32_t: 4 byte, but unsigned (int8)
   amount_to_sell hive.asset,
   fill_or_kill boolean,

@@ -1,6 +1,11 @@
+CREATE TYPE hive._props_witness_set_properties_operation AS (
+  "first" text,
+  second bytea
+);
+
 CREATE TYPE hive.witness_set_properties_operation AS (
   "owner" hive.account_name_type,
-  props hstore, -- text => bytea
+  props hive._props_witness_set_properties_operation[],
   extensions hive.extensions_type
 );
 
