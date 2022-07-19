@@ -3,6 +3,7 @@
 #include <hive/plugins/sql_serializer/sql_serializer_objects.hpp>
 #include <hive/plugins/sql_serializer/data_container_view.h>
 #include <hive/plugins/sql_serializer/data_2_sql_tuple_base.h>
+#include <hive/plugins/sql_serializer/variant_operation_deserializer.hpp>
 
 #include <fc/io/json.hpp>
 
@@ -66,21 +67,6 @@ namespace hive::plugins::sql_serializer {
       };
     };
 
-  struct variant_operation_deserializer : public data2_sql_tuple_base
-  {
-    using data2_sql_tuple_base::data2_sql_tuple_base;
-
-    template< typename T >
-    std::string operator()( const T& op )
-    {
-      fc::variant opVariant;
-      fc::to_variant(op, opVariant);
-      fc::string deserialized_op = fc::json::to_string(opVariant);
-
-      return escape(deserialized_op);
-    }
-  };
-
   template< typename Container >
   struct hive_operations
     {
@@ -90,15 +76,19 @@ namespace hive::plugins::sql_serializer {
     static const char TABLE[];
     static const char COLS[];
 
-    struct data2sql_tuple : public data2_sql_tuple_base
+    class data2sql_tuple : public data2_sql_tuple_base
       {
+      private:
+      constexpr static variant_operation_deserializer vod{};
+
+      public:
       using data2_sql_tuple_base::data2_sql_tuple_base;
 
       std::string operator()(typename container_t::const_reference data) const
       {
         return std::to_string(data.operation_id) + ',' + std::to_string(data.block_number) + ',' +
         std::to_string(data.trx_in_block) + ',' + std::to_string(data.op_in_trx) + ',' +
-        std::to_string(data.op.which()) + ",'" + data.timestamp.to_iso_string() + "'," + variant_operation_deserializer{}( data.op );
+        std::to_string(data.op.which()) + ",'" + data.timestamp.to_iso_string() + "'," + data.op.visit( data2sql_tuple::vod );
       }
       };
     };
