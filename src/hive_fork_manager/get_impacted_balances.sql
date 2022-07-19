@@ -75,6 +75,14 @@ UNION ALL
 SELECT 'hive::protocol::proposal_pay_operation'
 UNION ALL
 SELECT 'hive::protocol::sps_convert_operation'
+UNION ALL
+SELECT 'hive::protocol::author_reward_operation'
+UNION ALL
+SELECT 'hive::protocol::curation_reward_operation'
+UNION ALL
+SELECT 'hive::protocol::account_created_operation'
+UNION ALL
+SELECT 'hive::protocol::interest_operation'
 ;
 END
 $$;
