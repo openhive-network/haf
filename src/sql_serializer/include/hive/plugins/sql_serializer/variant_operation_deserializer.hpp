@@ -8,8 +8,9 @@ namespace hive::plugins::sql_serializer {
 
   namespace hp = hive::protocol;
 
-  struct variant_operation_deserializer : public data2_sql_tuple_base
+  class variant_operation_deserializer : public data2_sql_tuple_base
   {
+  public:
     using data2_sql_tuple_base::data2_sql_tuple_base;
 
     using result_type = std::string;
@@ -111,5 +112,21 @@ namespace hive::plugins::sql_serializer {
     result_type operator()( const hp::fill_recurrent_transfer_operation& op )const;
     result_type operator()( const hp::failed_recurrent_transfer_operation& op )const;
     result_type operator()( const hp::limit_order_cancelled_operation& op )const;
+
+  private:
+    result_type operator()( const hp::asset& type )const;
+    result_type operator()( const hp::price& type )const;
+    result_type operator()( const fc::time_point_sec& type )const;
+    result_type operator()( const hp::authority& type )const;
+    result_type operator()( const hp::legacy_chain_properties& type )const;
+
+    template< typename T >
+    result_type operator()( const fc::optional< T >& type )const
+    {
+      if( type.valid() )
+        return this->operator()( type.value() );
+
+      return "NULL";
+    }
   };
 }
