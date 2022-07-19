@@ -43,6 +43,107 @@ namespace hive::plugins::sql_serializer {
     return "((" + std::to_string( type.account_creation_fee.amount.value ) + ",ROW(" + std::to_string( type.account_creation_fee.symbol.ser ) + ")),"
       + std::to_string( type.maximum_block_size ) + ',' + std::to_string( type.hbd_interest_rate ) + ')';
   }
+  variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const boost::container::flat_set<hp::account_name_type>& type )const
+  {
+    std::string op_str = "ARRAY[";
+
+    for( auto it = type.begin(); it != type.end(); ++it )
+    {
+      if( it != type.begin() )
+        op_str += ',';
+
+      op_str += '"' + it->operator std::string() + '"';
+    }
+
+    return op_str + ']';
+  }
+
+  struct signed_block_header_extension_visitor
+  {
+    using result_type = std::string;
+
+    result_type operator()( const hp::void_t& )
+    {
+      return "ROW()::hive.void_t";
+    }
+    result_type operator()( const hp::version& type )
+    {
+      return "ROW(" + std::to_string(type.v_num) + "::hive.version";
+    }
+    result_type operator()( const hp::hardfork_version_vote& type )
+    {
+      return '(' + this->operator()<const hp::version&>( type.hf_version ) + ",to_timestamp("
+        + std::to_string( type.hf_time.sec_since_epoch() ) + "))::hive.hardfork_version_vote";
+    }
+#ifdef IS_TEST_NET
+    struct required_automated_actions_visitor
+    {
+      using result_type = std::string;
+      result_type operator()( const hp::example_required_action& type )
+      {
+        return "ROW('" + type.account + "')::hive.example_required_action";
+      }
+    };
+    struct optional_automated_actions_visitor
+    {
+      using result_type = std::string;
+      result_type operator()( const hp::example_optional_action& type )
+      {
+        return "ROW('" + type.account + "')::hive.example_optional_action";
+      }
+    };
+
+    static constexpr required_automated_actions_visitor raav{};
+    static constexpr optional_automated_actions_visitor oaav{};
+
+    result_type operator()( const hp::required_automated_actions& type )
+    {
+      std::string op_str = "ARRAY[";
+
+      for( auto it = type.begin(); it != type.end(); ++it )
+      {
+        if( it != type.begin() )
+          op_str += ',';
+
+        op_str += '"' + it->visit( raav ) + '"';
+      }
+
+      return op_str + "]::hive.required_automated_actions::hive.hive_block_header_extension";
+    }
+    result_type operator()( const hp::optional_automated_actions& type )
+    {
+      std::string op_str = "ARRAY[";
+
+      for( auto it = type.begin(); it != type.end(); ++it )
+      {
+        if( it != type.begin() )
+          op_str += ',';
+
+        op_str += '"' + it->visit( oaav ) + '"';
+      }
+
+      return op_str + "]::hive.optional_automated_actions::hive.hive_block_header_extension";
+    }
+#endif
+  };
+
+  variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::signed_block_header& type )const
+  {
+    static constexpr signed_block_header_extension_visitor sb_header_visitor{};
+
+    std::string op_str = '(' + escape_raw( type.previous ) + ',' + this->operator()( type.timestamp ) + ",'"
+      + type.witness + "'," + escape_raw( type.transaction_merkle_root ) + ",ARRAY[";
+
+    for( auto it = type.begin(); it != type.end(); ++it )
+    {
+      if( it != type.begin() )
+        op_str += ',';
+
+      op_str += type->visit( sb_header_visitor );
+    }
+
+    return op_str + "]::hive.block_header_extensions," + escape_raw( type.witness_signature ) + ')';
+  }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::vote_operation& op )const
   {
@@ -150,22 +251,24 @@ namespace hive::plugins::sql_serializer {
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::pow_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.worker_account + "'," + escape_raw( op.block_id ) + ',' + std::to_string( op.nonce ) + ",('"
+      + static_cast<std::string>(op.work.worker) + "'," + escape_raw( op.work.input ) + ',' + escape_raw( op.work.signature )
+      + ',' + escape_raw( op.work.work ) + ")," + this->operator()( op.props )
       + ")::hive.pow_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::custom_operation& op )const
   {
     return "("
-      + std::string{}
+      + this->operator()( op.required_auths ) + ',' + std::to_string( op.id ) + ',' + escape_raw( op.data )
       + ")::hive.custom_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::report_over_production_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.reporter + "'," + this->operator()( op.first_block ) + ',' + this->operator()( op.second_block )
       + ")::hive.report_over_production_operation";
   }
 
