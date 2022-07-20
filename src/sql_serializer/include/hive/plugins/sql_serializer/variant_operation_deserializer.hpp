@@ -121,6 +121,9 @@ namespace hive::plugins::sql_serializer {
     result_type operator()( const hp::legacy_chain_properties& type )const;
     result_type operator()( const boost::container::flat_set<hp::account_name_type>& type )const;
     result_type operator()( const hp::signed_block_header& type )const;
+    result_type operator()( const hp::extensions_type& type )const;
+    result_type operator()( const hp::public_key_type& type )const;
+    result_type operator()( const hp::pow2_work& type )const;
 
     template< typename T >
     result_type operator()( const fc::optional< T >& type )const
