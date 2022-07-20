@@ -24,6 +24,18 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   std::string
+  data2_sql_tuple_base::escape_raw(const digest_type& hash) const
+  {
+    return "\'\\x" + fc::to_hex(hash.data(), hash.data_size()) + '\'';
+  }
+
+  std::string
+  data2_sql_tuple_base::escape_raw(const std::vector< char >& hash) const
+  {
+    return "\'\\x" + fc::to_hex(hash.data(), hash.size()) + '\'';
+  }
+
+  std::string
   data2_sql_tuple_base::escape_raw(const fc::optional<signature_type>& sign) const
   {
     if( sign.valid() )

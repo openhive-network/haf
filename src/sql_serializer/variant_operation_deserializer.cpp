@@ -62,24 +62,24 @@ namespace hive::plugins::sql_serializer {
   {
     using result_type = std::string;
 
-    result_type operator()( const hp::void_t& )
+    result_type operator()( const hive::void_t& )const
     {
       return "ROW()::hive.void_t";
     }
-    result_type operator()( const hp::version& type )
+    result_type operator()( const hp::version& type )const
     {
       return "ROW(" + std::to_string(type.v_num) + "::hive.version";
     }
-    result_type operator()( const hp::hardfork_version_vote& type )
+    result_type operator()( const hp::hardfork_version_vote& type )const
     {
-      return '(' + this->operator()<const hp::version&>( type.hf_version ) + ",to_timestamp("
+      return '(' + this->operator()( type.hf_version ) + ",to_timestamp("
         + std::to_string( type.hf_time.sec_since_epoch() ) + "))::hive.hardfork_version_vote";
     }
 #ifdef IS_TEST_NET
     struct required_automated_actions_visitor
     {
       using result_type = std::string;
-      result_type operator()( const hp::example_required_action& type )
+      result_type operator()( const hp::example_required_action& type )const
       {
         return "ROW('" + type.account + "')::hive.example_required_action";
       }
@@ -87,7 +87,7 @@ namespace hive::plugins::sql_serializer {
     struct optional_automated_actions_visitor
     {
       using result_type = std::string;
-      result_type operator()( const hp::example_optional_action& type )
+      result_type operator()( const hp::example_optional_action& type )const
       {
         return "ROW('" + type.account + "')::hive.example_optional_action";
       }
@@ -96,7 +96,7 @@ namespace hive::plugins::sql_serializer {
     static constexpr required_automated_actions_visitor raav{};
     static constexpr optional_automated_actions_visitor oaav{};
 
-    result_type operator()( const hp::required_automated_actions& type )
+    result_type operator()( const hp::required_automated_actions& type )const
     {
       std::string op_str = "ARRAY[";
 
@@ -110,7 +110,7 @@ namespace hive::plugins::sql_serializer {
 
       return op_str + "]::hive.required_automated_actions::hive.hive_block_header_extension";
     }
-    result_type operator()( const hp::optional_automated_actions& type )
+    result_type operator()( const hp::optional_automated_actions& type )const
     {
       std::string op_str = "ARRAY[";
 
@@ -134,12 +134,12 @@ namespace hive::plugins::sql_serializer {
     std::string op_str = '(' + escape_raw( type.previous ) + ',' + this->operator()( type.timestamp ) + ",'"
       + type.witness + "'," + escape_raw( type.transaction_merkle_root ) + ",ARRAY[";
 
-    for( auto it = type.begin(); it != type.end(); ++it )
+    for( auto it = type.extensions.begin(); it != type.extensions.end(); ++it )
     {
-      if( it != type.begin() )
+      if( it != type.extensions.begin() )
         op_str += ',';
 
-      op_str += type->visit( sb_header_visitor );
+      op_str += it->visit( sb_header_visitor );
     }
 
     return op_str + "]::hive.block_header_extensions," + escape_raw( type.witness_signature ) + ')';

@@ -6,18 +6,22 @@
 #include <fc/crypto/ripemd160.hpp>
 
 #include <string>
+#include <vector>
 
 namespace hive::plugins::sql_serializer {
 
   struct data2_sql_tuple_base
     {
     using signature_type = hive::protocol::signature_type;
+    using digest_type = hive::protocol::digest_type;
     data2_sql_tuple_base() = default;
 
     protected:
       std::string escape(const std::string& source) const;
       std::string escape(const fc::optional<std::string>& source) const;
       std::string escape_raw(const fc::ripemd160& hash) const;
+      std::string escape_raw(const digest_type& hash) const;
+      std::string escape_raw(const std::vector< char >& hash) const;
       std::string escape_raw(const fc::optional<signature_type>& sign) const;
 
     private:

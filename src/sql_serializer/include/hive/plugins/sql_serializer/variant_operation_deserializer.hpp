@@ -119,7 +119,7 @@ namespace hive::plugins::sql_serializer {
     result_type operator()( const fc::time_point_sec& type )const;
     result_type operator()( const hp::authority& type )const;
     result_type operator()( const hp::legacy_chain_properties& type )const;
-    result_type operator()( const hp::boost::container::flat_set<hp::account_name_type>& type )const;
+    result_type operator()( const boost::container::flat_set<hp::account_name_type>& type )const;
     result_type operator()( const hp::signed_block_header& type )const;
 
     template< typename T >
