@@ -274,29 +274,93 @@ namespace hive::plugins::sql_serializer {
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::delete_comment_operation& op )const
   {
-    return "("
-      + std::string{}
-      + ")::hive.delete_comment_operation";
+    return "('"
+      + op.author + "','" + escape( op.permlink )
+      + "')::hive.delete_comment_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::custom_json_operation& op )const
   {
     return "("
-      + std::string{}
-      + ")::hive.custom_json_operation";
+      + this->operator()( op.required_auths ) + ',' + this->operator()( op.required_posting_auths ) + ",'"
+      + escape( op.id.operator std::string() ) + "','" + escape( op.json.operator const std::string&() )
+      + "')::hive.custom_json_operation";
   }
+
+  struct comment_options_extensions_visitor
+  {
+    using result_type = std::string;
+
+    result_type operator()( const hp::comment_payout_beneficiaries& type )const
+    {
+      std::string res_str = "ROW(ARRAY[";
+
+      for( auto it = type.beneficiaries.begin(); it != type.beneficiaries.end(); ++it )
+      {
+        if( it != type.beneficiaries.begin() )
+          res_str += ',';
+
+        res_str += "('" + it->account +"'," + std::to_string( it->weight ) + ')';
+      }
+
+      return res_str + "]::hive.beneficiary_route_type[])::hive.comment_payout_beneficiaries";
+    }
+#ifdef HIVE_ENABLE_SMT
+    struct votable_asset_info_visitor
+    {
+      using result_type = std::string;
+
+      result_type operator()( const hp::votable_asset_info_v1& type )const
+      {
+        return '(' + std::to_string( type.max_accepted_payout.value ) + ','
+          + std::to_string( type.allow_curation_rewards ) + ")::hive.votable_asset_info_v1";
+      }
+    };
+
+    result_type operator()( const hp::allowed_vote_assets& type )const
+    {
+      static constexpr votable_asset_info_visitor vaiv;
+
+      std::string res_str = "ROW(ARRAY[";
+
+      for( auto it = type.votable_assets.begin(); it != type.votable_assets.end(); ++it )
+      {
+        if( it != type.votable_assets.begin() )
+          res_str += ',';
+
+        res_str += "(" + std::to_string( it->first.asset_num ) + ',' + it->second.visit( vaiv );
+      }
+
+      return res_str + "]::hive.beneficiary_route_type[])::hive.comment_payout_beneficiaries";
+    }
+#endif
+
+  };
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::comment_options_operation& op )const
   {
-    return "("
-      + std::string{}
-      + ")::hive.comment_options_operation";
+    static constexpr comment_options_extensions_visitor coev{};
+
+    std::string op_str = "('"
+      + op.author + "','" + escape( op.permlink ) + "'," + this->operator()( op.max_accepted_payout ) + ','
+      + std::to_string( op.percent_hbd ) + ',' + std::to_string( op.allow_votes ) + ','
+      + std::to_string( op.allow_curation_rewards ) + ",ARRAY[";
+
+    for( auto it = op.extensions.begin(); it != op.extensions.end(); ++it )
+    {
+      if( it != op.extensions.begin() )
+        op_str += ',';
+
+      op_str += it->visit( coev );
+    }
+
+    return op_str + "]::hive.comment_options_extensions_type)::hive.comment_options_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::set_withdraw_vesting_route_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.from_account + "','" + op.to_account + "'," + std::to_string( op.percent ) + ',' + std::to_string( op.auto_vest )
       + ")::hive.set_withdraw_vesting_route_operation";
   }
 
