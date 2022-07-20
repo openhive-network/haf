@@ -177,6 +177,21 @@ namespace hive::plugins::sql_serializer {
     return static_cast< std::string >( type );
   }
 
+  variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const flat_set_ex<int64_t>& type )const
+  {
+    std::string type_str = "ARRAY[";
+
+    for( auto it = type.begin(); it != type.end(); ++it )
+    {
+      if( it != type.begin() )
+        type_str += ',';
+
+      type_str += std::to_string( *it );
+    }
+
+    return type_str + ']';
+  }
+
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::vote_operation& op )const
   {
     return "('"
@@ -626,30 +641,58 @@ namespace hive::plugins::sql_serializer {
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::create_proposal_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.creator + "','" + op.receiver + "'," + this->operator()( op.start_date ) + ',' + this->operator()( op.end_date ) + ','
+      + this->operator()( op.daily_pay ) + ",'" + escape( op.subject ) + "','" + escape( op.permlink ) + ',' + this->operator()( op.extensions )
       + ")::hive.create_proposal_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::update_proposal_votes_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.voter + "'," + this->operator()( op.proposal_ids ) + ',' + std::to_string( op.approve ) + ',' + this->operator()( op.extensions )
       + ")::hive.update_proposal_votes_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::remove_proposal_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.proposal_owner + "'," + this->operator()( op.proposal_ids ) + ',' + this->operator()( op.extensions )
       + ")::hive.remove_proposal_operation";
   }
 
+  struct update_proposal_extensions_variant
+  {
+    using result_type = std::string;
+
+    result_type operator()( const hive::void_t& )const
+    {
+      return "ROW()::hive.void_t";
+    }
+
+    result_type operator()( const hp::update_proposal_end_date& type )const
+    {
+      return "ROW(to_timestamp(" + std::to_string( type.end_date.sec_since_epoch() ) + "))::hive.update_proposal_end_date";
+    }
+  };
+
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::update_proposal_operation& op )const
   {
-    return "("
-      + std::string{}
-      + ")::hive.update_proposal_operation";
+    static constexpr update_proposal_extensions_variant upev{};
+
+    std::string str_op = "("
+      + std::to_string( op.proposal_id ) + ",'" + op.creator + "'," + this->operator()( op.daily_pay ) + ",'" + escape( op.subject ) + "','"
+      + escape( op.permlink ) + "',ARRAY[";
+
+    for( auto it = op.extensions.begin(); it != op.extensions.end(); ++it )
+    {
+      if( it != op.extensions.begin() )
+        str_op += ',';
+
+      str_op += it->visit( upev );
+    }
+
+    return str_op + "])::hive.update_proposal_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::collateralized_convert_operation& op )const

@@ -126,6 +126,7 @@ namespace hive::plugins::sql_serializer {
     result_type operator()( const hp::extensions_type& type )const;
     result_type operator()( const hp::public_key_type& type )const;
     result_type operator()( const hp::pow2_work& type )const;
+    result_type operator()( const flat_set_ex<int64_t>& type )const;
 
     template< typename T >
     result_type operator()( const fc::optional< T >& type )const
