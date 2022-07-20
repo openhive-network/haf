@@ -11,9 +11,16 @@ CREATE TYPE hive.pow2 AS (
 SELECT _variant.create_cast_in( 'hive.pow2' );
 SELECT _variant.create_cast_out( 'hive.pow2' );
 
+CREATE TYPE hive.pow2_proof AS (
+  n int8, -- uint32_t: 4 byte, bute unsigned (int8)
+  k int8, -- uint32_t: 4 byte, bute unsigned (int8)
+  seed bytea,
+  inputs int8[] -- uint32_t: 4 byte, bute unsigned (int8)
+);
+
 CREATE TYPE hive.equihash_pow AS (
   input hive.pow2_input,
-  proof bytea,
+  proof hive.pow2_proof,
   prev_block hive.block_id_type,
   pow_summary int8 -- uint32_t: 4 byte, but unsigned (int8)
 );
