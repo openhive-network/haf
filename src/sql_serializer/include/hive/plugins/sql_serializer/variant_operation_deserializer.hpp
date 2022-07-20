@@ -66,6 +66,7 @@ namespace hive::plugins::sql_serializer {
     result_type operator()( const hp::collateralized_convert_operation& op )const;
     result_type operator()( const hp::recurrent_transfer_operation& op )const;
 
+#ifdef HIVE_ENABLE_SMT
     /// SMT operations
     result_type operator()( const hp::claim_reward_balance2_operation& op )const;
     result_type operator()( const hp::smt_setup_operation& op )const;
@@ -74,6 +75,7 @@ namespace hive::plugins::sql_serializer {
     result_type operator()( const hp::smt_set_runtime_parameters_operation& op )const;
     result_type operator()( const hp::smt_create_operation& op )const;
     result_type operator()( const hp::smt_contribute_operation& op )const;
+#endif
 
     /// virtual operations below this point
     result_type operator()( const hp::fill_convert_request_operation& op )const;

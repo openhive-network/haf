@@ -513,92 +513,114 @@ namespace hive::plugins::sql_serializer {
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::escrow_approve_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.from + "','" + op.to + "','" + op.agent + "','" + op.who + "'," + std::to_string( op.escrow_id ) + ',' + std::to_string( op.approve )
       + ")::hive.escrow_approve_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::transfer_to_savings_operation& op )const
   {
-    return "("
-      + std::string{}
-      + ")::hive.transfer_to_savings_operation";
+    return "('"
+      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ",'" + escape( op.memo )
+      + "')::hive.transfer_to_savings_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::transfer_from_savings_operation& op )const
   {
-    return "("
-      + std::string{}
-      + ")::hive.transfer_from_savings_operation";
+    return "('"
+      + op.from + "'," + std::to_string( op.request_id ) + ",'" + op.to + ',' + this->operator()( op.amount ) + ",'" + escape( op.memo )
+      + "')::hive.transfer_from_savings_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::cancel_transfer_from_savings_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.from + "'," + std::to_string( op.request_id )
       + ")::hive.cancel_transfer_from_savings_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::custom_binary_operation& op )const
   {
-    return "("
-      + std::string{}
-      + ")::hive.custom_binary_operation";
+    std::string str_op = "(" + this->operator()( op.required_owner_auths ) + ',' + this->operator()( op.required_active_auths ) + ','
+      + this->operator()( op.required_posting_auths ) + ",ARRAY[";
+
+    for( auto it = op.required_auths.begin(); it != op.required_auths.end(); ++it )
+    {
+      if( it != op.required_auths.begin() )
+        str_op += ',';
+
+      str_op += this->operator()( *it );
+    }
+
+    return str_op + "]," + escape( op.id.operator std::string() ) + ',' + escape_raw( op.data ) + ")::hive.custom_binary_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::decline_voting_rights_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.account + "'," + std::to_string( op.decline )
       + ")::hive.decline_voting_rights_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::reset_account_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.reset_account + "','" + op.account_to_reset + "'," + this->operator()( op.new_owner_authority )
       + ")::hive.reset_account_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::set_reset_account_operation& op )const
   {
-    return "("
-      + std::string{}
-      + ")::hive.set_reset_account_operation";
+    return "('"
+      + op.account + "','" + op.current_reset_account + "','" + op.reset_account
+      + "')::hive.set_reset_account_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::claim_reward_balance_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.account + "'," + this->operator()( op.reward_hive ) + ',' + this->operator()( op.reward_hbd ) + ','
+      + this->operator()( op.reward_vests )
       + ")::hive.claim_reward_balance_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::delegate_vesting_shares_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.delegator + "','" + op.delegatee + "'," + this->operator()( op.vesting_shares )
       + ")::hive.delegate_vesting_shares_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::account_create_with_delegation_operation& op )const
   {
     return "("
-      + std::string{}
+      + this->operator()( op.fee ) + ',' + this->operator()( op.delegation ) + ",'" + op.creator + "','" + op.new_account_name + "',"
+      + this->operator()( op.owner ) + ',' + this->operator()( op.active ) + ',' + this->operator()( op.posting ) + ','
+      + this->operator()( op.memo_key ) + ",'" + escape( op.json_metadata.operator const std::string&() ) + "'," + this->operator()( op.extensions )
       + ")::hive.account_create_with_delegation_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::witness_set_properties_operation& op )const
   {
-    return "("
-      + std::string{}
-      + ")::hive.witness_set_properties_operation";
+    std::string str_op = "('" + op.owner + "',ARRAY[";
+
+    for( auto it = op.props.begin(); it != op.props.end(); ++it )
+    {
+      if( it != op.props.begin() )
+        str_op += ',';
+
+      str_op += "('" + it->first + "'," + escape_raw( it->second ) + ')';
+    }
+
+    return "]::hive._props_witness_set_properties_operation[]," + this->operator()( op.extensions ) + ")::hive.witness_set_properties_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::account_update2_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.account + "'," + this->operator()( op.owner ) + ',' + this->operator()( op.active ) + ','
+      + this->operator()( op.posting ) + ',' + this->operator()( op.memo_key ) + ",'" + escape( op.json_metadata.operator const std::string&() )
+      + "','" + escape( op.posting_json_metadata.operator const std::string&() ) + "'," + this->operator()( op.extensions )
       + ")::hive.account_update2_operation";
   }
 
@@ -632,25 +654,35 @@ namespace hive::plugins::sql_serializer {
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::collateralized_convert_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.owner + "'," + std::to_string( op.requestid ) + ',' + this->operator()( op.amount )
       + ")::hive.collateralized_convert_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::recurrent_transfer_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ",'" + escape( op.memo ) + "'," + std::to_string( op.recurrence ) + ','
+      + std::to_string( op.executions ) + ',' + this->operator()( op.extensions )
       + ")::hive.recurrent_transfer_operation";
   }
 
+#ifdef HIVE_ENABLE_SMT
 
   /// SMT operations
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::claim_reward_balance2_operation& op )const
   {
-    return "("
-      + std::string{}
-      + ")::hive.claim_reward_balance2_operation";
+    std::string str_op = "('" + op.account + "'," + this->operator()( op.extensions ) + ",ARRAY[";
+
+    for( auto it = op.reward_tokens.begin(); it != op.reward_tokens.end(); ++it )
+    {
+      if( it != op.reward_tokens.begin() )
+        str_op += ',';
+
+      str_op += this->operator()( *it );
+    }
+
+    return str_op + "])::hive.claim_reward_balance2_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::smt_setup_operation& op )const
@@ -695,6 +727,7 @@ namespace hive::plugins::sql_serializer {
       + ")::hive.smt_contribute_operation";
   }
 
+#endif
 
   /// virtual operations below this point
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::fill_convert_request_operation& op )const
