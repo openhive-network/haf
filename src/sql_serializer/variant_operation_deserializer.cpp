@@ -177,6 +177,22 @@ namespace hive::plugins::sql_serializer {
     return static_cast< std::string >( type );
   }
 
+  variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const fc::optional< hp::authority >& type )const
+  {
+    if( type.valid() )
+      return this->operator()( type.value() );
+
+    return "NULL";
+  }
+
+  variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const fc::optional< hp::public_key_type >& type )const
+  {
+    if( type.valid() )
+      return this->operator()( type.value() );
+
+    return "NULL";
+  }
+
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const flat_set_ex<int64_t>& type )const
   {
     std::string type_str = "ARRAY[";
@@ -661,7 +677,7 @@ namespace hive::plugins::sql_serializer {
       + ")::hive.remove_proposal_operation";
   }
 
-  struct update_proposal_extensions_variant
+  struct update_proposal_extensions_visitor
   {
     using result_type = std::string;
 
@@ -678,7 +694,7 @@ namespace hive::plugins::sql_serializer {
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::update_proposal_operation& op )const
   {
-    static constexpr update_proposal_extensions_variant upev{};
+    static constexpr update_proposal_extensions_visitor upev{};
 
     std::string str_op = "("
       + std::to_string( op.proposal_id ) + ",'" + op.creator + "'," + this->operator()( op.daily_pay ) + ",'" + escape( op.subject ) + "','"
@@ -728,45 +744,183 @@ namespace hive::plugins::sql_serializer {
     return str_op + "])::hive.claim_reward_balance2_operation";
   }
 
+  variant_operation_deserializer::result_type variant_operation_deserializer::operator()(
+    const boost::container::flat_map< hp::account_name_type, uint16_t >& map )const
+  {
+    std::string str_map = "ARRAY[";
+    for( auto it = map.begin(); it != map.end(); ++it )
+    {
+      if( it != map.begin() )
+        str_map += ',';
+
+      str_map += "('" + it->first + "'," + std::to_string( it->second ) + ')';
+    }
+    return str_map + "]::hive._unit_smt_generation_unit[]";
+  };
+
+  class variant_operation_deserializer::smt_generation_policy_visitor
+  {
+  public:
+    using result_type = std::string;
+
+    const variant_operation_deserializer& vod;
+
+    constexpr smt_generation_policy_visitor( const variant_operation_deserializer& vod )
+      : vod( vod ) {}
+
+    result_type operator()( const hp::smt_generation_unit& type )const
+    {
+      return '(' + vod( type.hive_unit ) + ',' + vod( type.token_unit ) + ')';
+    }
+
+    result_type operator()( const hp::smt_capped_generation_policy& type )const
+    {
+      return '(' + this->operator()( type.pre_soft_cap_unit ) + ',' + this->operator()( type.post_soft_cap_unit ) + ','
+        + std::to_string( type.soft_cap_percent ) + ',' + std::to_string( type.min_unit_ratio ) + ','
+        + std::to_string( type.max_unit_ratio ) + ',' + vod( type.extensions ) + ")::hive.smt_capped_generation_policy";
+    }
+  };
+
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::smt_setup_operation& op )const
   {
-    return "("
-      + std::string{}
+    static smt_generation_policy_visitor sgpv{ *this };
+
+    return "('"
+      + op.control_account + "'," + std::to_string( op.symbol.asset_num ) + ',' + std::to_string( op.max_supply ) + ','
+      + op.initial_generation_policy.visit( sgpv ) + ',' + this->operator()( op.contribution_begin_time ) + ','
+      + this->operator()( op.contribution_end_time ) + ',' + this->operator()( op.launch_time ) + ','
+      + std::to_string( op.hive_units_soft_cap.value ) + ',' + std::to_string( op.hive_units_hard_cap.value ) + ','
+      + this->operator()( op.extensions )
       + ")::hive.smt_setup_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::smt_setup_emissions_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.control_account + "'," + std::to_string( op.symbol.asset_num ) + ',' + this->operator()( op.schedule_time ) + ",ROW("
+      + this->operator()( op.emissions_unit.token_unit ) + ")," + std::to_string( op.interval_seconds ) + ','
+      + std::to_string( op.interval_count ) + ',' + this->operator()( op.lep_time ) + ',' + this->operator()( op.rep_time ) + ','
+      + this->operator()( op.lep_abs_amount ) + ',' + this->operator()( op.rep_abs_amount ) + ',' + std::to_string( op.lep_rel_amount_numerator ) + ','
+      + std::to_string( op.rep_rel_amount_numerator ) + ',' + std::to_string( op.rel_amount_denom_bits ) + ',' + std::to_string( op.remove ) + ','
+      + this->operator()( op.extensions )
       + ")::hive.smt_setup_emissions_operation";
   }
 
+  struct smt_setup_parameter_visitor
+  {
+    using result_type = std::string;
+
+    result_type operator()( const hp::smt_param_allow_voting& type )const
+    {
+      return "ROW(" + std::to_string( type.value ) + ")::hive.smt_param_allow_voting";
+    }
+  };
+
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::smt_set_setup_parameters_operation& op )const
   {
-    return "("
-      + std::string{}
-      + ")::hive.smt_set_setup_parameters_operation";
+    static constexpr smt_setup_parameter_visitor sspv;
+
+    std::string str_op = "('" + op.control_account + "'," + std::to_string( op.symbol.asset_num ) + ",ARRAY[";
+
+    for( auto it = op.setup_parameters.begin(); it != op.setup_parameters.end(); ++it )
+    {
+      if( it != op.setup_parameters.begin() )
+        str_op += ',';
+
+      str_op += it->visit( sspv );
+    }
+
+    return str_op + "]," + this->operator()( op.extensions ) + ")::hive.smt_set_setup_parameters_operation";
   }
+
+  struct smt_runtime_parameter_visitor
+  {
+    using result_type = std::string;
+
+    const result_type& operator()( const hp::curve_id& type )const
+    {
+      static std::string curve_ids[] = {
+        "'quadratic'",
+        "'bounded_curation'",
+        "'linear'",
+        "'square_root'",
+        "'convergent_linear'",
+        "'convergent_square_root'"
+      };
+
+      switch( type )
+      {
+        case hp::curve_id::quadratic:
+          return curve_ids[ 0 ];
+        case hp::curve_id::bounded_curation:
+          return curve_ids[ 1 ];
+        case hp::curve_id::linear:
+          return curve_ids[ 2 ];
+        case hp::curve_id::square_root:
+          return curve_ids[ 3 ];
+        case hp::curve_id::convergent_linear:
+          return curve_ids[ 4 ];
+        case hp::curve_id::convergent_square_root:
+          return curve_ids[ 5 ];
+      }
+
+      FC_ASSERT( false, "curve_id not supported: ${cid}", ("cid", type) );
+    }
+
+    result_type operator()( const hp::smt_param_windows_v1& type )const
+    {
+      return "(" + std::to_string( type.cashout_window_seconds ) + ','
+        + std::to_string( type.reverse_auction_window_seconds ) + ")::hive.smt_param_windows_v1";
+    }
+
+    result_type operator()( const hp::smt_param_vote_regeneration_period_seconds_v1& type )const
+    {
+      return "(" + std::to_string( type.vote_regeneration_period_seconds ) + ','
+        + std::to_string( type.votes_per_regeneration_period ) + ")::hive.smt_param_vote_regeneration_period_seconds_v1";
+    }
+
+    result_type operator()( const hp::smt_param_rewards_v1& type )const
+    {
+      return "(" + type.content_constant.operator std::string() + ',' + std::to_string( type.percent_curation_rewards ) + ','
+        + this->operator()( type.author_reward_curve ) + ',' + this->operator()( type.curation_reward_curve ) + ")::hive.smt_param_rewards_v1";
+    }
+
+    result_type operator()( const hp::smt_param_allow_downvotes& type )const
+    {
+      return "ROW(" + std::to_string( type.value ) + ")::hive.smt_param_allow_downvotes";
+    }
+  };
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::smt_set_runtime_parameters_operation& op )const
   {
-    return "("
-      + std::string{}
-      + ")::hive.smt_set_runtime_parameters_operation";
+    static constexpr smt_runtime_parameter_visitor srpv;
+
+    std::string str_op = "('" + op.control_account + "'," + std::to_string( op.symbol.asset_num ) + ",ARRAY[";
+
+    for( auto it = op.runtime_parameters.begin(); it != op.runtime_parameters.end(); ++it )
+    {
+      if( it != op.runtime_parameters.begin() )
+        str_op += ',';
+
+      str_op += it->visit( srpv );
+    }
+
+    return str_op + "]," + this->operator()( op.extensions ) + ")::hive.smt_set_runtime_parameters_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::smt_create_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.control_account + "'," + std::to_string( op.symbol.asset_num ) + ',' + this->operator()( op.smt_creation_fee ) + ','
+      + std::to_string( op.precision ) + ',' + this->operator()( op.extensions )
       + ")::hive.smt_create_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::smt_contribute_operation& op )const
   {
-    return "("
-      + std::string{}
+    return "('"
+      + op.contributor + "'," + std::to_string( op.symbol.asset_num ) + ',' + std::to_string( op.contribution_id ) + ','
+      + this->operator()( op.contribution ) + ',' + this->operator()( op.extensions )
       + ")::hive.smt_contribute_operation";
   }
 

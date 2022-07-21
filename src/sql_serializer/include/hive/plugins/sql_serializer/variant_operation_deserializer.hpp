@@ -125,16 +125,12 @@ namespace hive::plugins::sql_serializer {
     result_type operator()( const hp::signed_block_header& type )const;
     result_type operator()( const hp::extensions_type& type )const;
     result_type operator()( const hp::public_key_type& type )const;
-    result_type operator()( const hp::pow2_work& type )const;
     result_type operator()( const flat_set_ex<int64_t>& type )const;
+    result_type operator()( const boost::container::flat_map< hp::account_name_type, uint16_t >& type )const;
 
-    template< typename T >
-    result_type operator()( const fc::optional< T >& type )const
-    {
-      if( type.valid() )
-        return this->operator()( type.value() );
+    class smt_generation_policy_visitor;
 
-      return "NULL";
-    }
+    result_type operator()( const fc::optional< hp::authority >& type )const;
+    result_type operator()( const fc::optional< hp::public_key_type >& type )const;
   };
 }
