@@ -33,7 +33,7 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-        ( 1, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"value":{"new_account_name": "account_5"}}' );
+        ( 1, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('{"value":{"new_account_name": "account_5"}}')::hive.system_warning_operation );
 
     PERFORM hive.end_massive_sync(5);
 
@@ -74,7 +74,7 @@ BEGIN
 
     INSERT INTO hive.operations_reversible
     VALUES
-        ( 2, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"value":{"new_account_name": "account_8_reversible"}}', 1 );
+        ( 2, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('{"value":{"new_account_name": "account_8_reversible"}}')::hive.system_warning_operation, 1 );
 
 
     PERFORM hive.push_block(
@@ -104,7 +104,7 @@ BEGIN
 
     INSERT INTO hive.operations_reversible
     VALUES
-        ( 2, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"value":{"new_account_name": "account_8"}}', 2 );
+        ( 2, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('{"value":{"new_account_name": "account_8"}}')::hive.system_warning_operation, 2 );
 
     PERFORM hive.push_block(
                    ( 9, '\xBADD91', '\xCAFE91', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w' )

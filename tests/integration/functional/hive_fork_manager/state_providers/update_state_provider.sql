@@ -96,11 +96,11 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-           ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"value":{"new_account_name":"account_from_pow"}}' ) --pow
-         , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"value":{"new_account_name": "account_from_pow2"}}' ) --pow2
-         , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"value":{"new_account_name": "account_from_create_account"}}' )
-         , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"value":{"new_account_name": "account_from_create_claimed_account"}}' )
-         , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"value":{"new_account_name": "account_from_create_claimed_account_del"}}' )
+           ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('{"value":{"new_account_name":"account_from_pow"}}')::hive.system_warning_operation ) --pow
+         , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('{"value":{"new_account_name": "account_from_pow2"}}')::hive.system_warning_operation ) --pow2
+         , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('{"value":{"new_account_name": "account_from_create_account"}}')::hive.system_warning_operation )
+         , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('{"value":{"new_account_name": "account_from_create_claimed_account"}}')::hive.system_warning_operation )
+         , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('{"value":{"new_account_name": "account_from_create_claimed_account_del"}}')::hive.system_warning_operation )
          , ( 6, 5, 0, 1, 6, '2016-06-22 19:10:21-07'::timestamp, 'other' )
     ;
 
