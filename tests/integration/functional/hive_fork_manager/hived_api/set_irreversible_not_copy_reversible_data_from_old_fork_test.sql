@@ -45,7 +45,7 @@ BEGIN
 
     INSERT INTO hive.operations_reversible
     VALUES
-    ( 1, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'THREE OPERATION', 1 )
+    ( 1, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('THREE OPERATION')::hive.system_warning_operation, 1 )
     ;
 
     INSERT INTO hive.account_operations_reversible

@@ -121,8 +121,8 @@ BEGIN
         __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp );
         __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
         __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED' );
-        __operation1_1 = ( 1, 101, 0, 0, 1, 'ZERO OPERATION' );
-        __operation2_1 = ( 2, 101, 1, 0, 2, 'ONE OPERATION' );
+        __operation1_1 = ( 1, 101, 0, 0, 1, ROW('ZERO OPERATION')::hive.system_warning_operation );
+        __operation2_1 = ( 2, 101, 1, 0, 2, ROW('ONE OPERATION')::hive.system_warning_operation );
         __signatures1 = ( '\xDEED', '\xFEED' );
         __signatures2 = ( '\xBEEF', '\xBABE' );
         PERFORM hive.push_block(

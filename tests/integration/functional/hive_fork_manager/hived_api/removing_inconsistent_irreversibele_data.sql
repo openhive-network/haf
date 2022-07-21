@@ -37,8 +37,8 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-           ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'ZERO OPERATION' )
-         , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'ONE OPERATION' )
+           ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('ZERO OPERATION')::hive.system_warning_operation )
+         , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('ONE OPERATION')::hive.system_warning_operation )
     ;
 
     INSERT INTO hive.accounts

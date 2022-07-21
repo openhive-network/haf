@@ -36,7 +36,7 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-    ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'ZERO OPERATION' )
+    ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('ZERO OPERATION')::hive.system_warning_operation )
     ;
 
     INSERT INTO hive.transactions_multisig
@@ -65,7 +65,7 @@ BEGIN
     -- block 2 on fork 3 has no operations
     INSERT INTO hive.operations_reversible
     VALUES
-        ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'ONE OPERATION', 2 )
+        ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('ONE OPERATION')::hive.system_warning_operation, 2 )
     ;
 
     UPDATE hive.contexts SET fork_id = 3, irreversible_block = 1, current_block_num = 2;
@@ -99,14 +99,14 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.context_operations_view
         EXCEPT SELECT * FROM ( VALUES
-              ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'ZERO OPERATION' )
+              ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('ZERO OPERATION')::hive.system_warning_operation )
         ) as pattern
     ) , 'Unexpected rows in the operations view';
 
 
     ASSERT NOT EXISTS (
         SELECT * FROM ( VALUES
-              ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'ZERO OPERATION' )
+              ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('ZERO OPERATION')::hive.system_warning_operation )
         ) as pattern
         EXCEPT SELECT * FROM hive.context_operations_view
     ) , 'Unexpected rows in the operations view2';
