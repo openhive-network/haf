@@ -33,19 +33,6 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_account_from_accounts_operations( _account_operation TEXT )
-    RETURNS TEXT
-    LANGUAGE plpgsql
-    IMMUTABLE
-AS
-$BODY$
-BEGIN
-    RETURN json_extract_path_text( CAST( _account_operation as json ), 'value', 'new_account_name' );
-END;
-$BODY$
-;
-
-
 CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
     RETURNS void
     LANGUAGE plpgsql
@@ -67,7 +54,7 @@ BEGIN
 
     EXECUTE format(
         'INSERT INTO hive.%s_accounts( name )
-        SELECT hive.get_account_from_accounts_operations( ov.body ) as name
+        SELECT ( ov.body :: hive.account_created_operation ).new_account_name as name
         FROM hive.%s_operations_view ov
         JOIN hive.operation_types ot ON ov.op_type_id = ot.id
         WHERE
