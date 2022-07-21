@@ -41,7 +41,7 @@ BEGIN
          , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('{"value":{"new_account_name": "account_from_create_account"}}')::hive.system_warning_operation )
          , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('{"value":{"new_account_name": "account_from_create_claimed_account"}}')::hive.system_warning_operation )
          , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('{"value":{"new_account_name": "account_from_create_claimed_account_del"}}')::hive.system_warning_operation )
-         , ( 6, 5, 0, 1, 6, '2016-06-22 19:10:21-07'::timestamp, 'other' )
+         , ( 6, 5, 0, 1, 6, '2016-06-22 19:10:21-07'::timestamp, ROW('other')::hive.system_warning_operation )
     ;
 
     PERFORM hive.app_create_context( 'context' );
