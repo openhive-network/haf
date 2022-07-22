@@ -205,7 +205,6 @@ FROM (
           htm.trx_hash
         , htm.signature
     FROM hive.transactions_multisig htm
-    JOIN hive.transactions ht ON ht.trx_hash = htm.trx_hash
     UNION ALL
     SELECT
            reversible.trx_hash
