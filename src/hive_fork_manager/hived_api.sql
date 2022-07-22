@@ -345,7 +345,7 @@ $BODY$
 DECLARE
     __irreversible_head_block hive.blocks.num%TYPE;
 BEGIN
-    SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hive.blocks;
+    __irreversible_head_block := COALESCE((SELECT num FROM hive.blocks ORDER BY num DESC LIMIT 1), 0);
     IF ( _block_num < __irreversible_head_block ) THEN
         RETURN hive.get_block_irreversible( _block_num );
     END IF;
