@@ -2,6 +2,7 @@
 
 #include <fc/exception/exception.hpp>
 #include <fc/log/logger.hpp>
+#include <fc/thread/thread.hpp>
 #include <appbase/application.hpp>
 
 #include <boost/exception/diagnostic_information.hpp>
@@ -53,6 +54,8 @@ data_processor::data_processor( std::string description, const data_processing_f
   auto body = [this, dataProcessor]() -> void
   {
     ilog("Entering data processor thread: ${d}", ("d", _description));
+    fc::set_thread_name("sql_serializer");
+    fc::thread::current().set_name("sql_serializer");
 
     try
     {
