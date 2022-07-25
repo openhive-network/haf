@@ -75,19 +75,19 @@ BEGIN
 
     INSERT INTO hive.operations_reversible
     VALUES
-           ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('THREE OPERATION')::hive.system_warning_operation, 1 )
-         , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('FIVE OPERATION')::hive.system_warning_operation, 1 )
-         , ( 6, 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SIX OPERATION')::hive.system_warning_operation, 1 )
-         , ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SEVEN0 OPERATION')::hive.system_warning_operation, 1 ) -- must be abandon because of fork2
-         , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SEVEN01 OPERATION')::hive.system_warning_operation, 1 ) -- must be abandon because of fork2
-         , ( 9, 7, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SEVEN02 OPERATION')::hive.system_warning_operation, 1 ) -- must be abandon because of fork2
-         , ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SEVEN2 OPERATION')::hive.system_warning_operation, 2 )
-         , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SEVEN21 OPERATION')::hive.system_warning_operation, 2 )
-         , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('EAIGHT2 OPERATION')::hive.system_warning_operation, 2 )
-         , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('NINE2 OPERATION')::hive.system_warning_operation, 2 )
-         , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('EIGHT3 OPERATION')::hive.system_warning_operation, 3 )
-         , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('NINE3 OPERATION')::hive.system_warning_operation, 3 )
-         , ( 11, 10, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('TEN OPERATION')::hive.system_warning_operation, 3 )
+           ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('THREE OPERATION')::hive.system_warning_operation :: hive.hive_operation, 1 )
+         , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('FIVE OPERATION')::hive.system_warning_operation :: hive.hive_operation, 1 )
+         , ( 6, 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SIX OPERATION')::hive.system_warning_operation :: hive.hive_operation, 1 )
+         , ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SEVEN0 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 1 ) -- must be abandon because of fork2
+         , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SEVEN01 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 1 ) -- must be abandon because of fork2
+         , ( 9, 7, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SEVEN02 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 1 ) -- must be abandon because of fork2
+         , ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SEVEN2 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 2 )
+         , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('SEVEN21 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 2 )
+         , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('EAIGHT2 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 2 )
+         , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('NINE2 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 2 )
+         , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('EIGHT3 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 3 )
+         , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('NINE3 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 3 )
+         , ( 11, 10, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('TEN OPERATION')::hive.system_warning_operation :: hive.hive_operation, 3 )
     ;
 
     UPDATE hive.irreversible_data SET consistent_block = 5;

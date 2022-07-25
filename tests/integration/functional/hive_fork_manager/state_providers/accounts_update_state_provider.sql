@@ -36,11 +36,11 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-           ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ('account_from_pow', 'initminer', NULL, NULL) :: hive.account_created_operation ) --pow
-         , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ('account_from_pow2', 'initminer', NULL, NULL) :: hive.account_created_operation ) --pow2
-         , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ('account_from_create_account', 'initminer', NULL, NULL) :: hive.account_created_operation )
-         , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ('account_from_create_claimed_account', 'initminer', NULL, NULL) :: hive.account_created_operation )
-         , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ('account_from_create_claimed_account_del', 'initminer', NULL, NULL) :: hive.account_created_operation )
+           ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ('account1', 'initminer', NULL, NULL) :: hive.account_created_operation ) --pow
+         , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ('account2', 'initminer', NULL, NULL) :: hive.account_created_operation ) --pow2
+         , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ('account3', 'initminer', NULL, NULL) :: hive.account_created_operation )
+         , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ('account4', 'initminer', NULL, NULL) :: hive.account_created_operation )
+         , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ('account5', 'initminer', NULL, NULL) :: hive.account_created_operation )
          , ( 6, 5, 0, 1, 6, '2016-06-22 19:10:21-07'::timestamp, ROW('other')::hive.system_warning_operation )
     ;
 
@@ -73,11 +73,11 @@ STABLE
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'account_from_pow' ), 'account_from_pow not created';
-    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'account_from_pow2' ), 'account_from_pow2 not created';
-    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'account_from_create_account' ), 'account_from_create_account not created';
-    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'account_from_create_claimed_account' ), 'account_from_create_claimed_account not created';
-    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'account_from_create_claimed_account_del' ), 'account_create_with_delegation_operation not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'account1' ), 'account1 not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'account2' ), 'account2 not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'account3' ), 'account3 not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'account4' ), 'account4 not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'account5' ), 'account5 not created';
 
     ASSERT ( SELECT COUNT(*) FROM hive.context_accounts ) = 5, 'Wrong number of accounts';
 END;
