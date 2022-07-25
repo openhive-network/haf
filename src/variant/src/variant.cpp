@@ -461,6 +461,36 @@ variant_image_eq(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL( cmp == 0 ? true : false);
 }
 
+
+PG_FUNCTION_INFO_V1(variant_image_ne);
+Datum
+variant_image_ne(PG_FUNCTION_ARGS)
+{
+	Variant	l = (Variant) PG_GETARG_DATUM(0);
+	Variant	r = (Variant) PG_GETARG_DATUM(1);
+	int			cmp;
+
+	/*
+	 * To avoid detoasting we use _ANY variations on VAR*, but that means we must
+	 * make sure to use VARSIZE_ANY_EXHDR, *not* VARSIZE_ANY!
+	 */
+	if(VARSIZE_ANY_EXHDR(l) != VARSIZE_ANY_EXHDR(r))
+		PG_RETURN_BOOL(true);
+	
+	/*
+	 * At this point we need to detoast. We could theoretically leave data
+	 * compressed, but since there's no direct support for that we don't bother.
+	 */
+	l = (Variant) PG_DETOAST_DATUM_PACKED(l);
+	r = (Variant) PG_DETOAST_DATUM_PACKED(r);
+	cmp = memcmp(VARDATA_ANY(l), VARDATA_ANY(r), VARSIZE_ANY_EXHDR(l));
+
+	PG_FREE_IF_COPY(l, 0);
+	PG_FREE_IF_COPY(r, 1);
+
+	PG_RETURN_BOOL( cmp == 0 ? false : true);
+}
+
 PG_FUNCTION_INFO_V1(variant_hash);
 Datum
 variant_hash(PG_FUNCTION_ARGS)

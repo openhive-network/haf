@@ -85,45 +85,45 @@ CREATE OR REPLACE FUNCTION _variant.variant_%1$s(variant.variant, variant.varian
   $$
   , op
 ) )
-FROM unnest(string_to_array('image_eq lt le eq ne ge gt', ' ')) AS op
+FROM unnest(string_to_array('image_ne image_eq lt le eq ne ge gt', ' ')) AS op
 ) a;
 
-CREATE OPERATOR < (
+CREATE OPERATOR public.< (
   PROCEDURE = _variant.variant_lt
   , LEFTARG = variant.variant
   , RIGHTARG = variant.variant
   , COMMUTATOR = >
   , NEGATOR = >=
 );
-CREATE OPERATOR <= (
+CREATE OPERATOR public.<= (
   PROCEDURE = _variant.variant_le
   , LEFTARG = variant.variant
   , RIGHTARG = variant.variant
   , COMMUTATOR = >=
   , NEGATOR = >
 );
-CREATE OPERATOR = (
+CREATE OPERATOR public.= (
   PROCEDURE = _variant.variant_eq
   , LEFTARG = variant.variant
   , RIGHTARG = variant.variant
   , COMMUTATOR = =
   , NEGATOR = !=
 );
-CREATE OPERATOR != (
+CREATE OPERATOR public.!= (
   PROCEDURE = _variant.variant_ne
   , LEFTARG = variant.variant
   , RIGHTARG = variant.variant
   , COMMUTATOR = !=
   , NEGATOR = =
 );
-CREATE OPERATOR >= (
+CREATE OPERATOR public.>= (
   PROCEDURE = _variant.variant_ge
   , LEFTARG = variant.variant
   , RIGHTARG = variant.variant
   , COMMUTATOR = <=
   , NEGATOR = <
 );
-CREATE OPERATOR > (
+CREATE OPERATOR public.> (
   PROCEDURE = _variant.variant_gt
   , LEFTARG = variant.variant
   , RIGHTARG = variant.variant
@@ -135,7 +135,14 @@ CREATE OPERATOR *= (
   , LEFTARG = variant.variant
   , RIGHTARG = variant.variant
   , COMMUTATOR = *=
-  -- TODO , NEGATOR = *!=
+  , NEGATOR = *!=
+);
+CREATE OPERATOR *!= (
+  PROCEDURE = _variant.variant_image_ne
+  , LEFTARG = variant.variant
+  , RIGHTARG = variant.variant
+  , COMMUTATOR = *!=
+  , NEGATOR = *=
 );
 
 CREATE OPERATOR CLASS hash__variant_ops

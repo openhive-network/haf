@@ -211,11 +211,11 @@ BEGIN
     ASSERT NOT EXISTS (
     SELECT * FROM hive.operations_reversible
     EXCEPT SELECT * FROM ( VALUES
-           ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('EAIGHT2 OPERATION')::hive.system_warning_operation, 2 )
-         , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('NINE2 OPERATION')::hive.system_warning_operation, 2 )
-         , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('EIGHT3 OPERATION')::hive.system_warning_operation, 3 )
-         , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('NINE3 OPERATION')::hive.system_warning_operation, 3 )
-         , ( 11, 10, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('TEN OPERATION')::hive.system_warning_operation, 3 )
+           ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('EAIGHT2 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 2 )
+         , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('NINE2 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 2 )
+         , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('EIGHT3 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 3 )
+         , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('NINE3 OPERATION')::hive.system_warning_operation :: hive.hive_operation, 3 )
+         , ( 11, 10, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('TEN OPERATION')::hive.system_warning_operation :: hive.hive_operation, 3 )
     ) as pattern
     ), 'Unexpected rows in hive.operations_reversible'
     ;

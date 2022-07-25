@@ -124,10 +124,10 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.context_operations_view
         EXCEPT SELECT * FROM ( VALUES
-              ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('ZERO OPERATION')::hive.system_warning_operation )
-            , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('ONE OPERATION')::hive.system_warning_operation )
-            , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('TWO OPERATION')::hive.system_warning_operation )
-            , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('THREE OPERATION')::hive.system_warning_operation )
+              ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('ZERO OPERATION')::hive.system_warning_operation :: hive.hive_operation )
+            , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('ONE OPERATION')::hive.system_warning_operation :: hive.hive_operation )
+            , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('TWO OPERATION')::hive.system_warning_operation :: hive.hive_operation )
+            , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, ROW('THREE OPERATION')::hive.system_warning_operation :: hive.hive_operation )
         ) as pattern
     ) , 'Unexpected rows in the view';
 
