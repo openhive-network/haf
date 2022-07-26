@@ -130,6 +130,48 @@ CREATE OPERATOR public.> (
   , COMMUTATOR = <
   , NEGATOR = <=
 );
+CREATE OPERATOR < (
+  PROCEDURE = _variant.variant_lt
+  , LEFTARG = variant.variant
+  , RIGHTARG = variant.variant
+  , COMMUTATOR = >
+  , NEGATOR = >=
+);
+CREATE OPERATOR <= (
+  PROCEDURE = _variant.variant_le
+  , LEFTARG = variant.variant
+  , RIGHTARG = variant.variant
+  , COMMUTATOR = >=
+  , NEGATOR = >
+);
+CREATE OPERATOR = (
+  PROCEDURE = _variant.variant_eq
+  , LEFTARG = variant.variant
+  , RIGHTARG = variant.variant
+  , COMMUTATOR = =
+  , NEGATOR = !=
+);
+CREATE OPERATOR != (
+  PROCEDURE = _variant.variant_ne
+  , LEFTARG = variant.variant
+  , RIGHTARG = variant.variant
+  , COMMUTATOR = !=
+  , NEGATOR = =
+);
+CREATE OPERATOR >= (
+  PROCEDURE = _variant.variant_ge
+  , LEFTARG = variant.variant
+  , RIGHTARG = variant.variant
+  , COMMUTATOR = <=
+  , NEGATOR = <
+);
+CREATE OPERATOR > (
+  PROCEDURE = _variant.variant_gt
+  , LEFTARG = variant.variant
+  , RIGHTARG = variant.variant
+  , COMMUTATOR = <
+  , NEGATOR = <=
+);
 CREATE OPERATOR *= (
   PROCEDURE = _variant.variant_image_eq
   , LEFTARG = variant.variant
