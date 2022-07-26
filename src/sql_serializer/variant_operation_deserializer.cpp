@@ -36,7 +36,7 @@ namespace hive::plugins::sql_serializer {
       op_str += "('" + this->operator()(type.key_auths.nth( i )->first) + "'," + std::to_string( type.key_auths.nth( i )->second ) + ')';
     }
 
-    return op_str + "])";
+    return op_str + "]::hive._key_auths_authority[])";
   }
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::legacy_chain_properties& type )const
   {
