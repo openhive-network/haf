@@ -52,7 +52,7 @@ namespace hive::plugins::sql_serializer {
       if( it != type.begin() )
         op_str += ',';
 
-      op_str += '"' + it->operator std::string() + '"';
+      op_str += '\'' + it->operator std::string() + '\'';
     }
 
     return op_str + ']';
@@ -211,14 +211,14 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::vote_operation& op )const
   {
     return "('"
-      + op.voter + "','" + op.author + "','" + escape( op.permlink ) + "'," + std::to_string( op.weight )
+      + op.voter + "','" + op.author + "'," + escape( op.permlink ) + ',' + std::to_string( op.weight )
       + ")::hive.vote_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::comment_operation& op )const
   {
     return "('"
-      + op.parent_author + "','" + escape( op.parent_permlink ) + "','" + op.author + "','" + op.permlink + "','" + escape( op.title ) + "','"
+      + op.parent_author + "'," + escape( op.parent_permlink ) + ",'" + op.author + "','" + op.permlink + "'," + escape( op.title ) + ",'"
       + op.body + "','" + op.json_metadata.operator const std::string&()
       + "')::hive.comment_operation";
   }
@@ -226,8 +226,8 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::transfer_operation& op )const
   {
     return "('"
-      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ",'" + escape( op.memo )
-      + "')::hive.transfer_operation";
+      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ',' + escape( op.memo )
+      + ")::hive.transfer_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::transfer_to_vesting_operation& op )const
@@ -277,23 +277,23 @@ namespace hive::plugins::sql_serializer {
   {
     return '('
       + this->operator()( op.fee ) + ",'" + op.creator + "','" + op.new_account_name + "'," + this->operator()( op.owner ) + ','
-      + this->operator()( op.active ) + ',' + this->operator()( op.posting ) + ",'" + this->operator()( op.memo_key ) + "','"
+      + this->operator()( op.active ) + ',' + this->operator()( op.posting ) + ",'" + this->operator()( op.memo_key ) + "',"
       + escape( op.json_metadata.operator const std::string&() )
-      + "')::hive.account_create_operation";
+      + ")::hive.account_create_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::account_update_operation& op )const
   {
     return "('"
       + op.account + "'," + this->operator()( op.owner ) + ',' + this->operator()( op.active ) + ',' + this->operator()( op.posting )
-      + ",'" + this->operator()( op.memo_key ) + "','" + escape( op.json_metadata.operator const std::string&() )
-      + "')::hive.account_update_operation";
+      + ",'" + this->operator()( op.memo_key ) + "'," + escape( op.json_metadata.operator const std::string&() )
+      + ")::hive.account_update_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::witness_update_operation& op )const
   {
     return "('"
-      + op.owner + "','" + escape( op.url ) + "','" + this->operator()( op.block_signing_key ) + "',"
+      + op.owner + "'," + escape( op.url ) + ",'" + this->operator()( op.block_signing_key ) + "',"
       + this->operator()( op.props ) + ',' + this->operator()( op.fee )
       + ")::hive.witness_update_operation";
   }
@@ -338,16 +338,16 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::delete_comment_operation& op )const
   {
     return "('"
-      + op.author + "','" + escape( op.permlink )
-      + "')::hive.delete_comment_operation";
+      + op.author + "'," + escape( op.permlink )
+      + ")::hive.delete_comment_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::custom_json_operation& op )const
   {
     return '('
-      + this->operator()( op.required_auths ) + ',' + this->operator()( op.required_posting_auths ) + ",'"
-      + escape( op.id.operator std::string() ) + "','" + escape( op.json.operator const std::string&() )
-      + "')::hive.custom_json_operation";
+      + this->operator()( op.required_auths ) + ',' + this->operator()( op.required_posting_auths ) + ','
+      + escape( op.id.operator std::string() ) + ',' + escape( op.json.operator const std::string&() )
+      + ")::hive.custom_json_operation";
   }
 
   struct comment_options_extensions_visitor
@@ -405,7 +405,7 @@ namespace hive::plugins::sql_serializer {
     static constexpr comment_options_extensions_visitor coev{};
 
     std::string op_str = "('"
-      + op.author + "','" + escape( op.permlink ) + "'," + this->operator()( op.max_accepted_payout ) + ','
+      + op.author + "'," + escape( op.permlink ) + ',' + this->operator()( op.max_accepted_payout ) + ','
       + std::to_string( op.percent_hbd ) + ',' + std::to_string( op.allow_votes ) + ','
       + std::to_string( op.allow_curation_rewards ) + ",ARRAY[";
 
@@ -446,8 +446,8 @@ namespace hive::plugins::sql_serializer {
   {
     return "('"
       + op.creator + "','" + op.new_account_name + "'," + this->operator()( op.owner ) + ',' + this->operator()( op.active ) + ','
-      + this->operator()( op.posting ) + ",'" + this->operator()( op.memo_key ) + "','"
-      + escape( op.json_metadata.operator const std::string &() ) + "'," + this->operator()( op.extensions )
+      + this->operator()( op.posting ) + ",'" + this->operator()( op.memo_key ) + "',"
+      + escape( op.json_metadata.operator const std::string &() ) + ',' + this->operator()( op.extensions )
       + ")::hive.create_claimed_account_operation";
   }
 
@@ -479,8 +479,8 @@ namespace hive::plugins::sql_serializer {
     return "('"
       + op.from + "','" + op.to + "','" + op.agent + "'," + std::to_string( op.escrow_id ) + ',' + this->operator()( op.hbd_amount ) + ','
       + this->operator()( op.hive_amount ) + ',' + this->operator()( op.fee ) + ',' + this->operator()( op.ratification_deadline ) + ','
-      + this->operator()( op.escrow_expiration ) + ",'" + escape( op.json_meta.operator const std::string&() )
-      + "')::hive.escrow_transfer_operation";
+      + this->operator()( op.escrow_expiration ) + ',' + escape( op.json_meta.operator const std::string&() )
+      + ")::hive.escrow_transfer_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::escrow_dispute_operation& op )const
@@ -552,15 +552,15 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::transfer_to_savings_operation& op )const
   {
     return "('"
-      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ",'" + escape( op.memo )
-      + "')::hive.transfer_to_savings_operation";
+      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ',' + escape( op.memo )
+      + ")::hive.transfer_to_savings_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::transfer_from_savings_operation& op )const
   {
     return "('"
-      + op.from + "'," + std::to_string( op.request_id ) + ",'" + op.to + ',' + this->operator()( op.amount ) + ",'" + escape( op.memo )
-      + "')::hive.transfer_from_savings_operation";
+      + op.from + "'," + std::to_string( op.request_id ) + ",'" + op.to + ',' + this->operator()( op.amount ) + ',' + escape( op.memo )
+      + ")::hive.transfer_from_savings_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::cancel_transfer_from_savings_operation& op )const
@@ -627,7 +627,7 @@ namespace hive::plugins::sql_serializer {
     return '('
       + this->operator()( op.fee ) + ',' + this->operator()( op.delegation ) + ",'" + op.creator + "','" + op.new_account_name + "',"
       + this->operator()( op.owner ) + ',' + this->operator()( op.active ) + ',' + this->operator()( op.posting ) + ','
-      + this->operator()( op.memo_key ) + ",'" + escape( op.json_metadata.operator const std::string&() ) + "'," + this->operator()( op.extensions )
+      + this->operator()( op.memo_key ) + ',' + escape( op.json_metadata.operator const std::string&() ) + ',' + this->operator()( op.extensions )
       + ")::hive.account_create_with_delegation_operation";
   }
 
@@ -650,8 +650,8 @@ namespace hive::plugins::sql_serializer {
   {
     return "('"
       + op.account + "'," + this->operator()( op.owner ) + ',' + this->operator()( op.active ) + ','
-      + this->operator()( op.posting ) + ',' + this->operator()( op.memo_key ) + ",'" + escape( op.json_metadata.operator const std::string&() )
-      + "','" + escape( op.posting_json_metadata.operator const std::string&() ) + "'," + this->operator()( op.extensions )
+      + this->operator()( op.posting ) + ',' + this->operator()( op.memo_key ) + ',' + escape( op.json_metadata.operator const std::string&() )
+      + ',' + escape( op.posting_json_metadata.operator const std::string&() ) + ',' + this->operator()( op.extensions )
       + ")::hive.account_update2_operation";
   }
 
@@ -659,7 +659,7 @@ namespace hive::plugins::sql_serializer {
   {
     return "('"
       + op.creator + "','" + op.receiver + "'," + this->operator()( op.start_date ) + ',' + this->operator()( op.end_date ) + ','
-      + this->operator()( op.daily_pay ) + ",'" + escape( op.subject ) + "','" + escape( op.permlink ) + ',' + this->operator()( op.extensions )
+      + this->operator()( op.daily_pay ) + ',' + escape( op.subject ) + ',' + escape( op.permlink ) + ',' + this->operator()( op.extensions )
       + ")::hive.create_proposal_operation";
   }
 
@@ -697,8 +697,8 @@ namespace hive::plugins::sql_serializer {
     static constexpr update_proposal_extensions_visitor upev{};
 
     std::string str_op = '('
-      + std::to_string( op.proposal_id ) + ",'" + op.creator + "'," + this->operator()( op.daily_pay ) + ",'" + escape( op.subject ) + "','"
-      + escape( op.permlink ) + "',ARRAY[";
+      + std::to_string( op.proposal_id ) + ",'" + op.creator + "'," + this->operator()( op.daily_pay ) + ',' + escape( op.subject ) + ','
+      + escape( op.permlink ) + ",ARRAY[";
 
     for( auto it = op.extensions.begin(); it != op.extensions.end(); ++it )
     {
@@ -721,7 +721,7 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::recurrent_transfer_operation& op )const
   {
     return "('"
-      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ",'" + escape( op.memo ) + "'," + std::to_string( op.recurrence ) + ','
+      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ',' + escape( op.memo ) + ',' + std::to_string( op.recurrence ) + ','
       + std::to_string( op.executions ) + ',' + this->operator()( op.extensions )
       + ")::hive.recurrent_transfer_operation";
   }
@@ -937,7 +937,7 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::author_reward_operation& op )const
   {
     return "('"
-      + op.author + "','" + escape( op.permlink ) + "'," + this->operator()( op.hbd_payout ) + ',' + this->operator()( op.hive_payout ) + ','
+      + op.author + "'," + escape( op.permlink ) + ',' + this->operator()( op.hbd_payout ) + ',' + this->operator()( op.hive_payout ) + ','
       + this->operator()( op.vesting_payout ) + ',' + this->operator()( op.curators_vesting_payout ) + ',' + std::to_string( op.payout_must_be_claimed )
       + ")::hive.author_reward_operation";
   }
@@ -945,15 +945,15 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::curation_reward_operation& op )const
   {
     return "('"
-      + op.curator + "'," + this->operator()( op.reward ) + ",'" + op.comment_author + "','"
-      + escape( op.comment_permlink ) + "'," + std::to_string( op.payout_must_be_claimed )
+      + op.curator + "'," + this->operator()( op.reward ) + ",'" + op.comment_author + "',"
+      + escape( op.comment_permlink ) + ',' + std::to_string( op.payout_must_be_claimed )
       + ")::hive.curation_reward_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::comment_reward_operation& op )const
   {
     return "('"
-      + op.author + "','" + escape( op.permlink ) + "'," + this->operator()( op.payout ) + ',' + std::to_string( op.author_rewards.value ) + ','
+      + op.author + "'," + escape( op.permlink ) + ',' + this->operator()( op.payout ) + ',' + std::to_string( op.author_rewards.value ) + ','
       + this->operator()( op.total_payout_value ) + ',' + this->operator()( op.curator_payout_value ) + ',' + this->operator()( op.beneficiary_payout_value ) + ','
       + ")::hive.comment_reward_operation";
   }
@@ -998,8 +998,8 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::fill_transfer_from_savings_operation& op )const
   {
     return "('"
-      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ',' + std::to_string( op.request_id ) + ",'" + escape( op.memo )
-      + "')::hive.fill_transfer_from_savings_operation";
+      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ',' + std::to_string( op.request_id ) + ',' + escape( op.memo )
+      + ")::hive.fill_transfer_from_savings_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::hardfork_operation& op )const
@@ -1012,8 +1012,8 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::comment_payout_update_operation& op )const
   {
     return "('"
-      + op.author + "','" + escape( op.permlink )
-      + "')::hive.comment_payout_update_operation";
+      + op.author + "'," + escape( op.permlink )
+      + ")::hive.comment_payout_update_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::return_vesting_delegation_operation& op )const
@@ -1026,7 +1026,7 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::comment_benefactor_reward_operation& op )const
   {
     return "('"
-      + op.benefactor + "','" + op.author + "','" + escape( op.permlink ) + "'," + this->operator()( op.hbd_payout ) + ','
+      + op.benefactor + "','" + op.author + "'," + escape( op.permlink ) + ',' + this->operator()( op.hbd_payout ) + ','
       + this->operator()( op.hive_payout ) + ',' + this->operator()( op.vesting_payout )
       + ")::hive.comment_benefactor_reward_operation";
   }
@@ -1117,7 +1117,7 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::effective_comment_vote_operation& op )const
   {
     return "('"
-      + op.voter + "','" + op.author + "','" + escape( op.permlink ) + "'," + std::to_string( op.weight ) + ',' + std::to_string( op.rshares ) + ','
+      + op.voter + "','" + op.author + "'," + escape( op.permlink ) + ',' + std::to_string( op.weight ) + ',' + std::to_string( op.rshares ) + ','
       + std::to_string( op.total_vote_weight ) + ',' + this->operator()( op.pending_payout )
       + ")::hive.effective_comment_vote_operation";
   }
@@ -1125,8 +1125,8 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::ineffective_delete_comment_operation& op )const
   {
     return "('"
-      + op.author + "','" + escape( op.permlink )
-      + "')::hive.ineffective_delete_comment_operation";
+      + op.author + "'," + escape( op.permlink )
+      + ")::hive.ineffective_delete_comment_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::sps_convert_operation& op )const
@@ -1196,14 +1196,14 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::fill_recurrent_transfer_operation& op )const
   {
     return "('"
-      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ",'" + escape( op.memo ) + ',' + std::to_string( op.remaining_executions )
+      + op.from + "','" + op.to + "'," + this->operator()( op.amount ) + ',' + escape( op.memo ) + ',' + std::to_string( op.remaining_executions )
       + ")::hive.fill_recurrent_transfer_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::failed_recurrent_transfer_operation& op )const
   {
     return "('"
-      + op.from + "','" + op.to + ',' + this->operator()( op.amount ) + ",'" + escape( op.memo )
+      + op.from + "','" + op.to + ',' + this->operator()( op.amount ) + ',' + escape( op.memo )
       + ',' + std::to_string( op.consecutive_failures ) + ',' + std::to_string( op.remaining_executions ) + ',' + std::to_string( op.deleted )
       + ")::hive.failed_recurrent_transfer_operation";
   }
