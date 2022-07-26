@@ -55,7 +55,7 @@ namespace hive::plugins::sql_serializer {
       op_str += '\'' + it->operator std::string() + '\'';
     }
 
-    return op_str + ']';
+    return op_str + ']::hive.account_name_type';
   }
 
   struct signed_block_header_extension_visitor
@@ -169,7 +169,7 @@ namespace hive::plugins::sql_serializer {
       type_str += it->visit( fev );
     }
 
-    return type_str + ']';
+    return type_str + ']::hive.extensions_type';
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::public_key_type& type )const
@@ -205,7 +205,7 @@ namespace hive::plugins::sql_serializer {
       type_str += std::to_string( *it );
     }
 
-    return type_str + ']';
+    return type_str + ']::NUMERIC[]';
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::vote_operation& op )const
@@ -218,9 +218,9 @@ namespace hive::plugins::sql_serializer {
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::comment_operation& op )const
   {
     return "('"
-      + op.parent_author + "'," + escape( op.parent_permlink ) + ",'" + op.author + "','" + op.permlink + "'," + escape( op.title ) + ",'"
-      + op.body + "','" + op.json_metadata.operator const std::string&()
-      + "')::hive.comment_operation";
+      + op.parent_author + "'," + escape( op.parent_permlink ) + ",'" + op.author + "','" + op.permlink + "'," + escape( op.title ) + ","
+      + escape( op.body ) + ',' + escape( op.json_metadata.operator const std::string&() )
+      + ")::hive.comment_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::transfer_operation& op )const
@@ -519,7 +519,7 @@ namespace hive::plugins::sql_serializer {
         res_str += std::to_string( *it );
       }
 
-      return res_str + "])";
+      return res_str + "]::int8[])";
     }
 
     result_type operator()( const hp::pow2& type )const
@@ -583,7 +583,7 @@ namespace hive::plugins::sql_serializer {
       str_op += this->operator()( *it );
     }
 
-    return str_op + "]," + escape( op.id.operator std::string() ) + ',' + escape_raw( op.data ) + ")::hive.custom_binary_operation";
+    return str_op + "]::hive.authority[]," + escape( op.id.operator std::string() ) + ',' + escape_raw( op.data ) + ")::hive.custom_binary_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::decline_voting_rights_operation& op )const
@@ -708,7 +708,7 @@ namespace hive::plugins::sql_serializer {
       str_op += it->visit( upev );
     }
 
-    return str_op + "])::hive.update_proposal_operation";
+    return str_op + "]::hive.update_proposal_extensions_type)::hive.update_proposal_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::collateralized_convert_operation& op )const
@@ -741,7 +741,7 @@ namespace hive::plugins::sql_serializer {
       str_op += this->operator()( *it );
     }
 
-    return str_op + "])::hive.claim_reward_balance2_operation";
+    return str_op + "]::hive.asset[])::hive.claim_reward_balance2_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()(
@@ -830,7 +830,7 @@ namespace hive::plugins::sql_serializer {
       str_op += it->visit( sspv );
     }
 
-    return str_op + "]," + this->operator()( op.extensions ) + ")::hive.smt_set_setup_parameters_operation";
+    return str_op + "]::hive_smt_setup_parameter[]," + this->operator()( op.extensions ) + ")::hive.smt_set_setup_parameters_operation";
   }
 
   struct smt_runtime_parameter_visitor
@@ -905,7 +905,7 @@ namespace hive::plugins::sql_serializer {
       str_op += it->visit( srpv );
     }
 
-    return str_op + "]," + this->operator()( op.extensions ) + ")::hive.smt_set_runtime_parameters_operation";
+    return str_op + "]::hive_smt_runtime_parameter[]," + this->operator()( op.extensions ) + ")::hive.smt_set_runtime_parameters_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::smt_create_operation& op )const
@@ -1111,7 +1111,7 @@ namespace hive::plugins::sql_serializer {
       str_op += this->operator()( *it );
     }
 
-    return str_op + "]::hive.asset)::hive.consolidate_treasury_balance_operation";
+    return str_op + "]::hive.asset[])::hive.consolidate_treasury_balance_operation";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::effective_comment_vote_operation& op )const
