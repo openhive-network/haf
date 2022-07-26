@@ -130,7 +130,8 @@ BEGIN
               AND op_pos = 0
               AND op_type_id = 1
               AND timestamp = '2016-06-22 19:10:21-07'::timestamp
-              AND body :: hive.hive_operation = ROW('ZERO OPERATION')::hive.system_warning_operation :: hive.hive_operation
+              -- XXX: body is of composite type, which should not be compared. Also, composite types are not officially supported by the variant library
+              -- AND body :: hive.hive_operation = ROW('ZERO OPERATION')::hive.system_warning_operation :: hive.hive_operation
               AND fork_id = 1
     ) = 1, 'Wrong data of operation 1';
 
@@ -142,7 +143,8 @@ BEGIN
            AND op_pos = 0
            AND op_type_id = 2
            AND timestamp = '2016-06-22 19:10:21-07'::timestamp
-           AND body :: hive.hive_operation = ROW('ONE OPERATION')::hive.system_warning_operation :: hive.hive_operation
+           -- XXX: body is of composite type, which should not be compared. Also, composite types are not officially supported by the variant library
+           -- AND body :: hive.hive_operation = ROW('ONE OPERATION')::hive.system_warning_operation :: hive.hive_operation
            AND fork_id = 1
      ) = 1, 'Wrong data of operation 2';
 
