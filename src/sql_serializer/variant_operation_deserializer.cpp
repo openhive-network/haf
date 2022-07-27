@@ -55,7 +55,7 @@ namespace hive::plugins::sql_serializer {
       op_str += '\'' + it->operator std::string() + '\'';
     }
 
-    return op_str + "]::hive.account_name_type";
+    return op_str + "]::hive.account_name_type[]";
   }
 
   struct signed_block_header_extension_visitor
