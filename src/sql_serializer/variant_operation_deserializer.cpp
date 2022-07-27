@@ -954,7 +954,7 @@ namespace hive::plugins::sql_serializer {
   {
     return "('"
       + op.author + "'," + escape( op.permlink ) + ',' + this->operator()( op.payout ) + ',' + std::to_string( op.author_rewards.value ) + ','
-      + this->operator()( op.total_payout_value ) + ',' + this->operator()( op.curator_payout_value ) + ',' + this->operator()( op.beneficiary_payout_value ) + ','
+      + this->operator()( op.total_payout_value ) + ',' + this->operator()( op.curator_payout_value ) + ',' + this->operator()( op.beneficiary_payout_value )
       + ")::hive.comment_reward_operation";
   }
 
