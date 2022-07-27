@@ -55,7 +55,7 @@ namespace hive::plugins::sql_serializer {
       op_str += '\'' + it->operator std::string() + '\'';
     }
 
-    return op_str + ']::hive.account_name_type';
+    return op_str + "]::hive.account_name_type";
   }
 
   struct signed_block_header_extension_visitor
@@ -169,7 +169,7 @@ namespace hive::plugins::sql_serializer {
       type_str += it->visit( fev );
     }
 
-    return type_str + ']::hive.extensions_type';
+    return type_str + "]::hive.extensions_type";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::public_key_type& type )const
@@ -205,7 +205,7 @@ namespace hive::plugins::sql_serializer {
       type_str += std::to_string( *it );
     }
 
-    return type_str + ']::NUMERIC[]';
+    return type_str + "]::NUMERIC[]";
   }
 
   variant_operation_deserializer::result_type variant_operation_deserializer::operator()( const hp::vote_operation& op )const
