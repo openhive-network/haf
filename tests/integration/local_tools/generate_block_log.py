@@ -47,6 +47,9 @@ def prepare_block_log(length):
     alpha_net.run()
     beta_net.run()
 
+    for node in alpha_net.nodes + beta_net.nodes:
+        node.api.witness.disable_fast_confirm()
+
     tt.logger.info('Attaching wallets...')
     wallet = tt.Wallet(attach_to=api_node)
     # We are waiting here for block 43, because witness participation is counting
@@ -107,8 +110,9 @@ def prepare_block_log(length):
 
     if os.path.exists('block_log'):
         os.remove('block_log')
-    init_node.get_block_log().truncate('block_log', length)
     timestamp = init_node.api.block.get_block(block_num=length)['block']['timestamp']
+    init_node.close()
+    init_node.get_block_log().truncate('block_log', length)
 
     return timestamp
 

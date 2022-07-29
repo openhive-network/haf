@@ -19,6 +19,8 @@ def test_event_massive_sync(prepared_networks_and_database):
     node_under_test = networks['Beta'].node('ApiNode0')
 
     events_queue = Base.classes.events_queue
+    for node in networks["Alpha"].nodes + networks["Beta"].nodes:
+        node.config.enable_fast_confirm = False
 
     # WHEN
     run_networks(networks)

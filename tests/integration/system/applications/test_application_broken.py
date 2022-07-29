@@ -56,8 +56,12 @@ def test_application_broken(prepared_networks_and_database):
     # system under test
     create_app(second_session, APPLICATION_CONTEXT)
 
-    blocks_range = session.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone()
-    (first_block, last_block) = blocks_range
+    while True:
+        blocks_range = session.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone()
+        (first_block, last_block) = blocks_range
+        tt.logger.info(f'blocks_range is {blocks_range}')
+        if first_block:
+            break
 
     ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hive.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()
     tt.logger.info(f'ctx_stats-before-detach: cbn {ctx_stats[0]} irr {ctx_stats[1]}')

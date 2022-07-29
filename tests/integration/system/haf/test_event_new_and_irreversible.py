@@ -37,10 +37,11 @@ def test_event_new_and_irreversible(prepared_networks_and_database):
 
             previous_irreversible = irreversible_block
 
+        # with fast confirmation NEW_BLOCK event might be already removed
         session.query(events_queue).\
             filter(events_queue.event == 'NEW_BLOCK').\
             filter(events_queue.block_num == head_block).\
-            one()
+            one_or_none()
 
         # now check that old events were removed
         old_block_events = session.query(events_queue).\
@@ -50,10 +51,11 @@ def test_event_new_and_irreversible(prepared_networks_and_database):
         assert old_block_events == []
 
         lower_bound_event = session.query(events_queue).\
-            filter(events_queue.event == 'NEW_BLOCK').\
+            filter(events_queue.event == 'NEW_BLOCK' or events_queue.event == 'NEW_IRREVERSIBLE').\
             order_by(events_queue.id).\
             first()
 
+        tt.logger.info(f'Old events should be removed based on id={lower_bound_event.id}')
         old_irreversible_events = session.query(events_queue).\
             filter(events_queue.event == 'NEW_IRREVERSIBLE').\
             filter(events_queue.id < lower_bound_event.id).\
