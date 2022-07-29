@@ -77,7 +77,9 @@ ENV HTTP_PORT=${HTTP_PORT}
 ENV HAF_DB_STORE=/home/hived/datadir/haf_db_store
 ENV PGDATA=/home/hived/datadir/haf_db_store/pgdata
 # Environment variable which allows to override default postgres access specification in pg_hba.conf
-ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust"
+ENV PG_ACCESS=""\
+"host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\n"\
+"host    haf_block_log     haf_admin    172.0.0.0/8    trust\n"
 
 SHELL ["/bin/bash", "-c"] 
 
