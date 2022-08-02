@@ -223,7 +223,7 @@ BEGIN
             SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.id = CAST( TG_ARGV[ 0 ] as INTEGER ) INTO __block_num;
 
             IF ( __block_num <= 0 ) THEN
-                 RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
+                 call hive.elogs(''<no-context>'',''Did not execute hive.context_next_block before table edition'', TRUE);
             END IF;
 
             INSERT INTO hive.%I SELECT n.*,  __block_num, ''INSERT'' FROM new_table n ON CONFLICT DO NOTHING;
@@ -258,7 +258,7 @@ BEGIN
             SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.id = CAST( TG_ARGV[ 0 ] as INTEGER ) INTO __block_num;
 
             IF ( __block_num <= 0 ) THEN
-                RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
+                call hive.elogs(''<no-context>'', ''Did not execute hive.context_next_block before table edition'', TRUE);
             END IF;
 
             INSERT INTO hive.%I SELECT o.*, __block_num, ''DELETE'' FROM old_table o ON CONFLICT DO NOTHING;
@@ -293,7 +293,7 @@ BEGIN
             SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.id = CAST( TG_ARGV[ 0 ] as INTEGER ) INTO __block_num;
 
             IF ( __block_num <= 0 ) THEN
-                RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
+                call hive.elogs(''<no-context>'', ''Did not execute hive.context_next_block before table edition'', TRUE);
             END IF;
 
             INSERT INTO hive.%I SELECT o.*, __block_num, ''UPDATE'' FROM old_table o ON CONFLICT DO NOTHING;
@@ -328,7 +328,7 @@ BEGIN
              SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.id = CAST( TG_ARGV[ 0 ] as INTEGER ) INTO __block_num;
 
              IF ( __block_num <= 0 ) THEN
-                 RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
+                 call hive.elogs(''<no-context>'', ''Did not execute hive.context_next_block before table edition'', TRUE);
              END IF;
 
              INSERT INTO hive.%I SELECT o.*, __block_num, ''DELETE'' FROM %I.%I o ON CONFLICT DO NOTHING;
@@ -391,7 +391,7 @@ BEGIN
     ;
 
     IF __registered_table_id IS NULL THEN
-        RAISE EXCEPTION 'Table %s.%s is not registered', lower(_table_schema), lower(_table_name);
+        call hive.elogs(__context_name, format('Table %s.%s is not registered', lower(_table_schema), lower(_table_name)), TRUE);
     END IF;
 
     -- drop shadow table
@@ -416,6 +416,7 @@ BEGIN
     EXECUTE format( 'ALTER TABLE %I.%s NO INHERIT hive.%s', lower(_table_schema), lower(_table_name), __context_name );
     EXECUTE format( 'ALTER TABLE %I.%s DROP COLUMN hive_rowid CASCADE', lower(_table_schema), lower(_table_name)  );
     CALL hive.dlogs('<no-context>', 'Exiting unregister_table');
+
 END;
 $BODY$
 ;

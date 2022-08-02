@@ -7,13 +7,14 @@ $BODY$
 BEGIN
     CALL hive.dlogs(_name, 'Entering context_create');
     IF NOT _name SIMILAR TO '[a-zA-Z0-9_]+' THEN
-        RAISE EXCEPTION 'Incorrect context name %, only characters a-z A-Z 0-9 _ are allowed', name;
+        call hive.elogs(_name, format('Incorrect context name %s, only characters a-z A-Z 0-9 _ are allowed', name), TRUE);
     END IF;
 
     EXECUTE format( 'CREATE TABLE hive.%I( hive_rowid BIGSERIAL )', _name );
     INSERT INTO hive.contexts( name, current_block_num, irreversible_block, is_attached, events_id, fork_id, owner )
     VALUES( _name, 0, _irreversible_block, TRUE, 0, _fork_id, current_user );
     CALL hive.dlogs(_name, 'Exiting context_create');
+
 END;
 $BODY$
 ;
@@ -31,7 +32,7 @@ BEGIN
     SELECT hc.id INTO __context_id FROM hive.contexts hc WHERE hc.name = _name;
 
     IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'Context % does not exist', _name;
+        call hive.elogs(_name, format('Context %s does not exist', _name), TRUE);
     END IF;
 
     PERFORM hive.unregister_table( hrt.origin_table_schema, hrt.origin_table_name )
@@ -135,7 +136,7 @@ BEGIN
     SELECT ct.id FROM hive.contexts ct WHERE ct.name=_context INTO __context_id;
 
     IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'Unknown context %', _context;
+        call hive.elogs(_context, format('Unknown context %s', _context), true);
     END IF;
 
     PERFORM hive.detach_table( hrt.origin_table_schema, hrt.origin_table_name )
@@ -170,7 +171,7 @@ BEGIN
     INTO __context_id, __current_block_num;
 
     IF __context_id IS NULL THEN
-            RAISE EXCEPTION 'Unknown context % or context is already attached', _context;
+            call hive.elogs(_context, format('Unknown context %s or context is already attached', _context), TRUE);
     END IF;
 
     IF __current_block_num > _last_synced_block THEN
@@ -207,7 +208,7 @@ BEGIN
     SELECT irreversible_block FROM hive.contexts hc WHERE hc.name = _context INTO __current_irreversible;
 
     IF _block_num < __current_irreversible THEN
-            RAISE EXCEPTION 'The proposed block number of irreversible block is lower than the current one for context %', _context;
+            call hive.elogs(_context, format('The proposed block number of irreversible block is lower than the current one for context %s', _context), TRUE);
     END IF;
 
     UPDATE hive.contexts  SET irreversible_block = _block_num WHERE name = _context;

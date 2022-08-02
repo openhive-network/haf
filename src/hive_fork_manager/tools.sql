@@ -13,7 +13,7 @@ BEGIN
     WHERE hac.name = _context;
 
     IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context;
+        call hive.elogs(_context, format('No context with name %s', _context), TRUE);
     END IF;
     CALL hive.dlogs(_context, 'Exiting get_context_id');
 

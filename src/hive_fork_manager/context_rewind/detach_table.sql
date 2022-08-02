@@ -17,7 +17,7 @@ BEGIN
     WHERE hrt.origin_table_schema = _schema_name AND  hrt.origin_table_name = _table_name INTO __table_id, __shadow_table_name;
 
     IF __table_id IS NULL THEN
-        RAISE EXCEPTION 'Table is not registered';
+        call hive.elogs('<no-context>', 'Table is not registered', TRUE);
     END IF;
 
     -- remove triggers functions
@@ -35,6 +35,7 @@ BEGIN
 
     DELETE FROM hive.registered_tables hrt WHERE  hrt.origin_table_schema = _schema_name AND hrt.origin_table_name = _table_name;
     CALL hive.dlogs('<no-context>', 'Exiting clean_after_uregister_table');
+
 END;
 $BODY$
 ;
@@ -57,13 +58,13 @@ BEGIN
     WHERE  hrt.origin_table_schema = lower( _table_schema ) AND hrt.origin_table_name = _table_name INTO __table_id, __shadow_table_name;
 
     IF __table_id IS NULL THEN
-        RAISE EXCEPTION 'Table %.% is not registered', _table_schema, _table_name;
+        call hive.elogs('<no-context>', format('Table %s.%s is not registered', _table_schema, _table_name), TRUE);
     END IF;
 
     EXECUTE format( 'SELECT EXISTS( SELECT * FROM hive.%I LIMIT 1 )', __shadow_table_name ) INTO __shadow_table_is_not_empty;
 
     IF __shadow_table_is_not_empty = TRUE THEN
-        RAISE EXCEPTION 'Cannot detach a table %.%. Shadow table hive.% is not empty', _table_schema, _table_name, __shadow_table_name;
+        call hive.elogs('<no-context>', format('Cannot detach a table %s.%s. Shadow table hive.%s is not empty', _table_schema, _table_name, __shadow_table_name), TRUE);
     END IF;
 
     PERFORM hive.drop_triggers( _table_schema, _table_name );
@@ -96,7 +97,7 @@ BEGIN
     INTO __table_id, __shadow_table_name;
 
     IF __table_id IS NULL THEN
-            RAISE EXCEPTION 'Table %.% is not registered or is already attached', _table_schema, _table_name;
+            call hive.elogs('<no-context>', format('Table %s.%s is not registered or is already attached', _table_schema, _table_name), TRUE);
     END IF;
 
     PERFORM hive.create_triggers( _table_schema, _table_name, _context_id );

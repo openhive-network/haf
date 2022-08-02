@@ -124,7 +124,7 @@ BEGIN
     FROM hive.irreversible_data hir;
 
     IF _last_synced_block > __head_of_irreversible_block THEN
-        RAISE EXCEPTION 'Cannot attach context % because the block num % is grater than top of irreversible block %'
+        call hive.elogs(_context, format('Cannot attach context %s because the block num %s is grater than top of irreversible block %s'
             , _context, _last_synced_block,  __head_of_irreversible_block;
     END IF;
 
@@ -250,7 +250,7 @@ BEGIN
     WHERE hc.name = _context_name;
 
     IF __result IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context_name;
+        call hive.elogs(_context_name, format('No context with name %s', _context_name), TRUE);
     END IF;
 
     CALL hive.dlogs(_context_name, 'Exiting app_context_is_attached');
@@ -274,7 +274,7 @@ BEGIN
     RETURNING hc.id INTO __context_id;
 
     IF __context_id IS NULL  THEN
-        RAISE EXCEPTION 'Context % does not exist or is attached', _context_name;
+        call hive.elogs(_context_name, format('Context %s does not exist or is attached', _context_name), TRUE);
     END IF;
     CALL hive.dlogs(_context_name, 'Exiting app_context_detached_save_block_num');
 END;
@@ -296,7 +296,7 @@ BEGIN
     WHERE hc.name = _context_name AND hc.is_attached = FALSE;
 
     IF __context_id IS NULL  THEN
-        RAISE EXCEPTION 'Context % does not exist or is attached', _context_name;
+        call hive.elogs(_context_name, format('Context %s does not exist or is attached', _context_name), TRUE);
     END IF;
 
     SELECT hc.detached_block_num INTO __result
@@ -370,19 +370,19 @@ BEGIN
         INTO __context_id, __is_attached, __current_block_num;
 
     IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context;
+        call hive.elogs(_context, format('No context with name %s', _context), TRUE);
     END IF;
 
     IF __is_attached = TRUE AND _first_block != _last_block  THEN
-        RAISE EXCEPTION 'Only one block can be processed when context is attached';
+        call hive.elogs(_context, 'Only one block can be processed when context is attached', TRUE);
     END IF;
 
     IF _first_block > _last_block THEN
-        RAISE EXCEPTION 'First block % is greater than %', _first_block, _last_block;
+        call hive.elogs(_context, format('First block %s is greater than %s', _first_block, _last_block), TRUE);
     END IF;
 
     IF  _first_block < __current_block_num THEN
-        RAISE EXCEPTION 'First block % is lower than context % current block %', _first_block, _context, __current_block_num;
+        call hive.elogs(_context, format('First block %s is lower than context %s current block %s', _first_block, _context, __current_block_num), TRUE);
     END IF;
 
     PERFORM hive.update_one_state_providers( _first_block, _last_block, hsp.state_provider, _context )

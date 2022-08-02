@@ -8,6 +8,7 @@ DECLARE
     __exists_non_defferable BOOL := FALSE;
     __constraint_name TEXT;
 BEGIN
+
     EXECUTE format( 'SELECT EXISTS(
         SELECT 1 FROM information_schema.table_constraints
         WHERE constraint_catalog = current_database()
@@ -21,9 +22,10 @@ BEGIN
     INTO __exists_non_defferable;
 
     IF __exists_non_defferable = TRUE THEN
-        RAISE EXCEPTION 'A registered table cannot have non-deferrable referenced constraints. Please check constraints on table %.%'
-            , _table_schema, _table_name;
+        call hive.elogs('<no-context>', format('A registered table cannot have non-deferrable referenced constraints. Please check constraints on table %s.%s'
+            , _table_schema, _table_name), TRUE);
     END IF;
+
 END;
 $BODY$
 ;
@@ -35,6 +37,7 @@ CREATE OR REPLACE FUNCTION hive.register_state_provider_tables( _context hive.co
 AS
 $BODY$
 BEGIN
+
     IF EXISTS ( SELECT 1 FROM hive.contexts WHERE name=_context AND registering_state_provider = TRUE )
        OR hive.app_is_forking( _context ) THEN
             RETURN;
@@ -49,6 +52,8 @@ BEGIN
     WHERE hc.name = _context;
 
     UPDATE hive.contexts SET registering_state_provider = FALSE WHERE name =  _context;
+
+
 END;
 $BODY$
 ;
@@ -95,7 +100,7 @@ BEGIN
     EXECUTE format( 'SELECT EXISTS( SELECT * FROM hive.%I LIMIT 1 )', __shadow_table_name ) INTO __result;
 
     IF __result = TRUE THEN
-        RAISE EXCEPTION 'Cannot edit structure of registered tables when some rows are not rewinded';
+        call hive.elogs('<no-context>', 'Cannot edit structure of registered tables when some rows are not rewinded', TRUE);
     END IF;
 
     SELECT EXISTS (
@@ -107,7 +112,7 @@ BEGIN
     ) INTO __result;
 
     IF __result = FALSE THEN
-        RAISE EXCEPTION 'Cannot remove hive_rowid column';
+        call hive.elogs('<no-context>','Cannot remove hive_rowid column', TRUE);
     END IF;
 
     -- drop shadow table with old format
