@@ -11,6 +11,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_accounts';
 BEGIN
+    CALL hive.dlogs(_context, 'Entering start_provider_accounts');
     SELECT hac.id
     FROM hive.contexts hac
     WHERE hac.name = _context
@@ -27,6 +28,7 @@ BEGIN
                     , CONSTRAINT uq_%s UNIQUE( name )
                     )', __table_name, __table_name,  __table_name
     );
+    CALL hive.dlogs(_context, 'Entering start_provider_accounts');
 
     RETURN ARRAY[ __table_name ];
 END;
@@ -40,6 +42,9 @@ CREATE OR REPLACE FUNCTION hive.get_account_from_accounts_operations( _account_o
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering get_account_from_accounts_operations');
+    CALL hive.dlogs('<no-context>', 'Exiting get_account_from_accounts_operations');
+
     RETURN json_extract_path_text( CAST( _account_operation as json ), 'value', 'new_account_name' );
 END;
 $BODY$
@@ -56,6 +61,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_accounts';
 BEGIN
+    CALL hive.dlogs(_context, 'Entering update_state_provider_accounts');
     SELECT hac.id
     FROM hive.contexts hac
     WHERE hac.name = _context
@@ -76,6 +82,8 @@ BEGIN
         ON CONFLICT DO NOTHING'
         , _context, _context, _first_block, _last_block
     );
+    CALL hive.dlogs(_context, 'Exiting update_state_provider_accounts');
+
 END;
 $BODY$
 ;
@@ -91,6 +99,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_accounts';
 BEGIN
+    CALL hive.dlogs(_context, 'Entering drop_state_provider_accounts');
     SELECT hac.id
     FROM hive.contexts hac
     WHERE hac.name = _context
@@ -101,6 +110,8 @@ BEGIN
     END IF;
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
+    CALL hive.dlogs(_context, 'Exiting drop_state_provider_accounts');
+
 END;
 $BODY$
 ;

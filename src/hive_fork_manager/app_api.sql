@@ -5,6 +5,7 @@ CREATE OR REPLACE FUNCTION hive.app_create_context( _name hive.context_name )
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs(_name, 'Entering app_create_context');
     -- Any context always starts with block before genesis, the app may detach the context and execute 'massive sync'
     -- after massive sync the application must attach its context to last already synced block
     PERFORM hive.context_create(
@@ -20,6 +21,7 @@ BEGIN
     PERFORM hive.create_signatures_view( _name );
     PERFORM hive.create_accounts_view( _name );
     PERFORM hive.create_account_operations_view( _name );
+    CALL hive.dlogs(_name, 'Exiting app_create_context');
 END;
 $BODY$
 ;
@@ -31,9 +33,9 @@ CREATE OR REPLACE FUNCTION hive.app_remove_context( _name hive.context_name )
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering app_remove_context');
     PERFORM hive.app_state_provider_drop_all( _name );
     PERFORM hive.context_remove( _name );
-
     PERFORM hive.drop_signatures_view( _name );
     PERFORM hive.drop_operations_view( _name );
     PERFORM hive.drop_transactions_view( _name );
@@ -41,6 +43,8 @@ BEGIN
     PERFORM hive.drop_accounts_view( _name );
     PERFORM hive.drop_account_operations_view( _name );
     PERFORM hive.drop_context_data_view( _name );
+    CALL hive.dlogs('<no-context>', 'Entering app_remove_context');
+
 END;
 $BODY$
 ;
@@ -52,6 +56,9 @@ CREATE OR REPLACE FUNCTION hive.app_context_exists( _name TEXT )
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering app_context_exists');
+    CALL hive.dlogs('<no-context>', 'Exiting app_context_exists');
+
     RETURN hive.context_exists( _name );
 END;
 $BODY$
@@ -67,10 +74,12 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __result BOOL;
 BEGIN
+    CALL hive.dlogs(_context_name, 'Entering app_is_forking');
     __context_id = hive.get_context_id( _context_name );
 
     -- if there there is a registered table for a given context
     SELECT EXISTS( SELECT 1 FROM hive.registered_tables hrt WHERE hrt.context_id = __context_id ) INTO __result;
+    CALL hive.dlogs(_context_name, 'Exiting app_is_forking');
     RETURN __result;
 END;
 $BODY$
@@ -86,11 +95,14 @@ $BODY$
 DECLARE
     __result hive.blocks_range;
 BEGIN
+    CALL hive.dlogs(_context_name, 'Entering app_next_block');
     -- if there ther is  registered table for given context
     IF hive.app_is_forking( _context_name )
     THEN
         RETURN hive.app_next_block_forking_app( _context_name );
     END IF;
+
+    CALL hive.dlogs(_context_name, 'Exiting app_next_block');
 
     RETURN hive.app_next_block_non_forking_app( _context_name );
 END;
@@ -107,6 +119,7 @@ DECLARE
     __head_of_irreversible_block hive.blocks.num%TYPE:=0;
     __fork_id hive.fork.id%TYPE := 1;
 BEGIN
+    CALL hive.dlogs(_context, 'Entering app_context_attach');
     SELECT hir.consistent_block INTO __head_of_irreversible_block
     FROM hive.irreversible_data hir;
 
@@ -132,6 +145,7 @@ BEGIN
     PERFORM hive.create_signatures_view( _context );
     PERFORM hive.create_accounts_view( _context );
     PERFORM hive.create_account_operations_view( _context );
+    CALL hive.dlogs(_context, 'Exiting app_context_attach');
 END;
 $BODY$
 ;
@@ -143,6 +157,7 @@ CREATE OR REPLACE FUNCTION hive.app_context_detach( _context TEXT )
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs(_context, 'Entering app_context_detach');
     PERFORM hive.context_detach( _context );
 
     -- create view which return all irreversible data
@@ -152,6 +167,8 @@ BEGIN
     PERFORM hive.create_all_irreversible_signatures_view( _context );
     PERFORM hive.create_all_irreversible_accounts_view( _context );
     PERFORM hive.create_all_irreversible_account_operations_view( _context );
+    CALL hive.dlogs(_context, 'Entering app_context_detach');
+
 END;
 $BODY$
 ;
@@ -163,8 +180,11 @@ CREATE OR REPLACE FUNCTION hive.app_register_table( _table_schema TEXT,  _table_
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs(_context, 'Entering app_register_table');
     EXECUTE format( 'ALTER TABLE %I.%s ADD COLUMN hive_rowid BIGINT NOT NULL DEFAULT 0', _table_schema, _table_name );
     EXECUTE format( 'ALTER TABLE %I.%s INHERIT hive.%s', _table_schema, _table_name, _context );
+    CALL hive.dlogs(_context, 'Exiting app_register_table');
+
 END;
 $BODY$
 ;
@@ -176,7 +196,10 @@ CREATE OR REPLACE FUNCTION hive.app_unregister_table( _table_schema TEXT,  _tabl
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs('no-context', 'Entering app_unregister_table');
     PERFORM hive.unregister_table( _table_schema, _table_name );
+    CALL hive.dlogs('no-context', 'Entering app_unregister_table');
+
 END;
 $BODY$
 ;
@@ -190,6 +213,7 @@ $BODY$
 DECLARE
     __result hive.contexts.irreversible_block%TYPE;
 BEGIN
+    CALL hive.dlogs(_context, 'Entering app_get_irreversible_block');
     IF  _context_name = '' THEN
         SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hive.irreversible_data;
         RETURN __result;
@@ -203,6 +227,8 @@ BEGIN
     ELSE
         __result := COALESCE((SELECT hb.num from hive.blocks hb ORDER BY num DESC LIMIT 1), 0);
     END IF;
+
+    CALL hive.dlogs(_context, 'Exiting app_get_irreversible_block');
 
     RETURN __result;
 END;
@@ -218,6 +244,7 @@ $BODY$
 DECLARE
     __result bool;
 BEGIN
+    CALL hive.dlogs(_context_name, 'Entering app_context_is_attached');
     SELECT hc.is_attached INTO __result
     FROM hive.contexts hc
     WHERE hc.name = _context_name;
@@ -226,6 +253,7 @@ BEGIN
         RAISE EXCEPTION 'No context with name %', _context_name;
     END IF;
 
+    CALL hive.dlogs(_context_name, 'Exiting app_context_is_attached');
     RETURN __result;
 END;
 $BODY$;
@@ -239,6 +267,7 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
 BEGIN
+    CALL hive.dlogs(_context_name, 'Entering app_context_detached_save_block_num');
     UPDATE hive.contexts hc
     SET detached_block_num = _block_num
     WHERE hc.name = _context_name AND hc.is_attached = FALSE
@@ -247,6 +276,7 @@ BEGIN
     IF __context_id IS NULL  THEN
         RAISE EXCEPTION 'Context % does not exist or is attached', _context_name;
     END IF;
+    CALL hive.dlogs(_context_name, 'Exiting app_context_detached_save_block_num');
 END;
 $BODY$;
 
@@ -260,6 +290,7 @@ DECLARE
     __result INTEGER;
     __context_id hive.contexts.id%TYPE;
 BEGIN
+    CALL hive.dlogs(_context_name, 'Entering app_context_detached_get_block_num');
     SELECT hc.id INTO __context_id
     FROM hive.contexts hc
     WHERE hc.name = _context_name AND hc.is_attached = FALSE;
@@ -272,6 +303,7 @@ BEGIN
     FROM hive.contexts hc
     WHERE hc.id = __context_id;
 
+    CALL hive.dlogs(_context_name, 'Exiting app_context_detached_get_block_num');
     RETURN __result;
 END;
 $BODY$;
@@ -286,7 +318,7 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
 BEGIN
-
+    CALL hive.dlogs(_context, 'Entering app_state_provider_import');
     SELECT hac.id
     FROM hive.contexts hac
     WHERE hac.name = _context
@@ -314,6 +346,7 @@ BEGIN
     PERFORM hive.app_register_table( 'hive', unnest( hsp.tables ), _context )
     FROM hive.state_providers_registered hsp
     WHERE hsp.context_id = __context_id AND hsp.state_provider = _state_provider;
+    CALL hive.dlogs(_context, 'Exiting app_state_provider_import');
 END;
 $BODY$
 ;
@@ -330,6 +363,7 @@ DECLARE
     __is_attached BOOL;
     __current_block_num hive.blocks.num%TYPE;
 BEGIN
+    CALL hive.dlogs(_context, 'Entering app_state_provider_update');
     SELECT hac.id, hac.is_attached, hac.current_block_num
     FROM hive.contexts hac
     WHERE hac.name = _context
@@ -354,6 +388,7 @@ BEGIN
     PERFORM hive.update_one_state_providers( _first_block, _last_block, hsp.state_provider, _context )
     FROM hive.state_providers_registered hsp
     WHERE hsp.context_id = __context_id;
+    CALL hive.dlogs(_context, 'Entering app_state_provider_update');
 END;
 $BODY$
 ;
@@ -365,6 +400,7 @@ CREATE OR REPLACE FUNCTION hive.app_state_provider_drop( _state_provider HIVE.ST
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs(_context, 'Entering app_state_provider_drop');
     EXECUTE format(
             'SELECT hive.drop_state_provider_%s( %L )'
         , _state_provider, _context
@@ -373,6 +409,8 @@ BEGIN
     DELETE FROM hive.state_providers_registered hsp
         USING hive.contexts hc
     WHERE hc.name = _context AND hsp.state_provider = _state_provider AND hc.id = hsp.context_id;
+    CALL hive.dlogs(_context, 'Exiting app_state_provider_drop');
+
 END;
 $BODY$
 ;
@@ -384,10 +422,13 @@ CREATE OR REPLACE FUNCTION hive.app_state_provider_drop_all( _context hive.conte
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs(_context, 'Exiting app_state_provider_drop');
     PERFORM hive.app_state_provider_drop( hsp.state_provider, _context )
     FROM hive.state_providers_registered hsp
     JOIN hive.contexts hc ON hc.id = hsp.context_id
     WHERE hc.name = _context;
+    CALL hive.dlogs(_context, 'Exiting app_state_provider_drop');
+
 END;
 $BODY$
 ;

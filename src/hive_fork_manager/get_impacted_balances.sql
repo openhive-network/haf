@@ -25,7 +25,8 @@ IMMUTABLE
 AS
 $$
 BEGIN
-RETURN QUERY 
+CALL hive.dlogs('<no-context>', 'Entering get_balance_impacting_operations');
+RETURN QUERY
 SELECT 'hive::protocol::fill_vesting_withdraw_operation'
 UNION ALL
 SELECT 'hive::protocol::producer_reward_operation'
@@ -82,7 +83,7 @@ SELECT 'hive::protocol::curation_reward_operation'
 UNION ALL
 SELECT 'hive::protocol::account_created_operation'
 UNION ALL
-SELECT 'hive::protocol::interest_operation'
-;
+SELECT 'hive::protocol::interest_operation';
+CALL hive.dlogs('<no-context>', 'Exiting get_balance_impacting_operations');
 END
 $$;

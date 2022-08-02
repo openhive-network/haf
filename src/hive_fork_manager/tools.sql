@@ -7,6 +7,7 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
 BEGIN
+    CALL hive.dlogs(_context, 'Entering get_context_id');
     SELECT hac.id INTO __context_id
     FROM hive.contexts hac
     WHERE hac.name = _context;
@@ -14,6 +15,7 @@ BEGIN
     IF __context_id IS NULL THEN
         RAISE EXCEPTION 'No context with name %', _context;
     END IF;
+    CALL hive.dlogs(_context, 'Exiting get_context_id');
 
     RETURN __context_id;
 END;

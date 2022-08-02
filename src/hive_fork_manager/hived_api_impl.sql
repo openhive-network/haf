@@ -18,6 +18,7 @@ CREATE OR REPLACE FUNCTION hive.copy_blocks_to_irreversible(
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering copy_blocks_to_irreversible');
     INSERT INTO hive.blocks
     SELECT
           DISTINCT ON ( hbr.num ) hbr.num
@@ -35,6 +36,8 @@ BEGIN
         hbr.num <= _new_irreversible_block
     AND hbr.num > _head_block_of_irreversible_blocks
     ORDER BY hbr.num ASC, hbr.fork_id DESC;
+    CALL hive.dlogs('<no-context>', 'Exiting copy_blocks_to_irreversible');
+
 END;
 $BODY$
 ;
@@ -48,6 +51,7 @@ CREATE OR REPLACE FUNCTION hive.copy_transactions_to_irreversible(
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering copy_transactions_to_irreversible');
     INSERT INTO hive.transactions
     SELECT
           htr.block_num
@@ -69,6 +73,8 @@ BEGIN
             ORDER BY hbr.num ASC, hbr.fork_id DESC
     ) as num_and_forks ON htr.block_num = num_and_forks.num AND htr.fork_id = num_and_forks.fork_id
     ;
+    CALL hive.dlogs('<no-context>', 'Exiting copy_transactions_to_irreversible');
+
 END;
 $BODY$
 ;
@@ -82,6 +88,7 @@ CREATE OR REPLACE FUNCTION hive.copy_operations_to_irreversible(
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering copy_operations_to_irreversible');
     INSERT INTO hive.operations
     SELECT
            hor.id
@@ -104,6 +111,8 @@ BEGIN
             ORDER BY hbr.num ASC, hbr.fork_id DESC
         ) as num_and_forks ON hor.block_num = num_and_forks.num AND hor.fork_id = num_and_forks.fork_id
     ;
+    CALL hive.dlogs('<no-context>', 'Exiting copy_operations_to_irreversible');
+
 END;
 $BODY$
 ;
@@ -117,6 +126,7 @@ CREATE OR REPLACE FUNCTION hive.copy_signatures_to_irreversible(
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering copy_signatures_to_irreversible');
     INSERT INTO hive.transactions_multisig
     SELECT
           tsr.trx_hash
@@ -135,6 +145,8 @@ BEGIN
             ORDER BY hbr.num ASC, hbr.fork_id DESC
         ) as num_and_forks ON htr.block_num = num_and_forks.num AND htr.fork_id = num_and_forks.fork_id
     ;
+    CALL hive.dlogs('<no-context>', 'Exiting copy_signatures_to_irreversible');
+
 END;
 $BODY$
 ;
@@ -148,6 +160,7 @@ CREATE OR REPLACE FUNCTION hive.copy_accounts_to_irreversible(
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering copy_accounts_to_irreversible');
     INSERT INTO hive.accounts
     SELECT
            har.id
@@ -166,6 +179,8 @@ BEGIN
             ORDER BY hbr.num ASC, hbr.fork_id DESC
         ) as num_and_forks ON har.block_num = num_and_forks.num AND har.fork_id = num_and_forks.fork_id
     ;
+    CALL hive.dlogs('<no-context>', 'Exiting copy_accounts_to_irreversible');
+
 END;
 $BODY$
 ;
@@ -179,6 +194,7 @@ CREATE OR REPLACE FUNCTION hive.copy_account_operations_to_irreversible(
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering copy_account_operations_to_irreversible');
     INSERT INTO hive.account_operations
     SELECT
            haor.block_num
@@ -199,6 +215,8 @@ BEGIN
             ORDER BY hbr.num ASC, hbr.fork_id DESC
         ) as num_and_forks ON haor.fork_id = num_and_forks.fork_id AND haor.block_num = num_and_forks.num
     ;
+    CALL hive.dlogs('<no-context>', 'Exiting copy_account_operations_to_irreversible');
+
 END;
 $BODY$
 ;
@@ -210,6 +228,7 @@ CREATE OR REPLACE FUNCTION hive.remove_obsolete_reversible_data( _new_irreversib
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering remove_obsolete_reversible_data');
     DELETE FROM hive.account_operations_reversible har
     USING hive.operations_reversible hor
     WHERE
@@ -237,6 +256,8 @@ BEGIN
 
     DELETE FROM hive.blocks_reversible hbr
     WHERE hbr.num < _new_irreversible_block;
+    CALL hive.dlogs('<no-context>', 'Exiting remove_obsolete_reversible_data');
+
 END;
 $BODY$
 ;
@@ -251,6 +272,7 @@ DECLARE
     __upper_bound_events_id BIGINT := NULL;
     __max_block_num INTEGER := NULL;
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering remove_unecessary_events');
     SELECT consistent_block INTO __max_block_num FROM hive.irreversible_data;
 
     -- find the upper bound of events possible to remove
@@ -261,6 +283,7 @@ BEGIN
     DELETE FROM hive.events_queue heq
     USING ( SELECT MIN( hc.events_id) as id FROM hive.contexts hc ) as min_event
     WHERE ( heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL )  AND ( heq.id < min_event.id OR min_event.id IS NULL ) AND heq.id != 0;
+    CALL hive.dlogs('<no-context>', 'Exiting remove_unecessary_events');
 
 END;
 $BODY$
@@ -274,6 +297,7 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering save_and_drop_indexes_constraints');
     PERFORM hive.save_and_drop_constraints( _schema, _table );
 
     --LEFT JOIN is needed in situation when PRIMARY KEY exists in a `_table`.
@@ -321,6 +345,9 @@ BEGIN
         EXECUTE __command;
     END LOOP;
     CLOSE __cursor;
+
+    CALL hive.dlogs('<no-context>', 'Exiting save_and_drop_indexes_constraints');
+
 END;
 $function$
 LANGUAGE plpgsql VOLATILE
@@ -334,6 +361,7 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering save_and_drop_indexes_foreign_keys');
     INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
           DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
@@ -359,6 +387,8 @@ BEGIN
     END LOOP;
 
     CLOSE __cursor;
+    CALL hive.dlogs('<no-context>', 'Exiting save_and_drop_indexes_foreign_keys');
+
 END;
 $function$
 LANGUAGE plpgsql VOLATILE
@@ -372,6 +402,7 @@ DECLARE
 __command TEXT;
 __cursor REFCURSOR;
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering save_and_drop_constraints');
     INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
         DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
@@ -397,6 +428,9 @@ BEGIN
     END LOOP;
 
         CLOSE __cursor;
+
+    CALL hive.dlogs('<no-context>', 'Exiting save_and_drop_constraints');
+
     END;
 $function$
 LANGUAGE plpgsql VOLATILE
@@ -410,7 +444,7 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-
+    CALL hive.dlogs('<no-context>', 'Entering restore_indexes');
     --restoring indexes, primary keys, unique contraints
     OPEN __cursor FOR ( SELECT command FROM hive.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE );
     LOOP
@@ -422,6 +456,7 @@ BEGIN
 
     DELETE FROM hive.indexes_constraints
     WHERE table_name = _table_name AND is_foreign_key = FALSE;
+    CALL hive.dlogs('<no-context>', 'Exiting restore_indexes');
 
 END;
 $function$
@@ -437,7 +472,7 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-
+    CALL hive.dlogs('<no-context>', 'Entering restore_foreign_keys');
     --restoring indexes, primary keys, unique contraints
     OPEN __cursor FOR ( SELECT command FROM hive.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE );
     LOOP
@@ -449,6 +484,7 @@ BEGIN
 
     DELETE FROM hive.indexes_constraints
     WHERE table_name = _table_name AND is_foreign_key = TRUE;
+    CALL hive.dlogs('<no-context>', 'Exiting restore_foreign_keys');
 
 END;
 $function$
@@ -465,6 +501,7 @@ DECLARE
     __consistent_block INTEGER := NULL;
     __is_dirty BOOL := TRUE;
 BEGIN
+    CALL hive.dlogs('<no-context>', 'Entering remove_inconsistent_irreversible_data');
     SELECT consistent_block, is_dirty INTO __consistent_block, __is_dirty FROM hive.irreversible_data;
 
     IF ( __is_dirty = FALSE ) THEN
@@ -487,6 +524,7 @@ BEGIN
     DELETE FROM hive.blocks WHERE num > __consistent_block;
 
     UPDATE hive.irreversible_data SET is_dirty = FALSE;
+    CALL hive.dlogs('<no-context>', 'Exiting remove_inconsistent_irreversible_data');
 END;
 $BODY$
 ;

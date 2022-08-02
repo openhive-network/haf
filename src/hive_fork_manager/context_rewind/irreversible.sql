@@ -6,11 +6,14 @@ AS
 $BODY$
 DECLARE
 BEGIN
+CALL hive.dlogs('<no-context>', 'Entering remove_obsolete_operations');
 EXECUTE format(
         'DELETE FROM hive.%I st WHERE st.hive_block_num <= %s'
     , _shadow_table_name
     , _irreversible_block
     );
+    CALL hive.dlogs('<no-context>', 'Exiting remove_obsolete_operations');
+
 END;
 $BODY$
 ;

@@ -5,6 +5,7 @@ CREATE OR REPLACE FUNCTION hive.context_create( _name hive.context_name, _fork_i
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs(_name, 'Entering context_create');
     IF NOT _name SIMILAR TO '[a-zA-Z0-9_]+' THEN
         RAISE EXCEPTION 'Incorrect context name %, only characters a-z A-Z 0-9 _ are allowed', name;
     END IF;
@@ -12,6 +13,7 @@ BEGIN
     EXECUTE format( 'CREATE TABLE hive.%I( hive_rowid BIGSERIAL )', _name );
     INSERT INTO hive.contexts( name, current_block_num, irreversible_block, is_attached, events_id, fork_id, owner )
     VALUES( _name, 0, _irreversible_block, TRUE, 0, _fork_id, current_user );
+    CALL hive.dlogs(_name, 'Exiting context_create');
 END;
 $BODY$
 ;
@@ -25,6 +27,7 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE := NULL;
 BEGIN
+    CALL hive.dlogs(_name, 'Entering context_remove');
     SELECT hc.id INTO __context_id FROM hive.contexts hc WHERE hc.name = _name;
 
     IF __context_id IS NULL THEN
@@ -38,6 +41,8 @@ BEGIN
     DELETE FROM hive.contexts WHERE id = __context_id;
 
     EXECUTE format( 'DROP TABLE hive.%I', _name );
+    CALL hive.dlogs(_name, 'Exiting context_remove');
+
 END;
 $BODY$
 ;
@@ -50,6 +55,9 @@ CREATE OR REPLACE FUNCTION hive.context_exists( _name TEXT )
 AS
 $BODY$
 BEGIN
+    CALL hive.dlogs(_name, 'Entering context_exists');
+    CALL hive.dlogs(_name, 'Exiting context_exists');
+
     RETURN EXISTS( SELECT 1 FROM hive.contexts hc WHERE hc.name = _name );
 END;
 $BODY$
@@ -61,9 +69,12 @@ CREATE OR REPLACE FUNCTION hive.context_next_block( _name TEXT )
     VOLATILE
 AS
 $BODY$
+CALL hive.dlogs(_name, 'Entering context_next_block');
 UPDATE hive.contexts
 SET current_block_num = current_block_num + 1
 WHERE name = _name
+CALL hive.dlogs(_name, 'Exiting context_next_block');
+
     RETURNING current_block_num
 $BODY$
 ;
@@ -79,6 +90,8 @@ DECLARE
     __registerd_table_schema TEXT;
     __registerd_table_name TEXT;
 BEGIN
+    CALL hive.dlogs(_context, 'Entering context_back_from_fork');
+
     -- we need a flag for back_from_fork to returns from triggers immediatly
     -- we cannot use ALTER TABLE DISABLE TRIGGERS because DDL event trigger cause an error:
     -- Cannot ALTER TABLE "table" because it has pending trigger events, but only when origin tables have contstraints
@@ -103,6 +116,8 @@ BEGIN
     SET   current_block_num = _block_num_before_fork
         , back_from_fork = FALSE
     WHERE name = _context AND current_block_num > _block_num_before_fork;
+    CALL hive.dlogs(_context, 'Exiting context_back_from_fork');
+
 END;
 $BODY$
 ;
@@ -116,6 +131,7 @@ $BODY$
 DECLARE
     __context_id INTEGER := NULL;
 BEGIN
+    CALL hive.dlogs(_context, 'Entering context_detach');
     SELECT ct.id FROM hive.contexts ct WHERE ct.name=_context INTO __context_id;
 
     IF __context_id IS NULL THEN
@@ -131,6 +147,8 @@ BEGIN
         detached_block_num = NULL,
         current_block_num = CASE WHEN current_block_num = 0 THEN 0 ELSE current_block_num - 1 END
     WHERE id = __context_id;
+    CALL hive.dlogs(_context, 'Exiting context_detach');
+
 END;
 $BODY$
 ;
@@ -145,6 +163,7 @@ DECLARE
     __context_id INTEGER := NULL;
     __current_block_num INTEGER := NULL;
 BEGIN
+    CALL hive.dlogs(_context, 'Entering context_attach');
     SELECT ct.id, ct.current_block_num
     FROM hive.contexts ct
     WHERE ct.name=_context AND ct.is_attached = FALSE
@@ -155,7 +174,7 @@ BEGIN
     END IF;
 
     IF __current_block_num > _last_synced_block THEN
-        RAISE EXCEPTION 'Context % has already processed block nr %', _context, _last_synced_block;
+        call hive.elogs(_context, format('Context %s has already processed block nr %s', _context, _last_synced_block), TRUE);
     END IF;
 
 
@@ -168,6 +187,8 @@ BEGIN
         current_block_num = _last_synced_block
       , is_attached = TRUE
     WHERE id = __context_id;
+    CALL hive.dlogs(_context, 'Exiting context_attach');
+
 END;
 $BODY$
 ;
@@ -181,6 +202,7 @@ $BODY$
 DECLARE
     __current_irreversible INTEGER;
 BEGIN
+    CALL hive.dlogs(_context, 'Entering context_set_irreversible_block');
     -- validate new irreversible
     SELECT irreversible_block FROM hive.contexts hc WHERE hc.name = _context INTO __current_irreversible;
 
@@ -196,6 +218,8 @@ BEGIN
             JOIN hive.contexts hc ON hc.id = hrt.context_id
             WHERE hc.name = _context
             ORDER BY hrt.id;
+    CALL hive.dlogs(_context, 'Exiting context_set_irreversible_block');
+
 END;
 $BODY$
 ;
