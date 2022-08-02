@@ -199,8 +199,18 @@ BEGIN
 
     EXECUTE format('CREATE INDEX idx_%I_%I_row_id ON %I.%I(hive_rowid)', lower(_table_schema), lower(_table_name), lower(_table_schema), lower(_table_name) );
 
+
     ASSERT __context_id IS NOT NULL, 'There is no context %', _context_name;
+
+    IF __context_id IS NULL THEN
+        call hive.ilogs(_context_name, format('There is no context %s',_context_name))
+    END IF;
+
     ASSERT __registered_table_id IS NOT NULL;
+    
+    IF __registered_table_id IS NULL THEN
+        call hive.ilogs(_context_name, '__registered_table_id needs to be NOT NULL')
+    END IF;
 
     -- create trigger functions
     EXECUTE format(
@@ -244,9 +254,9 @@ BEGIN
         AS
         $$
         DECLARE
-           __block_num INTEGER := NULL;
-           __values TEXT;
-           __is_back_from_fork_in_progress BOOL := FALSE;
+            __block_num INTEGER := NULL;
+            __values TEXT;
+            __is_back_from_fork_in_progress BOOL := FALSE;
         BEGIN
             CALL hive.dlogs(''<no-context>'', ''Entering %s'');
             SELECT back_from_fork FROM hive.contexts WHERE id=%s INTO __is_back_from_fork_in_progress;
@@ -279,9 +289,9 @@ BEGIN
         AS
         $$
         DECLARE
-           __block_num INTEGER := NULL;
-           __values TEXT;
-           __is_back_from_fork_in_progress BOOL := FALSE;
+            __block_num INTEGER := NULL;
+            __values TEXT;
+            __is_back_from_fork_in_progress BOOL := FALSE;
         BEGIN
             CALL hive.dlogs(''<no-context>'', ''Entering %s'');
             SELECT back_from_fork FROM hive.contexts WHERE id=%s INTO __is_back_from_fork_in_progress;
@@ -308,16 +318,16 @@ BEGIN
     );
 
     EXECUTE format(
-         'CREATE OR REPLACE FUNCTION %s()
-             RETURNS trigger
-             LANGUAGE plpgsql
-         AS
-         $$
-         DECLARE
+        'CREATE OR REPLACE FUNCTION %s()
+            RETURNS trigger
+            LANGUAGE plpgsql
+        AS
+        $$
+        DECLARE
             __block_num INTEGER := NULL;
             __values TEXT;
             __is_back_from_fork_in_progress BOOL := FALSE;
-         BEGIN
+        BEGIN
              CALL hive.dlogs(''<no-context>'', ''Entering %s'');
              SELECT back_from_fork FROM hive.contexts WHERE id=%s INTO __is_back_from_fork_in_progress;
 

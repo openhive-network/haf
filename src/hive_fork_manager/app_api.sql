@@ -125,7 +125,7 @@ BEGIN
 
     IF _last_synced_block > __head_of_irreversible_block THEN
         call hive.elogs(_context, format('Cannot attach context %s because the block num %s is grater than top of irreversible block %s'
-            , _context, _last_synced_block,  __head_of_irreversible_block;
+            , _context, _last_synced_block, __head_of_irreversible_block), TRUE );
     END IF;
 
     PERFORM hive.context_attach( _context, _last_synced_block );
@@ -254,6 +254,7 @@ BEGIN
     END IF;
 
     CALL hive.dlogs(_context_name, 'Exiting app_context_is_attached');
+
     RETURN __result;
 END;
 $BODY$;
@@ -277,6 +278,7 @@ BEGIN
         call hive.elogs(_context_name, format('Context %s does not exist or is attached', _context_name), TRUE);
     END IF;
     CALL hive.dlogs(_context_name, 'Exiting app_context_detached_save_block_num');
+
 END;
 $BODY$;
 
@@ -304,6 +306,7 @@ BEGIN
     WHERE hc.id = __context_id;
 
     CALL hive.dlogs(_context_name, 'Exiting app_context_detached_get_block_num');
+
     RETURN __result;
 END;
 $BODY$;
@@ -328,6 +331,7 @@ BEGIN
 
     IF EXISTS( SELECT 1 FROM hive.state_providers_registered WHERE context_id = __context_id AND state_provider = _state_provider ) THEN
         RAISE LOG 'The state % provider is already imported for context %.', _state_provider, _context;
+        CALL hive.ilogs(_context, format('The state %s provider is already imported for context %s.', _state_provider, _context));
         RETURN;
     END IF;
 
@@ -347,6 +351,7 @@ BEGIN
     FROM hive.state_providers_registered hsp
     WHERE hsp.context_id = __context_id AND hsp.state_provider = _state_provider;
     CALL hive.dlogs(_context, 'Exiting app_state_provider_import');
+
 END;
 $BODY$
 ;
@@ -389,6 +394,7 @@ BEGIN
     FROM hive.state_providers_registered hsp
     WHERE hsp.context_id = __context_id;
     CALL hive.dlogs(_context, 'Entering app_state_provider_update');
+
 END;
 $BODY$
 ;

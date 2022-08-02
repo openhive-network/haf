@@ -26,7 +26,6 @@ BEGIN
         WHERE heq.block_num > __newest_irreversible_block_num
               AND heq.event != 'BACK_FROM_FORK'
         ORDER BY heq.id LIMIT 1;
-
         IF __result IS NULL THEN
             -- there is no reversible blocks event
             -- the last possible event are MASSIVE_SYNC(__newest_irreversible_block_num) or NEW_IRREVERSIBLE(__newest_irreversible_block_num)
@@ -59,11 +58,11 @@ BEGIN
     END IF;
     CALL hive.dlogs(_context, 'Exiting find_next_event');
 
+
     RETURN __result;
 END;
 $BODY$
 ;
-
 
 CREATE OR REPLACE FUNCTION hive.squash_fork_events( _context TEXT )
     RETURNS void
@@ -87,7 +86,6 @@ BEGIN
     WHERE heq.event = 'BACK_FROM_FORK' AND hc.name = _context
     ORDER BY hf.block_num ASC, heq.id DESC
     LIMIT 1;
-
     -- no newer fork, nothing to do
     IF __next_fork_event_id IS NULL THEN
         RETURN;
@@ -162,6 +160,7 @@ BEGIN
 END;
 $BODY$
 ;
+
 
 CREATE OR REPLACE FUNCTION hive.squash_events( _context TEXT )
     RETURNS void
@@ -273,6 +272,9 @@ BEGIN
         -- no RETURN here because code after the case will continue processing irreversible blocks only
     WHEN 'NEW_BLOCK' THEN
         ASSERT  __next_event_block_num > __current_block_num, 'We could not process block without consume event';
+        IF __next_event_block_num <= __current_block_num THEN
+            CALL hive.ilogs(_context_name,'We could not process block without consume event');
+        END IF;
         IF __next_event_block_num = ( __current_block_num + 1 ) THEN
             UPDATE hive.contexts
             SET current_block_num = __next_event_block_num
@@ -285,6 +287,9 @@ BEGIN
         -- it is impossible to have hole between __current_block_num and NEW_BLOCK event block_num
         -- when __current_block_num is not irreversible
         ASSERT __current_block_num <= __irreversible_block_num, 'current_block_num is reversible!';
+        IF __next_event_block_num > __current_block_num THEN
+            CALL hive.ilogs(_context_name, 'current_block_num is reversible!');
+        END IF;
     ELSE
     END CASE;
 
@@ -309,10 +314,11 @@ BEGIN
 
     __result.first_block = __next_block_to_process;
     __result.last_block = __last_block_to_process;
+
     CALL hive.dlogs(_context_name, 'Exiting app_next_block_forking_app');
 
     RETURN __result;
-END;
+    END;
 $BODY$
 ;
 
@@ -404,6 +410,7 @@ BEGIN
 $BODY$
 ;
 
+
 CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _state_provider HIVE.STATE_PROVIDERS, _context hive.context_name )
     RETURNS void
     LANGUAGE plpgsql
@@ -422,6 +429,7 @@ BEGIN
 END;
 $BODY$
 ;
+
 
 CREATE OR REPLACE FUNCTION hive.refresh_irreversible_block_for_all_contexts( _new_irreversible_block INT )
     RETURNS void

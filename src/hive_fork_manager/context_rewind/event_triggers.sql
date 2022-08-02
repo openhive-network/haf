@@ -153,6 +153,7 @@ BEGIN
     IF __table IS NOT NULL THEN
         PERFORM hive.clean_after_uregister_table( __schema, __table );
         RAISE WARNING 'Registered table were dropped: %.%', __schema, __table;
+        CALL hive.ilogs('<warning>', format('Registered table were dropped: %s.%s', __schema, __table));
     END IF;
 END;
 $$
@@ -164,6 +165,7 @@ CREATE OR REPLACE FUNCTION hive.on_create_tables()
 AS
 $$
 BEGIN
+
     PERFORM
           hive.register_state_provider_tables( tables.context )
         , hive.register_table( tables.schema_name, tables.relname, tables.context )
@@ -176,6 +178,7 @@ BEGIN
         JOIN hive.contexts hc ON ( 'hive.' || hc.name )::regclass = pgi.inhparent
         WHERE tr.object_type = 'table'
     ) as tables;
+
 END;
 $$
 ;
