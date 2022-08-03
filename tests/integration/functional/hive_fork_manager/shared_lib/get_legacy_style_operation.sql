@@ -48,7 +48,7 @@ DECLARE
   curation_reward_operation                       VARCHAR := '{"type":"curation_reward_operation","value":{"curator":"juanlibertad","reward":{"amount":"800915474","precision":6,"nai":"@@000000037"},"comment_author":"chris4210","comment_permlink":"why-brexit-may-not-happen-real-house-of-cards-similarities-to-the-dao","payout_must_be_claimed":false}}';
   comment_reward_operation                        VARCHAR := '{"type":"comment_reward_operation","value":{"author":"ceviche","permlink":"rhubarb-season","payout":{"amount":"938640","precision":3,"nai":"@@000000013"},"author_rewards":2133281,"total_payout_value":{"amount":"469321","precision":3,"nai":"@@000000013"},"curator_payout_value":{"amount":"469318","precision":3,"nai":"@@000000013"},"beneficiary_payout_value":{"amount":"0","precision":3,"nai":"@@000000013"}}}';
   liquidity_reward_operation                      VARCHAR := '{"type":"liquidity_reward_operation","value":{"owner":"adm","payout":{"amount":"1200000","precision":3,"nai":"@@000000021"}}}';
-  interest_operation                              VARCHAR := '{"type":"interest_operation","value":{"owner":"ikigai","interest":{"amount":"3","precision":3,"nai":"@@000000013"}}}';
+  interest_operation                              VARCHAR := '{"type":"interest_operation","value":{"owner":"ikigai","interest":{"amount":"3","precision":3,"nai":"@@000000013"},"is_saved_into_hbd_balance":false}}';
   fill_vesting_withdraw_operation                 VARCHAR := '{"type":"fill_vesting_withdraw_operation","value":{"from_account":"wolfenstein","to_account":"wolfenstein","withdrawn":{"amount":"1239","precision":6,"nai":"@@000000037"},"deposited":{"amount":"43","precision":3,"nai":"@@000000021"}}}';
   fill_order_operation                            VARCHAR := '{"type":"fill_order_operation","value":{"current_owner":"abit","current_orderid":42971,"current_pays":{"amount":"9500","precision":3,"nai":"@@000000013"},"open_owner":"imadev","open_orderid":24,"open_pays":{"amount":"50000","precision":3,"nai":"@@000000021"}}}';
   hardfork_operation                              VARCHAR := '{"type":"hardfork_operation","value":{"hardfork_id":3}}';
@@ -87,20 +87,26 @@ DECLARE
   shutdown_witness_operation                      VARCHAR := '{"type":"shutdown_witness_operation","value":{"owner":"mining1"}}';
   fill_transfer_from_savings_operation            VARCHAR := '{"type":"fill_transfer_from_savings_operation","value":{"from":"abit","to":"abit","amount":{"amount":"1000","precision":3,"nai":"@@000000013"},"request_id":101,"memo":""}}';
   return_vesting_delegation_operation             VARCHAR := '{"type":"return_vesting_delegation_operation","value":{"account":"arhag","vesting_shares":{"amount":"1000000000000","precision":6,"nai":"@@000000037"}}}';
-  comment_benefactor_reward_operation             VARCHAR := '{"type":"comment_benefactor_reward_operation","value":{"benefactor":"good-karma","author":"abit","permlink":"hard-fork-18-how-to-use-author-reward-splitting-feature","hbd_payout":{"amount":"0","precision":3,"nai":"@@000000013"},"hive_payout":{"amount":"0","precision":3,"nai":"@@000000021"},"vesting_payout":{"amount":"4754505657","precision":6,"nai":"@@000000037"}}}';
+  comment_benefactor_reward_operation             VARCHAR := '{"type":"comment_benefactor_reward_operation","value":{"benefactor":"good-karma","author":"abit","permlink":"hard-fork-18-how-to-use-author-reward-splitting-feature","hbd_payout":{"amount":"0","precision":3,"nai":"@@000000013"},"hive_payout":{"amount":"0","precision":3,"nai":"@@000000021"},"vesting_payout":{"amount":"4754505657","precision":6,"nai":"@@000000037"},"payout_must_be_claimed":false}}';
   clear_null_account_balance_operation            VARCHAR := '{"type":"clear_null_account_balance_operation","value":{"total_cleared":[{"amount":"2000","precision":3,"nai":"@@000000021"},{"amount":"21702525","precision":3,"nai":"@@000000013"}]}}';
   proposal_pay_operation                          VARCHAR := '{"type":"proposal_pay_operation","value":{"proposal_id":0,"receiver":"steem.dao","payer":"steem.dao","payment":{"amount":"157","precision":3,"nai":"@@000000013"},"trx_id":"0000000000000000000000000000000000000000","op_in_trx":0}}';
-  sps_fund_operation                              VARCHAR := '{"type":"sps_fund_operation","value":{"fund_account":"steem.dao","additional_funds":{"amount":"60","precision":3,"nai":"@@000000013"}}}';
+  dhf_funding_operation                           VARCHAR := '{"type":"dhf_funding_operation","value":{"treasury":"steem.dao","additional_funds":{"amount":"60","precision":3,"nai":"@@000000013"}}}';
   hardfork_hive_operation                         VARCHAR := '{"type":"hardfork_hive_operation","value":{"account":"abduhawab","treasury":"steem.dao","hbd_transferred":{"amount":"6171","precision":3,"nai":"@@000000013"},"hive_transferred":{"amount":"186651","precision":3,"nai":"@@000000021"},"vests_converted":{"amount":"3399458160520","precision":6,"nai":"@@000000037"},"total_hive_from_vests":{"amount":"1735804","precision":3,"nai":"@@000000021"}}}';
   hardfork_hive_restore_operation                 VARCHAR := '{"type":"hardfork_hive_restore_operation","value":{"account":"aellly","treasury":"steem.dao","hbd_transferred":{"amount":"3007","precision":3,"nai":"@@000000013"},"hive_transferred":{"amount":"0","precision":3,"nai":"@@000000021"}}}';
   delayed_voting_operation                        VARCHAR := '{"type":"delayed_voting_operation","value":{"voter":"balte","votes":"33105558106560"}}';
   consolidate_treasury_balance_operation          VARCHAR := '{"type":"consolidate_treasury_balance_operation","value":{"total_moved":[{"amount":"83353473585","precision":3,"nai":"@@000000021"},{"amount":"560371025","precision":3,"nai":"@@000000013"}]}}';
-  sps_convert_operation                           VARCHAR := '{"type":"sps_convert_operation","value":{"fund_account":"hive.fund","hive_amount_in":{"amount":"41676736","precision":3,"nai":"@@000000021"},"hbd_amount_out":{"amount":"6543247","precision":3,"nai":"@@000000013"}}}';
+  dhf_conversion_operation                        VARCHAR := '{"type":"dhf_conversion_operation","value":{"treasury":"hive.fund","hive_amount_in":{"amount":"41676736","precision":3,"nai":"@@000000021"},"hbd_amount_out":{"amount":"6543247","precision":3,"nai":"@@000000013"}}}';
   fill_collateralized_convert_request_operation   VARCHAR := '{"type":"fill_collateralized_convert_request_operation","value":{"owner":"gandalf","requestid":1625061900,"amount_in":{"amount":"353","precision":3,"nai":"@@000000021"},"amount_out":{"amount":"103","precision":3,"nai":"@@000000013"},"excess_collateral":{"amount":"647","precision":3,"nai":"@@000000021"}}}';
   fill_recurrent_transfer_operation               VARCHAR := '{"type":"fill_recurrent_transfer_operation","value":{"from":"deathwing","to":"rishi556","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"test","remaining_executions":4}}';
   failed_recurrent_transfer_operation             VARCHAR := '{"type":"failed_recurrent_transfer_operation","value":{"from":"blackknight1423","to":"aa111","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"","consecutive_failures":1,"remaining_executions":0,"deleted":false}}';
   limit_order_cancelled_operation                 VARCHAR := '{"type":"limit_order_cancelled_operation","value":{"seller":"linouxis9","amount_back":{"amount":"9950","precision":3,"nai":"@@000000021"}}}';
   expired_account_notification_operation          VARCHAR := '{"type":"expired_account_notification_operation","value":{"account":"abit"}}';
+  escrow_approved_operation                       VARCHAR := '{"type":"escrow_approved_operation","value":{"from":"abit","to":"aellly","agent":"deathwing","escrow_id":7890,"fee":{"amount":"35000","precision":3,"nai":"@@000000021"}}}';
+  escrow_rejected_operation                       VARCHAR := '{"type":"escrow_rejected_operation","value":{"from":"abit","to":"aellly","agent":"deathwing","escrow_id":7891,"hbd_amount":{"amount":"3007","precision":3,"nai":"@@000000013"},"hive_amount":{"amount":"40000","precision":3,"nai":"@@000000021"},"fee":{"amount":"35000","precision":3,"nai":"@@000000021"}}}';
+  producer_missed_operation                       VARCHAR := '{"type":"producer_missed_operation","value":{"producer":"abit"}}';
+  proposal_fee_operation                          VARCHAR := '{"type":"proposal_fee_operation","value":{"creator":"abit","treasury":"steem.dao","proposal_id":1234,"fee":{"amount":"35000","precision":3,"nai":"@@000000021"}}}';
+  collateralized_convert_immediate_conversion_operation
+                                                  VARCHAR := '{"type":"collateralized_convert_immediate_conversion_operation","value":{"owner":"abit","requestid":4321,"hbd_out":{"amount":"5000","precision":3,"nai":"@@000000013"}}}';
 
 BEGIN
 
@@ -313,8 +319,8 @@ BEGIN
   ASSERT (SELECT hive.get_legacy_style_operation(proposal_pay_operation)->>0) = 'proposal_pay', 'operation "proposal_pay_operation" error';
   ASSERT (SELECT hive.get_legacy_style_operation(proposal_pay_operation)#>>'{1,payment}') = '0.157 HBD', 'operation "proposal_pay_operation/payment" error';
 
-  ASSERT (SELECT hive.get_legacy_style_operation(sps_fund_operation)->>0) = 'sps_fund', 'operation "sps_fund_operation" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(sps_fund_operation)#>>'{1,additional_funds}') = '0.060 HBD', 'operation "sps_fund_operation/additional_funds" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(dhf_funding_operation)->>0) = 'dhf_funding', 'operation "dhf_funding_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(dhf_funding_operation)#>>'{1,additional_funds}') = '0.060 HBD', 'operation "dhf_funding_operation/additional_funds" error';
 
   ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_operation)->>0) = 'hardfork_hive', 'operation "hardfork_hive_operation" error';
   ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_operation)#>>'{1,hbd_transferred}') = '6.171 HBD', 'operation "hardfork_hive_operation/hbd_transferred" error';
@@ -332,9 +338,9 @@ BEGIN
   ASSERT (SELECT hive.get_legacy_style_operation(consolidate_treasury_balance_operation)#>>'{1,total_moved,0}') = '83353473.585 HIVE', 'operation "consolidate_treasury_balance_operation/total_moved/0" error';
   ASSERT (SELECT hive.get_legacy_style_operation(consolidate_treasury_balance_operation)#>>'{1,total_moved,1}') = '560371.025 HBD', 'operation "consolidate_treasury_balance_operation/total_moved/1" error';
 
-  ASSERT (SELECT hive.get_legacy_style_operation(sps_convert_operation)->>0) = 'sps_convert', 'operation "sps_convert_operation" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(sps_convert_operation)#>>'{1,hive_amount_in}') = '41676.736 HIVE', 'operation "sps_convert_operation/hive_amount_in" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(sps_convert_operation)#>>'{1,hbd_amount_out}') = '6543.247 HBD', 'operation "sps_convert_operation/hbd_amount_out" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(dhf_conversion_operation)->>0) = 'dhf_conversion', 'operation "dhf_conversion_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(dhf_conversion_operation)#>>'{1,hive_amount_in}') = '41676.736 HIVE', 'operation "dhf_conversion_operation/hive_amount_in" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(dhf_conversion_operation)#>>'{1,hbd_amount_out}') = '6543.247 HBD', 'operation "dhf_conversion_operation/hbd_amount_out" error';
 
   ASSERT (SELECT hive.get_legacy_style_operation(fill_collateralized_convert_request_operation)->>0) = 'fill_collateralized_convert_request', 'operation "fill_collateralized_convert_request_operation" error';
   ASSERT (SELECT hive.get_legacy_style_operation(fill_collateralized_convert_request_operation)#>>'{1,amount_in}') = '0.353 HIVE', 'operation "fill_collateralized_convert_request_operation/amount_in" error';
@@ -351,6 +357,33 @@ BEGIN
   ASSERT (SELECT hive.get_legacy_style_operation(limit_order_cancelled_operation)#>>'{1,amount_back}') = '9.950 HIVE', 'operation "limit_order_cancelled_operation/amount_back" error';
 
   ASSERT (SELECT hive.get_legacy_style_operation(expired_account_notification_operation)->>0) = 'expired_account_notification', 'operation "expired_account_notification_operation" error';
+
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_approved_operation)->>0) = 'escrow_approved', 'operation "escrow_approved_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_approved_operation)#>>'{1,from}') = 'abit', 'operation "escrow_approved_operation/from" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_approved_operation)#>>'{1,to}') = 'aellly', 'operation "escrow_approved_operation/to" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_approved_operation)#>>'{1,agent}') = 'deathwing', 'operation "escrow_approved_operation/agent" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_approved_operation)#>>'{1,fee}') = '35.000 HIVE', 'operation "escrow_approved_operation/fee" error';
+
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_rejected_operation)->>0) = 'escrow_rejected', 'operation "escrow_rejected_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_rejected_operation)#>>'{1,from}') = 'abit', 'operation "escrow_rejected_operation/from" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_rejected_operation)#>>'{1,to}') = 'aellly', 'operation "escrow_rejected_operation/to" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_rejected_operation)#>>'{1,agent}') = 'deathwing', 'operation "escrow_rejected_operation/agent" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_rejected_operation)#>>'{1,hbd_amount}') = '3.007 HBD', 'operation "escrow_rejected_operation/hbd_amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_rejected_operation)#>>'{1,hive_amount}') = '40.000 HIVE', 'operation "escrow_rejected_operation/hive_amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_rejected_operation)#>>'{1,fee}') = '35.000 HIVE', 'operation "escrow_rejected_operation/fee" error';
+
+  ASSERT (SELECT hive.get_legacy_style_operation(producer_missed_operation)->>0) = 'producer_missed', 'operation "producer_missed_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(producer_missed_operation)#>>'{1,producer}') = 'abit', 'operation "producer_missed_operation/producer" error';
+
+  ASSERT (SELECT hive.get_legacy_style_operation(proposal_fee_operation)->>0) = 'proposal_fee', 'operation "proposal_fee_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(proposal_fee_operation)#>>'{1,creator}') = 'abit', 'operation "proposhbdal_fee_operation/creator" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(proposal_fee_operation)#>>'{1,treasury}') = 'steem.dao', 'operation "proposal_fee_operation/treasury" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(proposal_fee_operation)#>>'{1,fee}') = '35.000 HIVE', 'operation "proposal_fee_operation/fee" error';
+
+  ASSERT (SELECT hive.get_legacy_style_operation(collateralized_convert_immediate_conversion_operation)->>0) = 'collateralized_convert_immediate_conversion', 'operation "collateralized_convert_immediate_conversion_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(collateralized_convert_immediate_conversion_operation)#>>'{1,owner}') = 'abit', 'operation "collateralized_convert_immediate_conversion_operation/owner" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(collateralized_convert_immediate_conversion_operation)#>>'{1,requestid}') = '4321', 'operation "collateralized_convert_immediate_conversion_operation/requestid" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(collateralized_convert_immediate_conversion_operation)#>>'{1,hbd_out}') = '5.000 HBD', 'operation "collateralized_convert_immediate_conversion_operation/hbd_out" error';
 END;
 $BODY$
 ;
