@@ -81,3 +81,10 @@ json_build_object(
                         'application/json');
 end;
 $BODY$;
+
+CREATE OR REPLACE FUNCTION http_post(uri VARCHAR, content VARCHAR, content_type VARCHAR)
+RETURNS integer AS $$
+        BEGIN
+                RETURN 0;
+        END;
+$$ LANGUAGE plpgsql;
