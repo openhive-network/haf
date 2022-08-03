@@ -86,8 +86,6 @@ void issue_error(const char* msg)
 #pragma pop_macro("elog")
 
 
-PG_MODULE_MAGIC;
-
 PG_FUNCTION_INFO_V1(get_legacy_style_operation);
 
 Datum get_legacy_style_operation(PG_FUNCTION_ARGS)
