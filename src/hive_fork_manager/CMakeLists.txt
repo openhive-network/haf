@@ -4,6 +4,11 @@ ADD_PSQL_EXTENSION(
              events_queue.sql
              forks.sql
              app_context.sql
+             types/operation/operation.sql
+             types/operation/operation_flow.sql
+             types/operation/operation_impl.sql
+             types/operation/operation_cmp.sql
+             types/operation/operation_casts.sql
              irreversible_blocks.sql
              reversible_blocks.sql
              block_views_for_head_block.sql
