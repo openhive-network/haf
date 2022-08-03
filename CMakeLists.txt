@@ -51,6 +51,17 @@ SET(CMAKE_INSTALL_PREFIX ${POSTGRES_LIBDIR} CACHE PATH "DEFAULT PREFIX" FORCE)
 
 ENABLE_TESTING()
 
+ExternalProject_Add( pgsql-http
+    GIT_REPOSITORY         https://gitlab.syncad.com/hive/pgsql-http
+    GIT_TAG                2a945a2fa51e8b2ed18b56d7d90e3c89fd90c9f5
+    GIT_PROGRESS           FALSE
+    GIT_SUBMODULES_RECURSE TRUE
+    CONFIGURE_COMMAND ""
+    INSTALL_COMMAND make install -C <SOURCE_DIR>
+    BUILD_COMMAND make -C <SOURCE_DIR> http.so
+    EXCLUDE_FROM_ALL TRUE
+)
+
 ADD_SUBDIRECTORY( src )
 
 ADD_SUBDIRECTORY( tests )
