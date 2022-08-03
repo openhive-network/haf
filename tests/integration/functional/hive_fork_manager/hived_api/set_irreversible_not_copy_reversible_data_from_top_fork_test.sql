@@ -48,7 +48,7 @@ BEGIN
 
     INSERT INTO hive.operations_reversible
     VALUES
-    ( 1, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'THREE OPERATION', 2 )
+    ( 1, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: hive.operation, 2 )
     ;
 
     INSERT INTO hive.account_operations_reversible
