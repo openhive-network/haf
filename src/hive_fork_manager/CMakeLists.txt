@@ -36,3 +36,4 @@ ADD_PSQL_EXTENSION(
 ADD_SUBDIRECTORY( shared_lib )
 
 ADD_DEPENDENCIES( extension.${EXTENSION_NAME} hfm-${GIT_REVISION} )
+ADD_CUSTOM_TARGET( "extension.${EXTENSION_NAME}_with_http" DEPENDS extension.${EXTENSION_NAME} pgsql-http )
