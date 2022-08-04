@@ -33,18 +33,9 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_account_from_accounts_operations( _account_operation TEXT )
-    RETURNS TEXT
-    LANGUAGE plpgsql
-    IMMUTABLE
-AS
-$BODY$
-BEGIN
-    RETURN json_extract_path_text( CAST( _account_operation as json ), 'value', 'new_account_name' );
-END;
-$BODY$
-;
-
+CREATE OR REPLACE FUNCTION hive.get_account_from_accounts_operations(IN _account_operation hive.operation)
+RETURNS TEXT
+AS '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so', 'get_account_from_accounts_operations' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
     RETURNS void

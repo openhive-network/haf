@@ -1,4 +1,4 @@
-#include "operation_base.hpp"
+#include "pq_operation_base.hpp"
 
 #include <hive/protocol/operations.hpp>
 
@@ -72,6 +72,8 @@ std::vector< char > json_to_op( const char* raw_data )
 
 extern "C"
 {
+  PG_MODULE_MAGIC;
+
   _operation* make_operation( const char* raw_data, uint32 data_length )
   {
     _operation* op = (_operation*) palloc( data_length + VARHDRSZ ); // Alocate with the header
