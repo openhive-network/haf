@@ -1,14 +1,11 @@
 import json
 from pathlib import Path
 import os
+import unittest
 
-import sqlalchemy
-from sqlalchemy.pool import NullPool
-from sqlalchemy.orm import sessionmaker
+from local_tools import get_rows_count
 
 import test_tools as tt
-
-from tables import EventsQueue, Blocks, Operations, Transactions, TransactionsMultisig, Accounts, AccountOperations
 
 
 def test_replay_5milion():
@@ -21,29 +18,17 @@ def test_replay_5milion():
 
     url = os.environ.get('DB_URL')
     patterns_root = Path(os.environ.get('PATTERNS_PATH'))
-    with open(patterns_root.joinpath('haf_rows_count.json')) as f:
-        rows_count = json.load(f)
+    with open(patterns_root.joinpath('haf_rows_count.pat.json')) as f:
+        expected_rows_count = json.load(f)
 
-    engine = sqlalchemy.create_engine(url, echo=False, poolclass=NullPool)
-    session = sessionmaker(bind=engine)()
+    actual_rows_count = get_rows_count(url)
 
-    event = session.query(EventsQueue).filter(EventsQueue.event == 'MASSIVE_SYNC').one()
-    assert event.block_num == rows_count['BLOCK_LOG_LENGTH']
-
-    blocks_count = session.query(Blocks).count()
-    assert blocks_count == rows_count['BLOCKS_COUNT']
-
-    operations_count = session.query(Operations).count()
-    assert operations_count == rows_count['OPERATIONS_COUNT']
-
-    transactions_count = session.query(Transactions).count()
-    assert transactions_count == rows_count['TRANSACTIONS_COUNT']
-
-    transactions_multisig_count = session.query(TransactionsMultisig).count()
-    assert transactions_multisig_count == rows_count['TRANSACTIONS_MULTISIG_COUNT']
-
-    account_count = session.query(Accounts).count()
-    assert account_count == rows_count['ACCOUNTS_COUNT']
-
-    account_operations_count = session.query(AccountOperations).count()
-    assert account_operations_count == rows_count['ACCOUNT_OPERATIONS_COUNT']
+    tt.logger.info(f'actual_rows_count: {actual_rows_count}')
+    tt.logger.info(f'expected_rows_count: {expected_rows_count}')
+    try:
+        case = unittest.TestCase()
+        case.assertDictEqual(actual_rows_count, expected_rows_count)
+    except:
+        with open(patterns_root.joinpath('haf_rows_count.out.json'), 'w') as f:
+            json.dump(actual_rows_count, f, indent=2, sort_keys=True)
+        raise

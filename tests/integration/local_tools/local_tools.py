@@ -1,6 +1,9 @@
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Thread, Event
+import sqlalchemy
+from sqlalchemy import func
+from sqlalchemy.pool import NullPool
+from sqlalchemy.orm import sessionmaker
 import time
 from typing import Dict
 
@@ -8,6 +11,7 @@ import test_tools as tt
 from test_tools.__private.user_handles.get_implementation import get_implementation
 from test_tools.__private.wait_for import wait_for_event
 
+from tables import AccountOperations, Accounts, Blocks, EventsQueue, Operations, OperationTypes, Transactions, TransactionsMultisig
 
 BLOCKS_IN_FORK = 5
 BLOCKS_AFTER_FORK = 5
@@ -154,3 +158,34 @@ def create_app(session, application_context):
     session.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE.format( application_context ) )
     session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION )
     session.commit()
+
+
+def get_rows_count(url):
+
+    engine = sqlalchemy.create_engine(url, echo=False, poolclass=NullPool)
+    session = sessionmaker(bind=engine)()
+
+    non_virtual_op_upper_bound = session.query(func.max(OperationTypes.id)).filter(OperationTypes.is_virtual==False).one()[0]
+    event_block_num = session.query(EventsQueue.block_num).filter(EventsQueue.event=='MASSIVE_SYNC').one()[0]
+
+    blocks_count = session.query(Blocks).count()
+    operations_non_virtual_count = session.query(Operations).filter(Operations.op_type_id<=non_virtual_op_upper_bound).count()
+    operations_all_count = session.query(Operations).count()
+    transactions_count = session.query(Transactions).count()
+    transactions_multisig_count = session.query(TransactionsMultisig).count()
+    accounts_count = session.query(Accounts).count()
+    account_operations_count = session.query(AccountOperations).count()
+
+    actual_rows_count = {
+        'NON_VIRTUAL_OP_UPPER_BOUND': non_virtual_op_upper_bound,
+        'BLOCK_LOG_LENGTH': event_block_num,
+        'BLOCKS_COUNT': blocks_count,
+        'OPERATIONS_ALL_COUNT': operations_all_count,
+        'OPERATIONS_NON_VIRTUAL_COUNT': operations_non_virtual_count,
+        'TRANSACTIONS_COUNT': transactions_count,
+        'TRANSACTIONS_MULTISIG_COUNT': transactions_multisig_count,
+        'ACCOUNTS_COUNT': accounts_count,
+        'ACCOUNT_OPERATIONS_COUNT': account_operations_count
+    }
+
+    return actual_rows_count

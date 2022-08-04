@@ -5,5 +5,6 @@ GeneratedInWorld
 report.xml
 Testing
 *.out.csv
+*.out.json
 .hived
 haf-base.log

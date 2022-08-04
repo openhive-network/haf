@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, DateTime, Integer, LargeBinary, SmallInteger, String, Text, MetaData
+from sqlalchemy import Column, BigInteger, Boolean, DateTime, Integer, LargeBinary, SmallInteger, String, Text, MetaData
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -141,3 +141,11 @@ class EventsQueue(Base):
     id = Column(BigInteger, primary_key=True)
     event = Column(String)
     block_num = Column(BigInteger)
+
+
+class OperationTypes(Base):
+    __tablename__ = "operation_types"
+
+    id = Column(SmallInteger, primary_key=True)
+    name = Column(String)
+    is_virtual = Column(Boolean)
