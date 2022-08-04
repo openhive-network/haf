@@ -29,6 +29,7 @@ namespace hive::plugins::sql_serializer {
 
     private:
       fc::string escape_sql(const std::string &text) const;
+      std::string sql_to_hex( const char* d, uint32_t s ) const;
     };
 
 } // namespace hive::plugins::sql_serializer
