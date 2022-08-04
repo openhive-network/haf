@@ -1,3 +1,4 @@
+#include "operation_base.hpp"
 
 #include <hive/protocol/forward_impacted.hpp>
 #include <hive/protocol/misc_utilities.hpp>
@@ -15,7 +16,7 @@ using hive::protocol::transaction_serialization_type;
 using hive::app::collected_keyauth_collection_t;
 using hive::app::impacted_balance_data;
 
-#define CUSTOM_LOG(format, ... ) { FILE *pFile = fopen("get-impacted-accounts.log","ae"); fprintf(pFile,format "\n",__VA_ARGS__); fclose(pFile); }
+#define CUSTOM_LOG(format, ... ) { FILE *pFile = fopen("get-impacted-accounts.log","ae"); fprintf(pFile,format "\n" __VA_OPT__(,) __VA_ARGS__); fclose(pFile); }
 
 namespace // anonymous
 {
@@ -60,20 +61,40 @@ void extract_set_witness_properties_impl(extract_set_witness_properties_result_t
   helper.try_fill<fc::string>("url");
 }
 
-fc::string get_legacy_style_operation_impl( const fc::string& operation_body )
+fc::string get_legacy_style_operation_impl( const char* raw_data, uint32_t data_length )
 {
-  hive::protocol::operation _op;
-  from_variant( fc::json::from_string( operation_body ), _op );
+  if( !data_length )
+    return {};
+
+  using hive::protocol::operation;
+
+  operation op = fc::raw::unpack_from_char_array< operation >( raw_data, data_length );
+
+  fc::variant v;
+  fc::to_variant( op, v );
 
   serialization_mode_controller::mode_guard guard( transaction_serialization_type::legacy );
 
-  return fc::json::to_string( _op );
+  return fc::json::to_string( op );
 }
 
-flat_set<account_name_type> get_accounts( const fc::string& operation_body )
+account_name_type get_account_from_accounts_operations_impl( const char* raw_data, uint32_t data_length )
 {
-  hive::protocol::operation _op;
-  from_variant( fc::json::from_string( operation_body ), _op );
+  if( !data_length )
+    return {};
+
+  using hive::protocol::operation;
+
+  operation _op = fc::raw::unpack_from_char_array< operation >( raw_data, data_length );
+
+  return hive::app::get_account_from_accounts_operations( _op );
+}
+
+flat_set<account_name_type> get_accounts( const char* raw_data, uint32_t data_length )
+{
+  using hive::protocol::operation;
+
+  operation _op = fc::raw::unpack_from_char_array< operation >( raw_data, data_length );
 
   flat_set<account_name_type> _impacted;
   hive::app::operation_get_impacted_accounts( _op, _impacted );
@@ -81,10 +102,11 @@ flat_set<account_name_type> get_accounts( const fc::string& operation_body )
   return _impacted;
 }
 
-impacted_balance_data collect_impacted_balances(const char* operation_body, const bool is_hf01)
+impacted_balance_data collect_impacted_balances(const char* raw_data, uint32_t data_length, const bool is_hf01)
 {
-  hive::protocol::operation op;
-  from_variant(fc::json::from_string(operation_body), op);
+  using hive::protocol::operation;
+
+  operation op = fc::raw::unpack_from_char_array< operation >( raw_data, data_length );
 
   return hive::app::operation_get_impacted_balances(op, is_hf01);
 }
@@ -226,8 +248,6 @@ Datum colect_data_and_fill_returned_recordset(Collect collect, FillReturnTuple f
   return (Datum)0;
 }
 
-
-
 template<typename ElemT, typename F>
 void fill_record_field(Datum* tuple_values, ElemT elem, const F& func, std::size_t counter)
 {
@@ -283,6 +303,25 @@ void issue_error(const char* msg)
 
 PG_MODULE_MAGIC;
 
+PG_FUNCTION_INFO_V1(get_account_from_accounts_operations);
+
+Datum get_account_from_accounts_operations(PG_FUNCTION_ARGS)
+{
+  _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+  auto _result = (Datum)0;
+
+  colect_data_and_fill_returned_recordset(
+    [=, &_result]()
+    {
+      std::string account = get_account_from_accounts_operations_impl( VARDATA_ANY( op ), VARSIZE_ANY_EXHDR( op ) );
+      _result = CStringGetTextDatum( account.c_str() );
+    },
+    [](){},
+    __FUNCTION__,
+    ""); // XXX: Binary data is an argument
+
+  return _result;
+}
 
 PG_FUNCTION_INFO_V1(extract_set_witness_properties);
 
@@ -317,18 +356,18 @@ PG_FUNCTION_INFO_V1(get_legacy_style_operation);
 
 Datum get_legacy_style_operation(PG_FUNCTION_ARGS)
 {
-  const char* _operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
   auto _result = (Datum)0;
 
   colect_data_and_fill_returned_recordset(
     [=, &_result]()
     {
-        fc::string _legacy_operation_body = get_legacy_style_operation_impl( _operation_body );
+        fc::string _legacy_operation_body = get_legacy_style_operation_impl( VARDATA_ANY( op ), VARSIZE_ANY_EXHDR( op ) );
         _result = CStringGetTextDatum( _legacy_operation_body.c_str() );
     },
     [](){},
     __FUNCTION__,
-    _operation_body);
+    ""); // XXX: Binary data is an argument
 
   return _result;
 }
@@ -359,10 +398,9 @@ Datum get_impacted_accounts(PG_FUNCTION_ARGS)
           [&current_account, fcinfo, funcctx]()
           {
             /* total number of tuples to be returned */
-            auto* _arg0 = (VarChar*)PG_GETARG_VARCHAR_P(0);
-            auto* _op_body = (char*)VARDATA(_arg0);
+            _operation* _arg0 = PG_GETARG_HIVE_OPERATION_PP( 0 );
 
-            flat_set<account_name_type> _accounts = get_accounts( _op_body );
+            flat_set<account_name_type> _accounts = get_accounts( VARDATA_ANY( _arg0 ), VARSIZE_ANY_EXHDR( _arg0 ) );
 
             funcctx->max_calls = _accounts.size();
             funcctx->user_fctx = nullptr;
@@ -429,10 +467,7 @@ Datum get_impacted_accounts(PG_FUNCTION_ARGS)
   {
     try
     {
-      auto* _arg0 = (VarChar*)PG_GETARG_VARCHAR_P(0);
-      auto* _op_body = (char*)VARDATA(_arg0);
-
-      CUSTOM_LOG( "An exception was raised during `get_impacted_accounts` call. Operation: %s", _op_body ? _op_body : "" )
+      CUSTOM_LOG( "An exception was raised during `get_impacted_accounts` call." );
     }
     catch(...)
     {
@@ -459,14 +494,14 @@ FUNCTION get_impacted_balances(_operation_body text, IN _is_hf01 bool) RETURNS S
 Datum get_impacted_balances(PG_FUNCTION_ARGS)
 {
   impacted_balance_data collected_data;
-  const char* operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
   const bool is_hf01 = PG_GETARG_BOOL(1);
 
   colect_data_and_fill_returned_recordset(
 
     [=, &collected_data]()
     {
-        collected_data = collect_impacted_balances(operation_body, is_hf01);
+        collected_data = collect_impacted_balances(VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body ), is_hf01);
     }, 
 
     [=, &collected_data]()
@@ -481,7 +516,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     
     __FUNCTION__,
 
-    operation_body);
+    ""); // XXX: Binary data is an argument
 
 
 

@@ -7,7 +7,7 @@ CREATE TYPE hive.impacted_balances_return AS
   asset_symbol_nai INT -- Type of asset symbol used in the operation
 );
 
-CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body text, IN _is_hf01 bool)
+CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body hive.operation, IN _is_hf01 bool)
 RETURNS SETOF impacted_balances_return
 AS 'MODULE_PATHNAME', 'get_impacted_balances' LANGUAGE C;
 
