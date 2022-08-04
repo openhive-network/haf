@@ -18,22 +18,41 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   std::string
+  data2_sql_tuple_base::sql_to_hex( const char* d, uint32_t s ) const
+  {
+      std::string r;
+      r.resize( s * 2 + 4 );
+      r[ 0 ] = '\'';
+      r[ 1 ] = '\\';
+      r[ 2 ] = 'x';
+      static const char* to_hex = "0123456789abcdef";
+      uint8_t* c = (uint8_t*) d;
+      for( uint32_t i = 0; i < s; ++i )
+      {
+        r[3 + i*2] = to_hex[(c[i] >> 4)];
+        r[3 + i*2 + 1] = to_hex[(c[i] & 0x0f)];
+      }
+      r[s*2 + 3] = '\'';
+      return r;
+  }
+
+  std::string
   data2_sql_tuple_base::escape_raw(const fc::ripemd160& hash) const
   {
-    return "\'\\x" + fc::to_hex(hash.data(), hash.data_size()) + '\'';
+    return sql_to_hex(hash.data(), hash.data_size());
   }
 
   std::string
   data2_sql_tuple_base::escape_raw(const std::vector<char>& binary) const
   {
-    return "\'\\x" + fc::to_hex(binary.data(), binary.size()) + '\'';
+    return sql_to_hex(binary.data(), binary.size());
   }
 
   std::string
   data2_sql_tuple_base::escape_raw(const fc::optional<signature_type>& sign) const
   {
     if( sign.valid() )
-      return "\'\\x" + fc::to_hex(reinterpret_cast<const char*>( sign->begin() ), sign->size()) + '\'';
+      return sql_to_hex(reinterpret_cast<const char*>( sign->begin() ), sign->size());
     else
       return "NULL";
   }
