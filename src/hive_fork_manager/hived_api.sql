@@ -349,23 +349,17 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.get_block_range( _starting_block_num INT, _count INT )
-    RETURNS hive.block_type[]
+    RETURNS SETOF hive.block_type
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
-DECLARE
-    __result hive.block_type[] := NULL;
 BEGIN
     ASSERT _starting_block_num  > 0, "Invalid starting block number";
     ASSERT _count > 0, "Why ask for zero blocks?";
     ASSERT _count <= 1000, "You can only ask for 1000 blocks at a time";
 
-    SELECT ARRAY_AGG( hive.get_block(num) )
-    FROM generate_series(_starting_block_num, _starting_block_num + _count - 1) num
-    INTO __result;
-
-    RETURN __result;
+    RETURN QUERY SELECT (unnest(ARRAY_AGG(hive.get_block(num)))).* FROM generate_series(_starting_block_num, _starting_block_num + _count - 1) num;
 END;
 $BODY$
 ;
