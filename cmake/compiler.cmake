@@ -8,7 +8,7 @@ MACRO( SETUP_OUTPUT_DIRECTORIES )
 ENDMACRO()
 
 MACRO( SETUP_COMPILER target_name )
-    TARGET_COMPILE_OPTIONS( ${target_name}  PRIVATE -std=c++14 -Wall )
+    TARGET_COMPILE_OPTIONS( ${target_name}  PRIVATE -Wall )
     TARGET_INCLUDE_DIRECTORIES( ${target_name}
             PRIVATE
             ${PROJECT_SOURCE_DIR}/common_includes
