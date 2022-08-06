@@ -19,9 +19,7 @@ extern "C"
 
 #define PG_RETURN_HIVE_OPERATION( x ) PG_RETURN_POINTER( x )
 
-#define DatumGetHiveOperationPP( X )     ( (_operation*) PG_DETOAST_DATUM( X ) )
+#define DatumGetHiveOperationPP( X )     ( (_operation*) PG_DETOAST_DATUM_PACKED( X ) )
 #define PG_GETARG_HIVE_OPERATION_PP( n ) DatumGetHiveOperationPP( PG_GETARG_DATUM( n ) )
-
-#define VarSizeEqual( l, r ) ( VARSIZE_ANY_EXHDR( l ) == VARSIZE_ANY_EXHDR( r ) )
 
 }

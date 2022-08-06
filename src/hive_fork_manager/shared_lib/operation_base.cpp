@@ -72,6 +72,8 @@ std::vector< char > json_to_op( const char* raw_data )
 
 extern "C"
 {
+#include <utils/hashutils.h>
+
   PG_MODULE_MAGIC;
 
   _operation* make_operation( const char* raw_data, uint32 data_length )
@@ -84,10 +86,14 @@ extern "C"
     return op;
   }
 
-  bool operation_equal( const _operation* lhs, const _operation* rhs )
+  int operation_cmp_impl( const _operation* lhs, const _operation* rhs )
   {
-    return VarSizeEqual( lhs->data, rhs->data ) ? memcmp( VARDATA_ANY( lhs->data ), VARDATA_ANY( rhs->data ), VARSIZE_ANY_EXHDR( lhs->data ) ) == 0
-                                                : false;
+    if( VARSIZE_ANY_EXHDR( lhs ) > VARSIZE_ANY_EXHDR( rhs ) )
+      return 1;
+    else if( VARSIZE_ANY_EXHDR( lhs ) < VARSIZE_ANY_EXHDR( rhs ) )
+      return -1;
+
+    return memcmp( VARDATA_ANY( lhs ), VARDATA_ANY( rhs ), VARSIZE_ANY_EXHDR( lhs ) );
   }
 
   Datum operation_in( PG_FUNCTION_ARGS )
@@ -150,7 +156,7 @@ extern "C"
     _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
     _operation* rhs = PG_GETARG_HIVE_OPERATION_PP( 1 );
 
-    PG_RETURN_BOOL( operation_equal( lhs, rhs ) );
+    PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) == 0 );
   }
 
   Datum operation_ne( PG_FUNCTION_ARGS )
@@ -158,6 +164,57 @@ extern "C"
     _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
     _operation* rhs = PG_GETARG_HIVE_OPERATION_PP( 1 );
 
-    PG_RETURN_BOOL( !operation_equal( lhs, rhs ) );
+    PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) != 0 );
+  }
+
+  Datum operation_gt( PG_FUNCTION_ARGS )
+  {
+    _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    _operation* rhs = PG_GETARG_HIVE_OPERATION_PP( 1 );
+
+    PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) > 0 );
+  }
+
+  Datum operation_ge( PG_FUNCTION_ARGS )
+  {
+    _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    _operation* rhs = PG_GETARG_HIVE_OPERATION_PP( 1 );
+
+    PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) >= 0 );
+  }
+
+  Datum operation_lt( PG_FUNCTION_ARGS )
+  {
+    _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    _operation* rhs = PG_GETARG_HIVE_OPERATION_PP( 1 );
+
+    PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) < 0 );
+  }
+
+  Datum operation_le( PG_FUNCTION_ARGS )
+  {
+    _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    _operation* rhs = PG_GETARG_HIVE_OPERATION_PP( 1 );
+
+    PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) <= 0 );
+  }
+
+  Datum operation_cmp( PG_FUNCTION_ARGS )
+  {
+    _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    _operation* rhs = PG_GETARG_HIVE_OPERATION_PP( 1 );
+
+    PG_RETURN_INT32( operation_cmp_impl( lhs, rhs ) );
+  }
+
+  Datum operation_hash( PG_FUNCTION_ARGS )
+  {
+    _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
+
+    Datum		result;
+
+    result = hash_any((unsigned char *) VARDATA_ANY( lhs ), VARSIZE_ANY_EXHDR( lhs ));
+
+    PG_RETURN_DATUM( result );
   }
 }

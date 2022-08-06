@@ -26,7 +26,7 @@ extern "C"
   _operation* make_operation( const char* raw_data, uint32 data_length );
 
   // compare underlying bytea _operation data using memcmp
-  bool operation_equal( const _operation* lhs, const _operation* rhs );
+  int operation_cmp_impl( const _operation* lhs, const _operation* rhs );
 
   // SQL functions
 
@@ -52,4 +52,22 @@ extern "C"
 
   PG_FUNCTION_INFO_V1( operation_ne );
   Datum operation_ne( PG_FUNCTION_ARGS );
+
+  PG_FUNCTION_INFO_V1( operation_gt );
+  Datum operation_gt( PG_FUNCTION_ARGS );
+
+  PG_FUNCTION_INFO_V1( operation_ge );
+  Datum operation_ge( PG_FUNCTION_ARGS );
+
+  PG_FUNCTION_INFO_V1( operation_lt );
+  Datum operation_lt( PG_FUNCTION_ARGS );
+
+  PG_FUNCTION_INFO_V1( operation_le );
+  Datum operation_le( PG_FUNCTION_ARGS );
+
+  PG_FUNCTION_INFO_V1( operation_cmp );
+  Datum operation_cmp( PG_FUNCTION_ARGS );
+
+  PG_FUNCTION_INFO_V1( operation_hash );
+  Datum operation_hash( PG_FUNCTION_ARGS );
 }
