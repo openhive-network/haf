@@ -8,6 +8,7 @@ variables:
   # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-5
   BUILDER_IMAGE_TAG: "@sha256:a22b174d15ad9878f878e798e297d2134da132174802abff0923ea214e2f4543"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
+  TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
 
 hive_fork_manager:
   stage: build_and_test
