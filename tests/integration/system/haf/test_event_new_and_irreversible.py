@@ -29,34 +29,18 @@ def test_event_new_and_irreversible(prepared_networks_and_database):
         head_block = get_head_block(node_under_test)
         irreversible_block = get_irreversible_block(node_under_test)
 
-        if irreversible_block > previous_irreversible:
-            session.query(events_queue).\
-                filter(events_queue.event == 'NEW_IRREVERSIBLE').\
-                filter(events_queue.block_num == irreversible_block).\
-                one()
-
-            previous_irreversible = irreversible_block
-
-        session.query(events_queue).\
+        #In every block comes `NEW_BLOCK` and after that `NEW_IRREVERSIBLE`.
+        #Event `NEW_IRREVERSIBLE` removes unnecessary events i.e `NEW_BLOCK`
+        new_block_result = session.query(events_queue).\
             filter(events_queue.event == 'NEW_BLOCK').\
             filter(events_queue.block_num == head_block).\
-            one()
-
-        # now check that old events were removed
-        old_block_events = session.query(events_queue).\
-            filter(events_queue.event == 'NEW_BLOCK').\
-            filter(events_queue.block_num <= irreversible_block).\
             all()
-        assert old_block_events == []
 
-        lower_bound_event = session.query(events_queue).\
-            filter(events_queue.event == 'NEW_BLOCK').\
-            order_by(events_queue.id).\
-            first()
+        assert len(new_block_result) == 0
 
-        old_irreversible_events = session.query(events_queue).\
+        new_irreversible_result = session.query(events_queue).\
             filter(events_queue.event == 'NEW_IRREVERSIBLE').\
-            filter(events_queue.id < lower_bound_event.id).\
-            filter(events_queue.id > 0).\
+            filter(events_queue.block_num == irreversible_block).\
             all()
-        assert old_irreversible_events == []
+
+        assert len(new_irreversible_result) == 1

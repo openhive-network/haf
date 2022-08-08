@@ -58,6 +58,12 @@ def test_application_broken(prepared_networks_and_database):
 
     blocks_range = session.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone()
     (first_block, last_block) = blocks_range
+    # Last event in `events_queue` == `NEW_IRREVERSIBLE` (before it was `NEW_BLOCK`) therefore first call `hive.app_next_block` returns {None, None}
+    if first_block is None:
+        blocks_range = session.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone()
+        (first_block, last_block) = blocks_range
+
+    tt.logger.info(f'first_block: {first_block}, last_block: {last_block}')
 
     ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hive.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()
     tt.logger.info(f'ctx_stats-before-detach: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
