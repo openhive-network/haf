@@ -453,6 +453,9 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
 {
   FC_ASSERT((chain_db.is_processing_block() && chain_db.is_producing_block()==false), "SQL serializer shall process only operations contained by finished blocks");
 
+  if(!is_effective_operation(note.op))
+    return;
+
   if(skip_reversible_block(note.block))
     return;
 
