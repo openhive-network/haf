@@ -67,16 +67,11 @@ CREATE FUNCTION test_then()
 STABLE
 AS
 $BODY$
-DECLARE
-    __blocks hive.block_type[];
 BEGIN
-    SELECT * FROM hive.get_block_range( 1, 3 ) INTO __blocks;
-    RAISE NOTICE 'Blocks = %', __blocks;
-
-    ASSERT array_length(__blocks, 1) = 3, 'Incorrect block range size';
-    ASSERT __blocks[1].block_id = '\xBADD10'::bytea, 'Incorrect first block_id';
-    ASSERT __blocks[2].block_id = '\xBADD20'::bytea, 'Incorrect second block_id';
-    ASSERT __blocks[3].block_id = '\xBADD30'::bytea, 'Incorrect third block_id';
+    ASSERT (SELECT COUNT(1) FROM hive.get_block_range( 1, 3 )) = 3, 'Incorrect block range size';
+    ASSERT (SELECT COUNT(1) FROM hive.get_block_range( 1, 3 ) WHERE block_id='\xBADD10'::bytea) = 1, 'Incorrect first block';
+    ASSERT (SELECT COUNT(1) FROM hive.get_block_range( 1, 3 ) WHERE block_id='\xBADD20'::bytea) = 1, 'Incorrect second block';
+    ASSERT (SELECT COUNT(1) FROM hive.get_block_range( 1, 3 ) WHERE block_id='\xBADD30'::bytea) = 1, 'Incorrect third block';
 END
 $BODY$
 ;
