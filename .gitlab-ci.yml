@@ -8,7 +8,6 @@ variables:
   # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-5
   BUILDER_IMAGE_TAG: "@sha256:a22b174d15ad9878f878e798e297d2134da132174802abff0923ea214e2f4543"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
-  TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
 
 hive_fork_manager:
   stage: build_and_test
@@ -29,6 +28,8 @@ hive_fork_manager:
 hived:
   stage: build_and_test
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  variables:
+    TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: "60"
   script:
     - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" hived compress_block_log
     # check if sql_serializer compiles with hived
@@ -47,6 +48,8 @@ hived:
 hived_testnet:
   stage: build_and_test
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  variables:
+    TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: "60"
   script:
     - $SETUP_SCRIPTS_PATH/build.sh --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=ON" --cmake-arg="-DHIVE_LINT=OFF" hived cli_wallet get_dev_key compress_block_log
     # check if sql_serializer compiles with hived
@@ -73,6 +76,7 @@ haf_system_tests:
   variables:
     PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
+    TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: "60"
   script:
     # use newest libfaketime version, version 0.97 is not enough
     - git clone --branch master https://github.com/wolfcw/libfaketime.git
@@ -105,6 +109,7 @@ applications_system_tests:
   variables:
     PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
+    TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: "60"
   script:
     # use newest libfaketime version, version 0.97 is not enough
     - git clone --branch master https://github.com/wolfcw/libfaketime.git
@@ -136,6 +141,7 @@ applications_system_tests:
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
     PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
+    TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: "60"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
     BLOCK_LOG_DIRECTORY: "/blockchain"
     DB_NAME: haf_block_log
