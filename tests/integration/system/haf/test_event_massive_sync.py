@@ -1,4 +1,5 @@
 from pathlib import Path
+import time
 
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.exc import MultipleResultsFound
@@ -8,7 +9,7 @@ import test_tools as tt
 from local_tools import run_networks
 
 
-MASSIVE_SYNC_BLOCK_NUM = 105
+NEW_IRREVERSIBLE_BLOCK_NUM = 106
 
 
 def test_event_massive_sync(prepared_networks_and_database):
@@ -24,15 +25,16 @@ def test_event_massive_sync(prepared_networks_and_database):
     run_networks(networks)
 
     # THEN
-    tt.logger.info(f'Checking that event MASSIVE_SYNC is in database')
+    tt.logger.info(f'Checking that event "NEW_IRREVERSIBLE" is in database')
     try:
-        event = session.query(events_queue).filter(events_queue.event == 'MASSIVE_SYNC').one()
-        assert event.block_num == MASSIVE_SYNC_BLOCK_NUM
+        #wait 1s to be sure that whole network is in stable state
+        time.sleep(1)
 
-    except MultipleResultsFound:
-        tt.logger.error(f'Multiple events MASSIVE_SYNC in database.')
-        raise
+         #Last event is `NEW_IRREVERSIBLE` instead of `MASSIVE_SYNC`.
+        events = session.query(events_queue).all()
+        assert len(events) == 2
+        assert events[1].block_num == NEW_IRREVERSIBLE_BLOCK_NUM
 
     except NoResultFound:
-        tt.logger.error(f'Event MASSIVE_SYNC not in database.')
+        tt.logger.error(f'Event NEW_IRREVERSIBLE not in database.')
         raise

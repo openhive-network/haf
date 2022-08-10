@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import os
+from pathlib import Path
 
 import test_tools as tt
+
+from test_tools.__private.block_log import BlockLog
 
 from witnesses import alpha_witness_names, beta_witness_names
 
@@ -85,6 +88,8 @@ def prepare_block_log(length):
     # Reason of this wait is to enable moving forward of irreversible block
     tt.logger.info('Wait 21 blocks (when every witness sign at least one block)')
     init_node.wait_number_of_blocks(21)
+    tt.logger.info('Wait 21 blocks for future slate to become active slate')
+    init_node.wait_number_of_blocks(21)
 
     # Network should be set up at this time, with 21 active witnesses, enough participation rate
     # and irreversible block number lagging behind around 15-20 blocks head block number
@@ -93,7 +98,8 @@ def prepare_block_log(length):
     head = result['head_block_num']
     tt.logger.info(f'Network prepared, irreversible block: {irreversible}, head block: {head}')
 
-    assert irreversible + 10 < head
+    # with fast confirm, irreversible will usually be = head
+    # assert irreversible + 10 < head
 
     while irreversible < length:
         init_node.wait_number_of_blocks(1)
@@ -107,8 +113,14 @@ def prepare_block_log(length):
 
     if os.path.exists('block_log'):
         os.remove('block_log')
-    init_node.get_block_log().truncate('block_log', length)
+
     timestamp = init_node.api.block.get_block(block_num=length)['block']['timestamp']
+
+    input_block_log_path    = init_node.get_block_log().get_path().parent.absolute()
+    output_block_log_path   = Path('block_log').parent.absolute()
+    init_node.close()
+
+    BlockLog.truncate(input_block_log_path, output_block_log_path, length)
 
     return timestamp
 
