@@ -42,7 +42,7 @@ def prepare_block_log(length):
         first = int(i * len(beta_witness_names) / 4)
         last = int((i+1) * len(beta_witness_names) / 4)
         tt.WitnessNode(network=beta_net, witnesses=beta_witness_names[first:last])
-        
+
     # Run
     alpha_net.connect_with(beta_net)
 
@@ -115,12 +115,9 @@ def prepare_block_log(length):
         os.remove('block_log')
 
     timestamp = init_node.api.block.get_block(block_num=length)['block']['timestamp']
-
-    input_block_log_path    = init_node.get_block_log().get_path().parent.absolute()
-    output_block_log_path   = Path('block_log').parent.absolute()
     init_node.close()
 
-    BlockLog.truncate(input_block_log_path, output_block_log_path, length)
+    init_node.get_block_log().truncate(Path('block_log').parent.absolute(), length)
 
     return timestamp
 
