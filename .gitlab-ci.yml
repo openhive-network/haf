@@ -156,7 +156,7 @@ applications_system_tests:
     - mkdir $PATTERNS_PATH/blockchain
     - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
     - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
-    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --exit-before-sync --psql-url $DB_URL > node_logs.log 2>&1
+    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs.log
   artifacts:
     paths:
     - "**/node_logs.log"
@@ -220,3 +220,47 @@ replay_accounts_body_operations_filtered_with_haf:
     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
   script:
     - tox .
+
+block_api_tests:
+  extends: .replay_step
+  variables:
+    FF_NETWORK_PER_BUILD: 1
+    SETUP_DIR: "$CI_PROJECT_DIR/setup_dir/"
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
+    BENCHMARK_DIR: "$CI_PROJECT_DIR/hive/tests/tests_api/benchmarks"
+  script:
+    # setup
+    - sudo apt update && sudo apt install -y bash git unzip wget ca-certificates curl build-essential python3-dev maven openjdk-8-jdk openjdk-8-jre python3 python3-pip
+    - pip3 install prettytable
+    - mkdir -p $SETUP_DIR && cd $SETUP_DIR
+    - $BENCHMARK_DIR/setup_jmeter.bash && source jmeter/activate # sets env $JMETER
+    - $BENCHMARK_DIR/setup_m2u.bash && source m2u/activate # sets env $M2U
+    - $M2U || true
+    - psql $DB_URL -c "CREATE ROLE bench LOGIN PASSWORD 'mark' INHERIT IN ROLE hived_group;"
+    - export BENCHMARK_DB_URL="postgresql://bench:mark@localhost:5432/$DB_NAME"
+
+    # run pattern tests
+    - cd "$BENCHMARK_DIR"
+    - (sleep 10 && tail -f wdir/jmeter_*.csv) & (python3 benchmark.py -n blocks_api -p 5432 -c perf_5M_light.csv --skip-version-check -j $JMETER -d wdir --postgres $BENCHMARK_DB_URL --call-style postgres 2>&1 | tee -i $CI_PROJECT_DIR/python_benchmark.log)
+
+    # generate JUNIT report file
+    - $M2U --input "$BENCHMARK_DIR/wdir/raw_jmeter_report.xml" --output $CI_PROJECT_DIR/report.junit
+
+  cache:
+    # this will prevent re-downloading jmeter and m2u
+    key: bench-tools
+    paths:
+      - "$SETUP_DIR/"
+
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+    reports:
+      junit: $CI_PROJECT_DIR/report.junit
+    paths:
+      - $BENCHMARK_DIR/wdir
+      - $CI_PROJECT_DIR/python_benchmark.log
+    when: always
+    expire_in: 1 week
+  tags:
+    - public-runner-docker
+    - hived-for-tests
