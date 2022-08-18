@@ -1,3 +1,30 @@
+CREATE OR REPLACE FUNCTION validate_pattern( legacy_name TEXT, pattern TEXT )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    pattern_json JSON;
+    verification_json JSON;
+    pattern_fields TEXT[];
+    verification_fields TEXT[];
+BEGIN
+
+    SELECT pattern :: JSON INTO pattern_json;
+    SELECT hive.get_legacy_style_operation(pattern) INTO verification_json;
+    SELECT array_agg(key) :: TEXT[] INTO pattern_fields FROM ( SELECT json_object_keys(pattern_json -> 'value') as key ) x;
+    SELECT array_agg(key) :: TEXT[] INTO verification_fields FROM ( SELECT json_object_keys(verification_json -> 1) as key ) x;
+
+    ASSERT verification_json ->> 0 = legacy_name,                                           FORMAT('Invalid name. Expected: `%s`, but `%s` given', legacy_name, verification_json ->> 0);
+    ASSERT array_length(pattern_fields, 1) = array_length(verification_fields, 1),          FORMAT('Invalid length error for %s operation [pattern != checking]: %I != %I ( %s != %s )', legacy_name, (SELECT array_length(pattern_fields, 1)), (SELECT array_length(verification_fields, 1)), array_to_json(pattern_fields) ::TEXT, array_to_json(verification_fields) ::TEXT);
+    ASSERT pattern_fields @> verification_fields,                                           FORMAT('Missing key error for %s operation [pattern != checking]: %s != %s', legacy_name, array_to_json(pattern_fields) ::TEXT, array_to_json(verification_fields) ::TEXT);
+    ASSERT pattern_fields <@ verification_fields,                                           FORMAT('Extra key error for %s operation [pattern != checking]: %s != %s', legacy_name, array_to_json(pattern_fields) ::TEXT, array_to_json(verification_fields) ::TEXT);
+
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_given;
 CREATE FUNCTION test_given()
     RETURNS void
