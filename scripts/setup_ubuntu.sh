@@ -60,7 +60,7 @@ DEBIAN_FRONTEND=noniteractive apt-get install -y \
         systemd \
         autoconf \
         wget \
-        postgresql \
+        postgresql-12=12.12-0ubuntu0.20.04.1 \
         postgresql-contrib \
         build-essential \
         cmake \
@@ -86,7 +86,7 @@ DEBIAN_FRONTEND=noniteractive apt-get install -y \
 
 postgres_major_version=$(pg_config --version | sed 's/PostgreSQL \([0-9]*\)\..*/\1/g')
 DEBIAN_FRONTEND=noniteractive apt-get install -y \
-        postgresql-server-dev-$postgres_major_version
+        postgresql-server-dev-${postgres_major_version}
 apt-get clean
 
 
