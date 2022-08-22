@@ -14,6 +14,7 @@ hive_fork_manager:
   stage: build_and_test
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
+    - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
     - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" extension.hive_fork_manager
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build"
     - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build" && ctest --output-on-failure  -R test.functional.hive_fork_manager.*
@@ -30,6 +31,7 @@ hived:
   stage: build_and_test
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
+    - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
     - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" hived compress_block_log
     # check if sql_serializer compiles with hived
     - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
@@ -48,6 +50,7 @@ hived_testnet:
   stage: build_and_test
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
+    - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
     - $SETUP_SCRIPTS_PATH/build.sh --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=ON" --cmake-arg="-DHIVE_LINT=OFF" hived cli_wallet get_dev_key compress_block_log
     # check if sql_serializer compiles with hived
     - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
