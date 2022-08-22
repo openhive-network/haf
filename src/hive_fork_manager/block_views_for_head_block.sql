@@ -5,17 +5,17 @@ CREATE OR REPLACE VIEW hive.account_operations_view AS
          ha.operation_id,
          ha.op_type_id,
          ha.block_num
-  FROM account_operations ha
+  FROM hive.account_operations ha
  )
 UNION ALL
 (
 WITH 
 consistent_block AS
-(SELECT COALESCE(hid.consistent_block, 0) AS consistent_block FROM irreversible_data hid LIMIT 1)
+(SELECT COALESCE(hid.consistent_block, 0) AS consistent_block FROM hive.irreversible_data hid LIMIT 1)
 ,forks AS
 (
   SELECT hbr.num, max(hbr.fork_id) AS max_fork_id
-  FROM blocks_reversible hbr, consistent_block cb
+  FROM hive.blocks_reversible hbr, consistent_block cb
   WHERE hbr.num > cb.consistent_block
   GROUP BY hbr.num
 )
@@ -25,8 +25,8 @@ SELECT har.account_id,
        har.op_type_id,
        har.block_num
 FROM forks 
-JOIN operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hor.block_num
-JOIN account_operations_reversible har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
+JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hor.block_num
+JOIN hive.account_operations_reversible har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
 );
 
 CREATE OR REPLACE VIEW hive.accounts_view AS
