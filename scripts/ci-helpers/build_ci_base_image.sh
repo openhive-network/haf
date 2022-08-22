@@ -1,7 +1,7 @@
 #! /bin/bash
 
 REGISTRY=${1:-registry.gitlab.syncad.com/hive/haf/}
-CI_IMAGE_TAG=:ubuntu20.04-5
+CI_IMAGE_TAG=:ubuntu20.04-6
 
 docker build --target=ci-base-image \
   --build-arg CI_REGISTRY_IMAGE=$REGISTRY --build-arg CI_IMAGE_TAG=$CI_IMAGE_TAG \
