@@ -5,8 +5,8 @@ stages:
 variables:
   GIT_DEPTH: 1
   GIT_SUBMODULE_STRATEGY: recursive
-  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-5
-  BUILDER_IMAGE_TAG: "@sha256:a22b174d15ad9878f878e798e297d2134da132174802abff0923ea214e2f4543"
+  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-6
+  BUILDER_IMAGE_TAG: "@sha256:15213df60acfdd06a5889af6d5ccc645ded7bbfb8d072b75510ae918c5272734"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
 
