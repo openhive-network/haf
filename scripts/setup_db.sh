@@ -93,6 +93,7 @@ sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on 
   CREATE DATABASE $DB_NAME WITH OWNER $DB_ADMIN TABLESPACE ${HAF_TABLESPACE_NAME};
 EOF
 
+sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE SCHEMA hive;' 
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE EXTENSION hive_fork_manager CASCADE;' 
 
 for u in "${DB_USERS[@]}"; do

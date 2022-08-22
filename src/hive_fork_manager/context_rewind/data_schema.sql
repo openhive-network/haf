@@ -1,4 +1,4 @@
-CREATE SCHEMA IF NOT EXISTS hive;
+-- New versions of PostgreSQL disallow to create schema if not exists statement for any object not belonging to extension, and given schema does not initially.
 
 DO
 $$
