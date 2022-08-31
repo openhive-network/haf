@@ -130,6 +130,29 @@ GRANT EXECUTE ON FUNCTION
 
 TO hived_group;
 
+GRANT EXECUTE ON FUNCTION
+      hive.dlog(context_name text, msg1 text)
+    , hive.dlog(context_name text, msg1 text, arg1 anyelement)
+    , hive.dlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement)
+    , hive.dlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement)
+    , hive.dlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement)
+    , hive.elog(context_name text, msg1 text)
+    , hive.elog(context_name text, msg1 text, arg1 anyelement)
+    , hive.elog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement)
+    , hive.elog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement)
+    , hive.elog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement)
+    , hive.wlog(context_name text, msg1 text)
+    , hive.wlog(context_name text, msg1 text, arg1 anyelement)
+    , hive.wlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement)
+    , hive.wlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement)
+    , hive.wlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement)
+    , hive.ilog(context_name text, msg1 text)
+    , hive.ilog(context_name text, msg1 text, arg1 anyelement)
+    , hive.ilog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement)
+    , hive.ilog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement)
+    , hive.ilog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement)
+TO PUBLIC;
+
 REVOKE EXECUTE ON FUNCTION
       hive.back_from_fork( INT )
     , hive.push_block( hive.blocks, hive.transactions[], hive.transactions_multisig[], hive.operations[], hive.accounts[], hive.account_operations[], hive.applied_hardforks[] )
