@@ -271,6 +271,9 @@ BEGIN
         END IF;
         -- no RETURN here because code after the case will continue processing irreversible blocks only
     WHEN 'NEW_BLOCK' THEN
+        IF __next_event_block_num <= __current_block_num THEN
+            PERFORM hive.ilog(_context_name,'We could not process block without consume event');
+        END IF;
         ASSERT  __next_event_block_num > __current_block_num, 'We could not process block without consume event';
         IF __next_event_block_num = ( __current_block_num + 1 ) THEN
             UPDATE hive.contexts
@@ -283,6 +286,9 @@ BEGIN
         END IF;
         -- it is impossible to have hole between __current_block_num and NEW_BLOCK event block_num
         -- when __current_block_num is not irreversible
+        IF __next_event_block_num > __current_block_num THEN
+            PERFORM hive.ilog(_context_name, 'current_block_num is reversible!');
+        END IF;
         ASSERT __current_block_num <= __irreversible_block_num, 'current_block_num is reversible!';
     ELSE
     END CASE;

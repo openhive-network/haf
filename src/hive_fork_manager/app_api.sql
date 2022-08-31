@@ -343,7 +343,7 @@ BEGIN
     __context_id = hive.get_context_id( _context );
 
     IF EXISTS( SELECT 1 FROM hive.state_providers_registered WHERE context_id = __context_id AND state_provider = _state_provider ) THEN
-        RAISE LOG 'The state % provider is already imported for context %.', _state_provider, _context;
+        PERFORM hive.ilog(_context, 'The state %s provider is already imported for context %s.', _state_provider::TEXT, _context::TEXT);
         RETURN;
     END IF;
 

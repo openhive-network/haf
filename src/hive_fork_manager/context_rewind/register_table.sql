@@ -203,7 +203,17 @@ BEGIN
 
     EXECUTE format('CREATE INDEX idx_%I_%I_row_id ON %I.%I(hive_rowid)', lower(_table_schema), lower(_table_name), lower(_table_schema), lower(_table_name) );
 
+
+    IF __context_id IS NULL THEN
+        PERFORM hive.ilog(_context_name, 'There is no context %s',_context_name);
+    END IF;
+
     ASSERT __context_id IS NOT NULL, 'There is no context %', _context_name;
+
+    IF __registered_table_id IS NULL THEN
+        PERFORM hive.ilog(_context_name, '__registered_table_id needs to be NOT NULL');
+    END IF;
+
     ASSERT __registered_table_id IS NOT NULL;
 
     -- create trigger functions
