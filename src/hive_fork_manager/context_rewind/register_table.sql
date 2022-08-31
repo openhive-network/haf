@@ -398,7 +398,7 @@ BEGIN
     ;
 
     IF __registered_table_id IS NULL THEN
-        RAISE EXCEPTION 'Table %s.%s is not registered', lower(_table_schema), lower(_table_name);
+        PERFORM hive.elog(__context_name, 'Table %s.%s is not registered', lower(_table_schema), lower(_table_name));
     END IF;
 
     -- drop shadow table

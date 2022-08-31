@@ -18,7 +18,7 @@ BEGIN
     INTO __context_id;
 
     IF __context_id IS NULL THEN
-         RAISE EXCEPTION 'No context with name %', _context;
+         PERFORM hive.elog(_context, 'No context with name %s', _context::TEXT);
     END IF;
 
     EXECUTE format( 'CREATE TABLE hive.%I(
@@ -56,7 +56,7 @@ BEGIN
         INTO __context_id;
 
     IF __context_id IS NULL THEN
-             RAISE EXCEPTION 'No context with name %', _context;
+             PERFORM hive.elog(_context, 'No context with name %s', _context::TEXT);
     END IF;
 
     EXECUTE format(
@@ -93,7 +93,7 @@ BEGIN
     INTO __context_id;
 
     IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context;
+        PERFORM hive.elog(_context, 'No context with name %s', _context::TEXT);
     END IF;
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );

@@ -229,11 +229,11 @@ BEGIN
     INTO __current_block_num, __current_fork, __current_event_id, __context_id, __context_is_attached, __irreversible_block_num;
 
     IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context_name;
+        PERFORM hive.elog(_context_name, 'No context with name %s', _context_name);
     END IF;
 
     IF __context_is_attached = FALSE THEN
-        RAISE EXCEPTION 'Context % is detached', _context_name;
+        PERFORM hive.elog(_context_name, 'Context %s is detached', _context_name);
     END IF;
 
     SELECT * INTO __next_event_id, __next_event_type,  __next_event_block_num
@@ -351,11 +351,11 @@ BEGIN
     INTO __current_block_num, __current_fork, __current_event_id, __context_id, __context_is_attached, __irreversible_block_num;
 
     IF __context_id IS NULL THEN
-            RAISE EXCEPTION 'No context with name %', _context_name;
+            PERFORM hive.elog(_context_name, 'No context with name %s', _context_name);
     END IF;
 
     IF __context_is_attached = FALSE THEN
-            RAISE EXCEPTION 'Context % is detached', _context_name;
+            PERFORM hive.elog(_context_name, 'Context %s is detached', _context_name);
     END IF;
 
     SELECT * INTO __next_event_id, __next_event_type,  __next_event_block_num
