@@ -5,6 +5,7 @@ CREATE OR REPLACE FUNCTION hive.create_context_data_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+PERFORM hive.dlog(_context_name, 'Entering create_context_data_view');
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_context_data_view AS
         SELECT
@@ -30,6 +31,7 @@ EXECUTE format(
         limit 1
         ;', _context_name, _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_context_data_view');
 END;
 $BODY$
 ;
@@ -41,7 +43,10 @@ CREATE OR REPLACE FUNCTION hive.drop_context_data_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+
+PERFORM hive.dlog(_context_name, 'Entering drop_context_data_view');
 EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_context_data_view CASCADE;', _context_name );
+PERFORM hive.dlog(_context_name, 'Exiting drop_context_data_view');
 END;
 $BODY$
 ;
@@ -53,6 +58,7 @@ CREATE OR REPLACE FUNCTION hive.create_blocks_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, 'Entering create_blocks_view');
     EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_blocks_view
         AS
@@ -99,6 +105,7 @@ BEGIN
         ) t;
         ;', _context_name, _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_blocks_view');
 END;
 $BODY$
 ;
@@ -110,6 +117,7 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_blocks_view( _context_na
 AS
 $BODY$
 BEGIN
+PERFORM hive.dlog(_context_name, 'Entering create_all_irreversible_blocks_view');
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_blocks_view
         AS
@@ -125,6 +133,7 @@ EXECUTE format(
         FROM hive.blocks hb
         ;', _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_all_irreversible_blocks_view');
 END;
 $BODY$
 ;
@@ -136,7 +145,9 @@ CREATE OR REPLACE FUNCTION hive.drop_blocks_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+PERFORM hive.dlog(_context_name, 'Entering drop_blocks_view');
 EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_blocks_view CASCADE;', _context_name );
+PERFORM hive.dlog(_context_name, 'Exiting drop_blocks_view');
 END;
 $BODY$
 ;
@@ -148,6 +159,7 @@ CREATE OR REPLACE FUNCTION hive.create_transactions_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, 'Entering create_transactions_view');
     EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_transactions_view AS
         SELECT t.block_num,
@@ -198,6 +210,7 @@ BEGIN
         ;'
     , _context_name, _context_name, _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_transactions_view');
 END;
 $BODY$
 ;
@@ -209,6 +222,7 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_transactions_view( _cont
 AS
 $BODY$
 BEGIN
+PERFORM hive.dlog(_context_name, 'Entering create_all_irreversible_transactions_view');
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_transactions_view AS
         SELECT ht.block_num,
@@ -222,6 +236,7 @@ EXECUTE format(
        ;'
     , _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_all_irreversible_transactions_view');
 END;
 $BODY$
 ;
@@ -233,7 +248,9 @@ CREATE OR REPLACE FUNCTION hive.drop_transactions_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, 'Entering drop_transactions_view');
     EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_transactions_view CASCADE;', _context_name );
+    PERFORM hive.dlog(_context_name, 'Exiting drop_transactions_view');
 END;
 $BODY$
 ;
@@ -245,6 +262,7 @@ CREATE OR REPLACE FUNCTION hive.create_operations_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+PERFORM hive.dlog(_context_name, 'Entering create_operations_view');
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_operations_view
          AS
@@ -290,6 +308,7 @@ EXECUTE format(
         ) t
         ;', _context_name, _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_operations_view');
 END;
 $BODY$
 ;
@@ -301,6 +320,7 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_operations_view( _contex
 AS
 $BODY$
 BEGIN
+PERFORM hive.dlog(_context_name, 'Entering create_operaticreate_all_irreversible_operations_viewons_view');
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_operations_view
          AS
@@ -315,6 +335,7 @@ EXECUTE format(
         FROM hive.operations ho
         ;', _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_operaticreate_all_irreversible_operations_viewons_view');
 END;
 $BODY$
 ;
@@ -327,7 +348,9 @@ CREATE OR REPLACE FUNCTION hive.drop_operations_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, 'Entering drop_operations_view');
     EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_operations_view CASCADE;', _context_name );
+    PERFORM hive.dlog(_context_name, 'Exiting drop_operations_view');
 END;
 $BODY$
 ;
@@ -339,6 +362,7 @@ CREATE OR REPLACE FUNCTION hive.create_signatures_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+PERFORM hive.dlog(_context_name, 'Entering create_signatures_view');
 EXECUTE format(
     'CREATE OR REPLACE VIEW hive.%s_TRANSACTIONS_MULTISIG_VIEW
     AS
@@ -376,6 +400,7 @@ EXECUTE format(
         ) t;'
         , _context_name, _context_name, _context_name, _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_signatures_view');
 END;
 $BODY$
 ;
@@ -387,6 +412,7 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_signatures_view( _contex
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, 'Entering create_all_irreversible_signatures_view');
 EXECUTE format(
     'CREATE OR REPLACE VIEW hive.%s_TRANSACTIONS_MULTISIG_VIEW
     AS
@@ -397,6 +423,7 @@ EXECUTE format(
     ;'
     , _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_all_irreversible_signatures_view');
 END;
 $BODY$
 ;
@@ -408,7 +435,9 @@ CREATE OR REPLACE FUNCTION hive.drop_signatures_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, 'Entering drop_signatures_view');
     EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_TRANSACTIONS_MULTISIG_VIEW CASCADE;', _context_name );
+    PERFORM hive.dlog(_context_name, 'Exiting drop_signatures_view');
 END;
 $BODY$
 ;
@@ -420,6 +449,7 @@ CREATE OR REPLACE FUNCTION hive.create_accounts_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+PERFORM hive.dlog(_context_name, 'Entering create_accounts_view');
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_accounts_view AS
         SELECT
@@ -456,6 +486,7 @@ EXECUTE format(
         ;'
     , _context_name, _context_name, _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_accounts_view');
 END;
 $BODY$
 ;
@@ -467,6 +498,7 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_accounts_view( _context_
 AS
 $BODY$
 BEGIN
+PERFORM hive.dlog(_context_name, 'Entering create_all_irreversible_accounts_view');
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_accounts_view AS
         SELECT
@@ -476,6 +508,7 @@ EXECUTE format(
         FROM hive.accounts ha
     ;', _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_all_irreversible_accounts_view');
 END;
 $BODY$
 ;
@@ -488,7 +521,9 @@ CREATE OR REPLACE FUNCTION hive.drop_accounts_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
+PERFORM hive.dlog(_context_name, 'Entering drop_accounts_view');
 EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_accounts_view CASCADE;', _context_name );
+PERFORM hive.dlog(_context_name, 'Exiting drop_accounts_view');
 END;
 $BODY$
 ;
@@ -500,6 +535,7 @@ CREATE OR REPLACE FUNCTION hive.create_account_operations_view( _context_name TE
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, 'Entering create_account_operations_view');
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_account_operations_view AS
         SELECT
@@ -545,6 +581,7 @@ EXECUTE format(
         ;'
     , _context_name, _context_name, _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_account_operations_view');
 END;
 $BODY$
 ;
@@ -556,6 +593,7 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_account_operations_view(
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, 'Entering create_all_irreversible_account_operations_view');
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_account_operations_view AS
         SELECT
@@ -568,6 +606,7 @@ EXECUTE format(
         ;'
     , _context_name
     );
+    PERFORM hive.dlog(_context_name, 'Exiting create_all_irreversible_account_operations_view');
 END;
 $BODY$
 ;
@@ -579,7 +618,9 @@ CREATE OR REPLACE FUNCTION hive.drop_account_operations_view( _context_name TEXT
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, 'Entering drop_account_operations_view');
     EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_account_operations_view CASCADE;', _context_name );
+    PERFORM hive.dlog(_context_name, 'Exiting drop_account_operations_view');
 END;
 $BODY$
 ;

@@ -11,6 +11,7 @@ DECLARE
     __current_context_irreversible_block hive.blocks.num%TYPE;
     __result hive.events_queue%ROWTYPE;
 BEGIN
+    PERFORM hive.dlog(_context, 'Entering find_next_event');
     SELECT hc.events_id
          , hc.current_block_num
          , hc.irreversible_block
@@ -56,12 +57,13 @@ BEGIN
         SET events_id = __result.id
         WHERE name = _context;
     END IF;
+    PERFORM hive.dlog(_context, 'Exiting find_next_event');
+
 
     RETURN __result;
 END;
 $BODY$
 ;
-
 
 CREATE OR REPLACE FUNCTION hive.squash_fork_events( _context TEXT )
     RETURNS void
@@ -76,6 +78,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __cannot_jump BOOL:= TRUE;
 BEGIN
+    PERFORM hive.dlog(_context, 'Entering squash_fork_events');
     -- first find a newer fork nearest current block
     SELECT heq.id, heq.block_num, hc.current_block_num, hc.id INTO __next_fork_event_id, __next_fork_block_num, __context_current_block_num, __context_id
     FROM hive.events_queue heq
@@ -84,7 +87,6 @@ BEGIN
     WHERE heq.event = 'BACK_FROM_FORK' AND hc.name = _context
     ORDER BY hf.block_num ASC, heq.id DESC
     LIMIT 1;
-
     -- no newer fork, nothing to do
     IF __next_fork_event_id IS NULL THEN
         RETURN;
@@ -106,6 +108,7 @@ BEGIN
     UPDATE hive.contexts
     SET events_id = __next_fork_event_id - 1 -- -1 because we pretend that we stay just before the next fork
     WHERE id = __context_id;
+    PERFORM hive.dlog(_context, 'Exiting squash_fork_events');  
 END;
 $BODY$
 ;
@@ -123,6 +126,7 @@ DECLARE
     __irreversible_block_num INT;
     __before_next_massive_sync_event_id BIGINT := NULL;
 BEGIN
+    PERFORM hive.dlog(_context, 'Entering squash_end_massive_sync_events');
     -- first find a newer massive_sync nearest current block
     SELECT heq.id, hc.current_block_num, hc.id, hc.irreversible_block
     INTO __next_massive_sync_event_id, __context_current_block_num, __context_id, __irreversible_block_num
@@ -152,6 +156,7 @@ BEGIN
     UPDATE hive.contexts
     SET events_id = __before_next_massive_sync_event_id -- it may be null if there is no events before the massive sync
     WHERE id = __context_id;
+    PERFORM hive.dlog(_context, 'Exiting squash_end_massive_sync_events');
     RETURN TRUE;
 END;
 $BODY$
@@ -166,6 +171,7 @@ $BODY$
 DECLARE
     __current_event_id hive.events_queue.id%TYPE;
 BEGIN
+    PERFORM hive.dlog(_context, 'Entering squash_events');
     SELECT hc.events_id INTO __current_event_id FROM hive.contexts hc WHERE hc.name = _context;
 
     -- do not squash not initialzed context
@@ -176,6 +182,7 @@ BEGIN
     IF NOT hive.squash_end_massive_sync_events( _context ) THEN
         PERFORM hive.squash_fork_events( _context );
     END IF;
+    PERFORM hive.dlog(_context, 'Exiting squash_events');
 END;
 $BODY$
 ;
@@ -207,6 +214,7 @@ DECLARE
     __fork_id BIGINT;
     __result hive.blocks_range;
 BEGIN
+    PERFORM hive.dlog(_context_name, 'Entering app_next_block_forking_app');
     PERFORM hive.squash_events( _context_name );
 
     SELECT
@@ -300,6 +308,7 @@ BEGIN
 
     __result.first_block = __next_block_to_process;
     __result.last_block = __last_block_to_process;
+    PERFORM hive.dlog(_context_name, 'Exiting app_next_block_forking_app');
     RETURN __result;
 END;
 $BODY$
@@ -327,6 +336,7 @@ DECLARE
     __max_events_id BIGINT;
     __result hive.blocks_range;
 BEGIN
+    PERFORM hive.dlog(_context_name, 'Entering app_next_block_non_forking_app');
     PERFORM hive.squash_events( _context_name );
 
     SELECT
@@ -385,6 +395,7 @@ BEGIN
 
     __result.first_block = __next_block_to_process;
     __result.last_block = __last_block_to_process;
+    PERFORM hive.dlog(_context_name, 'Exiting app_next_block_non_forking_app');
     RETURN __result;
     END;
 $BODY$
@@ -397,10 +408,12 @@ CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hive.bl
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context, 'Entering update_one_state_providers' );
     EXECUTE format(
           'SELECT hive.update_state_provider_%s( %s, %s, %L )'
         , _state_provider, _first_block, _last_block, _context
     );
+    PERFORM hive.dlog(_context, 'Exiting update_one_state_providers' );
 END;
 $BODY$
 ;
@@ -412,6 +425,7 @@ CREATE OR REPLACE FUNCTION hive.refresh_irreversible_block_for_all_contexts( _ne
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog('<all-contexts>', 'Entering refresh_irreversible_block_for_all_contexts');
     --Increasing `irreversible_block` for every context except contexts that already processed blocks higher than `_new_irreversible_block` value.
     --so as to remove redundant records from `irreversible` tables,
     --because it's no need to hold the same records in both types of tables `reversible`/`irreversible`,
@@ -419,6 +433,7 @@ BEGIN
     UPDATE hive.contexts
     SET irreversible_block = _new_irreversible_block
     WHERE current_block_num <= irreversible_block AND _new_irreversible_block > irreversible_block;
+    PERFORM hive.dlog('<all-contexts>', 'Exiting refresh_irreversible_block_for_all_contexts');
 END;
 $BODY$
 ;

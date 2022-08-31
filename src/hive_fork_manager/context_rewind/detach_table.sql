@@ -11,6 +11,7 @@ DECLARE
     __shadow_table_name TEXT;
     __trigger_funtion_name TEXT;
 BEGIN
+    PERFORM hive.dlog('<no-context>', 'Entering clean_after_uregister_table');
     SELECT hrt.id, hrt.shadow_table_name
     FROM hive.registered_tables hrt
     WHERE hrt.origin_table_schema = _schema_name AND  hrt.origin_table_name = _table_name INTO __table_id, __shadow_table_name;
@@ -33,6 +34,7 @@ BEGIN
     EXECUTE format( 'DROP TABLE hive.%I', __shadow_table_name );
 
     DELETE FROM hive.registered_tables hrt WHERE  hrt.origin_table_schema = _schema_name AND hrt.origin_table_name = _table_name;
+    PERFORM hive.dlog('<no-context>', 'Exiting clean_after_uregister_table');
 END;
 $BODY$
 ;
@@ -49,6 +51,7 @@ DECLARE
     __trigger_name TEXT;
     __shadow_table_is_not_empty BOOL := FALSE;
 BEGIN
+    PERFORM hive.dlog('<no-context>', 'Entering detach_table');
     SELECT hrt.id, hrt.shadow_table_name
     FROM hive.registered_tables hrt
     WHERE  hrt.origin_table_schema = lower( _table_schema ) AND hrt.origin_table_name = _table_name INTO __table_id, __shadow_table_name;
@@ -64,6 +67,7 @@ BEGIN
     END IF;
 
     PERFORM hive.drop_triggers( _table_schema, _table_name );
+    PERFORM hive.dlog('<no-context>', 'Exiting detach_table');
 
     RETURN;
 END;
@@ -81,6 +85,7 @@ DECLARE
     __shadow_table_name TEXT;
     __trigger_name TEXT;
 BEGIN
+    PERFORM hive.dlog('<no-context>', 'Entering attach_table');
     SELECT hrt.id, hrt.shadow_table_name
     FROM hive.registered_tables hrt
     JOIN hive.contexts hc ON hc.id = hrt.context_id
@@ -95,6 +100,7 @@ BEGIN
     END IF;
 
     PERFORM hive.create_triggers( _table_schema, _table_name, _context_id );
+    PERFORM hive.dlog('<no-context>', 'Exiting attach_table');
 END;
 $BODY$
 ;
