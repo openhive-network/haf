@@ -30,6 +30,7 @@ ADD_PSQL_EXTENSION(
             get_impacted_accounts.sql
             get_impacted_balances.sql
             get_legacy_style_operation.sql
+            extract_set_witness_properties.sql
 )
 
 ADD_SUBDIRECTORY( shared_lib )

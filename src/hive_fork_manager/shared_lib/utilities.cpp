@@ -19,6 +19,46 @@ using hive::app::impacted_balance_data;
 namespace // anonymous
 {
 
+using namespace hive::protocol;
+using witness_set_properties_props_t = fc::flat_map< fc::string, std::vector< char > >;
+using extract_set_witness_properties_result_t = fc::flat_map<fc::string, fc::string>;
+
+
+struct wsp_fill_helper
+{
+  const witness_set_properties_props_t& source;
+  extract_set_witness_properties_result_t& result;
+
+  template<typename T>
+  void try_fill(const fc::string& pname, const fc::string& alt_pname = fc::string{})
+  {
+    auto itr = source.find( pname );
+
+    if( itr == source.end() && alt_pname != fc::string{} )
+      itr = source.find( alt_pname );
+
+    if(itr != source.end())
+      result[pname] = fc::json::to_string(fc::raw::unpack_from_vector<T>(itr->second));
+  }
+};
+
+void extract_set_witness_properties_impl(extract_set_witness_properties_result_t& output, const fc::string& _input)
+{
+  witness_set_properties_props_t input_properties{};
+  fc::from_variant(fc::json::from_string(_input), input_properties);
+  wsp_fill_helper helper{ input_properties, output };
+
+  helper.try_fill<public_key_type>("key");
+  helper.try_fill<asset>("account_creation_fee");
+  helper.try_fill<uint32_t>("maximum_block_size");
+  helper.try_fill<uint16_t>("hbd_interest_rate", "sbd_interest_rate");
+  helper.try_fill<int32_t>("account_subsidy_budget");
+  helper.try_fill<uint32_t>("account_subsidy_decay");
+  helper.try_fill<public_key_type>("new_signing_key");
+  helper.try_fill<price>("hbd_exchange_rate", "sbd_exchange_rate");
+  helper.try_fill<fc::string>("url");
+}
+
 std::string get_legacy_style_operation_impl( const std::string& operation_body )
 {
   hive::protocol::operation _op;
@@ -87,6 +127,93 @@ void issue_error(const char* msg)
 
 
 PG_MODULE_MAGIC;
+
+PG_FUNCTION_INFO_V1(extract_set_witness_properties);
+
+Datum extract_set_witness_properties(PG_FUNCTION_ARGS)
+{
+  #define EXTRACT_PROPERTIES_RETURN_ATTRIBUTES 2
+  #define PROP_NAME 0
+  #define PROP_VALUE 1
+
+
+  TupleDesc            retvalDescription;
+  Tuplestorestate*     tupstore = nullptr;
+
+  MemoryContext per_query_ctx;
+  MemoryContext oldcontext;
+
+  Datum tuple_values[EXTRACT_PROPERTIES_RETURN_ATTRIBUTES] = {0};
+  bool  nulls[EXTRACT_PROPERTIES_RETURN_ATTRIBUTES] = {false};
+
+  ReturnSetInfo* rsinfo = reinterpret_cast<ReturnSetInfo*>(fcinfo->resultinfo); //NOLINT
+
+  /* check to see if caller supports us returning a tuplestore */
+  if(rsinfo == nullptr || !IsA(rsinfo, ReturnSetInfo))
+  {
+    issue_error("set-valued function called in context that cannot accept a set");
+  }
+
+  if((rsinfo->allowedModes & SFRM_Materialize) == 0) //NOLINT
+  {
+    issue_error("materialize mode required, but it is not allowed in this context");
+  }
+
+/* Build a tuple descriptor for our result type */
+  if(get_call_result_type(fcinfo, nullptr, &retvalDescription) != TYPEFUNC_COMPOSITE)
+  {
+    issue_error("return type must be a row type");
+  }
+
+  extract_set_witness_properties_result_t _extracted_data;
+  const char* _props_to_extract = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+  try
+  {
+    extract_set_witness_properties_impl( _extracted_data, _props_to_extract );
+  }
+  catch(const fc::exception& ex)
+  {
+    fc::string exception_info = ex.to_string();
+    issue_error(fc::string("Broken extract_set_witness_properties() input argument: `") + _props_to_extract + fc::string("'. Error: ") + exception_info);
+    return (Datum)0;
+  }
+  catch(const std::exception& ex)
+  {
+    issue_error(fc::string("Broken extract_set_witness_properties() input argument: `") + _props_to_extract + fc::string("'. Error: ") + ex.what());
+    return (Datum)0;
+  }
+  catch(...)
+  {
+    issue_error(fc::string("Unknown error during processing extract_set_witness_properties(") + _props_to_extract + fc::string(")"));
+    return (Datum)0;
+  }
+
+  per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
+  oldcontext = MemoryContextSwitchTo(per_query_ctx);
+
+  tupstore = tuplestore_begin_heap(true, false, work_mem);
+
+  /* let the caller know we're sending back a tuplestore */
+  rsinfo->returnMode = SFRM_Materialize;
+  rsinfo->setResult = tupstore;
+  rsinfo->setDesc = retvalDescription;
+
+  MemoryContextSwitchTo(oldcontext);
+
+  for(const auto& data : _extracted_data)
+  {
+    tuple_values[PROP_NAME] = CStringGetTextDatum(data.first.c_str());
+    tuple_values[PROP_VALUE] = CStringGetTextDatum(data.second.c_str());
+
+    tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
+  }
+
+/* clean up and return the tuplestore */
+  tuplestore_donestoring(tupstore);
+
+  return (Datum)0;
+}
 
 PG_FUNCTION_INFO_V1(get_legacy_style_operation);
 
