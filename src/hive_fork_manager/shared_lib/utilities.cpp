@@ -59,7 +59,7 @@ void extract_set_witness_properties_impl(extract_set_witness_properties_result_t
   helper.try_fill<fc::string>("url");
 }
 
-std::string get_legacy_style_operation_impl( const std::string& operation_body )
+fc::string get_legacy_style_operation_impl( const fc::string& operation_body )
 {
   hive::protocol::operation _op;
   from_variant( fc::json::from_string( operation_body ), _op );
@@ -69,7 +69,7 @@ std::string get_legacy_style_operation_impl( const std::string& operation_body )
   return fc::json::to_string( _op );
 }
 
-flat_set<account_name_type> get_accounts( const std::string& operation_body )
+flat_set<account_name_type> get_accounts( const fc::string& operation_body )
 {
   hive::protocol::operation _op;
   from_variant( fc::json::from_string( operation_body ), _op );
@@ -90,7 +90,7 @@ impacted_balance_data collect_impacted_balances(const char* operation_body, cons
 
 extern "C" void issue_error(const char* msg);
 
-void issue_error(const std::string& msg)
+void issue_error(const fc::string& msg)
 {
   issue_error(msg.c_str());
 }
@@ -231,18 +231,18 @@ Datum get_legacy_style_operation(PG_FUNCTION_ARGS)
   }
   catch(const fc::exception& ex)
   {
-    std::string exception_info = ex.to_string();
-    issue_error(std::string("Broken get_legacy_style_operation() input argument: `") + _operation_body + std::string("'. Error: ") + exception_info);
+    fc::string exception_info = ex.to_string();
+    issue_error(fc::string("Broken get_legacy_style_operation() input argument: `") + _operation_body + fc::string("'. Error: ") + exception_info);
     return (Datum)0;
   }
   catch(const std::exception& ex)
   {
-    issue_error(std::string("Broken get_legacy_style_operation() input argument: `") + _operation_body + std::string("'. Error: ") + ex.what());
+    issue_error(fc::string("Broken get_legacy_style_operation() input argument: `") + _operation_body + fc::string("'. Error: ") + ex.what());
     return (Datum)0;
   }
   catch(...)
   {
-    issue_error(std::string("Unknown error during processing get_legacy_style_operation(") + _operation_body + std::string(")"));
+    issue_error(fc::string("Unknown error during processing get_legacy_style_operation(") + _operation_body + fc::string(")"));
     return (Datum)0;
   }
 
@@ -417,18 +417,18 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
   }
   catch(const fc::exception& ex)
   {
-    std::string exception_info = ex.to_string();
-    issue_error(std::string("Broken get_impacted_balances() input argument: `") + operation_body + std::string("'. Error: ") + exception_info);
+    fc::string exception_info = ex.to_string();
+    issue_error(fc::string("Broken get_impacted_balances() input argument: `") + operation_body + fc::string("'. Error: ") + exception_info);
     return (Datum)0;
   }
   catch(const std::exception& ex)
   {
-    issue_error(std::string("Broken get_impacted_balances() input argument: `") + operation_body + std::string("'. Error: ") + ex.what());
+    issue_error(fc::string("Broken get_impacted_balances() input argument: `") + operation_body + fc::string("'. Error: ") + ex.what());
     return (Datum)0;
   }
   catch(...)
   {
-    issue_error(std::string("Unknown error during processing get_impacted_balances(") + operation_body + std::string(")"));
+    issue_error(fc::string("Unknown error during processing get_impacted_balances(") + operation_body + fc::string(")"));
     return (Datum)0;
   }
 
