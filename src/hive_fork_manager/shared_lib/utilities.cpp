@@ -343,7 +343,7 @@ PG_FUNCTION_INFO_V1(get_impacted_balances);
 /**
 * CREATE TYPE impacted_balances_return AS
 (
-	account_name VARCHAR, -- Name of the account impacted by given operation  
+	account_name VARCHAR, -- Name of the account impacted by given operation
 	amount BIGINT, -- Amount of tokens changed by operation. Positive if account balance (specific to given asset_symbol_nai) should be incremented, negative if decremented
 	asset_precision INT, -- Precision of assets (probably only for future cases when custom tokens will be available)
 	asset_symbol_nai INT -- Type of asset symbol used in the operation
@@ -362,7 +362,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
   TupleDesc            retvalDescription;
   Tuplestorestate*     tupstore = nullptr;
-  
+
   MemoryContext per_query_ctx;
   MemoryContext oldcontext;
 
