@@ -61,8 +61,14 @@ then
   sudo -n chown -Rc hived:hived /home/hived/datadir
 fi
 
-if [ ! -d $PGDATA ]
+if [ -d $PGDATA ]
 then
+  echo "Attempting to setup postgres instance..."
+
+  # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
+  sudo -n ./haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="$HAF_DB_STORE/tablespace"
+  echo "Postgres instance setup completed."
+else
   sudo -n mkdir -p $PGDATA 
   sudo -n mkdir -p $HAF_DB_STORE/tablespace
   sudo -n chown -Rc postgres:postgres $HAF_DB_STORE
