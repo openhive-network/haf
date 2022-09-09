@@ -99,7 +99,7 @@ ADD --chown=postgres:postgres ./docker/pg_hba.conf /etc/postgresql/12/main/pg_hb
 RUN sudo -n mkdir -p /home/hived/bin && sudo -n mkdir -p /home/hived/shm_dir && \
   sudo -n mkdir -p /home/hived/datadir && sudo -n chown -Rc hived:hived /home/hived/
 
-VOLUME [/home/hived/datadir, /home/hived/shm_dir]
+VOLUME [ "/home/hived/datadir", "/home/hived/shm_dir" ]
 
 STOPSIGNAL SIGINT 
 
