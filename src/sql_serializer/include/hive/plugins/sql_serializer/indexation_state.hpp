@@ -69,6 +69,7 @@ namespace hive::plugins::sql_serializer {
       void force_trigger_flush_with_all_data( cached_data_t& cached_data, int last_block_num );
       bool can_move_to_livesync() const;
       uint32_t expected_number_of_blocks_to_sync() const;
+      std::shared_ptr<data_dumper> decide_about_dumper(const uint32_t amount_of_blocks_to_process, std::shared_ptr<data_dumper> default_dumper) const;
 
     private:
       const sql_serializer_plugin& _main_plugin;
@@ -78,6 +79,7 @@ namespace hive::plugins::sql_serializer {
       const uint32_t _psql_operations_threads_number;
       const uint32_t _psql_account_operations_threads_number;
       const uint32_t _psql_livesync_threshold;
+      const uint32_t _psql_index_threshold;
 
       boost::signals2::connection _on_irreversible_block_conn;
       INDEXATION _state{ INDEXATION::P2P };
