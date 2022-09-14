@@ -91,7 +91,6 @@ BEGIN
                   hrt.origin_table_schema
                 , hrt.origin_table_name
                 , hrt.shadow_table_name
-                , hrt.origin_table_columns
                 , _block_num_before_fork
             )
     FROM hive.registered_tables hrt
