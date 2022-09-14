@@ -231,7 +231,7 @@ indexation_state::decide_about_dumper(
 {
   return (
     amount_of_blocks_to_process < _psql_index_threshold ?
-    std::make_shared< reindex_data_dumper >(_db_url, 1, 1, 1) :
+    std::make_shared< reindex_data_dumper<true> >(_db_url, 1, 1, 1) :
     default_dumper
   );
 }
@@ -254,7 +254,7 @@ indexation_state::update_state(
       _trigger.reset();
       _dumper.reset();
       _indexes_controler.disable_indexes_and_constraints_depends_on_blocks( amount_of_blocks_to_process );
-      _dumper = decide_about_dumper( amount_of_blocks_to_process, std::make_shared< reindex_data_dumper >(
+      _dumper = decide_about_dumper( amount_of_blocks_to_process, std::make_shared< reindex_data_dumper<false> >(
           _db_url
         , _psql_operations_threads_number
         , _psql_transactions_threads_number
@@ -279,7 +279,7 @@ indexation_state::update_state(
       _trigger.reset();
       _dumper.reset();
       _indexes_controler.disable_indexes_and_constraints_depends_on_blocks( amount_of_blocks_to_process );
-      _dumper = decide_about_dumper( amount_of_blocks_to_process, std::make_shared< reindex_data_dumper >(
+      _dumper = decide_about_dumper( amount_of_blocks_to_process, std::make_shared< reindex_data_dumper<false> >(
           _db_url
         , _psql_operations_threads_number
         , _psql_transactions_threads_number
