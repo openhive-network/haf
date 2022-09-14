@@ -9,9 +9,10 @@ namespace hive::plugins::sql_serializer {
   class indexes_controler{
   public:
     indexes_controler( std::string db_url, uint32_t psql_index_threshold );
-    void disable_indexes_depends_on_blocks( uint32_t number_of_blocks_to_insert );
+    void disable_indexes_and_constraints_depends_on_blocks( uint32_t number_of_blocks_to_insert );
     void enable_indexes();
     void disable_constraints();
+    void disable_indexes();
     void enable_constrains();
 
   private:

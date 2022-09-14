@@ -233,13 +233,13 @@ indexation_state::update_state(
     case INDEXATION::START:
       ilog( "Entered START sync state" );
       break;
-    case INDEXATION::P2P:
+    case INDEXATION::P2P: {
       ilog("Entering P2P sync...");
+      const uint32_t amount_of_blocks_to_process( expected_number_of_blocks_to_sync() );
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
-      _indexes_controler.disable_constraints();
-      _indexes_controler.disable_indexes_depends_on_blocks( expected_number_of_blocks_to_sync() );
+      _indexes_controler.disable_indexes_and_constraints_depends_on_blocks( amount_of_blocks_to_process );
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , _psql_operations_threads_number
@@ -256,18 +256,15 @@ indexation_state::update_state(
       );
       ilog("Entered P2P sync");
       break;
-    case INDEXATION::REINDEX:
+    }
+    case INDEXATION::REINDEX: {
       ilog("Entering REINDEX sync...");
+      const uint32_t amount_of_blocks_to_process( number_of_blocks_to_add == 0 ? expected_number_of_blocks_to_sync() : number_of_blocks_to_add );
       FC_ASSERT( _state == INDEXATION::START, "Reindex always starts after START" );
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
-      _indexes_controler.disable_constraints();
-      _indexes_controler.disable_indexes_depends_on_blocks(
-        number_of_blocks_to_add == 0 // stop_replay_at_block = 0
-        ? expected_number_of_blocks_to_sync()
-        : number_of_blocks_to_add
-      );
+      _indexes_controler.disable_indexes_and_constraints_depends_on_blocks( amount_of_blocks_to_process );
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , _psql_operations_threads_number
@@ -281,6 +278,7 @@ indexation_state::update_state(
       );
       ilog("Entered REINDEX sync");
       break;
+    }
       case INDEXATION::LIVE: {
         ilog("Entering LIVE sync...");
         if ( _state != INDEXATION::START ) {
@@ -291,7 +289,7 @@ indexation_state::update_state(
         _dumper.reset();
         _indexes_controler.enable_indexes();
         _indexes_controler.enable_constrains();
-        _dumper = std::make_unique< livesync_data_dumper >(
+      _dumper = std::make_shared< livesync_data_dumper >(
           _db_url
           , _main_plugin
           , _chain_db

@@ -16,18 +16,29 @@ indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_th
 }
 
 void
-indexes_controler::disable_indexes_depends_on_blocks( uint32_t number_of_blocks_to_insert ) {
+indexes_controler::disable_indexes_and_constraints_depends_on_blocks( uint32_t number_of_blocks_to_insert ) {
   if (appbase::app().is_interrupt_request())
     return;
 
   bool can_disable_indexes = number_of_blocks_to_insert > _psql_index_threshold;
 
   if ( !can_disable_indexes ) {
-    ilog( "Number of blocks to add is less than threshold for disabling indexes. Indexes won't be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
+    ilog( "Number of blocks to add is less than threshold for disabling indexes and constraints. Neither of them won't be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
     return;
   }
+  ilog( "Number of blocks to sync is greater than threshold for disabling indexes and constraints. Both of them will be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
 
-  ilog( "Number of blocks to sync is greater than threshold for disabling indexes. Indexes will be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
+
+  disable_constraints();
+  disable_indexes();
+}
+
+void
+indexes_controler::disable_indexes() {
+  if (appbase::app().is_interrupt_request())
+    return;
+
+
   auto processor = start_commit_sql(false, "hive.disable_indexes_of_irreversible()", "disable indexes" );
   processor->join();
   ilog( "All irreversible blocks tables indexes are dropped" );
