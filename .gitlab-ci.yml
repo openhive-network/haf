@@ -147,6 +147,7 @@ applications_system_tests:
     BLOCK_LOG_DIRECTORY: "/blockchain"
     DB_NAME: haf_block_log
     DB_URL: "postgresql:///$DB_NAME"
+    BLOCK_COUNT: 5000000
   before_script:
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
     - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
@@ -155,8 +156,8 @@ applications_system_tests:
     - cd $CI_PROJECT_DIR/tests/integration/replay
     - mkdir $PATTERNS_PATH/blockchain
     - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
-    - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
-    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --exit-before-sync --psql-url $DB_URL > node_logs.log 2>&1
+    - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count $BLOCK_COUNT
+    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --exit-before-sync --psql-url $DB_URL --stop-replay-at-block $BLOCK_COUNT 2>&1 | tee -i node_logs.log
   artifacts:
     paths:
     - "**/node_logs.log"
@@ -178,6 +179,14 @@ replay_with_haf:
     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
   script:
     - tox .
+
+replay_with_haf_500k:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
+    BLOCK_COUNT: 100000
+  script:
+    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --exit-before-sync --psql-url $DB_URL --replay --stop-replay-at-block 500000 2>&1 | tee -i -a node_logs.log
 
 replay_accounts_filtered_with_haf:
   extends: .replay_step
