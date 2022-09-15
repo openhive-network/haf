@@ -635,14 +635,14 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
   return false;
 }
 
-  void sql_serializer_plugin_impl::collect_account_operations(
-      int64_t operation_id
-    , const hive::protocol::operation& op
-    , uint32_t block_num
-  )
-  {
-    collector->collect(operation_id, op, block_num);
-  }
+void sql_serializer_plugin_impl::collect_account_operations(
+    int64_t operation_id
+  , const hive::protocol::operation& op
+  , uint32_t block_num
+)
+{
+  collector->collect(operation_id, op, block_num);
+}
 
 } // namespace detail
 
@@ -662,7 +662,7 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
                     ("psql-livesync-threshold", appbase::bpo::value<uint32_t>()->default_value( 10000 ), "threshold to move synchronization state during start immediatly to live")
                     ("psql-track-account-range", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "Defines a range of accounts to track as a json pair [\"from\",\"to\"] [from,to]. Can be specified multiple times.")
                     ("psql-track-operations", boost::program_options::value< std::vector<std::string> >()->composing(), "Defines operations' types to track. Can be specified multiple times.")
-                    ("psql-track-body-operations", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "For a type of operation it's defined a regex that filters body of operation and decides if it's excluded. Can be specified multiple times.")
+                    ("psql-track-body-operations", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "For a type of operation it's defined a regex that filters body of operation and decides if it's excluded. Can be specified multiple times. A complex regex can cause slowdown or processing can be even abandoned due to complexity.")
                     ("psql-enable-filter", appbase::bpo::value<bool>()->default_value( true ), "enable filtering accounts and operations")
                     ;
 }
