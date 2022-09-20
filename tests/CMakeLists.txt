@@ -1,2 +1,3 @@
 ADD_SUBDIRECTORY( integration )
 ADD_SUBDIRECTORY( unit )
+ADD_SUBDIRECTORY( unit2 )
