@@ -20,7 +20,9 @@ ADD_PSQL_EXTENSION(
             block_day_stats_view.sql
             block_day_stats_all_op_view.sql
             state_provider.sql
+            get_keyauths.sql
             state_providers/accounts.sql
+            state_providers/keyauth.sql
             hived_connections.sql
             hived_api_impl.sql
             app_api_impl.sql

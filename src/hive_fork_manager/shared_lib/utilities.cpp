@@ -12,6 +12,7 @@ using hive::protocol::asset;
 using hive::protocol::serialization_mode_controller;
 using hive::protocol::transaction_serialization_type;
 
+using hive::app::collected_keyauth_collection_t;
 using hive::app::impacted_balance_data;
 
 #define CUSTOM_LOG(format, ... ) { FILE *pFile = fopen("get-impacted-accounts.log","ae"); fprintf(pFile,format "\n",__VA_ARGS__); fclose(pFile); }
@@ -95,6 +96,12 @@ void issue_error(const fc::string& msg)
   issue_error(msg.c_str());
 }
 
+collected_keyauth_collection_t collect_keyauths(const char *operation_body)
+{
+    hive::protocol::operation op;
+    from_variant(fc::json::from_string(operation_body), op);
+    return hive::app::operation_get_keyauths(op);
+}
 
 } // namespace
 
@@ -465,4 +472,105 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
   return (Datum)0;
 }
 
+
+  PG_FUNCTION_INFO_V1(get_keyauths_wrapped);
+
+  /**
+   ** CREATE TYPE hive.authority_type AS ENUM( 'OWNER', 'ACTIVE', 'POSTING', 'WITNESS', 'NEW_OWNER_AUTHORITY', 'RECENT_OWNER_AUTHORITY');
+   ** CREATE TYPE hive.keyauth_record_type AS
+   **        (
+   **              key_auth TEXT
+   **            , authority_kind hive.authority_type
+   **            , account_name TEXT
+   **        );
+   ** FUNCTION get_keyauths_wrapped(_operation_body text) RETURNS SETOF hive.keyauth_record_type
+   **  It has to be wrapped, because it returns C enum as int. 
+   **  Postgres then has to wrap it up to let postgresive enum enter postgress realm
+   */
+
+
+
+  Datum get_keyauths_wrapped(PG_FUNCTION_ARGS)
+  {
+  
+    TupleDesc retvalDescription;
+    Tuplestorestate *tupstore = nullptr;
+
+    MemoryContext per_query_ctx;
+    MemoryContext oldcontext;
+  
+    ReturnSetInfo *rsinfo = reinterpret_cast<ReturnSetInfo *>(fcinfo->resultinfo); 
+
+    
+    if (rsinfo == nullptr || !IsA(rsinfo, ReturnSetInfo))
+    {
+      issue_error("set-valued function called in context that cannot accept a set");
+    }
+
+    if ((rsinfo->allowedModes & SFRM_Materialize) == 0)
+    {
+      issue_error("materialize mode required, but it is not allowed in this context");
+    }
+
+ 
+    if (get_call_result_type(fcinfo, nullptr, &retvalDescription) != TYPEFUNC_COMPOSITE)
+    {
+      issue_error("return type must be a row type");
+    }
+
+    per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
+    oldcontext = MemoryContextSwitchTo(per_query_ctx);
+
+    tupstore = tuplestore_begin_heap(true, false, work_mem);
+
+    rsinfo->returnMode = SFRM_Materialize;
+    rsinfo->setResult = tupstore;
+    rsinfo->setDesc = retvalDescription;
+
+    MemoryContextSwitchTo(oldcontext);
+
+    const char *operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+    collected_keyauth_collection_t collected_keyauths;
+    try
+    {
+      collected_keyauths = collect_keyauths(operation_body);
+    }
+
+    catch (const fc::exception &ex)
+    {
+      std::string exception_info = ex.to_string();
+      issue_error(std::string("Broken ") + __FUNCTION__+  "() input argument: `" + operation_body + std::string("'. Error: ") + exception_info);
+      return (Datum)0;
+    }
+    catch (const std::exception &ex)
+    {
+      issue_error(std::string("Broken ") + __FUNCTION__ + "() input argument: `" + operation_body + std::string("'. Error: ") + ex.what());
+      return (Datum)0;
+    }
+    catch (...)
+    {
+      issue_error(std::string("Unknown error during processing ") + __FUNCTION__ + "(" + operation_body + std::string(")"));
+      return (Datum)0;
+    }
+      
+    const auto GET_KEYAUTHS_RETURN_ATTRIBUTES = 3;
+    const auto KEY_AUTH_IDX = 0;
+    const auto AUTHORITY_KIND_IDX = 1;
+    const auto ACCOUNT_NAME__IDX = 2;
+
+    Datum tuple_values[GET_KEYAUTHS_RETURN_ATTRIBUTES] = {0};
+    bool nulls[GET_KEYAUTHS_RETURN_ATTRIBUTES] = {false};
+
+    for(const auto& collected_item : collected_keyauths)
+    {
+      tuple_values[KEY_AUTH_IDX] = CStringGetTextDatum(collected_item.key_auth.c_str());
+      tuple_values[AUTHORITY_KIND_IDX] = Int32GetDatum(collected_item.authority_kind);
+      tuple_values[ACCOUNT_NAME__IDX] = CStringGetTextDatum(collected_item.account_name.c_str());
+      tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
+    }
+
+    tuplestore_donestoring(tupstore);
+    return (Datum)0;
+  }
 }

@@ -1,7 +1,7 @@
 DO
 $$
     BEGIN
-    CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS' );
+    CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' );
     EXCEPTION
             WHEN duplicate_object THEN null;
     END
