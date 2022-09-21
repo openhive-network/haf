@@ -88,6 +88,8 @@ def run_networks(networks: Dict[str, tt.Network], blocklog_directory=None, repla
 
     tt.logger.info('Running nodes...')
 
+    connect_sub_networks(list(networks.values()))
+
     nodes = [node for network in networks.values() for node in network.nodes]
     nodes[0].run(wait_for_live=False, replay_from=block_log, time_offset=time_offset)
     endpoint = get_implementation(nodes[0]).get_p2p_endpoint()
@@ -108,6 +110,19 @@ def run_networks(networks: Dict[str, tt.Network], blocklog_directory=None, repla
             deadline=deadline,
             exception_message='Live mode not activated on time.'
         )
+
+
+def connect_sub_networks(sub_networks : list):
+    assert len(sub_networks) > 1
+
+    current_idx = 0
+    while current_idx < len(sub_networks) - 1:
+        next_current_idx = current_idx + 1
+        while next_current_idx < len(sub_networks):
+            tt.logger.info(f"Sub network {current_idx} connected with {next_current_idx}")
+            sub_networks[current_idx].connect_with(sub_networks[next_current_idx])
+            next_current_idx += 1
+        current_idx += 1
 
 
 def create_node_with_database(network: tt.Network, url):
