@@ -620,10 +620,12 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
   {
     FC_ASSERT(block_no > chain_db.get_last_irreversible_block_num(), "Block irreversible");
 
-    if(last_skipped_block < block_no)
+    if( last_skipped_block == 0 )
+      last_skipped_block = block_no;
+    if(block_no >= last_skipped_block + 1000)
     {
       ilog("Skipping data provided by already processed reversible block: ${block_no}", ("block_no", block_no));
-      last_skipped_block = block_no;
+      last_skipped_block = 0;
     }
 
     return true;
