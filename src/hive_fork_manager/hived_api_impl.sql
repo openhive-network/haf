@@ -558,7 +558,7 @@ BEGIN
             WHERE block_num = _block_num
             ORDER BY trx_in_block
     ), operations AS (
-            SELECT ho.block_num, ho.trx_in_block, ARRAY_AGG(ho.body) bodies
+            SELECT ho.block_num, ho.trx_in_block, ARRAY_AGG(ho.body ORDER BY op_pos ASC) bodies
             FROM hive.operations_view ho
             WHERE
                 ho.op_type_id < (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = TRUE ORDER BY ot.id LIMIT 1)
