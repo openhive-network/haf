@@ -1,3 +1,31 @@
+CREATE OR REPLACE FUNCTION hive.transactions_to_json(transactions hive.transaction_type[])
+    RETURNS JSONB
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __result JSONB;
+BEGIN
+    SELECT array_to_json(ARRAY( SELECT jsonb_build_object(
+        'ref_block_num', x.ref_block_num,
+        'ref_block_prefix', x.ref_block_prefix,
+        'expiration', x.expiration,
+        'operations', x.operations :: JSONB[],
+        'extensions', COALESCE(x.extensions, jsonb_build_array()),
+        'signatures', (
+            CASE
+                WHEN array_length(x.signatures, 1) > 0 AND x.signatures != ARRAY[ NULL ]::BYTEA[] THEN (SELECT ARRAY( SELECT encode(unnest(x.signatures), 'hex')))
+                ELSE ARRAY[] :: TEXT[]
+            END
+        )
+    )
+    FROM ( SELECT (unnest(transactions)).* ) x ) ) INTO __result;
+    RETURN __result;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.build_block_json(
     previous BYTEA,
     "timestamp" TIMESTAMP,
@@ -24,7 +52,7 @@ BEGIN
         'transaction_merkle_root', encode( transaction_merkle_root, 'hex'),
         'extensions', COALESCE(extensions, jsonb_build_array()),
         'witness_signature', encode( witness_signature, 'hex'),
-        'transactions', transactions,
+        'transactions', COALESCE(hive.transactions_to_json(transactions), jsonb_build_array()),
         'block_id', encode( block_id, 'hex'),
         'signing_key', signing_key
     ) INTO __result;

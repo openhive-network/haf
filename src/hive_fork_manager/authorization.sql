@@ -92,6 +92,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.get_block_range_json( _starting_block_num INT, _count INT )
     , hive.get_block_from_views( _block_num INT )
     , hive.build_block_json(previous BYTEA, "timestamp" TIMESTAMP, witness VARCHAR, transaction_merkle_root BYTEA, extensions jsonb, witness_signature BYTEA, transactions hive.transaction_type[], block_id BYTEA, signing_key TEXT )
+    , hive.transactions_to_json(transactions hive.transaction_type[])
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION
