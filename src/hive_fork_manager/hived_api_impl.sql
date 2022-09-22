@@ -215,28 +215,28 @@ BEGIN
     WHERE
             har.operation_id = hor.id
         AND har.fork_id = hor.fork_id
-        AND hor.block_num < _new_irreversible_block
+        AND hor.block_num <= _new_irreversible_block
     ;
 
     DELETE FROM hive.operations_reversible hor
-    WHERE hor.block_num < _new_irreversible_block;
+    WHERE hor.block_num <= _new_irreversible_block;
 
     DELETE FROM hive.transactions_multisig_reversible htmr
     USING hive.transactions_reversible htr
     WHERE
             htr.fork_id = htmr.fork_id
         AND htr.trx_hash = htmr.trx_hash
-        AND htr.block_num < _new_irreversible_block
+        AND htr.block_num <= _new_irreversible_block
     ;
 
     DELETE FROM hive.transactions_reversible htr
-    WHERE htr.block_num < _new_irreversible_block;
+    WHERE htr.block_num <= _new_irreversible_block;
 
     DELETE FROM hive.accounts_reversible har
-    WHERE har.block_num < _new_irreversible_block;
+    WHERE har.block_num <= _new_irreversible_block;
 
     DELETE FROM hive.blocks_reversible hbr
-    WHERE hbr.num < _new_irreversible_block;
+    WHERE hbr.num <= _new_irreversible_block;
 END;
 $BODY$
 ;
