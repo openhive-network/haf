@@ -35,7 +35,8 @@ CREATE OR REPLACE FUNCTION hive.build_block_json(
     witness_signature BYTEA,
     transactions hive.transaction_type[],
     block_id BYTEA,
-    signing_key TEXT
+    signing_key TEXT,
+    transaction_ids BYTEA[]
 )
     RETURNS JSONB
     LANGUAGE plpgsql
@@ -54,7 +55,8 @@ BEGIN
         'witness_signature', encode( witness_signature, 'hex'),
         'transactions', COALESCE(hive.transactions_to_json(transactions), jsonb_build_array()),
         'block_id', encode( block_id, 'hex'),
-        'signing_key', signing_key
+        'signing_key', signing_key,
+        'transaction_ids', (SELECT ARRAY( SELECT encode(unnest(transaction_ids), 'hex')))
     ) INTO __result;
     RETURN __result;
 END;
@@ -87,7 +89,9 @@ BEGIN
             __block.witness_signature,
             __block.transactions,
             __block.block_id,
-            __block.signing_key
+            __block.signing_key,
+            __block.transaction_ids
+
         )
     ) INTO __result ;
     RETURN __result;
@@ -146,7 +150,8 @@ BEGIN
                 gbr.witness_signature,
                 gbr.transactions,
                 gbr.block_id,
-                gbr.signing_key
+                gbr.signing_key,
+                gbr.transaction_ids
             )
         )
     ) INTO __result FROM hive.get_block_range( _starting_block_num , _count ) gbr
