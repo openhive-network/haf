@@ -643,11 +643,7 @@ void sql_serializer_plugin_impl::on_pre_reindex(const reindex_notification& note
   if(__on_pre_apply_block_con_initialization.connected())
     chain::util::disconnect_signal(__on_pre_apply_block_con_initialization);
 
-  if ( note.args.stop_replay_at ) {
-    _indexation_state.on_pre_reindex( *currently_caching_data, _last_block_num, ( note.args.stop_replay_at - _last_block_num ) );
-  } else {
-    _indexation_state.on_pre_reindex( *currently_caching_data, _last_block_num, 0 );
-  }
+  _indexation_state.on_pre_reindex( *currently_caching_data, _last_block_num, note.args.stop_replay_at );
   ilog("Leaving a reindex init...");
 }
 

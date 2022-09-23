@@ -155,7 +155,7 @@ indexation_state::indexation_state(
 }
 
 void
-indexation_state::on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t number_of_blocks_to_add ) {
+indexation_state::on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t stop_replay_at ) {
   if ( _state != INDEXATION::START ) {
     // on_end_of_syncing may already change the state to live
     return;
@@ -167,7 +167,7 @@ indexation_state::on_pre_reindex( cached_data_t& cached_data, int last_block_num
     return;
   }
 
-  update_state( INDEXATION::REINDEX, cached_data, last_block_num, number_of_blocks_to_add );
+  update_state( INDEXATION::REINDEX, cached_data, last_block_num, stop_replay_at );
 }
 
 void
@@ -182,8 +182,7 @@ indexation_state::on_post_reindex( cached_data_t& cached_data, uint32_t last_blo
     force_trigger_flush_with_all_data( cached_data, last_block_num );
     _trigger.reset();
     _dumper.reset();
-    _indexes_controler.enable_indexes();
-    _indexes_controler.enable_constrains();
+    _indexes_controler.enable_all();
     return;
   }
 
@@ -219,15 +218,24 @@ indexation_state::can_move_to_livesync() const {
 }
 
 uint32_t
-indexation_state::expected_number_of_blocks_to_sync() const {
-  return ( fc::time_point::now() - _chain_db.head_block_time() ).to_seconds() / 3;
+indexation_state::expected_number_of_blocks_to_sync( std::optional<uint32_t> number_of_blocks_to_add ) const {
+  uint32_t _blocks = 0;
+
+  if( number_of_blocks_to_add.has_value() )
+    _blocks = number_of_blocks_to_add.value();
+  else
+    _blocks = ( fc::time_point::now() - _chain_db.head_block_time() ).to_seconds() / 3;
+
+  ilog("Information about disabling/enabling contraints/indexes - now: ${now} head: ${head} blocks: ${_blocks} blocks are given: ${given}",
+  ("now", fc::time_point::now())("head", _chain_db.head_block_time())(_blocks)("given", number_of_blocks_to_add.has_value()));
+  return _blocks;
 }
 
 void
 indexation_state::update_state(
     INDEXATION state
   , cached_data_t& cached_data
-  , uint32_t last_block_num, uint32_t number_of_blocks_to_add
+  , uint32_t last_block_num, uint32_t stop_replay_at
 ) {
   FC_ASSERT( _state != INDEXATION::LIVE, "Move from LIVE state is illegal" );
   switch ( state ) {
@@ -239,8 +247,7 @@ indexation_state::update_state(
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
-      _indexes_controler.disable_constraints();
-      _indexes_controler.disable_indexes_depends_on_blocks( expected_number_of_blocks_to_sync() );
+      _indexes_controler.disable_all( expected_number_of_blocks_to_sync() );
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , _psql_operations_threads_number
@@ -259,16 +266,12 @@ indexation_state::update_state(
       break;
     case INDEXATION::REINDEX:
       ilog("Entering REINDEX sync...");
+      ilog(" last block number: ${last_block_num} stop replay at: ${stop_replay_at}",(last_block_num)(stop_replay_at));
       FC_ASSERT( _state == INDEXATION::START, "Reindex always starts after START" );
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
-      _indexes_controler.disable_constraints();
-      _indexes_controler.disable_indexes_depends_on_blocks(
-        number_of_blocks_to_add == 0 // stop_replay_at_block = 0
-        ? expected_number_of_blocks_to_sync()
-        : number_of_blocks_to_add
-      );
+      _indexes_controler.disable_all( expected_number_of_blocks_to_sync( stop_replay_at ? ( stop_replay_at - last_block_num ) : std::optional<uint32_t>() ) );
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , _psql_operations_threads_number
@@ -290,8 +293,7 @@ indexation_state::update_state(
         }
         _trigger.reset();
         _dumper.reset();
-        _indexes_controler.enable_indexes();
-        _indexes_controler.enable_constrains();
+        _indexes_controler.enable_all();
         _dumper = std::make_unique< livesync_data_dumper >(
           _db_url
           , _main_plugin

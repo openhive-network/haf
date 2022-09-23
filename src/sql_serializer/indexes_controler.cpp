@@ -20,12 +20,8 @@ indexes_controler::disable_indexes_depends_on_blocks( uint32_t number_of_blocks_
   if (appbase::app().is_interrupt_request())
     return;
 
-  bool can_disable_indexes = number_of_blocks_to_insert > _psql_index_threshold;
-
-  if ( !can_disable_indexes ) {
-    ilog( "Number of blocks to add is less than threshold for disabling indexes. Indexes won't be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
+  if( !allow_disable( number_of_blocks_to_insert, "indexes" ) )
     return;
-  }
 
   ilog( "Number of blocks to sync is greater than threshold for disabling indexes. Indexes will be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
   auto processor = start_commit_sql(false, "hive.disable_indexes_of_irreversible()", "disable indexes" );
@@ -60,8 +56,11 @@ indexes_controler::enable_indexes() {
 }
 
 void
-indexes_controler::disable_constraints() {
+indexes_controler::disable_constraints_depends_on_blocks( uint32_t number_of_blocks_to_insert ) {
   if (appbase::app().is_interrupt_request())
+    return;
+
+  if( !allow_disable( number_of_blocks_to_insert, "constraints" ) )
     return;
 
   auto processor = start_commit_sql(false, "hive.disable_fk_of_irreversible()", "disable fk-s" );
@@ -70,7 +69,7 @@ indexes_controler::disable_constraints() {
 }
 
 void
-indexes_controler::enable_constrains() {
+indexes_controler::enable_constraints() {
   if (appbase::app().is_interrupt_request())
     return;
 
@@ -117,6 +116,30 @@ indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_
 
   processor->trigger(data_processor::data_chunk_ptr(), 0);
   return processor;
+}
+
+bool indexes_controler::allow_disable( uint32_t number_of_blocks_to_insert, const std::string& elements_name ) const
+{
+  bool _can_disable = number_of_blocks_to_insert > _psql_index_threshold;
+
+  if ( !_can_disable ) {
+    ilog( "Number of blocks to add is less than threshold for disabling ${elements_name} - ${elements_name} won't be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold )(elements_name) );
+    return false;
+  }
+
+  return true;
+}
+
+void indexes_controler::enable_all()
+{
+  enable_indexes();
+  enable_constraints();
+}
+
+void indexes_controler::disable_all( uint32_t number_of_blocks_to_insert )
+{
+  disable_constraints_depends_on_blocks( number_of_blocks_to_insert );
+  disable_indexes_depends_on_blocks( number_of_blocks_to_insert );
 }
 
 }}} // namespace hive{ plugins { sql_serializer
