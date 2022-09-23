@@ -102,10 +102,13 @@ def test_application_broken(prepared_networks_and_database):
     assert irreversible_block == haf_irreversible.consistent_block
     assert irreversible_block == context_irreversible_block
 
-    blks = session.query(blocks_reversible).order_by(blocks_reversible.num).all()
-    block_min = min([block.num for block in blks])
-    tt.logger.info(f'min of blocks_reversible is {block_min}')
-
     assert irreversible_block == haf_irreversible.consistent_block
-    assert irreversible_block == block_min
+
+    blks = session.query(blocks_reversible).order_by(blocks_reversible.num).all()
+    if len(blks) == 0:
+        tt.logger.info(f'OBI can make an immediate irreversible block, so all reversible data can be cleared out')
+    else:
+        block_min = min([block.num for block in blks])
+        tt.logger.info(f'min of blocks_reversible is {block_min}')
+        assert irreversible_block == block_min
 

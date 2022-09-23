@@ -28,4 +28,4 @@ def test_blocks_reversible(prepared_networks_and_database):
     blks = session.query(blocks_reversible).order_by(blocks_reversible.num).all()
     block_nums_reversible = [block.num for block in blks]
     case = unittest.TestCase()
-    case.assertCountEqual(block_nums_reversible, range(irreversible_block_num, head_block_number+1))
+    case.assertCountEqual(block_nums_reversible, range(irreversible_block_num, head_block_number))
