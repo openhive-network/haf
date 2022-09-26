@@ -140,7 +140,7 @@ DECLARE
     __result JSONB;
 BEGIN
     SELECT jsonb_build_object(
-        'blocks', array_agg(
+        'blocks', COALESCE(array_agg(
             hive.build_block_json(
                 gbr.previous,
                 gbr.timestamp,
@@ -153,7 +153,7 @@ BEGIN
                 gbr.signing_key,
                 gbr.transaction_ids
             )
-        )
+        ), ARRAY[]::JSONB[] )
     ) INTO __result FROM hive.get_block_range( _starting_block_num , _count ) gbr
     WHERE gbr.timestamp IS NOT NULL;
     RETURN __result;
