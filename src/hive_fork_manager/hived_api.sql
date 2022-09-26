@@ -355,9 +355,26 @@ CREATE OR REPLACE FUNCTION hive.get_block_range( _starting_block_num INT, _count
 AS
 $BODY$
 BEGIN
-    ASSERT _starting_block_num  > 0, "Invalid starting block number";
-    ASSERT _count > 0, "Why ask for zero blocks?";
-    ASSERT _count <= 1000, "You can only ask for 1000 blocks at a time";
+
+    IF _count = 0 OR (_starting_block_num ::BIGINT + _count - 1) > POW(2, 31) :: BIGINT THEN
+        IF NOT _count <= 1000 THEN
+            RAISE EXCEPTION 'Assert Exception:count <= 1000: You can only ask for 1000 blocks at a timerethrow';
+        END IF;
+        RETURN QUERY SELECT (NULL::hive.block_type).* LIMIT 0;
+        RETURN;
+    END IF;
+
+    IF NOT _starting_block_num  > 0 THEN
+        RAISE EXCEPTION 'Assert Exception:starting_block_num > 0: Invalid starting block numberrethrow';
+    END IF;
+
+    IF NOT _count > 0 THEN
+        RAISE EXCEPTION 'Assert Exception:count > 0: Why ask for zero blocks?rethrow';
+    END IF;
+
+    IF NOT _count <= 1000 THEN
+        RAISE EXCEPTION 'Assert Exception:count <= 1000: You can only ask for 1000 blocks at a timerethrow';
+    END IF;
 
     RETURN QUERY SELECT (unnest(ARRAY_AGG(hive.get_block(num)))).* FROM generate_series(_starting_block_num, _starting_block_num + _count - 1) num;
 END;
