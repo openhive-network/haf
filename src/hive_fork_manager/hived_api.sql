@@ -316,7 +316,7 @@ BEGIN
          , hb.witness_signature
          , hb.extensions
          , hb.producer_account_id
-    FROM hive.blocks_view hb
+    FROM hive.blocks hb
     WHERE hb.num = _block_num
     INTO
          __result.previous
@@ -327,7 +327,7 @@ BEGIN
        , __witness_account_id;
 
     SELECT ha.name
-    FROM hive.accounts_view ha
+    FROM hive.accounts ha
     WHERE ha.id = __witness_account_id
     INTO __result.witness;
 

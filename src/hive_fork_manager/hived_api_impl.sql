@@ -534,7 +534,7 @@ BEGIN
          , hb.producer_account_id
          , hb.hash
          , hb.signing_key
-    FROM hive.blocks_view hb
+    FROM hive.blocks hb
     WHERE hb.num = _block_num
     INTO
          __result.previous
@@ -547,26 +547,26 @@ BEGIN
        , __result.signing_key;
 
     SELECT ha.name
-    FROM hive.accounts_view ha
+    FROM hive.accounts ha
     WHERE ha.id = __witness_account_id
     INTO __result.witness;
 
 
     WITH ht AS (
             SELECT *
-            FROM hive.transactions_view
+            FROM hive.transactions
             WHERE block_num = _block_num
             ORDER BY trx_in_block
     ), operations AS (
             SELECT ho.block_num, ho.trx_in_block, ARRAY_AGG(ho.body ORDER BY op_pos ASC) bodies
-            FROM hive.operations_view ho
+            FROM hive.operations ho
             WHERE
                 ho.op_type_id < (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = TRUE ORDER BY ot.id LIMIT 1)
                 AND ho.block_num = _block_num
             GROUP BY ho.block_num, ho.trx_in_block
     ), multisig AS (
             SELECT trx_hash, ARRAY_AGG(signature) signatures
-            FROM hive.transactions_multisig_view
+            FROM hive.transactions_multisig
             WHERE trx_hash = ANY(
                 SELECT trx_hash FROM ht
             )
