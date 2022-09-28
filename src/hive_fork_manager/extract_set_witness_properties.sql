@@ -13,4 +13,4 @@ $$;
 
 CREATE OR REPLACE FUNCTION hive.extract_set_witness_properties(IN prop_array TEXT)
 RETURNS SETOF hive.extract_set_witness_properties_return
-AS '$libdir/libhfm-@GIT_REVISION@.so', 'extract_set_witness_properties' LANGUAGE C;
+AS '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so', 'extract_set_witness_properties' LANGUAGE C;
