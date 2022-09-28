@@ -11,6 +11,14 @@ SET( HAF_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 FILE( CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/src/sql_serializer ${CMAKE_CURRENT_SOURCE_DIR}/hive/libraries/plugins/sql_serializer SYMBOLIC )
 
 ADD_SUBDIRECTORY( hive EXCLUDE_FROM_ALL )
+
+# Read whole HAF revision (using already imported Git tools from Hive project)
+list( APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/hive/libraries/fc/GitVersionGen" )
+include( GetGitRevisionDescription )
+get_git_head_revision_dir("${CMAKE_CURRENT_SOURCE_DIR}" HAF_GIT_REFSPEC HAF_GIT_REVISION_SHA)
+
+MESSAGE(STATUS "Detected HAf project git revision: ${HAF_GIT_REVISION_SHA}")
+
 SET_TARGET_PROPERTIES( hived PROPERTIES EXCLUDE_FROM_ALL 0 )
 SET_TARGET_PROPERTIES( cli_wallet PROPERTIES EXCLUDE_FROM_ALL 0 )
 SET_TARGET_PROPERTIES( get_dev_key PROPERTIES EXCLUDE_FROM_ALL 0 )
@@ -34,7 +42,6 @@ list( APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" )
 
 INCLUDE( clangtidy )
 INCLUDE( compiler )
-INCLUDE( git )
 INCLUDE( libraries )
 INCLUDE( postgres )
 INCLUDE( sql_extension )
@@ -42,8 +49,6 @@ INCLUDE( targets )
 INCLUDE( tests )
 
 SETUP_OUTPUT_DIRECTORIES()
-
-GENERATE_GIT_VERSION_FILE()
 GET_RUNTIME_POSTGRES_VARIABLES()
 
 set(CMAKE_INSTALL_RPATH ${POSTGRES_LIBDIR})
