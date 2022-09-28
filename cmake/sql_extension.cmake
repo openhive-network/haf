@@ -6,18 +6,18 @@ MACRO( ADD_PSQL_EXTENSION )
     SET( extension_path  ${CMAKE_BINARY_DIR}/extensions/${EXTENSION_NAME} )
     SET( extension_control_file ${EXTENSION_NAME}.control )
 
-    SET( extension_control_script ${extension_path}/${EXTENSION_NAME}--${GIT_REVISION}.sql )
+    SET( extension_control_script ${extension_path}/${EXTENSION_NAME}--${HAF_GIT_REVISION_SHA}.sql )
 
-    SET( PROXY_GIT_VER "PROXY--${GIT_REVISION}" )
+    SET( PROXY_GIT_VER "PROXY--${HAF_GIT_REVISION_SHA}" )
 
-    MESSAGE( STATUS "VERSION: ${GIT_REVISION}" )
+    MESSAGE( STATUS "VERSION: ${HAF_GIT_REVISION_SHA}" )
 
     ADD_CUSTOM_COMMAND(
             OUTPUT  ${extension_path}/${extension_control_file} ${extension_path}/${extension_control_script}
             COMMAND rm -rf ${extension_path}/*
-            COMMAND sed 's/@GIT_REVISION@/${GIT_REVISION}/g' ${extension_control_file}  > ${extension_path}/${extension_control_file}
-            COMMAND ${CMAKE_MODULE_PATH}/merge_sql.sh ${EXTENSION_SOURCES} > ${extension_path}/${EXTENSION_NAME}--${PROXY_GIT_VER}.sql
-            COMMAND sed 's/@GIT_REVISION@/${GIT_REVISION}/g' ${extension_path}/${EXTENSION_NAME}--${PROXY_GIT_VER}.sql  > ${extension_path}/${EXTENSION_NAME}--${GIT_REVISION}.sql
+            COMMAND sed 's/@HAF_GIT_REVISION_SHA@/${HAF_GIT_REVISION_SHA}/g' ${extension_control_file}  > ${extension_path}/${extension_control_file}
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/merge_sql.sh ${EXTENSION_SOURCES} > ${extension_path}/${EXTENSION_NAME}--${PROXY_GIT_VER}.sql
+            COMMAND sed 's/@HAF_GIT_REVISION_SHA@/${HAF_GIT_REVISION_SHA}/g' ${extension_path}/${EXTENSION_NAME}--${PROXY_GIT_VER}.sql  > ${extension_path}/${EXTENSION_NAME}--${HAF_GIT_REVISION_SHA}.sql
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             DEPENDS ${EXTENSION_SOURCES} ${extension_control_file}
             COMMENT "Generate ${EXTENSION_NAME} to ${extension_path}"
