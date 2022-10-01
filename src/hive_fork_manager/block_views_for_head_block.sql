@@ -226,3 +226,37 @@ FROM (
         ) as trr ON trr.trx_hash = htmr.trx_hash AND trr.max_fork_id = htmr.fork_id
     ) reversible
 ) t;
+
+CREATE OR REPLACE VIEW hive.applied_hardforks_view AS
+SELECT
+    t.hardfork_num,
+    t.block_num,
+    t.hardfork_vop_id
+FROM
+(
+    SELECT
+        hr.hardfork_num,
+        hr.block_num,
+        hr.hardfork_vop_id
+    FROM hive.applied_hardforks hr
+    UNION ALL
+    SELECT
+        reversible.hardfork_num,
+        reversible.block_num,
+        reversible.hardfork_vop_id
+    FROM (
+        SELECT
+            hjr.hardfork_num,
+            hjr.block_num,
+            hjr.hardfork_vop_id,
+            hjr.fork_id
+        FROM hive.applied_hardforks_reversible hjr
+        JOIN (
+            SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
+            FROM hive.blocks_reversible hbr
+            WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hive.irreversible_data hid )
+            GROUP by hbr.num
+        ) as forks ON forks.max_fork_id = hjr.fork_id AND forks.num = hjr.block_num
+    ) reversible
+) t
+;

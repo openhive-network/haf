@@ -583,3 +583,84 @@ BEGIN
 END;
 $BODY$
 ;
+
+
+CREATE OR REPLACE FUNCTION hive.create_applied_hardforks_view( _context_name TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+EXECUTE format(
+        'CREATE OR REPLACE VIEW hive.%s_applied_hardforks_view AS
+        SELECT
+           t.hardfork_num,
+           t.block_num,
+           t.hardfork_vop_id
+        FROM hive.%s_context_data_view c,
+        LATERAL
+        (
+          SELECT hr.hardfork_num,
+                 hr.block_num,
+                 hr.hardfork_vop_id
+                FROM hive.applied_hardforks hr
+                WHERE hr.block_num <= c.min_block
+                UNION ALL
+                SELECT
+                    reversible.hardfork_num,
+                    reversible.block_num,
+                    reversible.hardfork_vop_id
+                FROM ( SELECT
+                    hjr.hardfork_num,
+                    hjr.block_num,
+                    hjr.hardfork_vop_id,
+                    hjr.fork_id
+                FROM hive.applied_hardforks_reversible hjr
+                JOIN (
+                    SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
+                    FROM hive.blocks_reversible hbr
+                    WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
+                    GROUP by hbr.num
+                ) as forks ON forks.max_fork_id = hjr.fork_id AND forks.num = hjr.block_num
+             ) reversible
+        ) t
+        ;'
+    , _context_name, _context_name, _context_name
+    );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.create_all_irreversible_applied_hardforks_view( _context_name TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+EXECUTE format(
+        'CREATE OR REPLACE VIEW hive.%s_applied_hardforks_view AS
+        SELECT
+                 hr.hardfork_num,
+                 hr.block_num,
+                 hr.hardfork_vop_id
+        FROM hive.applied_hardforks hr
+        ;'
+    , _context_name, _context_name, _context_name
+    );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.drop_applied_hardforks_view( _context_name TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    EXECUTE format( 'DROP VIEW hive.%s_applied_hardforks_view;', _context_name );
+END;
+$BODY$
+;

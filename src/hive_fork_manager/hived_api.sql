@@ -17,6 +17,7 @@ END;
 $BODY$
 ;
 
+
 CREATE OR REPLACE FUNCTION hive.push_block(
       _block hive.blocks
     , _transactions hive.transactions[]
@@ -24,6 +25,7 @@ CREATE OR REPLACE FUNCTION hive.push_block(
     , _operations hive.operations[]
     , _accounts hive.accounts[]
     , _account_operations hive.account_operations[]
+    , _applied_hardforks hive.applied_hardforks[]
 )
     RETURNS void
     LANGUAGE plpgsql
@@ -46,6 +48,7 @@ BEGIN
     INSERT INTO hive.operations_reversible VALUES( ( unnest( _operations ) ).*, __fork_id );
     INSERT INTO hive.accounts_reversible VALUES( ( unnest( _accounts ) ).*, __fork_id );
     INSERT INTO hive.account_operations_reversible VALUES( ( unnest( _account_operations ) ).*, __fork_id );
+    INSERT INTO hive.applied_hardforks_reversible VALUES( ( unnest( _applied_hardforks ) ).*, __fork_id );
 END;
 $BODY$
 ;
@@ -76,6 +79,7 @@ BEGIN
     PERFORM hive.copy_signatures_to_irreversible( __irreversible_head_block, _block_num );
     PERFORM hive.copy_accounts_to_irreversible( __irreversible_head_block, _block_num );
     PERFORM hive.copy_account_operations_to_irreversible( __irreversible_head_block, _block_num );
+    PERFORM hive.copy_applied_hardforks_to_irreversible( __irreversible_head_block, _block_num );
 
     --try to increase irreversible blocks for every context
     PERFORM hive.refresh_irreversible_block_for_all_contexts( _block_num );
@@ -164,6 +168,8 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'operations' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'accounts' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'account_operations' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'applied_hardforks' );
+
 END;
 $BODY$
 ;
@@ -182,6 +188,8 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks' );
+
 END;
 $BODY$
 ;
@@ -200,6 +208,8 @@ BEGIN
     PERFORM hive.restore_indexes( 'hive.accounts' );
     PERFORM hive.restore_indexes( 'hive.account_operations' );
     PERFORM hive.restore_indexes( 'hive.irreversible_data' );
+    PERFORM hive.restore_indexes( 'hive.applied_hardforks' );
+
 END;
 $BODY$
 SET maintenance_work_mem TO '6GB';
@@ -219,6 +229,8 @@ BEGIN
     PERFORM hive.restore_foreign_keys( 'hive.irreversible_data' );
     PERFORM hive.restore_foreign_keys( 'hive.accounts' );
     PERFORM hive.restore_foreign_keys( 'hive.account_operations' );
+    PERFORM hive.restore_foreign_keys( 'hive.applied_hardforks' );
+
 END;
 $BODY$
 ;
@@ -236,6 +248,9 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations_reversible' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts_reversible' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations_reversible' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks_reversible' );
+
+
 
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'blocks_reversible' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions_reversible' );
@@ -243,6 +258,9 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'operations_reversible' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'accounts_reversible' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'account_operations_reversible' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'applied_hardforks_reversible' );
+
+
 END;
 $BODY$
 ;
@@ -260,6 +278,9 @@ BEGIN
     PERFORM hive.restore_indexes( 'hive.operations_reversible' );
     PERFORM hive.restore_indexes( 'hive.accounts_reversible' );
     PERFORM hive.restore_indexes( 'hive.account_operations_reversible' );
+    PERFORM hive.restore_indexes( 'hive.applied_hardforks_reversible' );
+
+
 
     PERFORM hive.restore_foreign_keys( 'hive.blocks_reversible' );
     PERFORM hive.restore_foreign_keys( 'hive.transactions_reversible' );
@@ -267,6 +288,8 @@ BEGIN
     PERFORM hive.restore_foreign_keys( 'hive.operations_reversible' );
     PERFORM hive.restore_foreign_keys( 'hive.accounts_reversible' );
     PERFORM hive.restore_foreign_keys( 'hive.account_operations_reversible' );
+    PERFORM hive.restore_foreign_keys( 'hive.applied_hardforks_reversible' );
+
 END;
 $BODY$
 ;
