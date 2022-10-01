@@ -129,6 +129,19 @@ namespace hive
           };
 
           /// Holds account information to be put into database
+          struct applied_hardforks_t
+            : public block_data_base
+          {
+            int32_t hardfork_num = 0;
+            int64_t hardfork_vop_id = 0;
+
+            applied_hardforks_t(int32_t _hardfork_num, int32_t _block_number, int64_t _hardfork_vop_id)
+            : block_data_base( _block_number )
+            , hardfork_num{_hardfork_num}
+            , hardfork_vop_id{_hardfork_vop_id}
+            {}
+          };
+
           struct account_data_t
             : public block_data_base
           {
@@ -167,8 +180,6 @@ namespace hive
           fun(ss);
           return ss;
         }
-
-
         struct name_gathering_visitor
         {
           using result_type = fc::string;

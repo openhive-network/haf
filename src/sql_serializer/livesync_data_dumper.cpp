@@ -28,6 +28,10 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       _accounts = std::move( _text );
     };
 
+    auto applied_hardforks_callback = [this]( std::string&& _text ){
+      _applied_hardforks = std::move( _text );
+    };
+
     transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "Livesync dumper" );
     constexpr auto ONE_THREAD_WRITERS_NUMBER = 3;
     auto NUMBER_OF_PROCESSORS_THREADS = ONE_THREAD_WRITERS_NUMBER + operations_threads + transactions_threads + account_operation_threads;
@@ -41,6 +45,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
         std::string operations_to_dump = "ARRAY[" + _operation_writer->get_merged_strings() + "]::hive.operations[]";
         std::string accounts_to_dump = "ARRAY[" + std::move( _accounts ) + "]::hive.accounts[]";
         std::string account_operations_to_dump = "ARRAY[" + _account_operations_writer->get_merged_strings() + "]::hive.account_operations[]";
+        std::string applied_hardforks_to_dump = "ARRAY[" + std::move( _applied_hardforks ) + "]::hive.applied_hardforks[]";
+
 
         std::string sql_command = "SELECT hive.push_block(" +
                 block_to_dump +
@@ -49,6 +55,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
           "," + operations_to_dump +
           "," + accounts_to_dump +
           "," + account_operations_to_dump +
+          "," + applied_hardforks_to_dump +
           ")";
 
         transaction->exec( sql_command );
@@ -57,6 +64,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       _block.clear();
       _transactions_multisig.clear();
       _accounts.clear();
+      _applied_hardforks.clear();
     };
     auto api_trigger = std::make_shared< block_num_rendezvous_trigger >( NUMBER_OF_PROCESSORS_THREADS, execute_push_block );
 
@@ -66,6 +74,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _operation_writer = std::make_unique<operation_data_container_t_writer>(operations_threads, "Operation data writer", api_trigger );
     _account_writer = std::make_unique<accounts_data_container_t_writer>(accounts_callback, "Accounts data writer", api_trigger);
     _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >(account_operation_threads, "Account operations data writer", api_trigger);
+    _applied_hardforks_writer = std::make_unique< applied_hardforks_container_t_writer >(applied_hardforks_callback,"Applied hardforks data writer", api_trigger );
 
     auto execute_set_irreversible
       = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx)->data_processor::data_processing_status{
@@ -105,6 +114,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _transaction_multisig_writer->trigger( std::move( cached_data.transactions_multisig ), last_block_num );
     _account_writer->trigger( std::move( cached_data.accounts ), last_block_num );
     _account_operations_writer->trigger( std::move( cached_data.account_operations ), last_block_num );
+    _applied_hardforks_writer->trigger( std::move(cached_data.applied_hardforks ), last_block_num );
 
     _block_writer->complete_data_processing();
     _operation_writer->complete_data_processing();
@@ -112,6 +122,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _transaction_multisig_writer->complete_data_processing();
     _account_writer->complete_data_processing();
     _account_operations_writer->complete_data_processing();
+    _applied_hardforks_writer->complete_data_processing();
   }
 
   void livesync_data_dumper::join() {
@@ -122,6 +133,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       , *_operation_writer
       , *_account_writer
       , *_account_operations_writer
+      , *_applied_hardforks_writer
       , *_set_irreversible_block_processor
       , *_notify_fork_block_processor
     );

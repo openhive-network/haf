@@ -130,5 +130,22 @@ namespace hive::plugins::sql_serializer {
       };
     };
 
+  struct hive_applied_hardforks
+    {
+    using container_t = std::vector<PSQL::processing_objects::applied_hardforks_t>;
+
+    static const char TABLE[];
+    static const char COLS[];
+
+    struct data2sql_tuple : public data2_sql_tuple_base
+      {
+      using data2_sql_tuple_base::data2_sql_tuple_base;
+
+      std::string operator()(typename container_t::const_reference data) const
+      {
+        return std::to_string(data.hardfork_num) + ',' + std::to_string(data.block_number) + ',' + std::to_string(data.hardfork_vop_id);
+      }
+      };
+    };
 
 } // namespace hive::plugins::sql_serializer
