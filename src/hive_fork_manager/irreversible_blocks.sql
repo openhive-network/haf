@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS hive.transactions (
     CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num)
 );
 
+
 CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
     trx_hash bytea NOT NULL,
     signature bytea NOT NULL,
@@ -68,6 +69,15 @@ CREATE TABLE IF NOT EXISTS hive.operations (
     CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id)
 );
 
+CREATE TABLE IF NOT EXISTS hive.applied_hardforks (
+    hardfork_num smallint NOT NULL,
+    block_num integer NOT NULL,
+    hardfork_vop_id bigint NOT NULL,
+    CONSTRAINT pk_hive_applied_hardforks PRIMARY KEY (hardfork_num),
+    CONSTRAINT fk_1_hive_applied_hardforks FOREIGN KEY (block_num) REFERENCES hive.blocks (num),
+    CONSTRAINT fk_2_hive_applied_hardforks FOREIGN KEY (hardfork_vop_id) REFERENCES hive.operations (id)
+);
+
 CREATE TABLE IF NOT EXISTS hive.accounts (
       id INTEGER NOT NULL
     , name VARCHAR(16) NOT NULL
@@ -91,6 +101,9 @@ CREATE TABLE IF NOT EXISTS hive.account_operations
     , CONSTRAINT hive_account_operations_uq2 UNIQUE ( account_id, operation_id )
 );
 
+CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_hardfork_vop_id_idx ON hive.applied_hardforks ( block_num, hardfork_vop_id );
+
+
 CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hive.transactions ( block_num, trx_in_block );
 
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_type_trx_in_block_idx ON hive.operations ( block_num, op_type_id, trx_in_block );
@@ -105,6 +118,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_type_account_id_op_seq
 --  ADD CONSTRAINT hive_account_operations_uq_1 UNIQUE USING INDEX hive_account_operations_account_id_op_seq_idx;
 
 CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hive.accounts USING btree (block_num);
+
 
 CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hive.blocks (producer_account_id);
 ALTER TABLE hive.blocks ADD CONSTRAINT fk_1_hive_blocks FOREIGN KEY (producer_account_id) REFERENCES hive.accounts (id) DEFERRABLE INITIALLY DEFERRED;
