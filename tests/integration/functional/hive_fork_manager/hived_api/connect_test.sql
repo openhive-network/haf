@@ -47,6 +47,7 @@ BEGIN
         , ( 2, 'user', 2)
     ;
 
+
     INSERT INTO hive.account_operations
     VALUES
           ( 1, 1, 1, 1, 1)

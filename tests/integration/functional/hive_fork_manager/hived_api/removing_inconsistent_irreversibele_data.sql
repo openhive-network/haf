@@ -53,6 +53,12 @@ BEGIN
       , ( 2, 2, 1, 2, 1)
     ;
 
+    INSERT INTO hive.applied_hardforks
+    VALUES
+        ( 1, 1, 1)
+      , ( 2, 2, 2)
+    ;
+
     -- here we simulate situation when hived claims recently only block 1
     -- block 2 was not claimed, and it is possible not all information about it was dumped - maybe hived crashes
     PERFORM hive.end_massive_sync( 1 );
@@ -89,6 +95,8 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hive.operations ) = 1, 'Unexpected number of operations';
     ASSERT ( SELECT COUNT(*) FROM hive.accounts ) = 4, 'Unexpected number of accounts';
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations ) = 1, 'Unexpected number of account_operations';
+    ASSERT ( SELECT COUNT(*) FROM hive.applied_hardforks ) = 1, 'Unexpected number of applied_hardforks';
+
 
     ASSERT ( SELECT COUNT(*) FROM hive.blocks WHERE num = 1 ) = 1, 'No blocks with num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive.transactions WHERE block_num = 1 ) = 1, 'No transaction with block_num = 1';
@@ -96,6 +104,8 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hive.accounts WHERE block_num = 1 ) = 4, 'No account with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig WHERE trx_hash = '\xDEED10'::bytea ) = 1, 'No signatures with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations WHERE account_id = 1 ) = 1, 'No account_operations with account_id = 1';
+    ASSERT ( SELECT COUNT(*) FROM hive.applied_hardforks WHERE block_num = 1 ) = 1, 'No applied_hardforks with block_num = 1';
+
 END
 $BODY$
 ;

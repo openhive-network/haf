@@ -108,7 +108,7 @@ BEGIN
                  ) as pattern
     ) , 'Unexpected rows in the view';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_view ) = 11, 'Wrong numbe rof rows';
+    ASSERT ( SELECT COUNT(*) FROM hive.transactions_view ) = 11, 'Wrong number of rows';
 END
 $BODY$
 ;

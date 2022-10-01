@@ -82,6 +82,7 @@ BEGIN
     ASSERT NOT ( SELECT is_any_index_for_table( 'hive.transactions_multisig_reversible'::regclass::oid ) ) , 'Index hive.transactions_multisig exists';
     ASSERT NOT ( SELECT is_any_index_for_table( 'hive.accounts_reversible'::regclass::oid ) ) , 'Index hive.accounts exists';
     ASSERT NOT ( SELECT is_any_index_for_table( 'hive.account_operations_reversible'::regclass::oid ) ) , 'Index hive.account_operations exists';
+    ASSERT NOT ( SELECT is_any_index_for_table( 'hive.applied_hardforks_reversible'::regclass::oid ) ) , 'Index hive.applied_hardforks exists';
 
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'blocks_reversible') ), 'FK for hive.blocks exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions_reversible') ), 'FK for hive.transactions exists';
@@ -90,6 +91,8 @@ BEGIN
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'irreversible_data_reversible') ), 'FK for hive.irreversible_data exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'accounts_reversible') ), 'FK for hive.accounts exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'account_operations_reversible') ), 'FK for hive.account_operations exists';
+    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks_reversible') ), 'FK for hive.applied_hardforks exists';
+
 
     ASSERT EXISTS(
         SELECT * FROM hive.indexes_constraints WHERE table_name='hive.transactions_multisig_reversible'

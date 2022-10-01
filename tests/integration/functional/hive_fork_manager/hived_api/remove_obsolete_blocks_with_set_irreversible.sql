@@ -100,6 +100,23 @@ BEGIN
          , ( 11, 10, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'TEN OPERATION', 3 )
     ;
 
+INSERT INTO hive.applied_hardforks_reversible
+VALUES
+       ( 4, 4, 4, 1 )
+     , ( 5, 5, 5, 1 )
+     , ( 6, 6, 6, 1 )
+     , ( 7, 7, 7, 1 ) -- must be abandon because of fork2
+     , ( 8, 7, 8, 1 ) -- must be abandon because of fork2
+     , ( 9, 7, 9, 1 ) -- must be abandon because of fork2
+     , ( 7, 7, 7, 2 )
+     , ( 8, 7, 8, 2 )
+     , ( 9, 8, 9, 2 )
+     , ( 10, 9, 10, 2 )
+     , ( 9, 8, 9, 3 )
+     , ( 10, 9, 10, 3 )
+     , ( 11, 10, 11, 3 )
+;
+
     INSERT INTO hive.account_operations_reversible
     VALUES
        ( 4, 4, 1, 4, 1, 1 )
@@ -117,6 +134,7 @@ BEGIN
      , ( 9, 10, 3, 10, 1, 3 )
      , ( 10, 11, 3, 10, 1, 3 )
 ;
+
 
     UPDATE hive.contexts SET fork_id = 2, irreversible_block = 8, current_block_num = 8;
     -- SUMMARY:
@@ -234,6 +252,19 @@ BEGIN
     ) as pattern
     ), 'Unexpected rows in hive.account_operations_reversible'
     ;
+
+    ASSERT EXISTS( SELECT * FROM hive.applied_hardforks_reversible ), 'No reversible applied_hardforks';
+    ASSERT NOT EXISTS (
+        SELECT * FROM hive.applied_hardforks_reversible
+        EXCEPT SELECT * FROM ( VALUES
+        ( 9, 8, 9, 2 )
+      , ( 10, 9, 10, 2 )
+      , ( 9, 8, 9, 3 )
+      , ( 10, 9, 10, 3 )
+      , ( 11, 10, 11, 3 )
+        ) as pattern
+    ) , 'Unexpected rows in hive.applied_hardforks_reversible';
+
 END;
 $BODY$
 ;

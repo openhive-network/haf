@@ -28,10 +28,12 @@ PERFORM hive.push_block(
         , NULL
         , NULL
         , NULL
+        , NULL
     );
 
 PERFORM hive.push_block(
          ( 7, '\xBADD70', '\xCAFE70', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w' )
+        , NULL
         , NULL
         , NULL
         , NULL
@@ -48,10 +50,12 @@ PERFORM hive.push_block(
         , NULL
         , NULL
         , NULL
+        , NULL
     );
 
 PERFORM hive.push_block(
          ( 9, '\xBADD90', '\xCAFE90', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w' )
+        , NULL
         , NULL
         , NULL
         , NULL
@@ -68,10 +72,12 @@ PERFORM hive.push_block(
         , NULL
         , NULL
         , NULL
+        , NULL
     );
 
 PERFORM hive.push_block(
          ( 9, '\xBADD91', '\xCAFE91', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w' )
+        , NULL
         , NULL
         , NULL
         , NULL
@@ -165,6 +171,7 @@ PERFORM hive.push_block(
         , NULL
         , NULL
         , NULL
+        , NULL
     );
 
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- BACK_FROM_FORK(8)
@@ -182,6 +189,7 @@ ASSERT __blocks IS NULL, 'Null is not returned instead for block 10';
 
 PERFORM hive.push_block(
          ( 10, '\xBADD1010', '\xCAFE1010', '2016-06-22 19:10:25-07'::timestamp, 5 )
+        , NULL
         , NULL
         , NULL
         , NULL

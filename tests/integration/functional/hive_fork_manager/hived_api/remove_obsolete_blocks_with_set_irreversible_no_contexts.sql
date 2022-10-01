@@ -118,6 +118,23 @@ BEGIN
     -- SUMMARY:
     --We have 3 forks: 1 (blocks: 4,5,6),2 (blocks: 7,8,9) ,3 (blocks: 8,9, 10), moreover block 1,2,3,4 are
     --in set of irreversible blocks.
+INSERT INTO hive.applied_hardforks_reversible
+VALUES
+       ( 4, 4, 4, 1 )
+     , ( 5, 5, 5, 1 )
+     , ( 6, 6, 6, 1 )
+     , ( 7, 7, 7, 1 ) 
+     , ( 8, 7, 8, 1 ) 
+     , ( 9, 7, 9, 1 ) 
+     , ( 7, 7, 7, 2 )
+     , ( 8, 7, 8, 2 )
+     , ( 9, 8, 9, 2 )
+     , ( 10, 9, 10, 2 )
+     , ( 9, 8, 9, 3 )
+     , ( 10, 9, 10, 3 )
+     , ( 11, 10, 11, 3 )
+;
+
 
 END;
 $BODY$
@@ -232,10 +249,21 @@ BEGIN
         ) as pattern
     ), 'Unexpected rows in hive.account_operations_reversible'
     ;
+
+    ASSERT EXISTS( SELECT * FROM hive.applied_hardforks_reversible ), 'No reversible applied_hardforks';
+    ASSERT NOT EXISTS (
+        SELECT * FROM hive.applied_hardforks_reversible
+        EXCEPT SELECT * FROM ( VALUES
+       ( 9, 8, 9, 2 )
+     , ( 10, 9, 10, 2 )
+     , ( 9, 8, 9, 3 )
+     , ( 10, 9, 10, 3 )
+     , ( 11, 10, 11, 3 )
+        ) as pattern
+    ) , 'Unexpected rows in hive.applied_hardforks_reversible';
+
 END;
 $BODY$
 ;
-
-
 
 

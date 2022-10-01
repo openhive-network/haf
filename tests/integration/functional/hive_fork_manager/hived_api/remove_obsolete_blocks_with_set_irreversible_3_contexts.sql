@@ -119,6 +119,23 @@ BEGIN
          , ( 9, 10, 3, 10, 1, 3 )
          , ( 10, 11, 3, 10, 1, 3 )
     ;
+  
+INSERT INTO hive.applied_hardforks_reversible
+VALUES
+       ( 4, 4, 4, 1 )
+     , ( 5, 5, 5, 1 )
+     , ( 6, 6, 6, 1 )
+     , ( 7, 7, 7, 1 ) -- must be abandon because of fork2
+     , ( 8, 7, 8, 1 ) -- must be abandon because of fork2
+     , ( 9, 7, 9, 1 ) -- must be abandon because of fork2
+     , ( 7, 7, 7, 2 )
+     , ( 8, 7, 8, 2 )
+     , ( 9, 8, 9, 2 )
+     , ( 10, 9, 10, 2 )
+     , ( 9, 8, 9, 3 )
+     , ( 10, 9, 10, 3 )
+     , ( 11, 10, 11, 3 )
+;
 
     UPDATE hive.contexts SET fork_id = 1, irreversible_block = 6, current_block_num = 6 WHERE name = 'context1';
     UPDATE hive.contexts SET fork_id = 1, irreversible_block = 7, current_block_num = 7 WHERE name = 'context17';
@@ -251,6 +268,25 @@ BEGIN
     ), 'Unexpected rows in hive.operations_reversible'
     ;
 
+
+    ASSERT EXISTS( SELECT * FROM hive.applied_hardforks_reversible ), 'No reversible applied_hardforks';
+    ASSERT NOT EXISTS (
+        SELECT * FROM hive.applied_hardforks_reversible
+        EXCEPT SELECT * FROM ( VALUES
+       ( 6, 6, 6, 1 )
+     , ( 7, 7, 7, 1 ) 
+     , ( 8, 7, 8, 1 ) 
+     , ( 9, 7, 9, 1 ) 
+     , ( 7, 7, 7, 2 )
+     , ( 8, 7, 8, 2 )
+     , ( 9, 8, 9, 2 )
+     , ( 10, 9, 10, 2 )
+     , ( 9, 8, 9, 3 )
+     , ( 10, 9, 10, 3 )
+     , ( 11, 10, 11, 3 )
+        ) as pattern
+    ) , 'Unexpected rows in hive.applied_hardforks_reversible';
+
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations_reversible ) = 3, 'Wrong number of account_operations';
     ASSERT NOT EXISTS (
     SELECT * FROM hive.account_operations_reversible
@@ -266,6 +302,8 @@ BEGIN
 END;
 $BODY$
 ;
+
+
 
 
 

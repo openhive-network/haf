@@ -73,6 +73,15 @@ BEGIN
      , ( 4, 4, 1, 4, 1 )
     ;
 
+INSERT INTO hive.applied_hardforks
+VALUES
+       ( 1, 1, 1 )
+     , ( 2, 2, 2 )
+     , ( 3, 3, 3 )
+     , ( 4, 4, 4 )
+     , ( 5, 5, 5 )
+;
+
     INSERT INTO hive.blocks_reversible
     VALUES
            ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1 )
@@ -169,6 +178,23 @@ BEGIN
          , ( 9, 10, 3, 10, 1, 3 ) -- block 9(3)
          , ( 9, 11, 3, 10, 1, 3 ) -- block 9(3)
     ;
+
+INSERT INTO hive.applied_hardforks_reversible
+VALUES
+       ( 4, 4, 4, 1 )
+     , ( 5, 5, 5, 1 )
+     , ( 6, 6, 6, 1 )
+     , ( 7, 7, 7, 1 ) -- must be abandon because of fork2
+     , ( 8, 7, 8, 1 ) -- must be abandon because of fork2
+     , ( 9, 7, 9, 1 ) -- must be abandon because of fork2
+     , ( 7, 7, 7, 2 )
+     , ( 8, 7, 8, 2 )
+     , ( 9, 8, 9, 2 )
+     , ( 10, 9, 10, 2 )
+     , ( 9, 8, 9, 3 )
+     , ( 10, 9, 10, 3 )
+     , ( 11, 10, 11, 3 )
+;
 
 
     UPDATE hive.contexts SET fork_id = 2, irreversible_block = 8, current_block_num = 8;
@@ -370,6 +396,38 @@ BEGIN
              ) as pattern
     ) , 'Unexpected rows in the account_operations';
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations ) = 8, 'Wrong number of hive account_operations';
+
+    ASSERT EXISTS( SELECT * FROM hive.applied_hardforks ), 'No applied_hardforks';
+
+    ASSERT NOT EXISTS (
+        SELECT * FROM hive.applied_hardforks
+        EXCEPT SELECT * FROM ( VALUES
+       ( 1, 1, 1 )
+     , ( 2, 2, 2 )
+     , ( 3, 3, 3 )
+     , ( 4, 4, 4 )
+     , ( 5, 5, 5 )
+     , ( 6, 6, 6 )
+     , ( 7, 7, 7 )
+     , ( 8, 7, 8 )
+     , ( 9, 8, 9 )
+        ) as pattern
+    ) , 'Unexpected rows in hive.applied_hardforks';
+
+    ASSERT EXISTS( SELECT * FROM hive.applied_hardforks_reversible ), 'No reversible applied_hardforks';
+
+
+    ASSERT NOT EXISTS (
+        SELECT * FROM hive.applied_hardforks_reversible
+        EXCEPT SELECT * FROM ( VALUES
+       ( 9, 8, 9, 2 )
+     , ( 10, 9, 10, 2 )
+     , ( 9, 8, 9, 3 )
+     , ( 10, 9, 10, 3 )
+     , ( 11, 10, 11, 3 )
+        ) as pattern
+    ) , 'Unexpected rows in hive.applied_hardforks_reversible';
+    
 END;
 $BODY$
 ;

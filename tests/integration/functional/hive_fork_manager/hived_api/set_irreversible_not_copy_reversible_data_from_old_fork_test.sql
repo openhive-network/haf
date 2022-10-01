@@ -32,6 +32,7 @@ BEGIN
         , NULL
         , NULL
         , NULL
+        , NULL
     );
 
     INSERT INTO hive.accounts_reversible
@@ -56,10 +57,16 @@ BEGIN
     VALUES
     ( '\xDEED20', '\xBEEF20',  1 );
 
+      INSERT INTO hive.applied_hardforks_reversible
+    VALUES ( 1, 2, 1, 1 )
+    ;
+
+
     PERFORM hive.back_from_fork( 1 );
 
     PERFORM hive.push_block(
          ( 2, '\xBADD22', '\xCAFE22', '2016-06-22 19:10:25-07'::timestamp, 7, '\x4007', E'[]', '\x2157', 'STM65w' )
+        , NULL
         , NULL
         , NULL
         , NULL
@@ -96,6 +103,7 @@ BEGIN
     ASSERT NOT EXISTS ( SELECT * FROM hive.transactions_multisig ), 'Signatures from abandoned block has landed in irreversible table';
     ASSERT NOT EXISTS ( SELECT * FROM hive.accounts WHERE id = 1 ), 'Accounts abandoned block has landed in irreversible table';
     ASSERT NOT EXISTS ( SELECT * FROM hive.account_operations ), 'Account_operations is not empty';
+    ASSERT NOT EXISTS ( SELECT * FROM hive.applied_hardforks ), 'Hardforks from abandoned block has landed in irreversible table';
     ASSERT NOT EXISTS ( SELECT * FROM hive.blocks WHERE hash = '\xBADD20'::bytea ), 'Abandoned block has landed in irreversible table';
 END;
 $BODY$

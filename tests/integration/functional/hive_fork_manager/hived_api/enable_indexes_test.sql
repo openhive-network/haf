@@ -98,12 +98,16 @@ BEGIN
     ASSERT ( SELECT is_any_index_for_table( 'hive.transactions'::regclass::oid ) ) , 'Index hive.transactions not exists';
     ASSERT ( SELECT is_any_index_for_table( 'hive.operations'::regclass::oid ) ) , 'Index hive.operations not exists';
     ASSERT ( SELECT is_any_index_for_table( 'hive.transactions_multisig'::regclass::oid ) ) , 'Index hive.transactions_multisig not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hive.applied_hardforks'::regclass::oid ) ) , 'Index hive.applied_hardforks not exists';
+
 
     ASSERT ( SELECT is_constraint_exists( 'pk_hive_blocks', 'PRIMARY KEY' ) ), 'PK pk_hive_blocks not exists';
     ASSERT ( SELECT is_constraint_exists( 'pk_hive_transactions', 'PRIMARY KEY' ) ), 'PK pk_hive_transactions not exists';
     ASSERT ( SELECT is_constraint_exists( 'pk_hive_transactions_multisig', 'PRIMARY KEY' ) ), 'PK pk_hive_transactions_multisig not exists';
     ASSERT ( SELECT is_constraint_exists( 'pk_hive_operations', 'PRIMARY KEY' ) ), 'PK pk_hive_operations not exists';
     ASSERT ( SELECT is_constraint_exists( 'pk_irreversible_data', 'PRIMARY KEY' ) ), 'PK pk_hive_irreversible_data not exists';
+    ASSERT ( SELECT is_constraint_exists( 'pk_hive_applied_hardforks', 'PRIMARY KEY' ) ), 'PK pk_hive_applied_hardforks not exists';
+
 
     ASSERT EXISTS( SELECT 1 FROM pg_index pgi WHERE pgi.indrelid = 'hive.transactions'::regclass::oid ), 'No index for table hive.transactions';
     ASSERT EXISTS( SELECT 1 FROM pg_index pgi WHERE pgi.indrelid = 'hive.operations'::regclass::oid ), 'No index for table hive.operations';
