@@ -450,6 +450,31 @@ void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& no
   ilog("Leaving a resync data init...");
 }
 
+
+struct hardfork_id_extractor_visitor
+{
+  typedef void result_type;
+
+  int hardfork_id;
+  template<typename T>
+  void operator()( const T& op )
+    {
+      hardfork_id = -1;
+    }
+
+  void operator()( const hive::protocol::hardfork_operation& op )
+    {
+      hardfork_id = op.hardfork_id;
+    }
+};
+
+int get_hardfork_id(const hive::protocol::operation& op)
+{
+  hardfork_id_extractor_visitor vis;
+  op.visit(vis);
+  return vis.hardfork_id;
+}
+
 void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notification& note)
 {
   FC_ASSERT((chain_db.is_processing_block() && chain_db.is_producing_block()==false), "SQL serializer shall process only operations contained by finished blocks");
@@ -472,6 +497,16 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
     filter.remember_trx_id( note.trx_in_block );
 
     cached_containter_t& cdtf = currently_caching_data; // alias
+
+   int hardfork_num = get_hardfork_id(note.op);
+    if(hardfork_num >= 0)
+    {
+      cdtf->applied_hardforks.emplace_back(
+        hardfork_num,
+        note.block,
+        op_sequence_id
+      );
+    }
 
     cdtf->operations.emplace_back(
       op_sequence_id,
