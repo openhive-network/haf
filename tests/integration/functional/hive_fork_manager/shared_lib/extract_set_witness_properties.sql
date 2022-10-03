@@ -30,7 +30,7 @@ AS
 $BODY$
 BEGIN
 
-    ASSERT 0 = (SELECT COUNT(*) FROM (
+    ASSERT 8 = (SELECT COUNT(*) FROM (
         SELECT (
             (
                 hive.extract_set_witness_properties(
@@ -44,7 +44,7 @@ BEGIN
             ) = (pattern ::TEXT)
         ) as cmp_result
         FROM samples_for_extract_set_witness_properties
-    ) x WHERE x.cmp_result != TRUE);
+    ) x WHERE x.cmp_result);
 
 END;
 $BODY$

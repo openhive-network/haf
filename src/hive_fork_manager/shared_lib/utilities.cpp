@@ -113,7 +113,18 @@ extern "C"
 #undef elog
 #endif
 
-#include <include/psql_utils/postgres_includes.hpp>
+//Suppress 'register' keyword usage warning in 3rd party code
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
+   #include <include/psql_utils/postgres_includes.hpp>
+#pragma clang diagnostic pop
+#elif defined(__GNUC__) || defined(__GNUG__)
+  #pragma GCC diagnostic push 
+  #pragma GCC diagnostic ignored "-Wregister"
+    #include <include/psql_utils/postgres_includes.hpp>
+  #pragma GCC diagnostic pop
+#endif
 
 #include <fmgr.h>
 #include <catalog/pg_type.h>
@@ -124,35 +135,23 @@ extern "C"
 #include <funcapi.h>
 #include <miscadmin.h>
 
-
-void issue_error(const char* msg)
-{
-  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("%s", msg))); //NOLINT
 }
 
-#pragma pop_macro("elog")
-
-
-PG_MODULE_MAGIC;
-
-PG_FUNCTION_INFO_V1(extract_set_witness_properties);
-
-Datum extract_set_witness_properties(PG_FUNCTION_ARGS)
+Tuplestorestate* init_tuple_store(ReturnSetInfo *rsinfo, TupleDesc retvalDescription)
 {
-  #define EXTRACT_PROPERTIES_RETURN_ATTRIBUTES 2
-  #define PROP_NAME 0
-  #define PROP_VALUE 1
+  MemoryContext per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
+  MemoryContext oldcontext = MemoryContextSwitchTo(per_query_ctx);
+  Tuplestorestate *tupstore  = tuplestore_begin_heap(true, false, work_mem);
+  rsinfo->returnMode = SFRM_Materialize;
+  rsinfo->setResult = tupstore;
+  rsinfo->setDesc = retvalDescription;
+  MemoryContextSwitchTo(oldcontext);
+  return tupstore;
+}
 
 
-  TupleDesc            retvalDescription;
-  Tuplestorestate*     tupstore = nullptr;
-
-  MemoryContext per_query_ctx;
-  MemoryContext oldcontext;
-
-  Datum tuple_values[EXTRACT_PROPERTIES_RETURN_ATTRIBUTES] = {0};
-  bool  nulls[EXTRACT_PROPERTIES_RETURN_ATTRIBUTES] = {false};
-
+void check_return_mode(PG_FUNCTION_ARGS)
+{
   ReturnSetInfo* rsinfo = reinterpret_cast<ReturnSetInfo*>(fcinfo->resultinfo); //NOLINT
 
   /* check to see if caller supports us returning a tuplestore */
@@ -165,59 +164,132 @@ Datum extract_set_witness_properties(PG_FUNCTION_ARGS)
   {
     issue_error("materialize mode required, but it is not allowed in this context");
   }
+}
 
-/* Build a tuple descriptor for our result type */
+TupleDesc build_tuple_descriptor(PG_FUNCTION_ARGS)
+{
+  /* Build a tuple descriptor for our result type */
+  TupleDesc retvalDescription;
   if(get_call_result_type(fcinfo, nullptr, &retvalDescription) != TYPEFUNC_COMPOSITE)
   {
     issue_error("return type must be a row type");
   }
 
-  extract_set_witness_properties_result_t _extracted_data;
-  const char* _props_to_extract = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  return retvalDescription;
+}
 
-  try
+
+Datum colect_data_and_fill_returned_recordset(std::function<void ()> collect, std::function<void ()>  fill_return_tuple,  const char* C_function_name, const char* arg1) noexcept 
+{
+  try 
   {
-    extract_set_witness_properties_impl( _extracted_data, _props_to_extract );
+    collect();
   }
   catch(const fc::exception& ex)
   {
     fc::string exception_info = ex.to_string();
-    issue_error(fc::string("Broken extract_set_witness_properties() input argument: `") + _props_to_extract + fc::string("'. Error: ") + exception_info);
+    issue_error(fc::string("Broken " + fc::string(C_function_name) + "() input argument: `") + arg1 + fc::string("'. Error: ") + exception_info);
     return (Datum)0;
   }
   catch(const std::exception& ex)
   {
-    issue_error(fc::string("Broken extract_set_witness_properties() input argument: `") + _props_to_extract + fc::string("'. Error: ") + ex.what());
+    issue_error(fc::string("Broken " + fc::string(C_function_name) + "() input argument: `") + arg1 + fc::string("'. Error: ") + ex.what());
     return (Datum)0;
   }
   catch(...)
   {
-    issue_error(fc::string("Unknown error during processing extract_set_witness_properties(") + _props_to_extract + fc::string(")"));
+    issue_error(fc::string("Unknown error during processing " + fc::string(C_function_name) + "(") + arg1 + fc::string(")"));
     return (Datum)0;
   }
 
-  per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
-  oldcontext = MemoryContextSwitchTo(per_query_ctx);
+  fill_return_tuple();
 
-  tupstore = tuplestore_begin_heap(true, false, work_mem);
+  return (Datum)0;
+}
 
-  /* let the caller know we're sending back a tuplestore */
-  rsinfo->returnMode = SFRM_Materialize;
-  rsinfo->setResult = tupstore;
-  rsinfo->setDesc = retvalDescription;
 
-  MemoryContextSwitchTo(oldcontext);
 
-  for(const auto& data : _extracted_data)
-  {
-    tuple_values[PROP_NAME] = CStringGetTextDatum(data.first.c_str());
-    tuple_values[PROP_VALUE] = CStringGetTextDatum(data.second.c_str());
+template<typename ElemT, typename F>
+void fill_record_field(Datum* tuple_values, ElemT elem, const F& func, std::size_t counter)
+{
+    *(tuple_values + counter) = func(elem);
+}
 
-    tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
-  }
+template<typename ElemT, typename ... Funcs>
+void fill_record(Datum* tuple_values, ElemT elem, Funcs ... funcs)
+{
+    std::size_t counter = 0;
+    std::initializer_list<int>{ ( fill_record_field(tuple_values, elem, funcs, counter++), 0) ... };
+}
 
-/* clean up and return the tuplestore */
-  tuplestore_donestoring(tupstore);
+template<typename Collection,typename ... Funcs>
+void fill_return_tuples(const Collection& collection, PG_FUNCTION_ARGS, Funcs ... funcs)
+{
+    check_return_mode(fcinfo);
+
+    TupleDesc retvalDescription = build_tuple_descriptor(fcinfo);
+
+    ReturnSetInfo* rsinfo = reinterpret_cast<ReturnSetInfo*>(fcinfo->resultinfo); //NOLINT
+
+    Tuplestorestate* tupstore = init_tuple_store(rsinfo, retvalDescription);
+
+    const auto TUPLE_LENGTH = sizeof ... (Funcs);
+
+    Datum tuple_values[TUPLE_LENGTH] = {0};
+    bool nulls[TUPLE_LENGTH] = {false};
+
+    for(const auto& collected_item : collection)
+    {
+      fill_record(tuple_values, collected_item, funcs...);
+
+      tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
+    }
+
+    tuplestore_donestoring(tupstore);
+
+}
+
+
+extern "C"
+{
+
+
+void issue_error(const char* msg)
+{
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("%s", msg))); //NOLINT
+}
+
+#pragma pop_macro("elog")
+
+
+PG_MODULE_MAGIC;
+
+
+PG_FUNCTION_INFO_V1(extract_set_witness_properties);
+
+Datum extract_set_witness_properties(PG_FUNCTION_ARGS)
+{
+
+  extract_set_witness_properties_result_t _extracted_data;
+  const char* _props_to_extract = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+  colect_data_and_fill_returned_recordset(
+      [=, &_extracted_data]()
+      {
+        extract_set_witness_properties_impl( _extracted_data, _props_to_extract );
+      },
+
+      [=, &_extracted_data]()
+      {
+        fill_return_tuples(_extracted_data, fcinfo, 
+          [] (const auto& data) {return CStringGetTextDatum(data.first.c_str());},
+          [] (const auto& data) {return CStringGetTextDatum(data.second.c_str());}
+        );
+      },
+
+    __FUNCTION__,
+
+     _props_to_extract);
 
   return (Datum)0;
 }
@@ -229,29 +301,15 @@ Datum get_legacy_style_operation(PG_FUNCTION_ARGS)
   const char* _operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
   auto _result = (Datum)0;
 
-  try
-  {
-
-    fc::string _legacy_operation_body = get_legacy_style_operation_impl( _operation_body );
-
-    _result = CStringGetTextDatum( _legacy_operation_body.c_str() );
-  }
-  catch(const fc::exception& ex)
-  {
-    fc::string exception_info = ex.to_string();
-    issue_error(fc::string("Broken get_legacy_style_operation() input argument: `") + _operation_body + fc::string("'. Error: ") + exception_info);
-    return (Datum)0;
-  }
-  catch(const std::exception& ex)
-  {
-    issue_error(fc::string("Broken get_legacy_style_operation() input argument: `") + _operation_body + fc::string("'. Error: ") + ex.what());
-    return (Datum)0;
-  }
-  catch(...)
-  {
-    issue_error(fc::string("Unknown error during processing get_legacy_style_operation(") + _operation_body + fc::string(")"));
-    return (Datum)0;
-  }
+  colect_data_and_fill_returned_recordset(
+    [=, &_result]()
+    {
+        fc::string _legacy_operation_body = get_legacy_style_operation_impl( _operation_body );
+        _result = CStringGetTextDatum( _legacy_operation_body.c_str() );
+    },
+    [](){},
+    __FUNCTION__,
+    _operation_body);
 
   return _result;
 }
@@ -380,97 +438,70 @@ FUNCTION get_impacted_balances(_operation_body text, IN _is_hf01 bool) RETURNS S
 
 Datum get_impacted_balances(PG_FUNCTION_ARGS)
 {
-  #define IMPACTED_BALANCES_RETURN_ATTRIBUTES 4
-  #define ACCOUNT_NAME_IDX 0
-  #define AMOUNT_IDX 1
-  #define ASSET_PRECISION_IDX 2
-  #define ASSET_NAI_IDX 3
-
-  TupleDesc            retvalDescription;
-  Tuplestorestate*     tupstore = nullptr;
-
-  MemoryContext per_query_ctx;
-  MemoryContext oldcontext;
-
-  Datum tuple_values[IMPACTED_BALANCES_RETURN_ATTRIBUTES] = {0};
-  bool  nulls[IMPACTED_BALANCES_RETURN_ATTRIBUTES] = {false};
-
-  ReturnSetInfo* rsinfo = reinterpret_cast<ReturnSetInfo*>(fcinfo->resultinfo); //NOLINT
-
-  /* check to see if caller supports us returning a tuplestore */
-  if(rsinfo == nullptr || !IsA(rsinfo, ReturnSetInfo))
-  {
-    issue_error("set-valued function called in context that cannot accept a set");
-  }
-
-  if((rsinfo->allowedModes & SFRM_Materialize) == 0) //NOLINT
-  {
-    issue_error("materialize mode required, but it is not allowed in this context");
-  }
-
-/* Build a tuple descriptor for our result type */
-  if(get_call_result_type(fcinfo, nullptr, &retvalDescription) != TYPEFUNC_COMPOSITE)
-  {
-    issue_error("return type must be a row type");
-  }
-
   impacted_balance_data collected_data;
   const char* operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
   const bool is_hf01 = PG_GETARG_BOOL(1);
 
-  try
-  {
-    collected_data = collect_impacted_balances(operation_body, is_hf01);
-  }
-  catch(const fc::exception& ex)
-  {
-    fc::string exception_info = ex.to_string();
-    issue_error(fc::string("Broken get_impacted_balances() input argument: `") + operation_body + fc::string("'. Error: ") + exception_info);
-    return (Datum)0;
-  }
-  catch(const std::exception& ex)
-  {
-    issue_error(fc::string("Broken get_impacted_balances() input argument: `") + operation_body + fc::string("'. Error: ") + ex.what());
-    return (Datum)0;
-  }
-  catch(...)
-  {
-    issue_error(fc::string("Unknown error during processing get_impacted_balances(") + operation_body + fc::string(")"));
-    return (Datum)0;
-  }
+  colect_data_and_fill_returned_recordset(
 
-  per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
-  oldcontext = MemoryContextSwitchTo(per_query_ctx);
+    [=, &collected_data]()
+    {
+        collected_data = collect_impacted_balances(operation_body, is_hf01);
+    }, 
 
-  tupstore = tuplestore_begin_heap(true, false, work_mem);
+    [=, &collected_data]()
+    {
+      fill_return_tuples(collected_data, fcinfo, 
+          [] (const auto& impacted_balance) {fc::string account = impacted_balance.first; return CStringGetTextDatum(account.c_str());},
+          [] (const auto& impacted_balance) {const hive::protocol::asset& balance_change = impacted_balance.second; return Int64GetDatum(balance_change.amount.value);},
+          [] (const auto& impacted_balance) {const hive::protocol::asset_symbol_type& token_type = impacted_balance.second.symbol; return Int32GetDatum(int32_t(token_type.decimals()));},
+          [] (const auto& impacted_balance) {const hive::protocol::asset_symbol_type& token_type = impacted_balance.second.symbol; return Int32GetDatum(int32_t(token_type.to_nai()));}
+        );
+    },
+    
+    __FUNCTION__,
 
-  /* let the caller know we're sending back a tuplestore */
-  rsinfo->returnMode = SFRM_Materialize;
-  rsinfo->setResult = tupstore;
-  rsinfo->setDesc = retvalDescription;
+    operation_body);
 
-  MemoryContextSwitchTo(oldcontext);
 
-  for(const auto& impacted_balance : collected_data)
-  {
-    fc::string account = impacted_balance.first;
-    const hive::protocol::asset& balance_change = impacted_balance.second;
-    const hive::protocol::asset_symbol_type& token_type = balance_change.symbol;
-
-    tuple_values[ACCOUNT_NAME_IDX] = CStringGetTextDatum(account.c_str());
-
-    tuple_values[AMOUNT_IDX] = Int64GetDatum(balance_change.amount.value);
-    tuple_values[ASSET_PRECISION_IDX] = Int32GetDatum(int32_t(token_type.decimals()));
-    tuple_values[ASSET_NAI_IDX] = Int32GetDatum(int32_t(token_type.to_nai()));
-
-    tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
-  }
-
-/* clean up and return the tuplestore */
-  tuplestore_donestoring(tupstore);
 
   return (Datum)0;
 }
+
+  PG_FUNCTION_INFO_V1(get_balance_impacting_operations);
+
+  /**
+   ** 
+   **  CREATE OR REPLACE FUNCTION hive.get_balance_impacting_operations()
+   ** 
+   **
+   **/
+
+  Datum get_balance_impacting_operations(PG_FUNCTION_ARGS)
+  {
+    hive::app::stringset operations_used_in_get_balance_impacting_operations;
+    
+    colect_data_and_fill_returned_recordset
+    (
+
+      [=, &operations_used_in_get_balance_impacting_operations](){operations_used_in_get_balance_impacting_operations = hive::app::get_operations_used_in_get_balance_impacting_operations();},
+
+      [=, &operations_used_in_get_balance_impacting_operations]()
+      {
+        fill_return_tuples(operations_used_in_get_balance_impacting_operations, fcinfo, 
+          [] (const auto& operation_name) {return CStringGetTextDatum(operation_name.c_str());}
+        );
+      },
+
+    __FUNCTION__,
+
+      ""
+    );
+      
+
+    return (Datum)0;
+  }  
+
 
 
   PG_FUNCTION_INFO_V1(get_keyauths_wrapped);
@@ -492,85 +523,81 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
   Datum get_keyauths_wrapped(PG_FUNCTION_ARGS)
   {
-  
-    TupleDesc retvalDescription;
-    Tuplestorestate *tupstore = nullptr;
-
-    MemoryContext per_query_ctx;
-    MemoryContext oldcontext;
-  
-    ReturnSetInfo *rsinfo = reinterpret_cast<ReturnSetInfo *>(fcinfo->resultinfo); 
-
-    
-    if (rsinfo == nullptr || !IsA(rsinfo, ReturnSetInfo))
-    {
-      issue_error("set-valued function called in context that cannot accept a set");
-    }
-
-    if ((rsinfo->allowedModes & SFRM_Materialize) == 0)
-    {
-      issue_error("materialize mode required, but it is not allowed in this context");
-    }
-
- 
-    if (get_call_result_type(fcinfo, nullptr, &retvalDescription) != TYPEFUNC_COMPOSITE)
-    {
-      issue_error("return type must be a row type");
-    }
-
-    per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
-    oldcontext = MemoryContextSwitchTo(per_query_ctx);
-
-    tupstore = tuplestore_begin_heap(true, false, work_mem);
-
-    rsinfo->returnMode = SFRM_Materialize;
-    rsinfo->setResult = tupstore;
-    rsinfo->setDesc = retvalDescription;
-
-    MemoryContextSwitchTo(oldcontext);
-
     const char *operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
 
     collected_keyauth_collection_t collected_keyauths;
-    try
-    {
-      collected_keyauths = collect_keyauths(operation_body);
-    }
 
-    catch (const fc::exception &ex)
-    {
-      std::string exception_info = ex.to_string();
-      issue_error(std::string("Broken ") + __FUNCTION__+  "() input argument: `" + operation_body + std::string("'. Error: ") + exception_info);
-      return (Datum)0;
-    }
-    catch (const std::exception &ex)
-    {
-      issue_error(std::string("Broken ") + __FUNCTION__ + "() input argument: `" + operation_body + std::string("'. Error: ") + ex.what());
-      return (Datum)0;
-    }
-    catch (...)
-    {
-      issue_error(std::string("Unknown error during processing ") + __FUNCTION__ + "(" + operation_body + std::string(")"));
-      return (Datum)0;
-    }
-      
-    const auto GET_KEYAUTHS_RETURN_ATTRIBUTES = 3;
-    const auto KEY_AUTH_IDX = 0;
-    const auto AUTHORITY_KIND_IDX = 1;
-    const auto ACCOUNT_NAME__IDX = 2;
+    colect_data_and_fill_returned_recordset(
 
-    Datum tuple_values[GET_KEYAUTHS_RETURN_ATTRIBUTES] = {0};
-    bool nulls[GET_KEYAUTHS_RETURN_ATTRIBUTES] = {false};
+      [=, &collected_keyauths]()
+      {
+        collected_keyauths = collect_keyauths(operation_body);
+      },
 
-    for(const auto& collected_item : collected_keyauths)
-    {
-      tuple_values[KEY_AUTH_IDX] = CStringGetTextDatum(collected_item.key_auth.c_str());
-      tuple_values[AUTHORITY_KIND_IDX] = Int32GetDatum(collected_item.authority_kind);
-      tuple_values[ACCOUNT_NAME__IDX] = CStringGetTextDatum(collected_item.account_name.c_str());
-      tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
-    }
 
-    tuplestore_donestoring(tupstore);
+      [=, &collected_keyauths]()
+      {
+        fill_return_tuples(collected_keyauths, fcinfo,
+          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.key_auth.c_str());},
+          [] (const auto& collected_item) {return Int32GetDatum(collected_item.authority_kind);},
+          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.account_name.c_str());}
+        );
+      },
+
+      __FUNCTION__, 
+
+      operation_body
+    );
+
     return (Datum)0;
   }
+
+
+  PG_FUNCTION_INFO_V1(get_keyauths_operations);
+
+  /**
+   ** 
+   **  CREATE OR REPLACE FUNCTION hive.get_keyauths_operations()
+   **  RETURNS hive.get_operations_type
+   **
+   **
+   ** To be used in a filter like this:
+   **
+   ** 'INSERT INTO hive.%s_keyauth 
+   **     SELECT (hive.get_keyauths( ov.body )).*
+   **     FROM hive.%s_operations_view ov
+   **     WHERE
+   **             hive.is_keyauths_operation(ov.body)
+   **         AND 
+   **             ov.block_num BETWEEN %s AND %s
+   **     ON CONFLICT DO NOTHING'
+   **     , _context, _context, _first_block, _last_block
+   **
+   **/
+
+  Datum get_keyauths_operations(PG_FUNCTION_ARGS)
+  {
+    hive::app::stringset operations_used_in_get_keyauths;
+
+    colect_data_and_fill_returned_recordset(
+
+      [=, &operations_used_in_get_keyauths]()
+      {
+      operations_used_in_get_keyauths = hive::app::get_operations_used_in_get_keyauths();},
+
+      [=, &operations_used_in_get_keyauths]()
+      {
+        fill_return_tuples(operations_used_in_get_keyauths, fcinfo, 
+          [] (const auto& operation_name) {return CStringGetTextDatum(operation_name.c_str());}
+        );
+      },
+
+      __FUNCTION__,
+
+      ""
+    );
+      
+
+    return (Datum)0;
+  }  
 }

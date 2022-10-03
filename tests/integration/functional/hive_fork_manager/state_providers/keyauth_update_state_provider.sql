@@ -226,12 +226,35 @@ BEGIN
 
         --overall key count
     ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 9, 'Wrong number of keys';
+
+        --check overall operations used
+    ASSERT hive.unordered_arrays_equal(
+        (SELECT array_agg(t.get_keyauths_operations) FROM hive.get_keyauths_operations()t),
+        (SELECT array_agg(t) FROM hive.get_keyauths_operations_pattern()t)
+    ), 'Broken hive.get_keyauths_operations';
+
 END;
 $BODY$
 ;
 
-
-
-
-
+CREATE OR REPLACE FUNCTION hive.get_keyauths_operations_pattern()
+RETURNS SETOF TEXT
+LANGUAGE plpgsql
+IMMUTABLE
+AS
+$$
+BEGIN
+RETURN QUERY
+          SELECT 'hive::protocol::account_create_operation'
+UNION ALL SELECT 'hive::protocol::account_create_with_delegation_operation'
+UNION ALL SELECT 'hive::protocol::account_update_operation'
+UNION ALL SELECT 'hive::protocol::account_update2_operation'
+UNION ALL SELECT 'hive::protocol::create_claimed_account_operation'
+UNION ALL SELECT 'hive::protocol::recover_account_operation'
+UNION ALL SELECT 'hive::protocol::request_account_recovery_operation'
+UNION ALL SELECT 'hive::protocol::reset_account_operation'
+UNION ALL SELECT 'hive::protocol::witness_set_properties_operation'
+;
+END
+$$;
 
