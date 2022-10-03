@@ -78,7 +78,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_context_detach( 'context' );
+    --NOTHING TODO HERE
 END
 $BODY$
 ;

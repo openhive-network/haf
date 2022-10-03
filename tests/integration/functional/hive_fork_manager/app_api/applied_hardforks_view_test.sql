@@ -125,10 +125,10 @@ STABLE
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='applied_hardforks' ), 'No applied_hardforks view';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='applied_hardforks_view' ), 'No applied_hardforks view';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.applied_hardforks
+        SELECT * FROM hive.applied_hardforks_view
         EXCEPT SELECT * FROM ( VALUES
               ( 1, 1, 1 )
             , ( 2, 2, 2 )

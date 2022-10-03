@@ -127,7 +127,7 @@ STABLE
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='applied_hardforks_view' ), 'No context applied_hardfroks view';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_applied_hardforks_view' ), 'No context applied_hardfroks view';
 
     ASSERT NOT EXISTS (
         SELECT * FROM hive.context_applied_hardforks_view
