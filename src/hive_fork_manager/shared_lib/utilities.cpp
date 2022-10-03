@@ -490,6 +490,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
 
 
+
   Datum get_keyauths_wrapped(PG_FUNCTION_ARGS)
   {
   
@@ -573,4 +574,91 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     tuplestore_donestoring(tupstore);
     return (Datum)0;
   }
+
+
+  PG_FUNCTION_INFO_V1(get_keyauths_operations);
+
+  /**
+   ** 
+   **  CREATE OR REPLACE FUNCTION hive.get_keyauths_operations()
+   **  RETURNS SETOF TEXT
+   ** To be used in a filter like this:
+   **
+   ** 'INSERT INTO hive.%s_keyauth 
+   **     SELECT (hive.get_keyauths( ov.body )).*
+   **     FROM hive.%s_operations_view ov
+   **     WHERE
+   **             hive.is_keyauths_operation(ov.body)
+   **         AND 
+   **             ov.block_num BETWEEN %s AND %s
+   **     ON CONFLICT DO NOTHING'
+   **     , _context, _context, _first_block, _last_block
+   **
+   **/
+
+  Datum get_keyauths_operations(PG_FUNCTION_ARGS)
+  {
+    TupleDesc retvalDescription;
+    Tuplestorestate *tupstore = nullptr;
+
+    MemoryContext per_query_ctx;
+    MemoryContext oldcontext;
+  
+    ReturnSetInfo *rsinfo = reinterpret_cast<ReturnSetInfo *>(fcinfo->resultinfo); 
+
+    
+    if (rsinfo == nullptr || !IsA(rsinfo, ReturnSetInfo))
+    {
+      issue_error("set-valued function called in context that cannot accept a set");
+    }
+
+    if ((rsinfo->allowedModes & SFRM_Materialize) == 0)
+    {
+      issue_error("materialize mode required, but it is not allowed in this context");
+    }
+
+ 
+    if (get_call_result_type(fcinfo, nullptr, &retvalDescription) != TYPEFUNC_COMPOSITE)
+    {
+      issue_error("return type must be a row type");
+    }
+
+    per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
+    oldcontext = MemoryContextSwitchTo(per_query_ctx);
+
+    tupstore = tuplestore_begin_heap(true, false, work_mem);
+
+    rsinfo->returnMode = SFRM_Materialize;
+    rsinfo->setResult = tupstore;
+    rsinfo->setDesc = retvalDescription;
+
+    MemoryContextSwitchTo(oldcontext);
+
+    std::unordered_set<std::string> operations_used_in_get_keyauths;
+    
+    try
+    {
+      operations_used_in_get_keyauths = hive::app::get_operations_used_in_get_keyauths();
+    }
+    catch (...)
+    {
+      issue_error(std::string("Unknown error during processing ") + __FUNCTION__ );
+      return (Datum)0;
+    }
+      
+    const auto GET_KEYAUTHS_RETURN_ATTRIBUTES = 1;
+    const auto STRING_IDX = 0;
+
+    Datum tuple_values[GET_KEYAUTHS_RETURN_ATTRIBUTES] = {0};
+    bool nulls[GET_KEYAUTHS_RETURN_ATTRIBUTES] = {false};
+
+    for(const auto& operation_name : operations_used_in_get_keyauths)
+    {
+      tuple_values[STRING_IDX] = CStringGetTextDatum(operation_name.c_str());
+      tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
+    }
+
+    tuplestore_donestoring(tupstore);
+    return (Datum)0;
+  }  
 }

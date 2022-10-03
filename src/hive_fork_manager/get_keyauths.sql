@@ -66,34 +66,21 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hive.get_keyauths_operations()
-RETURNS SETOF TEXT
-LANGUAGE plpgsql
-IMMUTABLE
-AS
+
+--MTTK todo change name of the field ?
+DO
 $$
-BEGIN
-RETURN QUERY 
-SELECT 'account_create_operation'
-UNION ALL
-SELECT 'account_create_with_delegation_operation'
-UNION ALL
-SELECT 'account_update_operation'
-UNION ALL
-SELECT 'account_update2_operation'
-UNION ALL
-SELECT 'create_claimed_account_operation'
-UNION ALL
-SELECT 'recover_account_operation'
-UNION ALL
-SELECT 'reset_account_operation'
-UNION ALL
-SELECT 'request_account_recovery_operation'
-UNION ALL
-SELECT 'witness_set_properties_operation'
-;
-END
+    BEGIN
+        CREATE TYPE hive.get_operations_type AS
+        (
+              get_keyauths_operations TEXT
+        );
+    END
 $$;
+
+CREATE OR REPLACE FUNCTION hive.get_keyauths_operations()
+RETURNS SETOF hive.get_operations_type
+AS '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so', 'get_keyauths_operations' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.is_keyauths_operation(IN _full_op TEXT)
 RETURNS Boolean
