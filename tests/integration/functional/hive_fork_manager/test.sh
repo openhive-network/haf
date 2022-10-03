@@ -28,6 +28,8 @@ then
   exit 1;
 fi
 
+psql -p $postgres_port -d psql_tools_test_db -a -v ON_ERROR_STOP=on -f  ./test_tools.sql;
+
 psql -p $postgres_port -d psql_tools_test_db -a -v ON_ERROR_STOP=on -f  ${test_path};
 evaluate_result $?;
 

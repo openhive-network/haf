@@ -18,71 +18,16 @@ RETURNS SETOF impacted_balances_return
 AS '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so', 'get_impacted_balances' LANGUAGE C;
 
 --- Returns set of operations which impact account balances.
-CREATE OR REPLACE FUNCTION hive.get_balance_impacting_operations()
-RETURNS SETOF TEXT
-LANGUAGE plpgsql
-IMMUTABLE
-AS
+DO
 $$
-BEGIN
-RETURN QUERY 
-SELECT 'hive::protocol::fill_vesting_withdraw_operation'
-UNION ALL
-SELECT 'hive::protocol::producer_reward_operation'
-UNION ALL
-SELECT 'hive::protocol::claim_account_operation'
-UNION ALL
-SELECT 'hive::protocol::account_create_operation'
-UNION ALL
-SELECT 'hive::protocol::account_create_with_delegation_operation'
-UNION ALL
-SELECT 'hive::protocol::hardfork_hive_restore_operation'
-UNION ALL
-SELECT 'hive::protocol::fill_recurrent_transfer_operation'
-UNION ALL
-SELECT 'hive::protocol::fill_transfer_from_savings_operation'
-UNION ALL
-SELECT 'hive::protocol::liquidity_reward_operation'
-UNION ALL
-SELECT 'hive::protocol::fill_convert_request_operation'
-UNION ALL
-SELECT 'hive::protocol::fill_collateralized_convert_request_operation'
-UNION ALL
-SELECT 'hive::protocol::escrow_transfer_operation'
-UNION ALL
-SELECT 'hive::protocol::escrow_release_operation'
-UNION ALL
-SELECT 'hive::protocol::transfer_operation'
---UNION ALL -- Ignore in favor to transfer_to_vesting_completed_operation
---SELECT 'hive::protocol::transfer_to_vesting_operation'
-UNION ALL
-SELECT 'hive::protocol::transfer_to_vesting_completed_operation'
-UNION ALL
-SELECT 'hive::protocol::pow_reward_operation'
-UNION ALL
-SELECT 'hive::protocol::limit_order_create_operation'
-UNION ALL
-SELECT 'hive::protocol::limit_order_create2_operation'
-UNION ALL
-SELECT 'hive::protocol::fill_order_operation'
-UNION ALL
-SELECT 'hive::protocol::limit_order_cancelled_operation'
-UNION ALL
-SELECT 'hive::protocol::transfer_to_savings_operation'
-UNION ALL
-SELECT 'hive::protocol::claim_reward_balance_operation'
-UNION ALL
-SELECT 'hive::protocol::proposal_pay_operation'
-UNION ALL
-SELECT 'hive::protocol::dhf_conversion_operation'
-UNION ALL
-SELECT 'hive::protocol::author_reward_operation'
-UNION ALL
-SELECT 'hive::protocol::curation_reward_operation'
-UNION ALL
-SELECT 'hive::protocol::account_created_operation'
-UNION ALL
-SELECT 'hive::protocol::interest_operation'
-;
-END
+    BEGIN
+        CREATE TYPE hive.get_balance_impacting_operations_return_type AS
+        (
+              get_balance_impacting_operations TEXT
+        );
+    END
 $$;
+
+CREATE OR REPLACE FUNCTION hive.get_balance_impacting_operations()
+RETURNS SETOF hive.get_balance_impacting_operations_return_type
+AS '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so', 'get_balance_impacting_operations' LANGUAGE C;
