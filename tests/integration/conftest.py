@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple
 from uuid import uuid4
 
 import pytest
+import signal
 import sqlalchemy
 from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy.ext.automap import automap_base
@@ -13,6 +14,8 @@ import test_tools as tt
 
 from witnesses import alpha_witness_names, beta_witness_names
 
+
+signal.signal(signal.SIGINT, lambda sig, frame: tt.logger.info('SIGINT received. ignoring'))
 
 def pytest_exception_interact(report):
     tt.logger.error(f'Test exception:\n{report.longreprtext}')
