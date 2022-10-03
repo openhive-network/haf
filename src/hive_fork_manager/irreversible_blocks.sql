@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS hive.account_operations
     , CONSTRAINT hive_account_operations_uq2 UNIQUE ( account_id, operation_id )
 );
 
-CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_hardfork_vop_id_idx ON hive.applied_hardforks ( block_num, hardfork_vop_id );
+CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_hardfork_vop_id_idx ON hive.applied_hardforks ( block_num );
 
 
 CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hive.transactions ( block_num, trx_in_block );
