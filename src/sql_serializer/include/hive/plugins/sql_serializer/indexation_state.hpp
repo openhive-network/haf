@@ -7,7 +7,6 @@
 #include <limits>
 #include <memory>
 #include <string>
-#include <optional>
 
 namespace hive::chain{
   class database;
@@ -49,7 +48,7 @@ namespace hive::plugins::sql_serializer {
        * REINDEX  | -               |       P2P       |       LIVE        | -              |
        * LIVE     | -               | -               | -                 | -              |
        */
-      void on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t stop_replay_at );
+      void on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t stop_process_at );
       void on_post_reindex( cached_data_t& cached_data, uint32_t last_block_num, uint32_t _stop_replay_at );
       void on_end_of_syncing( cached_data_t& cached_data, int last_block_num );
       void on_first_block();
@@ -63,13 +62,13 @@ namespace hive::plugins::sql_serializer {
     private:
       enum class INDEXATION{ START, P2P, REINDEX, LIVE };
       static constexpr auto UNKNOWN = std::numeric_limits< uint32_t >::max();
-      void update_state( INDEXATION state, cached_data_t& cached_data, uint32_t last_block_num, uint32_t stop_replay_at = UNKNOWN );
+      void update_state( INDEXATION state, cached_data_t& cached_data, uint32_t last_block_num, uint32_t stop_process_at = UNKNOWN );
 
       void on_irreversible_block( uint32_t block_num );
       void flush_all_data_to_reversible( cached_data_t& cached_data );
       void force_trigger_flush_with_all_data( cached_data_t& cached_data, int last_block_num );
       bool can_move_to_livesync() const;
-      uint32_t expected_number_of_blocks_to_sync( std::optional<uint32_t> number_of_blocks_to_add = std::optional<uint32_t>() ) const;
+      uint32_t expected_number_of_blocks_to_sync( uint32_t stop_process_at, uint32_t last_block_num ) const;
 
     private:
       const sql_serializer_plugin& _main_plugin;
