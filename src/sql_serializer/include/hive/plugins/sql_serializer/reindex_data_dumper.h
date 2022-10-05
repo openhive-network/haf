@@ -14,6 +14,7 @@
 
 namespace hive::plugins::sql_serializer {
 
+  template<bool force_synchronicity>
   class reindex_data_dumper: public data_dumper {
   public:
     reindex_data_dumper(
@@ -30,6 +31,7 @@ namespace hive::plugins::sql_serializer {
     reindex_data_dumper& operator=(reindex_data_dumper&) = delete;
 
     void trigger_data_flush( cached_data_t& cached_data, int last_block_num ) override;
+    bool is_synchronicity() const override;
   private:
     void join();
     void mark_irreversible_data_as_dirty( bool is_dirty );
@@ -77,6 +79,8 @@ namespace hive::plugins::sql_serializer {
 
     std::unique_ptr<end_massive_sync_processor> _end_massive_sync_processor;
     std::shared_ptr< transaction_controllers::transaction_controller > _transactions_controller;
+
+    synchronicity_data::synchronicity_data_ptr synchronicity;
   };
 
 } // namespace hive::plugins::sql_serializer

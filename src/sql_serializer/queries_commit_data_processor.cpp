@@ -1,17 +1,34 @@
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
 
+#include <fc/exception/exception.hpp>
+
 namespace hive{ namespace plugins{ namespace sql_serializer {
-queries_commit_data_processor::queries_commit_data_processor(const std::string& psqlUrl, std::string description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger ) {
-  auto tx_controller = transaction_controllers::build_own_transaction_controller( psqlUrl, description );
-  auto fn_wrapped_with_transaction = [ tx_controller, dataProcessor ]( const data_chunk_ptr& dataPtr ){
-    transaction_ptr tx( tx_controller->openTx() );
-    auto result = dataProcessor( dataPtr, *tx );
-    tx->commit();
 
-    return result;
-  };
+queries_commit_data_processor::queries_commit_data_processor(const std::string& psqlUrl, std::string description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger, synchronicity_data::synchronicity_data_ptr synchronicity ) {
 
-  m_wrapped_processor = std::make_unique< data_processor >( description, fn_wrapped_with_transaction, api_trigger );
+  if( synchronicity && synchronicity->is_synchronicity() )
+  {
+    auto fn_wrapped_with_transaction = [ synchronicity, dataProcessor ]( const data_chunk_ptr& dataPtr ){
+      auto result = dataProcessor( dataPtr, synchronicity->get_tx() );
+
+      return result;
+    };
+
+    m_wrapped_processor = std::make_unique< data_processor >( description, fn_wrapped_with_transaction, api_trigger );
+  }
+  else
+  {
+    auto tx_controller = transaction_controllers::build_own_transaction_controller( psqlUrl, description );
+    auto fn_wrapped_with_transaction = [ tx_controller, dataProcessor ]( const data_chunk_ptr& dataPtr ){
+      transaction_ptr _tx( tx_controller->openTx() );
+      auto result = dataProcessor( dataPtr, *_tx );
+      _tx->commit();
+
+      return result;
+    };
+
+    m_wrapped_processor = std::make_unique< data_processor >( description, fn_wrapped_with_transaction, api_trigger );
+  }
 }
 
 queries_commit_data_processor::~queries_commit_data_processor() {

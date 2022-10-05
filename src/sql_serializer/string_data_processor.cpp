@@ -7,6 +7,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , std::string description
     , const data_processing_fn& dataProcessor
     , std::shared_ptr< block_num_rendezvous_trigger > api_trigger
+    , synchronicity_data::synchronicity_data_ptr synchronicity
     )
     {
     auto fn_wrapped_with_transaction = [ string_callback, dataProcessor ]( const data_chunk_ptr& dataPtr ){

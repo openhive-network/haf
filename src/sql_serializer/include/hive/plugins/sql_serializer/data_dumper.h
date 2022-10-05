@@ -8,5 +8,6 @@ namespace hive::plugins::sql_serializer {
     virtual ~data_dumper() = default;
 
     virtual void trigger_data_flush( cached_data_t& cached_data, int last_block_num ) = 0;
+    virtual bool is_synchronicity() const { return false; };
   };
 } // namespace hive::plugins::sql_serializer

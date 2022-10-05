@@ -8,9 +8,6 @@ namespace hive::plugins::sql_serializer {
 
   class indexes_controler{
 
-  private:
-    bool allow_disable( uint32_t number_of_blocks_to_insert, const std::string& elements_name ) const;
-
     void disable_indexes_depends_on_blocks( uint32_t number_of_blocks_to_insert );
     void enable_indexes();
     void disable_constraints_depends_on_blocks( uint32_t number_of_blocks_to_insert );
@@ -20,7 +17,7 @@ namespace hive::plugins::sql_serializer {
     indexes_controler( std::string db_url, uint32_t psql_index_threshold );
 
     void enable_all();
-    void disable_all( uint32_t number_of_blocks_to_insert );
+    bool disable_all( uint32_t number_of_blocks_to_insert );
 
   private:
     std::unique_ptr<queries_commit_data_processor>

@@ -3,6 +3,7 @@
 #include <functional>
 
 #include <hive/plugins/sql_serializer/data_processor.hpp>
+#include <hive/plugins/sql_serializer/synchronicity_data.hpp>
 
 namespace hive::plugins::sql_serializer {
 
@@ -25,6 +26,7 @@ namespace hive::plugins::sql_serializer {
         , std::string description
         , const data_processing_fn& dataProcessor
         , std::shared_ptr< block_num_rendezvous_trigger > api_trigger
+        , synchronicity_data::synchronicity_data_ptr synchronicity = synchronicity_data::synchronicity_data_ptr()
         );
       ~string_data_processor();
 

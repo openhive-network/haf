@@ -180,9 +180,19 @@ indexation_state::on_post_reindex( cached_data_t& cached_data, uint32_t last_blo
   // when option stop-replay-at is used then we finish synchronization when limit block is reached
   if ( _stop_replay_at && _stop_replay_at == last_block_num ) {
     force_trigger_flush_with_all_data( cached_data, last_block_num );
+
+    if( !_dumper->is_synchronicity() )
+    {
+      ilog("End of reindexing. Constraints/foreign keys will be restored.");
+      _indexes_controler.enable_all();
+    }
+    else
+    {
+      ilog("End of reindexing. Constraints/foreign keys weren't removed before reindex therefore lack of any changes related to either constraints or foreign keys.");
+    }
+
     _trigger.reset();
     _dumper.reset();
-    _indexes_controler.enable_all();
     return;
   }
 
@@ -247,13 +257,20 @@ indexation_state::update_state(
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
-      _indexes_controler.disable_all( expected_number_of_blocks_to_sync( false/*not used yet*/, last_block_num ) );
-      _dumper = std::make_shared< reindex_data_dumper >(
-          _db_url
-        , _psql_operations_threads_number
-        , _psql_transactions_threads_number
-        , _psql_account_operations_threads_number
-      );
+      if( !_indexes_controler.disable_all( expected_number_of_blocks_to_sync( 0/*not used yet*/, last_block_num ) ) )
+        _dumper = std::make_shared< reindex_data_dumper<true> >(
+            _db_url
+          , _psql_operations_threads_number
+          , _psql_transactions_threads_number
+          , _psql_account_operations_threads_number
+        );
+      else
+        _dumper = std::make_shared< reindex_data_dumper<false> >(
+            _db_url
+          , _psql_operations_threads_number
+          , _psql_transactions_threads_number
+          , _psql_account_operations_threads_number
+        );
       _irreversible_block_num = NO_IRREVERSIBLE_BLOCK;
       _trigger = std::make_unique< p2p_flush_trigger >(
           _main_plugin
@@ -271,13 +288,20 @@ indexation_state::update_state(
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
-      _indexes_controler.disable_all( expected_number_of_blocks_to_sync( stop_process_at, last_block_num ) );
-      _dumper = std::make_shared< reindex_data_dumper >(
-          _db_url
-        , _psql_operations_threads_number
-        , _psql_transactions_threads_number
-        , _psql_account_operations_threads_number
-      );
+      if( !_indexes_controler.disable_all( expected_number_of_blocks_to_sync( stop_process_at, last_block_num ) ) )
+        _dumper = std::make_shared< reindex_data_dumper<true> >(
+            _db_url
+          , _psql_operations_threads_number
+          , _psql_transactions_threads_number
+          , _psql_account_operations_threads_number
+        );
+      else
+        _dumper = std::make_shared< reindex_data_dumper<false> >(
+            _db_url
+          , _psql_operations_threads_number
+          , _psql_transactions_threads_number
+          , _psql_account_operations_threads_number
+        );
       _trigger = std::make_unique< reindex_flush_trigger >(
         [this]( cached_data_t& cached_data, int last_block_num ) {
           force_trigger_flush_with_all_data( cached_data, last_block_num );

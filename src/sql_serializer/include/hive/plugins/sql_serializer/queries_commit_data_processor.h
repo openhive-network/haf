@@ -1,6 +1,7 @@
 #pragma once
 
 #include <hive/plugins/sql_serializer/data_processor.hpp>
+#include <hive/plugins/sql_serializer/synchronicity_data.hpp>
 
 namespace hive::plugins::sql_serializer {
   class queries_commit_data_processor
@@ -13,7 +14,7 @@ namespace hive::plugins::sql_serializer {
       /// pairs number of produced chunks and write status
       typedef std::pair<size_t, bool> data_processing_status;
 
-      queries_commit_data_processor( const std::string& psqlUrl, std::string description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger );
+      queries_commit_data_processor( const std::string& psqlUrl, std::string description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger, synchronicity_data::synchronicity_data_ptr synchronicity = synchronicity_data::synchronicity_data_ptr() );
       ~queries_commit_data_processor();
 
       queries_commit_data_processor(data_processor&&) = delete;
@@ -29,7 +30,6 @@ namespace hive::plugins::sql_serializer {
       void join();
       void only_report_batch_finished( uint32_t _block_num );
     private:
-      transaction_controllers::transaction_controller_ptr _txController;
       std::unique_ptr< data_processor > m_wrapped_processor;
     };
 } // namespace hive::plugins::sql_serializer
