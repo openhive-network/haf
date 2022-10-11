@@ -116,7 +116,7 @@ STABLE
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='operations_view' ), 'No transactions multisig view';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='operations_view' ), 'No operations view';
 
     ASSERT NOT EXISTS (
         SELECT * FROM hive.operations_view
