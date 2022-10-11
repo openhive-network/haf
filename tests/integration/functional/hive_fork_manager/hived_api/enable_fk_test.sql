@@ -96,12 +96,18 @@ BEGIN
     ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions') ), 'FK for hive.transactions not exists';
     ASSERT ( SELECT is_any_fk_for_hive_table( 'operations') ), 'FK for hive.operations not exists';
     ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hive.transactions_multisig not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hive.applied_hardforks not exists';
+
 
     ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_transactions', 'FOREIGN KEY' ) ), 'FK fk_1_hive_transactions not exists';
     ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_transactions_multisig', 'FOREIGN KEY' ) ), 'FK fk_1_hive_transactions_multisig not exists';
     ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_operations', 'FOREIGN KEY' ) ), 'FK fk_1_hive_operations not exists';
     ASSERT ( SELECT is_constraint_exists( 'fk_2_hive_operations', 'FOREIGN KEY' ) ), 'FK fk_2_hive_operations not exists';
     ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_irreversible_data', 'FOREIGN KEY' ) ), 'FK fk_1_hive_irreversible_data not exists';
+    ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_applied_hardforks', 'FOREIGN KEY' ) ), 'FK fk_1_hive_applied_hardforks not exists';
+
+
+
 END;
 $BODY$
 ;

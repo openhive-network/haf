@@ -20,11 +20,13 @@ BEGIN
         , NULL
         , ARRAY[ __account ]
         , NULL
+        , NULL
     );
 
 
     PERFORM hive.push_block(
          ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w' )
+        , NULL
         , NULL
         , NULL
         , NULL
@@ -39,10 +41,12 @@ BEGIN
         , NULL
         , NULL
         , NULL
+        , NULL
     );
 
     PERFORM hive.push_block(
          ( 4, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w' )
+        , NULL
         , NULL
         , NULL
         , NULL
