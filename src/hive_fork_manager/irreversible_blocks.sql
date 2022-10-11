@@ -68,6 +68,16 @@ CREATE TABLE IF NOT EXISTS hive.operations (
     CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id)
 );
 
+CREATE TABLE IF NOT EXISTS hive.applied_hardforks (
+    hardfork_num smallint NOT NULL,
+    block_num integer NOT NULL,
+    hardfork_vop_id bigint NOT NULL,
+    CONSTRAINT pk_hive_applied_hardforks PRIMARY KEY (hardfork_num),
+    CONSTRAINT fk_1_hive_applied_hardforks FOREIGN KEY (hardfork_vop_id) REFERENCES hive.operations(id),
+    CONSTRAINT fk_2_hive_applied_hardforks FOREIGN KEY (block_num) REFERENCES hive.blocks(num)
+
+);
+
 CREATE TABLE IF NOT EXISTS hive.accounts (
       id INTEGER NOT NULL
     , name VARCHAR(16) NOT NULL
@@ -90,6 +100,8 @@ CREATE TABLE IF NOT EXISTS hive.account_operations
     , CONSTRAINT hive_account_operations_uq_1 UNIQUE( account_id, account_op_seq_no )
     , CONSTRAINT hive_account_operations_uq2 UNIQUE ( account_id, operation_id )
 );
+
+CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hive.applied_hardforks ( block_num );
 
 CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hive.transactions ( block_num, trx_in_block );
 

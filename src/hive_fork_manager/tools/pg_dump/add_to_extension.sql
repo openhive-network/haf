@@ -18,3 +18,6 @@ alter extension hive_fork_manager add table hive.accounts_reversible;
 alter extension hive_fork_manager add table hive.account_operations_reversible;
 alter extension hive_fork_manager add table hive.accounts;
 alter extension hive_fork_manager add table hive.account_operations;
+alter extension hive_fork_manager add table hive.applied_hardforks_reversible;
+alter extension hive_fork_manager add table hive.applied_hardforks;
+
