@@ -226,3 +226,30 @@ FROM (
         ) as trr ON trr.trx_hash = htmr.trx_hash AND trr.max_fork_id = htmr.fork_id
     ) reversible
 ) t;
+
+CREATE OR REPLACE VIEW hive.applied_hardforks_view AS
+ (
+  SELECT hr.hardfork_num,
+         hr.block_num,
+         hr.hardfork_vop_id
+  FROM hive.applied_hardforks hr
+ )
+UNION ALL
+(
+WITH 
+consistent_block AS
+(SELECT COALESCE(hid.consistent_block, 0) AS consistent_block FROM hive.irreversible_data hid LIMIT 1)
+,forks AS
+(
+  SELECT hbr.num, max(hbr.fork_id) AS max_fork_id
+  FROM hive.blocks_reversible hbr, consistent_block cb
+  WHERE hbr.num > cb.consistent_block
+  GROUP BY hbr.num
+)
+SELECT hjr.hardfork_num,
+       hjr.block_num,
+       hjr.hardfork_vop_id
+FROM forks 
+JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hor.block_num
+JOIN hive.applied_hardforks_reversible hjr ON forks.max_fork_id = hjr.fork_id AND hjr.hardfork_vop_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
+);

@@ -108,6 +108,38 @@ END;
 $BODY$
 ;
 
+
+CREATE OR REPLACE FUNCTION hive.copy_applied_hardforks_to_irreversible(
+      _head_block_of_irreversible_blocks INT
+    , _new_irreversible_block INT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    INSERT INTO hive.applied_hardforks
+    SELECT
+           hjr.hardfork_num
+         , hjr.block_num
+         , hjr.hardfork_vop_id
+    FROM
+        hive.applied_hardforks_reversible hjr
+        JOIN (
+            SELECT
+                  DISTINCT ON ( hbr.num ) hbr.num
+                , hbr.fork_id
+            FROM hive.blocks_reversible hbr
+            WHERE
+                  hbr.num <= _new_irreversible_block
+              AND hbr.num > _head_block_of_irreversible_blocks
+            ORDER BY hbr.num ASC, hbr.fork_id DESC
+        ) as num_and_forks ON hjr.block_num = num_and_forks.num AND hjr.fork_id = num_and_forks.fork_id
+    ;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.copy_signatures_to_irreversible(
       _head_block_of_irreversible_blocks INT
     , _new_irreversible_block INT )
@@ -218,8 +250,12 @@ BEGIN
         AND hor.block_num <= _new_irreversible_block
     ;
 
+    DELETE FROM hive.applied_hardforks_reversible hjr
+    WHERE hjr.block_num <= _new_irreversible_block;
+
     DELETE FROM hive.operations_reversible hor
     WHERE hor.block_num <= _new_irreversible_block;
+
 
     DELETE FROM hive.transactions_multisig_reversible htmr
     USING hive.transactions_reversible htr
@@ -473,6 +509,8 @@ BEGIN
 
     DELETE FROM hive.account_operations hao
     WHERE hao.block_num > __consistent_block;
+
+    DELETE FROM hive.applied_hardforks WHERE block_num > __consistent_block;
 
     DELETE FROM hive.operations WHERE block_num > __consistent_block;
 
