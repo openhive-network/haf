@@ -32,6 +32,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _operation_writer = std::make_unique<operation_data_container_t_writer>( operations_threads, db_url, "Operation data writer", api_trigger);
     _account_writer = std::make_unique<accounts_data_container_t_writer>( db_url, "Accounts data writer", api_trigger);
     _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >( account_operation_threads, db_url, "Account operations data writer", api_trigger);
+    _applied_hardforks_writer = std::make_unique< applied_hardforks_container_t_writer >( db_url, "Hardfork data writer", api_trigger);
 
     mark_irreversible_data_as_dirty( true );
   }
@@ -49,6 +50,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _transaction_multisig_writer->trigger( std::move( cached_data.transactions_multisig ), last_block_num );
     _account_writer->trigger( std::move( cached_data.accounts ), last_block_num );
     _account_operations_writer->trigger( std::move( cached_data.account_operations ), last_block_num );
+    _applied_hardforks_writer->trigger( std::move( cached_data.applied_hardforks ), last_block_num );
   }
 
   void reindex_data_dumper::join() {
@@ -60,6 +62,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       , *_account_writer
       , *_account_operations_writer
       , *_end_massive_sync_processor
+      , *_applied_hardforks_writer
     );
 
     mark_irreversible_data_as_dirty( false );

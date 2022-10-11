@@ -11,6 +11,7 @@ namespace hive::plugins::sql_serializer {
     std::vector<PSQL::processing_objects::process_operation_t> operations;
     std::vector<PSQL::processing_objects::account_data_t> accounts;
     std::vector<PSQL::processing_objects::account_operation_data_t> account_operations;
+    std::vector<PSQL::processing_objects::applied_hardforks_t> applied_hardforks;
 
     size_t total_size;
 
@@ -22,6 +23,7 @@ namespace hive::plugins::sql_serializer {
       operations.reserve(reservation_size);
       accounts.reserve(reservation_size);
       account_operations.reserve(reservation_size);
+      applied_hardforks.reserve(reservation_size);
     }
 
     ~cached_data_t()
@@ -33,6 +35,7 @@ namespace hive::plugins::sql_serializer {
         ("o", operations.size() )
         ("a", accounts.size() )
         ("ao", account_operations.size() )
+        ("ah", applied_hardforks.size())
         ("ts", total_size )
         );
     }

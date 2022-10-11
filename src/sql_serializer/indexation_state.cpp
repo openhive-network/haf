@@ -52,6 +52,7 @@ cached_data_t move_irreveresible_blocks( cached_data_t& cached_data, uint32_t ir
   move_items_upto_block( irreversible_data.operations, cached_data.operations, irreversible_block );
   move_items_upto_block( irreversible_data.accounts, cached_data.accounts, irreversible_block );
   move_items_upto_block( irreversible_data.account_operations, cached_data.account_operations, irreversible_block );
+  move_items_upto_block( irreversible_data.applied_hardforks, cached_data.applied_hardforks, irreversible_block );
 
   return irreversible_data;
 }
@@ -343,6 +344,7 @@ indexation_state::flush_all_data_to_reversible( cached_data_t& cached_data ) {
     move_items_upto_block( reversible_data.operations, cached_data.operations, current_block );
     move_items_upto_block( reversible_data.accounts, cached_data.accounts, current_block );
     move_items_upto_block( reversible_data.account_operations, cached_data.account_operations, current_block );
+    move_items_upto_block( reversible_data.applied_hardforks, cached_data.applied_hardforks, current_block );
 
     force_trigger_flush_with_all_data( reversible_data, current_block );
   }
@@ -368,6 +370,8 @@ indexation_state::on_switch_fork( cached_data_t& cached_data, uint32_t block_num
   erase_items_greater_than_block( cached_data.operations, block_num );
   erase_items_greater_than_block( cached_data.accounts, block_num );
   erase_items_greater_than_block( cached_data.account_operations, block_num );
+  erase_items_greater_than_block( cached_data.applied_hardforks, block_num );
+
   ilog( "Cached reversible data removed" );
 }
 

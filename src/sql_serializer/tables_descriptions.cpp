@@ -29,6 +29,10 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::TABLE[] = "hive.account_operations";
   template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::COLS[] = "block_num, account_id, account_op_seq_no, operation_id, op_type_id";
 
+  const char hive_applied_hardforks::TABLE[] = "hive.applied_hardforks";
+  const char hive_applied_hardforks::COLS[] = "hardfork_num, block_num, hardfork_vop_id";
+
+
 }}} // namespace hive::plugins::sql_serializer
 
 
