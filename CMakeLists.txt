@@ -17,6 +17,14 @@ PROJECT( haf )
 SET( HAF_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 FILE( CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/src/sql_serializer ${CMAKE_CURRENT_SOURCE_DIR}/hive/libraries/plugins/sql_serializer SYMBOLIC )
 
+list( APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" )
+
+INCLUDE( compiler )
+
+if( "${CMAKE_GENERATOR}" STREQUAL "Ninja" )
+    ENABLE_NINJA_COLORFUL_OUTPUT()
+endif()
+
 ADD_SUBDIRECTORY( hive EXCLUDE_FROM_ALL )
 
 # Read whole HAF revision (using already imported Git tools from Hive project)
@@ -46,7 +54,6 @@ INCLUDE( ExternalProject )
 INCLUDE( hive_options )
 INCLUDE( hive_targets )
 INCLUDE( clangtidy )
-INCLUDE( compiler )
 INCLUDE( libraries )
 INCLUDE( postgres )
 INCLUDE( sql_extension )
