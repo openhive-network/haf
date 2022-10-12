@@ -119,7 +119,7 @@ STABLE
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_operations_view' ), 'No context transactions view';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_operations_view' ), 'No context operations view';
 
     ASSERT NOT EXISTS (
         SELECT * FROM hive.context_operations_view
