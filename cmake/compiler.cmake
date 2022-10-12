@@ -16,3 +16,13 @@ MACRO( SETUP_COMPILER target_name )
             ${GENERATED_FILES_DIRECTORY_ROOT}
     )
 ENDMACRO()
+
+MACRO( ENABLE_NINJA_COLORFUL_OUTPUT )
+    if( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+        set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics" )
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always" )
+    else()
+        message( AUTHOR_WARNING "You are using the Ninja generator with the unsupported compiler. Colorful output may not be available." )
+    endif()
+ENDMACRO()
