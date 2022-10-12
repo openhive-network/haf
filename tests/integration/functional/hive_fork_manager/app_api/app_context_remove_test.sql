@@ -62,6 +62,8 @@ BEGIN
     ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_transactions_multisig_view' ), 'context signatures view exists';
     ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_accounts_view' ), 'context accounts view exists';
     ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_account_operations_view' ), 'context account_operation view exists';
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_applied_hardforks_view' ), 'context applied_hardforks view exists';
+
 END;
 $BODY$
 ;

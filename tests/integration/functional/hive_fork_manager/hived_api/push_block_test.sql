@@ -35,6 +35,8 @@ DECLARE
     __account2 hive.accounts%ROWTYPE;
     __account_operation1 hive.account_operations%ROWTYPE;
     __account_operation2 hive.account_operations%ROWTYPE;
+    __applied_hardforks1 hive.applied_hardforks%ROWTYPE;
+    __applied_hardforks2 hive.applied_hardforks%ROWTYPE;
 BEGIN
     __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G' );
     __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
@@ -47,6 +49,8 @@ BEGIN
     __account2 = ( 2, 'bob', 101 );
     __account_operation1 = ( 101, 1, 1, 1, 1 );
     __account_operation2 = ( 102, 2, 1, 2, 2 );
+    __applied_hardforks1 = (1, 101, 1);
+    __applied_hardforks2 = (2, 101, 2);
     PERFORM hive.push_block(
           __block
         , ARRAY[ __transaction1, __transaction2 ]
@@ -54,6 +58,7 @@ BEGIN
         , ARRAY[ __operation1_1, __operation2_1 ]
         , ARRAY[ __account1, __account2 ]
         , ARRAY[ __account_operation1, __account_operation2 ]
+        , ARRAY[ __applied_hardforks1, __applied_hardforks2 ]
     );
 END
 $BODY$
@@ -173,6 +178,21 @@ BEGIN
         AND operation_id = 2
         AND fork_id = 1
     ) = 1 ,'No bob operation';
+
+    ASSERT ( SELECT COUNT(*) FROM hive.applied_hardforks_reversible
+        WHERE hardfork_num = 1
+        AND block_num = 101
+        AND hardfork_vop_id = 1
+        AND fork_id = 1
+    ) = 1, 'Wrong data of hardfork 1';
+
+    ASSERT ( SELECT COUNT(*) FROM hive.applied_hardforks_reversible
+        WHERE hardfork_num = 2
+        AND block_num = 101
+        AND hardfork_vop_id = 2
+        AND fork_id = 1
+    ) = 1, 'Wrong data of hardfork 2';
+
 
     ASSERT( SELECT is_dirty FROM hive.irreversible_data ) = FALSE, 'Irreversible data are dirty';
 END

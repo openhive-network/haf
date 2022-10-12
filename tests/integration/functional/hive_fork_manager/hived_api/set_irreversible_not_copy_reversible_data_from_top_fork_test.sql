@@ -34,6 +34,7 @@ BEGIN
         , NULL
         , NULL
         , NULL
+        , NULL
     );
 
 
@@ -55,9 +56,14 @@ BEGIN
     VALUES ( 2, 1, 1, 1, 1, 2 )
     ;
 
+
     INSERT INTO hive.transactions_multisig_reversible
     VALUES
     ( '\xDEED20', '\xBEEF20',  2 );
+
+    INSERT INTO hive.applied_hardforks_reversible
+    VALUES ( 1, 2, 1, 2 )
+    ;
 
 END;
 $BODY$
@@ -89,6 +95,7 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM hive.transactions_multisig ), 'Signatures not landed in irreversible table';
     ASSERT EXISTS ( SELECT * FROM hive.accounts ), 'Accounts not landed in irreversible table';
     ASSERT EXISTS ( SELECT * FROM hive.account_operations ), 'Account operation not landed in irreversible table';
+    ASSERT EXISTS ( SELECT * FROM hive.applied_hardforks ), 'Hardforks not landed in irreversible table';
     ASSERT EXISTS ( SELECT * FROM hive.blocks WHERE hash = '\xBADD20'::bytea ), 'block not landed in irreversible table';
 END;
 $BODY$

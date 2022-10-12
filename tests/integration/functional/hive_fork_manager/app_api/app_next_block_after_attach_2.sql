@@ -45,10 +45,12 @@ BEGIN
                , NULL
                , NULL
                , NULL
+               , NULL
                );
 
     PERFORM hive.push_block(
                    ( 7, '\xBADD70', '\xCAFE70', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w' )
+               , NULL
                , NULL
                , NULL
                , NULL
@@ -60,6 +62,7 @@ BEGIN
 
     PERFORM hive.push_block(
                    ( 8, '\xBADD80', '\xCAFE80', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w' )
+               , NULL
                , NULL
                , NULL
                , NULL
@@ -84,12 +87,14 @@ BEGIN
                , NULL
                , NULL
                , NULL
+               , NULL
                );
 
     PERFORM hive.back_from_fork( 7 );
 
     PERFORM hive.push_block(
                    ( 8, '\xBADD81', '\xCAFE81', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w' )
+               , NULL
                , NULL
                , NULL
                , NULL
@@ -113,6 +118,7 @@ BEGIN
                , NULL
                , NULL
                , NULL
+               , NULL
                );
 
     PERFORM hive.back_from_fork( 8 );
@@ -124,10 +130,12 @@ BEGIN
                , NULL
                , NULL
                , NULL
+               , NULL
                );
 
     PERFORM hive.push_block(
                    ( 10, '\xBADD1010', '\xCAFE1010', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w' )
+               , NULL
                , NULL
                , NULL
                , NULL
