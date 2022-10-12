@@ -81,6 +81,24 @@ ALTER TABLE hive.account_operations_reversible
     ADD CONSTRAINT pk_hive_account_operations_reversible PRIMARY KEY( account_id, account_op_seq_no, fork_id )
 ;
 
+CREATE TABLE IF NOT EXISTS hive.applied_hardforks_reversible(
+    LIKE hive.applied_hardforks
+    INCLUDING ALL
+    EXCLUDING CONSTRAINTS
+    EXCLUDING STATISTICS
+    EXCLUDING INDEXES
+    EXCLUDING IDENTITY
+);
+
+ALTER TABLE hive.applied_hardforks_reversible
+    ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
+    ADD CONSTRAINT pk_hive_applied_hardforks_reversible PRIMARY KEY( hardfork_num, fork_id ),
+    ADD CONSTRAINT fk_1_hive_applied_hardforks_reversible FOREIGN KEY ( block_num, fork_id ) REFERENCES hive.blocks_reversible( num, fork_id )
+
+;
+
+CREATE INDEX IF NOT EXISTS hive_applied_hardforks_reversible_block_num_idx ON hive.applied_hardforks_reversible( block_num );
+CREATE INDEX IF NOT EXISTS hive_applied_hardforks_reversible_fork_id_idx ON hive.applied_hardforks_reversible( fork_id );
 CREATE INDEX IF NOT EXISTS hive_transactions_reversible_block_num_trx_in_block_fork_id_idx ON hive.transactions_reversible( block_num, trx_in_block, fork_id );
 CREATE INDEX IF NOT EXISTS hive_operations_reversible_block_num_type_id_trx_in_block_fork_id_idx ON hive.operations_reversible( block_num, op_type_id, trx_in_block, fork_id );
 CREATE INDEX IF NOT EXISTS hive_operations_reversible_block_num_id_idx ON hive.operations_reversible USING btree(block_num, id, fork_id);
