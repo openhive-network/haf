@@ -73,6 +73,8 @@ namespace hive::plugins::sql_serializer {
         >
       >;
 
+    using applied_hardforks_container_t_writer = table_data_writer<hive_applied_hardforks, string_data_processor>;
+
     using accounts_data_container_t_writer = table_data_writer< hive_accounts, string_data_processor >;
     using account_operations_data_container_t_writer = chunks_for_string_writers_splitter<
         table_data_writer<
@@ -90,6 +92,7 @@ namespace hive::plugins::sql_serializer {
     std::unique_ptr< operation_data_container_t_writer > _operation_writer;
     std::unique_ptr< accounts_data_container_t_writer > _account_writer;
     std::unique_ptr< account_operations_data_container_t_writer > _account_operations_writer;
+    std::unique_ptr< applied_hardforks_container_t_writer > _applied_hardforks_writer;
 
     std::unique_ptr< queries_commit_data_processor > _set_irreversible_block_processor;
     std::unique_ptr< queries_commit_data_processor > _notify_fork_block_processor;
@@ -97,6 +100,7 @@ namespace hive::plugins::sql_serializer {
     std::string _block;
     std::string _transactions_multisig;
     std::string _accounts;
+    std::string _applied_hardforks;
 
     boost::signals2::connection _on_irreversible_block_conn;
     boost::signals2::connection _on_switch_fork_conn;

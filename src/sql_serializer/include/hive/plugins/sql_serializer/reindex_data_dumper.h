@@ -54,6 +54,9 @@ namespace hive::plugins::sql_serializer {
         >
       >
     >;
+
+    using applied_hardforks_container_t_writer = table_data_writer< hive_applied_hardforks >;
+
     using accounts_data_container_t_writer = table_data_writer< hive_accounts >;
     using account_operations_data_container_t_writer = chunks_for_sql_writers_splitter<
       table_data_writer<
@@ -70,6 +73,7 @@ namespace hive::plugins::sql_serializer {
     std::unique_ptr< operation_data_container_t_writer > _operation_writer;
     std::unique_ptr< accounts_data_container_t_writer > _account_writer;
     std::unique_ptr< account_operations_data_container_t_writer > _account_operations_writer;
+    std::unique_ptr< applied_hardforks_container_t_writer > _applied_hardforks_writer;
 
     std::unique_ptr<end_massive_sync_processor> _end_massive_sync_processor;
     std::shared_ptr< transaction_controllers::transaction_controller > _transactions_controller;
