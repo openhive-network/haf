@@ -165,9 +165,10 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions_multisig' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'operations' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'applied_hardforks' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'accounts' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'account_operations' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'applied_hardforks' );
+
 
 END;
 $BODY$
@@ -185,6 +186,7 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_multisig' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks' );
@@ -204,10 +206,11 @@ BEGIN
     PERFORM hive.restore_indexes( 'hive.transactions' );
     PERFORM hive.restore_indexes( 'hive.transactions_multisig' );
     PERFORM hive.restore_indexes( 'hive.operations' );
+    PERFORM hive.restore_indexes( 'hive.applied_hardforks' );
     PERFORM hive.restore_indexes( 'hive.accounts' );
     PERFORM hive.restore_indexes( 'hive.account_operations' );
     PERFORM hive.restore_indexes( 'hive.irreversible_data' );
-    PERFORM hive.restore_indexes( 'hive.applied_hardforks' );
+
 
 END;
 $BODY$
@@ -225,10 +228,10 @@ BEGIN
     PERFORM hive.restore_foreign_keys( 'hive.transactions' );
     PERFORM hive.restore_foreign_keys( 'hive.transactions_multisig' );
     PERFORM hive.restore_foreign_keys( 'hive.operations' );
+    PERFORM hive.restore_foreign_keys( 'hive.applied_hardforks' );
     PERFORM hive.restore_foreign_keys( 'hive.irreversible_data' );
     PERFORM hive.restore_foreign_keys( 'hive.accounts' );
     PERFORM hive.restore_foreign_keys( 'hive.account_operations' );
-    PERFORM hive.restore_foreign_keys( 'hive.applied_hardforks' );
 
 END;
 $BODY$
@@ -245,9 +248,9 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_reversible' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_multisig_reversible' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations_reversible' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks_reversible' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts_reversible' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks_reversible' );
 
 
 
@@ -255,9 +258,10 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions_reversible' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions_multisig_reversible' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'operations_reversible' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'applied_hardforks_reversible' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'accounts_reversible' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'account_operations_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'applied_hardforks_reversible' );
+
 
 
 END;

@@ -92,7 +92,9 @@ CREATE TABLE IF NOT EXISTS hive.applied_hardforks_reversible(
 
 ALTER TABLE hive.applied_hardforks_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
-    ADD CONSTRAINT pk_hive_applied_hardforks_reversible PRIMARY KEY( hardfork_num, fork_id )
+    ADD CONSTRAINT pk_hive_applied_hardforks_reversible PRIMARY KEY( hardfork_num, fork_id ),
+    ADD CONSTRAINT fk_1_hive_applied_hardforks_reversible FOREIGN KEY ( block_num, fork_id ) REFERENCES hive.blocks_reversible( num, fork_id )
+
 ;
 
 
