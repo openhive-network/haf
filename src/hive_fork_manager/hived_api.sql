@@ -343,7 +343,7 @@ CREATE OR REPLACE FUNCTION hive.get_block( _block_num INT )
 AS
 $BODY$
 BEGIN
-    RETURN hive.get_block_from_views( _block_num );
+    RETURN (hive.get_block_from_views( _block_num, 1 )).block;
 END;
 $BODY$
 ;
@@ -376,7 +376,7 @@ BEGIN
         RAISE EXCEPTION 'Assert Exception:count <= 1000: You can only ask for 1000 blocks at a timerethrow';
     END IF;
 
-    RETURN QUERY SELECT (unnest(ARRAY_AGG(hive.get_block(num)))).* FROM generate_series(_starting_block_num, _starting_block_num + _count - 1) num;
+    RETURN QUERY SELECT (block).* FROM hive.get_block_from_views( _starting_block_num, _count );
 END;
 $BODY$
 ;

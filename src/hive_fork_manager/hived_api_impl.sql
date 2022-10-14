@@ -515,81 +515,115 @@ CREATE TYPE hive.block_type AS (
     , transaction_ids bytea[]
     );
 
-CREATE OR REPLACE FUNCTION hive.get_block_from_views( _block_num INT )
-    RETURNS hive.block_type
+CREATE TYPE hive.block_type_ext AS (
+    block_num INTEGER,
+    block hive.block_type
+);
+
+CREATE OR REPLACE FUNCTION hive.get_block_from_views( _block_num_start INT, _block_count INT )
+    RETURNS SETOF hive.block_type_ext
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __witness_account_id INTEGER;
-    __result hive.block_type := NULL;
+    _empty_jsonb_array JSONB := array_to_json(ARRAY[] :: INT[]) :: JSONB;
+    _block_num_end INTEGER;
 BEGIN
-    SELECT
-           hb.prev
-         , hb.created_at
-         , hb.transaction_merkle_root
-         , hb.witness_signature
-         , hb.extensions
-         , hb.producer_account_id
-         , hb.hash
-         , hb.signing_key
-    FROM hive.blocks_view hb
-    WHERE hb.num = _block_num
-    INTO
-         __result.previous
-       , __result.timestamp
-       , __result.transaction_merkle_root
-       , __result.witness_signature
-       , __result.extensions
-       , __witness_account_id
-       , __result.block_id
-       , __result.signing_key;
 
-    SELECT ha.name
-    FROM hive.accounts_view ha
-    WHERE ha.id = __witness_account_id
-    INTO __result.witness;
+    SELECT _block_num_start + _block_count INTO _block_num_end;
 
-
-    WITH ht AS (
-            SELECT *
-            FROM hive.transactions_view
-            WHERE block_num = _block_num
-            ORDER BY trx_in_block
-    ), operations AS (
-            SELECT ho.block_num, ho.trx_in_block, ARRAY_AGG(ho.body ORDER BY op_pos ASC) bodies
-            FROM hive.operations_view ho
-            WHERE
-                ho.op_type_id < (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = TRUE ORDER BY ot.id LIMIT 1)
-                AND ho.block_num = _block_num
-            GROUP BY ho.block_num, ho.trx_in_block
-    ), multisig AS (
-            SELECT trx_hash, ARRAY_AGG(signature) signatures
-            FROM hive.transactions_multisig_view
-            WHERE trx_hash = ANY(
-                SELECT trx_hash FROM ht
-            )
-            GROUP BY trx_hash
-    ), transactions AS (
+    RETURN QUERY
+        WITH
+        base_blocks_data AS (
             SELECT
-                ht.ref_block_num ref_block_num, ht.ref_block_prefix ref_block_prefix
-              , ht.expiration expiration, operations.bodies operations
-              , NULL extensions, ht.signature || multisig.signatures signatures
-              , ht.trx_hash trx_hash
-            FROM ht
-            LEFT JOIN operations ON ht.block_num = operations.block_num AND ht.trx_in_block = operations.trx_in_block
-            LEFT JOIN multisig ON ht.trx_hash = multisig.trx_hash
-            ORDER BY ht.trx_in_block
-    )
-    SELECT
-        ARRAY_AGG( ROW(ref_block_num, ref_block_prefix, expiration, operations, extensions, signatures)::hive.transaction_type )
-      , ARRAY_AGG(trx_hash)
-    FROM transactions
-    INTO __result.transactions, __result.transaction_ids;
-
-
-    RETURN __result;
+                hb.num,
+                hb.prev,
+                hb.created_at,
+                hb.transaction_merkle_root,
+                hb.witness_signature,
+                COALESCE(hb.extensions, _empty_jsonb_array) AS extensions,
+                hb.producer_account_id,
+                hb.hash,
+                hb.signing_key,
+                ha.name
+            FROM hive.blocks_view hb
+            JOIN hive.accounts_view ha ON hb.producer_account_id = ha.id
+            WHERE hb.num >= _block_num_start AND hb.num < _block_num_end
+            ORDER BY hb.num ASC
+        ),
+        trx_details AS (
+            SELECT
+                htv.block_num,
+                htv.trx_in_block,
+                htv.expiration,
+                htv.ref_block_num,
+                htv.ref_block_prefix,
+                htv.trx_hash,
+                htv.signature
+            FROM hive.transactions_view htv
+            WHERE htv.block_num >= _block_num_start AND htv.block_num < _block_num_end
+            ORDER BY htv.block_num ASC, htv.trx_in_block ASC
+        ),
+        operations AS (
+                SELECT ho.block_num, ho.trx_in_block, ARRAY_AGG(ho.body ORDER BY op_pos ASC) bodies
+                FROM hive.operations_view ho
+                WHERE
+                    ho.op_type_id < (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = TRUE ORDER BY ot.id LIMIT 1)
+                    AND ho.block_num >= _block_num_start AND ho.block_num < _block_num_end
+                GROUP BY ho.block_num, ho.trx_in_block
+                ORDER BY ho.block_num ASC, trx_in_block ASC
+        ),
+        full_transactions_with_signatures AS (
+                SELECT
+                    htv.block_num,
+                    ARRAY_AGG(htv.trx_hash ORDER BY htv.trx_in_block ASC) AS trx_hashes,
+                    ARRAY_AGG(
+                        (
+                            htv.ref_block_num,
+                            htv.ref_block_prefix,
+                            htv.expiration,
+                            ops.bodies,
+                            _empty_jsonb_array,
+                            (
+                                CASE
+                                    WHEN multisigs.signatures = ARRAY[NULL]::BYTEA[] THEN ARRAY[ htv.signature ]::BYTEA[]
+                                    ELSE htv.signature || multisigs.signatures
+                                END
+                            )
+                        ) :: hive.transaction_type
+                    ) AS transactions
+                FROM
+                (
+                    SELECT txd.trx_hash, ARRAY_AGG(htmv.signature) AS signatures
+                    FROM trx_details txd
+                    LEFT JOIN hive.transactions_multisig_view htmv
+                    ON txd.trx_hash = htmv.trx_hash
+                    GROUP BY txd.trx_hash
+                ) AS multisigs
+                JOIN trx_details htv ON htv.trx_hash = multisigs.trx_hash
+                JOIN operations ops ON ops.block_num = htv.block_num AND htv.trx_in_block = ops.trx_in_block
+                GROUP BY htv.block_num
+                ORDER BY htv.block_num ASC
+        )
+        SELECT
+            bbd.num,
+            (
+                bbd.prev,
+                bbd.created_at,
+                bbd.name,
+                bbd.transaction_merkle_root,
+                bbd.extensions,
+                bbd.witness_signature,
+                ftws.transactions,
+                bbd.hash,
+                bbd.signing_key,
+                ftws.trx_hashes
+            ) :: hive.block_type
+        FROM base_blocks_data bbd
+        LEFT JOIN full_transactions_with_signatures ftws ON ftws.block_num = bbd.num
+        ORDER BY bbd.num ASC
+        ;
 END;
 $BODY$
 ;
