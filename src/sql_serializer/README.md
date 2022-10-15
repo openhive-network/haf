@@ -11,7 +11,7 @@ You need to add the sql_serializer plugin and associated parameters to the hived
 
 ```
 plugin = sql_serializer
-psql-url = dbname=block_log user=postgres password=pass hostaddr=127.0.0.1 port=5432
+psql-url = dbname=block_log user=my_hived_role password=pass hostaddr=127.0.0.1 port=5432
 psql-index-threshold = 1000000
 psql-operations-threads-number = 5
 psql-transactions-threads-number = 2
@@ -25,13 +25,13 @@ psql-livesync-threshold = 10000
 The sql_serializer extends hived with these new parameters:
 * **psql-url** contains information needed to connect to the HAF database
     - *dbname* name of the HAF database on the PostgreSQL cluster
-    - *user* a Postgres role name used to connect to the database
+    - *user* a Postgres role name used to connect to the database (by default it should be a hived builtin role)
     - *hostaddr* an internet address of the PostgreSQL cluster
     - *port* a TCP port on wich the PostgreSQL cluster is listening
 
   ```
   Example:
-  psql-url = dbname=block_log user=postgres password=pass hostaddr=127.0.0.1 port=5432
+  psql-url = dbname=block_log user=my_hived_role password=pass hostaddr=127.0.0.1 port=5432
   ```
 * **psql-index-threshold** [default: 1'000'000] tells the sql_serializer to enter massive sync mode if more than this number of blocks need to be processed when hived is restarted. The sql_serializer can process blocks much faster in massive sync mode, but there is a potential performance tradeoff in operating in massive sync mode versus live sync mode, because the sql indexes in the HAF database must be deleted to enter massive sync mode and they must be rebuilt when the sql_serializer exits massive sync mode (and rebuilding these indexes takes a significant amount of time). In other words, psql-index-threshold is the limit of the number of unprocessed blocks that will be synchronized slowly with enabled indexes. *Question: how is the number of unprocessed blocks determined?*
 * **psql-operations-threads-number**[default: 5] the number of threads used to dump blockchain operations to the database. Operations are the biggest part of the blockchain data, so by default more threads are assigned to process them. Operations are grouped into tuples which are dumped concurrently to the HAF database.

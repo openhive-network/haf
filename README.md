@@ -48,7 +48,7 @@ the same CMake parameters which are used to compile the hived project ( for exam
 
 ### Choose a version of Postgres to compile with
 CMake variable `POSTGRES_INSTALLATION_DIR` is used to point to the installation folder
-with PostgreSQL binaries. By default it is `/usr/lib/postgresql/14/bin` - place where Postgres v.14
+with PostgreSQL binaries. By default it is `/usr/lib/postgresql/12/bin` - place where Postgres v.12
 is installed on Ubuntu. An example of choosing a different version of Postgres:
 1. create build directory, for example in HAF source's root dir: `mkdir build`
 2. `cd build`
@@ -67,31 +67,32 @@ This will copy plugins to the Postgres cluster `$libdir/plugins` directory and e
 You can check the `$libdir` with command: `pg_config --pkglibdir`, and the shared dir with `pg_config --sharedir`
 
 ### - Authorization
-It is required to configure two based roles:
-```
-CREATE ROLE hived_group WITH NOLOGIN;
-CREATE ROLE hive_applications_group WITH NOLOGIN;
-```
+It is required to configure standard database roles being members of two special groups: `hived_group` and `hive_applications_group`.
+
+See builtin roles [deployment](https://gitlab.syncad.com/hive/haf/-/blob/develop/scripts/setup_postgres.sh#L36) for details. To have sysadm permission, it is advised to have dedicated role and avoid using postgres user for it. By default it is a `haf_admin` role which is deployed [here](https://gitlab.syncad.com/hive/haf/-/blob/develop/scripts/setup_postgres.sh#L155).
+Above builtin roles uses peer authentication scheme, so to use them also UNIX user should be created. Builtin role permissions are discussed in dockerized setup description which performs standard setup procedure of HAF instance - see: [builtin roles description](https://gitlab.syncad.com/hive/haf#access-permissions-specific-to-internal-postgresql-instance)
+
 The HAF will grant to these roles access to its internal elements in a way which gurantees security for the application data and application's execution flows.
-The maintainer of the PostgreSQL cluster server needs to create roles ( users ) which inherits from one of these groups for example:
+
+To create a custom roles being used in further steps, you can use example statements:
 ```
-   CREATE ROLE hived LOGIN PASSWORD 'hivedpass' INHERIT IN ROLE hived_group;
-   CREATE ROLE application LOGIN PASSWORD 'applicationpass' INHERIT IN ROLE hive_applications_group;
+   CREATE ROLE my_hived LOGIN PASSWORD 'hivedpass' INHERIT IN ROLE hived_group;
+   CREATE ROLE my_application LOGIN PASSWORD 'applicationpass' INHERIT IN ROLE hive_applications_group;
 ```
 The roles which inherits from `hived_groups` must be used by `sql_serializer` process to login into the database.
 Roles which inherit from `hive_application_group` shall be used by the applications.
 Each app role does not have access to internal data created by other HAF app roles and cannot
 modify data written by 'hived'. 'Hived' roles cannot modify the data of HAF apps.
 
-More about roles in PostgreSQL documentaion: [CREATE ROLE](https://www.postgresql.org/docs/10/sql-createrole.html) 
+More about roles in PostgreSQL documentaion: [CREATE ROLE](https://www.postgresql.org/docs/12/sql-createrole.html) 
 
 Note: whenever you build a new version of the hive_fork_manager extension, you have to create a new HAF database.
 There is no way currently to upgrade the schema installed in an old HAF database.
 
 ## 2. Preparing a PostgreSQL database
 A newly create HAF database has to have have the hive_fork_manager extension installed. Without this extension, 'sql_serializer'
-won't connect the hived node to the database. To install the extension in a database, execute the psql
-command: `CREATE EXTENSION hive_fork_manager CASCADE;`. The CASCADE option is needed to automatically install additional extensions that the hive_fork_manager extension depends on.
+won't connect the hived node to the database. Mostly, to install the extension in a database, execute the psql
+command: `CREATE EXTENSION hive_fork_manager CASCADE;`, but prederred way is to used scripts dedicated to that: [setup_postgres.sh](scripts/setup_postgres.sh) and [setup_db.sh](scripts/setup_db.sh).
 
 The database should use these parameters:
 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' and LC_CTYPE = 'en_US.UTF-8' 
