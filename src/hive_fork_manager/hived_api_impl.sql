@@ -569,7 +569,7 @@ BEGIN
                 SELECT ho.block_num, ho.trx_in_block, ARRAY_AGG(ho.body ORDER BY op_pos ASC) bodies
                 FROM hive.operations_view ho
                 WHERE
-                    ho.op_type_id < (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = TRUE ORDER BY ot.id LIMIT 1)
+                    ho.op_type_id <= (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = FALSE ORDER BY ot.id DESC LIMIT 1) 
                     AND ho.block_num >= _block_num_start AND ho.block_num < _block_num_end
                 GROUP BY ho.block_num, ho.trx_in_block
                 ORDER BY ho.block_num ASC, trx_in_block ASC

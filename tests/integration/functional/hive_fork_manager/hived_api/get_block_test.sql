@@ -51,6 +51,19 @@ BEGIN
         , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 3 )
     ;
 
+    INSERT INTO hive.operation_types VALUES (1, 'example_op', FALSE),(2, 'example_vop', TRUE);
+
+    INSERT INTO hive.operations
+    VALUES
+        -- id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body
+          ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'BLOCK ONE OP' )
+        , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'BLOCK TWO OP' )
+        , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'BLOCK THREE OP' )
+        , ( 4, 3, 0, 1, 2, '2016-06-22 19:10:21-07'::timestamp, 'BLOCK THREE OP' )
+        , ( 5, 4, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, 'BLOCK FOUR OP' )
+        , ( 6, 5, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp, 'BLOCK FIVE OP' )
+    ;
+
     UPDATE hive.irreversible_data SET consistent_block = 5;
 END;
 $BODY$
@@ -92,7 +105,7 @@ BEGIN
     ASSERT __block.extensions = E'[{"version":"1.26"}]'::jsonb, 'Incorrect extensions';
     ASSERT __block.witness_signature = '\x21571234'::bytea, 'Incorrect witness signature';
 
-    __transaction1 = (101, 100, '2016-06-22 19:10:23-07'::timestamp, NULL , NULL, ARRAY[ '\xBEEF'::bytea ]);
+    __transaction1 = (101, 100, '2016-06-22 19:10:23-07'::timestamp, ARRAY['BLOCK THREE OP'] :: TEXT[] , array_to_json(ARRAY[] :: INT[]) :: JSONB, ARRAY[ '\xBEEF'::bytea ]);
     ASSERT __block.transactions[1] = __transaction1, 'Incorrect first transaction';
     ASSERT __block.transactions = Array[ __transaction1 ], 'Incorrect transactions array';
     ASSERT __block.block_id = '\xBADD30'::bytea, 'Incorrect block_id';
