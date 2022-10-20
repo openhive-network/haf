@@ -1,0 +1,746 @@
+[0KRunning with gitlab-runner 15.2.1 (32fc1585)[0;m
+[0K  on hive-builder-4 (for hived) Na7LfxUG[0;m
+section_start:1659960584:prepare_executor
+[0K[0K[36;1mPreparing the "docker" executor[0;m[0;m
+[0KUsing Docker executor with image registry.gitlab.syncad.com/hive/haf/ci-base-image@sha256:a22b174d15ad9878f878e798e297d2134da132174802abff0923ea214e2f4543 ...[0;m
+[0KUsing locally found image version due to "if-not-present" pull policy[0;m
+[0KUsing docker image sha256:9b0b48ce1f75decbe0d10e50e5cb9921549cbe75ef8eed1ca8206795d8d538e3 for registry.gitlab.syncad.com/hive/haf/ci-base-image@sha256:a22b174d15ad9878f878e798e297d2134da132174802abff0923ea214e2f4543 with digest registry.gitlab.syncad.com/hive/haf/builder@sha256:a22b174d15ad9878f878e798e297d2134da132174802abff0923ea214e2f4543 ...[0;m
+section_end:1659960589:prepare_executor
+[0Ksection_start:1659960589:prepare_script
+[0K[0K[36;1mPreparing environment[0;m[0;m
+Running on runner-na7lfxug-project-323-concurrent-2 via hive-builder-4...
+section_end:1659960589:prepare_script
+[0Ksection_start:1659960589:get_sources
+[0K[0K[36;1mGetting source from Git repository[0;m[0;m
+[32;1mFetching changes with git depth set to 1...[0;m
+Reinitialized existing Git repository in /builds/hive/haf/.git/
+[32;1mChecking out dfbc46bd as ms_fast_confirmation_as_submodule...[0;m
+Removing build.log
+Removing hived_testnet/
+
+[32;1mUpdating/initializing submodules recursively with git depth set to 1...[0;m
+Synchronizing submodule url for 'hive'
+Synchronizing submodule url for 'hive/libraries/chain/compression_dictionaries'
+Synchronizing submodule url for 'hive/libraries/fc/vendor/secp256k1-zkp'
+Synchronizing submodule url for 'hive/libraries/fc/vendor/websocketpp'
+Synchronizing submodule url for 'hive/libraries/vendor/zstd'
+Synchronizing submodule url for 'hive/tests/schemas'
+Synchronizing submodule url for 'hive/tests/test_tools'
+Synchronizing submodule url for 'hive/tests/tests_api'
+Entering 'hive'
+Removing libraries/plugins/sql_serializer
+Removing programs/build_helpers/hive_build_helpers/__pycache__/
+Entering 'hive/libraries/chain/compression_dictionaries'
+Entering 'hive/libraries/fc/vendor/secp256k1-zkp'
+Removing Makefile.in
+Removing aclocal.m4
+Removing autom4te.cache/
+Removing build-aux/compile
+Removing build-aux/config.guess
+Removing build-aux/config.sub
+Removing build-aux/depcomp
+Removing build-aux/install-sh
+Removing build-aux/ltmain.sh
+Removing build-aux/m4/libtool.m4
+Removing build-aux/m4/ltoptions.m4
+Removing build-aux/m4/ltsugar.m4
+Removing build-aux/m4/ltversion.m4
+Removing build-aux/m4/lt~obsolete.m4
+Removing build-aux/missing
+Removing build-aux/test-driver
+Removing configure
+Removing src/libsecp256k1-config.h.in
+Entering 'hive/libraries/fc/vendor/websocketpp'
+Entering 'hive/libraries/vendor/zstd'
+Entering 'hive/tests/schemas'
+Entering 'hive/tests/test_tools'
+Entering 'hive/tests/tests_api'
+Entering 'hive'
+HEAD is now at ea884d3 add enable_fast_confirm config option
+Entering 'hive/libraries/chain/compression_dictionaries'
+HEAD is now at b01e204 Add custom dictionary for blocks in the 65-66 million range
+Entering 'hive/libraries/fc/vendor/secp256k1-zkp'
+HEAD is now at bd06794 Pedersen commitments, borromean ring signatures, and ZK range proofs.
+Entering 'hive/libraries/fc/vendor/websocketpp'
+HEAD is now at 1b11fd3 Create FUNDING.yml
+Entering 'hive/libraries/vendor/zstd'
+HEAD is now at e47e674 Merge pull request #2995 from facebook/v1.5.2-rc
+Entering 'hive/tests/schemas'
+HEAD is now at a5a6b87 change names containing sps to dhf
+Entering 'hive/tests/test_tools'
+HEAD is now at be7db65 start notification server thread as daemon
+Entering 'hive/tests/tests_api'
+HEAD is now at 3d0d9cf rename all instances of sps into dhf
+Entering 'hive'
+Entering 'hive/libraries/chain/compression_dictionaries'
+Entering 'hive/libraries/fc/vendor/secp256k1-zkp'
+Entering 'hive/libraries/fc/vendor/websocketpp'
+Entering 'hive/libraries/vendor/zstd'
+Entering 'hive/tests/schemas'
+Entering 'hive/tests/test_tools'
+Entering 'hive/tests/tests_api'
+Entering 'hive'
+Entering 'hive/libraries/chain/compression_dictionaries'
+Entering 'hive/libraries/fc/vendor/secp256k1-zkp'
+Entering 'hive/libraries/fc/vendor/websocketpp'
+Entering 'hive/libraries/vendor/zstd'
+Entering 'hive/tests/schemas'
+Entering 'hive/tests/test_tools'
+Entering 'hive/tests/tests_api'
+section_end:1659960591:get_sources
+[0Ksection_start:1659960591:download_artifacts
+[0K[0K[36;1mDownloading artifacts[0;m[0;m
+[32;1mDownloading artifacts for hive_fork_manager (346063)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=346063 responseStatus[0;m=200 OK token[0;m=ZtGRSas8
+[32;1mDownloading artifacts for hived (346064)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=346064 responseStatus[0;m=200 OK token[0;m=ZtGRSas8
+section_end:1659960617:download_artifacts
+[0Ksection_start:1659960617:step_script
+[0K[0K[36;1mExecuting "step_script" stage of the job script[0;m[0;m
+[0KUsing docker image sha256:9b0b48ce1f75decbe0d10e50e5cb9921549cbe75ef8eed1ca8206795d8d538e3 for registry.gitlab.syncad.com/hive/haf/ci-base-image@sha256:a22b174d15ad9878f878e798e297d2134da132174802abff0923ea214e2f4543 with digest registry.gitlab.syncad.com/hive/haf/builder@sha256:a22b174d15ad9878f878e798e297d2134da132174802abff0923ea214e2f4543 ...[0;m
+[32;1m$ sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"[0;m
+
+/builds/hive/haf/scripts/setup_postgres.sh parameters: --haf-admin-account=haf_admin --haf-binaries-dir=/builds/hive/haf/hive_fork_manager/build 
+Script path is: /builds/hive/haf/scripts
+Attempting to install hive_fork_manager extenstion into PostgreSQL directories...
+/builds/hive/haf/hive_fork_manager/build /builds/hive/haf
+[0/1] Re-running CMake...
+-- BUILD_HIVE_TESTNET: OFF
+-- ENABLE_SMT_SUPPORT: OFF
+-- STORE_ACCOUNT_METADATA: ON
+--      
+--                  CONFIGURING TO INDEX ACCOUNT METADATA      
+--      
+-- CHAINBASE_CHECK_LOCKING: ON
+-- HIVE_CONVERTER_BUILD: OFF
+-- HIVE_FAIL_ON_WARNINGS: OFF
+-- Found Boost: /usr/include (found suitable version "1.71.0", minimum required is "1.58") found components: thread date_time system filesystem program_options serialization chrono unit_test_framework context locale coroutine atomic 
+-- Configuring Hive on Linux
+-- Configuring project fc located in: /builds/hive/haf/hive/libraries/fc
+-- Configuring fc to build on Unix/Apple
+-- Found Boost: /usr/include (found suitable version "1.71.0", minimum required is "1.53") found components: thread date_time system filesystem program_options serialization chrono unit_test_framework context locale iostreams coroutine atomic regex 
+** websocketpp
+
+=========== Used Build Configuration =============
+
+-- ENABLE_CPP11        = ON
+-- BUILD_EXAMPLES      = OFF
+-- BUILD_TESTS         = OFF
+
+-- WEBSOCKETPP_ROOT    = /builds/hive/haf/hive/libraries/fc/vendor/websocketpp
+-- WEBSOCKETPP_BIN     = /builds/hive/haf/hive_fork_manager/build/hive/libraries/fc/vendor/websocketpp/bin
+-- WEBSOCKETPP_LIB     = /builds/hive/haf/hive_fork_manager/build/hive/libraries/fc/vendor/websocketpp/lib
+-- Install prefix      = /usr/lib/postgresql/12/lib
+
+-- WEBSOCKETPP_BOOST_LIBS        = 
+-- WEBSOCKETPP_PLATFORM_LIBS     = 
+-- WEBSOCKETPP_PLATFORM_TLS_LIBS = 
+
+-- OPENSSL_FOUND        = TRUE
+-- OPENSSL_INCLUDE_DIR     = /usr/include
+-- OPENSSL_LIBRARIES = /usr/lib/x86_64-linux-gnu/libssl.a;/usr/lib/x86_64-linux-gnu/libcrypto.a;-pthread;dl
+-- OPENSSL_VERSION = 1.1.1f
+
+-- Found Readline: /usr/lib/x86_64-linux-gnu/libreadline.a;/usr/lib/x86_64-linux-gnu/libreadline.a;/usr/lib/x86_64-linux-gnu/libtinfo.a
+-- zlib found
+-- Could NOT find BZip2 (missing: BZIP2_LIBRARIES BZIP2_INCLUDE_DIR) 
+-- bzip2 not found
+-- LOG_LONG_API: ON
+--      
+--      LOGGING LONG API CALLS
+--           MAX  MS: 1000
+--           WARN MS: 750
+--      
+-- Finished fc module configuration...
+-- Enabling RTTI
+-- JNI library is disabled
+-- ZSTD VERSION: 1.5.2
+-- CMAKE_INSTALL_PREFIX: /usr/lib/postgresql/12/lib
+-- CMAKE_INSTALL_LIBDIR: lib
+-- ZSTD_LEGACY_SUPPORT not defined!
+-- ZSTD_MULTITHREAD_SUPPORT is enabled
+-- TEMPLATE_DEPS: /builds/hive/haf/hive_fork_manager/build/hive/libraries/jsonball/template_context/mm_ticks.json;/builds/hive/haf/hive_fork_manager/build/hive/libraries/jsonball/template_context/resource_parameters.json;/builds/hive/haf/hive/libraries/jsonball/templates/jsonball/CMakeLists.txt.j2;/builds/hive/haf/hive/libraries/jsonball/templates/jsonball/rc_params.cpp.j2;/builds/hive/haf/hive/libraries/jsonball/templates/jsonball/mm_ticks.cpp.j2;/builds/hive/haf/hive/libraries/jsonball/templates/jsonball/include/hive/jsonball/jsonball.hpp.j2
+
+-- TEMPLATE_OUTPUTS: /builds/hive/haf/hive_fork_manager/build/hive/libraries/jsonball/gensrc/jsonball/CMakeLists.txt;/builds/hive/haf/hive_fork_manager/build/hive/libraries/jsonball/gensrc/jsonball/rc_params.cpp;/builds/hive/haf/hive_fork_manager/build/hive/libraries/jsonball/gensrc/jsonball/mm_ticks.cpp;/builds/hive/haf/hive_fork_manager/build/hive/libraries/jsonball/gensrc/jsonball/include/hive/jsonball/jsonball.hpp
+
+-- Found Boost: /usr/include (found suitable version "1.71.0", minimum required is "1.58") found components: thread date_time system filesystem chrono program_options unit_test_framework locale atomic 
+-- Configuring AppBase on Linux
+-- Found Boost: /usr/include (found suitable version "1.71.0", minimum required is "1.57") found components: thread date_time system filesystem chrono unit_test_framework locale atomic 
+-- Configuring ChainBase on Linux
+running c++ compiler wit flags: -E;-fdirectives-only;/builds/hive/haf/hive_fork_manager/build/hive/libraries/protocol/config.hpp.pregen.preprocessed.hpp;-o;/builds/hive/haf/hive_fork_manager/build/hive/libraries/protocol/config.hpp.preprocessed
+get_config.cpp has been generated in `/builds/hive/haf/hive_fork_manager/build/hive/libraries/protocol/get_config.cpp`
+-- PLUGINS_DEPS: /builds/hive/haf/hive/libraries/manifest/../plugins/account_history_rocksdb/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/tags/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/witness/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/comment_cashout_logging/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/stats_export/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/chain/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/reputation/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/statsd/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/market_history/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/follow/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/block_data_export/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/state_snapshot/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/webserver/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/rc/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/transaction_status_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/condenser_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/wallet_bridge_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/market_history_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/rc_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/database_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/network_node_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/reputation_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/witness_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/account_by_key_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/block_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/rewards_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/chain_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/debug_node_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/account_history_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/apis/network_broadcast_api/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/block_log_info/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/account_by_key/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/debug_node/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/sql_serializer/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/p2p/plugin.json;/builds/hive/haf/hive/libraries/manifest/../plugins/transaction_status/plugin.json
+
+-- MANIFEST_DEPS: /builds/hive/haf/hive_fork_manager/build/hive/libraries/manifest/template_context/plugins.json;/builds/hive/haf/hive/libraries/manifest/templates/plugins/CMakeLists.txt.j2;/builds/hive/haf/hive/libraries/manifest/templates/plugins/plugins.cpp;/builds/hive/haf/hive/libraries/manifest/templates/plugins/mf_plugins.cpp.j2;/builds/hive/haf/hive/libraries/manifest/templates/plugins/include/hive/manifest/plugins.hpp
+
+-- MANIFEST_OUTPUTS: /builds/hive/haf/hive_fork_manager/build/hive/libraries/manifest/gensrc/plugins/CMakeLists.txt;/builds/hive/haf/hive_fork_manager/build/hive/libraries/manifest/gensrc/plugins/plugins.cpp;/builds/hive/haf/hive_fork_manager/build/hive/libraries/manifest/gensrc/plugins/mf_plugins.cpp;/builds/hive/haf/hive_fork_manager/build/hive/libraries/manifest/gensrc/plugins/include/hive/manifest/plugins.hpp
+
+-- Could NOT find Doxygen (missing: DOXYGEN_EXECUTABLE) 
+CMake Warning (dev) at hive/programs/blockchain_converter/CMakeLists.txt:3 (message):
+  Building without hive converter
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Adding condenser_api/broadcast_block to test list
+-- Adding condenser_api/broadcast_transaction to test list
+-- Adding condenser_api/broadcast_transaction_synchronous to test list
+-- Adding condenser_api/find_proposals to test list
+-- Adding condenser_api/get_account_count to test list
+-- Adding condenser_api/get_account_history to test list
+-- Adding condenser_api/get_accounts to test list
+-- Adding condenser_api/get_active_witnesses to test list
+-- Adding condenser_api/get_block to test list
+-- Adding condenser_api/get_block_header to test list
+-- Adding condenser_api/get_chain_properties to test list
+-- Adding condenser_api/get_config to test list
+-- Adding condenser_api/get_conversion_requests to test list
+-- Adding condenser_api/get_current_median_history_price to test list
+-- Adding condenser_api/get_dynamic_global_properties to test list
+-- Adding condenser_api/get_escrow to test list
+-- Adding condenser_api/get_expiring_vesting_delegations to test list
+-- Adding condenser_api/get_feed_history to test list
+-- Adding condenser_api/get_hardfork_version to test list
+-- Adding condenser_api/get_key_references to test list
+-- Adding condenser_api/get_market_history to test list
+-- Adding condenser_api/get_market_history_buckets to test list
+-- Adding condenser_api/get_next_scheduled_hardfork to test list
+-- Adding condenser_api/get_open_orders to test list
+-- Adding condenser_api/get_ops_in_block to test list
+-- Adding condenser_api/get_order_book to test list
+-- Adding condenser_api/get_owner_history to test list
+-- Adding condenser_api/get_potential_signatures to test list
+-- Adding condenser_api/get_recent_trades to test list
+-- Adding condenser_api/get_recovery_request to test list
+-- Adding condenser_api/get_required_signatures to test list
+-- Adding condenser_api/get_reward_fund to test list
+-- Adding condenser_api/get_savings_withdraw_from to test list
+-- Adding condenser_api/get_savings_withdraw_to to test list
+-- Adding condenser_api/get_ticker to test list
+-- Adding condenser_api/get_trade_history to test list
+-- Adding condenser_api/get_transaction to test list
+-- Adding condenser_api/get_transaction_hex to test list
+-- Adding condenser_api/get_version to test list
+-- Adding condenser_api/get_vesting_delegations to test list
+-- Adding condenser_api/get_volume to test list
+-- Adding condenser_api/get_withdraw_routes to test list
+-- Adding condenser_api/get_witness_by_account to test list
+-- Adding condenser_api/get_witness_count to test list
+-- Adding condenser_api/get_witness_schedule to test list
+-- Adding condenser_api/get_witnesses to test list
+-- Adding condenser_api/get_witnesses_by_vote to test list
+-- Adding condenser_api/list_proposal_votes to test list
+-- Adding condenser_api/list_proposals to test list
+-- Adding condenser_api/lookup_account_names to test list
+-- Adding condenser_api/lookup_accounts to test list
+-- Adding condenser_api/lookup_witness_accounts to test list
+-- Adding condenser_api/verify_authority to test list
+-- Adding database_api/find_account_recovery_requests to test list
+-- Adding database_api/find_accounts to test list
+-- Adding database_api/find_change_recovery_account_requests to test list
+-- Adding database_api/find_decline_voting_rights_requests to test list
+-- Adding database_api/find_escrows to test list
+-- Adding database_api/find_limit_orders to test list
+-- Adding database_api/find_owner_histories to test list
+-- Adding database_api/find_proposals to test list
+-- Adding database_api/find_savings_withdrawals to test list
+-- Adding database_api/find_hbd_conversion_requests to test list
+-- Adding database_api/find_vesting_delegation_expirations to test list
+-- Adding database_api/find_vesting_delegations to test list
+-- Adding database_api/find_votes to test list
+-- Adding database_api/find_withdraw_vesting_routes to test list
+-- Adding database_api/find_witnesses to test list
+-- Adding database_api/get_active_witnesses to test list
+-- Adding database_api/get_config to test list
+-- Adding database_api/get_current_price_feed to test list
+-- Adding database_api/get_dynamic_global_properties to test list
+-- Adding database_api/get_feed_history to test list
+-- Adding database_api/get_hardfork_properties to test list
+-- Adding database_api/get_nai_pool to test list
+-- Adding database_api/get_order_book to test list
+-- Adding database_api/get_potential_signatures to test list
+-- Adding database_api/get_required_signatures to test list
+-- Adding database_api/get_reward_funds to test list
+-- Adding database_api/get_transaction_hex to test list
+-- Adding database_api/get_version to test list
+-- Adding database_api/get_witness_schedule to test list
+-- Adding database_api/list_account_recovery_requests to test list
+-- Adding database_api/list_accounts to test list
+-- Adding database_api/list_change_recovery_account_requests to test list
+-- Adding database_api/list_decline_voting_rights_requests to test list
+-- Adding database_api/list_escrows to test list
+-- Adding database_api/list_limit_orders to test list
+-- Adding database_api/list_owner_histories to test list
+-- Adding database_api/list_proposal_votes to test list
+-- Adding database_api/list_proposals to test list
+-- Adding database_api/list_savings_withdrawals to test list
+-- Adding database_api/list_hbd_conversion_requests to test list
+-- Adding database_api/list_vesting_delegation_expirations to test list
+-- Adding database_api/list_vesting_delegations to test list
+-- Adding database_api/list_votes to test list
+-- Adding database_api/list_withdraw_vesting_routes to test list
+-- Adding database_api/list_witness_votes to test list
+-- Adding database_api/list_witnesses to test list
+-- Adding database_api/verify_account_authority to test list
+-- Adding database_api/verify_authority to test list
+-- Adding database_api/verify_signatures to test list
+-- Adding jsonrpc_api/get_methods to test list
+-- Adding jsonrpc_api/get_signature to test list
+-- Adding market_history_api/get_market_history to test list
+-- Adding market_history_api/get_market_history_buckets to test list
+-- Adding market_history_api/get_order_book to test list
+-- Adding market_history_api/get_recent_trades to test list
+-- Adding market_history_api/get_ticker to test list
+-- Adding market_history_api/get_trade_history to test list
+-- Adding market_history_api/get_volume to test list
+-- Adding rc_api/find_rc_accounts to test list
+-- Adding rc_api/get_resource_params to test list
+-- Adding rc_api/get_resource_pool to test list
+-- Adding reputation_api/get_account_reputations to test list
+-- 
+
+             CONFIGURED FOR HIVE NETWORK             
+
+
+-- 
+
+             CONFIGURED FOR NO SUPPORT OF SMT             
+
+
+-- 
+
+             FORMAT IS NOT AVAIABLE                
+
+
+-- GIT hash: dfbc46b
+-- Postgres version: 12
+-- Postgres libdir: /usr/lib/postgresql/12/lib
+-- Postgres sharedir: /usr/share/postgresql/12
+-- Postgres server include dirs: /usr/include/postgresql;/usr/include/postgresql/12/server
+-- Postgres server port: 5432
+-- VERSION: dfbc46b
+-- Found Boost: /usr/include (found suitable version "1.71.0", minimum required is "1.53") found components: thread date_time system filesystem program_options serialization unit_test_framework context locale iostreams chrono atomic regex 
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.schema_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.register_table_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.register_table_edit_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.register_table_edit_negative_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.register_table_edit_negative_rowid_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.register_table_drop_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.detach_table_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.attach_table_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.detach_negative_unregistered_table_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.detach_negative_not_empty_shadow_table_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.detach_all_tables_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.detach_all_negative_tables_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.detach_constraint_fk_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.attach_negative_unregistered_table_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.attach_all_tables_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.attach_all_negative_tables_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.drop_registered_table_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.register_table_no_context_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.register_table_public_schema_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.register_table_to_two_contexts_negative_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.create_context_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.create_context_negative'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.context_next_block_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.trigger_on_insert_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.trigger_on_delete_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.trigger_on_update_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.trigger_on_truncate_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.trigger_on_insert_update_delete_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.trigger_on_multi_rows_insert_update_delete_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_insert_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_update_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_delete_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_truncate_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_update_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_truncate_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_delete_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_next_delete_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_update_delete_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_update_next_delete_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_update_some_rows_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_insert_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_next_insert_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_insert_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_delete_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_update_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_truncate_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_2_tables_schemas_insert_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_2_contexts_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_to_block_num_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_fk_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_unique_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_pk_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_update_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_insert_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_delete_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.set_irreversible_block_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.set_irreversible_block_negative_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.performance_insert_rows_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.performance_back_from_insert_rows_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.performance_delete_rows_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.performance_back_from_delete_rows_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.performance_update_rows_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.performance_back_from_update_rows_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.performance_truncate_rows_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.performance_back_from_truncate_rows_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.performance_insert_rows_one_by_one_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.performance_delete_rows_one_by_one_test'
+-- Added functional tests 'test.functional.hive_fork_manager.context_rewind.performance_update_rows_one_by_one_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.schema_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.back_from_fork_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.push_block_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.set_irreversible_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.copy_blocks_to_irreversible'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.copy_transactions_to_irreversible_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.copy_operations_to_irreversible_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.copy_signatures_to_irreversible_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible_3_contexts'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible_no_contexts'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.end_massive_sync_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.set_irreversible_cleaning_events_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.disable_indexes_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.enable_indexes_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.enable_indexes_compare_saved_statement_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.remove_obsolete_end_massive_sync_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.remove_obsolete_end_massive_sync_with_app_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.set_irreversible_not_copy_reversible_data_from_old_fork_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.set_irreversible_not_copy_reversible_data_from_top_fork_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.removing_inconsistent_irreversibele_data'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.not_removing_inconsistent_irreversibele_data'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.connect_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.copy_accounts_to_irreversible'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.copy_account_operations_to_irreversible'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.disable_indexes_reversible_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.enable_indexes_reversible_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.mark_irreversible_dirty_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.mark_irreversible_not_dirty_test'
+-- Added functional tests 'test.functional.hive_fork_manager.hived_api.enable_fk_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.create_context_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_remove_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_remove_negative_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_re_create_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_blocks_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_blocks_view_nonforking_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_transactions_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_transactions_view_non_forking_app_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_signatures_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_signatures_view_non_forking_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_operations_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_operations_view_non_forking_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_is_attached'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_is_attached_negative'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_detached_save_block_num'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_detached_get_block_num'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_detached_save_block_num_negative'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_detached_get_block_num_negative'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_process_new_block_event'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_negative'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_process_new_block_event_2_contexts'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_process_BFF_event'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_process_BFF_event_2_contexts'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_process_SET_IRREVERSIBLE_event'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_process_SET_IRREVERSIBLE_event_2_contexts'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_attach'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_attach_negative'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_detach'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_process_MASSIVE_SYNC_event'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_process_squash_MASSIVE_SYNC_event'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_series_of_MASSIVE_SYNC'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_process_negative_MASSIVE_SYNC_event'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_non_forking_app'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_exists'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.register_already_existed_table'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.register_already_registered_table_negative'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_get_irreversible_block_forking'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_get_irreversible_block_non_forking'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_unregister_table'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_unregister_table_with_dependency'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_blocks_view_nonforking_detach_context_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_blocks_view_detach_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_signatures_view_non_forking_detach_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_signatures_view_detach_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_operations_view_non_forking_detach_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_operations_view_detach_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_transactions_view_non_forking_detach_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_transactions_view_detach_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_after_attach'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_remove_detached_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.empty_blocks_and_views'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_accounts_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_accounts_view_detach_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_accounts_view_nonforking_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_accounts_view_nonforking_detach_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_account_operations_view_detach_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_account_operations_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_account_operations_view_nonforking_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.context_account_operations_view_nonforking_detach_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.account_operations_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.accounts_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.blocks_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.transactions_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.signatures_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.operations_view_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_next_block_after_attach_2'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.get_block_header_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.get_block_header_2_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.get_block_header_negative_test'
+-- Added functional tests 'test.functional.hive_fork_manager.app_api.app_context_detach_after_next_block'
+-- Added functional tests 'test.functional.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork'
+-- Added functional tests 'test.functional.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork_non_forking_app'
+-- Added functional tests 'test.functional.hive_fork_manager.state_providers.import_state_provider_negative'
+-- Added functional tests 'test.functional.hive_fork_manager.state_providers.import_state_provider'
+-- Added functional tests 'test.functional.hive_fork_manager.state_providers.accounts_start_state_provider'
+-- Added functional tests 'test.functional.hive_fork_manager.state_providers.accounts_update_state_provider'
+-- Added functional tests 'test.functional.hive_fork_manager.state_providers.update_state_provider'
+-- Added functional tests 'test.functional.hive_fork_manager.state_providers.update_state_provider_attached'
+-- Added functional tests 'test.functional.hive_fork_manager.state_providers.update_state_provider_negative'
+-- Added functional tests 'test.functional.hive_fork_manager.state_providers.context_remove_and_state_provider'
+-- Added functional tests 'test.functional.hive_fork_manager.state_providers.import_state_provider_non_fork'
+-- Added functional tests 'test.functional.hive_fork_manager.state_providers.switch_state_provider_to_forkable'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.authorization.alice_access_to_bob_negative'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.authorization.alice_access_events_infrustructure'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.authorization.hived_access_alice_context_data'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.authorization.api_protection'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.authorization.massive_sync_live_blocks_and_fork'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.authorization.alice_grant_to_hive_applications_group'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.authorization.hived_to_api_access'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.authorization.alice_access_to_head_block_views'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.examples.forking_application'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.examples.non_forking_application'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.examples.accounts_provider_application'
+-- Added functional authorization tests 'test.functional.hive_fork_manager.examples.accounts_provider_non_fork_application'
+-- Added functional tests 'test.functional.hive_fork_manager.shared_lib.get_impacted_accounts'
+-- Added functional tests 'test.functional.hive_fork_manager.shared_lib.get_impacted_balances'
+-- Added functional tests 'test.functional.hive_fork_manager.shared_lib.get_legacy_style_operation'
+-- haf system tests skipped: BUILD_HIVE_TESTNET is required
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /builds/hive/haf/hive_fork_manager/build
+[0/1] Install the project...
+-- Install configuration: "Release"
+-- Up-to-date: /usr/share/postgresql/12/extension
+-- Installing: /usr/share/postgresql/12/extension/hive_fork_manager--dfbc46b.sql
+-- Installing: /usr/share/postgresql/12/extension/hive_fork_manager--PROXY--dfbc46b.sql
+-- Installing: /usr/share/postgresql/12/extension/hive_fork_manager.control
+-- Installing: /usr/lib/postgresql/12/lib/./libhfm-dfbc46b.so
+-- Set runtime path of "/usr/lib/postgresql/12/lib/./libhfm-dfbc46b.so" to "/usr/lib/postgresql/12/lib"
+-- Up-to-date: /usr/lib/postgresql/12/lib
+/builds/hive/haf
+ * Starting PostgreSQL 12 database server
+   ...done.
+Attempting to deploy HAF builtin roles...
+DO $$
+BEGIN
+    CREATE ROLE hived_group WITH NOLOGIN;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+    RAISE NOTICE 'hived_group role already exists';
+END
+$$;
+DO
+DO $$
+BEGIN
+    CREATE ROLE hive_applications_group WITH NOLOGIN;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+    RAISE NOTICE 'hive_applications_group role already exists';
+END
+$$;
+DO
+DO $$
+BEGIN
+    CREATE ROLE haf_administrators_group WITH NOLOGIN SUPERUSER
+    INHERIT
+      CREATEDB
+      CREATEROLE
+      NOREPLICATION;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+    RAISE NOTICE 'haf_administrators_group role already exists';
+END
+$$;
+DO
+DO $$
+BEGIN
+    CREATE ROLE haf_app_admin WITH LOGIN CREATEROLE INHERIT IN ROLE hive_applications_group;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+    RAISE NOTICE 'haf_app_admin role already exists';
+END
+$$;
+DO
+DO $$
+BEGIN
+    CREATE ROLE hived WITH LOGIN INHERIT IN ROLE hived_group;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+    RAISE NOTICE 'hived role already exists';
+END
+$$;
+DO
+
+/builds/hive/haf/scripts/create_haf_admin_role.sh parameters: --host=/var/run/postgresql --port=5432 --haf-admin-account=haf_admin 
+DO $$
+BEGIN
+    CREATE ROLE haf_admin WITH
+      LOGIN
+      SUPERUSER
+      INHERIT
+      CREATEDB
+      NOCREATEROLE
+      NOREPLICATION
+      IN ROLE haf_administrators_group
+      ;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+    RAISE NOTICE 'haf_admin already exists';
+END
+$$;
+DO
+changed ownership of '/builds/hive/haf/haf_database_store' from root:root to postgres:postgres
+  CREATE TABLESPACE haf_tablespace OWNER haf_admin LOCATION '/builds/hive/haf/haf_database_store';
+CREATE TABLESPACE
+[32;1m$ $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"[0;m
+
+/builds/hive/haf/scripts/setup_db.sh parameters: --haf-db-name=haf_block_log --haf-app-user=haf_app_admin 
+  DROP DATABASE IF EXISTS haf_block_log;
+psql:<stdin>:1: NOTICE:  database "haf_block_log" does not exist, skipping
+DROP DATABASE
+  CREATE DATABASE haf_block_log WITH OWNER haf_admin TABLESPACE haf_tablespace;
+CREATE DATABASE
+CREATE EXTENSION hive_fork_manager CASCADE;
+NOTICE:  installing required extension "tablefunc"
+CREATE EXTENSION
+    GRANT CREATE ON DATABASE haf_block_log TO haf_app_admin;
+GRANT
+[32;1m$ test -n "$PATTERNS_PATH"[0;m
+[32;1m$ cd $CI_PROJECT_DIR/tests/integration/replay[0;m
+[32;1m$ mkdir $PATTERNS_PATH/blockchain[0;m
+[32;1m$ ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath[0;m
+total 29M
+-rwxr-xr-x  1 haf_admin haf_admin  24M Aug  8 11:55 compress_block_log
+drwxr-xr-x  3 haf_admin haf_admin 4.0K Aug  8 11:55 .
+-rwxr-xr-x  1 haf_admin haf_admin 5.7M Aug  8 11:55 get_dev_key
+drwxr-xr-x 10 haf_admin haf_admin 4.0K Aug  8 11:49 ..
+drwxr-xr-x 16 haf_admin haf_admin 4.0K Aug  8 11:49 CMakeFiles
+-rw-r--r--  1 haf_admin haf_admin  12K Aug  8 11:49 cmake_install.cmake
+[32;1m$ $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000[0;m
+632379ms compress_block_log.cpp:391    main                 ] Compressing using zstd level 15
+632379ms compress_block_log.cpp:275    fill_pending_queue   ] Starting fill_pending_queue
+632379ms block_log.cpp:158             open                 ] Opening blocklog /blockchain/block_log
+632379ms block_log.cpp:158             open                 ] Opening blocklog /builds/hive/haf/tests/integration/replay/patterns/virtual_operations_filtered/blockchain/block_log
+632379ms block_log.cpp:187             open                 ] block_log_size: 288316850520 
+632379ms block_log_artifacts.cpp:383   load_header          ] Loaded header containing: git rev: 18230bb79441b65d644ee92907dd574c3c231742, format version: 1.0, head_block_num: 44973262
+632379ms block_log_artifacts.cpp:342   try_to_open          ] block_log and block_log.artifacts files match - no generation needed.
+632379ms compress_block_log.cpp:278    fill_pending_queue   ] Opened source block log
+632379ms compress_block_log.cpp:286    fill_pending_queue   ] head_block_num: 44973262 
+632379ms compress_block_log.cpp:294    fill_pending_queue   ] Compressing blocks 1 to 5000000
+632379ms block_log_artifacts.cpp:289   try_to_open          ] Could not find artifacts file in /builds/hive/haf/tests/integration/replay/patterns/virtual_operations_filtered/blockchain/block_log.artifacts, it will be created and generated from block_log.
+632379ms block_log_artifacts.cpp:400   flush_header         ] Header pack size: 48
+632379ms block_log_artifacts.cpp:402   flush_header         ] Attempting to write header containing: git rev: ea884d3bcdaf6469232e2d1718f35ed00bdd2ddd, format version: 1.0, head_block_num: 0, dirty_close: 1
+632380ms block_log_artifacts.cpp:400   flush_header         ] Header pack size: 48
+632380ms block_log_artifacts.cpp:402   flush_header         ] Attempting to write header containing: git rev: ea884d3bcdaf6469232e2d1718f35ed00bdd2ddd, format version: 1.0, head_block_num: 0, dirty_close: 1
+632380ms compress_block_log.cpp:203    drain_completed_queu ] Opened output block log
+632981ms compress_block_log.cpp:253    drain_completed_queu ] at block 100000: total uncompressed 13947811 compressed to 13947811 (0.00%)
+633514ms compress_block_log.cpp:253    drain_completed_queu ] at block 200000: total uncompressed 27898801 compressed to 27898801 (0.00%)
+634055ms compress_block_log.cpp:253    drain_completed_queu ] at block 300000: total uncompressed 42067825 compressed to 42067825 (0.00%)
+634687ms compress_block_log.cpp:253    drain_completed_queu ] at block 400000: total uncompressed 57987851 compressed to 57987851 (0.00%)
+635239ms compress_block_log.cpp:253    drain_completed_queu ] at block 500000: total uncompressed 74465819 compressed to 74465819 (0.00%)
+635707ms compress_block_log.cpp:253    drain_completed_queu ] at block 600000: total uncompressed 91448914 compressed to 91448914 (0.00%)
+636276ms compress_block_log.cpp:253    drain_completed_queu ] at block 700000: total uncompressed 107908766 compressed to 107908766 (0.00%)
+636821ms compress_block_log.cpp:253    drain_completed_queu ] at block 800000: total uncompressed 123818616 compressed to 123818616 (0.00%)
+637445ms compress_block_log.cpp:253    drain_completed_queu ] at block 900000: total uncompressed 139127427 compressed to 139127427 (0.00%)
+637930ms compress_block_log.cpp:253    drain_completed_queu ] at block 1000000: total uncompressed 153834225 compressed to 153834225 (0.00%)
+638554ms compress_block_log.cpp:253    drain_completed_queu ] at block 1100000: total uncompressed 168715825 compressed to 168715825 (0.00%)
+639163ms compress_block_log.cpp:253    drain_completed_queu ] at block 1200000: total uncompressed 183902417 compressed to 183902417 (0.00%)
+639677ms compress_block_log.cpp:253    drain_completed_queu ] at block 1300000: total uncompressed 199088629 compressed to 199088629 (0.00%)
+640184ms compress_block_log.cpp:253    drain_completed_queu ] at block 1400000: total uncompressed 214889731 compressed to 214889731 (0.00%)
+640652ms compress_block_log.cpp:253    drain_completed_queu ] at block 1500000: total uncompressed 230884473 compressed to 230884473 (0.00%)
+641126ms compress_block_log.cpp:253    drain_completed_queu ] at block 1600000: total uncompressed 247632861 compressed to 247632861 (0.00%)
+641660ms compress_block_log.cpp:253    drain_completed_queu ] at block 1700000: total uncompressed 264014888 compressed to 264014888 (0.00%)
+642159ms compress_block_log.cpp:253    drain_completed_queu ] at block 1800000: total uncompressed 282508352 compressed to 282508352 (0.00%)
+642662ms compress_block_log.cpp:253    drain_completed_queu ] at block 1900000: total uncompressed 300321212 compressed to 300321212 (0.00%)
+643238ms compress_block_log.cpp:253    drain_completed_queu ] at block 2000000: total uncompressed 319062054 compressed to 319062054 (0.00%)
+643833ms compress_block_log.cpp:253    drain_completed_queu ] at block 2100000: total uncompressed 336474149 compressed to 336474149 (0.00%)
+644420ms compress_block_log.cpp:253    drain_completed_queu ] at block 2200000: total uncompressed 354413608 compressed to 354413608 (0.00%)
+645319ms compress_block_log.cpp:253    drain_completed_queu ] at block 2300000: total uncompressed 373427544 compressed to 373427544 (0.00%)
+645972ms compress_block_log.cpp:253    drain_completed_queu ] at block 2400000: total uncompressed 393263540 compressed to 393263540 (0.00%)
+646561ms compress_block_log.cpp:253    drain_completed_queu ] at block 2500000: total uncompressed 412263931 compressed to 412263931 (0.00%)
+647081ms compress_block_log.cpp:253    drain_completed_queu ] at block 2600000: total uncompressed 431921099 compressed to 431921099 (0.00%)
+647608ms compress_block_log.cpp:253    drain_completed_queu ] at block 2700000: total uncompressed 450686205 compressed to 450686205 (0.00%)
+648211ms compress_block_log.cpp:253    drain_completed_queu ] at block 2800000: total uncompressed 472230439 compressed to 472230439 (0.00%)
+648795ms compress_block_log.cpp:253    drain_completed_queu ] at block 2900000: total uncompressed 494135989 compressed to 494135989 (0.00%)
+649438ms compress_block_log.cpp:253    drain_completed_queu ] at block 3000000: total uncompressed 525382432 compressed to 525382432 (0.00%)
+650101ms compress_block_log.cpp:253    drain_completed_queu ] at block 3100000: total uncompressed 567665730 compressed to 567665730 (0.00%)
+650737ms compress_block_log.cpp:253    drain_completed_queu ] at block 3200000: total uncompressed 653334010 compressed to 653334010 (0.00%)
+651347ms compress_block_log.cpp:253    drain_completed_queu ] at block 3300000: total uncompressed 758676862 compressed to 758676862 (0.00%)
+651968ms compress_block_log.cpp:253    drain_completed_queu ] at block 3400000: total uncompressed 921865398 compressed to 921865398 (0.00%)
+652706ms compress_block_log.cpp:253    drain_completed_queu ] at block 3500000: total uncompressed 1280713467 compressed to 1280713467 (0.00%)
+653296ms compress_block_log.cpp:253    drain_completed_queu ] at block 3600000: total uncompressed 1442822472 compressed to 1442822472 (0.00%)
+653877ms compress_block_log.cpp:253    drain_completed_queu ] at block 3700000: total uncompressed 1565782813 compressed to 1565782813 (0.00%)
+654557ms compress_block_log.cpp:253    drain_completed_queu ] at block 3800000: total uncompressed 1698199675 compressed to 1698199675 (0.00%)
+655258ms compress_block_log.cpp:253    drain_completed_queu ] at block 3900000: total uncompressed 1827610627 compressed to 1827610627 (0.00%)
+656227ms compress_block_log.cpp:253    drain_completed_queu ] at block 4000000: total uncompressed 1968720609 compressed to 1968720609 (0.00%)
+657070ms compress_block_log.cpp:253    drain_completed_queu ] at block 4100000: total uncompressed 2081913864 compressed to 2081913864 (0.00%)
+657663ms compress_block_log.cpp:253    drain_completed_queu ] at block 4200000: total uncompressed 2204322687 compressed to 2204322687 (0.00%)
+658254ms compress_block_log.cpp:253    drain_completed_queu ] at block 4300000: total uncompressed 2315945910 compressed to 2315945910 (0.00%)
+658847ms compress_block_log.cpp:253    drain_completed_queu ] at block 4400000: total uncompressed 2434421090 compressed to 2434421090 (0.00%)
+659447ms compress_block_log.cpp:253    drain_completed_queu ] at block 4500000: total uncompressed 2542030191 compressed to 2542030191 (0.00%)
+660032ms compress_block_log.cpp:253    drain_completed_queu ] at block 4600000: total uncompressed 2653816505 compressed to 2653816505 (0.00%)
+660560ms compress_block_log.cpp:253    drain_completed_queu ] at block 4700000: total uncompressed 2746748615 compressed to 2746748615 (0.00%)
+661234ms compress_block_log.cpp:253    drain_completed_queu ] at block 4800000: total uncompressed 2852229690 compressed to 2852229690 (0.00%)
+661907ms compress_block_log.cpp:253    drain_completed_queu ] at block 4900000: total uncompressed 2947104102 compressed to 2947104102 (0.00%)
+662522ms block_log_artifacts.cpp:204   close                ] Closing a block log artifact file: /blockchain/block_log.artifacts file...
+662522ms block_log_artifacts.cpp:214   close                ] Block log artifact file closed.
+662523ms compress_block_log.cpp:253    drain_completed_queu ] at block 5000000: total uncompressed 3043425194 compressed to 3043425194 (0.00%)
+662523ms compress_block_log.cpp:225    drain_completed_queu ] Done draining writing compressed blocks to disk, exiting writer thread
+662523ms compress_block_log.cpp:262    drain_completed_queu ] Writer thread done writing compressed blocks to /builds/hive/haf/tests/integration/replay/patterns/virtual_operations_filtered/blockchain/block_log, compressed 3043425194 to 3043425194
+662523ms block_log_artifacts.cpp:204   close                ] Closing a block log artifact file: /builds/hive/haf/tests/integration/replay/patterns/virtual_operations_filtered/blockchain/block_log.artifacts file...
+662523ms block_log_artifacts.cpp:400   flush_header         ] Header pack size: 48
+662523ms block_log_artifacts.cpp:402   flush_header         ] Attempting to write header containing: git rev: ea884d3bcdaf6469232e2d1718f35ed00bdd2ddd, format version: 1.0, head_block_num: 5000000, dirty_close: 0
+662523ms block_log_artifacts.cpp:214   close                ] Block log artifact file closed.
+662523ms compress_block_log.cpp:442    main                 ] Total number of blocks by compression method:
+662523ms compress_block_log.cpp:446    main                 ]     uncompressed: 5000000
+662523ms compress_block_log.cpp:449    main                 ] Total bytes if all blocks compressed by compression method:
+[32;1m$ $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --stop-replay-at-block=5000000 --exit-before-sync --psql-url $DB_URL > node_logs.log 2>&1[0;m
+[32;1m$ tox .[0;m
+py38 create: /builds/hive/haf/tests/integration/.tox/py38
+py38 installdeps: pytest==6.2.5, pytest-timeout==2.0.1, pytest-repeat==0.9.1, sqlalchemy==1.4.25, sqlalchemy-utils==0.37.9, psycopg2==2.9.1, requests==2.25.1, pandas==1.4.0
+py38 installed: attrs==22.1.0,certifi==2022.6.15,chardet==4.0.0,greenlet==1.1.2,idna==2.10,iniconfig==1.1.1,numpy==1.23.1,packaging==21.3,pandas==1.4.0,pluggy==1.0.0,psycopg2==2.9.1,py==1.11.0,pyparsing==3.0.9,pytest==6.2.5,pytest-repeat==0.9.1,pytest-timeout==2.0.1,python-dateutil==2.8.2,pytz==2022.1,requests==2.25.1,six==1.16.0,SQLAlchemy==1.4.25,SQLAlchemy-Utils==0.37.9,toml==0.10.2,urllib3==1.26.11
+py38 run-test-pre: PYTHONHASHSEED='216375157'
+py38 run-test: commands[0] | pytest -s --junitxml=./report.xml replay
+============================= test session starts ==============================
+platform linux -- Python 3.8.10, pytest-6.2.5, py-1.11.0, pluggy-1.0.0
+cachedir: .tox/py38/.pytest_cache
+rootdir: /builds/hive/haf/tests/integration, configfile: pytest.ini
+plugins: timeout-2.0.1, repeat-0.9.1
+timeout: 300.0s
+timeout method: signal
+timeout func_only: False
+collected 3 items
+
+replay/test_blocks_day_stats.py .
+replay/test_blocks_day_stats_all_ops.py .
+replay/test_replay_5milion.py .
+
+------ generated xml file: /builds/hive/haf/tests/integration/report.xml -------
+============================== 3 passed in 5.03s ===============================
+___________________________________ summary ____________________________________
+  py38: commands succeeded
+  congratulations :)
+section_end:1659961748:step_script
+[0Ksection_start:1659961748:upload_artifacts_on_success
+[0K[0K[36;1mUploading artifacts for successful job[0;m[0;m
+[32;1mUploading artifacts...[0;m
+**/node_logs.log: found 1 matching files and directories[0;m 
+**/generated_during_*: found 9 matching files and directories[0;m 
+[0;33mWARNING: **/generated_by_package_fixtures: no matching files. Ensure that the artifact path is relative to the working directory[0;m 
+[0;33mWARNING: **/*.out.csv: no matching files. Ensure that the artifact path is relative to the working directory[0;m 
+[0;33mWARNING: **/*.out.json: no matching files. Ensure that the artifact path is relative to the working directory[0;m 
+Uploading artifacts as "archive" to coordinator... 201 Created[0;m  id[0;m=346071 responseStatus[0;m=201 Created token[0;m=ZtGRSas8
+[32;1mUploading artifacts...[0;m
+[0;33mWARNING: tests/integration/replay/report.xml: no matching files. Ensure that the artifact path is relative to the working directory[0;m 
+[31;1mERROR: No files to upload                         [0;m 
+section_end:1659961877:upload_artifacts_on_success
+[0Ksection_start:1659961877:cleanup_file_variables
+[0K[0K[36;1mCleaning up project directory and file based variables[0;m[0;m
+section_end:1659961915:cleanup_file_variables
+[0K[32;1mJob succeeded[0;m
+

@@ -1,0 +1,399 @@
+Test project /home/dev/mydes/haf-develop/build
+        Start   1: test.functional.hive_fork_manager.context_rewind.schema_test
+  1/197 Test   #1: test.functional.hive_fork_manager.context_rewind.schema_test ...............................................   Passed
+        Start   2: test.functional.hive_fork_manager.context_rewind.register_table_test
+  2/197 Test   #2: test.functional.hive_fork_manager.context_rewind.register_table_test .......................................   Passed
+        Start   3: test.functional.hive_fork_manager.context_rewind.register_table_edit_test
+  3/197 Test   #3: test.functional.hive_fork_manager.context_rewind.register_table_edit_test ..................................   Passed
+        Start   4: test.functional.hive_fork_manager.context_rewind.register_table_edit_negative_test
+  4/197 Test   #4: test.functional.hive_fork_manager.context_rewind.register_table_edit_negative_test .........................   Passed
+        Start   5: test.functional.hive_fork_manager.context_rewind.register_table_edit_negative_rowid_test
+  5/197 Test   #5: test.functional.hive_fork_manager.context_rewind.register_table_edit_negative_rowid_test ...................   Passed
+        Start   6: test.functional.hive_fork_manager.context_rewind.register_table_drop_test
+  6/197 Test   #6: test.functional.hive_fork_manager.context_rewind.register_table_drop_test ..................................   Passed
+        Start   7: test.functional.hive_fork_manager.context_rewind.detach_table_test
+  7/197 Test   #7: test.functional.hive_fork_manager.context_rewind.detach_table_test .........................................   Passed
+        Start   8: test.functional.hive_fork_manager.context_rewind.attach_table_test
+  8/197 Test   #8: test.functional.hive_fork_manager.context_rewind.attach_table_test .........................................   Passed
+        Start   9: test.functional.hive_fork_manager.context_rewind.detach_negative_unregistered_table_test
+  9/197 Test   #9: test.functional.hive_fork_manager.context_rewind.detach_negative_unregistered_table_test ...................   Passed
+        Start  10: test.functional.hive_fork_manager.context_rewind.detach_negative_not_empty_shadow_table_test
+ 10/197 Test  #10: test.functional.hive_fork_manager.context_rewind.detach_negative_not_empty_shadow_table_test ...............   Passed
+        Start  11: test.functional.hive_fork_manager.context_rewind.detach_all_tables_test
+ 11/197 Test  #11: test.functional.hive_fork_manager.context_rewind.detach_all_tables_test ....................................   Passed
+        Start  12: test.functional.hive_fork_manager.context_rewind.detach_all_negative_tables_test
+ 12/197 Test  #12: test.functional.hive_fork_manager.context_rewind.detach_all_negative_tables_test ...........................   Passed
+        Start  13: test.functional.hive_fork_manager.context_rewind.detach_constraint_fk_test
+ 13/197 Test  #13: test.functional.hive_fork_manager.context_rewind.detach_constraint_fk_test .................................   Passed
+        Start  14: test.functional.hive_fork_manager.context_rewind.attach_negative_unregistered_table_test
+ 14/197 Test  #14: test.functional.hive_fork_manager.context_rewind.attach_negative_unregistered_table_test ...................   Passed
+        Start  15: test.functional.hive_fork_manager.context_rewind.attach_all_tables_test
+ 15/197 Test  #15: test.functional.hive_fork_manager.context_rewind.attach_all_tables_test ....................................   Passed
+        Start  16: test.functional.hive_fork_manager.context_rewind.attach_all_negative_tables_test
+ 16/197 Test  #16: test.functional.hive_fork_manager.context_rewind.attach_all_negative_tables_test ...........................   Passed
+        Start  17: test.functional.hive_fork_manager.context_rewind.drop_registered_table_test
+ 17/197 Test  #17: test.functional.hive_fork_manager.context_rewind.drop_registered_table_test ................................   Passed
+        Start  18: test.functional.hive_fork_manager.context_rewind.register_table_no_context_test
+ 18/197 Test  #18: test.functional.hive_fork_manager.context_rewind.register_table_no_context_test ............................   Passed
+        Start  19: test.functional.hive_fork_manager.context_rewind.register_table_public_schema_test
+ 19/197 Test  #19: test.functional.hive_fork_manager.context_rewind.register_table_public_schema_test .........................   Passed
+        Start  20: test.functional.hive_fork_manager.context_rewind.register_table_to_two_contexts_negative_test
+ 20/197 Test  #20: test.functional.hive_fork_manager.context_rewind.register_table_to_two_contexts_negative_test ..............   Passed
+        Start  21: test.functional.hive_fork_manager.context_rewind.create_context_test
+ 21/197 Test  #21: test.functional.hive_fork_manager.context_rewind.create_context_test .......................................   Passed
+        Start  22: test.functional.hive_fork_manager.context_rewind.create_context_negative
+ 22/197 Test  #22: test.functional.hive_fork_manager.context_rewind.create_context_negative ...................................   Passed
+        Start  23: test.functional.hive_fork_manager.context_rewind.context_next_block_test
+ 23/197 Test  #23: test.functional.hive_fork_manager.context_rewind.context_next_block_test ...................................   Passed
+        Start  24: test.functional.hive_fork_manager.context_rewind.trigger_on_insert_test
+ 24/197 Test  #24: test.functional.hive_fork_manager.context_rewind.trigger_on_insert_test ....................................   Passed
+        Start  25: test.functional.hive_fork_manager.context_rewind.trigger_on_delete_test
+ 25/197 Test  #25: test.functional.hive_fork_manager.context_rewind.trigger_on_delete_test ....................................   Passed
+        Start  26: test.functional.hive_fork_manager.context_rewind.trigger_on_update_test
+ 26/197 Test  #26: test.functional.hive_fork_manager.context_rewind.trigger_on_update_test ....................................   Passed
+        Start  27: test.functional.hive_fork_manager.context_rewind.trigger_on_truncate_test
+ 27/197 Test  #27: test.functional.hive_fork_manager.context_rewind.trigger_on_truncate_test ..................................   Passed
+        Start  28: test.functional.hive_fork_manager.context_rewind.trigger_on_insert_update_delete_test
+ 28/197 Test  #28: test.functional.hive_fork_manager.context_rewind.trigger_on_insert_update_delete_test ......................   Passed
+        Start  29: test.functional.hive_fork_manager.context_rewind.trigger_on_multi_rows_insert_update_delete_test
+ 29/197 Test  #29: test.functional.hive_fork_manager.context_rewind.trigger_on_multi_rows_insert_update_delete_test ...........   Passed
+        Start  30: test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_insert_test
+ 30/197 Test  #30: test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_insert_test ...........................   Passed
+        Start  31: test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_update_test
+ 31/197 Test  #31: test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_update_test ...........................   Passed
+        Start  32: test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_delete_test
+ 32/197 Test  #32: test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_delete_test ...........................   Passed
+        Start  33: test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_truncate_test
+ 33/197 Test  #33: test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_truncate_test .........................   Passed
+        Start  34: test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_test
+ 34/197 Test  #34: test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_test ................................   Passed
+        Start  35: test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_test
+ 35/197 Test  #35: test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_test ................................   Passed
+        Start  36: test.functional.hive_fork_manager.context_rewind.back_from_fork_update_test
+ 36/197 Test  #36: test.functional.hive_fork_manager.context_rewind.back_from_fork_update_test ................................   Passed
+        Start  37: test.functional.hive_fork_manager.context_rewind.back_from_fork_truncate_test
+ 37/197 Test  #37: test.functional.hive_fork_manager.context_rewind.back_from_fork_truncate_test ..............................   Passed
+        Start  38: test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_delete_test
+ 38/197 Test  #38: test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_delete_test .........................   Passed
+        Start  39: test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_next_delete_test
+ 39/197 Test  #39: test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_next_delete_test ....................   Passed
+        Start  40: test.functional.hive_fork_manager.context_rewind.back_from_fork_update_delete_test
+ 40/197 Test  #40: test.functional.hive_fork_manager.context_rewind.back_from_fork_update_delete_test .........................   Passed
+        Start  41: test.functional.hive_fork_manager.context_rewind.back_from_fork_update_next_delete_test
+ 41/197 Test  #41: test.functional.hive_fork_manager.context_rewind.back_from_fork_update_next_delete_test ....................   Passed
+        Start  42: test.functional.hive_fork_manager.context_rewind.back_from_fork_update_some_rows_test
+ 42/197 Test  #42: test.functional.hive_fork_manager.context_rewind.back_from_fork_update_some_rows_test ......................   Passed
+        Start  43: test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_insert_test
+ 43/197 Test  #43: test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_insert_test .........................   Passed
+        Start  44: test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_next_insert_test
+ 44/197 Test  #44: test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_next_insert_test ....................   Passed
+        Start  45: test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_insert_test
+ 45/197 Test  #45: test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_insert_test .......................   Passed
+        Start  46: test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_delete_test
+ 46/197 Test  #46: test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_delete_test .......................   Passed
+        Start  47: test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_update_test
+ 47/197 Test  #47: test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_update_test .......................   Passed
+        Start  48: test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_truncate_test
+ 48/197 Test  #48: test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_truncate_test .....................   Passed
+        Start  49: test.functional.hive_fork_manager.context_rewind.back_from_fork_2_tables_schemas_insert_test
+ 49/197 Test  #49: test.functional.hive_fork_manager.context_rewind.back_from_fork_2_tables_schemas_insert_test ...............   Passed
+        Start  50: test.functional.hive_fork_manager.context_rewind.back_from_fork_2_contexts_test
+ 50/197 Test  #50: test.functional.hive_fork_manager.context_rewind.back_from_fork_2_contexts_test ............................   Passed
+        Start  51: test.functional.hive_fork_manager.context_rewind.back_from_fork_to_block_num_test
+ 51/197 Test  #51: test.functional.hive_fork_manager.context_rewind.back_from_fork_to_block_num_test ..........................   Passed
+        Start  52: test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_fk_test
+ 52/197 Test  #52: test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_fk_test .........................   Passed
+        Start  53: test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_unique_test
+ 53/197 Test  #53: test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_unique_test .....................   Passed
+        Start  54: test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_pk_test
+ 54/197 Test  #54: test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_pk_test .........................   Passed
+        Start  55: test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_update_test
+ 55/197 Test  #55: test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_update_test ...................   Passed
+        Start  56: test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_insert_test
+ 56/197 Test  #56: test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_insert_test ...................   Passed
+        Start  57: test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_delete_test
+ 57/197 Test  #57: test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_delete_test ...................   Passed
+        Start  58: test.functional.hive_fork_manager.context_rewind.set_irreversible_block_test
+ 58/197 Test  #58: test.functional.hive_fork_manager.context_rewind.set_irreversible_block_test ...............................   Passed
+        Start  59: test.functional.hive_fork_manager.context_rewind.set_irreversible_block_negative_test
+ 59/197 Test  #59: test.functional.hive_fork_manager.context_rewind.set_irreversible_block_negative_test ......................   Passed
+        Start  60: test.functional.hive_fork_manager.context_rewind.performance_insert_rows_test
+ 60/197 Test  #60: test.functional.hive_fork_manager.context_rewind.performance_insert_rows_test ..............................   Passed
+        Start  61: test.functional.hive_fork_manager.context_rewind.performance_back_from_insert_rows_test
+ 61/197 Test  #61: test.functional.hive_fork_manager.context_rewind.performance_back_from_insert_rows_test ....................   Passed
+        Start  62: test.functional.hive_fork_manager.context_rewind.performance_delete_rows_test
+ 62/197 Test  #62: test.functional.hive_fork_manager.context_rewind.performance_delete_rows_test ..............................   Passed
+        Start  63: test.functional.hive_fork_manager.context_rewind.performance_back_from_delete_rows_test
+ 63/197 Test  #63: test.functional.hive_fork_manager.context_rewind.performance_back_from_delete_rows_test ....................   Passed
+        Start  64: test.functional.hive_fork_manager.context_rewind.performance_update_rows_test
+ 64/197 Test  #64: test.functional.hive_fork_manager.context_rewind.performance_update_rows_test ..............................   Passed
+        Start  65: test.functional.hive_fork_manager.context_rewind.performance_back_from_update_rows_test
+ 65/197 Test  #65: test.functional.hive_fork_manager.context_rewind.performance_back_from_update_rows_test ....................   Passed
+        Start  66: test.functional.hive_fork_manager.context_rewind.performance_truncate_rows_test
+ 66/197 Test  #66: test.functional.hive_fork_manager.context_rewind.performance_truncate_rows_test ............................   Passed
+        Start  67: test.functional.hive_fork_manager.context_rewind.performance_back_from_truncate_rows_test
+ 67/197 Test  #67: test.functional.hive_fork_manager.context_rewind.performance_back_from_truncate_rows_test ..................   Passed
+        Start  68: test.functional.hive_fork_manager.context_rewind.performance_insert_rows_one_by_one_test
+ 68/197 Test  #68: test.functional.hive_fork_manager.context_rewind.performance_insert_rows_one_by_one_test ...................   Passed
+        Start  69: test.functional.hive_fork_manager.context_rewind.performance_delete_rows_one_by_one_test
+ 69/197 Test  #69: test.functional.hive_fork_manager.context_rewind.performance_delete_rows_one_by_one_test ...................   Passed
+        Start  70: test.functional.hive_fork_manager.context_rewind.performance_update_rows_one_by_one_test
+ 70/197 Test  #70: test.functional.hive_fork_manager.context_rewind.performance_update_rows_one_by_one_test ...................   Passed
+        Start  71: test.functional.hive_fork_manager.hived_api.schema_test
+ 71/197 Test  #71: test.functional.hive_fork_manager.hived_api.schema_test ....................................................   Passed
+        Start  72: test.functional.hive_fork_manager.hived_api.back_from_fork_test
+ 72/197 Test  #72: test.functional.hive_fork_manager.hived_api.back_from_fork_test ............................................   Passed
+        Start  73: test.functional.hive_fork_manager.hived_api.push_block_test
+ 73/197 Test  #73: test.functional.hive_fork_manager.hived_api.push_block_test ................................................   Passed
+        Start  74: test.functional.hive_fork_manager.hived_api.set_irreversible_test
+ 74/197 Test  #74: test.functional.hive_fork_manager.hived_api.set_irreversible_test ..........................................   Passed
+        Start  75: test.functional.hive_fork_manager.hived_api.copy_blocks_to_irreversible
+ 75/197 Test  #75: test.functional.hive_fork_manager.hived_api.copy_blocks_to_irreversible ....................................   Passed
+        Start  76: test.functional.hive_fork_manager.hived_api.copy_transactions_to_irreversible_test
+ 76/197 Test  #76: test.functional.hive_fork_manager.hived_api.copy_transactions_to_irreversible_test .........................   Passed
+        Start  77: test.functional.hive_fork_manager.hived_api.copy_operations_to_irreversible_test
+ 77/197 Test  #77: test.functional.hive_fork_manager.hived_api.copy_operations_to_irreversible_test ...........................   Passed
+        Start  78: test.functional.hive_fork_manager.hived_api.copy_signatures_to_irreversible_test
+ 78/197 Test  #78: test.functional.hive_fork_manager.hived_api.copy_signatures_to_irreversible_test ...........................   Passed
+        Start  79: test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible
+ 79/197 Test  #79: test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible ...................   Passed
+        Start  80: test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible_3_contexts
+ 80/197 Test  #80: test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible_3_contexts ........   Passed
+        Start  81: test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible_no_contexts
+ 81/197 Test  #81: test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible_no_contexts .......   Passed
+        Start  82: test.functional.hive_fork_manager.hived_api.end_massive_sync_test
+ 82/197 Test  #82: test.functional.hive_fork_manager.hived_api.end_massive_sync_test ..........................................   Passed
+        Start  83: test.functional.hive_fork_manager.hived_api.set_irreversible_cleaning_events_test
+ 83/197 Test  #83: test.functional.hive_fork_manager.hived_api.set_irreversible_cleaning_events_test ..........................   Passed
+        Start  84: test.functional.hive_fork_manager.hived_api.disable_indexes_test
+ 84/197 Test  #84: test.functional.hive_fork_manager.hived_api.disable_indexes_test ...........................................   Passed
+        Start  85: test.functional.hive_fork_manager.hived_api.enable_indexes_test
+ 85/197 Test  #85: test.functional.hive_fork_manager.hived_api.enable_indexes_test ............................................   Passed
+        Start  86: test.functional.hive_fork_manager.hived_api.enable_indexes_compare_saved_statement_test
+ 86/197 Test  #86: test.functional.hive_fork_manager.hived_api.enable_indexes_compare_saved_statement_test ....................   Passed
+        Start  87: test.functional.hive_fork_manager.hived_api.remove_obsolete_end_massive_sync_test
+ 87/197 Test  #87: test.functional.hive_fork_manager.hived_api.remove_obsolete_end_massive_sync_test ..........................   Passed
+        Start  88: test.functional.hive_fork_manager.hived_api.remove_obsolete_end_massive_sync_with_app_test
+ 88/197 Test  #88: test.functional.hive_fork_manager.hived_api.remove_obsolete_end_massive_sync_with_app_test .................   Passed
+        Start  89: test.functional.hive_fork_manager.hived_api.set_irreversible_not_copy_reversible_data_from_old_fork_test
+ 89/197 Test  #89: test.functional.hive_fork_manager.hived_api.set_irreversible_not_copy_reversible_data_from_old_fork_test ...   Passed
+        Start  90: test.functional.hive_fork_manager.hived_api.set_irreversible_not_copy_reversible_data_from_top_fork_test
+ 90/197 Test  #90: test.functional.hive_fork_manager.hived_api.set_irreversible_not_copy_reversible_data_from_top_fork_test ...   Passed
+        Start  91: test.functional.hive_fork_manager.hived_api.removing_inconsistent_irreversibele_data
+ 91/197 Test  #91: test.functional.hive_fork_manager.hived_api.removing_inconsistent_irreversibele_data .......................   Passed
+        Start  92: test.functional.hive_fork_manager.hived_api.not_removing_inconsistent_irreversibele_data
+ 92/197 Test  #92: test.functional.hive_fork_manager.hived_api.not_removing_inconsistent_irreversibele_data ...................   Passed
+        Start  93: test.functional.hive_fork_manager.hived_api.connect_test
+ 93/197 Test  #93: test.functional.hive_fork_manager.hived_api.connect_test ...................................................   Passed
+        Start  94: test.functional.hive_fork_manager.hived_api.copy_accounts_to_irreversible
+ 94/197 Test  #94: test.functional.hive_fork_manager.hived_api.copy_accounts_to_irreversible ..................................   Passed
+        Start  95: test.functional.hive_fork_manager.hived_api.copy_account_operations_to_irreversible
+ 95/197 Test  #95: test.functional.hive_fork_manager.hived_api.copy_account_operations_to_irreversible ........................   Passed
+        Start  96: test.functional.hive_fork_manager.hived_api.disable_indexes_reversible_test
+ 96/197 Test  #96: test.functional.hive_fork_manager.hived_api.disable_indexes_reversible_test ................................   Passed
+        Start  97: test.functional.hive_fork_manager.hived_api.enable_indexes_reversible_test
+ 97/197 Test  #97: test.functional.hive_fork_manager.hived_api.enable_indexes_reversible_test .................................   Passed
+        Start  98: test.functional.hive_fork_manager.hived_api.mark_irreversible_dirty_test
+ 98/197 Test  #98: test.functional.hive_fork_manager.hived_api.mark_irreversible_dirty_test ...................................   Passed
+        Start  99: test.functional.hive_fork_manager.hived_api.mark_irreversible_not_dirty_test
+ 99/197 Test  #99: test.functional.hive_fork_manager.hived_api.mark_irreversible_not_dirty_test ...............................   Passed
+        Start 100: test.functional.hive_fork_manager.hived_api.enable_fk_test
+100/197 Test #100: test.functional.hive_fork_manager.hived_api.enable_fk_test .................................................   Passed
+        Start 101: test.functional.hive_fork_manager.app_api.create_context_test
+101/197 Test #101: test.functional.hive_fork_manager.app_api.create_context_test ..............................................   Passed
+        Start 102: test.functional.hive_fork_manager.app_api.app_context_remove_test
+102/197 Test #102: test.functional.hive_fork_manager.app_api.app_context_remove_test ..........................................   Passed
+        Start 103: test.functional.hive_fork_manager.app_api.app_context_remove_negative_test
+103/197 Test #103: test.functional.hive_fork_manager.app_api.app_context_remove_negative_test .................................   Passed
+        Start 104: test.functional.hive_fork_manager.app_api.app_context_re_create_test
+104/197 Test #104: test.functional.hive_fork_manager.app_api.app_context_re_create_test .......................................   Passed
+        Start 105: test.functional.hive_fork_manager.app_api.context_blocks_view_test
+105/197 Test #105: test.functional.hive_fork_manager.app_api.context_blocks_view_test .........................................   Passed
+        Start 106: test.functional.hive_fork_manager.app_api.context_blocks_view_nonforking_test
+106/197 Test #106: test.functional.hive_fork_manager.app_api.context_blocks_view_nonforking_test ..............................   Passed
+        Start 107: test.functional.hive_fork_manager.app_api.context_transactions_view_test
+107/197 Test #107: test.functional.hive_fork_manager.app_api.context_transactions_view_test ...................................   Passed
+        Start 108: test.functional.hive_fork_manager.app_api.context_transactions_view_non_forking_app_test
+108/197 Test #108: test.functional.hive_fork_manager.app_api.context_transactions_view_non_forking_app_test ...................   Passed
+        Start 109: test.functional.hive_fork_manager.app_api.context_signatures_view_test
+109/197 Test #109: test.functional.hive_fork_manager.app_api.context_signatures_view_test .....................................   Passed
+        Start 110: test.functional.hive_fork_manager.app_api.context_signatures_view_non_forking_test
+110/197 Test #110: test.functional.hive_fork_manager.app_api.context_signatures_view_non_forking_test .........................   Passed
+        Start 111: test.functional.hive_fork_manager.app_api.context_operations_view_test
+111/197 Test #111: test.functional.hive_fork_manager.app_api.context_operations_view_test .....................................   Passed
+        Start 112: test.functional.hive_fork_manager.app_api.context_operations_view_non_forking_test
+112/197 Test #112: test.functional.hive_fork_manager.app_api.context_operations_view_non_forking_test .........................   Passed
+        Start 113: test.functional.hive_fork_manager.app_api.app_context_is_attached
+113/197 Test #113: test.functional.hive_fork_manager.app_api.app_context_is_attached ..........................................   Passed
+        Start 114: test.functional.hive_fork_manager.app_api.app_context_is_attached_negative
+114/197 Test #114: test.functional.hive_fork_manager.app_api.app_context_is_attached_negative .................................   Passed
+        Start 115: test.functional.hive_fork_manager.app_api.app_context_detached_save_block_num
+115/197 Test #115: test.functional.hive_fork_manager.app_api.app_context_detached_save_block_num ..............................   Passed
+        Start 116: test.functional.hive_fork_manager.app_api.app_context_detached_get_block_num
+116/197 Test #116: test.functional.hive_fork_manager.app_api.app_context_detached_get_block_num ...............................   Passed
+        Start 117: test.functional.hive_fork_manager.app_api.app_context_detached_save_block_num_negative
+117/197 Test #117: test.functional.hive_fork_manager.app_api.app_context_detached_save_block_num_negative .....................   Passed
+        Start 118: test.functional.hive_fork_manager.app_api.app_context_detached_get_block_num_negative
+118/197 Test #118: test.functional.hive_fork_manager.app_api.app_context_detached_get_block_num_negative ......................   Passed
+        Start 119: test.functional.hive_fork_manager.app_api.app_next_block_process_new_block_event
+119/197 Test #119: test.functional.hive_fork_manager.app_api.app_next_block_process_new_block_event ...........................   Passed
+        Start 120: test.functional.hive_fork_manager.app_api.app_next_block_negative
+120/197 Test #120: test.functional.hive_fork_manager.app_api.app_next_block_negative ..........................................   Passed
+        Start 121: test.functional.hive_fork_manager.app_api.app_next_block_process_new_block_event_2_contexts
+121/197 Test #121: test.functional.hive_fork_manager.app_api.app_next_block_process_new_block_event_2_contexts ................   Passed
+        Start 122: test.functional.hive_fork_manager.app_api.app_next_block_process_BFF_event
+122/197 Test #122: test.functional.hive_fork_manager.app_api.app_next_block_process_BFF_event .................................   Passed
+        Start 123: test.functional.hive_fork_manager.app_api.app_next_block_process_BFF_event_2_contexts
+123/197 Test #123: test.functional.hive_fork_manager.app_api.app_next_block_process_BFF_event_2_contexts ......................   Passed
+        Start 124: test.functional.hive_fork_manager.app_api.app_next_block_process_SET_IRREVERSIBLE_event
+124/197 Test #124: test.functional.hive_fork_manager.app_api.app_next_block_process_SET_IRREVERSIBLE_event ....................   Passed
+        Start 125: test.functional.hive_fork_manager.app_api.app_next_block_process_SET_IRREVERSIBLE_event_2_contexts
+125/197 Test #125: test.functional.hive_fork_manager.app_api.app_next_block_process_SET_IRREVERSIBLE_event_2_contexts .........   Passed
+        Start 126: test.functional.hive_fork_manager.app_api.app_context_attach
+126/197 Test #126: test.functional.hive_fork_manager.app_api.app_context_attach ...............................................   Passed
+        Start 127: test.functional.hive_fork_manager.app_api.app_context_attach_negative
+127/197 Test #127: test.functional.hive_fork_manager.app_api.app_context_attach_negative ......................................   Passed
+        Start 128: test.functional.hive_fork_manager.app_api.app_context_detach
+128/197 Test #128: test.functional.hive_fork_manager.app_api.app_context_detach ...............................................   Passed
+        Start 129: test.functional.hive_fork_manager.app_api.app_next_block_process_MASSIVE_SYNC_event
+129/197 Test #129: test.functional.hive_fork_manager.app_api.app_next_block_process_MASSIVE_SYNC_event ........................   Passed
+        Start 130: test.functional.hive_fork_manager.app_api.app_next_block_process_squash_MASSIVE_SYNC_event
+130/197 Test #130: test.functional.hive_fork_manager.app_api.app_next_block_process_squash_MASSIVE_SYNC_event .................   Passed
+        Start 131: test.functional.hive_fork_manager.app_api.app_next_block_series_of_MASSIVE_SYNC
+131/197 Test #131: test.functional.hive_fork_manager.app_api.app_next_block_series_of_MASSIVE_SYNC ............................   Passed
+        Start 132: test.functional.hive_fork_manager.app_api.app_next_block_process_negative_MASSIVE_SYNC_event
+132/197 Test #132: test.functional.hive_fork_manager.app_api.app_next_block_process_negative_MASSIVE_SYNC_event ...............   Passed
+        Start 133: test.functional.hive_fork_manager.app_api.app_next_block_non_forking_app
+133/197 Test #133: test.functional.hive_fork_manager.app_api.app_next_block_non_forking_app ...................................   Passed
+        Start 134: test.functional.hive_fork_manager.app_api.app_context_exists
+134/197 Test #134: test.functional.hive_fork_manager.app_api.app_context_exists ...............................................   Passed
+        Start 135: test.functional.hive_fork_manager.app_api.register_already_existed_table
+135/197 Test #135: test.functional.hive_fork_manager.app_api.register_already_existed_table ...................................   Passed
+        Start 136: test.functional.hive_fork_manager.app_api.register_already_registered_table_negative
+136/197 Test #136: test.functional.hive_fork_manager.app_api.register_already_registered_table_negative .......................   Passed
+        Start 137: test.functional.hive_fork_manager.app_api.app_get_irreversible_block_forking
+137/197 Test #137: test.functional.hive_fork_manager.app_api.app_get_irreversible_block_forking ...............................   Passed
+        Start 138: test.functional.hive_fork_manager.app_api.app_get_irreversible_block_non_forking
+138/197 Test #138: test.functional.hive_fork_manager.app_api.app_get_irreversible_block_non_forking ...........................   Passed
+        Start 139: test.functional.hive_fork_manager.app_api.app_unregister_table
+139/197 Test #139: test.functional.hive_fork_manager.app_api.app_unregister_table .............................................   Passed
+        Start 140: test.functional.hive_fork_manager.app_api.app_unregister_table_with_dependency
+140/197 Test #140: test.functional.hive_fork_manager.app_api.app_unregister_table_with_dependency .............................   Passed
+        Start 141: test.functional.hive_fork_manager.app_api.context_blocks_view_nonforking_detach_context_test
+141/197 Test #141: test.functional.hive_fork_manager.app_api.context_blocks_view_nonforking_detach_context_test ...............   Passed
+        Start 142: test.functional.hive_fork_manager.app_api.context_blocks_view_detach_test
+142/197 Test #142: test.functional.hive_fork_manager.app_api.context_blocks_view_detach_test ..................................   Passed
+        Start 143: test.functional.hive_fork_manager.app_api.context_signatures_view_non_forking_detach_test
+143/197 Test #143: test.functional.hive_fork_manager.app_api.context_signatures_view_non_forking_detach_test ..................   Passed
+        Start 144: test.functional.hive_fork_manager.app_api.context_signatures_view_detach_test
+144/197 Test #144: test.functional.hive_fork_manager.app_api.context_signatures_view_detach_test ..............................   Passed
+        Start 145: test.functional.hive_fork_manager.app_api.context_operations_view_non_forking_detach_test
+145/197 Test #145: test.functional.hive_fork_manager.app_api.context_operations_view_non_forking_detach_test ..................   Passed
+        Start 146: test.functional.hive_fork_manager.app_api.context_operations_view_detach_test
+146/197 Test #146: test.functional.hive_fork_manager.app_api.context_operations_view_detach_test ..............................   Passed
+        Start 147: test.functional.hive_fork_manager.app_api.context_transactions_view_non_forking_detach_test
+147/197 Test #147: test.functional.hive_fork_manager.app_api.context_transactions_view_non_forking_detach_test ................   Passed
+        Start 148: test.functional.hive_fork_manager.app_api.context_transactions_view_detach_test
+148/197 Test #148: test.functional.hive_fork_manager.app_api.context_transactions_view_detach_test ............................   Passed
+        Start 149: test.functional.hive_fork_manager.app_api.app_next_block_after_attach
+149/197 Test #149: test.functional.hive_fork_manager.app_api.app_next_block_after_attach ......................................   Passed
+        Start 150: test.functional.hive_fork_manager.app_api.app_context_remove_detached_test
+150/197 Test #150: test.functional.hive_fork_manager.app_api.app_context_remove_detached_test .................................   Passed
+        Start 151: test.functional.hive_fork_manager.app_api.empty_blocks_and_views
+151/197 Test #151: test.functional.hive_fork_manager.app_api.empty_blocks_and_views ...........................................   Passed
+        Start 152: test.functional.hive_fork_manager.app_api.context_accounts_view_test
+152/197 Test #152: test.functional.hive_fork_manager.app_api.context_accounts_view_test .......................................   Passed
+        Start 153: test.functional.hive_fork_manager.app_api.context_accounts_view_detach_test
+153/197 Test #153: test.functional.hive_fork_manager.app_api.context_accounts_view_detach_test ................................   Passed
+        Start 154: test.functional.hive_fork_manager.app_api.context_accounts_view_nonforking_test
+154/197 Test #154: test.functional.hive_fork_manager.app_api.context_accounts_view_nonforking_test ............................   Passed
+        Start 155: test.functional.hive_fork_manager.app_api.context_accounts_view_nonforking_detach_test
+155/197 Test #155: test.functional.hive_fork_manager.app_api.context_accounts_view_nonforking_detach_test .....................   Passed
+        Start 156: test.functional.hive_fork_manager.app_api.context_account_operations_view_detach_test
+156/197 Test #156: test.functional.hive_fork_manager.app_api.context_account_operations_view_detach_test ......................   Passed
+        Start 157: test.functional.hive_fork_manager.app_api.context_account_operations_view_test
+157/197 Test #157: test.functional.hive_fork_manager.app_api.context_account_operations_view_test .............................   Passed
+        Start 158: test.functional.hive_fork_manager.app_api.context_account_operations_view_nonforking_test
+158/197 Test #158: test.functional.hive_fork_manager.app_api.context_account_operations_view_nonforking_test ..................   Passed
+        Start 159: test.functional.hive_fork_manager.app_api.context_account_operations_view_nonforking_detach_test
+159/197 Test #159: test.functional.hive_fork_manager.app_api.context_account_operations_view_nonforking_detach_test ...........   Passed
+        Start 160: test.functional.hive_fork_manager.app_api.account_operations_view_test
+160/197 Test #160: test.functional.hive_fork_manager.app_api.account_operations_view_test .....................................   Passed
+        Start 161: test.functional.hive_fork_manager.app_api.accounts_view_test
+161/197 Test #161: test.functional.hive_fork_manager.app_api.accounts_view_test ...............................................   Passed
+        Start 162: test.functional.hive_fork_manager.app_api.blocks_view_test
+162/197 Test #162: test.functional.hive_fork_manager.app_api.blocks_view_test .................................................   Passed
+        Start 163: test.functional.hive_fork_manager.app_api.transactions_view_test
+163/197 Test #163: test.functional.hive_fork_manager.app_api.transactions_view_test ...........................................   Passed
+        Start 164: test.functional.hive_fork_manager.app_api.signatures_view_test
+164/197 Test #164: test.functional.hive_fork_manager.app_api.signatures_view_test .............................................   Passed
+        Start 165: test.functional.hive_fork_manager.app_api.operations_view_test
+165/197 Test #165: test.functional.hive_fork_manager.app_api.operations_view_test .............................................   Passed
+        Start 166: test.functional.hive_fork_manager.app_api.app_next_block_after_attach_2
+166/197 Test #166: test.functional.hive_fork_manager.app_api.app_next_block_after_attach_2 ....................................   Passed
+        Start 167: test.functional.hive_fork_manager.app_api.get_block_header_test
+167/197 Test #167: test.functional.hive_fork_manager.app_api.get_block_header_test ............................................   Passed
+        Start 168: test.functional.hive_fork_manager.app_api.get_block_header_2_test
+168/197 Test #168: test.functional.hive_fork_manager.app_api.get_block_header_2_test ..........................................   Passed
+        Start 169: test.functional.hive_fork_manager.app_api.get_block_header_negative_test
+169/197 Test #169: test.functional.hive_fork_manager.app_api.get_block_header_negative_test ...................................   Passed
+        Start 170: test.functional.hive_fork_manager.app_api.app_context_detach_after_next_block
+170/197 Test #170: test.functional.hive_fork_manager.app_api.app_context_detach_after_next_block ..............................   Passed
+        Start 171: test.functional.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork
+171/197 Test #171: test.functional.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork ..............................   Passed
+        Start 172: test.functional.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork_non_forking_app
+172/197 Test #172: test.functional.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork_non_forking_app ..............   Passed
+        Start 173: test.functional.hive_fork_manager.state_providers.import_state_provider_negative
+173/197 Test #173: test.functional.hive_fork_manager.state_providers.import_state_provider_negative ...........................   Passed
+        Start 174: test.functional.hive_fork_manager.state_providers.import_state_provider
+174/197 Test #174: test.functional.hive_fork_manager.state_providers.import_state_provider ....................................   Passed
+        Start 175: test.functional.hive_fork_manager.state_providers.accounts_start_state_provider
+175/197 Test #175: test.functional.hive_fork_manager.state_providers.accounts_start_state_provider ............................   Passed
+        Start 176: test.functional.hive_fork_manager.state_providers.accounts_update_state_provider
+176/197 Test #176: test.functional.hive_fork_manager.state_providers.accounts_update_state_provider ...........................   Passed
+        Start 177: test.functional.hive_fork_manager.state_providers.update_state_provider
+177/197 Test #177: test.functional.hive_fork_manager.state_providers.update_state_provider ....................................   Passed
+        Start 178: test.functional.hive_fork_manager.state_providers.update_state_provider_attached
+178/197 Test #178: test.functional.hive_fork_manager.state_providers.update_state_provider_attached ...........................   Passed
+        Start 179: test.functional.hive_fork_manager.state_providers.update_state_provider_negative
+179/197 Test #179: test.functional.hive_fork_manager.state_providers.update_state_provider_negative ...........................   Passed
+        Start 180: test.functional.hive_fork_manager.state_providers.context_remove_and_state_provider
+180/197 Test #180: test.functional.hive_fork_manager.state_providers.context_remove_and_state_provider ........................   Passed
+        Start 181: test.functional.hive_fork_manager.state_providers.import_state_provider_non_fork
+181/197 Test #181: test.functional.hive_fork_manager.state_providers.import_state_provider_non_fork ...........................   Passed
+        Start 182: test.functional.hive_fork_manager.state_providers.switch_state_provider_to_forkable
+182/197 Test #182: test.functional.hive_fork_manager.state_providers.switch_state_provider_to_forkable ........................   Passed
+        Start 183: test.functional.hive_fork_manager.authorization.alice_access_to_bob_negative
+183/197 Test #183: test.functional.hive_fork_manager.authorization.alice_access_to_bob_negative ...............................   Passed
+        Start 184: test.functional.hive_fork_manager.authorization.alice_access_events_infrustructure
+184/197 Test #184: test.functional.hive_fork_manager.authorization.alice_access_events_infrustructure .........................   Passed
+        Start 185: test.functional.hive_fork_manager.authorization.hived_access_alice_context_data
+185/197 Test #185: test.functional.hive_fork_manager.authorization.hived_access_alice_context_data ............................   Passed
+        Start 186: test.functional.hive_fork_manager.authorization.api_protection
+186/197 Test #186: test.functional.hive_fork_manager.authorization.api_protection .............................................   Passed
+        Start 187: test.functional.hive_fork_manager.authorization.massive_sync_live_blocks_and_fork
+187/197 Test #187: test.functional.hive_fork_manager.authorization.massive_sync_live_blocks_and_fork ..........................   Passed
+        Start 188: test.functional.hive_fork_manager.authorization.alice_grant_to_hive_applications_group
+188/197 Test #188: test.functional.hive_fork_manager.authorization.alice_grant_to_hive_applications_group .....................   Passed
+        Start 189: test.functional.hive_fork_manager.authorization.hived_to_api_access
+189/197 Test #189: test.functional.hive_fork_manager.authorization.hived_to_api_access ........................................   Passed
+        Start 190: test.functional.hive_fork_manager.authorization.alice_access_to_head_block_views
+190/197 Test #190: test.functional.hive_fork_manager.authorization.alice_access_to_head_block_views ...........................   Passed
+        Start 191: test.functional.hive_fork_manager.examples.forking_application
+191/197 Test #191: test.functional.hive_fork_manager.examples.forking_application .............................................   Passed
+        Start 192: test.functional.hive_fork_manager.examples.non_forking_application
+192/197 Test #192: test.functional.hive_fork_manager.examples.non_forking_application .........................................   Passed
+        Start 193: test.functional.hive_fork_manager.examples.accounts_provider_application
+193/197 Test #193: test.functional.hive_fork_manager.examples.accounts_provider_application ...................................   Passed
+        Start 194: test.functional.hive_fork_manager.examples.accounts_provider_non_fork_application
+194/197 Test #194: test.functional.hive_fork_manager.examples.accounts_provider_non_fork_application ..........................   Passed
+        Start 195: test.functional.hive_fork_manager.shared_lib.get_impacted_accounts
+195/197 Test #195: test.functional.hive_fork_manager.shared_lib.get_impacted_accounts .........................................   Passed
+        Start 196: test.functional.hive_fork_manager.shared_lib.get_impacted_balances
+196/197 Test #196: test.functional.hive_fork_manager.shared_lib.get_impacted_balances .........................................   Passed
+        Start 197: test.functional.hive_fork_manager.shared_lib.get_legacy_style_operation
+197/197 Test #197: test.functional.hive_fork_manager.shared_lib.get_legacy_style_operation ....................................   Passed
+
+100% tests passed, 0 tests failed out of 197
+
+Total Test time (real) = 317.45 sec

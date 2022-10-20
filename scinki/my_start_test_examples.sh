@@ -1,0 +1,146 @@
+#!/bin/sh
+
+set -x
+
+evaluate_result() {
+  local result=$1;
+
+  if [ ${result} -eq 0 ]
+  then
+    return;
+  fi
+
+  echo "FAILED";
+  exit 1;
+}
+
+examples_folder=$1
+test_path=$2;
+setup_scripts_dir_path=$3;
+postgres_port=$4;
+
+sudo -nu postgres psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -a -f  ./create_db_roles.sql;
+
+
+$setup_scripts_dir_path/setup_db.sh --port=$postgres_port  \
+  --haf-db-admin="haf_admin" --haf-db-name="psql_tools_test_db" --haf-app-user="alice" --haf-app-user="bob"
+
+
+
+if [ $? -ne 0 ]
+then
+  echo "FAILED. Cannot create extension"
+  exit 1;
+fi
+
+
+
+
+
+psql postgresql://test_hived:test@localhost:$postgres_port/psql_tools_test_db --username=test_hived -a -v ON_ERROR_STOP=on -f ./examples/prepare_data.sql
+evaluate_result $?;
+
+
+sudo -nu postgres psql -p $postgres_port -d psql_tools_test_db -v ON_ERROR_STOP=on -a -f  ~/Documents/my_debuggable.sql;
+
+
+
+# python3.8 -m venv .test_examples
+# . ./.test_examples/bin/activate
+
+# python3 -mpip install --upgrade pip
+
+# python3 -mpip install \
+#   pexpect==4.8 \
+#   psycopg2==2.9.3 \
+#   sqlalchemy==1.4.18 \
+#   jinja2==2.10
+
+# ( $test_path $examples_folder $postgres_port)
+
+# evaluate_result $?;
+
+
+
+#!/usr/bin/env python3
+
+# import sys
+# import sqlalchemy
+
+# APPLICATION_CONTEXT = "accounts_ctx"
+# SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE = """
+#     CREATE TABLE IF NOT EXISTS public.trx_histogram(
+#           day DATE
+#         , trx INT
+#         , CONSTRAINT pk_trx_histogram PRIMARY KEY( day ) )
+#     INHERITS( hive.{} )
+#     """.format( APPLICATION_CONTEXT )
+
+# def create_db_engine(pg_port):
+#     return sqlalchemy.create_engine(
+#                 "postgresql://alice:test@localhost:{}/psql_tools_test_db".format(pg_port), # this is only example of db
+#                 isolation_level="READ COMMITTED",
+#                 pool_size=1,
+#                 pool_recycle=3600,
+#                 echo=debug)
+
+# def prepare_application_data( db_connection ):
+#         # create a new context only if it not already exists
+#         exist = db_connection.execute( "SELECT hive.app_context_exists( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone();
+#         if exist[ 0 ] == False:
+#             db_connection.execute( "SELECT hive.app_create_context( '{}' )".format( APPLICATION_CONTEXT ) )
+
+#         # create and register a table
+#         db_connection.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE )
+
+#         # import accounts state provider
+#         db_connection.execute( "SELECT hive.app_state_provider_import( 'ACCOUNTS', '{}' )".format( APPLICATION_CONTEXT ) );
+
+# def main_loop( db_connection ):
+#     # forever loop
+#     while True:
+#         # start a new transaction
+#         with db_connection.begin():
+#             # get blocks range
+#             blocks_range = db_connection.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone()
+#             accounts = db_connection.execute( "SELECT * FROM hive.{}_accounts ORDER BY id DESC LIMIT 1".format( APPLICATION_CONTEXT ) ).fetchall()
+
+#             print( "Blocks range {}".format( blocks_range ) )
+#             print( "Accounts {}".format( accounts ) )
+#             (first_block, last_block) = blocks_range;
+#             # if no blocks are fetched then ask for new blocks again
+#             if not first_block:
+#                 continue;
+
+#             (first_block, last_block) = blocks_range;
+
+#             # check if massive sync is required
+#             if ( last_block - first_block ) > 100:
+#                 # Yes, massive sync is required
+#                 # detach context
+#                 db_connection.execute( "SELECT hive.app_context_detach( '{}' )".format( APPLICATION_CONTEXT ) )
+
+#                 # update massivly the application's table - one commit transaction for whole massive edition
+#                 db_connection.execute( "SELECT hive.app_state_providers_update( {}, {}, '{}' )".format( first_block, last_block, APPLICATION_CONTEXT ) )
+
+#                 # attach context and moves it to last synced block
+#                 db_connection.execute( "SELECT hive.app_context_attach( '{}', {} )".format( APPLICATION_CONTEXT, last_block ) )
+#                 continue
+
+#             # process the first block in range - one commit after each block
+#             db_connection.execute( "SELECT hive.app_state_providers_update( {}, {}, '{}' )".format( first_block, first_block, APPLICATION_CONTEXT ) )
+
+# def start_application(pg_port):
+#     engine = create_db_engine(pg_port)
+#     with engine.connect() as db_connection:
+#         prepare_application_data( db_connection )
+#         main_loop( db_connection )
+
+# if __name__ == '__main__':
+#     try:
+#         pg_port = sys.argv[1] if (len(sys.argv) > 1) else 5432
+#         start_application(pg_port)
+#     except KeyboardInterrupt:
+#         print( "Break by the user request" )
+#         pass
+
