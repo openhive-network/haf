@@ -61,6 +61,9 @@ then
   sudo -n chown -Rc hived:hived /home/hived/datadir
 fi
 
+# Be sure this directory exists
+mkdir --mode=777 -p /home/hived/datadir/blockchain
+
 if [ -d $PGDATA ]
 then
   echo "Attempting to setup postgres instance..."
