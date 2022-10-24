@@ -115,7 +115,9 @@ def prepare_block_log(length):
         os.remove('block_log')
 
     timestamp = init_node.api.block.get_block(block_num=length)['block']['timestamp']
-    init_node.close()
+
+    for node in [*alpha_net.nodes, *beta_net.nodes]:
+        node.close()
 
     init_node.get_block_log().truncate(Path('block_log'), length)
 
