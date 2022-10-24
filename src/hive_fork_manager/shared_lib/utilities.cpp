@@ -137,16 +137,35 @@ extern "C"
 
 }
 
+
+//use this template instead of Postgres' MemoryContextSwitchTo
+template<typename T>
+auto MemoryContextSwitcher(MemoryContext new_ctx, T statements) -> decltype(statements())
+{
+  class Switch
+  {
+  public:
+    Switch(MemoryContext in): oldcontext(MemoryContextSwitchTo(in)){}
+    ~Switch(){  MemoryContextSwitchTo(oldcontext);}
+  private:
+    MemoryContext oldcontext;
+  };
+
+  Switch switching_helper(new_ctx);
+  return statements();
+}
+
 Tuplestorestate* init_tuple_store(ReturnSetInfo *rsinfo, TupleDesc retvalDescription)
 {
-  MemoryContext per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
-  MemoryContext oldcontext = MemoryContextSwitchTo(per_query_ctx);
-  Tuplestorestate *tupstore  = tuplestore_begin_heap(true, false, work_mem);
-  rsinfo->returnMode = SFRM_Materialize;
-  rsinfo->setResult = tupstore;
-  rsinfo->setDesc = retvalDescription;
-  MemoryContextSwitchTo(oldcontext);
-  return tupstore;
+  return MemoryContextSwitcher(rsinfo->econtext->ecxt_per_query_memory,
+    [=](){
+        Tuplestorestate *tupstore  = tuplestore_begin_heap(true, false, work_mem);
+        rsinfo->returnMode = SFRM_Materialize;
+        rsinfo->setResult = tupstore;
+        rsinfo->setDesc = retvalDescription;
+        return tupstore;
+    }
+  );
 }
 
 
@@ -332,45 +351,46 @@ Datum get_impacted_accounts(PG_FUNCTION_ARGS)
     /* stuff done only on the first call of the function */
     if( _first_call )
     {
-        MemoryContext   oldcontext;
-
         /* create a function context for cross-call persistence */
         funcctx = SRF_FIRSTCALL_INIT();
 
         /* switch to memory context appropriate for multiple function calls */
-        oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
-
-        /* total number of tuples to be returned */
-        auto* _arg0 = (VarChar*)PG_GETARG_VARCHAR_P(0);
-        auto* _op_body = (char*)VARDATA(_arg0);
-
-        flat_set<account_name_type> _accounts = get_accounts( _op_body );
-
-        funcctx->max_calls = _accounts.size();
-        funcctx->user_fctx = nullptr;
-
-        if( !_accounts.empty() )
-        {
-          auto itr = _accounts.begin();
-          fc::string _str = *(itr);
-          current_account = CStringGetTextDatum( _str.c_str() );
-
-          if( _accounts.size() > 1 )
+        MemoryContextSwitcher(funcctx->multi_call_memory_ctx,
+          [&current_account, fcinfo, funcctx]()
           {
-            auto** _buffer = ( Datum** )palloc( ( _accounts.size() - 1 ) * sizeof( Datum* ) );
-            for( size_t i = 1; i < _accounts.size(); ++i )
-            {
-              ++itr;
-              _str = *(itr);
+            /* total number of tuples to be returned */
+            auto* _arg0 = (VarChar*)PG_GETARG_VARCHAR_P(0);
+            auto* _op_body = (char*)VARDATA(_arg0);
 
-              _buffer[i - 1] = ( Datum* )palloc( sizeof( Datum ) );;
-              *( _buffer[i - 1] ) = CStringGetTextDatum( _str.c_str() );
+            flat_set<account_name_type> _accounts = get_accounts( _op_body );
+
+            funcctx->max_calls = _accounts.size();
+            funcctx->user_fctx = nullptr;
+
+            if( !_accounts.empty() )
+            {
+              auto itr = _accounts.begin();
+              fc::string _str = *(itr);
+              current_account = CStringGetTextDatum( _str.c_str() );
+
+              if( _accounts.size() > 1 )
+              {
+                auto** _buffer = ( Datum** )palloc( ( _accounts.size() - 1 ) * sizeof( Datum* ) );
+                for( size_t i = 1; i < _accounts.size(); ++i )
+                {
+                  ++itr;
+                  _str = *(itr);
+
+                  _buffer[i - 1] = ( Datum* )palloc( sizeof( Datum ) );;
+                  *( _buffer[i - 1] ) = CStringGetTextDatum( _str.c_str() );
+                }
+                funcctx->user_fctx = _buffer;
+              }
             }
-            funcctx->user_fctx = _buffer;
-          }
         }
 
-        MemoryContextSwitchTo(oldcontext);
+      );
+
     }
 
     /* stuff done on every call of the function */
