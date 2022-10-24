@@ -84,7 +84,7 @@ def run_networks(networks: Dict[str, tt.Network], blocklog_directory=None, repla
 
     time_offset = get_time_offset_from_file(blocklog_directory/'timestamp')
 
-    block_log = tt.BlockLog(None, blocklog_directory/'block_log', include_index=False)
+    block_log = tt.BlockLog(blocklog_directory/'block_log')
 
     tt.logger.info('Running nodes...')
 
