@@ -5,8 +5,6 @@ from pathlib import Path
 
 import test_tools as tt
 
-from test_tools.__private.block_log import BlockLog
-
 from witnesses import alpha_witness_names, beta_witness_names
 
 
