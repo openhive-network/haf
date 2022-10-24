@@ -117,7 +117,7 @@ def prepare_block_log(length):
     timestamp = init_node.api.block.get_block(block_num=length)['block']['timestamp']
     init_node.close()
 
-    init_node.get_block_log().truncate(Path('block_log').parent.absolute(), length)
+    init_node.get_block_log().truncate(Path('block_log'), length)
 
     return timestamp
 
