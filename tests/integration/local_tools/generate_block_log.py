@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import os
 from pathlib import Path
 
 import test_tools as tt
@@ -109,13 +108,12 @@ def prepare_block_log(length):
             f'current head block: {result["head_block_num"]}'
         )
 
-    if os.path.exists('block_log'):
-        os.remove('block_log')
-
     timestamp = init_node.api.block.get_block(block_num=length)['block']['timestamp']
     init_node.close()
 
-    init_node.block_log.truncate(Path('block_log').parent.absolute(), length)
+    output_block_log_path = Path(__file__).parent / "block_log"
+    output_block_log_path.unlink(missing_ok=True)
+    init_node.block_log.truncate(output_block_log_path.parent, length)
 
     return timestamp
 
