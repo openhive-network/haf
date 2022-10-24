@@ -197,8 +197,8 @@ TupleDesc build_tuple_descriptor(PG_FUNCTION_ARGS)
   return retvalDescription;
 }
 
-
-Datum colect_data_and_fill_returned_recordset(std::function<void ()> collect, std::function<void ()>  fill_return_tuple,  const char* C_function_name, const char* arg1) noexcept 
+template<typename Collect, typename FillReturnTuple>
+Datum colect_data_and_fill_returned_recordset(Collect collect, FillReturnTuple fill_return_tuple,  const char* C_function_name, const char* arg1) noexcept 
 {
   try 
   {
