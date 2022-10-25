@@ -241,7 +241,7 @@ block_api_tests:
 
     # run pattern tests
     - cd "$BENCHMARK_DIR"
-    - python3 benchmark.py -n blocks_api -p 5432 -c perf_5M_light.csv --skip-version-check -j $JMETER -d wdir --postgres $BENCHMARK_DB_URL --call-style postgres 2>&1 | tee -i $CI_PROJECT_DIR/python_benchmark.log
+    - python3 benchmark.py --loops 200 --threads 5 -n blocks_api -p 5432 -c perf_5M_light.csv --skip-version-check -j $JMETER -d wdir --postgres $BENCHMARK_DB_URL --call-style postgres 2>&1 | tee -i $CI_PROJECT_DIR/python_benchmark.log
 
     # generate JUNIT report file
     - $M2U --input "$BENCHMARK_DIR/wdir/raw_jmeter_report.xml" --output $CI_PROJECT_DIR/report.junit
