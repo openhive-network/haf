@@ -131,3 +131,5 @@ if __name__ == '__main__':
 
     with open('timestamp', 'w') as f:
         f.write(f'{timestamp}')
+
+    tt.logger.info(f'{bcolors.OKGREEN}{bcolors.UNDERLINE}Finished regeneration of block_log{bcolors.ENDC}')
