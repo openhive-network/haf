@@ -113,7 +113,10 @@ def prepare_block_log(length):
 
     output_block_log_path = Path(__file__).parent / "block_log"
     output_block_log_path.unlink(missing_ok=True)
-    init_node.block_log.truncate(output_block_log_path.parent, length)
+    output_block_log = init_node.block_log.truncate(output_block_log_path.parent, length)
+
+    # compress_block_log additionally creates block_log.artifacts file, which is unneeded here.
+    output_block_log.artifacts_path.unlink()
 
     return timestamp
 
