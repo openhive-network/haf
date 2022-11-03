@@ -27,8 +27,8 @@ ADD_PSQL_EXTENSION(
             hived_api_impl.sql
             app_api_impl.sql
             hived_api.sql
-            hive_api_json.sql
             app_api.sql
+            api_helpers/block_api_support.sql
             authorization.sql
             get_impacted_accounts.sql
             get_impacted_balances.sql
