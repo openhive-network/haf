@@ -333,6 +333,32 @@ There is a way to specify multiple entries - they must be separated by newline c
 # HAF Versioning
 HAF Postgres extensions are versioned - the extension control file contains `default_version` configuration entry. The build system fills the entry with the repository git sha. The corresponding SQL script file is also named with the same version, as is required by postgres.
 
+# Pghero monitoring
+
+Run pghero web ui this way:
+```bash
+docker run \
+    --name pghero \
+    -d \
+    --link haf-instance-5M:db \
+    -e DATABASE_URL=postgres://pghero@db:5432/haf_block_log \
+    -p 8080:8080 \
+    ankane/pghero:v2.7.2
+```
+Open page http://localhost:8080 in your browser. Replace
+`haf-instance-5M` in above command with your name of running HAF
+container. Replace `haf_block_log` in above command with another
+database, when you want to monitor it. You can install pghero into any
+database this way (replace `<your_database>` with your database name):
+```
+docker exec -u root haf-instance-5M ./haf/scripts/setup_pghero.sh --database=<your_database>
+```
+
+To stop pghero web ui and remove its container run:
+```bash
+docker container rm -f -v pghero 2>/dev/null || true
+```
+
 # Using pg_dump/pg_restore to backup/restore a HAF database
 When setting up a new HAF server for production or testing purposes, you may want to load data from an existing HAF database using `pg_dump` and `pg_restore` commands, instead of filling it from scratch using hived with a replay of the blockchain data in a block_log.
 

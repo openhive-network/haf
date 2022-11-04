@@ -1,3 +1,0 @@
-databases:
-  haf_block_log:
-    url: <%= ENV["DATABASE_URL"] %>/haf_block_log

@@ -2,7 +2,7 @@
 # docker build --target=ci-base-image -t registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-xxx -f Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=:ubuntu20.04-6 
+ARG CI_IMAGE_TAG=:ubuntu20.04-6
 
 ARG BUILD_IMAGE_TAG
 
@@ -10,13 +10,13 @@ FROM phusion/baseimage:focal-1.0.0 AS ci-base-image
 
 ENV LANG=en_US.UTF-8
 
-SHELL ["/bin/bash", "-c"] 
+SHELL ["/bin/bash", "-c"]
 
 USER root
 WORKDIR /usr/local/src
 ADD ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 
-RUN ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived" 
+RUN ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived"
 
 USER haf_admin
 
@@ -43,7 +43,7 @@ ENV HIVE_LINT=${HIVE_LINT}
 USER haf_admin
 WORKDIR /home/haf_admin
 
-SHELL ["/bin/bash", "-c"] 
+SHELL ["/bin/bash", "-c"]
 
 # Get everything from cwd as sources to be built.
 COPY --chown=haf_admin:haf_admin . /home/haf_admin/haf
@@ -75,9 +75,9 @@ ENV HTTP_PORT=${HTTP_PORT}
 ENV HAF_DB_STORE=/home/hived/datadir/haf_db_store
 ENV PGDATA=/home/hived/datadir/haf_db_store/pgdata
 # Environment variable which allows to override default postgres access specification in pg_hba.conf
-ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust"
+ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\nhost    all     pghero    172.0.0.0/8    trust"
 
-SHELL ["/bin/bash", "-c"] 
+SHELL ["/bin/bash", "-c"]
 
 USER hived
 WORKDIR /home/hived
@@ -99,7 +99,7 @@ RUN sudo -n mkdir -p /home/hived/bin && sudo -n mkdir -p /home/hived/shm_dir && 
 
 VOLUME [ "/home/hived/datadir", "/home/hived/shm_dir" ]
 
-STOPSIGNAL SIGINT 
+STOPSIGNAL SIGINT
 
 ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
 
