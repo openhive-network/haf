@@ -44,5 +44,5 @@ to the location `/app/config/pghero.yml` in docker container.
 
 
 ```
-docker exec -u root haf-instance-5M ./haf/scripts/pghero/setup_pghero.sh --database=test
+docker exec -u root haf-instance-5M ./haf/scripts/pghero/setup_pghero.sh --database=haf_block_log
 ```

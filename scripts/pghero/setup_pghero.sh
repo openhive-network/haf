@@ -1,9 +1,10 @@
 #! /bin/bash
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+SCRIPTSDIR="$SCRIPTPATH/.."
 
 LOG_FILE=setup_pghero.log
-source "$SCRIPTPATH/common.sh"
+source "$SCRIPTSDIR/common.sh"
 
 log_exec_params "$@"
 
@@ -28,7 +29,7 @@ print_help() {
 setup_pghero() {
   local pg_access="$1"
   echo "Attempting to install pghero stuff"
-  sudo -nu postgres psql -d postgres -aw $pg_access -v ON_ERROR_STOP=on -f $SCRIPTPATH/pghero/pghero.sql
+  sudo -nu postgres psql -d postgres -aw $pg_access -v ON_ERROR_STOP=on -f $SCRIPTSDIR/pghero/pghero.sql
 }
 
 POSTGRES_HOST="/var/run/postgresql"
