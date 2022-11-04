@@ -1,6 +1,6 @@
 #! /bin/bash
 
-set -euo pipefail 
+set -euo pipefail
 
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTDIR/haf/scripts"
@@ -12,7 +12,7 @@ cleanup () {
   echo "Performing cleanup...."
   hived_pid=$(pidof 'hived')
   echo "Hived pid: $hived_pid"
-  
+
   jobs -l
 
   sudo -n kill -INT $hived_pid
@@ -33,7 +33,7 @@ cleanup () {
   if [ "$postgres_pid" -ne 0 ];
   then
     tail --pid=$postgres_pid -f /dev/null || true
-  fi 
+  fi
 
   echo "postgres finish done."
 
@@ -72,10 +72,10 @@ then
   sudo -n ./haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="$HAF_DB_STORE/tablespace"
   echo "Postgres instance setup completed."
 else
-  sudo -n mkdir -p $PGDATA 
+  sudo -n mkdir -p $PGDATA
   sudo -n mkdir -p $HAF_DB_STORE/tablespace
   sudo -n chown -Rc postgres:postgres $HAF_DB_STORE
-  
+
   echo "Attempting to setup postgres instance..."
 
   # Here is an exception against using /etc/init.d/postgresql script to manage postgres - maybe there is some better way to force initdb using regular script.
@@ -86,6 +86,7 @@ else
   echo "Postgres instance setup completed."
 
   ./haf/scripts/setup_db.sh --haf-db-admin=haf_admin --haf-db-name=haf_block_log --haf-app-user=haf_app_admin
+  ./haf/scripts/pghero/setup_pghero.sh --database=haf_block_log
 fi
 
 cd /home/hived/datadir
