@@ -348,7 +348,8 @@ The database `haf_block_log` is ready for monitoring with
    needed by pghero into schema `pghero` in database `haf_block_log`,
    when it creates postgres cluster first time.
 
-Run pghero web ui this way:
+When container `haf-instance-5M` is running, you can run pghero web ui
+this way:
 ```bash
 docker container rm -f -v pghero 2>/dev/null || true \
 && docker run \
