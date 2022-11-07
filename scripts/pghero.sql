@@ -16,12 +16,11 @@ DO
 $do$
 BEGIN
     IF EXISTS (SELECT * FROM pg_user WHERE pg_user.usename = 'pghero') THEN
-        raise warning 'Role % already exists', 'pghero';
+        RAISE NOTICE 'Role % already exists', 'pghero';
     ELSE
         CREATE ROLE pghero WITH LOGIN;
         COMMENT ON ROLE pghero IS
             'Role for monitoring https://github.com/ankane/pghero/';
-        ALTER ROLE pghero CONNECTION LIMIT 10;
         ALTER ROLE pghero SET search_path = pghero, pg_catalog, public;
         GRANT pg_monitor TO pghero;
    END IF;
@@ -86,20 +85,5 @@ CREATE OR REPLACE VIEW pghero.pg_stats AS SELECT * FROM pghero.pg_stats();
 GRANT USAGE ON SCHEMA pghero TO pg_monitor;
 GRANT SELECT ON ALL TABLES IN SCHEMA pghero TO pg_monitor;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA pghero TO pg_monitor;
-
-ALTER DEFAULT PRIVILEGES GRANT SELECT ON SEQUENCES TO pg_monitor;
-
--- TODO 
--- loop over existing schemas created by user and run for each
---
-GRANT USAGE ON SCHEMA public TO pg_monitor;
-GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO pg_monitor;
-
-GRANT USAGE ON SCHEMA hive TO pg_monitor;
-GRANT SELECT ON ALL SEQUENCES IN SCHEMA hive TO pg_monitor;
-
-----------------------
-
-GRANT CONNECT, TEMPORARY ON DATABASE haf_block_log TO pg_monitor;
 
 COMMIT;

@@ -335,9 +335,23 @@ HAF Postgres extensions are versioned - the extension control file contains `def
 
 # Pghero monitoring
 
+The database `haf_block_log` is ready for monitoring with
+[pghero](https://github.com/ankane/pghero/). It is achieved this way:
+1. The extension
+   [pg_stat_statements](https://www.postgresql.org/docs/12/pgstatstatements.html)
+   is enabled by setting `shared_preload_libraries =
+   'pg_stat_statements'` in `postgresql.conf`.
+2. There's the login role `pghero` added to postgresql's common role
+   `pg_monitor`. A required entry enabling login for this role exists
+   in `pg_hba.conf` file.
+3. The docker entrypoint script installs a set of functions and views
+   needed by pghero into schema `pghero` in database `haf_block_log`,
+   when it creates postgres cluster first time.
+
 Run pghero web ui this way:
 ```bash
-docker run \
+docker container rm -f -v pghero 2>/dev/null || true \
+&& docker run \
     --name pghero \
     -d \
     --link haf-instance-5M:db \
@@ -350,13 +364,25 @@ Open page http://localhost:8080 in your browser. Replace
 container. Replace `haf_block_log` in above command with another
 database, when you want to monitor it. You can install pghero into any
 database this way (replace `<your_database>` with your database name):
-```
+```bash
 docker exec -u root haf-instance-5M ./haf/scripts/setup_pghero.sh --database=<your_database>
 ```
+Another way:
+```bash
+docker exec haf-instance-5M sudo -n ./haf/scripts/setup_pghero.sh --database=<your_database>
+```
+Note, that pghero stuff can be installed by postgresql role with
+superuser privileges, because pghero needs creating extension
+`pg_stat_statements` in database.
 
 To stop pghero web ui and remove its container run:
 ```bash
 docker container rm -f -v pghero 2>/dev/null || true
+```
+
+To remove pghero stuff from database just remove schema `pghero`, for instance:
+```bash
+docker exec haf-instance-5M psql -d <your_database> -c "drop schema pghero cascade;"
 ```
 
 # Using pg_dump/pg_restore to backup/restore a HAF database

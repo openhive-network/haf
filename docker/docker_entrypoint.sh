@@ -86,6 +86,7 @@ else
   echo "Postgres instance setup completed."
 
   ./haf/scripts/setup_db.sh --haf-db-admin=haf_admin --haf-db-name=haf_block_log --haf-app-user=haf_app_admin
+
   sudo -n ./haf/scripts/setup_pghero.sh --database=haf_block_log
 fi
 
