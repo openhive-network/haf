@@ -339,14 +339,14 @@ The database `haf_block_log` is ready for monitoring with
 [pghero](https://github.com/ankane/pghero/). It is achieved this way:
 1. The extension
    [pg_stat_statements](https://www.postgresql.org/docs/12/pgstatstatements.html)
-   is enabled by setting `shared_preload_libraries =
+   is enabled on postgresql server by setting `shared_preload_libraries =
    'pg_stat_statements'` in `postgresql.conf`.
 2. There's the login role `pghero` added to postgresql's common role
-   `pg_monitor`. A required entry enabling login for this role exists
-   in `pg_hba.conf` file.
+   `pg_monitor`. A required entry enabling login by this role to any
+   database exists in `pg_hba.conf` file.
 3. The docker entrypoint script installs a set of functions and views
    needed by pghero into schema `pghero` in database `haf_block_log`,
-   when it creates postgres cluster first time.
+   when it creates postgresql cluster.
 
 When container `haf-instance-5M` is running, you can run pghero web ui
 this way:
@@ -361,7 +361,7 @@ docker container rm -f -v pghero 2>/dev/null || true \
     ankane/pghero:v2.7.2
 ```
 Open page http://localhost:8080 in your browser. Replace
-`haf-instance-5M` in above command with your name of running HAF
+`haf-instance-5M`, in above command, with your name of running HAF
 container. Replace `haf_block_log` in above command with another
 database, when you want to monitor it. You can install pghero into any
 database this way (replace `<your_database>` with your database name):
@@ -381,9 +381,11 @@ To stop pghero web ui and remove its container run:
 docker container rm -f -v pghero 2>/dev/null || true
 ```
 
-To remove pghero stuff from database just remove schema `pghero`, for instance:
+To remove pghero stuff from database just remove schema `pghero` and
+drop extension `pg_stat_statements`, for instance:
 ```bash
-docker exec haf-instance-5M psql -d <your_database> -c "drop schema pghero cascade;"
+docker exec haf-instance-5M psql -d <your_database> \
+  -c "drop schema if exists pghero cascade; drop extension if exists pg_stat_statements;"
 ```
 
 # Using pg_dump/pg_restore to backup/restore a HAF database
