@@ -126,7 +126,7 @@ DECLARE
   fill_collateralized_convert_request_operation   VARCHAR := '{"type":"fill_collateralized_convert_request_operation","value":{"owner":"gandalf","requestid":1625061900,"amount_in":{"amount":"353","precision":3,"nai":"@@000000021"},"amount_out":{"amount":"103","precision":3,"nai":"@@000000013"},"excess_collateral":{"amount":"647","precision":3,"nai":"@@000000021"}}}';
   fill_recurrent_transfer_operation               VARCHAR := '{"type":"fill_recurrent_transfer_operation","value":{"from":"deathwing","to":"rishi556","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"test","remaining_executions":4}}';
   failed_recurrent_transfer_operation             VARCHAR := '{"type":"failed_recurrent_transfer_operation","value":{"from":"blackknight1423","to":"aa111","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"","consecutive_failures":1,"remaining_executions":0,"deleted":false}}';
-  limit_order_cancelled_operation                 VARCHAR := '{"type":"limit_order_cancelled_operation","value":{"seller":"linouxis9","amount_back":{"amount":"9950","precision":3,"nai":"@@000000021"}}}';
+  limit_order_cancelled_operation                 VARCHAR := '{"type":"limit_order_cancelled_operation","value":{"seller":"linouxis9","orderid":7,"amount_back":{"amount":"9950","precision":3,"nai":"@@000000021"}}}';
   expired_account_notification_operation          VARCHAR := '{"type":"expired_account_notification_operation","value":{"account":"abit"}}';
 
 BEGIN
