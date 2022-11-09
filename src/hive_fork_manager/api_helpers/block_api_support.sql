@@ -50,35 +50,32 @@ CREATE OR REPLACE FUNCTION hive.get_block_from_views( _block_num_start INT, _blo
     RETURNS SETOF hive.block_type_ext
     LANGUAGE plpgsql
     VOLATILE
+    SET JIT=FALSE
 AS
 $BODY$
-DECLARE
-    _empty_jsonb_array JSONB := array_to_json(ARRAY[] :: INT[]) :: JSONB;
-    _block_num_end INTEGER;
 BEGIN
 
-    SELECT _block_num_start + _block_count INTO _block_num_end;
-
-    RETURN QUERY
+        RETURN QUERY
         WITH
-        base_blocks_data AS (
+        -- hive.get_block_from_views
+        base_blocks_data AS MATERIALIZED (
             SELECT
                 hb.num,
                 hb.prev,
                 hb.created_at,
                 hb.transaction_merkle_root,
                 hb.witness_signature,
-                COALESCE(hb.extensions, _empty_jsonb_array) AS extensions,
+                COALESCE(hb.extensions,  array_to_json(ARRAY[] :: INT[]) :: JSONB) AS extensions,
                 hb.producer_account_id,
                 hb.hash,
                 hb.signing_key,
                 ha.name
             FROM hive.blocks_view hb
             JOIN hive.accounts_view ha ON hb.producer_account_id = ha.id
-            WHERE hb.num >= _block_num_start AND hb.num < _block_num_end
+            WHERE hb.num BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
             ORDER BY hb.num ASC
         ),
-        trx_details AS (
+        trx_details AS MATERIALIZED (
             SELECT
                 htv.block_num,
                 htv.trx_in_block,
@@ -88,7 +85,7 @@ BEGIN
                 htv.trx_hash,
                 htv.signature
             FROM hive.transactions_view htv
-            WHERE htv.block_num >= _block_num_start AND htv.block_num < _block_num_end
+            WHERE htv.block_num BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
             ORDER BY htv.block_num ASC, htv.trx_in_block ASC
         ),
         operations AS (
@@ -96,11 +93,11 @@ BEGIN
                 FROM hive.operations_view ho
                 WHERE
                     ho.op_type_id <= (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = FALSE ORDER BY ot.id DESC LIMIT 1)
-                    AND ho.block_num >= _block_num_start AND ho.block_num < _block_num_end
+                    AND ho.block_num BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
                 GROUP BY ho.block_num, ho.trx_in_block
                 ORDER BY ho.block_num ASC, trx_in_block ASC
         ),
-        full_transactions_with_signatures AS (
+        full_transactions_with_signatures AS MATERIALIZED (
                 SELECT
                     htv.block_num,
                     ARRAY_AGG(htv.trx_hash ORDER BY htv.trx_in_block ASC) AS trx_hashes,
@@ -110,7 +107,7 @@ BEGIN
                             htv.ref_block_prefix,
                             htv.expiration,
                             ops.bodies,
-                            _empty_jsonb_array,
+                            array_to_json(ARRAY[] :: INT[]) :: JSONB,
                             (
                                 CASE
                                     WHEN multisigs.signatures = ARRAY[NULL]::BYTEA[] THEN ARRAY[ htv.signature ]::BYTEA[]
@@ -129,6 +126,7 @@ BEGIN
                 ) AS multisigs
                 JOIN trx_details htv ON htv.trx_hash = multisigs.trx_hash
                 JOIN operations ops ON ops.block_num = htv.block_num AND htv.trx_in_block = ops.trx_in_block
+                WHERE ops.block_num BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
                 GROUP BY htv.block_num
                 ORDER BY htv.block_num ASC
         )
