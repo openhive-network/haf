@@ -1,4 +1,3 @@
-import subprocess
 from pathlib import Path
 
 import test_tools as tt
@@ -18,67 +17,41 @@ def test_compare_forked_node_database(prepared_networks_and_database, database):
 
     session_ref, Base_ref = database('postgresql:///haf_block_log_ref')
 
-    print(session_ref.bind)
-
-
     blocks = Base.classes.blocks
     transactions = Base.classes.transactions
     operations = Base.classes.operations
 
     reference_node = create_node_with_database(networks['Alpha'], session_ref.get_bind().url)
 
-    blocklog_directory = Path('/home/dev/mydes/HAAF/haf-develop/tests/integration/local_tools')
-    
-    block_log = tt.BlockLog(None, blocklog_directory/'block_log', include_index=False)
-
-    reference_node.run(wait_for_live=False, replay_from=block_log, stop_at_block= 105)
-
-
-# time pg_restore -Fc -j 6 -v -U hive -d hive hivemind-31a03fa6-20201116.dump
-# time pg_dump -Fc hive -U hive -d hive -v -f hivemind-revisionsynca-revisionupgradeu-data.dump
-# oczywiście to przykłady z użycia starej bazy hiveminda (hive)
-
-    with open('db105.dump', 'w') as f:
-        subprocess.call(f'pg_dump {(session_ref.bind.url)} -v  > dump.sql', shell=True, stdout =f)
-
-    with open('db105.dump', 'r') as f:
-        subprocess.call(f'pg_restore {(session_ref.bind.url)}', shell=True, stdin =f)
-
-
-
-
-
-
-
     # WHEN
-    # run_networks(networks, replay_all_nodes=True)
-    # node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
-    # wallet = tt.Wallet(attach_to=node_under_test)
-    # transaction1 = wallet.api.transfer('initminer', 'null', tt.Asset.Test(1234), 'memo', broadcast=False)
-    # transaction2 = wallet.api.transfer_to_vesting('initminer', 'null', tt.Asset.Test(1234), broadcast=False)
-    # after_fork_block = make_fork(
-    #     networks,
-    #     main_chain_trxs=[transaction1],
-    #     fork_chain_trxs=[transaction2],
-    # )
+    run_networks(networks)
+    node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
+    wallet = tt.Wallet(attach_to=node_under_test)
+    transaction1 = wallet.api.transfer('initminer', 'null', tt.Asset.Test(1234), 'memo', broadcast=False)
+    transaction2 = wallet.api.transfer_to_vesting('initminer', 'null', tt.Asset.Test(1234), broadcast=False)
+    after_fork_block = make_fork(
+        networks,
+        main_chain_trxs=[transaction1],
+        fork_chain_trxs=[transaction2],
+    )
 
-    # # THEN
-    # wait_for_irreversible_progress(node_under_test, after_fork_block)
+    # THEN
+    wait_for_irreversible_progress(node_under_test, after_fork_block)
 
-    # blks = session.query(blocks).filter(blocks.num < after_fork_block).order_by(blocks.num).all()
-    # blks_ref = session_ref.query(blocks).filter(blocks.num < after_fork_block).order_by(blocks.num).all()
+    blks = session.query(blocks).filter(blocks.num < after_fork_block).order_by(blocks.num).all()
+    blks_ref = session_ref.query(blocks).filter(blocks.num < after_fork_block).order_by(blocks.num).all()
 
-    # for block, block_ref in zip(blks, blks_ref):
-    #     assert block.hash == block_ref.hash
+    for block, block_ref in zip(blks, blks_ref):
+        assert block.hash == block_ref.hash
 
-    # trxs = session.query(transactions).filter(transactions.block_num < after_fork_block).order_by(transactions.trx_hash).all()
-    # trxs_ref = session_ref.query(transactions).filter(transactions.block_num < after_fork_block).order_by(transactions.trx_hash).all()
+    trxs = session.query(transactions).filter(transactions.block_num < after_fork_block).order_by(transactions.trx_hash).all()
+    trxs_ref = session_ref.query(transactions).filter(transactions.block_num < after_fork_block).order_by(transactions.trx_hash).all()
 
-    # for trx, trx_ref in zip(trxs, trxs_ref):
-    #     assert trx.trx_hash == trx_ref.trx_hash
+    for trx, trx_ref in zip(trxs, trxs_ref):
+        assert trx.trx_hash == trx_ref.trx_hash
 
-    # ops = session.query(operations).filter(operations.block_num < after_fork_block).order_by(operations.id).all()
-    # ops_ref = session_ref.query(operations).filter(operations.block_num < after_fork_block).order_by(operations.id).all()
+    ops = session.query(operations).filter(operations.block_num < after_fork_block).order_by(operations.id).all()
+    ops_ref = session_ref.query(operations).filter(operations.block_num < after_fork_block).order_by(operations.id).all()
 
-    # for op, op_ref in zip(ops, ops_ref):
-    #     assert op.body == op_ref.body
+    for op, op_ref in zip(ops, ops_ref):
+        assert op.body == op_ref.body
