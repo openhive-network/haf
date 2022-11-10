@@ -40,29 +40,36 @@ def test_pg_dump(prepared_networks_and_database, database):
 # oczywiście to przykłady z użycia starej bazy hiveminda (hive)
 
     # subprocess.call(f'pg_dump {(session_ref.bind.url)} -Fp -v  > dump.sql', shell=True, stdout =f)
-    subprocess.call(f'pg_dump  -Fc   -d {(session_ref.bind.url)}  -v -f adump.Fcsql', shell=True)
-    subprocess.call(f'pg_restore --disable-triggers  -Fc -f adump.sql -v  adump.Fcsql', shell=True)
+    subprocess.call(f'pg_dump  -Fc   -d {(session_ref.bind.url)}   -f adump.Fcsql', shell=True)
+    subprocess.call(f'pg_restore --disable-triggers  -Fc -f adump.sql   adump.Fcsql', shell=True)
 
 
     targed_db = 'adb'
     # restore pre-data
-    subprocess.call(f"""psql -U dev -d postgres -c     'SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '{targed_db}' AND pid <> pg_backend_pid();'
+    subprocess.call(f"""psql -U dev -d postgres \
+        -c \
+        "SELECT pg_terminate_backend(pg_stat_activity.pid) 
+        FROM pg_stat_activity 
+        WHERE pg_stat_activity.datname = '{targed_db}' 
+            AND pid <> pg_backend_pid();"
     """,
      shell=True)
     subprocess.call(f"psql -d postgres -c 'DROP DATABASE {targed_db};'", shell=True)
     subprocess.call(f"psql -d postgres -c 'CREATE DATABASE {targed_db};'", shell=True)
-    subprocess.call(f"pg_restore  --section=pre-data  -Fc -d {targed_db} -v  adump.Fcsql", shell=True)
+    subprocess.call(f"pg_restore  --section=pre-data  -Fc -d {targed_db}   adump.Fcsql", shell=True)
 
     # delete status table contntents
     subprocess.call(f"psql  -d {targed_db} -c 'DELETE from hive.irreversible_data;'", shell=True)
 
     #restore data
-    subprocess.call(f"pg_restore --disable-triggers --section=data  -Fc  -d {targed_db} -v  adump.Fcsql", shell=True)
+    subprocess.call(f"pg_restore --disable-triggers --section=data  -Fc  -d {targed_db}   adump.Fcsql", shell=True)
 
     #restore post-data
-    subprocess.call(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {targed_db} -v  adump.Fcsql", shell=True)
+    subprocess.call(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {targed_db}   adump.Fcsql", shell=True)
 
     #is ok ?
+
+    session2, Base_ref2 = database('postgresql:///haf_block_log_ref')    
     subprocess.call(f"psql  -d {targed_db} -c 'SELECT COUNT(*) FROM hive.blocks", shell=True)
         
 
