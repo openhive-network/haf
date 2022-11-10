@@ -1,4 +1,11 @@
 import subprocess
+import sqlalchemy
+from sqlalchemy.pool import NullPool
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.automap import automap_base
+
+
+
 from pathlib import Path
 
 import test_tools as tt
@@ -69,8 +76,29 @@ def test_pg_dump(prepared_networks_and_database, database):
 
     #is ok ?
 
-    session2, Base_ref2 = database('postgresql:///haf_block_log_ref')    
-    subprocess.call(f"psql  -d {targed_db} -c 'SELECT COUNT(*) FROM hive.blocks", shell=True)
+    #subprocess.call(f"psql  -d {targed_db} -c 'SELECT COUNT(*) FROM hive.blocks", shell=True)
+    #session2, Base_ref2 = database('postgresql:///adb')    
+
+    engine = sqlalchemy.create_engine('postgresql:///adb', echo=False, poolclass=NullPool)
+    # with engine.connect() as connection:
+    #     connection.execute('CREATE EXTENSION hive_fork_manager CASCADE;')
+
+    # with engine.connect() as connection:
+    #     connection.execute('SET ROLE hived_group')
+
+    Session = sessionmaker(bind=engine)
+    session2 = Session()
+
+    metadata = sqlalchemy.MetaData(schema="hive")
+    Base2 = automap_base(bind=engine, metadata=metadata)
+    Base2.prepare(reflect=True)
+
+
+
+    blocks2 = Base2.classes.blocks
+
+    block_count = session2.query(blocks2).count()
+    assert(block_count == 105)
         
 
 
