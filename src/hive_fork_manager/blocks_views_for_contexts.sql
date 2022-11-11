@@ -41,7 +41,7 @@ CREATE OR REPLACE FUNCTION hive.drop_context_data_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
-EXECUTE format( 'DROP VIEW hive.%s_context_data_view;', _context_name );
+EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_context_data_view CASCADE;', _context_name );
 END;
 $BODY$
 ;
@@ -136,7 +136,7 @@ CREATE OR REPLACE FUNCTION hive.drop_blocks_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
-EXECUTE format( 'DROP VIEW hive.%s_blocks_view;', _context_name );
+EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_blocks_view CASCADE;', _context_name );
 END;
 $BODY$
 ;
@@ -233,7 +233,7 @@ CREATE OR REPLACE FUNCTION hive.drop_transactions_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
-    EXECUTE format( 'DROP VIEW hive.%s_transactions_view;', _context_name );
+    EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_transactions_view CASCADE;', _context_name );
 END;
 $BODY$
 ;
@@ -327,7 +327,7 @@ CREATE OR REPLACE FUNCTION hive.drop_operations_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
-    EXECUTE format( 'DROP VIEW hive.%s_operations_view;', _context_name );
+    EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_operations_view CASCADE;', _context_name );
 END;
 $BODY$
 ;
@@ -408,7 +408,7 @@ CREATE OR REPLACE FUNCTION hive.drop_signatures_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
-    EXECUTE format( 'DROP VIEW hive.%s_TRANSACTIONS_MULTISIG_VIEW;', _context_name );
+    EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_TRANSACTIONS_MULTISIG_VIEW CASCADE;', _context_name );
 END;
 $BODY$
 ;
@@ -488,7 +488,7 @@ CREATE OR REPLACE FUNCTION hive.drop_accounts_view( _context_name TEXT )
 AS
 $BODY$
 BEGIN
-EXECUTE format( 'DROP VIEW hive.%s_accounts_view;', _context_name );
+EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_accounts_view CASCADE;', _context_name );
 END;
 $BODY$
 ;
@@ -579,7 +579,7 @@ CREATE OR REPLACE FUNCTION hive.drop_account_operations_view( _context_name TEXT
 AS
 $BODY$
 BEGIN
-    EXECUTE format( 'DROP VIEW hive.%s_account_operations_view;', _context_name );
+    EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_account_operations_view CASCADE;', _context_name );
 END;
 $BODY$
 ;
