@@ -1,14 +1,7 @@
-.docker_image_builder_job:
-  variables:
-    DOCKER_BUILDKIT: 1
-    DOCKER_DRIVER: overlay2
-    DOCKER_TLS_CERTDIR: "/certs"
-  image: docker:20.10.10
-  services:
-    - docker:20.10.10-dind
-
-  before_script:
-    - apk update && apk add bash git ca-certificates curl
+include:
+  - project: 'hive/hive'
+    ref: develop
+    file: '/scripts/ci-helpers/prepare_data_image_job.yml' 
 
 .prepare_haf_data_5m_image:
   extends: .docker_image_builder_job
