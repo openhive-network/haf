@@ -4,8 +4,6 @@
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
 ARG CI_IMAGE_TAG=:ubuntu20.04-6 
 
-ARG BLOCK_LOG_SUFFIX
-
 ARG BUILD_IMAGE_TAG
 
 FROM phusion/baseimage:focal-1.0.0 AS ci-base-image
@@ -61,7 +59,7 @@ RUN \
   find . -name *.a  -type f -delete
 
 # Here we could use a smaller image without packages specific to build requirements
-FROM ${CI_REGISTRY_IMAGE}ci-base-image${BLOCK_LOG_SUFFIX}${CI_IMAGE_TAG} as base_instance
+FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG as base_instance
 
 ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu20.04-5}
 
@@ -105,7 +103,7 @@ STOPSIGNAL SIGINT
 
 ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
 
-FROM ${CI_REGISTRY_IMAGE}base_instance${BLOCK_LOG_SUFFIX}:base_instance-${BUILD_IMAGE_TAG} as instance
+FROM ${CI_REGISTRY_IMAGE}base_instance:base_instance-${BUILD_IMAGE_TAG} as instance
 
 # Embedded postgres service
 EXPOSE 5432
@@ -117,8 +115,11 @@ EXPOSE ${WS_PORT}
 # JSON rpc service
 EXPOSE ${HTTP_PORT}
 
-FROM ${CI_REGISTRY_IMAGE}instance-5m:instance-${BUILD_IMAGE_TAG} as data
+FROM ${CI_REGISTRY_IMAGE}ci-base-image-5m$CI_IMAGE_TAG AS block_log_5m_source
 
+FROM ${CI_REGISTRY_IMAGE}base_instance:base_instance-$BUILD_IMAGE_TAG as data
+
+COPY --from=block_log_5m_source /home/hived/datadir /home/hived/datadir 
 ADD --chown=hived:hived ./docker/config_5M.ini /home/hived/datadir/config.ini
 
 RUN "/home/haf_admin/docker_entrypoint.sh" --force-replay --stop-replay-at-block=5000000 --exit-before-sync
