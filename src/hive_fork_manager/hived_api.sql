@@ -199,7 +199,7 @@ BEGIN
     PERFORM hive.restore_indexes( 'hive.operations' );
     PERFORM hive.restore_indexes( 'hive.accounts' );
     PERFORM hive.restore_indexes( 'hive.account_operations' );
-    PERFORM hive.restore_indexes( 'hive.irreversible_data' );
+    PERFORM hive.restore_indexes( 'hive.irreversible_data_the_table' );
 END;
 $BODY$
 SET maintenance_work_mem TO '6GB';
@@ -216,7 +216,7 @@ BEGIN
     PERFORM hive.restore_foreign_keys( 'hive.transactions' );
     PERFORM hive.restore_foreign_keys( 'hive.transactions_multisig' );
     PERFORM hive.restore_foreign_keys( 'hive.operations' );
-    PERFORM hive.restore_foreign_keys( 'hive.irreversible_data' );
+    PERFORM hive.restore_foreign_keys( 'hive.irreversible_data_the_table' );
     PERFORM hive.restore_foreign_keys( 'hive.accounts' );
     PERFORM hive.restore_foreign_keys( 'hive.account_operations' );
 END;
