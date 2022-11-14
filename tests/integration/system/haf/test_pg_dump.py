@@ -40,7 +40,7 @@ def test_pg_dump(prepared_networks_and_database, database):
     blocklog_directory = get_blocklog_directory()
     
 # mttk todo  usun tu witness extension
-    block_log = tt.BlockLog(None, blocklog_directory/'block_log', include_index=False)
+    block_log = tt.BlockLog(blocklog_directory/'block_log')
 
     reference_node.run(wait_for_live=False, replay_from=block_log, stop_at_block= 105)
 
@@ -106,7 +106,7 @@ def test_pg_dump(prepared_networks_and_database, database):
     block_count = session2.query(blocks2).count()
     assert(block_count == 105)
 
-    irreversible_data = Base2.classes.irreversible_data_the_table
+    irreversible_data = Base2.classes.irreversible_data
 
     reco = session2.query(irreversible_data).one()
     print(reco)
