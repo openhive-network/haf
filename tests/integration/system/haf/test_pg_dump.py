@@ -7,6 +7,7 @@ from sqlalchemy.ext.automap import automap_base
 
 #mttk todo  Jeszcze w C sa irreversible_data bez _the_table
 #mttk new function  in local_tools 
+#mttk komentarz wszystkie table maja byc puste na poczatku
 
 from pathlib import Path
 

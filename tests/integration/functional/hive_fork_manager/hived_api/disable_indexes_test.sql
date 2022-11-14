@@ -82,6 +82,7 @@ BEGIN
     ASSERT NOT ( SELECT is_any_index_for_table( 'hive.operations'::regclass::oid ) ) , 'Index hive.operations exists';
     ASSERT NOT ( SELECT is_any_index_for_table( 'hive.transactions_multisig'::regclass::oid ) ) , 'Index hive.transactions_multisig exists';
     ASSERT NOT ( SELECT is_any_index_for_table( 'hive.irreversible_data'::regclass::oid ) ) , 'Index hive.irreversible_data exists';
+    ASSERT NOT ( SELECT is_any_index_for_table( 'hive.irreversible_data_the_table'::regclass::oid ) ) , 'Index hive.irreversible_data exists';
     ASSERT NOT ( SELECT is_any_index_for_table( 'hive.accounts'::regclass::oid ) ) , 'Index hive.accounts exists';
     ASSERT NOT ( SELECT is_any_index_for_table( 'hive.account_operations'::regclass::oid ) ) , 'Index hive.account_operations exists';
 
@@ -90,6 +91,7 @@ BEGIN
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'operations') ), 'FK for hive.operations exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hive.transactions_multisig exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'irreversible_data') ), 'FK for hive.irreversible_data exists';
+    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'irreversible_data_the_table') ), 'FK for hive.irreversible_data exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'accounts') ), 'FK for hive.accounts exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'account_operations') ), 'FK for hive.account_operations exists';
 
