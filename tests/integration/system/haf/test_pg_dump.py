@@ -5,18 +5,18 @@ from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.automap import automap_base
 
-
+#mttk todo  Jeszcze w C sa irreversible_data bez _the_table
+#mttk new function  in local_tools 
 
 from pathlib import Path
 
 import test_tools as tt
 
-from local_tools import make_fork, wait_for_irreversible_progress, run_networks, create_node_with_database
+from local_tools import make_fork, wait_for_irreversible_progress, run_networks, create_node_with_database, get_blocklog_directory
 
 
 START_TEST_BLOCK = 108
 
-@pytest.mark.skip(reason="no way of currently testing this")
 def test_pg_dump(prepared_networks_and_database, database):
     tt.logger.info(f'Start test_compare_forked_node_database')
 
@@ -35,9 +35,10 @@ def test_pg_dump(prepared_networks_and_database, database):
 
     reference_node = create_node_with_database(networks['Alpha'], session_ref.get_bind().url)
 
-    blocklog_directory = Path('/home/dev/mydes/HAAF/haf-develop/tests/integration/local_tools')
     
-# usun tu witness extension
+    blocklog_directory = get_blocklog_directory()
+    
+# mttk todo  usun tu witness extension
     block_log = tt.BlockLog(None, blocklog_directory/'block_log', include_index=False)
 
     reference_node.run(wait_for_live=False, replay_from=block_log, stop_at_block= 105)
@@ -104,7 +105,7 @@ def test_pg_dump(prepared_networks_and_database, database):
     block_count = session2.query(blocks2).count()
     assert(block_count == 105)
 
-    irreversible_data = Base2.classes.irreversible_data
+    irreversible_data = Base2.classes.irreversible_data_the_table
 
     reco = session2.query(irreversible_data).one()
     print(reco)

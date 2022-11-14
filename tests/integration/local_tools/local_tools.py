@@ -77,6 +77,8 @@ def get_time_offset_from_file(name):
     time_offset = str(difference) + 's'
     return time_offset
 
+def get_blocklog_directory():
+    return Path(__file__).parent.resolve()
 
 def run_networks(networks: Dict[str, tt.Network], blocklog_directory=None, replay_all_nodes=True):
     if blocklog_directory is None:
