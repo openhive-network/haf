@@ -5,7 +5,7 @@ ALTER TABLE hive.operations OWNER TO hived_group;
 ALTER TABLE hive.transactions_multisig OWNER TO hived_group;
 ALTER TABLE hive.accounts OWNER TO hived_group;
 ALTER TABLE hive.account_operations OWNER TO hived_group;
-ALTER TABLE hive.irreversible_data OWNER TO hived_group;
+ALTER TABLE hive.irreversible_data_the_table OWNER TO hived_group;
 ALTER TABLE hive.blocks_reversible OWNER TO hived_group;
 ALTER TABLE hive.transactions_reversible OWNER TO hived_group;
 ALTER TABLE hive.operations_reversible OWNER TO hived_group;
