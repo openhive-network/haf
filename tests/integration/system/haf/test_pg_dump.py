@@ -1,4 +1,5 @@
 import subprocess
+import pytest
 import sqlalchemy
 from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import sessionmaker
@@ -15,7 +16,7 @@ from local_tools import make_fork, wait_for_irreversible_progress, run_networks,
 
 START_TEST_BLOCK = 108
 
-
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_pg_dump(prepared_networks_and_database, database):
     tt.logger.info(f'Start test_compare_forked_node_database')
 
@@ -50,6 +51,9 @@ def test_pg_dump(prepared_networks_and_database, database):
     subprocess.call(f'pg_dump  -Fc   -d {(session_ref.bind.url)}   -f adump.Fcsql', shell=True)
     subprocess.call(f'pg_restore --disable-triggers  -Fc -f adump.sql   adump.Fcsql', shell=True)
 
+    subprocess.call(f'pg_restore --section=pre-data --disable-triggers  -Fc -f adump-pre-data.sql   adump.Fcsql', shell=True)
+    subprocess.call(f'pg_restore --section=data --disable-triggers  -Fc -f adump-data.sql   adump.Fcsql', shell=True)
+    subprocess.call(f'pg_restore --section=post-data --disable-triggers  -Fc -f adump-post-data.sql   adump.Fcsql', shell=True)
 
     targed_db = 'adb'
     # restore pre-data
@@ -66,10 +70,10 @@ def test_pg_dump(prepared_networks_and_database, database):
     subprocess.call(f"pg_restore  --section=pre-data  -Fc -d {targed_db}   adump.Fcsql", shell=True)
 
     # delete status table contntents
-    subprocess.call(f"psql  -d {targed_db} -c 'DELETE from hive.irreversible_data;'", shell=True)
+    ##### subprocess.call(f"psql  -d {targed_db} -c 'DELETE from hive.irreversible_data;'", shell=True)
 
     #restore data
-    subprocess.call(f"pg_restore --disable-triggers --section=data  -Fc  -d {targed_db}   adump.Fcsql", shell=True)
+    subprocess.call(f"pg_restore --disable-triggers --section=data  -v -Fc  -d {targed_db}   adump.Fcsql", shell=True)
 
     #restore post-data
     subprocess.call(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {targed_db}   adump.Fcsql", shell=True)
@@ -99,6 +103,11 @@ def test_pg_dump(prepared_networks_and_database, database):
 
     block_count = session2.query(blocks2).count()
     assert(block_count == 105)
+
+    irreversible_data = Base2.classes.irreversible_data
+
+    reco = session2.query(irreversible_data).one()
+    print(reco)
         
 
 
