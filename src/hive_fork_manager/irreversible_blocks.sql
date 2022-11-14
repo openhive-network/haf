@@ -21,13 +21,56 @@ CREATE TABLE IF NOT EXISTS hive.irreversible_data_the_table (
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.irreversible_data_the_table', '');
 
-DROP  VIEW if EXISTS hive.irreversible_data;
+DROP VIEW if EXISTS hive.irreversible_data;
 CREATE VIEW hive.irreversible_data AS
     SELECT *
       FROM hive.irreversible_data_the_table;
 
 
 INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
+
+CREATE OR REPLACE function irreversible_data_insert_trigger_handler()
+returns trigger
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+    RAISE NOTICE '!!! Inside handler';
+	
+	raise notice 'zawartosc_hive.irreversible_data=%',(select array_agg(t) FROM (SELECT * from hive.irreversible_data) t);
+	
+	RAISE NOTICE 'NEW=%', NEW;
+	RAISE NOTICE 'OLD=%', OLD;
+	RAISE NOTICE 'TG_NAME=%', TG_NAME;
+	RAISE NOTICE 'TG_WHEN=%', TG_WHEN;
+	RAISE NOTICE 'TG_LEVEL=%', TG_LEVEL;
+	RAISE NOTICE 'TG_OP=%', TG_OP;
+	RAISE NOTICE 'TG_RELID=%', TG_RELID;
+	RAISE NOTICE 'TG_RELNAME=%', TG_RELNAME;
+	RAISE NOTICE 'TG_TABLE_NAME=%', TG_TABLE_NAME ;
+	RAISE NOTICE 'TG_TABLE_SCHEMA=%', TG_TABLE_SCHEMA;
+	RAISE NOTICE 'TG_NARGS=%', TG_NARGS;
+	RAISE NOTICE 'TG_ARGV[]=%', TG_ARGV;
+	
+	
+	IF TG_OP='INSERT' THEN
+		ASSERT NEW.id = 1;
+		UPDATE hive.irreversible_data SET consistent_block = NEW.consistent_block, is_dirty = NEW.is_dirty;
+	END IF;
+
+
+	return (1,14, FALSE) ;
+END
+$$
+;
+
+
+DROP TRIGGER IF EXISTS irreversible_data_insert_trigger on hive.irreversible_data;
+CREATE trigger irreversible_data_insert_trigger
+INSTEAD OF INSERT ON irreversible_data
+FOR EACH ROW
+EXECUTE PROCEDURE
+irreversible_data_insert_trigger_handler();
 
 CREATE TABLE IF NOT EXISTS hive.transactions (
     block_num integer NOT NULL,
