@@ -35,29 +35,11 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-    RAISE NOTICE '!!! Inside handler';
-	
-	raise notice 'zawartosc_hive.irreversible_data=%',(select array_agg(t) FROM (SELECT * from hive.irreversible_data) t);
-	
-	RAISE NOTICE 'NEW=%', NEW;
-	RAISE NOTICE 'OLD=%', OLD;
-	RAISE NOTICE 'TG_NAME=%', TG_NAME;
-	RAISE NOTICE 'TG_WHEN=%', TG_WHEN;
-	RAISE NOTICE 'TG_LEVEL=%', TG_LEVEL;
-	RAISE NOTICE 'TG_OP=%', TG_OP;
-	RAISE NOTICE 'TG_RELID=%', TG_RELID;
-	RAISE NOTICE 'TG_RELNAME=%', TG_RELNAME;
-	RAISE NOTICE 'TG_TABLE_NAME=%', TG_TABLE_NAME ;
-	RAISE NOTICE 'TG_TABLE_SCHEMA=%', TG_TABLE_SCHEMA;
-	RAISE NOTICE 'TG_NARGS=%', TG_NARGS;
-	RAISE NOTICE 'TG_ARGV[]=%', TG_ARGV;
-	
-	
-	IF TG_OP='INSERT' THEN
+
+ 	IF TG_OP='INSERT' THEN
 		ASSERT NEW.id = 1;
 		UPDATE hive.irreversible_data SET consistent_block = NEW.consistent_block, is_dirty = NEW.is_dirty;
 	END IF;
-
 
 	return NEW;
 END
