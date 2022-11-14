@@ -59,7 +59,7 @@ BEGIN
 	END IF;
 
 
-	return (1,14, FALSE) ;
+	return NEW;
 END
 $$
 ;
