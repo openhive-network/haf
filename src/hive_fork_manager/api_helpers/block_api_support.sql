@@ -115,6 +115,7 @@ BEGIN
                                 END
                             )
                         ) :: hive.transaction_type
+                        ORDER BY htv.trx_in_block ASC
                     ) AS transactions
                 FROM
                 (
