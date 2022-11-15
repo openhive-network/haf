@@ -487,7 +487,7 @@ BEGIN
     DELETE FROM hive.blocks WHERE num > __consistent_block;
 
     IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
         INSERT INTO hive.irreversible_data Values(1, null, FALSE);
     END IF;
     UPDATE hive.irreversible_data SET is_dirty = FALSE;

@@ -106,6 +106,10 @@ BEGIN
 
     PERFORM hive.remove_obsolete_reversible_data( _block_num );
 
+    IF (select count(*) from hive.irreversible_data) = 0 THEN
+        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
+    END IF;
     UPDATE hive.irreversible_data SET consistent_block = _block_num;
 END;
 $BODY$
@@ -120,7 +124,7 @@ $BODY$
 BEGIN
 
     IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
         INSERT INTO hive.irreversible_data Values(1, null, FALSE);
     END IF;
  
@@ -137,7 +141,7 @@ AS
 $BODY$
 BEGIN
     IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
         INSERT INTO hive.irreversible_data Values(1, null, FALSE);
     END IF;
     UPDATE hive.irreversible_data SET is_dirty = FALSE;
@@ -155,7 +159,7 @@ DECLARE
     __is_dirty BOOL := FALSE;
 BEGIN
     IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
         INSERT INTO hive.irreversible_data Values(1, null, FALSE);
     END IF;
 
