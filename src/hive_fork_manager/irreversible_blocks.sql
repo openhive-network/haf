@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS hive.irreversible_data (
 );
 
 SELECT pg_catalog.pg_extension_config_dump('hive.irreversible_data', '');
-INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
+--INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS hive.transactions (
     block_num integer NOT NULL,

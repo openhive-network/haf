@@ -67,6 +67,9 @@ STABLE
 AS
 $BODY$
 BEGIN
+
+    raise notice 'MTTK hive.irreversible_data=%',    (        SELECT json_agg(t)        FROM (                SELECT *                FROM hive.irreversible_data            ) t    );
+
     ASSERT EXISTS ( SELECT FROM hive.events_queue WHERE id = 1 AND event = 'NEW_BLOCK' AND block_num = 101 ), 'No event added';
     ASSERT ( SELECT COUNT(*) FROM hive.events_queue ) = 2, 'Unexpected number of events';
 
@@ -174,7 +177,11 @@ BEGIN
         AND fork_id = 1
     ) = 1 ,'No bob operation';
 
-    ASSERT( SELECT is_dirty FROM hive.irreversible_data ) = FALSE, 'Irreversible data are dirty';
+
+    raise notice 'MTTK hive.irreversible_data=%',    (        SELECT json_agg(t)        FROM (                SELECT *                FROM hive.irreversible_data            ) t    );
+
+    ASSERT coalesce((SELECT is_dirty FROM hive.irreversible_data), FALSE) = FALSE, 'Irreversible data are dirty';
+
 END
 $BODY$
 ;

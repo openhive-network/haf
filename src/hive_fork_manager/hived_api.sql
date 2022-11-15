@@ -118,6 +118,12 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible_dirty()
 AS
 $BODY$
 BEGIN
+
+    IF (select count(*) from hive.irreversible_data) = 0 THEN
+        raise NOTICE 'INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
+    END IF;
+ 
     UPDATE hive.irreversible_data SET is_dirty = TRUE;
 END;
 $BODY$
@@ -130,6 +136,10 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible_not_dirty()
 AS
 $BODY$
 BEGIN
+    IF (select count(*) from hive.irreversible_data) = 0 THEN
+        raise NOTICE 'INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
+    END IF;
     UPDATE hive.irreversible_data SET is_dirty = FALSE;
 END;
 $BODY$
@@ -144,6 +154,11 @@ $BODY$
 DECLARE
     __is_dirty BOOL := FALSE;
 BEGIN
+    IF (select count(*) from hive.irreversible_data) = 0 THEN
+        raise NOTICE 'INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
+    END IF;
+
     SELECT is_dirty INTO __is_dirty FROM hive.irreversible_data;
     RETURN __is_dirty;
 END;
