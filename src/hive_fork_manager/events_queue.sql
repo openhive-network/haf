@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS hive.events_queue(
     , event hive.event_type NOT NULL
     , block_num BIGINT NOT NULL
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.events_queue', '');
 
 INSERT INTO hive.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
 
