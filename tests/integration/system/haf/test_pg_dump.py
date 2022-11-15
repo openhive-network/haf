@@ -77,7 +77,7 @@ def test_pg_dump(prepared_networks_and_database, database):
     subprocess.call(f"psql -d postgres -c 'CREATE DATABASE {targed_db};'", shell=True)
 
     print('MTTK before real restore of pre-data')
-    ##########subprocess.call(f"pg_restore  -v --section=pre-data  -Fc -d {targed_db}   adump.Fcsql", shell=True)
+    subprocess.call(f"pg_restore  -v --section=pre-data  -Fc -d {targed_db}   adump.Fcsql", shell=True)
 
     # delete status table contntents
     ##### subprocess.call(f"psql  -d {targed_db} -c 'DELETE from hive.irreversible_data;'", shell=True)
