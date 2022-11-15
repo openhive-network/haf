@@ -50,11 +50,17 @@ def test_pg_dump(prepared_networks_and_database, database):
 # oczywiście to przykłady z użycia starej bazy hiveminda (hive)
 
     # subprocess.call(f'pg_dump {(session_ref.bind.url)} -Fp -v  > dump.sql', shell=True, stdout =f)
+    print('MTTK before PG_DUMP extension')
     subprocess.call(f'pg_dump  -Fc   -d {(session_ref.bind.url)}   -f adump.Fcsql', shell=True)
+
+    print('MTTK before PG_RESTORE 1 ')
     subprocess.call(f'pg_restore --disable-triggers  -Fc -f adump.sql   adump.Fcsql', shell=True)
 
+    print('MTTK before PG_RESTORE 2 ')
     subprocess.call(f'pg_restore --section=pre-data --disable-triggers  -Fc -f adump-pre-data.sql   adump.Fcsql', shell=True)
+    print('MTTK before PG_RESTORE 3 ')
     subprocess.call(f'pg_restore --section=data --disable-triggers  -Fc -f adump-data.sql   adump.Fcsql', shell=True)
+    print('MTTK before PG_RESTORE 4 ')
     subprocess.call(f'pg_restore --section=post-data --disable-triggers  -Fc -f adump-post-data.sql   adump.Fcsql', shell=True)
 
     targed_db = 'adb'
@@ -69,14 +75,18 @@ def test_pg_dump(prepared_networks_and_database, database):
      shell=True)
     subprocess.call(f"psql -d postgres -c 'DROP DATABASE {targed_db};'", shell=True)
     subprocess.call(f"psql -d postgres -c 'CREATE DATABASE {targed_db};'", shell=True)
-    subprocess.call(f"pg_restore  --section=pre-data  -Fc -d {targed_db}   adump.Fcsql", shell=True)
+
+    print('MTTK before real restore of pre-data')
+    ##########subprocess.call(f"pg_restore  -v --section=pre-data  -Fc -d {targed_db}   adump.Fcsql", shell=True)
 
     # delete status table contntents
     ##### subprocess.call(f"psql  -d {targed_db} -c 'DELETE from hive.irreversible_data;'", shell=True)
 
+    print('MTTK before real restore of data')
     #restore data
     subprocess.call(f"pg_restore --disable-triggers --section=data  -v -Fc  -d {targed_db}   adump.Fcsql", shell=True)
 
+    print('MTTK before real restore of post-data')
     #restore post-data
     subprocess.call(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {targed_db}   adump.Fcsql", shell=True)
 
