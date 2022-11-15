@@ -93,8 +93,9 @@ CREATE TABLE IF NOT EXISTS hive.account_operations
 
 CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hive.transactions ( block_num, trx_in_block );
 
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_type_trx_in_block_idx ON hive.operations ( block_num, op_type_id, trx_in_block );
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hive.operations USING btree(block_num, id);
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hive.operations USING btree (block_num ASC NULLS LAST, trx_in_block ASC NULLS LAST) INCLUDE (op_type_id);
+CREATE INDEX IF NOT EXISTS hive_operations_op_type_id ON hive.operations USING btree (op_type_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_type_account_id_op_seq_idx ON hive.account_operations( op_type_id, account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
 --CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_seq_idx ON hive.account_operations( account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
@@ -107,5 +108,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_type_account_id_op_seq
 CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hive.accounts USING btree (block_num);
 
 CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hive.blocks (producer_account_id);
+
 ALTER TABLE hive.blocks ADD CONSTRAINT fk_1_hive_blocks FOREIGN KEY (producer_account_id) REFERENCES hive.accounts (id) DEFERRABLE INITIALLY DEFERRED;
 
