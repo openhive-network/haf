@@ -61,6 +61,10 @@ BEGIN
          , ( 1100, 'alice103', 10, 3 )
     ;
 
+    IF (select count(*) from hive.irreversible_data) = 0 THEN
+        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
+    END IF;
     UPDATE hive.irreversible_data SET consistent_block = 5;
 END;
 $BODY$

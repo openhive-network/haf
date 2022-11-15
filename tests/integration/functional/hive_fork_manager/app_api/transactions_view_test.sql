@@ -63,6 +63,10 @@ BEGIN
          , ( 10, 0::SMALLINT, '\xDEED11', 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF', 3 )
     ;
 
+    IF (select count(*) from hive.irreversible_data) = 0 THEN
+        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
+    END IF;
     UPDATE hive.irreversible_data SET consistent_block = 5;
 END;
 $BODY$
