@@ -305,7 +305,6 @@ void issue_error(const char* msg)
 #pragma pop_macro("elog")
 
 
-PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(get_account_from_accounts_operations);
 
