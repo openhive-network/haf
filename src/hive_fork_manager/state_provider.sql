@@ -1,11 +1,3 @@
-DO
-$$
-    BEGIN
-    CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' );
-    EXCEPTION
-            WHEN duplicate_object THEN null;
-    END
-$$;
 
 CREATE TABLE IF NOT EXISTS hive.state_providers_registered(
       id SERIAL

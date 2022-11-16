@@ -1,6 +1,3 @@
-DROP TYPE IF EXISTS hive.event_type CASCADE;
-CREATE TYPE hive.event_type AS ENUM( 'BACK_FROM_FORK', 'NEW_BLOCK', 'NEW_IRREVERSIBLE', 'MASSIVE_SYNC' );
-
 -- field block_num has different meaning for each event type
 -- BACK_FROM_FORK - fork id
 -- NEW_BLOCK - new block num
