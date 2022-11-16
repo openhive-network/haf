@@ -180,7 +180,7 @@ END;
 $BODY$
 ;
 
-DROP TYPE IF EXISTS hive.blocks_range;
+DROP TYPE IF EXISTS hive.blocks_range CASCADE;
 CREATE TYPE hive.blocks_range AS (
     first_block INT
     , last_block INT

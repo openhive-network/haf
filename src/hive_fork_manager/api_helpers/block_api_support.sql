@@ -2,7 +2,7 @@
 -- ############### DATA TYPES ###############
 -- ##########################################
 
-DROP TYPE IF EXISTS hive.block_header_type;
+DROP TYPE IF EXISTS hive.block_header_type CASCADE;
 CREATE TYPE hive.block_header_type AS (
       previous bytea
     , timestamp TIMESTAMP WITHOUT TIME ZONE
@@ -12,7 +12,7 @@ CREATE TYPE hive.block_header_type AS (
     , witness_signature bytea
     );
 
-DROP TYPE IF EXISTS hive.transaction_type;
+DROP TYPE IF EXISTS hive.transaction_type CASCADE;
 CREATE TYPE hive.transaction_type AS (
       ref_block_num integer
     , ref_block_prefix bigint
@@ -22,7 +22,7 @@ CREATE TYPE hive.transaction_type AS (
     , signatures bytea[]
     );
 
-DROP TYPE IF EXISTS hive.block_type;
+DROP TYPE IF EXISTS hive.block_type CASCADE;
 CREATE TYPE hive.block_type AS (
       previous bytea
     , timestamp TIMESTAMP WITHOUT TIME ZONE
@@ -36,7 +36,7 @@ CREATE TYPE hive.block_type AS (
     , transaction_ids bytea[]
     );
 
-DROP TYPE IF EXISTS hive.block_type_ext;
+DROP TYPE IF EXISTS hive.block_type_ext CASCADE;
 CREATE TYPE hive.block_type_ext AS (
     block_num INTEGER,
     block hive.block_type
