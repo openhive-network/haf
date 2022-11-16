@@ -178,7 +178,7 @@ BEGIN
 
 
 
-    ASSERT coalesce((SELECT is_dirty FROM hive.get_irr_data()), FALSE) = FALSE, 'Irreversible data are dirty';
+    ASSERT coalesce((SELECT is_dirty FROM hive.get_irr_data()), FALSE) = FALSE, 'Irreversible data are dirty'; -- MTTK this is ok - example of COALESCE usage
 
 END
 $BODY$

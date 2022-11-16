@@ -32,8 +32,8 @@ STABLE
 AS
 $BODY$
 BEGIN
-    ASSERT( SELECT is_dirty FROM hive.get_irr_data() ) = TRUE, 'Irreversible data are not dirty';
-    ASSERT( SELECT * FROM hive.is_irreversible_dirty() ) = TRUE, 'hive.is_irreversible_dirty returns FALSE';
+    ASSERT( SELECT is_dirty FROM hive.get_irr_data() ) = TRUE, 'Irreversible data are not dirty'; -- MTTK TODO double - COALESCE needed
+    ASSERT( SELECT * FROM hive.is_irreversible_dirty() ) = TRUE, 'hive.is_irreversible_dirty returns FALSE'; -- MTTK TODO double - COALESCE needed
 END
 $BODY$
 ;

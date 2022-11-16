@@ -103,7 +103,7 @@ BEGIN
 
     ASSERT( SELECT COUNT(*) FROM hive.fork WHERE id = 2 AND block_num = 100 ) = 1, 'No fork added after connection';
 
-    ASSERT( SELECT is_dirty FROM hive.get_irr_data() ) = FALSE, 'Irreversible data are dirty';
+    ASSERT( SELECT is_dirty FROM hive.get_irr_data() ) = FALSE, 'Irreversible data are dirty';  -- MTTK TODO double - COALESCE needed
 END
 $BODY$
 ;
