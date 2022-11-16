@@ -200,7 +200,6 @@ BEGIN
     PERFORM hive.restore_indexes( 'hive.operations' );
     PERFORM hive.restore_indexes( 'hive.accounts' );
     PERFORM hive.restore_indexes( 'hive.account_operations' );
-    PERFORM hive.force_irr_data_insert();
     PERFORM hive.restore_indexes( 'hive.irreversible_data' );
 END;
 $BODY$
