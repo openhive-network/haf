@@ -209,7 +209,6 @@ DECLARE
 BEGIN
     IF  _context_name = '' THEN
     
-        PERFORM hive.force_irr_data_insert();
         SELECT COALESCE(COALESCE( consistent_block, 0 ),0) INTO __result FROM hive.get_irr_data();
         RETURN __result;
     END IF;
