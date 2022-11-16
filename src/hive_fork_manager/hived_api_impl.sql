@@ -1,13 +1,3 @@
-DROP TABLE IF EXISTS hive.indexes_constraints;
-CREATE TABLE IF NOT EXISTS hive.indexes_constraints (
-    table_name text NOT NULL,
-    index_constraint_name text NOT NULL,
-    command text NOT NULL,
-    is_constraint boolean NOT NULL,
-    is_index boolean NOT NULL,
-    is_foreign_key boolean NOT NULL,
-    CONSTRAINT pk_hive_indexes_constraints UNIQUE( table_name, index_constraint_name )
-);
 
 CREATE OR REPLACE FUNCTION hive.copy_blocks_to_irreversible(
       _head_block_of_irreversible_blocks INT
