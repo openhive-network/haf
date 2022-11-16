@@ -201,7 +201,7 @@ $BODY$
 CREATE OR REPLACE FUNCTION hive.app_get_irreversible_block( _context_name TEXT DEFAULT '' )
     RETURNS hive.contexts.irreversible_block%TYPE
     LANGUAGE plpgsql
-    STABLE
+    VOLATILE
 AS
 $BODY$
 DECLARE
