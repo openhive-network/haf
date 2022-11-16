@@ -217,7 +217,6 @@ BEGIN
     PERFORM hive.restore_foreign_keys( 'hive.transactions' );
     PERFORM hive.restore_foreign_keys( 'hive.transactions_multisig' );
     PERFORM hive.restore_foreign_keys( 'hive.operations' );
-    PERFORM hive.force_irr_data_insert();
     PERFORM hive.restore_foreign_keys( 'hive.irreversible_data' );
     PERFORM hive.restore_foreign_keys( 'hive.accounts' );
     PERFORM hive.restore_foreign_keys( 'hive.account_operations' );
