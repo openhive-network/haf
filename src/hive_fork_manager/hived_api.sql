@@ -106,10 +106,7 @@ BEGIN
 
     PERFORM hive.remove_obsolete_reversible_data( _block_num );
 
-    IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
-        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
-    END IF;
+    PERFORM hive.force_irr_data_insert();
     UPDATE hive.irreversible_data SET consistent_block = _block_num;
 END;
 $BODY$
@@ -123,11 +120,8 @@ AS
 $BODY$
 BEGIN
 
-    IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
-        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
-    END IF;
- 
+    PERFORM hive.force_irr_data_insert(); 
+    
     UPDATE hive.irreversible_data SET is_dirty = TRUE;
 END;
 $BODY$
@@ -140,10 +134,7 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible_not_dirty()
 AS
 $BODY$
 BEGIN
-    IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
-        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
-    END IF;
+    PERFORM hive.force_irr_data_insert();
     UPDATE hive.irreversible_data SET is_dirty = FALSE;
 END;
 $BODY$
@@ -158,11 +149,7 @@ $BODY$
 DECLARE
     __is_dirty BOOL := FALSE;
 BEGIN
-    IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
-        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
-    END IF;
-
+    PERFORM hive.force_irr_data_insert();
     SELECT is_dirty INTO __is_dirty FROM hive.irreversible_data;
     RETURN __is_dirty;
 END;
@@ -218,6 +205,7 @@ BEGIN
     PERFORM hive.restore_indexes( 'hive.operations' );
     PERFORM hive.restore_indexes( 'hive.accounts' );
     PERFORM hive.restore_indexes( 'hive.account_operations' );
+    PERFORM hive.force_irr_data_insert();
     PERFORM hive.restore_indexes( 'hive.irreversible_data' );
 END;
 $BODY$
@@ -235,6 +223,7 @@ BEGIN
     PERFORM hive.restore_foreign_keys( 'hive.transactions' );
     PERFORM hive.restore_foreign_keys( 'hive.transactions_multisig' );
     PERFORM hive.restore_foreign_keys( 'hive.operations' );
+    PERFORM hive.force_irr_data_insert();
     PERFORM hive.restore_foreign_keys( 'hive.irreversible_data' );
     PERFORM hive.restore_foreign_keys( 'hive.accounts' );
     PERFORM hive.restore_foreign_keys( 'hive.account_operations' );

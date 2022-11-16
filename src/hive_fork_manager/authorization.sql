@@ -50,7 +50,8 @@ REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA hive FROM PUBLIC;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hive TO hive_applications_group;
 
 GRANT EXECUTE ON FUNCTION
-      hive.back_from_fork( INT )
+      force_irr_data_insert()
+    , hive.back_from_fork( INT )
     , hive.push_block( hive.blocks, hive.transactions[], hive.transactions_multisig[], hive.operations[], hive.accounts[], hive.account_operations[] )
     , hive.set_irreversible( INT )
     , hive.end_massive_sync( INTEGER )

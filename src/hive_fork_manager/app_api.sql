@@ -124,6 +124,7 @@ DECLARE
     __head_of_irreversible_block hive.blocks.num%TYPE:=0;
     __fork_id hive.fork.id%TYPE := 1;
 BEGIN
+    PERFORM hive.force_irr_data_insert();
     SELECT hir.consistent_block INTO __head_of_irreversible_block
     FROM hive.irreversible_data hir;
 
@@ -209,10 +210,7 @@ DECLARE
 BEGIN
     IF  _context_name = '' THEN
     
-        IF (select count(*) from hive.irreversible_data) = 0 THEN
-            raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
-            INSERT INTO hive.irreversible_data Values(1, null, FALSE);
-        END IF;
+        PERFORM hive.force_irr_data_insert();
         SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hive.irreversible_data;
         RETURN __result;
     END IF;

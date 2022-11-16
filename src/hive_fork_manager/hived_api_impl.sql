@@ -251,6 +251,7 @@ DECLARE
     __upper_bound_events_id BIGINT := NULL;
     __max_block_num INTEGER := NULL;
 BEGIN
+    PERFORM hive.force_irr_data_insert();
     SELECT consistent_block INTO __max_block_num FROM hive.irreversible_data;
 
     -- find the upper bound of events possible to remove
@@ -465,6 +466,7 @@ DECLARE
     __consistent_block INTEGER := NULL;
     __is_dirty BOOL := TRUE;
 BEGIN
+    PERFORM hive.force_irr_data_insert();
     SELECT consistent_block, is_dirty INTO __consistent_block, __is_dirty FROM hive.irreversible_data;
 
     IF ( __is_dirty = FALSE ) THEN
@@ -486,10 +488,7 @@ BEGIN
 
     DELETE FROM hive.blocks WHERE num > __consistent_block;
 
-    IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
-        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
-    END IF;
+    PERFORM hive.force_irr_data_insert();
     UPDATE hive.irreversible_data SET is_dirty = FALSE;
 END;
 $BODY$

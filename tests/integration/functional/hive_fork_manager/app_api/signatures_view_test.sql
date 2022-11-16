@@ -89,10 +89,7 @@ BEGIN
      , ( '\xDEED1102', '\xBEEF13',  3 )
     ;
 
-    IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
-        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
-    END IF;
+    PERFORM hive.force_irr_data_insert();
     UPDATE hive.irreversible_data SET consistent_block = 5;
 END;
 $BODY$

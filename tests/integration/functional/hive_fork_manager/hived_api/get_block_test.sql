@@ -64,10 +64,7 @@ BEGIN
         , ( 6, 5, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp, 'BLOCK FIVE OP' )
     ;
 
-    IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
-        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
-    END IF;
+    PERFORM hive.force_irr_data_insert();
     UPDATE hive.irreversible_data SET consistent_block = 5;
 END;
 $BODY$

@@ -17,10 +17,7 @@ BEGIN
     INTO __curent_events_id, __current_context_block_num, __current_context_irreversible_block
     FROM hive.contexts hc WHERE hc.name = _context;
 
-    IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
-        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
-    END IF;
+    PERFORM hive.force_irr_data_insert();
 
 
     SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
