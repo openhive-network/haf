@@ -209,7 +209,7 @@ DECLARE
 BEGIN
     IF  _context_name = '' THEN
     
-        SELECT COALESCE(COALESCE( consistent_block, 0 ),0) INTO __result FROM hive.get_irr_data();
+        SELECT COALESCE((SELECT consistent_block FROM hive.get_irr_data()), 0 ) INTO __result;
         RETURN __result;
     END IF;
 
