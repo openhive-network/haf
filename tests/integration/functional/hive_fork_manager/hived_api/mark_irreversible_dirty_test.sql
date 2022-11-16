@@ -6,8 +6,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    PERFORM hive.force_irr_data_insert();
-    UPDATE hive.irreversible_data SET is_dirty = FALSE;
+    PERFORM hive.update_irr_data_dirty(FALSE);
 END;
 $BODY$
 ;
@@ -33,7 +32,7 @@ STABLE
 AS
 $BODY$
 BEGIN
-    ASSERT( SELECT is_dirty FROM hive.irreversible_data ) = TRUE, 'Irreversible data are not dirty';
+    ASSERT( SELECT is_dirty FROM hive.get_irr_data() ) = TRUE, 'Irreversible data are not dirty';
     ASSERT( SELECT * FROM hive.is_irreversible_dirty() ) = TRUE, 'hive.is_irreversible_dirty returns FALSE';
 END
 $BODY$

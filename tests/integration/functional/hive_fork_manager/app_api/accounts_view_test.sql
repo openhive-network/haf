@@ -61,8 +61,7 @@ BEGIN
          , ( 1100, 'alice103', 10, 3 )
     ;
 
-    PERFORM hive.force_irr_data_insert();
-    UPDATE hive.irreversible_data SET consistent_block = 5;
+    PERFORM hive.update_irr_data_consistent_block(5);
 END;
 $BODY$
 ;

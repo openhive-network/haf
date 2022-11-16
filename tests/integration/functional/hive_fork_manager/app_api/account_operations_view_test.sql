@@ -120,8 +120,7 @@ BEGIN
          , ( 10, 1100, 3, 10, 1, 3 )
     ;
 
-    PERFORM hive.force_irr_data_insert();
-    UPDATE hive.irreversible_data SET consistent_block = 4;
+    PERFORM hive.update_irr_data_consistent_block(4);
 END;
 $BODY$
 ;

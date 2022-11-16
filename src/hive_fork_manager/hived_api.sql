@@ -83,7 +83,7 @@ BEGIN
     -- remove unneeded blocks and events
     PERFORM hive.remove_obsolete_reversible_data( _block_num );
 
-    UPDATE hive.irreversible_data SET consistent_block = _block_num;
+    PERFORM hive.update_irr_data_consistent_block( _block_num );
 END;
 $BODY$
 ;
@@ -106,8 +106,7 @@ BEGIN
 
     PERFORM hive.remove_obsolete_reversible_data( _block_num );
 
-    PERFORM hive.force_irr_data_insert();
-    UPDATE hive.irreversible_data SET consistent_block = _block_num;
+    PERFORM hive.update_irr_data_consistent_block(_block_num);
 END;
 $BODY$
 ;
@@ -119,10 +118,7 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible_dirty()
 AS
 $BODY$
 BEGIN
-
-    PERFORM hive.force_irr_data_insert(); 
-    
-    UPDATE hive.irreversible_data SET is_dirty = TRUE;
+    PERFORM hive.update_irr_data_dirty(TRUE);
 END;
 $BODY$
 ;
@@ -134,8 +130,7 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible_not_dirty()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.force_irr_data_insert();
-    UPDATE hive.irreversible_data SET is_dirty = FALSE;
+    PERFORM hive.update_irr_data_dirty(FALSE);
 END;
 $BODY$
 ;
@@ -150,7 +145,7 @@ DECLARE
     __is_dirty BOOL := FALSE;
 BEGIN
     PERFORM hive.force_irr_data_insert();
-    SELECT is_dirty INTO __is_dirty FROM hive.irreversible_data;
+    SELECT is_dirty INTO __is_dirty FROM hive.get_irr_data();
     RETURN __is_dirty;
 END;
 $BODY$

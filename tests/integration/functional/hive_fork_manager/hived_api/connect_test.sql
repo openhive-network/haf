@@ -57,8 +57,8 @@ BEGIN
     -- block 2 was not claimed, and it is possible not all information about it was dumped - maybe hived crashes
     PERFORM hive.end_massive_sync( 1 );
 
-    PERFORM hive.force_irr_data_insert();
-    UPDATE hive.irreversible_data SET is_dirty = TRUE;
+    PERFORM hive.update_irr_data_dirty(TRUE);
+    
 END;
 $BODY$
 ;
@@ -103,7 +103,7 @@ BEGIN
 
     ASSERT( SELECT COUNT(*) FROM hive.fork WHERE id = 2 AND block_num = 100 ) = 1, 'No fork added after connection';
 
-    ASSERT( SELECT is_dirty FROM hive.irreversible_data ) = FALSE, 'Irreversible data are dirty';
+    ASSERT( SELECT is_dirty FROM hive.get_irr_data() ) = FALSE, 'Irreversible data are dirty';
 END
 $BODY$
 ;

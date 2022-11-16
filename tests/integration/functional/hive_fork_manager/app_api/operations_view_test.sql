@@ -90,8 +90,7 @@ BEGIN
          , ( 11, 10, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, 'TEN OPERATION', 3 )
     ;
 
-    PERFORM hive.force_irr_data_insert();
-    UPDATE hive.irreversible_data SET consistent_block = 5;
+    PERFORM hive.update_irr_data_consistent_block(5);
 END;
 $BODY$
 ;

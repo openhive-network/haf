@@ -10,7 +10,7 @@ BEGIN
     PERFORM hive.context_create(
         _name
         , ( SELECT MAX( hf.id ) FROM hive.fork hf ) -- current fork id
-        , COALESCE(COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ),0) -- head of irreversible block
+        , COALESCE(COALESCE( ( SELECT hid.consistent_block FROM hive.get_irr_data() hid ), 0 ),0) -- head of irreversible block
     );
 
     PERFORM hive.create_context_data_view( _name );
@@ -126,7 +126,7 @@ DECLARE
 BEGIN
     PERFORM hive.force_irr_data_insert();
     SELECT hir.consistent_block INTO __head_of_irreversible_block
-    FROM hive.irreversible_data hir;
+    FROM hive.get_irr_data() hir;
 
     IF _last_synced_block > __head_of_irreversible_block THEN
         RAISE EXCEPTION 'Cannot attach context % because the block num % is grater than top of irreversible block %'
@@ -211,7 +211,7 @@ BEGIN
     IF  _context_name = '' THEN
     
         PERFORM hive.force_irr_data_insert();
-        SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hive.irreversible_data;
+        SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hive.get_irr_data();
         RETURN __result;
     END IF;
 

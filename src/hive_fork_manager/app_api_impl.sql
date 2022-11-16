@@ -20,7 +20,7 @@ BEGIN
     PERFORM hive.force_irr_data_insert();
 
 
-    SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
+    SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.get_irr_data();
     IF __current_context_block_num <= __current_context_irreversible_block  AND  __newest_irreversible_block_num IS NOT NULL THEN
         -- here we are sure that context only processing irreversible blocks, we can continue
         -- processing irreversible blocks or find next event after irreversible
@@ -250,7 +250,7 @@ BEGIN
         WHERE id = __context_id;
         RETURN NULL;
     WHEN 'NEW_IRREVERSIBLE' THEN
-        -- we may got on context  creation irreversible block based on hive.irreversible_data
+        -- we may got on context  creation irreversible block based on hive.irr eversible_data
         -- unfortunetly some slow app may prevent to removing this event, so wee need to process it
         -- but do not update irreversible
         IF ( __irreversible_block_num < __next_event_block_num ) THEN
@@ -259,7 +259,7 @@ BEGIN
         RETURN NULL;
     WHEN 'MASSIVE_SYNC' THEN
         --massive events are squashe at the function begin
-        -- we may got on context  creation irreversible block based on hive.irreversible_data
+        -- we may got on context  creation irreversible block based on hive.irr eversible_data
         -- unfortunetly some slow app may prevent to removing this event, so we need to process it
         -- but do not update irreversible
         IF ( __irreversible_block_num < __next_event_block_num ) THEN

@@ -17,3 +17,53 @@ $BODY$
 ;
 
 
+
+DROP TYPE IF EXISTS hive.irr_data_type;
+CREATE TYPE hive.irr_data_type AS (
+      id integer,
+      consistent_block integer,
+      is_dirty bool 
+    );
+
+CREATE OR REPLACE FUNCTION hive.get_irr_data()
+    RETURNS SETOF hive.irr_data_type
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+DECLARE
+BEGIN
+    RETURN QUERY SELECT * FROM hive.irreversible_data;
+END;
+$BODY$
+;
+
+
+CREATE OR REPLACE FUNCTION hive.update_irr_data_dirty(flag boolean)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+DECLARE
+BEGIN
+    PERFORM hive.force_irr_data_insert();
+    UPDATE hive.irreversible_data SET is_dirty = flag;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.update_irr_data_consistent_block(num integer)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+DECLARE
+BEGIN
+    PERFORM hive.force_irr_data_insert();
+    UPDATE hive.irreversible_data SET consistent_block = num;
+END;
+$BODY$
+;
+

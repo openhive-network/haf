@@ -57,8 +57,8 @@ BEGIN
     -- block 2 was not claimed, and it is possible not all information about it was dumped - maybe hived crashes
     PERFORM hive.end_massive_sync( 1 );
 
-    PERFORM hive.force_irr_data_insert();
-    UPDATE hive.irreversible_data SET is_dirty = FALSE;
+
+    PERFORM hive.update_irr_data_dirty(FALSE);
 END;
 $BODY$
 ;

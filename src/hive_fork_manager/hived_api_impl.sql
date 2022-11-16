@@ -252,7 +252,7 @@ DECLARE
     __max_block_num INTEGER := NULL;
 BEGIN
     PERFORM hive.force_irr_data_insert();
-    SELECT consistent_block INTO __max_block_num FROM hive.irreversible_data;
+    SELECT consistent_block INTO __max_block_num FROM hive.get_irr_data();
 
     -- find the upper bound of events possible to remove
     SELECT MIN(heq.id) INTO __upper_bound_events_id
@@ -467,7 +467,7 @@ DECLARE
     __is_dirty BOOL := TRUE;
 BEGIN
     PERFORM hive.force_irr_data_insert();
-    SELECT consistent_block, is_dirty INTO __consistent_block, __is_dirty FROM hive.irreversible_data;
+    SELECT consistent_block, is_dirty INTO __consistent_block, __is_dirty FROM hive.get_irr_data();
 
     IF ( __is_dirty = FALSE ) THEN
         RETURN;
@@ -488,8 +488,7 @@ BEGIN
 
     DELETE FROM hive.blocks WHERE num > __consistent_block;
 
-    PERFORM hive.force_irr_data_insert();
-    UPDATE hive.irreversible_data SET is_dirty = FALSE;
+    PERFORM hive.update_irr_data_dirty(FALSE);
 END;
 $BODY$
 ;

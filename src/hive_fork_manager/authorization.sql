@@ -50,8 +50,7 @@ REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA hive FROM PUBLIC;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hive TO hive_applications_group;
 
 GRANT EXECUTE ON FUNCTION
-      force_irr_data_insert()
-    , hive.back_from_fork( INT )
+      hive.back_from_fork( INT )
     , hive.push_block( hive.blocks, hive.transactions[], hive.transactions_multisig[], hive.operations[], hive.accounts[], hive.account_operations[] )
     , hive.set_irreversible( INT )
     , hive.end_massive_sync( INTEGER )
@@ -94,6 +93,10 @@ GRANT EXECUTE ON FUNCTION
     , hive.get_block_from_views( _block_num_start INT, _block_count INT )
     , hive.build_block_json(previous BYTEA, "timestamp" TIMESTAMP, witness VARCHAR, transaction_merkle_root BYTEA, extensions jsonb, witness_signature BYTEA, transactions hive.transaction_type[], block_id BYTEA, signing_key TEXT, transaction_ids BYTEA[])
     , hive.transactions_to_json(transactions hive.transaction_type[])
+    , hive.force_irr_data_insert()
+    , hive.get_irr_data()
+    , hive.update_irr_data_dirty(flag boolean)
+    , hive.update_irr_data_consistent_block(num integer)
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION
