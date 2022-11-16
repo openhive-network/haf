@@ -208,6 +208,11 @@ DECLARE
     __result hive.contexts.irreversible_block%TYPE;
 BEGIN
     IF  _context_name = '' THEN
+    
+        IF (select count(*) from hive.irreversible_data) = 0 THEN
+            raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+            INSERT INTO hive.irreversible_data Values(1, null, FALSE);
+        END IF;
         SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hive.irreversible_data;
         RETURN __result;
     END IF;

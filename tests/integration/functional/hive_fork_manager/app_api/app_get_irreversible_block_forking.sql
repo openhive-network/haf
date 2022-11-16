@@ -6,14 +6,20 @@ VOLATILE
 AS
 $BODY$
 BEGIN
+    raise notice 'MTTK hive.irreversible_data=%',    (        SELECT json_agg(t)        FROM (                SELECT *                FROM hive.irreversible_data            ) t    );
     PERFORM hive.app_create_context( 'context' );
+    raise notice 'MTTK hive.irreversible_data=%',    (        SELECT json_agg(t)        FROM (                SELECT *                FROM hive.irreversible_data            ) t    );
     CREATE SCHEMA A;
+    raise notice 'MTTK hive.irreversible_data=%',    (        SELECT json_agg(t)        FROM (                SELECT *                FROM hive.irreversible_data            ) t    );
+    raise notice 'MTTK hive.irreversible_data=%',    (        SELECT json_agg(t)        FROM (                SELECT *                FROM hive.irreversible_data            ) t    );
     CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
+    raise notice 'MTTK hive.irreversible_data=%',    (        SELECT json_agg(t)        FROM (                SELECT *                FROM hive.irreversible_data            ) t    );
 
     -- hived inserts once irreversible block
     INSERT INTO hive.blocks
     VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w' )
     ;
+    raise notice 'MTTK hive.irreversible_data=%',    (        SELECT json_agg(t)        FROM (                SELECT *                FROM hive.irreversible_data            ) t    );
 
     INSERT INTO hive.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
@@ -35,6 +41,7 @@ __result INT;
 __blocks hive.blocks_range;
 __curent_block INT;
 BEGIN
+    raise notice 'MTTK hive.irreversible_data=%',    (        SELECT json_agg(t)        FROM (                SELECT *                FROM hive.irreversible_data            ) t    );
         ASSERT ( SELECT hive.app_get_irreversible_block() ) = 0, 'global irreversible block is not 0';
         ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 0, 'hive.app_get_irreversible_block !=0 (1)';
 
