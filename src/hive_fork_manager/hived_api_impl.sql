@@ -251,7 +251,6 @@ DECLARE
     __upper_bound_events_id BIGINT := NULL;
     __max_block_num INTEGER := NULL;
 BEGIN
-    PERFORM hive.force_irr_data_insert();
     SELECT consistent_block INTO __max_block_num FROM hive.get_irr_data();
 
     -- find the upper bound of events possible to remove
