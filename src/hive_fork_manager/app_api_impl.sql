@@ -17,10 +17,7 @@ BEGIN
     INTO __curent_events_id, __current_context_block_num, __current_context_irreversible_block
     FROM hive.contexts hc WHERE hc.name = _context;
 
-    PERFORM hive.force_irr_data_insert();
-
-
-    SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.get_irr_data();
+    SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.get_irr_data(); -- MTTK OK beacuse NULL returned when no table or fresh 1 row table
     IF __current_context_block_num <= __current_context_irreversible_block  AND  __newest_irreversible_block_num IS NOT NULL THEN
         -- here we are sure that context only processing irreversible blocks, we can continue
         -- processing irreversible blocks or find next event after irreversible
