@@ -10,7 +10,7 @@ BEGIN
     PERFORM hive.context_create(
         _name
         , ( SELECT MAX( hf.id ) FROM hive.fork hf ) -- current fork id
-        , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
+        , COALESCE(COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ),0) -- head of irreversible block
     );
 
     PERFORM hive.create_context_data_view( _name );
