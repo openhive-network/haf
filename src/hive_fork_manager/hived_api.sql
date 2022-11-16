@@ -145,7 +145,7 @@ DECLARE
     __is_dirty BOOL := FALSE;
 BEGIN
     PERFORM hive.force_irr_data_insert();
-    SELECT is_dirty INTO __is_dirty FROM hive.get_irr_data();
+    __is_dirty = COALESCE((SELECT is_dirty FROM hive.get_irr_data()), FALSE);
     RETURN __is_dirty;
 END;
 $BODY$
