@@ -16,6 +16,13 @@ BEGIN
          , hc.irreversible_block
     INTO __curent_events_id, __current_context_block_num, __current_context_irreversible_block
     FROM hive.contexts hc WHERE hc.name = _context;
+
+    IF (select count(*) from hive.irreversible_data) = 0 THEN
+        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
+        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
+    END IF;
+
+
     SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
     IF __current_context_block_num <= __current_context_irreversible_block  AND  __newest_irreversible_block_num IS NOT NULL THEN
         -- here we are sure that context only processing irreversible blocks, we can continue
