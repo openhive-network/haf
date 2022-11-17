@@ -175,7 +175,7 @@ def test_pg_dump(prepared_networks_and_database, database):
     block_count = session2.query(blocks2).count()
     assert(block_count == 105)
 
-    irreversible_data = Base2.classes.irreversible_data_renamed
+    irreversible_data = Base2.classes.irreversible_data
 
     reco = session2.query(irreversible_data).one()
     print(reco)

@@ -157,7 +157,7 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'irreversible_data_renamed' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'irreversible_data' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'blocks' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions_multisig' );
@@ -175,7 +175,7 @@ CREATE OR REPLACE FUNCTION hive.disable_fk_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'irreversible_data_renamed' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'irreversible_data' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'blocks' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_multisig' );
@@ -199,7 +199,7 @@ BEGIN
     PERFORM hive.restore_indexes( 'hive.operations' );
     PERFORM hive.restore_indexes( 'hive.accounts' );
     PERFORM hive.restore_indexes( 'hive.account_operations' );
-    PERFORM hive.restore_indexes( 'hive.irreversible_data_renamed' );
+    PERFORM hive.restore_indexes( 'hive.irreversible_data' );
 END;
 $BODY$
 SET maintenance_work_mem TO '6GB';
@@ -216,7 +216,7 @@ BEGIN
     PERFORM hive.restore_foreign_keys( 'hive.transactions' );
     PERFORM hive.restore_foreign_keys( 'hive.transactions_multisig' );
     PERFORM hive.restore_foreign_keys( 'hive.operations' );
-    PERFORM hive.restore_foreign_keys( 'hive.irreversible_data_renamed' );
+    PERFORM hive.restore_foreign_keys( 'hive.irreversible_data' );
     PERFORM hive.restore_foreign_keys( 'hive.accounts' );
     PERFORM hive.restore_foreign_keys( 'hive.account_operations' );
 END;

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS hive.blocks (
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.blocks', '');
 
-CREATE TABLE IF NOT EXISTS hive.irreversible_data_renamed (
+CREATE TABLE IF NOT EXISTS hive.irreversible_data (
       id integer,
       consistent_block integer,
       is_dirty bool NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS hive.irreversible_data_renamed (
       CONSTRAINT fk_1_hive_irreversible_data FOREIGN KEY (consistent_block) REFERENCES hive.blocks (num)
 );
 
-SELECT pg_catalog.pg_extension_config_dump('hive.irreversible_data_renamed', '');
+SELECT pg_catalog.pg_extension_config_dump('hive.irreversible_data', '');
 --INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS hive.transactions (
