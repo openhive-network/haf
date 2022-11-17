@@ -46,7 +46,7 @@ def test_application_broken(prepared_networks_and_database):
     networks, session, Base = prepared_networks_and_database
     second_session = sessionmaker()(bind=session.get_bind())
     node_under_test = networks['Beta'].node('ApiNode0')
-    irreversible_data = Base.classes.irreversible_data
+    irreversible_data = Base.classes.irreversible_data_renamed
     blocks_reversible = Base.classes.blocks_reversible
 
     # WHEN

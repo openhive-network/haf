@@ -7,9 +7,9 @@ $BODY$
 DECLARE
 BEGIN
 
-    IF (select count(*) from hive.irreversible_data) = 0 THEN
-        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data Values(1, null, FALSE)';
-        INSERT INTO hive.irreversible_data Values(1, null, FALSE);
+    IF (select count(*) from hive.irreversible_data_renamed) = 0 THEN
+        raise NOTICE 'MTTK INSERT INTO hive.irreversible_data_renamed Values(1, null, FALSE)';
+        INSERT INTO hive.irreversible_data_renamed Values(1, null, FALSE);
     END IF;
 
 END;
@@ -33,7 +33,7 @@ AS
 $BODY$
 DECLARE
 BEGIN
-    RETURN QUERY SELECT * FROM hive.irreversible_data;
+    RETURN QUERY SELECT * FROM hive.irreversible_data_renamed;
 END;
 $BODY$
 ;
@@ -48,7 +48,7 @@ $BODY$
 DECLARE
 BEGIN
     PERFORM hive.force_irr_data_insert();
-    UPDATE hive.irreversible_data SET is_dirty = flag;
+    UPDATE hive.irreversible_data_renamed SET is_dirty = flag;
 END;
 $BODY$
 ;
@@ -62,7 +62,7 @@ $BODY$
 DECLARE
 BEGIN
     PERFORM hive.force_irr_data_insert();
-    UPDATE hive.irreversible_data SET consistent_block = num;
+    UPDATE hive.irreversible_data_renamed SET consistent_block = num;
 END;
 $BODY$
 ;

@@ -5,7 +5,7 @@ alter extension hive_fork_manager drop table hive.events_queue;
 alter extension hive_fork_manager drop table hive.fork;
 alter extension hive_fork_manager drop table hive.indexes_constraints;
 alter extension hive_fork_manager drop table hive.blocks;
-alter extension hive_fork_manager drop table hive.irreversible_data;
+alter extension hive_fork_manager drop table hive.irreversible_data_renamed;
 alter extension hive_fork_manager drop table hive.transactions;
 alter extension hive_fork_manager drop table hive.transactions_multisig;
 alter extension hive_fork_manager drop table hive.operation_types;
