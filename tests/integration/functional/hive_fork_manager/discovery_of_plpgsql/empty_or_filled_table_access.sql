@@ -70,10 +70,28 @@ BEGIN
     -- split into two 
     SELECT int_or_null FROM tab_empty  INTO result ; 
     SELECT COALESCE((SELECT b FROM tab_empty),  FALSE) INTO bresult;
-
     ASSERT result is null, 'A7';
     ASSERT bresult = FALSE, 'A8';
 
+    SELECT int_or_null FROM tab_one_row  INTO result ; 
+    SELECT COALESCE((SELECT b FROM tab_one_row),  FALSE) INTO bresult;
+    ASSERT result is null, 'A9';
+    ASSERT bresult = FALSE, 'A10';
+
+    SELECT int_or_null FROM tab_something_in  INTO result ; 
+    SELECT COALESCE((SELECT b FROM tab_something_in),  FALSE) INTO bresult;
+    ASSERT result = 3, 'A11';
+    ASSERT bresult = TRUE, 'A12';
+
+
+
+
+    -- INSERT INTO hive.irreversible_data_renamed (id, consistent_block) VALUES (1, num) 
+    -- ON CONFLICT (id) DO UPDATE SET consistent_block = num;
+
+
+    --INSERT INTO hive.irreversible_data_renamed (id, is_dirty) VALUES (1, flag) 
+    --ON CONFLICT (id) DO UPDATE SET is_dirty = flag;
 
 END;
 $BODY$
