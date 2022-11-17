@@ -572,15 +572,15 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
   Datum get_keyauths_wrapped(PG_FUNCTION_ARGS)
   {
-    const char *operation_body = text_to_cstring(PG_GETARG_TEXT_PP(0));
+    _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
 
     collected_keyauth_collection_t collected_keyauths;
 
-    colect_data_and_fill_returned_recordset(
+    colect_operation_data_and_fill_returned_recordset(
 
-      [=, &collected_keyauths]()
+      [=, &collected_keyauths](const hive::protocol::operation& op)
       {
-        collected_keyauths = collect_keyauths(operation_body);
+        collected_keyauths = collect_keyauths(op);
       },
 
 
@@ -595,7 +595,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
       __FUNCTION__, 
 
-      operation_body
+      VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body )
     );
 
     return (Datum)0;

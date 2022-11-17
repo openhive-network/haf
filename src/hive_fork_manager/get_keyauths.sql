@@ -18,7 +18,7 @@ CREATE TYPE hive.keyauth_c_record_type AS
     , account_name TEXT
 );
 
-CREATE OR REPLACE FUNCTION hive.get_keyauths_wrapper(IN _operation_body text)
+CREATE OR REPLACE FUNCTION hive.get_keyauths_wrapper(IN _operation_body hive.operation)
 RETURNS SETOF hive.keyauth_c_record_type
 AS 'MODULE_PATHNAME', 'get_keyauths_wrapped' LANGUAGE C;
 
@@ -37,7 +37,7 @@ END
 $$;
 
 
-CREATE OR REPLACE FUNCTION hive.get_keyauths(IN _operation_body text)
+CREATE OR REPLACE FUNCTION hive.get_keyauths(IN _operation_body hive.operation)
 RETURNS SETOF hive.keyauth_record_type
 LANGUAGE plpgsql
 IMMUTABLE
