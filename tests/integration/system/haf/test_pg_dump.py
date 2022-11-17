@@ -16,9 +16,66 @@ import test_tools as tt
 from local_tools import make_fork, wait_for_irreversible_progress, run_networks, create_node_with_database, get_blocklog_directory
 
 
+import re
+
+def db2text(databasename):
+
+    outputfile = databasename + '_schema.txt'
+    contents_file = databasename + '_data.txt'
+
+
+    subprocess.call(f'rm {outputfile}', shell=True)
+    subprocess.call(f'rm {contents_file}', shell=True)
+
+
+    subprocess.call(rf"psql -d {databasename} -c '\dn'  > {outputfile}", shell=True)
+    subprocess.call(rf"psql -d {databasename} -c '\d hive.*' >> {outputfile}", shell=True)
+    # subprocess.call(rf"psql -d {databasename} -c '\d *' >> {outputfile}", shell=True)
+
+    def dbobjects2text(pattern):
+        tables = re.findall(pattern, open(outputfile).read())
+        print(tables)
+
+        for table in tables:
+            subprocess.call(f"psql -d {databasename} -c 'SELECT * FROM {table}' >> {contents_file}", shell=True)
+
+    pattern = re.compile(r'Table "(.*)"')
+    dbobjects2text(pattern)
+
+    pattern = re.compile(r'View "(.*)"')
+    dbobjects2text(pattern)
+
+    return outputfile, contents_file
+
+
+
+def filescompare(file1, file2):
+    subprocess.call(rf"diff {file1} {file2}", shell=True)
+
+def comparethesetexts_equal(fileset1, fileset2):
+    def comparefiles(file1, file2):
+        difffilename = f'diff_{file1}_{file2}.diff'
+        subprocess.call(f"diff {file1} {file2} > {difffilename}", shell=True)
+        filelength = len(open(difffilename).read())
+        return filelength
+
+    diff_file_lengths = 0
+    for file1, file2 in zip(fileset1, fileset2):
+        print(f'meld {file1} {file2}')
+        diff_file_lengths += comparefiles(file1, file2)
+
+    return diff_file_lengths == 0
+
+
+
+
+if __name__ == '__main__':
+    db2text('haf_block_log')
+
 START_TEST_BLOCK = 108
 
 def test_pg_dump(prepared_networks_and_database, database):
+    # db2text('haf_block_log')
     tt.logger.info(f'Start test_compare_forked_node_database')
 
     # GIVEN
@@ -63,36 +120,38 @@ def test_pg_dump(prepared_networks_and_database, database):
     print('MTTK before PG_RESTORE 4 ')
     subprocess.call(f'pg_restore --section=post-data --disable-triggers  -Fc -f adump-post-data.sql   adump.Fcsql', shell=True)
 
-    targed_db = 'adb'
+
+    source_db = session_ref.bind.url.database
+    target_db = 'adb'
     # restore pre-data
     subprocess.call(f"""psql -U dev -d postgres \
         -c \
         "SELECT pg_terminate_backend(pg_stat_activity.pid) 
         FROM pg_stat_activity 
-        WHERE pg_stat_activity.datname = '{targed_db}' 
+        WHERE pg_stat_activity.datname = '{target_db}' 
             AND pid <> pg_backend_pid();"
     """,
      shell=True)
-    subprocess.call(f"psql -d postgres -c 'DROP DATABASE {targed_db};'", shell=True)
-    subprocess.call(f"psql -d postgres -c 'CREATE DATABASE {targed_db};'", shell=True)
+    subprocess.call(f"psql -d postgres -c 'DROP DATABASE {target_db};'", shell=True)
+    subprocess.call(f"psql -d postgres -c 'CREATE DATABASE {target_db};'", shell=True)
 
     print('MTTK before real restore of pre-data')
-    subprocess.call(f"pg_restore  -v --section=pre-data  -Fc -d {targed_db}   adump.Fcsql", shell=True)
+    subprocess.call(f"pg_restore  -v --section=pre-data  -Fc -d {target_db}   adump.Fcsql", shell=True)
 
     # delete status table contntents
-    ##### subprocess.call(f"psql  -d {targed_db} -c 'DELETE from hive.irreversible_data;'", shell=True)
+    ##### subprocess.call(f"psql  -d {target_db} -c 'DELETE from hive.irreversible_data;'", shell=True)
 
     print('MTTK before real restore of data')
     #restore data
-    subprocess.call(f"pg_restore --disable-triggers --section=data  -v -Fc  -d {targed_db}   adump.Fcsql", shell=True)
+    subprocess.call(f"pg_restore --disable-triggers --section=data  -v -Fc  -d {target_db}   adump.Fcsql", shell=True)
 
     print('MTTK before real restore of post-data')
     #restore post-data
-    subprocess.call(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {targed_db}   adump.Fcsql", shell=True)
+    subprocess.call(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {target_db}   adump.Fcsql", shell=True)
 
     #is ok ?
 
-    #subprocess.call(f"psql  -d {targed_db} -c 'SELECT COUNT(*) FROM hive.blocks", shell=True)
+    #subprocess.call(f"psql  -d {target_db} -c 'SELECT COUNT(*) FROM hive.blocks", shell=True)
     #session2, Base_ref2 = database('postgresql:///adb')    
 
     engine = sqlalchemy.create_engine('postgresql:///adb', echo=False, poolclass=NullPool)
@@ -120,7 +179,12 @@ def test_pg_dump(prepared_networks_and_database, database):
 
     reco = session2.query(irreversible_data).one()
     print(reco)
-        
+
+    
+    
+    no_differences = comparethesetexts_equal(db2text(source_db), db2text(target_db))
+    ##### assert(no_differences) MTTK uncomment this when files become equal
+
 
 
     #with open('db105.dump', 'r') as f:
