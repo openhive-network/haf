@@ -65,6 +65,16 @@ BEGIN
     ASSERT bresult is TRUE, 'A6';
 
 
+    -- multiple assignment like this
+    --SELECT int_or_null, b INTO result, bresult FROM tab_empty;    
+    -- split into two 
+    SELECT int_or_null FROM tab_empty  INTO result ; 
+    SELECT COALESCE((SELECT b FROM tab_empty),  FALSE) INTO bresult;
+
+    ASSERT result is null, 'A7';
+    ASSERT bresult = FALSE, 'A8';
+
+
 END;
 $BODY$
 ;

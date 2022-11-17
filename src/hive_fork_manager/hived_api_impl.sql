@@ -465,8 +465,8 @@ DECLARE
     __consistent_block INTEGER := NULL;
     __is_dirty BOOL := TRUE;
 BEGIN
-    PERFORM hive.force_irr_data_insert();
-    SELECT consistent_block, is_dirty INTO __consistent_block, __is_dirty FROM hive.get_irr_data();
+    SELECT consistent_block FROM hive.get_irr_data() INTO __consistent_block ;
+    SELECT COALESCE((SELECT is_dirty FROM hive.get_irr_data()), FALSE) INTO __is_dirty;
 
     IF ( __is_dirty = FALSE ) THEN
         RETURN;
