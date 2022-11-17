@@ -12,7 +12,7 @@ DECLARE
 BEGIN
 
     SELECT pattern :: JSON INTO pattern_json;
-    SELECT hive.get_legacy_style_operation(pattern) INTO verification_json;
+    SELECT hive.get_legacy_style_operation(pattern :: hive.operation) INTO verification_json;
     SELECT array_agg(key) :: TEXT[] INTO pattern_fields FROM ( SELECT json_object_keys(pattern_json -> 'value') as key ) x;
     SELECT array_agg(key) :: TEXT[] INTO verification_fields FROM ( SELECT json_object_keys(verification_json -> 1) as key ) x;
 
@@ -134,49 +134,49 @@ BEGIN
   PERFORM validate_pattern('vote', vote_operation);
 
   PERFORM validate_pattern('comment', comment_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,parent_author}') = 'steemit', 'operation "comment_operation/parent_author" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,parent_permlink}') = 'firstpost', 'operation "comment_operation/parent_permlink" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,author}') = 'admin', 'operation "comment_operation/author" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,permlink}') = 'firstpost', 'operation "comment_operation/permlink" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,title}') = 'TITLE', 'operation "comment_operation/title" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,body}') = 'First Reply! Lets get this **party** started', 'operation "comment_operation/body" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation)#>>'{1,json_metadata}') = '{}', 'operation "comment_operation/json_metadata" error';
-  ASSERT ((SELECT hive.get_legacy_style_operation(comment_operation)::VARCHAR) = '["comment",{"parent_author":"steemit","parent_permlink":"firstpost","author":"admin","permlink":"firstpost","title":"TITLE","body":"First Reply! Lets get this **party** started","json_metadata":"{}"}]'), 'operation "comment_operation/whole-body" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation :: hive.operation)#>>'{1,parent_author}') = 'steemit', 'operation "comment_operation/parent_author" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation :: hive.operation)#>>'{1,parent_permlink}') = 'firstpost', 'operation "comment_operation/parent_permlink" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation :: hive.operation)#>>'{1,author}') = 'admin', 'operation "comment_operation/author" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation :: hive.operation)#>>'{1,permlink}') = 'firstpost', 'operation "comment_operation/permlink" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation :: hive.operation)#>>'{1,title}') = 'TITLE', 'operation "comment_operation/title" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation :: hive.operation)#>>'{1,body}') = 'First Reply! Lets get this **party** started', 'operation "comment_operation/body" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_operation :: hive.operation)#>>'{1,json_metadata}') = '{}', 'operation "comment_operation/json_metadata" error';
+  ASSERT ((SELECT hive.get_legacy_style_operation(comment_operation :: hive.operation)::VARCHAR) = '["comment",{"parent_author":"steemit","parent_permlink":"firstpost","author":"admin","permlink":"firstpost","title":"TITLE","body":"First Reply! Lets get this **party** started","json_metadata":"{}"}]'), 'operation "comment_operation/whole-body" error';
 
   PERFORM validate_pattern('transfer', transfer_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,from}') = 'faddy3', 'operation "transfer_operation/from" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,to}') = 'faddy', 'operation "transfer_operation/to" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,amount}') = '40.000 HIVE', 'operation "transfer_operation/amount" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation)#>>'{1,memo}') = 'this is a test', 'operation "transfer_operation/memo" error';
-  ASSERT ((SELECT hive.get_legacy_style_operation(transfer_operation)::VARCHAR) = '["transfer",{"from":"faddy3","to":"faddy","amount":"40.000 HIVE","memo":"this is a test"}]'), 'operation "transfer_operation/whole-body" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation :: hive.operation)#>>'{1,from}') = 'faddy3', 'operation "transfer_operation/from" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation :: hive.operation)#>>'{1,to}') = 'faddy', 'operation "transfer_operation/to" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation :: hive.operation)#>>'{1,amount}') = '40.000 HIVE', 'operation "transfer_operation/amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_operation :: hive.operation)#>>'{1,memo}') = 'this is a test', 'operation "transfer_operation/memo" error';
+  ASSERT ((SELECT hive.get_legacy_style_operation(transfer_operation :: hive.operation)::VARCHAR) = '["transfer",{"from":"faddy3","to":"faddy","amount":"40.000 HIVE","memo":"this is a test"}]'), 'operation "transfer_operation/whole-body" error';
 
   PERFORM validate_pattern('transfer_to_vesting', transfer_to_vesting_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_vesting_operation)#>>'{1,amount}') = '100.000 HIVE', 'operation "transfer_to_vesting_operation/amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_vesting_operation :: hive.operation)#>>'{1,amount}') = '100.000 HIVE', 'operation "transfer_to_vesting_operation/amount" error';
 
   PERFORM validate_pattern('withdraw_vesting', withdraw_vesting_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(withdraw_vesting_operation)#>>'{1,vesting_shares}') = '2.753463 VESTS', 'operation "withdraw_vesting_operation/vesting_shares" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(withdraw_vesting_operation :: hive.operation)#>>'{1,vesting_shares}') = '2.753463 VESTS', 'operation "withdraw_vesting_operation/vesting_shares" error';
 
   PERFORM validate_pattern('limit_order_create', limit_order_create_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create_operation)#>>'{1,amount_to_sell}') = '1.000 HIVE', 'operation "limit_order_create_operation/amount_to_sell" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create_operation)#>>'{1,min_to_receive}') = '1.000 HBD', 'operation "limit_order_create_operation/min_to_receive" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create_operation :: hive.operation)#>>'{1,amount_to_sell}') = '1.000 HIVE', 'operation "limit_order_create_operation/amount_to_sell" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create_operation :: hive.operation)#>>'{1,min_to_receive}') = '1.000 HBD', 'operation "limit_order_create_operation/min_to_receive" error';
 
   PERFORM validate_pattern('limit_order_cancel', limit_order_cancel_operation);
 
   PERFORM validate_pattern('feed_publish', feed_publish_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(feed_publish_operation)#>>'{1,exchange_rate,base}') = '15.000 HBD', 'operation "feed_publish_operation/exchange_rate/base" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(feed_publish_operation)#>>'{1,exchange_rate,quote}') = '2.000 HIVE', 'operation "feed_publish_operation/exchange_rate/quote" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(feed_publish_operation :: hive.operation)#>>'{1,exchange_rate,base}') = '15.000 HBD', 'operation "feed_publish_operation/exchange_rate/base" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(feed_publish_operation :: hive.operation)#>>'{1,exchange_rate,quote}') = '2.000 HIVE', 'operation "feed_publish_operation/exchange_rate/quote" error';
 
   PERFORM validate_pattern('convert', convert_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(convert_operation)#>>'{1,amount}') = '5.000 HBD', 'operation "convert_operation/amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(convert_operation :: hive.operation)#>>'{1,amount}') = '5.000 HBD', 'operation "convert_operation/amount" error';
 
   PERFORM validate_pattern('account_create', account_create_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(account_create_operation)#>>'{1,fee}') = '0.000 HIVE', 'operation "account_create_operation/fee" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(account_create_operation :: hive.operation)#>>'{1,fee}') = '0.000 HIVE', 'operation "account_create_operation/fee" error';
 
   PERFORM validate_pattern('account_update', account_update_operation);
 
   PERFORM validate_pattern('witness_update', witness_update_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(witness_update_operation)#>>'{1,props,account_creation_fee}') = '100.000 HIVE', 'operation "witness_update_operation/props/account_creation_fee" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(witness_update_operation)#>>'{1,fee}') = '0.000 HIVE', 'operation "witness_update_operation/fee" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(witness_update_operation :: hive.operation)#>>'{1,props,account_creation_fee}') = '100.000 HIVE', 'operation "witness_update_operation/props/account_creation_fee" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(witness_update_operation :: hive.operation)#>>'{1,fee}') = '0.000 HIVE', 'operation "witness_update_operation/fee" error';
 
   PERFORM validate_pattern('account_witness_vote', account_witness_vote_operation);
   PERFORM validate_pattern('account_witness_proxy', account_witness_proxy_operation);
@@ -186,199 +186,199 @@ BEGIN
   PERFORM validate_pattern('custom_json', custom_json_operation);
 
   PERFORM validate_pattern('comment_options', comment_options_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_options_operation)#>>'{1,max_accepted_payout}') = '1000000.000 HBD', 'operation "comment_options_operation/max_accepted_payout" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_options_operation :: hive.operation)#>>'{1,max_accepted_payout}') = '1000000.000 HBD', 'operation "comment_options_operation/max_accepted_payout" error';
 
   PERFORM validate_pattern('set_withdraw_vesting_route', set_withdraw_vesting_route_operation);
   PERFORM validate_pattern('request_account_recovery', request_account_recovery_operation);
   PERFORM validate_pattern('recover_account', recover_account_operation);
   PERFORM validate_pattern('change_recovery_account', change_recovery_account_operation);
 
-  ASSERT (SELECT hive.get_legacy_style_operation(pow2_operation)->>0) = 'pow2', 'operation "pow2_operation" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(pow2_operation)#>>'{1,props,account_creation_fee}') = '0.001 HIVE', 'operation "pow2_operation/props/account_creation_fee" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(pow2_operation :: hive.operation)->>0) = 'pow2', 'operation "pow2_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(pow2_operation :: hive.operation)#>>'{1,props,account_creation_fee}') = '0.001 HIVE', 'operation "pow2_operation/props/account_creation_fee" error';
 
   PERFORM validate_pattern('fill_convert_request', fill_convert_request_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(fill_convert_request_operation)#>>'{1,amount_in}') = '5.000 HBD', 'operation "fill_convert_request_operation/amount_in" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(fill_convert_request_operation)#>>'{1,amount_out}') = '18.867 HIVE', 'operation "fill_convert_request_operation/amount_out" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(fill_convert_request_operation :: hive.operation)#>>'{1,amount_in}') = '5.000 HBD', 'operation "fill_convert_request_operation/amount_in" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(fill_convert_request_operation :: hive.operation)#>>'{1,amount_out}') = '18.867 HIVE', 'operation "fill_convert_request_operation/amount_out" error';
 
   PERFORM validate_pattern('author_reward', author_reward_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(author_reward_operation)#>>'{1,hbd_payout}') = '0.009 HBD', 'operation "author_reward_operation/hbd_payout" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(author_reward_operation)#>>'{1,hive_payout}') = '0.000 HIVE', 'operation "author_reward_operation/hive_payout" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(author_reward_operation)#>>'{1,vesting_payout}') = '235.563374 VESTS', 'operation "author_reward_operation/vesting_payout" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(author_reward_operation)#>>'{1,curators_vesting_payout}') = '455.422524 VESTS', 'operation "author_reward_operation/curators_vesting_payout" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(author_reward_operation :: hive.operation)#>>'{1,hbd_payout}') = '0.009 HBD', 'operation "author_reward_operation/hbd_payout" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(author_reward_operation :: hive.operation)#>>'{1,hive_payout}') = '0.000 HIVE', 'operation "author_reward_operation/hive_payout" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(author_reward_operation :: hive.operation)#>>'{1,vesting_payout}') = '235.563374 VESTS', 'operation "author_reward_operation/vesting_payout" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(author_reward_operation :: hive.operation)#>>'{1,curators_vesting_payout}') = '455.422524 VESTS', 'operation "author_reward_operation/curators_vesting_payout" error';
 
   PERFORM validate_pattern('curation_reward', curation_reward_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(curation_reward_operation)#>>'{1,reward}') = '800.915474 VESTS', 'operation "curation_reward_operation/reward" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(curation_reward_operation :: hive.operation)#>>'{1,reward}') = '800.915474 VESTS', 'operation "curation_reward_operation/reward" error';
 
   PERFORM validate_pattern('comment_reward', comment_reward_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_reward_operation)#>>'{1,payout}') = '938.640 HBD', 'operation "comment_reward_operation/payout" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_reward_operation)#>>'{1,total_payout_value}') = '469.321 HBD', 'operation "comment_reward_operation/total_payout_value" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_reward_operation)#>>'{1,curator_payout_value}') = '469.318 HBD', 'operation "comment_reward_operation/curator_payout_value" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_reward_operation)#>>'{1,beneficiary_payout_value}') = '0.000 HBD', 'operation "comment_reward_operation/beneficiary_payout_value" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_reward_operation :: hive.operation)#>>'{1,payout}') = '938.640 HBD', 'operation "comment_reward_operation/payout" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_reward_operation :: hive.operation)#>>'{1,total_payout_value}') = '469.321 HBD', 'operation "comment_reward_operation/total_payout_value" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_reward_operation :: hive.operation)#>>'{1,curator_payout_value}') = '469.318 HBD', 'operation "comment_reward_operation/curator_payout_value" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_reward_operation :: hive.operation)#>>'{1,beneficiary_payout_value}') = '0.000 HBD', 'operation "comment_reward_operation/beneficiary_payout_value" error';
 
   PERFORM validate_pattern('liquidity_reward', liquidity_reward_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(liquidity_reward_operation)#>>'{1,payout}') = '1200.000 HIVE', 'operation "liquidity_reward_operation/payout" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(liquidity_reward_operation :: hive.operation)#>>'{1,payout}') = '1200.000 HIVE', 'operation "liquidity_reward_operation/payout" error';
 
   PERFORM validate_pattern('interest', interest_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(interest_operation)#>>'{1,interest}') = '0.003 HBD', 'operation "interest_operation/interest" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(interest_operation :: hive.operation)#>>'{1,interest}') = '0.003 HBD', 'operation "interest_operation/interest" error';
 
   PERFORM validate_pattern('fill_vesting_withdraw', fill_vesting_withdraw_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(fill_vesting_withdraw_operation)#>>'{1,withdrawn}') = '0.001239 VESTS', 'operation "fill_vesting_withdraw_operation/withdrawn" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(fill_vesting_withdraw_operation)#>>'{1,deposited}') = '0.043 HIVE', 'operation "fill_vesting_withdraw_operation/deposited" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(fill_vesting_withdraw_operation :: hive.operation)#>>'{1,withdrawn}') = '0.001239 VESTS', 'operation "fill_vesting_withdraw_operation/withdrawn" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(fill_vesting_withdraw_operation :: hive.operation)#>>'{1,deposited}') = '0.043 HIVE', 'operation "fill_vesting_withdraw_operation/deposited" error';
 
   PERFORM validate_pattern('fill_order', fill_order_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(fill_order_operation)#>>'{1,current_pays}') = '9.500 HBD', 'operation "fill_order_operation/current_pays" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(fill_order_operation)#>>'{1,open_pays}') = '50.000 HIVE', 'operation "fill_order_operation/open_pays" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(fill_order_operation :: hive.operation)#>>'{1,current_pays}') = '9.500 HBD', 'operation "fill_order_operation/current_pays" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(fill_order_operation :: hive.operation)#>>'{1,open_pays}') = '50.000 HIVE', 'operation "fill_order_operation/open_pays" error';
 
   PERFORM validate_pattern('hardfork', hardfork_operation);
   PERFORM validate_pattern('comment_payout_update', comment_payout_update_operation);
 
   PERFORM validate_pattern('producer_reward', producer_reward_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(producer_reward_operation)#>>'{1,vesting_shares}') = '5236.135027 VESTS', 'operation "producer_reward_operation/vesting_shares" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(producer_reward_operation :: hive.operation)#>>'{1,vesting_shares}') = '5236.135027 VESTS', 'operation "producer_reward_operation/vesting_shares" error';
 
   PERFORM validate_pattern('effective_comment_vote', effective_comment_vote_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(effective_comment_vote_operation)#>>'{1,pending_payout}') = '0.034 HBD', 'operation "effective_comment_vote_operation/pending_payout" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(effective_comment_vote_operation :: hive.operation)#>>'{1,pending_payout}') = '0.034 HBD', 'operation "effective_comment_vote_operation/pending_payout" error';
 
   PERFORM validate_pattern('ineffective_delete_comment', ineffective_delete_comment_operation);
   PERFORM validate_pattern('changed_recovery_account', changed_recovery_account_operation);
 
   PERFORM validate_pattern('transfer_to_vesting_completed', transfer_to_vesting_completed_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_vesting_completed_operation)#>>'{1,hive_vested}') = '100.000 HIVE', 'operation "transfer_to_vesting_completed_operation/hive_vested" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_vesting_completed_operation)#>>'{1,vesting_shares_received}') = '100.000000 VESTS', 'operation "transfer_to_vesting_completed_operation/vesting_shares_received" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_vesting_completed_operation :: hive.operation)#>>'{1,hive_vested}') = '100.000 HIVE', 'operation "transfer_to_vesting_completed_operation/hive_vested" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_vesting_completed_operation :: hive.operation)#>>'{1,vesting_shares_received}') = '100.000000 VESTS', 'operation "transfer_to_vesting_completed_operation/vesting_shares_received" error';
 
   PERFORM validate_pattern('pow_reward', pow_reward_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(pow_reward_operation)#>>'{1,reward}') = '0.000 HIVE', 'operation "pow_reward_operation/reward" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(pow_reward_operation :: hive.operation)#>>'{1,reward}') = '0.000 HIVE', 'operation "pow_reward_operation/reward" error';
 
   PERFORM validate_pattern('vesting_shares_split', vesting_shares_split_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(vesting_shares_split_operation)#>>'{1,vesting_shares_before_split}') = '67.667354 VESTS', 'operation "vesting_shares_split_operation/vesting_shares_before_split" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(vesting_shares_split_operation)#>>'{1,vesting_shares_after_split}') = '67667354.000000 VESTS', 'operation "vesting_shares_split_operation/vesting_shares_after_split" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(vesting_shares_split_operation :: hive.operation)#>>'{1,vesting_shares_before_split}') = '67.667354 VESTS', 'operation "vesting_shares_split_operation/vesting_shares_before_split" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(vesting_shares_split_operation :: hive.operation)#>>'{1,vesting_shares_after_split}') = '67667354.000000 VESTS', 'operation "vesting_shares_split_operation/vesting_shares_after_split" error';
 
   PERFORM validate_pattern('account_created', account_created_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(account_created_operation)#>>'{1,initial_vesting_shares}') = '0.000000 VESTS', 'operation "account_created_operation/initial_vesting_shares" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(account_created_operation)#>>'{1,initial_delegation}') = '0.000000 VESTS', 'operation "account_created_operation/initial_delegation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(account_created_operation :: hive.operation)#>>'{1,initial_vesting_shares}') = '0.000000 VESTS', 'operation "account_created_operation/initial_vesting_shares" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(account_created_operation :: hive.operation)#>>'{1,initial_delegation}') = '0.000000 VESTS', 'operation "account_created_operation/initial_delegation" error';
 
   PERFORM validate_pattern('system_warning', system_warning_operation);
 
-  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create2_operation)->>0) = 'limit_order_create2', 'operation "limit_order_create2_operation" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create2_operation)#>>'{1,amount_to_sell}') = '0.001 HBD', 'operation "limit_order_create2_operation/amount_to_sell" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create2_operation)#>>'{1,exchange_rate,base}') = '0.001 HBD', 'operation "limit_order_create2_operation/exchange_rate/base" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create2_operation)#>>'{1,exchange_rate,quote}') = '0.010 HIVE', 'operation "limit_order_create2_operation/exchange_rate/quote" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create2_operation :: hive.operation)->>0) = 'limit_order_create2', 'operation "limit_order_create2_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create2_operation :: hive.operation)#>>'{1,amount_to_sell}') = '0.001 HBD', 'operation "limit_order_create2_operation/amount_to_sell" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create2_operation :: hive.operation)#>>'{1,exchange_rate,base}') = '0.001 HBD', 'operation "limit_order_create2_operation/exchange_rate/base" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_create2_operation :: hive.operation)#>>'{1,exchange_rate,quote}') = '0.010 HIVE', 'operation "limit_order_create2_operation/exchange_rate/quote" error';
 
   PERFORM validate_pattern('claim_account', claim_account_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(claim_account_operation)#>>'{1,fee}') = '0.000 HIVE', 'operation "claim_account_operation/fee" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(claim_account_operation :: hive.operation)#>>'{1,fee}') = '0.000 HIVE', 'operation "claim_account_operation/fee" error';
 
   PERFORM validate_pattern('create_claimed_account', create_claimed_account_operation);
 
   PERFORM validate_pattern('escrow_transfer', escrow_transfer_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(escrow_transfer_operation)#>>'{1,hbd_amount}') = '1.000 HBD', 'operation "escrow_transfer_operation/hbd_amount" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(escrow_transfer_operation)#>>'{1,hive_amount}') = '0.000 HIVE', 'operation "escrow_transfer_operation/hive_amount" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(escrow_transfer_operation)#>>'{1,fee}') = '0.100 HBD', 'operation "escrow_transfer_operation/fee" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_transfer_operation :: hive.operation)#>>'{1,hbd_amount}') = '1.000 HBD', 'operation "escrow_transfer_operation/hbd_amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_transfer_operation :: hive.operation)#>>'{1,hive_amount}') = '0.000 HIVE', 'operation "escrow_transfer_operation/hive_amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_transfer_operation :: hive.operation)#>>'{1,fee}') = '0.100 HBD', 'operation "escrow_transfer_operation/fee" error';
 
   PERFORM validate_pattern('escrow_dispute', escrow_dispute_operation);
 
   PERFORM validate_pattern('escrow_release', escrow_release_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(escrow_release_operation)#>>'{1,hbd_amount}') = '5.000 HBD', 'operation "escrow_release_operation/hbd_amount" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(escrow_release_operation)#>>'{1,hive_amount}') = '0.000 HIVE', 'operation "escrow_release_operation/hive_amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_release_operation :: hive.operation)#>>'{1,hbd_amount}') = '5.000 HBD', 'operation "escrow_release_operation/hbd_amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(escrow_release_operation :: hive.operation)#>>'{1,hive_amount}') = '0.000 HIVE', 'operation "escrow_release_operation/hive_amount" error';
 
   PERFORM validate_pattern('escrow_approve', escrow_approve_operation);
 
   PERFORM validate_pattern('transfer_to_savings', transfer_to_savings_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_savings_operation)#>>'{1,amount}') = '1.000 HBD', 'operation "transfer_to_savings_operation/amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_to_savings_operation :: hive.operation)#>>'{1,amount}') = '1.000 HBD', 'operation "transfer_to_savings_operation/amount" error';
 
   PERFORM validate_pattern('transfer_from_savings', transfer_from_savings_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(transfer_from_savings_operation)#>>'{1,amount}') = '1.000 HBD', 'operation "transfer_from_savings_operation/amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(transfer_from_savings_operation :: hive.operation)#>>'{1,amount}') = '1.000 HBD', 'operation "transfer_from_savings_operation/amount" error';
 
   PERFORM validate_pattern('cancel_transfer_from_savings', cancel_transfer_from_savings_operation);
   PERFORM validate_pattern('decline_voting_rights', decline_voting_rights_operation);
 
   PERFORM validate_pattern('claim_reward_balance', claim_reward_balance_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(claim_reward_balance_operation)#>>'{1,reward_hive}') = '0.017 HIVE', 'operation "claim_reward_balance_operation/reward_hive" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(claim_reward_balance_operation)#>>'{1,reward_hbd}') = '0.011 HBD', 'operation "claim_reward_balance_operation/reward_hbd" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(claim_reward_balance_operation)#>>'{1,reward_vests}') = '185.025103 VESTS', 'operation "claim_reward_balance_operation/reward_vests" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(claim_reward_balance_operation :: hive.operation)#>>'{1,reward_hive}') = '0.017 HIVE', 'operation "claim_reward_balance_operation/reward_hive" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(claim_reward_balance_operation :: hive.operation)#>>'{1,reward_hbd}') = '0.011 HBD', 'operation "claim_reward_balance_operation/reward_hbd" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(claim_reward_balance_operation :: hive.operation)#>>'{1,reward_vests}') = '185.025103 VESTS', 'operation "claim_reward_balance_operation/reward_vests" error';
 
   PERFORM validate_pattern('delegate_vesting_shares', delegate_vesting_shares_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(delegate_vesting_shares_operation)#>>'{1,vesting_shares}') = '94599167.138276 VESTS', 'operation "delegate_vesting_shares_operation/vesting_shares" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(delegate_vesting_shares_operation :: hive.operation)#>>'{1,vesting_shares}') = '94599167.138276 VESTS', 'operation "delegate_vesting_shares_operation/vesting_shares" error';
 
   PERFORM validate_pattern('account_create_with_delegation', account_create_with_delegation_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(account_create_with_delegation_operation)#>>'{1,fee}') = '35.000 HIVE', 'operation "account_create_with_delegation_operation/fee" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(account_create_with_delegation_operation)#>>'{1,delegation}') = '0.000000 VESTS', 'operation "account_create_with_delegation_operation/delegation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(account_create_with_delegation_operation :: hive.operation)#>>'{1,fee}') = '35.000 HIVE', 'operation "account_create_with_delegation_operation/fee" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(account_create_with_delegation_operation :: hive.operation)#>>'{1,delegation}') = '0.000000 VESTS', 'operation "account_create_with_delegation_operation/delegation" error';
 
   PERFORM validate_pattern('witness_set_properties', witness_set_properties_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(account_update2_operation)->>0) = 'account_update2', 'operation "account_update2_operation" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(account_update2_operation :: hive.operation)->>0) = 'account_update2', 'operation "account_update2_operation" error';
 
   PERFORM validate_pattern('create_proposal', create_proposal_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(create_proposal_operation)#>>'{1,daily_pay}') = '240000000.000 HBD', 'operation "create_proposal_operation/daily_pay" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(create_proposal_operation :: hive.operation)#>>'{1,daily_pay}') = '240000000.000 HBD', 'operation "create_proposal_operation/daily_pay" error';
 
   PERFORM validate_pattern('update_proposal_votes', update_proposal_votes_operation);
   PERFORM validate_pattern('remove_proposal', remove_proposal_operation);
 
   PERFORM validate_pattern('update_proposal', update_proposal_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(update_proposal_operation)#>>'{1,daily_pay}') = '0.999 HBD', 'operation "update_proposal_operation/daily_pay" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(update_proposal_operation :: hive.operation)#>>'{1,daily_pay}') = '0.999 HBD', 'operation "update_proposal_operation/daily_pay" error';
 
   PERFORM validate_pattern('collateralized_convert', collateralized_convert_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(collateralized_convert_operation)#>>'{1,amount}') = '1.000 HIVE', 'operation "collateralized_convert_operation/amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(collateralized_convert_operation :: hive.operation)#>>'{1,amount}') = '1.000 HIVE', 'operation "collateralized_convert_operation/amount" error';
 
   PERFORM validate_pattern('recurrent_transfer', recurrent_transfer_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(recurrent_transfer_operation)#>>'{1,amount}') = '1.000 HIVE', 'operation "recurrent_transfer_operation/amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(recurrent_transfer_operation :: hive.operation)#>>'{1,amount}') = '1.000 HIVE', 'operation "recurrent_transfer_operation/amount" error';
 
   PERFORM validate_pattern('shutdown_witness', shutdown_witness_operation);
 
   PERFORM validate_pattern('fill_transfer_from_savings', fill_transfer_from_savings_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(fill_transfer_from_savings_operation)#>>'{1,amount}') = '1.000 HBD', 'operation "fill_transfer_from_savings_operation/amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(fill_transfer_from_savings_operation :: hive.operation)#>>'{1,amount}') = '1.000 HBD', 'operation "fill_transfer_from_savings_operation/amount" error';
 
   PERFORM validate_pattern('return_vesting_delegation', return_vesting_delegation_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(return_vesting_delegation_operation)#>>'{1,vesting_shares}') = '1000000.000000 VESTS', 'operation "return_vesting_delegation_operation/vesting_shares" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(return_vesting_delegation_operation :: hive.operation)#>>'{1,vesting_shares}') = '1000000.000000 VESTS', 'operation "return_vesting_delegation_operation/vesting_shares" error';
 
   PERFORM validate_pattern('comment_benefactor_reward', comment_benefactor_reward_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_benefactor_reward_operation)#>>'{1,hbd_payout}') = '0.000 HBD', 'operation "comment_benefactor_reward_operation/hbd_payout" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_benefactor_reward_operation)#>>'{1,hive_payout}') = '0.000 HIVE', 'operation "comment_benefactor_reward_operation/hive_payout" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_benefactor_reward_operation)#>>'{1,vesting_payout}') = '4754.505657 VESTS', 'operation "comment_benefactor_reward_operation/vesting_payout" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(comment_benefactor_reward_operation)#>>'{1,payout_must_be_claimed}') = 'false', 'operation "comment_benefactor_reward_operation/" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_benefactor_reward_operation :: hive.operation)#>>'{1,hbd_payout}') = '0.000 HBD', 'operation "comment_benefactor_reward_operation/hbd_payout" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_benefactor_reward_operation :: hive.operation)#>>'{1,hive_payout}') = '0.000 HIVE', 'operation "comment_benefactor_reward_operation/hive_payout" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_benefactor_reward_operation :: hive.operation)#>>'{1,vesting_payout}') = '4754.505657 VESTS', 'operation "comment_benefactor_reward_operation/vesting_payout" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(comment_benefactor_reward_operation :: hive.operation)#>>'{1,payout_must_be_claimed}') = 'false', 'operation "comment_benefactor_reward_operation/" error';
 
   PERFORM validate_pattern('clear_null_account_balance', clear_null_account_balance_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(clear_null_account_balance_operation)#>>'{1,total_cleared,0}') = '2.000 HIVE', 'operation "clear_null_account_balance_operation/total_cleared/0" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(clear_null_account_balance_operation)#>>'{1,total_cleared,1}') = '21702.525 HBD', 'operation "clear_null_account_balance_operation/total_cleared/1" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(clear_null_account_balance_operation :: hive.operation)#>>'{1,total_cleared,0}') = '2.000 HIVE', 'operation "clear_null_account_balance_operation/total_cleared/0" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(clear_null_account_balance_operation :: hive.operation)#>>'{1,total_cleared,1}') = '21702.525 HBD', 'operation "clear_null_account_balance_operation/total_cleared/1" error';
 
   PERFORM validate_pattern('proposal_pay', proposal_pay_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(proposal_pay_operation)#>>'{1,payment}') = '0.157 HBD', 'operation "proposal_pay_operation/payment" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(proposal_pay_operation :: hive.operation)#>>'{1,payment}') = '0.157 HBD', 'operation "proposal_pay_operation/payment" error';
 
   PERFORM validate_pattern('dhf_funding', dhf_funding_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(dhf_funding_operation)#>>'{1,treasury}') = 'steem.dao', 'operation "dhf_funding_operation/treasury" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(dhf_funding_operation)#>>'{1,additional_funds}') = '0.060 HBD', 'operation "dhf_funding_operation/additional_funds" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(dhf_funding_operation :: hive.operation)#>>'{1,treasury}') = 'steem.dao', 'operation "dhf_funding_operation/treasury" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(dhf_funding_operation :: hive.operation)#>>'{1,additional_funds}') = '0.060 HBD', 'operation "dhf_funding_operation/additional_funds" error';
 
   PERFORM validate_pattern('hardfork_hive', hardfork_hive_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_operation)#>>'{1,hbd_transferred}') = '6.171 HBD', 'operation "hardfork_hive_operation/hbd_transferred" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_operation)#>>'{1,hive_transferred}') = '186.651 HIVE', 'operation "hardfork_hive_operation/hive_transferred" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_operation)#>>'{1,vests_converted}') = '3399458.160520 VESTS', 'operation "hardfork_hive_operation/vests_converted" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_operation)#>>'{1,total_hive_from_vests}') = '1735.804 HIVE', 'operation "hardfork_hive_operation/total_hive_from_vests" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_operation :: hive.operation)#>>'{1,hbd_transferred}') = '6.171 HBD', 'operation "hardfork_hive_operation/hbd_transferred" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_operation :: hive.operation)#>>'{1,hive_transferred}') = '186.651 HIVE', 'operation "hardfork_hive_operation/hive_transferred" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_operation :: hive.operation)#>>'{1,vests_converted}') = '3399458.160520 VESTS', 'operation "hardfork_hive_operation/vests_converted" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_operation :: hive.operation)#>>'{1,total_hive_from_vests}') = '1735.804 HIVE', 'operation "hardfork_hive_operation/total_hive_from_vests" error';
 
   PERFORM validate_pattern('hardfork_hive_restore', hardfork_hive_restore_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_restore_operation)#>>'{1,hbd_transferred}') = '3.007 HBD', 'operation "hardfork_hive_restore_operation/hbd_transferred" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_restore_operation)#>>'{1,hive_transferred}') = '0.000 HIVE', 'operation "hardfork_hive_restore_operation/hive_transferred" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_restore_operation :: hive.operation)#>>'{1,hbd_transferred}') = '3.007 HBD', 'operation "hardfork_hive_restore_operation/hbd_transferred" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(hardfork_hive_restore_operation :: hive.operation)#>>'{1,hive_transferred}') = '0.000 HIVE', 'operation "hardfork_hive_restore_operation/hive_transferred" error';
 
   PERFORM validate_pattern('delayed_voting', delayed_voting_operation);
 
   PERFORM validate_pattern('consolidate_treasury_balance', consolidate_treasury_balance_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(consolidate_treasury_balance_operation)#>>'{1,total_moved,0}') = '83353473.585 HIVE', 'operation "consolidate_treasury_balance_operation/total_moved/0" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(consolidate_treasury_balance_operation)#>>'{1,total_moved,1}') = '560371.025 HBD', 'operation "consolidate_treasury_balance_operation/total_moved/1" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(consolidate_treasury_balance_operation :: hive.operation)#>>'{1,total_moved,0}') = '83353473.585 HIVE', 'operation "consolidate_treasury_balance_operation/total_moved/0" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(consolidate_treasury_balance_operation :: hive.operation)#>>'{1,total_moved,1}') = '560371.025 HBD', 'operation "consolidate_treasury_balance_operation/total_moved/1" error';
 
   PERFORM validate_pattern('dhf_conversion', dhf_conversion_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(dhf_conversion_operation)#>>'{1,hive_amount_in}') = '41676.736 HIVE', 'operation "dhf_conversion_operation/hive_amount_in" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(dhf_conversion_operation)#>>'{1,hbd_amount_out}') = '6543.247 HBD', 'operation "dhf_conversion_operation/hbd_amount_out" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(dhf_conversion_operation)#>>'{1,treasury}') = 'hive.fund', 'operation "dhf_conversion_operation/treasury" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(dhf_conversion_operation :: hive.operation)#>>'{1,hive_amount_in}') = '41676.736 HIVE', 'operation "dhf_conversion_operation/hive_amount_in" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(dhf_conversion_operation :: hive.operation)#>>'{1,hbd_amount_out}') = '6543.247 HBD', 'operation "dhf_conversion_operation/hbd_amount_out" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(dhf_conversion_operation :: hive.operation)#>>'{1,treasury}') = 'hive.fund', 'operation "dhf_conversion_operation/treasury" error';
 
   PERFORM validate_pattern('fill_collateralized_convert_request', fill_collateralized_convert_request_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(fill_collateralized_convert_request_operation)#>>'{1,amount_in}') = '0.353 HIVE', 'operation "fill_collateralized_convert_request_operation/amount_in" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(fill_collateralized_convert_request_operation)#>>'{1,amount_out}') = '0.103 HBD', 'operation "fill_collateralized_convert_request_operation/amount_out" error';
-  ASSERT (SELECT hive.get_legacy_style_operation(fill_collateralized_convert_request_operation)#>>'{1,excess_collateral}') = '0.647 HIVE', 'operation "fill_collateralized_convert_request_operation/excess_collateral" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(fill_collateralized_convert_request_operation :: hive.operation)#>>'{1,amount_in}') = '0.353 HIVE', 'operation "fill_collateralized_convert_request_operation/amount_in" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(fill_collateralized_convert_request_operation :: hive.operation)#>>'{1,amount_out}') = '0.103 HBD', 'operation "fill_collateralized_convert_request_operation/amount_out" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(fill_collateralized_convert_request_operation :: hive.operation)#>>'{1,excess_collateral}') = '0.647 HIVE', 'operation "fill_collateralized_convert_request_operation/excess_collateral" error';
 
   PERFORM validate_pattern('fill_recurrent_transfer', fill_recurrent_transfer_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(fill_recurrent_transfer_operation)#>>'{1,amount}') = '1.000 HIVE', 'operation "fill_recurrent_transfer_operation/amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(fill_recurrent_transfer_operation :: hive.operation)#>>'{1,amount}') = '1.000 HIVE', 'operation "fill_recurrent_transfer_operation/amount" error';
 
   PERFORM validate_pattern('failed_recurrent_transfer', failed_recurrent_transfer_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(failed_recurrent_transfer_operation)#>>'{1,amount}') = '1.000 HIVE', 'operation "failed_recurrent_transfer_operation/amount" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(failed_recurrent_transfer_operation :: hive.operation)#>>'{1,amount}') = '1.000 HIVE', 'operation "failed_recurrent_transfer_operation/amount" error';
 
   PERFORM validate_pattern('limit_order_cancelled', limit_order_cancelled_operation);
-  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_cancelled_operation)#>>'{1,amount_back}') = '9.950 HIVE', 'operation "limit_order_cancelled_operation/amount_back" error';
+  ASSERT (SELECT hive.get_legacy_style_operation(limit_order_cancelled_operation :: hive.operation)#>>'{1,amount_back}') = '9.950 HIVE', 'operation "limit_order_cancelled_operation/amount_back" error';
 
   PERFORM validate_pattern('expired_account_notification', expired_account_notification_operation);
 
