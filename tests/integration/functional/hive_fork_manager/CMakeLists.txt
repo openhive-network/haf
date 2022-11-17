@@ -266,3 +266,5 @@ ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_accounts.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_balances.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_legacy_style_operation.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/extract_set_witness_properties.sql )
+
+ADD_SQL_FUNCTIONAL_TESTS( discovery_of_plpgsql/empty_or_filled_table_access.sql )
