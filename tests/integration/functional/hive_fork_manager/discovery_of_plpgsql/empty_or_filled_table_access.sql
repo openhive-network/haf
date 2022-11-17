@@ -43,11 +43,11 @@ BEGIN
 
 
     result = COALESCE( ( SELECT int_or_null FROM tab_empty ), 0 ); 
-    ASSERT result = 0,'A31';
+    ASSERT result = 0,'A3a';
     result = COALESCE( ( SELECT int_or_null FROM tab_one_row ), 0 ); 
-    ASSERT result = 0,'A32';
+    ASSERT result = 0,'A3b';
     result = COALESCE( ( SELECT int_or_null FROM tab_something_in ), 0 ); 
-    ASSERT result = 3,'A33';
+    ASSERT result = 3,'A3c';
 
     bresult = COALESCE((SELECT b FROM tab_empty),  FALSE);
     SELECT COALESCE((SELECT b FROM tab_empty),  FALSE) INTO bresult2;
@@ -86,8 +86,13 @@ BEGIN
 
 
 
-    -- INSERT INTO hive.irreversible_data_renamed (id, consistent_block) VALUES (1, num) 
-    -- ON CONFLICT (id) DO UPDATE SET consistent_block = num;
+    INSERT INTO tab_empty (id,  b) VALUES (1,  TRUE) 
+    ON CONFLICT (id) DO UPDATE SET int_or_null = 15;
+    Raise Notice '>>>>%', (SELECT array_agg(t) FROM (SELECT * FROM tab_empty)t);
+
+    INSERT INTO tab_empty (id, int_or_null, b) VALUES (1, 15, TRUE) 
+    ON CONFLICT (id) DO UPDATE SET int_or_null = 15;
+    Raise Notice '>>>>%', (SELECT array_agg(t) FROM (SELECT * FROM tab_empty)t);
 
 
     --INSERT INTO hive.irreversible_data_renamed (id, is_dirty) VALUES (1, flag) 
