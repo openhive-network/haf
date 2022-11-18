@@ -342,6 +342,7 @@ public:
     queries_commit_data_processor block_loader(db_url, "Block loader",
                                                 [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
       {
+        tx.exec("INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;"); //MTTK is it ok place ?
         pqxx::result data = tx.exec("SELECT hb.num AS _max_block FROM hive.blocks hb ORDER BY hb.num DESC LIMIT 1;");
         if( !data.empty() )
         {

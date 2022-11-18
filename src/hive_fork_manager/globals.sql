@@ -47,7 +47,7 @@ AS
 $BODY$
 DECLARE
 BEGIN
-    PERFORM hive.force_irr_data_insert();
+    --PERFORM hive.force_irr_data_insert();
     UPDATE hive.irreversible_data SET is_dirty = flag;
 
     --INSERT INTO hive.irreversible_data_renamed (id, is_dirty) VALUES (1, flag) 
@@ -64,7 +64,7 @@ AS
 $BODY$
 DECLARE
 BEGIN
-    PERFORM hive.force_irr_data_insert();
+    --PERFORM hive.force_irr_data_insert();
     UPDATE hive.irreversible_data SET consistent_block = num;
 
     --INSERT INTO hive.irreversible_data_renamed (id, consistent_block, is_dirty) VALUES (1, num, FALSE) 
