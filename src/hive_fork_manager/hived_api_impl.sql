@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS hive.indexes_constraints (
     is_foreign_key boolean NOT NULL,
     CONSTRAINT pk_hive_indexes_constraints UNIQUE( table_name, index_constraint_name )
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.indexes_constraints', '');
 
 CREATE OR REPLACE FUNCTION hive.copy_blocks_to_irreversible(
       _head_block_of_irreversible_blocks INT

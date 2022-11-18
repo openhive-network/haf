@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS hive.contexts(
     CONSTRAINT pk_hive_contexts PRIMARY KEY( id ),
     CONSTRAINT uq_hive_context_name UNIQUE ( name )
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.contexts', '');
 
 CREATE INDEX IF NOT EXISTS hive_contexts_owner_idx ON hive.contexts( owner );
 
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS hive.registered_tables(
    CONSTRAINT fk_hive_registered_tables_context FOREIGN KEY(context_id) REFERENCES hive.contexts( id ),
    CONSTRAINT uq_hive_registered_tables_register_table UNIQUE( origin_table_schema, origin_table_name )
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.registered_tables', '');
 
 
 CREATE INDEX IF NOT EXISTS hive_registered_tables_context_idx ON hive.registered_tables( context_id );
@@ -64,6 +66,7 @@ CREATE TABLE IF NOT EXISTS hive.triggers(
    CONSTRAINT fk_hive_triggers_registered_table FOREIGN KEY( registered_table_id ) REFERENCES hive.registered_tables( id ),
    CONSTRAINT uq_hive_triggers_registered_table UNIQUE( trigger_name )
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.triggers', '');
 
 CREATE INDEX IF NOT EXISTS hive_registered_triggers_table_id ON hive.triggers( registered_table_id );
 CREATE INDEX IF NOT EXISTS hive_triggers_owner_idx ON hive.triggers( owner );
