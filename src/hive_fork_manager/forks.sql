@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS hive.fork(
     time_of_fork TIMESTAMP WITHOUT TIME ZONE NOT NULL, -- time of receiving notification from hived (see: hive.back_from_fork definition)
     CONSTRAINT pk_hive_fork PRIMARY KEY( id )
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.fork', '');
 
 INSERT INTO hive.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp )
     ON CONFLICT DO NOTHING;
