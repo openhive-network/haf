@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS hive.blocks (
 
        CONSTRAINT pk_hive_blocks PRIMARY KEY( num )
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.blocks', '');
 
 CREATE TABLE IF NOT EXISTS hive.irreversible_data (
       id integer,
@@ -41,7 +42,7 @@ CREATE TABLE IF NOT EXISTS hive.irreversible_data (
       CONSTRAINT fk_1_hive_irreversible_data FOREIGN KEY (consistent_block) REFERENCES hive.blocks (num)
 );
 
-INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
+SELECT pg_catalog.pg_extension_config_dump('hive.irreversible_data', '');
 
 CREATE TABLE IF NOT EXISTS hive.transactions (
     block_num integer NOT NULL,
@@ -54,6 +55,7 @@ CREATE TABLE IF NOT EXISTS hive.transactions (
     CONSTRAINT pk_hive_transactions PRIMARY KEY ( trx_hash ),
     CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num)
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.transactions', '');
 
 CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
     trx_hash bytea NOT NULL,
@@ -61,6 +63,7 @@ CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
     CONSTRAINT pk_hive_transactions_multisig PRIMARY KEY ( trx_hash, signature ),
     CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash) REFERENCES hive.transactions (trx_hash)
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.transactions_multisig', '');
 
 CREATE TABLE IF NOT EXISTS hive.operation_types (
     id smallint NOT NULL,
@@ -69,6 +72,7 @@ CREATE TABLE IF NOT EXISTS hive.operation_types (
     CONSTRAINT pk_hive_operation_types PRIMARY KEY (id),
     CONSTRAINT uq_hive_operation_types UNIQUE (name)
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.operation_types', '');
 
 CREATE TABLE IF NOT EXISTS hive.operations (
     id bigint not null,
@@ -89,6 +93,7 @@ CREATE TABLE IF NOT EXISTS hive.operations (
     CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num),
     CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id)
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.operations', '');
 
 CREATE TABLE IF NOT EXISTS hive.applied_hardforks (
     hardfork_num smallint NOT NULL,
@@ -109,6 +114,7 @@ CREATE TABLE IF NOT EXISTS hive.accounts (
     , CONSTRAINT uq_hive_accounst_name UNIQUE ( name )
     , CONSTRAINT fk_1_hive_accounts FOREIGN KEY (block_num) REFERENCES hive.blocks (num)
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.accounts', '');
 
 CREATE TABLE IF NOT EXISTS hive.account_operations
 (
@@ -123,6 +129,7 @@ CREATE TABLE IF NOT EXISTS hive.account_operations
     , CONSTRAINT hive_account_operations_uq_1 UNIQUE( account_id, account_op_seq_no )
     , CONSTRAINT hive_account_operations_uq2 UNIQUE ( account_id, operation_id )
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.account_operations', '');
 
 
 CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hive.applied_hardforks ( block_num );

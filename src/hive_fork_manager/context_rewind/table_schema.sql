@@ -11,8 +11,12 @@ CREATE TABLE IF NOT EXISTS hive.verify_table_schema(
     table_indexes TEXT NOT NULL
 );
 
+SELECT pg_catalog.pg_extension_config_dump('hive.verify_table_schema', '');
+
 CREATE TABLE IF NOT EXISTS hive.table_schema(
     schema_name TEXT NOT NULL,
     schema_hash UUID NOT NULL
 );
+
+SELECT pg_catalog.pg_extension_config_dump('hive.table_schema', '');
 
