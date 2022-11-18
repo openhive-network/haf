@@ -16,8 +16,6 @@ def test_compare_forked_node_database(prepared_networks_and_database, database):
 
     session_ref = database('postgresql:///haf_block_log_ref')
 
-    reference_node = create_node_with_database(networks['Alpha'], session_ref.get_bind().url)
-
     # WHEN
     prepare_networks(networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)

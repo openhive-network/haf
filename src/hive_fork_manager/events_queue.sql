@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS hive.events_queue(
     , event hive.event_type NOT NULL
     , block_num BIGINT NOT NULL
 );
-
-INSERT INTO hive.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
+SELECT pg_catalog.pg_extension_config_dump('hive.events_queue', '');
 
 CREATE INDEX IF NOT EXISTS hive_events_queue_block_num_idx ON hive.events_queue( block_num );

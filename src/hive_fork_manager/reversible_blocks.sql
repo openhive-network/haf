@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS hive.blocks_reversible(
     EXCLUDING INDEXES
     EXCLUDING IDENTITY
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.blocks_reversible', '');
 ALTER TABLE hive.blocks_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
     ADD CONSTRAINT pk_hive_blocks_reversible PRIMARY KEY( num, fork_id ),
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS hive.transactions_reversible(
     EXCLUDING INDEXES
     EXCLUDING IDENTITY
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.transactions_reversible', '');
 ALTER TABLE hive.transactions_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
     ADD CONSTRAINT fk_1_hive_transactions_reversible FOREIGN KEY (block_num, fork_id) REFERENCES hive.blocks_reversible(num,fork_id),
@@ -30,6 +32,7 @@ CREATE TABLE IF NOT EXISTS hive.transactions_multisig_reversible(
     EXCLUDING INDEXES
     EXCLUDING IDENTITY
 );
+SELECT pg_catalog.pg_extension_config_dump('transactions_multisig_reversible', '');
 ALTER TABLE hive.transactions_multisig_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
     ADD CONSTRAINT pk_transactions_multisig_reversible PRIMARY KEY ( trx_hash, signature, fork_id ),
@@ -43,6 +46,7 @@ CREATE TABLE IF NOT EXISTS hive.operations_reversible(
     EXCLUDING INDEXES
     EXCLUDING IDENTITY
 );
+SELECT pg_catalog.pg_extension_config_dump('operations_reversible', '');
 ALTER TABLE hive.operations_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
     ADD CONSTRAINT pk_operations_reversible PRIMARY KEY( id, block_num, fork_id ),
@@ -59,6 +63,7 @@ CREATE TABLE IF NOT EXISTS hive.accounts_reversible(
     EXCLUDING INDEXES
     EXCLUDING IDENTITY
 );
+SELECT pg_catalog.pg_extension_config_dump('accounts_reversible', '');
 ALTER TABLE hive.accounts_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
     ADD CONSTRAINT pk_hive_accounts_reversible_id PRIMARY KEY( id, fork_id ),
@@ -75,6 +80,7 @@ CREATE TABLE IF NOT EXISTS hive.account_operations_reversible(
     EXCLUDING IDENTITY
 )
 ;
+SELECT pg_catalog.pg_extension_config_dump('account_operations_reversible', '');
 ALTER TABLE hive.account_operations_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
     ADD CONSTRAINT fk_1_hive_account_operations_reversible FOREIGN KEY ( operation_id, fork_id ) REFERENCES hive.operations_reversible( id, fork_id ),
