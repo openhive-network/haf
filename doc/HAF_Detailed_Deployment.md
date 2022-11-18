@@ -355,18 +355,34 @@ docker exec haf-instance-5M psql -d <your_database> \
   -c "drop schema if exists pghero cascade; drop extension if exists pg_stat_statements;"
 ```
 
-# Using pg_dump/pg_restore to backup/restore a HAF database
-When setting up a new HAF server for production or testing purposes, you may want to load data from an existing HAF database using `pg_dump` and `pg_restore` commands, instead of filling it from scratch using hived with a replay of the blockchain data in a block_log.
+# Using scripts to perform full backup
+Not only the haf Postgres database needs to be stored to have the full data backed up.
+Also the hived server state is needed.
+To perform the full backup:
+1. Stop the hived server
+2. execute ```dump_instance.sh```
 
-One problem that arises is that pg_dump doesn't dump tables which are part of a postgres extension, and some tables in HAF are associated with the hive_fork_manager extension. So to use pg_dump to dump a HAF database, you must first temporarily disassociate these tables from the extension, then reassociate them after completing the dump of the database.
 
-Tables can be temporarily disassociated from an extension using the command:
-`ALTER EXTENSION <extension name> DROP TABLE <tabel name>;`.
 
-*It is important to note that this command does not drop the tables from the database itself: despite the use of the term "drop" in this command, the tables themselves continue to exist and contain the same data. They are simply no longer associated with the extension, so pg_dump can now dump them to the dump file.*
+To perform the full restore and immediately run the hived server:
+1. execute ```load_instance.sh```
 
-After the database has been dumped, the tables can be reassociated with an extension using the command:
-`ALTER EXTENSION <extension name> ADD TABLE <tabel name>;`
-This reassociation needs to be done to the original database that was dumped, and also to any database that is restored from the dumpfile using `pg_rstore`.
+All unrecognized options are forwarded to the hived executable.
 
-Hive_fork_manager has prepared scripts which disassociate and reassociate its tables: [./src/hive_fork_manager/tools/pg_dump](./src/hive_fork_manager/tools/pg_dump/readme.md).
+
+E.g.:
+
+```scripts/dump_instance.sh --backup-dir=path_to_backup_directory \
+--hived-executable-path=path_to_hived \
+--hived-data-dir=path_to_hived_datadir \
+--haf-db-name=haf_block_log \
+--override-existing-backup-dir \
+--exit-before-sync
+
+scripts/load_instance.sh --backup-dir=path_to_backup_directory
+--hived-executable-path=path_to_hived \
+--hived-data-dir=path_to_hived_datadir \
+--haf-db-name=haf_block_log \
+--exit-before-sync --stop-replay-at-block=5000000
+```
+
