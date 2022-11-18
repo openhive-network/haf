@@ -74,3 +74,26 @@ END;
 $BODY$
 ;
 
+
+DROP TYPE IF EXISTS hive.foorks_data_type;
+CREATE TYPE hive.foorks_data_type AS (
+    id BIGINT ,
+    block_num INT , -- head block number, after reverting all blocks from fork (look for `notify_switch_fork` in database.cpp hive project file )
+    time_of_fork TIMESTAMP WITHOUT TIME ZONE -- time of receiving notification from hived (see: hive.back_from_fork definition)
+    );
+
+
+
+CREATE OR REPLACE FUNCTION hive.get_hive_foorks()
+    RETURNS SETOF hive.foorks_data_type
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+DECLARE
+BEGIN
+    RETURN QUERY SELECT * FROM hive.forks;
+END;
+$BODY$
+;
+
