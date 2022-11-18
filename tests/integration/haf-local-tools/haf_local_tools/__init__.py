@@ -1,15 +1,24 @@
+from __future__ import annotations
+
 import time
 from pathlib import Path
-from typing import Dict
+from typing import Any, TYPE_CHECKING, Dict, Optional
 
 import test_tools as tt
 from haf_local_tools import block_logs
 from haf_local_tools.tables import EventsQueue
 from shared_tools.complex_networks import run_networks
 
+if TYPE_CHECKING:
+    from sqlalchemy.engine.row import Row
+    from sqlalchemy.orm.session import Session
+
+
 BLOCKS_IN_FORK = 5
 BLOCKS_AFTER_FORK = 5
 WAIT_FOR_CONTEXT_TIMEOUT = 90.0
+
+
 
 
 def make_fork(networks: Dict[str, tt.Network], main_chain_trxs=[], fork_chain_trxs=[]):
@@ -64,6 +73,10 @@ def get_irreversible_block(node):
     return irreversible_block_num
 
 
+def get_blocklog_directory():
+    return Path(__file__).parent.resolve()
+
+
 def prepare_networks(networks: Dict[str, tt.Network], replay_all_nodes = True):
     blocklog_directory = None
     if replay_all_nodes:
@@ -71,10 +84,11 @@ def prepare_networks(networks: Dict[str, tt.Network], replay_all_nodes = True):
 
     run_networks(list(networks.values()), blocklog_directory)
 
-def create_node_with_database(network: tt.Network, url):
+
+def create_node_with_database(url: str, network: Optional[tt.Network] = None) -> tt.ApiNode:
     api_node = tt.ApiNode(network=network)
     api_node.config.plugin.append('sql_serializer')
-    api_node.config.psql_url = str(url)
+    api_node.config.psql_url = url
     return api_node
 
 
@@ -154,3 +168,13 @@ def wait_until_irreversible(node_under_test, session):
 
         if result[ len(result) - 1 ].event == 'NEW_IRREVERSIBLE':
             return
+
+
+def query_col(session: Session, sql: str, **kwargs) -> list[Any]:
+    """Perform a `SELECT n*1`"""
+    return [row[0] for row in session.execute(sql, params=kwargs).fetchall()]
+
+
+def query_all(session: Session, sql: str, **kwargs) -> list[Row]:
+    """Perform a `SELECT n*m`"""
+    return session.execute(sql, params=kwargs).fetchall()

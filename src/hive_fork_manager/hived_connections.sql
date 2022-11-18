@@ -5,3 +5,4 @@ CREATE TABLE IF NOT EXISTS hive.hived_connections(
     time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     CONSTRAINT pk_hived_connections PRIMARY KEY( id )
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.hived_connections', '');
