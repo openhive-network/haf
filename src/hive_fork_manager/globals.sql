@@ -92,7 +92,7 @@ AS
 $BODY$
 DECLARE
 BEGIN
-    RETURN QUERY SELECT * FROM hive.forks;
+    RETURN QUERY SELECT * FROM hive.fork;
 END;
 $BODY$
 ;
