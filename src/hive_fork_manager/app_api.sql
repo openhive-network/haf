@@ -9,7 +9,7 @@ BEGIN
     -- after massive sync the application must attach its context to last already synced block
     PERFORM hive.context_create(
         _name
-        , ( SELECT MAX( hf.id ) FROM hive.get_hive_foorks() hf ) -- current fork id
+        , ( SELECT MAX( hf.id ) FROM hive.get_hive_foork() hf ) -- current fork id
         , COALESCE( ( SELECT hid.consistent_block FROM hive.get_irr_data() hid ), 0 ) -- head of irreversible block
     );
 
@@ -134,7 +134,7 @@ BEGIN
 
     PERFORM hive.context_attach( _context, _last_synced_block );
 
-    SELECT MAX(hf.id) INTO __fork_id FROM hive.get_hive_foorks() hf WHERE hf.block_num <= _last_synced_block;
+    SELECT MAX(hf.id) INTO __fork_id FROM hive.get_hive_foork() hf WHERE hf.block_num <= _last_synced_block;
 
     UPDATE hive.contexts
     SET   fork_id = __fork_id

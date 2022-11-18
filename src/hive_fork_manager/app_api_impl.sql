@@ -80,7 +80,7 @@ BEGIN
     -- first find a newer fork nearest current block
     SELECT heq.id, heq.block_num, hc.current_block_num, hc.id INTO __next_fork_event_id, __next_fork_block_num, __context_current_block_num, __context_id
     FROM hive.events_queue heq
-    JOIN hive.get_hive_foorks() hf ON hf.id = heq.block_num
+    JOIN hive.get_hive_foork() hf ON hf.id = heq.block_num
     JOIN hive.contexts hc ON hc.events_id < heq.id AND hc.current_block_num >= hf.block_num
     WHERE heq.event = 'BACK_FROM_FORK' AND hc.name = _context
     ORDER BY hf.block_num ASC, heq.id DESC
@@ -235,7 +235,7 @@ BEGIN
     CASE __next_event_type
     WHEN 'BACK_FROM_FORK' THEN
         SELECT hf.id, hf.block_num INTO __fork_id, __next_event_block_num
-        FROM hive.get_hive_foorks() hf
+        FROM hive.get_hive_foork() hf
         WHERE hf.id = __next_event_block_num; -- block_num for BFF events = fork_id
 
         PERFORM hive.context_back_from_fork( _context_name, __next_event_block_num );

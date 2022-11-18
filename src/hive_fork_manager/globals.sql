@@ -84,7 +84,7 @@ CREATE TYPE hive.foorks_data_type AS (
 
 
 
-CREATE OR REPLACE FUNCTION hive.get_hive_foorks()
+CREATE OR REPLACE FUNCTION hive.get_hive_foork()
     RETURNS SETOF hive.foorks_data_type
     LANGUAGE 'plpgsql'
     VOLATILE
