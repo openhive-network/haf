@@ -54,7 +54,10 @@ def comparethesetexts_equal(fileset1, fileset2):
     def comparefiles(file1, file2):
         difffilename = f'diff_{file1}_{file2}.diff'
         subprocess.call(f"diff {file1} {file2} > {difffilename}", shell=True)
-        filelength = len(open(difffilename).read())
+        s = open(difffilename).read()
+        filelength = len(s)
+        if filelength:
+            print(f"Error: database dumps not equal ({file1}, {file2}), diff file:\n{s}")
         return filelength
 
     diff_file_lengths = 0
