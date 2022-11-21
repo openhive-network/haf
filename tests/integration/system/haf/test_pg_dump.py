@@ -1,3 +1,4 @@
+import os
 import subprocess
 import pytest
 import sqlalchemy
@@ -49,9 +50,6 @@ def db2text(databasename):
 
 
 
-def filescompare(file1, file2):
-    subprocess.call(rf"diff {file1} {file2}", shell=True)
-
 def comparethesetexts_equal(fileset1, fileset2):
     def comparefiles(file1, file2):
         difffilename = f'diff_{file1}_{file2}.diff'
@@ -61,7 +59,7 @@ def comparethesetexts_equal(fileset1, fileset2):
 
     diff_file_lengths = 0
     for file1, file2 in zip(fileset1, fileset2):
-        print(f'meld {file1} {file2}')
+        print(f'meld {os.path.realpath(file1)} {os.path.realpath(file2)}')
         diff_file_lengths += comparefiles(file1, file2)
 
     return diff_file_lengths == 0
@@ -183,48 +181,6 @@ def test_pg_dump(prepared_networks_and_database, database):
     
     
     no_differences = comparethesetexts_equal(db2text(source_db), db2text(target_db))
-    ##### assert(no_differences) MTTK uncomment this when files become equal
+    assert(no_differences)
 
 
-
-    #with open('db105.dump', 'r') as f:
-     #   subprocess.call(f'pg_restore {(session_ref.bind.url)} -d inna_baza', shell=True, stdin =f)
-
-
-
-
-
-
-
-    # WHEN
-    # run_networks(networks, replay_all_nodes=True)
-    # node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
-    # wallet = tt.Wallet(attach_to=node_under_test)
-    # transaction1 = wallet.api.transfer('initminer', 'null', tt.Asset.Test(1234), 'memo', broadcast=False)
-    # transaction2 = wallet.api.transfer_to_vesting('initminer', 'null', tt.Asset.Test(1234), broadcast=False)
-    # after_fork_block = make_fork(
-    #     networks,
-    #     main_chain_trxs=[transaction1],
-    #     fork_chain_trxs=[transaction2],
-    # )
-
-    # # THEN
-    # wait_for_irreversible_progress(node_under_test, after_fork_block)
-
-    # blks = session.query(blocks).filter(blocks.num < after_fork_block).order_by(blocks.num).all()
-    # blks_ref = session_ref.query(blocks).filter(blocks.num < after_fork_block).order_by(blocks.num).all()
-
-    # for block, block_ref in zip(blks, blks_ref):
-    #     assert block.hash == block_ref.hash
-
-    # trxs = session.query(transactions).filter(transactions.block_num < after_fork_block).order_by(transactions.trx_hash).all()
-    # trxs_ref = session_ref.query(transactions).filter(transactions.block_num < after_fork_block).order_by(transactions.trx_hash).all()
-
-    # for trx, trx_ref in zip(trxs, trxs_ref):
-    #     assert trx.trx_hash == trx_ref.trx_hash
-
-    # ops = session.query(operations).filter(operations.block_num < after_fork_block).order_by(operations.id).all()
-    # ops_ref = session_ref.query(operations).filter(operations.block_num < after_fork_block).order_by(operations.id).all()
-
-    # for op, op_ref in zip(ops, ops_ref):
-    #     assert op.body == op_ref.body
