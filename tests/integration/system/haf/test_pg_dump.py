@@ -53,7 +53,7 @@ def db2text(databasename):
 def comparethesetexts_equal(fileset1, fileset2):
     def comparefiles(file1, file2):
         difffilename = f'diff_{file1}_{file2}.diff'
-        subprocess.call(f"diff {file1} {file2} > {difffilename}", shell=True)
+        subprocess.call(f"diff -w {file1} {file2} > {difffilename}", shell=True)
         s = open(difffilename).read()
         filelength = len(s)
         if filelength:
