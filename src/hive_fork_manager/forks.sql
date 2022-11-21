@@ -6,5 +6,3 @@ CREATE TABLE IF NOT EXISTS hive.fork(
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.fork', '');
 
-INSERT INTO hive.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp )
-    ON CONFLICT DO NOTHING;
