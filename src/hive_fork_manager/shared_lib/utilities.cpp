@@ -204,48 +204,88 @@ TupleDesc build_tuple_descriptor(PG_FUNCTION_ARGS)
   return retvalDescription;
 }
 
-template<typename... Collect>
-Datum colect_data_and_fill_returned_recordset(const std::function<void()>& collect, const std::function<void()>& fill_return_tuple,  const char* C_function_name, const char* arg1) noexcept 
-{
-  try 
-  {
-    collect();
-  }
-  catch(const fc::exception& ex)
-  {
-    fc::string exception_info = ex.to_string();
-    issue_error(fc::string("Broken " + fc::string(C_function_name) + "() input argument: `") + arg1 + fc::string("'. Error: ") + exception_info);
-    return (Datum)0;
-  }
-  catch(const std::exception& ex)
-  {
-    issue_error(fc::string("Broken " + fc::string(C_function_name) + "() input argument: `") + arg1 + fc::string("'. Error: ") + ex.what());
-    return (Datum)0;
-  }
-  catch(...)
-  {
-    issue_error(fc::string("Unknown error during processing " + fc::string(C_function_name) + "(") + arg1 + fc::string(")"));
-    return (Datum)0;
+#define HFM_NOEXCEPT_CAPTURE_AND_ISSUE_ERROR(ARG_VAL)                                                                          \
+  catch(const fc::exception& ex)                                                                                               \
+  {                                                                                                                            \
+    std::string arg1;                                                                                                          \
+    try                                                                                                                        \
+    {                                                                                                                          \
+      arg1 = ARG_VAL;                                                                                                          \
+    }                                                                                                                          \
+    catch(...)                                                                                                                 \
+    {                                                                                                                          \
+      arg1 = "[error retrieving arg1 value]";                                                                                  \
+    }                                                                                                                          \
+    fc::string exception_info = ex.to_string();                                                                                \
+    issue_error(fc::string("Broken " + fc::string(C_function_name) + "()") + arg1 + fc::string(". Error: ") + exception_info); \
+    return (Datum)0;                                                                                                           \
+  }                                                                                                                            \
+  catch(const std::exception& ex)                                                                                              \
+  {                                                                                                                            \
+    std::string arg1;                                                                                                          \
+    try                                                                                                                        \
+    {                                                                                                                          \
+      arg1 = ARG_VAL;                                                                                                          \
+    }                                                                                                                          \
+    catch(...)                                                                                                                 \
+    {                                                                                                                          \
+      arg1 = "[error retrieving arg1 value]";                                                                                  \
+    }                                                                                                                          \
+    issue_error(fc::string("Broken " + fc::string(C_function_name) + "()") + arg1 + fc::string(". Error: ") + ex.what());      \
+    return (Datum)0;                                                                                                           \
+  }                                                                                                                            \
+  catch(...)                                                                                                                   \
+  {                                                                                                                            \
+    std::string arg1;                                                                                                          \
+    try                                                                                                                        \
+    {                                                                                                                          \
+      arg1 = ARG_VAL;                                                                                                          \
+    }                                                                                                                          \
+    catch(...)                                                                                                                 \
+    {                                                                                                                          \
+      arg1 = "[error retrieving arg1 value]";                                                                                  \
+    }                                                                                                                          \
+    issue_error(fc::string("Broken " + fc::string(C_function_name) + "()") + arg1 + fc::string(". Unknown error"));            \
+    return (Datum)0;                                                                                                           \
   }
 
-  fill_return_tuple();
+template<typename Collect, typename FillReturnTuple, typename ArgValueGetter>
+Datum colect_data_and_fill_returned_recordset(Collect collect, FillReturnTuple fill_return_tuple,
+  const char* C_function_name, ArgValueGetter arg_getter) noexcept
+{
+  try
+  {
+    collect();
+  } HFM_NOEXCEPT_CAPTURE_AND_ISSUE_ERROR( fc::string(" input argument: '") + arg_getter() + "'" )
+
+  try
+  {
+    fill_return_tuple();
+  } HFM_NOEXCEPT_CAPTURE_AND_ISSUE_ERROR( ": fill_return_tuple invocation" )
 
   return (Datum)0;
 }
 
-Datum colect_operation_data_and_fill_returned_recordset(const std::function<void(const operation&)>& collect,
-  const std::function<void()>& fill_return_tuple,  const char* C_function_name, const char* raw_data, uint32_t data_length) noexcept 
+template<typename Collect, typename FillReturnTuple>
+Datum colect_operation_data_and_fill_returned_recordset(Collect collect,
+  FillReturnTuple fill_return_tuple, const char* C_function_name, const char* raw_data, uint32_t data_length) noexcept
 {
-  using hive::protocol::operation;
+  try
+  {
+    using hive::protocol::operation;
 
-  operation op = fc::raw::unpack_from_char_array< operation >( raw_data, data_length );
+    operation op = fc::raw::unpack_from_char_array< operation >( raw_data, data_length );
 
-  fc::string op_name;
-  fc::get_legacy_static_variant_name{ op_name }( op );
+    return colect_data_and_fill_returned_recordset( [&]{
+      collect(op);
+    }, fill_return_tuple, C_function_name,
+    [&op] {
+      fc::variant v;
+      fc::to_variant(op, v);
 
-  return colect_data_and_fill_returned_recordset( [&]{
-    collect(op);
-  }, fill_return_tuple, C_function_name, op_name.c_str() );
+      return fc::json::to_string( v );
+    } );
+  } HFM_NOEXCEPT_CAPTURE_AND_ISSUE_ERROR( ": unpack_from_char_array invocation" )
 }
 
 template<typename ElemT, typename F>
@@ -346,7 +386,7 @@ Datum extract_set_witness_properties(PG_FUNCTION_ARGS)
 
     __FUNCTION__,
 
-     _props_to_extract);
+     [=]{ return _props_to_extract; });
 
   return (Datum)0;
 }
@@ -549,7 +589,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
     __FUNCTION__,
 
-      ""
+      []{ return std::string{""}; }
     );
       
 
@@ -648,7 +688,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
       __FUNCTION__,
 
-      ""
+      []{ return std::string{""}; }
     );
       
 
