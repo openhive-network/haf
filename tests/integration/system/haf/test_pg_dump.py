@@ -19,6 +19,44 @@ from local_tools import make_fork, wait_for_irreversible_progress, run_networks,
 
 import re
 
+
+START_TEST_BLOCK = 108
+
+def test_pg_dump(prepared_networks_and_database, database):
+    tt.logger.info(f'Start test_compare_forked_node_database')
+
+    # GIVEN
+    source_session = prepare_source_db(prepared_networks_and_database)
+    pg_dump(source_session.bind.url)
+
+    pg_restore_to_show_files_only()
+
+    target_db_name = 'adb'
+    wipe_db(target_db_name)
+
+    # WHEN
+    pg_restore(target_db_name)
+
+    # THEN 
+    target_session, target_Base = access_target_db(target_db_name)
+    block_count = target_session.query(target_Base.classes.blocks).count()
+    assert(block_count == 105)
+
+    no_differences = comparethesetexts_equal(db2text(source_session), db2text(target_session))
+    assert(no_differences)
+
+
+def access_target_db(target_db_name):
+    engine = sqlalchemy.create_engine(f'postgresql:///{target_db_name}', echo=False, poolclass=NullPool)
+
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    metadata = sqlalchemy.MetaData(schema="hive")
+    Base = automap_base(bind=engine, metadata=metadata)
+    Base.prepare(reflect=True)
+
+    return session, Base
+
 def db2text(session):
     databasename = session.bind.url.database
     schema_filename = databasename + '_schema.txt'
@@ -132,45 +170,4 @@ def pg_restore(target_db_name):
     print('MTTK before real restore of post-data')
     #restore post-data
     shell(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {target_db_name}   adump.Fcsql")
-
-def access_target_db(target_db_name):
-    engine = sqlalchemy.create_engine(f'postgresql:///{target_db_name}', echo=False, poolclass=NullPool)
-
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    metadata = sqlalchemy.MetaData(schema="hive")
-    Base = automap_base(bind=engine, metadata=metadata)
-    Base.prepare(reflect=True)
-
-    return session, Base
-
-
-START_TEST_BLOCK = 108
-
-def test_pg_dump(prepared_networks_and_database, database):
-    tt.logger.info(f'Start test_compare_forked_node_database')
-
-    # GIVEN
-
-    source_session = prepare_source_db(prepared_networks_and_database)
-    pg_dump(source_session.bind.url)
-    pg_restore_to_show_files_only()
-
-    target_db_name = 'adb'
-    wipe_db(target_db_name)
-
-    # WHEN
-
-    pg_restore(target_db_name)
-
-
-    # THEN 
-
-    target_session, target_Base = access_target_db(target_db_name)
-    block_count = target_session.query(target_Base.classes.blocks).count()
-    assert(block_count == 105)
-
-    no_differences = comparethesetexts_equal(db2text(source_session), db2text(target_session))
-    assert(no_differences)
-
 
