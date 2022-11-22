@@ -22,8 +22,8 @@ import re
 
 START_TEST_BLOCK = 108
 
-def test_pg_dump(prepared_networks_and_database, database):
-    tt.logger.info(f'Start test_compare_forked_node_database')
+def test_pg_dump(prepared_networks_and_database):
+    tt.logger.info(f'Start test_pg_dump')
 
     # GIVEN
     source_session = prepare_source_db(prepared_networks_and_database)
