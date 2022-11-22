@@ -40,7 +40,7 @@ def test_pg_dump(prepared_networks_and_database):
 
     compare_databases(source_session,  target_session)
 
-    compare_psql_dumped_schemas(source_session,  target_session)
+    create_psql_tool_dumped_schemas(source_session,  target_session)
 
     
 def prepare_source_db(prepared_networks_and_database):
@@ -105,15 +105,15 @@ def wipe_db(db_name):
 def pg_restore(target_db_name):
     if ERRRORS_IN_CREATE_POLICY:
         # restore pre-data
-        shell(f"pg_restore  -v --section=pre-data  -Fc -d {target_db_name}   adump.Fcsql")
+        shell(f"pg_restore --section=pre-data  -Fc -d {target_db_name}   adump.Fcsql")
 
         #restore data
-        shell(f"pg_restore --disable-triggers --section=data  -v -Fc  -d {target_db_name}   adump.Fcsql")
+        shell(f"pg_restore --disable-triggers --section=data -Fc  -d {target_db_name}   adump.Fcsql")
 
         #restore post-data
         shell(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {target_db_name}   adump.Fcsql")
     else:
-        shell(f"pg_restore  -v --single-transaction  -Fc -d {target_db_name} drop adump.Fcsql")
+        shell(f"pg_restore --single-transaction  -Fc -d {target_db_name} adump.Fcsql")
 
 
 def access_target_db(target_db_name):
@@ -150,6 +150,23 @@ def take_table_contents(session, table):
     recordset = execute_sql(session, f"SELECT column_name FROM information_schema.columns  WHERE table_schema = 'hive' AND table_name   = '{table}';")
     columns = ', '.join([e[0] for e in (recordset)])
     return execute_sql(session, f"SELECT * FROM hive.{table} ORDER BY {columns}")
+
+
+def create_psql_tool_dumped_schema(session):
+    databasename = session.bind.url.database
+    schema_filename = databasename + '_schema.txt'
+
+    shell(rf"psql -d {databasename} -c '\dn'  > {schema_filename}")
+    shell(rf"psql -d {databasename} -c '\d hive.*' >> {schema_filename}")
+
+    return open(schema_filename).read()
+
+def create_psql_tool_dumped_schemas(source_session, target_session):
+    source_schema = create_psql_tool_dumped_schema(source_session)
+    target_schema = create_psql_tool_dumped_schema(target_session)
+
+    assert source_schema == target_schema
+
 
 def shell(command):
     subprocess.call(command, shell=True)
