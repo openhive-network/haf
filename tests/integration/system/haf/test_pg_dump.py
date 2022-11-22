@@ -84,6 +84,8 @@ def comparethesetexts_equal(fileset1, fileset2):
     return diff_file_lengths == 0
 
 
+def shell(command):
+    subprocess.call(command, shell=True)
 
 
 if __name__ == '__main__':
@@ -99,16 +101,16 @@ def test_pg_dump(prepared_networks_and_database, database):
     networks, session, Base = prepared_networks_and_database
     node_under_test = networks['Beta'].node('ApiNode0')
 
-    session_ref, Base_ref = database('postgresql:///haf_block_log_ref')
+    source_session, Base_ref = database('postgresql:///haf_block_log_ref')
 
-    print(session_ref.bind)
+    print(source_session.bind)
 
 
     blocks = Base.classes.blocks
     transactions = Base.classes.transactions
     operations = Base.classes.operations
 
-    reference_node = create_node_with_database(networks['Alpha'], session_ref.get_bind().url)
+    reference_node = create_node_with_database(networks['Alpha'], source_session.get_bind().url)
 
     
     blocklog_directory = get_blocklog_directory()
@@ -123,22 +125,25 @@ def test_pg_dump(prepared_networks_and_database, database):
 # time pg_dump -Fc hive -U hive -d hive -v -f hivemind-revisionsynca-revisionupgradeu-data.dump
 # oczywiście to przykłady z użycia starej bazy hiveminda (hive)
 
-    # subprocess.call(f'pg_dump {(session_ref.bind.url)} -Fp -v  > dump.sql', shell=True, stdout =f)
+    # subprocess.call(f'pg_dump {(source_session.bind.url)} -Fp -v  > dump.sql', shell=True, stdout =f)
     print('MTTK before PG_DUMP extension')
-    subprocess.call(f'pg_dump  -Fc   -d {(session_ref.bind.url)}   -f adump.Fcsql', shell=True)
+    def pg_dump(db_name):
+        shell(f'pg_dump  -Fc   -d {db_name} -f adump.Fcsql')
 
-    print('MTTK before PG_RESTORE 1 ')
-    subprocess.call(f'pg_restore --disable-triggers  -Fc -f adump.sql   adump.Fcsql', shell=True)
+    pg_dump(source_session.bind.url)
 
-    print('MTTK before PG_RESTORE 2 ')
-    subprocess.call(f'pg_restore --section=pre-data --disable-triggers  -Fc -f adump-pre-data.sql   adump.Fcsql', shell=True)
-    print('MTTK before PG_RESTORE 3 ')
-    subprocess.call(f'pg_restore --section=data --disable-triggers  -Fc -f adump-data.sql   adump.Fcsql', shell=True)
-    print('MTTK before PG_RESTORE 4 ')
-    subprocess.call(f'pg_restore --section=post-data --disable-triggers  -Fc -f adump-post-data.sql   adump.Fcsql', shell=True)
+    
+    def pg_restore_to_show_files_only():
+        shell(f'pg_restore                     --disable-triggers  -Fc -f adump.sql           adump.Fcsql')
+        shell(f'pg_restore --section=pre-data  --disable-triggers  -Fc -f adump-data.sql      adump.Fcsql')
+        shell(f'pg_restore --section=data      --disable-triggers  -Fc -f adump-data.sql      adump.Fcsql')
+        shell(f'pg_restore --section=post-data --disable-triggers  -Fc -f adump-post-data.sql adump.Fcsql')
+
+    pg_restore_to_show_files_only()
 
 
-    source_db = session_ref.bind.url.database
+
+    source_db = source_session.bind.url.database
     target_db = 'adb'
     # restore pre-data
     subprocess.call(f"""psql -U dev -d postgres \
