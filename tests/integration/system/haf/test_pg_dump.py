@@ -96,6 +96,9 @@ def prepare_source_db(prepared_networks_and_database):
 def shell(command):
     subprocess.call(command, shell=True)
 
+# time pg_restore -Fc -j 6 -v -U hive -d hive hivemind-31a03fa6-20201116.dump
+# time pg_dump -Fc hive -U hive -d hive -v -f hivemind-revisionsynca-revisionupgradeu-data.dump
+# oczywiście to przykłady z użycia starej bazy hiveminda (hive)
 def pg_dump(db_name):
     shell(f'pg_dump  -Fc   -d {db_name} -f adump.Fcsql')
 
@@ -119,6 +122,7 @@ def wipe_db(db_name):
 
 def pg_restore(target_db_name):
     print('MTTK before real restore of pre-data')
+    # restore pre-data
     shell(f"pg_restore  -v --section=pre-data  -Fc -d {target_db_name}   adump.Fcsql")
 
     print('MTTK before real restore of data')
@@ -129,6 +133,16 @@ def pg_restore(target_db_name):
     #restore post-data
     shell(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {target_db_name}   adump.Fcsql")
 
+def access_target_db(target_db_name):
+    engine = sqlalchemy.create_engine(f'postgresql:///{target_db_name}', echo=False, poolclass=NullPool)
+
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    metadata = sqlalchemy.MetaData(schema="hive")
+    Base = automap_base(bind=engine, metadata=metadata)
+    Base.prepare(reflect=True)
+
+    return session, Base
 
 if __name__ == '__main__':
     db2text('haf_block_log')
@@ -144,9 +158,6 @@ def test_pg_dump(prepared_networks_and_database, database):
 
     source_session = prepare_source_db(prepared_networks_and_database)
 
-# time pg_restore -Fc -j 6 -v -U hive -d hive hivemind-31a03fa6-20201116.dump
-# time pg_dump -Fc hive -U hive -d hive -v -f hivemind-revisionsynca-revisionupgradeu-data.dump
-# oczywiście to przykłady z użycia starej bazy hiveminda (hive)
 
     pg_dump(source_session.bind.url)
 
@@ -161,30 +172,21 @@ def test_pg_dump(prepared_networks_and_database, database):
 
 
 
-    engine = sqlalchemy.create_engine('postgresql:///adb', echo=False, poolclass=NullPool)
-
-    Session = sessionmaker(bind=engine)
-    session2 = Session()
-
-    metadata = sqlalchemy.MetaData(schema="hive")
-    Base2 = automap_base(bind=engine, metadata=metadata)
-    Base2.prepare(reflect=True)
+    target_session, Base2 = access_target_db(target_db_name)
 
 
 
-    blocks2 = Base2.classes.blocks
-
-    block_count = session2.query(blocks2).count()
+    block_count = target_session.query(Base2.classes.blocks).count()
     assert(block_count == 105)
 
     irreversible_data = Base2.classes.irreversible_data
 
-    reco = session2.query(irreversible_data).one()
+    reco = target_session.query(irreversible_data).one()
     print(reco)
 
     
     
-    no_differences = comparethesetexts_equal(db2text(source_db_name, source_session), db2text(target_db_name, session2))
+    no_differences = comparethesetexts_equal(db2text(source_db_name, source_session), db2text(target_db_name, target_session))
     assert(no_differences)
 
 
