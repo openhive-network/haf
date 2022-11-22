@@ -1,9 +1,13 @@
+import os
 import subprocess
+import pytest
 import sqlalchemy
 from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.automap import automap_base
 
+
+from pathlib import Path
 
 import test_tools as tt
 
@@ -39,6 +43,7 @@ def test_pg_dump(prepared_networks_and_database):
 
     compare_databases(source_session,  target_session)
 
+
     
 def prepare_source_db(prepared_networks_and_database):
     networks, source_session, Base = prepared_networks_and_database
@@ -50,10 +55,13 @@ def prepare_source_db(prepared_networks_and_database):
     source_db_name = source_session.bind.url
     return source_session, source_db_name
 
-
+# time pg_restore -Fc -j 6 -v -U hive -d hive hivemind-31a03fa6-20201116.dump
+# time pg_dump -Fc hive -U hive -d hive -v -f hivemind-revisionsynca-revisionupgradeu-data.dump
+# oczywiście to przykłady z użycia starej bazy hiveminda (hive)
 def pg_dump(db_name):
     shell(f'pg_dump  -Fc   -d {db_name} -f adump.Fcsql')
 
+    
 def pg_restore_to_show_files_only():
     shell(f'pg_restore                     --disable-triggers  -Fc -f adump.sql           adump.Fcsql')
     shell(f'pg_restore --section=pre-data  --disable-triggers  -Fc -f adump-data.sql      adump.Fcsql')
@@ -98,25 +106,69 @@ def access_target_db(target_db_name):
 
     return session, Base
 
+    
+def comparethesetexts_equal(fileset1, fileset2):
+    diff_file_lengths = 0
+    for file1, file2 in zip(fileset1, fileset2):
+        print(f'meld {os.path.realpath(file1)} {os.path.realpath(file2)}')
+        diff_file_lengths += comparefiles(file1, file2)
+
+    return diff_file_lengths == 0
+
+def comparefiles(file1, file2):
+    difffilename = f'diff_{file1}_{file2}.diff'
+    subprocess.call(f"diff {file1} {file2} > {difffilename}", shell=True)
+    s = open(difffilename).read()
+    filelength = len(s)
+    if filelength:
+        print(f"Error: database dumps not equal ({file1}, {file2}), diff file:\n{s}")
+    return filelength
+
+def db2text(session):
+    databasename = session.bind.url.database
+    schema_filename = databasename + '_schema.txt'
+    data_filename = databasename + '_data.txt'
+
+
+    shell(f'rm {schema_filename}')
+    shell(f'rm {data_filename}')
+
+
+    shell(rf"psql -d {databasename} -c '\dn'  > {schema_filename}")
+    shell(rf"psql -d {databasename} -c '\d hive.*' >> {schema_filename}")
+    
+    dbobjects2text('Table', databasename, session, schema_filename, data_filename)
+    dbobjects2text('View', databasename, session, schema_filename, data_filename)
+
+    return schema_filename, data_filename
+
+
 
 def compare_databases(source_session, target_session):
-    ask_for_tables_and_vies_sql = f"select table_name from information_schema.tables where table_schema = 'hive'"
-    source_tables = execute_sql_one_column(source_session, ask_for_tables_and_vies_sql)
-    target_tables = execute_sql_one_column(target_session, ask_for_tables_and_vies_sql)
+    ask_for_tables_and_views_sql = f"select table_name from information_schema.tables where table_schema = 'hive'"
+    source_tables = execute_sql_one_column(source_session, ask_for_tables_and_views_sql)
+    target_tables = execute_sql_one_column(target_session, ask_for_tables_and_views_sql)
 
     source_tables.sort()
     target_tables.sort()
 
     assert source_tables ==  target_tables
 
+    
     for table in source_tables:
         ask_for_table_contents_sql = f"SELECT * FROM hive.{table}"
-        source_recordset = execute_sql(source_session, ask_for_table_contents_sql)
-        target_recordset = execute_sql(target_session, ask_for_table_contents_sql)
+
+        recordset = execute_sql(source_session, f"SELECT column_name FROM information_schema.columns  WHERE table_schema = 'hive' AND table_name   = '{table}';")
+        source_columns = ', '.join([e[0] for e in (recordset)])
+        source_recordset = execute_sql(source_session, f"SELECT * FROM hive.{table} ORDER BY {source_columns}")
+
+        recordset = execute_sql(target_session, f"SELECT column_name FROM information_schema.columns  WHERE table_schema = 'hive' AND table_name   = '{table}';")
+        target_columns = ', '.join([e[0] for e in (recordset)])
+        target_recordset = execute_sql(target_session, f"SELECT * FROM hive.{table} ORDER BY {target_columns}")
 
         assert source_recordset == target_recordset, f"ERROR: in table: {table}"
 
-        
+
 def shell(command):
     subprocess.call(command, shell=True)
 
@@ -124,7 +176,7 @@ def shell(command):
 def execute_sql_one_column(session, s):
     return [e[0] for e in session.execute(s)]
 
-
 def execute_sql(session, s):
     return [e for e in session.execute(s)]
+    
 
