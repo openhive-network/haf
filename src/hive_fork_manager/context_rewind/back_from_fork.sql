@@ -5,14 +5,14 @@ CREATE OR REPLACE FUNCTION hive.revert_insert( _table_schema TEXT, _table_name T
 AS
 $BODY$
 BEGIN
-    PERFORM hive.dlog('<no-context>', 'Entering revert_insert');
+    PERFORM hive.dlog('<no-context>', '"Entering revert_insert" _table_schema=%s, _table_name=%s, _row_id=%s',_table_schema, _table_name, _row_id::TEXT);
     EXECUTE format(
           'DELETE FROM %I.%I WHERE hive_rowid = %s'
         , _table_schema
         , _table_name
         , _row_id
     );
-    PERFORM hive.dlog('<no-context>', 'Exiting revert_insert');
+    PERFORM hive.dlog('<no-context>', '"Exiting revert_insert" _table_schema=%s, _table_name=%s, _row_id=%s',_table_schema, _table_name, _row_id::TEXT);
 END;
 $BODY$
 ;
@@ -24,7 +24,8 @@ CREATE OR REPLACE FUNCTION hive.revert_delete( _table_schema TEXT, _table_name T
 AS
 $BODY$
 BEGIN
-    PERFORM hive.dlog('<no-context>', 'Entering revert_delete');
+    PERFORM hive.dlog('<no-context>', '"Entering revert_delete" _table_schema=%s, _table_name=%s, _shadow_table_name=%s, _operation_id=%s, _columns=%s',
+    _table_schema, _table_name,_shadow_table_name,_operation_id::TEXT,_columns);
     EXECUTE format(
         'INSERT INTO %I.%I( %s )
         (
@@ -39,7 +40,8 @@ BEGIN
         , _shadow_table_name
         , _operation_id
     );
-    PERFORM hive.dlog('<no-context>', 'Exiting revert_delete');
+    PERFORM hive.dlog('<no-context>', '"Exiting revert_delete" _table_schema=%s, _table_name=%s, _shadow_table_name=%s, _operation_id=%s, _columns=%s',
+    _table_schema, _table_name,_shadow_table_name,_operation_id::TEXT,_columns);
 END;
 $BODY$
 ;
@@ -51,7 +53,8 @@ CREATE OR REPLACE FUNCTION hive.revert_update( _table_schema TEXT, _table_name T
 AS
 $BODY$
 BEGIN
-PERFORM hive.dlog('<no-context>', 'Entering revert_update');
+PERFORM hive.dlog('<no-context>', '"Entering revert_update" _table_schema=%s, _table_name=%s, _shadow_table_name=%s, _operation_id=%s, _columns=%s, _row_id=%s',
+    _table_schema, _table_name,_shadow_table_name,_operation_id::TEXT,_columns,_row_id::TEXT);
 EXECUTE format(
     'UPDATE %I.%I as t SET ( %s ) = (
         SELECT %s
@@ -67,7 +70,8 @@ EXECUTE format(
     , _operation_id
     , _row_id
     );
-    PERFORM hive.dlog('<no-context>', 'Exiting revert_update');
+    PERFORM hive.dlog('<no-context>', '"Exiting revert_update" _table_schema=%s, _table_name=%s, _shadow_table_name=%s, _operation_id=%s, _columns=%s, _row_id=%s',
+    _table_schema, _table_name,_shadow_table_name,_operation_id::TEXT,_columns,_row_id::TEXT);
 END;
 $BODY$
 ;
@@ -79,7 +83,8 @@ CREATE OR REPLACE FUNCTION hive.back_from_fork_one_table( _table_schema TEXT, _t
 AS
 $BODY$
 BEGIN
-    PERFORM hive.dlog('<no-context>', 'Entering back_from_fork_one_table');
+    PERFORM hive.dlog('<no-context>', '"Entering back_from_fork_one_table" _table_schema=%s, _table_name=%s, _shadow_table_name=%s, _block_num_before_fork=%s',
+     _table_schema, _table_name, _shadow_table_name, _block_num_before_fork::TEXT);
     EXECUTE format(
         'SELECT
         CASE st.hive_operation_type
@@ -99,7 +104,8 @@ BEGIN
 
     -- remove rows from shadow table
     EXECUTE format( 'DELETE FROM hive.%I st WHERE st.hive_block_num > %s', _shadow_table_name, _block_num_before_fork );
-    PERFORM hive.dlog('<no-context>', 'Exiting back_from_fork_one_table');
+    PERFORM hive.dlog('<no-context>', '"Exiting back_from_fork_one_table" _table_schema=%s, _table_name=%s, _shadow_table_name=%s, _block_num_before_fork=%s',
+     _table_schema, _table_name, _shadow_table_name, _block_num_before_fork::TEXT);
 END;
 $BODY$
 ;

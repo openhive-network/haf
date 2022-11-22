@@ -33,6 +33,9 @@ $$
 DECLARE
     __arr hive.authority_type []:= enum_range(null::hive.authority_type);
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering authority_type_c_int_to_enum" _pos=%I', _pos);
+    PERFORM hive.dlog('<no-context>', '"Exiting authority_type_c_int_to_enum" _pos=%I', _pos);
+
     return __arr[_pos + 1];
 END
 $$;
@@ -45,6 +48,9 @@ IMMUTABLE
 AS
 $$
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering get_keyauths" _operation_body=%s', _operation_body);
+    PERFORM hive.dlog('<no-context>', '"Exiting get_keyauths" _operation_body=%s', _operation_body);
+
     RETURN QUERY SELECT 
         key_auth , 
         hive.authority_type_c_int_to_enum(authority_c_kind), 

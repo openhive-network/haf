@@ -17,7 +17,7 @@ AS
 $BODY$
 begin
     if (select lvl from hive.log_properties) >= 100 then
-    RAISE DEBUG 'context="%" haflog="%"', context_name, msg;
+    RAISE DEBUG 'level="DEBUG" context="%" haflog=%', context_name, msg;
     end if;
 end;
 $BODY$;
@@ -32,7 +32,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 100 then
 Select format(msg1, arg1) into msg;
-RAISE DEBUG 'context="%" haflog="%"', context_name, msg;
+RAISE DEBUG 'level="DEBUG" context="%" haflog=%', context_name, msg;
 end if;
 
 end;
@@ -48,7 +48,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 100 then
 Select format(msg1, arg1, arg2) into msg;
-RAISE DEBUG 'context="%" haflog="%"', context_name, msg;
+RAISE DEBUG 'level="DEBUG" context="%" haflog=%', context_name, msg;
 end if;
 
 end;
@@ -64,7 +64,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 100 then
 Select format(msg1, arg1, arg2, arg3) into msg;
-RAISE DEBUG 'context="%" haflog="%"', context_name, msg;
+RAISE DEBUG 'level="DEBUG" context="%" haflog=%', context_name, msg;
 end if;
 
 end;
@@ -81,9 +81,57 @@ begin
 
 if (select lvl from hive.log_properties) >= 100 then
 Select format(msg1, arg1, arg2, arg3, arg4) into msg;
-RAISE DEBUG 'context="%" haflog="%"', context_name, msg;
+RAISE DEBUG 'level="DEBUG" context="%" haflog=%', context_name, msg;
 end if;
 
+end;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.dlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 100 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5) into msg;
+RAISE DEBUG 'level="DEBUG" context="%" haflog=%', context_name, msg;
+end if;
+end;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.dlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement, arg6 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 100 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5, arg6) into msg;
+RAISE DEBUG 'level="DEBUG" context="%" haflog=%', context_name, msg;
+end if;
+end;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.dlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement, arg6 anyelement, arg7 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 100 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5, arg6, arg7) into msg;
+RAISE DEBUG 'level="DEBUG" context="%" haflog=%', context_name, msg;
+end if;
 end;
 $BODY$;
 
@@ -96,7 +144,7 @@ AS
 $BODY$
 begin
 if (select lvl from hive.log_properties) >= 40 then
-RAISE EXCEPTION 'context="%" haflog="%"', context_name, msg;
+RAISE EXCEPTION 'level="ERROR" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -112,7 +160,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 40 then
 Select format(msg1, arg1) into msg;
-RAISE EXCEPTION 'context="%" haflog="%"', context_name, msg;
+RAISE EXCEPTION 'level="ERROR" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -128,7 +176,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 40 then
 Select format(msg1, arg1, arg2) into msg;
-RAISE EXCEPTION 'context="%" haflog="%"', context_name, msg;
+RAISE EXCEPTION 'level="ERROR" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -144,7 +192,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 40 then
 Select format(msg1, arg1, arg2, arg3) into msg;
-RAISE EXCEPTION 'context="%" haflog="%"', context_name, msg;
+RAISE EXCEPTION 'level="ERROR" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -161,11 +209,60 @@ begin
 
 if (select lvl from hive.log_properties) >= 40 then
 Select format(msg1, arg1, arg2, arg3, arg4) into msg;
-RAISE EXCEPTION 'context="%" haflog="%"', context_name, msg;
+RAISE EXCEPTION 'level="ERROR" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
 $BODY$;
+
+CREATE OR REPLACE FUNCTION hive.elog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 40 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5) into msg;
+RAISE EXCEPTION 'level="ERROR" context="%" haflog=''%''', context_name, msg;
+end if;
+end;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.elog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement, arg6 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 40 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5, arg6) into msg;
+RAISE EXCEPTION 'level="ERROR" context="%" haflog=''%''', context_name, msg;
+end if;
+end;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.elog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement, arg6 anyelement, arg7 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 40 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5, arg6, arg7) into msg;
+RAISE EXCEPTION 'level="ERROR" context="%" haflog=''%''', context_name, msg;
+end if;
+end;
+$BODY$;
+
 
 --INFO LOGS
 
@@ -177,7 +274,7 @@ $BODY$
 
 begin
 if (select lvl from hive.log_properties) >= 80 then
-RAISE INFO 'context="%" haflog="%"', context_name, msg;
+RAISE INFO 'level="INFO" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -193,7 +290,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 80 then
 Select format(msg1, arg1) into msg;
-RAISE INFO 'context="%" haflog="%"', context_name, msg;
+RAISE INFO 'level="INFO" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -209,7 +306,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 80 then
 Select format(msg1, arg1, arg2) into msg;
-RAISE INFO 'context="%" haflog="%"', context_name, msg;
+RAISE INFO 'level="INFO" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -225,7 +322,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 80 then
 Select format(msg1, arg1, arg2, arg3) into msg;
-RAISE INFO 'context="%" haflog="%"', context_name, msg;
+RAISE INFO 'level="INFO" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -242,9 +339,58 @@ begin
 
 if (select lvl from hive.log_properties) >= 80 then
 Select format(msg1, arg1, arg2, arg3, arg4) into msg;
-RAISE INFO 'context="%" haflog="%"', context_name, msg;
+RAISE INFO 'level="INFO" context="%" haflog=''%''', context_name, msg;
 end if;
 
+end;
+$BODY$;
+
+
+CREATE OR REPLACE FUNCTION hive.ilog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 80 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5) into msg;
+RAISE INFO 'level="INFO" context="%" haflog=''%''', context_name, msg;
+end if;
+end;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.ilog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement, arg6 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 80 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5, arg6) into msg;
+RAISE INFO 'level="INFO" context="%" haflog=''%''', context_name, msg;
+end if;
+end;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.ilog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement, arg6 anyelement, arg7 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 80 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5, arg6, arg7) into msg;
+RAISE INFO 'level="INFO" context="%" haflog=''%''', context_name, msg;
+end if;
 end;
 $BODY$;
 
@@ -257,7 +403,7 @@ AS
 $BODY$
 begin
 if (select lvl from hive.log_properties) >= 60 then
-RAISE WARNING 'context="%" haflog="%"', context_name, msg;
+RAISE WARNING 'level="WARNING" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -273,7 +419,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 60 then
 Select format(msg1, arg1) into msg;
-RAISE WARNING 'context="%" haflog="%"', context_name, msg;
+RAISE WARNING 'level="WARNING" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -289,7 +435,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 60 then
 Select format(msg1, arg1, arg2) into msg;
-RAISE WARNING 'context="%" haflog="%"', context_name, msg;
+RAISE WARNING 'level="WARNING" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -305,7 +451,7 @@ DECLARE
 begin
 if (select lvl from hive.log_properties) >= 60 then
 Select format(msg1, arg1, arg2, arg3) into msg;
-RAISE WARNING 'context="%" haflog="%"', context_name, msg;
+RAISE WARNING 'level="WARNING" context="%" haflog=''%''', context_name, msg;
 end if;
 
 end;
@@ -322,9 +468,57 @@ begin
 
 if (select lvl from hive.log_properties) >= 60 then
 Select format(msg1, arg1, arg2, arg3, arg4) into msg;
-RAISE WARNING 'context="%" haflog="%"', context_name, msg;
+RAISE WARNING 'level="WARNING" context="%" haflog=''%''', context_name, msg;
 end if;
 
+end;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.wlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 60 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5) into msg;
+RAISE WARNING 'level="WARNING" context="%" haflog=''%''', context_name, msg;
+end if;
+end;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.wlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement, arg6 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 60 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5, arg6) into msg;
+RAISE WARNING 'level="WARNING" context="%" haflog=''%''', context_name, msg;
+end if;
+end;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.wlog(context_name text, msg1 text, arg1 anyelement, arg2 anyelement, arg3 anyelement, arg4 anyelement, arg5 anyelement, arg6 anyelement, arg7 anyelement)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+    msg text;
+begin
+
+if (select lvl from hive.log_properties) >= 60 then
+Select format(msg1, arg1, arg2, arg3, arg4, arg5, arg6, arg7) into msg;
+RAISE WARNING 'level="WARNING" context="%" haflog=''%''', context_name, msg;
+end if;
 end;
 $BODY$;
 

@@ -5,9 +5,9 @@ CREATE OR REPLACE FUNCTION hive.create_revert_functions( _table_schema TEXT,  _t
 AS
 $BODY$
 DECLARE
-__columns TEXT = array_to_string( _columns, ',' );
+    __columns TEXT = array_to_string( _columns, ',' );
 BEGIN
-    PERFORM hive.dlog('<no-context>', 'Entering create_revert_functions');
+    PERFORM hive.dlog('<no-context>', '"Entering create_revert_functions" _table_schema=%s, _table_name=%s, _shadow_table_name=%s, _columns=%s',_table_schema, _table_name,_shadow_table_name, __columns);
     -- rewind_insert
     EXECUTE format(
         'CREATE OR REPLACE FUNCTION hive.%I_%I_revert_insert( _row_id BIGINT )
@@ -83,7 +83,7 @@ BEGIN
     , _shadow_table_name
     , _table_schema, _table_name
     );
-    PERFORM hive.dlog('<no-context>', 'Exiting create_revert_functions');
+    PERFORM hive.dlog('<no-context>', '"Exiting create_revert_functions" _table_schema=%s, _table_name=%s, _shadow_table_name=%s, _columns=%s',_table_schema, _table_name,_shadow_table_name, __columns);
 END;
 $BODY$
 ;
@@ -95,7 +95,7 @@ CREATE OR REPLACE FUNCTION hive.drop_revert_functions( _table_schema TEXT,  _tab
 AS
 $BODY$
 BEGIN
-    PERFORM hive.dlog('<no-context>', 'Entering drop_revert_functions');
+    PERFORM hive.dlog('<no-context>', '"Entering drop_revert_functions" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
     -- rewind_insert
     EXECUTE format(
           'DROP FUNCTION hive.%I_%I_revert_insert'
@@ -115,7 +115,7 @@ BEGIN
         , _table_schema, _table_name
         , _table_schema, _table_name
     );
-    PERFORM hive.dlog('<no-context>', 'Exiting drop_revert_functions');
+    PERFORM hive.dlog('<no-context>', '"Exiting drop_revert_functions" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
 END;
 $BODY$
 ;
@@ -134,13 +134,13 @@ DECLARE
     __hive_rowid_column_name TEXT := 'hive_rowid';
     __operation_id_column_name TEXT :=  'hive_operation_id';
 BEGIN
-    PERFORM hive.dlog('<no-context>', 'Entering create_shadow_table');
+    PERFORM hive.dlog('<no-context>', '"Entering create_shadow_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
     EXECUTE format('CREATE TABLE hive.%I AS TABLE %I.%I', __shadow_table_name, _table_schema, _table_name );
     EXECUTE format('DELETE FROM hive.%I', __shadow_table_name ); --empty shadow table if origin table is not empty
     EXECUTE format('ALTER TABLE hive.%I ADD COLUMN %I INTEGER NOT NULL', __shadow_table_name, __block_num_column_name );
     EXECUTE format('ALTER TABLE hive.%I ADD COLUMN %I hive.TRIGGER_OPERATION NOT NULL', __shadow_table_name, __operation_column_name );
     EXECUTE format('ALTER TABLE hive.%I ADD COLUMN %I BIGSERIAL PRIMARY KEY', __shadow_table_name, __operation_id_column_name );
-    PERFORM hive.dlog('<no-context>', 'Exiting create_shadow_table');
+    PERFORM hive.dlog('<no-context>', '"Exiting create_shadow_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
 
     RETURN __shadow_table_name;
 END;
@@ -172,7 +172,7 @@ DECLARE
     __registered_table_id INTEGER := NULL;
     __columns_names TEXT[];
 BEGIN
-    PERFORM hive.dlog(_context_name, 'Entering register_table');
+    PERFORM hive.dlog(_context_name, '"Entering register_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
     PERFORM hive.chceck_constrains(_table_schema, _table_name);
 
     -- create a shadow table
@@ -374,7 +374,7 @@ BEGIN
        , ( __registered_table_id, __hive_update_trigger_name, __hive_triggerfunction_name_update, current_user )
        , ( __registered_table_id, __hive_truncate_trigger_name, __hive_triggerfunction_name_truncate, current_user )
     ;
-    PERFORM hive.dlog(_context_name, 'Exiting register_table');
+    PERFORM hive.dlog(_context_name, '"Exiting register_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
 END;
 $BODY$
 ;
@@ -400,7 +400,7 @@ DECLARE
     __context_name TEXT := NULL;
     __registered_table_id INTEGER := NULL;
 BEGIN
-    PERFORM hive.dlog('<no-context>', 'Entering unregister_table');
+    PERFORM hive.dlog('<no-context>', '"Entering unregister_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
     SELECT hc.name, hrt.id INTO __context_name, __registered_table_id
     FROM hive.contexts hc
     JOIN hive.registered_tables hrt ON hrt.context_id = hc.id
@@ -432,7 +432,7 @@ BEGIN
     -- remove inheritance and sequence
     EXECUTE format( 'ALTER TABLE %I.%s NO INHERIT hive.%s', lower(_table_schema), lower(_table_name), __context_name );
     EXECUTE format( 'ALTER TABLE %I.%s DROP COLUMN hive_rowid CASCADE', lower(_table_schema), lower(_table_name)  );
-    PERFORM hive.dlog('<no-context>', 'Exiting unregister_table');
+    PERFORM hive.dlog('<no-context>', '"Exiting unregister_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
 END;
 $BODY$
 ;

@@ -11,7 +11,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_accounts';
 BEGIN
-    PERFORM hive.dlog(_context, 'Entering start_provider_accounts');
+    PERFORM hive.dlog(_context, '"Entering start_provider_accounts"');
     SELECT hac.id
     FROM hive.contexts hac
     WHERE hac.name = _context
@@ -28,7 +28,7 @@ BEGIN
                     , CONSTRAINT uq_%s UNIQUE( name )
                     )', __table_name, __table_name,  __table_name
     );
-    PERFORM hive.dlog(_context, 'Entering start_provider_accounts');
+    PERFORM hive.dlog(_context, '"Entering start_provider_accounts"');
 
     RETURN ARRAY[ __table_name ];
 END;
@@ -49,7 +49,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_accounts';
 BEGIN
-    PERFORM hive.dlog(_context, 'Entering update_state_provider_accounts');
+    PERFORM hive.dlog(_context, '"Entering update_state_provider_accounts" _first_block=%s, _last_block=%s', _first_block::TEXT,_last_block::TEXT);
     SELECT hac.id
     FROM hive.contexts hac
     WHERE hac.name = _context
@@ -70,7 +70,7 @@ BEGIN
         ON CONFLICT DO NOTHING'
         , _context, _context, _first_block, _last_block
     );
-    PERFORM hive.dlog(_context, 'Exiting update_state_provider_accounts');
+    PERFORM hive.dlog(_context, '"Exiting update_state_provider_accounts" _first_block=%s, _last_block=%s', _first_block::TEXT,_last_block::TEXT);
 END;
 $BODY$
 ;
@@ -86,7 +86,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_accounts';
 BEGIN
-    PERFORM hive.dlog(_context, 'Entering drop_state_provider_accounts');
+    PERFORM hive.dlog(_context, '"Entering drop_state_provider_accounts"');
     SELECT hac.id
     FROM hive.contexts hac
     WHERE hac.name = _context
@@ -97,7 +97,7 @@ BEGIN
     END IF;
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
-    PERFORM hive.dlog(_context, 'Exiting drop_state_provider_accounts');
+    PERFORM hive.dlog(_context, '"Exiting drop_state_provider_accounts"');
 END;
 $BODY$
 ;
