@@ -40,6 +40,8 @@ def test_pg_dump(prepared_networks_and_database):
 
     compare_databases(source_session,  target_session)
 
+    compare_psql_dumped_schemas(source_session,  target_session)
+
     
 def prepare_source_db(prepared_networks_and_database):
     networks, source_session, Base = prepared_networks_and_database
@@ -50,6 +52,31 @@ def prepare_source_db(prepared_networks_and_database):
     reference_node.run(wait_for_live=False, replay_from=block_log, stop_at_block= 105)
     source_db_name = source_session.bind.url
     return source_session, source_db_name
+
+def create_psql_tool_dumped_schema(session):
+    databasename = session.bind.url.database
+    schema_filename = databasename + '_schema.txt'
+
+    shell(rf"psql -d {databasename} -c '\dn'  > {schema_filename}")
+    shell(rf"psql -d {databasename} -c '\d hive.*' >> {schema_filename}")
+
+    return schema_filename
+
+def compare_psql_dumped_schemas(source_session, target_session):
+    def comparefiles(file1, file2):
+        difffilename = f'diff_{file1}_{file2}.diff'
+        shell(f"diff {file1} {file2} > {difffilename}")
+        s = open(difffilename).read()
+        filelength = len(s)
+        if filelength:
+            print(f"Error: schema psql dumps not equal ({file1}, {file2}), diff file:\n{s}")
+        return filelength
+
+    source_schema_filename = create_psql_tool_dumped_schema(source_session)
+    target_schema_filename = create_psql_tool_dumped_schema(target_session)
+
+    assert comparefiles(source_schema_filename, target_schema_filename) == 0
+
 
 
 def pg_dump(db_name):
@@ -71,7 +98,7 @@ def wipe_db(db_name):
         WHERE pg_stat_activity.datname = '{db_name}' 
             AND pid <> pg_backend_pid();"
     """)
-    shell(f"psql -d postgres -c 'DROP DATABASE {db_name};'")
+    shell(f"psql -d postgres -c 'DROP DATABASE IF EXISTS {db_name};'")
     shell(f"psql -d postgres -c 'CREATE DATABASE {db_name};'")
 
 
@@ -86,7 +113,7 @@ def pg_restore(target_db_name):
         #restore post-data
         shell(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {target_db_name}   adump.Fcsql")
     else:
-        shell(f"pg_restore  -v --single-transaction  -Fc -d {target_db_name}  adump.Fcsql")
+        shell(f"pg_restore  -v --single-transaction  -Fc -d {target_db_name} drop adump.Fcsql")
 
 
 def access_target_db(target_db_name):
