@@ -19,41 +19,57 @@ from local_tools import make_fork, wait_for_irreversible_progress, run_networks,
 
 import re
 
-def db2text(databasename):
+def db2text(databasename, session):
 
-    outputfile = databasename + '_schema.txt'
-    contents_file = databasename + '_data.txt'
-
-
-    subprocess.call(f'rm {outputfile}', shell=True)
-    subprocess.call(f'rm {contents_file}', shell=True)
+    schema_filename = databasename + '_schema.txt'
+    data_filename = databasename + '_data.txt'
 
 
-    subprocess.call(rf"psql -d {databasename} -c '\dn'  > {outputfile}", shell=True)
-    subprocess.call(rf"psql -d {databasename} -c '\d hive.*' >> {outputfile}", shell=True)
-    # subprocess.call(rf"psql -d {databasename} -c '\d *' >> {outputfile}", shell=True)
+    subprocess.call(f'rm {schema_filename}', shell=True)
+    subprocess.call(f'rm {data_filename}', shell=True)
 
-    def dbobjects2text(pattern):
-        tables = re.findall(pattern, open(outputfile).read())
+
+    subprocess.call(rf"psql -d {databasename} -c '\dn'  > {schema_filename}", shell=True)
+    subprocess.call(rf"psql -d {databasename} -c '\d hive.*' >> {schema_filename}", shell=True)
+    # subprocess.call(rf"psql -d {databasename} -c '\d *' >> {schema_filename}", shell=True)
+
+    def dbobjects2text(table_or_view):
+        pattern = re.compile(rf'{table_or_view} "(.*)"')
+        tables = re.findall(pattern, open(schema_filename).read())
         print(tables)
 
         for table in tables:
-            subprocess.call(f"psql -d {databasename} -c 'SELECT * FROM {table}' >> {contents_file}", shell=True)
+            hive_prefix = 'hive.'
+            if table.startswith(hive_prefix):
+                table_wo_prefix = table[len(hive_prefix):]
+            else:
+                table_wo_prefix = table
+            subprocess.call(f"echo {table_or_view} {table} >> {data_filename}", shell=True)
+            # https://wiki.postgresql.org/wiki/Retrieve_primary_key_columns
+            # subprocess.call(f"""psql -d {databasename} -c  "SELECT a.attname, format_type(a.atttypid, a.atttypmod) AS data_type             FROM   pg_index i             JOIN   pg_attribute a ON a.attrelid = i.indrelid                                 AND a.attnum = ANY(i.indkey)             WHERE  i.indrelid = '{table}'::regclass             AND    i.indisprimary;"  >> {data_filename}""", shell=True)
 
-    pattern = re.compile(r'Table "(.*)"')
-    dbobjects2text(pattern)
+            # subprocess.call(f"""psql -d {databasename} -c "SELECT * FROM information_schema.columns  WHERE table_schema = 'hive' AND table_name   = '{table}';"  >> {data_filename}""", shell=True)
+            recordset = session.execute(f"SELECT column_name FROM information_schema.columns  WHERE table_schema = 'hive' AND table_name   = '{table_wo_prefix}';")
 
-    pattern = re.compile(r'View "(.*)"')
-    dbobjects2text(pattern)
+            
+            order_by = ', '.join([e[0] for e in (recordset)])
+            
+            execution_string  = f"psql -d {databasename} -c 'SELECT * FROM {table} ORDER BY {order_by}' >> {data_filename}"
+            print('execution_string=',execution_string)
+            subprocess.call(execution_string, shell=True)
 
-    return outputfile, contents_file
+    
+    dbobjects2text('Table')
+    dbobjects2text('View')
+
+    return schema_filename, data_filename
 
 
 
 def comparethesetexts_equal(fileset1, fileset2):
     def comparefiles(file1, file2):
         difffilename = f'diff_{file1}_{file2}.diff'
-        subprocess.call(f"diff -w {file1} {file2} > {difffilename}", shell=True)
+        subprocess.call(f"diff {file1} {file2} > {difffilename}", shell=True)
         s = open(difffilename).read()
         filelength = len(s)
         if filelength:
@@ -183,7 +199,7 @@ def test_pg_dump(prepared_networks_and_database, database):
 
     
     
-    no_differences = comparethesetexts_equal(db2text(source_db), db2text(target_db))
+    no_differences = comparethesetexts_equal(db2text(source_db, session), db2text(target_db, session2))
     assert(no_differences)
 
 
