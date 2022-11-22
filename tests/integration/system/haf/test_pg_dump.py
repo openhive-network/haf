@@ -44,8 +44,11 @@ def test_pg_dump(prepared_networks_and_database):
     block_count = target_session.query(target_Base.classes.blocks).count()
     assert(block_count == 105)
 
-    no_differences = comparethesetexts_equal(db2text(source_session), db2text(target_session))
-    assert(no_differences)
+    # no_differences = comparethesetexts_equal(db2text(source_session), db2text(target_session))
+    # assert(no_differences)
+
+    compare_dbs(source_session,  target_session)
+
 
     
 def prepare_source_db(prepared_networks_and_database):
@@ -145,6 +148,30 @@ def db2text(session):
 
     return schema_filename, data_filename
 
+
+
+def compare_dbs(source_session,  target_session):
+    ask_for_tables_and_vies_sql = f"select table_name from information_schema.tables where table_schema = 'hive'"
+    source_tables = execute_sql_one_column(source_session, ask_for_tables_and_vies_sql)
+    target_tables = execute_sql_one_column(target_session, ask_for_tables_and_vies_sql)
+
+    source_tables.sort()
+    target_tables.sort()
+
+    assert source_tables ==  target_tables
+
+    for table in source_tables:
+        print ("MTLK")
+        print(f'{table=}')
+        ask_for_table_contents_sql = f"SELECT * FROM hive.{table}"
+        source_recordset = execute_sql(source_session, ask_for_table_contents_sql)
+        target_recordset = execute_sql(target_session, ask_for_table_contents_sql)
+
+
+        assert source_recordset == target_recordset, f"ERROR: in table: {table}"
+
+
+
 def dbobjects2text(table_or_view, databasename, session, schema_filename, data_filename):
     pattern = re.compile(rf'{table_or_view} "(.*)"')
     db_relations = re.findall(pattern, open(schema_filename).read())
@@ -186,5 +213,10 @@ def shell(command):
     subprocess.call(command, shell=True)
 
 
+def execute_sql_one_column(session, s):
+    return [e[0] for e in session.execute(s)]
+
+def execute_sql(session, s):
+    return [e for e in session.execute(s)]
     
 
