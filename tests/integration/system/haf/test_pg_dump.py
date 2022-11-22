@@ -19,6 +19,8 @@ from local_tools import make_fork, wait_for_irreversible_progress, run_networks,
 
 import re
 
+#once the errrors disappear we could use single pg_restore command
+ERRRORS_IN_CREATE_POLICY = True
 
 START_TEST_BLOCK = 108
 
@@ -83,17 +85,18 @@ def wipe_db(db_name):
 
     
 def pg_restore(target_db_name):
-    print('MTTK before real restore of pre-data')
-    # restore pre-data
-    shell(f"pg_restore  -v --section=pre-data  -Fc -d {target_db_name}   adump.Fcsql")
+    if ERRRORS_IN_CREATE_POLICY:
+        # restore pre-data
+        shell(f"pg_restore  -v --section=pre-data  -Fc -d {target_db_name}   adump.Fcsql")
 
-    print('MTTK before real restore of data')
-    #restore data
-    shell(f"pg_restore --disable-triggers --section=data  -v -Fc  -d {target_db_name}   adump.Fcsql")
+        #restore data
+        shell(f"pg_restore --disable-triggers --section=data  -v -Fc  -d {target_db_name}   adump.Fcsql")
 
-    print('MTTK before real restore of post-data')
-    #restore post-data
-    shell(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {target_db_name}   adump.Fcsql")
+        #restore post-data
+        shell(f"pg_restore --disable-triggers --section=post-data  -Fc  -d {target_db_name}   adump.Fcsql")
+    else:
+        shell(f"pg_restore  -v --single-transaction  -Fc -d {target_db_name}   adump.Fcsql")
+
 
 def access_target_db(target_db_name):
     engine = sqlalchemy.create_engine(f'postgresql:///{target_db_name}', echo=False, poolclass=NullPool)
