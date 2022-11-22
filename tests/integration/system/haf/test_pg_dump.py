@@ -19,8 +19,8 @@ from local_tools import make_fork, wait_for_irreversible_progress, run_networks,
 
 import re
 
-def db2text(databasename, session):
-
+def db2text(session):
+    databasename = session.bind.url.database
     schema_filename = databasename + '_schema.txt'
     data_filename = databasename + '_data.txt'
 
@@ -144,8 +144,6 @@ def access_target_db(target_db_name):
 
     return session, Base
 
-if __name__ == '__main__':
-    db2text('haf_block_log')
 
 START_TEST_BLOCK = 108
 
@@ -154,39 +152,25 @@ def test_pg_dump(prepared_networks_and_database, database):
 
     # GIVEN
 
-
-
     source_session = prepare_source_db(prepared_networks_and_database)
-
-
     pg_dump(source_session.bind.url)
-
     pg_restore_to_show_files_only()
 
-    source_db_name = source_session.bind.url.database
     target_db_name = 'adb'
-
     wipe_db(target_db_name)
+
+    # WHEN
 
     pg_restore(target_db_name)
 
 
+    # THEN 
 
-    target_session, Base2 = access_target_db(target_db_name)
-
-
-
-    block_count = target_session.query(Base2.classes.blocks).count()
+    target_session, target_Base = access_target_db(target_db_name)
+    block_count = target_session.query(target_Base.classes.blocks).count()
     assert(block_count == 105)
 
-    irreversible_data = Base2.classes.irreversible_data
-
-    reco = target_session.query(irreversible_data).one()
-    print(reco)
-
-    
-    
-    no_differences = comparethesetexts_equal(db2text(source_db_name, source_session), db2text(target_db_name, target_session))
+    no_differences = comparethesetexts_equal(db2text(source_session), db2text(target_session))
     assert(no_differences)
 
 
