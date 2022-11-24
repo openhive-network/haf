@@ -76,7 +76,7 @@ haf_system_tests:
       artifacts: true
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
-    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
+    PYTHONPATH: "$CI_PROJECT_DIR/tests/integration/local_tools"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
   script:
     # use newest libfaketime version, version 0.97 is not enough
@@ -109,7 +109,7 @@ applications_system_tests:
       artifacts: true
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
-    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
+    PYTHONPATH: "$CI_PROJECT_DIR/tests/integration/local_tools"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
   script:
     # use newest libfaketime version, version 0.97 is not enough
@@ -142,7 +142,7 @@ applications_system_tests:
       artifacts: true
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
-    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
+    PYTHONPATH: "$CI_PROJECT_DIR/tests/integration/local_tools"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
     BLOCK_LOG_DIRECTORY: "/blockchain"
     DB_NAME: haf_block_log
