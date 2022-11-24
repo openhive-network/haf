@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/plugins/sql_serializer/synchronicity_data.hpp>
+
 #include <memory>
 
 namespace hive::plugins::sql_serializer {
@@ -8,7 +10,7 @@ namespace hive::plugins::sql_serializer {
   class end_massive_sync_processor
   {
   public:
-    end_massive_sync_processor( std::string psqlUrl );
+    end_massive_sync_processor( std::string psqlUrl, synchronicity_data::synchronicity_data_ptr synchronicity );
     end_massive_sync_processor( end_massive_sync_processor& ) = delete;
     end_massive_sync_processor( end_massive_sync_processor&& ) = delete;
     end_massive_sync_processor& operator=( end_massive_sync_processor& ) = delete;

@@ -12,18 +12,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , uint32_t operations_threads
     , uint32_t transactions_threads
     , uint32_t account_operation_threads ) {
-    ilog( "Starting reindexing dump to database with ${o} operations and ${t} transactions threads", ("o", operations_threads )("t", transactions_threads) );
     ilog("reindex data dumper has ${mode} mode enabled",("mode", force_synchronicity ? "synchronicity" : "asynchronicity"));
-    _transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "reindex dumper" );
-    _end_massive_sync_processor = std::make_unique< end_massive_sync_processor >( db_url );
-    constexpr auto ONE_THREAD_WRITERS_NUMBER = 4; // a thread for dumping blocks + a thread dumping multisignatures + a thread for accounts
-    auto NUMBER_OF_PROCESSORS_THREADS = ONE_THREAD_WRITERS_NUMBER + operations_threads + transactions_threads + account_operation_threads;
-    auto execute_end_massive_sync_callback = [this](block_num_rendezvous_trigger::BLOCK_NUM _block_num ){
-      if ( !_block_num ) {
-        return;
-      }
-      _end_massive_sync_processor->trigger_block_number( _block_num );
-    };
+
+    std::shared_ptr< block_num_rendezvous_trigger > api_trigger;
 
     if( force_synchronicity )
     {
@@ -34,7 +25,24 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       synchronicity = synchronicity_data::synchronicity_data_ptr( new synchronicity_data( force_synchronicity, db_url, "reindex dumper 2" ) );
     }
 
-    auto api_trigger = std::make_shared< block_num_rendezvous_trigger >( NUMBER_OF_PROCESSORS_THREADS, execute_end_massive_sync_callback );
+    constexpr auto ONE_THREAD_WRITERS_NUMBER = 4; // a thread for dumping blocks + a thread dumping multisignatures + a thread for accounts
+    auto NUMBER_OF_PROCESSORS_THREADS = ONE_THREAD_WRITERS_NUMBER + operations_threads + transactions_threads + account_operation_threads;
+    ilog( "Starting reindexing dump to database with ${o} operations and ${t} transactions and ${ao} account operations threads", ("o", operations_threads )("t", transactions_threads)("ao", account_operation_threads) );
+
+    _transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "reindex dumper" );
+    _end_massive_sync_processor = std::make_unique< end_massive_sync_processor >( db_url, synchronicity );
+
+    if( !force_synchronicity )
+    {
+      auto execute_end_massive_sync_callback = [this](block_num_rendezvous_trigger::BLOCK_NUM _block_num ){
+        if ( !_block_num ) {
+          return;
+        }
+        _end_massive_sync_processor->trigger_block_number( _block_num );
+      };
+      api_trigger = std::make_shared< block_num_rendezvous_trigger >( NUMBER_OF_PROCESSORS_THREADS, execute_end_massive_sync_callback );
+    }
+
 
     _block_writer = std::make_unique<block_data_container_t_writer>( db_url, "Block data writer", api_trigger, synchronicity );
 
@@ -85,6 +93,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
       _applied_hardforks_writer->trigger( std::move( cached_data.applied_hardforks ), last_block_num );
       _applied_hardforks_writer->complete_data_processing();
+
+      _end_massive_sync_processor->trigger_block_number( last_block_num );
+      _end_massive_sync_processor->complete_data_processing();
 
       synchronicity->commit();
     }

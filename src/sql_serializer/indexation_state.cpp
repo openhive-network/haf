@@ -188,7 +188,7 @@ indexation_state::on_post_reindex( cached_data_t& cached_data, uint32_t last_blo
     }
     else
     {
-      ilog("End of reindexing. Constraints/foreign keys weren't removed before reindex therefore lack of any changes related to either constraints or foreign keys.");
+      ilog("End of reindexing. Constraints/foreign keys won't be restored, because they weren't removed.");
     }
 
     _trigger.reset();
