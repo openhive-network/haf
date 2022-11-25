@@ -68,14 +68,14 @@ data_processor::data_processor( std::string description, const data_processing_f
 
       while(_continue.load())
       {
-        dlog("${d} data processor is waiting for DATA-READY signal...", ("d", _description));
+        ilog("${d} data processor is waiting for DATA-READY signal...", ("d", _description));
         std::unique_lock<std::mutex> lk(_mtx);
         _cv.wait(lk, [this] {return _dataPtr.valid() || _continue.load() == false; });
 
-        dlog("${d} data processor resumed by DATA-READY signal...", ("d", _description));
+        ilog("${d} data processor resumed by DATA-READY signal...", ("d", _description));
 
         if(_continue.load() == false) {
-          dlog("${d} data processor _continue.load() == false", ("d", _description));
+          ilog("${d} data processor _continue.load() == false", ("d", _description));
           break;
         }
 
@@ -83,24 +83,25 @@ data_processor::data_processor( std::string description, const data_processing_f
         uint32_t last_block_num_in_stage = _last_block_num;
 
         lk.unlock();
-        dlog("${d} data processor consumed data - notifying trigger process...", ("d", _description));
+        ilog("${d} data processor consumed data - notifying trigger process...", ("d", _description));
         _cv.notify_one();
 
         if(_cancel.load())
           break;
 
-        dlog("${d} data processor starts a data processing...", ("d", _description));
+        ilog("${d} data processor starts a data processing...", ("d", _description));
 
         {
           data_processing_status_notifier notifier(&_is_processing_data, &_data_processing_mtx, &_data_processing_finished_cv);
 
-          dataProcessor(*dataPtr);
+          auto _result = dataProcessor(*dataPtr);
+          ilog("mario*: ${d} ${a}", ("d", _description)("a", _result.first));
 
           if ( _randezvous_trigger && last_block_num_in_stage )
             _randezvous_trigger->report_complete_thread_stage( last_block_num_in_stage );
         }
 
-        dlog("${d} data processor finished processing a data chunk...", ("d", _description));
+        ilog("${d} data processor finished processing a data chunk...", ("d", _description));
       }
     }
     catch(...)
@@ -129,22 +130,22 @@ void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
   _is_processing_data = true;
 
   {
-  dlog("Trying to trigger data processor: ${d}...", ("d", _description));
+  ilog("Trying to trigger data processor: ${d}...", ("d", _description));
   std::lock_guard<std::mutex> lk(_mtx);
   _dataPtr = std::move(dataPtr);
   _last_block_num = last_blocknum;
-  dlog("Data processor: ${d} triggerred...", ("d", _description));
+  ilog("Data processor: ${d} triggerred...", ("d", _description));
   }
   _cv.notify_one();
 
   /// wait for the worker
   {
-    dlog("Waiting until data_processor ${d} will consume a data...", ("d", _description));
+    ilog("Waiting until data_processor ${d} will consume a data...", ("d", _description));
     std::unique_lock<std::mutex> lk(_mtx);
     _cv.wait(lk, [this] {return _dataPtr.valid() == false; });
   }
 
-  dlog("Leaving trigger of data data processor: ${d}...", ("d", _description));
+  ilog("Leaving trigger of data data processor: ${d}...", ("d", _description));
 }
 
 void
@@ -163,10 +164,10 @@ void data_processor::complete_data_processing()
   if(_is_processing_data == false)
     return;
 
-  dlog("Awaiting for data processing finish in the  data processor: ${d}...", ("d", _description));
+  ilog("Awaiting for data processing finish in the  data processor: ${d}...", ("d", _description));
   std::unique_lock<std::mutex> lk(_data_processing_mtx);
   _data_processing_finished_cv.wait(lk, [this] { return _is_processing_data == false; });
-  dlog("Data processor: ${d} finished processing data...", ("d", _description));
+  ilog("Data processor: ${d} finished processing data...", ("d", _description));
 }
 
 void data_processor::cancel()
