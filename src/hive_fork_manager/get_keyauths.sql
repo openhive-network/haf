@@ -20,7 +20,7 @@ CREATE TYPE hive.keyauth_c_record_type AS
 
 CREATE OR REPLACE FUNCTION hive.get_keyauths_wrapper(IN _operation_body text)
 RETURNS SETOF hive.keyauth_c_record_type
-AS '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so', 'get_keyauths_wrapped' LANGUAGE C;
+AS 'MODULE_PATHNAME', 'get_keyauths_wrapped' LANGUAGE C;
 
 
 CREATE OR REPLACE FUNCTION hive.authority_type_c_int_to_enum(IN _pos integer)
@@ -60,7 +60,7 @@ CREATE TYPE hive.get_operations_type AS
 );
 CREATE OR REPLACE FUNCTION hive.get_keyauths_operations()
 RETURNS SETOF hive.get_operations_type
-AS '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so', 'get_keyauths_operations' LANGUAGE C;
+AS 'MODULE_PATHNAME', 'get_keyauths_operations' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.is_keyauths_operation(IN _full_op TEXT)
 RETURNS Boolean

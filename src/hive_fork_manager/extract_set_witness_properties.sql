@@ -7,4 +7,4 @@ CREATE TYPE hive.extract_set_witness_properties_return AS
 
 CREATE OR REPLACE FUNCTION hive.extract_set_witness_properties(IN prop_array TEXT)
 RETURNS SETOF hive.extract_set_witness_properties_return
-AS '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so', 'extract_set_witness_properties' LANGUAGE C;
+AS 'MODULE_PATHNAME', 'extract_set_witness_properties' LANGUAGE C;

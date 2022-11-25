@@ -9,7 +9,7 @@ CREATE TYPE hive.impacted_balances_return AS
 
 CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body text, IN _is_hf01 bool)
 RETURNS SETOF impacted_balances_return
-AS '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so', 'get_impacted_balances' LANGUAGE C;
+AS 'MODULE_PATHNAME', 'get_impacted_balances' LANGUAGE C;
 
 --- Returns set of operations which impact account balances.
 
@@ -23,4 +23,4 @@ CREATE TYPE hive.get_balance_impacting_operations_return_type AS
 
 CREATE OR REPLACE FUNCTION hive.get_balance_impacting_operations()
 RETURNS SETOF hive.get_balance_impacting_operations_return_type
-AS '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so', 'get_balance_impacting_operations' LANGUAGE C;
+AS 'MODULE_PATHNAME', 'get_balance_impacting_operations' LANGUAGE C;
