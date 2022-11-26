@@ -8,6 +8,8 @@ SCRIPTSDIR="$SCRIPTDIR/haf/scripts"
 LOG_FILE=docker_entrypoint.log
 source "$SCRIPTSDIR/common.sh"
 
+export POSTGRES_VERSION=12
+
 cleanup () {
   echo "Performing cleanup...."
   hived_pid=$(pidof 'hived')
@@ -22,9 +24,9 @@ cleanup () {
   echo "Hived finish done."
 
   postgres_pid=0
-  if [ -f /var/run/postgresql/12-main.pid ];
+  if [ -f /var/run/postgresql/${POSTGRES_VERSION}-main.pid ];
   then
-    postgres_pid=$(cat /var/run/postgresql/12-main.pid)
+    postgres_pid=$(cat /var/run/postgresql/${POSTGRES_VERSION}-main.pid)
   fi
 
   sudo -n /etc/init.d/postgresql stop
@@ -42,9 +44,9 @@ cleanup () {
 
 prepare_pg_hba_file() {
   sudo -En /bin/bash << EOF
-  echo -e "${PG_ACCESS}" > /etc/postgresql/12/main/pg_hba.conf
-  cat /etc/postgresql/12/main/pg_hba.conf.default >> /etc/postgresql/12/main/pg_hba.conf
-  cat /etc/postgresql/12/main/pg_hba.conf
+  echo -e "${PG_ACCESS}" > /etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf
+  cat /etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf.default >> /etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf
+  cat /etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf
 EOF
 }
 
@@ -66,10 +68,12 @@ mkdir --mode=777 -p /home/hived/datadir/blockchain
 
 if [ -d $PGDATA ]
 then
-  echo "Attempting to setup postgres instance..."
+  echo "Attempting to setup postgres instance already containing HAF database..."
 
   # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
   sudo -n ./haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="$HAF_DB_STORE/tablespace"
+  sudo -n /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh --haf-admin-account=haf_admin --haf-db-name=haf_block_log
+
   echo "Postgres instance setup completed."
 else
   sudo -n mkdir -p $PGDATA
@@ -79,7 +83,7 @@ else
   echo "Attempting to setup postgres instance..."
 
   # Here is an exception against using /etc/init.d/postgresql script to manage postgres - maybe there is some better way to force initdb using regular script.
-  sudo -nu postgres PGDATA=$PGDATA /usr/lib/postgresql/12/bin/pg_ctl initdb
+  sudo -nu postgres PGDATA=$PGDATA /usr/lib/postgresql/${POSTGRES_VERSION}/bin/pg_ctl initdb
 
   sudo -n ./haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="$HAF_DB_STORE/tablespace"
 
