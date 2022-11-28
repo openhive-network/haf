@@ -22,21 +22,26 @@ RESTORE_FROM_TOC = True
 def test_pg_dump(database):
     tt.logger.info(f'Start test_pg_dump')
 
-    # GIVEN
-    source_session, source_db_url = prepare_source_db(database)
-    pg_dump(source_db_url)
+    for pg_restore in (pg_restore_from_TOC, pg_restore_from_dump_file_only):
 
-    target_session, _ = database('postgresql:///dump_target')
-    target_db_url = target_session.bind.url
+        tt.logger.info(f'Start dump test with {pg_restore.__name__}')
 
-    # WHEN
-    pg_restore(target_db_url)
+        # GIVEN
+        source_session, source_db_url = prepare_source_db(database)
+        pg_dump(source_db_url)
 
-    # THEN 
+        target_session, _ = database('postgresql:///dump_target')
+        target_db_url = target_session.bind.url
 
-    compare_databases(source_session,  target_session)
+        # WHEN
 
-    compare_psql_tool_dumped_schemas(source_db_url.database ,  target_db_url.database)
+        pg_restore(target_db_url)
+
+        # THEN 
+
+        compare_databases(source_session,  target_session)
+
+        compare_psql_tool_dumped_schemas(source_db_url.database ,  target_db_url.database)
 
     
 def prepare_source_db(database) -> tuple(Session, URL):
@@ -52,34 +57,29 @@ def prepare_source_db(database) -> tuple(Session, URL):
 def pg_dump(db_name : str) -> None:
     shell(f'pg_dump -Fc -d {db_name} -f {DUMP_FILENAME}')
 
-
-def pg_restore(target_db_name: str) -> None:
+def pg_restore_from_TOC(target_db_name: str) -> None:
     """ For debugging purposes it is sometimes valuable to display dump contents like this:
     pg_restore --section=pre-data  --disable-triggers  -Fc -f adump-pre-data.sql  adump.Fcsql
     """
     db_name = target_db_name.database
-    if RESTORE_FROM_TOC:
-        toc_filename = f'{db_name}.toc'
-        toc_filename2 = f'{db_name}.toc2'
+    original_toc = f'{db_name}_org_.toc'
+    stripped_toc = f'{db_name}_stripped.toc'
 
-        print (f'meld {toc_filename} {toc_filename2}')
+    shell(f"pg_restore --exit-on-error -l {DUMP_FILENAME} > {original_toc}")
 
-        shell(f"pg_restore --exit-on-error -l {DUMP_FILENAME} > {toc_filename}")
+    shell(fr"grep -v '[0-9]\+; [0-9]\+ [0-9]\+ SCHEMA - hive'  {original_toc} | grep -v '[0-9]\+; [0-9]\+ [0-9]\+ POLICY hive' > {stripped_toc} ")
+    
+    shell(f"pg_restore --exit-on-error --single-transaction  -L {stripped_toc} -d {target_db_name} {DUMP_FILENAME}")
 
-        shell(fr"grep -v '[0-9]\+; [0-9]\+ [0-9]\+ SCHEMA - hive'  {toc_filename} | grep -v '[0-9]\+; [0-9]\+ [0-9]\+ POLICY hive' > {toc_filename2} ")
-        
-        #shell(f"pg_restore --exit-on-error --section=pre-data -L {toc_filename2} -d {target_db_name}   {DUMP_FILENAME}")
-        #shell(f"pg_restore --exit-on-error --disable-triggers -L {toc_filename2} --section=data -Fc  -d {target_db_name}   {DUMP_FILENAME}")
+    
+def pg_restore_from_dump_file_only(target_db_name: str) -> None:
+    # restore pre-data
+    shell(f"pg_restore --section=pre-data -Fc -d {target_db_name}   {DUMP_FILENAME}")
 
-        shell(f"pg_restore --exit-on-error --single-transaction  -L {toc_filename2} -d {target_db_name} {DUMP_FILENAME}")
-    else:
-       # restore pre-data
-        shell(f"pg_restore --section=pre-data  -Fc -d {target_db_name}   {DUMP_FILENAME}")
+    #restore data
+    shell(f"pg_restore --section=data -Fc --disable-triggers -d {target_db_name}   {DUMP_FILENAME}")
 
-        #restore data
-        shell(f"pg_restore --disable-triggers --section=data -Fc  -d {target_db_name}   {DUMP_FILENAME}")
-
-        #restore post-data is not needed by far 
+    #restore post-data is not needed by far 
 
 def compare_databases(source_session: Session, target_session: Session) -> None:
     ask_for_tables_and_views_sql = f"SELECT table_name FROM information_schema.tables WHERE table_schema = 'hive' ORDER BY table_name"
