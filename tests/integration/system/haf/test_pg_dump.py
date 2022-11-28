@@ -35,7 +35,7 @@ def test_pg_dump(database):
     compare_psql_tool_dumped_schemas(source_session,  target_session)
 
     
-def prepare_source_db(database):
+def prepare_source_db(database) -> None:
     source_session, Base= database('postgresql:///haf_block_log')
     reference_node = create_node_with_database(network = None, url = source_session.get_bind().url)
     blocklog_directory = get_blocklog_directory()
@@ -122,13 +122,13 @@ def create_psql_tool_dumped_schema(session: Session) -> str:
     return open(schema_filename).read()
 
 
-def shell(command: str):
+def shell(command: str) -> None:
     subprocess.call(command, shell=True)
 
     
-def query_col(session: Session, s: str):
+def query_col(session: Session, s: str) -> list[str]:
     return [e[0] for e in session.execute(s)]
 
 
-def query_all(session: Session, s: str):
+def query_all(session: Session, s: str) -> list[Row]:
     return [e for e in session.execute(s)]
