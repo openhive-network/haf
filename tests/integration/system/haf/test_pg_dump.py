@@ -88,8 +88,8 @@ def pg_restore(target_db_name: str) -> None:
 
 def compare_databases(source_session: Session, target_session: Session) -> None:
     ask_for_tables_and_views_sql = f"SELECT table_name FROM information_schema.tables WHERE table_schema = 'hive' ORDER BY table_name"
-    source_tables = execute_sql_col(source_session, ask_for_tables_and_views_sql)
-    target_tables = execute_sql_col(target_session, ask_for_tables_and_views_sql)
+    source_tables = query_col(source_session, ask_for_tables_and_views_sql)
+    target_tables = query_col(target_session, ask_for_tables_and_views_sql)
 
     assert source_tables ==  target_tables
     
@@ -100,9 +100,9 @@ def compare_databases(source_session: Session, target_session: Session) -> None:
 
         
 def take_table_contents(session: Session, table: str) -> list[Row]:
-    recordset = execute_sql_row(session, f"SELECT column_name FROM information_schema.columns  WHERE table_schema = 'hive' AND table_name   = '{table}';")
+    recordset = query_all(session, f"SELECT column_name FROM information_schema.columns  WHERE table_schema = 'hive' AND table_name   = '{table}';")
     columns = ', '.join([e[0] for e in (recordset)])
-    return execute_sql_row(session, f"SELECT * FROM hive.{table} ORDER BY {columns}")
+    return query_all(session, f"SELECT * FROM hive.{table} ORDER BY {columns}")
 
 
 def compare_psql_tool_dumped_schemas(source_session: Session, target_session: Session) -> None:
@@ -126,9 +126,9 @@ def shell(command: str):
     subprocess.call(command, shell=True)
 
     
-def execute_sql_col(session: Session, s: str):
+def query_col(session: Session, s: str):
     return [e[0] for e in session.execute(s)]
 
 
-def execute_sql_row(session: Session, s: str):
+def query_all(session: Session, s: str):
     return [e for e in session.execute(s)]
