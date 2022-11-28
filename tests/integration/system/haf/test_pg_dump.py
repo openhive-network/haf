@@ -10,6 +10,7 @@ from local_tools import make_fork, wait_for_irreversible_progress, run_networks,
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
     from sqlalchemy.engine.row import Row
+    from sqlalchemy.engine.url import URL
 
 
 RESTORE_FROM_TOC = True
@@ -19,41 +20,31 @@ def test_pg_dump(database):
     tt.logger.info(f'Start test_pg_dump')
 
     # GIVEN
-    source_session, source_db_name = prepare_source_db(database)
-    pg_dump(source_db_name)
+    source_session, source_db_url = prepare_source_db(database)
+    pg_dump(source_db_url)
 
     target_session, _ = database('postgresql:///adb')
-    target_db_name = target_session.bind.url
+    target_db_url = target_session.bind.url
 
     # WHEN
-    pg_restore(target_db_name)
+    pg_restore(target_db_url)
 
     # THEN 
 
     compare_databases(source_session,  target_session)
 
-    compare_psql_tool_dumped_schemas(source_session,  target_session)
+    compare_psql_tool_dumped_schemas(source_db_url.database ,  target_db_url.database)
 
     
-def prepare_source_db(database) -> None:
+def prepare_source_db(database) -> tuple(Session, URL):
     source_session, _ = database('postgresql:///haf_block_log')
-    source_db_name = source_session.get_bind().url
+    source_db_name = source_session.bind.url
     reference_node = create_node_with_database(url = source_db_name)
     blocklog_directory = get_blocklog_directory()
     block_log = tt.BlockLog(blocklog_directory/'block_log')
     reference_node.run(replay_from=block_log, stop_at_block= 105, exit_before_synchronization=True)
-    source_db_name = source_session.bind.url
     return source_session, source_db_name
 
-
-def create_psql_tool_dumped_schema(session: Session) -> str:
-    databasename = session.bind.url.database
-    schema_filename = databasename + '_schema.txt'
-
-    shell(rf"psql -d {databasename} -c '\dn'  > {schema_filename}")
-    shell(rf"psql -d {databasename} -c '\d hive.*' >> {schema_filename}")
-
-    return open(schema_filename).read()
 
 def pg_dump(db_name : str) -> None:
     shell(f'pg_dump -Fc -d {db_name} -f adump.Fcsql')
@@ -106,21 +97,22 @@ def take_table_contents(session: Session, table: str) -> list[Row]:
     return query_all(session, f"SELECT * FROM hive.{table} ORDER BY {columns}")
 
 
-def compare_psql_tool_dumped_schemas(source_session: Session, target_session: Session) -> None:
-    source_schema = create_psql_tool_dumped_schema(source_session)
-    target_schema = create_psql_tool_dumped_schema(target_session)
+def compare_psql_tool_dumped_schemas(source_db_name: str, target_db_name: str) -> None:
+    source_schema = create_psql_tool_dumped_schema(source_db_name)
+    target_schema = create_psql_tool_dumped_schema(target_db_name)
 
     assert source_schema == target_schema
 
     
-def create_psql_tool_dumped_schema(session: Session) -> str:
-    databasename = session.bind.url.database
-    schema_filename = databasename + '_schema.txt'
+def create_psql_tool_dumped_schema(db_name: str) -> str:
+    
+    schema_filename = db_name + '_schema.txt'
 
-    shell(rf"psql -d {databasename} -c '\dn'  > {schema_filename}")
-    shell(rf"psql -d {databasename} -c '\d hive.*' >> {schema_filename}")
+    shell(rf"psql -d {db_name} -c '\dn'  > {schema_filename}")
+    shell(rf"psql -d {db_name} -c '\d hive.*' >> {schema_filename}")
 
-    return open(schema_filename).read()
+    with open(schema_filename, encoding="utf-8") as file:
+        return file.read()
 
 
 def shell(command: str) -> None:
