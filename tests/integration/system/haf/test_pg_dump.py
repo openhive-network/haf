@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import subprocess
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 
 import test_tools as tt
