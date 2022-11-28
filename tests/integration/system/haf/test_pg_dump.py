@@ -12,8 +12,7 @@ if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
 
 
-# MTTK TODO once the errrors disappear we could use single pg_restore command
-ERRORS_IN_CREATE_POLICY = True
+RESTORE_FROM_TOC = True
 
 
 def test_pg_dump(database):
@@ -63,17 +62,29 @@ def pg_restore(target_db_name: str) -> None:
     """ For debugging purposes it is sometimes valuable to display dump contents like this:
     pg_restore --section=pre-data  --disable-triggers  -Fc -f adump-pre-data.sql  adump.Fcsql
     """
-    if ERRORS_IN_CREATE_POLICY:
-        # restore pre-data
+    db_name = target_db_name.database
+    if RESTORE_FROM_TOC:
+        toc_filename = f'{db_name}.toc'
+        toc_filename2 = f'{db_name}.toc2'
+
+        print (f'meld {toc_filename} {toc_filename2}')
+
+        shell(f"pg_restore --exit-on-error -l adump.Fcsql > {toc_filename}")
+
+        shell(fr"grep -v '[0-9]\+; [0-9]\+ [0-9]\+ SCHEMA - hive'  {toc_filename} | grep -v '[0-9]\+; [0-9]\+ [0-9]\+ POLICY hive' > {toc_filename2} ")
+        
+        #shell(f"pg_restore --exit-on-error --section=pre-data -L {toc_filename2} -d {target_db_name}   adump.Fcsql")
+        #shell(f"pg_restore --exit-on-error --disable-triggers -L {toc_filename2} --section=data -Fc  -d {target_db_name}   adump.Fcsql")
+
+        shell(f"pg_restore --exit-on-error --single-transaction  -L {toc_filename2} -d {target_db_name} adump.Fcsql")
+    else:
+       # restore pre-data
         shell(f"pg_restore --section=pre-data  -Fc -d {target_db_name}   adump.Fcsql")
 
         #restore data
         shell(f"pg_restore --disable-triggers --section=data -Fc  -d {target_db_name}   adump.Fcsql")
 
         #restore post-data is not needed by far 
-    else:
-        shell(f"pg_restore --single-transaction  -Fc -d {target_db_name} adump.Fcsql")
-
 
 def compare_databases(source_session: Session, target_session: Session) -> None:
     ask_for_tables_and_views_sql = f"SELECT table_name FROM information_schema.tables WHERE table_schema = 'hive' ORDER BY table_name"
