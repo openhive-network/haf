@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import subprocess
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 
 import test_tools as tt
@@ -12,6 +12,9 @@ if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
     from sqlalchemy.engine.url import URL
 
+
+    
+DUMP_FILENAME: Final[str] = "adump.Fcsql"
 
 RESTORE_FROM_TOC = True
 
@@ -47,7 +50,7 @@ def prepare_source_db(database) -> tuple(Session, URL):
 
 
 def pg_dump(db_name : str) -> None:
-    shell(f'pg_dump -Fc -d {db_name} -f adump.Fcsql')
+    shell(f'pg_dump -Fc -d {db_name} -f {DUMP_FILENAME}')
 
 
 def pg_restore(target_db_name: str) -> None:
@@ -61,20 +64,20 @@ def pg_restore(target_db_name: str) -> None:
 
         print (f'meld {toc_filename} {toc_filename2}')
 
-        shell(f"pg_restore --exit-on-error -l adump.Fcsql > {toc_filename}")
+        shell(f"pg_restore --exit-on-error -l {DUMP_FILENAME} > {toc_filename}")
 
         shell(fr"grep -v '[0-9]\+; [0-9]\+ [0-9]\+ SCHEMA - hive'  {toc_filename} | grep -v '[0-9]\+; [0-9]\+ [0-9]\+ POLICY hive' > {toc_filename2} ")
         
-        #shell(f"pg_restore --exit-on-error --section=pre-data -L {toc_filename2} -d {target_db_name}   adump.Fcsql")
-        #shell(f"pg_restore --exit-on-error --disable-triggers -L {toc_filename2} --section=data -Fc  -d {target_db_name}   adump.Fcsql")
+        #shell(f"pg_restore --exit-on-error --section=pre-data -L {toc_filename2} -d {target_db_name}   {DUMP_FILENAME}")
+        #shell(f"pg_restore --exit-on-error --disable-triggers -L {toc_filename2} --section=data -Fc  -d {target_db_name}   {DUMP_FILENAME}")
 
-        shell(f"pg_restore --exit-on-error --single-transaction  -L {toc_filename2} -d {target_db_name} adump.Fcsql")
+        shell(f"pg_restore --exit-on-error --single-transaction  -L {toc_filename2} -d {target_db_name} {DUMP_FILENAME}")
     else:
        # restore pre-data
-        shell(f"pg_restore --section=pre-data  -Fc -d {target_db_name}   adump.Fcsql")
+        shell(f"pg_restore --section=pre-data  -Fc -d {target_db_name}   {DUMP_FILENAME}")
 
         #restore data
-        shell(f"pg_restore --disable-triggers --section=data -Fc  -d {target_db_name}   adump.Fcsql")
+        shell(f"pg_restore --disable-triggers --section=data -Fc  -d {target_db_name}   {DUMP_FILENAME}")
 
         #restore post-data is not needed by far 
 
