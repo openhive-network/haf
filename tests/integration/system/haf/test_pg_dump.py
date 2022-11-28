@@ -23,7 +23,7 @@ def test_pg_dump(database):
     source_session, source_db_url = prepare_source_db(database)
     pg_dump(source_db_url)
 
-    target_session, _ = database('postgresql:///adb')
+    target_session, _ = database('postgresql:///dump_target')
     target_db_url = target_session.bind.url
 
     # WHEN
@@ -80,20 +80,20 @@ def pg_restore(target_db_name: str) -> None:
 
 def compare_databases(source_session: Session, target_session: Session) -> None:
     ask_for_tables_and_views_sql = f"SELECT table_name FROM information_schema.tables WHERE table_schema = 'hive' ORDER BY table_name"
-    source_tables = query_col(source_session, ask_for_tables_and_views_sql)
-    target_tables = query_col(target_session, ask_for_tables_and_views_sql)
+    source_table_names = query_col(source_session, ask_for_tables_and_views_sql)
+    target_table_names = query_col(target_session, ask_for_tables_and_views_sql)
 
-    assert source_tables ==  target_tables
+    assert source_table_names ==  target_table_names
     
-    for table in source_tables:
+    for table in source_table_names:
         source_recordset = take_table_contents(source_session, table)
         target_recordset = take_table_contents(target_session, table)
         assert source_recordset == target_recordset, f"ERROR: in table_or_view: {table}"
 
         
 def take_table_contents(session: Session, table: str) -> list[Row]:
-    recordset = query_all(session, f"SELECT column_name FROM information_schema.columns  WHERE table_schema = 'hive' AND table_name   = '{table}';")
-    columns = ', '.join([e[0] for e in (recordset)])
+    column_names = query_col(session, f"SELECT column_name FROM information_schema.columns  WHERE table_schema = 'hive' AND table_name   = '{table}';")
+    columns = ', '.join(column_names)
     return query_all(session, f"SELECT * FROM hive.{table} ORDER BY {columns}")
 
 
