@@ -115,6 +115,12 @@ GRANT EXECUTE ON FUNCTION
     , hive._operation_bin_out(hive.operation)
     , hive._operation_eq(hive.operation, hive.operation)
     , hive._operation_ne(hive.operation, hive.operation)
+    , hive._operation_gt(hive.operation, hive.operation)
+    , hive._operation_ge(hive.operation, hive.operation)
+    , hive._operation_lt(hive.operation, hive.operation)
+    , hive._operation_le(hive.operation, hive.operation)
+    , hive._operation_cmp(hive.operation, hive.operation)
+    , hive._operation_hash(hive.operation)
 
 TO hived_group;
 
