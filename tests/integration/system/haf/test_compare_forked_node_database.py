@@ -2,7 +2,7 @@ from pathlib import Path
 
 import test_tools as tt
 
-from local_tools import make_fork, wait_for_irreversible_progress, run_networks, create_node_with_database
+from local_tools import make_fork, wait_for_irreversible_progress, run_networks
 
 
 START_TEST_BLOCK = 108
@@ -20,8 +20,6 @@ def test_compare_forked_node_database(prepared_networks_and_database, database):
     blocks = Base.classes.blocks
     transactions = Base.classes.transactions
     operations = Base.classes.operations
-
-    reference_node = create_node_with_database(networks['Alpha'], session_ref.get_bind().url)
 
     # WHEN
     run_networks(networks)

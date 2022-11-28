@@ -37,7 +37,7 @@ def test_pg_dump(database):
     
 def prepare_source_db(database) -> None:
     source_session, Base= database('postgresql:///haf_block_log')
-    reference_node = create_node_with_database(network = None, url = source_session.get_bind().url)
+    reference_node = create_node_with_database(url = source_session.get_bind().url)
     blocklog_directory = get_blocklog_directory()
     block_log = tt.BlockLog(blocklog_directory/'block_log')
     reference_node.run(wait_for_live=False, replay_from=block_log, stop_at_block= 105)

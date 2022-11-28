@@ -2,7 +2,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from threading import Thread, Event
 import time
-from typing import Dict
+from typing import Dict, Optional
+
+from sqlalchemy.engine.url import URL
 
 import test_tools as tt
 from test_tools.__private.user_handles.get_implementation import get_implementation
@@ -127,7 +129,7 @@ def connect_sub_networks(sub_networks : list):
         current_idx += 1
 
 
-def create_node_with_database(network: tt.Network, url):
+def create_node_with_database(url : URL, network: Optional[tt.Network] = None) -> tt.ApiNode:
     api_node = tt.ApiNode(network=network)
     api_node.config.plugin.append('sql_serializer')
     api_node.config.psql_url = str(url)
