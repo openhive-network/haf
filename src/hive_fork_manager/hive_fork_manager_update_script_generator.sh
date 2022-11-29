@@ -2,8 +2,6 @@
 
 set -euo pipefail 
 
-PSQL_URL="postgresql://haf_admin@localhost:5432/haf_block_log"
-
 log_exec_params() {
   echo
   echo -n "$0 parameters: "
@@ -33,9 +31,6 @@ print_help () {
 
 DB_NAME="haf_block_log"
 DB_ADMIN="haf_admin"
-HAF_TABLESPACE_NAME="haf_tablespace"
-
-DEFAULT_DB_USERS=("haf_app_admin")
 POSTGRES_HOST="/var/run/postgresql"
 POSTGRES_PORT=5432
 
@@ -54,7 +49,6 @@ while [ $# -gt 0 ]; do
     --haf-admin-account=*)
         DB_ADMIN="${1#*=}"
         ;;
-
     --help)
         print_help
         exit 0
@@ -102,11 +96,12 @@ generate_final_update_script() {
   echo "Update file was created correctly"
 }
 
+
 make_update() {
   echo
   echo "Attempting to update your database..."
 
-  psql "$PSQL_URL" -v ON_ERROR_STOP=on -c "ALTER EXTENSION hive_fork_manager UPDATE"
+  sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER EXTENSION hive_fork_manager UPDATE"
 }
 
 get_deployed_version
