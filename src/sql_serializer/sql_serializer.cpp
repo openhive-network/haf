@@ -12,9 +12,11 @@
 #include <hive/chain/util/impacted.hpp>
 #include <hive/chain/util/supplement_operations.hpp>
 #include <hive/chain/index.hpp>
+#include <hive/chain/database_exceptions.hpp>
 
 #include <hive/protocol/config.hpp>
 #include <hive/protocol/operations.hpp>
+#include <hive/protocol/exceptions.hpp>
 
 #include <hive/utilities/plugin_utilities.hpp>
 #include <hive/plugins/sql_serializer/blockchain_data_filter.hpp>
@@ -180,6 +182,7 @@ constexpr size_t default_reservation_size{ 16'000u };
 
 namespace detail
 {
+using chain::plugin_exception;
 
 using data_processing_status = data_processor::data_processing_status;
 using data_chunk_ptr = data_processor::data_chunk_ptr;
@@ -379,8 +382,19 @@ public:
     sequence_loader.join();
     block_loader.join();
 
-    ilog("Next operation id: ${s} psql block number: ${pbn}.",
-      ("s", op_sequence_id)("pbn", psql_block_number));
+    ilog("Next operation id: ${s} psql block number: ${pbn} head_block: ${head_block} last-irreversible-block-number: ${lib}.",
+      ("s", op_sequence_id)("pbn", psql_block_number)("head_block", chain_db.head_block_num())("lib", chain_db.get_last_irreversible_block_num()));
+
+    if( psql_block_number > chain_db.head_block_num() )
+    {
+      /*
+        Data from a SQL database doesn't correspond to data from a 'shared_memory_file'.
+        The most probable reasons:
+        - a 'shared_memory_file' was removed and created again by using a command `--force-replay`
+        - a SQL database was created with a different 'shared_memory_file'
+      */
+      HIVE_ASSERT(false, plugin_exception, "A SQL database has data but a 'shared_memory_file' doesn't. A node is closed. Drop and recreate a database. Details: db-last-block-number: ${psql_block_number} head-block: ${head_block} last-irreversible-block-number: ${lib}",(psql_block_number)("head_block", chain_db.head_block_num())("lib", chain_db.get_last_irreversible_block_num()));
+    }
   }
 
   bool skip_reversible_block(uint32_t block);
