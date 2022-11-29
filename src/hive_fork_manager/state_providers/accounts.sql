@@ -35,7 +35,7 @@ $BODY$
 
 CREATE OR REPLACE FUNCTION hive.get_account_from_accounts_operations(IN _account_operation hive.operation)
 RETURNS TEXT
-AS '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so', 'get_account_from_accounts_operations' LANGUAGE C;
+AS 'MODULE_PATHNAME', 'get_account_from_accounts_operations' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
     RETURNS void
