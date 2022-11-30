@@ -44,7 +44,7 @@ the same CMake parameters which are used to compile the hived project ( for exam
 2. create build directory, for example in sources root: `mkdir build`
 3. `cd build`
 4. `cmake -DCMAKE_BUILD_TYPE=Release .. -GNinja`
-5. `make`
+5. `ninja`
 
 ### Choose a version of Postgres to compile with
 CMake variable `POSTGRES_INSTALLATION_DIR` is used to point to the installation folder
@@ -52,14 +52,14 @@ with PostgreSQL binaries. By default it is `/usr/lib/postgresql/12/bin` - place 
 is installed on Ubuntu. An example of choosing a different version of Postgres:
 1. create build directory, for example in HAF source's root dir: `mkdir build`
 2. `cd build`
-3. `cmake -DPOSTGRES_INSTALLATION_DIR=/usr/lib/postgresql/13/bin ..`
-4. `make`
+3. `cmake -DPOSTGRES_INSTALLATION_DIR=/usr/lib/postgresql/13/bin -GNinja ..`
+4. `ninja`
 
 # Setup of a directly-hosted HAF server
 ## 1. Configure PostgreSQL cluster
 Compiled PostgreSQL plugins and extensions have to be installed in a postgres cluster. The best method
 to do this is to execute the command below in the build directory (typically requires root privilieges):
-- `sudo make install`
+- `sudo ninja install`
 
 This will copy plugins to the Postgres cluster `$libdir/plugins` directory and exstensions to
 `<postgres_shared_dir>/extension`.
@@ -81,7 +81,7 @@ To create a custom roles being used in further steps, you can use example statem
 ```
 The roles which inherits from `hived_groups` must be used by `sql_serializer` process to login into the database.
 Roles which inherit from `hive_application_group` shall be used by the applications.
-Each app role does not have access to internal data created by other HAF app roles and cannot
+No app role has access to internal data created by other HAF app roles nor can it
 modify data written by 'hived'. 'Hived' roles cannot modify the data of HAF apps.
 
 More about roles in PostgreSQL documentaion: [CREATE ROLE](https://www.postgresql.org/docs/12/sql-createrole.html)
