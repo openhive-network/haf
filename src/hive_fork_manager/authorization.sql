@@ -123,7 +123,6 @@ GRANT EXECUTE ON FUNCTION
     , hive._operation_lt(hive.operation, hive.operation)
     , hive._operation_le(hive.operation, hive.operation)
     , hive._operation_cmp(hive.operation, hive.operation)
-    , hive._operation_hash(hive.operation)
 
 TO hived_group;
 
