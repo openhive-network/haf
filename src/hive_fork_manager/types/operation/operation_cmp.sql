@@ -71,8 +71,3 @@ DEFAULT FOR TYPE hive.operation USING btree AS
     OPERATOR    5   >  (hive.operation, hive.operation),
     FUNCTION    1   hive._operation_cmp(hive.operation, hive.operation),
 STORAGE hive.operation;
-
-CREATE OPERATOR CLASS hive.operation_ops
-DEFAULT FOR TYPE hive.operation USING hash AS
-    OPERATOR    1   =  (hive.operation, hive.operation),
-    FUNCTION    1   hive._operation_hash(hive.operation);
