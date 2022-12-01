@@ -67,7 +67,4 @@ extern "C"
 
   PG_FUNCTION_INFO_V1( operation_cmp );
   Datum operation_cmp( PG_FUNCTION_ARGS );
-
-  PG_FUNCTION_INFO_V1( operation_hash );
-  Datum operation_hash( PG_FUNCTION_ARGS );
 }

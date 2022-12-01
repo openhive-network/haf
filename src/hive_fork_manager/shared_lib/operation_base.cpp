@@ -206,15 +206,4 @@ extern "C"
 
     PG_RETURN_INT32( operation_cmp_impl( lhs, rhs ) );
   }
-
-  Datum operation_hash( PG_FUNCTION_ARGS )
-  {
-    _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
-
-    Datum		result;
-
-    result = hash_any((unsigned char *) VARDATA_ANY( lhs ), VARSIZE_ANY_EXHDR( lhs ));
-
-    PG_RETURN_DATUM( result );
-  }
 }
