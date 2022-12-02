@@ -6,6 +6,11 @@ from sqlalchemy.dialects.postgresql import JSONB
 # declarative base class
 Base = declarative_base(metadata=MetaData(schema="hive"))
 
+class HiveOperation(LargeBinary, Base):
+    __visit_name__ = "operation"
+
+    def __init__(self, length=None):
+        LargeBinary.__init__(self, length=length)
 
 class Accounts(Base):
     __tablename__ = "accounts"
@@ -79,7 +84,7 @@ class Operations(Base):
     op_pos = Column(Integer)
     op_type_id = Column(SmallInteger)
     timestamp = Column(DateTime)
-    body = Column(Text)
+    body = Column(HiveOperation)
 
 
 class OperationsReversible(Base):
@@ -91,7 +96,7 @@ class OperationsReversible(Base):
     op_pos = Column(Integer)
     op_type_id = Column(SmallInteger)
     timestamp = Column(DateTime)
-    body = Column(Text)
+    body = Column(HiveOperation)
     fork_id = Column(BigInteger, primary_key=True)
 
 
