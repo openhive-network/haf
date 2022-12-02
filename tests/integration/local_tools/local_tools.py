@@ -1,14 +1,19 @@
+from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Thread, Event
 import time
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from sqlalchemy.engine.url import URL
 
 import test_tools as tt
 from test_tools.__private.user_handles.get_implementation import get_implementation
 from test_tools.__private.wait_for import wait_for_event
+
+
+from sqlalchemy.engine.row import Row
+from sqlalchemy.orm.session import Session
 
 
 BLOCKS_IN_FORK = 5
@@ -173,3 +178,13 @@ def create_app(session, application_context):
     session.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE.format( application_context ) )
     session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION )
     session.commit()
+
+
+def query_col(session: Session, sql: str) -> list[str]:
+    """Perform a `SELECT n*1`"""
+    return [row[0] for row in session.execute(sql).fetchall()]
+
+
+def query_all(session: Session, sql: str) -> list[Row]:
+    """Perform a `SELECT n*m`"""
+    return session.execute(sql).fetchall()

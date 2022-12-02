@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
     from sqlalchemy.engine.url import URL
 
-
+from local_tools import query_col, query_all
     
 DUMP_FILENAME: Final[str] = "adump.Fcsql"
 
@@ -121,10 +121,4 @@ def create_psql_tool_dumped_schema(db_name: str) -> str:
 def shell(command: str) -> None:
     subprocess.call(command, shell=True)
 
-    
-def query_col(session: Session, s: str) -> list[str]:
-    return [e[0] for e in session.execute(s)]
 
-
-def query_all(session: Session, s: str) -> list[Row]:
-    return [e for e in session.execute(s)]
