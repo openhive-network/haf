@@ -13,7 +13,7 @@ MACRO( ADD_PSQL_EXTENSION )
 
     SET( update_control_script ${UPDATE_NAME}.sql )
 
-    SET( extension_control_file ${EXTENSION_NAME}.control )
+    SET( extension_control_file ${EXTENSION_NAME}.control.in )
 
     SET( extension_control_script ${EXTENSION_NAME}--${HAF_GIT_REVISION_SHA}.sql )
 
@@ -24,13 +24,17 @@ MACRO( ADD_PSQL_EXTENSION )
 
     MESSAGE( STATUS "CONFIGURING the update script generator script: ${CMAKE_BINARY_DIR}/extensions/${EXTENSION_NAME}/hive_fork_manager_update_script_generator.sh" )
 
-    CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/hive_fork_manager_update_script_generator.sh"
+    CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/hive_fork_manager_update_script_generator.sh.in"
       "${extension_path}/hive_fork_manager_update_script_generator.sh" @ONLY)
+
+    MESSAGE( STATUS "CONFIGURING the control file: ${CMAKE_BINARY_DIR}/extensions/${EXTENSION_NAME}/hive_fork_manager.control" )
+
+    CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/${extension_control_file}"
+      "${extension_path}/hive_fork_manager.control" @ONLY)
 
     ADD_CUSTOM_COMMAND(
             OUTPUT  "${extension_path}/${extension_control_file}" "${extension_path}/${extension_control_script}"
-            COMMAND sed 's/@HAF_GIT_REVISION_SHA@/${HAF_GIT_REVISION_SHA}/g' ${extension_control_file}  > ${extension_path}/${extension_control_file}
-            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/merge_sql.sh ${EXTENSION_DEPLOY_SOURCES} > ${extension_path}/${EXTENSION_NAME}--${HAF_GIT_REVISION_SHA}.sql
+            COMMAND sed 's/@HAF_GIT_REVISION_SHA@/${HAF_GIT_REVISION_SHA}/g' ${extension_control_file}  > ${extension_path}/${EXTENSION_NAME}.control
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             DEPENDS ${EXTENSION_DEPLOY_SOURCES} ${extension_control_file}
             COMMENT "Generating ${EXTENSION_NAME} files to ${extension_path}"
@@ -52,7 +56,7 @@ MACRO( ADD_PSQL_EXTENSION )
               GROUP_EXECUTE GROUP_READ
               WORLD_EXECUTE WORLD_READ
             )
-    INSTALL ( FILES "${extension_path}/${update_control_script}" "${extension_path}/${extension_control_file}" "${extension_path}/${extension_control_script}"
+    INSTALL ( FILES "${extension_path}/${update_control_script}" "${extension_path}/${EXTENSION_NAME}.control" "${extension_path}/${extension_control_script}"
               DESTINATION ${POSTGRES_SHAREDIR}/extension
               PERMISSIONS OWNER_WRITE OWNER_READ
               GROUP_READ
