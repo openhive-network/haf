@@ -69,7 +69,7 @@ def test_pg_dump(database, pg_restore):
     compare_psql_tool_dumped_schemas(source_db_url.database ,  target_db_url.database)
 
     
-def prepare_source_db(database) -> tuple(Session, URL):
+def prepare_source_db(database) -> tuple[Session, URL]:
     source_session, _ = database('postgresql:///haf_block_log')
     source_db_name = source_session.bind.url
     reference_node = create_node_with_database(url = source_db_name)
