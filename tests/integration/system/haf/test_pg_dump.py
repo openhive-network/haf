@@ -40,10 +40,10 @@ def pg_restore_from_dump_file_only(target_db_name: str, tmp_path : Path) -> None
     # restore pre-data
     shell(f"pg_restore --section=pre-data -Fc -d {target_db_name}   {tmp_path / DUMP_FILENAME}")
 
-    #restore data
+    # restore data
     shell(f"pg_restore --section=data -Fc --disable-triggers -d {target_db_name}   {tmp_path / DUMP_FILENAME}")
 
-    #restore post-data is not needed by far 
+    # restore post-data is not needed by far 
 
 
 @pytest.mark.parametrize("pg_restore",[pg_restore_from_TOC, pg_restore_from_dump_file_only])
@@ -64,9 +64,7 @@ def test_pg_dump(database, pg_restore, tmp_path : Path):
     pg_restore(target_db_url, tmp_path)
 
     # THEN 
-
     compare_databases(source_session,  target_session)
-
     compare_psql_tool_dumped_schemas(source_db_url.database ,  target_db_url.database, tmp_path)
 
     
