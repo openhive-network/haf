@@ -72,7 +72,7 @@ def test_pg_dump(database, pg_restore):
 def prepare_source_db(database) -> tuple[Session, URL]:
     source_session, _ = database('postgresql:///haf_block_log')
     source_db_name = source_session.bind.url
-    reference_node = create_node_with_database(url = source_db_name)
+    reference_node = create_node_with_database(url = str(source_db_name))
     blocklog_directory = get_blocklog_directory()
     block_log = tt.BlockLog(blocklog_directory/'block_log')
     reference_node.run(replay_from=block_log, stop_at_block= 105, exit_before_synchronization=True)

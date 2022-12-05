@@ -134,10 +134,10 @@ def connect_sub_networks(sub_networks : list):
         current_idx += 1
 
 
-def create_node_with_database(url : URL, network: Optional[tt.Network] = None) -> tt.ApiNode:
+def create_node_with_database(url : str, network: Optional[tt.Network] = None) -> tt.ApiNode:
     api_node = tt.ApiNode(network=network)
     api_node.config.plugin.append('sql_serializer')
-    api_node.config.psql_url = str(url)
+    api_node.config.psql_url = url
     return api_node
 
 
