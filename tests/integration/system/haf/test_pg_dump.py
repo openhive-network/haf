@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Final
 import pytest
 
 import test_tools as tt
-from local_tools import make_fork, wait_for_irreversible_progress, run_networks, create_node_with_database, get_blocklog_directory
+from local_tools import create_node_with_database, get_blocklog_directory
 
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
@@ -17,8 +17,6 @@ if TYPE_CHECKING:
 from local_tools import query_col, query_all
     
 DUMP_FILENAME: Final[str] = "adump.Fcsql"
-
-RESTORE_FROM_TOC = True
 
 
 def pg_restore_from_TOC(target_db_name: str, tmp_path : Path) -> None:
@@ -120,5 +118,3 @@ def create_psql_tool_dumped_schema(db_name: str, tmp_path : Path) -> str:
 
 def shell(command: str) -> None:
     subprocess.call(command, shell=True)
-
-
