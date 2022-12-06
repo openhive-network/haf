@@ -26,22 +26,6 @@ GRANT ALL ON hive.registered_tables TO hive_applications_group;
 GRANT ALL ON hive.triggers TO hive_applications_group;
 GRANT ALL ON hive.state_providers_registered TO hive_applications_group;
 
--- protect an application rows aginst other applications
-ALTER TABLE hive.contexts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY dp_hive_context ON hive.contexts FOR ALL USING ( owner = current_user );
-CREATE POLICY sp_hived_hive_context ON hive.contexts FOR SELECT TO hived_group USING( TRUE );
-CREATE POLICY sp_applications_hive_context ON hive.contexts FOR SELECT TO hive_applications_group USING( owner = current_user );
-CREATE POLICY sp_applications_hive_state_providers ON hive.state_providers_registered FOR SELECT TO hive_applications_group USING( owner = current_user );
-
-ALTER TABLE hive.registered_tables ENABLE ROW LEVEL SECURITY;
-CREATE POLICY policy_hive_registered_tables ON hive.registered_tables FOR ALL USING ( owner = current_user );
-
-ALTER TABLE hive.triggers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY policy_hive_triggers ON hive.triggers FOR ALL USING ( owner = current_user );
-
-ALTER TABLE hive.state_providers_registered ENABLE ROW LEVEL SECURITY;
-CREATE POLICY dp_state_providers_registered ON hive.state_providers_registered FOR ALL USING ( owner = current_user );
-
 -- protect api
 -- 1. only hived_group and hive_applications_group can invoke functions from hive schema
 -- 2. hived_group can use only hived_api

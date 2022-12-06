@@ -248,9 +248,7 @@ ADD_SQL_FUNCTIONAL_TESTS( state_providers/context_remove_and_state_provider.sql 
 ADD_SQL_FUNCTIONAL_TESTS( state_providers/import_state_provider_non_fork.sql )
 ADD_SQL_FUNCTIONAL_TESTS( state_providers/switch_state_provider_to_forkable.sql )
 
-ADD_AUTHORIZATION_FUNCTIONAL_TESTS( authorization/alice_access_to_bob_negative.sql )
 ADD_AUTHORIZATION_FUNCTIONAL_TESTS( authorization/alice_access_events_infrustructure.sql )
-ADD_AUTHORIZATION_FUNCTIONAL_TESTS( authorization/hived_access_alice_context_data.sql )
 ADD_AUTHORIZATION_FUNCTIONAL_TESTS( authorization/api_protection.sql )
 ADD_AUTHORIZATION_FUNCTIONAL_TESTS( authorization/massive_sync_live_blocks_and_fork.sql )
 ADD_AUTHORIZATION_FUNCTIONAL_TESTS( authorization/alice_grant_to_hive_applications_group.sql )
