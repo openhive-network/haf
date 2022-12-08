@@ -38,8 +38,11 @@ SET( BUILD_SHARED_LIBS ON )
 
 INCLUDE( ExternalProject )
 
-list( APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" )
+list( APPEND CMAKE_MODULE_PATH
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/hive/cmake" )
 
+INCLUDE( hive_options )
 INCLUDE( clangtidy )
 INCLUDE( compiler )
 INCLUDE( libraries )
