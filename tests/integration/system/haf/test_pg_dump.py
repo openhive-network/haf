@@ -18,6 +18,10 @@ from local_tools import query_col, query_all
     
 DUMP_FILENAME: Final[str] = "adump.Fcsql"
 
+SQL_ALL_TABLES_AND_VIEWS: Final[str] = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'hive' ORDER BY table_name"
+
+SQL_TABLE_COLUMNS: Final[str] = "SELECT column_name FROM information_schema.columns  WHERE table_schema = 'hive' AND table_name   = :table;"
+
 
 def pg_restore_from_TOC(target_db_name: str, tmp_path : Path) -> None:
     """ For debugging purposes it is sometimes valuable to display dump contents like this:
@@ -80,9 +84,8 @@ def pg_dump(db_name : str, tmp_path : Path) -> None:
     shell(f'pg_dump -Fc -d {db_name} -f {tmp_path / DUMP_FILENAME}')
 
 def compare_databases(source_session: Session, target_session: Session) -> None:
-    ask_for_tables_and_views_sql = f"SELECT table_name FROM information_schema.tables WHERE table_schema = 'hive' ORDER BY table_name"
-    source_table_names = query_col(source_session, ask_for_tables_and_views_sql)
-    target_table_names = query_col(target_session, ask_for_tables_and_views_sql)
+    source_table_names = query_col(source_session, SQL_ALL_TABLES_AND_VIEWS)
+    target_table_names = query_col(target_session, SQL_ALL_TABLES_AND_VIEWS)
 
     assert source_table_names ==  target_table_names
     
@@ -93,7 +96,7 @@ def compare_databases(source_session: Session, target_session: Session) -> None:
 
         
 def take_table_contents(session: Session, table: str) -> list[Row]:
-    column_names = query_col(session, f"SELECT column_name FROM information_schema.columns  WHERE table_schema = 'hive' AND table_name   = '{table}';")
+    column_names = query_col(session, SQL_TABLE_COLUMNS, params = {"table" :table})
     columns = ', '.join(column_names)
     return query_all(session, f"SELECT * FROM hive.{table} ORDER BY {columns}")
 

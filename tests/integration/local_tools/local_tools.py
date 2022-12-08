@@ -180,9 +180,9 @@ def create_app(session, application_context):
     session.commit()
 
 
-def query_col(session: Session, sql: str) -> list[str]:
+def query_col(session: Session, sql: str, params=None) -> list[str]:
     """Perform a `SELECT n*1`"""
-    return [row[0] for row in session.execute(sql).fetchall()]
+    return [row[0] for row in session.execute(sql, params=params).fetchall()]
 
 
 def query_all(session: Session, sql: str) -> list[Row]:
