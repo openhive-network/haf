@@ -1,19 +1,17 @@
 from __future__ import annotations
+
+import time
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Thread, Event
-import time
-from typing import Dict, Optional, List
-
-from sqlalchemy.engine.url import URL
+from typing import Any, TYPE_CHECKING, Dict, Optional
 
 import test_tools as tt
 from test_tools.__private.user_handles.get_implementation import get_implementation
 from test_tools.__private.wait_for import wait_for_event
 
-
-from sqlalchemy.engine.row import Row
-from sqlalchemy.orm.session import Session
+if TYPE_CHECKING:
+    from sqlalchemy.engine.row import Row
+    from sqlalchemy.orm.session import Session
 
 
 BLOCKS_IN_FORK = 5
@@ -134,7 +132,7 @@ def connect_sub_networks(sub_networks : list):
         current_idx += 1
 
 
-def create_node_with_database(url : str, network: Optional[tt.Network] = None) -> tt.ApiNode:
+def create_node_with_database(url: str, network: Optional[tt.Network] = None) -> tt.ApiNode:
     api_node = tt.ApiNode(network=network)
     api_node.config.plugin.append('sql_serializer')
     api_node.config.psql_url = url
@@ -180,11 +178,11 @@ def create_app(session, application_context):
     session.commit()
 
 
-def query_col(session: Session, sql: str, params=None) -> list[str]:
+def query_col(session: Session, sql: str, **kwargs) -> list[Any]:
     """Perform a `SELECT n*1`"""
-    return [row[0] for row in session.execute(sql, params=params).fetchall()]
+    return [row[0] for row in session.execute(sql, params=kwargs).fetchall()]
 
 
-def query_all(session: Session, sql: str) -> list[Row]:
+def query_all(session: Session, sql: str, **kwargs) -> list[Row]:
     """Perform a `SELECT n*m`"""
-    return session.execute(sql).fetchall()
+    return session.execute(sql, params=kwargs).fetchall()
