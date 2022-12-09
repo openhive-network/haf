@@ -44,11 +44,11 @@ BEGIN
     FROM hive.get_impacted_balances('{}', FALSE) f
     ;
 
-    ASSERT FALSE, 'TEST0 should throw exception: "feature_not_supported"';
+    ASSERT FALSE, 'TEST0 should throw exception: "invalid_text_representation"';
 
     exception 
     -- ignore exceptions in test0
-        when feature_not_supported then
+        when invalid_text_representation then
             NULL;
     END;
 
@@ -74,11 +74,11 @@ BEGIN
     FROM hive.get_impacted_balances('{"type":"not_existing_type","value":{"from":"anonymtest","to":"someguy123","agent":"xtar","who":"xtar","receiver":"someguy123","escrow_id":72526562,"hbd_amount":{"amount":"5000","precision":3,"nai":"@@000000013"},"hive_amount":{"amount":"0","precision":3,"nai":"@@000000021"}}}', FALSE) f
     ;
 
-    ASSERT FALSE, 'TEST2 should throw exception: "feature_not_supported"';
+    ASSERT FALSE, 'TEST2 should throw exception: "invalid_text_representation"';
 
     exception 
     -- ignore exceptions in test2
-        when feature_not_supported then
+        when invalid_text_representation then
             NULL;
     END;
 
@@ -119,11 +119,11 @@ BEGIN
     FROM hive.get_impacted_balances('[1,3,34,543,34]', FALSE) f
     ;
 
-    ASSERT FALSE, 'TEST5 should throw exception: "feature_not_supported"';
+    ASSERT FALSE, 'TEST5 should throw exception: "invalid_text_representation"';
 
     exception
     -- ignore exceptions in test5
-        when feature_not_supported then
+        when invalid_text_representation then
             NULL;
     END;
 
@@ -134,11 +134,11 @@ BEGIN
     FROM hive.get_impacted_balances('{"value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":3,"nai":"@@000000013"}}}', FALSE) f
     ;
 
-    ASSERT FALSE, 'TEST6 should throw exception: "feature_not_supported"';
+    ASSERT FALSE, 'TEST6 should throw exception: "invalid_text_representation"';
 
     exception
     -- ignore exceptions in test6
-        when feature_not_supported then
+        when invalid_text_representation then
             NULL;
     END;
 
@@ -149,11 +149,11 @@ BEGIN
     FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"precision":3,"nai":"@@000000013"}}}', FALSE) f
     ;
 
-    ASSERT FALSE, 'TEST7 should throw exception: "feature_not_supported"';
+    ASSERT FALSE, 'TEST7 should throw exception: "invalid_text_representation"';
 
     exception
     -- ignore exceptions in test7
-        when feature_not_supported then
+        when invalid_text_representation then
             NULL;
     END;
 
@@ -164,11 +164,11 @@ BEGIN
     FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","nai":"@@000000013"}}}', FALSE) f
     ;
 
-    ASSERT FALSE, 'TEST8 should throw exception: "feature_not_supported"';
+    ASSERT FALSE, 'TEST8 should throw exception: "invalid_text_representation"';
 
     exception
     -- ignore exceptions in test8
-        when feature_not_supported then
+        when invalid_text_representation then
             NULL;
     END;
 
@@ -179,11 +179,11 @@ BEGIN
     FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":3}}}', FALSE) f
     ;
 
-    ASSERT FALSE, 'TEST9 should throw exception: "feature_not_supported"';
+    ASSERT FALSE, 'TEST9 should throw exception: "invalid_text_representation"';
 
     exception
     -- ignore exceptions in test9
-        when feature_not_supported then
+        when invalid_text_representation then
             NULL;
     END;
 
@@ -194,11 +194,11 @@ BEGIN
     FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":5000,"precision":3,"nai":"@@000000013"}}}', FALSE) f
     ;
 
-    ASSERT FALSE, 'TEST10 should throw exception: "feature_not_supported"';
+    ASSERT FALSE, 'TEST10 should throw exception: "invalid_text_representation"';
 
     exception
     -- ignore exceptions in test10
-        when feature_not_supported then
+        when invalid_text_representation then
             NULL;
     END;
 
@@ -209,11 +209,11 @@ BEGIN
     FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":"some_string","nai":"@@000000013"}}}', FALSE) f
     ;
 
-    ASSERT FALSE, 'TEST11 should throw exception: "feature_not_supported"';
+    ASSERT FALSE, 'TEST11 should throw exception: "invalid_text_representation"';
 
     exception
     -- ignore exceptions in test11
-        when feature_not_supported then
+        when invalid_text_representation then
             NULL;
     END;
 
@@ -224,11 +224,11 @@ BEGIN
     FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":3,"nai":"@@000000099"}}}', FALSE) f
     ;
 
-    ASSERT FALSE, 'TEST12 should throw exception: "feature_not_supported"';
+    ASSERT FALSE, 'TEST12 should throw exception: "invalid_text_representation"';
 
     exception
     -- ignore exceptions in test12
-        when feature_not_supported then
+        when invalid_text_representation then
             NULL;
     END;
 
@@ -239,11 +239,11 @@ BEGIN
     FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"some_string","precision":3,"nai":"@@000000013"}}}', FALSE) f
     ;
 
-    ASSERT FALSE, 'TEST13 should throw exception: "feature_not_supported"';
+    ASSERT FALSE, 'TEST13 should throw exception: "invalid_text_representation"';
 
     exception
     -- ignore exceptions in test13
-        when feature_not_supported then
+        when invalid_text_representation then
             NULL;
     END;
 
