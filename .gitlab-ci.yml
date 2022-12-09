@@ -10,12 +10,12 @@ variables:
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
 
-hive_fork_manager:
+.hive_fork_manager_build:
   stage: build_and_test
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
     - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
-    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" extension.hive_fork_manager
+    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --cmake-arg="-DBUILD_HIVE_TESTNET=$BUILD_HIVE_TESTNET" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" extension.hive_fork_manager
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build"
     - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build" && ctest --output-on-failure  -R test.functional.hive_fork_manager.*
   artifacts:
@@ -27,13 +27,22 @@ hive_fork_manager:
     - public-runner-docker
     - hived
 
-# job resonsible for hived build in mainnet config.
-hived:
+hive_fork_manager:
+  variables:
+    BUILD_HIVE_TESTNET: "OFF"
+  extends: .hive_fork_manager_build
+
+hive_fork_manager_testnet:
+  variables:
+    BUILD_HIVE_TESTNET: "ON"
+  extends: .hive_fork_manager_build
+
+.hived_build:
   stage: build_and_test
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
     - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
-    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" hived compress_block_log
+    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=$BUILD_HIVE_TESTNET" $HIVE_TARGETS
     # check if sql_serializer compiles with hived
     - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
     # check if sql_serializer plugin is included in hived plugins
@@ -47,30 +56,24 @@ hived:
     - public-runner-docker
     - hived
 
+# job resonsible for hived build in mainnet config.
+hived:
+  variables:
+    BUILD_HIVE_TESTNET: "OFF"
+    HIVE_TARGETS: "hived compress_block_log"
+  extends: .hived_build
+
 hived_testnet:
-  stage: build_and_test
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  script:
-    - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
-    - $SETUP_SCRIPTS_PATH/build.sh --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=ON" --cmake-arg="-DHIVE_LINT=OFF" hived cli_wallet get_dev_key compress_block_log
-    # check if sql_serializer compiles with hived
-    - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
-    # check if sql_serializer plugin is included in hived plugins
-    - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/programs/hived"
-    - ./hived --help | grep psql-url
-  artifacts:
-    paths:
-    - "$CI_JOB_NAME"
-    expire_in: 6 hours
+  variables:
+    BUILD_HIVE_TESTNET: "ON"
+    HIVE_TARGETS: "hived cli_wallet get_dev_key compress_block_log"
+  extends: .hived_build
   interruptible: true
-  tags:
-    - public-runner-docker
-    - hived
 
 haf_system_tests:
   stage: build_and_test
   needs:
-    - job: hive_fork_manager
+    - job: hive_fork_manager_testnet
       artifacts: true
     - job: hived_testnet
       artifacts: true
@@ -84,7 +87,7 @@ haf_system_tests:
     - cd libfaketime && make
     - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
     # install hive_fork_manager extension built in previous stage
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager_testnet/build"
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf
     - tox .
@@ -103,7 +106,7 @@ haf_system_tests:
 applications_system_tests:
   stage: build_and_test
   needs:
-    - job: hive_fork_manager
+    - job: hive_fork_manager_testnet
       artifacts: true
     - job: hived_testnet
       artifacts: true
@@ -117,7 +120,7 @@ applications_system_tests:
     - cd libfaketime && make
     - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
     # install hive_fork_manager extension built in previous stage
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager_testnet/build"
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/applications
     - tox .

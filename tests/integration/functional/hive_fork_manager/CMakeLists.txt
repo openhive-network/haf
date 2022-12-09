@@ -1,3 +1,6 @@
+# hive_fork_manager functional tests are written only for the mainnet
+IF ( NOT BUILD_HIVE_TESTNET )
+
 MACRO( ADD_SQL_FUNCTIONAL_TESTS sql_test_path)
     STRING( REGEX MATCH "^(([^\\/]*)\\/)?(.*)\\.[^.]*$" dummy ${sql_test_path} ) # remove sql extension
     SET( test_name ${CMAKE_MATCH_3})
@@ -271,3 +274,5 @@ ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_balances/test_not_supported_op
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_balances/test_false.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_legacy_style_operation.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/extract_set_witness_properties.sql )
+
+ENDIF()
