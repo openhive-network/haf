@@ -55,3 +55,4 @@ def test_compare_forked_node_database(prepared_networks_and_database, database):
 
     for op, op_ref in zip(ops, ops_ref):
         assert op.body == op_ref.body
+        tt.logger.info(f'body is {op.body}')

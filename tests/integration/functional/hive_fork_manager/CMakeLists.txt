@@ -268,6 +268,6 @@ ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_balances/test_no_virtual_opera
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_balances/test_virtual_operations.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_balances/test_operations_dependent_from_hf01.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_balances/test_not_supported_operations.sql )
-ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_balances/test_false.sql )
+# ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_balances/test_false.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_legacy_style_operation.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/extract_set_witness_properties.sql )
