@@ -72,8 +72,6 @@ std::vector< char > json_to_op( const char* raw_data )
 
 extern "C"
 {
-#include <utils/hashutils.h>
-
   PG_MODULE_MAGIC;
 
   _operation* make_operation( const char* raw_data, uint32 data_length )
