@@ -71,9 +71,9 @@ fc::string get_legacy_style_operation_impl( const hive::protocol::operation& _op
   return fc::json::to_string( _op );
 }
 
-account_name_type get_account_from_accounts_operations_impl( const hive::protocol::operation& _op )
+account_name_type get_creator_from_account_create_operations_impl( const hive::protocol::operation& _op )
 {
-  return hive::app::get_account_from_accounts_operations( _op );
+  return hive::app::get_creator_from_account_create_operations( _op );
 }
 
 flat_set<account_name_type> get_accounts( const char* raw_data, uint32_t data_length )
@@ -337,9 +337,9 @@ void issue_error(const char* msg)
 
 
 
-PG_FUNCTION_INFO_V1(get_account_from_accounts_operations);
+PG_FUNCTION_INFO_V1(get_creator_from_account_create_operations);
 
-Datum get_account_from_accounts_operations(PG_FUNCTION_ARGS)
+Datum get_creator_from_account_create_operations(PG_FUNCTION_ARGS)
 {
   _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
   auto _result = (Datum)0;
@@ -347,7 +347,7 @@ Datum get_account_from_accounts_operations(PG_FUNCTION_ARGS)
   colect_operation_data_and_fill_returned_recordset(
     [=, &_result](const hive::protocol::operation& op)
     {
-      std::string account = get_account_from_accounts_operations_impl( op );
+      std::string account = get_creator_from_account_create_operations_impl( op );
       _result = CStringGetTextDatum( account.c_str() );
     },
     [](){},
