@@ -3,6 +3,7 @@ from pathlib import Path
 import test_tools as tt
 
 from local_tools import get_head_block, get_irreversible_block, run_networks
+from tables import EventsQueue
 
 
 START_TEST_BLOCK = 108
@@ -12,10 +13,8 @@ def test_event_after_replay(prepared_networks_and_database):
     tt.logger.info(f'Start test_event_after_replay')
 
     # GIVEN
-    networks, session, Base = prepared_networks_and_database
+    networks, session = prepared_networks_and_database
     node_under_test = networks['Beta'].node('ApiNode0')
-
-    events_queue = Base.classes.events_queue
 
     # WHEN
     run_networks(networks, replay_all_nodes=True)
@@ -33,16 +32,16 @@ def test_event_after_replay(prepared_networks_and_database):
 
         #In every block comes `NEW_BLOCK` and after that `NEW_IRREVERSIBLE`.
         #Event `NEW_IRREVERSIBLE` removes unnecessary events i.e `NEW_BLOCK`
-        new_block_result = session.query(events_queue).\
-            filter(events_queue.event == 'NEW_BLOCK').\
-            filter(events_queue.block_num == head_block).\
+        new_block_result = session.query(EventsQueue).\
+            filter(EventsQueue.event == 'NEW_BLOCK').\
+            filter(EventsQueue.block_num == head_block).\
             all()
 
         assert len(new_block_result) == 0
 
-        new_irreversible_result = session.query(events_queue).\
-            filter(events_queue.event == 'NEW_IRREVERSIBLE').\
-            filter(events_queue.block_num == irreversible_block).\
+        new_irreversible_result = session.query(EventsQueue).\
+            filter(EventsQueue.event == 'NEW_IRREVERSIBLE').\
+            filter(EventsQueue.block_num == irreversible_block).\
             all()
 
         assert len(new_irreversible_result) == 1

@@ -6,6 +6,7 @@ from sqlalchemy.orm.exc import MultipleResultsFound
 import test_tools as tt
 
 from local_tools import make_fork, wait_for_irreversible_progress, run_networks
+from tables import Operations
 
 
 START_TEST_BLOCK = 108
@@ -15,9 +16,8 @@ def test_undo_operations(prepared_networks_and_database):
     tt.logger.info(f'Start test_undo_operations')
 
     # GIVEN
-    networks, session, Base = prepared_networks_and_database
+    networks, session = prepared_networks_and_database
     node_under_test = networks['Beta'].node('ApiNode0')
-    operations = Base.classes.operations
 
     # WHEN
     run_networks(networks)
@@ -37,7 +37,7 @@ def test_undo_operations(prepared_networks_and_database):
     for i in range(fork_block, after_fork_block):
         try:
             # there should be exactly one producer_reward_operation
-            session.query(operations).filter(operations.block_num == i).one()
+            session.query(Operations).filter(Operations.block_num == i).one()
         
         except MultipleResultsFound:
             tt.logger.error(f'Multiple operations in block {i}.')

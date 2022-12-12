@@ -7,6 +7,7 @@ from sqlalchemy.orm.exc import MultipleResultsFound
 import test_tools as tt
 
 from local_tools import run_networks
+from tables import EventsQueue
 
 
 NEW_IRREVERSIBLE_BLOCK_NUM = 106
@@ -16,10 +17,8 @@ def test_event_massive_sync(prepared_networks_and_database):
     tt.logger.info(f'Start test_event_massive_sync')
 
     # GIVEN
-    networks, session, Base = prepared_networks_and_database
+    networks, session = prepared_networks_and_database
     node_under_test = networks['Beta'].node('ApiNode0')
-
-    events_queue = Base.classes.events_queue
 
     # WHEN
     run_networks(networks)
@@ -31,7 +30,7 @@ def test_event_massive_sync(prepared_networks_and_database):
         time.sleep(1)
 
          #Last event is `NEW_IRREVERSIBLE` instead of `MASSIVE_SYNC`.
-        events = session.query(events_queue).all()
+        events = session.query(EventsQueue).all()
         assert len(events) == 2
         assert events[1].block_num == NEW_IRREVERSIBLE_BLOCK_NUM
 
