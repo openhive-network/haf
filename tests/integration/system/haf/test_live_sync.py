@@ -3,6 +3,7 @@ import json
 import test_tools as tt
 
 from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress, prepare_networks
+from haf_local_tools.tables import Blocks, Transactions, Operations
 
 
 START_TEST_BLOCK = 108
@@ -12,13 +13,9 @@ def test_live_sync(prepared_networks_and_database):
     tt.logger.info(f'Start test_live_sync')
 
     # GIVEN
-    networks, session, Base = prepared_networks_and_database
+    networks, session = prepared_networks_and_database
     witness_node = networks['Alpha'].node('WitnessNode0')
     node_under_test = networks['Beta'].node('ApiNode0')
-
-    blocks = Base.classes.blocks
-    transactions = Base.classes.transactions
-    operations = Base.classes.operations
 
     # WHEN
     prepare_networks(networks)
@@ -32,15 +29,15 @@ def test_live_sync(prepared_networks_and_database):
     head_block = get_head_block(node_under_test)
     irreversible_block = get_irreversible_block(node_under_test)
 
-    blks = session.query(blocks).order_by(blocks.num).all()
+    blks = session.query(Blocks).order_by(Blocks.num).all()
     block_nums = [block.num for block in blks]
     assert sorted(block_nums) == [i for i in range(1, irreversible_block+1)]
 
     tt.logger.info(f'head_block: {head_block} irreversible_block: {irreversible_block}')
 
-    session.query(transactions).filter(transactions.block_num == transaction_block_num).one()
+    session.query(Transactions).filter(Transactions.block_num == transaction_block_num).one()
 
-    ops = session.query(operations).filter(operations.block_num == transaction_block_num).all()
+    ops = session.query(Operations).filter(Operations.block_num == transaction_block_num).all()
     types = [json.loads(op.body)['type'] for op in ops]
 
     assert 'transfer_operation' in types

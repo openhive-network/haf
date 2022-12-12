@@ -3,6 +3,7 @@ import json
 import test_tools as tt
 
 from haf_local_tools import make_fork, wait_for_irreversible_progress, prepare_networks
+from haf_local_tools.tables import Transactions, Operations
 
 
 START_TEST_BLOCK = 108
@@ -12,10 +13,8 @@ def test_operations_after_switchng_fork(prepared_networks_and_database):
     tt.logger.info(f'Start test_operations_after_switchng_fork')
 
     # GIVEN
-    networks, session, Base = prepared_networks_and_database
+    networks, session = prepared_networks_and_database
     node_under_test = networks['Beta'].node('ApiNode0')
-    transactions = Base.classes.transactions
-    operations = Base.classes.operations
 
     # WHEN
     prepare_networks(networks)
@@ -33,9 +32,9 @@ def test_operations_after_switchng_fork(prepared_networks_and_database):
 
     # THEN
     wait_for_irreversible_progress(node_under_test, after_fork_block)
-    trx = session.query(transactions).filter(transactions.block_num > START_TEST_BLOCK).one()
+    trx = session.query(Transactions).filter(Transactions.block_num > START_TEST_BLOCK).one()
 
-    ops = session.query(operations).filter(operations.block_num == trx.block_num).all()
+    ops = session.query(Operations).filter(Operations.block_num == trx.block_num).all()
     types = [json.loads(op.body)['type'] for op in ops]
 
     assert 'producer_reward_operation' in types

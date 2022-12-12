@@ -3,6 +3,7 @@ from sqlalchemy.orm.session import sessionmaker
 import test_tools as tt
 
 from haf_local_tools import prepare_networks, wait_for_irreversible_progress, get_irreversible_block, create_app
+from haf_local_tools.tables import BlocksReversible, IrreversibleData
 
 
 #replay_all_nodes==false and TIMEOUT==300s therefore START_TEST_BLOCK has to be less than 100 blocks 
@@ -45,11 +46,9 @@ def test_application_broken(prepared_networks_and_database):
     #Finally a value of `irreversible_block` for given context has to be equal to current value of `irreversible_block` in HAF.
 
     # GIVEN
-    networks, session, Base = prepared_networks_and_database
+    networks, session = prepared_networks_and_database
     second_session = sessionmaker()(bind=session.get_bind())
     node_under_test = networks['Beta'].node('ApiNode0')
-    irreversible_data = Base.classes.irreversible_data
-    blocks_reversible = Base.classes.blocks_reversible
 
     # WHEN
     prepare_networks(networks, replay_all_nodes=False)
@@ -95,7 +94,7 @@ def test_application_broken(prepared_networks_and_database):
     irreversible_block = get_irreversible_block(node_under_test)
     tt.logger.info(f'irreversible_block {irreversible_block}')
 
-    haf_irreversible = session.query(irreversible_data).one()
+    haf_irreversible = session.query(IrreversibleData).one()
     tt.logger.info(f'consistent_block {haf_irreversible.consistent_block}')
 
     context_irreversible_block = session.execute( "SELECT irreversible_block FROM hive.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()[0]
@@ -106,7 +105,7 @@ def test_application_broken(prepared_networks_and_database):
 
     assert irreversible_block == haf_irreversible.consistent_block
 
-    blks = session.query(blocks_reversible).order_by(blocks_reversible.num).all()
+    blks = session.query(BlocksReversible).order_by(BlocksReversible.num).all()
     if len(blks) == 0:
         tt.logger.info(f'OBI can make an immediate irreversible block, so all reversible data can be cleared out')
     else:

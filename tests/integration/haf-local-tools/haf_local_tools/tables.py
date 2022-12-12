@@ -1,6 +1,7 @@
-from sqlalchemy import Column, BigInteger, DateTime, Integer, LargeBinary, SmallInteger, String, Text, MetaData
+from sqlalchemy import Column, BigInteger, Boolean, DateTime, Integer, LargeBinary, SmallInteger, String, Text, MetaData
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.types import TypeDecorator
 
 
 HIVE_METADATA = MetaData(schema="hive")
@@ -8,12 +9,15 @@ HIVE_METADATA = MetaData(schema="hive")
 # declarative base class
 Base = declarative_base(metadata=HIVE_METADATA)
 
-class HiveOperation(LargeBinary):
+class HiveOperation(TypeDecorator):
+    impl = LargeBinary
     __visit_name__ = "operation"
 
-    def __init__(self, length=None):
-        LargeBinary.__init__(self, length=length)
-        self.metadata = HIVE_METADATA
+    def result_processor(self, dialect, coltype):
+        def process(value):
+            return fr'{value}'
+        return process
+
 
 class Accounts(Base):
     __tablename__ = "accounts"
@@ -149,3 +153,11 @@ class EventsQueue(Base):
     id = Column(BigInteger, primary_key=True)
     event = Column(String)
     block_num = Column(BigInteger)
+
+
+class IrreversibleData(Base):
+    __tablename__ = "irreversible_data"
+
+    id = Column(Integer, primary_key=True)
+    consistent_block = Column(Integer)
+    is_dirty = Column(Boolean)
