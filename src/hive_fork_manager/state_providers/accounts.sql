@@ -33,9 +33,9 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_account_from_accounts_operations(IN _account_operation hive.operation)
+CREATE OR REPLACE FUNCTION hive.get_creator_from_account_create_operations(IN _account_operation hive.operation)
 RETURNS TEXT
-AS 'MODULE_PATHNAME', 'get_account_from_accounts_operations' LANGUAGE C;
+AS 'MODULE_PATHNAME', 'get_creator_from_account_create_operations' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
     RETURNS void
@@ -58,7 +58,7 @@ BEGIN
 
     EXECUTE format(
         'INSERT INTO hive.%s_accounts( name )
-        SELECT hive.get_account_from_accounts_operations( ov.body ) as name
+        SELECT hive.get_creator_from_account_create_operations( ov.body ) as name
         FROM hive.%s_operations_view ov
         JOIN hive.operation_types ot ON ov.op_type_id = ot.id
         WHERE
