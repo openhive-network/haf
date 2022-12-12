@@ -12,7 +12,7 @@ def test_event_massive_sync(prepared_networks_and_database):
     tt.logger.info(f'Start test_event_massive_sync')
 
     # GIVEN
-    networks, session, Base = prepared_networks_and_database
+    networks, session = prepared_networks_and_database
 
     # WHEN
     prepare_networks(networks)
@@ -20,7 +20,7 @@ def test_event_massive_sync(prepared_networks_and_database):
     # THEN
     tt.logger.info(f'Checking if an event `NEW_IRREVERSIBLE` is in a database')
     try:
-        wait_until_irreversible_without_new_block(session, Base, NEW_IRREVERSIBLE_BLOCK_NUM, 100)
+        wait_until_irreversible_without_new_block(session, NEW_IRREVERSIBLE_BLOCK_NUM, 100)
     except NoResultFound:
         tt.logger.error(f'An event `NEW_IRREVERSIBLE` not in a database.')
         raise

@@ -4,6 +4,7 @@ from typing import Dict
 
 import test_tools as tt
 from haf_local_tools import block_logs
+from haf_local_tools.tables import EventsQueue
 from shared_tools.complex_networks import run_networks
 
 BLOCKS_IN_FORK = 5
@@ -115,8 +116,7 @@ def create_app(session, application_context):
     session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION )
     session.commit()
 
-def wait_until_irreversible_without_new_block(session, Base, final_block, limit):
-    events_queue = Base.classes.events_queue
+def wait_until_irreversible_without_new_block(session, final_block, limit):
 
     assert limit > 0
 
@@ -126,7 +126,7 @@ def wait_until_irreversible_without_new_block(session, Base, final_block, limit)
         time.sleep(0.1)
 
          #Last event is `NEW_IRREVERSIBLE` instead of `MASSIVE_SYNC`.
-        events = session.query(events_queue).all()
+        events = session.query(EventsQueue).all()
 
         tt.logger.info(f'number of events: {len(events)} block number of last event: {0 if len(events) == 0 else events[len(events) - 1].block_num}')
 
@@ -137,9 +137,7 @@ def wait_until_irreversible_without_new_block(session, Base, final_block, limit)
 
     assert False, "An expected content of `events_queue` table has not been reached."
 
-def wait_until_irreversible(node_under_test, session, Base):
-    events_queue = Base.classes.events_queue
-
+def wait_until_irreversible(node_under_test, session):
     while True:
         node_under_test.wait_number_of_blocks(1)
 
@@ -149,8 +147,8 @@ def wait_until_irreversible(node_under_test, session, Base):
 
         tt.logger.info(f'head_block: {head_block} irreversible_block: {irreversible_block}')
 
-        result = session.query(events_queue).\
-            filter(events_queue.block_num == head_block).\
+        result = session.query(EventsQueue).\
+            filter(EventsQueue.block_num == head_block).\
             all()
 
         if result[ len(result) - 1 ].event == 'NEW_IRREVERSIBLE':

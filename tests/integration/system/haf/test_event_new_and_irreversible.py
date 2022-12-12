@@ -9,7 +9,7 @@ def test_event_new_and_irreversible(prepared_networks_and_database):
     tt.logger.info(f'Start test_event_new_and_irreversible')
 
     # GIVEN
-    networks, session, Base = prepared_networks_and_database
+    networks, session = prepared_networks_and_database
     node_under_test = networks['Beta'].node('ApiNode0')
 
     # WHEN
@@ -18,4 +18,4 @@ def test_event_new_and_irreversible(prepared_networks_and_database):
 
     # THEN
     tt.logger.info(f'Checking that event NEW_IRREVERSIBLE and NEW_BLOCK appear in database in correct order')
-    wait_until_irreversible(node_under_test, session, Base)
+    wait_until_irreversible(node_under_test, session)

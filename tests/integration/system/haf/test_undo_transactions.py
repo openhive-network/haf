@@ -1,7 +1,7 @@
 import test_tools as tt
 
 from haf_local_tools import make_fork, wait_for_irreversible_progress, prepare_networks
-
+from haf_local_tools.tables import Transactions
 
 START_TEST_BLOCK = 108
 
@@ -10,9 +10,8 @@ def test_undo_transactions(prepared_networks_and_database):
     tt.logger.info(f'Start test_undo_transactions')
 
     # GIVEN
-    networks, session, Base = prepared_networks_and_database
+    networks, session = prepared_networks_and_database
     node_under_test = networks['Beta'].node('ApiNode0')
-    transactions = Base.classes.transactions
 
     # WHEN
     prepare_networks(networks)
@@ -28,6 +27,6 @@ def test_undo_transactions(prepared_networks_and_database):
 
     # THEN
     wait_for_irreversible_progress(node_under_test, after_fork_block)
-    trxs = session.query(transactions).filter(transactions.block_num > START_TEST_BLOCK).all()
+    trxs = session.query(Transactions).filter(Transactions.block_num > START_TEST_BLOCK).all()
 
     assert trxs == []

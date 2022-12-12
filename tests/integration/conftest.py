@@ -46,11 +46,7 @@ def database():
         Session = sessionmaker(bind=engine)
         session = Session()
 
-        metadata = sqlalchemy.MetaData(schema="hive")
-        Base = automap_base(bind=engine, metadata=metadata)
-        Base.prepare(reflect=True)
-
-        return session, Base
+        return session
 
     yield make_database
 
@@ -58,12 +54,12 @@ def database():
 
 
 @pytest.fixture()
-def prepared_networks_and_database(database, witness_names) -> Tuple[Dict[str, tt.Network], Any, Any]:
+def prepared_networks_and_database(database, witness_names) -> Tuple[Dict[str, tt.Network], Any]:
     alpha_witness_names, beta_witness_names = witness_names
-    session, Base = database('postgresql:///haf_block_log')
+    session = database('postgresql:///haf_block_log')
 
     alpha_net = tt.Network()
-    init_node = tt.InitNode(network=alpha_net)
+    tt.InitNode(network=alpha_net)
     tt.WitnessNode(network=alpha_net, witnesses=alpha_witness_names)
 
     beta_net = tt.Network()
@@ -84,4 +80,4 @@ def prepared_networks_and_database(database, witness_names) -> Tuple[Dict[str, t
         'Beta': beta_net,
     }
 
-    yield networks, session, Base
+    yield networks, session
