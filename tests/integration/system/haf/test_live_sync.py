@@ -1,10 +1,8 @@
 import json
-from pathlib import Path
-import unittest
 
 import test_tools as tt
 
-from local_tools import get_irreversible_block, wait_for_irreversible_progress, run_networks
+from local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress, prepare_networks
 
 
 START_TEST_BLOCK = 108
@@ -23,7 +21,7 @@ def test_live_sync(prepared_networks_and_database):
     operations = Base.classes.operations
 
     # WHEN
-    run_networks(networks)
+    prepare_networks(networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     wallet = tt.Wallet(attach_to=witness_node)
     wallet.api.transfer('initminer', 'initminer', tt.Asset.Test(1000), 'dummy transfer operation')
@@ -31,12 +29,14 @@ def test_live_sync(prepared_networks_and_database):
 
     # THEN
     wait_for_irreversible_progress(node_under_test, transaction_block_num)
+    head_block = get_head_block(node_under_test)
     irreversible_block = get_irreversible_block(node_under_test)
 
     blks = session.query(blocks).order_by(blocks.num).all()
     block_nums = [block.num for block in blks]
-    case = unittest.TestCase()
-    case.assertCountEqual(block_nums, range(1, irreversible_block+1))
+    assert sorted(block_nums) == [i for i in range(1, irreversible_block+1)]
+
+    tt.logger.info(f'head_block: {head_block} irreversible_block: {irreversible_block}')
 
     session.query(transactions).filter(transactions.block_num == transaction_block_num).one()
 

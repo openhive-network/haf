@@ -1,8 +1,6 @@
-from pathlib import Path
-
 import test_tools as tt
 
-from local_tools import make_fork, wait_for_irreversible_progress, run_networks
+from local_tools import make_fork, wait_for_irreversible_progress, prepare_networks
 
 
 START_TEST_BLOCK = 108
@@ -17,7 +15,7 @@ def test_undo_transactions(prepared_networks_and_database):
     transactions = Base.classes.transactions
 
     # WHEN
-    run_networks(networks)
+    prepare_networks(networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     wallet = tt.Wallet(attach_to=node_under_test)
     transaction = wallet.api.transfer_to_vesting('initminer', 'null', tt.Asset.Test(1234), broadcast=False)

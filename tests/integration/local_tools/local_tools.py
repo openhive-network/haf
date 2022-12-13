@@ -5,6 +5,7 @@ import time
 from typing import Dict
 
 import test_tools as tt
+from test_tools.shared_tools.complex_networks import run_networks
 from test_tools.__private.user_handles.get_implementation import get_implementation
 from test_tools.__private.wait_for import wait_for_event
 
@@ -66,64 +67,12 @@ def get_irreversible_block(node):
     return irreversible_block_num
 
 
-def get_time_offset_from_file(name):
-    timestamp = ''
-    with open(name, 'r') as f:
-        timestamp = f.read()
-    timestamp = timestamp.strip()
-    current_time = datetime.now(timezone.utc)
-    new_time = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc)
-    difference = round(new_time.timestamp()-current_time.timestamp()) - 5 #reduce node start delay from 10s, caused test fails
-    time_offset = str(difference) + 's'
-    return time_offset
-
-
-def run_networks(networks: Dict[str, tt.Network], blocklog_directory=None, replay_all_nodes=True):
-    if blocklog_directory is None:
+def prepare_networks(networks: Dict[str, tt.Network], replay_all_nodes = True):
+    blocklog_directory = None
+    if replay_all_nodes:
         blocklog_directory = Path(__file__).parent.resolve()
 
-    time_offset = get_time_offset_from_file(blocklog_directory/'timestamp')
-
-    block_log = tt.BlockLog(blocklog_directory/'block_log')
-
-    tt.logger.info('Running nodes...')
-
-    connect_sub_networks(list(networks.values()))
-
-    nodes = [node for network in networks.values() for node in network.nodes]
-    nodes[0].run(wait_for_live=False, replay_from=block_log, time_offset=time_offset)
-    endpoint = get_implementation(nodes[0]).get_p2p_endpoint()
-    for node in nodes[1:]:
-        node.config.p2p_seed_node.append(endpoint)
-        if replay_all_nodes:
-            node.run(wait_for_live=False, replay_from=block_log, time_offset=time_offset)
-        else:
-            node.run(wait_for_live=False, time_offset=time_offset)
-
-    for network in networks.values():
-        network.is_running = True
-
-    deadline = time.time() + 20
-    for node in nodes:
-        wait_for_event(
-            get_implementation(node)._Node__notifications.live_mode_entered_event,
-            deadline=deadline,
-            exception_message='Live mode not activated on time.'
-        )
-
-
-def connect_sub_networks(sub_networks : list):
-    assert len(sub_networks) > 1
-
-    current_idx = 0
-    while current_idx < len(sub_networks) - 1:
-        next_current_idx = current_idx + 1
-        while next_current_idx < len(sub_networks):
-            tt.logger.info(f"Sub network {current_idx} connected with {next_current_idx}")
-            sub_networks[current_idx].connect_with(sub_networks[next_current_idx])
-            next_current_idx += 1
-        current_idx += 1
-
+    run_networks(list(networks.values()), blocklog_directory)
 
 def create_node_with_database(network: tt.Network, url):
     api_node = tt.ApiNode(network=network)
@@ -169,3 +118,34 @@ def create_app(session, application_context):
     session.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE.format( application_context ) )
     session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION )
     session.commit()
+
+def wait_until_irreversible_without_new_block(session, Base, final_block):
+    events_queue = Base.classes.events_queue
+
+    while True:
+        #wait many times to be sure that whole network is in stable state
+        time.sleep(0.1)
+
+         #Last event is `NEW_IRREVERSIBLE` instead of `MASSIVE_SYNC`.
+        events = session.query(events_queue).all()
+        if len(events) == 2 and events[1].block_num == final_block:
+            break
+
+def wait_until_irreversible(node_under_test, session, Base):
+    events_queue = Base.classes.events_queue
+
+    while True:
+        node_under_test.wait_number_of_blocks(1)
+
+        #Sometimes an irreversible block is less than head block so it's necessary to try final condition many times
+        head_block = get_head_block(node_under_test)
+        irreversible_block = get_irreversible_block(node_under_test)
+
+        tt.logger.info(f'head_block: {head_block} irreversible_block: {irreversible_block}')
+
+        result = session.query(events_queue).\
+            filter(events_queue.block_num == head_block).\
+            all()
+
+        if result[ len(result) - 1 ].event == 'NEW_IRREVERSIBLE':
+            return

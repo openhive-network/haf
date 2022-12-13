@@ -1,9 +1,6 @@
-from pathlib import Path
-import unittest
-
 import test_tools as tt
 
-from local_tools import make_fork, wait_for_irreversible_progress, run_networks
+from local_tools import make_fork, wait_for_irreversible_progress, prepare_networks
 
 
 START_TEST_BLOCK = 108
@@ -18,7 +15,7 @@ def test_blocks_reversible(prepared_networks_and_database):
     blocks_reversible = Base.classes.blocks_reversible
 
     # WHEN
-    run_networks(networks)
+    prepare_networks(networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     after_fork_block = make_fork(networks)
 
@@ -27,5 +24,4 @@ def test_blocks_reversible(prepared_networks_and_database):
 
     blks = session.query(blocks_reversible).order_by(blocks_reversible.num).all()
     block_nums_reversible = [block.num for block in blks]
-    case = unittest.TestCase()
-    case.assertCountEqual(block_nums_reversible, range(irreversible_block_num, head_block_number))
+    assert sorted(block_nums_reversible) == [i for i in range(irreversible_block_num, head_block_number)]

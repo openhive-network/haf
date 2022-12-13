@@ -63,6 +63,7 @@ def prepared_networks_and_database(database, witness_names) -> Tuple[Dict[str, t
     session, Base = database('postgresql:///haf_block_log')
 
     alpha_net = tt.Network()
+    init_node = tt.InitNode(network=alpha_net)
     tt.WitnessNode(network=alpha_net, witnesses=alpha_witness_names)
 
     beta_net = tt.Network()

@@ -2,11 +2,13 @@ from sqlalchemy.orm.session import sessionmaker
 
 import test_tools as tt
 
-from local_tools import run_networks, run_networks, wait_for_irreversible_progress, get_irreversible_block, create_app
+from local_tools import prepare_networks, wait_for_irreversible_progress, get_irreversible_block, create_app
 
 
-START_TEST_BLOCK = 108
-CONTEXT_ATTACH_BLOCK = 50
+#replay_all_nodes==false and TIMEOUT==300s therefore START_TEST_BLOCK has to be less than 100 blocks 
+START_TEST_BLOCK = 50
+
+CONTEXT_ATTACH_BLOCK = 40
 APPLICATION_CONTEXT = "trx_histogram"
 
 
@@ -50,7 +52,7 @@ def test_application_broken(prepared_networks_and_database):
     blocks_reversible = Base.classes.blocks_reversible
 
     # WHEN
-    run_networks(networks, replay_all_nodes=False)
+    prepare_networks(networks, replay_all_nodes=False)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
 
     # system under test
