@@ -1,12 +1,9 @@
 -- New versions of PostgreSQL disallow to create schema if not exists statement for any object not belonging to extension, and given schema does not initially.
 
-DROP DOMAIN IF EXISTS hive.context_name CASCADE;
 CREATE DOMAIN hive.context_name AS TEXT;
 
-DROP TYPE IF EXISTS hive.state_providers CASCADE;
 CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' );
 
-DROP TYPE IF EXISTS hive.event_type CASCADE;
 CREATE TYPE hive.event_type AS ENUM( 'BACK_FROM_FORK', 'NEW_BLOCK', 'NEW_IRREVERSIBLE', 'MASSIVE_SYNC' );
 
 CREATE TABLE IF NOT EXISTS hive.contexts(
