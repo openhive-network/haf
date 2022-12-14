@@ -114,17 +114,27 @@ def create_app(session, application_context):
     session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION )
     session.commit()
 
-def wait_until_irreversible_without_new_block(session, Base, final_block):
+def wait_until_irreversible_without_new_block(session, Base, final_block, limit):
     events_queue = Base.classes.events_queue
 
-    while True:
+    assert limit > 0
+
+    cnt = 0
+    while cnt < limit:
         #wait many times to be sure that whole network is in stable state
         time.sleep(0.1)
 
          #Last event is `NEW_IRREVERSIBLE` instead of `MASSIVE_SYNC`.
         events = session.query(events_queue).all()
+
+        tt.logger.info(f'number of events: {len(events)} block number of last event: {0 if len(events) == 0 else events[len(events) - 1].block_num}')
+
         if len(events) == 2 and events[1].block_num == final_block:
-            break
+            return
+
+        cnt += 1
+
+    assert False, "An expected content of `events_queue` table has not been reached."
 
 def wait_until_irreversible(node_under_test, session, Base):
     events_queue = Base.classes.events_queue
