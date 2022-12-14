@@ -1,6 +1,7 @@
 ADD_PSQL_EXTENSION(
     NAME hive_fork_manager
-    SCHEMA_SOURCES context_rewind/data_schema.sql
+    SCHEMA_SOURCES context_rewind/data_schema_types.sql
+             context_rewind/data_schema.sql
              events_queue.sql
              forks.sql
              app_context.sql
@@ -14,7 +15,6 @@ ADD_PSQL_EXTENSION(
              hived_api_impl_indexes.sql
 
     DEPLOY_SOURCES trigger_switch/trigger_off.sql
-            context_rewind/data_schema_types.sql
             context_rewind/names.sql
             context_rewind/triggers.sql
             context_rewind/event_triggers.sql
