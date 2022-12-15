@@ -34,9 +34,9 @@ SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION = """
      $function$
     """
 
-def create_db_engine(pg_port):
+def create_db_engine(db_name, pg_port):
     return sqlalchemy.create_engine(
-                "postgresql://alice:test@localhost:{}/psql_tools_test_db".format(pg_port), # this is only example of db
+                "postgresql://alice:test@localhost:{}/{}".format(pg_port, db_name), # this is only example of db
                 isolation_level="READ COMMITTED",
                 pool_size=1,
                 pool_recycle=3600,
@@ -86,16 +86,17 @@ def main_loop( db_connection ):
             # process the first block in range - one commit after each block
             db_connection.execute( "SELECT public.update_histogram( {}, {} )".format( first_block, last_block ) )
 
-def start_application(pg_port):
-    engine = create_db_engine(pg_port)
+def start_application(db_name, pg_port):
+    engine = create_db_engine(db_name, pg_port)
     with engine.connect() as db_connection:
         prepare_application_data( db_connection )
         main_loop( db_connection )
 
 if __name__ == '__main__':
     try:
-        pg_port = sys.argv[1] if (len(sys.argv) > 1) else 5432
-        start_application(pg_port)
+        db_name = sys.argv[1] if (len(sys.argv) > 1) else 'psql_tools_test_db'
+        pg_port = sys.argv[2] if (len(sys.argv) > 2) else 5432
+        start_application(db_name, pg_port)
     except KeyboardInterrupt:
         print( "Break by the user request" )
         pass
