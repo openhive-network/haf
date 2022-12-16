@@ -8,10 +8,18 @@ name = "haf_local_tools"
 version = "0.0.0"
 description = "A collective library containing all the tools required by haf python tests."
 authors = ["Mateusz Żebrak <mzebrak@syncad.com>"]
-packages = [
-    { include = "haf_local_tools" },
+packages = [{ include = "haf_local_tools" },
 ]
 
 
 [tool.poetry.dependencies]
 python = "^3.8"
+pytest = "6.2.5"
+pytest-timeout = "2.0.1"
+pytest-repeat = "0.9.1"
+sqlalchemy = "1.4.25"
+sqlalchemy-utils = "0.37.9"
+psycopg2-binary = "2.9.1"
+pandas = "1.4.0"
+shared_tools = { path = "shared-tools" }
+test_tools = { path = "test-tools" }
