@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 import test_tools as tt
 
-from tables import EventsQueue, Blocks, Operations, Transactions, TransactionsMultisig, Accounts, AccountOperations
+from haf_local_tools.tables import EventsQueue, Blocks, Operations, Transactions, TransactionsMultisig, Accounts, AccountOperations
 
 
 def test_replay_5milion():

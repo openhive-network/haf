@@ -2,7 +2,7 @@ import json
 
 import test_tools as tt
 
-from local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress, prepare_networks
+from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress, prepare_networks
 
 
 START_TEST_BLOCK = 108

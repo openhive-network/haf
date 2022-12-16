@@ -1,6 +1,6 @@
 import test_tools as tt
 
-from local_tools import wait_until_irreversible, prepare_networks
+from haf_local_tools import wait_until_irreversible, prepare_networks
 
 
 START_TEST_BLOCK = 108

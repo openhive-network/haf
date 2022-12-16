@@ -2,7 +2,7 @@ from sqlalchemy.orm.session import sessionmaker
 
 import test_tools as tt
 
-from local_tools import prepare_networks, wait_for_irreversible_progress, get_irreversible_block, create_app
+from haf_local_tools import prepare_networks, wait_for_irreversible_progress, get_irreversible_block, create_app
 
 
 #replay_all_nodes==false and TIMEOUT==300s therefore START_TEST_BLOCK has to be less than 100 blocks 

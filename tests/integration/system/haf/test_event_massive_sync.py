@@ -3,7 +3,7 @@ from sqlalchemy.orm.exc import MultipleResultsFound
 
 import test_tools as tt
 
-from local_tools import wait_until_irreversible_without_new_block, prepare_networks
+from haf_local_tools import wait_until_irreversible_without_new_block, prepare_networks
 
 
 NEW_IRREVERSIBLE_BLOCK_NUM = 106

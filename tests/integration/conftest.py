@@ -11,7 +11,7 @@ from sqlalchemy.pool import NullPool
 from test_tools.__private.scope.scope_fixtures import *  # pylint: disable=wildcard-import, unused-wildcard-import
 import test_tools as tt
 
-from witnesses import alpha_witness_names, beta_witness_names
+from haf_local_tools.witnesses import alpha_witness_names, beta_witness_names
 
 
 def pytest_exception_interact(report):

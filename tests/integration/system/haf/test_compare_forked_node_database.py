@@ -1,6 +1,6 @@
 import test_tools as tt
 
-from local_tools import make_fork, wait_for_irreversible_progress, prepare_networks, create_node_with_database
+from haf_local_tools import make_fork, wait_for_irreversible_progress, prepare_networks, create_node_with_database
 
 
 START_TEST_BLOCK = 108
