@@ -1,35 +1,13 @@
 #!/bin/sh
 
-evaluate_result() {
-  local result=$1;
-
-  if [ ${result} -eq 0 ]
-  then
-    return;
-  fi
-
-  echo "FAILED";
-  exit 1;
-}
-
 examples_folder=$1
 test_path=$2;
 setup_scripts_dir_path=$3;
 postgres_port=$4;
 
-UUID=`cat /proc/sys/kernel/random/uuid | od -A n -t x1 -N 16 | tr -dc '[:xdigit:]'`
-DB_NAME=psql_tools_test_db_$UUID
+. ./common.sh
 
-sudo -nu postgres psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -a -f  ./create_db_roles.sql;
-
-$setup_scripts_dir_path/setup_db.sh --port=$postgres_port  \
-  --haf-db-admin="haf_admin" --haf-db-name="$DB_NAME" --haf-app-user="alice" --haf-app-user="bob"
-
-if [ $? -ne 0 ]
-then
-  echo "FAILED. Cannot create extension"
-  exit 1;
-fi
+setup_test_database "$setup_scripts_dir_path" "$postgres_port"
 
 psql postgresql://test_hived:test@localhost:$postgres_port/$DB_NAME --username=test_hived -a -v ON_ERROR_STOP=on -f ./examples/prepare_data.sql
 evaluate_result $?;
