@@ -2,7 +2,7 @@
 
 CREATE DOMAIN hive.context_name AS TEXT;
 
-CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' );
+CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' , 'METADATA' );
 
 CREATE TYPE hive.event_type AS ENUM( 'BACK_FROM_FORK', 'NEW_BLOCK', 'NEW_IRREVERSIBLE', 'MASSIVE_SYNC' );
 

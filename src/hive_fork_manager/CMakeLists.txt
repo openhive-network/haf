@@ -26,8 +26,10 @@ ADD_PSQL_EXTENSION(
             tools.sql
             blocks_views_for_contexts.sql
             get_keyauths.sql
+            get_metadata.sql
             state_providers/accounts.sql
             state_providers/keyauth.sql
+            state_providers/metadata.sql
             hived_api_impl.sql
             app_api_impl.sql
             hived_api.sql
