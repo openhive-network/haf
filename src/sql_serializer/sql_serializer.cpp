@@ -479,35 +479,46 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
 {
   FC_ASSERT((chain_db.is_processing_block() && chain_db.is_producing_block()==false), "SQL serializer shall process only operations contained by finished blocks");
 
+  ilog("***mario-00*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
   if(!is_effective_operation(note.op))
     return;
+
+  ilog("***mario-01*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
 
   if(skip_reversible_block(note.block))
     return;
 
+  ilog("***mario-02*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
   hive::util::supplement_operation(note.op, chain_db);
 
   const bool is_virtual = hive::protocol::is_virtual_operation(note.op);
   FC_ASSERT( is_virtual || note.trx_in_block >= 0,  "Non is_producing real operation with trx_in_block = -1" );
 
+  ilog("***mario-03*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
   collect_account_operations( op_sequence_id, note.op, note.block );
 
+  ilog("***mario-04*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
   if( collector->is_op_accepted() )
   {
+    ilog("***mario-05*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
     filter.remember_trx_id( note.trx_in_block );
 
+    ilog("***mario-06*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
     cached_containter_t& cdtf = currently_caching_data; // alias
 
    int hardfork_num = get_hardfork_id(note.op);
     if(hardfork_num > 0)
     {
+      ilog("***mario-07*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
       cdtf->applied_hardforks.emplace_back(
         hardfork_num,
         note.block,
         op_sequence_id
       );
+      ilog("***mario-08*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
     }
 
+    ilog("***mario-09*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
     cdtf->operations.emplace_back(
       op_sequence_id,
       note.block,
@@ -516,7 +527,9 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
       chain_db.head_block_time(),
       note.op
     );
+    ilog("***mario-10*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
   }
+  ilog("***mario-111*** ${trx_id} ${block} ${which}", ("trx_id", note.trx_id )("block", note.block)("which", note.op.which()) );
   ++op_sequence_id;
 }
 
