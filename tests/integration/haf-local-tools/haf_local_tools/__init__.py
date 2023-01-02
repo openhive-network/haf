@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict
 
 import test_tools as tt
+from haf_local_tools import block_logs
 from shared_tools.complex_networks import run_networks
 
 BLOCKS_IN_FORK = 5
@@ -65,7 +66,7 @@ def get_irreversible_block(node):
 def prepare_networks(networks: Dict[str, tt.Network], replay_all_nodes = True):
     blocklog_directory = None
     if replay_all_nodes:
-        blocklog_directory = Path(__file__).parent.resolve()
+        blocklog_directory = Path(block_logs.__file__).parent
 
     run_networks(list(networks.values()), blocklog_directory)
 
