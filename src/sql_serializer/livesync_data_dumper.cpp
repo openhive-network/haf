@@ -33,7 +33,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     };
 
     transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "Livesync dumper" );
-    constexpr auto ONE_THREAD_WRITERS_NUMBER = 3;
+    constexpr auto ONE_THREAD_WRITERS_NUMBER = 4;
     auto NUMBER_OF_PROCESSORS_THREADS = ONE_THREAD_WRITERS_NUMBER + operations_threads + transactions_threads + account_operation_threads;
     auto execute_push_block = [this](block_num_rendezvous_trigger::BLOCK_NUM _block_num ){
       if ( !_block.empty() ) {

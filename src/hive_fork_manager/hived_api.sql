@@ -189,7 +189,6 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks' );
 
 END;
 $BODY$
