@@ -19,6 +19,18 @@ BEGIN
         , hbr.extensions
         , hbr.witness_signature
         , hbr.signing_key
+
+        , hbr.hbd_interest_rate
+
+        , hbr.total_vesting_fund_hive
+        , hbr.total_vesting_shares
+
+        , hbr.total_reward_fund_hive
+        , hbr.virtual_supply
+        , hbr.current_supply
+        , hbr.current_hbd_supply
+        , hbr.dhf_interval_ledger
+
     FROM
         hive.blocks_reversible hbr
     WHERE
