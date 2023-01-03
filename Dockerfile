@@ -9,6 +9,7 @@ ARG BUILD_IMAGE_TAG
 FROM phusion/baseimage:focal-1.0.0 AS ci-base-image
 
 ENV LANG=en_US.UTF-8
+ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
 SHELL ["/bin/bash", "-c"]
 
