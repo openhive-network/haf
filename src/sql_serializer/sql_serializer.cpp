@@ -531,6 +531,8 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
   const hive::chain::account_object* account_ptr = chain_db.find_account(block_header.witness);
   const hive::chain::witness_object* witness_ptr = chain_db.find_witness(block_header.witness);
 
+  const hive::chain::dynamic_global_property_object& dgpo = chain_db.get_dynamic_global_properties();
+
   currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
   currently_caching_data->blocks.emplace_back(
     note.block_id,
@@ -541,7 +543,22 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
     block_header.transaction_merkle_root,
     (block_header.extensions.size() == 0) ? fc::optional<std::string>() : fc::optional<std::string>(fc::json::to_string( block_header.extensions )),
     block_header.witness_signature,
-    witness_ptr->signing_key);
+    witness_ptr->signing_key,
+    
+    dgpo.hbd_interest_rate,
+
+    dgpo.total_vesting_shares,
+    dgpo.total_vesting_fund_hive,
+
+    dgpo.total_reward_fund_hive,
+
+    dgpo.virtual_supply,
+    dgpo.current_supply,
+
+    dgpo.current_hbd_supply,
+    dgpo.init_hbd_supply
+    );
+
   _last_block_num = note.block_num;
 
   _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
