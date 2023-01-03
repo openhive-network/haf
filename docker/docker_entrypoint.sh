@@ -1,11 +1,29 @@
 #! /bin/bash
 
-set -euo pipefail
+set -xeuo pipefail
 
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTDIR/haf/scripts"
 
-LOG_FILE=docker_entrypoint.log
+if [ ! -d "$DATADIR" ];
+then
+    echo "Data directory (DATADIR) $DATADIR does not exist. Exiting."
+    exit 1
+fi
+
+if [ ! -d "$SHM_DIR" ];
+then
+    echo "Shared memory file directory (SHM_DIR) $SHM_DIR does not exist. Exiting."
+    exit 1
+fi
+
+HAF_DB_STORE=$DATADIR/haf_db_store
+PGDATA=$DATADIR/haf_db_store/pgdata
+
+LOG_FILE="${DATADIR}/${LOG_FILE:=docker_entrypoint.log}"
+sudo -n touch $LOG_FILE
+sudo -n chown -Rc hived:hived $LOG_FILE
+sudo -n chmod a+rw $LOG_FILE
 source "$SCRIPTSDIR/common.sh"
 
 export POSTGRES_VERSION=12
@@ -55,18 +73,20 @@ EOF
 #trap cleanup EXIT
 trap cleanup INT QUIT TERM
 
-prepare_pg_hba_file
 
-if [ ! -d /home/hived/datadir ]
-then
-  sudo -n mkdir -p /home/hived/datadir
-  sudo -n chown -Rc hived:hived /home/hived/datadir
-fi
+sudo -n find "$DATADIR" -path "$HAF_DB_STORE" -prune -o -exec chown -c hived:hived {} +
+sudo -n chown -Rc hived:hived "$SHM_DIR"
 
 # Be sure this directory exists
-mkdir --mode=777 -p /home/hived/datadir/blockchain
+sudo -Enu hived mkdir --mode=777 -p "$DATADIR/blockchain"
 
-if [ -d $PGDATA ]
+sudo -n mkdir -p "$HAF_DB_STORE/tablespace"
+sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE"
+test "$HAF_DB_STORE" = "/home/hived/datadir/haf_db_store" || sudo -n ln -s "$HAF_DB_STORE" /home/hived/datadir/haf_db_store
+prepare_pg_hba_file
+
+
+if [ -d "$PGDATA" ]
 then
   echo "Attempting to setup postgres instance already containing HAF database..."
 
@@ -76,14 +96,10 @@ then
 
   echo "Postgres instance setup completed."
 else
-  sudo -n mkdir -p $PGDATA
-  sudo -n mkdir -p $HAF_DB_STORE/tablespace
-  sudo -n chown -Rc postgres:postgres $HAF_DB_STORE
-
   echo "Attempting to setup postgres instance..."
 
   # Here is an exception against using /etc/init.d/postgresql script to manage postgres - maybe there is some better way to force initdb using regular script.
-  sudo -nu postgres PGDATA=$PGDATA /usr/lib/postgresql/${POSTGRES_VERSION}/bin/pg_ctl initdb
+  sudo -nu postgres PGDATA="$PGDATA" /usr/lib/postgresql/${POSTGRES_VERSION}/bin/pg_ctl initdb
 
   sudo -n ./haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="$HAF_DB_STORE/tablespace"
 
@@ -94,7 +110,7 @@ else
   sudo -n ./haf/scripts/setup_pghero.sh --database=haf_block_log
 fi
 
-cd /home/hived/datadir
+cd "$DATADIR"
 
 # be sure postgres is running
 sudo -n /etc/init.d/postgresql start
@@ -105,14 +121,13 @@ export HIVED_ARGS
 
 echo "Attempting to execute hived using additional command line arguments: ${HIVED_ARGS[@]}"
 
-echo $BASH_SOURCE
 
 {
 sudo -Enu hived /bin/bash << EOF
 echo "Attempting to execute hived using additional command line arguments: ${HIVED_ARGS[@]}"
 
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
-  --data-dir=/home/hived/datadir --shared-file-dir=/home/hived/shm_dir \
+  --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
     --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
       ${HIVED_ARGS[@]} 2>&1 | tee -i hived.log
 echo "$? Hived process finished execution."

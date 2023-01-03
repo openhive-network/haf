@@ -1,0 +1,1 @@
+../../hive/scripts/ci-helpers/prepare_data_and_shm_dir.sh

@@ -70,14 +70,12 @@ ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu20.04-5}
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
 
-ARG WS_PORT=8090
+ARG WS_PORT=8091
 ENV WS_PORT=${WS_PORT}
 
 ARG HTTP_PORT=8090
 ENV HTTP_PORT=${HTTP_PORT}
 
-ENV HAF_DB_STORE=/home/hived/datadir/haf_db_store
-ENV PGDATA=/home/hived/datadir/haf_db_store/pgdata
 # Environment variable which allows to override default postgres access specification in pg_hba.conf
 ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\nhost    all     pghero    172.0.0.0/8    trust"
 
@@ -103,7 +101,13 @@ RUN sudo -n mkdir -p /home/hived/bin && sudo -n mkdir -p /home/hived/shm_dir && 
 
 VOLUME [ "/home/hived/datadir", "/home/hived/shm_dir" ]
 
+ENV DATADIR=/home/hived/datadir
+ENV SHM_DIR=/home/hived/shm_dir
+
 STOPSIGNAL SIGINT
+
+# JSON rpc service
+EXPOSE ${HTTP_PORT}
 
 ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
 
@@ -112,7 +116,6 @@ FROM ${CI_REGISTRY_IMAGE}base_instance:base_instance-${BUILD_IMAGE_TAG} as insta
 # Embedded postgres service
 EXPOSE 5432
 
-#p2p service
 EXPOSE ${P2P_PORT}
 # websocket service
 EXPOSE ${WS_PORT}
@@ -123,7 +126,7 @@ FROM ${CI_REGISTRY_IMAGE}ci-base-image-5m$CI_IMAGE_TAG AS block_log_5m_source
 
 FROM ${CI_REGISTRY_IMAGE}base_instance:base_instance-$BUILD_IMAGE_TAG as data
 
-COPY --from=block_log_5m_source /home/hived/datadir /home/hived/datadir 
+COPY --from=block_log_5m_source /home/hived/datadir /home/hived/datadir
 ADD --chown=hived:hived ./docker/config_5M.ini /home/hived/datadir/config.ini
 
 RUN "/home/haf_admin/docker_entrypoint.sh" --force-replay --stop-replay-at-block=5000000 --exit-before-sync

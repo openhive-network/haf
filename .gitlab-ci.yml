@@ -1,15 +1,24 @@
 stages:
   - build_and_test
   - deploy
+  - cleanup
 
 variables:
   CTEST_NUMBER_OF_JOBS: 4
-  GIT_DEPTH: 1
+  GIT_DEPTH: 20
   GIT_SUBMODULE_STRATEGY: recursive
+  CI_DEBUG_SERVICES: "true"
   # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-7
   BUILDER_IMAGE_TAG: "@sha256:c3bfeee205b5ffffa3b5c5b1a4ebff19d1d15afe1e6d5f73efc2fd4a5d6dd632"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
+  DATA_CACHE_MAINNET: /cache/replay_data_haf_mainnet_${CI_PIPELINE_ID}
+  DATA_CACHE_MIRRORNET: /cache/replay_data_haf_mirrornet_${CI_PIPELINE_ID}
+  BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
+  BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /blockchain/block_log_5m_mirrornet
+
+include:
+  - '/scripts/ci-helpers/prepare_data_image_job.yml'
 
 hive_fork_manager:
   stage: build_and_test

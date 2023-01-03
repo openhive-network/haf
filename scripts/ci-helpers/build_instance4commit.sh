@@ -13,6 +13,7 @@ REGISTRY=""
 BRANCH="master"
 
 NETWORK_TYPE_ARG=""
+EXPORT_BINARIES_ARG=""
 
 print_help () {
     echo "Usage: $0 <commit> <registry_url> [OPTION[=VALUE]]..."
@@ -20,6 +21,7 @@ print_help () {
     echo "Allows to build docker image containing HAF installation built from pointed COMMIT"
     echo "OPTIONS:"
     echo "  --network-type=TYPE       Allows to specify type of blockchain network supported by built hived. Allowed values: mainnet, testnet, mirrornet"
+    echo "  --export-binaries=PATH    Allows to specify a path where binaries shall be exported from built image."
     echo "  --help                    Display this help screen and exit"
     echo
 }
@@ -29,6 +31,10 @@ while [ $# -gt 0 ]; do
     --network-type=*)
         type="${1#*=}"
         NETWORK_TYPE_ARG="--network-type=${type}"
+        ;;
+    --export-binaries=*)
+        export_path="${1#*=}"
+        EXPORT_BINARIES_ARG="--export-binaries=${export_path}"
         ;;
     -*)
         echo "ERROR: '$1' is not a valid option"
@@ -59,6 +65,6 @@ BUILD_IMAGE_TAG=$COMMIT
 
 do_clone "$BRANCH" "./haf-${COMMIT}" https://gitlab.syncad.com/hive/haf.git "$COMMIT"
 
-"$SCRIPTSDIR/ci-helpers/build_instance.sh" "${BUILD_IMAGE_TAG}" "./haf-${COMMIT}" "${REGISTRY}" ${NETWORK_TYPE_ARG}
+"$SCRIPTSDIR/ci-helpers/build_instance.sh" "${BUILD_IMAGE_TAG}" "./haf-${COMMIT}" "${REGISTRY}" ${NETWORK_TYPE_ARG} ${EXPORT_BINARIES_ARG}
 
 
