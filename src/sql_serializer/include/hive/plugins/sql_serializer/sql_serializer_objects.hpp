@@ -42,6 +42,10 @@ namespace hive
         using hive::protocol::checksum_type;
         using hive::protocol::public_key_type;
 
+        using hive::protocol::VEST_asset;
+        using hive::protocol::HIVE_asset;
+        using hive::protocol::HBD_asset;
+
         namespace processing_objects
         {
           struct block_data_base
@@ -62,6 +66,7 @@ namespace hive
           struct process_block_t
             : public block_data_with_hash
           {
+            
             using block_data_with_hash::hash_t;
             fc::time_point_sec created_at;
             hash_t prev_hash;
@@ -71,10 +76,33 @@ namespace hive
             signature_type witness_signature;
             public_key_type signing_key;
 
+            uint16_t hbd_interest_rate = 0;
+
+            VEST_asset total_vesting_shares;
+            HIVE_asset total_vesting_fund_hive;
+
+            HIVE_asset total_reward_fund_hive;
+            
+            HIVE_asset virtual_supply;
+            HIVE_asset current_supply;
+
+            HBD_asset current_hbd_supply;
+            HBD_asset dhf_interval_ledger;
+
             process_block_t(const hash_t &_hash, const int _block_number, const fc::time_point_sec _tp, const hash_t &_prev, const int _producer_account_id,
-                            const checksum_type& _transaction_merkle_root, const fc::optional<std::string>& _extensions, const signature_type& _witness_signature, const public_key_type& _signing_key)
+                            const checksum_type& _transaction_merkle_root, const fc::optional<std::string>& _extensions, const signature_type& _witness_signature, const public_key_type& _signing_key,
+                            uint16_t _hbd_interest_rate,
+                            const VEST_asset& _total_vesting_shares, const HIVE_asset& _total_vesting_fund_hive,
+                            const HIVE_asset& _total_reward_fund_hive,
+                            const HIVE_asset& _virtual_supply, const HIVE_asset& _current_supply,
+                            const HBD_asset& _current_hbd_supply, const HBD_asset& _dhf_interval_ledger)
             : block_data_with_hash{_hash, _block_number}, created_at{_tp}, prev_hash{_prev}, producer_account_id{_producer_account_id},
-            transaction_merkle_root{_transaction_merkle_root}, extensions{_extensions}, witness_signature{_witness_signature}, signing_key{_signing_key}
+              transaction_merkle_root{_transaction_merkle_root}, extensions{_extensions}, witness_signature{_witness_signature}, signing_key{_signing_key},
+              hbd_interest_rate{_hbd_interest_rate },
+              total_vesting_shares{_total_vesting_shares}, total_vesting_fund_hive{_total_vesting_fund_hive},
+              total_reward_fund_hive{_total_reward_fund_hive},
+              virtual_supply{_virtual_supply}, current_supply{_current_supply},
+              current_hbd_supply{_current_hbd_supply}, dhf_interval_ledger{_dhf_interval_ledger}
             {}
           };
 
