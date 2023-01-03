@@ -20,6 +20,12 @@ namespace hive::plugins::sql_serializer {
       std::string escape_raw(const fc::ripemd160& hash) const;
       std::string escape_raw(const fc::optional<signature_type>& sign) const;
 
+      template< uint32_t _SYMBOL >
+      std::string to_string(const hive::protocol::tiny_asset<_SYMBOL>& a) const
+      {
+        return std::to_string(a.amount.value);
+      }
+
     private:
       fc::string escape_sql(const std::string &text) const;
     };
