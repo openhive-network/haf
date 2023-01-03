@@ -21,5 +21,5 @@ sqlalchemy = "1.4.25"
 sqlalchemy-utils = "0.37.9"
 psycopg2-binary = "2.9.1"
 pandas = "1.4.0"
-shared_tools = { path = "shared-tools" }
-test_tools = { path = "test-tools" }
+shared_tools = { path = "shared-tools", develop = true }
+test_tools = { path = "test-tools", develop = true }
