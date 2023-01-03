@@ -23,7 +23,12 @@ namespace hive::plugins::sql_serializer {
       {
         return std::to_string(data.block_number) + "," + escape_raw(data.hash) + "," +
         escape_raw(data.prev_hash) + ", '" + data.created_at.to_iso_string() + "' ," + std::to_string(data.producer_account_id) + "," +
-        escape_raw(data.transaction_merkle_root) + "," + escape(data.extensions) + "," + escape_raw(data.witness_signature) + ", '" + static_cast<std::string>(data.signing_key) + "'";
+        escape_raw(data.transaction_merkle_root) + "," + escape(data.extensions) + "," + escape_raw(data.witness_signature) + ", '" + static_cast<std::string>(data.signing_key) + "'" + "," +
+        std::to_string(data.hbd_interest_rate) + "," +
+        to_string(data.total_vesting_fund_hive) + "," + to_string(data.total_vesting_shares) + "," +
+        to_string(data.total_reward_fund_hive) + "," +
+        to_string(data.virtual_supply) + "," + to_string(data.current_supply) + "," +
+        to_string(data.current_hbd_supply) + "," + to_string(data.dhf_interval_ledger);
       }
       };
     };
