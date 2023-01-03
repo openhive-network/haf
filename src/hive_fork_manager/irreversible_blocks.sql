@@ -1,3 +1,9 @@
+CREATE DOMAIN hive.vest_amount AS NUMERIC NOT NULL;
+CREATE DOMAIN hive.hive_amount AS NUMERIC NOT NULL;
+CREATE DOMAIN hive.hbd_amount AS NUMERIC NOT NULL;
+--- Interest rate (in BPS - basis points)
+CREATE DOMAIN hive.interest_rate AS INT4 NOT NULL;
+
 CREATE TABLE IF NOT EXISTS hive.blocks (
        num integer NOT NULL,
        hash bytea NOT NULL,
@@ -8,6 +14,22 @@ CREATE TABLE IF NOT EXISTS hive.blocks (
        extensions jsonb DEFAULT NULL,
        witness_signature bytea NOT NULL,
        signing_key text NOT NULL,
+
+       --- Data specific to parts of blockchain DGPO 
+
+       hbd_interest_rate hive.interest_rate,
+
+       total_vesting_fund_hive hive.hive_amount,
+       total_vesting_shares hive.vest_amount,
+
+       total_reward_fund_hive hive.hive_amount,
+       
+       virtual_supply hive.hive_amount,
+       current_supply hive.hive_amount,
+
+       current_hbd_supply hive.hbd_amount,
+       dhf_interval_ledger hive.hbd_amount,
+
        CONSTRAINT pk_hive_blocks PRIMARY KEY( num )
 );
 
