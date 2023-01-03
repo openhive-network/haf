@@ -2,7 +2,7 @@
 # docker build --target=ci-base-image -t registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-xxx -f Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=:ubuntu20.04-6
+ARG CI_IMAGE_TAG=:ubuntu20.04-7
 
 ARG BUILD_IMAGE_TAG
 
