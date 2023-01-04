@@ -14,12 +14,12 @@ packages = [{ include = "haf_local_tools" },
 
 [tool.poetry.dependencies]
 python = "^3.8"
+pandas = "1.4.0"
+psycopg2-binary = "2.9.1"
 pytest = "6.2.5"
-pytest-timeout = "2.0.1"
 pytest-repeat = "0.9.1"
+pytest-timeout = "2.0.1"
+shared_tools = { path = "shared-tools", develop = true }
 sqlalchemy = "1.4.25"
 sqlalchemy-utils = "0.37.9"
-psycopg2-binary = "2.9.1"
-pandas = "1.4.0"
-shared_tools = { path = "shared-tools", develop = true }
 test_tools = { path = "test-tools", develop = true }
