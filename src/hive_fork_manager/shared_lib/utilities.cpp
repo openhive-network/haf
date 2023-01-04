@@ -201,8 +201,20 @@ TupleDesc build_tuple_descriptor(PG_FUNCTION_ARGS)
   return retvalDescription;
 }
 
+Datum process_exception( const std::string& exception_info, const char* C_function_name, const char* arg1 )
+{
+  issue_error(fc::string("Broken " + fc::string(C_function_name) + "() input argument: `") + arg1 + fc::string("'. Error: ") + exception_info);
+  return (Datum)0;
+}
+
+Datum process_exception( const char* C_function_name, const char* arg1 )
+{
+  issue_error(fc::string("Unknown error during processing " + fc::string(C_function_name) + "(") + arg1 + fc::string(")"));
+  return (Datum)0;
+}
+
 template<typename Collect, typename FillReturnTuple>
-Datum colect_data_and_fill_returned_recordset(Collect collect, FillReturnTuple fill_return_tuple,  const char* C_function_name, const char* arg1) noexcept 
+Datum colect_data_and_fill_returned_recordset(Collect collect, FillReturnTuple fill_return_tuple, const char* C_function_name, const char* arg1) noexcept 
 {
   try 
   {
@@ -210,19 +222,15 @@ Datum colect_data_and_fill_returned_recordset(Collect collect, FillReturnTuple f
   }
   catch(const fc::exception& ex)
   {
-    fc::string exception_info = ex.to_string();
-    issue_error(fc::string("Broken " + fc::string(C_function_name) + "() input argument: `") + arg1 + fc::string("'. Error: ") + exception_info);
-    return (Datum)0;
+    return process_exception( ex.to_string(), C_function_name, arg1 );
   }
   catch(const std::exception& ex)
   {
-    issue_error(fc::string("Broken " + fc::string(C_function_name) + "() input argument: `") + arg1 + fc::string("'. Error: ") + ex.what());
-    return (Datum)0;
+    return process_exception( ex.what(), C_function_name, arg1 );
   }
   catch(...)
   {
-    issue_error(fc::string("Unknown error during processing " + fc::string(C_function_name) + "(") + arg1 + fc::string(")"));
-    return (Datum)0;
+    return process_exception( C_function_name, arg1 );
   }
 
   fill_return_tuple();
@@ -230,7 +238,29 @@ Datum colect_data_and_fill_returned_recordset(Collect collect, FillReturnTuple f
   return (Datum)0;
 }
 
+template<typename Collect>
+Datum collect_data(Collect collect, const char* C_function_name, PG_FUNCTION_ARGS) noexcept
+{
+  try
+  {
+    return collect( fcinfo );
+  }
+  catch(const fc::exception& ex)
+  {
+    process_exception( ex.to_string(), C_function_name, text_to_cstring(PG_GETARG_TEXT_PP(0)) );
+  }
+  catch(const std::exception& ex)
+  {
+    process_exception( ex.what(), C_function_name, text_to_cstring(PG_GETARG_TEXT_PP(0)) );
+  }
+  catch(...)
+  {
+    process_exception( C_function_name, text_to_cstring(PG_GETARG_TEXT_PP(0)) );
+  }
 
+  FuncCallContext* funcctx = nullptr;
+  SRF_RETURN_DONE(funcctx);
+}
 
 template<typename ElemT, typename F>
 void fill_record_field(Datum* tuple_values, ElemT elem, const F& func, std::size_t counter)
@@ -337,113 +367,97 @@ Datum get_legacy_style_operation(PG_FUNCTION_ARGS)
   return _result;
 }
 
-PG_FUNCTION_INFO_V1(get_impacted_accounts);
-
-Datum get_impacted_accounts(PG_FUNCTION_ARGS)
+Datum collect_impacted_accounts(PG_FUNCTION_ARGS)
 {
-  FuncCallContext*  funcctx   = nullptr;
+  FuncCallContext* funcctx = nullptr;
 
-  try
+  int call_cntr = 0;
+  int max_calls = 0;
+
+  static Datum _empty = CStringGetTextDatum("");
+  Datum current_account = _empty;
+
+  bool _first_call = SRF_IS_FIRSTCALL();
+  /* stuff done only on the first call of the function */
+  if( _first_call )
   {
-    int call_cntr = 0;
-    int max_calls = 0;
+      /* create a function context for cross-call persistence */
+      funcctx = SRF_FIRSTCALL_INIT();
 
-    static Datum _empty = CStringGetTextDatum("");
-    Datum current_account = _empty;
+      /* switch to memory context appropriate for multiple function calls */
+      MemoryContextSwitcher(funcctx->multi_call_memory_ctx,
+        [&current_account, fcinfo, funcctx]()
+        {
+          /* total number of tuples to be returned */
+          flat_set<account_name_type> _accounts = get_accounts( text_to_cstring(PG_GETARG_TEXT_PP(0)) );
 
-    bool _first_call = SRF_IS_FIRSTCALL();
-    /* stuff done only on the first call of the function */
-    if( _first_call )
-    {
-        /* create a function context for cross-call persistence */
-        funcctx = SRF_FIRSTCALL_INIT();
+          funcctx->max_calls = _accounts.size();
+          funcctx->user_fctx = nullptr;
 
-        /* switch to memory context appropriate for multiple function calls */
-        MemoryContextSwitcher(funcctx->multi_call_memory_ctx,
-          [&current_account, fcinfo, funcctx]()
+          if( !_accounts.empty() )
           {
-            /* total number of tuples to be returned */
-            auto* _arg0 = (VarChar*)PG_GETARG_VARCHAR_P(0);
-            auto* _op_body = (char*)VARDATA(_arg0);
+            auto itr = _accounts.begin();
+            fc::string _str = *(itr);
+            current_account = CStringGetTextDatum( _str.c_str() );
 
-            flat_set<account_name_type> _accounts = get_accounts( _op_body );
-
-            funcctx->max_calls = _accounts.size();
-            funcctx->user_fctx = nullptr;
-
-            if( !_accounts.empty() )
+            if( _accounts.size() > 1 )
             {
-              auto itr = _accounts.begin();
-              fc::string _str = *(itr);
-              current_account = CStringGetTextDatum( _str.c_str() );
-
-              if( _accounts.size() > 1 )
+              auto** _buffer = ( Datum** )palloc( ( _accounts.size() - 1 ) * sizeof( Datum* ) );
+              for( size_t i = 1; i < _accounts.size(); ++i )
               {
-                auto** _buffer = ( Datum** )palloc( ( _accounts.size() - 1 ) * sizeof( Datum* ) );
-                for( size_t i = 1; i < _accounts.size(); ++i )
-                {
-                  ++itr;
-                  _str = *(itr);
+                ++itr;
+                _str = *(itr);
 
-                  _buffer[i - 1] = ( Datum* )palloc( sizeof( Datum ) );;
-                  *( _buffer[i - 1] ) = CStringGetTextDatum( _str.c_str() );
-                }
-                funcctx->user_fctx = _buffer;
+                _buffer[i - 1] = ( Datum* )palloc( sizeof( Datum ) );;
+                *( _buffer[i - 1] ) = CStringGetTextDatum( _str.c_str() );
               }
+              funcctx->user_fctx = _buffer;
             }
-        }
-
-      );
-
-    }
-
-    /* stuff done on every call of the function */
-    funcctx = SRF_PERCALL_SETUP();
-
-    call_cntr = funcctx->call_cntr;
-    max_calls = funcctx->max_calls;
-
-    if( call_cntr < max_calls )    /* do when there is more left to send */
-    {
-      if( !_first_call )
-      {
-        auto** _buffer = ( Datum** )funcctx->user_fctx;
-        current_account = *( _buffer[ call_cntr - 1 ] );
+          }
       }
 
-      SRF_RETURN_NEXT(funcctx, current_account );
-    }
-    else    /* do when there is no more left */
-    {
-      if( funcctx->user_fctx != nullptr )
-      {
-        auto** _buffer = ( Datum** )funcctx->user_fctx;
+    );
 
-        for( auto i = 0; i < max_calls - 1; ++i ) {
-          pfree( _buffer[i] );
-        }
-
-        pfree( _buffer );
-      }
-
-      SRF_RETURN_DONE(funcctx);
-    }
   }
-  catch(...)
-  {
-    try
-    {
-      auto* _arg0 = (VarChar*)PG_GETARG_VARCHAR_P(0);
-      auto* _op_body = (char*)VARDATA(_arg0);
 
-      CUSTOM_LOG( "An exception was raised during `get_impacted_accounts` call. Operation: %s", _op_body ? _op_body : "" )
-    }
-    catch(...)
+  /* stuff done on every call of the function */
+  funcctx = SRF_PERCALL_SETUP();
+
+  call_cntr = funcctx->call_cntr;
+  max_calls = funcctx->max_calls;
+
+  if( call_cntr < max_calls )    /* do when there is more left to send */
+  {
+    if( !_first_call )
     {
+      auto** _buffer = ( Datum** )funcctx->user_fctx;
+      current_account = *( _buffer[ call_cntr - 1 ] );
+    }
+
+    SRF_RETURN_NEXT(funcctx, current_account );
+  }
+  else    /* do when there is no more left */
+  {
+    if( funcctx->user_fctx != nullptr )
+    {
+      auto** _buffer = ( Datum** )funcctx->user_fctx;
+
+      for( auto i = 0; i < max_calls - 1; ++i ) {
+        pfree( _buffer[i] );
+      }
+
+      pfree( _buffer );
     }
 
     SRF_RETURN_DONE(funcctx);
   }
+}
+
+PG_FUNCTION_INFO_V1(get_impacted_accounts);
+
+Datum get_impacted_accounts(PG_FUNCTION_ARGS)
+{
+  return collect_data( collect_impacted_accounts, __FUNCTION__, fcinfo );
 }
 
 PG_FUNCTION_INFO_V1(get_impacted_balances);
