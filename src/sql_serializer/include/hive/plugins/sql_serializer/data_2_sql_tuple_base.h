@@ -18,6 +18,7 @@ namespace hive::plugins::sql_serializer {
       std::string escape(const std::string& source) const;
       std::string escape(const fc::optional<std::string>& source) const;
       std::string escape_raw(const fc::ripemd160& hash) const;
+      std::string escape_raw(const std::vector<char>& binary) const;
       std::string escape_raw(const fc::optional<signature_type>& sign) const;
 
       template< uint32_t _SYMBOL >
