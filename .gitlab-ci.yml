@@ -151,12 +151,13 @@ applications_system_tests:
       artifacts: true
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
-    PYTHONPATH: "$CI_PROJECT_DIR/hive/tests/test_tools/package:$CI_PROJECT_DIR/tests/integration/local_tools"
+    PYTHONPATH: "$CI_PROJECT_DIR/tests/integration/local_tools"
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
     BLOCK_LOG_DIRECTORY: "/blockchain"
     DB_NAME: haf_block_log
     DB_URL: "postgresql:///$DB_NAME"
   before_script:
+    - !reference [.pytest_based, before_script]
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
     - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
     # replay
@@ -167,6 +168,8 @@ applications_system_tests:
     - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --replay-blockchain --stop-replay-at-block 4100000 --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_1_step_logs.log
     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --replay-blockchain --stop-replay-at-block 5000000 --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_2_step_logs.log
+  script:
+    - pytest --junitxml report.xml
   artifacts:
     paths:
     - "**/node_1_step_logs.log"
