@@ -81,13 +81,11 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        fc::variant opVariant;
-        fc::to_variant(data.op, opVariant);
-        fc::string deserialized_op = fc::json::to_string(opVariant);
+        std::vector<char> opDeserialized = fc::raw::pack_to_vector( data.op );
 
         return std::to_string(data.operation_id) + ',' + std::to_string(data.block_number) + ',' +
         std::to_string(data.trx_in_block) + ',' + std::to_string(data.op_in_trx) + ',' +
-        std::to_string(data.op.which()) + ",'" + data.timestamp.to_iso_string() + "'," + escape(deserialized_op);
+        std::to_string(data.op.which()) + ",'" + data.timestamp.to_iso_string() + "'," + escape_raw(opDeserialized);
       }
       };
     };

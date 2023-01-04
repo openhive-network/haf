@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS hive.operations (
     -- - system triggered virtual operations usualy are created after applaying current block and got time equals its time
     --   (after hived not changed head_block to another one)
     timestamp TIMESTAMP NOT NULL,
-    body text DEFAULT NULL,
+    body hive.operation DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id ),
     CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num),
     CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id)
