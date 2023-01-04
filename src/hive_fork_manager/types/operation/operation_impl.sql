@@ -8,5 +8,7 @@ CREATE TYPE hive.operation(
   , SEND = hive._operation_bin_out -- hive.operation -> bytea
 
   , INTERNALLENGTH = VARIABLE
-  , STORAGE = extended
+  --- According to documentation: https://www.postgresql.org/docs/current/storage-toast.html#STORAGE-TOAST-ONDISK
+  --- we want to held this data embedded inside table row, instead of pushing to external storage.
+  , STORAGE = MAIN
 );
