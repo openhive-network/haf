@@ -16,7 +16,8 @@ USER root
 WORKDIR /usr/local/src
 ADD ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 
-RUN ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived"
+# Install development packages and create required accounts
+RUN ./scripts/setup_ubuntu.sh --dev --haf-admin-account="haf_admin" --hived-account="hived"
 
 USER haf_admin
 
