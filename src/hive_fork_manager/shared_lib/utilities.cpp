@@ -39,7 +39,11 @@ struct wsp_fill_helper
       itr = source.find( alt_pname );
 
     if(itr != source.end())
-      result[pname] = fc::json::to_string(fc::raw::unpack_from_vector<T>(itr->second));
+    {
+      T unpack_result;
+      fc::raw::unpack_from_vector<T>(itr->second, unpack_result);
+      result[pname] = fc::json::to_string(unpack_result);
+    }
   }
 };
 
