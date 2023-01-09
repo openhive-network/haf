@@ -20,8 +20,10 @@ ADD ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 RUN ./scripts/setup_ubuntu.sh --dev --haf-admin-account="haf_admin" --hived-account="hived"
 
 USER haf_admin
-
 WORKDIR /home/haf_admin
+
+# Install additionally packages located in user directory
+RUN /usr/local/src/scripts/setup_ubuntu.sh --user
 
 #docker build --target=ci-base-image-5m -t registry.gitlab.syncad.com/hive/haf/ci-base-image-5m:ubuntu20.04-xxx -f Dockerfile .
 FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG AS ci-base-image-5m

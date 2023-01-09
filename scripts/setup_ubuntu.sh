@@ -14,6 +14,7 @@ print_help () {
     echo "Allows to setup this machine for HAF installation"
     echo "OPTIONS:"
     echo "  --dev                     Allows to install all packages required to build and run haf project."
+    echo "  --user                    Allows to install all packages being stored in the user's home directory."
     echo "  --haf-admin-account=NAME  Allows to specify the account name to be used for HAF administration. (it is associated to the PostgreSQL role)"
     echo "  --hived-account=NAME      Allows to specify the account name to be used for hived process. (it is accociated to PostgreSQL role)."
     echo "  --help                    Display this help screen and exit"
@@ -69,6 +70,12 @@ install_all_dev_packages() {
   apt-get clean
 }
 
+install_user_packages() {
+  echo "Attempting to install user packages..."
+
+  curl -sSL https://install.python-poetry.org | python3 -  # install poetry in an isolated environment
+}
+
 create_haf_admin_account() {
   echo "Attempting to create $haf_admin_unix_account account..."
   assert_is_root
@@ -96,6 +103,9 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --dev)
         install_all_dev_packages
+        ;;
+    --user)
+        install_user_packages
         ;;
     --haf-admin-account=*)
         haf_admin_unix_account="${1#*=}"
