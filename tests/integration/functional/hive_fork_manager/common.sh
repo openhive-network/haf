@@ -12,25 +12,28 @@ evaluate_result() {
   exit 1;
 }
 
-uuid_gen() {
-  cat /proc/sys/kernel/random/uuid | od -A n -t x1 -N 16 | tr -dc '[:xdigit:]'
+test_name_from_path() {
+  # Convert test path to name, e.g. 'a/b/c.sql' => 'a_b_c'
+  test_path="$1"
+  echo -n "$test_path" | sed -E -e 's#/#_#g' -e 's#.[^.]+$##'
 }
 
 setup_test_database() {
-  setup_scripts_dir_path=$1;
+  setup_scripts_dir_path="$1"
   postgres_port="$2"
+  test_path="$3"
 
-  UUID=`uuid_gen`
-  DB_NAME="psql_tools_test_db_$UUID"
+  test_name=$(test_name_from_path "$test_path")
 
-  sudo -nu postgres psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -a -f  ./create_db_roles.sql;
+  DB_NAME="t_$test_name"
+
+  sudo -nu postgres psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -a -f ./create_db_roles.sql
 
   "$setup_scripts_dir_path/setup_db.sh" --port="$postgres_port"  \
     --haf-db-admin="haf_admin"  --haf-db-name="$DB_NAME" --haf-app-user="alice" --haf-app-user="bob"
 
-  if [ $? -ne 0 ]
-  then
+  if [ $? -ne 0 ]; then
     echo "FAILED. Cannot setup database"
-    exit 1;
+    exit 1
   fi
 }

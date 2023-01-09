@@ -7,7 +7,7 @@ postgres_port=$4;
 
 . ./common.sh
 
-setup_test_database "$setup_scripts_dir_path" "$postgres_port"
+setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
 
 # add test functions:
 # load tests function

@@ -7,14 +7,15 @@ postgres_port=$4;
 
 . ./common.sh
 
-setup_test_database "$setup_scripts_dir_path" "$postgres_port"
+setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
 
 psql postgresql://test_hived:test@localhost:$postgres_port/$DB_NAME --username=test_hived -a -v ON_ERROR_STOP=on -f ./examples/prepare_data.sql
 evaluate_result $?;
 
-python3.8 -m venv ".test_examples_$UUID"
-. "./.test_examples_$UUID/bin/activate"
-trap 'rm -rf "./.test_examples_$UUID"' EXIT
+test_name=$(test_name_from_path "$test_path")
+
+python3 -m venv ".test_examples_$test_name"
+. "./.test_examples_$test_name/bin/activate"
 
 python3 -mpip install --upgrade pip
 
