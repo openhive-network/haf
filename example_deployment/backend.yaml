@@ -1,0 +1,37 @@
+version: "3.8"
+name: "haf-world"
+
+services:
+  pghero:
+    image: ankane/pghero:v2.7.2
+    environment:
+      DATABASE_URL: postgres://pghero@haf:5432/haf_block_log
+    ports:
+      - ${PGHERO_PORT}:8080
+    networks:
+      - haf-network
+    tty: true
+    stdin_open: true
+    init: true
+    depends_on:
+      haf:
+        condition: service_healthy
+
+  pgadmin:
+    image: dpage/pgadmin4:6
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@haf.world"
+      PGADMIN_DEFAULT_PASSWORD: "admin"
+    ports:
+      - ${PGADMIN_PORT}:80
+    networks:
+      - haf-network
+    tty: true
+    stdin_open: true
+    init: true
+    volumes:
+      - ./haf-datadir/pgadmin/data:/var/lib/pgadmin:rw
+      - ./haf-datadir/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      haf:
+        condition: service_healthy

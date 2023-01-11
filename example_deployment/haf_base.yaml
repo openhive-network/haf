@@ -1,0 +1,44 @@
+version: "3.8"
+name: "haf-world"
+
+services:
+  haf:
+    image: ${HAF_IMAGE}
+    ports:
+      - ${HAF_PORT}:8090
+      - ${DB_PORT}:5432
+    networks:
+      - haf-network
+    tty: true
+    stdin_open: true
+    init: true
+    entrypoint:
+      - /home/haf_admin/docker_entrypoint.sh
+      - ${ARGUMENTS}
+    volumes:
+      - haf_datadir:/home/hived/datadir
+      - haf_shmdir:/home/hived/shm_dir
+    healthcheck:
+      test: ["CMD-SHELL","curl -f localhost:8090"]
+      interval: 10s
+      timeout: 2s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  haf_datadir:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${HAF_DATA_DIRECTORY}/
+  haf_shmdir:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${HAF_SHM_DIRECTORY}/
+
+networks:
+  haf-network:
+    name: ${NETWORK_NAME}
