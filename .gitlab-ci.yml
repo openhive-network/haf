@@ -3,6 +3,7 @@ stages:
   - build_and_test_phase_2
   - deploy
   - cleanup
+  - publish
 
 variables:
   CTEST_NUMBER_OF_JOBS: 4
@@ -21,6 +22,18 @@ variables:
 
 include: '/scripts/ci-helpers/prepare_data_image_job.yml'
 
+
+  # Variables required by Common CI jobs
+  CI_COMMON_JOB_VERSION: "0a8b4a4d6098c3e4087a58a61622ffb0817ecb39"
+  DOCKER_BUILDER_TAG: "$CI_COMMON_JOB_VERSION"
+  DOCKER_DIND_TAG: "$CI_COMMON_JOB_VERSION"
+  IMAGE_REMOVER_TAG: "$CI_COMMON_JOB_VERSION"
+
+include:
+  - template: Workflows/Branch-Pipelines.gitlab-ci.yml
+  - project: 'hive/common-ci-configuration'
+    ref: 0a8b4a4d6098c3e4087a58a61622ffb0817ecb39
+    file: '/templates/docker_image_jobs.gitlab-ci.yml'
 
 .hive_fork_manager_build:
   stage: build_and_test_phase_1
@@ -362,3 +375,17 @@ cleanup_haf_cache_manual:
   resource_group: ${CI_COMMIT_SHA}
   tags:
     - hive-builder-4
+
+build_and_publish_image:
+  stage: publish
+  extends: .docker_image_builder_job_template
+  dependencies: []
+  before_script:
+    - echo "Disabled the default before_script block"
+  script:
+    - scripts/ci-helpers/build_and_publish_instance.sh
+  tags:
+    - public-runner-docker  
+  rules:
+    - if: '$CI_COMMIT_TAG && $CI_COMMIT_REF_PROTECTED == "true"'
+      when: manual
