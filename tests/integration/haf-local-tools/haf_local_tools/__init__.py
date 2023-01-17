@@ -123,7 +123,8 @@ def wait_until_irreversible_without_new_block(session, final_block, limit):
     cnt = 0
     while cnt < limit:
         #wait many times to be sure that whole network is in stable state
-        time.sleep(0.1)
+        #Changed from 0.1s to 0.5s, because when a computer is under stress (every CPU is used 100%), better is to wait longer
+        time.sleep(0.5)
 
          #Last event is `NEW_IRREVERSIBLE` instead of `MASSIVE_SYNC`.
         events = session.query(EventsQueue).all()
