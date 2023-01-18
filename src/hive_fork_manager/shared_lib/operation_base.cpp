@@ -42,6 +42,34 @@ std::string op_to_json( const char* raw_data, uint32 data_length )
   }
 }
 
+fc::variant op_to_variant( const char* raw_data, uint32 data_length )
+{
+  try
+  {
+    if( !data_length )
+      return {};
+
+    using hive::protocol::operation;
+
+    operation op = fc::raw::unpack_from_char_array< operation >( raw_data, static_cast< uint32_t >( data_length ) );
+
+    fc::variant v;
+    fc::to_variant( op, v );
+
+    return v;
+  }
+  catch( const fc::exception& e )
+  {
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( e.to_string().c_str() ) ) );
+    return {};
+  }
+  catch( ... )
+  {
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "Unexpected binary to text conversion occured" ) ) );
+    return {};
+  }
+}
+
 std::vector< char > json_to_op( const char* raw_data )
 {
   try
@@ -203,5 +231,60 @@ extern "C"
     _operation* rhs = PG_GETARG_HIVE_OPERATION_PP( 1 );
 
     PG_RETURN_INT32( operation_cmp_impl( lhs, rhs ) );
+  }
+
+  Datum operation_member( PG_FUNCTION_ARGS )
+  {
+    _operation* op  = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    text*       path_text = PG_GETARG_TEXT_PP(1);
+    uint32 data_length   = VARSIZE_ANY_EXHDR( op );
+    const char* raw_data = VARDATA_ANY( op );
+
+    const fc::variant op_v = op_to_variant( raw_data, data_length );
+
+    const char* path_str = text_to_cstring(path_text);
+    const std::string_view path = path_str;
+
+    try
+    {
+      fc::variant value = op_v;
+      auto pos = path.begin();
+      while (true) {
+        const auto next = std::find(pos, std::end(path), '.');
+        const auto key = std::string(pos, next);
+        value = value[key.c_str()];
+        if (next == std::end(path))
+        {
+          break;
+        }
+        pos = next + 1;
+      }
+
+      text* result;
+      if (value.is_string())
+      {
+        result = cstring_to_text(value.as_string().c_str());
+      }
+      else
+      {
+        result = cstring_to_text(fc::json::to_string(value).c_str());
+      }
+      PG_RETURN_TEXT_P( result );
+    }
+    catch( const fc::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( e.to_string().c_str() ) ) );
+      return {};
+    }
+    catch( const std::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( e.what() ) ) );
+      return {};
+    }
+    catch( ... )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "Error while getting operation member" ) ) );
+      return {};
+    }
   }
 }
