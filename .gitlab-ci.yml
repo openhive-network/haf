@@ -282,7 +282,7 @@ build_and_publish_image:
   before_script:
     - echo "Disabled the default before_script block"
   script:
-    - scripts/ci-helpers/build_and_push_instance.sh
+    - scripts/ci-helpers/build_and_publish_instance.sh
   tags:
     - public-runner-docker  
   rules:
