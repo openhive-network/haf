@@ -17,7 +17,7 @@ CREATE TYPE hive.transaction_type AS (
       ref_block_num integer
     , ref_block_prefix bigint
     , expiration TIMESTAMP WITHOUT TIME ZONE
-    , operations text[]
+    , operations hive.operation[]
     , extensions jsonb
     , signatures bytea[]
     );
@@ -166,7 +166,7 @@ BEGIN
         'ref_block_num', x.ref_block_num,
         'ref_block_prefix', x.ref_block_prefix,
         'expiration', x.expiration,
-        'operations', x.operations :: JSONB[],
+        'operations', x.operations :: TEXT[] :: JSONB[],
         'extensions', COALESCE(x.extensions, jsonb_build_array()),
         'signatures', (
             CASE
