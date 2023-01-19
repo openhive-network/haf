@@ -646,6 +646,26 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     return (Datum)0;
   }
 
+  PG_FUNCTION_INFO_V1(is_keyauths_operation);
+
+  Datum is_keyauths_operation(PG_FUNCTION_ARGS)
+  {
+    _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
+
+    bool _result = false;
+
+    colect_operation_data_and_fill_returned_recordset(
+      [=, &_result](const hive::protocol::operation& op)
+      {
+        _result = hive::app::is_keyauths_operation( op );
+      },
+      [](){},
+      __FUNCTION__,
+      VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body )
+    );
+
+    PG_RETURN_BOOL(_result);
+  }
 
   PG_FUNCTION_INFO_V1(get_keyauths_operations);
 

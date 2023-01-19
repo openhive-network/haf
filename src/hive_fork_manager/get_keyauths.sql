@@ -66,24 +66,6 @@ RETURNS SETOF hive.get_operations_type
 AS 'MODULE_PATHNAME', 'get_keyauths_operations' LANGUAGE C;
 
 DROP FUNCTION IF EXISTS hive.is_keyauths_operation;
-CREATE OR REPLACE FUNCTION hive.is_keyauths_operation(IN _full_op TEXT)
+CREATE OR REPLACE FUNCTION hive.is_keyauths_operation(IN _operation_body hive.operation)
 RETURNS Boolean
-LANGUAGE plpgsql
-IMMUTABLE
-AS
-$$
-DECLARE
-    __j JSON;
-    __op TEXT;
-BEGIN
-    BEGIN
-        __j := _full_op AS JSON;
-    EXCEPTION   
-        WHEN others THEN
-        RETURN false;
-    END;
-    __op := 'hive::protocol::' ||  BTRIM((json_extract_path(__j, 'type') :: TEXT), '"');
-    RETURN EXISTS(SELECT * FROM  hive.get_keyauths_operations() WHERE  __op =  get_keyauths_operations);
-END
-$$;
-
+AS 'MODULE_PATHNAME', 'is_keyauths_operation' LANGUAGE C;

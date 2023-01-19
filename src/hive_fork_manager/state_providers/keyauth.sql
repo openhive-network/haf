@@ -79,7 +79,7 @@ BEGIN
         SELECT (hive.get_keyauths( ov.body )).*
         FROM hive.%s_operations_view ov
         WHERE
-                hive.is_keyauths_operation(ov.body :: text)
+                hive.is_keyauths_operation(ov.body)
             AND 
                 ov.block_num BETWEEN %s AND %s
         ON CONFLICT DO NOTHING'
