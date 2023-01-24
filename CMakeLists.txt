@@ -4,6 +4,10 @@ SET( CMAKE_POSITION_INDEPENDENT_CODE ON )
 SET( CMAKE_CXX_STANDARD 17 )
 SET( CMAKE_CXX_STANDARD_REQUIRED ON )
 
+# Enable export of compile_commands.json in the build directory.
+# This file is useful to see detailed compiler invocations like in the hived project.
+SET(CMAKE_EXPORT_COMPILE_COMMANDS "ON")
+
 list( APPEND CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
     "${CMAKE_CURRENT_SOURCE_DIR}/hive/cmake"
