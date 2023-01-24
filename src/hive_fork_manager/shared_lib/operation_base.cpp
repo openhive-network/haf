@@ -14,6 +14,34 @@
 
 namespace {
 
+fc::variant op_to_variant( const char* raw_data, uint32 data_length )
+{
+  try
+  {
+    if( !data_length )
+      return {};
+
+    using hive::protocol::operation;
+
+    operation op = fc::raw::unpack_from_char_array< operation >( raw_data, static_cast< uint32_t >( data_length ) );
+
+    fc::variant v;
+    fc::to_variant( op, v );
+
+    return v;
+  }
+  catch( const fc::exception& e )
+  {
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( e.to_string().c_str() ) ) );
+    return {};
+  }
+  catch( ... )
+  {
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "Unexpected binary to text conversion occured" ) ) );
+    return {};
+  }
+}
+
 std::string op_to_json( const char* raw_data, uint32 data_length )
 {
   try
