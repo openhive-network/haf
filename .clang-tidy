@@ -1,0 +1,3 @@
+Checks: '-*, -modernize-use-trailing-return-type, -llvmlibc-restrict-system-libc-headers, -bugprone-easily-swappable-parameters, -auto_not_allowed, -llvmlibc*, -modernize-use-nodiscard, -fuchsia-default-arguments-calls, -readability-identifier-length, -altera-unroll-loops, -fuchsia-overloaded-operator, -readability-function-cognitive-complexity  '
+---
+CompilationDatabaseCommand: clang++ -std=c++17

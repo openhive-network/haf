@@ -6,6 +6,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
+
     INSERT INTO hive.operation_types
     VALUES
           ( 1, 'hive::protocol::account_create_operation', FALSE )
