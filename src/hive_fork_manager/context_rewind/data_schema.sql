@@ -3,7 +3,7 @@
 CREATE DOMAIN hive.context_name AS TEXT NOT NULL CONSTRAINT non_empty_context CHECK( LENGTH( VALUE ) != 0);
 CREATE DOMAIN hive.contexts_group AS hive.context_name[] NOT NULL CONSTRAINT non_empty_contexts_group CHECK( CARDINALITY( VALUE ) > 0 );
 
-CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' , 'METADATA' );
+CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' , 'METADATA', 'CURRENT_ACCOUNT_BALANCE_STATE_PROVIDER');
 
 CREATE TYPE hive.event_type AS ENUM( 'BACK_FROM_FORK', 'NEW_BLOCK', 'NEW_IRREVERSIBLE', 'MASSIVE_SYNC' );
 
