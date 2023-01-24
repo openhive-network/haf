@@ -2,6 +2,8 @@
 #include <hive/protocol/forward_impacted.hpp>
 #include <hive/protocol/misc_utilities.hpp>
 
+#include <hive/plugins/block_api/block_api.hpp>
+
 #include <fc/io/json.hpp>
 #include <fc/string.hpp>
 
@@ -624,4 +626,37 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
     return (Datum)0;
   }  
+
+
+PG_FUNCTION_INFO_V1(consume_json_block);
+
+  /**
+   ** 
+   **  CREATE OR REPLACE FUNCTION hive.consume_json_block()
+   **  RETURNS void
+   **
+   **
+   **
+   **/
+
+
+  Datum consume_json_block(PG_FUNCTION_ARGS)
+  {
+
+
+
+    const char *json_block = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+    hive::plugins::block_api::consume_json_block_impl(json_block);
+
+    // colect_data_and_fill_returned_recordset(
+    //   [=](){ hive::plugins::block_api::consume_json_block_impl(json_block);},
+    //   [](){},
+    //   __FUNCTION__,
+    //   json_block);
+    
+    return (Datum)0;
+  }  
+
+
 }

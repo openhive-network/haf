@@ -25,6 +25,7 @@ ADD_PSQL_EXTENSION(
             context_rewind/rewind_api.sql
             tools.sql
             blocks_views_for_contexts.sql
+            json_play.sql
             get_keyauths.sql
             state_providers/accounts.sql
             state_providers/keyauth.sql

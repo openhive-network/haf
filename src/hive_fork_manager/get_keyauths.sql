@@ -65,6 +65,8 @@ CREATE OR REPLACE FUNCTION hive.get_keyauths_operations()
 RETURNS SETOF hive.get_operations_type
 AS 'MODULE_PATHNAME', 'get_keyauths_operations' LANGUAGE C;
 
+
+
 DROP FUNCTION IF EXISTS hive.is_keyauths_operation;
 CREATE OR REPLACE FUNCTION hive.is_keyauths_operation(IN _full_op TEXT)
 RETURNS Boolean
