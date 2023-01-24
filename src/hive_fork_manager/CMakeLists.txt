@@ -31,11 +31,13 @@ ADD_PSQL_EXTENSION(
             context_rewind/rewind_api.sql
             tools.sql
             blocks_views_for_contexts.sql
+            consensus_state_provider_helpers.sql
             get_keyauths.sql
             get_metadata.sql
             state_providers/accounts.sql
             state_providers/keyauth.sql
             state_providers/metadata.sql
+            state_providers/current_account_balance.sql
             hived_api_impl.sql
             app_api_impl.sql
             hived_api.sql
@@ -55,4 +57,6 @@ ADD_SUBDIRECTORY( shared_lib )
 ADD_DEPENDENCIES( extension.${EXTENSION_NAME} hfm-${HAF_GIT_REVISION_SHA} )
 
 MESSAGE(STATUS "Detected root project git revision: ${HAF_GIT_REVISION_SHA}")
+
+ADD_SUBDIRECTORY( state_providers/consensus_state_provider_test_driver )
 

@@ -24,13 +24,13 @@ psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ${test_path};
 evaluate_result $?;
 
-psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c 'SELECT test_given()';
+psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "CALL test_given('$CI_PROJECT_DIR')";
 evaluate_result $?;
 
-psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c 'SELECT test_when()';
+psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "CALL test_when('$CI_PROJECT_DIR')";
 evaluate_result $?;
 
-psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c 'SELECT test_then()';
+psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "CALL test_then('$CI_PROJECT_DIR')";
 evaluate_result $?;
 
 psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE $DB_NAME";

@@ -298,7 +298,7 @@ END;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION hive.app_state_provider_import( _state_provider hive.state_providers, _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_state_provider_import( _state_provider hive.state_providers, _context hive.context_name, _arg1 TEXT DEFAULT '')
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -323,8 +323,8 @@ BEGIN
 
     EXECUTE format(
         'INSERT INTO hive.state_providers_registered( context_id, state_provider, tables, owner )
-        SELECT %s , %L, hive.start_provider_%s( %L ), current_user
-        ON CONFLICT DO NOTHING', __context_id, _state_provider, _state_provider, _context
+        SELECT %s , %L, hive.start_provider_%s( %L , %L ), current_user
+        ON CONFLICT DO NOTHING', __context_id, _state_provider, _state_provider, _context, _arg1
     );
 
     IF NOT hive.app_is_forking( _context ) THEN
