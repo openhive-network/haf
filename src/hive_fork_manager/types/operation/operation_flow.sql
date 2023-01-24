@@ -32,6 +32,11 @@ CREATE OR REPLACE FUNCTION hive._operation_bin_out(
 AS 'MODULE_PATHNAME',
 'operation_bin_out';
 
+CREATE OR REPLACE FUNCTION hive._operation_to_jsonb(
+  hive.operation
+) RETURNS jsonb LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_jsonb';
 
 CREATE OR REPLACE FUNCTION hive._operation_eq(
   hive.operation, hive.operation
