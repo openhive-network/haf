@@ -166,7 +166,7 @@ BEGIN
         'ref_block_num', x.ref_block_num,
         'ref_block_prefix', x.ref_block_prefix,
         'expiration', x.expiration,
-        'operations', x.operations :: TEXT[] :: JSONB[],
+        'operations', x.operations :: JSONB[],
         'extensions', COALESCE(x.extensions, jsonb_build_array()),
         'signatures', (
             CASE
