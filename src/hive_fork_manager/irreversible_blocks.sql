@@ -4,6 +4,12 @@ CREATE DOMAIN hive.hbd_amount AS NUMERIC NOT NULL;
 --- Interest rate (in BPS - basis points)
 CREATE DOMAIN hive.interest_rate AS INT4 NOT NULL;
 
+CREATE TABLE IF NOT EXISTS hive.sessions (
+    name TEXT PRIMARY KEY,
+    params JSONB
+);
+SELECT pg_catalog.pg_extension_config_dump('hive.sessions', '');
+
 CREATE TABLE IF NOT EXISTS hive.blocks (
        num integer NOT NULL,
        hash bytea NOT NULL,

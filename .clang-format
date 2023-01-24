@@ -1,0 +1,36 @@
+BasedOnStyle: Google
+ColumnLimit: 140
+UseTab: Never
+IndentWidth: 2
+SpaceBeforeParens: Never
+
+SeparateDefinitionBlocks: Always
+EmptyLineBeforeAccessModifier: LogicalBlock
+
+AllowShortIfStatementsOnASingleLine: Never
+BinPackParameters: false
+SpaceAfterTemplateKeyword: false
+CompactNamespaces: true
+SortIncludes: Never
+
+# BreakBeforeBraces: Allman
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: true
+  BeforeWhile: true
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+
