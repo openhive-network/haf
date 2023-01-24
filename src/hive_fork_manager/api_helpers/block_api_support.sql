@@ -280,8 +280,8 @@ $BODY$
 BEGIN
 
     IF _count = 0 OR (_starting_block_num ::BIGINT + _count - 1) > POW(2, 31) :: BIGINT THEN
-        IF NOT _count <= 1000 THEN
-            RAISE EXCEPTION 'Assert Exception:count <= 1000: You can only ask for 1000 blocks at a timerethrow';
+        IF NOT _count <= 100000 THEN
+            RAISE EXCEPTION 'Assert Exception:count <= 100000: You can only ask for 100000 blocks at a timerethrow';
         END IF;
         RETURN QUERY SELECT (NULL::hive.block_type).* LIMIT 0;
         RETURN;
@@ -295,8 +295,8 @@ BEGIN
         RAISE EXCEPTION 'Assert Exception:count > 0: Why ask for zero blocks?rethrow';
     END IF;
 
-    IF NOT _count <= 1000 THEN
-        RAISE EXCEPTION 'Assert Exception:count <= 1000: You can only ask for 1000 blocks at a timerethrow';
+    IF NOT _count <= 100000 THEN
+        RAISE EXCEPTION 'Assert Exception:count <= 100000: You can only ask for 100000 blocks at a timerethrow';
     END IF;
 
     RETURN QUERY SELECT (block).* FROM hive.get_block_from_views( _starting_block_num, _count );

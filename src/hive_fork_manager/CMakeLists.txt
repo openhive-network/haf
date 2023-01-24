@@ -31,11 +31,13 @@ ADD_PSQL_EXTENSION(
             context_rewind/rewind_api.sql
             tools.sql
             blocks_views_for_contexts.sql
+            consensus_state_provider_helpers.sql
             get_keyauths.sql
             get_metadata.sql
             state_providers/accounts.sql
             state_providers/keyauth.sql
             state_providers/metadata.sql
+            state_providers/current_account_balance.sql
             hived_api_impl.sql
             app_api_impl.sql
             hived_api.sql

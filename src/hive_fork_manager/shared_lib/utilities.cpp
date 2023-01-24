@@ -6,7 +6,11 @@
 #include <fc/io/json.hpp>
 #include <fc/string.hpp>
 
+#include "try_grab_operations.hpp"
+
 #include <vector>
+
+
 
 using hive::protocol::account_name_type;
 using hive::protocol::asset;
@@ -806,4 +810,116 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
     return (Datum)0;
   }  
+
+
+
+PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
+
+  /**
+   **  CREATE OR REPLACE FUNCTION hive.consensus_state_provider_get_expected_block_num(IN _context TEXT)
+   **  RETURNS INTEGER
+   ** 
+   **  Returns the block number where we stand in hive state.
+   **/
+
+
+volatile static auto stop_in_consensus_state_provider_get_expected_block_num=false;
+
+Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
+{
+
+  while(stop_in_consensus_state_provider_get_expected_block_num)
+  {
+    int a = 0 ;
+    a=a;
+  }
+
+  const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+  int expected_block_num = hive::app::consensus_state_provider_get_expected_block_num_impl(context);
+
+  PG_RETURN_INT32(expected_block_num); 
+  return (Datum)0;
 }
+
+
+PG_FUNCTION_INFO_V1(current_all_accounts_balances_C);
+
+  /**
+   ** CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C();
+   ** RETURNS SETOF hive.current_account_balance_return_type
+   ** AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
+   **
+   ** Returns all accounts information for the given state.
+   **/
+
+Datum current_all_accounts_balances_C(PG_FUNCTION_ARGS)
+{
+  const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+  hive::app::collected_account_balances_collection_t collected_data;
+
+  colect_data_and_fill_returned_recordset(
+
+    [=, &collected_data]()
+    {
+        collected_data = hive::app::collect_current_all_accounts_balances(context);
+    }, 
+
+    [=, &collected_data]()
+    {
+      fill_return_tuples(collected_data, fcinfo, 
+          [] (const auto& account_data) {fc::string account = account_data.account_name; return CStringGetTextDatum(account.c_str());},
+          [] (const auto& account_data) { return Int64GetDatum(account_data.balance);},
+          [] (const auto& account_data) { return Int64GetDatum(account_data.hbd_balance);},
+          [] (const auto& account_data) { return Int64GetDatum(account_data.vesting_shares);},
+          [] (const auto& account_data) { return Int64GetDatum(account_data.savings_hbd_balance);},
+          [] (const auto& account_data) { return Int64GetDatum(account_data.reward_hbd_balance);}
+        );
+    },
+    
+    __FUNCTION__,
+
+      []{ return std::string{""}; }
+    );
+
+  return (Datum)0;
+}
+
+
+PG_FUNCTION_INFO_V1(consensus_state_provider_finish);
+
+  /**
+   ** 
+   **  CREATE OR REPLACE FUNCTION hive.consensus_state_provider_finish(IN _context TEXT)
+   **  RETURNS void
+   **
+   **  Erase the context_sharedmemory.bin file.
+   **/
+
+Datum consensus_state_provider_finish(PG_FUNCTION_ARGS)
+{
+  const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+  hive::app::consensus_state_provider_finish_impl(context);
+
+  return (Datum)0;
+}  
+
+////////
+
+PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
+
+Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
+{
+  int from = PG_GETARG_INT32(0);
+  int to = PG_GETARG_INT32(1);
+  const char* context = text_to_cstring(PG_GETARG_TEXT_PP(2));
+  const char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(3));
+
+  hive::app::consensus_state_provider_replay_impl(from, to, context, postgres_url);
+
+  return (Datum)0;
+}
+
+} //extern "C"
