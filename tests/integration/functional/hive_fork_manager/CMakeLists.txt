@@ -11,7 +11,7 @@ MACRO( ADD_EXAMPLES_FUNCTIONAL_TESTS example_test_path)
             COMMAND hive_fork_manager/test_examples.sh ${sources_under_tests_path} ${tests_folder}/${example_test_path} ${setup_scripts_dir_path} ${POSTGRES_PORT}
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/integration/functional
             )
-    MESSAGE( STATUS "Added functional examples tests '${test_target}'" )
+    # mtlk to restore, this line should go to my_develop branch/commit  MESSAGE( STATUS "Added functional examples tests '${test_target}'" )
 ENDMACRO()
 
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/schema_test.sql )
@@ -289,7 +289,5 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/calculate_schema_hash.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_vesting_balance/get_vesting_balance.sql )
  ADD_SQL_FUNCTIONAL_TEST( sanity_check/test_tables_and_sequences_properly_flagged_for_dump.sql )
-
-
-
-
+ 
+ ADD_SQL_FUNCTIONAL_COMMIT_TEST( state_providers/current_account_balance_update_state_provider.sql )
