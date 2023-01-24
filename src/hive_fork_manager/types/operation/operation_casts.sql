@@ -7,3 +7,6 @@ CREATE CAST (bytea AS hive.operation)
 CREATE CAST (hive.operation AS bytea)
   WITH FUNCTION hive._operation_bin_out
   AS IMPLICIT;
+
+CREATE CAST (hive.operation AS jsonb)
+  WITH FUNCTION hive._operation_to_jsonb;
