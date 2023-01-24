@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+#include "jsonb.hpp"
+
 namespace {
 
 fc::variant op_to_variant( const char* raw_data, uint32 data_length )
@@ -120,6 +122,37 @@ extern "C"
       return -1;
 
     return memcmp( VARDATA_ANY( lhs ), VARDATA_ANY( rhs ), VARSIZE_ANY_EXHDR( lhs ) );
+  }
+
+  Datum operation_to_jsonb( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    uint32 data_length = VARSIZE_ANY_EXHDR( op );
+    const char* raw_data = VARDATA_ANY( op );
+
+    try
+    {
+      const fc::variant op_v = op_to_variant( raw_data, data_length );
+
+      JsonbValue* jsonb = variant_to_jsonb_value(op_v);
+
+      PG_RETURN_POINTER(JsonbValueToJsonb(jsonb));
+    }
+    catch( const fc::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( e.to_string().c_str() ) ) );
+      return {};
+    }
+    catch( const std::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( e.what() ) ) );
+      return {};
+    }
+    catch( ... )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to jsonb" ) ) );
+      return {};
+    }
   }
 
   Datum operation_in( PG_FUNCTION_ARGS )

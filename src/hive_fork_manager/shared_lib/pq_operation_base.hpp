@@ -31,6 +31,9 @@ extern "C"
   // SQL functions
 
   /// operation casts
+  PG_FUNCTION_INFO_V1( operation_to_jsonb );
+  Datum operation_to_jsonb( PG_FUNCTION_ARGS );
+
   PG_FUNCTION_INFO_V1( operation_in );
   Datum operation_in( PG_FUNCTION_ARGS );
 
