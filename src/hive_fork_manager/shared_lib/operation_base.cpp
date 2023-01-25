@@ -16,21 +16,26 @@
 
 namespace {
 
+fc::variant op_to_variant_impl( const char* raw_data, uint32 data_length )
+{
+  if( !data_length )
+    return {};
+
+  using hive::protocol::operation;
+
+  operation op = fc::raw::unpack_from_char_array< operation >( raw_data, static_cast< uint32_t >( data_length ) );
+
+  fc::variant v;
+  fc::to_variant( op, v );
+
+  return v;
+}
+
 fc::variant op_to_variant( const char* raw_data, uint32 data_length )
 {
   try
   {
-    if( !data_length )
-      return {};
-
-    using hive::protocol::operation;
-
-    operation op = fc::raw::unpack_from_char_array< operation >( raw_data, static_cast< uint32_t >( data_length ) );
-
-    fc::variant v;
-    fc::to_variant( op, v );
-
-    return v;
+    return op_to_variant_impl(raw_data, data_length);
   }
   catch( const fc::exception& e )
   {
@@ -48,17 +53,7 @@ std::string op_to_json( const char* raw_data, uint32 data_length )
 {
   try
   {
-    if( !data_length )
-      return {};
-
-    using hive::protocol::operation;
-
-    operation op = fc::raw::unpack_from_char_array< operation >( raw_data, static_cast< uint32_t >( data_length ) );
-
-    fc::variant v;
-    fc::to_variant( op, v );
-
-    return fc::json::to_string( v );
+    return fc::json::to_string( op_to_variant_impl( raw_data, data_length ) );
   }
   catch( const fc::exception& e )
   {
