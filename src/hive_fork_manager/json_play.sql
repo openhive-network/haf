@@ -54,6 +54,23 @@ END;
 $BODY$
 ;
 
-select json_play();
+CREATE OR REPLACE FUNCTION hive.consume_json_blocks(in _from INT, in _to INT)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+STABLE
+AS
+$BODY$
+DECLARE
+    jb jsonb;
+BEGIN
+    raise notice 'Consuming blocks from % to %', _from, _to;
 
+    for i in _from INT .. _to LOOP
+        SELECT into jb * FROM hive.get_block_json( i );
+        jb = jb ->'block';
+        Perform hive.consume_json_block(jb::TEXT);
+    END LOOP;
+END;
+$BODY$
+;
 

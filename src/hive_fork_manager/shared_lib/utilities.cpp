@@ -659,4 +659,46 @@ PG_FUNCTION_INFO_V1(consume_json_block);
   }  
 
 
+PG_FUNCTION_INFO_V1(current_all_accounts_balances_C);
+
+/**
+
+
+CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C();
+RETURNS SETOF hive.current_account_balance_return_type
+AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
+
+use like this:
+    insert into table_name select current_all_accounts_balances_C();
+
+*/
+
+Datum current_all_accounts_balances_C(PG_FUNCTION_ARGS)
+{
+  hive::app::collected_account_balances_collection_t collected_data;
+
+  colect_data_and_fill_returned_recordset(
+
+    [=, &collected_data]()
+    {
+        collected_data = hive::app::collect_current_all_accounts_balances();
+    }, 
+
+    [=, &collected_data]()
+    {
+      fill_return_tuples(collected_data, fcinfo, 
+          [] (const auto& account_data) {fc::string account = account_data.account_name; return CStringGetTextDatum(account.c_str());},
+          [] (const auto& account_data) { return Int64GetDatum(account_data.balance);}
+        );
+    },
+    
+    __FUNCTION__,
+
+    "");
+
+  return (Datum)0;
+}
+
+
+
 }
