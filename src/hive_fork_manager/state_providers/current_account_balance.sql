@@ -1,8 +1,4 @@
 
-TYPE 
-
-
-
 DROP TYPE IF EXISTS hive.current_account_balance_return_type  CASCADE;
 CREATE TYPE hive.current_account_balance_return_type  AS
 (
