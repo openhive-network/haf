@@ -24,11 +24,25 @@ JsonbValue* push_variant_value_to_jsonb(const fc::variant& value, JsonbIteratorT
     case fc::variant::int64_type:
     case fc::variant::uint64_type:
     case fc::variant::double_type:
-      jb.type = jbvNumeric;
-      jb.val.numeric = DatumGetNumeric(DirectFunctionCall3(numeric_in,
-          CStringGetDatum(value.as_string().c_str()),
-          ObjectIdGetDatum(InvalidOid),
-          Int32GetDatum(-1)));
+      // Numeric types are converted either to numeric or string types in json.
+      // If value can be represented in 32bits, it's converted to numeric type.
+      // Otherwise it's converted to string type.
+      // This makes the operation::jsonb conversion in sync with the operation::text::jsonb conversion.
+      if (value.as_uint64() < 0xffffffff)
+      {
+        jb.type = jbvNumeric;
+        // Call the builtin Postgres function that converts text to numeric type.
+        jb.val.numeric = DatumGetNumeric(DirectFunctionCall3(numeric_in,
+            CStringGetDatum(value.as_string().c_str()),
+            ObjectIdGetDatum(InvalidOid), // not used
+            Int32GetDatum(-1))); // default type modifier
+      }
+      else
+      {
+        jb.type = jbvString;
+        jb.val.string.len = value.as_string().length();
+        jb.val.string.val = pstrdup(value.as_string().c_str());
+      }
       break;
     case fc::variant::bool_type:
       jb.type = jbvBool;
