@@ -1,14 +1,6 @@
 
-DROP TYPE IF EXISTS hive.current_account_balance_return_type  CASCADE;
-CREATE TYPE hive.current_account_balance_return_type  AS
-(
---TODO 16 magic number
-    account                 CHAR(16),
-    balance                 BIGINT
-);
-
-
-CREATE OR REPLACE FUNCTION hive.start_provider_current_account_balance( _context hive.context_name )
+DROP FUNCTION if exists  hive.start_provider_current_account_balance;
+CREATE OR REPLACE FUNCTION hive.start_provider_current_account_balance( _context text )
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE
@@ -71,11 +63,6 @@ $BODY$
 
 
 
-
-DROP FUNCTION IF EXISTS hive.current_all_accounts_balances_C;
-CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C()
-RETURNS SETOF hive.current_account_balance_return_type
-AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
 
 
 CREATE OR REPLACE FUNCTION FILL_CURRENT_ACCOUNT_BALANCE_TABLE(TEXT table_name, in _first_block integer, in _last_block integer)
