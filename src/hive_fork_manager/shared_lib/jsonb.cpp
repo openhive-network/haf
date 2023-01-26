@@ -105,13 +105,13 @@ JsonbValue* variant_to_jsonb_value(const fc::variant& value)
 
   switch (value.get_type())
   {
-      case fc::variant::array_type:
-        return push_variant_array_to_jsonb(value.get_array(), &parseState);
+    case fc::variant::array_type:
+      return push_variant_array_to_jsonb(value.get_array(), &parseState);
 
-      case fc::variant::object_type:
-        return push_variant_object_to_jsonb(value.get_object(), &parseState);
+    case fc::variant::object_type:
+      return push_variant_object_to_jsonb(value.get_object(), &parseState);
 
-      default:
-        FC_THROW_EXCEPTION( fc::invalid_arg_exception, "Cannot convert variant of type ${type} to jsonb", ("type", value.get_type() ) );
+    default:
+      FC_THROW_EXCEPTION( fc::invalid_arg_exception, "Cannot convert variant of type ${type} to jsonb", ("type", value.get_type() ) );
   }
 }
