@@ -4,6 +4,7 @@
 
 #include <fc/exception/exception.hpp>
 #include <fc/io/datastream.hpp>
+#include <fc/io/buffered_iostream.hpp>
 #include <fc/io/json.hpp>
 #include <fc/io/raw.hpp>
 #include <fc/io/varint.hpp>
@@ -13,6 +14,7 @@
 #include <vector>
 
 #include "jsonb.hpp"
+#include "svstream.hpp"
 
 namespace {
 
@@ -74,7 +76,8 @@ std::vector< char > json_to_op( const char* raw_data )
     if( *raw_data == '\0' )
       return {};
 
-    fc::variant v = fc::json::from_string( std::string{ raw_data } );
+    auto bufstream = fc::buffered_istream( std::make_shared<fc::svstream>( raw_data ) );
+    fc::variant v = fc::json::from_stream( bufstream );
 
     hive::protocol::operation op;
     fc::from_variant( v, op );
