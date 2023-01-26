@@ -73,7 +73,7 @@ $BODY$
 
 
 DROP FUNCTION IF EXISTS hive.current_all_accounts_balances_C;
-CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C();
+CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C()
 RETURNS SETOF hive.current_account_balance_return_type
 AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
 
