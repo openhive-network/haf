@@ -65,7 +65,7 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION FILL_CURRENT_ACCOUNT_BALANCE_TABLE(TEXT table_name, in _first_block integer, in _last_block integer)
+CREATE OR REPLACE FUNCTION FILL_CURRENT_ACCOUNT_BALANCE_TABLE(table_name TEXT, in _first_block integer, in _last_block integer)
 RETURNS void
 LANGUAGE plpgsql
 VOLATILE
