@@ -3,6 +3,22 @@
 -- dev@zk-29:~/mydes/H/haf/build$ (sudo -u haf_admin psql -d haf_block_log -f '/home/dev/mydes/H/haf/tests/json_play.sql') 2>&1 | tee -i json_play_log..json
 
 
+DROP TYPE IF EXISTS hive.current_account_balance_return_type  CASCADE;
+CREATE TYPE hive.current_account_balance_return_type  AS
+(
+--TODO 16 magic number
+    account                 CHAR(16),
+    balance                 BIGINT
+);
+
+
+DROP FUNCTION IF EXISTS hive.current_all_accounts_balances_C;
+CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C()
+RETURNS SETOF hive.current_account_balance_return_type
+AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
+
+
+
 CREATE OR REPLACE FUNCTION hive.consume_json_block(IN json_block TEXT)
 RETURNS void
 AS 'MODULE_PATHNAME', 'consume_json_block' LANGUAGE C;
@@ -65,7 +81,7 @@ DECLARE
 BEGIN
     raise notice 'Consuming blocks from % to %', _from, _to;
 
-    for i in _from INT .. _to LOOP
+    for i in _from _from .. _to LOOP
         SELECT into jb * FROM hive.get_block_json( i );
         jb = jb ->'block';
         Perform hive.consume_json_block(jb::TEXT);
