@@ -13,7 +13,7 @@ psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./test_tools.sql;
 
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ${test_path};
 evaluate_result $?;
-
+# exit 1
 psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c 'SELECT test_given()';
 evaluate_result $?;
 psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c 'SELECT test_when()';
