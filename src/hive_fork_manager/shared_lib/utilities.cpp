@@ -675,6 +675,15 @@ use like this:
 
 Datum current_all_accounts_balances_C(PG_FUNCTION_ARGS)
 {
+
+  static int stop3 = 1;
+  while(stop3)
+  {
+    int a = 0;
+    a=a;
+  }
+
+
   hive::app::collected_account_balances_collection_t collected_data;
 
   colect_data_and_fill_returned_recordset(
