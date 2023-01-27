@@ -156,6 +156,11 @@ extern "C"
   Datum operation_in( PG_FUNCTION_ARGS )
   {
     const char* t            = PG_GETARG_CSTRING( 0 );
+    if (!t || *t == 0)
+    {
+      ereport( ERROR, ( errcode( ERRCODE_FEATURE_NOT_SUPPORTED ), errmsg( "Cannot convert empty string to hive.operation" ) ) );
+    }
+
     std::vector< char > data = json_to_op( t ); // Get parsed operation in raw bytes
 
     PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
