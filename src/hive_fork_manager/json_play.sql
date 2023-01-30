@@ -84,7 +84,7 @@ BEGIN
     for i in _from _from .. _to LOOP
         SELECT into jb * FROM hive.get_block_json( i );
         jb = jb ->'block';
-        -- Perform hive.consume_json_block(jb::TEXT);
+        Perform hive.consume_json_block(jb::TEXT);
     END LOOP;
 END;
 $BODY$
