@@ -18,13 +18,14 @@ BEGIN
          RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
-    
+    Raise notice 'maybe unimportant warning begin';
     EXECUTE format('DROP TABLE IF EXISTS hive.%I', __table_name);
+    Raise notice 'maybe unimportant warning end';
 
     EXECUTE format('CREATE TABLE hive.%I 
-                        OF 
-                            hive.current_account_balance_return_type
                    (
+                        account                 CHAR(16),
+                        balance                 BIGINT,
                         PRIMARY KEY ( account )
                    )', __table_name);
 
@@ -62,7 +63,12 @@ BEGIN
 --    EXECUTE format('SELECT FILL_CURRENT_ACCOUNT_BALANCE_TABLE(''hive.%s'', %s, %s)',  __table_name, _first_block, _last_block);
     PERFORM hive.consume_json_blocks(_first_block ,_last_block );
 
-    texcik = 'SELECT  hive.current_all_accounts_balances_C();';
+
+    --texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L);', __table_name, _context);
+    texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C();', __table_name);
+
+    raise notice 'texcik=%', texcik;
+
 
     raise notice 'NEW_TABLE=%',
     (
