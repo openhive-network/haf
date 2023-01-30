@@ -11,14 +11,15 @@
 
 #include <signal.h>
 
-namespace {
+namespace hive { namespace plugins { namespace sql_serializer {
+
+namespace killer
+{
   void kill_node() {
     elog( "An error occured and HAF is stopping synchronization..." );
     kill( 0, SIGINT );
   }
 }
-
-namespace hive { namespace plugins { namespace sql_serializer {
 
 class data_processing_status_notifier
 {
@@ -210,30 +211,30 @@ data_processor::handle_exception( std::exception_ptr exception_ptr ) {
   catch(const pqxx::sql_error& ex)
   {
     elog("Data processor ${d} detected SQL statement execution failure. Failing statement: `${q}'.", ("d", _description)("q", ex.query()));
-    kill_node();
+    killer::kill_node();
     throw;
   }
   catch(const pqxx::pqxx_exception& ex)
   {
     elog("Data processor ${d} detected SQL execution failure: ${e}", ("d", _description)("e", ex.base().what()));
-    kill_node();
+    killer::kill_node();
     throw;
   }
   catch(const fc::exception& ex)
   {
     elog("Data processor ${d} execution failed: ${e}", ("d", _description)("e", ex.what()));
-    kill_node();
+    killer::kill_node();
     throw;
   }
   catch(const std::exception& ex)
   {
     elog("Data processor ${d} execution failed: ${e}", ("d", _description)("e", ex.what()));
-    kill_node();
+    killer::kill_node();
     throw;
   }
   catch(...) {
     elog("Data processor ${d} execution failed: unknown exception", ("d", _description));
-    kill_node();
+    killer::kill_node();
     throw;
   }
 }

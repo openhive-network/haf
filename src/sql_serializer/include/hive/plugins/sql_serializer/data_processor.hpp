@@ -18,6 +18,11 @@
 
 namespace hive { namespace plugins { namespace sql_serializer {
 
+namespace killer
+{
+  void kill_node();
+}
+
 class data_processor 
 {
 public:

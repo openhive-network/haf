@@ -12,6 +12,7 @@
 #include <hive/chain/util/impacted.hpp>
 #include <hive/chain/util/supplement_operations.hpp>
 #include <hive/chain/index.hpp>
+#include <hive/chain/database_exceptions.hpp>
 
 #include <hive/protocol/config.hpp>
 #include <hive/protocol/operations.hpp>
@@ -180,6 +181,7 @@ constexpr size_t default_reservation_size{ 16'000u };
 
 namespace detail
 {
+using chain::plugin_exception;
 
 using data_processing_status = data_processor::data_processing_status;
 using data_chunk_ptr = data_processor::data_chunk_ptr;
@@ -264,7 +266,7 @@ public:
   uint32_t psql_operations_threads_number = 5;
   uint32_t psql_account_operations_threads_number = 2;
   bool     psql_dump_account_operations = true;
-  uint32_t head_block_number = 0;
+  bool     initialization_database_is_allowed = true;
 
   int64_t op_sequence_id = 0;
 
@@ -296,13 +298,39 @@ public:
       return function;
   }
 
-  void init_database(bool freshDb, uint32_t max_block_number )
+  void init_database(bool freshDb, std::optional<uint32_t> max_block_number = std::optional<uint32_t>())
   {
-    head_block_number = max_block_number;
-
     load_initial_db_data();
     if(freshDb)
     {
+      initialization_database_is_allowed = false;
+      if(max_block_number.has_value() && *max_block_number > 1)
+      {
+        uint32_t nr_operation_types = 0;
+        queries_commit_data_processor operation_types_checker(db_url, "Operation types checker",
+                                                    [&nr_operation_types](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
+          {
+            pqxx::result data = tx.exec("SELECT COUNT(*) AS _nr_op_types FROM hive.operation_types;");
+            FC_ASSERT( !data.empty(), "Data empty" );
+            FC_ASSERT( data.size() == 1, "Data size" );
+            const auto& record = data[0];
+            nr_operation_types = record["_nr_op_types"].as<uint32_t>();
+            return data_processing_status();
+          }
+          , nullptr
+        );
+        operation_types_checker.trigger(data_processor::data_chunk_ptr(), 0);
+        operation_types_checker.join();
+
+        if( nr_operation_types == 0 )
+        {
+          killer::kill_node();
+          HIVE_ASSERT( false, plugin_exception,
+                              "A first received block has a number: ${block}, but connected database doesn't contain basic data. Synchronization is stopped.",
+                              ("block", (*max_block_number)) );
+        }
+      }
+
       auto get_type_definitions = [ this ](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx){
         auto types = PSQL::get_all_type_definitions( op_extractor );
         if ( types.empty() )
@@ -441,7 +469,7 @@ void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& no
 
   /// Let's init our database before applying first block (resync case)...
   inform_hfm_about_starting();
-  init_database(note.block_num == 1, note.block_num);
+  init_database(initialization_database_is_allowed, note.block_num);
   _indexation_state.on_first_block();
 
   /// And disconnect to avoid subsequent inits
@@ -637,7 +665,7 @@ void sql_serializer_plugin_impl::on_pre_reindex(const reindex_notification& note
   ilog("Entering a reindex init...");
   /// Let's init our database before applying first block...
   inform_hfm_about_starting();
-  init_database(note.force_replay, note.max_block_number);
+  init_database(note.force_replay);
 
   /// Disconnect pre-apply-block handler to avoid another initialization (for resync case).
   if(__on_pre_apply_block_con_initialization.connected())
