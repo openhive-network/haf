@@ -13,16 +13,29 @@ CREATE TYPE hive.current_account_balance_return_type  AS
 
 
 DROP FUNCTION IF EXISTS hive.current_all_accounts_balances_C;
-CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C()
+CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C(IN context TEXT)
 RETURNS SETOF hive.current_account_balance_return_type
 AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
 
 
 
-CREATE OR REPLACE FUNCTION hive.consume_json_block(IN json_block TEXT)
+
+
+
+
+CREATE OR REPLACE FUNCTION hive.create_consume_json_blocks(IN context TEXT)
+RETURNS void
+AS 'MODULE_PATHNAME', 'create_consume_json_blocks' LANGUAGE C;
+
+
+CREATE OR REPLACE FUNCTION hive.consume_json_block(IN json_block TEXT, IN context TEXT)
 RETURNS void
 AS 'MODULE_PATHNAME', 'consume_json_block' LANGUAGE C;
 
+
+CREATE OR REPLACE FUNCTION hive.delete_consume_json_blocks(IN context TEXT)
+RETURNS void
+AS 'MODULE_PATHNAME', 'delete_consume_json_blocks' LANGUAGE C;
 
 
 CREATE OR REPLACE FUNCTION json_play()
@@ -70,7 +83,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.consume_json_blocks(in _from INT, in _to INT)
+CREATE OR REPLACE FUNCTION hive.consume_json_blocks(in _from INT, in _to INT, _context TEXT)
     RETURNS void
     LANGUAGE 'plpgsql'
 STABLE
@@ -84,7 +97,7 @@ BEGIN
     for i in _from _from .. _to LOOP
         SELECT into jb * FROM hive.get_block_json( i );
         jb = jb ->'block';
-        Perform hive.consume_json_block(jb::TEXT);
+        Perform hive.consume_json_block(jb::TEXT, _context);
     END LOOP;
 END;
 $BODY$

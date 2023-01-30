@@ -22,11 +22,14 @@ BEGIN
     EXECUTE format('DROP TABLE IF EXISTS hive.%I', __table_name);
 
     EXECUTE format('CREATE TABLE hive.%I 
-                        OF 
-                            hive.current_account_balance_return_type
                    (
+                        account                 CHAR(16),
+                        balance                 BIGINT,
                         PRIMARY KEY ( account )
                    )', __table_name);
+
+    PERFORM hive.create_consume_json_blocks(_context );
+
 
     RETURN ARRAY[ __table_name ];
 END;
@@ -60,22 +63,26 @@ BEGIN
     --RAISE WARNING '%',format('SELECT FILL_CURRENT_ACCOUNT_BALANCE_TABLE(''hive.%s'', %s, %s)',  __table_name, _first_block, _last_block);
 
 --    EXECUTE format('SELECT FILL_CURRENT_ACCOUNT_BALANCE_TABLE(''hive.%s'', %s, %s)',  __table_name, _first_block, _last_block);
-    PERFORM hive.consume_json_blocks(_first_block ,_last_block );
+    PERFORM hive.consume_json_blocks(_first_block ,_last_block, _context );
 
-    texcik = 'SELECT  hive.current_all_accounts_balances_C();';
+    texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L);', __table_name, _context);
+
+    raise notice 'texcik=%', texcik;
 
     raise notice 'NEW_TABLE=%',
     (
         SELECT json_agg(t)
         FROM (
                 SELECT *
-                FROM hive.current_all_accounts_balances_C()
+                FROM hive.current_all_accounts_balances_C(_context)
             ) t
     );
 
 
-    RAISE WARNING '%',format(texcik, __table_name);
-    EXECUTE           format(texcik, __table_name);
+    EXECUTE texcik;
+
+    -- RAISE WARNING '%',format(texcik, __table_name);
+    -- EXECUTE           format(texcik, __table_name);
 
 END;
 $BODY$
@@ -118,6 +125,9 @@ BEGIN
     END IF;
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
+
+    PERFORM hive.delete_consume_json_blocks(_context);
+
 END;
 $BODY$
 ;

@@ -2,8 +2,6 @@
 #include <hive/protocol/forward_impacted.hpp>
 #include <hive/protocol/misc_utilities.hpp>
 
-#include <hive/plugins/block_api/block_api.hpp>
-
 #include <fc/io/json.hpp>
 #include <fc/string.hpp>
 
@@ -639,50 +637,128 @@ PG_FUNCTION_INFO_V1(consume_json_block);
    **
    **/
 
-void consume_json_block_impl(const char *json_block);
+void consume_json_block_impl(const char *json_block, const char* context);
 
   Datum consume_json_block(PG_FUNCTION_ARGS)
   {
 
+  dlog("consume_json_block started mtlk pid=${pid}", ("pid", getpid()));
+
+
+  static int stop4 = 0;
+  while(stop4)
+  {
+    int a = 0;
+    a=a;
+  }
 
 
     const char *json_block = text_to_cstring(PG_GETARG_TEXT_PP(0));
+    const char *context = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
-    consume_json_block_impl(json_block);
+    consume_json_block_impl(json_block, context);
 
     // colect_data_and_fill_returned_recordset(
     //   [=](){ hive::plugins::block_api::consume_json_block_impl(json_block);},
     //   [](){},
     //   __FUNCTION__,
     //   json_block);
+
+    dlog("consume_json_block finished mtlk pid=${pid}", ("pid", getpid()));
     
     return (Datum)0;
   }  
 
+
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////VVVV
+
+PG_FUNCTION_INFO_V1(create_consume_json_blocks);
+
+  /**
+   ** 
+   **  CREATE OR REPLACE FUNCTION hive.create_consume_json_blocks(IN context TEXT)
+   **  RETURNS void
+   **
+   **
+   **
+   **/
+
+  void create_consume_json_blocks_impl(const char *context);
+
+  Datum create_consume_json_blocks(PG_FUNCTION_ARGS)
+  {
+
+    static int stop5 = 0;
+    while(stop5)
+    {
+      int a = 0;
+      a=a;
+    }
+
+    const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+    create_consume_json_blocks_impl(context);
+    
+    return (Datum)0;
+  }  
+
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+
+PG_FUNCTION_INFO_V1(delete_consume_json_blocks);
+
+  /**
+   ** 
+   **  CREATE OR REPLACE FUNCTION hive.delete_consume_json_blocks(IN context TEXT)
+   **  RETURNS void
+   **
+   **
+   **
+   **/
+
+  void delete_consume_json_blocks_impl(const char *context);
+
+  Datum delete_consume_json_blocks(PG_FUNCTION_ARGS)
+  {
+
+    const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+    delete_consume_json_blocks_impl(context);
+    
+    return (Datum)0;
+  }  
+
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 
 PG_FUNCTION_INFO_V1(current_all_accounts_balances_C);
 
 /**
 
 
-CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C();
+CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C(IN context TEXT);
 RETURNS SETOF hive.current_account_balance_return_type
 AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
 
 use like this:
-    insert into table_name select current_all_accounts_balances_C();
+    insert into table_name select current_all_accounts_balances_C(context);
 
 */
 
 Datum current_all_accounts_balances_C(PG_FUNCTION_ARGS)
 {
 
-  static int stop3 = 1;
+  static int stop3 = 0;
   while(stop3)
   {
     int a = 0;
     a=a;
   }
+  const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
 
 
   hive::app::collected_account_balances_collection_t collected_data;
@@ -691,7 +767,7 @@ Datum current_all_accounts_balances_C(PG_FUNCTION_ARGS)
 
     [=, &collected_data]()
     {
-        collected_data = hive::app::collect_current_all_accounts_balances();
+        collected_data = hive::app::collect_current_all_accounts_balances(context);
     }, 
 
     [=, &collected_data]()

@@ -39,6 +39,13 @@ drop table keyauth_app.LOG_TABLE;
 select hive.app_reset_data('keyauth_app')
 ```
 
+
+Or simply:
+```
+killpostgres && sudo -u postgres psql  -c 'drop database haf_block_log;' &&  sudo -u postgres psql  -c 'create database haf_block_log with template haf_block_log5m;' &&   psql -v "ON_ERROR_STOP=1" -d haf_block_log -f src/hive_fork_manager/state_providers/performance_examination/keyauth_app.sql &&   psql -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing'  -c "call keyauth_app.main('keyauth_app', 1000000, 200000)"
+```
+
+
 ## Timing data
 is available in the keyauth_app.LOG_TABLE table before clearing.
 
