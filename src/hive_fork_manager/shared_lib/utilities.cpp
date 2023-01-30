@@ -707,7 +707,7 @@ void consume_json_block_impl(const char *json_block);
 
     const char *json_block = text_to_cstring(PG_GETARG_TEXT_PP(0));
 
-    // consume_json_block_impl(json_block);
+    consume_json_block_impl(json_block);
 
     // colect_data_and_fill_returned_recordset(
     //   [=](){ hive::plugins::block_api::consume_json_block_impl(json_block);},
