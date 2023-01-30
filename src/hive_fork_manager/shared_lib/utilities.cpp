@@ -698,6 +698,7 @@ PG_FUNCTION_INFO_V1(consume_json_block);
    **
    **/
 
+
 void consume_json_block_impl(const char *json_block);
 
   Datum consume_json_block(PG_FUNCTION_ARGS)
