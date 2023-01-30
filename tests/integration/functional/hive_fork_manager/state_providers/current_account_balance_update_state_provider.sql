@@ -29,7 +29,7 @@ BEGIN
     PERFORM hive.app_context_detach( 'context' );
 
     UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 5;
-    -- PERFORM hive.update_state_provider_current_account_balance( 1, 5, 'context' );
+    PERFORM hive.update_state_provider_current_account_balance( 1, 5, 'context' );
 
 
     --PERFORM hive.app_state_provider_drop_all( 'context' );

@@ -70,18 +70,18 @@ BEGIN
     raise notice 'texcik=%', texcik;
 
 
-    raise notice 'NEW_TABLE=%',
-    (
-        SELECT json_agg(t)
-        FROM (
-                SELECT *
-                FROM hive.current_all_accounts_balances_C()
-            ) t
-    );
+    -- raise notice 'NEW_TABLE=%',
+    -- (
+    --     SELECT json_agg(t)
+    --     FROM (
+    --             SELECT *
+    --             FROM hive.current_all_accounts_balances_C()
+    --         ) t
+    -- );
 
 
     RAISE WARNING '%',format(texcik, __table_name);
-    EXECUTE           format(texcik, __table_name);
+--    EXECUTE           format(texcik, __table_name);
 
 END;
 $BODY$
