@@ -61,7 +61,7 @@ BEGIN
     --RAISE WARNING '%',format('SELECT FILL_CURRENT_ACCOUNT_BALANCE_TABLE(''hive.%s'', %s, %s)',  __table_name, _first_block, _last_block);
 
 --    EXECUTE format('SELECT FILL_CURRENT_ACCOUNT_BALANCE_TABLE(''hive.%s'', %s, %s)',  __table_name, _first_block, _last_block);
-    PERFORM hive.consume_json_blocks(_first_block ,_last_block );
+    -- PERFORM hive.consume_json_blocks(_first_block ,_last_block );
 
 
     --texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L);', __table_name, _context);
