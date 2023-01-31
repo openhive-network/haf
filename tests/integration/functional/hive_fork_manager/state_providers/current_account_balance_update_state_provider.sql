@@ -37,9 +37,13 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance WHERE account = 'temp' and balance = 0), 'Incorrect balance of temp';
     ASSERT 4 = ( SELECT COUNT(*) FROM hive.context_current_account_balance), 'Incorrect number of accounts';
 
+    ASSERT (SELECT to_regclass('hive.context_current_account_balance')) IS NOT NULL, 'State provider table should exist';
+
     PERFORM hive.app_state_provider_drop_all( 'context' );
 
-    -- mtlk todo check if table still exists
+
+    ASSERT (SELECT to_regclass('hive.context_current_account_balance')) IS NULL, 'State provider table should not exist';
+    
 
 END;
 $BODY$
