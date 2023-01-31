@@ -41,7 +41,7 @@ fc::variant op_to_variant( const char* raw_data, uint32 data_length )
   }
   catch( const fc::exception& e )
   {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( e.to_string().c_str() ) ) );
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
     return {};
   }
   catch( ... )
@@ -59,7 +59,7 @@ std::string op_to_json( const char* raw_data, uint32 data_length )
   }
   catch( const fc::exception& e )
   {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( e.to_string().c_str() ) ) );
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
     return {};
   }
   catch( ... )
@@ -86,7 +86,7 @@ std::vector< char > json_to_op( const char* raw_data )
   }
   catch( const fc::exception& e )
   {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( e.to_string().c_str() ) ) );
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
     return {};
   }
   catch( ... )
@@ -138,12 +138,12 @@ extern "C"
     }
     catch( const fc::exception& e )
     {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( e.to_string().c_str() ) ) );
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.to_string().c_str() ) ) );
       return {};
     }
     catch( const std::exception& e )
     {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( e.what() ) ) );
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.what() ) ) );
       return {};
     }
     catch( ... )
