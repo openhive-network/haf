@@ -31,8 +31,15 @@ BEGIN
     UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 5;
     PERFORM hive.update_state_provider_current_account_balance( 1, 5, 'context' );
 
+    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance WHERE account = 'initminer' and balance = 4000), 'Incorrect balance of initminer';
+    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance WHERE account = 'miners' and balance = 0),'Incorrect balance of miners';
+    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance WHERE account = 'null' and balance = 0), 'Incorrect balance of null';
+    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance WHERE account = 'temp' and balance = 0), 'Incorrect balance of temp';
+    ASSERT 4 = ( SELECT COUNT(*) FROM hive.context_current_account_balance), 'Incorrect number of accounts';
 
-    --PERFORM hive.app_state_provider_drop_all( 'context' );
+    PERFORM hive.app_state_provider_drop_all( 'context' );
+
+    -- mtlk todo check if table still exists
 
 END;
 $BODY$
@@ -46,11 +53,6 @@ CREATE FUNCTION test_when()
 AS
 $BODY$
 BEGIN
-    -- ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance WHERE account = 'initminer' and balance = 4000), 'ASSERT1';
-    -- ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance WHERE account = 'miners' and balance = 0),'ASSERT2';
-    -- ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance WHERE account = 'null' and balance = 0);
-    -- ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance WHERE account = 'temp' and balance = 0);
-    -- ASSERT 4 = (SELECT COUNT(*) FROM hive.context_current_account_balance);
 END;
 $BODY$
 ;
