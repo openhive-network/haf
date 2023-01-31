@@ -699,16 +699,15 @@ PG_FUNCTION_INFO_V1(consume_json_block);
    **/
 
 
-void consume_json_block_impl(const char *json_block);
+void consume_json_block_impl(const char *json_block, const char *context);
 
   Datum consume_json_block(PG_FUNCTION_ARGS)
   {
 
-
-
     const char *json_block = text_to_cstring(PG_GETARG_TEXT_PP(0));
+    const char *context = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
-    consume_json_block_impl(json_block);
+    consume_json_block_impl(json_block, context);
 
     // colect_data_and_fill_returned_recordset(
     //   [=](){ hive::plugins::block_api::consume_json_block_impl(json_block);},
@@ -744,6 +743,7 @@ Datum current_all_accounts_balances_C(PG_FUNCTION_ARGS)
     a=a;
   }
 
+  const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
 
   hive::app::collected_account_balances_collection_t collected_data;
 
@@ -751,7 +751,7 @@ Datum current_all_accounts_balances_C(PG_FUNCTION_ARGS)
 
     [=, &collected_data]()
     {
-        collected_data = hive::app::collect_current_all_accounts_balances();
+        collected_data = hive::app::collect_current_all_accounts_balances(context);
     }, 
 
     [=, &collected_data]()
