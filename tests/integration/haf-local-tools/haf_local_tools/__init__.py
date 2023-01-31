@@ -1,3 +1,5 @@
+import datetime
+import json
 import time
 from pathlib import Path
 from typing import Dict
@@ -71,6 +73,7 @@ def prepare_networks(networks: Dict[str, tt.Network], replay_all_nodes = True):
 
     run_networks(list(networks.values()), blocklog_directory)
 
+
 def create_node_with_database(network: tt.Network, url):
     api_node = tt.ApiNode(network=network)
     api_node.config.plugin.append('sql_serializer')
@@ -116,6 +119,7 @@ def create_app(session, application_context):
     session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION )
     session.commit()
 
+
 def wait_until_irreversible_without_new_block(session, final_block, limit):
 
     assert limit > 0
@@ -138,6 +142,7 @@ def wait_until_irreversible_without_new_block(session, final_block, limit):
 
     assert False, "An expected content of `events_queue` table has not been reached."
 
+
 def wait_until_irreversible(node_under_test, session):
     while True:
         node_under_test.wait_number_of_blocks(1)
@@ -154,3 +159,68 @@ def wait_until_irreversible(node_under_test, session):
 
         if result[ len(result) - 1 ].event == 'NEW_IRREVERSIBLE':
             return
+
+
+def connect_nodes(first_node, second_node) -> None:
+    """
+    This place have to be removed after solving issue https://gitlab.syncad.com/hive/test-tools/-/issues/10
+    """
+    from test_tools.__private.user_handles.get_implementation import get_implementation
+    second_node.config.p2p_seed_node = get_implementation(first_node).get_p2p_endpoint()
+
+
+def prepare_network_with_init_node_and_api_node(session, init_node_time_offset: str = None):
+    init_node = tt.InitNode()
+    init_node.run(time_offset=init_node_time_offset)
+
+    api_node = tt.ApiNode()
+    api_node.config.plugin.append('sql_serializer')
+    api_node.config.psql_url = str(session.get_bind().url)
+
+    return api_node, init_node
+
+
+def prepare_operations(node: tt.InitNode, wallet: tt.Wallet) -> [dict, dict]:
+    node.wait_for_block_with_number(5)
+    transaction_0 = wallet.api.create_account('initminer', 'alice', '{}')
+    node.wait_for_block_with_number(8)
+    transaction_1 = wallet.api.create_account('initminer', 'bob', '{}')
+    node.wait_for_irreversible_block()
+    return transaction_0, transaction_1
+
+
+def verify_operation_in_haf_database(operation_name: str, transactions: list, session, operations):
+    query_operations = []
+    for transaction in transactions:
+        query_operations.append(session.query(operations).filter(operations.block_num == transaction['block_num']).all())
+
+    types = []
+    for operation in query_operations:
+        types.append([json.loads(op.body)['type'] for op in operation])
+
+    for type in types:
+        assert operation_name in type
+
+
+def get_absolute_head_block_time(node) -> datetime.datetime:
+    head_block_num = node.api.condenser.get_dynamic_global_properties()['head_block_number']
+    head_block_timestamp = node.api.block.get_block(block_num=head_block_num)['block']['timestamp']
+    return tt.Time.parse(head_block_timestamp)
+
+
+def set_time_to_offset(node, shift_in_time: int) -> str:
+    absolute_start_time = get_absolute_head_block_time(node) + tt.Time.seconds(shift_in_time)
+    return tt.Time.serialize(absolute_start_time, format_=tt.Time.TIME_OFFSET_FORMAT)
+
+
+def get_operations(node, last_block: int, first_block: int = 0) -> list:
+    blocks = [node.api.account_history.get_ops_in_block(block_num=i) for i in range(first_block, last_block + 1)]
+    transactions = []
+    for block in blocks:
+        transactions.extend(block['ops'])
+    return transactions
+
+
+def get_operations_from_database(session, operations_marker, last_block: int) -> list:
+    operations = session.query(operations_marker).filter(operations_marker.block_num <= last_block).all()
+    return [json.loads(op.body)for op in operations]
