@@ -193,6 +193,7 @@ BEGIN
     PERFORM keyauth_app.define_schema();
     PERFORM hive.app_state_provider_import('KEYAUTH', _appContext);
     PERFORM hive.app_state_provider_import('ACCOUNTS', _appContext);
+    PERFORM hive.app_state_provider_import('CURRENT_ACCOUNT_BALANCE', _appContext);
 
     COMMIT;
   END IF;
