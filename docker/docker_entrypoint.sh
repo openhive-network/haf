@@ -83,7 +83,6 @@ sudo -Enu hived mkdir --mode=777 -p "$DATADIR/blockchain"
 sudo -n mkdir -p "$HAF_DB_STORE/tablespace"
 sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE"
 test "$HAF_DB_STORE" = "/home/hived/datadir/haf_db_store" || sudo -n ln -s "$HAF_DB_STORE" /home/hived/datadir/haf_db_store
-prepare_pg_hba_file
 
 
 if [ -d "$PGDATA" ]
@@ -113,7 +112,8 @@ fi
 cd "$DATADIR"
 
 # be sure postgres is running
-sudo -n /etc/init.d/postgresql start
+prepare_pg_hba_file
+sudo -n /etc/init.d/postgresql restart
 
 HIVED_ARGS=()
 HIVED_ARGS+=("$@")
@@ -121,11 +121,34 @@ export HIVED_ARGS
 
 echo "Attempting to execute hived using additional command line arguments: ${HIVED_ARGS[@]}"
 
+sudo -n ls -lath /usr/local/lib/faketime/ || true
+
+sudo -n mkdir /home/hived/hive_base_config
+sudo -n ls /home/hived -lathR || true
+pushd /home/hived/hive_base_config
+sudo -n git clone --depth 1 --branch master https://github.com/wolfcw/libfaketime.git
+cd libfaketime && sudo -n make
+sudo -n make install # install it into default location path.
+popd
+
+sudo -n ls -lath /usr/local/lib/faketime/ || true
+
+echo "2016-09-15T19:47:21"
+date
+sudo -n cat "$DATADIR/faketime.rc" || true
+
+sudo -n /bin/bash << EOF
+LD_PRELOAD=/usr/local/lib/faketime/libfaketimeMT.so.1 \
+FAKETIME_TIMESTAMP_FILE="$DATADIR/faketime.rc" \
+date
+EOF
 
 {
 sudo -Enu hived /bin/bash << EOF
 echo "Attempting to execute hived using additional command line arguments: ${HIVED_ARGS[@]}"
 
+LD_PRELOAD=/usr/local/lib/faketime/libfaketimeMT.so.1 \
+FAKETIME_TIMESTAMP_FILE="$DATADIR/faketime.rc" \
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
   --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
     --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \

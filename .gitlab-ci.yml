@@ -20,253 +20,381 @@ variables:
 include:
   - '/scripts/ci-helpers/prepare_data_image_job.yml'
 
-hive_fork_manager:
+# hive_fork_manager:
+#   stage: build_and_test
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   script:
+#     - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
+#     - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" extension.hive_fork_manager
+#     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build"
+#     - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build" && ctest -j${CTEST_NUMBER_OF_JOBS} --output-on-failure  -R test.functional.hive_fork_manager.*
+#   artifacts:
+#     paths:
+#     - "$CI_JOB_NAME"
+#     expire_in: 6 hours
+#   interruptible: true
+#   tags:
+#     - public-runner-docker
+#     - hived
+
+# # job resonsible for hived build in mainnet config.
+# hived:
+#   stage: build_and_test
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   script:
+#     - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
+#     - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" hived compress_block_log
+#     # check if sql_serializer compiles with hived
+#     - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
+#     # check if sql_serializer plugin is included in hived plugins
+#     - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/programs/hived"
+#     - ./hived --help | grep psql-url
+#   artifacts:
+#     paths:
+#     - "$CI_JOB_NAME"
+#     expire_in: 6 hours
+#   tags:
+#     - public-runner-docker
+#     - hived
+
+# hived_testnet:
+#   stage: build_and_test
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   script:
+#     - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
+#     - $SETUP_SCRIPTS_PATH/build.sh --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=ON" --cmake-arg="-DHIVE_LINT=OFF" hived cli_wallet get_dev_key compress_block_log
+#     # check if sql_serializer compiles with hived
+#     - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
+#     # check if sql_serializer plugin is included in hived plugins
+#     - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/programs/hived"
+#     - ./hived --help | grep psql-url
+#   artifacts:
+#     paths:
+#     - "$CI_JOB_NAME"
+#     expire_in: 6 hours
+#   interruptible: true
+#   tags:
+#     - public-runner-docker
+#     - hived
+
+# .pytest_based:
+#   before_script:
+#     - export PATH="/home/haf_admin/.local/bin:$PATH"
+#     - curl -sSL https://install.python-poetry.org | python3 -  # install poetry in isolated environment
+#     - python3 -m venv venv/
+#     - . venv/bin/activate
+#     - (cd $CI_PROJECT_DIR/tests/integration/haf-local-tools && poetry install)
+
+# haf_system_tests:
+#   stage: build_and_test
+#   extends: .pytest_based
+#   needs:
+#     - job: hive_fork_manager
+#       artifacts: true
+#     - job: hived_testnet
+#       artifacts: true
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   variables:
+#     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
+#   script:
+#     # use newest libfaketime version, version 0.97 is not enough
+#     - git clone --branch master https://github.com/wolfcw/libfaketime.git
+#     - cd libfaketime && make
+#     - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
+#     # install hive_fork_manager extension built in previous stage
+#     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+#     # prepare environment and run tests
+#     - cd $CI_PROJECT_DIR/tests/integration/system/haf
+#     - pytest --junitxml report.xml
+#   artifacts:
+#     paths:
+#     - "**/generated_during_*"
+#     - "**/generated_by_package_fixtures"
+#     reports:
+#       junit: tests/integration/system/haf/report.xml
+#     when: always
+#     expire_in: 1 week
+#   interruptible: true
+#   tags:
+#     - public-runner-docker
+
+# applications_system_tests:
+#   stage: build_and_test
+#   extends: .pytest_based
+#   needs:
+#     - job: hive_fork_manager
+#       artifacts: true
+#     - job: hived_testnet
+#       artifacts: true
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   variables:
+#     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
+#   script:
+#     # use newest libfaketime version, version 0.97 is not enough
+#     - git clone --branch master https://github.com/wolfcw/libfaketime.git
+#     - cd libfaketime && make
+#     - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
+#     # install hive_fork_manager extension built in previous stage
+#     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+#     # prepare environment and run tests
+#     - cd $CI_PROJECT_DIR/tests/integration/system/applications
+#     - pytest --junitxml report.xml
+#   artifacts:
+#     paths:
+#     - "**/generated_during_*"
+#     - "**/generated_by_package_fixtures"
+#     reports:
+#       junit: tests/integration/system/haf/report.xml
+#     when: always
+#     expire_in: 1 week
+#   interruptible: true
+#   tags:
+#     - public-runner-docker
+
+# .replay_step:
+#   stage: build_and_test
+#   needs:
+#     - job: hive_fork_manager
+#       artifacts: true
+#     - job: hived
+#       artifacts: true
+#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+#   variables:
+#     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
+#     BLOCK_LOG_DIRECTORY: "/blockchain"
+#     DB_NAME: haf_block_log
+#     DB_URL: "postgresql:///$DB_NAME"
+#   before_script:
+#     - !reference [.pytest_based, before_script]
+#     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+#     - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
+#     # replay
+#     - test -n "$PATTERNS_PATH"
+#     - cd $CI_PROJECT_DIR/tests/integration/replay
+#     - mkdir $PATTERNS_PATH/blockchain
+#     - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
+#     - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
+#     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs.log
+#   script:
+#     - pytest --junitxml report.xml
+#   artifacts:
+#     paths:
+#     - "**/node_logs.log"
+#     - "**/generated_during_*"
+#     - "**/generated_by_package_fixtures"
+#     - "**/*.out.csv"
+#     reports:
+#       junit: tests/integration/replay/report.xml
+#     when: always
+#     expire_in: 1 week
+#   interruptible: true
+#   tags:
+#     - public-runner-docker
+#     - hived-for-tests
+
+# replay_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
+
+# replay_accounts_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_filtered"
+
+# replay_accounts_operations_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_operations_filtered"
+
+# replay_virtual_operations_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/virtual_operations_filtered"
+
+# replay_operations_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/operations_filtered"
+
+# replay_body_operations_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/body_operations_filtered"
+
+# replay_accounts_body_operations_filtered_with_haf:
+#   extends: .replay_step
+#   variables:
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
+
+# block_api_tests:
+#   extends: .replay_step
+#   variables:
+#     FF_NETWORK_PER_BUILD: 1
+#     SETUP_DIR: "$CI_PROJECT_DIR/setup_dir/"
+#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
+#     BENCHMARK_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools/tests_api/benchmarks"
+#   script:
+#     # setup
+#     - sudo apt update && sudo apt install -y bash git unzip wget ca-certificates curl build-essential python3-dev maven openjdk-8-jdk openjdk-8-jre python3 python3-pip
+#     - pip3 install prettytable
+#     - mkdir -p $SETUP_DIR && cd $SETUP_DIR
+#     - $BENCHMARK_DIR/setup_jmeter.bash && source jmeter/activate # sets env $JMETER
+#     - $BENCHMARK_DIR/setup_m2u.bash && source m2u/activate # sets env $M2U
+#     - $M2U || true
+#     - psql $DB_URL -c "CREATE ROLE bench LOGIN PASSWORD 'mark' INHERIT IN ROLE hived_group;"
+#     - export BENCHMARK_DB_URL="postgresql://bench:mark@localhost:5432/$DB_NAME"
+
+#     # run pattern tests
+#     - cd "$BENCHMARK_DIR"
+#     - python3 benchmark.py --loops 200 --threads 5 -n blocks_api -p 5432 -c perf_5M_light.csv --skip-version-check -j $JMETER -d wdir --postgres $BENCHMARK_DB_URL --call-style postgres 2>&1 | tee -i $CI_PROJECT_DIR/python_benchmark.log
+
+#     # generate JUNIT report file
+#     - $M2U --input "$BENCHMARK_DIR/wdir/raw_jmeter_report.xml" --output $CI_PROJECT_DIR/report.junit
+
+#   cache:
+#     # this will prevent re-downloading jmeter and m2u
+#     key: bench-tools
+#     paths:
+#       - "$SETUP_DIR/"
+
+#   artifacts:
+#     name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+#     reports:
+#       junit: $CI_PROJECT_DIR/report.junit
+#     paths:
+#       - $BENCHMARK_DIR/wdir
+#       - $CI_PROJECT_DIR/python_benchmark.log
+#     when: always
+#     expire_in: 1 week
+#   tags:
+#     - public-runner-docker
+#     - hived-for-tests
+
+
+
+prepare_haf_image:
+  extends: .prepare_haf_image
   stage: build_and_test
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  script:
-    - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
-    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" extension.hive_fork_manager
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build"
-    - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build" && ctest -j${CTEST_NUMBER_OF_JOBS} --output-on-failure  -R test.functional.hive_fork_manager.*
-  artifacts:
-    paths:
-    - "$CI_JOB_NAME"
-    expire_in: 6 hours
-  interruptible: true
+  variables:
+    REGISTRY_USER: "$CI_IMG_BUILDER_USER"
+    REGISTRY_PASS: $CI_IMG_BUILDER_PASSWORD
+    BINARY_CACHE_PATH: "haf-binaries"
+    HIVE_NETWORK_TYPE: mirrornet
   tags:
-    - public-runner-docker
-    - hived
+    - hive-builder-4
 
-# job resonsible for hived build in mainnet config.
-hived:
-  stage: build_and_test
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  script:
-    - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
-    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" hived compress_block_log
-    # check if sql_serializer compiles with hived
-    - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
-    # check if sql_serializer plugin is included in hived plugins
-    - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/programs/hived"
-    - ./hived --help | grep psql-url
-  artifacts:
-    paths:
-    - "$CI_JOB_NAME"
-    expire_in: 6 hours
-  tags:
-    - public-runner-docker
-    - hived
-
-hived_testnet:
-  stage: build_and_test
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  script:
-    - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
-    - $SETUP_SCRIPTS_PATH/build.sh --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=ON" --cmake-arg="-DHIVE_LINT=OFF" hived cli_wallet get_dev_key compress_block_log
-    # check if sql_serializer compiles with hived
-    - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
-    # check if sql_serializer plugin is included in hived plugins
-    - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/programs/hived"
-    - ./hived --help | grep psql-url
-  artifacts:
-    paths:
-    - "$CI_JOB_NAME"
-    expire_in: 6 hours
-  interruptible: true
-  tags:
-    - public-runner-docker
-    - hived
-
-.pytest_based:
-  before_script:
-    - export PATH="/home/haf_admin/.local/bin:$PATH"
-    - curl -sSL https://install.python-poetry.org | python3 -  # install poetry in isolated environment
-    - python3 -m venv venv/
-    - . venv/bin/activate
-    - (cd $CI_PROJECT_DIR/tests/integration/haf-local-tools && poetry install)
-
-haf_system_tests:
-  stage: build_and_test
-  extends: .pytest_based
+prepare_haf_data:
+  extends: .prepare_haf_data_5m
   needs:
-    - job: hive_fork_manager
+    - job: prepare_haf_image
       artifacts: true
-    - job: hived_testnet
-      artifacts: true
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  variables:
-    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
-  script:
-    # use newest libfaketime version, version 0.97 is not enough
-    - git clone --branch master https://github.com/wolfcw/libfaketime.git
-    - cd libfaketime && make
-    - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
-    # install hive_fork_manager extension built in previous stage
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
-    # prepare environment and run tests
-    - cd $CI_PROJECT_DIR/tests/integration/system/haf
-    - pytest --junitxml report.xml
-  artifacts:
-    paths:
-    - "**/generated_during_*"
-    - "**/generated_by_package_fixtures"
-    reports:
-      junit: tests/integration/system/haf/report.xml
-    when: always
-    expire_in: 1 week
-  interruptible: true
-  tags:
-    - public-runner-docker
-
-applications_system_tests:
   stage: build_and_test
-  extends: .pytest_based
-  needs:
-    - job: hive_fork_manager
-      artifacts: true
-    - job: hived_testnet
-      artifacts: true
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
-    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
-  script:
-    # use newest libfaketime version, version 0.97 is not enough
-    - git clone --branch master https://github.com/wolfcw/libfaketime.git
-    - cd libfaketime && make
-    - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
-    # install hive_fork_manager extension built in previous stage
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
-    # prepare environment and run tests
-    - cd $CI_PROJECT_DIR/tests/integration/system/applications
-    - pytest --junitxml report.xml
-  artifacts:
-    paths:
-    - "**/generated_during_*"
-    - "**/generated_by_package_fixtures"
-    reports:
-      junit: tests/integration/system/haf/report.xml
-    when: always
-    expire_in: 1 week
-  interruptible: true
+    DATA_CACHE: $DATA_CACHE_MIRRORNET
+    HIVE_NETWORK_TYPE: mirrornet
+    BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M
+    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_mirrornet_5M.ini"
+    FAKETIME_TIMESTAMP: "2016-09-15T19:47:21"
   tags:
-    - public-runner-docker
+    - hive-builder-4
+  resource_group: ${CI_COMMIT_SHA}
 
-.replay_step:
+job_using_cache:
   stage: build_and_test
-  needs:
-    - job: hive_fork_manager
-      artifacts: true
-    - job: hived
-      artifacts: true
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  needs:
+    - job: prepare_haf_image
+      artifacts: true
+    - job: prepare_haf_data
+
+  services:
+    - name: $HAF_IMAGE_NAME
+      alias: haf-instance
+      variables:
+        # Allow access from any network to eliminate CI IP addressing problems
+        PG_ACCESS: "host    haf_block_log    haf_app_admin    0.0.0.0/0    trust"
+        DATADIR: $DATA_CACHE/datadir
+        SHM_DIR: $DATA_CACHE/shm_dir
+        LOG_FILE: $CI_JOB_NAME-$CI_COMMIT_SHORT_SHA.log
+      command: ["--replay-blockchain"]
+
   variables:
-    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
-    BLOCK_LOG_DIRECTORY: "/blockchain"
-    DB_NAME: haf_block_log
-    DB_URL: "postgresql:///$DB_NAME"
-  before_script:
-    - !reference [.pytest_based, before_script]
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
-    - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
-    # replay
-    - test -n "$PATTERNS_PATH"
-    - cd $CI_PROJECT_DIR/tests/integration/replay
-    - mkdir $PATTERNS_PATH/blockchain
-    - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
-    - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
-    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs.log
+    DATA_CACHE: $DATA_CACHE_MIRRORNET
+    HAF_POSTGRES_URL: postgresql://haf_app_admin@haf-instance:5432/haf_block_log
   script:
-    - pytest --junitxml report.xml
+    - curl -I haf-instance:8090 || (echo "error connecting to service hived-instance" && false)
+    - env
+    - set -x
+    - ls /cache -lath || true
+    - ls $DATA_CACHE -lath || true
+    - sleep 60 || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' haf-instance:8090 || true
+    - psql $HAF_POSTGRES_URL -c 'SELECT 1;' || true
+    - sleep 60 || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' haf-instance:8090 || true
+    - apk update && apk add postgresql || true
+    - psql "${HAF_POSTGRES_URL}" -c '\d hive.blocks' || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' haf-instance:8090 || true
+    - sleep 60 || true
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' haf-instance:8090 || true
+    - sleep 60
+  after_script:
+    - ls -lath /cache || true
+    - ls -lath /cache/*/ || true
+    - du -d 1 -h /cache || true
+    - rm docker_entrypoint.log -f
+    - cp $DATA_CACHE/datadir/$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA.log $CI_PROJECT_DIR/docker_entrypoint.log
+
   artifacts:
     paths:
-    - "**/node_logs.log"
-    - "**/generated_during_*"
-    - "**/generated_by_package_fixtures"
-    - "**/*.out.csv"
-    reports:
-      junit: tests/integration/replay/report.xml
-    when: always
-    expire_in: 1 week
-  interruptible: true
+    - docker_entrypoint.log
   tags:
-    - public-runner-docker
-    - hived-for-tests
+    - hive-builder-4
+  resource_group: ${CI_COMMIT_SHA}
 
-replay_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
-
-replay_accounts_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_filtered"
-
-replay_accounts_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_operations_filtered"
-
-replay_virtual_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/virtual_operations_filtered"
-
-replay_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/operations_filtered"
-
-replay_body_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/body_operations_filtered"
-
-replay_accounts_body_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
-
-block_api_tests:
-  extends: .replay_step
-  variables:
-    FF_NETWORK_PER_BUILD: 1
-    SETUP_DIR: "$CI_PROJECT_DIR/setup_dir/"
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
-    BENCHMARK_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools/tests_api/benchmarks"
+cleanup_cache_manual:
+  extends: .docker_image_cleanup_job
+  stage: cleanup
+  needs: []
   script:
-    # setup
-    - sudo apt update && sudo apt install -y bash git unzip wget ca-certificates curl build-essential python3-dev maven openjdk-8-jdk openjdk-8-jre python3 python3-pip
-    - pip3 install prettytable
-    - mkdir -p $SETUP_DIR && cd $SETUP_DIR
-    - $BENCHMARK_DIR/setup_jmeter.bash && source jmeter/activate # sets env $JMETER
-    - $BENCHMARK_DIR/setup_m2u.bash && source m2u/activate # sets env $M2U
-    - $M2U || true
-    - psql $DB_URL -c "CREATE ROLE bench LOGIN PASSWORD 'mark' INHERIT IN ROLE hived_group;"
-    - export BENCHMARK_DB_URL="postgresql://bench:mark@localhost:5432/$DB_NAME"
+    - env
+    - whoami
+    - ls -lathR /cache || true
+    - du -d 1 -h /cache || true
+    - rm /cache/replay_data_haf_* -rf
+    - du -d 1 -h /cache || true
 
-    # run pattern tests
-    - cd "$BENCHMARK_DIR"
-    - python3 benchmark.py --loops 200 --threads 5 -n blocks_api -p 5432 -c perf_5M_light.csv --skip-version-check -j $JMETER -d wdir --postgres $BENCHMARK_DB_URL --call-style postgres 2>&1 | tee -i $CI_PROJECT_DIR/python_benchmark.log
-
-    # generate JUNIT report file
-    - $M2U --input "$BENCHMARK_DIR/wdir/raw_jmeter_report.xml" --output $CI_PROJECT_DIR/report.junit
-
-  cache:
-    # this will prevent re-downloading jmeter and m2u
-    key: bench-tools
-    paths:
-      - "$SETUP_DIR/"
-
-  artifacts:
-    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
-    reports:
-      junit: $CI_PROJECT_DIR/report.junit
-    paths:
-      - $BENCHMARK_DIR/wdir
-      - $CI_PROJECT_DIR/python_benchmark.log
-    when: always
-    expire_in: 1 week
   tags:
-    - public-runner-docker
-    - hived-for-tests
+    - hive-builder-4
+  when: manual
+  resource_group: ${CI_COMMIT_SHA}
+

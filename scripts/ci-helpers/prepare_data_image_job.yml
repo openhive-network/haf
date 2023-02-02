@@ -1,6 +1,6 @@
 include:
   - project: 'hive/hive'
-    ref: ms_add_anchor_for_common_gitlab_job_definition
+    ref: ms_setup_ci_using_cache_with_mirrornet
     file: '/scripts/ci-helpers/prepare_data_image_job.yml' 
 
 .prepare_haf_data_5m_image:
@@ -57,9 +57,10 @@ include:
     CONFIG_INI_SOURCE: ""
     DATA_CACHE: $DATA_CACHE_MAINNET
     HIVE_NETWORK_TYPE: mainnet
+    FAKETIME_TIMESTAMP: ""
   script:
     - echo "HOSTNAME is ${HOSTNAME} CI_CONCURRENT_ID ${CI_CONCURRENT_ID}"
-    - $SCRIPTS_PATH/ci-helpers/build_data2.sh $HAF_IMAGE_NAME
+    - $SCRIPTS_PATH/ci-helpers/build_data2.sh $HAF_IMAGE_NAME --faketime-timestamp="$FAKETIME_TIMESTAMP"
         --data-cache="$DATA_CACHE" --block-log-source-dir="$BLOCK_LOG_SOURCE_DIR" --config-ini-source="$CONFIG_INI_SOURCE"
     - du -h -d 1 /cache
     - cp $DATA_CACHE/datadir/docker_entrypoint.log $CI_PROJECT_DIR
