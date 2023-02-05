@@ -736,8 +736,8 @@ use like this:
 Datum current_all_accounts_balances_C(PG_FUNCTION_ARGS)
 {
 
-  static int stop3 = 0;
-  while(stop3)
+  static int volatile stop_in_current_all_accounts_balances_C = 0;
+  while(stop_in_current_all_accounts_balances_C)
   {
     int a = 0;
     a=a;
