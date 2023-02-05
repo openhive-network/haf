@@ -63,12 +63,12 @@ AS 'MODULE_PATHNAME', 'consume_json_block' LANGUAGE C;
 
 
 
-    --for i in 1 to last_block_num
-    --Perform hive.consume_json_block((()::TEXT));
+    -- --for i in 1 to last_block_num
+    -- --Perform hive.consume_json_block((()::TEXT));
     
-END;
-$BODY$
-;
+-- END;
+-- $BODY$
+-- ;
 
 CREATE OR REPLACE FUNCTION hive.consume_json_blocks(in _from INT, in _to INT, IN _context TEXT)
     RETURNS void
