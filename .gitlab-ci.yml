@@ -158,9 +158,11 @@ applications_system_tests:
     BLOCK_LOG_DIRECTORY: "/blockchain"
     DB_NAME: haf_block_log
     DB_URL: "postgresql:///$DB_NAME"
+    DB_ADMIN: "haf_admin"
+    REPLAY: "--force-replay"
   before_script:
     - !reference [.pytest_based, before_script]
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=$DB_ADMIN --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
     - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
     # replay
     - test -n "$PATTERNS_PATH"
@@ -168,12 +170,13 @@ applications_system_tests:
     - mkdir $PATTERNS_PATH/blockchain
     - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
     - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
-    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH --force-replay --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs.log
+    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs.log
   script:
     - pytest --junitxml report.xml
   artifacts:
     paths:
     - "**/node_logs.log"
+    - "**/node_logs1.log"
     - "**/generated_during_*"
     - "**/generated_by_package_fixtures"
     - "**/*.out.csv"
@@ -220,6 +223,20 @@ replay_accounts_body_operations_filtered_with_haf:
   extends: .replay_step
   variables:
     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
+
+replay_with_update:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
+    REPLAY: "--replay-blockchain --stop-replay-at-block 1000000"
+    REPLAY_CONTINUATION: "--replay-blockchain --stop-replay-at-block 2000000"
+  script:
+    # run script that makes database update
+    - sudo $SETUP_SCRIPTS_PATH/ci-helpers/test_extension_update.sh --setup_scripts_path=$SETUP_SCRIPTS_PATH --haf_binaries_dir=$CI_PROJECT_DIR/$CI_JOB_NAME/build --ci_project_dir=$CI_PROJECT_DIR
+    # repeat replay from 1 milion blocks
+    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH $REPLAY_CONTINUATION --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs1.log
+    # verify if upgrade is complete by calling the new added function
+    - sudo -Enu $DB_ADMIN psql -w --host /var/run/postgresql --port 5432 -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "SELECT hive.test()"
 
 block_api_tests:
   extends: .replay_step
