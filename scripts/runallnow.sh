@@ -1,5 +1,12 @@
 #!/bin/bash
 
+
+SERIALIZE_TILL_BLOCK=3'000'000
+RUN_MINIMAL_TILL_BLOCK=2'726'329
+RUN_MAIN_TILL_BLOCK=3000000
+RUN_MAIN_CHUNK_SIZE=10000
+
+
 set -e
 
 killpostgres()
@@ -11,12 +18,12 @@ killpostgres()
 
 erase_haf_block_log_database()
 {
-    sudo ../scripts/setup_db.sh # erase haf_block_log database
+    sudo ../scripts/setup_db.sh || true # erase haf_block_log database
 }
 
 reset_app()
 {
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c "select hive.app_reset_data('keyauth_app');" # reset app
+    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c "select hive.app_reset_data('keyauth_app');" || true # reset app
 }
 
 
@@ -36,12 +43,12 @@ build()
 
 serializer()
 {
-    /home/dev/mydes/H/haf/build/hive/programs/hived/hived --data-dir=/home/dev/mainnet-5m --shared-file-dir=/home/dev/mainnet-5m/blockchain --plugin=sql_serializer --psql-url=dbname=haf_block_log host=/var/run/postgresql port=5432 --replay --exit-before-sync --stop-replay-at-block=3000 --force-replay # serializer
+    /home/dev/mydes/H/haf/build/hive/programs/hived/hived --data-dir=/home/dev/mainnet-5m --shared-file-dir=/home/dev/mainnet-5m/blockchain --plugin=sql_serializer --psql-url=dbname=haf_block_log host=/var/run/postgresql port=5432 --replay --exit-before-sync --stop-replay-at-block=$SERIALIZE_TILL_BLOCK --force-replay # serializer
 }
 
 minimal_hived()
 {
-    /home/dev/mydes/H/haf/build/hive/programs/hived/hived --data-dir=/home/dev/mainnet-5m --shared-file-dir=/home/dev/mainnet-5m/blockchain --replay --exit-before-sync --stop-replay-at-block=100 --force-replay # minimal
+    /home/dev/mydes/H/haf/build/hive/programs/hived/hived --data-dir=/home/dev/mainnet-5m --shared-file-dir=/home/dev/mainnet-5m/blockchain --replay --exit-before-sync --stop-replay-at-block=$RUN_MINIMAL_TILL_BLOCK --force-replay # minimal
 }
 
 minimal_hived_cont()
@@ -51,7 +58,7 @@ minimal_hived_cont()
 
 app()
 {
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c "select hive.app_reset_data('keyauth_app');" && psql -v "ON_ERROR_STOP=1" -d haf_block_log -f /home/dev/mydes/H/haf/src/hive_fork_manager/state_providers/performance_examination/keyauth_app.sql &&  psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing'  -c "call keyauth_app.main('keyauth_app', 3000000, 10000)" -c 'select * from hive.keyauth_app_current_account_balance;' -c 'select count(*) from hive.keyauth_app_accounts;' 2>&1 | tee -i app.log # run
+    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c "select hive.app_reset_data('keyauth_app');" && psql -v "ON_ERROR_STOP=1" -d haf_block_log -f /home/dev/mydes/H/haf/src/hive_fork_manager/state_providers/performance_examination/keyauth_app.sql &&  psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing'  -c "call keyauth_app.main('keyauth_app', $RUN_MAIN_TILL_BLOCK, $RUN_MAIN_CHUNK_SIZE)" -c 'select * from hive.keyauth_app_current_account_balance;' -c 'select count(*) from hive.keyauth_app_accounts;' 2>&1 | tee -i app.log # run
 }
 
 
