@@ -20,7 +20,7 @@ AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
 
 
 CREATE OR REPLACE FUNCTION hive.consume_json_block(IN _json_block TEXT, IN _context TEXT, IN block_num INTEGER)
-RETURNS void
+RETURNS INTEGER
 AS 'MODULE_PATHNAME', 'consume_json_block' LANGUAGE C;
 
 
@@ -78,15 +78,27 @@ AS
 $BODY$
 DECLARE
     jb jsonb;
+    __expected_block_num INTEGER;
+	i INTEGER;
 BEGIN
-    raise notice 'Consuming blocks from % to %', _from, _to;
+    raise notice 'CConsuming blocks from % to %', _from, _to;
 
-    for i in _from _from .. _to LOOP
+    i = _from;
+    SELECT into jb * FROM hive.get_block_json( i );
+    jb = jb ->'block';
+    SELECT  hive.consume_json_block(jb::TEXT, _context, i) INTO __expected_block_num;
+
+    
+    raise notice 'Actually Consuming blocks from % to %', __expected_block_num, _to;
+
+    WHILE __expected_block_num <= _to LOOP
+        i = __expected_block_num;
         SELECT into jb * FROM hive.get_block_json( i );
         jb = jb ->'block';
-        Perform hive.consume_json_block(jb::TEXT, _context, i);
+        SELECT  hive.consume_json_block(jb::TEXT, _context, i) INTO __expected_block_num;
     END LOOP;
 END;
+
 $BODY$
 ;
 

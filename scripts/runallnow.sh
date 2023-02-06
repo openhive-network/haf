@@ -22,7 +22,7 @@ reset_app()
 
 remove_compiled()
 {
-    rm -rf /home/dev/mydes/H/haf/build/extensions/hive_fork_manager ; sudo rm /usr/share/postgresql/12/extension/hive* ;    sudo rm /usr/lib/postgresql/12/lib/libhfm* ; 
+    rm -rf /home/dev/mydes/H/haf/build/extensions/hive_fork_manager || true ; sudo rm /usr/share/postgresql/12/extension/hive* || true;    sudo rm /usr/lib/postgresql/12/lib/libhfm* || true; 
 }
 
 build()
@@ -36,7 +36,7 @@ build()
 
 serializer()
 {
-    /home/dev/mydes/H/haf/build/hive/programs/hived/hived --data-dir=/home/dev/mainnet-5m --shared-file-dir=/home/dev/mainnet-5m/blockchain --plugin=sql_serializer --psql-url=dbname=haf_block_log host=/var/run/postgresql port=5432 --replay --exit-before-sync --stop-replay-at-block=3000000 --force-replay # serializer
+    /home/dev/mydes/H/haf/build/hive/programs/hived/hived --data-dir=/home/dev/mainnet-5m --shared-file-dir=/home/dev/mainnet-5m/blockchain --plugin=sql_serializer --psql-url=dbname=haf_block_log host=/var/run/postgresql port=5432 --replay --exit-before-sync --stop-replay-at-block=3000 --force-replay # serializer
 }
 
 minimal_hived()
@@ -69,14 +69,16 @@ sudo_enter()
 
 sudo_enter
 killpostgres
-# erase_haf_block_log_database
+erase_haf_block_log_database
 reset_app
 remove_compiled
 build
+serializer
 minimal_hived
 permissions
-minimal_hived_cont
-minimal_hived
-permissions
-# serializer
-# app
+# minimal_hived_cont
+# minimal_hived
+# permissions
+
+
+app

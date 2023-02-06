@@ -699,7 +699,7 @@ PG_FUNCTION_INFO_V1(consume_json_block);
    **/
 
 
-void consume_json_block_impl(const char *json_block, const char *context, int block_num);
+    int consume_json_block_impl(const char *json_block, const char *context, int block_num);
 
   Datum consume_json_block(PG_FUNCTION_ARGS)
   {
@@ -708,7 +708,9 @@ void consume_json_block_impl(const char *json_block, const char *context, int bl
     const char *context = text_to_cstring(PG_GETARG_TEXT_PP(1));
     int block_num = PG_GETARG_INT32(2);
 
-    consume_json_block_impl(json_block, context, block_num);
+    int expected_block_num = consume_json_block_impl(json_block, context, block_num);
+
+    PG_RETURN_INT32(expected_block_num); 
 
     // colect_data_and_fill_returned_recordset(
     //   [=](){ hive::plugins::block_api::consume_json_block_impl(json_block);},
