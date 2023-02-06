@@ -2,11 +2,11 @@
 # docker build --target=ci-base-image -t registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-xxx -f Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=:ubuntu20.04-7
+ARG CI_IMAGE_TAG=:ubuntu22.04-1
 
 ARG BUILD_IMAGE_TAG
 
-FROM phusion/baseimage:focal-1.0.0 AS ci-base-image
+FROM phusion/baseimage:jammy-1.0.1 AS ci-base-image
 
 ENV LANG=en_US.UTF-8
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
@@ -15,10 +15,15 @@ SHELL ["/bin/bash", "-c"]
 
 USER root
 WORKDIR /usr/local/src
-ADD ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
+COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
+COPY hive/scripts/openssl.conf /etc/ssl/hive-openssl.conf
 
 # Install development packages and create required accounts
-RUN ./scripts/setup_ubuntu.sh --dev --haf-admin-account="haf_admin" --hived-account="hived"
+# TODO: Updated SSL config can be removed after Ubuntu ships with OpenSSL 3.0.7 or above 
+# (unless future versions of OpenSSL deprecate necessary algorithms again: https://stackoverflow.com/a/72508879)
+RUN echo -e "\n.include /etc/ssl/hive-openssl.conf\n" >> /etc/ssl/openssl.cnf && \
+  ./scripts/setup_ubuntu.sh --dev --haf-admin-account="haf_admin" --hived-account="hived" \ 
+  && rm -rf /var/lib/apt/lists/*
 
 USER haf_admin
 WORKDIR /home/haf_admin
@@ -29,9 +34,10 @@ RUN /usr/local/src/scripts/setup_ubuntu.sh --user
 #docker build --target=ci-base-image-5m -t registry.gitlab.syncad.com/hive/haf/ci-base-image-5m:ubuntu20.04-xxx -f Dockerfile .
 FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG AS ci-base-image-5m
 
-RUN sudo -n mkdir -p /home/hived/datadir/blockchain && cd /home/hived/datadir/blockchain && \
-  sudo -n wget -c https://gtg.openhive.network/get/blockchain/block_log.5M && \
-    sudo -n mv block_log.5M block_log && sudo -n chown -Rc hived:hived /home/hived/datadir/
+USER hived
+RUN  mkdir -p /home/hived/datadir/blockchain && \
+  wget -c https://gtg.openhive.network/get/blockchain/block_log.5M --output-document=/home/hived/datadir/blockchain/block_log
+USER haf_admin
 
 FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG AS build
 
@@ -50,7 +56,7 @@ WORKDIR /home/haf_admin
 SHELL ["/bin/bash", "-c"]
 
 # Get everything from cwd as sources to be built.
-COPY --chown=haf_admin:haf_admin . /home/haf_admin/haf
+COPY --chown=haf_admin:users . /home/haf_admin/haf
 
 RUN \
   ./haf/scripts/build.sh --haf-source-dir="./haf" --haf-binaries-dir="./build" \
@@ -86,6 +92,11 @@ SHELL ["/bin/bash", "-c"]
 USER hived
 WORKDIR /home/hived
 
+RUN mkdir -p /home/hived/bin && \
+    mkdir /home/hived/shm_dir && \
+    mkdir /home/hived/datadir && \
+    chown -Rc hived:users /home/hived/
+
 COPY --from=build /home/haf_admin/build/hive/programs/hived/hived /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet /home/haf_admin/build/hive/programs/util/compress_block_log /home/hived/bin/
 
 USER haf_admin
@@ -94,12 +105,10 @@ WORKDIR /home/haf_admin
 COPY --from=build /home/haf_admin/build /home/haf_admin/build/
 COPY --from=build /home/haf_admin/haf /home/haf_admin/haf/
 
-ADD ./docker/docker_entrypoint.sh .
-ADD --chown=postgres:postgres ./docker/postgresql.conf /etc/postgresql/12/main/postgresql.conf
-ADD --chown=postgres:postgres ./docker/pg_hba.conf /etc/postgresql/12/main/pg_hba.conf.default
-
-RUN sudo -n mkdir -p /home/hived/bin && sudo -n mkdir -p /home/hived/shm_dir && \
-  sudo -n mkdir -p /home/hived/datadir && sudo -n chown -Rc hived:hived /home/hived/
+ENV POSTGRES_VERSION=14
+COPY --chown=haf_admin:users ./docker/docker_entrypoint.sh .
+COPY --chown=postgres:postgres ./docker/postgresql.conf /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
+COPY --chown=postgres:postgres ./docker/pg_hba.conf /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
 
 VOLUME [ "/home/hived/datadir", "/home/hived/shm_dir" ]
 
@@ -124,7 +133,7 @@ FROM ${CI_REGISTRY_IMAGE}ci-base-image-5m$CI_IMAGE_TAG AS block_log_5m_source
 FROM ${CI_REGISTRY_IMAGE}base_instance:base_instance-$BUILD_IMAGE_TAG as data
 
 COPY --from=block_log_5m_source /home/hived/datadir /home/hived/datadir 
-ADD --chown=hived:hived ./docker/config_5M.ini /home/hived/datadir/config.ini
+ADD --chown=hived:users ./docker/config_5M.ini /home/hived/datadir/config.ini
 
 RUN "/home/haf_admin/docker_entrypoint.sh" --force-replay --stop-replay-at-block=5000000 --exit-before-sync
 

@@ -40,7 +40,7 @@ install_all_dev_packages() {
           systemd \
           autoconf \
           wget \
-          postgresql-12=12.12-0ubuntu0.20.04.1 \
+          postgresql \
           postgresql-contrib \
           build-essential \
           cmake \
@@ -62,12 +62,14 @@ install_all_dev_packages() {
 
   python_version=$(python3 -c 'import sys; print("{}.{}".format(sys.version_info.major, sys.version_info.minor))')
   DEBIAN_FRONTEND=noniteractive apt-get install -y \
-          python${python_version}-venv
+          "python${python_version}-venv"
 
   postgres_major_version=$(pg_config --version | sed 's/PostgreSQL \([0-9]*\)\..*/\1/g')
   DEBIAN_FRONTEND=noniteractive apt-get install -y \
-          postgresql-server-dev-${postgres_major_version}
+          "postgresql-server-dev-${postgres_major_version}"
   apt-get clean
+
+  sudo usermod -a -G users postgres
 }
 
 install_user_packages() {
@@ -84,7 +86,7 @@ create_haf_admin_account() {
   if id "$haf_admin_unix_account" &>/dev/null; then
       echo "Account $haf_admin_unix_account already exists. Creation skipped."
   else
-      useradd -ms /bin/bash "$haf_admin_unix_account" && echo "$haf_admin_unix_account ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+      useradd -ms /bin/bash -g users "$haf_admin_unix_account" && echo "$haf_admin_unix_account ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
   fi
 }
 
@@ -95,7 +97,7 @@ create_hived_account() {
   if id "$hived_unix_account" &>/dev/null; then
       echo "Account $hived_unix_account already exists. Creation skipped."
   else
-      useradd -ms /bin/bash "$hived_unix_account"
+      useradd -ms /bin/bash -g users "$hived_unix_account"
   fi
 }
 
