@@ -13,6 +13,24 @@ namespace {
 JsonbValue* push_variant_object_to_jsonb(const fc::variant_object& o, JsonbParseState** parseState);
 JsonbValue* push_variant_array_to_jsonb(const fc::variants& arr, JsonbParseState** parseState);
 
+void to_numeric(JsonbValue* jb, const fc::variant& value)
+{
+  jb->type = jbvNumeric;
+  // Call the builtin Postgres function that converts text to numeric type.
+  jb->val.numeric = DatumGetNumeric(DirectFunctionCall3(numeric_in,
+      CStringGetDatum(value.as_string().c_str()),
+      ObjectIdGetDatum(InvalidOid), // not used
+      Int32GetDatum(-1))); // default type modifier
+}
+
+void to_text(JsonbValue* jb, const fc::variant& value)
+{
+  const auto str = value.as_string();
+  jb->type = jbvString;
+  jb->val.string.len = str.length();
+  jb->val.string.val = pstrdup(str.c_str());
+}
+
 JsonbValue* push_variant_value_to_jsonb(const fc::variant& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   JsonbValue jb;
@@ -21,28 +39,32 @@ JsonbValue* push_variant_value_to_jsonb(const fc::variant& value, JsonbIteratorT
     case fc::variant::null_type:
       jb.type = jbvNull;
       break;
-    case fc::variant::int64_type:
     case fc::variant::uint64_type:
-    case fc::variant::double_type:
       // Numeric types are converted either to numeric or string types in json.
       // If value can be represented in 32bits, it's converted to numeric type.
       // Otherwise it's converted to string type.
       // This makes the operation::jsonb conversion in sync with the operation::text::jsonb conversion.
-      if (value.as_uint64() < 0xffffffff)
+      if (value.as_uint64() <= 0xffffffff)
       {
-        jb.type = jbvNumeric;
-        // Call the builtin Postgres function that converts text to numeric type.
-        jb.val.numeric = DatumGetNumeric(DirectFunctionCall3(numeric_in,
-            CStringGetDatum(value.as_string().c_str()),
-            ObjectIdGetDatum(InvalidOid), // not used
-            Int32GetDatum(-1))); // default type modifier
+        to_numeric(&jb, value);
       }
       else
       {
-        jb.type = jbvString;
-        jb.val.string.len = value.as_string().length();
-        jb.val.string.val = pstrdup(value.as_string().c_str());
+        to_text(&jb, value);
       }
+      break;
+    case fc::variant::int64_type:
+      if (value.as_int64() <= 0xffffffff)
+      {
+        to_numeric(&jb, value);
+      }
+      else
+      {
+        to_text(&jb, value);
+      }
+      break;
+    case fc::variant::double_type:
+      to_text(&jb, value);
       break;
     case fc::variant::bool_type:
       jb.type = jbvBool;
