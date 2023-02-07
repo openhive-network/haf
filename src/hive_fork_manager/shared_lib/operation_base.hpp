@@ -9,6 +9,7 @@ extern "C"
 
 #include <include/psql_utils/postgres_includes.hpp>
 
+#undef elog
 #pragma pop_macro( "elog" )
 
   typedef struct

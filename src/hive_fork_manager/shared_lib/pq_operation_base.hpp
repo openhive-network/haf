@@ -9,6 +9,8 @@ extern "C"
 
 #include <include/psql_utils/postgres_includes.hpp>
 
+#undef elog
+
 #include <catalog/pg_type.h>
 #include <fmgr.h>
 #include <utils/array.h>

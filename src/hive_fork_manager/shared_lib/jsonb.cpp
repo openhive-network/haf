@@ -4,6 +4,8 @@ extern "C"
 #include <catalog/pg_type.h>
 }
 
+#undef elog
+
 #include <fc/io/raw.hpp>
 
 #include "jsonb.hpp"
