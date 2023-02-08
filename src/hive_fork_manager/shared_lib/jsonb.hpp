@@ -1,9 +1,10 @@
 #pragma once
-#include <fc/io/varint.hpp>
 
-extern "C"
+namespace fc
 {
-#include <utils/jsonb.h>
-}
+  class variant;
+} /// namespace fc
 
-JsonbValue* variant_to_jsonb_value(const fc::variant& o);
+struct JsonbValue;
+
+struct JsonbValue* variant_to_jsonb_value(const fc::variant& o);

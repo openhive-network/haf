@@ -1,14 +1,10 @@
-extern "C"
-{
-#include <include/psql_utils/postgres_includes.hpp>
-#include <catalog/pg_type.h>
-}
-
-#undef elog
-
-#include <fc/io/raw.hpp>
-
 #include "jsonb.hpp"
+
+#include <fc/exception/exception.hpp>
+#include <fc/variant.hpp>
+#include <fc/variant_object.hpp>
+
+#include <include/psql_utils/postgres_includes.hpp>
 
 namespace {
 
