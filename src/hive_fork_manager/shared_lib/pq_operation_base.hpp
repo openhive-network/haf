@@ -1,28 +1,11 @@
 #pragma once
 
-extern "C"
-{
-#ifdef elog
-#  pragma push_macro( "elog" )
-#  undef elog
-#endif
-
 #include <include/psql_utils/postgres_includes.hpp>
 
-#undef elog
-
-#include <catalog/pg_type.h>
-#include <fmgr.h>
-#include <utils/array.h>
-#include <utils/builtins.h>
-#include <utils/lsyscache.h>
-
-#include <funcapi.h>
-#include <miscadmin.h>
-
-#pragma pop_macro( "elog" )
-
 #include "operation_base.hpp"
+
+extern "C"
+{
 
   // Create internal operation data type representation from the underlying bytea data
   _operation* make_operation( const char* raw_data, uint32 data_length );
@@ -72,4 +55,5 @@ extern "C"
 
   PG_FUNCTION_INFO_V1( operation_cmp );
   Datum operation_cmp( PG_FUNCTION_ARGS );
-}
+
+} /// extern "C"
