@@ -1,5 +1,7 @@
 #include "operation_base.hpp"
 
+#include <include/psql_utils/postgres_includes.hpp>
+
 #include <hive/protocol/operations.hpp>
 
 #include <hive/protocol/forward_impacted.hpp>
@@ -111,39 +113,6 @@ collected_keyauth_collection_t collect_keyauths(const hive::protocol::operation&
 }
 
 } // namespace
-
-extern "C"
-{
-
-#ifdef elog
-#pragma push_macro( "elog" )
-#undef elog
-#endif
-
-//Suppress 'register' keyword usage warning in 3rd party code
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpadded"
-   #include <include/psql_utils/postgres_includes.hpp>
-#pragma clang diagnostic pop
-#elif defined(__GNUC__) || defined(__GNUG__)
-  #pragma GCC diagnostic push 
-  #pragma GCC diagnostic ignored "-Wregister"
-    #include <include/psql_utils/postgres_includes.hpp>
-  #pragma GCC diagnostic pop
-#endif
-
-#include <fmgr.h>
-#include <catalog/pg_type.h>
-#include <utils/builtins.h>
-#include <utils/array.h>
-#include <utils/lsyscache.h>
-
-#include <funcapi.h>
-#include <miscadmin.h>
-
-}
-
 
 //use this template instead of Postgres' MemoryContextSwitchTo
 template<typename T>
