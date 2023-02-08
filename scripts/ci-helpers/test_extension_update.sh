@@ -72,7 +72,8 @@ test_extension_update() {
     $SETUP_DIR/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$DIR" --haf-binaries-dir="$HAF_DIR" extension.hive_fork_manager
     (cd $HAF_DIR; sudo ninja install)
     # run generator script
-    sudo /usr/share/postgresql/12/extension/hive_fork_manager_update_script_generator.sh
+    POSTGRES_VERSION=14
+    sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh
 }
 
 test_extension_update
