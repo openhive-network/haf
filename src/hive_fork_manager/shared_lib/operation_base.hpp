@@ -1,16 +1,9 @@
 #pragma once
 
-extern "C"
-{
-#ifdef elog
-#  pragma push_macro( "elog" )
-#  undef elog
-#endif
-
 #include <include/psql_utils/postgres_includes.hpp>
 
-#undef elog
-#pragma pop_macro( "elog" )
+extern "C"
+{
 
   typedef struct
   {
