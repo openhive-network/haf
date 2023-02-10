@@ -1,12 +1,14 @@
 stages:
   - build_and_test_phase_1
   - build_and_test_phase_2
+  - docker_build
   - deploy
   - publish
 
 variables:
   CTEST_NUMBER_OF_JOBS: 4
   GIT_DEPTH: 1
+  GIT_STRATEGY: clone
   GIT_SUBMODULE_STRATEGY: recursive
   FF_ENABLE_JOB_CLEANUP: 1
   GIT_STRATEGY: clone
@@ -20,6 +22,9 @@ variables:
   DOCKER_BUILDER_TAG: "$CI_COMMON_JOB_VERSION"
   DOCKER_DIND_TAG: "$CI_COMMON_JOB_VERSION"
   IMAGE_REMOVER_TAG: "$CI_COMMON_JOB_VERSION"
+
+  # Gitlab Runner feature flags
+  FF_ENABLE_JOB_CLEANUP: "true"
 
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
@@ -290,14 +295,32 @@ block_api_tests:
     - public-runner-docker
     - hived-for-tests
 
-build_and_publish_image:
+build_base_instance_image:
+  stage: docker_build
+  extends: .docker_image_builder_job_template
+  needs: []
+  script:
+    - scripts/ci-helpers/build_base_instance.sh
+  tags:
+    - public-runner-docker
+
+build_instance_image:
+  stage: docker_build
+  extends: .docker_image_builder_job_template
+  needs: 
+    - build_base_instance_image
+  script:
+    - scripts/ci-helpers/build_instance_ci.sh
+  tags:
+    - public-runner-docker
+
+publish_image:
   stage: publish
   extends: .docker_image_builder_job_template
-  dependencies: []
-  before_script:
-    - echo "Disabled the default before_script block"
+  needs:
+    - build_instance_image
   script:
-    - scripts/ci-helpers/build_and_publish_instance.sh
+    - scripts/ci-helpers/publish_instance.sh
   tags:
     - public-runner-docker  
   rules:
