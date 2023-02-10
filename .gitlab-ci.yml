@@ -20,6 +20,9 @@ variables:
   DOCKER_DIND_TAG: "$CI_COMMON_JOB_VERSION"
   IMAGE_REMOVER_TAG: "$CI_COMMON_JOB_VERSION"
 
+  # Gitlab Runner feature flags
+  FF_ENABLE_JOB_CLEANUP: "true"
+
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - project: 'hive/common-ci-configuration'
@@ -302,9 +305,17 @@ build_base_instance_image:
   extends: .docker_image_builder_job_template
   needs: []
   script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - scripts/ci-helpers/build_instance.sh "$CI_COMMIT_SHA" "$CI_PROJECT_DIR" "$CI_REGISTRY_IMAGE/" --network-type=mainnet
-    - docker push "${CI_REGISTRY_IMAGE}/base_instance:base_instance-${CI_COMMIT_SHA}"
+    - scripts/ci-helpers/build_base_instance.sh
+  tags:
+    - public-runner-docker
+
+build_instance_image:
+  stage: docker_build
+  extends: .docker_image_builder_job_template
+  needs: 
+    - build_base_instance_image
+  script:
+    - scripts/ci-helpers/build_instance_ci.sh
   tags:
     - public-runner-docker
 
