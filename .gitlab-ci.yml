@@ -1,6 +1,7 @@
 stages:
   - build_and_test_phase_1
   - build_and_test_phase_2
+  - docker_build
   - deploy
   - publish
 
@@ -296,10 +297,22 @@ block_api_tests:
     - public-runner-docker
     - hived-for-tests
 
+build_base_instance_image:
+  stage: docker_build
+  extends: .docker_image_builder_job_template
+  needs: []
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - scripts/ci-helpers/build_instance.sh "$CI_COMMIT_SHA" "$CI_PROJECT_DIR" "$CI_REGISTRY/" --network-type=mainnet
+    - docker push "${CI_REGISTRY}/base_instance:base_instance-${CI_COMMIT_SHA}"
+  tags:
+    - public-runner-docker
+
 build_and_publish_image:
   stage: publish
   extends: .docker_image_builder_job_template
-  dependencies: []
+  needs:
+    - build_image
   before_script:
     - echo "Disabled the default before_script block"
   script:
