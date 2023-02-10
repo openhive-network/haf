@@ -1,6 +1,6 @@
 #include "pq_operation_base.hpp"
 
-#include "jsonb.hpp"
+#include "to_jsonb.hpp"
 #include "svstream.hpp"
 
 #include <hive/protocol/operations.hpp>
@@ -17,6 +17,14 @@
 #include <vector>
 
 namespace {
+
+hive::protocol::operation raw_to_operation( const char* raw_data, uint32 data_length )
+{
+  if( !data_length )
+    return {};
+
+  return fc::raw::unpack_from_char_array< hive::protocol::operation >( raw_data, static_cast< uint32_t >( data_length ) );
+}
 
 fc::variant op_to_variant_impl( const char* raw_data, uint32 data_length )
 {
@@ -130,9 +138,9 @@ extern "C"
 
     try
     {
-      const fc::variant op_v = op_to_variant( raw_data, data_length );
+      const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
 
-      JsonbValue* jsonb = variant_to_jsonb_value(op_v);
+      JsonbValue* jsonb = operation_to_jsonb_value(operation);
 
       PG_RETURN_POINTER(JsonbValueToJsonb(jsonb));
     }
