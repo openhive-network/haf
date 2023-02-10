@@ -2,17 +2,25 @@ stages:
   - build_and_test_phase_1
   - build_and_test_phase_2
   - deploy
+  - cleanup
 
 variables:
   CTEST_NUMBER_OF_JOBS: 4
-  GIT_DEPTH: 1
+  GIT_DEPTH: 20
   GIT_SUBMODULE_STRATEGY: recursive
   FF_ENABLE_JOB_CLEANUP: 1
   GIT_STRATEGY: clone
   # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu22.04-2
   BUILDER_IMAGE_TAG: "@sha256:e7ef9044f9da03653d349d01e51e17c406550ef97f921a1552e7c21a8968b190"
+  CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
+  DATA_CACHE_MAINNET: /cache/replay_data_haf_mainnet_${CI_PIPELINE_ID}
+  BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
+
+
+include: '/scripts/ci-helpers/prepare_data_image_job.yml'
+
 
 .hive_fork_manager_build:
   stage: build_and_test_phase_1
@@ -277,3 +285,80 @@ block_api_tests:
   tags:
     - public-runner-docker
     - hived-for-tests
+
+prepare_haf_image:
+  extends: .prepare_haf_image
+  stage: build_and_test_phase_1
+  variables:
+    REGISTRY_USER: "$CI_IMG_BUILDER_USER"
+    REGISTRY_PASS: $CI_IMG_BUILDER_PASSWORD
+    BINARY_CACHE_PATH: "haf-binaries"
+    HIVE_NETWORK_TYPE: mainnet
+  tags:
+    - hive-builder-4
+
+prepare_haf_data:
+  extends: .prepare_haf_data_5m
+  needs:
+    - job: prepare_haf_image
+      artifacts: true
+  stage: build_and_test_phase_1
+  variables:
+    DATA_CACHE: $DATA_CACHE_MAINNET
+    BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
+    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+  tags:
+    - hive-builder-4
+  resource_group: ${CI_COMMIT_SHA}
+
+.haf-service: &haf-service
+  name: $HAF_IMAGE_NAME
+  alias: haf-instance
+  variables:
+    # Allow access from any network to eliminate CI IP addressing problems
+    PG_ACCESS: "host    haf_block_log    haf_app_admin    0.0.0.0/0    trust"
+    DATADIR: $DATA_CACHE/datadir
+    SHM_DIR: $DATA_CACHE/shm_dir
+    LOG_FILE: $CI_JOB_NAME.log
+  command: ["--replay-blockchain", "--stop-replay-at-block=5000000"]
+
+start_haf_as_service:
+  stage: build_and_test_phase_2
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  needs:
+    - job: prepare_haf_data
+      artifacts: true
+  services:
+    - *haf-service
+  variables:
+    DATA_CACHE: $DATA_CACHE_MAINNET
+    HAF_POSTGRES_URL: postgresql://haf_app_admin@haf-instance:5432/haf_block_log
+    HIVED_UID: $HIVED_UID
+  script:
+    - curl -I haf-instance:8090 || (echo "error connecting to service hived-instance" && false)
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' haf-instance:8090
+  after_script:
+    - rm docker_entrypoint.log -f
+    - cp $DATA_CACHE/datadir/$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA.log $CI_PROJECT_DIR/docker_entrypoint.log
+  artifacts:
+    paths:
+    - docker_entrypoint.log
+  tags:
+    - hive-builder-4
+  resource_group: ${CI_COMMIT_SHA}
+
+cleanup_haf_cache_manual:
+  extends: .cleanup_cache_manual
+  stage: cleanup
+  variables:
+    CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
+  resource_group: ${CI_COMMIT_SHA}
+  tags:
+    - hive-builder-4

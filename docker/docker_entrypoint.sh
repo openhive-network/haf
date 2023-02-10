@@ -1,11 +1,41 @@
 #! /bin/bash
 
-set -euo pipefail
+set -xeuo pipefail
+
+env
+
+echo "Starting the container with user $(whoami) with uid $(id -u)"
+
+if [ -n "${HIVED_UID+x}" ];
+then
+  echo "setting user hived uid to value ${HIVED_UID}"
+  sudo -n usermod -o -u "${HIVED_UID}" hived
+fi
+
 
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTDIR/haf/scripts"
 
-export LOG_FILE=docker_entrypoint.log
+if [ ! -d "$DATADIR" ];
+then
+    echo "Data directory (DATADIR) $DATADIR does not exist. Exiting."
+    exit 1
+fi
+
+if [ ! -d "$SHM_DIR" ];
+then
+    echo "Shared memory file directory (SHM_DIR) $SHM_DIR does not exist. Exiting."
+    exit 1
+fi
+
+HAF_DB_STORE=$DATADIR/haf_db_store
+PGDATA=$DATADIR/haf_db_store/pgdata
+
+LOG_FILE="${DATADIR}/${LOG_FILE:-docker_entrypoint.log}"
+sudo -n touch $LOG_FILE
+sudo -n chown -Rc hived:users $LOG_FILE
+sudo -n chmod a+rw "$LOG_FILE"
+
 # shellcheck source=../scripts/common.sh
 source "$SCRIPTSDIR/common.sh"
 
@@ -57,25 +87,17 @@ EOF
 trap 'exit' INT QUIT TERM
 trap cleanup EXIT
 
-echo "Starting the container with user $(whoami)"
-
-prepare_pg_hba_file
-
-if [ ! -d /home/hived/datadir ]
-then
-  sudo --user=hived -n mkdir -p /home/hived/datadir
-fi
 
 # Be sure those directories exists and have right permissions
-sudo --user=hived -n mkdir -p /home/hived/datadir/blockchain
+sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
+
+# data_directory is hardcoded in postgresql.conf as '/home/hived/datadir/haf_db_store/pgdata' so we create symbolic link to location of HAF_DB_STORE
+test "$HAF_DB_STORE" = "/home/hived/datadir/haf_db_store" || sudo -n ln -s "$HAF_DB_STORE" /home/hived/datadir/haf_db_store
+
 
 if [ -d "$PGDATA" ]
 then
   echo "Attempting to setup postgres instance already containing HAF database..."
-
-  # Fix permissions on Postgres data directory
-  sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE"
-  sudo -n chown -Rc postgres:postgres "$PGDATA"
 
   # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
   sudo -n ./haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="$HAF_DB_STORE/tablespace"
@@ -104,10 +126,11 @@ else
   sudo -n ./haf/scripts/setup_pghero.sh --database=haf_block_log
 fi
 
-cd /home/hived/datadir
+cd "$DATADIR"
 
-# be sure postgres is running
-sudo -n /etc/init.d/postgresql start
+# be sure postgres is running and reload pg_hba file
+prepare_pg_hba_file
+sudo -n /etc/init.d/postgresql restart
 
 HIVED_ARGS=()
 HIVED_ARGS+=("$@")
@@ -122,7 +145,7 @@ sudo --user=hived -En /bin/bash << EOF
 echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
 
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
-  --data-dir=/home/hived/datadir --shared-file-dir=/home/hived/shm_dir \
+  --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
   --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
   ${HIVED_ARGS[@]} 2>&1 | tee -i hived.log
 echo "$? Hived process finished execution."
