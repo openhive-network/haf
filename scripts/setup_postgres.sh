@@ -1,5 +1,7 @@
 #! /bin/bash
 
+set -xeuo pipefail
+
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 LOG_FILE=setup_postgres.log
@@ -70,8 +72,16 @@ EOF
         return 0
       fi
     else
-      echo "ERROR: Tablespace $haf_tablespace_name already exists, but points to different location: $TABLESPACE_PATH. Aborting"
-      exit 2
+      echo "WARNING: Tablespace $haf_tablespace_name already exists, but points to different location: $TABLESPACE_PATH. Relinking tablespace directory."
+
+        OID=$(sudo -nu postgres psql -qtAX -d postgres -w $pg_access -v ON_ERROR_STOP=on -f - <<EOF
+        SELECT oid FROM pg_tablespace where spcname = '$haf_tablespace_name';
+EOF
+)
+      sudo -n /etc/init.d/postgresql stop
+      ln -sf $haf_tablespace_abs_path /home/hived/datadir/haf_db_store/pgdata/pg_tblspc/$OID
+      sudo -n /etc/init.d/postgresql start
+      return 0
   fi
 fi
 

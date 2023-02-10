@@ -1,0 +1,1 @@
+../../hive/scripts/ci-helpers/build_data2.sh

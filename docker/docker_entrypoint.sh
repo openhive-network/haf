@@ -1,11 +1,29 @@
 #! /bin/bash
 
-set -euo pipefail
+set -xeuo pipefail
 
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTDIR/haf/scripts"
 
-export LOG_FILE=docker_entrypoint.log
+if [ ! -d "$DATADIR" ];
+then
+    echo "Data directory (DATADIR) $DATADIR does not exist. Exiting."
+    exit 1
+fi
+
+if [ ! -d "$SHM_DIR" ];
+then
+    echo "Shared memory file directory (SHM_DIR) $SHM_DIR does not exist. Exiting."
+    exit 1
+fi
+
+HAF_DB_STORE=$DATADIR/haf_db_store
+PGDATA=$DATADIR/haf_db_store/pgdata
+
+export LOG_FILE="${DATADIR}/${LOG_FILE:-docker_entrypoint.log}"
+sudo -n touch $LOG_FILE
+sudo -n chown -Rc hived:users $LOG_FILE
+
 # shellcheck source=../scripts/common.sh
 source "$SCRIPTSDIR/common.sh"
 
@@ -59,19 +77,20 @@ trap cleanup EXIT
 
 echo "Starting the container with user $(whoami)"
 
-prepare_pg_hba_file
 
-if [ ! -d /home/hived/datadir ]
-then
-  sudo --user=hived -n mkdir -p /home/hived/datadir
-fi
-
-# Fix permissions on data and shm directories
-sudo -n chown -Rc hived:users /home/hived/datadir
-sudo -n chown -Rc hived:users /home/hived/shm_dir
+# Fix permissions on data and shm directories but haf_db_store ownership should be not changed to hived
+sudo -n find "$DATADIR" -path "$HAF_DB_STORE" -prune -o -exec chown -c hived:users {} +
+sudo -n chown -Rc hived:users "$SHM_DIR"
 
 # Be sure this directory exists
-sudo --user=hived -n mkdir -p /home/hived/datadir/blockchain
+sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
+
+sudo -n mkdir -p "$HAF_DB_STORE/tablespace"
+sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE"
+
+# data_directory is hardcoded as '/home/hived/datadir/haf_db_store/pgdata' so we create symbolic link to location of HAF_DB_STORE
+test "$HAF_DB_STORE" = "/home/hived/datadir/haf_db_store" || sudo -n ln -s "$HAF_DB_STORE" /home/hived/datadir/haf_db_store
+
 
 if [ -d "$PGDATA" ]
 then
@@ -87,11 +106,6 @@ then
 
   echo "Postgres instance setup completed."
 else
-  sudo --user=hived -n mkdir -p "$PGDATA"
-  sudo --user=hived -n mkdir -p "$HAF_DB_STORE/tablespace"
-  sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE"
-  sudo -n chown -Rc postgres:postgres "$PGDATA"
-
   echo "Attempting to setup postgres instance: running initdb..."
  
   # Here is an exception against using /etc/init.d/postgresql script to manage postgres - maybe there is some better way to force initdb using regular script.
@@ -108,10 +122,11 @@ else
   sudo -n ./haf/scripts/setup_pghero.sh --database=haf_block_log
 fi
 
-cd /home/hived/datadir
+cd "$DATADIR"
 
-# be sure postgres is running
-sudo -n /etc/init.d/postgresql start
+# be sure postgres is running and reload pg_hba file
+prepare_pg_hba_file
+sudo -n /etc/init.d/postgresql restart
 
 HIVED_ARGS=()
 HIVED_ARGS+=("$@")
@@ -126,7 +141,7 @@ sudo --user=hived -En /bin/bash << EOF
 echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
 
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
-  --data-dir=/home/hived/datadir --shared-file-dir=/home/hived/shm_dir \
+  --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
   --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
   ${HIVED_ARGS[@]} 2>&1 | tee -i hived.log
 echo "$? Hived process finished execution."
