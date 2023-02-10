@@ -312,7 +312,7 @@ build_and_publish_image:
   stage: publish
   extends: .docker_image_builder_job_template
   needs:
-    - build_image
+    - build_base_instance_image
   before_script:
     - echo "Disabled the default before_script block"
   script:
