@@ -20,9 +20,7 @@ docker buildx build --progress=plain --target=instance \
   --build-arg BUILD_IMAGE_TAG="$CI_COMMIT_SHA" \
   --cache-from=type=registry,ref="$TAG" \
   --cache-to=type=inline \
-  --tag "$TAG" \
+  --push --tag "$TAG" \
   --file "Dockerfile" .
-
-docker push "$TAG"  
 
 popd
