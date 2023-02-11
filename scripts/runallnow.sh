@@ -1,13 +1,19 @@
 #!/bin/bash
 
+# we are in build directory
+
+set -ex
 
 SERIALIZE_TILL_BLOCK=3'000'000
 RUN_MINIMAL_TILL_BLOCK=2'726'329
 RUN_MAIN_TILL_BLOCK=3000000
 RUN_MAIN_CHUNK_SIZE=10000
 
+BUILD_DIR=.
+SRC_DIR=../haf
+DATA_DIR=/home/dev/mainnet-5m
 
-set -e
+
 
 killpostgres()
 {
@@ -18,7 +24,7 @@ killpostgres()
 
 erase_haf_block_log_database()
 {
-    sudo ../scripts/setup_db.sh || true # erase haf_block_log database
+    sudo $SRC_DIR/scripts/setup_db.sh || true # erase haf_block_log database
 }
 
 reset_app()
@@ -29,7 +35,7 @@ reset_app()
 
 remove_compiled()
 {
-    rm -rf /home/dev/mydes/H/haf/build/extensions/hive_fork_manager || true ; sudo rm /usr/share/postgresql/12/extension/hive* || true;    sudo rm /usr/lib/postgresql/12/lib/libhfm* || true; 
+    rm -rf $BUILD_DIR/extensions/hive_fork_manager || true ; sudo rm /usr/share/postgresql/12/extension/hive* || true;    sudo rm /usr/lib/postgresql/12/lib/libhfm* || true; 
 }
 
 build()
@@ -37,23 +43,23 @@ build()
 
     # cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" -GNinja .. ;  # Release
 
-    cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-O0 -fdiagnostics-color=always" -GNinja .. ; # Debug O0
+    cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # Debug O0
     (ninja  hived extension.hive_fork_manager  && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure) ; 
 }
 
 serializer()
 {
-    /home/dev/mydes/H/haf/build/hive/programs/hived/hived --data-dir=/home/dev/mainnet-5m --shared-file-dir=/home/dev/mainnet-5m/blockchain --plugin=sql_serializer --psql-url=dbname=haf_block_log host=/var/run/postgresql port=5432 --replay --exit-before-sync --stop-replay-at-block=$SERIALIZE_TILL_BLOCK --force-replay # serializer
+    $BUILD_DIR/hive/programs/hived/hived --data-dir=$DATA_DIR --shared-file-dir=$DATA_DIR/blockchain --plugin=sql_serializer --psql-url=dbname=haf_block_log host=/var/run/postgresql port=5432 --replay --exit-before-sync --stop-replay-at-block=$SERIALIZE_TILL_BLOCK --force-replay # serializer
 }
 
 minimal_hived()
 {
-    /home/dev/mydes/H/haf/build/hive/programs/hived/hived --data-dir=/home/dev/mainnet-5m --shared-file-dir=/home/dev/mainnet-5m/blockchain --replay --exit-before-sync --stop-replay-at-block=$RUN_MINIMAL_TILL_BLOCK --force-replay # minimal
+    $BUILD_DIR/hive/programs/hived/hived --data-dir=$DATA_DIR --shared-file-dir=$DATA_DIR/blockchain --replay --exit-before-sync --stop-replay-at-block=$RUN_MINIMAL_TILL_BLOCK --force-replay # minimal
 }
 
 minimal_hived_cont()
 {
-    /home/dev/mydes/H/haf/build/hive/programs/hived/hived --data-dir=/home/dev/mainnet-5m --shared-file-dir=/home/dev/mainnet-5m/blockchain --replay --exit-before-sync --stop-replay-at-block=102 # minimal cont
+    $BUILD_DIR/hive/programs/hived/hived --data-dir=$DATA_DIR --shared-file-dir=$DATA_DIR/blockchain --replay --exit-before-sync --stop-replay-at-block=102 # minimal cont
 }
 
 app()
