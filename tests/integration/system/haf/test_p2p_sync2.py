@@ -20,6 +20,7 @@ def test_p2p_sync(database):
 
     connect_nodes(init_node, api_node)
     api_node.run(wait_for_live=True)
+    assert init_node.get_last_block_number() - 1 < api_node.get_last_block_number()
 
     #wait for synchronize api node with haf
     init_node.wait_number_of_blocks(3)
@@ -43,6 +44,7 @@ def test_p2p_sync_with_massive_sync(database):
 
     connect_nodes(init_node, api_node)
     api_node.run(wait_for_live=True)
+    assert init_node.get_last_block_number() - 1 < api_node.get_last_block_number()
 
     #wait for synchronize api node with haf
     init_node.wait_number_of_blocks(3)
