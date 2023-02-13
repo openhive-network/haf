@@ -30,6 +30,7 @@ def test_replay_and_p2p_sync(database):
     connect_nodes(init_node, api_node)
 
     api_node.run(replay_from=block_log, wait_for_live=True)
+    assert init_node.get_last_block_number() - 1 < api_node.get_last_block_number()
 
     #wait for synchronize api node with haf
     init_node.wait_number_of_blocks(3)
@@ -63,6 +64,7 @@ def test_replay_and_p2p_massive_sync(database):
     connect_nodes(init_node, api_node)
 
     api_node.run(replay_from=block_log, wait_for_live=True)
+    assert init_node.get_last_block_number() - 1 < api_node.get_last_block_number()
 
     #wait for synchronize api node with haf
     init_node.wait_number_of_blocks(3)
