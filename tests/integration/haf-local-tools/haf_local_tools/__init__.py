@@ -180,7 +180,8 @@ def prepare_network_with_init_node_and_api_node(session, init_node_time_offset: 
     return api_node, init_node
 
 
-def prepare_and_send_transactions(node: tt.InitNode, wallet: tt.Wallet) -> [dict, dict]:
+def prepare_and_send_transactions(node: tt.InitNode) -> [dict, dict]:
+    wallet = tt.Wallet(attach_to=node)
     node.wait_for_block_with_number(5)
     transaction_0 = wallet.api.create_account('initminer', 'alice', '{}')
     node.wait_for_block_with_number(8)
