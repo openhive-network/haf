@@ -173,9 +173,7 @@ class static_variant_to_jsonb_visitor
       push_string_value_to_jsonb(type_name, parseState);
       // value
       push_key_to_jsonb("value", parseState);
-      pushJsonbValue(parseState, WJB_BEGIN_OBJECT, NULL);
       to_jsonb(o, WJB_VALUE, parseState);
-      pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
       return pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
     }
 
