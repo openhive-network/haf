@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import test_tools as tt
-
 from haf_local_tools import connect_nodes, get_operations, get_operations_from_database,\
     prepare_network_with_init_node_and_api_node, prepare_and_send_transactions, verify_operation_in_haf_database
 from haf_local_tools.tables import Operations
