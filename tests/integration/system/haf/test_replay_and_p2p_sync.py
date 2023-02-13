@@ -14,9 +14,7 @@ def test_replay_and_p2p_sync(database):
 
     api_node, init_node = prepare_network_with_init_node_and_api_node(session)
 
-    wallet = tt.Wallet(attach_to=init_node)
-
-    transaction_0, transaction_1 = prepare_and_send_transactions(init_node, wallet)
+    transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
 
     init_node.close()
 
@@ -48,9 +46,7 @@ def test_replay_and_p2p_massive_sync(database):
     api_node, init_node = prepare_network_with_init_node_and_api_node(session)
     api_node.config.psql_index_threshold = 10
 
-    wallet = tt.Wallet(attach_to=init_node)
-
-    transaction_0, transaction_1 = prepare_and_send_transactions(init_node, wallet)
+    transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
 
     init_node.close()
 
