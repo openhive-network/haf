@@ -111,6 +111,7 @@ JsonbValue* to_jsonb(const hive::protocol::json_string& value, JsonbIteratorToke
 JsonbValue* to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken token, JsonbParseState** parseState);
 JsonbValue* to_jsonb(const hive::protocol::legacy_asset& value, JsonbIteratorToken token, JsonbParseState** parseState);
 JsonbValue* to_jsonb(const hive::protocol::legacy_hive_asset& value, JsonbIteratorToken token, JsonbParseState** parseState);
+JsonbValue* to_jsonb(const hive::protocol::public_key_type& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename T>
 JsonbValue* to_jsonb(const fc::optional<T>& t, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename... Types>
@@ -330,6 +331,10 @@ JsonbValue* to_jsonb(const hive::protocol::legacy_asset& value, JsonbIteratorTok
 JsonbValue* to_jsonb(const hive::protocol::legacy_hive_asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   return to_jsonb(value.to_asset<false>(), token, parseState);
+}
+JsonbValue* to_jsonb(const hive::protocol::public_key_type& value, JsonbIteratorToken token, JsonbParseState** parseState)
+{
+  return to_jsonb(std::string(value), token, parseState);
 }
 template<typename T>
 JsonbValue* to_jsonb(const fc::optional<T>& t, JsonbIteratorToken token, JsonbParseState** parseState)
