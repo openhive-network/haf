@@ -235,7 +235,7 @@ JsonbValue* to_jsonb(int32_t value, JsonbIteratorToken, JsonbParseState** parseS
 }
 JsonbValue* to_jsonb(int64_t value, JsonbIteratorToken, JsonbParseState** parseState)
 {
-  return push_numeric_value_to_jsonb(std::to_string(value), parseState);
+  return push_int_value_to_jsonb(value, parseState);
 }
 JsonbValue* to_jsonb(uint8_t value, JsonbIteratorToken, JsonbParseState** parseState)
 {
@@ -251,7 +251,7 @@ JsonbValue* to_jsonb(uint32_t value, JsonbIteratorToken, JsonbParseState** parse
 }
 JsonbValue* to_jsonb(uint64_t value, JsonbIteratorToken, JsonbParseState** parseState)
 {
-  return push_numeric_value_to_jsonb(std::to_string(value), parseState);
+  return push_int_value_to_jsonb(value, parseState);
 }
 JsonbValue* to_jsonb(const std::string& value, JsonbIteratorToken, JsonbParseState** parseState)
 {
@@ -312,12 +312,12 @@ JsonbValue* to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken toke
   {
     pushJsonbValue(parseState, WJB_BEGIN_OBJECT, NULL);
     const auto amount = boost::lexical_cast<std::string>(value.amount.value);
-    const auto precision = uint64_t(value.symbol.decimals());
+    const auto precision = std::to_string(value.symbol.decimals());
     const auto nai = value.symbol.to_nai_string();
     push_key_to_jsonb("amount", parseState);
     push_string_value_to_jsonb(amount, parseState);
     push_key_to_jsonb("precision", parseState);
-    push_int_value_to_jsonb(precision, parseState);
+    push_numeric_value_to_jsonb(precision, parseState);
     push_key_to_jsonb("nai", parseState);
     push_string_value_to_jsonb(nai, parseState);
     return pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
