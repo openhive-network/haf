@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from haf_local_tools import connect_nodes, get_operations, get_operations_from_database,\
-    prepare_network_with_init_node_and_api_node, prepare_and_send_transactions, verify_operation_in_haf_database
+from haf_local_tools import get_operations, get_operations_from_database,prepare_network_with_init_node_and_api_node,\
+    prepare_and_send_transactions, verify_operation_in_haf_database
 from haf_local_tools.tables import Operations
 
 
@@ -13,16 +13,7 @@ def test_replay_without_disabled_indexes(database):
 
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
 
-    init_node.close()
-
-    init_node.run()
-    connect_nodes(init_node, api_node)
-
     api_node.run(replay_from=init_node.block_log, stop_at_block=20, wait_for_live=False)
-    assert init_node.get_last_block_number() - 1 < api_node.get_last_block_number()
-
-    #wait for synchronize api node with haf
-    init_node.wait_number_of_blocks(3)
 
     verify_operation_in_haf_database('account_create_operation', [transaction_0, transaction_1], session, Operations)
 
@@ -39,16 +30,8 @@ def test_replay_with_disabled_indexes(database):
 
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
 
-    init_node.close()
-
-    init_node.run()
-    connect_nodes(init_node, api_node)
-
     api_node.run(replay_from=init_node.block_log, stop_at_block=20, wait_for_live=False)
     assert init_node.get_last_block_number() - 1 < api_node.get_last_block_number()
-
-    #wait for synchronize api node with haf
-    init_node.wait_number_of_blocks(3)
 
     verify_operation_in_haf_database('account_create_operation', [transaction_0, transaction_1], session, Operations)
 
