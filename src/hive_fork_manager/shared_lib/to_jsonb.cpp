@@ -56,7 +56,7 @@ JsonbValue* push_numeric_value_to_jsonb(const std::string& num, JsonbParseState*
   return pushJsonbValue(parseState, WJB_VALUE, &jb);
 }
 
-JsonbValue* push_int_value_to_jsonb(const uint64_t value, JsonbParseState** parseState)
+JsonbValue* push_uint64_value_to_jsonb(const uint64_t value, JsonbParseState** parseState)
 {
   // Numeric types are converted either to numeric or string types in json.
   // If value can be represented in 32bits, it's converted to numeric type.
@@ -71,7 +71,7 @@ JsonbValue* push_int_value_to_jsonb(const uint64_t value, JsonbParseState** pars
     return push_string_value_to_jsonb(std::to_string(value), parseState);
   }
 }
-JsonbValue* push_int_value_to_jsonb(const int64_t value, JsonbParseState** parseState)
+JsonbValue* push_int64_value_to_jsonb(const int64_t value, JsonbParseState** parseState)
 {
   // Numeric types are converted either to numeric or string types in json.
   // If value can be represented in 32bits, it's converted to numeric type.
@@ -235,7 +235,7 @@ JsonbValue* to_jsonb(int32_t value, JsonbIteratorToken, JsonbParseState** parseS
 }
 JsonbValue* to_jsonb(int64_t value, JsonbIteratorToken, JsonbParseState** parseState)
 {
-  return push_int_value_to_jsonb(value, parseState);
+  return push_int64_value_to_jsonb(value, parseState);
 }
 JsonbValue* to_jsonb(uint8_t value, JsonbIteratorToken, JsonbParseState** parseState)
 {
@@ -251,7 +251,7 @@ JsonbValue* to_jsonb(uint32_t value, JsonbIteratorToken, JsonbParseState** parse
 }
 JsonbValue* to_jsonb(uint64_t value, JsonbIteratorToken, JsonbParseState** parseState)
 {
-  return push_int_value_to_jsonb(value, parseState);
+  return push_uint64_value_to_jsonb(value, parseState);
 }
 JsonbValue* to_jsonb(const std::string& value, JsonbIteratorToken, JsonbParseState** parseState)
 {
