@@ -213,9 +213,9 @@ class operation_to_jsonb_visitor
 template<typename T>
 JsonbValue* to_jsonb(const T& t, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  JsonbValue* output;
-  fc::reflector<T>::visit(member_to_jsonb_visitor<T>(t, parseState, &output));
-  return output;
+  pushJsonbValue(parseState, WJB_BEGIN_OBJECT, NULL);
+  fc::reflector<T>::visit(member_to_jsonb_visitor<T>(t, parseState));
+  return pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
 }
 JsonbValue* to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
