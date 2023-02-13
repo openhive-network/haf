@@ -23,6 +23,7 @@ def test_replay_without_disabled_indexes(database):
     connect_nodes(init_node, api_node)
 
     api_node.run(replay_from=init_node.block_log, stop_at_block=20, wait_for_live=False)
+    assert init_node.get_last_block_number() - 1 < api_node.get_last_block_number()
 
     #wait for synchronize api node with haf
     init_node.wait_number_of_blocks(3)
@@ -50,6 +51,7 @@ def test_replay_with_disabled_indexes(database):
     connect_nodes(init_node, api_node)
 
     api_node.run(replay_from=init_node.block_log, stop_at_block=20, wait_for_live=False)
+    assert init_node.get_last_block_number() - 1 < api_node.get_last_block_number()
 
     #wait for synchronize api node with haf
     init_node.wait_number_of_blocks(3)
