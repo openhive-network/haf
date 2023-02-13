@@ -5,7 +5,7 @@ from pathlib import Path
 import test_tools as tt
 
 from haf_local_tools import connect_nodes, get_operations, get_operations_from_database,\
-    prepare_network_with_init_node_and_api_node, prepare_operations, verify_operation_in_haf_database
+    prepare_network_with_init_node_and_api_node, prepare_and_send_transactions, verify_operation_in_haf_database
 from haf_local_tools.tables import Operations
 
 
@@ -16,7 +16,7 @@ def test_replay_and_p2p_sync(database):
 
     wallet = tt.Wallet(attach_to=init_node)
 
-    transaction_0, transaction_1 = prepare_operations(init_node, wallet)
+    transaction_0, transaction_1 = prepare_and_send_transactions(init_node, wallet)
 
     init_node.close()
 
@@ -50,7 +50,7 @@ def test_replay_and_p2p_massive_sync(database):
 
     wallet = tt.Wallet(attach_to=init_node)
 
-    transaction_0, transaction_1 = prepare_operations(init_node, wallet)
+    transaction_0, transaction_1 = prepare_and_send_transactions(init_node, wallet)
 
     init_node.close()
 
