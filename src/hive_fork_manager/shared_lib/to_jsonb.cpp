@@ -96,47 +96,47 @@ JsonbValue* push_int64_to_jsonb(const int64_t value, JsonbIteratorToken token, J
 }
 
 template<typename T>
-JsonbValue* to_jsonb(const T& t, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(int8_t value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(int16_t value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(int32_t value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(int64_t value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(uint8_t value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(uint16_t value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(uint32_t value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(uint64_t value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(const std::string& value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(const std::vector<char>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const T& t, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(int8_t value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(int16_t value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(int32_t value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(int64_t value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(uint8_t value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(uint16_t value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(uint32_t value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(uint64_t value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const std::string& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const std::vector<char>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename T>
-JsonbValue* to_jsonb(const std::vector<T>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const std::vector<T>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename A, typename B>
-JsonbValue* to_jsonb(const std::pair<A, B>& value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(const hive::protocol::fixed_string<16>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const std::pair<A, B>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const hive::protocol::fixed_string<16>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename Storage>
-JsonbValue* to_jsonb(const hive::protocol::fixed_string_impl<Storage>& value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(const hive::protocol::json_string& value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(const hive::protocol::legacy_asset& value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(const hive::protocol::legacy_hive_asset& value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(const hive::protocol::public_key_type& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const hive::protocol::fixed_string_impl<Storage>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const hive::protocol::json_string& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const hive::protocol::legacy_asset& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const hive::protocol::legacy_hive_asset& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const hive::protocol::public_key_type& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename T>
-JsonbValue* to_jsonb(const fc::safe<T>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const fc::safe<T>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename T>
-JsonbValue* to_jsonb(const fc::optional<T>& t, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const fc::optional<T>& t, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename... Types>
-JsonbValue* to_jsonb(const fc::static_variant<Types...>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const fc::static_variant<Types...>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename T, size_t N>
-JsonbValue* to_jsonb(const fc::array<T, N>& value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(const fc::time_point_sec& value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(const fc::ripemd160& value, JsonbIteratorToken token, JsonbParseState** parseState);
-JsonbValue* to_jsonb(const fc::sha256& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const fc::array<T, N>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const fc::time_point_sec& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const fc::ripemd160& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const fc::sha256& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename T>
-JsonbValue* to_jsonb(const boost::container::flat_set<T>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const boost::container::flat_set<T>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename T>
-JsonbValue* to_jsonb(const flat_set_ex<T>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const flat_set_ex<T>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename K, typename... T>
-JsonbValue* to_jsonb(const boost::container::flat_map<K, T...>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+void to_jsonb(const boost::container::flat_map<K, T...>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 
 template<typename T>
 class member_to_jsonb_visitor
@@ -215,102 +215,102 @@ class operation_to_jsonb_visitor
 };
 
 template<typename T>
-JsonbValue* to_jsonb(const T& t, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const T& t, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   pushJsonbValue(parseState, WJB_BEGIN_OBJECT, NULL);
   fc::reflector<T>::visit(member_to_jsonb_visitor<T>(t, parseState));
-  return pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
+  pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
 }
-JsonbValue* to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_bool_to_jsonb(value, token, parseState);
+  push_bool_to_jsonb(value, token, parseState);
 }
-JsonbValue* to_jsonb(int8_t value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(int8_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
+  push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
-JsonbValue* to_jsonb(int16_t value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(int16_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
+  push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
-JsonbValue* to_jsonb(int32_t value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(int32_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
+  push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
-JsonbValue* to_jsonb(int64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(int64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_int64_to_jsonb(value, token, parseState);
+  push_int64_to_jsonb(value, token, parseState);
 }
-JsonbValue* to_jsonb(uint8_t value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(uint8_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
+  push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
-JsonbValue* to_jsonb(uint16_t value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(uint16_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
+  push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
-JsonbValue* to_jsonb(uint32_t value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(uint32_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
+  push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
-JsonbValue* to_jsonb(uint64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(uint64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_uint64_to_jsonb(value, token, parseState);
+  push_uint64_to_jsonb(value, token, parseState);
 }
-JsonbValue* to_jsonb(const std::string& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const std::string& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_string_to_jsonb(value, token, parseState);
+  push_string_to_jsonb(value, token, parseState);
 }
-JsonbValue* to_jsonb(const std::vector<char>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const std::vector<char>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_string_to_jsonb(fc::to_hex(value), token, parseState);
+  push_string_to_jsonb(fc::to_hex(value), token, parseState);
 }
 template<typename T>
-JsonbValue* to_jsonb(const std::vector<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const std::vector<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   pushJsonbValue(parseState, WJB_BEGIN_ARRAY, NULL);
   for (const auto& elem : value)
   {
     to_jsonb(elem, WJB_ELEM, parseState);
   }
-  return pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
+  pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
 }
 template<typename A, typename B>
-JsonbValue* to_jsonb(const std::pair<A, B>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const std::pair<A, B>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   pushJsonbValue(parseState, WJB_BEGIN_ARRAY, NULL);
   to_jsonb(value.first, WJB_ELEM, parseState);
   to_jsonb(value.second, WJB_ELEM, parseState);
-  return pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
+  pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
 }
-JsonbValue* to_jsonb(const hive::protocol::fixed_string<16>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const hive::protocol::fixed_string<16>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   const std::string str = static_cast<std::string>(value);
   JsonbValue jb;
   jb.type = jbvString;
   jb.val.string.len = str.length();
   jb.val.string.val = pstrdup(str.c_str());
-  return pushJsonbValue(parseState, token, &jb);
+  pushJsonbValue(parseState, token, &jb);
 }
 template<typename Storage>
-JsonbValue* to_jsonb(const hive::protocol::fixed_string_impl<Storage>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const hive::protocol::fixed_string_impl<Storage>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-    return push_string_to_jsonb(std::string(value), token, parseState);
+    push_string_to_jsonb(std::string(value), token, parseState);
 }
-JsonbValue* to_jsonb(const hive::protocol::json_string& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const hive::protocol::json_string& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   const std::string str = static_cast<std::string>(value);
   JsonbValue jb;
   jb.type = jbvString;
   jb.val.string.len = str.length();
   jb.val.string.val = pstrdup(str.c_str());
-  return pushJsonbValue(parseState, token, &jb);
+  pushJsonbValue(parseState, token, &jb);
 }
-JsonbValue* to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   if(hive::protocol::serialization_mode_controller::legacy_enabled())
   {
-    return to_jsonb(hive::protocol::legacy_asset(value), token, parseState);
+    to_jsonb(hive::protocol::legacy_asset(value), token, parseState);
   }
   else
   {
@@ -324,77 +324,76 @@ JsonbValue* to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken toke
     push_numeric_to_jsonb(precision, WJB_VALUE, parseState);
     push_key_to_jsonb("nai", parseState);
     push_string_to_jsonb(nai, WJB_VALUE, parseState);
-    return pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
+    pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
   }
 }
-JsonbValue* to_jsonb(const hive::protocol::legacy_asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const hive::protocol::legacy_asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_string_to_jsonb(value.to_string(), token, parseState);
+  push_string_to_jsonb(value.to_string(), token, parseState);
 }
-JsonbValue* to_jsonb(const hive::protocol::legacy_hive_asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const hive::protocol::legacy_hive_asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return to_jsonb(value.to_asset<false>(), token, parseState);
+  to_jsonb(value.to_asset<false>(), token, parseState);
 }
-JsonbValue* to_jsonb(const hive::protocol::public_key_type& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const hive::protocol::public_key_type& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return to_jsonb(std::string(value), token, parseState);
-}
-template<typename T>
-JsonbValue* to_jsonb(const fc::safe<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
-{
-  return to_jsonb(value.value, token, parseState);
+  to_jsonb(std::string(value), token, parseState);
 }
 template<typename T>
-JsonbValue* to_jsonb(const fc::optional<T>& t, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const fc::safe<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+{
+  to_jsonb(value.value, token, parseState);
+}
+template<typename T>
+void to_jsonb(const fc::optional<T>& t, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   if (t.valid())
   {
     to_jsonb(t.value(), token, parseState);
   }
-  return nullptr;
 }
 template<typename T, size_t N>
-JsonbValue* to_jsonb(const fc::array<T, N>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const fc::array<T, N>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   const auto vec = std::vector<char>( (const char*)&value, ((const char*)&value) + sizeof(value) );
-  return to_jsonb(vec, token, parseState);
+  to_jsonb(vec, token, parseState);
 }
 template<typename... Types>
-JsonbValue* to_jsonb(const fc::static_variant<Types...>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const fc::static_variant<Types...>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return value.visit(static_variant_to_jsonb_visitor(parseState));
+  value.visit(static_variant_to_jsonb_visitor(parseState));
 }
-JsonbValue* to_jsonb(const fc::time_point_sec& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const fc::time_point_sec& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_string_to_jsonb(fc::string(value), token, parseState);
+  push_string_to_jsonb(fc::string(value), token, parseState);
 }
-JsonbValue* to_jsonb(const fc::ripemd160& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const fc::ripemd160& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   const auto vec = std::vector<char>( (const char*)&value, ((const char*)&value) + sizeof(value) );
-  return to_jsonb(vec, token, parseState);
+  to_jsonb(vec, token, parseState);
 }
-JsonbValue* to_jsonb(const fc::sha256& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const fc::sha256& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   const auto vec = std::vector<char>( (const char*)&value, ((const char*)&value) + sizeof(value) );
-  return to_jsonb(vec, token, parseState);
+  to_jsonb(vec, token, parseState);
 }
 template<typename T>
-JsonbValue* to_jsonb(const boost::container::flat_set<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const boost::container::flat_set<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   pushJsonbValue(parseState, WJB_BEGIN_ARRAY, NULL);
   for (const auto& elem : value)
   {
     to_jsonb(elem, WJB_ELEM, parseState);
   }
-  return pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
+  pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
 }
 template<typename T>
-JsonbValue* to_jsonb(const flat_set_ex<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const flat_set_ex<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return to_jsonb(static_cast<boost::container::flat_set<T>>(value), token, parseState);
+  to_jsonb(static_cast<boost::container::flat_set<T>>(value), token, parseState);
 }
 template<typename K, typename... T>
-JsonbValue* to_jsonb(const boost::container::flat_map<K, T...>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+void to_jsonb(const boost::container::flat_map<K, T...>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   // TODO keys
   pushJsonbValue(parseState, WJB_BEGIN_ARRAY, NULL);
@@ -402,7 +401,7 @@ JsonbValue* to_jsonb(const boost::container::flat_map<K, T...>& value, JsonbIter
   {
     to_jsonb(elem, WJB_ELEM, parseState);
   }
-  return pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
+  pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
 }
 
 }
