@@ -144,25 +144,20 @@ class member_to_jsonb_visitor
   public:
     using result_type = JsonbValue*;
 
-    member_to_jsonb_visitor(const T& obj, JsonbParseState** state, JsonbValue** output = nullptr) :
-      obj(obj), parseState(state), output(output)
+    member_to_jsonb_visitor(const T& obj, JsonbParseState** state) :
+      obj(obj), parseState(state)
     {}
 
     template<typename Member, class Class, Member (Class::*member)>
     void operator()(const char* name) const
     {
       push_key_to_jsonb(name, parseState);
-      JsonbValue* ret = to_jsonb(obj.*member, WJB_VALUE, parseState);
-      if (output)
-      {
-        *output = ret;
-      }
+      to_jsonb(obj.*member, WJB_VALUE, parseState);
     }
 
   private:
     const T& obj;
     mutable JsonbParseState** parseState;
-    mutable JsonbValue** output;
 };
 
 class static_variant_to_jsonb_visitor
@@ -352,12 +347,11 @@ JsonbValue* to_jsonb(const fc::safe<T>& value, JsonbIteratorToken token, JsonbPa
 template<typename T>
 JsonbValue* to_jsonb(const fc::optional<T>& t, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  JsonbValue* output = nullptr;
   if (t.valid())
   {
     to_jsonb(t.value(), token, parseState);
   }
-  return output;
+  return nullptr;
 }
 template<typename T, size_t N>
 JsonbValue* to_jsonb(const fc::array<T, N>& value, JsonbIteratorToken token, JsonbParseState** parseState)
