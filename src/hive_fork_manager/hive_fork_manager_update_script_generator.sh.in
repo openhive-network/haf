@@ -76,6 +76,31 @@ COMMIT_NEW_ID='@HAF_GIT_REVISION_SHA@'
 
 POSTGRES_EXTENSION_DIR='@POSTGRES_SHAREDIR@/extension'
 
+verify_table_schema() {
+  echo
+  echo "Attempting to verify if existing table schema is correct..."
+
+  sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "SELECT hive.compare_schema()"
+
+
+  HASH_TABLE=$(sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -t -A -c "SELECT COUNT(*) FROM hive.verify_table_schema")
+
+  if [ "$HASH_TABLE" = 0 ]; then
+    echo "The table schema is correct, verification completed."
+  else
+    echo
+    echo " Table contains information which tables have incorrect schema and which part of a table schema is incorrect (columns_hash, constraints_hash or indexes_hash)"
+    echo
+    echo "  SELECT * FROM hive.verify_table_schema "
+    echo
+    sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "SELECT * FROM hive.verify_table_schema"
+
+    echo "Table schema is inconsistent"
+
+    exit 1
+  fi
+}
+
 get_deployed_version() {
   echo "Attempting to find version of already deployed hive_fork_manager extension..."
 
@@ -103,6 +128,8 @@ make_update() {
 
   sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER EXTENSION hive_fork_manager UPDATE"
 }
+
+verify_table_schema
 
 get_deployed_version
 

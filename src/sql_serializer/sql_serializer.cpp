@@ -51,6 +51,7 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
 
   bool is_extension_created = false;
   bool is_irreversible_dirty = false;
+  bool is_table_schema_correct = false;
   queries_commit_data_processor db_checker(
     database_url
     , "Check correctness"
@@ -66,7 +67,46 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
   db_checker.join();
 
   if ( !is_extension_created ) {
-    elog( "The exstenion 'hive_fork_manager' is not created" );
+    elog( "The extension 'hive_fork_manager' is not created" );
+    return false;
+  }
+
+
+  queries_commit_data_processor ts_checker(
+    database_url
+    , "Check consistency of table schema"
+    , [&is_table_schema_correct](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+      pqxx::result data = tx.exec("SELECT hive.compare_schema();");
+      is_table_schema_correct = data.empty();
+      pqxx::result rows = tx.exec("SELECT table_name, columns_hash, constraints_hash, indexes_hash FROM hive.verify_table_schema;");
+      if ( !is_table_schema_correct ) {
+        std::cout << std::endl;
+        std::cout << " Table contains information which tables have incorrect schema and which part of a table schema is incorrect (columns_hash, constraints_hash or indexes_hash)" << std::endl;
+        std::cout << std::endl;
+        std::cout << "                                     SELECT * FROM hive.verify_table_schema " << std::endl;
+        std::cout << " -----------------------------+---------------------------------+---------------------------------+--------------------------------- " << std::endl;
+        std::cout << "           table_name                    columns_hash                     constraints_hash                    indexes_hash           " << std::endl;
+        for (int i=0; i < rows.size(); i++) {
+        const auto& row = rows[i];
+        const auto table_name = row[ "table_name" ].as<fc::string>();
+        const auto columns_hash = row[ "columns_hash" ].as<fc::string>();
+        const auto constraints_hash = row[ "constraints_hash" ].as<fc::string>();
+        const auto indexes_hash = row[ "indexes_hash" ].as<fc::string>();
+        std::cout << "  " << table_name << ",   " << columns_hash << ",   " << constraints_hash << ",   " << indexes_hash << "  "<< std::endl;
+        };
+        std::cout << " -----------------------------+---------------------------------+---------------------------------+--------------------------------- " << std::endl;
+        std::cout << std::endl;
+      }
+      return data_processor::data_processing_status();
+      }
+      , nullptr
+      );
+
+  ts_checker.trigger(data_processor::data_chunk_ptr(), 0);
+  ts_checker.join();
+
+  if ( !is_table_schema_correct ) {
+    elog( "Table schema is inconsistent" );
     return false;
   }
 
