@@ -33,7 +33,7 @@ JsonbValue* push_key_to_jsonb(const std::string& key, JsonbParseState** parseSta
   return pushJsonbValue(parseState, WJB_KEY, &jb);
 }
 
-JsonbValue* push_string_value_to_jsonb(const std::string& value, JsonbIteratorToken token, JsonbParseState** parseState)
+JsonbValue* push_string_to_jsonb(const std::string& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   const char* str = value.c_str();
   const auto len = value.length();
@@ -44,7 +44,7 @@ JsonbValue* push_string_value_to_jsonb(const std::string& value, JsonbIteratorTo
   return pushJsonbValue(parseState, token, &jb);
 }
 
-JsonbValue* push_bool_value_to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState)
+JsonbValue* push_bool_to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   JsonbValue jb;
   jb.type = jbvBool;
@@ -52,7 +52,7 @@ JsonbValue* push_bool_value_to_jsonb(bool value, JsonbIteratorToken token, Jsonb
   return pushJsonbValue(parseState, token, &jb);
 }
 
-JsonbValue* push_numeric_value_to_jsonb(const std::string& num, JsonbIteratorToken token, JsonbParseState** parseState)
+JsonbValue* push_numeric_to_jsonb(const std::string& num, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   JsonbValue jb;
   jb.type = jbvNumeric;
@@ -64,7 +64,7 @@ JsonbValue* push_numeric_value_to_jsonb(const std::string& num, JsonbIteratorTok
   return pushJsonbValue(parseState, token, &jb);
 }
 
-JsonbValue* push_uint64_value_to_jsonb(const uint64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
+JsonbValue* push_uint64_to_jsonb(const uint64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   // Numeric types are converted either to numeric or string types in json.
   // If value can be represented in 32bits, it's converted to numeric type.
@@ -72,14 +72,14 @@ JsonbValue* push_uint64_value_to_jsonb(const uint64_t value, JsonbIteratorToken 
   // This makes the operation::jsonb conversion in sync with the operation::text::jsonb conversion.
   if (value <= 0xffffffff)
   {
-    return push_numeric_value_to_jsonb(std::to_string(value), token, parseState);
+    return push_numeric_to_jsonb(std::to_string(value), token, parseState);
   }
   else
   {
-    return push_string_value_to_jsonb(std::to_string(value), token, parseState);
+    return push_string_to_jsonb(std::to_string(value), token, parseState);
   }
 }
-JsonbValue* push_int64_value_to_jsonb(const int64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
+JsonbValue* push_int64_to_jsonb(const int64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   // Numeric types are converted either to numeric or string types in json.
   // If value can be represented in 32bits, it's converted to numeric type.
@@ -87,11 +87,11 @@ JsonbValue* push_int64_value_to_jsonb(const int64_t value, JsonbIteratorToken to
   // This makes the operation::jsonb conversion in sync with the operation::text::jsonb conversion.
   if (value <= 0xffffffff)
   {
-    return push_numeric_value_to_jsonb(std::to_string(value), token, parseState);
+    return push_numeric_to_jsonb(std::to_string(value), token, parseState);
   }
   else
   {
-    return push_string_value_to_jsonb(std::to_string(value), token, parseState);
+    return push_string_to_jsonb(std::to_string(value), token, parseState);
   }
 }
 
@@ -178,7 +178,7 @@ class static_variant_to_jsonb_visitor
       // type
       const auto type_name = fc::trim_typename_namespace(fc::get_typename<T>::name());
       push_key_to_jsonb("type", parseState);
-      push_string_value_to_jsonb(type_name, WJB_VALUE, parseState);
+      push_string_to_jsonb(type_name, WJB_VALUE, parseState);
       // value
       push_key_to_jsonb("value", parseState);
       to_jsonb(o, WJB_VALUE, parseState);
@@ -204,7 +204,7 @@ class operation_to_jsonb_visitor
       // type
       const auto type_name = fc::trim_typename_namespace(fc::get_typename<T>::name());
       push_key_to_jsonb("type", parseState);
-      push_string_value_to_jsonb(type_name, WJB_VALUE, parseState);
+      push_string_to_jsonb(type_name, WJB_VALUE, parseState);
       // value
       push_key_to_jsonb("value", parseState);
       pushJsonbValue(parseState, WJB_BEGIN_OBJECT, NULL);
@@ -226,47 +226,47 @@ JsonbValue* to_jsonb(const T& t, JsonbIteratorToken token, JsonbParseState** par
 }
 JsonbValue* to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_bool_value_to_jsonb(value, token, parseState);
+  return push_bool_to_jsonb(value, token, parseState);
 }
 JsonbValue* to_jsonb(int8_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_value_to_jsonb(std::to_string(value), token, parseState);
+  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
 JsonbValue* to_jsonb(int16_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_value_to_jsonb(std::to_string(value), token, parseState);
+  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
 JsonbValue* to_jsonb(int32_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_value_to_jsonb(std::to_string(value), token, parseState);
+  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
 JsonbValue* to_jsonb(int64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_int64_value_to_jsonb(value, token, parseState);
+  return push_int64_to_jsonb(value, token, parseState);
 }
 JsonbValue* to_jsonb(uint8_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_value_to_jsonb(std::to_string(value), token, parseState);
+  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
 JsonbValue* to_jsonb(uint16_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_value_to_jsonb(std::to_string(value), token, parseState);
+  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
 JsonbValue* to_jsonb(uint32_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_numeric_value_to_jsonb(std::to_string(value), token, parseState);
+  return push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }
 JsonbValue* to_jsonb(uint64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_uint64_value_to_jsonb(value, token, parseState);
+  return push_uint64_to_jsonb(value, token, parseState);
 }
 JsonbValue* to_jsonb(const std::string& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_string_value_to_jsonb(value, token, parseState);
+  return push_string_to_jsonb(value, token, parseState);
 }
 JsonbValue* to_jsonb(const std::vector<char>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_string_value_to_jsonb(fc::to_hex(value), token, parseState);
+  return push_string_to_jsonb(fc::to_hex(value), token, parseState);
 }
 template<typename T>
 JsonbValue* to_jsonb(const std::vector<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
@@ -298,7 +298,7 @@ JsonbValue* to_jsonb(const hive::protocol::fixed_string<16>& value, JsonbIterato
 template<typename Storage>
 JsonbValue* to_jsonb(const hive::protocol::fixed_string_impl<Storage>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-    return push_string_value_to_jsonb(std::string(value), token, parseState);
+    return push_string_to_jsonb(std::string(value), token, parseState);
 }
 JsonbValue* to_jsonb(const hive::protocol::json_string& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
@@ -322,17 +322,17 @@ JsonbValue* to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken toke
     const auto precision = std::to_string(value.symbol.decimals());
     const auto nai = value.symbol.to_nai_string();
     push_key_to_jsonb("amount", parseState);
-    push_string_value_to_jsonb(amount, WJB_VALUE, parseState);
+    push_string_to_jsonb(amount, WJB_VALUE, parseState);
     push_key_to_jsonb("precision", parseState);
-    push_numeric_value_to_jsonb(precision, WJB_VALUE, parseState);
+    push_numeric_to_jsonb(precision, WJB_VALUE, parseState);
     push_key_to_jsonb("nai", parseState);
-    push_string_value_to_jsonb(nai, WJB_VALUE, parseState);
+    push_string_to_jsonb(nai, WJB_VALUE, parseState);
     return pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
   }
 }
 JsonbValue* to_jsonb(const hive::protocol::legacy_asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_string_value_to_jsonb(value.to_string(), token, parseState);
+  return push_string_to_jsonb(value.to_string(), token, parseState);
 }
 JsonbValue* to_jsonb(const hive::protocol::legacy_hive_asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
@@ -365,7 +365,7 @@ JsonbValue* to_jsonb(const fc::static_variant<Types...>& value, JsonbIteratorTok
 }
 JsonbValue* to_jsonb(const fc::time_point_sec& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return push_string_value_to_jsonb(fc::string(value), token, parseState);
+  return push_string_to_jsonb(fc::string(value), token, parseState);
 }
 JsonbValue* to_jsonb(const fc::ripemd160& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
