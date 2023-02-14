@@ -395,11 +395,10 @@ void to_jsonb(const flat_set_ex<T>& value, JsonbIteratorToken token, JsonbParseS
 template<typename K, typename... T>
 void to_jsonb(const boost::container::flat_map<K, T...>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  // TODO keys
   pushJsonbValue(parseState, WJB_BEGIN_ARRAY, NULL);
-  for (const auto& elem : value)
+  for (const auto& kv : value)
   {
-    to_jsonb(elem, WJB_ELEM, parseState);
+    to_jsonb(kv, WJB_ELEM, parseState);
   }
   pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
 }
