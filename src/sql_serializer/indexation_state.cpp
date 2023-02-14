@@ -155,39 +155,45 @@ indexation_state::indexation_state(
 }
 
 void
-indexation_state::on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t number_of_blocks_to_add ) {
+indexation_state::on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t number_of_blocks_to_reindex_only ) {
+    ilog("on_pre_reindex last block: ${last_block} number_of_blocks_to_reindex_only: ${number_of_blocks_to_reindex_only}"
+         , ("last_block", last_block_num)("number_of_blocks_to_reindex_only",number_of_blocks_to_reindex_only)
+    );
   if ( _state != INDEXATION::START ) {
     // on_end_of_syncing may already change the state to live
     return;
   }
 
-  if ( can_move_to_livesync() ) {
+  if ( can_move_to_livesync(number_of_blocks_to_reindex_only) ) {
     cached_data_t empty_cache{0};
     update_state( INDEXATION::LIVE, empty_cache, 0 );
     return;
   }
 
-  update_state( INDEXATION::REINDEX, cached_data, last_block_num, number_of_blocks_to_add );
+  update_state( INDEXATION::REINDEX, cached_data, last_block_num, number_of_blocks_to_reindex_only );
 }
 
 void
 indexation_state::on_post_reindex( cached_data_t& cached_data, uint32_t last_block_num, uint32_t _stop_replay_at ) {
-  if ( _state != INDEXATION::REINDEX ) {
-    // on_end_of_syncing may already change the state
-    return;
-  }
-
+  ilog("on_post_reindex last block: ${last_block} stop replay: ${stop_replay}"
+  , ("last_block", last_block_num)("stop_replay",_stop_replay_at)
+  );
   // when option stop-replay-at is used then we finish synchronization when limit block is reached
   if ( _stop_replay_at && _stop_replay_at == last_block_num ) {
-    force_trigger_flush_with_all_data( cached_data, last_block_num );
-    _trigger.reset();
-    _dumper.reset();
-    _indexes_controler.enable_indexes();
-    _indexes_controler.enable_constrains();
-    return;
+      force_trigger_flush_with_all_data( cached_data, last_block_num );
+      _trigger.reset();
+      _dumper.reset();
+      _indexes_controler.enable_indexes();
+      _indexes_controler.enable_constrains();
+      return;
   }
 
-  update_state( INDEXATION::P2P, cached_data, last_block_num, UNKNOWN );
+  if ( _state != INDEXATION::REINDEX ) {
+      // on_end_of_syncing may already change the state
+      return;
+  }
+
+  update_state( INDEXATION::P2P, cached_data, last_block_num, ADD_NOT_ONLY_REINDEXED_BLOCKS );
 }
 
 void
@@ -195,7 +201,7 @@ indexation_state::on_end_of_syncing( cached_data_t& cached_data, int last_block_
   if ( _state == INDEXATION::LIVE ) {
     return;
   }
-  update_state( INDEXATION::LIVE, cached_data, last_block_num, UNKNOWN );
+  update_state( INDEXATION::LIVE, cached_data, last_block_num, ADD_NOT_ONLY_REINDEXED_BLOCKS );
 }
 
 void
@@ -214,8 +220,12 @@ indexation_state::on_first_block() {
 }
 
 bool
-indexation_state::can_move_to_livesync() const {
-  return fc::time_point::now() - _chain_db.head_block_time() < fc::seconds( _psql_livesync_threshold * 3 );
+indexation_state::can_move_to_livesync(uint32_t number_of_blocks_to_reindex_only) const {
+    if ( number_of_blocks_to_reindex_only != ADD_NOT_ONLY_REINDEXED_BLOCKS ) {
+        return number_of_blocks_to_reindex_only < _psql_livesync_threshold;
+    }
+
+    return fc::time_point::now() - _chain_db.head_block_time() < fc::seconds( _psql_livesync_threshold * 3 );
 }
 
 uint32_t
@@ -227,7 +237,7 @@ void
 indexation_state::update_state(
     INDEXATION state
   , cached_data_t& cached_data
-  , uint32_t last_block_num, uint32_t number_of_blocks_to_add
+  , uint32_t last_block_num, uint32_t number_of_blocks_to_reindex_only
 ) {
   FC_ASSERT( _state != INDEXATION::LIVE, "Move from LIVE state is illegal" );
   switch ( state ) {
@@ -265,9 +275,9 @@ indexation_state::update_state(
       _dumper.reset();
       _indexes_controler.disable_constraints();
       _indexes_controler.disable_indexes_depends_on_blocks(
-        number_of_blocks_to_add == 0 // stop_replay_at_block = 0
+        number_of_blocks_to_reindex_only == ADD_NOT_ONLY_REINDEXED_BLOCKS
         ? expected_number_of_blocks_to_sync()
-        : number_of_blocks_to_add
+        : number_of_blocks_to_reindex_only
       );
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url

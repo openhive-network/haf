@@ -27,6 +27,7 @@
 
 #include <boost/filesystem.hpp>
 
+#include <algorithm>
 #include <condition_variable>
 #include <map>
 #include <sstream>
@@ -653,9 +654,9 @@ void sql_serializer_plugin_impl::on_pre_reindex(const reindex_notification& note
     chain::util::disconnect_signal(__on_pre_apply_block_con_initialization);
 
   if ( note.args.stop_replay_at ) {
-    _indexation_state.on_pre_reindex( *currently_caching_data, _last_block_num, ( note.args.stop_replay_at - _last_block_num ) );
+    _indexation_state.on_pre_reindex( *currently_caching_data, _last_block_num, ( std::min(note.args.stop_replay_at, note.max_block_number) - _last_block_num ) );
   } else {
-    _indexation_state.on_pre_reindex( *currently_caching_data, _last_block_num, 0 );
+    _indexation_state.on_pre_reindex( *currently_caching_data, _last_block_num, indexation_state::ADD_NOT_ONLY_REINDEXED_BLOCKS );
   }
   ilog("Leaving a reindex init...");
 }
