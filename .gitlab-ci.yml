@@ -7,6 +7,8 @@ variables:
   CTEST_NUMBER_OF_JOBS: 4
   GIT_DEPTH: 1
   GIT_SUBMODULE_STRATEGY: recursive
+  FF_ENABLE_JOB_CLEANUP: 1
+  GIT_STRATEGY: clone
   # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu22.04-1
   BUILDER_IMAGE_TAG: "@sha256:6c7543994086288e1d80331f8603408f467e72e6fe20b6b331989b3335d2e195"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
