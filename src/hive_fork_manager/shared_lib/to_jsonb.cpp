@@ -44,6 +44,14 @@ JsonbValue* push_string_value_to_jsonb(const std::string& value, JsonbParseState
   return pushJsonbValue(parseState, WJB_VALUE, &jb);
 }
 
+JsonbValue* push_bool_value_to_jsonb(bool value, JsonbParseState** parseState)
+{
+  JsonbValue jb;
+  jb.type = jbvBool;
+  jb.val.boolean = value;
+  return pushJsonbValue(parseState, WJB_VALUE, &jb);
+}
+
 JsonbValue* push_numeric_value_to_jsonb(const std::string& num, JsonbParseState** parseState)
 {
   JsonbValue jb;
@@ -218,7 +226,7 @@ JsonbValue* to_jsonb(const T& t, JsonbIteratorToken token, JsonbParseState** par
 }
 JsonbValue* to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  return to_jsonb(uint64_t(value), token, parseState);
+  return push_bool_value_to_jsonb(value, parseState);
 }
 JsonbValue* to_jsonb(int8_t value, JsonbIteratorToken, JsonbParseState** parseState)
 {

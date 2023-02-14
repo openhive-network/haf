@@ -47,6 +47,10 @@ BEGIN
   -- Make sure that negative integer is converted to jsonb as numeric type
   ASSERT (select '{"type":"vote_operation","value":{"voter":"dantheman","author":"red","permlink":"888","weight":-100}}'::hive.operation::jsonb #> '{"value", "weight"}' = '-100'::jsonb), 'Negative value should be converted to jsonb as numeric type';
 
+  -- Make sure that boolean values are converted to textual form
+  ASSERT (select '{"type": "account_witness_vote_operation", "value": {"account": "donalddrumpf", "approve": true, "witness": "berniesanders"}}'::hive.operation::jsonb #> '{"value", "approve"}' = 'true'::jsonb), 'Boolean true should be converted to textual form';
+  ASSERT (select '{"type": "account_witness_vote_operation", "value": {"account": "donalddrumpf", "approve": false, "witness": "berniesanders"}}'::hive.operation::jsonb #> '{"value", "approve"}' = 'false'::jsonb), 'Boolean false should be converted to textual form';
+
   PERFORM ASSERT_THIS_TEST('{"type":"transfer_operation","value":{"from":"admin","to":"steemit","amount":{"amount":"833000","precision":3,"nai":"@@000000021"},"memo":""}}');
   PERFORM ASSERT_THIS_TEST('{"type":"system_warning_operation","value":{"message":"no impacted accounts"}}');
   PERFORM ASSERT_THIS_TEST('{"type": "pow_operation", "value": {"work": {"work": "00000089714c32dce184406b658b7cdad39779ac751d8713e0b0ea5dc1500a7e", "input": "ebfbdb9fe886d41b8b0a354d4f4b21f7b509c21c76cd0edc4f18329803366a32", "worker": "STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G", "signature": "1f77ec5334c005791caac1644e6ab67da951388cc2b35866801fcf7d04d15dc8c07ac3b7d60e4f690a36fc8204a267e7471f0e278b7bc998c7be1a55c8f5e4e644"}, "nonce": 13371292260756155458, "props": {"hbd_interest_rate": 1000, "maximum_block_size": 131072, "account_creation_fee": {"nai": "@@000000021", "amount": "100000", "precision": 3}}, "block_id": "00000b12facff059ff17895eb1898f825d2aa470", "worker_account": "any"}}');
