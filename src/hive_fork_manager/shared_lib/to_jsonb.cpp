@@ -177,34 +177,6 @@ class static_variant_to_jsonb_visitor
     mutable JsonbParseState** parseState;
 };
 
-class operation_to_jsonb_visitor
-{
-  public:
-    using result_type = JsonbValue*;
-
-    operation_to_jsonb_visitor(JsonbParseState** state) : parseState(state)
-    {}
-
-    template<typename T>
-    JsonbValue* operator()(const T& o) const
-    {
-      pushJsonbValue(parseState, WJB_BEGIN_OBJECT, NULL);
-      // type
-      const auto type_name = fc::trim_typename_namespace(fc::get_typename<T>::name());
-      push_key_to_jsonb("type", parseState);
-      push_string_to_jsonb(type_name, WJB_VALUE, parseState);
-      // value
-      push_key_to_jsonb("value", parseState);
-      pushJsonbValue(parseState, WJB_BEGIN_OBJECT, NULL);
-      fc::reflector<T>::visit(member_to_jsonb_visitor(o, parseState));
-      pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
-      return pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
-    }
-
-  private:
-    mutable JsonbParseState** parseState;
-};
-
 template<typename T>
 void to_jsonb(const T& t, JsonbIteratorToken token, JsonbParseState** parseState)
 {
@@ -392,5 +364,5 @@ JsonbValue* operation_to_jsonb_value(const hive::protocol::operation& op)
 {
   JsonbParseState* parseState = nullptr;
 
-  return op.visit(operation_to_jsonb_visitor(&parseState));
+  return op.visit(static_variant_to_jsonb_visitor(&parseState));
 }
