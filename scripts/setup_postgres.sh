@@ -72,16 +72,8 @@ EOF
         return 0
       fi
     else
-      echo "WARNING: Tablespace $haf_tablespace_name already exists, but points to different location: $TABLESPACE_PATH. Relinking tablespace directory."
-
-        OID=$(sudo -nu postgres psql -qtAX -d postgres -w $pg_access -v ON_ERROR_STOP=on -f - <<EOF
-        SELECT oid FROM pg_tablespace where spcname = '$haf_tablespace_name';
-EOF
-)
-      sudo -n /etc/init.d/postgresql stop
-      ln -sf $haf_tablespace_abs_path /home/hived/datadir/haf_db_store/pgdata/pg_tblspc/$OID
-      sudo -n /etc/init.d/postgresql start
-      return 0
+      echo "ERROR: Tablespace $haf_tablespace_name already exists, but points to different location: $TABLESPACE_PATH. Aborting"
+      exit 2
   fi
 fi
 
