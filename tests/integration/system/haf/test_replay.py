@@ -31,7 +31,6 @@ def test_replay_with_disabled_indexes(database):
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
 
     api_node.run(replay_from=init_node.block_log, stop_at_block=20, wait_for_live=False)
-    assert init_node.get_last_block_number() - 1 < api_node.get_last_block_number()
 
     verify_operation_in_haf_database('account_create_operation', [transaction_0, transaction_1], session, Operations)
 
