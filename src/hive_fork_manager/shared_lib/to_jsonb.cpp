@@ -1,15 +1,10 @@
-extern "C"
-{
-#include <include/psql_utils/postgres_includes.hpp>
-#include <catalog/pg_type.h>
-}
+#include "to_jsonb.hpp"
 
-#undef elog
+#include <include/psql_utils/postgres_includes.hpp>
 
 #include <fc/exception/exception.hpp>
 #include <fc/crypto/hex.hpp>
 
-#include "to_jsonb.hpp"
 #include <hive/protocol/types_fwd.hpp>
 
 #include <boost/container/flat_set.hpp>
@@ -17,7 +12,6 @@ extern "C"
 
 #include <string>
 #include <vector>
-#include <type_traits>
 
 namespace {
 
