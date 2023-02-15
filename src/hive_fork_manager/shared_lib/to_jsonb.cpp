@@ -15,7 +15,6 @@
 
 namespace {
 
-
 JsonbValue* push_key_to_jsonb(const std::string& key, JsonbParseState** parseState)
 {
   const char* str = key.c_str();
@@ -92,9 +91,7 @@ JsonbValue* push_int64_to_jsonb(const int64_t value, JsonbIteratorToken token, J
 template<typename T>
 void to_jsonb(const T& t, JsonbIteratorToken token, JsonbParseState** parseState);
 void to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState);
-void to_jsonb(int8_t value, JsonbIteratorToken token, JsonbParseState** parseState);
 void to_jsonb(int16_t value, JsonbIteratorToken token, JsonbParseState** parseState);
-void to_jsonb(int32_t value, JsonbIteratorToken token, JsonbParseState** parseState);
 void to_jsonb(int64_t value, JsonbIteratorToken token, JsonbParseState** parseState);
 void to_jsonb(uint8_t value, JsonbIteratorToken token, JsonbParseState** parseState);
 void to_jsonb(uint16_t value, JsonbIteratorToken token, JsonbParseState** parseState);
@@ -219,15 +216,7 @@ void to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState
 {
   push_bool_to_jsonb(value, token, parseState);
 }
-void to_jsonb(int8_t value, JsonbIteratorToken token, JsonbParseState** parseState)
-{
-  push_numeric_to_jsonb(std::to_string(value), token, parseState);
-}
 void to_jsonb(int16_t value, JsonbIteratorToken token, JsonbParseState** parseState)
-{
-  push_numeric_to_jsonb(std::to_string(value), token, parseState);
-}
-void to_jsonb(int32_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   push_numeric_to_jsonb(std::to_string(value), token, parseState);
 }

@@ -41,24 +41,6 @@ fc::variant op_to_variant_impl( const char* raw_data, uint32 data_length )
   return v;
 }
 
-fc::variant op_to_variant( const char* raw_data, uint32 data_length )
-{
-  try
-  {
-    return op_to_variant_impl(raw_data, data_length);
-  }
-  catch( const fc::exception& e )
-  {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
-    return {};
-  }
-  catch( ... )
-  {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "Unexpected binary to text conversion occured" ) ) );
-    return {};
-  }
-}
-
 std::string op_to_json( const char* raw_data, uint32 data_length )
 {
   try
@@ -139,7 +121,6 @@ extern "C"
     try
     {
       const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
-
       JsonbValue* jsonb = operation_to_jsonb_value(operation);
 
       PG_RETURN_POINTER(JsonbValueToJsonb(jsonb));
