@@ -133,8 +133,6 @@ template<typename T>
 class member_to_jsonb_visitor
 {
   public:
-    using result_type = JsonbValue*;
-
     member_to_jsonb_visitor(const T& obj, JsonbParseState** state) :
       obj(obj), parseState(state)
     {}
