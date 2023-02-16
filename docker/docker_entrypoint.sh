@@ -66,10 +66,6 @@ then
   sudo --user=hived -n mkdir -p /home/hived/datadir
 fi
 
-# Fix permissions on data and shm directories
-sudo -n chown -Rc hived:users /home/hived/datadir
-sudo -n chown -Rc hived:users /home/hived/shm_dir
-
 # Be sure this directory exists
 sudo --user=hived -n mkdir -p /home/hived/datadir/blockchain
 
