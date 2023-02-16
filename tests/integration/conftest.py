@@ -11,7 +11,7 @@ from sqlalchemy.pool import NullPool
 from test_tools.__private.scope.scope_fixtures import *  # pylint: disable=wildcard-import, unused-wildcard-import
 import test_tools as tt
 
-from haf_local_tools.witnesses import alpha_witness_names, beta_witness_names
+from haf_local_tools.witnesses import alpha_witness_names, beta_witness_names, alpha_witness_names_17, beta_witness_names_3
 
 
 def pytest_exception_interact(report):
@@ -22,6 +22,9 @@ def pytest_exception_interact(report):
 def witness_names():
     return alpha_witness_names, beta_witness_names
 
+@pytest.fixture()
+def witness_names_17_3():
+    return alpha_witness_names_17, beta_witness_names_3
 
 @pytest.fixture()
 def database():
@@ -53,9 +56,8 @@ def database():
     close_all_sessions()
 
 
-@pytest.fixture()
-def prepared_networks_and_database(database, witness_names) -> Tuple[Dict[str, tt.Network], Any]:
-    alpha_witness_names, beta_witness_names = witness_names
+def prepared_networks_and_database_internal(database, current_witness_names) -> Tuple[Dict[str, tt.Network], Any]:
+    alpha_witness_names, beta_witness_names = current_witness_names
     session = database('postgresql:///haf_block_log')
 
     alpha_net = tt.Network()
@@ -80,4 +82,13 @@ def prepared_networks_and_database(database, witness_names) -> Tuple[Dict[str, t
         'Beta': beta_net,
     }
 
-    yield networks, session
+    return networks, session
+
+@pytest.fixture()
+def prepared_networks_and_database(database, witness_names) -> Tuple[Dict[str, tt.Network], Any]:
+    yield prepared_networks_and_database_internal(database, witness_names)
+
+
+@pytest.fixture()
+def prepared_networks_and_database_17_3(database, witness_names_17_3) -> Tuple[Dict[str, tt.Network], Any]:
+    yield prepared_networks_and_database_internal(database, witness_names_17_3)

@@ -16,7 +16,12 @@ class sql_accounts(haf_base):
     self.app                          = None
     self.schema_name                  = schema_name
     self.create_creator_account_table = ''
-    self.get_accounts                 = ''
+    self.get_accounts = '''
+      SELECT block_num, body
+      FROM hive.{}_operations_view o
+      JOIN hive.operation_types ot ON o.op_type_id = ot.id
+      WHERE ot.name = 'hive::protocol::account_created_operation' AND block_num >= {} and block_num <= {}
+    '''
     self.insert_into_history          = []
 
   def prepare_sql(self):
@@ -30,13 +35,6 @@ class sql_accounts(haf_base):
         account_id INTEGER NOT NULL
       );
     '''.format(self.schema_name, self.schema_name)
-
-    self.get_accounts = '''
-      SELECT block_num, body
-      FROM hive.{}_operations_view o
-      JOIN hive.operation_types ot ON o.op_type_id = ot.id
-      WHERE ot.name = 'hive::protocol::account_created_operation' AND block_num >= {} and block_num <= {}
-    '''
 
     self.insert_into_history.append( "INSERT INTO {}.creation_history(block_num, creator_id, account_id) SELECT T.block_num, C.id, A.id FROM ( VALUES".format(self.schema_name) )
     self.insert_into_history.append( " ( {}, '{}', '{}' )" )
