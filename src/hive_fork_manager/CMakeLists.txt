@@ -2,6 +2,7 @@ ADD_PSQL_EXTENSION(
     NAME hive_fork_manager
     SCHEMA_SOURCES context_rewind/data_schema_types.sql
              context_rewind/data_schema.sql
+             context_rewind/table_schema.sql
              events_queue.sql
              forks.sql
              app_context.sql
@@ -37,6 +38,7 @@ ADD_PSQL_EXTENSION(
             app_api_impl.sql
             hived_api.sql
             app_api.sql
+            table_schema_verification.sql
             api_helpers/block_api_support.sql
             authorization.sql
             get_impacted_accounts.sql
