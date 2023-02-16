@@ -296,11 +296,11 @@ public:
       return function;
   }
 
-  void init_database(bool freshDb, uint32_t max_block_number )
+  void init_database(bool freshDb, uint32_t max_block_number, bool reindexing )
   {
     head_block_number = max_block_number;
 
-    load_initial_db_data();
+    load_initial_db_data(reindexing);
     if(freshDb)
     {
       auto get_type_definitions = [ this ](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx){
@@ -332,7 +332,7 @@ public:
     processor.join();
   }
 
-  void load_initial_db_data()
+  void load_initial_db_data(bool reindexing_in_progress)
   {
     ilog("Loading operation's last id ...");
 
@@ -358,14 +358,23 @@ public:
     block_loader.trigger(data_processor::data_chunk_ptr(), 0);
 
     queries_commit_data_processor sequence_loader(db_url, "Sequence loader",
-                                                  [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
+                                                  [this, reindexing_in_progress](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
       {
-        pqxx::result data = tx.exec("SELECT ho.id AS _max FROM hive.operations ho ORDER BY ho.id DESC LIMIT 1;");
+        pqxx::result data = tx.exec(
+        "SELECT COALESCE(ho.id,0) AS _max, COALESCE(hor.id,0) AS _max_rev"
+        " FROM (SELECT ho.id FROM hive.operations ho ORDER BY ho.id DESC LIMIT 1 ) as ho"
+        " LEFT JOIN (SELECT hor.id FROM hive.operations_reversible hor ORDER BY hor.id DESC LIMIT 1) as hor ON TRUE;"
+        );
         if( !data.empty() )
         {
           FC_ASSERT( data.size() == 1, "Data size 2" );
           const auto& record = data[0];
-          op_sequence_id = record["_max"].as<int64_t>();
+          auto irreversible_max = record["_max"].as<int64_t>();
+          auto reversible_max = record["_max_rev"].as<int64_t>();
+          op_sequence_id = reindexing_in_progress
+            ? std::max(irreversible_max, reversible_max)
+            : irreversible_max;
+
           //because newly created operation has to have subsequent number
           ++op_sequence_id;
         }
@@ -441,7 +450,7 @@ void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& no
 
   /// Let's init our database before applying first block (resync case)...
   inform_hfm_about_starting();
-  init_database(note.block_num == 1, note.block_num);
+  init_database(note.block_num == 1, note.block_num, false);
   _indexation_state.on_first_block();
 
   /// And disconnect to avoid subsequent inits
@@ -637,7 +646,7 @@ void sql_serializer_plugin_impl::on_pre_reindex(const reindex_notification& note
   ilog("Entering a reindex init...");
   /// Let's init our database before applying first block...
   inform_hfm_about_starting();
-  init_database(note.force_replay, note.max_block_number);
+  init_database(note.force_replay, note.max_block_number, true);
 
   /// Disconnect pre-apply-block handler to avoid another initialization (for resync case).
   if(__on_pre_apply_block_con_initialization.connected())
