@@ -20,8 +20,16 @@ class sql_memo_scanner(haf_base):
     self.searched_item      = searched_item
     self.schema_name        = schema_name
     self.create_memo_table  = ''
-    self.get_transfers      = ''
+    self.get_transfers = '''
+      SELECT block_num, trx_in_block, op_pos, body
+      FROM hive.{}_operations_view o
+      JOIN hive.operation_types ot ON o.op_type_id = ot.id
+      WHERE ot.name = 'hive::protocol::transfer_operation' AND block_num >= {} and block_num <= {}
+    '''
     self.insert_into_memos  = []
+    self.insert_into_memos.append( "INSERT INTO {}.memos(block_num, trx_in_block, op_pos, memo_content) VALUES".format(self.schema_name) )
+    self.insert_into_memos.append( " ({}, {}, {}, '{}')" )
+    self.insert_into_memos.append( " ON CONFLICT DO NOTHING ;" )
 
   def prepare_sql(self):
     #SQL queries
@@ -36,17 +44,6 @@ class sql_memo_scanner(haf_base):
 
       ALTER TABLE {}.memos ADD CONSTRAINT memos_pkey PRIMARY KEY ( block_num, trx_in_block, op_pos );
     '''.format(self.schema_name, self.schema_name, self.app.app_context, self.schema_name)
-
-    self.insert_into_memos.append( "INSERT INTO {}.memos(block_num, trx_in_block, op_pos, memo_content) VALUES".format(self.schema_name) )
-    self.insert_into_memos.append( " ({}, {}, {}, '{}')" )
-    self.insert_into_memos.append( " ;" )
-
-    self.get_transfers = '''
-      SELECT block_num, trx_in_block, op_pos, body
-      FROM hive.{}_operations_view o
-      JOIN hive.operation_types ot ON o.op_type_id = ot.id
-      WHERE ot.name = 'hive::protocol::transfer_operation' AND block_num >= {} and block_num <= {}
-    '''
 
   def checker(self):
     assert self.app is not None, "an app must be initialized"
@@ -90,15 +87,19 @@ class argument_parser_ex(argument_parser):
   def __init__(self):
     super().__init__()
     self.parser.add_argument("--searched-item", type = str, required = True, help = "Part of memo that should be found")
+    self.parser.add_argument("--scanner-name", type = str, required = True, help = "Name of scanner")
 
   def get_searched_item(self):
     return self.args.searched_item
+
+  def get_scanner_name(self):
+    return self.args.scanner_name
 
 def main():
   _parser = argument_parser_ex()
   _parser.parse()
 
-  _schema_name      = "memo_scanner"
+  _schema_name      = _parser.get_scanner_name()
   _sql_memo_scanner = sql_memo_scanner(_parser.get_searched_item(), _schema_name)
   _app              = application(args_container(_parser.get_url(), _parser.get_range_blocks(), _parser.get_massive_threshold()), _schema_name + "_app", _sql_memo_scanner)
 

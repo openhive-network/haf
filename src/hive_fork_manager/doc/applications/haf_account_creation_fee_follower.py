@@ -19,7 +19,12 @@ class sql_account_creation_fee_follower(haf_base):
     self.app                  = None
     self.schema_name          = schema_name
     self.create_history_table = ''
-    self.get_witness_updates  = ''
+    self.get_witness_updates = '''
+      SELECT block_num, body
+      FROM hive.{}_operations_view o
+      JOIN hive.operation_types ot ON o.op_type_id = ot.id
+      WHERE ot.name = 'hive::protocol::witness_update_operation' AND block_num >= {} and block_num <= {}
+    '''
     self.insert_into_history  = []
 
   def prepare_sql(self):
@@ -37,13 +42,6 @@ class sql_account_creation_fee_follower(haf_base):
     self.insert_into_history.append( "INSERT INTO {}.fee_history(block_num, witness_id, fee) SELECT T.block_num, A.id, T.fee FROM ( VALUES".format(self.schema_name) )
     self.insert_into_history.append( " ( {}, '{}', {} )" )
     self.insert_into_history.append( " ) T(block_num, witness_name, fee) JOIN hive.{}_accounts_view A ON T.witness_name = A.name;".format(self.app.app_context) )
-
-    self.get_witness_updates = '''
-      SELECT block_num, body
-      FROM hive.{}_operations_view o
-      JOIN hive.operation_types ot ON o.op_type_id = ot.id
-      WHERE ot.name = 'hive::protocol::witness_update_operation' AND block_num >= {} and block_num <= {}
-    '''
 
   def checker(self):
     assert self.app is not None, "an app must be initialized"
