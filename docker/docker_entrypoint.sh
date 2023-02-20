@@ -66,8 +66,16 @@ then
   sudo --user=hived -n mkdir -p /home/hived/datadir
 fi
 
-# Be sure this directory exists
+# Fix permissions on data and shm directories
+sudo -n chown -Rc hived:users /home/hived/datadir
+sudo -n chown -Rc hived:users /home/hived/shm_dir
+
+# Be sure those directories exists and have right permissions
 sudo --user=hived -n mkdir -p /home/hived/datadir/blockchain
+sudo --user=hived -n mkdir -p /home/hived/datadir/postgresql_logs
+sudo --user=hived -n mkdir -p /home/hived/datadir/haf_postgresql_conf.d
+sudo -n chown -Rc postgres:postgres /home/hived/datadir/postgresql_logs
+sudo -n chown -Rc postgres:postgres /home/hived/datadir/haf_postgresql_conf.d
 
 if [ -d "$PGDATA" ]
 then
