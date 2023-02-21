@@ -11,8 +11,31 @@ DECLARE
     _columns   TEXT;
     _constraints   TEXT;
     _indexes    TEXT;
+    verified_tables_list TEXT[];
 BEGIN
-FOR _table_name IN SELECT table_name FROM hive.verified_tables_list ORDER BY table_name
+
+verified_tables_list = ARRAY[
+'blocks',
+'irreversible_data',
+'transactions',
+'transactions_multisig',
+'operation_types',
+'operations',
+'applied_hardforks',
+'accounts',
+'account_operations',
+'fork',
+'blocks_reversible',
+'blocks_reversible',
+'transactions_multisig_reversible',
+'operations_reversible',
+'accounts_reversible',
+'account_operations_reversible',
+'applied_hardforks_reversible',
+'contexts'
+];
+
+FOR _table_name IN SELECT UNNEST( verified_tables_list ) as _table_name
 LOOP
 -- concatination of columns
     SELECT string_agg(c.agg_columns, ' | ') AS columns INTO _columns
@@ -126,10 +149,17 @@ DECLARE
     ts hive.table_schema%ROWTYPE;
     _tmp TEXT;
 BEGIN
-    SELECT string_agg(table_schema, ' | ') FROM hive.calculate_schema_hash(schema_name) INTO _tmp GROUP BY table_name ORDER BY table_name ASC;
+    TRUNCATE hive.table_schema;
+
+    SELECT string_agg(table_schema, ' | ') FROM hive.calculate_schema_hash(schema_name) INTO _tmp;
+
+    INSERT INTO hive.table_schema VALUES (schema_name, MD5(_tmp)::uuid);
+
     ts.schema_name := schema_name;
     ts.schema_hash := MD5(_tmp)::uuid;
 RETURN NEXT ts;
 END;
 $BODY$
 ;
+
+SELECT hive.create_database_hash('hive');

@@ -16,29 +16,3 @@ CREATE TABLE IF NOT EXISTS hive.table_schema(
     schema_hash UUID NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS hive.verified_tables_list(
-    table_name TEXT NOT NULL
-);
-
-INSERT INTO hive.verified_tables_list VALUES 
-('blocks'),
-('irreversible_data'),
-('transactions'),
-('transactions_multisig'),
-('operation_types'),
-('operations'),
-('applied_hardforks'),
-('accounts'),
-('account_operations'),
-('fork'),
-('blocks_reversible'),
-('blocks_reversible'),
-('transactions_multisig_reversible'),
-('operations_reversible'),
-('accounts_reversible'),
-('account_operations_reversible'),
-('applied_hardforks_reversible'),
-('contexts');
-
-
-
