@@ -253,6 +253,14 @@ replay_with_update:
     # verify if upgrade is complete by calling the new added function
     - sudo -Enu $DB_ADMIN psql -w --host /var/run/postgresql --port 5432 -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "SELECT hive.test()"
 
+update_with_wrong_table_schema:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
+    REPLAY: "--replay-blockchain --stop-replay-at-block 1000000"
+  script:
+    - $SETUP_SCRIPTS_PATH/ci-helpers/test_table_schema.sh --setup_scripts_path=$SETUP_SCRIPTS_PATH --haf_binaries_dir=$CI_PROJECT_DIR/$CI_JOB_NAME/build --ci_project_dir=$CI_PROJECT_DIR --build_root_dir=$HIVE_BUILD_ROOT_PATH --pattern_dir=$PATTERNS_PATH --psql-url=$DB_URL
+
 block_api_tests:
   extends: .replay_step
   variables:
