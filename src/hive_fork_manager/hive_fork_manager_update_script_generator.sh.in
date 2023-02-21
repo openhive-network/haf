@@ -70,11 +70,45 @@ while [ $# -gt 0 ]; do
 done
 
 POSTGRES_ACCESS="--host $POSTGRES_HOST --port $POSTGRES_PORT"
-
 COMMIT_PREV_ID=''
 COMMIT_NEW_ID='@HAF_GIT_REVISION_SHA@'
-
 POSTGRES_EXTENSION_DIR='@POSTGRES_SHAREDIR@/extension'
+DB_NAME_AFTER_UPDATE='temp_after_update'
+
+save_table_schema() {
+  sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -o before_update_columns.txt -v ON_ERROR_STOP=on -U "$DB_ADMIN" -q -t -A -c "SELECT table_name, table_columns FROM hive.calculate_schema_hash('hive')"
+  sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -o before_update_constraints.txt -v ON_ERROR_STOP=on -U "$DB_ADMIN" -q -t -A -c "SELECT table_name, table_constraints FROM hive.calculate_schema_hash('hive')"
+  sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -o before_update_indexes.txt -v ON_ERROR_STOP=on -U "$DB_ADMIN" -q -t -A -c "SELECT table_name, table_indexes FROM hive.calculate_schema_hash('hive')"
+  sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME_AFTER_UPDATE" -o after_update_columns.txt -v ON_ERROR_STOP=on -U "$DB_ADMIN" -q -t -A -c "SELECT table_name, table_columns FROM hive.calculate_schema_hash('hive')"
+  sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME_AFTER_UPDATE" -o after_update_constraings.txt -v ON_ERROR_STOP=on -U "$DB_ADMIN" -q -t -A -c "SELECT table_name, table_constraints FROM hive.calculate_schema_hash('hive')"
+  sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME_AFTER_UPDATE" -o after_update_indexes.txt -v ON_ERROR_STOP=on -U "$DB_ADMIN" -q -t -A -c "SELECT table_name, table_indexes FROM hive.calculate_schema_hash('hive')"
+}
+
+verify_table_schema() {
+  echo "Attempting to verify if existing table schema is correct..."
+  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "CREATE DATABASE $DB_NAME_AFTER_UPDATE WITH OWNER $DB_ADMIN;"
+  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME_AFTER_UPDATE" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE EXTENSION hive_fork_manager CASCADE;' 
+  BEFORE_UPDATE=$(sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -t -A -c "SELECT schema_hash FROM hive.create_database_hash('hive')")
+  AFTER_UPDATE=$(sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME_AFTER_UPDATE" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -t -A -c "SELECT schema_hash FROM hive.create_database_hash('hive')")
+  if [ "$BEFORE_UPDATE" = "$AFTER_UPDATE" ]; then
+  echo "The table schema is correct, verification completed."
+  echo "Dropping temporary database"
+  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "DROP DATABASE IF EXISTS $DB_NAME_AFTER_UPDATE;"
+  else
+  save_table_schema
+  echo "Table schema is inconsistent"
+  echo "COLUMNS"
+  diff --suppress-common-lines before_update_columns.txt after_update_columns.txt || true
+  echo "CONSTRAINTS"
+  diff --suppress-common-lines before_update_constraints.txt after_update_constraings.txt || true
+  echo "INDEXES"
+  diff --suppress-common-lines before_update_indexes.txt after_update_indexes.txt || true
+  echo "Dropping temporary database"
+  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "DROP DATABASE IF EXISTS $DB_NAME_AFTER_UPDATE;"
+  find -type f -name '*.txt' > /dev/null 2>&1
+  exit 1
+  fi
+}
 
 get_deployed_version() {
   echo "Attempting to find version of already deployed hive_fork_manager extension..."
@@ -96,13 +130,14 @@ generate_final_update_script() {
   echo "Update file was created correctly"
 }
 
-
 make_update() {
   echo
   echo "Attempting to update your database..."
 
   sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER EXTENSION hive_fork_manager UPDATE"
 }
+
+verify_table_schema
 
 get_deployed_version
 
