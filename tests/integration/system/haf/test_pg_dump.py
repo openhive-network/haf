@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable, Final
 import pytest
 
 import test_tools as tt
-from local_tools import create_node_with_database, get_blocklog_directory, query_all, query_col
+from haf_local_tools import create_node_with_database, get_blocklog_directory, query_all, query_col
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
@@ -34,7 +34,6 @@ SELECT *
 FROM hive.{table}
 ORDER BY {columns};
 """
-
 
 def pg_restore_from_toc(target_db_name: str, tmp_path: Path) -> None:
     """
@@ -69,6 +68,7 @@ def test_pg_dump(database, pg_restore: Callable[[str, Path], None], tmp_path: Pa
     # GIVEN
     source_session, source_db_url = prepare_source_db(database)
     target_session, target_db_url = prepare_target_db(database)
+    source_database_not_empty_sanity_check(source_session)
 
     # WHEN
     pg_dump(source_db_url.database, tmp_path)
@@ -80,16 +80,20 @@ def test_pg_dump(database, pg_restore: Callable[[str, Path], None], tmp_path: Pa
 
 
 def prepare_source_db(database) -> tuple[Session, URL]:
-    session, _ = database('postgresql:///test_pg_dump_source')
+    session = database('postgresql:///test_pg_dump_source')
     db_name = session.bind.url
     node = create_node_with_database(url=str(db_name))
-    block_log = tt.BlockLog(get_blocklog_directory() / 'block_log')
-    node.run(replay_from=block_log, stop_at_block=105, exit_before_synchronization=True)
+
+    blocklog_dir = get_blocklog_directory()
+    blocklog_dir = blocklog_dir / 'block_logs/block_log'
+
+    node.run(replay_from=blocklog_dir, stop_at_block=30, exit_before_synchronization=True)
+
     return session, db_name
 
 
 def prepare_target_db(database) -> tuple[Session, URL]:
-    session, _ = database('postgresql:///test_pg_dump_target')
+    session = database('postgresql:///test_pg_dump_target')
     db_name = session.bind.url
     return session, db_name
 
@@ -136,3 +140,11 @@ def create_psql_tool_dumped_schema(db_name: str, tmp_path: Path) -> str:
 
 def shell(command: str) -> None:
     subprocess.call(command, shell=True)
+
+
+def source_database_not_empty_sanity_check(source_session: Session):
+    source_table_names = query_col(source_session, SQL_ALL_TABLES_AND_VIEWS)
+    assert source_table_names, "No tables exist at all"
+    account_operations_table_contents_exists = take_table_contents(source_session, 'blocks')
+    assert account_operations_table_contents_exists, "Source table is empty, did we replay the blocklog?"
+

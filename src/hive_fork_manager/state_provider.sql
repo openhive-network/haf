@@ -10,5 +10,6 @@ CREATE TABLE IF NOT EXISTS hive.state_providers_registered(
     , CONSTRAINT fk_hive_state_providers_registered_context FOREIGN KEY( context_id ) REFERENCES hive.contexts( id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.state_providers_registered', '');
+SELECT pg_catalog.pg_extension_config_dump('hive.state_providers_registered_id_seq', '');
 
 CREATE INDEX IF NOT EXISTS hive_state_providers_registered_idx ON hive.state_providers_registered( owner );
