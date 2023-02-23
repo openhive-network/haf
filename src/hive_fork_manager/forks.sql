@@ -5,4 +5,5 @@ CREATE TABLE IF NOT EXISTS hive.fork(
     CONSTRAINT pk_hive_fork PRIMARY KEY( id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.fork', '');
+SELECT pg_catalog.pg_extension_config_dump('hive.fork_id_seq', '');
 

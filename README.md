@@ -388,29 +388,30 @@ docker exec haf-instance-5M psql -d <your_database> \
   -c "drop schema if exists pghero cascade; drop extension if exists pg_stat_statements;"
 ```
 
-# Using pg_dump/pg_restore to backup/restore a HAF database
-When setting up a new HAF server for production or testing purposes, you may want to load data from an existing HAF database using `pg_dump` and `pg_restore` commands, instead of filling it from scratch using hived with a replay of the blockchain data in a block_log.
-
-To dump use the following command line
-```
-pg_dump -j <number_of_processes> -Fd -f <backup_directory> -d <database_connection string>
-```
-e.g.:
-```
-pg_dump -j 3 -Fd  -f dump -d postgresql://haf_admin@172.17.0.2/haf_block_log
-```
+# Using scripts to perform full backup
+Not only the haf Postgres database needs to be stored to have the full data backed up.
+Also the hived server state is needed.
+To perform the full backup:
+1. Stop the hived server
+2. execute dump_instance.sh
 
 
-To restore run the following 3 commands in sequence:
-```
-pg_restore                          --section=pre-data  --disable-triggers                     -d <empty_database> <backup_directory>
-pg_restore -j <number_of_processes> --section=data      --disable-triggers                     -d <empty_database> <backup_directory>
-pg_restore                          --section=post-data --disable-triggers --clean --if-exists -d <empty_database> <backup_directory>
-```
+To perform the full restore and immediately run the hived server:
+1. execute load_instance.sh
 
-e.g.:
-```
-pg_restore      --section=pre-data  --disable-triggers                     -d restored dump
-pg_restore -j 3 --section=data      --disable-triggers                     -d restored dump
-pg_restore      --section=post-data --disable-triggers --clean --if-exists -d restored dump
-```
+All unrecognized options are forwarded to the hived executable.
+
+E.g.
+scripts/dump_instance.sh --backup-dir=path_to_backup_directory \
+--hived-executable-path=path_to_hived \
+--hived-data-dir=path_to_hived_datadir \
+--haf-db-name=haf_block_log \
+--override-existing-backup-dir \
+--exit-before-sync
+
+scripts/load_instance.sh --backup-dir=path_to_backup_directory
+--hived-executable-path=path_to_hived \
+--hived-data-dir=path_to_hived_datadir \
+--haf-db-name=haf_block_log \
+--exit-before-sync --stop-replay-at-block=5000000
+
