@@ -1,9 +1,13 @@
-import time
-
 import test_tools as tt
 import datetime
 
-def test_replay_and_p2p_sync():
+from haf_local_tools import connect_nodes, get_operations, get_operations_from_database, \
+    prepare_network_with_init_node_and_api_node, prepare_and_send_transactions, verify_operation_in_haf_database
+from haf_local_tools.tables import Operations
+
+def test_replay_and_p2p_sync(database):
+    session = database('postgresql://dev@172.17.0.1:5432/haf_block_log')
+
     max_years = 292  # Ref: https://github.com/python/cpython/blob/889b0b9bf95651fc05ad532cc4a66c0f8ff29fc2/Include/cpython/pytime.h
     sleep_time = datetime.timedelta(days=max_years * 365).total_seconds()
     witnesses = ["rabbit-70", "kushed", "delegate.lafona", "wackou", "complexring", "jesta", "xeldal", "riverhead", "clayop", "steemed", "smooth.witness", "ihashfury", "joseph", "datasecuritynode", "boatymcboatface", "steemychicken1", "roadscape", "pharesim", "abit", "blocktrades", "arhag", "bitcube", "witness.svk", "gxt-1080-sc-0003", "steve-walschot", "bhuz", "liondani", "rabbit-63", "pfunk"]
@@ -30,16 +34,10 @@ def test_replay_and_p2p_sync():
     api_node = tt.ApiNode()
     connect_nodes(raw_node, api_node)
     api_node.config.shared_file_size = '20G'
+    api_node.config.plugin.append('sql_serializer')
+    api_node.config.psql_url = str(session.get_bind().url)
 
     api_node.run(replay_from=path_block_log_3m, time_offset = tt.Time.serialize(absolute_start_time, format_=tt.Time.TIME_OFFSET_FORMAT), wait_for_live=True, timeout=sleep_time,  arguments=['--chain-id', '42'])
 
     tt.logger.info(f'raw_node last block number:  {raw_node.get_last_block_number()}')
     tt.logger.info(f'api last block number:  {api_node.get_last_block_number()}')
-
-
-def connect_nodes(first_node, second_node) -> None:
-    """
-    This place have to be removed after solving issue https://gitlab.syncad.com/hive/test-tools/-/issues/10
-    """
-    from test_tools.__private.user_handles.get_implementation import get_implementation
-    second_node.config.p2p_seed_node = get_implementation(first_node).get_p2p_endpoint()
