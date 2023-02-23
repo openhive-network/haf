@@ -11,8 +11,8 @@ def test_replay():
     raw_node.config.private_key = '5JNHfZYKGaomSFvd4NUdQ9qMcEAC43kujbfjueTHpVapX1Kzq2n'
     raw_node.config.shared_file_size = '20G'
     raw_node.config.enable_stale_production = True
-    raw_node.config.transaction_status_track_after_block = '54500000'
+    # raw_node.config.transaction_status_track_after_block = '54500000'
     raw_node.config.required_participation = 0
-    raw_node.config.plugin = 'database_api block_api account_history_api market_history_api network_broadcast_api witness account_by_key account_by_key_api wallet_bridge_api'
+    # raw_node.config.plugin = 'database_api block_api account_history_api market_history_api network_broadcast_api witness account_by_key account_by_key_api wallet_bridge_api'
 
     raw_node.run(replay_from=path, time_offset='@2016-09-15 19:47:24', wait_for_live=True, timeout=sleep_time, arguments=['--chain-id', '42', '--skeleton-key', '5JNHfZYKGaomSFvd4NUdQ9qMcEAC43kujbfjueTHpVapX1Kzq2n'])
