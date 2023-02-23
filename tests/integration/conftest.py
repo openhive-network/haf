@@ -38,7 +38,7 @@ def database():
 
         engine = sqlalchemy.create_engine(url, echo=False, poolclass=NullPool)
         with engine.connect() as connection:
-            connection.execute('CREATE EXTENSION hive_fork_manager CASCADE;')
+            connection.execute("CREATE EXTENSION hive_fork_manager WITH VERSION 'c37a9671a73d2cc22ce8370993f5fa8c0f066bda' CASCADE;")
 
         with engine.connect() as connection:
             connection.execute('SET ROLE hived_group')
