@@ -30,6 +30,7 @@ print_help () {
     echo "                       and install an exension inside."
     echo "                       Role MUST be earlier created on pointed Postgres instance !!!"
     echo "                       If omitted, defaults to haf_admin role."
+    echo "  --no-create-schema   Skips the final steps of creating schema, extension and database roles"
     echo "  --help               Display this help screen and exit"
     echo
 }
@@ -42,6 +43,7 @@ DEFAULT_DB_USERS=("haf_app_admin")
 DB_USERS=()
 POSTGRES_HOST="/var/run/postgresql"
 POSTGRES_PORT=5432
+NO_CREATE_SCHEMA=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -65,6 +67,9 @@ while [ $# -gt 0 ]; do
     --help)
         print_help
         exit 0
+        ;;
+    --no-create-schema)
+        NO_CREATE_SCHEMA=true
         ;;
     -*)
         echo "ERROR: '$1' is not a valid option"
@@ -92,6 +97,12 @@ sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on 
   DROP DATABASE IF EXISTS "$DB_NAME";
   CREATE DATABASE "$DB_NAME" WITH OWNER $DB_ADMIN TABLESPACE ${HAF_TABLESPACE_NAME};
 EOF
+
+
+if [ ${NO_CREATE_SCHEMA} = true ]; then
+    exit 0
+fi
+
 
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE SCHEMA hive;' 
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE EXTENSION hive_fork_manager CASCADE;' 

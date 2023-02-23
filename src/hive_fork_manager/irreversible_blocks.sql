@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS hive.applied_hardforks (
 
 
 );
+SELECT pg_catalog.pg_extension_config_dump('hive.applied_hardforks', '');
 
 CREATE TABLE IF NOT EXISTS hive.accounts (
       id INTEGER NOT NULL

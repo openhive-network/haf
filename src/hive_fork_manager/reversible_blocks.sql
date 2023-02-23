@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS hive.applied_hardforks_reversible(
     EXCLUDING INDEXES
     EXCLUDING IDENTITY
 );
-
+SELECT pg_catalog.pg_extension_config_dump('applied_hardforks_reversible', '');
 ALTER TABLE hive.applied_hardforks_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
     ADD CONSTRAINT pk_hive_applied_hardforks_reversible PRIMARY KEY( hardfork_num, fork_id ),
