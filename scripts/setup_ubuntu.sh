@@ -1,12 +1,13 @@
 #! /bin/bash
 
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+SRC_DIR="$SCRIPT_DIR/.."
+
 set -euo pipefail
 
 # Script purpose is an installation of all packages required to build and run HAF instance.
 # After changing it, please also update and push to the registry a docker image defined in https://gitlab.syncad.com/hive/haf/-/blob/develop/Dockerfile
-
-#Updated docker image must be also explicitly referenced in the https://gitlab.syncad.com/hive/haf/-/blob/develop/.gitlab-ci.yml#L7
-
+# Updated docker image must be also explicitly referenced in the https://gitlab.syncad.com/hive/haf/-/blob/develop/.gitlab-ci.yml#L7
 
 print_help () {
     echo "Usage: $0 [OPTION[=VALUE]]..."
@@ -35,41 +36,22 @@ install_all_dev_packages() {
   echo "Attempting to install all dev packages..."
   assert_is_root
 
+  "$SRC_DIR/hive/scripts/setup_ubuntu.sh" --runtime --dev
+
   apt-get update
   DEBIAN_FRONTEND=noniteractive apt-get install -y \
           systemd \
-          autoconf \
-          wget \
           postgresql \
           postgresql-contrib \
-          build-essential \
-          cmake \
-          libboost-all-dev \
-          git \
-          python3-pip \
-          python3-jinja2 \
-          libssl-dev \
-          libreadline-dev \
-          libsnappy-dev \
           libpqxx-dev \
-          clang \
-          clang-tidy \
           tox \
           joe \
-          sudo \
-          ca-certificates \
-          ninja-build
+          postgresql-server-dev-all
 
-  python_version=$(python3 -c 'import sys; print("{}.{}".format(sys.version_info.major, sys.version_info.minor))')
-  DEBIAN_FRONTEND=noniteractive apt-get install -y \
-          "python${python_version}-venv"
-
-  postgres_major_version=$(pg_config --version | sed 's/PostgreSQL \([0-9]*\)\..*/\1/g')
-  DEBIAN_FRONTEND=noniteractive apt-get install -y \
-          "postgresql-server-dev-${postgres_major_version}"
   apt-get clean
+  rm -rf /var/lib/apt/lists/*
 
-  sudo usermod -a -G users postgres
+  sudo usermod -a -G users -c "PostgreSQL daemon account" postgres
 }
 
 install_user_packages() {
@@ -82,23 +64,19 @@ create_haf_admin_account() {
   echo "Attempting to create $haf_admin_unix_account account..."
   assert_is_root
 
-  # Unfortunetely haf_admin must be able to su as root, because it must be able to write into /usr/share/postgresql/12/extension directory, being owned by root (it could be owned by postgres)
+  # Unfortunately haf_admin must be able to su as root, because it must be able to write into /usr/share/postgresql/14/extension directory, being owned by root (it could be owned by postgres)
   if id "$haf_admin_unix_account" &>/dev/null; then
       echo "Account $haf_admin_unix_account already exists. Creation skipped."
   else
-      useradd -ms /bin/bash -g users "$haf_admin_unix_account" && echo "$haf_admin_unix_account ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+      useradd -ms /bin/bash -g users -c "HAF admin account" "$haf_admin_unix_account" && echo "$haf_admin_unix_account ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
   fi
 }
 
 create_hived_account() {
   echo "Attempting to create $hived_unix_account account..."
-  assert_is_root
-
-  if id "$hived_unix_account" &>/dev/null; then
-      echo "Account $hived_unix_account already exists. Creation skipped."
-  else
-      useradd -ms /bin/bash -g users "$hived_unix_account"
-  fi
+  "$SRC_DIR/hive/scripts/setup_ubuntu.sh" --hived-account="$hived_unix_account"
+  usermod -a -G "$hived_unix_account" -g users -c "Hived daemon account" "$hived_unix_account"
+  sudo -n chown -Rc "$hived_unix_account":users "/home/$hived_unix_account"
 }
 
 while [ $# -gt 0 ]; do
