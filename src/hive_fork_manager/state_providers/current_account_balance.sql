@@ -63,7 +63,7 @@ BEGIN
 
 
     --texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L);', __table_name, _context);
-    texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L)ON CONFLICT (account) DO UPDATE SET balance= excluded.balance;', __table_name, _context);
+    texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L);', __table_name, _context);
 
     -- raise notice 'texcik=%', texcik;
 
