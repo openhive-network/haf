@@ -3,14 +3,18 @@
 # we are in build directory
 
 # mtlk TODO
+# start/stop on contextual shared mem file
 # What about ON CONFLICT DO NOTHING in src/hive_fork_manager/state_providers/current_account_balance.sql - two accounts in one state ?     texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L) ON CONFLICT DO NOTHING;', __table_name, _context);
 
 set -ex
 
-SERIALIZE_TILL_BLOCK=5'000'000
+SERIALIZE_TILL_BLOCK=1'000'000
 RUN_MINIMAL_TILL_BLOCK=5'000'000
-RUN_APP_MAIN_TILL_BLOCK=5000000
-RUN_APP_MAIN_CHUNK_SIZE=100000
+RUN_APP_MAIN_TILL_BLOCK=5000
+RUN_APP_MAIN_CHUNK_SIZE=1000
+
+RUN_APP_CONT_MAIN_TILL_BLOCK=10000
+RUN_APP_CONT_MAIN_CHUNK_SIZE=1000
 
 BUILD_DIR=.
 SRC_DIR=../haf
@@ -81,11 +85,19 @@ minimal_hived_cont()
     $BUILD_DIR/hive/programs/hived/hived --data-dir=$DATA_DIR --shared-file-dir=$DATA_DIR/blockchain --replay --exit-before-sync --stop-replay-at-block=3000000 # minimal cont
 }
 
-app()
+app_start()
 {
     rm -f  ~/mainnet-5m/blockchain/keyauth_appshared_memory.bin 
 
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c "select hive.app_reset_data('keyauth_app');" && psql -v "ON_ERROR_STOP=1" -d haf_block_log -f $SRC_DIR/src/hive_fork_manager/state_providers/performance_examination/keyauth_app.sql &&  psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing'  -c "call keyauth_app.main('keyauth_app', $RUN_APP_MAIN_TILL_BLOCK, $RUN_APP_MAIN_CHUNK_SIZE)" -c 'select * from hive.keyauth_app_current_account_balance;' -c 'select count(*) from hive.keyauth_app_accounts;' 2>&1 | tee -i app.log # run
+    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c "select hive.app_reset_data('keyauth_app');" && psql -v "ON_ERROR_STOP=1" -d haf_block_log -f $SRC_DIR/src/hive_fork_manager/state_providers/performance_examination/keyauth_app.sql &&  psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing'  -c "call keyauth_app.main('keyauth_app', $RUN_APP_MAIN_TILL_BLOCK, $RUN_APP_MAIN_CHUNK_SIZE)" -c 'select * from hive.keyauth_app_current_account_balance limit 30;' -c 'select count(*) from hive.keyauth_app_accounts;' 2>&1 | tee -i app.log # run
+}
+
+app_cont()
+{
+    psql -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing' \
+    -c "call keyauth_app.main('keyauth_app', $RUN_APP_CONT_MAIN_TILL_BLOCK, $RUN_APP_CONT_MAIN_CHUNK_SIZE)" \
+    -c 'select * from hive.keyauth_app_current_account_balance limit 30;' -c 'select count(*) from hive.keyauth_app_accounts;' \
+    2>&1 | tee -i app.log # run
 }
 
 
@@ -163,7 +175,7 @@ run_all_from_scratch()
     serializer
     # minimal_hived
     #permissions
-    app
+    app_start
 }
 
 # # # run_from_saved

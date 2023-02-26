@@ -75,13 +75,6 @@ BEGIN
             ) t
     );
 
-    raise notice 'Accounts number =%',
-    (
-         (
-                SELECT count(*)
-                FROM hive.current_all_accounts_balances_C(_context) LIMIT 15 
-            ) 
-    );
 
     EXECUTE           format(texcik, __table_name);
 
