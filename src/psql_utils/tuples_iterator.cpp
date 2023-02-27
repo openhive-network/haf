@@ -8,7 +8,7 @@
 namespace PsqlTools::PsqlUtils {
 
 TuplesStoreIterator::TuplesStoreIterator( Tuplestorestate* _tuples ) : m_tuples( _tuples ) {
-  // m_slot = MakeTupleTableSlot();
+  m_slot = MakeTupleTableSlot(, &TTSOpsVirtual);
   if ( !m_slot ) {
     THROW_INITIALIZATION_ERROR( "Cannot create tuples slot" );
   }

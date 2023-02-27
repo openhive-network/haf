@@ -28,7 +28,7 @@ public:
     virtual void tuplestore_rescan(Tuplestorestate *state) = 0;
     virtual bool tuplestore_gettupleslot(Tuplestorestate *state, bool forward, bool copy, TupleTableSlot *slot) = 0;
     virtual RangeVar* makeRangeVar(char *schemaname, char *relname, int location) = 0;
-    virtual Relation heap_openrv(const RangeVar *relation, LOCKMODE lockmode) = 0;
+    virtual Relation table_openrv(const RangeVar *relation, LOCKMODE lockmode) = 0;
     virtual void relation_close(Relation relation, LOCKMODE lockmode) = 0;
     virtual char *SPI_getrelname(Relation rel) = 0;
 
@@ -54,7 +54,7 @@ public:
     MOCK_METHOD( void, tuplestore_rescan, (Tuplestorestate*) );
     MOCK_METHOD( bool, tuplestore_gettupleslot, (Tuplestorestate*, bool, bool, TupleTableSlot*) );
     MOCK_METHOD( RangeVar*, makeRangeVar, (char*, char*, int) );
-    MOCK_METHOD( Relation, heap_openrv, (const RangeVar*, LOCKMODE) );
+    MOCK_METHOD( Relation, table_openrv, (const RangeVar*, LOCKMODE) );
     MOCK_METHOD( void, relation_close, (Relation, LOCKMODE) );
     MOCK_METHOD(  char*, SPI_getrelname, (Relation) );
 

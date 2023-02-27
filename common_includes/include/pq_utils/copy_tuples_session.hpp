@@ -5,8 +5,8 @@
 
 extern "C" {
   struct HeapTupleData;
-  struct tupleDesc;
-  typedef tupleDesc* TupleDesc;
+  struct TupleDescData;
+  typedef TupleDescData* TupleDesc;
   typedef HeapTupleData *HeapTuple;
   typedef struct varlena bytea;
 } // extern "C"
