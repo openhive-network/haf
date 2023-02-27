@@ -8,10 +8,10 @@
 
 //Suppress 'register' keyword usage warning in 3rd party code
 #if defined(__clang__)
-  #pragma clang diagnostic push
+#pragma clang diagnostic push
   #pragma clang diagnostic ignored "-Wpadded"
 #elif defined(__GNUC__) || defined(__GNUG__)
-  #pragma GCC diagnostic push 
+  #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wregister"
   #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
@@ -54,8 +54,8 @@ extern "C" {
 #undef elog
 
 #ifdef POP_ELOG
-  #pragma pop_macro( "elog" )
+#pragma pop_macro( "elog" )
   #undef POP_ELOG
-#endif 
+#endif
 
 

@@ -8,7 +8,7 @@ namespace PsqlTools::PsqlUtils {
 } // PsqlTools::PsqlUtils
 
 namespace PsqlTools::ForkExtension {
-  /* The object of this type is a global variable in initialization.hpp
+  /* The object of tit stathis type is a global variable in initialization.hpp
    * In its ctro db is initialized and prepared to work with fork extenstion
    * Please add all db initialization inside the ctor
    */

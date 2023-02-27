@@ -77,6 +77,10 @@ char* OidOutputFunctionCall(Oid functionId, Datum val) {
   return POSTGRES_MOCK.lock()->OidOutputFunctionCall(functionId, val);
 }
 
+TupleTableSlot* MakeTupleTableSlot() {
+  return POSTGRES_MOCK.lock()->MakeTupleTableSlot();
+}
+
 void tuplestore_rescan(Tuplestorestate *state) {
   return POSTGRES_MOCK.lock()->tuplestore_rescan(state);
 }
@@ -89,8 +93,8 @@ RangeVar* makeRangeVar(char *schemaname, char *relname, int location) {
   return POSTGRES_MOCK.lock()->makeRangeVar(schemaname, relname, location);
 }
 
-Relation table_openrv(const RangeVar *relation, LOCKMODE lockmode) {
-  return POSTGRES_MOCK.lock()->table_openrv(relation, lockmode);
+Relation heap_openrv(const RangeVar *relation, LOCKMODE lockmode) {
+  return POSTGRES_MOCK.lock()->heap_openrv(relation, lockmode);
 }
 
 void relation_close(Relation relation, LOCKMODE lockmode) {
