@@ -23,9 +23,11 @@ extern "C" {
 #include <catalog/pg_type.h>
 
 #include <fmgr.h>
+#include <foreign/foreign.h>
 #include <funcapi.h>
 #include <miscadmin.h>
 
+#include <executor/executor.h>
 #include <executor/spi.h>
 #include <libpq-fe.h>
 #include <access/table.h>
@@ -33,7 +35,10 @@ extern "C" {
 
 #include <nodes/makefuncs.h>
 
+#include <tcop/tcopprot.h>
+
 #include <utils/array.h>
+#include <utils/backend_status.h>
 #include <utils/builtins.h>
 #include <utils/elog.h>
 #include <utils/fmgrprotos.h>
@@ -43,6 +48,8 @@ extern "C" {
 
 #include <utils/rel.h>
 #include <utils/tuplestore.h>
+
+#include <pgstat.h>
 
 #include <c.h>
 
