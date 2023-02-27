@@ -8,12 +8,15 @@
 
 set -ex
 
-SERIALIZE_TILL_BLOCK=1'000'000
-RUN_MINIMAL_TILL_BLOCK=5'000'000
-RUN_APP_MAIN_TILL_BLOCK=5000
+SERIALIZE_TILL_BLOCK=100000
+
+RUN_MINIMAL_TILL_BLOCK=1000
+RUN_MINIMAL_CONT_TILL_BLOCK=5000
+
+RUN_APP_MAIN_TILL_BLOCK=2000
 RUN_APP_MAIN_CHUNK_SIZE=1000
 
-RUN_APP_CONT_MAIN_TILL_BLOCK=10000
+RUN_APP_CONT_MAIN_TILL_BLOCK=8000
 RUN_APP_CONT_MAIN_CHUNK_SIZE=1000
 
 BUILD_DIR=.
@@ -58,8 +61,8 @@ if [[ "$PWD" =~ build$ ]]
 then
 
     # cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" -GNinja $SRC_DIR ;  # Release
-    # cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # Debug O0
-    cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-O2 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # Debug O2
+    cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # Debug O0
+    # cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-O2 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # Debug O2
 
     (ninja  hived extension.hive_fork_manager  && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure) ; 
 else
@@ -88,7 +91,7 @@ fi
 
 minimal_hived_cont()
 {
-    $BUILD_DIR/hive/programs/hived/hived --data-dir=$DATA_DIR --shared-file-dir=$DATA_DIR/blockchain --replay --exit-before-sync --stop-replay-at-block=3000000 # minimal cont
+    $BUILD_DIR/hive/programs/hived/hived --data-dir=$DATA_DIR --shared-file-dir=$DATA_DIR/blockchain --replay --exit-before-sync --stop-replay-at-block=$RUN_MINIMAL_CONT_TILL_BLOCK # minimal cont
 }
 
 app_start()
@@ -100,6 +103,8 @@ app_start()
 
 app_cont()
 {
+    permissions
+    
     psql -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing' \
     -c "call keyauth_app.main('keyauth_app', $RUN_APP_CONT_MAIN_TILL_BLOCK, $RUN_APP_CONT_MAIN_CHUNK_SIZE)" \
     -c 'select * from hive.keyauth_app_current_account_balance limit 30;' -c 'select count(*) from hive.keyauth_app_accounts;' \
@@ -110,7 +115,10 @@ app_cont()
 
 permissions()
 {
-    chmod 777 /home/dev/mainnet-5m/blockchain/shared_memory.bin
+    chmod 777 /home/dev/mainnet-5m/blockchain/shared_memory.bin || true
+    chmod 777 $DATA_DIR/blockchain
+    sudo chmod 777 $DATA_DIR/blockchain/*
+
 }
 
 
