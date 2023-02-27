@@ -19,6 +19,7 @@
 extern "C" {
 #include <postgres.h>
 #include <catalog/pg_attribute.h>
+#include <catalog/pg_constraint.h>
 #include <catalog/pg_type.h>
 
 #include <fmgr.h>
@@ -27,12 +28,14 @@ extern "C" {
 
 #include <executor/spi.h>
 #include <libpq-fe.h>
+#include <access/table.h>
 #include <access/sysattr.h>
 
 #include <nodes/makefuncs.h>
 
 #include <utils/array.h>
 #include <utils/builtins.h>
+#include <utils/elog.h>
 #include <utils/fmgrprotos.h>
 #include <utils/fmgroids.h>
 #include <utils/jsonb.h>
@@ -51,7 +54,8 @@ extern "C" {
   #pragma GCC diagnostic pop
 #endif
 
-#undef elog
+// WORKAROUND - temporary remove the undef to allow to report to postgres log
+// #undef elog
 
 #ifdef POP_ELOG
 #pragma pop_macro( "elog" )

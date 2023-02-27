@@ -4,7 +4,7 @@
 
 namespace PsqlTools::PsqlUtils {
 
-ColumnsIterator::ColumnsIterator( const tupleDesc& _desc )
+ColumnsIterator::ColumnsIterator( const TupleDescData& _desc )
   : m_tuple_desc( _desc )
   , m_current_column( 0 )
 {

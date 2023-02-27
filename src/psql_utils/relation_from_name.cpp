@@ -15,7 +15,7 @@ RelationFromName::RelationFromName( const std::string& _relation_name ) {
     THROW_INITIALIZATION_ERROR("Cannot open relation "s + _relation_name);
   }
 
-  m_postgres_relation = heap_openrv( range, AccessShareLock );
+  m_postgres_relation = table_openrv( range, AccessShareLock );
   if ( m_postgres_relation == nullptr ) {
     THROW_INITIALIZATION_ERROR("Cannot open relation "s + _relation_name);
   }
@@ -27,7 +27,7 @@ RelationFromName::~RelationFromName() {
 
   m_relation_wrapper.reset();
 
-  heap_close(m_postgres_relation, NoLock);
+  table_close(m_postgres_relation, NoLock);
 }
 
 IRelation::PrimaryKeyColumns

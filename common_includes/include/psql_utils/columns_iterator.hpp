@@ -5,20 +5,20 @@
 #include <functional>
 
 extern "C" {
-  struct tupleDesc;
+  struct TupleDescData;
 }
 
 namespace PsqlTools::PsqlUtils {
     
   class ColumnsIterator {
   public:
-    ColumnsIterator( const tupleDesc& _desc ); // lifetime of _desc controlled by the postgres
+    explicit ColumnsIterator( const TupleDescData& _desc ); // lifetime of _desc controlled by the postgres
     ~ColumnsIterator() = default;
 
     boost::optional<std::string> next();
 
   private:
-    std::reference_wrapper< const tupleDesc > m_tuple_desc;
+    std::reference_wrapper< const TupleDescData > m_tuple_desc;
     uint16_t m_current_column;
   };
 } // namespace PsqlTools::PsqlUtils
