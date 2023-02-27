@@ -93,8 +93,8 @@ Relation table_openrv(const RangeVar *relation, LOCKMODE lockmode) {
   return POSTGRES_MOCK.lock()->table_openrv(relation, lockmode);
 }
 
-void relation_close(Relation relation, LOCKMODE lockmode) {
-  return POSTGRES_MOCK.lock()->relation_close(relation, lockmode);
+void table_close(Relation relation, LOCKMODE lockmode) {
+  return POSTGRES_MOCK.lock()->table_close(relation, lockmode);
 }
 
 char* SPI_getrelname(Relation rel) {
