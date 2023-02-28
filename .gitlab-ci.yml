@@ -4,6 +4,7 @@ stages:
   - deploy
 
 variables:
+  GIT_STRATEGY: clone
   CTEST_NUMBER_OF_JOBS: 4
   GIT_DEPTH: 1
   GIT_SUBMODULE_STRATEGY: recursive
