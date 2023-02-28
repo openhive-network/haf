@@ -6,6 +6,7 @@ ExternalProject_Add(
         INSTALL_DIR "${CMAKE_BINARY_DIR}"
         CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}"
         STEP_TARGETS mkdir download update build configure install
+        BUILD_BYPRODUCTS "${CMAKE_BINARY_DIR}/lib/libgmock.a" "${CMAKE_BINARY_DIR}/lib/libgtest.a" "${CMAKE_BINARY_DIR}/lib/libgtest_main.a"
 )
 
 # googletest-mkdir googletest-download googletest-update googletest-configure googletest-build
