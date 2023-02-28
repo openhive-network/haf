@@ -5,6 +5,10 @@
 # mtlk TODO
 # start/stop on contextual shared mem file
 # What about ON CONFLICT DO NOTHING in src/hive_fork_manager/state_providers/current_account_balance.sql - two accounts in one state ?     texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L) ON CONFLICT DO NOTHING;', __table_name, _context);
+# consuming jsons one by one or getting a vector of blocks form haf block api
+# separate C function to get current block_num where we stand
+
+
 
 set -ex
 
