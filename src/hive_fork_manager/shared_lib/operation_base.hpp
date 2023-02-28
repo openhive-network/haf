@@ -1,5 +1,6 @@
 #pragma once
 
+#include <hive/protocol/operations.hpp>
 #include <include/psql_utils/postgres_includes.hpp>
 
 extern "C"
