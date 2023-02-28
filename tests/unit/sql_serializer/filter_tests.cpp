@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE basic_test
-#include <BoostTestTargetConfig.h>
-
+//#include <BoostTestTargetConfig.h>
 #include <boost/test/unit_test.hpp>
+
 #include <boost/program_options.hpp>
 
 #include <hive/protocol/hive_operations.hpp>
