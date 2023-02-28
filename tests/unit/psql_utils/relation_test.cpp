@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE( relation_from_name ) {
     .WillOnce( ::testing::Return( postgres_relation_ptr ) )
   ;
   // 3. close the relation
-  EXPECT_CALL( *postgres_mock, relation_close( postgres_relation_ptr, NoLock) )
+  EXPECT_CALL( *postgres_mock, table_close( postgres_relation_ptr, NoLock) )
           .Times( 1 )
  ;
 
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE( negative_relation_from_name_cannot_open_relation ) {
             .WillOnce( ::testing::Return( nullptr ) )
             ;
     // 3. ensure that close wont be called
-    EXPECT_CALL( *postgres_mock, relation_close( ::testing::_, ::testing::_) )
+    EXPECT_CALL( *postgres_mock, table_close( ::testing::_, ::testing::_) )
       .Times( 0 )
     ;
 
