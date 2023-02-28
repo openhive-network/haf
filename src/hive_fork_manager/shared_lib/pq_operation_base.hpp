@@ -1,8 +1,7 @@
 #pragma once
 
-#include <include/psql_utils/postgres_includes.hpp>
-
 #include "operation_base.hpp"
+#include <include/psql_utils/postgres_includes.hpp>
 
 extern "C"
 {
