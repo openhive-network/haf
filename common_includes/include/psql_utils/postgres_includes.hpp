@@ -54,12 +54,10 @@ extern "C" {
   #pragma GCC diagnostic pop
 #endif
 
-// WORKAROUND - temporary remove the undef to allow to report to postgres log
-// #undef elog
-
 #ifdef POP_ELOG
+#undef elog
 #pragma pop_macro( "elog" )
-  #undef POP_ELOG
+#undef POP_ELOG
 #endif
 
 

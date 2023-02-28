@@ -1,9 +1,5 @@
 #include "operation_base.hpp"
 
-#include <include/psql_utils/postgres_includes.hpp>
-
-#include <hive/protocol/operations.hpp>
-
 #include <hive/protocol/forward_impacted.hpp>
 #include <hive/protocol/misc_utilities.hpp>
 
