@@ -13,7 +13,9 @@ MACRO( ADD_UNIT_TESTS module_name)
     ADD_BOOST_LIBRARIES( ${test_target} TRUE )
 
     ADD_POSTGRES_LIBRARIES( ${test_target} )
-    TARGET_LINK_LIBRARIES( ${test_target} PRIVATE test_${module_name} )
+    IF ( TARGET test_${module_name} )
+        TARGET_LINK_LIBRARIES( ${test_target} PRIVATE test_${module_name} )
+    ENDIF()
     TARGET_LINK_LIBRARIES( ${test_target} PRIVATE ${CMAKE_BINARY_DIR}/lib/libgmock.a )
     TARGET_LINK_LIBRARIES( ${test_target} PRIVATE ${CMAKE_BINARY_DIR}/lib/libgtest.a )
 
