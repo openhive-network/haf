@@ -12,10 +12,10 @@ def test_event_massive_sync(prepared_networks_and_database):
     tt.logger.info(f'Start test_event_massive_sync')
 
     # GIVEN
-    networks, session = prepared_networks_and_database
+    networks_builder, session = prepared_networks_and_database
 
     # WHEN
-    prepare_networks(networks)
+    prepare_networks(networks_builder.networks)
 
     # THEN
     tt.logger.info(f'Checking if an event `NEW_IRREVERSIBLE` is in a database')

@@ -3,6 +3,7 @@ import subprocess
 import time
 import random
 from pathlib import Path
+from typing import Iterable
 
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -91,12 +92,12 @@ def haf_app_processor(identifier):
         tt.logger.info( f"app runs: {identifier}")
         _app.run()
 
-def fork_activator(network_alpha, network_beta, logs, majority_api_node, _m, _M):
+def fork_activator(networks: Iterable[tt.Network], logs, majority_api_node, _m, _M):
     _cnt = 1
 
     while True:
         tt.logger.info(f'Disconnect sub networks: {_cnt}...')
-        sh.disconnect_sub_networks([ network_alpha, network_beta ])
+        sh.disconnect_sub_networks(networks)
 
         sh.wait(5, logs, majority_api_node)
 
@@ -104,7 +105,7 @@ def fork_activator(network_alpha, network_beta, logs, majority_api_node, _m, _M)
         tt.logger.info(f'last Lib: {_last_lib_M}...')
 
         tt.logger.info(f'Reconnect sub networks: {_cnt}...')
-        sh.connect_sub_networks([ network_alpha, network_beta ])
+        sh.connect_sub_networks(networks)
 
         sh.wait_for_final_block(majority_api_node, logs, [_m, _M], True, partial(sh.lib_custom_condition, _M, _last_lib_M), False)
         tt.logger.info(f'Sub networks reconnected: {_cnt}...')
@@ -119,18 +120,18 @@ def trx_creator(wallet):
 
 def test_many_forks_many_ops(prepared_networks_and_database_17_3):
 
-    tt.logger.info(f'Start test_compare_forked_node_database')
+    tt.logger.info(f'Start test_many_forks_many_ops')
 
-    networks, session = prepared_networks_and_database_17_3
+    networks_builder, session = prepared_networks_and_database_17_3
 
     if not haf_app.process_env_vars(session):
         tt.logger.info('Variables must be set: HAF_APP_ROOT_PATH, HAF_APP_POSTGRES_URL')
         exit(1)
 
-    majority_api_node = tt.ApiNode(network=networks['Alpha'])
-    minority_api_node = networks['Beta'].node('ApiNode0')
+    majority_api_node = tt.ApiNode(network=networks_builder.networks[0])
+    minority_api_node = networks_builder.networks[1].node('ApiNode0')
 
-    prepare_networks(networks)
+    prepare_networks(networks_builder.networks)
     minority_api_node.wait_for_block_with_number(START_TEST_BLOCK)
 
     logs = []
@@ -160,7 +161,7 @@ def test_many_forks_many_ops(prepared_networks_and_database_17_3):
     _push_threads = 2
     _app_threads  = 1
     with ThreadPoolExecutor(max_workers = _fork_threads + _push_threads + _app_threads ) as executor:
-        _futures.append(executor.submit(fork_activator, networks['Alpha'], networks['Beta'], logs, majority_api_node, _m, _M))
+        _futures.append(executor.submit(fork_activator, networks_builder.networks, logs, majority_api_node, _m, _M))
 
         for i in range(_push_threads):
             if i % 2 == 0:

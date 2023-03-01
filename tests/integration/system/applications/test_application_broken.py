@@ -46,12 +46,12 @@ def test_application_broken(prepared_networks_and_database):
     #Finally a value of `irreversible_block` for given context has to be equal to current value of `irreversible_block` in HAF.
 
     # GIVEN
-    networks, session = prepared_networks_and_database
+    networks_builder, session = prepared_networks_and_database
     second_session = sessionmaker()(bind=session.get_bind())
-    node_under_test = networks['Beta'].node('ApiNode0')
+    node_under_test = networks_builder.networks[1].node('ApiNode0')
 
     # WHEN
-    prepare_networks(networks, replay_all_nodes=False)
+    prepare_networks(networks_builder.networks, replay_all_nodes=False)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
 
     # system under test

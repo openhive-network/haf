@@ -13,12 +13,12 @@ def test_live_sync(prepared_networks_and_database):
     tt.logger.info(f'Start test_live_sync')
 
     # GIVEN
-    networks, session = prepared_networks_and_database
-    witness_node = networks['Alpha'].node('WitnessNode0')
-    node_under_test = networks['Beta'].node('ApiNode0')
+    networks_builder, session = prepared_networks_and_database
+    witness_node = networks_builder.networks[0].node('WitnessNode0')
+    node_under_test = networks_builder.networks[1].node('ApiNode0')
 
     # WHEN
-    prepare_networks(networks)
+    prepare_networks(networks_builder.networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     wallet = tt.Wallet(attach_to=witness_node)
     wallet.api.transfer('initminer', 'initminer', tt.Asset.Test(1000), 'dummy transfer operation')

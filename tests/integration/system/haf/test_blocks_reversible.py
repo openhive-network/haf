@@ -11,13 +11,13 @@ def test_blocks_reversible(prepared_networks_and_database):
     tt.logger.info(f'Start test_blocks_reversible')
 
     # GIVEN
-    networks, session = prepared_networks_and_database
-    node_under_test = networks['Beta'].node('ApiNode0')
+    networks_builder, session = prepared_networks_and_database
+    node_under_test = networks_builder.networks[1].node('ApiNode0')
 
     # WHEN
-    prepare_networks(networks)
+    prepare_networks(networks_builder.networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
-    after_fork_block = make_fork(networks)
+    after_fork_block = make_fork(networks_builder.networks)
 
     # THEN
     irreversible_block_num, head_block_number = wait_for_irreversible_progress(node_under_test, after_fork_block+1)

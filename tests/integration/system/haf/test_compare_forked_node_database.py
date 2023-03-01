@@ -11,19 +11,21 @@ def test_compare_forked_node_database(prepared_networks_and_database, database):
     tt.logger.info(f'Start test_compare_forked_node_database')
 
     # GIVEN
-    networks, session = prepared_networks_and_database
-    node_under_test = networks['Beta'].node('ApiNode0')
+    networks_builder, session = prepared_networks_and_database
+    node_under_test = networks_builder.networks[1].node('ApiNode0')
 
     session_ref = database('postgresql:///haf_block_log_ref')
 
+    reference_node = create_node_with_database(networks_builder.networks[0], session_ref.get_bind().url)
+
     # WHEN
-    prepare_networks(networks)
+    prepare_networks(networks_builder.networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     wallet = tt.Wallet(attach_to=node_under_test)
     transaction1 = wallet.api.transfer('initminer', 'null', tt.Asset.Test(1234), 'memo', broadcast=False)
     transaction2 = wallet.api.transfer_to_vesting('initminer', 'null', tt.Asset.Test(1234), broadcast=False)
     after_fork_block = make_fork(
-        networks,
+        networks_builder.networks,
         main_chain_trxs=[transaction1],
         fork_chain_trxs=[transaction2],
     )

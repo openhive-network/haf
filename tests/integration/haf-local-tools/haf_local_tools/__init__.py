@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 from typing import Any, TYPE_CHECKING, Dict, Optional
 
+from typing import Iterable
 import test_tools as tt
 from haf_local_tools import block_logs
 from haf_local_tools.tables import EventsQueue
@@ -19,11 +20,9 @@ BLOCKS_AFTER_FORK = 5
 WAIT_FOR_CONTEXT_TIMEOUT = 90.0
 
 
-
-
-def make_fork(networks: Dict[str, tt.Network], main_chain_trxs=[], fork_chain_trxs=[]):
-    alpha_net = networks['Alpha']
-    beta_net = networks['Beta']
+def make_fork(networks: Iterable[tt.Network], main_chain_trxs=[], fork_chain_trxs=[]):
+    alpha_net = networks[0]
+    beta_net = networks[1]
     alpha_witness_node = alpha_net.node('WitnessNode0')
     beta_witness_node = beta_net.node('WitnessNode1')
 
@@ -73,16 +72,12 @@ def get_irreversible_block(node):
     return irreversible_block_num
 
 
-def get_blocklog_directory():
-    return Path(__file__).parent.resolve()
-
-
-def prepare_networks(networks: Dict[str, tt.Network], replay_all_nodes = True):
+def prepare_networks(networks: Iterable[tt.Network], replay_all_nodes = True, time_offsets: Iterable[int] = None):
     blocklog_directory = None
     if replay_all_nodes:
         blocklog_directory = Path(block_logs.__file__).parent
 
-    run_networks(list(networks.values()), blocklog_directory)
+    run_networks(networks, blocklog_directory, time_offsets)
 
 
 def create_node_with_database(url: str, network: Optional[tt.Network] = None) -> tt.ApiNode:

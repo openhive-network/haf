@@ -11,20 +11,10 @@ from sqlalchemy.pool import NullPool
 from test_tools.__private.scope.scope_fixtures import *  # pylint: disable=wildcard-import, unused-wildcard-import
 import test_tools as tt
 
-from haf_local_tools.witnesses import alpha_witness_names, beta_witness_names, alpha_witness_names_17, beta_witness_names_3
-
+import shared_tools.networks_architecture as networks
 
 def pytest_exception_interact(report):
     tt.logger.error(f'Test exception:\n{report.longreprtext}')
-
-
-@pytest.fixture()
-def witness_names():
-    return alpha_witness_names, beta_witness_names
-
-@pytest.fixture()
-def witness_names_17_3():
-    return alpha_witness_names_17, beta_witness_names_3
 
 @pytest.fixture()
 def database():
@@ -56,39 +46,84 @@ def database():
     close_all_sessions()
 
 
-def prepared_networks_and_database_internal(database, current_witness_names) -> Tuple[Dict[str, tt.Network], Any]:
-    alpha_witness_names, beta_witness_names = current_witness_names
+def build_networks(database, architecture: networks.NetworksArchitecture) -> Tuple[networks.NetworksBuilder, Any]:
     session = database('postgresql:///haf_block_log')
 
-    alpha_net = tt.Network()
-    tt.InitNode(network=alpha_net)
-    tt.WitnessNode(network=alpha_net, witnesses=alpha_witness_names)
+    builder = networks.NetworksBuilder()
+    builder.build(architecture)
 
-    beta_net = tt.Network()
-    tt.WitnessNode(network=beta_net, witnesses=beta_witness_names)
-    node_under_test = tt.ApiNode(network=beta_net)
+    node_under_test = builder.networks[1].node('ApiNode0')
     node_under_test.config.plugin.append('sql_serializer')
     node_under_test.config.psql_url = str(session.get_bind().url)
 
-    for node in [*alpha_net.nodes, *beta_net.nodes]:
+    for node in builder.nodes:
         node.config.log_logger = '{"name":"default","level":"debug","appender":"stderr,p2p"} '\
                                  '{"name":"user","level":"debug","appender":"stderr,p2p"} '\
                                  '{"name":"chainlock","level":"debug","appender":"p2p"} '\
                                  '{"name":"sync","level":"debug","appender":"p2p"} '\
                                  '{"name":"p2p","level":"debug","appender":"p2p"}'
 
-    networks = {
-        'Alpha': alpha_net,
-        'Beta': beta_net,
+    return builder, session
+
+@pytest.fixture()
+def prepared_networks_and_database(database) -> Tuple[networks.NetworksBuilder, Any]:
+    config = {
+        "networks": [
+                        {
+                            "InitNode"     : True,
+                            "WitnessNodes" :[12]
+                        },
+                        {
+                            "ApiNode"      : True,
+                            "WitnessNodes" :[8]
+                        }
+                    ]
     }
-
-    return networks, session
-
-@pytest.fixture()
-def prepared_networks_and_database(database, witness_names) -> Tuple[Dict[str, tt.Network], Any]:
-    yield prepared_networks_and_database_internal(database, witness_names)
-
+    architecture_creator = networks.NetworksArchitecture()
+    architecture_creator.load(config)
+    yield build_networks(database, architecture_creator)
 
 @pytest.fixture()
-def prepared_networks_and_database_17_3(database, witness_names_17_3) -> Tuple[Dict[str, tt.Network], Any]:
-    yield prepared_networks_and_database_internal(database, witness_names_17_3)
+def prepared_networks_and_database_17_3(database) -> Tuple[networks.NetworksBuilder, Any]:
+    config = {
+        "networks": [
+                        {
+                            "InitNode"     : True,
+                            "WitnessNodes" :[17]
+                        },
+                        {
+                            "ApiNode"      : True,
+                            "WitnessNodes" :[3]
+                        }
+                    ]
+    }
+    architecture_creator = networks.NetworksArchitecture()
+    architecture_creator.load(config)
+    yield build_networks(database, architecture_creator)
+
+@pytest.fixture()
+def prepared_networks_and_database_4_4_4_4_4(database) -> Tuple[networks.NetworksBuilder, Any]:
+    config = {
+        "networks": [
+                        {
+                            "InitNode"     : True,
+                            "WitnessNodes" :[4]
+                        },
+                        {
+                            "ApiNode"      : True,
+                            "WitnessNodes" :[4]
+                        },
+                        {
+                            "WitnessNodes" :[4]
+                        },
+                        {
+                            "WitnessNodes" :[4]
+                        },
+                        {
+                            "WitnessNodes" :[4]
+                        }
+                    ]
+    }
+    architecture_creator = networks.NetworksArchitecture()
+    architecture_creator.load(config)
+    yield build_networks(database, architecture_creator)
