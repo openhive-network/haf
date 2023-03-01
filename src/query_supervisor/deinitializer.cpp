@@ -1,4 +1,4 @@
-#include "initializer.hpp"
+#include "deinitializer.hpp"
 
 #include "include/exceptions.hpp"
 #include "include/psql_utils/postgres_includes.hpp"
@@ -11,7 +11,7 @@ using namespace std::string_literals;
 
 namespace PsqlTools::QuerySupervisor {
 
-  Initializer::Initializer() try {
+  Deinitializer::Deinitializer() try {
     m_spi_session = PsqlTools::PsqlUtils::SpiSession::create();
   }
   catch ( std::exception& _exception ) {
