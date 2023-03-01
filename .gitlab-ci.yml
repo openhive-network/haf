@@ -94,10 +94,6 @@ haf_system_tests:
   variables:
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
   script:
-    # use newest libfaketime version, version 0.97 is not enough
-    - git clone --branch master https://github.com/wolfcw/libfaketime.git
-    - cd libfaketime && make
-    - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
     # install hive_fork_manager extension built in previous stage
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-database-store="$CI_PROJECT_DIR/haf_database_store" --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager_testnet/build"
     # prepare environment and run tests
@@ -127,10 +123,6 @@ applications_system_tests:
   variables:
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_testnet/build/hive"
   script:
-    # use newest libfaketime version, version 0.97 is not enough
-    - git clone --branch master https://github.com/wolfcw/libfaketime.git
-    - cd libfaketime && make
-    - export LIBFAKETIME_PATH=`pwd`/src/libfaketime.so.1
     # install hive_fork_manager extension built in previous stage
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-database-store="$CI_PROJECT_DIR/haf_database_store" --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager_testnet/build"
     # prepare environment and run tests
