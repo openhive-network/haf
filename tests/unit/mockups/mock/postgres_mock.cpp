@@ -89,8 +89,8 @@ RangeVar* makeRangeVar(char *schemaname, char *relname, int location) {
   return POSTGRES_MOCK.lock()->makeRangeVar(schemaname, relname, location);
 }
 
-Relation heap_openrv(const RangeVar *relation, LOCKMODE lockmode) {
-  return POSTGRES_MOCK.lock()->heap_openrv(relation, lockmode);
+Relation table_openrv(const RangeVar *relation, LOCKMODE lockmode) {
+  return POSTGRES_MOCK.lock()->table_openrv(relation, lockmode);
 }
 
 void table_close(Relation relation, LOCKMODE lockmode) {

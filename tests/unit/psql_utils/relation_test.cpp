@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE( relation_from_name ) {
     .WillOnce( ::testing::Return( range_var_ptr ) )
   ;
   // 2. find the relation by varRange
-  EXPECT_CALL( *postgres_mock, heap_openrv( range_var_ptr, AccessShareLock) )
+  EXPECT_CALL( *postgres_mock, table_openrv( range_var_ptr, AccessShareLock) )
     .Times( 1 )
     .WillOnce( ::testing::Return( postgres_relation_ptr ) )
   ;
@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE( negative_relation_from_name_cannot_open_relation ) {
             .WillOnce( ::testing::Return( range_var_ptr ) )
             ;
     // 2. find the relation by varRange
-    EXPECT_CALL( *postgres_mock, heap_openrv( range_var_ptr, AccessShareLock) )
+    EXPECT_CALL( *postgres_mock, table_openrv( range_var_ptr, AccessShareLock) )
             .Times( 1 )
             .WillOnce( ::testing::Return( nullptr ) )
             ;
