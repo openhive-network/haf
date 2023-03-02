@@ -162,4 +162,3 @@ END;
 $BODY$
 ;
 
-SELECT hive.create_database_hash('hive');
