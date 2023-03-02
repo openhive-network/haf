@@ -26,6 +26,7 @@ extern "C" {
 #include <funcapi.h>
 #include <miscadmin.h>
 
+#include <executor/executor.h>
 #include <executor/spi.h>
 #include <libpq-fe.h>
 #include <access/table.h>

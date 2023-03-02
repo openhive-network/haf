@@ -3,7 +3,7 @@
 #include "include/psql_utils/postgres_includes.hpp"
 
 #define LOG_TO_POSTGRES( _level, _message, ... )      \
-  elog( _level, "HIVE FORK EXTENSION: "  _message, ##__VA_ARGS__ )             \
+  elog( _level, "HIVE EXTENSION: "  _message, ##__VA_ARGS__ )             \
 
 #define LOG_WARNING( _message, ... )                  \
   LOG_TO_POSTGRES( WARNING, _message, ##__VA_ARGS__ ) \
