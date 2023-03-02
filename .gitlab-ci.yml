@@ -9,7 +9,6 @@ stages:
 variables:
   CTEST_NUMBER_OF_JOBS: 4
   GIT_DEPTH: 20
-  GIT_STRATEGY: clone
   GIT_SUBMODULE_STRATEGY: recursive
   FF_ENABLE_JOB_CLEANUP: 1
   GIT_STRATEGY: clone
@@ -21,21 +20,15 @@ variables:
   DATA_CACHE_MAINNET: /cache/replay_data_haf_mainnet_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
 
-
-include: '/scripts/ci-helpers/prepare_data_image_job.yml'
-
-
   # Variables required by Common CI jobs
   CI_COMMON_JOB_VERSION: "656cd1670240c01fe05e56ee7158ea04877da555"
   DOCKER_BUILDER_TAG: "$CI_COMMON_JOB_VERSION"
   DOCKER_DIND_TAG: "$CI_COMMON_JOB_VERSION"
   IMAGE_REMOVER_TAG: "$CI_COMMON_JOB_VERSION"
 
-  # Gitlab Runner feature flags
-  FF_ENABLE_JOB_CLEANUP: "true"
-
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
+  - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
   - project: 'hive/common-ci-configuration'
     ref: 656cd1670240c01fe05e56ee7158ea04877da555
     file: '/templates/docker_image_jobs.gitlab-ci.yml'
@@ -380,25 +373,6 @@ cleanup_haf_cache_manual:
   resource_group: ${CI_COMMIT_SHA}
   tags:
     - hive-builder-4
-
-build_base_instance_image:
-  stage: docker_build
-  extends: .docker_image_builder_job_template
-  needs: []
-  script:
-    - scripts/ci-helpers/build_base_instance.sh
-  tags:
-    - public-runner-docker
-
-build_instance_image:
-  stage: docker_build
-  extends: .docker_image_builder_job_template
-  needs: 
-    - build_base_instance_image
-  script:
-    - scripts/ci-helpers/build_instance_ci.sh
-  tags:
-    - public-runner-docker
 
 build_and_publish_image:
   stage: publish
