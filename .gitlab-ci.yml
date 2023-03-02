@@ -18,7 +18,7 @@ variables:
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
 
   # Variables required by Common CI jobs
-  CI_COMMON_JOB_VERSION: "0a8b4a4d6098c3e4087a58a61622ffb0817ecb39"
+  CI_COMMON_JOB_VERSION: "656cd1670240c01fe05e56ee7158ea04877da555"
   DOCKER_BUILDER_TAG: "$CI_COMMON_JOB_VERSION"
   DOCKER_DIND_TAG: "$CI_COMMON_JOB_VERSION"
   IMAGE_REMOVER_TAG: "$CI_COMMON_JOB_VERSION"
@@ -29,7 +29,7 @@ variables:
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - project: 'hive/common-ci-configuration'
-    ref: 0a8b4a4d6098c3e4087a58a61622ffb0817ecb39
+    ref: 656cd1670240c01fe05e56ee7158ea04877da555
     file: '/templates/docker_image_jobs.gitlab-ci.yml'
 
 .hive_fork_manager_build:
@@ -295,34 +295,10 @@ block_api_tests:
     - public-runner-docker
     - hived-for-tests
 
-build_base_instance_image:
-  stage: docker_build
-  extends: .docker_image_builder_job_template
-  needs: []
-  script:
-    - scripts/ci-helpers/build_base_instance.sh
-  tags:
-    - public-runner-docker
-
-build_instance_image:
-  stage: docker_build
-  extends: .docker_image_builder_job_template
-  needs: 
-    - build_base_instance_image
-  script:
-    - scripts/ci-helpers/build_instance_ci.sh
-  tags:
-    - public-runner-docker
-
-publish_image:
+build_and_publish_image:
   stage: publish
-  extends: .docker_image_builder_job_template
-  needs:
-    - build_instance_image
+  extends: .publish_docker_image_template
   script:
-    - scripts/ci-helpers/publish_instance.sh
+    - scripts/ci-helpers/build_and_publish_instance.sh
   tags:
-    - public-runner-docker  
-  rules:
-    - if: '$CI_COMMIT_TAG && $CI_COMMIT_REF_PROTECTED == "true"'
-      when: manual 
+    - public-runner-docker
