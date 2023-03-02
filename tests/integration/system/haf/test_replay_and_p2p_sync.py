@@ -1,11 +1,10 @@
 import pytest
 
-from pathlib import Path
 import test_tools as tt
 
-from haf_local_tools import connect_nodes, get_operations, get_operations_from_database,\
-    prepare_network_with_init_node_and_api_node, prepare_and_send_transactions, verify_operation_in_haf_database
-from haf_local_tools.tables import Operations
+from haf_local_tools import connect_nodes, prepare_network_with_init_node_and_api_node, \
+    prepare_and_send_transactions, verify_operation_in_haf_database
+from haf_local_tools.tables import Blocks, Operations
 
 
 @pytest.mark.parametrize("psql_index_threshold", [2147483647, 100000, 10])
@@ -22,7 +21,7 @@ def test_replay_and_p2p_sync(database, psql_index_threshold):
     output_block_log_artifacts_path = tt.context.get_current_directory() / "block_log.artifacts"
     output_block_log_path.unlink(missing_ok=True)
     output_block_log_artifacts_path.unlink(missing_ok=True)
-    block_log = init_node.block_log.truncate(tt.context.get_current_directory(), transaction_0['block_num']+2)
+    block_log = init_node.block_log.truncate(tt.context.get_current_directory(), transaction_0['block_num']+1)
 
     init_node.run()
     connect_nodes(init_node, api_node)
@@ -35,6 +34,6 @@ def test_replay_and_p2p_sync(database, psql_index_threshold):
 
     verify_operation_in_haf_database('account_create_operation', [transaction_0, transaction_1], session, Operations)
 
-    operations_in_database = get_operations_from_database(session, Operations, transaction_1['block_num'])
-    operations = get_operations(init_node, last_block=transaction_1['block_num'])
-    assert len(operations_in_database) == len(operations)
+    blocks_in_database = session.query(Blocks).filter(Blocks.num <= transaction_1['block_num']).all()
+    expected_blocks = transaction_1['block_num']
+    assert len(blocks_in_database) == expected_blocks

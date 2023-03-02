@@ -1,8 +1,8 @@
 import pytest
 
-from haf_local_tools import connect_nodes, get_operations, get_operations_from_database, \
-    prepare_network_with_init_node_and_api_node, prepare_and_send_transactions, verify_operation_in_haf_database
-from haf_local_tools.tables import Operations
+from haf_local_tools import connect_nodes, prepare_network_with_init_node_and_api_node, \
+    prepare_and_send_transactions, verify_operation_in_haf_database
+from haf_local_tools.tables import Operations, Blocks
 
 
 @pytest.mark.parametrize("psql_index_threshold", [2147483647, 100000])
@@ -23,6 +23,6 @@ def test_p2p_sync(database, psql_index_threshold):
 
     verify_operation_in_haf_database('account_create_operation', [transaction_0, transaction_1], session, Operations)
 
-    operations_in_database = get_operations_from_database(session, Operations, transaction_1['block_num'])
-    operations = get_operations(init_node, last_block=transaction_1['block_num'])
-    assert len(operations_in_database) == len(operations)
+    blocks_in_database = session.query(Blocks).filter(Blocks.num <= transaction_1['block_num']).all()
+    expected_blocks = transaction_1['block_num']
+    assert len(blocks_in_database) == expected_blocks

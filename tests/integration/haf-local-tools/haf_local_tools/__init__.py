@@ -212,16 +212,3 @@ def get_absolute_head_block_time(node) -> datetime.datetime:
 def set_time_to_offset(node, shift_in_time: int) -> str:
     absolute_start_time = get_absolute_head_block_time(node) + tt.Time.seconds(shift_in_time)
     return tt.Time.serialize(absolute_start_time, format_=tt.Time.TIME_OFFSET_FORMAT)
-
-
-def get_operations(node, last_block: int, first_block: int = 0) -> list:
-    blocks = [node.api.account_history.get_ops_in_block(block_num=i) for i in range(first_block, last_block + 1)]
-    transactions = []
-    for block in blocks:
-        transactions.extend(block['ops'])
-    return transactions
-
-
-def get_operations_from_database(session, operations_marker, last_block: int) -> list:
-    operations = session.query(operations_marker).filter(operations_marker.block_num <= last_block).all()
-    return [json.loads(op.body)for op in operations]
