@@ -34,6 +34,8 @@ extern "C" {
 
 #include <nodes/makefuncs.h>
 
+#include <tcop/tcopprot.h>
+
 #include <utils/array.h>
 #include <utils/builtins.h>
 #include <utils/elog.h>
