@@ -124,6 +124,9 @@ GRANT EXECUTE ON FUNCTION
     , hive._operation_le(hive.operation, hive.operation)
     , hive._operation_cmp(hive.operation, hive.operation)
     , hive._operation_to_jsonb(hive.operation)
+    , hive.create_database_hash(schema_name TEXT)
+    , hive.calculate_schema_hash(schema_name TEXT)
+
 
 TO hived_group;
 
