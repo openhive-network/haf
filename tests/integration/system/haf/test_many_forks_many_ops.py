@@ -20,7 +20,6 @@ class haf_app:
 
     root_path       = None
     postgres_url    = None
-    database_name   = None
 
     def __init__(self, identifier):
         self.pid = None
@@ -30,10 +29,8 @@ class haf_app:
         self.create_args()
 
     def process_env_vars(session):
-        haf_app.root_path       = os.getenv('HAF_APP_ROOT_PATH')
-        haf_app.postgres_url    = os.getenv('HAF_APP_POSTGRES_URL')
-        haf_app.database_name   = str(session.get_bind().url)
-        haf_app.database_name   = haf_app.database_name[len('postgresql:///') : len(haf_app.database_name)]
+        haf_app.root_path       = Path(__file__).parent.absolute() / ".." / ".." / ".." / ".." / "src" / "hive_fork_manager" / "doc" / "applications"
+        haf_app.postgres_url    = str(session.get_bind().url)
 
         return haf_app.root_path is not None and haf_app.postgres_url is not None
 
@@ -44,7 +41,7 @@ class haf_app:
         self.args.append("--scanner-name")
         self.args.append(f"memo_scanner_{self.identifier}")
         self.args.append("--url")
-        self.args.append(f"{haf_app.postgres_url}/{haf_app.database_name}")
+        self.args.append(f"{haf_app.postgres_url}")
         self.args.append("--range-block")
         self.args.append("1")
         self.args.append("--massive-threshold")
@@ -122,9 +119,7 @@ def test_many_forks_many_ops(prepared_networks_and_database_17_3):
 
     networks_builder, session = prepared_networks_and_database_17_3
 
-    if not haf_app.process_env_vars(session):
-        tt.logger.info('Variables must be set: HAF_APP_ROOT_PATH, HAF_APP_POSTGRES_URL')
-        exit(1)
+    haf_app.process_env_vars(session)
 
     majority_api_node = networks_builder.networks[0].node('ApiNode0')
     minority_api_node = networks_builder.networks[1].node('ApiNode1')
