@@ -47,6 +47,8 @@ extern "C" {
 #include <utils/rel.h>
 #include <utils/tuplestore.h>
 
+#include <pgstat.h>
+
 #include <c.h>
 
 }
