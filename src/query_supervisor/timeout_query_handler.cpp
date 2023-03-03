@@ -17,6 +17,7 @@ namespace PsqlTools::QuerySupervisor {
   }
 
   void TimeoutQueryHandler::onStartQuery( QueryDesc* _queryDesc, int _eflags ) {
+    LOG_INFO( "start query %s", _queryDesc->sourceText  );
     if ( isQueryCancelPending() ) {
       return;
     }
@@ -30,6 +31,7 @@ namespace PsqlTools::QuerySupervisor {
   }
 
   void TimeoutQueryHandler::onEndQuery( QueryDesc* _queryDesc ) {
+    LOG_INFO( "end query %s", _queryDesc->sourceText  );
     if ( isQueryCancelPending() ) {
       return;
     }
@@ -38,7 +40,7 @@ namespace PsqlTools::QuerySupervisor {
       return;
     }
 
-    LOG_DEBUG( "Root query end: %s", _queryDesc->sourceText );
+    LOG_INFO( "Root query end: %s", _queryDesc->sourceText );
     resetPendingRootQuery();
     m_conditionVariable.notify_one();
     if ( m_spawnedFuture.valid() ) {
@@ -48,7 +50,7 @@ namespace PsqlTools::QuerySupervisor {
   }
 
   void TimeoutQueryHandler::setPendingRootQuery( QueryDesc* _queryDesc ) {
-    LOG_DEBUG( "Start pending root query end: %s", _queryDesc->sourceText );
+    LOG_INFO( "Start pending root query end: %s", _queryDesc->sourceText );
     m_pendingRootQuery = _queryDesc;
   }
   bool TimeoutQueryHandler::isPendingRootQuery() const {
@@ -70,14 +72,15 @@ namespace PsqlTools::QuerySupervisor {
 
   std::future<void> TimeoutQueryHandler::spawn() {
     auto thread_body = [this]{
+      LOG_INFO( "Spawned" );
       using namespace std::chrono_literals;
       std::unique_lock lock(m_mutex);
-      bool isQueryStillPending = m_conditionVariable.wait_for(lock,1s,[this]{return !isPendingRootQuery();} );
-      if ( !isQueryStillPending ) {
-        LOG_DEBUG( "End of supervise thread because of root pending query ended" );
+      bool isQueryEnded = m_conditionVariable.wait_for(lock,1s,[this]{return !isPendingRootQuery();} );
+      if ( isQueryEnded ) {
+        LOG_INFO( "End of supervise thread because of root pending query ended" );
         return;
       }
-      LOG_DEBUG( "Needs to break pending root query because of timeout" );
+      LOG_INFO( "Needs to break pending root query because of timeout" );
       StatementCancelHandler(0);
       resetPendingRootQuery();
     };
