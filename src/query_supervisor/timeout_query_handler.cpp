@@ -6,11 +6,6 @@
 #include <future>
 #include <string>
 
-bool allow_to_break = false;
-std::future<void> timeout_future;
-QueryDesc* root_queryDesc = nullptr;
-
-
 namespace PsqlTools::QuerySupervisor {
   TimeoutQueryHandler::TimeoutQueryHandler() {
 
