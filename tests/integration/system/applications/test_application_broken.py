@@ -2,7 +2,7 @@ from sqlalchemy.orm.session import sessionmaker
 
 import test_tools as tt
 
-from haf_local_tools import prepare_networks, wait_for_irreversible_progress, get_irreversible_block, create_app
+from haf_local_tools import wait_for_irreversible_progress, get_irreversible_block, create_app
 from haf_local_tools.tables import BlocksReversible, IrreversibleData
 
 
@@ -26,7 +26,7 @@ def update_app_continuously(session, application_context, cycles):
         tt.logger.info(f'ctx_stats-update-app: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
 
 
-def test_application_broken(prepared_networks_and_database):
+def test_application_broken(prepared_networks_and_database_12_8_without_block_log):
     tt.logger.info(f'Start test_application_broken')
 
 
@@ -46,12 +46,11 @@ def test_application_broken(prepared_networks_and_database):
     #Finally a value of `irreversible_block` for given context has to be equal to current value of `irreversible_block` in HAF.
 
     # GIVEN
-    networks_builder, session = prepared_networks_and_database
+    networks_builder, session = prepared_networks_and_database_12_8_without_block_log
     second_session = sessionmaker()(bind=session.get_bind())
     node_under_test = networks_builder.networks[1].node('ApiNode0')
 
     # WHEN
-    prepare_networks(networks_builder.networks, replay_all_nodes=False)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
 
     # system under test

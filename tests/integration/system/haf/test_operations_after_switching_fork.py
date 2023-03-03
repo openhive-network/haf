@@ -2,22 +2,21 @@ import json
 
 import test_tools as tt
 
-from haf_local_tools import make_fork, wait_for_irreversible_progress, prepare_networks
+from haf_local_tools import make_fork, wait_for_irreversible_progress
 from haf_local_tools.tables import Transactions, Operations
 
 
 START_TEST_BLOCK = 108
 
 
-def test_operations_after_switchng_fork(prepared_networks_and_database):
+def test_operations_after_switchng_fork(prepared_networks_and_database_12_8):
     tt.logger.info(f'Start test_operations_after_switchng_fork')
 
     # GIVEN
-    networks_builder, session = prepared_networks_and_database
+    networks_builder, session = prepared_networks_and_database_12_8
     node_under_test = networks_builder.networks[1].node('ApiNode0')
 
     # WHEN
-    prepare_networks(networks_builder.networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     wallet = tt.Wallet(attach_to=node_under_test)
     transaction1 = wallet.api.transfer('initminer', 'null', tt.Asset.Test(1234), 'memo', broadcast=False)

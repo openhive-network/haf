@@ -10,8 +10,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import test_tools as tt
 
-from haf_local_tools import prepare_networks
-
 import shared_tools.complex_networks_helper_functions as sh
 
 START_TEST_BLOCK    = 108
@@ -128,10 +126,9 @@ def test_many_forks_many_ops(prepared_networks_and_database_17_3):
         tt.logger.info('Variables must be set: HAF_APP_ROOT_PATH, HAF_APP_POSTGRES_URL')
         exit(1)
 
-    majority_api_node = tt.ApiNode(network=networks_builder.networks[0])
-    minority_api_node = networks_builder.networks[1].node('ApiNode0')
+    majority_api_node = networks_builder.networks[0].node('ApiNode0')
+    minority_api_node = networks_builder.networks[1].node('ApiNode1')
 
-    prepare_networks(networks_builder.networks)
     minority_api_node.wait_for_block_with_number(START_TEST_BLOCK)
 
     logs = []

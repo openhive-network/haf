@@ -71,16 +71,7 @@ def get_irreversible_block(node):
     irreversible_block_num = node.api.database.get_dynamic_global_properties()["last_irreversible_block_num"]
     return irreversible_block_num
 
-
-def prepare_networks(networks: Iterable[tt.Network], replay_all_nodes = True, time_offsets: Iterable[int] = None):
-    blocklog_directory = None
-    if replay_all_nodes:
-        blocklog_directory = Path(block_logs.__file__).parent
-
-    run_networks(networks, blocklog_directory, time_offsets)
-
-
-def create_node_with_database(url: str, network: Optional[tt.Network] = None) -> tt.ApiNode:
+def create_node_with_database(network: tt.Network, url):
     api_node = tt.ApiNode(network=network)
     api_node.config.plugin.append('sql_serializer')
     api_node.config.psql_url = url

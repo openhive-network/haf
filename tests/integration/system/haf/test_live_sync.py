@@ -2,23 +2,22 @@ import json
 
 import test_tools as tt
 
-from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress, prepare_networks
+from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress
 from haf_local_tools.tables import Blocks, Transactions, Operations
 
 
 START_TEST_BLOCK = 108
 
 
-def test_live_sync(prepared_networks_and_database):
+def test_live_sync(prepared_networks_and_database_12_8):
     tt.logger.info(f'Start test_live_sync')
 
     # GIVEN
-    networks_builder, session = prepared_networks_and_database
+    networks_builder, session = prepared_networks_and_database_12_8
     witness_node = networks_builder.networks[0].node('WitnessNode0')
     node_under_test = networks_builder.networks[1].node('ApiNode0')
 
     # WHEN
-    prepare_networks(networks_builder.networks)
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     wallet = tt.Wallet(attach_to=witness_node)
     wallet.api.transfer('initminer', 'initminer', tt.Asset.Test(1000), 'dummy transfer operation')
