@@ -4,8 +4,11 @@ from haf_local_tools import prepare_network_with_init_node_and_api_node, prepare
 from haf_local_tools.tables import Blocks, Operations
 
 
-@pytest.mark.parametrize("psql_index_threshold", [100, 10])
-def test_replay_without_disabled_indexes(database, psql_index_threshold):
+@pytest.mark.parametrize(
+    "psql_index_threshold,expected_disable_indexes_calls",
+    [(100, None), (10, (1,))]
+)
+def test_replay_without_disabled_indexes(database, psql_index_threshold, expected_disable_indexes_calls):
     session = database('postgresql:///haf_block_log')
 
     api_node, init_node = prepare_network_with_init_node_and_api_node(session)
@@ -20,3 +23,7 @@ def test_replay_without_disabled_indexes(database, psql_index_threshold):
     blocks_in_database = session.query(Blocks).filter(Blocks.num <= transaction_1['block_num']).all()
     expected_blocks = transaction_1['block_num']
     assert len(blocks_in_database) == expected_blocks
+
+    # verify that disable_indexes_of_irreversible was called as expected
+    function_calls = session.execute( "SELECT calls FROM pg_stat_user_functions WHERE funcname = 'disable_indexes_of_irreversible';" ).one_or_none()
+    assert function_calls == expected_disable_indexes_calls
