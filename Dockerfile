@@ -91,13 +91,19 @@ RUN mkdir -p /home/hived/bin && \
     mkdir /home/hived/datadir && \
     chown -Rc hived:users /home/hived/
 
-COPY --from=build /home/haf_admin/build/hive/programs/hived/hived /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet /home/haf_admin/build/hive/programs/util/compress_block_log /home/hived/bin/
+COPY --from=build --chown=hived:users \
+  /home/haf_admin/build/hive/programs/hived/hived \
+  /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet \
+  /home/haf_admin/build/hive/programs/util/compress_block_log \
+  /home/haf_admin/build/hive/programs/util/get_dev_key \
+  /home/haf_admin/build/hive/programs/blockchain_converter/blockchain_converter* \
+  /home/hived/bin/
 
 USER haf_admin
 WORKDIR /home/haf_admin
 
-COPY --from=build /home/haf_admin/build /home/haf_admin/build/
-COPY --from=build /home/haf_admin/haf /home/haf_admin/haf/
+COPY --from=build --chown=haf_admin:users /home/haf_admin/build /home/haf_admin/build/
+COPY --from=build --chown=haf_admin:users /home/haf_admin/haf /home/haf_admin/haf/
 
 ENV POSTGRES_VERSION=14
 COPY --chown=haf_admin:users ./docker/docker_entrypoint.sh .
@@ -131,7 +137,7 @@ FROM ${CI_REGISTRY_IMAGE}ci-base-image-5m$CI_IMAGE_TAG AS block_log_5m_source
 
 FROM ${CI_REGISTRY_IMAGE}base_instance:base_instance-$BUILD_IMAGE_TAG as data
 
-COPY --from=block_log_5m_source /home/hived/datadir /home/hived/datadir 
+COPY --from=block_log_5m_source --chown=hived:users /home/hived/datadir /home/hived/datadir 
 ADD --chown=hived:users ./docker/config_5M.ini /home/hived/datadir/config.ini
 
 RUN "/home/haf_admin/docker_entrypoint.sh" --force-replay --stop-replay-at-block=5000000 --exit-before-sync

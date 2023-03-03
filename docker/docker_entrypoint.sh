@@ -6,7 +6,7 @@ env
 
 echo "Starting the container with user $(whoami) with uid $(id -u)"
 
-if [ -n "${HIVED_UID+x}" ];
+if [ "${HIVED_UID}" -ne 0 ];
 then
   echo "setting user hived uid to value ${HIVED_UID}"
   sudo -n usermod -o -u "${HIVED_UID}" hived
