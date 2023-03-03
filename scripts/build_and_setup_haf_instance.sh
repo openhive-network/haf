@@ -7,7 +7,7 @@ LOG_FILE=build_and_setup_haf_instance.log
 # Because this script should work as standalone script being just downloaded from gitlab repo, and next use internal
 # scripts from a cloned repo, logging code is duplicated.
 
-exec > >(tee "${LOG_FILE}") 2>&1
+exec > >(tee -i "${LOG_FILE}") 2>&1
 
 log_exec_params() {
   echo
