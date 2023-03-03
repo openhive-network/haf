@@ -66,6 +66,8 @@ def pg_restore_from_dump_file_only(target_db_name: str, tmp_path: Path) -> None:
 @pytest.mark.parametrize("pg_restore", [pg_restore_from_toc, pg_restore_from_dump_file_only])
 def test_pg_dump(database, pg_restore: Callable[[str, Path], None], tmp_path: Path):
     # GIVEN
+
+
     source_session, source_db_url = prepare_source_db(database)
     target_session, target_db_url = prepare_target_db(database)
     source_database_not_empty_sanity_check(source_session)
@@ -82,6 +84,10 @@ def test_pg_dump(database, pg_restore: Callable[[str, Path], None], tmp_path: Pa
 def prepare_source_db(database) -> tuple[Session, URL]:
     session = database('postgresql:///test_pg_dump_source')
     db_name = session.bind.url
+
+    shell(fr'psql -d {db_name} -c "\l" ' )
+    assert false,'psql above'
+
     node = create_node_with_database(url=str(db_name))
 
     blocklog_dir = get_blocklog_directory()
