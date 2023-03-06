@@ -37,6 +37,7 @@ extern "C" {
 #include <tcop/tcopprot.h>
 
 #include <utils/array.h>
+#include <utils/backend_status.h>
 #include <utils/builtins.h>
 #include <utils/elog.h>
 #include <utils/fmgrprotos.h>

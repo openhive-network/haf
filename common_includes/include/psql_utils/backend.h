@@ -9,9 +9,7 @@ namespace PsqlTools::PsqlUtils {
     Backend();
     ~Backend() = default;
 
-    Oid userid() const {return m_userId;}
-  private:
-    const Oid m_userId{};
+    Oid userid() const;
   };
 
 } // namespace PsqlTools::PsqlUtils
