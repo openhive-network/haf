@@ -247,7 +247,7 @@ replay_with_update:
     REPLAY_CONTINUATION: "--replay-blockchain --stop-replay-at-block 2000000"
   script:
     # run script that makes database update
-    - sudo $SETUP_SCRIPTS_PATH/ci-helpers/test_extension_update.sh --setup_scripts_path=$SETUP_SCRIPTS_PATH --haf_binaries_dir=$CI_PROJECT_DIR/$CI_JOB_NAME/build --ci_project_dir=$CI_PROJECT_DIR
+    - sudo $CI_PROJECT_DIR/tests/integration/functional/hive_fork_manager/test_extension_update.sh --setup_scripts_path=$SETUP_SCRIPTS_PATH --haf_binaries_dir=$CI_PROJECT_DIR/$CI_JOB_NAME/build --ci_project_dir=$CI_PROJECT_DIR
     # repeat replay from 1 milion blocks
     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH $REPLAY_CONTINUATION --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs1.log
     # verify if upgrade is complete by calling the new added function
@@ -259,7 +259,7 @@ update_with_wrong_table_schema:
     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
     REPLAY: "--replay-blockchain --stop-replay-at-block 1000000"
   script:
-    - $SETUP_SCRIPTS_PATH/ci-helpers/test_table_schema.sh --setup_scripts_path=$SETUP_SCRIPTS_PATH --haf_binaries_dir=$CI_PROJECT_DIR/$CI_JOB_NAME/build --ci_project_dir=$CI_PROJECT_DIR --build_root_dir=$HIVE_BUILD_ROOT_PATH --pattern_dir=$PATTERNS_PATH --psql-url=$DB_URL
+    - $CI_PROJECT_DIR/tests/integration/functional/hive_fork_manager/test_table_schema.sh --setup_scripts_path=$SETUP_SCRIPTS_PATH --haf_binaries_dir=$CI_PROJECT_DIR/$CI_JOB_NAME/build --ci_project_dir=$CI_PROJECT_DIR --build_root_dir=$HIVE_BUILD_ROOT_PATH --pattern_dir=$PATTERNS_PATH --psql-url=$DB_URL
 
 block_api_tests:
   extends: .replay_step
