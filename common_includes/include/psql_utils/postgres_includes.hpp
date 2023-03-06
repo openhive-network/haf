@@ -23,6 +23,7 @@ extern "C" {
 #include <catalog/pg_type.h>
 
 #include <fmgr.h>
+#include <foreign/foreign.h>
 #include <funcapi.h>
 #include <miscadmin.h>
 

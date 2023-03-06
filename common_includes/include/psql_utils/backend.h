@@ -2,6 +2,8 @@
 
 #include "include/psql_utils/postgres_includes.hpp"
 
+#include <string>
+
 namespace PsqlTools::PsqlUtils {
 
   class Backend {
@@ -9,7 +11,8 @@ namespace PsqlTools::PsqlUtils {
     Backend();
     ~Backend() = default;
 
-    Oid userid() const;
+    Oid userOid() const;
+    std::string userName() const;
   };
 
 } // namespace PsqlTools::PsqlUtils
