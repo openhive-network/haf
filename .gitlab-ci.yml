@@ -389,3 +389,15 @@ build_and_publish_image:
     - scripts/ci-helpers/build_and_publish_instance.sh
   tags:
     - public-runner-docker
+
+double_haf_replay_tests:
+  extends: .docker_image_builder_job
+  stage: build_and_test_phase_2
+  variables:
+    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+  needs:
+    - job: prepare_haf_image
+  script:
+  - ./tests/test_double_haf_replay.sh
+  tags:
+    - hived-for-tests
