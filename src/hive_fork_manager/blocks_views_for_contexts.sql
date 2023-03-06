@@ -632,6 +632,7 @@ CREATE OR REPLACE FUNCTION hive.create_applied_hardforks_view( _context_name TEX
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, '"Entering create_applied_hardforks_view"');
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_applied_hardforks_view AS
         SELECT
@@ -668,6 +669,7 @@ EXECUTE format(
         ;'
     , _context_name, _context_name, _context_name
     );
+    PERFORM hive.dlog(_context_name, '"Exiting create_applied_hardforks_view"');
 END;
 $BODY$
 ;
@@ -680,6 +682,7 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_applied_hardforks_view( 
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, '"Entering create_all_irreversible_applied_hardforks_view"');
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_applied_hardforks_view AS
         SELECT
@@ -690,6 +693,7 @@ EXECUTE format(
         ;'
     , _context_name
     );
+    PERFORM hive.dlog(_context_name, '"Exiting create_all_irreversible_applied_hardforks_view"');
 END;
 $BODY$
 ;
@@ -701,7 +705,9 @@ CREATE OR REPLACE FUNCTION hive.drop_applied_hardforks_view( _context_name TEXT 
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog(_context_name, '"Entering drop_applied_hardforks_view"');
     EXECUTE format( 'DROP VIEW hive.%s_applied_hardforks_view;', _context_name );
+    PERFORM hive.dlog(_context_name, '"Exiting drop_applied_hardforks_view"');
 END;
 $BODY$
 ;

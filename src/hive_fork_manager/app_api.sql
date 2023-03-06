@@ -436,7 +436,7 @@ CREATE OR REPLACE FUNCTION hive.app_state_provider_drop_all( _context hive.conte
 AS
 $BODY$
 BEGIN
-    PERFORM hive.dlog(_context, '"Exiting app_state_provider_drop"');
+    PERFORM hive.dlog(_context, '"Entering app_state_provider_drop"');
     PERFORM hive.app_state_provider_drop( hsp.state_provider, _context )
     FROM hive.state_providers_registered hsp
     JOIN hive.contexts hc ON hc.id = hsp.context_id

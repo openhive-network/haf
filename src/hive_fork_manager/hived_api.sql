@@ -312,16 +312,8 @@ BEGIN
     PERFORM hive.restore_foreign_keys( 'hive.operations_reversible' );
     PERFORM hive.restore_foreign_keys( 'hive.accounts_reversible' );
     PERFORM hive.restore_foreign_keys( 'hive.account_operations_reversible' );
-<<<<<<< HEAD
-<<<<<<< HEAD
     PERFORM hive.restore_foreign_keys( 'hive.applied_hardforks_reversible' );
-
-=======
-    PERFORM hive.dlog('<no-context>', 'Exiting enable_indexes_of_reversible');
->>>>>>> Add dlog
-=======
     PERFORM hive.dlog('<no-context>', '"Exiting enable_indexes_of_reversible"');
->>>>>>> Add parameter values to dlog
 END;
 $BODY$
 ;
