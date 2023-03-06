@@ -281,5 +281,6 @@ ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_impacted_balances/test_false.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/get_legacy_style_operation.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/extract_set_witness_properties.sql )
 ADD_SQL_FUNCTIONAL_TESTS( shared_lib/operation_to_jsonb_conversion.sql )
+ADD_SQL_FUNCTIONAL_TESTS( shared_lib/calculate_schema_hash.sql )
 
 ENDIF()
