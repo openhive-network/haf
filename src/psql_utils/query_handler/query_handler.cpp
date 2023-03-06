@@ -1,6 +1,6 @@
-#include "query_handler.h"
+#include "include/psql_utils/query_handler/query_handler.h"
 
-namespace PsqlTools::QuerySupervisor {
+namespace PsqlTools::PsqlUtils {
   class QueryHandler::Impl {
   public:
     Impl(QueryHandler *_parent);
@@ -40,20 +40,20 @@ namespace PsqlTools::QuerySupervisor {
     }
     return standard_ExecutorEnd( _queryDesc );
   }
-} // namespace PsqlTools::QuerySupervisor
+} // namespace PsqlTools::PsqlUtils
 
 namespace {
   void startQueryHook( QueryDesc *_queryDesc, int _eflags ) {
-    PsqlTools::QuerySupervisor::QueryHandler::getImpl().onStartQuery(_queryDesc,_eflags);
+    PsqlTools::PsqlUtils::QueryHandler::getImpl().onStartQuery(_queryDesc,_eflags);
   }
 
   void endQueryHook( QueryDesc *_queryDesc ) {
-    PsqlTools::QuerySupervisor::QueryHandler::getImpl().onEndQuery(_queryDesc);
+    PsqlTools::PsqlUtils::QueryHandler::getImpl().onEndQuery(_queryDesc);
   }
 } //namespace
 
 
-namespace PsqlTools::QuerySupervisor {
+namespace PsqlTools::PsqlUtils {
   QueryHandler::QueryHandler() {
     m_impl = std::make_unique< Impl >(this);
     m_impl->m_originalStarExecutorHook = ExecutorStart_hook;
@@ -68,6 +68,6 @@ namespace PsqlTools::QuerySupervisor {
   }
 
   std::unique_ptr< QueryHandler > QueryHandler::m_instance = nullptr;
-} // namespace PsqlTools::QuerySupervisor
+} // namespace PsqlTools::PsqlUtils
 
 

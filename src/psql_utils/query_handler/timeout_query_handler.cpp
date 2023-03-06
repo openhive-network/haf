@@ -1,4 +1,4 @@
-#include "timeout_query_handler.h"
+#include "include/psql_utils/query_handler/timeout_query_handler.h"
 
 #include "include/psql_utils/logger.hpp"
 
@@ -6,7 +6,7 @@
 #include <future>
 #include <string>
 
-namespace PsqlTools::QuerySupervisor {
+namespace PsqlTools::PsqlUtils {
   TimeoutQueryHandler::TimeoutQueryHandler() {
 
   }
@@ -82,4 +82,4 @@ namespace PsqlTools::QuerySupervisor {
 
     return std::async( std::launch::async, thread_body );
   }
-} // namespace PsqlTools::QuerySupervisor
+} // namespace PsqlTools::PsqlUtils

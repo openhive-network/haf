@@ -1,11 +1,11 @@
 #pragma once
 
-#include <include/psql_utils/postgres_includes.hpp>
+#include "include/psql_utils/postgres_includes.hpp"
 
 #include <cassert>
 #include <memory>
 
-namespace PsqlTools::QuerySupervisor {
+namespace PsqlTools::PsqlUtils {
 
   class QueryHandler {
     public:
@@ -51,4 +51,4 @@ namespace PsqlTools::QuerySupervisor {
     m_instance.reset();
   }
 
-} // namespace PsqlTools::QuerySupervisor
+} // namespace PsqlTools::PsqlUtils

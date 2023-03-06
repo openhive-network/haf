@@ -6,7 +6,7 @@
 #include <future>
 #include <mutex>
 
-namespace PsqlTools::QuerySupervisor {
+namespace PsqlTools::PsqlUtils {
   class TimeoutQueryHandler
     : public QueryHandler
   {
@@ -33,4 +33,4 @@ namespace PsqlTools::QuerySupervisor {
     std::condition_variable m_conditionVariable;
     QueryDesc* m_pendingRootQuery{nullptr };
   };
-} // namespace PsqlTools::QuerySupervisor
+} // namespace PsqlTools::PsqlUtils
