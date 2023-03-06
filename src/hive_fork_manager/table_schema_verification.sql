@@ -26,7 +26,7 @@ verified_tables_list = ARRAY[
 'account_operations',
 'fork',
 'blocks_reversible',
-'blocks_reversible',
+'transactions_reversible',
 'transactions_multisig_reversible',
 'operations_reversible',
 'accounts_reversible',
@@ -37,7 +37,7 @@ verified_tables_list = ARRAY[
 
 FOR _table_name IN SELECT UNNEST( verified_tables_list ) as _table_name
 LOOP
--- concatination of columns
+-- concatenation of columns
     SELECT string_agg(c.agg_columns, ' | ') AS columns INTO _columns
     FROM 
     (SELECT 
@@ -54,7 +54,7 @@ LOOP
         _columns = 'EMPTY';
     END IF;
 
--- concatination of constraints
+-- concatenation of constraints
 
     SELECT string_agg(cc.agg_constraints, ' | ') AS columns INTO _constraints
     FROM 
@@ -73,7 +73,7 @@ LOOP
         _constraints = 'EMPTY';
     END IF;
 
--- concatination of indexes
+-- concatenation of indexes
 
     SELECT string_agg(idx.agg_indexes, ' | ') AS indexes INTO _indexes
     FROM 
@@ -104,7 +104,7 @@ LOOP
         _indexes = 'EMPTY';
     END IF;
 
--- concatination of access rights
+-- concatenation of access rights
 
 --    SELECT string_agg(ar.agg_access, ' | ') AS access INTO _access
 --    FROM 

@@ -261,6 +261,10 @@ are irreversible, so there is no sense to process lowest events.
 #### Removing obsolete events
 Once a block becomes irreversible, events related to that block which have been processed by all contexts (apps) are no longer needed by apps. These events are automatcially removed from the events queue by the function `hive.set_irreversible` (this function is periodically called by hived when the last irreversible block number changes).
 
+#### Using hive_fork_manager_update_script_generator.sh to upgrade existing HAF database
+When using HAF database, you may want to update already installed extension instead of dropping it and installing new database and filling it with data again. Using `hive_fork_manager_update_script_generator.sh` script located in `/build/extensions/hive_fork_manager`.
+
+To use this script you have to rebuild the project and then run `hive_fork_manager_update_script_generator.sh`. If you did not build your PostgreSQL server and HAF database with recommended methods (setup scripts) you may need to use flags `--haf-admin-account=NAME` and `--haf-db-name=NAME` to change default values (haf_admin, haf_block_log).
 
 ### CONTEXT REWIND
 Context_rewind is the part of the fork manager which is responsible for registering app tables and the saving/rewinding operation on the tables to handle fork switching.
@@ -313,6 +317,8 @@ The set of scripts implements an API for the apps:
 The functions which are used by hived
 ##### hive.back_from_fork( _block_num_before_fork )
 Schedules back from fork
+
+###### Schema verification
 
 ##### hive.push_block( _block, transactions[], signatures[], operations[] )
 Push new block with its transactions, their operations and signatures
@@ -449,6 +455,11 @@ Disables triggers attached to a register table. It is useful for processing irre
 
 ##### hive.get_impacted_accounts( operation_body )
 Returns list of accounts ( their names ) impacted by the operation. 
+
+###### hive.calculate_schema_hash( schema_name )
+Calculates hash for group of tables, used by hive.create_database_hash.
+###### hive.create_database_hash( schema_name )
+Used in update procedure, creates database hash using table schema.
 
 ## Known Problems
 1. FOREIGN KEY constraints must be DEFERRABLE, otherwise we cannot guarantee success rewinding changes - the process may temporarily violate tables constraints.
