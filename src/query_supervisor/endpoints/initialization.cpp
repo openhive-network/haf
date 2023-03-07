@@ -2,7 +2,6 @@
 
 #include "include/psql_utils/query_handler/timeout_query_handler.h"
 
-
 extern "C" {
   PG_MODULE_MAGIC;
 

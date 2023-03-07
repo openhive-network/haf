@@ -45,6 +45,7 @@ extern "C" {
 #include <utils/fmgroids.h>
 #include <utils/jsonb.h>
 #include <utils/lsyscache.h>
+#include <utils/timeout.h>
 
 #include <utils/rel.h>
 #include <utils/tuplestore.h>
