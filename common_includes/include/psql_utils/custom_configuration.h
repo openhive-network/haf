@@ -11,7 +11,7 @@ namespace PsqlTools::PsqlUtils {
   class CustomConfiguration final {
     public:
       // define configuration entry prefix for a module
-      CustomConfiguration( std::string _prefix ) : m_prefix(std::move(m_prefix)){}
+      CustomConfiguration( std::string _prefix );
       ~CustomConfiguration();
 
       void addStringOption(
