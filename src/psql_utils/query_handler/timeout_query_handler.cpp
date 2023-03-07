@@ -1,10 +1,13 @@
 #include "include/psql_utils/query_handler/timeout_query_handler.h"
 
+#include "include/psql_utils/custom_configuration.h"
 #include "include/psql_utils/logger.hpp"
 
 #include <chrono>
 #include <future>
 #include <string>
+
+extern PsqlTools::PsqlUtils::CustomConfiguration g_customConfiguration;
 
 namespace PsqlTools::PsqlUtils {
   TimeoutQueryHandler::TimeoutQueryHandler() {
@@ -12,6 +15,7 @@ namespace PsqlTools::PsqlUtils {
   }
 
   void TimeoutQueryHandler::onStartQuery( QueryDesc* _queryDesc, int _eflags ) {
+    LOG_INFO( "Haf admin from configuration %s", g_customConfiguration.getOptionValue("hafadmin").c_str() );
     LOG_DEBUG( "start query %s", _queryDesc->sourceText  );
     if ( isQueryCancelPending() ) {
       return;
