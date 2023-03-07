@@ -27,3 +27,7 @@ def test_replay_without_disabled_indexes(database, psql_index_threshold, expecte
     # verify that disable_indexes_of_irreversible was called as expected
     function_calls = session.execute( "SELECT calls FROM pg_stat_user_functions WHERE funcname = 'disable_indexes_of_irreversible';" ).one_or_none()
     assert function_calls == expected_disable_indexes_calls
+
+    # verify that indexes are restored
+    indexes = session.execute( "SELECT indexname FROM pg_indexes WHERE tablename='blocks'" ).all()
+    assert len(indexes) > 0
