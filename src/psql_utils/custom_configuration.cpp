@@ -18,9 +18,10 @@ namespace PsqlTools::PsqlUtils {
     OptionBase(const OptionBase&&) = delete;
   };
 
-class StringOption : public CustomConfiguration::OptionBase {
-    public:
-      char* m_value;
+  // here are defined memory placeholders for configuration options
+  class StringOption : public CustomConfiguration::OptionBase {
+      public:
+        char* m_value;
   };
 
   CustomConfiguration::~CustomConfiguration(){
@@ -51,6 +52,12 @@ class StringOption : public CustomConfiguration::OptionBase {
     }
 
     m_options.emplace( _name, std::move(newOption) );
+  }
+
+  std::string CustomConfiguration::getOptionValue( const std::string& _name ) const {
+    // Warning: it can be used only in backend main thread because static variable is used to pass a result
+    std::string value = GetConfigOption( ( m_prefix + "." + _name ).c_str(), false, false );
+    return value;
   }
 
 } // namespace PsqlTools::PsqlUtils

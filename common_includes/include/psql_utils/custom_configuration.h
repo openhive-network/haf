@@ -21,6 +21,7 @@ namespace PsqlTools::PsqlUtils {
         , const std::string& _defaultValue = std::string()
           );
 
+      std::string getOptionValue( const std::string& _name ) const;
       class OptionBase;
     private:
       const std::string m_prefix;
