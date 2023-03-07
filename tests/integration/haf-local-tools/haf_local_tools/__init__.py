@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import random
 import time
 from pathlib import Path
 from typing import Any, TYPE_CHECKING, Dict, Optional
@@ -19,6 +22,70 @@ BLOCKS_IN_FORK = 5
 BLOCKS_AFTER_FORK = 5
 WAIT_FOR_CONTEXT_TIMEOUT = 90.0
 
+
+class haf_app:
+
+    root_path       = None
+    postgres_url    = None
+
+    def __init__(self, identifier, before_kill_time_min, before_kill_time_max):
+        self.pid = None
+        self.identifier = identifier
+        self.args       = []
+        self.before_kill_time_min = before_kill_time_min
+        self.before_kill_time_max = before_kill_time_max
+
+        self.create_args()
+
+    def setup(session, path):
+        haf_app.root_path       = path
+        haf_app.postgres_url    = str(session.get_bind().url)
+
+        return haf_app.root_path is not None and haf_app.postgres_url is not None
+
+    def create_args(self):
+        assert haf_app.root_path is not None and haf_app.postgres_url is not None
+
+        self.args.append("./haf_memo_scanner.py")
+        self.args.append("--scanner-name")
+        self.args.append(f"memo_scanner_{self.identifier}")
+        self.args.append("--url")
+        self.args.append(f"{haf_app.postgres_url}")
+        self.args.append("--range-block")
+        self.args.append("1")
+        self.args.append("--massive-threshold")
+        self.args.append("1000000")
+        self.args.append("--searched-item")
+        self.args.append(f"{self.identifier}")
+
+    def run(self):
+
+        _after_kill_time    = 2
+        _before_kill_time   = random.randint( self.before_kill_time_min, self.before_kill_time_max )
+
+        log_file = Path(f'{self.identifier}.log')
+        tt.logger.info( f"Before opening file: {log_file}" )
+        with open( log_file, "a") as dump_file:
+            try:
+                tt.logger.info( f"Start app: id: {self.identifier } before time: {_before_kill_time} {haf_app.root_path} {self.args}")
+                _process = subprocess.Popen( self.args, cwd = haf_app.root_path, stdout = dump_file, stderr = subprocess.STDOUT )
+                self.pid = _process.pid
+                tt.logger.info( f"app started: id: {self.identifier} pid: {self.pid}")
+            except Exception as ex:
+                tt.logger.info( f"app start problem: {ex}")
+
+            time.sleep( _before_kill_time )
+
+            tt.logger.info( f"before kill: before time: {_before_kill_time} [s] id: {self.pid}" )
+            _command = "kill -2 " + str( self.pid )
+            try:
+                os.system( _command )
+            except Exception as ex:
+                tt.logger.info( f"kill problem: {ex}")
+
+            tt.logger.info( f"after kill: {_command}")
+
+            time.sleep( _after_kill_time )
 
 def make_fork(networks: Iterable[tt.Network], main_chain_trxs=[], fork_chain_trxs=[]):
     alpha_net = networks[0]

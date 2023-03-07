@@ -21,8 +21,10 @@ from shared_tools.complex_networks import prepare_sub_networks_v2
 def prepare_time_offsets(limit: int):
     time_offsets = []
 
+    cnt = 0
     for i in range(limit):
-        time_offsets.append(random.randint(0, 3))
+        time_offsets.append(cnt % 3 + 1)
+        cnt += 1
 
     result = ",".join(str(time_offset) for time_offset in time_offsets)
     tt.logger.info( f"Generated: {result}" )

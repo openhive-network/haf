@@ -4,6 +4,7 @@ import time
 import random
 from pathlib import Path
 from typing import Iterable
+import pytest
 
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -11,79 +12,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import test_tools as tt
 
 import shared_tools.complex_networks_helper_functions as sh
+from haf_local_tools import haf_app
 
 START_TEST_BLOCK    = 108
 memo_cnt            = 0
-cnt                 = 0
 
-class haf_app:
 
-    root_path       = None
-    postgres_url    = None
-
-    def __init__(self, identifier):
-        self.pid = None
-        self.identifier = identifier
-        self.args       = []
-
-        self.create_args()
-
-    def process_env_vars(session):
-        haf_app.root_path       = Path(__file__).parent.absolute() / ".." / ".." / ".." / ".." / "src" / "hive_fork_manager" / "doc" / "applications"
-        haf_app.postgres_url    = str(session.get_bind().url)
-
-        return haf_app.root_path is not None and haf_app.postgres_url is not None
-
-    def create_args(self):
-        assert haf_app.root_path is not None and haf_app.postgres_url is not None
-
-        self.args.append("./haf_memo_scanner.py")
-        self.args.append("--scanner-name")
-        self.args.append(f"memo_scanner_{self.identifier}")
-        self.args.append("--url")
-        self.args.append(f"{haf_app.postgres_url}")
-        self.args.append("--range-block")
-        self.args.append("1")
-        self.args.append("--massive-threshold")
-        self.args.append("1000000")
-        self.args.append("--searched-item")
-        self.args.append(f"{self.identifier}")
-
-    def run(self):
-
-        global cnt
-
-        _after_kill_time    = 2
-        _before_kill_time   = random.randint( 5, 30 )
-
-        tt.logger.info( f"Before opening file" )
-        with open( Path(f'{self.identifier}.log'), "a") as dump_file:
-            cnt += 1
-
-            try:
-                tt.logger.info( f"Start app: id: {self.identifier } before time: {_before_kill_time} {haf_app.root_path} {self.args}")
-                _process = subprocess.Popen( self.args, cwd = haf_app.root_path, stdout = dump_file, stderr = subprocess.STDOUT )
-                self.pid = _process.pid
-                tt.logger.info( f"app started: id: {self.identifier} pid: {self.pid}")
-            except Exception as ex:
-                tt.logger.info( f"app start problem: {ex}")
-
-            time.sleep( _before_kill_time )
-
-            tt.logger.info( f"before kill: cnt: {cnt} before time: {_before_kill_time} [s] id: {self.pid}" )
-            _command = "kill -2 " + str( self.pid )
-            try:
-                os.system( _command )
-            except Exception as ex:
-                tt.logger.info( f"kill problem: {ex}")
-
-            tt.logger.info( f"after kill: {_command}")
-
-            time.sleep( _after_kill_time )
-
-def haf_app_processor(identifier):
+def haf_app_processor(identifier, before_kill_time_min, before_kill_time_max):
     while True:
-        _app = haf_app(identifier)
+        _app = haf_app(identifier, before_kill_time_min, before_kill_time_max)
         tt.logger.info( f"app runs: {identifier}")
         _app.run()
 
@@ -113,13 +50,14 @@ def trx_creator(wallet):
         wallet.api.transfer_nonblocking('initminer', 'null', tt.Asset.Test(1), str(memo_cnt))
         memo_cnt += 1
 
+@pytest.mark.skip(reason='https://gitlab.syncad.com/hive/haf/-/issues/118')
 def test_many_forks_many_ops(prepared_networks_and_database_17_3):
 
     tt.logger.info(f'Start test_many_forks_many_ops')
 
     networks_builder, session = prepared_networks_and_database_17_3
 
-    haf_app.process_env_vars(session)
+    haf_app.setup(session, Path(__file__).parent.absolute() / ".." / ".." / ".." / ".." / "src" / "hive_fork_manager" / "doc" / "applications")
 
     majority_api_node = networks_builder.networks[0].node('ApiNode0')
     minority_api_node = networks_builder.networks[1].node('ApiNode1')
@@ -162,7 +100,7 @@ def test_many_forks_many_ops(prepared_networks_and_database_17_3):
                 _futures.append(executor.submit(trx_creator, minority_wallet))
 
         for i in range(_app_threads):
-            _futures.append(executor.submit(haf_app_processor, i ))
+            _futures.append(executor.submit(haf_app_processor, i, 5, 30 ))
 
     for future in as_completed(_futures):
         future.result()
