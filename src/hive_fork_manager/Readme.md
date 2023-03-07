@@ -498,3 +498,55 @@ When the SQL method of rewinding reversible tables was implemented (this part is
 Unfortunately, during analysis, it was found that this kind of architecture will require the use of locks on hived's tables to solve a race condition between reading of hived tables by the apps and modifications to those tables by hived. 
 
 Introducing locking would make hived's operation dependent on the quality of the apps operating on the data - how fast they will commit transactions to release their locks on the data being written by hived. Moreover, the apps become dependant on each other, because one app may block hived and other apps would then not get new live blocks during the time that app blocked hived from adding new blocks.
+
+### SQL logging interface
+To start using Postgresql logs, open file using `sudo vim /etc/postgresql/12/main/postgresql.conf` and change following postgresql configuration to (recommended values):
+
+1. `log_min_messages = debug1` it sets postgresql log level to highest state
+2. `log_line_prefix = 'timestamp="%m" user="%u" database="%d" '` this way grafana recognize fields and values, it makes the log more readable.
+
+Docker setup is explained in [here](https://gitlab.syncad.com/hive/haf/-/merge_requests/152)
+
+To change log level use `SELECT hive.update_log_properties(log level)` where log level value is `0-100`, it changes the value in table `hive.log_properties`:
+1. Debug (dlog) - `100`
+2. Info (ilog) - `99-80`
+3. Warning (wlog) - `79-60`
+4. Error (elog) - `59-40`
+5. No logs - `39-0`
+
+By setting log level to `100` then debug, info warning and error logs are being sent.
+
+To send a log, use `PERFORM hive.dlog(context_name text, msg text)` example:
+`PERFORM hive.dlog(_context, '"Exiting app_state_provider_drop"');`,  `'""'` double quote is used so grafana recognize the message as a value. In grafana the log would look like this:
+
+`timestamp="2022-09-08 13:37:26.377 CEST" user="postgres" database="haf" DEBUG:  level="DEBUG" context="<no-context>" haflog="Exiting set_irreversible_dirty"`
+
+---
+
+# :warning: `anyelement` usage warning :warning:
+
+The function is overloaded so if additional parameters are required to use: 
+
+`PERFORM hive.dlog(context_name text, msg1 text, arg1 anyelement)` 
+
+example:
+
+`hive.revert_insert( _table_schema TEXT, _table_name TEXT, _row_id BIGINT )` 
+
+`anyelement` type requires type casts in certain scenarios, if the first `anyelement` argument is a TEXT, the next parameters have to be TEXT too:
+
+`PERFORM hive.dlog('<no-context>', '"Entering revert_insert" _table_schema=%s, _table_name=%s, _row_id=%s',_table_schema, _table_name, _row_id::TEXT);`
+
+example:
+
+`hive.context_create( _name hive.context_name, _fork_id BIGINT = 1, _irreversible_block INT = 0)`
+
+`PERFORM hive.dlog(_name, '"Entering context_create" _fork_id=%I, _irreversible_block=%I', _fork_id, _irreversible_block::BIGINT);`
+
+example:
+
+`hive.app_state_providers_update( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )`
+
+It also requires to type casts parameters with custom type:
+
+`PERFORM hive.dlog(_context, '"Entering app_state_provider_update" _first_block=%s, _last_block=%s', _first_block::TEXT,_last_block::TEXT);`
