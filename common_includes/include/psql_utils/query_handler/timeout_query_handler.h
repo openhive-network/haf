@@ -6,6 +6,8 @@
 #include <future>
 #include <mutex>
 
+#include "include/psql_utils/postgres_includes.hpp"
+
 namespace PsqlTools::PsqlUtils {
   class TimeoutQueryHandler
     : public QueryHandler
@@ -18,19 +20,14 @@ namespace PsqlTools::PsqlUtils {
     void onEndQuery( QueryDesc* _queryDesc ) override;
 
     private:
-    using SpawnFuture = std::future<void>;
-    SpawnFuture spawn();
+    void spawn();
 
-    void setPendingRootQuery( QueryDesc* _queryDesc );
-    bool isPendingRootQuery() const;
-    void resetPendingRootQuery();
-    bool isEqualRootQuery( QueryDesc* _queryDesc ) const;
+    static void setPendingRootQuery( QueryDesc* _queryDesc );
+    static bool isPendingRootQuery();
+    static bool isEqualRootQuery( QueryDesc* _queryDesc );
     static bool isQueryCancelPending();
 
     private:
-    std::mutex m_mutex;
-    SpawnFuture m_spawnedFuture;
-    std::condition_variable m_conditionVariable;
-    QueryDesc* m_pendingRootQuery{nullptr };
+      TimeoutId m_pendingQueryTimeout{USER_TIMEOUT};
   };
 } // namespace PsqlTools::PsqlUtils
