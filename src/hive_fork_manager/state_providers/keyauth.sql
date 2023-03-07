@@ -26,6 +26,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_keyauth';
 BEGIN
+    PERFORM hive.dlog(_context, '"Entering start_provider_keyauth"');
 
     SELECT hac.id
     FROM hive.contexts hac
@@ -46,6 +47,7 @@ BEGIN
                      , account_name TEXT
                    , PRIMARY KEY ( key_auth, authority_kind )
                    )', __table_name);
+    PERFORM hive.dlog(_context, '"Exiting start_provider_keyauth"');
 
     RETURN ARRAY[ __table_name ];
 END;
@@ -65,6 +67,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_keyauth';
 BEGIN
+    PERFORM hive.dlog(_context, '"Entering update_state_provider_keyauth" _first_block=%s, _last_block=%s', _first_block::TEXT,_last_block::TEXT);
     SELECT hac.id
     FROM hive.contexts hac
     WHERE hac.name = _context
@@ -85,6 +88,7 @@ BEGIN
         ON CONFLICT DO NOTHING'
         , _context, _context, _first_block, _last_block
     );
+    PERFORM hive.dlog(_context, '"Exiting update_state_provider_keyauth" _first_block=%s, _last_block=%s', _first_block::TEXT,_last_block::TEXT);
 END;
 $BODY$
 ;
@@ -99,6 +103,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_keyauth';
 BEGIN
+    PERFORM hive.dlog(_context, '"Entering drop_state_provider_keyauth"');
     SELECT hac.id
     FROM hive.contexts hac
     WHERE hac.name = _context
@@ -109,6 +114,7 @@ BEGIN
     END IF;
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
+    PERFORM hive.dlog(_context, '"Exiting drop_state_provider_keyauth"');
 END;
 $BODY$
 ;

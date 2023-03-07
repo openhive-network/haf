@@ -54,7 +54,7 @@ CREATE OR REPLACE FUNCTION hive.get_block_from_views( _block_num_start INT, _blo
 AS
 $BODY$
 BEGIN
-
+        PERFORM hive.dlog('<no-context>', '"Entering get_block_from_views" _block_num_start=%I, _block_count=%I', _block_num_start, _block_count);
         RETURN QUERY
         WITH
         -- hive.get_block_from_views
@@ -149,6 +149,9 @@ BEGIN
         LEFT JOIN full_transactions_with_signatures ftws ON ftws.block_num = bbd.num
         ORDER BY bbd.num ASC
         ;
+
+        PERFORM hive.dlog('<no-context>', '"Exiting get_block_from_views" _block_num_start=%I, _block_count=%I', _block_num_start, _block_count);
+
 END;
 $BODY$
 ;
@@ -160,8 +163,11 @@ CREATE OR REPLACE FUNCTION hive.transactions_to_json(transactions hive.transacti
 AS
 $BODY$
 DECLARE
+    _transactions TEXT = array_to_string( transactions, ',' );
     __result JSONB;
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering transactions_to_json" transactions=%s', transactions);
+
     SELECT array_to_json(ARRAY( SELECT jsonb_build_object(
         'ref_block_num', x.ref_block_num,
         'ref_block_prefix', x.ref_block_prefix,
@@ -176,6 +182,9 @@ BEGIN
         )
     )
     FROM ( SELECT (unnest(transactions)).* ) x ) ) INTO __result;
+
+    PERFORM hive.dlog('<no-context>', '"Exiting transactions_to_json" transactions=%s', transactions);
+
     RETURN __result;
 END;
 $BODY$
@@ -232,6 +241,7 @@ DECLARE
     __witness_account_id INTEGER;
     __result hive.block_header_type := NULL;
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering get_block_header" _block_num=%I', _block_num);
     SELECT
            hb.prev
          , hb.created_at
@@ -254,6 +264,8 @@ BEGIN
     WHERE ha.id = __witness_account_id
     INTO __result.witness;
 
+    PERFORM hive.dlog('<no-context>', '"Exiting get_block_header" _block_num=%I', _block_num);
+
     RETURN __result;
 END;
 $BODY$
@@ -266,6 +278,9 @@ CREATE OR REPLACE FUNCTION hive.get_block( _block_num INT )
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering get_block_range" _block_num=%I', _block_num);
+    PERFORM hive.dlog('<no-context>', '"Exiting get_block_range" _block_num=%I', _block_num);
+
     RETURN (hive.get_block_from_views( _block_num, 1 )).block;
 END;
 $BODY$
@@ -278,6 +293,7 @@ CREATE OR REPLACE FUNCTION hive.get_block_range( _starting_block_num INT, _count
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering get_block_range" _starting_block_num=%I, _count=%I', _starting_block_num, _count);
 
     IF _count = 0 OR (_starting_block_num ::BIGINT + _count - 1) > POW(2, 31) :: BIGINT THEN
         IF NOT _count <= 1000 THEN
@@ -299,6 +315,8 @@ BEGIN
         RAISE EXCEPTION 'Assert Exception:count <= 1000: You can only ask for 1000 blocks at a timerethrow';
     END IF;
 
+    PERFORM hive.dlog('<no-context>', '"Exiting get_block_range" _starting_block_num=%I, _count=%I', _starting_block_num, _count);
+
     RETURN QUERY SELECT (block).* FROM hive.get_block_from_views( _starting_block_num, _count );
 END;
 $BODY$
@@ -318,6 +336,8 @@ DECLARE
     __block hive.block_type;
     __result JSON;
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering get_block_json" _block_num=%I', _block_num);
+
     SELECT * FROM hive.get_block( _block_num ) INTO __block;
 
     IF __block.timestamp IS NULL THEN
@@ -339,6 +359,9 @@ BEGIN
 
         )
     ) INTO __result ;
+
+    PERFORM hive.dlog('<no-context>', '"Exiting get_block_json" _block_num=%I', _block_num);
+
     RETURN __result;
 END;
 $BODY$
@@ -354,6 +377,7 @@ DECLARE
     __block hive.block_header_type;
     __result JSON;
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering get_block_header_json" _block_num=%I', _block_num);
 
     SELECT * FROM hive.get_block_header( _block_num ) INTO __block;
 
@@ -370,6 +394,9 @@ BEGIN
             'extensions', COALESCE(__block.extensions, jsonb_build_array())
         )
     ) INTO __result;
+
+    PERFORM hive.dlog('<no-context>', '"Exiting get_block_header_json" _block_num=%I', _block_num);
+
     RETURN __result;
 END;
 $BODY$
@@ -384,6 +411,8 @@ $BODY$
 DECLARE
     __result JSONB;
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering get_block_range_json" _starting_block_num=%I, _count=%I', _starting_block_num, _count);
+
     SELECT jsonb_build_object(
         'blocks', COALESCE(array_agg(
             hive.build_block_json(
@@ -401,6 +430,9 @@ BEGIN
         ), ARRAY[]::JSONB[] )
     ) INTO __result FROM hive.get_block_range( _starting_block_num , _count ) gbr
     WHERE gbr.timestamp IS NOT NULL;
+
+    PERFORM hive.dlog('<no-context>', '"Exiting get_block_range_json" _starting_block_num=%I, _block_num=%I', _starting_block_num, _count);
+
     RETURN __result;
 END;
 $BODY$;

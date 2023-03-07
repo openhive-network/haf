@@ -21,8 +21,8 @@ BEGIN
     INTO __exists_non_defferable;
 
     IF __exists_non_defferable = TRUE THEN
-        RAISE EXCEPTION 'A registered table cannot have non-deferrable referenced constraints. Please check constraints on table %.%'
-            , _table_schema, _table_name;
+        PERFORM hive.elog('<no-context>', 'A registered table cannot have non-deferrable referenced constraints. Please check constraints on table %s.%s'
+            , _table_schema, _table_name);
     END IF;
 END;
 $BODY$
@@ -95,7 +95,7 @@ BEGIN
     EXECUTE format( 'SELECT EXISTS( SELECT * FROM hive.%I LIMIT 1 )', __shadow_table_name ) INTO __result;
 
     IF __result = TRUE THEN
-        RAISE EXCEPTION 'Cannot edit structure of registered tables when some rows are not rewinded';
+        PERFORM hive.elog('<no-context>', 'Cannot edit structure of registered tables when some rows are not rewinded');
     END IF;
 
     SELECT EXISTS (
@@ -107,7 +107,7 @@ BEGIN
     ) INTO __result;
 
     IF __result = FALSE THEN
-        RAISE EXCEPTION 'Cannot remove hive_rowid column';
+        PERFORM hive.elog('<no-context>','Cannot remove hive_rowid column');
     END IF;
 
     -- drop shadow table with old format
@@ -147,7 +147,7 @@ BEGIN
 
     IF __table IS NOT NULL THEN
         PERFORM hive.clean_after_uregister_table( __schema, __table );
-        RAISE WARNING 'Registered table were dropped: %.%', __schema, __table;
+        PERFORM hive.wlog('<no-context>', 'Registered table were dropped: %s.%s', __schema, __table);
     END IF;
 END;
 $$

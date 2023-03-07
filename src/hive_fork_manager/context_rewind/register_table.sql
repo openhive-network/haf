@@ -5,8 +5,9 @@ CREATE OR REPLACE FUNCTION hive.create_revert_functions( _table_schema TEXT,  _t
 AS
 $BODY$
 DECLARE
-__columns TEXT = array_to_string( _columns, ',' );
+    __columns TEXT = array_to_string( _columns, ',' );
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering create_revert_functions" _table_schema=%s, _table_name=%s, _shadow_table_name=%s, _columns=%s',_table_schema, _table_name,_shadow_table_name, __columns);
     -- rewind_insert
     EXECUTE format(
         'CREATE OR REPLACE FUNCTION hive.%I_%I_revert_insert( _row_id BIGINT )
@@ -16,9 +17,14 @@ BEGIN
         AS
         $$
         BEGIN
+            PERFORM hive.dlog(''<no-context>'', ''Entering %I_%I_revert_insert'');
             DELETE FROM %I.%I WHERE hive_rowid = _row_id;
+            PERFORM hive.dlog(''<no-context>'', ''Exiting %I_%I_revert_insert'');
+
         END;
         $$'
+    , _table_schema,  _table_name
+    , _table_schema,  _table_name
     , _table_schema,  _table_name
     , _table_schema,  _table_name
     );
@@ -32,18 +38,23 @@ BEGIN
         AS
         $$
         BEGIN
+            PERFORM hive.dlog(''<no-context>'', ''Entering %I_%I_revert_delete'');
             INSERT INTO %I.%I( %s )
             (
                 SELECT %s
                 FROM hive.%I st
                 WHERE st.hive_operation_id = _operation_id
             );
+            PERFORM hive.dlog(''<no-context>'', ''Exiting %I_%I_revert_delete'');
+
         END;
         $$'
+    , _table_schema, _table_name
     , _table_schema, _table_name
     , _table_schema, _table_name, __columns
     , __columns
     , _shadow_table_name
+    , _table_schema, _table_name
     );
 
     EXECUTE format(
@@ -54,19 +65,25 @@ BEGIN
         AS
         $$
         BEGIN
+            PERFORM hive.dlog(''<no-context>'', ''Entering %I_%I_revert_update'');
             UPDATE %I.%I as t SET ( %s ) = (
             SELECT %s
             FROM hive.%I st1
             WHERE st1.hive_operation_id = _operation_id
             )
             WHERE t.hive_rowid = _row_id;
+            PERFORM hive.dlog(''<no-context>'', ''Exiting %I_%I_revert_update'');
+
         END;
         $$'
+    , _table_schema, _table_name
     , _table_schema, _table_name
     , _table_schema, _table_name, __columns
     , __columns
     , _shadow_table_name
+    , _table_schema, _table_name
     );
+    PERFORM hive.dlog('<no-context>', '"Exiting create_revert_functions" _table_schema=%s, _table_name=%s, _shadow_table_name=%s, _columns=%s',_table_schema, _table_name,_shadow_table_name, __columns);
 END;
 $BODY$
 ;
@@ -78,6 +95,7 @@ CREATE OR REPLACE FUNCTION hive.drop_revert_functions( _table_schema TEXT,  _tab
 AS
 $BODY$
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering drop_revert_functions" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
     -- rewind_insert
     EXECUTE format(
           'DROP FUNCTION hive.%I_%I_revert_insert'
@@ -97,6 +115,7 @@ BEGIN
         , _table_schema, _table_name
         , _table_schema, _table_name
     );
+    PERFORM hive.dlog('<no-context>', '"Exiting drop_revert_functions" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
 END;
 $BODY$
 ;
@@ -115,11 +134,13 @@ DECLARE
     __hive_rowid_column_name TEXT := 'hive_rowid';
     __operation_id_column_name TEXT :=  'hive_operation_id';
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering create_shadow_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
     EXECUTE format('CREATE TABLE hive.%I AS TABLE %I.%I', __shadow_table_name, _table_schema, _table_name );
     EXECUTE format('DELETE FROM hive.%I', __shadow_table_name ); --empty shadow table if origin table is not empty
     EXECUTE format('ALTER TABLE hive.%I ADD COLUMN %I INTEGER NOT NULL', __shadow_table_name, __block_num_column_name );
     EXECUTE format('ALTER TABLE hive.%I ADD COLUMN %I hive.TRIGGER_OPERATION NOT NULL', __shadow_table_name, __operation_column_name );
     EXECUTE format('ALTER TABLE hive.%I ADD COLUMN %I BIGSERIAL PRIMARY KEY', __shadow_table_name, __operation_id_column_name );
+    PERFORM hive.dlog('<no-context>', '"Exiting create_shadow_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
 
     RETURN __shadow_table_name;
 END;
@@ -151,6 +172,7 @@ DECLARE
     __registered_table_id INTEGER := NULL;
     __columns_names TEXT[];
 BEGIN
+    PERFORM hive.dlog(_context_name, '"Entering register_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
     PERFORM hive.chceck_constrains(_table_schema, _table_name);
 
     -- create a shadow table
@@ -181,7 +203,17 @@ BEGIN
 
     EXECUTE format('CREATE INDEX idx_%I_%I_row_id ON %I.%I(hive_rowid)', lower(_table_schema), lower(_table_name), lower(_table_schema), lower(_table_name) );
 
+
+    IF __context_id IS NULL THEN
+        PERFORM hive.ilog(_context_name, 'There is no context %s',_context_name);
+    END IF;
+
     ASSERT __context_id IS NOT NULL, 'There is no context %', _context_name;
+
+    IF __registered_table_id IS NULL THEN
+        PERFORM hive.ilog(_context_name, '__registered_table_id needs to be NOT NULL');
+    END IF;
+
     ASSERT __registered_table_id IS NOT NULL;
 
     -- create trigger functions
@@ -196,6 +228,7 @@ BEGIN
            __values TEXT;
            __is_back_from_fork_in_progress BOOL := FALSE;
         BEGIN
+            PERFORM hive.dlog(''<no-context>'', ''Entering %s'');
             SELECT back_from_fork FROM hive.contexts WHERE id=%s INTO __is_back_from_fork_in_progress;
 
             IF ( __is_back_from_fork_in_progress = TRUE ) THEN
@@ -204,16 +237,19 @@ BEGIN
             SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.id = CAST( TG_ARGV[ 0 ] as INTEGER ) INTO __block_num;
 
             IF ( __block_num <= 0 ) THEN
-                 RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
+                 PERFORM hive.elog(''<no-context>'',''Did not execute hive.context_next_block before table edition'');
             END IF;
 
             INSERT INTO hive.%I SELECT n.*,  __block_num, ''INSERT'' FROM new_table n ON CONFLICT DO NOTHING;
+            PERFORM hive.dlog(''<no-context>'', ''Exiting %s'');
             RETURN NEW;
         END;
         $$'
         , __hive_triggerfunction_name_insert
+        , __hive_triggerfunction_name_insert
         , __context_id
         , __shadow_table_name
+        , __hive_triggerfunction_name_insert
     );
 
     EXECUTE format(
@@ -227,6 +263,7 @@ BEGIN
            __values TEXT;
            __is_back_from_fork_in_progress BOOL := FALSE;
         BEGIN
+            PERFORM hive.dlog(''<no-context>'', ''Entering %s'');
             SELECT back_from_fork FROM hive.contexts WHERE id=%s INTO __is_back_from_fork_in_progress;
 
             IF ( __is_back_from_fork_in_progress = TRUE ) THEN
@@ -236,16 +273,19 @@ BEGIN
             SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.id = CAST( TG_ARGV[ 0 ] as INTEGER ) INTO __block_num;
 
             IF ( __block_num <= 0 ) THEN
-                RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
+                PERFORM hive.elog(''<no-context>'', ''Did not execute hive.context_next_block before table edition'');
             END IF;
 
             INSERT INTO hive.%I SELECT o.*, __block_num, ''DELETE'' FROM old_table o ON CONFLICT DO NOTHING;
+            PERFORM hive.dlog(''<no-context>'', ''Exiting %s'');
             RETURN NEW;
         END;
         $$'
         , __hive_triggerfunction_name_delete
+        , __hive_triggerfunction_name_delete
         , __context_id
         , __shadow_table_name
+        , __hive_triggerfunction_name_delete
     );
 
     EXECUTE format(
@@ -259,6 +299,7 @@ BEGIN
            __values TEXT;
            __is_back_from_fork_in_progress BOOL := FALSE;
         BEGIN
+            PERFORM hive.dlog(''<no-context>'', ''Entering %s'');
             SELECT back_from_fork FROM hive.contexts WHERE id=%s INTO __is_back_from_fork_in_progress;
 
             IF ( __is_back_from_fork_in_progress = TRUE ) THEN
@@ -268,16 +309,19 @@ BEGIN
             SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.id = CAST( TG_ARGV[ 0 ] as INTEGER ) INTO __block_num;
 
             IF ( __block_num <= 0 ) THEN
-                RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
+                PERFORM hive.elog(''<no-context>'', ''Did not execute hive.context_next_block before table edition'');
             END IF;
 
             INSERT INTO hive.%I SELECT o.*, __block_num, ''UPDATE'' FROM old_table o ON CONFLICT DO NOTHING;
+            PERFORM hive.dlog(''<no-context>'', ''Exiting %s'');
             RETURN NEW;
         END;
         $$'
         , __hive_triggerfunction_name_update
+        , __hive_triggerfunction_name_update
         , __context_id
         , __shadow_table_name
+        , __hive_triggerfunction_name_update
     );
 
     EXECUTE format(
@@ -291,6 +335,7 @@ BEGIN
             __values TEXT;
             __is_back_from_fork_in_progress BOOL := FALSE;
          BEGIN
+             PERFORM hive.dlog(''<no-context>'', ''Entering %s'');
              SELECT back_from_fork FROM hive.contexts WHERE id=%s INTO __is_back_from_fork_in_progress;
 
              IF ( __is_back_from_fork_in_progress = TRUE ) THEN
@@ -300,18 +345,21 @@ BEGIN
              SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.id = CAST( TG_ARGV[ 0 ] as INTEGER ) INTO __block_num;
 
              IF ( __block_num <= 0 ) THEN
-                 RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
+                 PERFORM hive.elog(''<no-context>'', ''Did not execute hive.context_next_block before table edition'');
              END IF;
 
              INSERT INTO hive.%I SELECT o.*, __block_num, ''DELETE'' FROM %I.%I o ON CONFLICT DO NOTHING;
+             PERFORM hive.dlog(''<no-context>'', ''Exiting %s'');
              RETURN NEW;
          END;
          $$'
+        , __hive_triggerfunction_name_truncate
         , __hive_triggerfunction_name_truncate
         , __context_id
         , __shadow_table_name
         , _table_schema
         , _table_name
+        , __hive_triggerfunction_name_truncate
     );
 
     PERFORM hive.create_triggers(  _table_schema, _table_name, __context_id );
@@ -326,6 +374,7 @@ BEGIN
        , ( __registered_table_id, __hive_update_trigger_name, __hive_triggerfunction_name_update, current_user )
        , ( __registered_table_id, __hive_truncate_trigger_name, __hive_triggerfunction_name_truncate, current_user )
     ;
+    PERFORM hive.dlog(_context_name, '"Exiting register_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
 END;
 $BODY$
 ;
@@ -351,6 +400,7 @@ DECLARE
     __context_name TEXT := NULL;
     __registered_table_id INTEGER := NULL;
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering unregister_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
     SELECT hc.name, hrt.id INTO __context_name, __registered_table_id
     FROM hive.contexts hc
     JOIN hive.registered_tables hrt ON hrt.context_id = hc.id
@@ -358,7 +408,7 @@ BEGIN
     ;
 
     IF __registered_table_id IS NULL THEN
-        RAISE EXCEPTION 'Table %s.%s is not registered', lower(_table_schema), lower(_table_name);
+        PERFORM hive.elog(__context_name, 'Table %s.%s is not registered', lower(_table_schema), lower(_table_name));
     END IF;
 
     -- drop shadow table
@@ -382,6 +432,7 @@ BEGIN
     -- remove inheritance and sequence
     EXECUTE format( 'ALTER TABLE %I.%s NO INHERIT hive.%s', lower(_table_schema), lower(_table_name), __context_name );
     EXECUTE format( 'ALTER TABLE %I.%s DROP COLUMN hive_rowid CASCADE', lower(_table_schema), lower(_table_name)  );
+    PERFORM hive.dlog('<no-context>', '"Exiting unregister_table" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
 END;
 $BODY$
 ;

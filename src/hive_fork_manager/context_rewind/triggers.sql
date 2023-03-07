@@ -18,6 +18,7 @@ DECLARE
     __registered_table_id INTEGER := NULL;
     __columns_names TEXT[];
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering create_triggers" _table_schema=%s, _table_name=%s, _context_id=%s',_table_schema, _table_name, _context_id::TEXT);
     -- register insert trigger
     EXECUTE format(
             'CREATE TRIGGER %I AFTER INSERT ON %s.%s REFERENCING NEW TABLE AS NEW_TABLE FOR EACH STATEMENT EXECUTE PROCEDURE %s( %L, %L )'
@@ -61,6 +62,7 @@ BEGIN
             , _context_id
             , __shadow_table_name
     );
+    PERFORM hive.dlog('<no-context>', '"Exiting create_triggers" _table_schema=%s, _table_name=%s, _context_id=%s',_table_schema, _table_name, _context_id::TEXT);
 END;
 $BODY$
 ;
@@ -77,6 +79,7 @@ DECLARE
     __hive_update_trigger_name TEXT := hive.get_trigger_update_name( _table_schema,  _table_name );
     __hive_truncate_trigger_name TEXT := hive.get_trigger_truncate_name( _table_schema,  _table_name );
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering drop_triggers" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
         -- register insert trigger
     EXECUTE format(
             'DROP TRIGGER %I ON %s.%s'
@@ -108,6 +111,7 @@ BEGIN
             , _table_schema
             , _table_name
         );
+    PERFORM hive.dlog('<no-context>', '"Exiting drop_triggers" _table_schema=%s, _table_name=%s',_table_schema, _table_name);
 END;
 $BODY$
 ;

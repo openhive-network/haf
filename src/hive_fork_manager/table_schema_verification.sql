@@ -34,6 +34,7 @@ verified_tables_list = ARRAY[
 'applied_hardforks_reversible',
 'contexts'
 ];
+    PERFORM hive.dlog('<no-context>', '"Entering calculate_schema_hash" schema_name=%s', schema_name);
 
 FOR _table_name IN SELECT UNNEST( verified_tables_list ) as _table_name
 LOOP
@@ -134,6 +135,7 @@ LOOP
     RETURN NEXT schemarow;
 
     END LOOP;
+    PERFORM hive.dlog('<no-context>', '"Exiting calculate_schema_hash" schema_name=%s', schema_name);
 RETURN;
 END;
 $BODY$
@@ -149,6 +151,8 @@ DECLARE
     ts hive.table_schema%ROWTYPE;
     _tmp TEXT;
 BEGIN
+    PERFORM hive.dlog('<no-context>', '"Entering create_database_hash" schema_name=%s', schema_name);
+
     TRUNCATE hive.table_schema;
 
     SELECT string_agg(table_schema, ' | ') FROM hive.calculate_schema_hash(schema_name) INTO _tmp;
@@ -157,7 +161,9 @@ BEGIN
 
     ts.schema_name := schema_name;
     ts.schema_hash := MD5(_tmp)::uuid;
-RETURN NEXT ts;
+    RETURN NEXT ts;
+
+    PERFORM hive.dlog('<no-context>', '"Exiting create_database_hash" schema_name=%s', schema_name);
 END;
 $BODY$
 ;
