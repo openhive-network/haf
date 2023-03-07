@@ -19,6 +19,7 @@ ADD_PSQL_EXTENSION(
              state_provider.sql
              hived_connections.sql
              hived_api_impl_indexes.sql
+             logs_schema.sql
 
     DEPLOY_SOURCES trigger_switch/trigger_off.sql
             context_rewind/names.sql
@@ -29,6 +30,7 @@ ADD_PSQL_EXTENSION(
             context_rewind/back_from_fork.sql
             context_rewind/irreversible.sql
             context_rewind/rewind_api.sql
+            logs.sql
             tools.sql
             blocks_views_for_contexts.sql
             get_keyauths.sql
