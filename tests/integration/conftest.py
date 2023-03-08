@@ -16,7 +16,7 @@ from test_tools.__private.scope.scope_fixtures import *  # pylint: disable=wildc
 import test_tools as tt
 
 import shared_tools.networks_architecture as networks
-from shared_tools.complex_networks import prepare_sub_networks_v2
+from shared_tools.complex_networks import prepare_sub_networks
 
 def prepare_time_offsets(limit: int):
     time_offsets = []
@@ -83,7 +83,7 @@ def before_run_network(builder: networks.NetworksBuilder, session: sessionmaker,
 def prepare_basic_networks(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None, details: networks_details = None) -> Tuple[networks.NetworksBuilder, Any]:
     session = database('postgresql:///haf_block_log')
 
-    builder = prepare_sub_networks_v2(architecture, block_log_directory_name, time_offsets, partial( before_run_network, session=session, details=details))
+    builder = prepare_sub_networks(architecture, block_log_directory_name, time_offsets, partial( before_run_network, session=session, details=details))
 
     if builder == None:
         tt.logger.info(f"Generating 'block_log' enabled. Exiting...")
