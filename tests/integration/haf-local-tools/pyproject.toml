@@ -19,6 +19,7 @@ psycopg2-binary = "2.9.1"
 pytest = "6.2.5"
 pytest-repeat = "0.9.1"
 pytest-timeout = "2.0.1"
+pytest-xdist = "3.2.0"
 shared_tools = { path = "shared-tools", develop = true }
 sqlalchemy = "1.4.25"
 sqlalchemy-utils = "0.37.9"
