@@ -7,7 +7,12 @@
 #include <memory>
 
 namespace PsqlTools::PsqlUtils {
-
+  /**
+   * Base class for queries handlers - classes which can observe and break queries execution
+   * The class overwrite PostgreSQL executor hooks to its own hooks which call C++ base virtual methods
+   * Only one object of the class can exists, thus to ensure that only one hook implementation is in use
+   * in a process.
+   */
   class QueryHandler {
     public:
       virtual ~QueryHandler();
@@ -32,6 +37,7 @@ namespace PsqlTools::PsqlUtils {
       virtual void onFinishQuery( QueryDesc* _queryDesc )  {}
       virtual void onPeriodicCheck() {}
 
+      // helpers to start periodic check
       void startPeriodicCheck( const std::chrono::milliseconds& _period );
       void stopPeriodicCheck();
       bool isPeriodicTimerPending() const;

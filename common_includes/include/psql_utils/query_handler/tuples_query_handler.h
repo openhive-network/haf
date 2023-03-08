@@ -4,9 +4,12 @@
 
 namespace PsqlTools::PsqlUtils {
 
+  /**
+   *  Break a query when more than given number of tuples are touched, or the execution timeout was exceeded
+   */
   class TuplesQueryHandler : public TimeoutQueryHandler {
   public:
-    TuplesQueryHandler() = default;
+    TuplesQueryHandler( uint32_t _limitOfTuplesPerRootQuery, std::chrono::milliseconds _queryTimeout );
 
     void onStartQuery( QueryDesc* _queryDesc, int _eflags ) override;
     void onEndQuery( QueryDesc* _queryDesc ) override;
@@ -16,6 +19,9 @@ namespace PsqlTools::PsqlUtils {
 
   private:
     void addInstrumentation( QueryDesc* _queryDesc ) const;
+
+  private:
+    const uint32_t m_limitOfTuplesPerRootQuery;
   };
 
 } // namespace PsqlTools::PsqlUtils

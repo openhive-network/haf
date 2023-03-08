@@ -6,7 +6,8 @@ extern "C" {
   PG_MODULE_MAGIC;
 
 void _PG_init(void) {
-  PsqlTools::PsqlUtils::QueryHandler::initialize<PsqlTools::PsqlUtils::TuplesQueryHandler>();
+  using namespace  std::chrono_literals;
+  PsqlTools::PsqlUtils::QueryHandler::initialize<PsqlTools::PsqlUtils::TuplesQueryHandler>( 1000, 1s );
 }
 
 void _PG_fini(void) {

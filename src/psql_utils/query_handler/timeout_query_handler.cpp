@@ -3,7 +3,6 @@
 #include "include/psql_utils/custom_configuration.h"
 #include "include/psql_utils/logger.hpp"
 
-#include <chrono>
 #include <string>
 
 namespace {
@@ -26,7 +25,9 @@ namespace {
 
 
 namespace PsqlTools::PsqlUtils {
-  TimeoutQueryHandler::TimeoutQueryHandler() {
+  TimeoutQueryHandler::TimeoutQueryHandler( std::chrono::milliseconds _queryTimeout )
+    : m_queryTimeout( std::move(_queryTimeout) )
+  {
     // no worries about fail of registration because pg will terminate backend
     m_pendingQueryTimeout = RegisterTimeout( USER_TIMEOUT, timeoutHandler );
   }
@@ -43,7 +44,7 @@ namespace PsqlTools::PsqlUtils {
     }
 
     TimeoutQueryHandler::setPendingRootQuery(_queryDesc);
-    spawn();
+    spawnTimer();
   }
 
   void TimeoutQueryHandler::onEndQuery( QueryDesc* _queryDesc ) {
@@ -53,7 +54,7 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    if ( !isEqualRootQuery( _queryDesc ) ) {
+    if ( !isRootQuery(_queryDesc) ) {
       return;
     }
 
@@ -70,7 +71,7 @@ namespace PsqlTools::PsqlUtils {
     return m_pendingRootQuery != nullptr;
   }
 
-  bool TimeoutQueryHandler::isEqualRootQuery( QueryDesc* _queryDesc ) {
+  bool TimeoutQueryHandler::isRootQuery(QueryDesc* _queryDesc ) {
     return m_pendingRootQuery == _queryDesc;
   }
 
@@ -86,9 +87,7 @@ namespace PsqlTools::PsqlUtils {
     return m_pendingRootQuery;
   }
 
-  void TimeoutQueryHandler::spawn() {
-    using namespace std::chrono_literals;
-    auto delay = 5s;
-    enable_timeout_after( m_pendingQueryTimeout, std::chrono::duration_cast< std::chrono::milliseconds >(delay).count() );
+  void TimeoutQueryHandler::spawnTimer() {
+    enable_timeout_after( m_pendingQueryTimeout, m_queryTimeout.count() );
   }
 } // namespace PsqlTools::PsqlUtils

@@ -6,6 +6,11 @@
 
 namespace PsqlTools::PsqlUtils {
 
+  TuplesQueryHandler::TuplesQueryHandler( uint32_t _limitOfTuplesPerRootQuery, std::chrono::milliseconds _queryTimeout )
+    : TimeoutQueryHandler( _queryTimeout )
+    , m_limitOfTuplesPerRootQuery(_limitOfTuplesPerRootQuery)
+  {}
+
   void TuplesQueryHandler::onStartQuery( QueryDesc* _queryDesc, int _eflags ) {
     using namespace std::chrono_literals;
 
@@ -33,7 +38,7 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    if ( !isEqualRootQuery( _queryDesc ) ) {
+    if ( !isRootQuery(_queryDesc) ) {
       return;
     }
 
@@ -57,7 +62,7 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    if ( isEqualRootQuery( _queryDesc ) ) {
+    if (isRootQuery(_queryDesc) ) {
       return;
     }
 
@@ -75,10 +80,11 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    LOG_INFO( "Query ntuples %lf", getPendingQuery()->totaltime->tuplecount );
-
-    if (  getPendingQuery()->totaltime->tuplecount > 1000 ) {
-      LOG_INFO( "Break because more than 1000 touples were touched" );
+    if (  getPendingQuery()->totaltime->tuplecount > m_limitOfTuplesPerRootQuery ) {
+      LOG_WARNING( "Query was broken because of tuples limit reached %lf > %d"
+                   , getPendingQuery()->totaltime->tuplecount
+                   , m_limitOfTuplesPerRootQuery
+      );
       stopPeriodicCheck();
       breakPendingRootQuery();
     }
