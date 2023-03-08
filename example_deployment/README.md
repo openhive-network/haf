@@ -15,6 +15,9 @@ and environment files:
 
 The environment files specify the versions of images and ports used by applications, as well as the network definition, which varies depending on the version of the environment being run.
 
+This example deployment assumes that haf-datadir local subdirecory can be directly used as HAF instance data directory, by specifying actual path in environment file.
+As usually, if you want to perform replay, you have to put a block_log file into `haf-datadir/blockchain` and specify --replay option to the Hived startup options (see ARGUMENTS variable definition in the example env files).
+
 ## Launch example
 
 ---
