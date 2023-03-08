@@ -7,6 +7,7 @@ stages:
   - publish
 
 variables:
+  PYTEST_NUMBER_OF_PROCESSES: 4
   CTEST_NUMBER_OF_JOBS: 4
   GIT_DEPTH: 20
   GIT_SUBMODULE_STRATEGY: recursive
@@ -114,7 +115,7 @@ haf_system_tests:
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-database-store="$CI_PROJECT_DIR/haf_database_store" --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager_testnet/build"
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf
-    - pytest --junitxml report.xml
+    - pytest --junitxml report.xml -n ${PYTEST_NUMBER_OF_PROCESSES}
   artifacts:
     paths:
     - "**/generated_during_*"
@@ -143,7 +144,7 @@ applications_system_tests:
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-database-store="$CI_PROJECT_DIR/haf_database_store" --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager_testnet/build"
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/applications
-    - pytest --junitxml report.xml
+    - pytest --junitxml report.xml -n ${PYTEST_NUMBER_OF_PROCESSES}
   artifacts:
     paths:
     - "**/generated_during_*"
