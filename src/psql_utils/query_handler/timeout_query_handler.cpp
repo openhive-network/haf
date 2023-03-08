@@ -11,6 +11,8 @@ namespace {
 
   void resetPendingRootQuery() {
     assert(m_pendingRootQuery!= nullptr);
+
+    LOG_DEBUG( "Root query end: %s", m_pendingRootQuery->sourceText );
     m_pendingRootQuery = nullptr;
   }
 
@@ -30,8 +32,7 @@ namespace PsqlTools::PsqlUtils {
   }
 
   void TimeoutQueryHandler::onStartQuery( QueryDesc* _queryDesc, int _eflags ) {
-    LOG_DEBUG( "start query %s", _queryDesc->sourceText  );
-
+    LOG_DEBUG( "Start query %s", _queryDesc->sourceText  );
 
     if ( isQueryCancelPending() ) {
       return;
@@ -47,7 +48,7 @@ namespace PsqlTools::PsqlUtils {
 
   void TimeoutQueryHandler::onEndQuery( QueryDesc* _queryDesc ) {
     //Warning: onEndQuery won't be called when pending root query was broken
-    LOG_DEBUG( "end query %s", _queryDesc->sourceText  );
+    LOG_DEBUG( "End query %s", _queryDesc->sourceText  );
     if ( isQueryCancelPending() ) {
       return;
     }
@@ -56,49 +57,8 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    LOG_INFO( "Query ntuples %lf", m_pendingRootQuery->totaltime->tuplecount );
-
-    stopPeriodicCheck();
-    LOG_DEBUG( "Root query end: %s", _queryDesc->sourceText );
     disable_timeout( m_pendingQueryTimeout, false );
     resetPendingRootQuery();
-  }
-
-  void TimeoutQueryHandler::onRunQuery( QueryDesc* _queryDesc ) {
-    addInstrumentation( _queryDesc );
-  }
-
-  void TimeoutQueryHandler::onFinishQuery( QueryDesc* _queryDesc ) {
-    assert( _queryDesc );
-    LOG_INFO( "Finish query: %s, %lf", _queryDesc->sourceText, _queryDesc->totaltime->tuplecount );
-    if ( isQueryCancelPending() ) {
-      return;
-    }
-
-    if ( isEqualRootQuery( _queryDesc ) ) {
-      return;
-    }
-
-    assert( m_pendingRootQuery );
-    assert( m_pendingRootQuery->totaltime );
-    assert( _queryDesc->totaltime );
-    InstrAggNode(m_pendingRootQuery->totaltime, _queryDesc->totaltime );
-  }
-
-  void TimeoutQueryHandler::onPeriodicCheck() {
-    LOG_INFO( "Periodic check!" );
-    if ( !isPendingRootQuery() ) {
-      stopPeriodicCheck();
-      return;
-    }
-
-    if (m_pendingRootQuery) {
-      LOG_INFO( "Query ntuples %lf", m_pendingRootQuery->totaltime->tuplecount );
-      if (  m_pendingRootQuery->totaltime->tuplecount > 1000 ) {
-        LOG_INFO( "Break because more than 1000 touples were touched" );
-        timeoutHandler();
-      }
-    }
   }
 
   void TimeoutQueryHandler::setPendingRootQuery( QueryDesc* _queryDesc ) {
@@ -110,8 +70,6 @@ namespace PsqlTools::PsqlUtils {
     return m_pendingRootQuery != nullptr;
   }
 
-
-
   bool TimeoutQueryHandler::isEqualRootQuery( QueryDesc* _queryDesc ) {
     return m_pendingRootQuery == _queryDesc;
   }
@@ -120,22 +78,17 @@ namespace PsqlTools::PsqlUtils {
     return QueryCancelPending;
   }
 
+  void TimeoutQueryHandler::breakPendingRootQuery() {
+    timeoutHandler();
+  }
+
+  QueryDesc* TimeoutQueryHandler::getPendingQuery() {
+    return m_pendingRootQuery;
+  }
+
   void TimeoutQueryHandler::spawn() {
     using namespace std::chrono_literals;
     auto delay = 5s;
     enable_timeout_after( m_pendingQueryTimeout, std::chrono::duration_cast< std::chrono::milliseconds >(delay).count() );
-    startPeriodicCheck( 1ms );
-  }
-
-  void TimeoutQueryHandler::addInstrumentation( QueryDesc* _queryDesc ) const {
-    LOG_INFO( "Set instrumentation" );
-    // Add instrumentation to track query resources
-    if ( _queryDesc->totaltime != nullptr ) {
-      return;
-    }
-    MemoryContext oldcxt;
-    oldcxt = MemoryContextSwitchTo(_queryDesc->estate->es_query_cxt);
-    _queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL, true);
-    MemoryContextSwitchTo(oldcxt);
   }
 } // namespace PsqlTools::PsqlUtils
