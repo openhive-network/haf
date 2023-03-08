@@ -3,6 +3,7 @@
 #include "include/psql_utils/postgres_includes.hpp"
 
 #include <cassert>
+#include <chrono>
 #include <memory>
 
 namespace PsqlTools::PsqlUtils {
@@ -26,14 +27,17 @@ namespace PsqlTools::PsqlUtils {
 
       virtual void onStartQuery( QueryDesc* _queryDesc, int _eflags ) = 0;
       virtual void onEndQuery( QueryDesc* _queryDesc ) = 0;
+      virtual void onPeriodicCheck() {};
+
+      void startPeriodicCheck( const std::chrono::milliseconds& _period );
+      void stopPeriodicCheck();
+      bool isPeriodicTimerPending() const;
 
     public:
       class Impl;
       std::unique_ptr< Impl > m_impl;
       static Impl& getImpl() { assert(m_instance && m_instance->m_impl ); return *m_instance->m_impl; }
     private:
-
-
       static std::unique_ptr<QueryHandler> m_instance;
   };
 
