@@ -3,7 +3,6 @@
 #include "include/psql_utils/custom_configuration.h"
 #include "include/psql_utils/logger.hpp"
 
-#include <chrono>
 #include <string>
 
 namespace {
@@ -11,6 +10,8 @@ namespace {
 
   void resetPendingRootQuery() {
     assert(m_pendingRootQuery!= nullptr);
+
+    LOG_DEBUG( "Root query end: %s", m_pendingRootQuery->sourceText );
     m_pendingRootQuery = nullptr;
   }
 
@@ -24,50 +25,62 @@ namespace {
 
 
 namespace PsqlTools::PsqlUtils {
-  TimeoutQueryHandler::TimeoutQueryHandler() {
+  TimeoutQueryHandler::TimeoutQueryHandler( std::chrono::milliseconds _queryTimeout )
+    : m_queryTimeout( std::move(_queryTimeout) )
+  {
+    // no worries about fail of registration because pg will terminate backend
     m_pendingQueryTimeout = RegisterTimeout( USER_TIMEOUT, timeoutHandler );
   }
 
   void TimeoutQueryHandler::onStartQuery( QueryDesc* _queryDesc, int _eflags ) {
-    LOG_DEBUG( "start query %s", _queryDesc->sourceText  );
+    assert(_queryDesc);
+
+    LOG_DEBUG( "Start query %s", _queryDesc->sourceText  );
+
     if ( isQueryCancelPending() ) {
       return;
     }
 
-    if ( isPendingRootQuery() ) {
+    if (isRootQueryPending() ) {
       return;
     }
 
-    TimeoutQueryHandler::setPendingRootQuery(_queryDesc);
-    spawn();
+    setPendingRootQuery(_queryDesc);
+    spawnTimer();
   }
 
   void TimeoutQueryHandler::onEndQuery( QueryDesc* _queryDesc ) {
-    LOG_DEBUG( "end query %s", _queryDesc->sourceText  );
+    assert(_queryDesc);
+
+    //Warning: onEndQuery won't be called when pending root query was broken
+    LOG_DEBUG( "End query %s", _queryDesc->sourceText  );
     if ( isQueryCancelPending() ) {
       return;
     }
 
-    if ( !isEqualRootQuery( _queryDesc ) ) {
+    if ( !isPendingRootQuery(_queryDesc) ) {
       return;
     }
 
-    LOG_DEBUG( "Root query end: %s", _queryDesc->sourceText );
     disable_timeout( m_pendingQueryTimeout, false );
     resetPendingRootQuery();
   }
 
   void TimeoutQueryHandler::setPendingRootQuery( QueryDesc* _queryDesc ) {
-    LOG_DEBUG( "Start pending root query end: %s", _queryDesc->sourceText );
+    assert(_queryDesc);
+
+    LOG_DEBUG( "Start root query: %s", _queryDesc->sourceText );
     m_pendingRootQuery = _queryDesc;
   }
-  bool TimeoutQueryHandler::isPendingRootQuery() {
+
+  bool TimeoutQueryHandler::isRootQueryPending() {
     return m_pendingRootQuery != nullptr;
   }
 
-
-
-  bool TimeoutQueryHandler::isEqualRootQuery( QueryDesc* _queryDesc ) {
+  bool TimeoutQueryHandler::isPendingRootQuery(QueryDesc* _queryDesc ) {
+    if ( _queryDesc == nullptr ) {
+      return false;
+    }
     return m_pendingRootQuery == _queryDesc;
   }
 
@@ -75,9 +88,15 @@ namespace PsqlTools::PsqlUtils {
     return QueryCancelPending;
   }
 
-  void TimeoutQueryHandler::spawn() {
-    using namespace std::chrono_literals;
-    auto delay = 1s;
-    enable_timeout_after( m_pendingQueryTimeout, std::chrono::duration_cast< std::chrono::milliseconds >(delay).count() );
+  void TimeoutQueryHandler::breakPendingRootQuery() {
+    timeoutHandler();
+  }
+
+  QueryDesc* TimeoutQueryHandler::getPendingRootQuery() {
+    return m_pendingRootQuery;
+  }
+
+  void TimeoutQueryHandler::spawnTimer() {
+    enable_timeout_after( m_pendingQueryTimeout, m_queryTimeout.count() );
   }
 } // namespace PsqlTools::PsqlUtils
