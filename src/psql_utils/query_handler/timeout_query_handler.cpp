@@ -41,8 +41,6 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    auto* instr = InstrAlloc(1, INSTRUMENT_BUFFERS | INSTRUMENT_TIMER | INSTRUMENT_WAL, true);
-    _queryDesc->totaltime = instr;
     TimeoutQueryHandler::setPendingRootQuery(_queryDesc);
     spawn();
   }
@@ -58,21 +56,48 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
+    LOG_INFO( "Query ntuples %lf", m_pendingRootQuery->totaltime->tuplecount );
+
     stopPeriodicCheck();
     LOG_DEBUG( "Root query end: %s", _queryDesc->sourceText );
     disable_timeout( m_pendingQueryTimeout, false );
     resetPendingRootQuery();
   }
 
+  void TimeoutQueryHandler::onRunQuery( QueryDesc* _queryDesc ) {
+    addInstrumentation( _queryDesc );
+  }
+
+  void TimeoutQueryHandler::onFinishQuery( QueryDesc* _queryDesc ) {
+    assert( _queryDesc );
+    LOG_INFO( "Finish query: %s, %lf", _queryDesc->sourceText, _queryDesc->totaltime->tuplecount );
+    if ( isQueryCancelPending() ) {
+      return;
+    }
+
+    if ( isEqualRootQuery( _queryDesc ) ) {
+      return;
+    }
+
+    assert( m_pendingRootQuery );
+    assert( m_pendingRootQuery->totaltime );
+    assert( _queryDesc->totaltime );
+    InstrAggNode(m_pendingRootQuery->totaltime, _queryDesc->totaltime );
+  }
+
   void TimeoutQueryHandler::onPeriodicCheck() {
     LOG_INFO( "Periodic check!" );
-    if (!m_pendingRootQuery) {
+    if ( !isPendingRootQuery() ) {
       stopPeriodicCheck();
       return;
     }
 
     if (m_pendingRootQuery) {
-      LOG_INFO( "Query ntuples %lf", m_pendingRootQuery->totaltime->total );
+      LOG_INFO( "Query ntuples %lf", m_pendingRootQuery->totaltime->tuplecount );
+      if (  m_pendingRootQuery->totaltime->tuplecount > 1000 ) {
+        LOG_INFO( "Break because more than 1000 touples were touched" );
+        timeoutHandler();
+      }
     }
   }
 
@@ -97,8 +122,20 @@ namespace PsqlTools::PsqlUtils {
 
   void TimeoutQueryHandler::spawn() {
     using namespace std::chrono_literals;
-    auto delay = 1s;
+    auto delay = 5s;
     enable_timeout_after( m_pendingQueryTimeout, std::chrono::duration_cast< std::chrono::milliseconds >(delay).count() );
     startPeriodicCheck( 1ms );
+  }
+
+  void TimeoutQueryHandler::addInstrumentation( QueryDesc* _queryDesc ) const {
+    LOG_INFO( "Set instrumentation" );
+    // Add instrumentation to track query resources
+    if ( _queryDesc->totaltime != nullptr ) {
+      return;
+    }
+    MemoryContext oldcxt;
+    oldcxt = MemoryContextSwitchTo(_queryDesc->estate->es_query_cxt);
+    _queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL, true);
+    MemoryContextSwitchTo(oldcxt);
   }
 } // namespace PsqlTools::PsqlUtils

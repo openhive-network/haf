@@ -27,7 +27,10 @@ namespace PsqlTools::PsqlUtils {
 
       virtual void onStartQuery( QueryDesc* _queryDesc, int _eflags ) = 0;
       virtual void onEndQuery( QueryDesc* _queryDesc ) = 0;
-      virtual void onPeriodicCheck() {};
+
+      virtual void onRunQuery( QueryDesc* _queryDesc )  {}
+      virtual void onFinishQuery( QueryDesc* _queryDesc )  {}
+      virtual void onPeriodicCheck() {}
 
       void startPeriodicCheck( const std::chrono::milliseconds& _period );
       void stopPeriodicCheck();

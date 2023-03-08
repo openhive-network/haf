@@ -18,10 +18,14 @@ namespace PsqlTools::PsqlUtils {
 
     void onStartQuery( QueryDesc* _queryDesc, int _eflags ) override;
     void onEndQuery( QueryDesc* _queryDesc ) override;
+    void onRunQuery( QueryDesc* _queryDesc ) override;
+    void onFinishQuery( QueryDesc* _queryDesc ) override;
+
     void onPeriodicCheck() override;
 
     private:
     void spawn();
+    void addInstrumentation( QueryDesc* _queryDesc ) const;
 
     static void setPendingRootQuery( QueryDesc* _queryDesc );
     static bool isPendingRootQuery();

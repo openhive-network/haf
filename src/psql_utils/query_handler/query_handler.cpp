@@ -8,7 +8,11 @@ namespace PsqlTools::PsqlUtils {
 
     void onStartQuery(QueryDesc *_queryDesc, int _eflags);
     void onEndQuery(QueryDesc *_queryDesc);
+    void onRunQuery( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once );
+    void onFinishQuery( QueryDesc* _queryDesc );
+
     void onCheckQueryResources();
+
     void startPeriodicTimer( const std::chrono::milliseconds& _period );
     void stopPeriodicTimer();
     bool isPeriodicTimerPending() const;
@@ -16,6 +20,8 @@ namespace PsqlTools::PsqlUtils {
 
     ExecutorStart_hook_type m_originalStarExecutorHook = nullptr;
     ExecutorEnd_hook_type m_originalEndExecutorHook = nullptr;
+    ExecutorRun_hook_type m_originalRunExecutorHook = nullptr;
+    ExecutorFinish_hook_type m_originalFinishExecutorHook = nullptr;
 
   private:
     QueryHandler* m_parent = nullptr;
@@ -61,6 +67,40 @@ namespace PsqlTools::PsqlUtils {
     return standard_ExecutorEnd( _queryDesc );
   }
 
+  namespace {
+    void onRunQueryHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once) {
+      PsqlTools::PsqlUtils::QueryHandler::getImpl().onRunQuery( _queryDesc, _direction, _count, _execute_once );
+    }
+  } //namespace
+
+  void QueryHandler::Impl::onRunQuery( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {
+    assert(m_parent);
+    m_parent->onRunQuery(_queryDesc);
+
+    if ( m_originalRunExecutorHook ) {
+      m_originalRunExecutorHook( _queryDesc, _direction, _count, _execute_once );
+    }
+
+    standard_ExecutorRun(_queryDesc, _direction, _count, _execute_once );
+  }
+
+  namespace {
+    void onFinishQueryHook(QueryDesc* _queryDesc) {
+      PsqlTools::PsqlUtils::QueryHandler::getImpl().onFinishQuery(_queryDesc);
+    }
+  }
+
+  void QueryHandler::Impl::onFinishQuery( QueryDesc* _queryDesc ) {
+    assert(m_parent);
+    m_parent->onFinishQuery( _queryDesc );
+
+    if ( m_originalFinishExecutorHook ) {
+      m_originalFinishExecutorHook(_queryDesc);
+    }
+
+    standard_ExecutorFinish( _queryDesc );
+  }
+
   void QueryHandler::Impl::onCheckQueryResources() {
     assert( m_parent );
     assert( isPeriodicTimerInitialized() );
@@ -104,13 +144,19 @@ namespace PsqlTools::PsqlUtils {
     m_impl = std::make_unique< Impl >(this);
     m_impl->m_originalStarExecutorHook = ExecutorStart_hook;
     m_impl->m_originalEndExecutorHook = ExecutorEnd_hook;
+    m_impl->m_originalRunExecutorHook = ExecutorRun_hook;
+    m_impl->m_originalFinishExecutorHook = ExecutorFinish_hook;
     ExecutorStart_hook = startQueryHook;
     ExecutorEnd_hook = endQueryHook;
+    ExecutorRun_hook = onRunQueryHook;
+    ExecutorFinish_hook = onFinishQueryHook;
   }
 
   QueryHandler::~QueryHandler() {
-    ExecutorStart_hook = nullptr;
-    ExecutorEnd_hook = nullptr;
+    ExecutorStart_hook = m_impl->m_originalStarExecutorHook;
+    ExecutorEnd_hook =  m_impl->m_originalEndExecutorHook;
+    ExecutorRun_hook = m_impl->m_originalRunExecutorHook;
+    ExecutorFinish_hook = m_impl->m_originalFinishExecutorHook;
   }
 
   void QueryHandler::startPeriodicCheck( const std::chrono::milliseconds& _period ) {
