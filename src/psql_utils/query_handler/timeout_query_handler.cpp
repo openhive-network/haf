@@ -32,6 +32,10 @@ namespace PsqlTools::PsqlUtils {
     m_pendingQueryTimeout = RegisterTimeout( USER_TIMEOUT, timeoutHandler );
   }
 
+  TimeoutQueryHandler::~TimeoutQueryHandler() {
+    disable_timeout( m_pendingQueryTimeout, true );
+  }
+
   void TimeoutQueryHandler::onStartQuery( QueryDesc* _queryDesc, int _eflags ) {
     assert(_queryDesc);
 

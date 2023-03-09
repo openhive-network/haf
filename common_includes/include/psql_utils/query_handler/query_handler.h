@@ -28,6 +28,8 @@ namespace PsqlTools::PsqlUtils {
       template< typename _Handler, typename... _Args >
       static void deinitialize(_Args... _args);
 
+      static bool isInitialized() { return m_instance != nullptr; }
+
     protected:
       QueryHandler();
 

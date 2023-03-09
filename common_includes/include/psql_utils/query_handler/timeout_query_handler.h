@@ -22,7 +22,7 @@ namespace PsqlTools::PsqlUtils {
   {
     public:
     TimeoutQueryHandler( std::chrono::milliseconds _queryTimeout );
-    ~TimeoutQueryHandler() override = default;
+    ~TimeoutQueryHandler() override;
 
     void onStartQuery( QueryDesc* _queryDesc, int _eflags ) override;
     void onEndQuery( QueryDesc* _queryDesc ) override;

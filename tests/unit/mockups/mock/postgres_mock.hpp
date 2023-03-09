@@ -7,7 +7,18 @@
 
 #include <gmock/gmock.h>
 
+// mock-ed global variables
+extern ExecutorStart_hook_type ExecutorStart_hook;
+extern ExecutorRun_hook_type ExecutorRun_hook;
+extern ExecutorFinish_hook_type ExecutorFinish_hook;
+extern ExecutorEnd_hook_type ExecutorEnd_hook;
+extern volatile sig_atomic_t QueryCancelPending;
 
+// mock-ed hooks
+void executorStartHook(QueryDesc* _queryDesc, int _eflags);
+void executorRunHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once);
+void executorFinishHook(QueryDesc* _queryDesc);
+void executorEndHook(QueryDesc* _queryDesc);
 
 class IPostgresMock {
 public:
@@ -32,9 +43,23 @@ public:
     virtual void table_close(Relation relation, LOCKMODE lockmode) = 0;
     virtual char *SPI_getrelname(Relation rel) = 0;
 
+    virtual TimeoutId RegisterTimeout(TimeoutId id, timeout_handler_proc handler) = 0;
+    virtual void disable_timeout(TimeoutId id, bool keep_indicator) = 0;
+    virtual void standard_ExecutorStart(QueryDesc *queryDesc, int eflags) = 0;
+    virtual void standard_ExecutorEnd(QueryDesc *queryDesc) = 0;
+    virtual void standard_ExecutorRun(QueryDesc*, ScanDirection, uint64 , bool ) = 0;
+    virtual void standard_ExecutorFinish(QueryDesc*) = 0;
+    virtual void enable_timeout_after(TimeoutId, int) = 0;
+    virtual void StatementCancelHandler(int) = 0;
+
     //Bitmapset
     virtual int	bms_next_member(const Bitmapset* a, int prevbit) = 0;
 
+    // Executor hooks
+    virtual void executorStartHook(QueryDesc *queryDesc, int eflags) = 0;
+    virtual void executorRunHook(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool execute_once) = 0;
+    virtual void executorFinishHook(QueryDesc *queryDesc) = 0;
+    virtual void executorEndHook(QueryDesc *queryDesc) = 0;
 };
 
 class PostgresMock : public IPostgresMock {
@@ -56,10 +81,25 @@ public:
     MOCK_METHOD( RangeVar*, makeRangeVar, (char*, char*, int) );
     MOCK_METHOD( Relation, table_openrv, (const RangeVar*, LOCKMODE) );
     MOCK_METHOD( void, table_close, (Relation, LOCKMODE) );
-    MOCK_METHOD(  char*, SPI_getrelname, (Relation) );
+    MOCK_METHOD( char*, SPI_getrelname, (Relation) );
+
+    MOCK_METHOD( TimeoutId, RegisterTimeout,(TimeoutId, timeout_handler_proc) );
+    MOCK_METHOD( void, disable_timeout, (TimeoutId, bool) );
+    MOCK_METHOD( void, standard_ExecutorStart, (QueryDesc*, int) );
+    MOCK_METHOD( void, standard_ExecutorEnd, (QueryDesc*) );
+    MOCK_METHOD( void, standard_ExecutorRun, (QueryDesc*, ScanDirection , uint64 , bool ) );
+    MOCK_METHOD( void, standard_ExecutorFinish, (QueryDesc*) );
+    MOCK_METHOD( void, enable_timeout_after, (TimeoutId, int) );
 
     //Bitmapset
     MOCK_METHOD( int, bms_next_member, (const Bitmapset*, int));
+
+    // Executor hooks
+    MOCK_METHOD( void, executorStartHook, (QueryDesc*, int) );
+    MOCK_METHOD( void, executorRunHook, (QueryDesc*, ScanDirection, uint64, bool) );
+    MOCK_METHOD( void, executorFinishHook, (QueryDesc*) );
+    MOCK_METHOD( void, executorEndHook, (QueryDesc*) );
+    MOCK_METHOD( void, StatementCancelHandler, (int) );
 
     static std::shared_ptr<PostgresMock> create_and_get();
 
