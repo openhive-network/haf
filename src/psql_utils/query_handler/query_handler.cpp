@@ -79,6 +79,7 @@ namespace PsqlTools::PsqlUtils {
 
     if ( m_originalRunExecutorHook ) {
       m_originalRunExecutorHook( _queryDesc, _direction, _count, _execute_once );
+      return;
     }
 
     standard_ExecutorRun(_queryDesc, _direction, _count, _execute_once );
@@ -96,6 +97,7 @@ namespace PsqlTools::PsqlUtils {
 
     if ( m_originalFinishExecutorHook ) {
       m_originalFinishExecutorHook(_queryDesc);
+      return;
     }
 
     standard_ExecutorFinish( _queryDesc );

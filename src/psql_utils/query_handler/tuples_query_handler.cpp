@@ -71,8 +71,8 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    assert( m_pendingRootQuery );
-    assert( m_pendingRootQuery->totaltime );
+    assert( isRootQueryPending() );
+    assert( getPendingRootQuery()->totaltime );
     assert( _queryDesc->totaltime );
     InstrAggNode(getPendingRootQuery()->totaltime, _queryDesc->totaltime );
   }
