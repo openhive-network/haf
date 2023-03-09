@@ -116,9 +116,6 @@ haf_system_tests:
   script:
     # install hive_fork_manager extension built in previous stage
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-database-store="$CI_PROJECT_DIR/haf_database_store" --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager_testnet/build"
-    # track call of postgres functions
-    - sudo -Enu haf_admin psql -d postgres -c "ALTER SYSTEM SET track_functions TO pl;"
-    - sudo -Enu haf_admin psql -d postgres -c "SELECT pg_reload_conf();"
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf
     - pytest --junitxml report.xml

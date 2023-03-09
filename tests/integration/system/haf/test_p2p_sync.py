@@ -11,6 +11,8 @@ from haf_local_tools.tables import Operations, Blocks
 )
 def test_p2p_sync(database, psql_index_threshold, expected_disable_indexes_calls):
     session = database('postgresql:///haf_block_log')
+    session.execute( 'CREATE EXTENSION pg_stat_statements;' )
+    session.commit()
 
     api_node, init_node = prepare_network_with_init_node_and_api_node(session)
     api_node.config.psql_index_threshold = psql_index_threshold
