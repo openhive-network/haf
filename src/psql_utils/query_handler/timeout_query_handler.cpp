@@ -48,7 +48,7 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    if (isRootQueryPending() ) {
+    if ( isRootQueryPending() ) {
       return;
     }
 
