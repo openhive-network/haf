@@ -4,132 +4,48 @@ from pathlib import Path
 
 import test_tools as tt
 
-from witnesses import alpha_witness_names, beta_witness_names
+from shared_tools.complex_networks import prepare_sub_networks_generation
+import shared_tools.networks_architecture as networks
 
+def prepare_blocklog(desired_blocklog_length: int):
+    #Here is an example how to create a whole architecture of sub networks.
+    # If you want to create your own custom network, just create a new config JSON.
+    config = {
+        "networks": [
+                        {
+                            "InitNode"     : True,
+                            "ApiNode"      : True,
+                            "WitnessNodes" :[3, 3, 2, 2]
+                        },
+                        {
+                            "ApiNode"      : True,
+                            "WitnessNodes" :[3, 3, 2, 2]
+                        }
+                    ]
+    }
+    architecture = networks.NetworksArchitecture()
+    architecture.load(config)
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    # (Network-alpha)
+    #   (InitNode)
+    #   (ApiNode)
+    #   (WitnessNode-0 (witness0-alpha)(witness1-alpha)(witness2-alpha))
+    #   (WitnessNode-1 (witness3-alpha)(witness4-alpha)(witness5-alpha))
+    #   (WitnessNode-2 (witness6-alpha)(witness7-alpha))
+    #   (WitnessNode-3 (witness8-alpha)(witness9-alpha))
+    # (Network-beta)
+    #   (ApiNode)
+    #   (WitnessNode-0 (witness10-beta)(witness11-beta)(witness12-beta))
+    #   (WitnessNode-1 (witness13-beta)(witness14-beta)(witness15-beta))
+    #   (WitnessNode-2 (witness16-beta)(witness17-beta))
+    #   (WitnessNode-3 (witness18-beta)(witness19-beta)) 
+    tt.logger.info(architecture)
 
+    prepare_sub_networks_generation(architecture, Path('generated'), None, desired_blocklog_length)
 
-def prepare_block_log(length):
-    tt.cleanup_policy.set_default(tt.constants.CleanupPolicy.DO_NOT_REMOVE_FILES)
-
-    all_witness_names = alpha_witness_names + beta_witness_names
-
-    # Create first network
-    alpha_net = tt.Network()
-    beta_net = tt.Network()
-    init_node = tt.InitNode(network=alpha_net)
-
-    for i in range(4):
-        first = int(i * len(alpha_witness_names) / 4)
-        last = int((i+1) * len(alpha_witness_names) / 4)
-        tt.WitnessNode(network=alpha_net, witnesses=alpha_witness_names[first:last])
-    api_node = tt.ApiNode(network=alpha_net)
-
-    for i in range(4):
-        first = int(i * len(beta_witness_names) / 4)
-        last = int((i+1) * len(beta_witness_names) / 4)
-        tt.WitnessNode(network=beta_net, witnesses=beta_witness_names[first:last])
-
-    # Run
-    alpha_net.connect_with(beta_net)
-
-    tt.logger.info('Running networks, waiting for live...')
-    alpha_net.run()
-    beta_net.run()
-
-    tt.logger.info('Attaching wallets...')
-    wallet = tt.Wallet(attach_to=api_node)
-    # We are waiting here for block 43, because witness participation is counting
-    # by dividing total produced blocks in last 128 slots by 128. When we were waiting
-    # too short, for example 42 blocks, then participation equals 42 / 128 = 32.81%.
-    # It is not enough, because 33% is required. 43 blocks guarantee, that this
-    # requirement is always fulfilled (43 / 128 = 33.59%, which is greater than 33%).
-    tt.logger.info('Wait for block 43 (to fulfill required 33% of witness participation)')
-    init_node.wait_for_block_with_number(43)
-
-    # Prepare witnesses on blockchain
-    with wallet.in_single_transaction():
-        for name in all_witness_names:
-            wallet.api.create_account('initminer', name, '')
-    with wallet.in_single_transaction():
-        for name in all_witness_names:
-            wallet.api.transfer_to_vesting('initminer', name, tt.Asset.Test(1000))
-    with wallet.in_single_transaction():
-        for name in all_witness_names:
-            wallet.api.update_witness(
-                name, 'https://' + name,
-                tt.Account(name).public_key,
-                {'account_creation_fee': tt.Asset.Test(3), 'maximum_block_size': 65536, 'sbd_interest_rate': 0}
-            )
-
-    tt.logger.info('Wait 21 blocks to schedule newly created witnesses')
-    init_node.wait_number_of_blocks(21)
-
-    tt.logger.info('Witness state after voting')
-    response = api_node.api.database.list_witnesses(start=0, limit=100, order='by_name')
-    active_witnesses = response['witnesses']
-    active_witnesses_names = [witness['owner'] for witness in active_witnesses]
-    tt.logger.info(active_witnesses_names)
-    assert len(active_witnesses_names) == 21
-
-    # Reason of this wait is to enable moving forward of irreversible block
-    tt.logger.info('Wait 21 blocks (when every witness sign at least one block)')
-    init_node.wait_number_of_blocks(21)
-    tt.logger.info('Wait 21 blocks for future slate to become active slate')
-    init_node.wait_number_of_blocks(21)
-
-    # Network should be set up at this time, with 21 active witnesses, enough participation rate
-    # and irreversible block number lagging behind around 15-20 blocks head block number
-    result = wallet.api.info()
-    irreversible = result['last_irreversible_block_num']
-    head = result['head_block_num']
-    tt.logger.info(f'Network prepared, irreversible block: {irreversible}, head block: {head}')
-
-    # with fast confirm, irreversible will usually be = head
-    # assert irreversible + 10 < head
-
-    while irreversible < length:
-        init_node.wait_number_of_blocks(1)
-        result = wallet.api.info()
-        irreversible = result['last_irreversible_block_num']
-        tt.logger.info(
-            f'Generating block_log of length: {length}, '
-            f'current irreversible: {result["last_irreversible_block_num"]}, '
-            f'current head block: {result["head_block_num"]}'
-        )
-
-    timestamp = init_node.api.block.get_block(block_num=length)['block']['timestamp']
-    init_node.close()
-
-    output_block_log_path = Path(__file__).parent / "block_log"
-    output_block_log_path.unlink(missing_ok=True)
-    output_block_log = init_node.block_log.truncate(output_block_log_path.parent, length)
-
-    # compress_block_log additionally creates block_log.artifacts file, which is unneeded here.
-    output_block_log.artifacts_path.unlink()
-
-    return timestamp
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--length', type=int, default=105, help='Desired blocklog length')
     args = parser.parse_args()
 
-    timestamp = prepare_block_log(args.length)
-    tt.logger.info(f'{bcolors.OKGREEN}timestamp: {timestamp}{bcolors.ENDC}')
-
-    with open('timestamp', 'w') as f:
-        f.write(f'{timestamp}')
-
-    tt.logger.info(f'{bcolors.OKGREEN}{bcolors.UNDERLINE}Finished regeneration of block_log{bcolors.ENDC}')
+    prepare_blocklog(args.length)
