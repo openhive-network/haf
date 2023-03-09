@@ -9,7 +9,11 @@ namespace PsqlTools::PsqlUtils {
    */
   class TuplesQueryHandler : public TimeoutQueryHandler {
   public:
-    TuplesQueryHandler( uint32_t _limitOfTuplesPerRootQuery, std::chrono::milliseconds _queryTimeout );
+    TuplesQueryHandler(
+        uint32_t _limitOfTuplesPerRootQuery
+      , std::chrono::milliseconds _periodicCheckPeriod
+      , std::chrono::milliseconds _queryTimeout
+    );
 
     void onStartQuery( QueryDesc* _queryDesc, int _eflags ) override;
     void onEndQuery( QueryDesc* _queryDesc ) override;
@@ -22,6 +26,8 @@ namespace PsqlTools::PsqlUtils {
 
   private:
     const uint32_t m_limitOfTuplesPerRootQuery;
+    const std::chrono::milliseconds m_period;
+
   };
 
 } // namespace PsqlTools::PsqlUtils

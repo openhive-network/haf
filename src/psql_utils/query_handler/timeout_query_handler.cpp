@@ -33,28 +33,32 @@ namespace PsqlTools::PsqlUtils {
   }
 
   void TimeoutQueryHandler::onStartQuery( QueryDesc* _queryDesc, int _eflags ) {
+    assert(_queryDesc);
+
     LOG_DEBUG( "Start query %s", _queryDesc->sourceText  );
 
     if ( isQueryCancelPending() ) {
       return;
     }
 
-    if ( isPendingRootQuery() ) {
+    if (isRootQueryPending() ) {
       return;
     }
 
-    TimeoutQueryHandler::setPendingRootQuery(_queryDesc);
+    setPendingRootQuery(_queryDesc);
     spawnTimer();
   }
 
   void TimeoutQueryHandler::onEndQuery( QueryDesc* _queryDesc ) {
+    assert(_queryDesc);
+
     //Warning: onEndQuery won't be called when pending root query was broken
     LOG_DEBUG( "End query %s", _queryDesc->sourceText  );
     if ( isQueryCancelPending() ) {
       return;
     }
 
-    if ( !isRootQuery(_queryDesc) ) {
+    if ( !isPendingRootQuery(_queryDesc) ) {
       return;
     }
 
@@ -63,15 +67,20 @@ namespace PsqlTools::PsqlUtils {
   }
 
   void TimeoutQueryHandler::setPendingRootQuery( QueryDesc* _queryDesc ) {
-    LOG_DEBUG( "Start pending root query end: %s", _queryDesc->sourceText );
+    assert(_queryDesc);
+
+    LOG_DEBUG( "Start root query: %s", _queryDesc->sourceText );
     m_pendingRootQuery = _queryDesc;
   }
 
-  bool TimeoutQueryHandler::isPendingRootQuery() {
+  bool TimeoutQueryHandler::isRootQueryPending() {
     return m_pendingRootQuery != nullptr;
   }
 
-  bool TimeoutQueryHandler::isRootQuery(QueryDesc* _queryDesc ) {
+  bool TimeoutQueryHandler::isPendingRootQuery(QueryDesc* _queryDesc ) {
+    if ( _queryDesc == nullptr ) {
+      return false;
+    }
     return m_pendingRootQuery == _queryDesc;
   }
 
@@ -83,7 +92,7 @@ namespace PsqlTools::PsqlUtils {
     timeoutHandler();
   }
 
-  QueryDesc* TimeoutQueryHandler::getPendingQuery() {
+  QueryDesc* TimeoutQueryHandler::getPendingRootQuery() {
     return m_pendingRootQuery;
   }
 

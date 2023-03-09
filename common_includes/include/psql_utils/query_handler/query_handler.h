@@ -1,5 +1,6 @@
 #pragma once
 
+#include "include/exceptions.hpp"
 #include "include/psql_utils/postgres_includes.hpp"
 
 #include <cassert>
@@ -30,17 +31,30 @@ namespace PsqlTools::PsqlUtils {
     protected:
       QueryHandler();
 
+      /**
+       * Methods are called when the executor starts and ends executes a query (exactly a statement).
+       * Warning! Postgres function call is treated as one statement, and statements in a function body
+       * are treated as separated statements and each of them are started and ended by the executor separately.
+       * Original hooks are started after these methods
+       */
       virtual void onStartQuery( QueryDesc* _queryDesc, int _eflags ) = 0;
       virtual void onEndQuery( QueryDesc* _queryDesc ) = 0;
 
-      virtual void onRunQuery( QueryDesc* _queryDesc )  {}
-      virtual void onFinishQuery( QueryDesc* _queryDesc )  {}
-      virtual void onPeriodicCheck() {}
+      /**
+      * Methods are called when the executor runs and  finish executes a query (exactly a statement).
+      * PostgreSQL added this stage for some query resources initialization, especially a query instrumentation.
+      * Methods are not 'poor virtual' because not every handler will use them
+      * Original hooks are started after these methods
+      */
+      virtual void onRunQuery( QueryDesc* _queryDesc ) {}
+      virtual void onFinishQuery( QueryDesc* _queryDesc ) {}
 
       // helpers to start periodic check
       void startPeriodicCheck( const std::chrono::milliseconds& _period );
       void stopPeriodicCheck();
       bool isPeriodicTimerPending() const;
+      // Override to make periodic checks, the function will be called with a period passed to startPeriodicCheck
+      virtual void onPeriodicCheck() {}
 
     public:
       class Impl;
@@ -53,14 +67,15 @@ namespace PsqlTools::PsqlUtils {
   template< typename _Handler, typename... _Args >
   inline void QueryHandler::initialize(_Args... _args) {
     static_assert( std::is_base_of_v< QueryHandler, _Handler >, "Handler is not derived from QueryHandler" );
-    assert( m_instance == nullptr && "Query handler already initialized" );
+    if ( m_instance != nullptr ) {
+      THROW_INITIALIZATION_ERROR( "An object of QueryHandler class already exists" );
+    }
     m_instance = std::make_unique< _Handler >(_args...);
   }
 
   template< typename _Handler, typename... _Args >
   inline void QueryHandler::deinitialize(_Args... _args) {
     static_assert( std::is_base_of_v< QueryHandler, _Handler >, "Handler is not derived from QueryHandler" );
-    assert( m_instance != nullptr && "Query handler is not initialized" );
     m_instance.reset();
   }
 

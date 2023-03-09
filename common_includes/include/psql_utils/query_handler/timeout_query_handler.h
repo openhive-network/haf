@@ -13,6 +13,9 @@ namespace PsqlTools::PsqlUtils {
    * and break a query when given timeout is exceeded.
    * Because it inherits from QueryHandler, then no more than one of its object can exists
    * Implementation uses PSQL timeouts, based on SIG_ALARM, this allows the backend to remain a single-threaded process
+   * The handler supervises a root of query statements and its children, i.e. function and its body statements.
+   * The function call statement is named RootQuery to distinguish it from its sub statements.
+   * Timeout value refers to the time of a root query execution ( which includes sub-statements times )
    */
   class TimeoutQueryHandler
     : public QueryHandler
@@ -25,13 +28,13 @@ namespace PsqlTools::PsqlUtils {
     void onEndQuery( QueryDesc* _queryDesc ) override;
 
     protected:
-    static bool isPendingRootQuery();
-    static bool isRootQuery(QueryDesc* _queryDesc );
+    static bool isRootQueryPending();
+    static bool isPendingRootQuery(QueryDesc* _queryDesc );
     static bool isQueryCancelPending();
     static void breakPendingRootQuery();
 
     // may return nullptr
-    static QueryDesc* getPendingQuery();
+    static QueryDesc* getPendingRootQuery();
 
     private:
     void spawnTimer();

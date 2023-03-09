@@ -159,6 +159,16 @@ namespace PsqlTools::PsqlUtils {
     ExecutorFinish_hook = m_impl->m_originalFinishExecutorHook;
   }
 
+  void
+  QueryHandler::onStartQuery( QueryDesc* _queryDesc, int _eflags ) {
+
+  }
+
+  void
+  QueryHandler::onEndQuery( QueryDesc* _queryDesc ) {
+
+  }
+
   void QueryHandler::startPeriodicCheck( const std::chrono::milliseconds& _period ) {
     return getImpl().startPeriodicTimer( _period );
   }

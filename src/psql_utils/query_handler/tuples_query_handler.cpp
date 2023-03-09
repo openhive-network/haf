@@ -6,9 +6,14 @@
 
 namespace PsqlTools::PsqlUtils {
 
-  TuplesQueryHandler::TuplesQueryHandler( uint32_t _limitOfTuplesPerRootQuery, std::chrono::milliseconds _queryTimeout )
+  TuplesQueryHandler::TuplesQueryHandler(
+      uint32_t _limitOfTuplesPerRootQuery
+    , std::chrono::milliseconds _periodicCheckPeriod
+    , std::chrono::milliseconds _queryTimeout
+  )
     : TimeoutQueryHandler( _queryTimeout )
     , m_limitOfTuplesPerRootQuery(_limitOfTuplesPerRootQuery)
+    , m_period( _periodicCheckPeriod )
   {}
 
   void TuplesQueryHandler::onStartQuery( QueryDesc* _queryDesc, int _eflags ) {
@@ -22,11 +27,11 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    if ( isPendingRootQuery() ) {
+    if (isRootQueryPending() ) {
       return;
     }
 
-    startPeriodicCheck( 1ms );
+    startPeriodicCheck( m_period );
   }
 
   void TuplesQueryHandler::onEndQuery( QueryDesc* _queryDesc ) {
@@ -38,7 +43,7 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    if ( !isRootQuery(_queryDesc) ) {
+    if ( !isPendingRootQuery(_queryDesc) ) {
       return;
     }
 
@@ -62,27 +67,25 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    if (isRootQuery(_queryDesc) ) {
+    if (isPendingRootQuery(_queryDesc) ) {
       return;
     }
 
     assert( m_pendingRootQuery );
     assert( m_pendingRootQuery->totaltime );
     assert( _queryDesc->totaltime );
-    InstrAggNode(getPendingQuery()->totaltime, _queryDesc->totaltime );
+    InstrAggNode(getPendingRootQuery()->totaltime, _queryDesc->totaltime );
   }
 
   void TuplesQueryHandler::onPeriodicCheck() {
-    LOG_INFO( "Periodic check!" );
-
-    if ( !isPendingRootQuery() ) {
+    if ( !isRootQueryPending() ) {
       stopPeriodicCheck();
       return;
     }
 
-    if (  getPendingQuery()->totaltime->tuplecount > m_limitOfTuplesPerRootQuery ) {
-      LOG_WARNING( "Query was broken because of tuples limit reached %lf > %d"
-                   , getPendingQuery()->totaltime->tuplecount
+    if (getPendingRootQuery()->totaltime->tuplecount > m_limitOfTuplesPerRootQuery ) {
+      LOG_WARNING("Query was broken because of tuples limit reached %lf > %d"
+                   , getPendingRootQuery()->totaltime->tuplecount
                    , m_limitOfTuplesPerRootQuery
       );
       stopPeriodicCheck();
