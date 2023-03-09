@@ -27,8 +27,9 @@ namespace PsqlTools::PsqlUtils {
     void onStartQuery( QueryDesc* _queryDesc, int _eflags ) override;
     void onEndQuery( QueryDesc* _queryDesc ) override;
 
-    protected:
     static bool isRootQueryPending();
+
+    protected:
     static bool isPendingRootQuery(QueryDesc* _queryDesc );
     static bool isQueryCancelPending();
     static void breakPendingRootQuery();
