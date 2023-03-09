@@ -6,7 +6,7 @@ from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irr
 from haf_local_tools.tables import Blocks, Transactions, Operations
 
 
-START_TEST_BLOCK = 108
+START_TEST_BLOCK =  115
 
 
 def test_live_sync(prepared_networks_and_database_12_8):
