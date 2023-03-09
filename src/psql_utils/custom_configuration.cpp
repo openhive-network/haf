@@ -25,7 +25,7 @@ namespace PsqlTools::PsqlUtils {
   };
 
   CustomConfiguration::CustomConfiguration( std::string _prefix )
-    : m_prefix(std::move(m_prefix)) {
+    : m_prefix(std::move(_prefix)) {
   }
 
   CustomConfiguration::~CustomConfiguration(){
@@ -58,9 +58,13 @@ namespace PsqlTools::PsqlUtils {
     m_options.emplace( _name, std::move(newOption) );
   }
 
-  std::string CustomConfiguration::getOptionValue( const std::string& _name ) const {
+  std::string CustomConfiguration::getOptionAsString(const std::string& _name ) const {
     // Warning: it can be used only in backend main thread because static variable is used to pass a result
-    std::string value = GetConfigOption( ( m_prefix + "." + _name ).c_str(), false, false );
+    using namespace std::string_literals;
+    auto value = GetConfigOption( ( m_prefix + "." + _name ).c_str(), false, false );
+    if ( value == nullptr ) {
+      THROW_RUNTIME_ERROR( "No configuration option "s +  m_prefix + "."s + _name );
+    }
     return value;
   }
 

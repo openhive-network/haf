@@ -32,6 +32,13 @@ namespace PsqlTools::PsqlUtils {
     m_pendingQueryTimeout = RegisterTimeout( USER_TIMEOUT, timeoutHandler );
   }
 
+  TimeoutQueryHandler::~TimeoutQueryHandler() {
+    disable_timeout( m_pendingQueryTimeout, true );
+    if (TimeoutQueryHandler::isRootQueryPending()) {
+      resetPendingRootQuery();
+    }
+  }
+
   void TimeoutQueryHandler::onStartQuery( QueryDesc* _queryDesc, int _eflags ) {
     assert(_queryDesc);
 
@@ -41,7 +48,7 @@ namespace PsqlTools::PsqlUtils {
       return;
     }
 
-    if (isRootQueryPending() ) {
+    if ( isRootQueryPending() ) {
       return;
     }
 
