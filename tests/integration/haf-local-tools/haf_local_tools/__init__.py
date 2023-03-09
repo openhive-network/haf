@@ -138,12 +138,6 @@ def get_irreversible_block(node):
     irreversible_block_num = node.api.database.get_dynamic_global_properties()["last_irreversible_block_num"]
     return irreversible_block_num
 
-def create_node_with_database(network: tt.Network, url):
-    api_node = tt.ApiNode(network=network)
-    api_node.config.plugin.append('sql_serializer')
-    api_node.config.psql_url = url
-    return api_node
-
 
 SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE = """
     CREATE TABLE IF NOT EXISTS public.trx_histogram(

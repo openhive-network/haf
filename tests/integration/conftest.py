@@ -63,15 +63,20 @@ def database():
 
     close_all_sessions()
 
-class networks_details:
+class sql_preparer:
     def __init__(self, network_under_test: int, node_under_test_name: str) -> None:
         self.network_under_test     = network_under_test
         self.node_under_test_name   = node_under_test_name
+        self.session                = None
 
-def before_run_network(builder: networks.NetworksBuilder, session: sessionmaker, details: networks_details):
-    node_under_test = builder.networks[details.network_under_test].node(details.node_under_test_name)
-    node_under_test.config.plugin.append('sql_serializer')
-    node_under_test.config.psql_url = str(session.get_bind().url)
+    def prepare(self, builder: networks.NetworksBuilder):
+        node_under_test = builder.networks[self.network_under_test].node(self.node_under_test_name)
+        node_under_test.config.plugin.append('sql_serializer')
+        node_under_test.config.psql_url = str(self.session.get_bind().url)
+
+def before_run_network(builder: networks.NetworksBuilder, preparers: Iterable[sql_preparer]):
+    for preparer in preparers:
+        preparer.prepare(builder)
 
     for node in builder.nodes:
         node.config.log_logger = '{"name":"default","level":"debug","appender":"stderr,p2p"} '\
@@ -80,17 +85,23 @@ def before_run_network(builder: networks.NetworksBuilder, session: sessionmaker,
                                  '{"name":"sync","level":"debug","appender":"p2p"} '\
                                  '{"name":"p2p","level":"debug","appender":"p2p"}'
 
-def prepare_basic_networks(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None, details: networks_details = None) -> Tuple[networks.NetworksBuilder, Any]:
-    session = database('postgresql:///haf_block_log')
-
-    builder = prepare_sub_networks(architecture, block_log_directory_name, time_offsets, partial( before_run_network, session=session, details=details))
+def prepare_basic_networks_internal(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None, preparers: Iterable[sql_preparer] = None) -> Tuple[networks.NetworksBuilder, Any]:
+    builder = prepare_sub_networks(architecture, block_log_directory_name, time_offsets, partial( before_run_network, preparers=preparers))
 
     if builder == None:
         tt.logger.info(f"Generating 'block_log' enabled. Exiting...")
         sys.exit(1)
 
+    return builder
 
-    return builder, session
+def prepare_basic_networks(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None, preparer: sql_preparer = None) -> Tuple[networks.NetworksBuilder, Any]:
+    preparer.session = database('postgresql:///haf_block_log')
+    return prepare_basic_networks_internal(database, architecture, block_log_directory_name, time_offsets, [preparer]), preparer.session
+
+def prepare_basic_networks_with_2_sessions(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None, preparers: Iterable[sql_preparer] = None) -> Tuple[networks.NetworksBuilder, Any]:
+    preparers[0].session = database('postgresql:///haf_block_log')
+    preparers[1].session = database('postgresql:///haf_block_log_ref')
+    return prepare_basic_networks_internal(database, architecture, block_log_directory_name, time_offsets, preparers), [preparers[0].session, preparers[1].session]
 
 @pytest.fixture()
 def prepared_networks_and_database_12_8(database) -> Tuple[networks.NetworksBuilder, Any]:
@@ -108,7 +119,27 @@ def prepared_networks_and_database_12_8(database) -> Tuple[networks.NetworksBuil
     }
     architecture = networks.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_basic_networks(database, architecture, create_block_log_directory_name('block_log_12_8'), None, networks_details(1, 'ApiNode0'))
+    yield prepare_basic_networks(database, architecture, create_block_log_directory_name('block_log_12_8'), None, sql_preparer(1, 'ApiNode0'))
+
+@pytest.fixture()
+def prepared_networks_and_database_12_8_with_2_sessions(database) -> Tuple[networks.NetworksBuilder, Any]:
+    config = {
+        "networks": [
+                        {
+                            "InitNode"     : True,
+                            "ApiNode"      : True,
+                            "WitnessNodes" :[12]
+                        },
+                        {
+                            "ApiNode"      : True,
+                            "WitnessNodes" :[8]
+                        }
+                    ]
+    }
+    architecture = networks.NetworksArchitecture()
+    architecture.load(config)
+    sql_preparers = [sql_preparer(0, 'ApiNode0'), sql_preparer(1, 'ApiNode1')]
+    yield prepare_basic_networks_with_2_sessions(database, architecture, create_block_log_directory_name('block_log_12_8'), None, sql_preparers)
 
 @pytest.fixture()
 def prepared_networks_and_database_12_8_without_block_log(database) -> Tuple[networks.NetworksBuilder, Any]:
@@ -126,7 +157,7 @@ def prepared_networks_and_database_12_8_without_block_log(database) -> Tuple[net
     }
     architecture = networks.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_basic_networks(database, architecture, None, None, networks_details(1, 'ApiNode0'))
+    yield prepare_basic_networks(database, architecture, None, None, sql_preparer(1, 'ApiNode0'))
 
 @pytest.fixture()
 def prepared_networks_and_database_17_3(database) -> Tuple[networks.NetworksBuilder, Any]:
@@ -145,7 +176,7 @@ def prepared_networks_and_database_17_3(database) -> Tuple[networks.NetworksBuil
     }
     architecture = networks.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_basic_networks(database, architecture, create_block_log_directory_name('block_log_17_3'), None, networks_details(1, 'ApiNode1'))
+    yield prepare_basic_networks(database, architecture, create_block_log_directory_name('block_log_17_3'), None, sql_preparer(1, 'ApiNode1'))
 
 @pytest.fixture()
 def prepared_networks_and_database_4_4_4_4_4(database) -> Tuple[networks.NetworksBuilder, Any]:
@@ -174,4 +205,4 @@ def prepared_networks_and_database_4_4_4_4_4(database) -> Tuple[networks.Network
     architecture.load(config)
     time_offsets = prepare_time_offsets(architecture.nodes_number)
 
-    yield prepare_basic_networks(database, architecture, create_block_log_directory_name('block_log_4_4_4_4_4'), time_offsets, networks_details(1, 'ApiNode0'))
+    yield prepare_basic_networks(database, architecture, create_block_log_directory_name('block_log_4_4_4_4_4'), time_offsets, sql_preparer(1, 'ApiNode0'))
