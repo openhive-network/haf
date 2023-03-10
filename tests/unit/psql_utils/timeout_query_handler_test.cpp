@@ -36,11 +36,16 @@ struct timeout_query_handler_fixture
     const auto flags = 0;
 
     EXPECT_CALL( *m_postgres_mock, RegisterTimeout( USER_TIMEOUT, testing::_ ) )
-      .Times( 1 )
+      .Times(1)
       .WillOnce( ::testing::Return( m_expected_timer_id ) )
       ;
     EXPECT_CALL( *m_postgres_mock, enable_timeout_after( m_expected_timer_id, m_timeout.count() ) ).Times(1);
-    EXPECT_CALL( *m_postgres_mock, executorStartHook( m_rootQuery.get(), flags ) ).Times(1);
+    if ( ExecutorStart_hook ) {
+      EXPECT_CALL( *m_postgres_mock, executorStartHook( m_rootQuery.get(), flags )).Times(1);
+    }
+    else {
+      EXPECT_CALL( *m_postgres_mock, standard_ExecutorStart( m_rootQuery.get(), flags )).Times(1);
+    }
 
     PsqlTools::PsqlUtils::QueryHandler::initialize<PsqlTools::PsqlUtils::TimeoutQueryHandler>( m_timeout );
 
@@ -170,7 +175,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, timeout_query_handler_fixture )
     EXPECT_CALL( *m_postgres_mock, disable_timeout( m_expected_timer_id, false  ) ).Times(1);
     EXPECT_CALL( *m_postgres_mock, executorEndHook( m_rootQuery.get() ) ).Times(1);
     // do not call standard end, previously set hook is responsible for this
-    EXPECT_CALL( *m_postgres_mock, standard_ExecutorEnd( m_rootQuery.get() ) ).Times(0);
+    EXPECT_CALL( *m_postgres_mock, standard_ExecutorEnd( ::testing::_ ) ).Times(0);
 
     // WHEN
     // pretend executor hook call
@@ -189,7 +194,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, timeout_query_handler_fixture )
     EXPECT_CALL( *m_postgres_mock, disable_timeout( ::testing::_, ::testing::_ ) ).Times(0);
     EXPECT_CALL( *m_postgres_mock, executorEndHook( m_subQuery.get() ) ).Times(1);
     // do not call standard end, previously set hook is responsible for this
-    EXPECT_CALL( *m_postgres_mock, standard_ExecutorEnd( m_subQuery.get() ) ).Times(0);
+    EXPECT_CALL( *m_postgres_mock, standard_ExecutorEnd( ::testing::_ ) ).Times(0);
 
     // WHEN
     // pretend executor hook call
@@ -217,4 +222,42 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, timeout_query_handler_fixture )
     BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
   }
 
+  BOOST_AUTO_TEST_CASE( start_root_query_sub_query ) {
+    // GIVEN
+    const int subQueryFlags = 0;
+    moveToPendingRootQuery();
+
+    // THEN PART 1
+    // do not disable timer when only subquery was ended
+    EXPECT_CALL( *m_postgres_mock, disable_timeout( ::testing::_, ::testing::_ ) ).Times(0);
+    EXPECT_CALL( *m_postgres_mock, executorStartHook( m_subQuery.get(), subQueryFlags ) ).Times(1);
+    // do not call standard end, previously set hook is responsible for this
+    EXPECT_CALL( *m_postgres_mock, standard_ExecutorStart( ::testing::_, ::testing::_ ) ).Times(0);
+
+    // WHEN
+    // pretend executor hook call
+    ExecutorStart_hook( m_subQuery.get(), subQueryFlags );
+
+    // THEN PART 2
+    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+  }
+
+  BOOST_AUTO_TEST_CASE( start_root_query_sub_query_handler_not_set ) {
+    // GIVEN
+    const int subQueryFlags = 0;
+    ExecutorStart_hook = nullptr;
+    moveToPendingRootQuery();
+
+    // THEN PART 1
+    // do not disable timer when only subquery was ended
+    EXPECT_CALL( *m_postgres_mock, enable_timeout_after( ::testing::_, ::testing::_ ) ).Times(0);
+    EXPECT_CALL( *m_postgres_mock, standard_ExecutorStart( m_subQuery.get(), subQueryFlags ) ).Times(1);
+
+    // WHEN
+    // pretend executor hook call
+    ExecutorStart_hook( m_subQuery.get(), subQueryFlags );
+
+    // THEN PART 2
+    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+  }
   BOOST_AUTO_TEST_SUITE_END()
