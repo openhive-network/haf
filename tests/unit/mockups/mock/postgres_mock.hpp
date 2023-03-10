@@ -52,6 +52,21 @@ public:
     virtual void enable_timeout_after(TimeoutId, int) = 0;
     virtual void StatementCancelHandler(int) = 0;
 
+    virtual void DefineCustomStringVariable(
+      const char *,
+      const char *,
+      const char *,
+      char **,
+      const char *,
+      GucContext,
+      int,
+      GucStringCheckHook,
+      GucStringAssignHook,
+      GucShowHook
+    ) = 0;
+
+    virtual char *GetConfigOption(const char*, bool, bool) = 0;
+
     //Bitmapset
     virtual int	bms_next_member(const Bitmapset* a, int prevbit) = 0;
 
@@ -90,6 +105,22 @@ public:
     MOCK_METHOD( void, standard_ExecutorRun, (QueryDesc*, ScanDirection , uint64 , bool ) );
     MOCK_METHOD( void, standard_ExecutorFinish, (QueryDesc*) );
     MOCK_METHOD( void, enable_timeout_after, (TimeoutId, int) );
+
+
+    MOCK_METHOD( void, DefineCustomStringVariable,(
+        const char *,
+        const char *,
+        const char *,
+        char **,
+        const char *,
+        GucContext,
+        int,
+        GucStringCheckHook,
+        GucStringAssignHook,
+        GucShowHook
+        )
+    );
+    MOCK_METHOD( char*, GetConfigOption, (const char*, bool, bool) );
 
     //Bitmapset
     MOCK_METHOD( int, bms_next_member, (const Bitmapset*, int));

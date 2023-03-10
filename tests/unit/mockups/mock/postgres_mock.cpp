@@ -165,5 +165,24 @@ void StatementCancelHandler(int _arg) {
   return POSTGRES_MOCK.lock()->StatementCancelHandler( _arg );
 }
 
+void DefineCustomStringVariable(const char *name,
+                                const char *short_desc,
+                                const char *long_desc,
+                                char **valueAddr,
+                                const char *bootValue,
+                                GucContext context,
+                                int flags,
+                                GucStringCheckHook check_hook,
+                                GucStringAssignHook assign_hook,
+                                GucShowHook show_hook
+                                ) {
+    return POSTGRES_MOCK.lock()->DefineCustomStringVariable(
+      name, short_desc, long_desc, valueAddr, bootValue, context, flags, check_hook, assign_hook, show_hook
+    );
+  }
+
+  const char *GetConfigOption(const char *name, bool missing_ok, bool restrict_privileged) {
+    return POSTGRES_MOCK.lock()->GetConfigOption(name,missing_ok,restrict_privileged);
+  }
 
 } // extern "C"
