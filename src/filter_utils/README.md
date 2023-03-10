@@ -1,0 +1,1 @@
+The tool `op_body_filter` can be used during a regex creation. Examples how to to use this tool are presented in `examples.info` file. Input should be retrieved by `block_api.get_block` call.

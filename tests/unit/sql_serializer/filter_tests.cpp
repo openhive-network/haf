@@ -21,34 +21,6 @@ struct base
   }
 };
 
-hive::plugins::sql_serializer::blockchain_filter make_filter()
-{
-  namespace po = boost::program_options;
-
-  type_extractor::operation_extractor op_extractor;
-  hive::plugins::sql_serializer::blockchain_filter filter( true, op_extractor );
-
-  std::stringstream _file;
-  _file<<"psql-track-body-operations = ";
-  _file<<"[\"custom_json_operation\",";
-  _file<<R"("\"id\":.*\"podping\"|\"id\":.*\"pp_video_update\"|\"id\":.*\"ssc-mainnet-hive\"")";
-  _file<<"]";
-
-  po::options_description desc("");
-  desc.add_options()
-    ("psql-track-account-range", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "")
-    ("psql-track-operations", boost::program_options::value< std::vector<std::string> >()->composing(), "")
-    ("psql-track-body-operations", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "");
-
-  po::variables_map vm;
-
-  po::store( po::parse_config_file( _file, desc, true ), vm );
-
-  filter.fill( vm, "psql-track-account-range", "psql-track-operations", "psql-track-body-operations" );
-
-  return filter;
-}
-
 bool is_tracked_operation_complex( const hive::plugins::sql_serializer::blockchain_filter& filter, const std::string& json )
 {
   hive::protocol::custom_json_operation op;
@@ -77,7 +49,9 @@ BOOST_AUTO_TEST_CASE( body_operation_00 )
 {
   BOOST_TEST_MESSAGE( "Testing: a body of an operation in custom_json_operation" );
 
-  auto filter = make_filter();
+  auto filter = hive::plugins::sql_serializer::utils::make_filter(
+                                                "custom_json_operation",
+                                                R"(\"id\":.*\"podping\"|\"id\":.*\"pp_video_update\"|\"id\":.*\"ssc-mainnet-hive\")" );
 
   BOOST_REQUIRE_EQUAL( is_tracked_operation( filter, "pp_video_update" ), true );
   BOOST_REQUIRE_EQUAL( is_tracked_operation( filter, "podping" ), true );

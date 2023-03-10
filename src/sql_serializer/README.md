@@ -43,6 +43,15 @@ The sql_serializer extends hived with these new parameters:
   greater than the limit, then synchronization process will move through massive sync states (reindex and p2p), otherwise it will imeddiatly moves to 'live' state what saves time to
   disable and enable indexes and foreigh keys. 
 
+## Filter parameters
+* **psql-enable-filter**[default: true] enable filtering accounts and operations
+* **psql-track-account-range**[default: empty] defines a range of accounts to track as a json pair [\"from\",\"to\"] [from,to]. Can be specified multiple times.
+* **psql-track-operations**[default: empty] defines operations' types to track. Can be specified multiple times.
+* **psql-track-body-operations**[default: empty] for a type of operation it's defined a regex that filters body of operation and decides if it's excluded. Can be specified multiple times. A complex regex can cause slowdown or processing can be even abandoned due to complexity
+1) All psql-track* parameters are connected by AND operator.
+2) Examples regarding **psql-track-body-operations** are presented in src/filter_utils/examples.info
+3) There is a tool `op_body_filter` in src/filter_utils/ that can be used during a regex creation
+
 ### Example hived command
 
 	./hived --replay-blockchain --stop-replay-at-block 5000000 --exit-after-replay -d ../../../datadir --force-replay --psql-index-threshold 65432

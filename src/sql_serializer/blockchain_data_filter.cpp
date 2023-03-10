@@ -41,9 +41,23 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       ptr_operations_tracker      _of   = ptr_operations_tracker( new operation_filter( "op-sql", op_helper ) );
       ptr_operations_body_tracker _obf  = ptr_operations_body_tracker( new operation_body_filter( "opb-sql", op_helper ) );
 
-      _af->fill( options, tracked_accounts );
-      _of->fill( options, tracked_operations );
-      _obf->fill( options, tracked_body_operations );
+      try
+      {
+        _af->fill( options, tracked_accounts );
+      }
+      FC_CAPTURE_AND_LOG(("tracked accounts"))
+
+      try
+      {
+        _of->fill( options, tracked_operations );
+      }
+      FC_CAPTURE_AND_LOG(("tracked operations"))
+
+      try
+      {
+        _obf->fill( options, tracked_body_operations );
+      }
+      FC_CAPTURE_AND_LOG(("tracked body operations"))
 
       if( _af->empty() && _of->empty() && _obf->empty() )
         enabled = false;
@@ -63,6 +77,39 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     if( is_enabled() )
       trx_in_block_filter_accepted.clear();
+  }
+
+  blockchain_filter utils::make_filter( const std::string& operation_type, const std::string& body_filter )
+  {
+    namespace po = boost::program_options;
+
+    type_extractor::operation_extractor op_extractor;
+    blockchain_filter filter( true, op_extractor );
+
+    std::stringstream _file;
+    _file<<"psql-track-body-operations = ";
+    _file<<"[\"";
+    _file<<operation_type;
+    _file<<"\"";
+    _file<<",";
+    _file<<"\"";
+    _file<<body_filter;
+    _file<<"\"";
+    _file<<"]";
+
+    po::options_description desc("");
+    desc.add_options()
+      ("psql-track-account-range", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "")
+      ("psql-track-operations", boost::program_options::value< std::vector<std::string> >()->composing(), "")
+      ("psql-track-body-operations", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "");
+
+    po::variables_map vm;
+
+    po::store( po::parse_config_file( _file, desc, true ), vm );
+
+    filter.fill( vm, "psql-track-account-range", "psql-track-operations", "psql-track-body-operations" );
+
+    return filter;
   }
 
 }}} // namespace hive::plugins::sql_serializer

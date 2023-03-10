@@ -56,4 +56,9 @@ namespace hive::plugins::sql_serializer {
       void clear();
   };
 
+  struct utils
+  {
+    static blockchain_filter make_filter( const std::string& operation_type, const std::string& body_filter  );
+  };
+
 } // namespace hive::plugins::sql_serializer
