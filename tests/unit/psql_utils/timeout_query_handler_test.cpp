@@ -35,10 +35,11 @@ struct timeout_query_handler_fixture
   void moveToPendingRootQuery() {
     const auto flags = 0;
 
+    ON_CALL(*m_postgres_mock, RegisterTimeout).WillByDefault(
+      [this](TimeoutId _id, timeout_handler_proc _handler) { m_timoutHandler = _handler; return m_expected_timer_id;}
+      );
     EXPECT_CALL( *m_postgres_mock, RegisterTimeout( USER_TIMEOUT, testing::_ ) )
-      .Times(1)
-      .WillOnce( ::testing::Return( m_expected_timer_id ) )
-      ;
+      .Times(1);
     EXPECT_CALL( *m_postgres_mock, enable_timeout_after( m_expected_timer_id, m_timeout.count() ) ).Times(1);
     if ( ExecutorStart_hook ) {
       EXPECT_CALL( *m_postgres_mock, executorStartHook( m_rootQuery.get(), flags )).Times(1);
@@ -57,6 +58,7 @@ struct timeout_query_handler_fixture
   std::unique_ptr<QueryDesc> m_subQuery;
   static const auto m_expected_timer_id = static_cast< TimeoutId >( USER_TIMEOUT + 1 );
   const std::chrono::milliseconds m_timeout = 1s;
+  timeout_handler_proc m_timoutHandler = nullptr;
 };
 
 
@@ -335,6 +337,22 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, timeout_query_handler_fixture )
 
     // THEN PART 2
     BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+  }
+
+  BOOST_AUTO_TEST_CASE( timeout_handler ) {
+    // GIVEN
+    moveToPendingRootQuery();
+    BOOST_ASSERT( m_timoutHandler != nullptr );
+
+    // THEN PART 1
+    EXPECT_CALL( *m_postgres_mock, StatementCancelHandler( ::testing::_ ) ).Times(1);
+
+    // WHEN
+    // pretend that PostgreSQL calls our timeout handler
+    m_timoutHandler();
+
+    // THEN PART 2
+    BOOST_ASSERT( !PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_SUITE_END()
