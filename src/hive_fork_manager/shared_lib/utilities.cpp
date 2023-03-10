@@ -15,6 +15,7 @@ using hive::protocol::transaction_serialization_type;
 
 using hive::app::collected_keyauth_collection_t;
 using hive::app::impacted_balance_data;
+using hive::app::collected_metadata_collection_t;
 
 #define CUSTOM_LOG(format, ... ) { FILE *pFile = fopen("get-impacted-accounts.log","ae"); fprintf(pFile,format "\n" __VA_OPT__(,) __VA_ARGS__); fclose(pFile); }
 
@@ -107,6 +108,13 @@ collected_keyauth_collection_t collect_keyauths(const hive::protocol::operation&
 {
     return hive::app::operation_get_keyauths(op);
 }
+
+
+collected_metadata_collection_t collect_metadata(const hive::protocol::operation& op)
+{
+    return hive::app::operation_get_metadata(op);
+}
+
 
 } // namespace
 
@@ -676,6 +684,125 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       []{ return std::string{""}; }
     );
       
+
+    return (Datum)0;
+  }  
+
+
+
+  PG_FUNCTION_INFO_V1(get_metadata);
+
+ /**
+  ** CREATE TYPE hive.metadata_record_type AS
+  ** (
+  **      account_name TEXT
+  **    , json_metadata TEXT
+  **    , posting_json_metadata TEXT
+  ** );
+  **
+  ** CREATE OR REPLACE FUNCTION hive.get_metadata(IN _operation_body text)
+  ** RETURNS SETOF hive.metadata_record_type
+  ** AS 'MODULE_PATHNAME', 'get_metadata' LANGUAGE C;
+  */
+
+  Datum get_metadata(PG_FUNCTION_ARGS)
+  {
+    _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
+
+    collected_metadata_collection_t collected_metadata;
+
+    colect_operation_data_and_fill_returned_recordset(
+
+      [=, &collected_metadata](const hive::protocol::operation& op)
+      {
+        collected_metadata = collect_metadata(op);
+      },
+
+
+      [=, &collected_metadata]()
+      {
+        fill_return_tuples(collected_metadata, fcinfo,
+          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.account_name.c_str());},
+          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.json_metadata.c_str());},
+          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.posting_json_metadata.c_str());}
+        );
+      },
+
+      __FUNCTION__, 
+
+      VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body )
+    );
+
+    return (Datum)0;
+  }
+
+
+  PG_FUNCTION_INFO_V1(is_metadata_operation);
+
+  Datum is_metadata_operation(PG_FUNCTION_ARGS)
+  {
+    _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
+
+    bool _result = false;
+
+    colect_operation_data_and_fill_returned_recordset(
+      [=, &_result](const hive::protocol::operation& op)
+      {
+        _result = hive::app::is_metadata_operation( op );
+      },
+      [](){},
+      __FUNCTION__,
+      VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body )
+    );
+
+    PG_RETURN_BOOL(_result);
+  }
+
+
+  PG_FUNCTION_INFO_V1(get_metadata_operations);
+
+  /**
+   ** 
+   **  CREATE OR REPLACE FUNCTION hive.get_metadata_operations()
+   **  RETURNS hive.get_operations_type
+   **
+   **
+   ** To be used in a filter like this:
+   **
+   ** 'INSERT INTO hive.%s_keyauth 
+   **     SELECT (hive.get_keyauths( ov.body )).*
+   **     FROM hive.%s_operations_view ov
+   **     WHERE
+   **             hive.is_keyauths_operation(ov.body)
+   **         AND 
+   **             ov.block_num BETWEEN %s AND %s
+   **     ON CONFLICT DO NOTHING'
+   **     , _context, _context, _first_block, _last_block
+   **
+   **/
+
+  Datum get_metadata_operations(PG_FUNCTION_ARGS)
+  {
+    hive::app::stringset operations_used_in_get_metadata;
+
+    colect_data_and_fill_returned_recordset(
+
+      [=, &operations_used_in_get_metadata]()
+      {
+      operations_used_in_get_metadata = hive::app::get_operations_used_in_get_metadata();},
+
+      [=, &operations_used_in_get_metadata]()
+      {
+        fill_return_tuples(operations_used_in_get_metadata, fcinfo, 
+          [] (const auto& operation_name) {return CStringGetTextDatum(operation_name.c_str());}
+        );
+      },
+
+      __FUNCTION__,
+
+      []{ return std::string{""}; }
+
+    );
 
     return (Datum)0;
   }  
