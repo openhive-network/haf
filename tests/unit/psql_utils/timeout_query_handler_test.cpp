@@ -260,4 +260,46 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, timeout_query_handler_fixture )
     // THEN PART 2
     BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
   }
+
+  BOOST_AUTO_TEST_CASE( run_query_previous_hook_not_set ) {
+    // GIVEN
+    ExecutorRun_hook = nullptr;
+    const ScanDirection direction = BackwardScanDirection;
+    const uint64 count = 15;
+    const bool executeOnce = true;
+    moveToPendingRootQuery();
+
+    // THEN PART 1
+    // setup timeout
+    EXPECT_CALL( *m_postgres_mock, disable_timeout( ::testing::_, ::testing::_ ) ).Times(0);
+    EXPECT_CALL( *m_postgres_mock, standard_ExecutorRun( m_rootQuery.get(), direction, count, executeOnce ) ).Times(1);
+
+    // WHEN
+    // pretend executor hook call
+    ExecutorRun_hook( m_rootQuery.get(), direction, count, executeOnce );
+
+    // THEN PART 2
+    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+  }
+
+  BOOST_AUTO_TEST_CASE( run_query_previous_hook_set ) {
+    // GIVEN
+    const ScanDirection direction = BackwardScanDirection;
+    const uint64 count = 15;
+    const bool executeOnce = true;
+    moveToPendingRootQuery();
+
+    // THEN PART 1
+    EXPECT_CALL( *m_postgres_mock, disable_timeout( ::testing::_, ::testing::_ ) ).Times(0);
+    EXPECT_CALL( *m_postgres_mock, executorRunHook( m_rootQuery.get(), direction, count, executeOnce ) ).Times(1);
+    EXPECT_CALL( *m_postgres_mock, standard_ExecutorRun( ::testing::_, ::testing::_, ::testing::_, ::testing::_ ) ).Times(0);
+
+    // WHEN
+    // pretend executor hook call
+    ExecutorRun_hook( m_rootQuery.get(), direction, count, executeOnce );
+
+    // THEN PART 2
+    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+  }
+
   BOOST_AUTO_TEST_SUITE_END()
