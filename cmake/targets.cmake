@@ -5,8 +5,6 @@ MACRO( ADD_RUNTIME_LOADED_LIB target_name )
     SETUP_COMPILER( ${target_name} )
     SETUP_CLANG_TIDY( ${target_name} )
 
-    ADD_BOOST_LIBRARIES( ${target_name} FALSE )
-
     ADD_POSTGRES_INCLUDES( ${target_name} )
     ADD_POSTGRES_LIBRARIES( ${target_name} )
 ENDMACRO()
@@ -21,9 +19,6 @@ MACRO( ADD_LOADTIME_LOADED_LIB target_name )
     SETUP_COMPILER( ${target_name} )
     SETUP_COMPILER( ${test_lib} )
     SETUP_CLANG_TIDY( ${target_name} )
-
-    ADD_BOOST_LIBRARIES( ${target_name} FALSE )
-    ADD_BOOST_LIBRARIES( ${test_lib} TRUE )
 
     ADD_POSTGRES_INCLUDES( ${target_name} )
     ADD_POSTGRES_INCLUDES( ${test_lib} )
@@ -40,9 +35,6 @@ MACRO( ADD_STATIC_LIB target_name )
     SETUP_COMPILER( ${target_name} )
     SETUP_COMPILER( ${test_lib} )
     SETUP_CLANG_TIDY( ${target_name} )
-
-    ADD_BOOST_LIBRARIES( ${target_name} TRUE )
-    ADD_BOOST_LIBRARIES( ${test_lib} TRUE )
 
     ADD_POSTGRES_INCLUDES( ${target_name} )
     ADD_POSTGRES_INCLUDES( ${test_lib} )
