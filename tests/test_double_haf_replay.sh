@@ -14,25 +14,27 @@ echo "START FIRST REPLAY: "
 "$SETUP_SCRIPTS_PATH"/run_hived_img.sh "$HAF_IMAGE_NAME" --data-dir="$SOURCE_DATA_DIR"/datadir --name=haf-instance-5M --replay --stop-replay-at-block=100000 --exit-before-sync --psql-index-threshold=60000 --detach
 echo "Logs from first container hived_instance:"
 docker logs -f haf-instance-5M &
-
 test "$(docker wait haf-instance-5M)" = 0
+
 "$SETUP_SCRIPTS_PATH"/run_hived_img.sh "$HAF_IMAGE_NAME" --detach --data-dir="$SOURCE_DATA_DIR"/datadir --docker-option=--entrypoint=/home/haf_admin/haf/scripts/psql_run.sh --name=haf-instance-5M
 docker logs -f haf-instance-5M
 
 echo "CHECK THE NUMBER OF REPLAYED BLOCKS"
 cat "$SOURCE_DATA_DIR"/datadir/psql.log
 grep "[ ]100000$" "$SOURCE_DATA_DIR"/datadir/psql.log
+test "$(docker wait haf-instance-5M)" = 0
 
 echo "START SECOND REPLAY: "
 "$SETUP_SCRIPTS_PATH"/run_hived_img.sh "$HAF_IMAGE_NAME" --data-dir="$SOURCE_DATA_DIR"/datadir --name=haf-instance-5M --replay --stop-replay-at-block=150000 --exit-before-sync --psql-index-threshold=60000 --detach
 echo "Logs from second container hived_instance:"
 docker logs -f haf-instance-5M &
-
 test "$(docker wait haf-instance-5M)" = 0
+
 "$SETUP_SCRIPTS_PATH"/run_hived_img.sh "$HAF_IMAGE_NAME" --detach --data-dir="$SOURCE_DATA_DIR"/datadir --docker-option=--entrypoint=/home/haf_admin/haf/scripts/psql_run.sh --name=haf-instance-5M
 docker logs -f haf-instance-5M
 
 echo "CHECK THE NUMBER OF REPLAYED BLOCKS"
 cat "$SOURCE_DATA_DIR"/datadir/psql.log
 grep "[ ]150000$" "$SOURCE_DATA_DIR"/datadir/psql.log
+test "$(docker wait haf-instance-5M)" = 0
 
