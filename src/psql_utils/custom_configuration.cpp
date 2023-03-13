@@ -25,7 +25,7 @@ namespace PsqlTools::PsqlUtils {
   };
 
   CustomConfiguration::CustomConfiguration( std::string _prefix )
-    : m_prefix(std::move(m_prefix)) {
+    : m_prefix(std::move(_prefix)) {
   }
 
   CustomConfiguration::~CustomConfiguration(){

@@ -29,7 +29,7 @@ BOOST_FIXTURE_TEST_SUITE( custom_configuration, custom_configuration_fixture )
     ).Times(1);*/
 
     EXPECT_CALL( *m_postgres_mock, DefineCustomStringVariable(
-      _, _, _, _, _, GucContext::PGC_SIGHUP, 0, nullptr, nullptr, nullptr  )
+      StrEq("root.option"), StrEq("short"), StrEq("long"), _, StrEq("default"), GucContext::PGC_SIGHUP, 0, nullptr, nullptr, nullptr  )
     ).Times(1);
 
     objectUnderTest.addStringOption( "option", "short", "long", "default" );
