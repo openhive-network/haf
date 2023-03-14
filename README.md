@@ -25,7 +25,7 @@ The image above shows the main components of a HAF installation:
 
 # HAF instance QuickStart
 
-Best way to quickly start a HAF instance is to use a prebuilt docker image (see [hiveio/haf images on dockerhub](https://hub.docker.com/r/hiveio/haf ) ) or build one locally by following the steps:
+The best way to quickly start a HAF instance is to use a prebuilt docker image (see [hiveio/haf images on dockerhub](https://hub.docker.com/r/hiveio/haf ) ) or build one locally by following the steps below:
 
 ```
   git clone --recurse --branch develop https://gitlab.syncad.com/hive/haf.git
@@ -34,21 +34,21 @@ Best way to quickly start a HAF instance is to use a prebuilt docker image (see 
   ../haf/scripts/ci-helpers/build_instance.sh local-develop ../haf/ registry.gitlab.syncad.com/hive/haf/
 ```
 
-Now you can download block log from location you trust, i.e. [block_log](https://gtg.openhive.network/get/blockchain/compressed/block_log) or skip it to sync from scratch using P2P network.
+Now you can either sync your hived node from scratch via the Hive P2P network or you can download a copy of the blockchain's block_log file from a location you trust (e.g. https://gtg.openhive.network/get/blockchain/compressed/block_log) and replay the block_log. The latter method is typically faster, because a replay doesn't re-validate the blocks, but the first method (sync from scratch) requires the least trust.
 
-To run HAF instance you have to execute:
+To start your HAF instance, type:
 
 ```
   ../haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf/instance:instance-local-develop --name=haf-instance --data-dir=$(pwd)/haf-datadir --replay
 ```
 
-If you don't have local block_log, please just remove `--replay` option from above command line, to sync blockchain using P2P network.
+If you don't have a local block_log file, just remove the `--replay` option from above command line to get the blockchain blocks using the P2P network via the normal sync procedure.
 
-It is advisable to use own PostgreSQL config (i.e. to have PostgreSQL logs available locally or specify custom database access permissions). To do that, before starting HAF instance just copy [doc/haf_postgresql_conf.d](./doc/haf_postgresql_conf.d) containing configuration files where you can override any PostgreSQL setting.
+It is advisable to have your own custom PostgreSQL config file in order to have PostgreSQL logs available locally and specify custom database access permissions. To do that, before starting your HAF instance, just copy [doc/haf_postgresql_conf.d](./doc/haf_postgresql_conf.d) containing configuration files where you can override any PostgreSQL setting.
 
-Above process should create a `haf-datadir/haf_db_store` subdirectory containig a PostgreSQL database holding HAF data and `haf-datadir/hived.log` containing output of underlying hived process.
+The steps above should create a `haf-datadir/haf_db_store` subdirectory containig a PostgreSQL database holding HAF data and `haf-datadir/hived.log` containing the output of the underlying hived process.
 
-Use `docker container stop haf-instance` to safely stop service.
+Use `docker container stop haf-instance` to safely stop the service.
 
 See [dockerized deployment details](./doc/HAF_Detailed_Deployment.md#building-and-deploying-haf-inside-a-docker-container) for further details.
 
