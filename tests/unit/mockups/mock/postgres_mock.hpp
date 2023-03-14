@@ -67,6 +67,8 @@ public:
 
     virtual char *GetConfigOption(const char*, bool, bool) = 0;
 
+    virtual void InstrAggNode(Instrumentation*, Instrumentation*) = 0;
+    virtual Instrumentation *InstrAlloc(int n, int instrument_options, bool async_mode) = 0;
     //Bitmapset
     virtual int	bms_next_member(const Bitmapset* a, int prevbit) = 0;
 
@@ -75,6 +77,8 @@ public:
     virtual void executorRunHook(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool execute_once) = 0;
     virtual void executorFinishHook(QueryDesc *queryDesc) = 0;
     virtual void executorEndHook(QueryDesc *queryDesc) = 0;
+
+
 };
 
 class PostgresMock : public IPostgresMock {
@@ -121,6 +125,9 @@ public:
         )
     );
     MOCK_METHOD( char*, GetConfigOption, (const char*, bool, bool) );
+
+    MOCK_METHOD( void, InstrAggNode, (Instrumentation*, Instrumentation*) );
+    MOCK_METHOD( Instrumentation*, InstrAlloc, (int, int, bool) );
 
     //Bitmapset
     MOCK_METHOD( int, bms_next_member, (const Bitmapset*, int));

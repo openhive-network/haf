@@ -4,16 +4,15 @@
 
 #include <boost/scope_exit.hpp>
 
+
 namespace PsqlTools::PsqlUtils {
 
   TuplesQueryHandler::TuplesQueryHandler(
       uint32_t _limitOfTuplesPerRootQuery
-    , std::chrono::milliseconds _periodicCheckPeriod
     , std::chrono::milliseconds _queryTimeout
   )
     : TimeoutQueryHandler( _queryTimeout )
     , m_limitOfTuplesPerRootQuery(_limitOfTuplesPerRootQuery)
-    , m_period( _periodicCheckPeriod )
   {}
 
   void TuplesQueryHandler::onRunQuery( QueryDesc* _queryDesc ) {
@@ -34,13 +33,15 @@ namespace PsqlTools::PsqlUtils {
     }
 
     if (isPendingRootQuery(_queryDesc) ) {
+      checkTuplesLimit();
       return;
     }
 
     assert( isRootQueryPending() );
     assert( getPendingRootQuery()->totaltime );
     assert( _queryDesc->totaltime );
-    InstrAggNode(getPendingRootQuery()->totaltime, _queryDesc->totaltime );
+
+    InstrAggNode( getPendingRootQuery()->totaltime, _queryDesc->totaltime );
 
     checkTuplesLimit();
   }
@@ -64,11 +65,17 @@ namespace PsqlTools::PsqlUtils {
     if ( _queryDesc->totaltime != nullptr ) {
       return;
     }
-
+    /* Memory switching context is defined as static inline function which
+     * cannot be mocked and in consequences it blocks unittests.
+     */
+#ifndef UNITTESTS
     MemoryContext oldCxt;
     oldCxt = MemoryContextSwitchTo(_queryDesc->estate->es_query_cxt);
+#endif
     _queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL, true);
+#ifndef UNITTESTS
     MemoryContextSwitchTo(oldCxt);
+#endif
   }
 
 } // namespace PsqlTools::PsqlUtils
