@@ -35,4 +35,34 @@ BOOST_FIXTURE_TEST_SUITE( custom_configuration, custom_configuration_fixture )
     objectUnderTest.addStringOption( "option", "short", "long", "default" );
   }
 
+  BOOST_AUTO_TEST_CASE( get_any_option_as_string ) {
+    using namespace ::testing;
+
+    CustomConfiguration objectUnderTest( "root" );
+
+    EXPECT_CALL( *m_postgres_mock, GetConfigOption(
+      StrEq("root.option"), false, false  )
+    ).Times(1)
+    .WillOnce( Return( const_cast<char*>("value") ) )
+    ;
+
+    auto result = objectUnderTest.getOptionAsString( "option" );
+
+    BOOST_REQUIRE_EQUAL( result, "value" );
+  }
+
+  BOOST_AUTO_TEST_CASE( get_any_option_as_string_no_option ) {
+    using namespace ::testing;
+
+    CustomConfiguration objectUnderTest( "root" );
+
+    EXPECT_CALL( *m_postgres_mock, GetConfigOption(
+      StrEq("root.option"), false, false  ))
+    .Times(1)
+    .WillOnce( Return(nullptr) )
+    ;
+
+    BOOST_CHECK_THROW( objectUnderTest.getOptionAsString( "option" ), std::runtime_error );
+  }
+
 BOOST_AUTO_TEST_SUITE_END()
