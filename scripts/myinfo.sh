@@ -4,4 +4,5 @@ echo $SHELL
 echo $0
 POSTGRESLOG=$(find / -name postgresql*.log)
 echo $POSTGRESLOG
-tail -n 1000 $POSTGRESLOG
+ls -lah $POSTGRESLOG
+sudo tail -n 1000 $POSTGRESLOG
