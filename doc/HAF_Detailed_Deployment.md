@@ -173,17 +173,13 @@ Warning: 'ninja install' will install all already built project items in the bui
 
 Unless you are developing HAF itself, you will probably find it easiest to use docker containers to deploy and manage your HAF server.
 
-There are currently two docker files available for deploying HAF:
+In the "standard" `instance` configuration, both the hived node that collects data from the blockchain and the postgres database server itself are located inside the docker container, but the HAF database data itself is stored outside the docker container on the host, with a docker binding used to map this external location to an internal filesystem location known to the database server. This keeps configuration keeps the docker container itself relatively lightweight, since all the state data is persistently stored on the host system itself. This standard configuration is the one that should be used by API nodes and other production systems. Note: since the standard configuration doesn't come with a pre-filled database, one of several methods must be used to fill it with already-produced blockchain blocks. There are three available options for filling it: 1) the fastest method is to download and import a HAF database dump from an existing HAF server, 2) the second fastest method is to point the hived process inside the container to a datadir on the host system with downloaded block_log and start hived with the replay option, and 3) the slowest (but least trusting) method is to let the hived process sync from all the blockchain blocks directly from the p2p network.
 
-1. In the "standard" `instance` configuration, both the hived node that collects data from the blockchain and the postgres database server itself are located inside the docker container, but the HAF database data itself is stored outside the docker container on the host, with a docker binding used to map this external location to an internal filesystem location known to the database server. This keeps configuration keeps the docker container itself relatively lightweight, since all the state data is persistently stored on the host system itself. This standard configuration is the one that should be used by API nodes and other production systems. Note: dince the standard configuration doesn't come with a pre-filled database, one of several methods must be used to fill it with already-produced blockchain blocks. There are three available options for filling it: 1) the fastest method is to download and import a HAF database dump from an existing HAF server, 2) the second fastest method is to point the hived process inside the container to a datadir on the host system with downloaded block_log and start hived with the replay option, and 3) the slowest (but least trusting) method is to let the hived process sync from all the blockchain blocks directly from the p2p network.
-
-2. In the "sandbox" `data` configuration, the HAF docker container holds not only the hived process and the database process, it also directly stores the database data itself. In other words, a sandbox container is monolithic and contains all portions of the HAF server. Typically a sandbox container will contain a "filled" version of the HAF database with a fixed number of blocks of data already processed from the blockchain data into HAF table form. The sandbox configuration was designed primarily for Hive app developers who want to quickly deploy a simple HAF server containing some real data so that they can experiment with what can be done with HAF. Currently, the sandbox container for HAF is filled from a block_log file with the first 5 million blockchain blocks.
-
-## Ad 1. Building an `instance` image.
+## Building an `instance` image.
 
 ### Building a HAF docker image from a local git repository
 
-To build an `instance` docker image from a local git repo of haf, run the `build_instance.sh` script with a commandline similar to the example below:
+To build an `instance` docker image from already cloned local git repo (**git submodule update is required step**) of haf, run the `build_instance.sh` script with a commandline similar to the example below:
 
 ```
 ../haf/scripts/ci-helpers/build_instance.sh local ../haf registry.gitlab.syncad.com/hive/haf/
@@ -207,14 +203,6 @@ build_instance4commit.sh fdebe397498f814920e959d5d11863d8fe51be22 registry.gitla
 ```
 This will create an image called: `registry.gitlab.syncad.com/hive/haf/instance:instance-fdebe397498f814920e959d5d11863d8fe51be22`
 
-## Ad 2. Building a sandboxed `data` image.
-
-If you want to experiment with a sandboxed HAF docker image, then mostly likely you can just use of the prebuilt `data` images stored at https://gitlab.syncad.com/hive/haf/container_registry/
-
-But if do want to build your own image instead, you can use one of the two scripts below:
-- `build_data.sh` which builds the image from a local HAF source directory.
-- `build_data4commit.sh` which checks out a specific commit hash and builds the image from that commit.
-
 The examples below assume the following directory structure:
 
 ```
@@ -226,10 +214,16 @@ The examples below assume the following directory structure:
 
 ```
 
-### Building a HAF `data` image from a source directory
+### Building a HAF `instance` image from a source directory
+
+1. Repository clone:
 
 ```
-../haf/scripts/ci-helpers/build_data.sh local ../haf registry.gitlab.syncad.com/hive/haf/
+  git clone --recurse --branch develop https://gitlab.syncad.com/hive/haf.git
+```
+
+```
+../haf/scripts/ci-helpers/build_instance.sh local ../haf registry.gitlab.syncad.com/hive/haf/
 ```
 where:
 `local` is a suffix to the tag for the docker image
@@ -238,24 +232,14 @@ where:
 
 The command above will create a local docker image called `registry.gitlab.syncad.com/hive/haf/data:data-local`.
 
-### Building a HAF `data` image from a specified commit
-
-```
-../haf/scripts/ci-helpers/build_data4commit.sh fdebe397498f814920e959d5d11863d8fe51be22 registry.gitlab.syncad.com/hive/haf/
-
-```
-
-The command above will create a local docker image called `registry.gitlab.syncad.com/hive/haf/data:data-fdebe397498f814920e959d5d11863d8fe51be22`
-
 ## Starting a HAF docker `instance` container
 Before you start your HAF instance, you will need to configurate a hived datadir on your host system. For full details on how to do this, you can refer to the docs in the `hive` repo.
 
 Inside your hived datadir, you will need to create a `config.ini` file. Note that the command-line launch of hived forces the sql_serializer plugin to be enabled (HAF depends on it), but you may want to set some of the other options that control how the sql_serializer operates in your config file.
 
-
 You will probably also want to create a `blockchain` subdirectory with a valid block_log file to reduce the time that would otherwise be required to sync the entire blockchain history from the p2p network.
 
-And finally, you will need to specify a `haf_db_store` directory on your host that the docker container will map the HAF database to. Since this data is stored on the docker container host, it will persist even when the HAF docker container is stopped and restarted.
+And finally, you will need to specify a `haf_db_store` directory on your host that the docker container will map the HAF database to. Since this data is stored on the docker container host, it will persist even when the HAF docker container is stopped and restarted. This directory, by default is stored as a subdirectory of data-directory pointed to `run_hived_img.sh` script.
 
 With these preliminaries out of the way, you can start your `instance` container using a command like the one below:
 
@@ -269,10 +253,12 @@ This example works as follows:
 - `--name=haf-instance-5M`- names your docker container for docker commands.
 - other options `--replay --stop-replay-at-block=5000000` are passed directly to hived command line
 
-The container starts in detached mode (similar to a service), so you can see no output directly on your console.
+The container starts in attached mode, so you can see output directly on your console. You can use stardard Docker shortcut Ctrl+p, Ctrl+q to detach.
 
 To inspect what the above instance does, you would type `docker logs haf-instance-5M`.
 To stop the instance, you would type `docker container stop haf-instance-5M`.
+
+All persistent data (required by HAF instance after restart) are held on host inside mapped data-directory, so container can be easily dropped, altough it must be shutdown cleanly to correctly flush hived and PostgreSQL data.
 
 ## Accessing already started HAF instance service(s)
 
@@ -295,11 +281,14 @@ To stop the instance, you would type `docker container stop haf-instance-5M`.
 
 1. Accessing internal PostgreSQL held by dockerized HAF instance:
   By default internal PostgreSQL instance allows trusted connections performed by `haf_app_admin` account incoming from network class: `172.0.0.0/8` (this is default IP address range specific to docker bridge network). To connect your application to HAF instance (assuming its container has address: `172.17.0.2`) , you should connect to: `postgresql://haf_app_admin@172.17.0.2/haf_block_log`.<br/><br/>
-To override default authorization rules (defined in PostgreSQL pg_hba.conf file), `PG_ACCESS` environment variable can used (it can be overrided by passing `docker run -e PG_ACCESS=value <other-args> <docker-image>` parameter). As its value, whole pg_hba.conf entry should be defined (reflecting PostgreSQL configuration rules), i.e.:<br/>`PG_ACCESS="host    haf_block_log    haf_app_admin  0.0.0.0/0    trust"`<br/>
-what can override default rules and allow any netork to access docker internal PostgreSQL service using haf_app_admin account.
-There is a way to specify multiple entries - they must be separated by newline character, i.e.: <br/>`PG_ACCESS="host    haf_block_log    haf_app_admin  0.0.0.0/0    trust\n host    haf_block_log    haf_admin  0.0.0.0/0    trust"`
+  To override default authorization rules (defined in PostgreSQL pg_hba.conf file):
+  - you can create a `haf_postgresql_conf.d` subdirectory inside your mapped data-dir and pu there `custom_postgres.conf` and `custom_pg_hba.conf` files containing your settins. You can use example files created in [doc/haf_postgresql_conf.d](./doc/haf_postgresql_conf.d)
 
-    To perform SQL administration access to the database, most prefered way is to connect directly into docker container using bash, and by operating on haf_admin account (default one after access it) using psql tool any action specific to PostgreSQL instance can be performed. Below is specified example command line which could be used for this operation:
+  - `PG_ACCESS` environment variable can used (it can be overrided by passing `docker run -e PG_ACCESS=value <other-args> <docker-image>` parameter). As its value, whole pg_hba.conf entry should be defined (reflecting PostgreSQL configuration rules), i.e.:<br/>`PG_ACCESS="host    haf_block_log    haf_app_admin  0.0.0.0/0    trust"`<br/>
+  what can override default rules and allow any netork to access docker internal PostgreSQL service using haf_app_admin account.
+  There is a way to specify multiple entries - they must be separated by newline character, i.e.: <br/>`PG_ACCESS="host    haf_block_log    haf_app_admin  0.0.0.0/0    trust\n host    haf_block_log    haf_admin  0.0.0.0/0    trust"`
+
+  To perform SQL administration access to the database, most prefered way is to connect directly into docker container using bash, and by operating on haf_admin account (default one after access it) using psql tool any action specific to PostgreSQL instance can be performed. Below is specified example command line which could be used for this operation:
     ```
     docker container exec -it haf-instance-5M /bin/bash
     ```
