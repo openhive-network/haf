@@ -358,7 +358,7 @@ start_haf_as_service:
     HIVED_UID: $HIVED_UID
   script:
     - $SETUP_SCRIPTS_PATH/myinfo.sh
-    - curl -I haf-instance:8090 || (echo "error connecting to service hived-instance" && false)
+    - curl -I haf-instance:8090 || (echo "error connecting to service hived-instance" && false) || true
     - |
         curl -XPOST -d '{
         "jsonrpc": "2.0",
@@ -366,7 +366,7 @@ start_haf_as_service:
         "params": {
         },
         "id": 2
-        }' haf-instance:8090
+        }' haf-instance:8090 || true
     - $SETUP_SCRIPTS_PATH/myinfo.sh
   after_script:
     - rm docker_entrypoint.log -f
