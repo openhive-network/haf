@@ -1,19 +1,13 @@
 # HAF Server Requirements
 ## Environment
-1. Tested on Ubuntu 20.04
-2. postgresql server dev package: `sudo apt-get install postgresql-server-dev-12`
-3. ssl dev package:               `sudo apt-get install libssl-dev`
-4. readline dev package:          `sudo apt-get install libreadline-dev`
-5. pqxx dev package:              `sudo apt-get install libpqxx-dev`
-
-## PostgreSQL cluster
-HAF is intended to run on postgres version 14 or higher.
+1. Tested on Ubuntu 22.04
+2. To install all required packages, please use script [scripts/setup_ubuntu.sh](./scripts/setup_ubuntu.sh). This script requires root priviledges (since it updates your system). It allows to install system packages specific to development (see `--dev` switch) like also tools specific to running tests (which must be deployed to operating user HOME): see `--user` switch. Additionally, it creates UNIX accounts specific to `hived` and `haf_admin` roles.
 
 # Manually building HAF
 Note: below are the instructions for manually building HAF and deploying it directly on a server, but users who are only planning to operate a HAF server or develop HAF apps, but don't plan to actively develop the base HAF layer itself, may want to skip this section and follow the more simplified procedure further down in this document for building and deploying a HAF-based server running inside a docker container.
 
 CMake and ninja are used to build the project (you will typically need to install ninja on your system). The procedure presented below will build all the targets from the HAF repository and the `hived` program from the submodule `hive`. You can pass
-the same CMake parameters which are used to compile the hived project ( for example: -DCLEAR_VOTES=ON -DBUILD_HIVE_TESTNET=OFF -DHIVE_LINT=OFF -GNinja).
+the same CMake parameters which are used to compile the hived project ( for example: -DBUILD_HIVE_TESTNET=OFF -GNinja ).
 
 1. `git submodule update --init --recursive`
 2. create build directory, for example in sources root: `mkdir build`
@@ -21,23 +15,32 @@ the same CMake parameters which are used to compile the hived project ( for exam
 4. `cmake -DCMAKE_BUILD_TYPE=Release .. -GNinja`
 5. `ninja`
 
+You can also use a [scripts/build.sh](./scripts/build.sh) script which encapsulates above process. All what it needs, are paths to source and binary directories (see --help message for details).
+
 ### Choose a version of Postgres to compile with
 CMake variable `POSTGRES_INSTALLATION_DIR` is used to point to the installation folder
-with PostgreSQL binaries. By default it is `/usr/lib/postgresql/12/bin` - place where Postgres v.12
+with PostgreSQL binaries. By default it is `/usr/lib/postgresql/<POSTGRES_VERSION>/bin` - place where Postgres RDBMS
 is installed on Ubuntu. An example of choosing a different version of Postgres:
 1. create build directory, for example in HAF source's root dir: `mkdir build`
 2. `cd build`
-3. `cmake -DPOSTGRES_INSTALLATION_DIR=/usr/lib/postgresql/13/bin -GNinja ..`
+3. `cmake -DPOSTGRES_INSTALLATION_DIR=/usr/lib/postgresql/15/bin -GNinja ..`
 4. `ninja`
 
 # Setup of a directly-hosted HAF server
+
+## 1. One-step solution
+Direct host deployment can be significantly simplified by using a [scripts/setup_haf_instance.sh](./scripts/setup_haf_instance.sh) script, which encapsulates all setup steps described below. See `--help` output for details.
+
+If someone would like to perform all steps manually, paragraphs below will cover required actions.
+
 ## 1. Configure PostgreSQL cluster
 Compiled PostgreSQL plugins and extensions have to be installed in a postgres cluster. The best method
-to do this is to execute the command below in the build directory (typically requires root privilieges):
-- `sudo ninja install`
+to do this is to execute the command in the build directory (requires root privilieges):
+- `sudo scripts/setup_postgres.sh --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --haf-binaries-dir="$HAF_BINARY_DIR" --haf-database-store="$HAF_TABLESPACE_LOCATION"
+`
 
-This will copy plugins to the Postgres cluster `$libdir/plugins` directory and exstensions to
-`<postgres_shared_dir>/extension`.
+This will copy plugins to the Postgres cluster `$libdir/plugins` directory and extensions to `<postgres_shared_dir>/extension`.
+Above script also will create required databse roles on you Postgres cluster.
 
 You can check the `$libdir` with command: `pg_config --pkglibdir`, and the shared dir with `pg_config --sharedir`
 
@@ -59,15 +62,15 @@ Roles which inherit from `hive_application_group` shall be used by the applicati
 No app role has access to internal data created by other HAF app roles nor can it
 modify data written by 'hived'. 'Hived' roles cannot modify the data of HAF apps.
 
-More about roles in PostgreSQL documentaion: [CREATE ROLE](https://www.postgresql.org/docs/12/sql-createrole.html)
+More about roles in PostgreSQL documentaion: [CREATE ROLE](https://www.postgresql.org/docs/14/sql-createrole.html)
 
-Note: whenever you build a new version of the hive_fork_manager extension, you have to create a new HAF database.
-There is no way currently to upgrade the schema installed in an old HAF database.
+Note: HAF DOES NOT support database schema upgrades (specific to hive table definitions). Whenever you build a new version of the hive_fork_manager extension, you have to create a new HAF database (an error is emitted while trying to install newer extension over existing database having differnt table schema).
+Altough HFM upgrade is possible, when only binaries or functional code changed - such updates should be correctly performed over existing database.
 
 ## 2. Preparing a PostgreSQL database
 A newly create HAF database has to have have the hive_fork_manager extension installed. Without this extension, 'sql_serializer'
 won't connect the hived node to the database. Mostly, to install the extension in a database, execute the psql
-command: `CREATE EXTENSION hive_fork_manager CASCADE;`, but prederred way is to used scripts dedicated to that: [setup_postgres.sh](scripts/setup_postgres.sh) and [setup_db.sh](scripts/setup_db.sh).
+command: `CREATE EXTENSION hive_fork_manager CASCADE;`, but preferred way is to used scripts dedicated to that: [setup_postgres.sh](scripts/setup_postgres.sh) and [setup_db.sh](scripts/setup_db.sh).
 
 The database should use these parameters:
 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' and LC_CTYPE = 'en_US.UTF-8'
@@ -113,7 +116,7 @@ Unit tests are used to test parts of modules in isolation from their surrounding
             mockups              Contains mocks
    ```
 
-There is also a `generated` directory inside the build directory that contains autmatically generated headers which can be included in the code with ```#include "gen/header_file_name.hpp"```
+There is also a `generated` directory inside the build directory that contains automatically generated headers which can be included in the code with ```#include "gen/header_file_name.hpp"```
 
 # Internal docs for HAF's cmake files
 ## Predefined cmake targets
@@ -157,14 +160,14 @@ The test `test.unit.<module_name>` is added to ctest.
 ### 5. PSQL extension based on sql script
 If there is a need to create psql extension ( to use CREATE EXTENSION psql command ) a cmake macro is added to cmake:
 `ADD_PSQL_EXTENSION` with parameters:
-- NAME - name of extension, in current source directory file <name>.control (see https://www.postgresql.org/docs/12/extend-extensions.html#id-1.8.3.18.11 )
+- NAME - name of extension, in current source directory file <name>.control (see https://www.postgresql.org/docs/14/extend-extensions.html#id-1.8.3.18.11 )
 - SOURCES - list of sql scripts, the order of the files is important since they are compiled into one sql script
 
-The macro creates a new target extension.<name_of_extension>. The command 'make extension.<name_of_extension>' will create
+The macro creates a new target extension.<name_of_extension>. The command 'ninja extension.<name_of_extension>' will create
 an psql extension in `${CMAKE_BINARY_DIR}/extensions/<name>`.
-To install the extension please execute 'make install'.
+To install the extension please execute 'sudo ninja install extension.hive_fork_manager'. `sudo` is needed, since installation process puts extension files into PostgreSQL installation directories, being owned by root user.
 
-Warning: 'make install' will install all already built project items in the build dir. To install only one of them please build it in a separate build directory, making only the desired target. For example: `make extension.hive_fork_manager; make install;`
+Warning: 'ninja install' will install all already built project items in the build dir. To install only one of them please build it in a separate build directory, making only the desired target.
 
 # Building and deploying HAF inside a docker container
 
