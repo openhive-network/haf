@@ -16,40 +16,6 @@ namespace PsqlTools::PsqlUtils {
     , m_period( _periodicCheckPeriod )
   {}
 
-  void TuplesQueryHandler::onStartQuery( QueryDesc* _queryDesc, int _eflags ) {
-    using namespace std::chrono_literals;
-
-    BOOST_SCOPE_EXIT_ALL(_queryDesc, _eflags, this) {
-      TimeoutQueryHandler::onStartQuery( _queryDesc, _eflags );
-    };
-
-    if ( isQueryCancelPending() ) {
-      return;
-    }
-
-    if (isRootQueryPending() ) {
-      return;
-    }
-
-    startPeriodicCheck( m_period );
-  }
-
-  void TuplesQueryHandler::onEndQuery( QueryDesc* _queryDesc ) {
-    BOOST_SCOPE_EXIT_ALL(_queryDesc, this) {
-        TimeoutQueryHandler::onEndQuery( _queryDesc );
-    };
-    if ( isQueryCancelPending() ) {
-      stopPeriodicCheck();
-      return;
-    }
-
-    if ( !isPendingRootQuery(_queryDesc) ) {
-      return;
-    }
-
-    stopPeriodicCheck();
-  }
-
   void TuplesQueryHandler::onRunQuery( QueryDesc* _queryDesc ) {
     addInstrumentation( _queryDesc );
     TimeoutQueryHandler::onRunQuery(_queryDesc);
@@ -75,11 +41,12 @@ namespace PsqlTools::PsqlUtils {
     assert( getPendingRootQuery()->totaltime );
     assert( _queryDesc->totaltime );
     InstrAggNode(getPendingRootQuery()->totaltime, _queryDesc->totaltime );
+
+    checkTuplesLimit();
   }
 
-  void TuplesQueryHandler::onPeriodicCheck() {
+  void TuplesQueryHandler::checkTuplesLimit() {
     if ( !isRootQueryPending() ) {
-      stopPeriodicCheck();
       return;
     }
 
@@ -88,7 +55,6 @@ namespace PsqlTools::PsqlUtils {
                    , getPendingRootQuery()->totaltime->tuplecount
                    , m_limitOfTuplesPerRootQuery
       );
-      stopPeriodicCheck();
       breakPendingRootQuery();
     }
   }

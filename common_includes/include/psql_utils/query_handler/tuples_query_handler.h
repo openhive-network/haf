@@ -15,14 +15,12 @@ namespace PsqlTools::PsqlUtils {
       , std::chrono::milliseconds _queryTimeout
     );
 
-    void onStartQuery( QueryDesc* _queryDesc, int _eflags ) override;
-    void onEndQuery( QueryDesc* _queryDesc ) override;
     void onRunQuery( QueryDesc* _queryDesc ) override;
     void onFinishQuery( QueryDesc* _queryDesc ) override;
-    void onPeriodicCheck() override;
 
   private:
     void addInstrumentation( QueryDesc* _queryDesc ) const;
+    void checkTuplesLimit();
 
   private:
     const uint32_t m_limitOfTuplesPerRootQuery;
