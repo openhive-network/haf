@@ -369,6 +369,7 @@ start_haf_as_service:
   after_script:
     - rm docker_entrypoint.log -f
     - cp $DATA_CACHE/datadir/$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA.log $CI_PROJECT_DIR/docker_entrypoint.log
+    - $SETUP_SCRIPTS_PATH/myinfo.sh
   artifacts:
     paths:
     - docker_entrypoint.log
