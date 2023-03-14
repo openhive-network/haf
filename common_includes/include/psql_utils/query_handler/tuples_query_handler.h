@@ -11,7 +11,6 @@ namespace PsqlTools::PsqlUtils {
   public:
     TuplesQueryHandler(
         uint32_t _limitOfTuplesPerRootQuery
-      , std::chrono::milliseconds _periodicCheckPeriod
       , std::chrono::milliseconds _queryTimeout
     );
 
@@ -24,8 +23,6 @@ namespace PsqlTools::PsqlUtils {
 
   private:
     const uint32_t m_limitOfTuplesPerRootQuery;
-    const std::chrono::milliseconds m_period;
-
   };
 
 } // namespace PsqlTools::PsqlUtils

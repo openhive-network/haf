@@ -42,6 +42,8 @@ ExecutorEnd_hook_type ExecutorEnd_hook;
 
 volatile sig_atomic_t QueryCancelPending;
 
+MemoryContext CurrentMemoryContext = nullptr;
+
 
 std::shared_ptr<PostgresMock> PostgresMock::create_and_get() {
   assert( POSTGRES_MOCK.lock() == nullptr && "Use only one mock instance" );
@@ -183,6 +185,14 @@ void DefineCustomStringVariable(const char *name,
 
   const char *GetConfigOption(const char *name, bool missing_ok, bool restrict_privileged) {
     return POSTGRES_MOCK.lock()->GetConfigOption(name,missing_ok,restrict_privileged);
+  }
+
+  void InstrAggNode(Instrumentation *dst, Instrumentation *add) {
+    return POSTGRES_MOCK.lock()->InstrAggNode(dst,add);
+  }
+
+  Instrumentation* InstrAlloc(int n, int instrument_options, bool async_mode) {
+    return POSTGRES_MOCK.lock()->InstrAlloc( n,  instrument_options,  async_mode );
   }
 
 } // extern "C"
