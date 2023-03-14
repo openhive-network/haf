@@ -5,4 +5,6 @@ echo $0
 POSTGRESLOG=$(find / -name postgresql*.log)
 echo $POSTGRESLOG
 ls -lah $POSTGRESLOG
-sudo tail -n 1000 $POSTGRESLOG
+echo "mtlk Listing 10 000 last lines of postgres log"
+sudo tail -n 10000 $POSTGRESLOG
+echo "mtlk end listing postgres log"
