@@ -19,7 +19,10 @@ def test_replay(database):
     # raw_node.config.transaction_status_track_after_block = '54500000'
     raw_node.config.required_participation = 0
     raw_node.config.plugin = 'sql_serializer database_api block_api account_history_api market_history_api network_broadcast_api witness account_by_key account_by_key_api wallet_bridge_api'
-    # raw_node.config.plugin.append('sql_serializer')
+    raw_node.config.plugin.append('sql_serializer')
     raw_node.config.psql_url = str(session.get_bind().url)
+    timestamp_origin = '@2016-09-15 19:47:24'
+    timestamp_blok_100k = '@2016-03-28 04:07:21'
+    raw_node.run(replay_from=path, time_offset=timestamp_blok_100k, wait_for_live=True, timeout=sleep_time, arguments=['--chain-id', '42', '--skeleton-key', '5JNHfZYKGaomSFvd4NUdQ9qMcEAC43kujbfjueTHpVapX1Kzq2n'])
 
-    raw_node.run(replay_from=path, time_offset='@2016-09-15 19:47:24', wait_for_live=True, timeout=sleep_time, arguments=['--chain-id', '42', '--skeleton-key', '5JNHfZYKGaomSFvd4NUdQ9qMcEAC43kujbfjueTHpVapX1Kzq2n'])
+    time.sleep(200)
