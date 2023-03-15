@@ -5,11 +5,11 @@ test_path=$2;
 setup_scripts_dir_path=$3;
 postgres_port=$4;
 
-. ./common.sh
+. ./tools/common.sh
 
 setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
 
-psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./test_tools.sql;
+psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
 
 # add test functions:
 # load tests function
