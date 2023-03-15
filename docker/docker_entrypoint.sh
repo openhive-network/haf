@@ -1,8 +1,6 @@
 #! /bin/bash
 
-set -xeuo pipefail
-
-env
+set -euo pipefail
 
 echo "Starting the container with user $(whoami) with uid $(id -u)"
 
