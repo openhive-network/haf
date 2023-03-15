@@ -5,7 +5,7 @@ test_path=$2;
 setup_scripts_dir_path=$3;
 postgres_port=$4;
 
-. ./common.sh
+. ./tools/common.sh
 
 setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
 
