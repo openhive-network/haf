@@ -23,4 +23,4 @@ def test_replay(database):
 
     raw_node.run(replay_from=path, time_offset='@2016-09-15 19:47:24', wait_for_live=True, timeout=sleep_time, arguments=['--chain-id', '42', '--skeleton-key', '5JNHfZYKGaomSFvd4NUdQ9qMcEAC43kujbfjueTHpVapX1Kzq2n'])
 
-    time.sleep(50)
+    time.sleep(200)
