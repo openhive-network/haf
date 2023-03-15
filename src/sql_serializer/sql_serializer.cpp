@@ -80,6 +80,7 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
       
 
       wlog( "mtlk INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;" );
+      wlog( "mtlk 2 INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;" );
 
       // these tables need to be empty in haf extension script because of pg_dump/pg/restore
       tx.exec("INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;");
