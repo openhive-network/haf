@@ -1,12 +1,20 @@
 #! /bin/bash
 find / -name postgresql*.log 2>/dev/null
 echo "mtlk orientation"
+set -x
+pwdwhoami
 echo $SHELL
 echo $0
 env | sort
 
+echo DATA_CACHE=$DATA_CACHE
 ls -lah $DATA_CACHE
 ls -lah $DATA_CACHE/*
+ls -lah $DATA_CACHE/datadir/*
+
+
+
+
 
 POSTGRESLOG=$(find / -name postgresql*.log)
 echo $POSTGRESLOG
