@@ -5,6 +5,9 @@ echo $SHELL
 echo $0
 env | sort
 
+ls -lah $DATA_CACHE
+ls -lah $DATA_CACHE/*
+
 POSTGRESLOG=$(find / -name postgresql*.log)
 echo $POSTGRESLOG
 ls -lah $POSTGRESLOG
