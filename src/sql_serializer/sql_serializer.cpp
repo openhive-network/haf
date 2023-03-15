@@ -70,11 +70,17 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
     return false;
   }
 
+
+
+
   queries_commit_data_processor db_consistency_checker(
     database_url
     , "Check consistency of irreversible data"
     , [&is_irreversible_dirty](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
       
+
+      wlog( "mtlk INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;" );
+
       // these tables need to be empty in haf extension script because of pg_dump/pg/restore
       tx.exec("INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;");
       tx.exec("INSERT INTO hive.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;");
