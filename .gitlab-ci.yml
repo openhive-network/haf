@@ -38,7 +38,7 @@ include:
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
     - sudo -n chown -Rc haf_admin "$CI_PROJECT_DIR"
-    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --cmake-arg="-DBUILD_HIVE_TESTNET=$BUILD_HIVE_TESTNET" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" extension.hive_fork_manager
+    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --cmake-arg="-DBUILD_HIVE_TESTNET=$BUILD_HIVE_TESTNET" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" extension.hive_fork_manager unit.pq_utils unit.psql_utils unit.sql_serializer
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build"
     - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build" && ctest -j${CTEST_NUMBER_OF_JOBS} --output-on-failure  -R test.functional.hive_fork_manager.*
     - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build" && ctest --output-on-failure  -R test.unit.*
