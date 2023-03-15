@@ -1,0 +1,2 @@
+ADD_SQL_ERROR_FUNCTIONAL_TESTS_FOR_LIBRARY( query_timeout/simple_break_query_after_300ms_test.sql libquery_supervisor.so )
+ADD_SQL_ERROR_FUNCTIONAL_TESTS_FOR_LIBRARY( query_tuples/simple_break_query_when_tuples_limit_exceede.sql libquery_supervisor.so )
