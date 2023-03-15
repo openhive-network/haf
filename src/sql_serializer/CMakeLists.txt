@@ -1,7 +1,13 @@
 file(GLOB HEADERS "include/hive/plugins/sql_serializer/*.hpp")
 
-FIND_LIBRARY(PQXX_LIB pqxx)
-FIND_LIBRARY(PQ_LIB pq)
+SET (ORIGINAL_LIB_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+set (CMAKE_FIND_LIBRARY_SUFFIXES .a)
+
+FIND_LIBRARY(PQXX_LIB pqxx REQUIRED) #Static version is preferred over shared one to eliminate libstdc++ runtime deps
+
+SET (CMAKE_FIND_LIBRARY_SUFFIXES ${ORIGINAL_LIB_SUFFIXES})
+
+FIND_LIBRARY(PQ_LIB pq REQUIRED)
 
 ADD_LIBRARY(
     sql_serializer_plugin
@@ -23,7 +29,7 @@ ADD_LIBRARY(
     ${HEADERS}
 )
 
-target_link_libraries( sql_serializer_plugin chain_plugin hive_chain hive_protocol transaction_controllers ${PQXX_LIB} )
+target_link_libraries( sql_serializer_plugin chain_plugin hive_chain hive_protocol transaction_controllers ${PQXX_LIB} ${PQ_LIB} )
 
 target_include_directories(
     sql_serializer_plugin
