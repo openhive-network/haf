@@ -1,3 +1,19 @@
+MACRO( ADD_EXAMPLES_FUNCTIONAL_TESTS example_test_path)
+    STRING( REGEX MATCH "^(([^\\/]*)\\/)?(.*)\\.[^.]*$" dummy ${example_test_path} ) # remove py extension
+    SET( test_name ${CMAKE_MATCH_3})
+    IF( CMAKE_MATCH_2 )
+        SET( test_name ${CMAKE_MATCH_2}.${test_name} )
+    ENDIF()
+    CMAKE_PATH( GET CMAKE_CURRENT_SOURCE_DIR FILENAME tests_folder  )
+    SET( test_target test.functional.${tests_folder}.${test_name} )
+    SET( sources_under_tests_path ${CMAKE_SOURCE_DIR}/src/hive_fork_manager/doc/examples )
+    ADD_TEST( NAME ${test_target}
+            COMMAND hive_fork_manager/test_examples.sh ${sources_under_tests_path} ${tests_folder}/${example_test_path} ${setup_scripts_dir_path} ${POSTGRES_PORT}
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/integration/functional
+            )
+    MESSAGE( STATUS "Added functional examples tests '${test_target}'" )
+ENDMACRO()
+
 ADD_SQL_FUNCTIONAL_TESTS( context_rewind/schema_test.sql )
 
 ADD_SQL_FUNCTIONAL_TESTS( context_rewind/register_table_test.sql )
