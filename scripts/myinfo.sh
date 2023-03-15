@@ -1,7 +1,10 @@
 #! /bin/bash
 find / -name postgresql*.log 2>/dev/null
+echo "mtlk orientation"
 echo $SHELL
 echo $0
+env | sort
+
 POSTGRESLOG=$(find / -name postgresql*.log)
 echo $POSTGRESLOG
 ls -lah $POSTGRESLOG
