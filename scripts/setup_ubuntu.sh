@@ -57,7 +57,7 @@ install_all_dev_packages() {
 install_user_packages() {
   echo "Attempting to install user packages..."
 
-  curl -sSL https://install.python-poetry.org | python3 -  # install poetry in an isolated environment
+  "$SRC_DIR/hive/scripts/setup_ubuntu.sh" --user
 }
 
 create_haf_admin_account() {
@@ -68,14 +68,15 @@ create_haf_admin_account() {
   if id "$haf_admin_unix_account" &>/dev/null; then
       echo "Account $haf_admin_unix_account already exists. Creation skipped."
   else
-      useradd -ms /bin/bash -g users -c "HAF admin account" "$haf_admin_unix_account" && echo "$haf_admin_unix_account ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+      useradd -ms /bin/bash -c "HAF admin account" -u 4000 -U "$haf_admin_unix_account" && echo "$haf_admin_unix_account ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+      usermod -a -G users "$haf_admin_unix_account"
+      chown -Rc "$haf_admin_unix_account":users "/home/$haf_admin_unix_account"
   fi
 }
 
 create_hived_account() {
   echo "Attempting to create $hived_unix_account account..."
   "$SRC_DIR/hive/scripts/setup_ubuntu.sh" --hived-account="$hived_unix_account"
-  usermod -a -G "$hived_unix_account" -g users -c "Hived daemon account" "$hived_unix_account"
   sudo -n chown -Rc "$hived_unix_account":users "/home/$hived_unix_account"
 }
 
