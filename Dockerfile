@@ -2,11 +2,11 @@
 # docker build --target=ci-base-image -t registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-xxx -f Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=:ubuntu22.04-2
+ARG CI_IMAGE_TAG=:ubuntu22.04-3
 
 ARG BUILD_IMAGE_TAG
 
-FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu22.04-1 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu22.04-3 AS ci-base-image
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
@@ -137,7 +137,8 @@ EXPOSE ${WS_PORT}
 # JSON rpc service
 EXPOSE ${HTTP_PORT}
 
-FROM ${CI_REGISTRY_IMAGE}ci-base-image-5m$CI_IMAGE_TAG AS block_log_5m_source
+# Hardcoded as not supported yet (to be eliminated at all together with data image target)
+FROM registry.gitlab.syncad.com/hive/haf/ci-base-image-5m:ubuntu22.04-2 AS block_log_5m_source
 
 FROM ${CI_REGISTRY_IMAGE}base_instance:base_instance-$BUILD_IMAGE_TAG as data
 
