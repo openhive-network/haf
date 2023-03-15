@@ -2,7 +2,8 @@
 find / -name postgresql*.log 2>/dev/null
 echo "mtlk orientation"
 set -x
-pwdwhoami
+pwd
+whoami
 echo $SHELL
 echo $0
 env | sort
