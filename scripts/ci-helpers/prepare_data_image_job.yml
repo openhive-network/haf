@@ -65,6 +65,7 @@ include:
     - echo "cache usage:"
     - du -h -d 1 /cache || true
     - cp $DATA_CACHE/datadir/docker_entrypoint.log $CI_PROJECT_DIR
+    - cp $DATA_CACHE/datadir/haf_db_store/pgdata/postgresql_logs $CI_PROJECT_DIR -r
     - echo "HIVED_UID=$(id -u)" > hived_uid.env
     - cat hived_uid.env
 
@@ -75,4 +76,5 @@ include:
         - hived_uid.env
     paths:
     - docker_entrypoint.log
+    - postgresql_logs
     expire_in: 6 hours
