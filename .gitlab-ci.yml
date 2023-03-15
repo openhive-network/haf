@@ -54,11 +54,13 @@ include:
     - hived
 
 hive_fork_manager:
+  when: manual
   variables:
     BUILD_HIVE_TESTNET: "OFF"
   extends: .hive_fork_manager_build
 
 hive_fork_manager_testnet:
+  when: manual
   variables:
     BUILD_HIVE_TESTNET: "ON"
   extends: .hive_fork_manager_build
@@ -84,12 +86,14 @@ hive_fork_manager_testnet:
 
 # job resonsible for hived build in mainnet config.
 hived:
+  when: manual
   variables:
     BUILD_HIVE_TESTNET: "OFF"
     HIVE_TARGETS: "hived compress_block_log"
   extends: .hived_build
 
 hived_testnet:
+  when: manual
   variables:
     BUILD_HIVE_TESTNET: "ON"
     HIVE_TARGETS: "hived cli_wallet get_dev_key compress_block_log"
