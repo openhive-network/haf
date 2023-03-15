@@ -63,7 +63,7 @@ RUN \
   --cmake-arg="-DENABLE_SMT_SUPPORT=${ENABLE_SMT_SUPPORT}" \
   --cmake-arg="-DHIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}" \
   --cmake-arg="-DHIVE_LINT=${HIVE_LINT}" \
-  hived cli_wallet compress_block_log extension.hive_fork_manager && \
+  && \
   cd ./build && \
   find . -name *.o  -type f -delete && \
   find . -name *.a  -type f -delete
@@ -98,9 +98,9 @@ RUN mkdir -p /home/hived/bin && \
 COPY --from=build --chown=hived:users \
   /home/haf_admin/build/hive/programs/hived/hived \
   /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet \
-  /home/haf_admin/build/hive/programs/util/compress_block_log \
-  /home/haf_admin/build/hive/programs/util/get_dev_key \
+  /home/haf_admin/build/hive/programs/util/* \
   /home/haf_admin/build/hive/programs/blockchain_converter/blockchain_converter* \
+  /home/haf_admin/build/tests/unit/* \
   /home/hived/bin/
 
 USER haf_admin
