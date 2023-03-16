@@ -101,9 +101,7 @@ EOF
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE SCHEMA hive;' 
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE EXTENSION hive_fork_manager CASCADE;' 
 
-if [ -z "$DB_ADMIN_PRELOAD_LIBS" ]; then
-  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER ROLE $DB_ADMIN IN DATABASE $DB_NAME RESET local_preload_libraries;"
-else
+if [ -n "$DB_ADMIN_PRELOAD_LIBS" ]; then
   sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER ROLE $DB_ADMIN IN DATABASE $DB_NAME SET local_preload_libraries TO '$DB_ADMIN_PRELOAD_LIBS';"
 fi
 

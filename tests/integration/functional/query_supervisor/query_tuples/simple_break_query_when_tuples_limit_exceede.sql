@@ -6,7 +6,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    -- Nothing to check here
+    -- nothing to prepare here
 END
 $BODY$
 ;
@@ -19,7 +19,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    PERFORM pg_sleep( 5 );
+    SELECT * FROM generate_series(1,10000);
 END
 $BODY$
 ;
