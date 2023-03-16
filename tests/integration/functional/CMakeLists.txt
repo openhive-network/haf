@@ -34,4 +34,5 @@ ENDMACRO()
 # hive_fork_manager functional tests are written only for the mainnet
 IF ( NOT BUILD_HIVE_TESTNET )
     ADD_SUBDIRECTORY(hive_fork_manager)
+    ADD_SUBDIRECTORY(query_supervisor)
 ENDIF()

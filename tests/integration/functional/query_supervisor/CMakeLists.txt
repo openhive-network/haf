@@ -1,0 +1,1 @@
+ADD_SQL_FUNCTIONAL_TESTS( query_timeout/simple_break_query_after_300ms_test.sql )

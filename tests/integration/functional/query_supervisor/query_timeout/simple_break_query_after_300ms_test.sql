@@ -7,7 +7,7 @@ AS
 $BODY$
 BEGIN
     --TODO: move load to fixture or requirements
-    LOAD '$libdir/plugins/libquery_supervisor.so'
+    LOAD '$libdir/plugins/libquery_supervisor.so';
 END;
 $BODY$
 ;
@@ -20,7 +20,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    SELECT pg_sleep( 5 );
+    --PERFORM pg_sleep( 5 );
 END
 $BODY$
 ;
