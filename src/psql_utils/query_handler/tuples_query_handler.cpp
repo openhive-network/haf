@@ -16,6 +16,7 @@ namespace PsqlTools::PsqlUtils {
   {}
 
   void TuplesQueryHandler::onRunQuery( QueryDesc* _queryDesc ) {
+    LOG_DEBUG( "Run query: %s", _queryDesc->sourceText );
     addInstrumentation( _queryDesc );
     TimeoutQueryHandler::onRunQuery(_queryDesc);
   }
@@ -23,11 +24,13 @@ namespace PsqlTools::PsqlUtils {
   void TuplesQueryHandler::onFinishQuery( QueryDesc* _queryDesc ) {
     assert( _queryDesc );
 
+    LOG_DEBUG( "Finish query: %s", _queryDesc->sourceText );
+
     BOOST_SCOPE_EXIT_ALL(_queryDesc, this) {
       TimeoutQueryHandler::onFinishQuery( _queryDesc );
     };
 
-    LOG_INFO( "Finish query: %s, %lf", _queryDesc->sourceText, _queryDesc->totaltime->tuplecount );
+    LOG_DEBUG( "Finish query: %s with tuples:  %lf", _queryDesc->sourceText, _queryDesc->totaltime->tuplecount );
     if ( isQueryCancelPending() ) {
       return;
     }

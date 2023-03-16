@@ -19,18 +19,20 @@ print_help () {
     echo
     echo "Allows to create and setup a database to be filled by HAF instance. DROPs already existing database !!!"
     echo "OPTIONS:"
-    echo "  --host=VALUE         Allows to specify a PostgreSQL host location (defaults to /var/run/postgresql)"
-    echo "  --port=NUMBER        Allows to specify a PostgreSQL operating port (defaults to 5432)"
-    echo "  --haf-db-name=NAME   Allows to specify a name of database to store a HAF data"
-    echo "  --haf-app-user=NAME  Allows to specify a name of database role to be specified as an APP user of HAF database."
-    echo "                       Can be specified multiple times, if user would like to add multiple roles."
-    echo "                       Role MUST be earlier created on pointed Postgres instance !!!"
-    echo "                       If omitted, defaults to haf_app_admin role."
-    echo "  --haf-db-admin=NAME  Allows to specify a name of database admin role having permission to create the database"
-    echo "                       and install an exension inside."
-    echo "                       Role MUST be earlier created on pointed Postgres instance !!!"
-    echo "                       If omitted, defaults to haf_admin role."
-    echo "  --help               Display this help screen and exit"
+    echo "  --host=VALUE                    Allows to specify a PostgreSQL host location (defaults to /var/run/postgresql)"
+    echo "  --port=NUMBER                   Allows to specify a PostgreSQL operating port (defaults to 5432)"
+    echo "  --haf-db-name=NAME              Allows to specify a name of database to store a HAF data"
+    echo "  --haf-app-user=NAME             Allows to specify a name of database role to be specified as an APP user of HAF database."
+    echo "                                  Can be specified multiple times, if user would like to add multiple roles."
+    echo "                                  Role MUST be earlier created on pointed Postgres instance !!!"
+    echo "                                  If omitted, defaults to haf_app_admin role."
+    echo "  --haf-db-admin=NAME             Allows to specify a name of database admin role having permission to create the database"
+    echo "                                  and install an extension inside."
+    echo "                                  Role MUST be earlier created on pointed Postgres instance !!!"
+    echo "                                  If omitted, defaults to haf_admin role."
+    echo "  --haf-db-admin-libs=VALUE       Allows to specify postgres modules to preload before db admin session start"
+    echo "                                  The parameters LIBRARIES are passed to configuration option 'local_preload_libraries' "
+    echo "  --help                          Display this help screen and exit"
     echo
 }
 
@@ -61,6 +63,9 @@ while [ $# -gt 0 ]; do
         ;;
     --haf-db-admin=*)
         DB_ADMIN="${1#*=}"
+        ;;
+    --haf-db-admin-libs=*)
+        DB_ADMIN_PRELOAD_LIBS="${1#*=}"
         ;;
     --help)
         print_help
@@ -96,9 +101,14 @@ EOF
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE SCHEMA hive;' 
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE EXTENSION hive_fork_manager CASCADE;' 
 
+if [ -z "$DB_ADMIN_PRELOAD_LIBS" ]; then
+  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER ROLE $DB_ADMIN IN DATABASE $DB_NAME RESET local_preload_libraries;"
+else
+  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER ROLE $DB_ADMIN IN DATABASE $DB_NAME SET local_preload_libraries TO '$DB_ADMIN_PRELOAD_LIBS';"
+fi
+
 for u in "${DB_USERS[@]}"; do
   sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
     GRANT CREATE ON DATABASE "$DB_NAME" TO $u;
 EOF
-
 done

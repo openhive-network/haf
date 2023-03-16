@@ -6,9 +6,8 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    --TODO: move load to fixture or requirements
-    LOAD '$libdir/plugins/libquery_supervisor.so';
-END;
+    -- Nothing to check here
+END
 $BODY$
 ;
 
@@ -20,7 +19,8 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    --PERFORM pg_sleep( 5 );
+    PERFORM pg_sleep( 5 );
+    ASSERT FALSE, 'Cannot reach this point because query_supervisor.so shall break pending root query';
 END
 $BODY$
 ;
@@ -29,11 +29,11 @@ DROP FUNCTION IF EXISTS test_then;
 CREATE FUNCTION test_then()
     RETURNS void
     LANGUAGE 'plpgsql'
-STABLE
+VOLATILE
 AS
 $BODY$
 BEGIN
-    -- Nothing to check here
+    -- nothing to check here
 END
 $BODY$
 ;

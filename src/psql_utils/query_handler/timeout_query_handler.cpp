@@ -59,8 +59,9 @@ namespace PsqlTools::PsqlUtils {
   void TimeoutQueryHandler::onEndQuery( QueryDesc* _queryDesc ) {
     assert(_queryDesc);
 
-    //Warning: onEndQuery won't be called when pending root query was broken
     LOG_DEBUG( "End query %s", _queryDesc->sourceText  );
+
+    //Warning: onEndQuery won't be called when pending root query was broken;
     if ( isQueryCancelPending() ) {
       return;
     }
