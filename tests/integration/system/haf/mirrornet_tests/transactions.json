@@ -1,0 +1,47 @@
+[
+  {
+    'type': 'pow_operation',
+    'value': {
+      'worker_account': 'steemit59',
+      'block_id': '0000270f6b797aa3245e6fb35a164e2c56ca0ad9',
+      'nonce': '2069557240858032527',
+      'work': {
+        'worker': 'STM6LLegbAgLAy28EHrffBVuANFWcFgmqRMW13wBmTExqFE9SCkg4',
+        'input': '1125c3ab09a55396c55ed60283cd6634d455d7bc1b9efb169952c654923e9f7e',
+        'signature': '20194bba7b31c53f7bc74efd9d0524e71ae87e4b60072313d866dac4c722c30da8365c3c28c972f8b06892cf1c60703d4abf550c24f66098e57a7f9671b41caf42',
+        'work': '0000000435a0bfad8471034a209d7556b4c16d77b22a66970de224f6fedad95a'
+      },
+      'props': {
+        'account_creation_fee': {
+          'amount': '100000',
+          'precision': 3,
+          'nai': '@@000000021'
+        },
+        'maximum_block_size': 131072,
+        'hbd_interest_rate': 1000
+      }
+    }
+  },
+  {
+    'type': 'pow_reward_operation',
+    'value': {
+      'worker': 'itsascam',
+      'reward': {
+        'amount': '21000',
+        'precision': 3,
+        'nai': '@@000000021'
+      }
+    }
+  },
+  {
+    'type': 'producer_reward_operation',
+    'value': {
+      'producer': 'itsascam',
+      'vesting_shares': {
+        'amount': '1000',
+        'precision': 3,
+        'nai': '@@000000021'
+      }
+    }
+  }
+]
