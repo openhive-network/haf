@@ -22,6 +22,7 @@ ADD_PSQL_EXTENSION(
              hived_api.sql
 
              types/types.sql
+             types/casts.sql
 
     DEPLOY_SOURCES trigger_switch/trigger_off.sql
             context_rewind/names.sql
