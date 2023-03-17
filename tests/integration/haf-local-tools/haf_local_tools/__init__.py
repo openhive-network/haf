@@ -65,6 +65,7 @@ class haf_app:
 
         log_file = Path(f'{self.identifier}.log')
         tt.logger.info( f"Before opening file: {log_file}" )
+        _process = None
         with open( log_file, "a") as dump_file:
             try:
                 tt.logger.info( f"Start app: id: {self.identifier } before time: {_before_kill_time} {haf_app.root_path} {self.args}")
@@ -80,6 +81,7 @@ class haf_app:
             _command = "kill -2 " + str( self.pid )
             try:
                 os.system( _command )
+                _process.wait()
             except Exception as ex:
                 tt.logger.info( f"kill problem: {ex}")
 
