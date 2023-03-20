@@ -14,23 +14,8 @@ from test_tools.__private.scope.scope_fixtures import *  # pylint: disable=wildc
 import test_tools as tt
 
 import shared_tools.networks_architecture as networks
-from shared_tools.complex_networks import sql_preparer, prepare_basic_networks, prepare_basic_networks_with_2_sessions
+from shared_tools.complex_networks import sql_preparer, prepare_basic_networks, prepare_basic_networks_with_2_sessions, prepare_time_offsets, create_block_log_directory_name
 
-def prepare_time_offsets(limit: int):
-    time_offsets = []
-
-    cnt = 0
-    for i in range(limit):
-        time_offsets.append(cnt % 3 + 1)
-        cnt += 1
-
-    result = ",".join(str(time_offset) for time_offset in time_offsets)
-    tt.logger.info( f"Generated: {result}" )
-
-    return time_offsets
-
-def create_block_log_directory_name(name : str):
-    return Path(__file__).parent.absolute() / "system" / "haf" / name
 
 @pytest.fixture()
 def database():

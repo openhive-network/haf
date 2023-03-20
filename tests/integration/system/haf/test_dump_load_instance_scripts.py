@@ -16,7 +16,7 @@ from sqlalchemy.pool import NullPool
 from test_tools.__private import paths_to_executables
 from haf_local_tools import query_all
 
-from shared_tools.complex_networks import prepare_node_with_database
+from shared_tools.complex_networks import prepare_node_with_database, create_block_log_directory_name
 
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
@@ -26,9 +26,6 @@ SQL_TABLE_COUNT: Final[str] = """
 SELECT COUNT(*)
 FROM hive.{table};
 """
-
-def create_block_log_directory_name():
-    return Path(__file__).parent.absolute() / "block_log" / "block_log"
 
 class Test:
     @pytest.mark.parametrize(
@@ -96,7 +93,7 @@ class Test:
         self.dump_instance_script=scripts_path/'dump_instance.sh'
         self.load_instance_script=scripts_path/'load_instance.sh'
 
-        node.run(replay_from=create_block_log_directory_name(), stop_at_block=stop_at_block, exit_before_synchronization=True)
+        node.run(replay_from=create_block_log_directory_name("block_log") / "block_log", stop_at_block=stop_at_block, exit_before_synchronization=True)
         session.close()
 
 
