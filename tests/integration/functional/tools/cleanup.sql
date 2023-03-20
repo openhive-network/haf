@@ -1,0 +1,2 @@
+ALTER SYSTEM RESET ALL;
+SELECT pg_reload_conf();

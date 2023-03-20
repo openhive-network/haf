@@ -6,7 +6,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    -- nothing to prepare here
+    -- haf_admin is limited in the fixture
 END
 $BODY$
 ;
@@ -19,7 +19,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    SELECT * FROM generate_series(1,10000);
+    PERFORM pg_sleep( 5 );
 END
 $BODY$
 ;

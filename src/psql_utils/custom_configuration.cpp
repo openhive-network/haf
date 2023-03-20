@@ -46,7 +46,7 @@ namespace PsqlTools::PsqlUtils {
       , _longDescription.c_str()
       , &newOption->m_value
       , _defaultValue.c_str()
-      , GucContext::PGC_SIGHUP
+      , GucContext::PGC_SUSET
       , 0
       , nullptr, nullptr, nullptr
     );

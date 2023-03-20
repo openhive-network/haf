@@ -15,6 +15,8 @@ preload_libraries=$5;
 
 setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path" "$preload_libraries"
 
+trap on_exit EXIT;
+
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
 
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ${test_path};
@@ -26,6 +28,7 @@ evaluate_result $?;
 psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c 'SELECT test_error()';
 evaluate_error_result $?;
 
+on_exit
 psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE $DB_NAME";
 
 echo "PASSED";

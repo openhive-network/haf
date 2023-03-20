@@ -19,6 +19,7 @@
 extern "C" {
 #include <postgres.h>
 #include <catalog/pg_attribute.h>
+#include <catalog/pg_authid.h>
 #include <catalog/pg_constraint.h>
 #include <catalog/pg_type.h>
 
@@ -40,12 +41,14 @@ extern "C" {
 #include <utils/array.h>
 #include <utils/backend_status.h>
 #include <utils/builtins.h>
+#include <utils/catcache.h>
 #include <utils/elog.h>
 #include <utils/fmgrprotos.h>
 #include <utils/fmgroids.h>
 #include <utils/jsonb.h>
 #include <utils/lsyscache.h>
 #include <utils/timeout.h>
+#include <utils/syscache.h>
 
 #include <utils/rel.h>
 #include <utils/tuplestore.h>
