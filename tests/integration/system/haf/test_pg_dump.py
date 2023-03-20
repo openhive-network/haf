@@ -7,7 +7,9 @@ from typing import TYPE_CHECKING, Callable, Final
 import pytest
 
 import test_tools as tt
-from haf_local_tools import create_node_with_database, get_blocklog_directory, query_all, query_col
+from haf_local_tools import query_all, query_col
+
+from shared_tools.complex_networks import prepare_node_with_database
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
@@ -34,6 +36,9 @@ SELECT *
 FROM hive.{table}
 ORDER BY {columns};
 """
+
+def create_block_log_directory_name():
+    return Path(__file__).parent.absolute() / "block_log_12_8" / "block_log"
 
 def pg_restore_from_toc(target_db_name: str, tmp_path: Path) -> None:
     """
@@ -80,14 +85,8 @@ def test_pg_dump(database, pg_restore: Callable[[str, Path], None], tmp_path: Pa
 
 
 def prepare_source_db(database) -> tuple[Session, URL]:
-    session = database('postgresql:///test_pg_dump_source')
-    db_name = session.bind.url
-    node = create_node_with_database(url=str(db_name))
-
-    blocklog_dir = get_blocklog_directory()
-    blocklog_dir = blocklog_dir / 'block_logs/block_log'
-
-    node.run(replay_from=blocklog_dir, stop_at_block=30, exit_before_synchronization=True)
+    node, session, db_name = prepare_node_with_database(database)
+    node.run(replay_from=create_block_log_directory_name(), stop_at_block=30, exit_before_synchronization=True)
 
     return session, db_name
 

@@ -7,13 +7,16 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 
+import test_tools as tt
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 
 from test_tools.__private import paths_to_executables
-from haf_local_tools import create_node_with_database, get_blocklog_directory, query_all
+from haf_local_tools import query_all
+
+from shared_tools.complex_networks import prepare_node_with_database
 
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
@@ -23,6 +26,9 @@ SQL_TABLE_COUNT: Final[str] = """
 SELECT COUNT(*)
 FROM hive.{table};
 """
+
+def create_block_log_directory_name():
+    return Path(__file__).parent.absolute() / "block_log" / "block_log"
 
 class Test:
     @pytest.mark.parametrize(
@@ -75,11 +81,7 @@ class Test:
         
 
     def run_node_with_db(self, database, stop_at_block : int):
-
-        session = database('postgresql:///test_pg_dump_source')
-        self.db_name = session.bind.url
-        node = create_node_with_database(url=str(self.db_name))
-
+        node, session, self.db_name = prepare_node_with_database(database)
 
         self.hived_executable_path =paths_to_executables.get_path_of("hived")
 
@@ -94,11 +96,7 @@ class Test:
         self.dump_instance_script=scripts_path/'dump_instance.sh'
         self.load_instance_script=scripts_path/'load_instance.sh'
 
-
-
-        blocklog_dir = get_blocklog_directory()
-        blocklog_dir = blocklog_dir / 'block_logs/block_log'
-        node.run(replay_from=blocklog_dir, stop_at_block=stop_at_block, exit_before_synchronization=True)
+        node.run(replay_from=create_block_log_directory_name(), stop_at_block=stop_at_block, exit_before_synchronization=True)
         session.close()
 
 

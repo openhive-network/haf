@@ -1,9 +1,7 @@
 from pathlib import Path
-from typing import Any, Iterable, Tuple
+from typing import Any, Tuple
 from uuid import uuid4
 from functools import partial
-import random
-import sys
 
 import pytest
 import sqlalchemy
@@ -16,7 +14,7 @@ from test_tools.__private.scope.scope_fixtures import *  # pylint: disable=wildc
 import test_tools as tt
 
 import shared_tools.networks_architecture as networks
-from shared_tools.complex_networks import prepare_sub_networks
+from shared_tools.complex_networks import sql_preparer, prepare_basic_networks, prepare_basic_networks_with_2_sessions
 
 def prepare_time_offsets(limit: int):
     time_offsets = []
@@ -62,46 +60,6 @@ def database():
     yield make_database
 
     close_all_sessions()
-
-class sql_preparer:
-    def __init__(self, network_under_test: int, node_under_test_name: str) -> None:
-        self.network_under_test     = network_under_test
-        self.node_under_test_name   = node_under_test_name
-        self.session                = None
-
-    def prepare(self, builder: networks.NetworksBuilder):
-        node_under_test = builder.networks[self.network_under_test].node(self.node_under_test_name)
-        node_under_test.config.plugin.append('sql_serializer')
-        node_under_test.config.psql_url = str(self.session.get_bind().url)
-
-def before_run_network(builder: networks.NetworksBuilder, preparers: Iterable[sql_preparer]):
-    for preparer in preparers:
-        preparer.prepare(builder)
-
-    for node in builder.nodes:
-        node.config.log_logger = '{"name":"default","level":"debug","appender":"stderr,p2p"} '\
-                                 '{"name":"user","level":"debug","appender":"stderr,p2p"} '\
-                                 '{"name":"chainlock","level":"debug","appender":"p2p"} '\
-                                 '{"name":"sync","level":"debug","appender":"p2p"} '\
-                                 '{"name":"p2p","level":"debug","appender":"p2p"}'
-
-def prepare_basic_networks_internal(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None, preparers: Iterable[sql_preparer] = None) -> Tuple[networks.NetworksBuilder, Any]:
-    builder = prepare_sub_networks(architecture, block_log_directory_name, time_offsets, partial( before_run_network, preparers=preparers))
-
-    if builder == None:
-        tt.logger.info(f"Generating 'block_log' enabled. Exiting...")
-        sys.exit(1)
-
-    return builder
-
-def prepare_basic_networks(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None, preparer: sql_preparer = None) -> Tuple[networks.NetworksBuilder, Any]:
-    preparer.session = database('postgresql:///haf_block_log')
-    return prepare_basic_networks_internal(database, architecture, block_log_directory_name, time_offsets, [preparer]), preparer.session
-
-def prepare_basic_networks_with_2_sessions(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None, preparers: Iterable[sql_preparer] = None) -> Tuple[networks.NetworksBuilder, Any]:
-    preparers[0].session = database('postgresql:///haf_block_log')
-    preparers[1].session = database('postgresql:///haf_block_log_ref')
-    return prepare_basic_networks_internal(database, architecture, block_log_directory_name, time_offsets, preparers), [preparers[0].session, preparers[1].session]
 
 @pytest.fixture()
 def prepared_networks_and_database_12_8(database) -> Tuple[networks.NetworksBuilder, Any]:
