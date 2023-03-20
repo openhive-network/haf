@@ -1,4 +1,4 @@
-MACRO( ADD_SQL_FUNCTIONAL_TESTS_FOR_LIBRARY sql_test_path preloaded_library test_script_type) # test_script_type gwt or error
+MACRO( ADD_SQL_FUNCTIONAL_TESTS_TYPE_FOR_LIBRARY sql_test_path preloaded_library test_script_type) # test_script_type gwt or error
     STRING( REGEX MATCH "^(([^\\/]*)\\/)?(.*)\\.[^.]*$" dummy ${sql_test_path} ) # remove sql extension
     SET( test_name ${CMAKE_MATCH_3})
     IF( CMAKE_MATCH_2 )
@@ -16,11 +16,15 @@ MACRO( ADD_SQL_FUNCTIONAL_TESTS_FOR_LIBRARY sql_test_path preloaded_library test
 ENDMACRO()
 
 MACRO( ADD_SQL_ERROR_FUNCTIONAL_TESTS_FOR_LIBRARY sql_test_path preloaded_library )
-    ADD_SQL_FUNCTIONAL_TESTS_FOR_LIBRARY( ${sql_test_path} ${preloaded_library} error )
+    ADD_SQL_FUNCTIONAL_TESTS_TYPE_FOR_LIBRARY( ${sql_test_path} ${preloaded_library} error )
+ENDMACRO()
+
+MACRO( ADD_SQL_FUNCTIONAL_TESTS sql_test_path preloaded_library)
+    ADD_SQL_FUNCTIONAL_TESTS_TYPE_FOR_LIBRARY( ${sql_test_path} ${preloaded_library} gwt )
 ENDMACRO()
 
 MACRO( ADD_SQL_FUNCTIONAL_TESTS sql_test_path )
-    ADD_SQL_FUNCTIONAL_TESTS_FOR_LIBRARY( ${sql_test_path} "" gwt )
+    ADD_SQL_FUNCTIONAL_TESTS_TYPE_FOR_LIBRARY( ${sql_test_path} "" gwt )
 ENDMACRO()
 
 MACRO( ADD_AUTHORIZATION_FUNCTIONAL_TESTS sql_test_path)

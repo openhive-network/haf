@@ -6,7 +6,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    -- Nothing to check here
+    SET query_supervisor.limited_users TO haf_admin;
 END
 $BODY$
 ;
