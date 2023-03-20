@@ -113,13 +113,18 @@ fi
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE SCHEMA hive;' 
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE EXTENSION hive_fork_manager CASCADE;' 
 
-if [ -n "$DB_ADMIN_PRELOAD_LIBS" ]; then
-  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER ROLE $DB_ADMIN IN DATABASE $DB_NAME SET local_preload_libraries TO '$DB_ADMIN_PRELOAD_LIBS';"
-fi
-
 for u in "${DB_USERS[@]}"; do
   sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
     GRANT CREATE ON DATABASE "$DB_NAME" TO $u;
 EOF
 
 done
+
+if [ -n "$DB_ADMIN_PRELOAD_LIBS" ]; then
+  for user in ${DB_ADMIN} ${DB_USERS}; do
+    sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
+     ALTER SYSTEM SET session_preload_libraries TO 'libquery_supervisor.so';SELECT pg_reload_conf();
+EOF
+
+  done
+fi

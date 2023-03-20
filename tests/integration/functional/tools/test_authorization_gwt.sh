@@ -9,6 +9,8 @@ postgres_port=$4;
 
 setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
 
+trap on_exit EXIT;
+
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
 
 # add test functions:
@@ -39,6 +41,7 @@ evaluate_result $?;
 psql postgresql://bob:test@localhost:$postgres_port/$DB_NAME --username=bob -a -v ON_ERROR_STOP=on -c 'SELECT bob_test_then()';
 evaluate_result $?;
 
+on_exit
 psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE $DB_NAME";
 
 echo "PASSED";

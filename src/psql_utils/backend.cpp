@@ -1,14 +1,17 @@
+#include "include/psql_utils/postgres_backend.hpp"
 #include "include/psql_utils/backend.h"
 
 namespace PsqlTools::PsqlUtils {
 
   Oid Backend::userOid() const {
-    return MyBEEntry->st_userid;
+    return GetSessionUserId();
   }
 
   std::string Backend::userName() const {
-    auto user = userOid();
-    return MappingUserName(user);
+    if ( !MyProcPort->user_name ) {
+      return "";
+    }
+    return MyProcPort->user_name;
   }
 
 } // namespace PsqlTools::PsqlUtils

@@ -8,7 +8,7 @@ namespace PsqlTools::PsqlUtils {
 
   class Backend {
   public:
-    Backend();
+    Backend() = default;
     ~Backend() = default;
 
     Oid userOid() const;
