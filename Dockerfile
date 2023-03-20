@@ -85,6 +85,9 @@ ENV HTTP_PORT=${HTTP_PORT}
 # Environment variable which allows to override default postgres access specification in pg_hba.conf
 ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\nhost    all     pghero    172.0.0.0/8    trust"
 
+#variable defined to simplify image direct usage (without run_hived_img.sh script).
+ENV HIVED_UID=0
+
 SHELL ["/bin/bash", "-c"]
 
 USER hived
