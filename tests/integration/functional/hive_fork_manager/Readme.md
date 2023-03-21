@@ -41,7 +41,7 @@ Function which name started with a role name is called with this role's priville
 by 'hived' role.
 
 To add authorization test use cmake macro `ADD_AUTHORIZATION_FUNCTIONAL_TESTS( <sql_script_relative_local_path> )`.
-The macro add call [test_authorization.sh](../tools/test_authorization.sh) with passing given script to run.
+The macro add call [test_authorization.sh](../tools/test_authorization_gwt.sh) with passing given script to run.
 
 ## EXAMPLES
 The tests check if examples from folder 'src/hive_fork_manager/doc/examples' work correctly. The macro `ADD_EXAMPLES_FUNCTIONAL_TESTS( <relative_path_to_script> )`
