@@ -17,3 +17,14 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.comment_options_operation)
   WITH FUNCTION hive._operation_to_comment_options_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_vote_operation(
+  hive.operation
+) RETURNS hive.vote_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_vote_operation';
+
+CREATE CAST (hive.operation AS hive.vote_operation)
+  WITH FUNCTION hive._operation_to_vote_operation
+  AS ASSIGNMENT;
+
