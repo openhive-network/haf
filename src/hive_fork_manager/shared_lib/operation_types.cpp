@@ -46,7 +46,7 @@ Datum comment_operation_to_sql_tuple(const hive::protocol::comment_operation& co
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
-Datum asset_to_sql_tuple(const hive::protocol::asset& asset, FunctionCallInfo fcinfo)
+Datum asset_to_sql_tuple(const hive::protocol::asset& asset)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.asset");
   BlessTupleDesc(desc);
@@ -76,7 +76,7 @@ Datum comment_options_operation_to_sql_tuple(const hive::protocol::comment_optio
   Datum values[] = {
     CStringGetTextDatum(static_cast<std::string>(options.author).c_str()),
     CStringGetTextDatum(options.permlink.c_str()),
-    asset_to_sql_tuple(options.max_accepted_payout, fcinfo),
+    asset_to_sql_tuple(options.max_accepted_payout),
     UInt16GetDatum(options.percent_hbd),
     BoolGetDatum(options.allow_votes),
     BoolGetDatum(options.allow_curation_rewards),
