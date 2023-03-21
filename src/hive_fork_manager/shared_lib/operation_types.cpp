@@ -64,6 +64,49 @@ Datum asset_to_sql_tuple(const hive::protocol::asset& asset)
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
+Datum comment_options_extensions_to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.comment_options_extensions_type");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    (Datum)0, // comment_payout_beneficiaries
+    (Datum)0, // allowed_vote_assets
+  };
+  bool nulls[] = {
+    true,
+    true,
+  };
+  struct extensions_visitor
+  {
+    using result_type = void;
+
+    extensions_visitor(Datum* values, bool* nulls) : values(values), nulls(nulls)
+    {}
+    void operator()(const hive::protocol::comment_payout_beneficiaries& payout_beneficiaries)
+    {
+      // values[0] = ...
+      // nulls[0] = false;
+    }
+#ifdef HIVE_ENABLE_SMT
+    void operator()(const hive::protocol::allowed_vote_assets& allowed_vote_assets)
+    {
+      // TODO: values[1] = ...
+      // TODO: nulls[1] = false;
+    }
+#endif /// HIVE_ENABLE_SMT
+  private:
+    Datum* values;
+    bool* nulls;
+  };
+  extensions_visitor v(values, nulls);
+  for (const auto& extension : extensions)
+  {
+    extension.visit(v);
+  }
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
 Datum comment_options_operation_to_sql_tuple(const hive::protocol::comment_options_operation& options, FunctionCallInfo fcinfo)
 {
   TupleDesc desc;
@@ -80,7 +123,7 @@ Datum comment_options_operation_to_sql_tuple(const hive::protocol::comment_optio
     UInt16GetDatum(options.percent_hbd),
     BoolGetDatum(options.allow_votes),
     BoolGetDatum(options.allow_curation_rewards),
-    (Datum)0, // extensions
+    comment_options_extensions_to_sql_tuple(options.extensions),
   };
   bool nulls[] = {
     false,
@@ -89,7 +132,7 @@ Datum comment_options_operation_to_sql_tuple(const hive::protocol::comment_optio
     false,
     false,
     false,
-    true,
+    false,
   };
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
