@@ -13,11 +13,12 @@ memo_cnt            = 0
 break_cnt           = 0
 break_limit         = 250
 
-def generate_break(node, identifier):
+def generate_break(wallet, node, identifier):
     global break_cnt
     global break_limit
 
     while break_cnt < break_limit:
+        sh.info("m4", wallet)
         node.wait_number_of_blocks(1)
         break_cnt += 1
     return f'[break {identifier}] Breaking activated...'
@@ -45,11 +46,11 @@ def trx_creator(wallet, identifier):
 
 #When the issue 118 will be fixed, change `break_limit` temporarily to a value that will be related to a few hours in order to evaluate if everything works
 @pytest.mark.skip(reason='https://gitlab.syncad.com/hive/haf/-/issues/118')
-def test_many_forks_node_with_time_offset(prepared_networks_and_database_4_4_4_4_4):
+def test_many_forks_node_with_time_offset_db(prepared_networks_and_database_4_4_4_4_4):
     global break_cnt
     global break_limit
 
-    tt.logger.info(f'Start test_many_forks_many_ops')
+    tt.logger.info(f'Start test_many_forks_node_with_time_offset_db')
 
     networks_builder, session = prepared_networks_and_database_4_4_4_4_4
 
@@ -72,7 +73,7 @@ def test_many_forks_node_with_time_offset(prepared_networks_and_database_4_4_4_4
         for i in range(_app_threads):
             _futures.append(executor.submit(haf_app_processor, 1, 5, i))
 
-        _futures.append(executor.submit(generate_break, node_under_test, 0))
+        _futures.append(executor.submit(generate_break, beta_wallet, node_under_test, 0))
 
     tt.logger.info("results:")
     for future in _futures:

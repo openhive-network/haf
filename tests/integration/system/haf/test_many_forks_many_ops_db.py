@@ -72,11 +72,11 @@ def trx_creator(wallet, identifier):
 
 #When the issue 118 will be fixed, change `break_limit` temporarily to a value that will be related to a few hours in order to evaluate if everything works
 @pytest.mark.skip(reason='https://gitlab.syncad.com/hive/haf/-/issues/118')
-def test_many_forks_many_ops(prepared_networks_and_database_17_3):
+def test_many_forks_many_ops_db(prepared_networks_and_database_17_3):
     global break_cnt
     global break_limit
 
-    tt.logger.info(f'Start test_many_forks_many_ops')
+    tt.logger.info(f'Start test_many_forks_many_ops_db')
 
     networks_builder, session = prepared_networks_and_database_17_3
 

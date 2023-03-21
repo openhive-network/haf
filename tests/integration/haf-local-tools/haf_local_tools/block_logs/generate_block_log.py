@@ -4,7 +4,7 @@ from pathlib import Path
 
 import test_tools as tt
 
-from shared_tools.complex_networks import prepare_sub_networks_generation
+from shared_tools.complex_networks import generate_networks
 import shared_tools.networks_architecture as networks
 
 def prepare_blocklog(desired_blocklog_length: int):
@@ -17,7 +17,7 @@ def prepare_blocklog(desired_blocklog_length: int):
 
     tt.logger.info(architecture)
 
-    prepare_sub_networks_generation(architecture, Path('generated'), None, desired_blocklog_length)
+    generate_networks(architecture, Path('generated'), None, desired_blocklog_length)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

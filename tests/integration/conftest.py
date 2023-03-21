@@ -14,7 +14,7 @@ from test_tools.__private.scope.scope_fixtures import *  # pylint: disable=wildc
 import test_tools as tt
 
 import shared_tools.networks_architecture as networks
-from shared_tools.complex_networks import sql_preparer, prepare_basic_networks, prepare_basic_networks_with_2_sessions, prepare_time_offsets, create_block_log_directory_name
+from shared_tools.complex_networks import sql_preparer, prepare_network_with_1_session, prepare_network_with_2_sessions, prepare_time_offsets, create_block_log_directory_name
 
 
 @pytest.fixture()
@@ -62,7 +62,7 @@ def prepared_networks_and_database_12_8(database) -> Tuple[networks.NetworksBuil
     }
     architecture = networks.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_basic_networks(database, architecture, create_block_log_directory_name('block_log_12_8'), None, sql_preparer(1, 'ApiNode0'))
+    yield prepare_network_with_1_session(database, architecture, create_block_log_directory_name('block_log_12_8'), None, sql_preparer(1, 'ApiNode0'))
 
 @pytest.fixture()
 def prepared_networks_and_database_12_8_with_2_sessions(database) -> Tuple[networks.NetworksBuilder, Any]:
@@ -82,7 +82,7 @@ def prepared_networks_and_database_12_8_with_2_sessions(database) -> Tuple[netwo
     architecture = networks.NetworksArchitecture()
     architecture.load(config)
     sql_preparers = [sql_preparer(0, 'ApiNode0'), sql_preparer(1, 'ApiNode1')]
-    yield prepare_basic_networks_with_2_sessions(database, architecture, create_block_log_directory_name('block_log_12_8'), None, sql_preparers)
+    yield prepare_network_with_2_sessions(database, architecture, create_block_log_directory_name('block_log_12_8'), None, sql_preparers)
 
 @pytest.fixture()
 def prepared_networks_and_database_12_8_without_block_log(database) -> Tuple[networks.NetworksBuilder, Any]:
@@ -100,7 +100,7 @@ def prepared_networks_and_database_12_8_without_block_log(database) -> Tuple[net
     }
     architecture = networks.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_basic_networks(database, architecture, None, None, sql_preparer(1, 'ApiNode0'))
+    yield prepare_network_with_1_session(database, architecture, None, None, sql_preparer(1, 'ApiNode0'))
 
 @pytest.fixture()
 def prepared_networks_and_database_17_3(database) -> Tuple[networks.NetworksBuilder, Any]:
@@ -119,7 +119,7 @@ def prepared_networks_and_database_17_3(database) -> Tuple[networks.NetworksBuil
     }
     architecture = networks.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_basic_networks(database, architecture, create_block_log_directory_name('block_log_17_3'), None, sql_preparer(1, 'ApiNode1'))
+    yield prepare_network_with_1_session(database, architecture, create_block_log_directory_name('block_log_17_3'), None, sql_preparer(1, 'ApiNode1'))
 
 @pytest.fixture()
 def prepared_networks_and_database_4_4_4_4_4(database) -> Tuple[networks.NetworksBuilder, Any]:
@@ -148,4 +148,4 @@ def prepared_networks_and_database_4_4_4_4_4(database) -> Tuple[networks.Network
     architecture.load(config)
     time_offsets = prepare_time_offsets(architecture.nodes_number)
 
-    yield prepare_basic_networks(database, architecture, create_block_log_directory_name('block_log_4_4_4_4_4'), time_offsets, sql_preparer(1, 'ApiNode0'))
+    yield prepare_network_with_1_session(database, architecture, create_block_log_directory_name('block_log_4_4_4_4_4'), time_offsets, sql_preparer(1, 'ApiNode0'))
