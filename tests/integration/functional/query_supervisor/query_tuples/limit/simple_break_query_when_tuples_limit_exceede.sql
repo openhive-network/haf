@@ -6,7 +6,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    SET query_supervisor.limited_users TO haf_admin;
+    -- nothing to prepare here
 END
 $BODY$
 ;
@@ -19,7 +19,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    PERFORM pg_sleep( 5 );
+    PERFORM * FROM generate_series(1,10000);
 END
 $BODY$
 ;
