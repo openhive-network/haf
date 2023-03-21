@@ -34,7 +34,8 @@ CREATE DOMAIN hive.proposal_subject AS VARCHAR(80);
 
 CREATE TYPE hive.asset AS (
   amount hive.share_type,
-  symbol hive.asset_symbol
+  precision int2,
+  nai text
 );
 
 CREATE TYPE hive.price AS (
