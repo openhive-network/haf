@@ -39,7 +39,7 @@ Now you can either sync your hived node from scratch via the Hive P2P network or
 To start your HAF instance, type:
 
 ```
-  ../haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf/instance:instance-local-develop --name=haf-instance --data-dir=$(pwd)/haf-datadir --replay
+  ../haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf/instance:instance-local-develop --name=haf-instance --webserver-http-endpoint=8091 --webserver-ws-endpoint=8090  --data-dir=$(pwd)/haf-datadir --replay
 ```
 
 If you don't have a local block_log file, just remove the `--replay` option from above command line to get the blockchain blocks using the P2P network via the normal sync procedure.
