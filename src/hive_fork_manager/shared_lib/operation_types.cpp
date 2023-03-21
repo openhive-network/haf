@@ -64,6 +64,20 @@ Datum asset_to_sql_tuple(const hive::protocol::asset& asset)
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
+Datum comment_payout_beneficiaries_to_sql_tuple(const hive::protocol::comment_payout_beneficiaries& payout_beneficiaries)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.comment_payout_beneficiaries");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    (Datum)0,
+  };
+  bool nulls[] = {
+    true,
+  };
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
 Datum comment_options_extensions_to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.comment_options_extensions_type");
@@ -84,8 +98,8 @@ Datum comment_options_extensions_to_sql_tuple(const hive::protocol::comment_opti
     {}
     void operator()(const hive::protocol::comment_payout_beneficiaries& payout_beneficiaries)
     {
-      // values[0] = ...
-      // nulls[0] = false;
+      values[0] = comment_payout_beneficiaries_to_sql_tuple(payout_beneficiaries);
+      nulls[0] = false;
     }
 #ifdef HIVE_ENABLE_SMT
     void operator()(const hive::protocol::allowed_vote_assets& allowed_vote_assets)
