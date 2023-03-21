@@ -91,3 +91,11 @@ CREATE TYPE hive.comment_options_operation AS (
   allow_curation_rewards boolean,
   extensions hive.comment_options_extensions_type
 );
+
+CREATE TYPE hive.vote_operation AS (
+  voter hive.account_name_type,
+  author hive.account_name_type,
+  permlink hive.permlink,
+  weight int4 -- uint16_t: 2 byte, but unsigned (4 byte)
+);
+

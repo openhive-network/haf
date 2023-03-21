@@ -202,6 +202,31 @@ Datum comment_options_operation_to_sql_tuple(const hive::protocol::comment_optio
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
+Datum vote_operation_to_sql_tuple(const hive::protocol::vote_operation& vote, FunctionCallInfo fcinfo)
+{
+  TupleDesc desc;
+  TypeFuncClass cls = get_call_result_type(fcinfo, nullptr, &desc);
+  if (cls != TYPEFUNC_COMPOSITE)
+  {
+    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "function returning record called in context that cannot accept type record." ) ) );
+  }
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    CStringGetTextDatum(static_cast<std::string>(vote.voter).c_str()),
+    CStringGetTextDatum(static_cast<std::string>(vote.author).c_str()),
+    CStringGetTextDatum(vote.permlink.c_str()),
+    UInt32GetDatum(vote.weight),
+  };
+  bool nulls[] = {
+    false,
+    false,
+    false,
+    false,
+  };
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
 }
 
 extern "C"
@@ -257,6 +282,33 @@ extern "C"
     catch( ... )
     {
       ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to comment_options_operation" ) ) );
+    }
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_vote_operation );
+  Datum operation_to_vote_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    uint32 data_length = VARSIZE_ANY_EXHDR( op );
+    const char* raw_data = VARDATA_ANY( op );
+
+    try
+    {
+      const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
+      const hive::protocol::vote_operation options = operation.get<hive::protocol::vote_operation>();
+      return vote_operation_to_sql_tuple(options, fcinfo);
+    }
+    catch( const fc::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.to_string().c_str() ) ) );
+    }
+    catch( const std::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.what() ) ) );
+    }
+    catch( ... )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to vote_operation" ) ) );
     }
   }
 }
