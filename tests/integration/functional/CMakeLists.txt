@@ -1,9 +1,9 @@
 MACRO( ADD_SQL_FUNCTIONAL_TESTS_TYPE_FOR_LIBRARY sql_test_path preloaded_library test_script_type) # test_script_type gwt or error
-    STRING( REGEX MATCH "^(([^\\/]*)\\/)?(.*)\\.[^.]*$" dummy ${sql_test_path} ) # remove sql extension
-    SET( test_name ${CMAKE_MATCH_3})
-    IF( CMAKE_MATCH_2 )
-        SET( test_name ${CMAKE_MATCH_2}.${test_name} )
-    ENDIF()
+    GET_FILENAME_COMPONENT( test_dir ${sql_test_path} DIRECTORY )
+    GET_FILENAME_COMPONENT( test_name  ${sql_test_path} NAME_WLE )
+    SET( test_name ${test_dir}.${test_name})
+    STRING( REPLACE "/" "." test_name ${test_name} )
+
     CMAKE_PATH( GET CMAKE_CURRENT_SOURCE_DIR FILENAME tests_folder  )
     SET( test_target test.functional.${tests_folder}.${test_name} )
     SET( sources_under_tests_path ${CMAKE_SOURCE_DIR}/src/${tests_folder} )
@@ -28,11 +28,11 @@ MACRO( ADD_SQL_FUNCTIONAL_TESTS sql_test_path )
 ENDMACRO()
 
 MACRO( ADD_AUTHORIZATION_FUNCTIONAL_TESTS sql_test_path)
-    STRING( REGEX MATCH "^(([^\\/]*)\\/)?(.*)\\.[^.]*$" dummy ${sql_test_path} ) # remove sql extension
-    SET( test_name ${CMAKE_MATCH_3})
-    IF( CMAKE_MATCH_2 )
-        SET( test_name ${CMAKE_MATCH_2}.${test_name} )
-    ENDIF()
+    GET_FILENAME_COMPONENT( test_dir ${sql_test_path} DIRECTORY )
+    GET_FILENAME_COMPONENT( test_name  ${sql_test_path} NAME_WLE )
+    SET( test_name ${test_dir}.${test_name})
+    STRING( REPLACE "/" "." test_name ${test_name} )
+
     CMAKE_PATH( GET CMAKE_CURRENT_SOURCE_DIR FILENAME tests_folder  )
     SET( test_target test.functional.${tests_folder}.${test_name} )
     SET( sources_under_tests_path ${CMAKE_SOURCE_DIR}/src/${tests_folder} )
