@@ -1,8 +1,15 @@
 #include "operation_base.hpp"
 
-#include "funcapi.h"
-
 #include <fc/io/raw.hpp>
+
+#include <algorithm>
+
+extern "C" {
+#include "funcapi.h"
+#include <utils/syscache.h>
+#include <catalog/pg_type_d.h>
+#include <catalog/pg_namespace_d.h>
+}
 
 namespace {
 
@@ -64,15 +71,40 @@ Datum asset_to_sql_tuple(const hive::protocol::asset& asset)
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
+Datum beneficiary_route_types_to_sql_array(const std::vector<hive::protocol::beneficiary_route_type>& beneficiaries)
+{
+  Oid hiveOid = GetSysCacheOid1(NAMESPACENAME, Anum_pg_namespace_oid, CStringGetDatum("hive"));
+  Oid elementOid = GetSysCacheOid2(TYPENAMENSP, Anum_pg_type_oid, CStringGetDatum("beneficiary_route_type"), ObjectIdGetDatum(hiveOid));
+
+  if (!OidIsValid(elementOid))
+  {
+    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "could not determine data type of input" ) ) );
+  }
+
+  int16 typlen;
+  bool  typbyval;
+  char  typalign;
+
+  // get required info about the element type
+  get_typlenbyvalalign(elementOid, &typlen, &typbyval, &typalign);
+
+  const auto elementCount = 0;
+  Datum elements[elementCount];
+
+  ArrayType* result = construct_array(elements, elementCount, elementOid, typlen, typbyval, typalign);
+
+  PG_RETURN_ARRAYTYPE_P(result);
+}
+
 Datum comment_payout_beneficiaries_to_sql_tuple(const hive::protocol::comment_payout_beneficiaries& payout_beneficiaries)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.comment_payout_beneficiaries");
   BlessTupleDesc(desc);
   Datum values[] = {
-    (Datum)0,
+    beneficiary_route_types_to_sql_array(payout_beneficiaries.beneficiaries),
   };
   bool nulls[] = {
-    true,
+    false,
   };
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
