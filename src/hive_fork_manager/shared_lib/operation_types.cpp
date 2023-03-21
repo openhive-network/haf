@@ -46,6 +46,55 @@ Datum comment_operation_to_sql_tuple(const hive::protocol::comment_operation& co
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
+Datum asset_to_sql_tuple(const hive::protocol::asset& asset, FunctionCallInfo fcinfo)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.asset");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    Int64GetDatum(asset.amount.value),
+    Int16GetDatum(asset.symbol.decimals()),
+    CStringGetTextDatum(asset.symbol.to_nai_string().c_str()),
+  };
+  bool nulls[] = {
+    false,
+    false,
+    false,
+  };
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
+Datum comment_options_operation_to_sql_tuple(const hive::protocol::comment_options_operation& options, FunctionCallInfo fcinfo)
+{
+  TupleDesc desc;
+  TypeFuncClass cls = get_call_result_type(fcinfo, nullptr, &desc);
+  if (cls != TYPEFUNC_COMPOSITE)
+  {
+    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "function returning record called in context that cannot accept type record." ) ) );
+  }
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    CStringGetTextDatum(static_cast<std::string>(options.author).c_str()),
+    CStringGetTextDatum(options.permlink.c_str()),
+    asset_to_sql_tuple(options.max_accepted_payout, fcinfo),
+    UInt16GetDatum(options.percent_hbd),
+    BoolGetDatum(options.allow_votes),
+    BoolGetDatum(options.allow_curation_rewards),
+    (Datum)0, // extensions
+  };
+  bool nulls[] = {
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+  };
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
 }
 
 extern "C"
@@ -75,6 +124,32 @@ extern "C"
     {
       ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to comment_operation" ) ) );
     }
+  }
 
+  PG_FUNCTION_INFO_V1( operation_to_comment_options_operation );
+  Datum operation_to_comment_options_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    uint32 data_length = VARSIZE_ANY_EXHDR( op );
+    const char* raw_data = VARDATA_ANY( op );
+
+    try
+    {
+      const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
+      const hive::protocol::comment_options_operation options = operation.get<hive::protocol::comment_options_operation>();
+      return comment_options_operation_to_sql_tuple(options, fcinfo);
+    }
+    catch( const fc::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.to_string().c_str() ) ) );
+    }
+    catch( const std::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.what() ) ) );
+    }
+    catch( ... )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to comment_options_operation" ) ) );
+    }
   }
 }
