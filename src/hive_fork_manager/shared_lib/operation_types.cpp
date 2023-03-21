@@ -71,6 +71,22 @@ Datum asset_to_sql_tuple(const hive::protocol::asset& asset)
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
+Datum beneficiary_route_type_to_sql_tuple(const hive::protocol::beneficiary_route_type& beneficiary)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.beneficiary_route_type");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    CStringGetTextDatum(static_cast<std::string>(beneficiary.account).c_str()),
+    Int32GetDatum(beneficiary.weight),
+  };
+  bool nulls[] = {
+    false,
+    false,
+  };
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
 Datum beneficiary_route_types_to_sql_array(const std::vector<hive::protocol::beneficiary_route_type>& beneficiaries)
 {
   Oid hiveOid = GetSysCacheOid1(NAMESPACENAME, Anum_pg_namespace_oid, CStringGetDatum("hive"));
@@ -88,10 +104,12 @@ Datum beneficiary_route_types_to_sql_array(const std::vector<hive::protocol::ben
   // get required info about the element type
   get_typlenbyvalalign(elementOid, &typlen, &typbyval, &typalign);
 
-  const auto elementCount = 0;
-  Datum elements[elementCount];
+  const auto elementCount = beneficiaries.size();
+  std::vector<Datum> elements;
+  elements.reserve(elementCount);
+  std::transform(std::begin(beneficiaries), std::end(beneficiaries), std::begin(elements), beneficiary_route_type_to_sql_tuple);
 
-  ArrayType* result = construct_array(elements, elementCount, elementOid, typlen, typbyval, typalign);
+  ArrayType* result = construct_array(elements.data(), elementCount, elementOid, typlen, typbyval, typalign);
 
   PG_RETURN_ARRAYTYPE_P(result);
 }
