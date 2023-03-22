@@ -17,8 +17,9 @@ variables:
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
-  DATA_CACHE_MAINNET: /cache/replay_data_haf_mainnet_${CI_PIPELINE_ID}
+  DATA_CACHE_MIRRORNET: /cache/replay_data_haf_mirrornet_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
+  BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /blockchain/block_log_5m_mirrornet
 
   # Variables required by Common CI jobs
   CI_COMMON_JOB_VERSION: "656cd1670240c01fe05e56ee7158ea04877da555"
@@ -310,18 +311,32 @@ prepare_haf_image:
     BINARY_CACHE_PATH: "haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
   tags:
-    - hive-builder-4
+    - public-runner-docker
+    - hived
 
-prepare_haf_data:
+prepare_haf_image_mirrornet:
+  extends: .prepare_haf_image
+  stage: build_and_test_phase_1
+  variables:
+    REGISTRY_USER: "$CI_IMG_BUILDER_USER"
+    REGISTRY_PASS: $CI_IMG_BUILDER_PASSWORD
+    BINARY_CACHE_PATH: "haf-binaries"
+    HIVE_NETWORK_TYPE: mirrornet
+  tags:
+    - public-runner-docker
+    - hived
+
+prepare_haf_data_mirrornet:
   extends: .prepare_haf_data_5m
   needs:
-    - job: prepare_haf_image
+    - job: prepare_haf_image_mirrornet
       artifacts: true
   stage: build_and_test_phase_1
   variables:
-    DATA_CACHE: $DATA_CACHE_MAINNET
-    BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
-    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+    DATA_CACHE: $DATA_CACHE_MIRRORNET
+    BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M
+    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/hive/docker/config_mirrornet_5M.ini"
+    FAKETIME_TIMESTAMP: "2016-09-15T19:47:21"
   tags:
     - hive-builder-4
   resource_group: ${CI_COMMIT_SHA}
@@ -335,33 +350,29 @@ prepare_haf_data:
     DATADIR: $DATA_CACHE/datadir
     SHM_DIR: $DATA_CACHE/shm_dir
     LOG_FILE: $CI_JOB_NAME.log
-  command: ["--replay-blockchain", "--stop-replay-at-block=5000000"]
+  command: ["--replay-blockchain"]
 
-start_haf_as_service:
+start_haf_mirrornet_as_service:
   stage: build_and_test_phase_2
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   needs:
-    - job: prepare_haf_data
+    - job: prepare_haf_data_mirrornet
       artifacts: true
   services:
     - *haf-service
   variables:
-    DATA_CACHE: $DATA_CACHE_MAINNET
+    DATA_CACHE: $DATA_CACHE_MIRRORNET
     HAF_POSTGRES_URL: postgresql://haf_app_admin@haf-instance:5432/haf_block_log
     HIVED_UID: $HIVED_UID
   script:
-    - curl -I haf-instance:8090 || (echo "error connecting to service hived-instance" && false)
-    - |
-        curl -XPOST -d '{
-        "jsonrpc": "2.0",
-        "method": "database_api.get_dynamic_global_properties",
-        "params": {
-        },
-        "id": 2
-        }' haf-instance:8090
+    - timeout 300 bash -c "until psql \"${HAF_POSTGRES_URL}\" -c \"SELECT hive.wait_for_ready_instance('4 MIN'::interval);\" ; do sleep 3 ; done"
+    - psql $HAF_POSTGRES_URL -t -c 'SELECT MAX(num) FROM hive.blocks;'
+    - sleep 60
+    - HEAD_BLOCK_NUM=$(psql $HAF_POSTGRES_URL -t -c 'SELECT MAX(num) FROM hive.blocks;')
+    - test $HEAD_BLOCK_NUM -gt 5000000
   after_script:
     - rm docker_entrypoint.log -f
-    - cp $DATA_CACHE/datadir/$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA.log $CI_PROJECT_DIR/docker_entrypoint.log
+    - cp $DATA_CACHE/datadir/$CI_JOB_NAME.log $CI_PROJECT_DIR/docker_entrypoint.log
   artifacts:
     paths:
     - docker_entrypoint.log
