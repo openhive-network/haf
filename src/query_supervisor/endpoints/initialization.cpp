@@ -38,8 +38,6 @@ bool isCurrentUserLimited() {
     return false;
   }
 
-  initializeGlobals();
-
   std::vector< std::string > users;
   boost::split( users, limitedUsersString, boost::is_any_of(",") );
 
@@ -54,11 +52,13 @@ void _PG_init(void) {
     LOG_INFO( "query_supervisor.so loaded into backend %d...", getpid() );
   } BOOST_SCOPE_EXIT_END
 
+  initializeGlobals();
+
+  if ( !isCurrentUserLimited() ) {
+    return;
+  }
+
   using namespace  std::chrono_literals;
-
-
-
-
   PsqlTools::PsqlUtils::QueryHandler::initialize<PsqlTools::PsqlUtils::TuplesQueryHandler>( 1000, 1s );
 }
 
@@ -68,9 +68,7 @@ void _PG_fini(void) {
       LOG_INFO( "query_supervisor.so unloaded from backend %d...", getpid() );
   } BOOST_SCOPE_EXIT_END
 
-  const auto limitedUsers = g_customConfiguration->getOptionAsString( "limited_users" );
-
-  if ( limitedUsers.empty() ) {
+  if ( !isCurrentUserLimited() ) {
     return;
   }
 
