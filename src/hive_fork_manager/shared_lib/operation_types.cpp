@@ -227,6 +227,33 @@ Datum vote_operation_to_sql_tuple(const hive::protocol::vote_operation& vote, Fu
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
+Datum extensions_type_to_sql_array(const hive::protocol::extensions_type& extensions)
+{
+  Oid hiveOid = GetSysCacheOid1(NAMESPACENAME, Anum_pg_namespace_oid, CStringGetDatum("hive"));
+  Oid elementOid = GetSysCacheOid2(TYPENAMENSP, Anum_pg_type_oid, CStringGetDatum("hive_future_extensions"), ObjectIdGetDatum(hiveOid));
+
+  if (!OidIsValid(elementOid))
+  {
+    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "could not determine data type of input" ) ) );
+  }
+
+  int16 typlen;
+  bool  typbyval;
+  char  typalign;
+
+  // get required info about the element type
+  get_typlenbyvalalign(elementOid, &typlen, &typbyval, &typalign);
+
+  const auto elementCount = 0;
+  std::vector<Datum> elements;
+  elements.reserve(elementCount);
+  // TODO: std::transform(std::begin(extensions), std::end(extensions), std::begin(elements), future_extensions_to_sql_tuple);
+
+  ArrayType* result = construct_array(elements.data(), elementCount, elementOid, typlen, typbyval, typalign);
+
+  PG_RETURN_ARRAYTYPE_P(result);
+}
+
 Datum witness_set_properties_operation_to_sql_tuple(const hive::protocol::witness_set_properties_operation& properties, FunctionCallInfo fcinfo)
 {
   TupleDesc desc;
@@ -239,12 +266,12 @@ Datum witness_set_properties_operation_to_sql_tuple(const hive::protocol::witnes
   Datum values[] = {
     CStringGetTextDatum(static_cast<std::string>(properties.owner).c_str()),
     (Datum)0, // props
-    (Datum)0, // extensions
+    extensions_type_to_sql_array(properties.extensions),
   };
   bool nulls[] = {
     false,
     true,
-    true,
+    false,
   };
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
