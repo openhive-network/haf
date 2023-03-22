@@ -54,6 +54,10 @@ CREATE TYPE hive.legacy_hive_asset AS (
 
 -- basic types
 
+CREATE TYPE hive.hive_future_extensions AS ();
+
+CREATE DOMAIN hive.extensions_type AS hive_future_extensions[];
+
 CREATE TYPE hive.comment_operation AS (
   parent_author hive.account_name_type,
   parent_permlink hive.permlink,
@@ -97,5 +101,11 @@ CREATE TYPE hive.vote_operation AS (
   author hive.account_name_type,
   permlink hive.permlink,
   weight int4 -- uint16_t: 2 byte, but unsigned (4 byte)
+);
+
+CREATE TYPE hive.witness_set_properties_operation AS (
+  owner hive.account_name_type,
+  props hstore, -- text => bytea
+  extensions hive.extensions_type
 );
 
