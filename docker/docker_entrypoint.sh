@@ -140,6 +140,13 @@ echo "${BASH_SOURCE[@]}"
 
 {
 sudo --user=hived -En /bin/bash << EOF
+if test -f "$DATADIR/faketime.rc"; then
+    echo "$DATADIR/faketime.rc exists."
+    cat "$DATADIR/faketime.rc"
+    export LD_PRELOAD=/usr/local/lib/faketime/libfaketimeMT.so.1
+    export FAKETIME_TIMESTAMP_FILE="$DATADIR/faketime.rc"
+fi
+
 echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
 
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
