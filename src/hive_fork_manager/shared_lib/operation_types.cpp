@@ -227,6 +227,29 @@ Datum vote_operation_to_sql_tuple(const hive::protocol::vote_operation& vote, Fu
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
+Datum witness_set_properties_operation_to_sql_tuple(const hive::protocol::witness_set_properties_operation& properties, FunctionCallInfo fcinfo)
+{
+  TupleDesc desc;
+  TypeFuncClass cls = get_call_result_type(fcinfo, nullptr, &desc);
+  if (cls != TYPEFUNC_COMPOSITE)
+  {
+    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "function returning record called in context that cannot accept type record." ) ) );
+  }
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    CStringGetTextDatum(static_cast<std::string>(properties.owner).c_str()),
+    (Datum)0, // props
+    (Datum)0, // extensions
+  };
+  bool nulls[] = {
+    false,
+    true,
+    true,
+  };
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
 }
 
 extern "C"
@@ -309,6 +332,33 @@ extern "C"
     catch( ... )
     {
       ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to vote_operation" ) ) );
+    }
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_witness_set_properties_operation );
+  Datum operation_to_witness_set_properties_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    uint32 data_length = VARSIZE_ANY_EXHDR( op );
+    const char* raw_data = VARDATA_ANY( op );
+
+    try
+    {
+      const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
+      const hive::protocol::witness_set_properties_operation options = operation.get<hive::protocol::witness_set_properties_operation>();
+      return witness_set_properties_operation_to_sql_tuple(options, fcinfo);
+    }
+    catch( const fc::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.to_string().c_str() ) ) );
+    }
+    catch( const std::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.what() ) ) );
+    }
+    catch( ... )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to witness_set_properties_operation" ) ) );
     }
   }
 }

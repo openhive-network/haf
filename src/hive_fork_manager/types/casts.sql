@@ -28,3 +28,13 @@ CREATE CAST (hive.operation AS hive.vote_operation)
   WITH FUNCTION hive._operation_to_vote_operation
   AS ASSIGNMENT;
 
+CREATE OR REPLACE FUNCTION hive._operation_to_witness_set_properties_operation(
+  hive.operation
+) RETURNS hive.witness_set_properties_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_witness_set_properties_operation';
+
+CREATE CAST (hive.operation AS hive.witness_set_properties_operation)
+  WITH FUNCTION hive._operation_to_witness_set_properties_operation
+  AS ASSIGNMENT;
+
