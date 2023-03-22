@@ -9,6 +9,7 @@ extern "C" {
 #include <utils/syscache.h>
 #include <catalog/pg_type_d.h>
 #include <catalog/pg_namespace_d.h>
+#include <extension/hstore/hstore.h>
 }
 
 namespace {
@@ -254,6 +255,35 @@ Datum extensions_type_to_sql_array(const hive::protocol::extensions_type& extens
   PG_RETURN_ARRAYTYPE_P(result);
 }
 
+Pairs prop_to_hstore_pair(const std::pair<std::string, std::vector<char>>& prop)
+{
+  Pairs p;
+  p.key = VARDATA(CStringGetTextDatum(prop.first.c_str()));
+  p.val = nullptr;
+  p.keylen = prop.first.size();
+  p.vallen = 4;
+  p.isnull = true;
+  p.needfree = false;
+  return p;
+}
+
+Datum props_to_hstore(const fc::flat_map<std::string, std::vector<char>>& props)
+{
+  auto element_count = props.size();
+
+  Pairs* pairs = (Pairs*)palloc(element_count * sizeof(Pairs));
+  std::transform(std::begin(props), std::end(props), pairs, prop_to_hstore_pair);
+
+  int32 buflen;
+  void* ptr;
+  // TODO: memoise loading function pointers
+  auto* hstoreUniquePairs = (int (*)(Pairs *, int32, int32*))load_external_function("hstore.so", "hstoreUniquePairs", true, &ptr);
+  element_count = hstoreUniquePairs(pairs, element_count, &buflen);
+  auto* hstorePairs = (HStore* (*)(Pairs*, int32, int32))load_external_function("hstore.so", "hstorePairs", true, &ptr);
+  HStore* out = hstorePairs(pairs, element_count, buflen);
+  PG_RETURN_POINTER(out);
+}
+
 Datum witness_set_properties_operation_to_sql_tuple(const hive::protocol::witness_set_properties_operation& properties, FunctionCallInfo fcinfo)
 {
   TupleDesc desc;
@@ -265,12 +295,12 @@ Datum witness_set_properties_operation_to_sql_tuple(const hive::protocol::witnes
   BlessTupleDesc(desc);
   Datum values[] = {
     CStringGetTextDatum(static_cast<std::string>(properties.owner).c_str()),
-    (Datum)0, // props
+    props_to_hstore(properties.props),
     extensions_type_to_sql_array(properties.extensions),
   };
   bool nulls[] = {
     false,
-    true,
+    false,
     false,
   };
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
