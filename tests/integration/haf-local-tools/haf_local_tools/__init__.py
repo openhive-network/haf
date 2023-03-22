@@ -5,13 +5,11 @@ import subprocess
 import random
 import time
 from pathlib import Path
-from typing import Any, TYPE_CHECKING, Dict, Optional
+from typing import Any, TYPE_CHECKING
 
 from typing import Iterable
 import test_tools as tt
-from haf_local_tools import block_logs
 from haf_local_tools.tables import EventsQueue
-from shared_tools.complex_networks import run_networks
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
@@ -25,19 +23,19 @@ WAIT_FOR_CONTEXT_TIMEOUT = 90.0
 
 class haf_app:
 
-    root_path       = None
-    postgres_url    = None
+    root_path: Path     = None
+    postgres_url: str   = None
 
-    def __init__(self, identifier, before_kill_time_min, before_kill_time_max):
-        self.pid = None
-        self.identifier = identifier
-        self.args       = []
-        self.before_kill_time_min = before_kill_time_min
-        self.before_kill_time_max = before_kill_time_max
+    def __init__(self, identifier: int, before_kill_time_min: int, before_kill_time_max: int):
+        self.pid: int               = None
+        self.identifier             = identifier
+        self.args: list[str]        = []
+        self.before_kill_time_min   = before_kill_time_min
+        self.before_kill_time_max   = before_kill_time_max
 
         self.create_args()
 
-    def setup(session, path):
+    def setup(session: Session, path: Path):
         haf_app.root_path       = path
         haf_app.postgres_url    = str(session.get_bind().url)
 
