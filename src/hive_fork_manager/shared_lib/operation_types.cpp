@@ -15,6 +15,12 @@ extern "C" {
 
 namespace {
 
+Datum beneficiary_route_types_to_sql_array(const std::vector<hive::protocol::beneficiary_route_type>& beneficiaries);
+Datum asset_to_sql_tuple(const hive::protocol::asset& asset);
+Datum comment_options_extensions_to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions);
+Datum extensions_type_to_sql_array(const hive::protocol::extensions_type& extensions);
+Datum props_to_hstore(const fc::flat_map<std::string, std::vector<char>>& props);
+
 // TODO: copied from operation_base.cpp
 hive::protocol::operation raw_to_operation( const char* raw_data, uint32 data_length )
 {
@@ -23,6 +29,68 @@ hive::protocol::operation raw_to_operation( const char* raw_data, uint32 data_le
 
   return fc::raw::unpack_from_char_array< hive::protocol::operation >( raw_data, static_cast< uint32_t >( data_length ) );
 }
+
+Datum to_datum(bool value)
+{
+  return BoolGetDatum(value);
+}
+Datum to_datum(uint16_t value)
+{
+  return Int32GetDatum(value);
+}
+Datum to_datum(int16_t value)
+{
+  return UInt32GetDatum(value);
+}
+Datum to_datum(const std::string& value)
+{
+  return CStringGetTextDatum(value.c_str());
+}
+Datum to_datum(const std::vector<hive::protocol::beneficiary_route_type>& value)
+{
+  return beneficiary_route_types_to_sql_array(value);
+}
+Datum to_datum(const fc::flat_map<std::string, std::vector<char>>& value)
+{
+  return props_to_hstore(value);
+}
+Datum to_datum(const hive::protocol::account_name_type& value)
+{
+  return CStringGetTextDatum(static_cast<std::string>(value).c_str());
+}
+Datum to_datum(const hive::protocol::json_string& value)
+{
+  return DirectFunctionCall1(jsonb_in, CStringGetDatum(static_cast<std::string>(value).c_str()));
+}
+Datum to_datum(const hive::protocol::asset& value)
+{
+  return asset_to_sql_tuple(value);
+}
+Datum to_datum(const hive::protocol::comment_options_extensions_type& value)
+{
+  return comment_options_extensions_to_sql_tuple(value);
+}
+Datum to_datum(const hive::protocol::extensions_type& value)
+{
+  return extensions_type_to_sql_array(value);
+}
+
+template<typename T>
+struct members_to_sql_tuple_visitor {
+    members_to_sql_tuple_visitor(const T& obj, Datum* values) : obj(obj), values(values)
+    {}
+
+    template<typename Member, class Class, Member (Class::*member)>
+    void operator()(const char*) const
+    {
+      values[i++] = to_datum(obj.*member);
+    }
+
+  private:
+    const T& obj;
+    mutable Datum* values;
+    mutable size_t i = 0;
+};
 
 Datum comment_operation_to_sql_tuple(const hive::protocol::comment_operation& comment, FunctionCallInfo fcinfo)
 {
@@ -33,24 +101,9 @@ Datum comment_operation_to_sql_tuple(const hive::protocol::comment_operation& co
     ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "function returning record called in context that cannot accept type record." ) ) );
   }
   BlessTupleDesc(desc);
-  Datum values[] = {
-    CStringGetTextDatum(static_cast<std::string>(comment.parent_author).c_str()),
-    CStringGetTextDatum(comment.parent_permlink.c_str()),
-    CStringGetTextDatum(static_cast<std::string>(comment.author).c_str()),
-    CStringGetTextDatum(comment.permlink.c_str()),
-    CStringGetTextDatum(comment.title.c_str()),
-    CStringGetTextDatum(comment.body.c_str()),
-    DirectFunctionCall1(jsonb_in, CStringGetDatum(static_cast<std::string>(comment.json_metadata).c_str())),
-  };
-  bool nulls[] = {
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-  };
+  Datum values[fc::reflector<hive::protocol::comment_operation>::total_member_count];
+  fc::reflector<hive::protocol::comment_operation>::visit(members_to_sql_tuple_visitor(comment, values));
+  bool nulls[fc::reflector<hive::protocol::comment_operation>::total_member_count] = {};
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
@@ -77,14 +130,9 @@ Datum beneficiary_route_type_to_sql_tuple(const hive::protocol::beneficiary_rout
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.beneficiary_route_type");
   BlessTupleDesc(desc);
-  Datum values[] = {
-    CStringGetTextDatum(static_cast<std::string>(beneficiary.account).c_str()),
-    Int32GetDatum(beneficiary.weight),
-  };
-  bool nulls[] = {
-    false,
-    false,
-  };
+  Datum values[fc::reflector<hive::protocol::beneficiary_route_type>::total_member_count];
+  fc::reflector<hive::protocol::beneficiary_route_type>::visit(members_to_sql_tuple_visitor(beneficiary, values));
+  bool nulls[fc::reflector<hive::protocol::beneficiary_route_type>::total_member_count] = {};
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
@@ -120,12 +168,9 @@ Datum comment_payout_beneficiaries_to_sql_tuple(const hive::protocol::comment_pa
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.comment_payout_beneficiaries");
   BlessTupleDesc(desc);
-  Datum values[] = {
-    beneficiary_route_types_to_sql_array(payout_beneficiaries.beneficiaries),
-  };
-  bool nulls[] = {
-    false,
-  };
+  Datum values[fc::reflector<hive::protocol::comment_payout_beneficiaries>::total_member_count];
+  fc::reflector<hive::protocol::comment_payout_beneficiaries>::visit(members_to_sql_tuple_visitor(payout_beneficiaries, values));
+  bool nulls[fc::reflector<hive::protocol::comment_payout_beneficiaries>::total_member_count] = {};
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
@@ -182,24 +227,9 @@ Datum comment_options_operation_to_sql_tuple(const hive::protocol::comment_optio
     ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "function returning record called in context that cannot accept type record." ) ) );
   }
   BlessTupleDesc(desc);
-  Datum values[] = {
-    CStringGetTextDatum(static_cast<std::string>(options.author).c_str()),
-    CStringGetTextDatum(options.permlink.c_str()),
-    asset_to_sql_tuple(options.max_accepted_payout),
-    UInt16GetDatum(options.percent_hbd),
-    BoolGetDatum(options.allow_votes),
-    BoolGetDatum(options.allow_curation_rewards),
-    comment_options_extensions_to_sql_tuple(options.extensions),
-  };
-  bool nulls[] = {
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-  };
+  Datum values[fc::reflector<hive::protocol::comment_options_operation>::total_member_count];
+  fc::reflector<hive::protocol::comment_options_operation>::visit(members_to_sql_tuple_visitor(options, values));
+  bool nulls[fc::reflector<hive::protocol::comment_options_operation>::total_member_count] = {};
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
@@ -213,18 +243,9 @@ Datum vote_operation_to_sql_tuple(const hive::protocol::vote_operation& vote, Fu
     ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "function returning record called in context that cannot accept type record." ) ) );
   }
   BlessTupleDesc(desc);
-  Datum values[] = {
-    CStringGetTextDatum(static_cast<std::string>(vote.voter).c_str()),
-    CStringGetTextDatum(static_cast<std::string>(vote.author).c_str()),
-    CStringGetTextDatum(vote.permlink.c_str()),
-    UInt32GetDatum(vote.weight),
-  };
-  bool nulls[] = {
-    false,
-    false,
-    false,
-    false,
-  };
+  Datum values[fc::reflector<hive::protocol::vote_operation>::total_member_count];
+  fc::reflector<hive::protocol::vote_operation>::visit(members_to_sql_tuple_visitor(vote, values));
+  bool nulls[fc::reflector<hive::protocol::vote_operation>::total_member_count] = {};
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
@@ -298,16 +319,9 @@ Datum witness_set_properties_operation_to_sql_tuple(const hive::protocol::witnes
     ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "function returning record called in context that cannot accept type record." ) ) );
   }
   BlessTupleDesc(desc);
-  Datum values[] = {
-    CStringGetTextDatum(static_cast<std::string>(properties.owner).c_str()),
-    props_to_hstore(properties.props),
-    extensions_type_to_sql_array(properties.extensions),
-  };
-  bool nulls[] = {
-    false,
-    false,
-    false,
-  };
+  Datum values[fc::reflector<hive::protocol::witness_set_properties_operation>::total_member_count];
+  fc::reflector<hive::protocol::witness_set_properties_operation>::visit(members_to_sql_tuple_visitor(properties, values));
+  bool nulls[fc::reflector<hive::protocol::witness_set_properties_operation>::total_member_count] = {};
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
