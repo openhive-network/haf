@@ -3,6 +3,7 @@
 #include "include/psql_utils/backend.h"
 #include "include/psql_utils/custom_configuration.h"
 #include "include/psql_utils/query_handler/tuples_query_handler.h"
+#include "include/psql_utils/spi_session.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/scope_exit.hpp>
@@ -53,6 +54,9 @@ void _PG_init(void) {
   } BOOST_SCOPE_EXIT_END
 
   initializeGlobals();
+
+  LOG_DEBUG( "Username: %s", g_backend->userName().c_str() );
+  LOG_DEBUG( "Limited users: %s", g_customConfiguration->getOptionAsString("limited_users").c_str() );
 
   if ( !isCurrentUserLimited() ) {
     return;

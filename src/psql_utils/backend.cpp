@@ -1,7 +1,5 @@
+#include "include/psql_utils/postgres_backend.hpp"
 #include "include/psql_utils/backend.h"
-
-#include "include/psql_utils/logger.hpp"
-
 
 namespace PsqlTools::PsqlUtils {
 
@@ -10,9 +8,10 @@ namespace PsqlTools::PsqlUtils {
   }
 
   std::string Backend::userName() const {
-    const auto user = userOid();
-
-    return GetUserNameFromId(user, false);
+    if ( !MyProcPort->user_name ) {
+      return "";
+    }
+    return MyProcPort->user_name;
   }
 
 } // namespace PsqlTools::PsqlUtils
