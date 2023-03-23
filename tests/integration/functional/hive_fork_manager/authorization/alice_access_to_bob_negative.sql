@@ -56,6 +56,8 @@ VOLATILE
 AS
 $BODY$
 BEGIN
+    ALTER ROLE alice RESET local_preload_libraries;
+
     PERFORM hive.app_create_context( 'alice_context' );
     PERFORM hive.app_create_context( 'alice_context_detached' );
     PERFORM hive.app_context_detach( 'alice_context_detached' );

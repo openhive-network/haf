@@ -9,11 +9,10 @@ extension_path=$1
 test_path=$2;
 setup_scripts_dir_path=$3;
 postgres_port=$4;
-preload_libraries=$5;
 
 . ./tools/common.sh
 
-setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path" "$preload_libraries"
+setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
 
 trap on_exit EXIT;
 
@@ -28,6 +27,7 @@ evaluate_result $?;
 psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c 'SELECT test_error()';
 evaluate_error_result $?;
 
+on_exit
 psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE $DB_NAME";
 
 echo "PASSED";

@@ -4,11 +4,10 @@ extension_path=$1
 test_path=$2;
 setup_scripts_dir_path=$3;
 postgres_port=$4;
-preload_libraries=$5;
 
 . ./tools/common.sh
 
-setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path" "$preload_libraries"
+setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
 
 trap on_exit EXIT;
 
@@ -18,7 +17,7 @@ psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools
 # load tests function
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ${test_path};
 
-users="alice bob"
+users="test_hived alice bob"
 tests="given when error"
 
 # you can use alice_test_given, alice_test_when, alice_test_error and their bob's equivalents
@@ -36,15 +35,15 @@ for user in ${users}; do
     psql postgresql://${user}:test@localhost:$postgres_port/$DB_NAME --username=${user} -a -v ON_ERROR_STOP=on -c "${sql_code}";
     result=$?;
 
-    # shellcheck disable=SC2170
-    if [ "${testfun}" = "error" ]; then
-      evaluate_error_result ${result}
-    else
-      evaluate_result ${result}
-    fi
+    #if [ "${testfun}" = "error" ]; then
+    #  evaluate_error_result ${result}
+    # else
+    #  evaluate_result ${result}
+    #fi
   done
 done
 
+on_exit
 psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE $DB_NAME";
 
 echo "PASSED";

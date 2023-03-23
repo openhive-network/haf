@@ -6,7 +6,9 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    -- haf_admin is limited in the fixture
+    ALTER ROLE haf_admin SET local_preload_libraries TO 'libquery_supervisor.so';
+    ALTER ROLE alice SET local_preload_libraries TO 'libquery_supervtisor.so';
+    ALTER ROLE alice SET query_supervisor.limited_users TO 'alice';
 END
 $BODY$
 ;

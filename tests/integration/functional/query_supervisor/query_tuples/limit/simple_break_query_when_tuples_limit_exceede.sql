@@ -6,7 +6,7 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    -- nothing to prepare here
+    ALTER ROLE haf_admin SET local_preload_libraries TO 'libquery_supervisor.so';
 END
 $BODY$
 ;

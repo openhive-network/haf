@@ -41,6 +41,7 @@ evaluate_result $?;
 psql postgresql://bob:test@localhost:$postgres_port/$DB_NAME --username=bob -a -v ON_ERROR_STOP=on -c 'SELECT bob_test_then()';
 evaluate_result $?;
 
+on_exit
 psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE $DB_NAME";
 
 echo "PASSED";

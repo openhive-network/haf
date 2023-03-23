@@ -1,2 +1,5 @@
-ALTER SYSTEM RESET ALL;
-SELECT pg_reload_conf();
+--ALTER SYSTEM RESET ALL;
+--ALTER ROLE haf_admin RESET local_preload_libraries;
+--ALTER ROLE alice RESET local_preload_libraries;
+--ALTER ROLE bob RESET local_preload_libraries;
+--SELECT pg_reload_conf();
