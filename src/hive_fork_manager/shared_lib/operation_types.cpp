@@ -1,6 +1,7 @@
 #include "operation_base.hpp"
 
 #include <fc/io/raw.hpp>
+#include <fc/crypto/hex.hpp>
 
 #include <algorithm>
 
@@ -257,12 +258,16 @@ Datum extensions_type_to_sql_array(const hive::protocol::extensions_type& extens
 
 Pairs prop_to_hstore_pair(const std::pair<std::string, std::vector<char>>& prop)
 {
+  const std::string& key = prop.first;
+  const std::vector<char>& value = prop.second;
+  const auto encodedValue = fc::to_hex(value);
+
   Pairs p;
-  p.key = VARDATA(CStringGetTextDatum(prop.first.c_str()));
-  p.val = nullptr;
-  p.keylen = prop.first.size();
-  p.vallen = 4;
-  p.isnull = true;
+  p.key = VARDATA(CStringGetTextDatum(key.c_str()));
+  p.val = VARDATA(CStringGetTextDatum(encodedValue.c_str())),
+  p.keylen = key.size();
+  p.vallen = encodedValue.size();
+  p.isnull = false;
   p.needfree = false;
   return p;
 }
