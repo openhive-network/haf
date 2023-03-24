@@ -16,10 +16,13 @@ extern "C" {
 namespace {
 
 Datum beneficiary_route_types_to_sql_array(const std::vector<hive::protocol::beneficiary_route_type>& beneficiaries);
-Datum asset_to_sql_tuple(const hive::protocol::asset& asset);
-Datum comment_options_extensions_to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions);
 Datum extensions_type_to_sql_array(const hive::protocol::extensions_type& extensions);
 Datum props_to_hstore(const fc::flat_map<std::string, std::vector<char>>& props);
+
+template<typename T>
+Datum to_sql_tuple(const T& value);
+Datum to_sql_tuple(const hive::protocol::asset& asset);
+Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions);
 
 // TODO: copied from operation_base.cpp
 hive::protocol::operation raw_to_operation( const char* raw_data, uint32 data_length )
@@ -64,11 +67,11 @@ Datum to_datum(const hive::protocol::json_string& value)
 }
 Datum to_datum(const hive::protocol::asset& value)
 {
-  return asset_to_sql_tuple(value);
+  return to_sql_tuple(value);
 }
 Datum to_datum(const hive::protocol::comment_options_extensions_type& value)
 {
-  return comment_options_extensions_to_sql_tuple(value);
+  return to_sql_tuple(value);
 }
 Datum to_datum(const hive::protocol::extensions_type& value)
 {
@@ -92,23 +95,20 @@ struct members_to_sql_tuple_visitor {
     mutable size_t i = 0;
 };
 
-Datum comment_operation_to_sql_tuple(const hive::protocol::comment_operation& comment, FunctionCallInfo fcinfo)
+template<typename T>
+Datum to_sql_tuple(const T& value)
 {
-  TupleDesc desc;
-  TypeFuncClass cls = get_call_result_type(fcinfo, nullptr, &desc);
-  if (cls != TYPEFUNC_COMPOSITE)
-  {
-    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "function returning record called in context that cannot accept type record." ) ) );
-  }
+  const std::string type_name = fc::trim_typename_namespace(fc::get_typename<T>::name());
+  TupleDesc desc = RelationNameGetTupleDesc(("hive." + type_name).c_str());
   BlessTupleDesc(desc);
-  Datum values[fc::reflector<hive::protocol::comment_operation>::total_member_count];
-  fc::reflector<hive::protocol::comment_operation>::visit(members_to_sql_tuple_visitor(comment, values));
-  bool nulls[fc::reflector<hive::protocol::comment_operation>::total_member_count] = {};
+  Datum values[fc::reflector<T>::total_member_count];
+  fc::reflector<T>::visit(members_to_sql_tuple_visitor(value, values));
+  bool nulls[fc::reflector<T>::total_member_count] = {};
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
-Datum asset_to_sql_tuple(const hive::protocol::asset& asset)
+Datum to_sql_tuple(const hive::protocol::asset& asset)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.asset");
   BlessTupleDesc(desc);
@@ -122,17 +122,6 @@ Datum asset_to_sql_tuple(const hive::protocol::asset& asset)
     false,
     false,
   };
-  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
-  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
-}
-
-Datum beneficiary_route_type_to_sql_tuple(const hive::protocol::beneficiary_route_type& beneficiary)
-{
-  TupleDesc desc = RelationNameGetTupleDesc("hive.beneficiary_route_type");
-  BlessTupleDesc(desc);
-  Datum values[fc::reflector<hive::protocol::beneficiary_route_type>::total_member_count];
-  fc::reflector<hive::protocol::beneficiary_route_type>::visit(members_to_sql_tuple_visitor(beneficiary, values));
-  bool nulls[fc::reflector<hive::protocol::beneficiary_route_type>::total_member_count] = {};
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
@@ -157,25 +146,14 @@ Datum beneficiary_route_types_to_sql_array(const std::vector<hive::protocol::ben
   const auto elementCount = beneficiaries.size();
   std::vector<Datum> elements;
   elements.reserve(elementCount);
-  std::transform(std::begin(beneficiaries), std::end(beneficiaries), std::begin(elements), beneficiary_route_type_to_sql_tuple);
+  std::transform(std::begin(beneficiaries), std::end(beneficiaries), std::begin(elements), to_sql_tuple<hive::protocol::beneficiary_route_type>);
 
   ArrayType* result = construct_array(elements.data(), elementCount, elementOid, typlen, typbyval, typalign);
 
   PG_RETURN_ARRAYTYPE_P(result);
 }
 
-Datum comment_payout_beneficiaries_to_sql_tuple(const hive::protocol::comment_payout_beneficiaries& payout_beneficiaries)
-{
-  TupleDesc desc = RelationNameGetTupleDesc("hive.comment_payout_beneficiaries");
-  BlessTupleDesc(desc);
-  Datum values[fc::reflector<hive::protocol::comment_payout_beneficiaries>::total_member_count];
-  fc::reflector<hive::protocol::comment_payout_beneficiaries>::visit(members_to_sql_tuple_visitor(payout_beneficiaries, values));
-  bool nulls[fc::reflector<hive::protocol::comment_payout_beneficiaries>::total_member_count] = {};
-  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
-  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
-}
-
-Datum comment_options_extensions_to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions)
+Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.comment_options_extensions_type");
   BlessTupleDesc(desc);
@@ -195,7 +173,7 @@ Datum comment_options_extensions_to_sql_tuple(const hive::protocol::comment_opti
     {}
     void operator()(const hive::protocol::comment_payout_beneficiaries& payout_beneficiaries)
     {
-      values[0] = comment_payout_beneficiaries_to_sql_tuple(payout_beneficiaries);
+      values[0] = to_sql_tuple(payout_beneficiaries);
       nulls[0] = false;
     }
 #ifdef HIVE_ENABLE_SMT
@@ -214,38 +192,6 @@ Datum comment_options_extensions_to_sql_tuple(const hive::protocol::comment_opti
   {
     extension.visit(v);
   }
-  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
-  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
-}
-
-Datum comment_options_operation_to_sql_tuple(const hive::protocol::comment_options_operation& options, FunctionCallInfo fcinfo)
-{
-  TupleDesc desc;
-  TypeFuncClass cls = get_call_result_type(fcinfo, nullptr, &desc);
-  if (cls != TYPEFUNC_COMPOSITE)
-  {
-    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "function returning record called in context that cannot accept type record." ) ) );
-  }
-  BlessTupleDesc(desc);
-  Datum values[fc::reflector<hive::protocol::comment_options_operation>::total_member_count];
-  fc::reflector<hive::protocol::comment_options_operation>::visit(members_to_sql_tuple_visitor(options, values));
-  bool nulls[fc::reflector<hive::protocol::comment_options_operation>::total_member_count] = {};
-  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
-  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
-}
-
-Datum vote_operation_to_sql_tuple(const hive::protocol::vote_operation& vote, FunctionCallInfo fcinfo)
-{
-  TupleDesc desc;
-  TypeFuncClass cls = get_call_result_type(fcinfo, nullptr, &desc);
-  if (cls != TYPEFUNC_COMPOSITE)
-  {
-    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "function returning record called in context that cannot accept type record." ) ) );
-  }
-  BlessTupleDesc(desc);
-  Datum values[fc::reflector<hive::protocol::vote_operation>::total_member_count];
-  fc::reflector<hive::protocol::vote_operation>::visit(members_to_sql_tuple_visitor(vote, values));
-  bool nulls[fc::reflector<hive::protocol::vote_operation>::total_member_count] = {};
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
@@ -310,22 +256,6 @@ Datum props_to_hstore(const fc::flat_map<std::string, std::vector<char>>& props)
   PG_RETURN_POINTER(out);
 }
 
-Datum witness_set_properties_operation_to_sql_tuple(const hive::protocol::witness_set_properties_operation& properties, FunctionCallInfo fcinfo)
-{
-  TupleDesc desc;
-  TypeFuncClass cls = get_call_result_type(fcinfo, nullptr, &desc);
-  if (cls != TYPEFUNC_COMPOSITE)
-  {
-    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "function returning record called in context that cannot accept type record." ) ) );
-  }
-  BlessTupleDesc(desc);
-  Datum values[fc::reflector<hive::protocol::witness_set_properties_operation>::total_member_count];
-  fc::reflector<hive::protocol::witness_set_properties_operation>::visit(members_to_sql_tuple_visitor(properties, values));
-  bool nulls[fc::reflector<hive::protocol::witness_set_properties_operation>::total_member_count] = {};
-  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
-  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
-}
-
 }
 
 extern "C"
@@ -341,7 +271,7 @@ extern "C"
     {
       const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
       const hive::protocol::comment_operation comment = operation.get<hive::protocol::comment_operation>();
-      return comment_operation_to_sql_tuple(comment, fcinfo);
+      return to_sql_tuple(comment);
     }
     catch( const fc::exception& e )
     {
@@ -368,7 +298,7 @@ extern "C"
     {
       const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
       const hive::protocol::comment_options_operation options = operation.get<hive::protocol::comment_options_operation>();
-      return comment_options_operation_to_sql_tuple(options, fcinfo);
+      return to_sql_tuple(options);
     }
     catch( const fc::exception& e )
     {
@@ -395,7 +325,7 @@ extern "C"
     {
       const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
       const hive::protocol::vote_operation options = operation.get<hive::protocol::vote_operation>();
-      return vote_operation_to_sql_tuple(options, fcinfo);
+      return to_sql_tuple(options);
     }
     catch( const fc::exception& e )
     {
@@ -422,7 +352,7 @@ extern "C"
     {
       const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
       const hive::protocol::witness_set_properties_operation options = operation.get<hive::protocol::witness_set_properties_operation>();
-      return witness_set_properties_operation_to_sql_tuple(options, fcinfo);
+      return to_sql_tuple(options);
     }
     catch( const fc::exception& e )
     {
