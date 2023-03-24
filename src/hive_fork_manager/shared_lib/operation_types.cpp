@@ -255,6 +255,33 @@ Datum props_to_hstore(const fc::flat_map<std::string, std::vector<char>>& props)
   PG_RETURN_POINTER(out);
 }
 
+template<typename T>
+Datum operation_to(_operation* op)
+{
+    uint32 data_length = VARSIZE_ANY_EXHDR( op );
+    const char* raw_data = VARDATA_ANY( op );
+
+    try
+    {
+      const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
+      const T& actual_op = operation.get<T>();
+      return to_sql_tuple(actual_op);
+    }
+    catch( const fc::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.to_string().c_str() ) ) );
+    }
+    catch( const std::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.what() ) ) );
+    }
+    catch( ... )
+    {
+      const std::string type_name = fc::trim_typename_namespace(fc::get_typename<T>::name());
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to %s", type_name.c_str() ) ) );
+    }
+}
+
 }
 
 extern "C"
@@ -263,107 +290,27 @@ extern "C"
   Datum operation_to_comment_operation( PG_FUNCTION_ARGS )
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
-    uint32 data_length = VARSIZE_ANY_EXHDR( op );
-    const char* raw_data = VARDATA_ANY( op );
-
-    try
-    {
-      const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
-      const hive::protocol::comment_operation comment = operation.get<hive::protocol::comment_operation>();
-      return to_sql_tuple(comment);
-    }
-    catch( const fc::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.to_string().c_str() ) ) );
-    }
-    catch( const std::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.what() ) ) );
-    }
-    catch( ... )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to comment_operation" ) ) );
-    }
+    return operation_to<hive::protocol::comment_operation>(op);
   }
 
   PG_FUNCTION_INFO_V1( operation_to_comment_options_operation );
   Datum operation_to_comment_options_operation( PG_FUNCTION_ARGS )
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
-    uint32 data_length = VARSIZE_ANY_EXHDR( op );
-    const char* raw_data = VARDATA_ANY( op );
-
-    try
-    {
-      const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
-      const hive::protocol::comment_options_operation options = operation.get<hive::protocol::comment_options_operation>();
-      return to_sql_tuple(options);
-    }
-    catch( const fc::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.to_string().c_str() ) ) );
-    }
-    catch( const std::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.what() ) ) );
-    }
-    catch( ... )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to comment_options_operation" ) ) );
-    }
+    return operation_to<hive::protocol::comment_options_operation>(op);
   }
 
   PG_FUNCTION_INFO_V1( operation_to_vote_operation );
   Datum operation_to_vote_operation( PG_FUNCTION_ARGS )
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
-    uint32 data_length = VARSIZE_ANY_EXHDR( op );
-    const char* raw_data = VARDATA_ANY( op );
-
-    try
-    {
-      const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
-      const hive::protocol::vote_operation options = operation.get<hive::protocol::vote_operation>();
-      return to_sql_tuple(options);
-    }
-    catch( const fc::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.to_string().c_str() ) ) );
-    }
-    catch( const std::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.what() ) ) );
-    }
-    catch( ... )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to vote_operation" ) ) );
-    }
+    return operation_to<hive::protocol::vote_operation>(op);
   }
 
   PG_FUNCTION_INFO_V1( operation_to_witness_set_properties_operation );
   Datum operation_to_witness_set_properties_operation( PG_FUNCTION_ARGS )
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
-    uint32 data_length = VARSIZE_ANY_EXHDR( op );
-    const char* raw_data = VARDATA_ANY( op );
-
-    try
-    {
-      const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
-      const hive::protocol::witness_set_properties_operation options = operation.get<hive::protocol::witness_set_properties_operation>();
-      return to_sql_tuple(options);
-    }
-    catch( const fc::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.to_string().c_str() ) ) );
-    }
-    catch( const std::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.what() ) ) );
-    }
-    catch( ... )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to witness_set_properties_operation" ) ) );
-    }
+    return operation_to<hive::protocol::witness_set_properties_operation>(op);
   }
 }
