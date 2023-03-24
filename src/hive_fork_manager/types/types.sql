@@ -109,3 +109,4 @@ CREATE TYPE hive.witness_set_properties_operation AS (
   extensions hive.extensions_type
 );
 
+CREATE TYPE hive.void_t AS ();
