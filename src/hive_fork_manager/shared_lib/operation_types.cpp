@@ -4,6 +4,7 @@
 #include <fc/crypto/hex.hpp>
 
 #include <algorithm>
+#include <iterator>
 
 extern "C" {
 #include "funcapi.h"
@@ -15,14 +16,16 @@ extern "C" {
 
 namespace {
 
-Datum beneficiary_route_types_to_sql_array(const std::vector<hive::protocol::beneficiary_route_type>& beneficiaries);
-Datum extensions_type_to_sql_array(const hive::protocol::extensions_type& extensions);
 Datum props_to_hstore(const fc::flat_map<std::string, std::vector<char>>& props);
 
 template<typename T>
 Datum to_sql_tuple(const T& value);
 Datum to_sql_tuple(const hive::protocol::asset& asset);
 Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions);
+Datum to_sql_tuple(const hive::protocol::future_extensions& extensions);
+
+template<typename Iter>
+Datum to_sql_array(Iter first, Iter last);
 
 // TODO: copied from operation_base.cpp
 hive::protocol::operation raw_to_operation( const char* raw_data, uint32 data_length )
@@ -51,7 +54,7 @@ Datum to_datum(const std::string& value)
 }
 Datum to_datum(const std::vector<hive::protocol::beneficiary_route_type>& value)
 {
-  return beneficiary_route_types_to_sql_array(value);
+  return to_sql_array(std::begin(value), std::end(value));
 }
 Datum to_datum(const fc::flat_map<std::string, std::vector<char>>& value)
 {
@@ -75,7 +78,7 @@ Datum to_datum(const hive::protocol::comment_options_extensions_type& value)
 }
 Datum to_datum(const hive::protocol::extensions_type& value)
 {
-  return extensions_type_to_sql_array(value);
+  return to_sql_array(std::begin(value), std::end(value));
 }
 
 template<typename T>
@@ -126,10 +129,34 @@ Datum to_sql_tuple(const hive::protocol::asset& asset)
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
-Datum beneficiary_route_types_to_sql_array(const std::vector<hive::protocol::beneficiary_route_type>& beneficiaries)
+Datum to_sql_tuple(const hive::protocol::future_extensions& extensions)
 {
+  TupleDesc desc = RelationNameGetTupleDesc("hive.void_t");
+  BlessTupleDesc(desc);
+  Datum values[] = {};
+  bool nulls[] = {};
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
+template<typename T>
+std::string sql_typename_from_protocol_type()
+{
+  return fc::trim_typename_namespace(fc::get_typename<T>::name());
+}
+template<>
+std::string sql_typename_from_protocol_type<hive::protocol::future_extensions>()
+{
+  return "void_t";
+}
+
+template<typename Iter>
+Datum to_sql_array(Iter first, Iter last)
+{
+  using value_type = typename std::iterator_traits<Iter>::value_type;
+  const std::string type_name = sql_typename_from_protocol_type<value_type>();
   Oid hiveOid = GetSysCacheOid1(NAMESPACENAME, Anum_pg_namespace_oid, CStringGetDatum("hive"));
-  Oid elementOid = GetSysCacheOid2(TYPENAMENSP, Anum_pg_type_oid, CStringGetDatum("beneficiary_route_type"), ObjectIdGetDatum(hiveOid));
+  Oid elementOid = GetSysCacheOid2(TYPENAMENSP, Anum_pg_type_oid, CStringGetDatum(type_name.c_str()), ObjectIdGetDatum(hiveOid));
 
   if (!OidIsValid(elementOid))
   {
@@ -143,13 +170,12 @@ Datum beneficiary_route_types_to_sql_array(const std::vector<hive::protocol::ben
   // get required info about the element type
   get_typlenbyvalalign(elementOid, &typlen, &typbyval, &typalign);
 
-  const auto elementCount = beneficiaries.size();
+  const auto elementCount = std::distance(first, last);
   std::vector<Datum> elements;
   elements.reserve(elementCount);
-  std::transform(std::begin(beneficiaries), std::end(beneficiaries), std::begin(elements), to_sql_tuple<hive::protocol::beneficiary_route_type>);
+  std::transform(first, last, std::begin(elements), [](const auto& v){return to_sql_tuple(v);});
 
   ArrayType* result = construct_array(elements.data(), elementCount, elementOid, typlen, typbyval, typalign);
-
   PG_RETURN_ARRAYTYPE_P(result);
 }
 
@@ -194,33 +220,6 @@ Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extens
   }
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
-}
-
-Datum extensions_type_to_sql_array(const hive::protocol::extensions_type& extensions)
-{
-  Oid hiveOid = GetSysCacheOid1(NAMESPACENAME, Anum_pg_namespace_oid, CStringGetDatum("hive"));
-  Oid elementOid = GetSysCacheOid2(TYPENAMENSP, Anum_pg_type_oid, CStringGetDatum("hive_future_extensions"), ObjectIdGetDatum(hiveOid));
-
-  if (!OidIsValid(elementOid))
-  {
-    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "could not determine data type of input" ) ) );
-  }
-
-  int16 typlen;
-  bool  typbyval;
-  char  typalign;
-
-  // get required info about the element type
-  get_typlenbyvalalign(elementOid, &typlen, &typbyval, &typalign);
-
-  const auto elementCount = 0;
-  std::vector<Datum> elements;
-  elements.reserve(elementCount);
-  // TODO: std::transform(std::begin(extensions), std::end(extensions), std::begin(elements), future_extensions_to_sql_tuple);
-
-  ArrayType* result = construct_array(elements.data(), elementCount, elementOid, typlen, typbyval, typalign);
-
-  PG_RETURN_ARRAYTYPE_P(result);
 }
 
 Pairs prop_to_hstore_pair(const std::pair<std::string, std::vector<char>>& prop)
