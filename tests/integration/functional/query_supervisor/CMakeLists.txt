@@ -4,3 +4,6 @@ ADD_AUTHORIZATION_ERROR_FUNCTIONAL_TESTS( query_timeout/limit/alice_is_limited_a
 
 ADD_SQL_FUNCTIONAL_TESTS( query_tuples/nolimit/no_limited_users.sql )
 ADD_SQL_ERROR_FUNCTIONAL_TESTS_FOR_LIBRARY(query_tuples/limit/simple_break_query_when_tuples_limit_exceede.sql libquery_supervisor.so )
+
+ADD_AUTHORIZATION_ERROR_FUNCTIONAL_TESTS( hardiness/alice_wants_to_override_server_settings.sql libquery_supervisor.so )
+ADD_AUTHORIZATION_ERROR_FUNCTIONAL_TESTS( hardiness/alice_wants_to_change_limited_users_list.sql libquery_supervisor.so )
