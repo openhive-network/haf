@@ -54,6 +54,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void reindex_data_dumper::join() {
+    // _end_massive_sync_processor should be joined last
     join_writers(
         *_block_writer
       , *_transaction_writer
@@ -61,8 +62,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       , *_operation_writer
       , *_account_writer
       , *_account_operations_writer
-      , *_end_massive_sync_processor
       , *_applied_hardforks_writer
+      , *_end_massive_sync_processor
     );
 
     mark_irreversible_data_as_dirty( false );
