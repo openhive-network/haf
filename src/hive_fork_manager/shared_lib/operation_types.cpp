@@ -103,26 +103,37 @@ Datum to_datum(const hive::protocol::public_key_type& value)
   return CStringGetTextDatum(static_cast<std::string>(value).c_str());
 }
 template<typename T>
-Datum to_datum(const fc::optional<T>& value)
+std::optional<Datum> to_datum(const fc::optional<T>& value)
 {
-  if (value.valid()) return to_datum(value.value());
-  else return (Datum)0; // NULL
+  if (value.valid()) return {to_datum(value.value())};
+  else return std::nullopt; // NULL
 }
 
 template<typename T>
 struct members_to_sql_tuple_visitor {
-    members_to_sql_tuple_visitor(const T& obj, Datum* values) : obj(obj), values(values)
+    members_to_sql_tuple_visitor(const T& obj, Datum* values, bool* nulls) : obj(obj), values(values), nulls(nulls)
     {}
 
     template<typename Member, class Class, Member (Class::*member)>
     void operator()(const char*) const
     {
-      values[i++] = to_datum(obj.*member);
+      const std::optional<Datum> datum = to_datum(obj.*member);
+      if (datum.has_value())
+      {
+        values[i] = datum.value();
+      }
+      else
+      {
+        values[i] = (Datum)0;
+        nulls[i] = true;
+      }
+      i++;
     }
 
   private:
     const T& obj;
     mutable Datum* values;
+    mutable bool* nulls;
     mutable size_t i = 0;
 };
 
@@ -133,8 +144,8 @@ Datum to_sql_tuple(const T& value)
   TupleDesc desc = RelationNameGetTupleDesc(("hive." + type_name).c_str());
   BlessTupleDesc(desc);
   Datum values[fc::reflector<T>::total_member_count];
-  fc::reflector<T>::visit(members_to_sql_tuple_visitor(value, values));
   bool nulls[fc::reflector<T>::total_member_count] = {};
+  fc::reflector<T>::visit(members_to_sql_tuple_visitor(value, values, nulls));
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
