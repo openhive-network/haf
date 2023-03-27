@@ -170,4 +170,9 @@ CREATE TYPE hive.account_witness_vote_operation AS (
   approve boolean
 );
 
+CREATE TYPE hive.cancel_transfer_from_savings_operation AS (
+  "from" hive.account_name_type,
+  request_id int8 -- uint32_t: 4 byte, but unsigned (int8)
+);
+
 CREATE TYPE hive.void_t AS ();
