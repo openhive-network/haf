@@ -159,4 +159,9 @@ CREATE TYPE hive.account_update_operation AS (
   json_metadata text
 );
 
+CREATE TYPE hive.account_witness_proxy_operation AS (
+  account hive.account_name_type,
+  proxy hive.account_name_type
+);
+
 CREATE TYPE hive.void_t AS ();
