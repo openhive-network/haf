@@ -150,4 +150,13 @@ CREATE TYPE hive.account_update2_operation AS (
   extensions hive.extensions_type
 );
 
+CREATE TYPE hive.account_update_operation AS (
+  account hive.account_name_type,
+  owner hive.authority,
+  active hive.authority,
+  posting hive.authority,
+  memo_key hive.public_key_type,
+  json_metadata text
+);
+
 CREATE TYPE hive.void_t AS ();
