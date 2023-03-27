@@ -126,4 +126,17 @@ CREATE TYPE hive.account_create_operation AS (
   json_metadata text
 );
 
+CREATE TYPE hive.account_create_with_delegation_operation AS (
+  fee hive.asset,
+  delegation hive.asset,
+  creator hive.account_name_type,
+  new_account_name hive.account_name_type,
+  owner hive.authority,
+  active hive.authority,
+  posting hive.authority,
+  memo_key hive.public_key_type,
+  json_metadata text,
+  extensions hive.extensions_type
+);
+
 CREATE TYPE hive.void_t AS ();
