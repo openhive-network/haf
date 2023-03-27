@@ -102,6 +102,12 @@ Datum to_datum(const hive::protocol::public_key_type& value)
 {
   return CStringGetTextDatum(static_cast<std::string>(value).c_str());
 }
+template<typename T>
+Datum to_datum(const fc::optional<T>& value)
+{
+  if (value.valid()) return to_datum(value.value());
+  else return (Datum)0; // NULL
+}
 
 template<typename T>
 struct members_to_sql_tuple_visitor {
@@ -416,5 +422,12 @@ extern "C"
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::account_create_with_delegation_operation>(op);
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_account_update2_operation );
+  Datum operation_to_account_update2_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::account_update2_operation>(op);
   }
 }
