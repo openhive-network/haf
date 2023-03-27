@@ -181,4 +181,10 @@ CREATE TYPE hive.change_recovery_account_operation AS (
   extensions hive.extensions_type
 );
 
+CREATE TYPE hive.claim_account_operation AS (
+  creator hive.account_name_type,
+  fee hive.asset,
+  extensions hive.extensions_type
+);
+
 CREATE TYPE hive.void_t AS ();
