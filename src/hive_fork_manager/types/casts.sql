@@ -38,3 +38,12 @@ CREATE CAST (hive.operation AS hive.witness_set_properties_operation)
   WITH FUNCTION hive._operation_to_witness_set_properties_operation
   AS ASSIGNMENT;
 
+CREATE OR REPLACE FUNCTION hive._operation_to_account_create_operation(
+  hive.operation
+) RETURNS hive.account_create_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_account_create_operation';
+
+CREATE CAST (hive.operation AS hive.account_create_operation)
+  WITH FUNCTION hive._operation_to_account_create_operation
+  AS ASSIGNMENT;

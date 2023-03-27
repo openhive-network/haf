@@ -109,4 +109,21 @@ CREATE TYPE hive.witness_set_properties_operation AS (
   extensions hive.extensions_type
 );
 
+CREATE TYPE hive.authority AS (
+  weight_treshold int8, -- uint32_t: 4 byte, but unsigned (int8)
+  account_auths hstore, -- hive.account_name_type => hive.weight_type
+  key_auths hstore -- hive.public_key_type => hive.weight_type
+);
+
+CREATE TYPE hive.account_create_operation AS (
+  fee hive.asset,
+  creator hive.account_name_type,
+  new_account_name hive.account_name_type,
+  owner hive.authority,
+  active hive.authority,
+  posting hive.authority,
+  memo_key hive.public_key_type,
+  json_metadata text
+);
+
 CREATE TYPE hive.void_t AS ();
