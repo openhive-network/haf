@@ -8,7 +8,7 @@ CREATE DOMAIN hive.comment_title AS VARCHAR(255);
 
 CREATE DOMAIN hive.memo AS VARCHAR(2048);
 
-CREATE DOMAIN hive.public_key_type AS bytea;
+CREATE DOMAIN hive.public_key_type AS VARCHAR;
 
 CREATE DOMAIN hive.weight_type AS int4; -- uint16_t: 2 byte, but unsigned (int4)
 
