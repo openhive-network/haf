@@ -1,4 +1,4 @@
-#include "include/psql_utils/query_handler/query_handler.h"
+#include "psql_utils/query_handler/query_handler.h"
 
 namespace PsqlTools::PsqlUtils {
   class QueryHandler::Impl {

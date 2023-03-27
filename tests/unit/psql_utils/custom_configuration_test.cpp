@@ -1,6 +1,6 @@
 #include <boost/test/unit_test.hpp>
 
-#include "include/psql_utils/custom_configuration.h"
+#include "psql_utils/custom_configuration.h"
 
 #include "mock/postgres_mock.hpp"
 

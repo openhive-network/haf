@@ -1,9 +1,9 @@
 #include <boost/test/unit_test.hpp>
 
 #include "include/exceptions.hpp"
-#include "include/psql_utils/postgres_includes.hpp"
-#include "include/psql_utils/to_bytea.hpp"
-#include "include/psql_utils/tuple_fields_iterators.hpp"
+#include "psql_utils/postgres_includes.hpp"
+#include "psql_utils/to_bytea.hpp"
+#include "psql_utils/tuple_fields_iterators.hpp"
 
 
 #include <cstring>

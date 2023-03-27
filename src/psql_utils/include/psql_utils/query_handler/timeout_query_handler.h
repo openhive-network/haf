@@ -4,7 +4,7 @@
 
 #include <chrono>
 
-#include "include/psql_utils/postgres_includes.hpp"
+#include "psql_utils/postgres_includes.hpp"
 
 namespace PsqlTools::PsqlUtils {
 

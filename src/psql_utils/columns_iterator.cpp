@@ -1,6 +1,6 @@
-#include "include/psql_utils/columns_iterator.hpp"
+#include "psql_utils/columns_iterator.hpp"
 
-#include "include/psql_utils/postgres_includes.hpp"
+#include "psql_utils/postgres_includes.hpp"
 
 namespace PsqlTools::PsqlUtils {
 

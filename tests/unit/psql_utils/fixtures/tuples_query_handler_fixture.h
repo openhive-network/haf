@@ -2,7 +2,7 @@
 
 #include "timeout_query_handler_fixture.h"
 
-#include "include/psql_utils/query_handler/tuples_query_handler.h"
+#include "psql_utils/query_handler/tuples_query_handler.h"
 
 #include "mock/postgres_mock.hpp"
 

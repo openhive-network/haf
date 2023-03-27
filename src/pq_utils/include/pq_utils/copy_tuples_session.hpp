@@ -1,6 +1,6 @@
 #pragma once
 
-#include "include/pq_utils/copy_session.hpp"
+#include "pq_utils/copy_session.hpp"
 #include <memory>
 
 extern "C" {

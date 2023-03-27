@@ -1,6 +1,6 @@
 #pragma once
 
-#include "include/psql_utils/query_handler/timeout_query_handler.h"
+#include "psql_utils/query_handler/timeout_query_handler.h"
 
 namespace PsqlTools::PsqlUtils {
 

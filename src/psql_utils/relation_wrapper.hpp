@@ -1,6 +1,6 @@
 #pragma once
 
-#include "include/psql_utils/relation.hpp"
+#include "psql_utils/relation.hpp"
 
 #include <vector>
 

@@ -1,6 +1,6 @@
-#include "include/psql_utils/query_handler/tuples_query_handler.h"
+#include "psql_utils/query_handler/tuples_query_handler.h"
 
-#include "include/psql_utils/logger.hpp"
+#include "psql_utils/logger.hpp"
 
 #include <boost/scope_exit.hpp>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "include/psql_utils/logger.hpp"
+#include "psql_utils/logger.hpp"
 
 #include <stdexcept>
 #include <string>

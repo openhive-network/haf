@@ -4,8 +4,8 @@
 
 #include "mock/spi_mock.hpp"
 
-#include "include/psql_utils/postgres_includes.hpp"
-#include "include/psql_utils/spi_session.hpp"
+#include "psql_utils/postgres_includes.hpp"
+#include "psql_utils/spi_session.hpp"
 #include "include/exceptions.hpp"
 
 BOOST_AUTO_TEST_SUITE( spi_query_result_iterator )

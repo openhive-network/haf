@@ -1,6 +1,6 @@
 #include <boost/test/unit_test.hpp>
 
-#include "include/psql_utils/columns_iterator.hpp"
+#include "psql_utils/columns_iterator.hpp"
 
 #include "mock/postgres_mock.hpp"
 

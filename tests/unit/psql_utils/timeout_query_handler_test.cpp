@@ -1,7 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include "fixtures/timeout_query_handler_fixture.h"
 
-#include "include/psql_utils/query_handler/timeout_query_handler.h"
+#include "psql_utils/query_handler/timeout_query_handler.h"
 
 #include "mock/postgres_mock.hpp"
 

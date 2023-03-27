@@ -1,7 +1,7 @@
 #include "postgres_accessor.hpp"
 
-#include "include/psql_utils/backend.h"
-#include "include/psql_utils/custom_configuration.h"
+#include "psql_utils/backend.h"
+#include "psql_utils/custom_configuration.h"
 
 #include <cassert>
 

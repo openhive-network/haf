@@ -1,7 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include "fixtures/tuples_query_handler_fixture.h"
 
-#include "include/psql_utils/query_handler/tuples_query_handler.h"
+#include "psql_utils/query_handler/tuples_query_handler.h"
 
 #include <chrono>
 

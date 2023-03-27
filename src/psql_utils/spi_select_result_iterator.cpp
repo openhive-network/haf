@@ -2,7 +2,7 @@
 
 #include "include/exceptions.hpp"
 
-#include "include/psql_utils/postgres_includes.hpp"
+#include "psql_utils/postgres_includes.hpp"
 
 #include <cassert>
 

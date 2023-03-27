@@ -1,7 +1,7 @@
-#include "include/psql_utils/query_handler/timeout_query_handler.h"
+#include "psql_utils/query_handler/timeout_query_handler.h"
 
-#include "include/psql_utils/custom_configuration.h"
-#include "include/psql_utils/logger.hpp"
+#include "psql_utils/custom_configuration.h"
+#include "psql_utils/logger.hpp"
 
 #include <string>
 

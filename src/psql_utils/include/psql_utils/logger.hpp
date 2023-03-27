@@ -1,6 +1,6 @@
 #pragma once
 
-#include "include/psql_utils/postgres_includes.hpp"
+#include "psql_utils/postgres_includes.hpp"
 
 #define LOG_TO_POSTGRES( _level, _message, ... )      \
   elog( _level, "HIVE EXTENSION: "  _message, ##__VA_ARGS__ )             \

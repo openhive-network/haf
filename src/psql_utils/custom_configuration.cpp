@@ -1,8 +1,8 @@
-#include "include/psql_utils/custom_configuration.h"
+#include "psql_utils/custom_configuration.h"
 
 #include "include/exceptions.hpp"
 
-#include "include/psql_utils/postgres_includes.hpp"
+#include "psql_utils/postgres_includes.hpp"
 
 namespace PsqlTools::PsqlUtils {
 

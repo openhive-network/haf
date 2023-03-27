@@ -3,7 +3,7 @@
 #include "mock/pq_mock.hpp"
 #include "mock/postgres_mock.hpp"
 
-#include "include/pq_utils/db_client.hpp"
+#include "pq_utils/db_client.hpp"
 #include "include/exceptions.hpp"
 
 using ::testing::Return;

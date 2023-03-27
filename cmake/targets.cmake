@@ -1,3 +1,8 @@
+MACRO( ADD_SUBDIRECTORY_WITH_INCLUDES subdirectory )
+    INCLUDE_DIRECTORIES( ${subdirectory}/include )
+    ADD_SUBDIRECTORY( ${subdirectory} )
+ENDMACRO()
+
 MACRO( ADD_RUNTIME_LOADED_LIB target_name )
     FILE( GLOB_RECURSE sources ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp )
     ADD_LIBRARY( ${target_name} SHARED ${sources} )

@@ -2,7 +2,7 @@
 
 #include <gmock/gmock.h>
 
-#include "include/psql_utils/postgres_includes.hpp"
+#include "psql_utils/postgres_includes.hpp"
 
 class ISpiMock {
 public:

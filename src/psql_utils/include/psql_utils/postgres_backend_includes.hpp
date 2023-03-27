@@ -4,7 +4,7 @@
  * from main postgres_includes.h header file
  */
 
-#include "include/psql_utils/postgres_includes.hpp"
+#include "psql_utils/postgres_includes.hpp"
 
 #ifdef elog
 #pragma push_macro( "elog" )

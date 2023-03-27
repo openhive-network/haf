@@ -1,6 +1,6 @@
 #include "to_jsonb.hpp"
 
-#include <include/psql_utils/postgres_includes.hpp>
+#include <psql_utils/postgres_includes.hpp>
 
 #include <fc/exception/exception.hpp>
 #include <fc/crypto/hex.hpp>

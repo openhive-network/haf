@@ -1,6 +1,6 @@
 #pragma once
 
-#include "include/psql_utils/spi_session.hpp"
+#include "psql_utils/spi_session.hpp"
 
 #include <boost/optional.hpp>
 

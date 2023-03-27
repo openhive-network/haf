@@ -2,8 +2,8 @@
 
 #include "mock/spi_mock.hpp"
 
-#include "include/psql_utils/spi_session.hpp"
-#include "include/psql_utils/postgres_includes.hpp"
+#include "psql_utils/spi_session.hpp"
+#include "psql_utils/postgres_includes.hpp"
 #include "include/exceptions.hpp"
 
 using namespace PsqlTools;

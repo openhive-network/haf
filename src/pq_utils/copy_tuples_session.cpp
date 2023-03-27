@@ -1,7 +1,7 @@
-#include "include/pq_utils/copy_tuples_session.hpp"
+#include "pq_utils/copy_tuples_session.hpp"
 
 #include "include/exceptions.hpp"
-#include "include/psql_utils/postgres_includes.hpp"
+#include "psql_utils/postgres_includes.hpp"
 
 #include <cassert>
 #include <numeric>

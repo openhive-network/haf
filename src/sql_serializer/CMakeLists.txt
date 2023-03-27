@@ -34,7 +34,7 @@ target_link_libraries( sql_serializer_plugin chain_plugin hive_chain hive_protoc
 target_include_directories(
     sql_serializer_plugin
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
-    PRIVATE "${PostgreSQL_INCLUDE_DIRS}" "${HAF_DIRECTORY}/common_includes/include"
+    PRIVATE "${PostgreSQL_INCLUDE_DIRS}" "${HAF_DIRECTORY}/common_includes/include" "${HAF_DIRECTORY}/src/transaction_controllers/include"
 )
 
 if( CLANG_TIDY_EXE )

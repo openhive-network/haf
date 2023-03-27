@@ -1,6 +1,6 @@
 #pragma once
 
-#include "include/psql_utils/columns_iterator.hpp"
+#include "psql_utils/columns_iterator.hpp"
 
 #include <memory>
 #include <string>

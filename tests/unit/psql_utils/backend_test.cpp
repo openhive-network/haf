@@ -1,7 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include "mock/postgres_mock.hpp"
 
-#include "include/psql_utils/backend.h"
+#include "psql_utils/backend.h"
 
 using namespace PsqlTools;
 using ::testing::Return;
