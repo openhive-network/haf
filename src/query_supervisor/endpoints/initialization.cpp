@@ -1,5 +1,7 @@
 #include "include/psql_utils/postgres_includes.hpp"
 
+#include "postgres_accessor.hpp"
+
 #include "include/psql_utils/backend.h"
 #include "include/psql_utils/custom_configuration.h"
 #include "include/psql_utils/query_handler/tuples_query_handler.h"
@@ -15,23 +17,10 @@
 extern "C" {
   PG_MODULE_MAGIC;
 
-  std::unique_ptr< PsqlTools::PsqlUtils::CustomConfiguration > g_customConfiguration;
-  std::unique_ptr< PsqlTools::PsqlUtils::Backend > g_backend;
-
-void initializeGlobals() {
-  g_customConfiguration = std::make_unique< PsqlTools::PsqlUtils::CustomConfiguration >( "query_supervisor" );
-  g_customConfiguration->addStringOption(
-      "limited_users"
-    , "Limited users names"
-    , "List of users separated by commas whose queries are limited by the query_supervisor"
-    , ""
-  );
-
-  g_backend = std::make_unique<PsqlTools::PsqlUtils::Backend>();
-}
-
 bool isCurrentUserLimited() {
-  const auto limitedUsersString = g_customConfiguration->getOptionAsString( "limited_users" );
+  using PsqlTools::QuerySupervisor::PostgresAccessor;
+  const auto limitedUsersString = PostgresAccessor::getInstance()
+    .getCustomConfiguration().getOptionAsString( "limited_users" );
 
   LOG_DEBUG( "Limited users: {%s}", limitedUsersString.c_str() );
 
@@ -42,25 +31,25 @@ bool isCurrentUserLimited() {
   std::vector< std::string > users;
   boost::split( users, limitedUsersString, boost::is_any_of(",") );
 
-  auto userIt = std::find( users.begin(), users.end(), g_backend->userName() );
+  auto userIt = std::find( users.begin(), users.end(), PostgresAccessor::getInstance().getBackend().userName() );
   return userIt != users.end();
 }
 
 void _PG_init(void) {
+  using PsqlTools::QuerySupervisor::PostgresAccessor;
+
   LOG_INFO( "Loading query_supervisor.so into backend %d...", getpid() );
 
   BOOST_SCOPE_EXIT(void) {
     LOG_INFO( "query_supervisor.so loaded into backend %d...", getpid() );
   } BOOST_SCOPE_EXIT_END
 
-  initializeGlobals();
-
   if ( !isCurrentUserLimited() ) {
-    LOG_DEBUG( "Current user %s is not limited", g_backend->userName().c_str() );
+    LOG_DEBUG( "Current user %s is not limited", PostgresAccessor::getInstance().getBackend().userName().c_str() );
     return;
   }
 
-  LOG_DEBUG( "Current user %s is limited", g_backend->userName().c_str() );
+  LOG_DEBUG( "Current user %s is limited", PostgresAccessor::getInstance().getBackend().userName().c_str() );
   using namespace  std::chrono_literals;
   PsqlTools::PsqlUtils::QueryHandler::initialize<PsqlTools::PsqlUtils::TuplesQueryHandler>( 1000, 300ms );
 }
