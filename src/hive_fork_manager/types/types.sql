@@ -139,4 +139,15 @@ CREATE TYPE hive.account_create_with_delegation_operation AS (
   extensions hive.extensions_type
 );
 
+CREATE TYPE hive.account_update2_operation AS (
+  account hive.account_name_type,
+  owner hive.authority,
+  active hive.authority,
+  posting hive.authority,
+  memo_key hive.public_key_type,
+  json_metadata text,
+  posting_json_metadata text,
+  extensions hive.extensions_type
+);
+
 CREATE TYPE hive.void_t AS ();
