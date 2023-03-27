@@ -187,4 +187,11 @@ CREATE TYPE hive.claim_account_operation AS (
   extensions hive.extensions_type
 );
 
+CREATE TYPE hive.claim_reward_balance_operation AS (
+  account hive.account_name_type,
+  reward_hive hive.asset,
+  reward_hbd hive.asset,
+  reward_vests hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();

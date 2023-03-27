@@ -127,3 +127,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.claim_account_operation)
   WITH FUNCTION hive._operation_to_claim_account_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_claim_reward_balance_operation(
+  hive.operation
+) RETURNS hive.claim_reward_balance_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_claim_reward_balance_operation';
+
+CREATE CAST (hive.operation AS hive.claim_reward_balance_operation)
+  WITH FUNCTION hive._operation_to_claim_reward_balance_operation
+  AS ASSIGNMENT;
