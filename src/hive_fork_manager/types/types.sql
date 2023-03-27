@@ -175,4 +175,10 @@ CREATE TYPE hive.cancel_transfer_from_savings_operation AS (
   request_id int8 -- uint32_t: 4 byte, but unsigned (int8)
 );
 
+CREATE TYPE hive.change_recovery_account_operation AS (
+  account_to_recover hive.account_name_type,
+  new_recovery_account hive.account_name_type,
+  extensions hive.extensions_type
+);
+
 CREATE TYPE hive.void_t AS ();
