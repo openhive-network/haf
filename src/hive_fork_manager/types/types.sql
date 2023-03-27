@@ -164,4 +164,10 @@ CREATE TYPE hive.account_witness_proxy_operation AS (
   proxy hive.account_name_type
 );
 
+CREATE TYPE hive.account_witness_vote_operation AS (
+  account hive.account_name_type,
+  witness hive.account_name_type,
+  approve boolean
+);
+
 CREATE TYPE hive.void_t AS ();
