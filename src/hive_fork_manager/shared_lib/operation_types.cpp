@@ -462,4 +462,11 @@ extern "C"
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::account_witness_vote_operation>(op);
   }
+
+  PG_FUNCTION_INFO_V1( operation_to_cancel_transfer_from_savings_operation );
+  Datum operation_to_cancel_transfer_from_savings_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::cancel_transfer_from_savings_operation>(op);
+  }
 }
