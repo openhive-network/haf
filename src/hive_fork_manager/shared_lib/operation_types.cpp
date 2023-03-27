@@ -17,6 +17,8 @@ extern "C" {
 namespace {
 
 Datum props_to_hstore(const fc::flat_map<std::string, std::vector<char>>& props);
+Datum account_authority_map_to_hstore(const fc::flat_map<hive::protocol::account_name_type, hive::protocol::weight_type>& auth);
+Datum key_authority_map_to_hstore(const fc::flat_map<hive::protocol::public_key_type, hive::protocol::weight_type>& auth);
 
 template<typename T>
 Datum to_sql_tuple(const T& value);
@@ -48,6 +50,10 @@ Datum to_datum(int16_t value)
 {
   return UInt32GetDatum(value);
 }
+Datum to_datum(uint32_t value)
+{
+  return Int64GetDatum(value);
+}
 Datum to_datum(const std::string& value)
 {
   return CStringGetTextDatum(value.c_str());
@@ -76,9 +82,25 @@ Datum to_datum(const hive::protocol::comment_options_extensions_type& value)
 {
   return to_sql_tuple(value);
 }
+Datum to_datum(const hive::protocol::authority& value)
+{
+  return to_sql_tuple(value);
+}
+Datum to_datum(const hive::protocol::authority::account_authority_map& value)
+{
+  return account_authority_map_to_hstore(value);
+}
+Datum to_datum(const hive::protocol::authority::key_authority_map& value)
+{
+  return key_authority_map_to_hstore(value);
+}
 Datum to_datum(const hive::protocol::extensions_type& value)
 {
   return to_sql_array(std::begin(value), std::end(value));
+}
+Datum to_datum(const hive::protocol::public_key_type& value)
+{
+  return CStringGetTextDatum(static_cast<std::string>(value).c_str());
 }
 
 template<typename T>
@@ -255,6 +277,74 @@ Datum props_to_hstore(const fc::flat_map<std::string, std::vector<char>>& props)
   PG_RETURN_POINTER(out);
 }
 
+Pairs account_authority_to_hstore_pair(const std::pair<hive::protocol::account_name_type, hive::protocol::weight_type>& auth)
+{
+  const hive::protocol::account_name_type& key = auth.first;
+  hive::protocol::weight_type value = auth.second;
+  const std::string stringKey = static_cast<std::string>(key);
+  const std::string stringValue = std::to_string(value);
+
+  Pairs p;
+  p.key = VARDATA(CStringGetTextDatum(stringKey.c_str()));
+  p.val = VARDATA(CStringGetTextDatum(stringValue.c_str())),
+  p.keylen = stringKey.size();
+  p.vallen = stringValue.size();
+  p.isnull = false;
+  p.needfree = false;
+  return p;
+}
+
+Datum account_authority_map_to_hstore(const fc::flat_map<hive::protocol::account_name_type, hive::protocol::weight_type>& auth)
+{
+  auto element_count = auth.size();
+
+  Pairs* pairs = (Pairs*)palloc(element_count * sizeof(Pairs));
+  std::transform(std::begin(auth), std::end(auth), pairs, account_authority_to_hstore_pair);
+
+  int32 buflen;
+  void* ptr;
+  // TODO: memoise loading function pointers
+  auto* hstoreUniquePairs = (int (*)(Pairs *, int32, int32*))load_external_function("hstore.so", "hstoreUniquePairs", true, &ptr);
+  element_count = hstoreUniquePairs(pairs, element_count, &buflen);
+  auto* hstorePairs = (HStore* (*)(Pairs*, int32, int32))load_external_function("hstore.so", "hstorePairs", true, &ptr);
+  HStore* out = hstorePairs(pairs, element_count, buflen);
+  PG_RETURN_POINTER(out);
+}
+
+Pairs key_authority_to_hstore_pair(const std::pair<hive::protocol::public_key_type, hive::protocol::weight_type>& auth)
+{
+  const hive::protocol::public_key_type& key = auth.first;
+  hive::protocol::weight_type value = auth.second;
+  const std::string stringKey = static_cast<std::string>(key);
+  const std::string stringValue = std::to_string(value);
+
+  Pairs p;
+  p.key = VARDATA(CStringGetTextDatum(stringKey.c_str()));
+  p.val = VARDATA(CStringGetTextDatum(stringValue.c_str())),
+  p.keylen = stringKey.size();
+  p.vallen = stringValue.size();
+  p.isnull = false;
+  p.needfree = false;
+  return p;
+}
+
+Datum key_authority_map_to_hstore(const fc::flat_map<hive::protocol::public_key_type, hive::protocol::weight_type>& auth)
+{
+  auto element_count = auth.size();
+
+  Pairs* pairs = (Pairs*)palloc(element_count * sizeof(Pairs));
+  std::transform(std::begin(auth), std::end(auth), pairs, key_authority_to_hstore_pair);
+
+  int32 buflen;
+  void* ptr;
+  // TODO: memoise loading function pointers
+  auto* hstoreUniquePairs = (int (*)(Pairs *, int32, int32*))load_external_function("hstore.so", "hstoreUniquePairs", true, &ptr);
+  element_count = hstoreUniquePairs(pairs, element_count, &buflen);
+  auto* hstorePairs = (HStore* (*)(Pairs*, int32, int32))load_external_function("hstore.so", "hstorePairs", true, &ptr);
+  HStore* out = hstorePairs(pairs, element_count, buflen);
+  PG_RETURN_POINTER(out);
+}
+
 template<typename T>
 Datum operation_to(_operation* op)
 {
@@ -312,5 +402,12 @@ extern "C"
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::witness_set_properties_operation>(op);
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_account_create_operation );
+  Datum operation_to_account_create_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::account_create_operation>(op);
   }
 }
