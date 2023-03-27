@@ -28,11 +28,13 @@ extern "C" {
 #ifdef ENABLE_GSS
   #pragma push_macro( "ENABLE_GSS" )
   #pragma push_macro( "REG_BADRPT" )
+  #pragma push_macro( "REG_ESPACE" )
   #undef ENABLE_GSS
   #undef REG_BADRPT
   #include <libpq/libpq-be.h>
   #pragma push_macro( "REG_BADRPT" )
   #pragma pop_macro( "ENABLE_GSS" )
+  #pragma pop_macro( "REG_ESPACE" )
 #else
   #include <libpq/libpq-be.h>
 #endif

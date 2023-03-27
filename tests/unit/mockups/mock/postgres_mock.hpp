@@ -66,6 +66,7 @@ public:
     ) = 0;
 
     virtual char *GetConfigOption(const char*, bool, bool) = 0;
+    virtual Oid GetSessionUserId() = 0;
 
     virtual void InstrAggNode(Instrumentation*, Instrumentation*) = 0;
     virtual Instrumentation *InstrAlloc(int n, int instrument_options, bool async_mode) = 0;
@@ -125,6 +126,7 @@ public:
         )
     );
     MOCK_METHOD( char*, GetConfigOption, (const char*, bool, bool) );
+    MOCK_METHOD( Oid, GetSessionUserId, () );
 
     MOCK_METHOD( void, InstrAggNode, (Instrumentation*, Instrumentation*) );
     MOCK_METHOD( Instrumentation*, InstrAlloc, (int, int, bool) );

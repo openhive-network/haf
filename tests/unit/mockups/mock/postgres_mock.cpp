@@ -44,7 +44,6 @@ volatile sig_atomic_t QueryCancelPending;
 
 MemoryContext CurrentMemoryContext = nullptr;
 
-
 std::shared_ptr<PostgresMock> PostgresMock::create_and_get() {
   assert( POSTGRES_MOCK.lock() == nullptr && "Use only one mock instance" );
   auto instance = std::shared_ptr< PostgresMock >( new PostgresMock() );
@@ -187,7 +186,11 @@ void DefineCustomStringVariable(const char *name,
     return POSTGRES_MOCK.lock()->GetConfigOption(name,missing_ok,restrict_privileged);
   }
 
-  void InstrAggNode(Instrumentation *dst, Instrumentation *add) {
+  Oid GetSessionUserId(void) {
+    return POSTGRES_MOCK.lock()->GetSessionUserId();
+  }
+
+void InstrAggNode(Instrumentation *dst, Instrumentation *add) {
     return POSTGRES_MOCK.lock()->InstrAggNode(dst,add);
   }
 
