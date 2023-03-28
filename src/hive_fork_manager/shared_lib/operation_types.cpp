@@ -58,7 +58,16 @@ Datum to_datum(const std::string& value)
 {
   return CStringGetTextDatum(value.c_str());
 }
-Datum to_datum(const std::vector<hive::protocol::beneficiary_route_type>& value)
+Datum to_datum(const std::vector<char>& value)
+{
+  const auto size = value.size();
+  bytea* bytes = (bytea*)palloc(VARHDRSZ + size);
+  std::copy(std::begin(value), std::end(value), VARDATA(bytes));
+  SET_VARSIZE(bytes, VARHDRSZ + size);
+  PG_RETURN_BYTEA_P(bytes);
+}
+template<typename T>
+Datum to_datum(const std::vector<T>& value)
 {
   return to_sql_array(std::begin(value), std::end(value));
 }
@@ -107,6 +116,11 @@ std::optional<Datum> to_datum(const fc::optional<T>& value)
 {
   if (value.valid()) return {to_datum(value.value())};
   else return std::nullopt; // NULL
+}
+template<typename T>
+Datum to_datum(const fc::flat_set<T>& value)
+{
+  return to_sql_array(std::begin(value), std::end(value));
 }
 
 template<typename T>
@@ -166,6 +180,12 @@ Datum to_sql_tuple(const hive::protocol::asset& asset)
   };
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
+template<typename T>
+Datum to_sql_tuple(const hive::protocol::fixed_string_impl<T>& string)
+{
+  return CStringGetTextDatum(static_cast<std::string>(string).c_str());
 }
 
 Datum to_sql_tuple(const hive::protocol::future_extensions& extensions)
@@ -510,5 +530,12 @@ extern "C"
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::create_claimed_account_operation>(op);
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_custom_binary_operation );
+  Datum operation_to_custom_binary_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::custom_binary_operation>(op);
   }
 }
