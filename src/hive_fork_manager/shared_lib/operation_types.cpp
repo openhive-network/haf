@@ -208,6 +208,11 @@ std::string sql_typename_from_protocol_type<hive::protocol::future_extensions>()
 {
   return "void_t";
 }
+template<>
+std::string sql_typename_from_protocol_type<hive::protocol::account_name_type>()
+{
+  return "account_name_type";
+}
 
 template<typename Iter>
 Datum to_sql_array(Iter first, Iter last)
@@ -537,5 +542,12 @@ extern "C"
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::custom_binary_operation>(op);
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_custom_json_operation );
+  Datum operation_to_custom_json_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::custom_json_operation>(op);
   }
 }

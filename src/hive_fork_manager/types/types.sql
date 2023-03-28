@@ -226,4 +226,11 @@ CREATE TYPE hive.custom_binary_operation AS (
   data bytea
 );
 
+CREATE TYPE hive.custom_json_operation AS (
+  required_auths hive.account_name_type[],
+  required_posting_auths hive.account_name_type[],
+  id hive.custom_id_type,
+  json text
+);
+
 CREATE TYPE hive.void_t AS ();
