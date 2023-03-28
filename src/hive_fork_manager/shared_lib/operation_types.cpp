@@ -599,4 +599,11 @@ extern "C"
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::escrow_release_operation>(op);
   }
+
+  PG_FUNCTION_INFO_V1( operation_to_escrow_transfer_operation );
+  Datum operation_to_escrow_transfer_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::escrow_transfer_operation>(op);
+  }
 }
