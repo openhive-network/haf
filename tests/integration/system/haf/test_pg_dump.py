@@ -9,7 +9,7 @@ import pytest
 import test_tools as tt
 from haf_local_tools import query_all, query_col
 
-from shared_tools.complex_networks import prepare_node_with_database, create_block_log_directory_name
+from shared_tools.complex_networks import create_block_log_directory_name
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
@@ -66,9 +66,9 @@ def pg_restore_from_dump_file_only(target_db_name: str, tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("pg_restore", [pg_restore_from_toc, pg_restore_from_dump_file_only])
-def test_pg_dump(database, pg_restore: Callable[[str, Path], None], tmp_path: Path):
+def test_pg_dump(prepared_networks_and_database_1, database, pg_restore: Callable[[str, Path], None], tmp_path: Path):
     # GIVEN
-    source_session, source_db_url = prepare_source_db(database)
+    source_session, source_db_url = prepare_source_db(prepared_networks_and_database_1, database)
     target_session, target_db_url = prepare_target_db(database)
     source_database_not_empty_sanity_check(source_session)
 
@@ -81,8 +81,8 @@ def test_pg_dump(database, pg_restore: Callable[[str, Path], None], tmp_path: Pa
     compare_psql_tool_dumped_schemas(source_db_url.database, target_db_url.database, tmp_path)
 
 
-def prepare_source_db(database) -> tuple[Session, URL]:
-    node, session, db_name = prepare_node_with_database(database)
+def prepare_source_db(prepare_node, database) -> tuple[Session, URL]:
+    node, session, db_name = prepare_node(database)
     node.run(replay_from=create_block_log_directory_name("block_log_12_8") / "block_log", stop_at_block=30, exit_before_synchronization=True)
     return session, db_name
 

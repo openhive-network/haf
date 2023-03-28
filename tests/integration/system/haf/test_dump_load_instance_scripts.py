@@ -16,7 +16,7 @@ from sqlalchemy.pool import NullPool
 from test_tools.__private import paths_to_executables
 from haf_local_tools import query_all
 
-from shared_tools.complex_networks import prepare_node_with_database, create_block_log_directory_name
+from shared_tools.complex_networks import create_block_log_directory_name
 
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
@@ -60,9 +60,9 @@ class Test:
 
         ]
     )
-    def test_dump_load_instance_scripts(self, database, first_run : int, dump_exit_before_sync : int, dump_stop_replay_at_block : int, load_exit_before_sync : int, load_stop_replay_at_block : int, after_dump : int, after_load : int):
+    def test_dump_load_instance_scripts(self, prepared_networks_and_database_1, database, first_run : int, dump_exit_before_sync : int, dump_stop_replay_at_block : int, load_exit_before_sync : int, load_stop_replay_at_block : int, after_dump : int, after_load : int):
         # GIVEN
-        self.run_node_with_db(database, first_run)
+        self.run_node_with_db(prepared_networks_and_database_1, database, first_run)
         
 
         # WHEN
@@ -77,8 +77,8 @@ class Test:
         self.assert_loaded(after_load)
         
 
-    def run_node_with_db(self, database, stop_at_block : int):
-        node, session, self.db_name = prepare_node_with_database(database)
+    def run_node_with_db(self, prepared_networks_and_database_1, database, stop_at_block : int):
+        node, session, self.db_name = prepared_networks_and_database_1(database)
 
         self.hived_executable_path =paths_to_executables.get_path_of("hived")
 
