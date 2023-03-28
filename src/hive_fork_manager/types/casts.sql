@@ -237,3 +237,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.escrow_approve_operation)
   WITH FUNCTION hive._operation_to_escrow_approve_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_escrow_dispute_operation(
+  hive.operation
+) RETURNS hive.escrow_dispute_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_escrow_dispute_operation';
+
+CREATE CAST (hive.operation AS hive.escrow_dispute_operation)
+  WITH FUNCTION hive._operation_to_escrow_dispute_operation
+  AS ASSIGNMENT;
