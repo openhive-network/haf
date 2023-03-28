@@ -25,6 +25,7 @@ Datum to_sql_tuple(const T& value);
 Datum to_sql_tuple(const hive::protocol::asset& asset);
 Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions);
 Datum to_sql_tuple(const hive::protocol::future_extensions& extensions);
+Datum to_sql_tuple(const hive::protocol::price& price);
 
 template<typename Iter>
 Datum to_sql_array(Iter first, Iter last);
@@ -84,6 +85,10 @@ Datum to_datum(const hive::protocol::json_string& value)
   return DirectFunctionCall1(jsonb_in, CStringGetDatum(static_cast<std::string>(value).c_str()));
 }
 Datum to_datum(const hive::protocol::asset& value)
+{
+  return to_sql_tuple(value);
+}
+Datum to_datum(const hive::protocol::price& value)
 {
   return to_sql_tuple(value);
 }
@@ -175,6 +180,22 @@ Datum to_sql_tuple(const hive::protocol::asset& asset)
   };
   bool nulls[] = {
     false,
+    false,
+    false,
+  };
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
+Datum to_sql_tuple(const hive::protocol::price& price)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.price");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    to_datum(price.base),
+    to_datum(price.quote),
+  };
+  bool nulls[] = {
     false,
     false,
   };
@@ -605,5 +626,12 @@ extern "C"
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::escrow_transfer_operation>(op);
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_feed_publish_operation );
+  Datum operation_to_feed_publish_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::feed_publish_operation>(op);
   }
 }

@@ -296,4 +296,9 @@ CREATE TYPE hive.escrow_transfer_operation AS (
   json_meta text
 );
 
+CREATE TYPE hive.feed_publish_operation AS (
+  publisher hive.account_name_type,
+  exchange_rate hive.price
+);
+
 CREATE TYPE hive.void_t AS ();
