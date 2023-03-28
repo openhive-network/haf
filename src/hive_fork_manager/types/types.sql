@@ -206,4 +206,15 @@ CREATE TYPE hive.convert_operation AS (
   amount hive.asset
 );
 
+CREATE TYPE hive.create_claimed_account_operation AS (
+  creator hive.account_name_type,
+  new_account_name hive.account_name_type,
+  owner hive.authority,
+  active hive.authority,
+  posting hive.authority,
+  memo_key hive.public_key_type,
+  json_metadata text,
+  extensions hive.extensions_type
+);
+
 CREATE TYPE hive.void_t AS ();
