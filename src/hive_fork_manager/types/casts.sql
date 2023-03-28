@@ -147,3 +147,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.collateralized_convert_operation)
   WITH FUNCTION hive._operation_to_collateralized_convert_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_convert_operation(
+  hive.operation
+) RETURNS hive.convert_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_convert_operation';
+
+CREATE CAST (hive.operation AS hive.convert_operation)
+  WITH FUNCTION hive._operation_to_convert_operation
+  AS ASSIGNMENT;
