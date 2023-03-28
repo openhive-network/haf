@@ -217,3 +217,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.delegate_vesting_shares_operation)
   WITH FUNCTION hive._operation_to_delegate_vesting_shares_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_delete_comment_operation(
+  hive.operation
+) RETURNS hive.delete_comment_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_delete_comment_operation';
+
+CREATE CAST (hive.operation AS hive.delete_comment_operation)
+  WITH FUNCTION hive._operation_to_delete_comment_operation
+  AS ASSIGNMENT;
