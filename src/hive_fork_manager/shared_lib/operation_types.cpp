@@ -557,4 +557,11 @@ extern "C"
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::custom_operation>(op);
   }
+
+  PG_FUNCTION_INFO_V1( operation_to_decline_voting_rights_operation );
+  Datum operation_to_decline_voting_rights_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::decline_voting_rights_operation>(op);
+  }
 }

@@ -239,4 +239,9 @@ CREATE TYPE hive.custom_operation AS (
   data bytea
 );
 
+CREATE TYPE hive.decline_voting_rights_operation AS (
+  account hive.account_name_type,
+  decline boolean
+);
+
 CREATE TYPE hive.void_t AS ();
