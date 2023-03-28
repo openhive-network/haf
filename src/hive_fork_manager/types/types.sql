@@ -194,4 +194,10 @@ CREATE TYPE hive.claim_reward_balance_operation AS (
   reward_vests hive.asset
 );
 
+CREATE TYPE hive.collateralized_convert_operation AS (
+  owner hive.account_name_type,
+  requestid int8, -- uint32_t: 4 byte, but unsigned (int8)
+  amount hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
