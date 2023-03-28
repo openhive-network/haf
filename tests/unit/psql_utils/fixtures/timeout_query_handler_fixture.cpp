@@ -10,7 +10,6 @@ namespace Fixtures {
 
     QueryCancelPending = false;
 
-    m_postgres_mock = PostgresMock::create_and_get();
     m_rootQuery = std::make_unique<QueryDesc>();
     m_subQuery = std::make_unique<QueryDesc>();
   }

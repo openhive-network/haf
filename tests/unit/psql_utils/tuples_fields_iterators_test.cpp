@@ -1,5 +1,7 @@
 #include <boost/test/unit_test.hpp>
 
+#include "mock/gmock_fixture.hpp"
+
 #include "include/exceptions.hpp"
 #include "psql_utils/postgres_includes.hpp"
 #include "psql_utils/to_bytea.hpp"
@@ -29,7 +31,7 @@ struct TupleExample {
 };
 #pragma pack( pop )
 
-BOOST_AUTO_TEST_SUITE( tuples_fileds_iterators )
+BOOST_FIXTURE_TEST_SUITE( tuples_fileds_iterators, GmockFixture )
 
 BOOST_AUTO_TEST_CASE( simple_iteration_by_fields )
 {

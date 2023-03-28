@@ -1,5 +1,5 @@
 #include <boost/test/unit_test.hpp>
-#include "mock/postgres_mock.hpp"
+#include "mock/gmock_fixture.hpp"
 
 #include "psql_utils/backend.h"
 
@@ -9,16 +9,15 @@ using ::testing::InSequence;
 using ::testing::StrEq;
 using ::testing::_;
 
-BOOST_AUTO_TEST_SUITE( backend )
+BOOST_FIXTURE_TEST_SUITE( backend, GmockFixture )
 
   BOOST_AUTO_TEST_CASE( userOid )
   {
-    auto postgres_mock = PostgresMock::create_and_get();
     const Oid expectedUserId = 1313;
 
     PsqlUtils::Backend unitUnderTest;
 
-    EXPECT_CALL( *postgres_mock, GetSessionUserId() )
+    EXPECT_CALL( *m_postgres_mock, GetSessionUserId() )
       .Times( 1 )
       .WillOnce( ::Return( expectedUserId ) )
       ;

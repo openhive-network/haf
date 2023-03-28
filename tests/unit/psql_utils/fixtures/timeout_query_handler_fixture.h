@@ -1,5 +1,7 @@
 #pragma once
 
+#include "mock/gmock_fixture.hpp"
+
 #include "psql_utils/query_handler/timeout_query_handler.h"
 
 #include "mock/postgres_mock.hpp"
@@ -8,7 +10,7 @@
 
 namespace Fixtures {
 
-  struct TimeoutQueryHandlerFixture {
+  struct TimeoutQueryHandlerFixture : public GmockFixture {
     TimeoutQueryHandlerFixture();
 
     ~TimeoutQueryHandlerFixture();
@@ -16,7 +18,6 @@ namespace Fixtures {
     template< typename _Handler, typename... _Args  >
     void moveToPendingRootQuery( _Args... _args );
 
-    std::shared_ptr<PostgresMock> m_postgres_mock;
     std::unique_ptr<QueryDesc> m_rootQuery;
     std::unique_ptr<QueryDesc> m_subQuery;
     static const auto m_expected_timer_id = static_cast< TimeoutId >( USER_TIMEOUT + 1 );

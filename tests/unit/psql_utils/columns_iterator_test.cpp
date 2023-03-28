@@ -1,12 +1,14 @@
 #include <boost/test/unit_test.hpp>
 
+#include "mock/gmock_fixture.hpp"
+
 #include "psql_utils/columns_iterator.hpp"
 
 #include "mock/postgres_mock.hpp"
 
 #include <cstring>
 
-BOOST_AUTO_TEST_SUITE( columns_iterator )
+BOOST_FIXTURE_TEST_SUITE( columns_iterator, GmockFixture )
 
 BOOST_AUTO_TEST_CASE( positive_iteration_threw_columns ) {
   auto desc = static_cast<TupleDescData*>(malloc( sizeof(TupleDescData) + 4*sizeof(FormData_pg_attribute) ));
