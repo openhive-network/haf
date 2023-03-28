@@ -207,3 +207,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.decline_voting_rights_operation)
   WITH FUNCTION hive._operation_to_decline_voting_rights_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_delegate_vesting_shares_operation(
+  hive.operation
+) RETURNS hive.delegate_vesting_shares_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_delegate_vesting_shares_operation';
+
+CREATE CAST (hive.operation AS hive.delegate_vesting_shares_operation)
+  WITH FUNCTION hive._operation_to_delegate_vesting_shares_operation
+  AS ASSIGNMENT;

@@ -244,4 +244,10 @@ CREATE TYPE hive.decline_voting_rights_operation AS (
   decline boolean
 );
 
+CREATE TYPE hive.delegate_vesting_shares_operation AS (
+  delegator hive.account_name_type,
+  delegatee hive.account_name_type,
+  vesting_shares hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
