@@ -272,4 +272,15 @@ CREATE TYPE hive.escrow_dispute_operation AS (
   escrow_id int8 -- uint32_t: 4 byte, but unsigned (int8)
 );
 
+CREATE TYPE hive.escrow_release_operation AS (
+  "from" hive.account_name_type,
+  "to" hive.account_name_type,
+  agent hive.account_name_type,
+  who hive.account_name_type,
+  receiver hive.account_name_type,
+  escrow_id int8, -- uint32_t: 4 byte, but unsigned (int8)
+  hbd_amount hive.asset,
+  hive_amount hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
