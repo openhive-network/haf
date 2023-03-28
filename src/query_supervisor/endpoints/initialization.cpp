@@ -1,10 +1,10 @@
 #include "psql_utils/postgres_includes.hpp"
 
 #include "postgres_accessor.hpp"
+#include "query_handlers.hpp"
 
 #include "psql_utils/backend.h"
 #include "psql_utils/custom_configuration.h"
-#include "psql_utils/query_handler/tuples_query_handler.h"
 #include "psql_utils/spi_session.hpp"
 
 #include <boost/algorithm/string.hpp>
@@ -35,6 +35,8 @@ bool isCurrentUserLimited() {
   return userIt != users.end();
 }
 
+std::unique_ptr< PsqlTools::QuerySupervisor::QueryHandlers > g_queryHandlers;
+
 void _PG_init(void) {
   using PsqlTools::QuerySupervisor::PostgresAccessor;
 
@@ -50,8 +52,8 @@ void _PG_init(void) {
   }
 
   LOG_DEBUG( "Current user %s is limited", PostgresAccessor::getInstance().getBackend().userName().c_str() );
-  using namespace  std::chrono_literals;
-  PsqlTools::PsqlUtils::QueryHandler::initialize<PsqlTools::PsqlUtils::TuplesQueryHandler>( 1000, 300ms );
+
+  g_queryHandlers = std::make_unique< PsqlTools::QuerySupervisor::QueryHandlers >();
 }
 
 void _PG_fini(void) {
@@ -60,11 +62,7 @@ void _PG_fini(void) {
       LOG_INFO( "query_supervisor.so unloaded from backend %d...", getpid() );
   } BOOST_SCOPE_EXIT_END
 
-  if ( !isCurrentUserLimited() ) {
-    return;
-  }
-
-  PsqlTools::PsqlUtils::QueryHandler::deinitialize<PsqlTools::PsqlUtils::TuplesQueryHandler>();
+  g_queryHandlers.reset();
 }
 
 } // extern "C"

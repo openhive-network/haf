@@ -3,15 +3,34 @@
 namespace Fixtures {
 
   TuplesQueryHandlerFixture::TuplesQueryHandlerFixture() {
+    ExecutorStart_hook = executorStartHook;
+    ExecutorRun_hook = executorRunHook;
+    ExecutorFinish_hook = executorFinishHook;
+    ExecutorEnd_hook = executorEndHook;
+
+    QueryCancelPending = false;
+
+    m_rootQuery = std::make_unique<QueryDesc>();
+    m_subQuery = std::make_unique<QueryDesc>();
   }
 
   TuplesQueryHandlerFixture::~TuplesQueryHandlerFixture() {
+    ExecutorStart_hook = nullptr;
+    ExecutorRun_hook = nullptr;
+    ExecutorFinish_hook = nullptr;
+    ExecutorEnd_hook = nullptr;
   }
 
-  void TuplesQueryHandlerFixture::moveToRunRootQuery(int _limit, std::chrono::milliseconds _timeout) {
+  void TuplesQueryHandlerFixture::moveToRunRootQuery(int _limit ) {
     using namespace testing;
 
     EXPECT_CALL( *m_postgres_mock, InstrAlloc( _, _, _ ) ).WillOnce( Return(&m_instrumentation) );
+
+    if (ExecutorStart_hook) {
+      EXPECT_CALL( *m_postgres_mock, executorStartHook( m_rootQuery.get(), _ )).Times( 1 );
+    } else {
+      EXPECT_CALL( *m_postgres_mock, standard_ExecutorStart( m_rootQuery.get(), _ )).Times( 1 );
+    }
 
     if (ExecutorRun_hook) {
       EXPECT_CALL( *m_postgres_mock, executorRunHook( _, _, _, _ ) ).Times( 1 );
@@ -25,8 +44,9 @@ namespace Fixtures {
       EXPECT_CALL( *m_postgres_mock, standard_ExecutorFinish( _ ) ).Times( 1 );
     }
 
-    moveToPendingRootQuery< PsqlTools::PsqlUtils::TuplesQueryHandler >( _limit, _timeout );
+    m_unitUnderTest = std::make_shared< PsqlTools::PsqlUtils::TuplesQueryHandler >( _limit );
 
+    ExecutorStart_hook( m_rootQuery.get(), 0 );
     ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 0, true );
   }
 

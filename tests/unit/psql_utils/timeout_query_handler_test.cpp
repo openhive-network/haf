@@ -10,11 +10,11 @@ using namespace std::chrono_literals;
 BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixture )
 
   BOOST_AUTO_TEST_CASE( initialization ) {
-    EXPECT_CALL( *m_postgres_mock, RegisterTimeout( USER_TIMEOUT, testing::_ ) ).Times( 1 );
+    EXPECT_CALL( *m_postgres_mock, RegisterTimeout( USER_TIMEOUT, testing::_ ) )
+      .Times( 1 );
+    EXPECT_CALL( *m_postgres_mock, disable_timeout( ::testing::_, ::testing::_ )).Times( 1 );
 
-    PsqlTools::PsqlUtils::QueryHandler::initialize<PsqlTools::PsqlUtils::TimeoutQueryHandler>( 1s );
-
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isInitialized() );
+    PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( 1s );
 
     // check if handlers are changed
     BOOST_ASSERT( ExecutorStart_hook != executorStartHook );
@@ -25,22 +25,20 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
 
   BOOST_AUTO_TEST_CASE( deinitialization ) {
     EXPECT_CALL( *m_postgres_mock, RegisterTimeout( USER_TIMEOUT, testing::_ ) )
-      .Times( 1 )
       .WillOnce( ::testing::Return( m_expected_timer_id ) )
     ;
-    PsqlTools::PsqlUtils::QueryHandler::initialize<PsqlTools::PsqlUtils::TimeoutQueryHandler>( 1s );
+    EXPECT_CALL( *m_postgres_mock, disable_timeout( m_expected_timer_id, true )).Times( 1 );
 
-    EXPECT_CALL( *m_postgres_mock, disable_timeout( m_expected_timer_id, true ) ).Times(1);
+    {
+      PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( 1s );
+    }
 
-    PsqlTools::PsqlUtils::QueryHandler::deinitialize<PsqlTools::PsqlUtils::TimeoutQueryHandler>();
 
     // check if handlers are restored
     BOOST_ASSERT( ExecutorStart_hook == executorStartHook );
     BOOST_ASSERT( ExecutorRun_hook == executorRunHook );
     BOOST_ASSERT( ExecutorFinish_hook == executorFinishHook );
     BOOST_ASSERT( ExecutorEnd_hook == executorEndHook );
-
-    BOOST_ASSERT( !PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( star_query_previous_hook_set ) {
@@ -53,7 +51,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
       .WillOnce( ::testing::Return( m_expected_timer_id ) )
     ;
     const std::chrono::milliseconds timeout = 1s;
-    PsqlTools::PsqlUtils::QueryHandler::initialize<PsqlTools::PsqlUtils::TimeoutQueryHandler>( timeout );
+    PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( timeout );
 
     // THEN
     // setup timeout
@@ -62,12 +60,13 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     EXPECT_CALL( *m_postgres_mock, executorStartHook( rootQuery.get(), flags ) ).Times(1);
     // previous hook is responsible for calling standard executor
     EXPECT_CALL( *m_postgres_mock, standard_ExecutorStart( m_rootQuery.get(), flags ) ).Times(0);
+    EXPECT_CALL( *m_postgres_mock, disable_timeout( m_expected_timer_id, true ) ).Times(1); // dtor disables timeout
 
     // WHEN
     // pretend executor hook call
     ExecutorStart_hook( rootQuery.get(), flags );
 
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( unitUnderTest.isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( star_query_previous_hook_not_set ) {
@@ -81,24 +80,25 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
       .WillOnce( ::testing::Return( m_expected_timer_id ) )
       ;
     const std::chrono::milliseconds timeout = 1s;
-    PsqlTools::PsqlUtils::QueryHandler::initialize<PsqlTools::PsqlUtils::TimeoutQueryHandler>( timeout );
+    PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( timeout );
 
     // THEN
     // setup timeout
     EXPECT_CALL( *m_postgres_mock, enable_timeout_after( m_expected_timer_id, timeout.count() ) ).Times(1);
     EXPECT_CALL( *m_postgres_mock, executorStartHook( rootQuery.get(), flags ) ).Times(0);
     EXPECT_CALL( *m_postgres_mock, standard_ExecutorStart( rootQuery.get(), flags ) ).Times(1);
+    EXPECT_CALL( *m_postgres_mock, disable_timeout( m_expected_timer_id, true ) ).Times(1); // dtor disables timeout
 
     // WHEN
     // pretend executor hook call
     ExecutorStart_hook( rootQuery.get(), flags );
 
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( unitUnderTest.isRootQueryPending() );
   }
   BOOST_AUTO_TEST_CASE( end_query_previous_hook_not_set ) {
     // GIVEN
     ExecutorEnd_hook = nullptr;
-    moveToPendingRootQuery<PsqlTools::PsqlUtils::TimeoutQueryHandler>(1s);
+    moveToPendingRootQuery();
 
     // THEN PART 1
     // setup timeout
@@ -110,12 +110,12 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     ExecutorEnd_hook( m_rootQuery.get() );
 
     // THEN PART 2
-    BOOST_ASSERT( !PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( !m_unitUnderTest->isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( end_root_query_previous_hook_set ) {
     // GIVEN
-    moveToPendingRootQuery<PsqlTools::PsqlUtils::TimeoutQueryHandler>(1s);
+    moveToPendingRootQuery();
 
     // THEN PART 1
     // setup timeout
@@ -129,12 +129,12 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     ExecutorEnd_hook( m_rootQuery.get() );
 
     // THEN PART 2
-    BOOST_ASSERT( !PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( !m_unitUnderTest->isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( end_root_query_sub_query ) {
     // GIVEN
-    moveToPendingRootQuery<PsqlTools::PsqlUtils::TimeoutQueryHandler>(1s);
+    moveToPendingRootQuery();
 
     // THEN PART 1
     // do not disable timer when only subquery was ended
@@ -148,13 +148,13 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     ExecutorEnd_hook( m_subQuery.get() );
 
     // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( m_unitUnderTest->isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( end_root_query_sub_query_handler_not_set ) {
     // GIVEN
     ExecutorEnd_hook = nullptr;
-    moveToPendingRootQuery<PsqlTools::PsqlUtils::TimeoutQueryHandler>(1s);
+    moveToPendingRootQuery();
 
     // THEN PART 1
     // do not disable timer when only subquery was ended
@@ -166,13 +166,13 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     ExecutorEnd_hook( m_subQuery.get() );
 
     // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( m_unitUnderTest->isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( start_root_query_sub_query ) {
     // GIVEN
     const int subQueryFlags = 0;
-    moveToPendingRootQuery<PsqlTools::PsqlUtils::TimeoutQueryHandler>(1s);
+    moveToPendingRootQuery();
 
     // THEN PART 1
     // do not disable timer when only subquery was ended
@@ -186,14 +186,14 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     ExecutorStart_hook( m_subQuery.get(), subQueryFlags );
 
     // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( m_unitUnderTest->isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( start_root_query_sub_query_handler_not_set ) {
     // GIVEN
     const int subQueryFlags = 0;
     ExecutorStart_hook = nullptr;
-    moveToPendingRootQuery<PsqlTools::PsqlUtils::TimeoutQueryHandler>(1s);
+    moveToPendingRootQuery();
 
     // THEN PART 1
     // do not disable timer when only subquery was ended
@@ -205,7 +205,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     ExecutorStart_hook( m_subQuery.get(), subQueryFlags );
 
     // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( m_unitUnderTest->isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( run_query_previous_hook_not_set ) {
@@ -214,7 +214,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     const ScanDirection direction = BackwardScanDirection;
     const uint64 count = 15;
     const bool executeOnce = true;
-    moveToPendingRootQuery<PsqlTools::PsqlUtils::TimeoutQueryHandler>(1s);
+    moveToPendingRootQuery();
 
     // THEN PART 1
     // setup timeout
@@ -226,7 +226,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     ExecutorRun_hook( m_rootQuery.get(), direction, count, executeOnce );
 
     // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( m_unitUnderTest->isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( run_query_previous_hook_set ) {
@@ -234,7 +234,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     const ScanDirection direction = BackwardScanDirection;
     const uint64 count = 15;
     const bool executeOnce = true;
-    moveToPendingRootQuery<PsqlTools::PsqlUtils::TimeoutQueryHandler>(1s);
+    moveToPendingRootQuery();
 
     // THEN PART 1
     EXPECT_CALL( *m_postgres_mock, disable_timeout( ::testing::_, ::testing::_ ) ).Times(0);
@@ -246,13 +246,13 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     ExecutorRun_hook( m_rootQuery.get(), direction, count, executeOnce );
 
     // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( m_unitUnderTest->isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( finish_query_previous_hook_not_set ) {
     // GIVEN
     ExecutorFinish_hook = nullptr;
-    moveToPendingRootQuery<PsqlTools::PsqlUtils::TimeoutQueryHandler>(1s);
+    moveToPendingRootQuery();
 
     // THEN PART 1
     // setup timeout
@@ -264,12 +264,12 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     ExecutorFinish_hook( m_rootQuery.get() );
 
     // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( m_unitUnderTest->isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( finish_query_previous_hook_set ) {
     // GIVEN
-    moveToPendingRootQuery<PsqlTools::PsqlUtils::TimeoutQueryHandler>(1s);
+    moveToPendingRootQuery();
 
     // THEN PART 1
     EXPECT_CALL( *m_postgres_mock, disable_timeout( ::testing::_, ::testing::_ ) ).Times(0);
@@ -281,12 +281,12 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     ExecutorFinish_hook( m_rootQuery.get() );
 
     // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( m_unitUnderTest->isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( timeout_handler ) {
     // GIVEN
-    moveToPendingRootQuery<PsqlTools::PsqlUtils::TimeoutQueryHandler>(1s);
+    moveToPendingRootQuery();
     BOOST_ASSERT( m_timoutHandler != nullptr );
 
     // THEN PART 1
@@ -297,7 +297,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     m_timoutHandler();
 
     // THEN PART 2
-    BOOST_ASSERT( !PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
+    BOOST_ASSERT( !PsqlTools::PsqlUtils::QueryHandler::isQueryCancelPending() );
   }
 
   BOOST_AUTO_TEST_SUITE_END()

@@ -15,7 +15,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit, timeout );
+    moveToRunRootQuery( tuplesLimit );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit - 10;
 
@@ -26,9 +26,6 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // WHEN
     // pretend that PostgreSQL calls our finish handler
     ExecutorFinish_hook(m_rootQuery.get());
-
-    // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( tuples_eq_limit ) {
@@ -37,7 +34,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit, timeout );
+    moveToRunRootQuery( tuplesLimit );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit;
 
@@ -48,9 +45,6 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // WHEN
     // pretend that PostgreSQL calls our finish handler
     ExecutorFinish_hook(m_rootQuery.get());
-
-    // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( tuples_gt_limit ) {
@@ -59,7 +53,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit, timeout );
+    moveToRunRootQuery( tuplesLimit );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit + 10;
 
@@ -70,9 +64,6 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // WHEN
     // pretend that PostgreSQL calls our finish handler
     ExecutorFinish_hook(m_rootQuery.get());
-
-    // THEN PART 2
-    BOOST_ASSERT( !PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( subquery_tuples_less_than_limit ) {
@@ -81,7 +72,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit, timeout );
+    moveToRunRootQuery( tuplesLimit );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit - 10;
     Instrumentation subQueryInstrumentation;
@@ -95,9 +86,6 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // WHEN
     // pretend that PostgreSQL calls our finish handler
     ExecutorFinish_hook(m_subQuery.get());
-
-    // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( subquery_tuples_eq_limit ) {
@@ -106,7 +94,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit, timeout );
+    moveToRunRootQuery( tuplesLimit );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit;
     Instrumentation subQueryInstrumentation;
@@ -120,9 +108,6 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // WHEN
     // pretend that PostgreSQL calls our finish handler
     ExecutorFinish_hook(m_subQuery.get());
-
-    // THEN PART 2
-    BOOST_ASSERT( PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( subquery_tuples_gt_limit ) {
@@ -131,7 +116,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit, timeout );
+    moveToRunRootQuery( tuplesLimit );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit + 10;
     Instrumentation subQueryInstrumentation;
@@ -145,9 +130,6 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // WHEN
     // pretend that PostgreSQL calls our finish handler
     ExecutorFinish_hook(m_subQuery.get());
-
-    // THEN PART 2
-    BOOST_ASSERT( !PsqlTools::PsqlUtils::TimeoutQueryHandler::isRootQueryPending() );
   }
 
 

@@ -7,56 +7,51 @@
 
 namespace PsqlTools::PsqlUtils {
 
-  TuplesQueryHandler::TuplesQueryHandler(
-      uint32_t _limitOfTuplesPerRootQuery
-    , std::chrono::milliseconds _queryTimeout
-  )
-    : TimeoutQueryHandler( _queryTimeout )
-    , m_limitOfTuplesPerRootQuery(_limitOfTuplesPerRootQuery)
-  {}
-
-  void TuplesQueryHandler::onRunQuery( QueryDesc* _queryDesc ) {
-    LOG_DEBUG( "Run query: %s", _queryDesc->sourceText );
-    addInstrumentation( _queryDesc );
-    TimeoutQueryHandler::onRunQuery(_queryDesc);
+  TuplesQueryHandler::TuplesQueryHandler( uint32_t _limitOfTuplesPerRootQuery )
+    : m_limitOfTuplesPerRootQuery(_limitOfTuplesPerRootQuery)
+  {
+    //TODO{@mickiewicz}: needs to support configuration reload
   }
 
-  void TuplesQueryHandler::onFinishQuery( QueryDesc* _queryDesc ) {
+  void TuplesQueryHandler::onRootQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {
+    addInstrumentation( _queryDesc );
+  }
+
+  void TuplesQueryHandler::onSubQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {
+    addInstrumentation( _queryDesc );
+  }
+
+  void TuplesQueryHandler::onRootQueryFinish( QueryDesc* _queryDesc ) {
     assert( _queryDesc );
 
-    LOG_DEBUG( "Finish query: %s", _queryDesc->sourceText );
-
-    BOOST_SCOPE_EXIT_ALL(_queryDesc, this) {
-      TimeoutQueryHandler::onFinishQuery( _queryDesc );
-    };
-
-    LOG_DEBUG( "Finish query: %s with tuples:  %lf", _queryDesc->sourceText, _queryDesc->totaltime->tuplecount );
+    LOG_DEBUG( "Finish root query: %s with tuples:  %lf", _queryDesc->sourceText, _queryDesc->totaltime->tuplecount );
     if ( isQueryCancelPending() ) {
       return;
     }
 
-    if (isPendingRootQuery(_queryDesc) ) {
-      checkTuplesLimit();
+    checkTuplesLimit();
+  }
+
+  void TuplesQueryHandler::onSubQueryFinish( QueryDesc* _queryDesc ) {
+    assert( _queryDesc );
+
+    LOG_DEBUG( "Finish sub query: %s with tuples:  %lf", _queryDesc->sourceText, _queryDesc->totaltime->tuplecount );
+    if ( isQueryCancelPending() ) {
       return;
     }
 
-    assert( isRootQueryPending() );
-    assert( getPendingRootQuery()->totaltime );
+    assert( getRootQuery()->totaltime );
     assert( _queryDesc->totaltime );
 
-    InstrAggNode( getPendingRootQuery()->totaltime, _queryDesc->totaltime );
+    InstrAggNode( getRootQuery()->totaltime, _queryDesc->totaltime );
 
     checkTuplesLimit();
   }
 
   void TuplesQueryHandler::checkTuplesLimit() {
-    if ( !isRootQueryPending() ) {
-      return;
-    }
-
-    if (getPendingRootQuery()->totaltime->tuplecount > m_limitOfTuplesPerRootQuery ) {
+    if (getRootQuery()->totaltime->tuplecount > m_limitOfTuplesPerRootQuery ) {
       LOG_WARNING("Query was broken because of tuples limit reached %lf > %d"
-                   , getPendingRootQuery()->totaltime->tuplecount
+                   , getRootQuery()->totaltime->tuplecount
                    , m_limitOfTuplesPerRootQuery
       );
       breakPendingRootQuery();

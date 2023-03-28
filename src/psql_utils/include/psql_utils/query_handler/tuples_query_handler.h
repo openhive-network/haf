@@ -1,21 +1,20 @@
 #pragma once
 
-#include "psql_utils/query_handler/timeout_query_handler.h"
+#include "psql_utils/query_handler/root_query_handler.hpp"
 
 namespace PsqlTools::PsqlUtils {
 
   /**
    *  Break a query when more than given number of tuples are touched, or the execution timeout was exceeded
    */
-  class TuplesQueryHandler : public TimeoutQueryHandler {
+  class TuplesQueryHandler : public RootQueryHandler {
   public:
-    TuplesQueryHandler(
-        uint32_t _limitOfTuplesPerRootQuery
-      , std::chrono::milliseconds _queryTimeout
-    );
+    explicit TuplesQueryHandler( uint32_t _limitOfTuplesPerRootQuery );
 
-    void onRunQuery( QueryDesc* _queryDesc ) override;
-    void onFinishQuery( QueryDesc* _queryDesc ) override;
+    void onRootQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) override;
+    void onSubQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) override;
+    void onRootQueryFinish( QueryDesc* _queryDesc ) override;
+    void onSubQueryFinish( QueryDesc* _queryDesc ) override;
 
   private:
     void addInstrumentation( QueryDesc* _queryDesc ) const;

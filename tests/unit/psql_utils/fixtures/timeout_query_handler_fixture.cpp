@@ -20,9 +20,9 @@ namespace Fixtures {
     ExecutorFinish_hook = nullptr;
     ExecutorEnd_hook = nullptr;
 
-    if (PsqlTools::PsqlUtils::TimeoutQueryHandler::isInitialized()) {
+    if (m_unitUnderTest) {
       EXPECT_CALL( *m_postgres_mock, disable_timeout( ::testing::_, ::testing::_ )).Times( 1 );
-      PsqlTools::PsqlUtils::QueryHandler::deinitialize<PsqlTools::PsqlUtils::TimeoutQueryHandler>();
+      m_unitUnderTest.reset();
     }
   }
 

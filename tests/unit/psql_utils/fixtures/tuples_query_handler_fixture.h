@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mock/gmock_fixture.hpp"
 #include "timeout_query_handler_fixture.h"
 
 #include "psql_utils/query_handler/tuples_query_handler.h"
@@ -10,14 +11,18 @@
 
 namespace Fixtures {
 
-  struct TuplesQueryHandlerFixture : public TimeoutQueryHandlerFixture {
+  struct TuplesQueryHandlerFixture : public GmockFixture{
     TuplesQueryHandlerFixture();
 
     ~TuplesQueryHandlerFixture();
 
-    void moveToRunRootQuery( int _limit, std::chrono::milliseconds _timeout );
+    void moveToRunRootQuery( int _limit );
 
+    std::unique_ptr<QueryDesc> m_rootQuery;
+    std::unique_ptr<QueryDesc> m_subQuery;
     Instrumentation m_instrumentation{};
+
+    std::shared_ptr< PsqlTools::PsqlUtils::TuplesQueryHandler > m_unitUnderTest;
   };
 
 

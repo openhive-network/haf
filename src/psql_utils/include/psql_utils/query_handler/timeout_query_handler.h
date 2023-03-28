@@ -1,6 +1,6 @@
 #pragma once
 
-#include "query_handler.h"
+#include "psql_utils/query_handler/root_query_handler.hpp"
 
 #include <chrono>
 
@@ -18,29 +18,17 @@ namespace PsqlTools::PsqlUtils {
    * Timeout value refers to the time of a root query execution ( which includes sub-statements times )
    */
   class TimeoutQueryHandler
-    : public QueryHandler
+    : public RootQueryHandler
   {
     public:
     TimeoutQueryHandler( std::chrono::milliseconds _queryTimeout );
     ~TimeoutQueryHandler() override;
 
-    void onStartQuery( QueryDesc* _queryDesc, int _eflags ) override;
-    void onEndQuery( QueryDesc* _queryDesc ) override;
-
-    static bool isRootQueryPending();
-
-    protected:
-    static bool isPendingRootQuery(QueryDesc* _queryDesc );
-    static bool isQueryCancelPending();
-    static void breakPendingRootQuery();
-
-    // may return nullptr
-    static QueryDesc* getPendingRootQuery();
+    void onRootQueryStart( QueryDesc* _queryDesc, int _eflags ) override;
+    void onRootQueryEnd( QueryDesc* _queryDesc ) override;
 
     private:
     void spawnTimer();
-
-    static void setPendingRootQuery( QueryDesc* _queryDesc );
 
     private:
       const std::chrono::milliseconds m_queryTimeout;

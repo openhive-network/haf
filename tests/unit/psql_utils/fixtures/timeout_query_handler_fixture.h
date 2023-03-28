@@ -15,18 +15,19 @@ namespace Fixtures {
 
     ~TimeoutQueryHandlerFixture();
 
-    template< typename _Handler, typename... _Args  >
-    void moveToPendingRootQuery( _Args... _args );
+    void moveToPendingRootQuery();
 
     std::unique_ptr<QueryDesc> m_rootQuery;
     std::unique_ptr<QueryDesc> m_subQuery;
     static const auto m_expected_timer_id = static_cast< TimeoutId >( USER_TIMEOUT + 1 );
     const std::chrono::milliseconds m_timeout{1000};
     timeout_handler_proc m_timoutHandler = nullptr;
+
+    std::shared_ptr< PsqlTools::PsqlUtils::TimeoutQueryHandler > m_unitUnderTest;
   };
 
-  template< typename _Handler, typename... _Args >
-  inline void TimeoutQueryHandlerFixture::moveToPendingRootQuery( _Args... _args ) {
+
+  inline void TimeoutQueryHandlerFixture::moveToPendingRootQuery() {
     const auto flags = 0;
 
     ON_CALL( *m_postgres_mock, RegisterTimeout ).WillByDefault(
@@ -44,7 +45,7 @@ namespace Fixtures {
       EXPECT_CALL( *m_postgres_mock, standard_ExecutorStart( m_rootQuery.get(), flags )).Times( 1 );
     }
 
-    PsqlTools::PsqlUtils::QueryHandler::initialize<_Handler>( _args... );
+    m_unitUnderTest = std::make_shared< PsqlTools::PsqlUtils::TimeoutQueryHandler >( m_timeout );
 
     ExecutorStart_hook( m_rootQuery.get(), flags );
   }
