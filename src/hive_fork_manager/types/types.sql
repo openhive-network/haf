@@ -250,4 +250,9 @@ CREATE TYPE hive.delegate_vesting_shares_operation AS (
   vesting_shares hive.asset
 );
 
+CREATE TYPE hive.delete_comment_operation AS (
+  author hive.account_name_type,
+  permlink hive.permlink
+);
+
 CREATE TYPE hive.void_t AS ();
