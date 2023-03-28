@@ -550,4 +550,11 @@ extern "C"
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::custom_json_operation>(op);
   }
+
+  PG_FUNCTION_INFO_V1( operation_to_custom_operation );
+  Datum operation_to_custom_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::custom_operation>(op);
+  }
 }

@@ -233,4 +233,10 @@ CREATE TYPE hive.custom_json_operation AS (
   json text
 );
 
+CREATE TYPE hive.custom_operation AS (
+  required_auths hive.account_name_type[],
+  id int4, -- uint16_t: 2 byte, but unsigned (uint16_t)
+  data bytea
+);
+
 CREATE TYPE hive.void_t AS ();

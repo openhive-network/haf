@@ -187,3 +187,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.custom_json_operation)
   WITH FUNCTION hive._operation_to_custom_json_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_custom_operation(
+  hive.operation
+) RETURNS hive.custom_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_custom_operation';
+
+CREATE CAST (hive.operation AS hive.custom_operation)
+  WITH FUNCTION hive._operation_to_custom_operation
+  AS ASSIGNMENT;
