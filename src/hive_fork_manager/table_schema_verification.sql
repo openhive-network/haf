@@ -123,7 +123,8 @@ LOOP
 --    END IF;
 
     schemarow.table_name := _table_name;
-    schemarow.table_schema := (_columns || _constraints || _indexes);
+--    schemarow.table_schema := (_columns || _constraints || _indexes);
+    schemarow.table_schema := (_columns);
     schemarow.table_schema_hash := MD5(_columns || _constraints || _indexes)::uuid;
     schemarow.columns_hash := MD5(_columns)::uuid;
     schemarow.constraints_hash := MD5(_constraints)::uuid;
