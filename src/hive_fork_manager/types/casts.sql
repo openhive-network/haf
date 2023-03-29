@@ -277,3 +277,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.feed_publish_operation)
   WITH FUNCTION hive._operation_to_feed_publish_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_limit_order_cancel_operation(
+  hive.operation
+) RETURNS hive.limit_order_cancel_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_limit_order_cancel_operation';
+
+CREATE CAST (hive.operation AS hive.limit_order_cancel_operation)
+  WITH FUNCTION hive._operation_to_limit_order_cancel_operation
+  AS ASSIGNMENT;

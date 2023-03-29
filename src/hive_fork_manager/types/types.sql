@@ -301,4 +301,9 @@ CREATE TYPE hive.feed_publish_operation AS (
   exchange_rate hive.price
 );
 
+CREATE TYPE hive.limit_order_cancel_operation AS (
+  owner hive.account_name_type,
+  orderid int8 -- uint32_t: 4 byte, but unsigned (int8)
+);
+
 CREATE TYPE hive.void_t AS ();
