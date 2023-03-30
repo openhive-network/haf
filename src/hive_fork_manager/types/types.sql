@@ -417,4 +417,11 @@ CREATE TYPE hive.set_reset_account_operation AS (
   reset_account hive.account_name_type
 );
 
+CREATE TYPE hive.set_withdraw_vesting_route_operation AS (
+  from_account hive.account_name_type,
+  to_account hive.account_name_type,
+  percent int4, -- uint16_t: 4 byte, but unsigned (int4)
+  auto_vest boolean
+);
+
 CREATE TYPE hive.void_t AS ();
