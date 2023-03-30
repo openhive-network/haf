@@ -3,6 +3,7 @@
 #include "psql_utils/query_handler/root_query_handler.hpp"
 
 #include <chrono>
+#include <functional>
 
 #include "psql_utils/postgres_includes.hpp"
 
@@ -21,7 +22,10 @@ namespace PsqlTools::PsqlUtils {
     : public RootQueryHandler
   {
     public:
-    TimeoutQueryHandler( std::chrono::milliseconds _queryTimeout );
+    using Limit = std::chrono::milliseconds;
+    using TimeoutLimitGetter = std::function< Limit() >;
+
+    TimeoutQueryHandler( TimeoutLimitGetter _limitGetter );
     ~TimeoutQueryHandler() override;
 
     void onRootQueryStart( QueryDesc* _queryDesc, int _eflags ) override;
@@ -31,7 +35,7 @@ namespace PsqlTools::PsqlUtils {
     void spawnTimer();
 
     private:
-      const std::chrono::milliseconds m_queryTimeout;
+      const TimeoutLimitGetter m_timeoutLimitGetter;
       TimeoutId m_pendingQueryTimeout{USER_TIMEOUT};
   };
 } // namespace PsqlTools::PsqlUtils

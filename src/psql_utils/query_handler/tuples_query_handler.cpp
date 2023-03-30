@@ -7,22 +7,26 @@
 
 namespace PsqlTools::PsqlUtils {
 
-  TuplesQueryHandler::TuplesQueryHandler( uint32_t _limitOfTuplesPerRootQuery )
-    : m_limitOfTuplesPerRootQuery(_limitOfTuplesPerRootQuery)
+  TuplesQueryHandler::TuplesQueryHandler( TuplesLimitGetter _tuplesLimitGetter )
+    : m_tuplesLimitGetter( _tuplesLimitGetter )
   {
-    //TODO{@mickiewicz}: needs to support configuration reload
+    assert( m_tuplesLimitGetter );
   }
 
   void TuplesQueryHandler::onRootQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {
+    m_limitOfTuplesPerRootQuery = m_tuplesLimitGetter();
     addInstrumentation( _queryDesc );
   }
 
   void TuplesQueryHandler::onSubQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {
+    assert( m_limitOfTuplesPerRootQuery );
+
     addInstrumentation( _queryDesc );
   }
 
   void TuplesQueryHandler::onRootQueryFinish( QueryDesc* _queryDesc ) {
     assert( _queryDesc );
+    assert( m_limitOfTuplesPerRootQuery );
 
     LOG_DEBUG( "Finish root query: %s with tuples:  %lf", _queryDesc->sourceText, _queryDesc->totaltime->tuplecount );
     if ( isQueryCancelPending() ) {
@@ -30,10 +34,12 @@ namespace PsqlTools::PsqlUtils {
     }
 
     checkTuplesLimit();
+    m_limitOfTuplesPerRootQuery.reset();
   }
 
   void TuplesQueryHandler::onSubQueryFinish( QueryDesc* _queryDesc ) {
     assert( _queryDesc );
+    assert( m_limitOfTuplesPerRootQuery );
 
     LOG_DEBUG( "Finish sub query: %s with tuples:  %lf", _queryDesc->sourceText, _queryDesc->totaltime->tuplecount );
     if ( isQueryCancelPending() ) {
@@ -49,10 +55,12 @@ namespace PsqlTools::PsqlUtils {
   }
 
   void TuplesQueryHandler::checkTuplesLimit() {
-    if (getRootQuery()->totaltime->tuplecount > m_limitOfTuplesPerRootQuery ) {
+    assert( m_limitOfTuplesPerRootQuery );
+
+    if (getRootQuery()->totaltime->tuplecount > m_limitOfTuplesPerRootQuery.value() ) {
       LOG_WARNING("Query was broken because of tuples limit reached %lf > %d"
                    , getRootQuery()->totaltime->tuplecount
-                   , m_limitOfTuplesPerRootQuery
+                   , m_limitOfTuplesPerRootQuery.value()
       );
       breakPendingRootQuery();
     }

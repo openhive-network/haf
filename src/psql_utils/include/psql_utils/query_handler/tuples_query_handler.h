@@ -2,14 +2,20 @@
 
 #include "psql_utils/query_handler/root_query_handler.hpp"
 
+#include <functional>
+#include <optional>
+
 namespace PsqlTools::PsqlUtils {
 
   /**
-   *  Break a query when more than given number of tuples are touched, or the execution timeout was exceeded
+   *  Break a root query when more than given number of tuples are touched, or the execution timeout was exceeded
    */
   class TuplesQueryHandler : public RootQueryHandler {
   public:
-    explicit TuplesQueryHandler( uint32_t _limitOfTuplesPerRootQuery );
+    using Limit = uint32_t;
+    using TuplesLimitGetter = std::function< Limit() >;
+
+    explicit TuplesQueryHandler( TuplesLimitGetter _tuplesLimitGetter );
 
     void onRootQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) override;
     void onSubQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) override;
@@ -21,7 +27,8 @@ namespace PsqlTools::PsqlUtils {
     void checkTuplesLimit();
 
   private:
-    const uint32_t m_limitOfTuplesPerRootQuery;
+    std::optional< Limit > m_limitOfTuplesPerRootQuery = std::nullopt;
+    const TuplesLimitGetter m_tuplesLimitGetter;
   };
 
 } // namespace PsqlTools::PsqlUtils

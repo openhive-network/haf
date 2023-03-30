@@ -12,8 +12,8 @@ namespace {
 } // namespace
 
 namespace PsqlTools::PsqlUtils {
-  TimeoutQueryHandler::TimeoutQueryHandler( std::chrono::milliseconds _queryTimeout )
-    : m_queryTimeout( std::move(_queryTimeout) )
+  TimeoutQueryHandler::TimeoutQueryHandler( TimeoutLimitGetter _limitGetter  )
+    : m_timeoutLimitGetter( _limitGetter )
   {
     // no worries about fail of registration because pg will terminate backend
     m_pendingQueryTimeout = RegisterTimeout( USER_TIMEOUT, timeoutHandler );
@@ -45,6 +45,7 @@ namespace PsqlTools::PsqlUtils {
   }
 
   void TimeoutQueryHandler::spawnTimer() {
-    enable_timeout_after( m_pendingQueryTimeout, m_queryTimeout.count() );
+    assert( m_timeoutLimitGetter );
+    enable_timeout_after( m_pendingQueryTimeout, m_timeoutLimitGetter().count() );
   }
 } // namespace PsqlTools::PsqlUtils
