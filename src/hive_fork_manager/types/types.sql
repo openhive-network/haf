@@ -411,4 +411,10 @@ CREATE TYPE hive.reset_account_operation AS (
   new_owner_authority hive.authority
 );
 
+CREATE TYPE hive.set_reset_account_operation AS (
+  account hive.account_name_type,
+  current_reset_account hive.account_name_type,
+  reset_account hive.account_name_type
+);
+
 CREATE TYPE hive.void_t AS ();
