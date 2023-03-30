@@ -446,4 +446,10 @@ CREATE TYPE hive.transfer_to_savings_operation AS (
   memo hive.memo
 );
 
+CREATE TYPE hive.transfer_to_vesting_operation AS (
+  "from" hive.account_name_type,
+  "to" hive.account_name_type,
+  amount hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
