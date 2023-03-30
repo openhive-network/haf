@@ -15,7 +15,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit );
+    moveToRunRootQuery( []{ return tuplesLimit; } );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit - 10;
 
@@ -34,7 +34,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit );
+    moveToRunRootQuery( []{ return tuplesLimit; } );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit;
 
@@ -53,7 +53,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit );
+    moveToRunRootQuery( []{ return tuplesLimit; } );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit + 10;
 
@@ -72,7 +72,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit );
+    moveToRunRootQuery( []{ return tuplesLimit; } );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit - 10;
     Instrumentation subQueryInstrumentation;
@@ -94,7 +94,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit );
+    moveToRunRootQuery( []{ return tuplesLimit; } );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit;
     Instrumentation subQueryInstrumentation;
@@ -116,7 +116,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesQueryHandlerFixt
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( tuplesLimit );
+    moveToRunRootQuery( []{ return tuplesLimit; } );
 
     m_rootQuery->totaltime->tuplecount = tuplesLimit + 10;
     Instrumentation subQueryInstrumentation;

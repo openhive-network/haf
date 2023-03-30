@@ -16,7 +16,7 @@ namespace Fixtures {
 
     ~TuplesQueryHandlerFixture();
 
-    void moveToRunRootQuery( int _limit );
+    void moveToRunRootQuery( PsqlTools::PsqlUtils::TuplesQueryHandler::TuplesLimitGetter _limit );
 
     std::unique_ptr<QueryDesc> m_rootQuery;
     std::unique_ptr<QueryDesc> m_subQuery;
