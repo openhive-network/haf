@@ -381,4 +381,11 @@ CREATE TYPE hive.pow_operation AS (
   props hive.legacy_chain_properties
 );
 
+CREATE TYPE hive.recover_account_operation AS (
+  account_to_recover hive.account_name_type,
+  new_owner_authority hive.authority,
+  recent_owner_authority hive.authority,
+  extensions hive.extensions_type
+);
+
 CREATE TYPE hive.void_t AS ();
