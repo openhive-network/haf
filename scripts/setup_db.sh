@@ -27,11 +27,9 @@ print_help () {
     echo "                                  Role MUST be earlier created on pointed Postgres instance !!!"
     echo "                                  If omitted, defaults to haf_app_admin role."
     echo "  --haf-db-admin=NAME             Allows to specify a name of database admin role having permission to create the database"
-    echo "                                  and install an extension inside."
+    echo "                       and install an exension inside."
     echo "                                  Role MUST be earlier created on pointed Postgres instance !!!"
     echo "                                  If omitted, defaults to haf_admin role."
-    echo "  --haf-db-admin-libs=VALUE       Allows to specify postgres modules to preload before db admin session start"
-    echo "                                  The parameters LIBRARIES are passed to configuration option 'local_preload_libraries' "
     echo "  --no-create-schema              Skips the final steps of creating schema, extension and database roles"
     echo "  --help                          Display this help screen and exit"
     echo
@@ -39,7 +37,6 @@ print_help () {
 
 DB_NAME="haf_block_log"
 DB_ADMIN="haf_admin"
-DB_ADMIN_PRELOAD_LIBS=""
 HAF_TABLESPACE_NAME="haf_tablespace"
 
 DEFAULT_DB_USERS=("haf_app_admin")
@@ -66,9 +63,6 @@ while [ $# -gt 0 ]; do
         ;;
     --haf-db-admin=*)
         DB_ADMIN="${1#*=}"
-        ;;
-    --haf-db-admin-libs=*)
-        DB_ADMIN_PRELOAD_LIBS="${1#*=}"
         ;;
     --help)
         print_help
@@ -119,12 +113,3 @@ for u in "${DB_USERS[@]}"; do
 EOF
 
 done
-
-if [ -n "$DB_ADMIN_PRELOAD_LIBS" ]; then
-  for user in ${DB_ADMIN} ${DB_USERS}; do
-    sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
-     ALTER SYSTEM SET session_preload_libraries TO 'libquery_supervisor.so';SELECT pg_reload_conf();
-EOF
-
-  done
-fi

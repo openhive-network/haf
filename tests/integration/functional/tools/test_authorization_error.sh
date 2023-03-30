@@ -4,11 +4,10 @@ extension_path=$1
 test_path=$2;
 setup_scripts_dir_path=$3;
 postgres_port=$4;
-preload_libraries=$5;
 
 . ./tools/common.sh
 
-setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path" "$preload_libraries"
+setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
 
 trap on_exit EXIT;
 
