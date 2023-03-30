@@ -23,6 +23,8 @@ Datum key_authority_map_to_hstore(const fc::flat_map<hive::protocol::public_key_
 template<typename T>
 Datum to_sql_tuple(const T& value);
 Datum to_sql_tuple(uint32_t value);
+template<typename T, size_t N>
+Datum to_sql_tuple(const fc::array<T, N>& value);
 Datum to_sql_tuple(const hive::protocol::asset& asset);
 Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions);
 Datum to_sql_tuple(const hive::protocol::future_extensions& extensions);
@@ -175,9 +177,29 @@ Datum to_datum(const hive::protocol::legacy_chain_properties& value)
   // fc::static_variant<pow2, equihash_pow> is being created from legacy_chain_properties, which fails
   return to_sql_tuple(value);
 }
+Datum to_datum(const hive::protocol::pow& value)
+{
+  // This overload should not be needed, but without it
+  // fc::static_variant<pow2, equihash_pow> is being created from pow, which fails
+  return to_sql_tuple(value);
+}
+Datum to_datum(const fc::ecc::public_key_data& value)
+{
+  // This overload should not be needed, but without it
+  // fc::static_variant<pow2, equihash_pow> is being created from public_key_data, which fails
+  return to_sql_tuple(value);
+}
 Datum to_datum(const hive::protocol::legacy_hive_asset& value)
 {
   return to_datum(value.to_asset<false>());
+}
+template<typename T, size_t N>
+Datum to_datum(const fc::array<T, N>& value)
+{
+  bytea* bytes = (bytea*)palloc(VARHDRSZ + N);
+  std::copy(std::begin(value), std::end(value), VARDATA(bytes));
+  SET_VARSIZE(bytes, VARHDRSZ + N);
+  PG_RETURN_BYTEA_P(bytes);
 }
 
 template<typename T>
@@ -222,6 +244,12 @@ Datum to_sql_tuple(const T& value)
 }
 
 Datum to_sql_tuple(uint32_t value)
+{
+  return to_datum(value);
+}
+
+template<typename T, size_t N>
+Datum to_sql_tuple(const fc::array<T, N>& value)
 {
   return to_datum(value);
 }
@@ -757,5 +785,12 @@ extern "C"
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::pow2_operation>(op);
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_pow_operation );
+  Datum operation_to_pow_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::pow_operation>(op);
   }
 }

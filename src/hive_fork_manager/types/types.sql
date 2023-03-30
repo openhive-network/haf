@@ -366,4 +366,19 @@ CREATE TYPE hive.pow2_operation AS (
   props hive.legacy_chain_properties
 );
 
+CREATE TYPE pow AS (
+  worker hive.public_key_type,
+  input hive.digest_type,
+  signature hive.signature_type,
+  work hive.digest_type
+);
+
+CREATE TYPE hive.pow_operation AS (
+  worker_account hive.account_name_type,
+  block_id hive.block_id_type,
+  nonce NUMERIC,
+  work hive.pow,
+  props hive.legacy_chain_properties
+);
+
 CREATE TYPE hive.void_t AS ();

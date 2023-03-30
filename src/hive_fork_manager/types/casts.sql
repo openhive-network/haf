@@ -317,3 +317,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.pow2_operation)
   WITH FUNCTION hive._operation_to_pow2_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_pow_operation(
+  hive.operation
+) RETURNS hive.pow_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_pow_operation';
+
+CREATE CAST (hive.operation AS hive.pow_operation)
+  WITH FUNCTION hive._operation_to_pow_operation
+  AS ASSIGNMENT;
