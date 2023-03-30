@@ -424,4 +424,19 @@ CREATE TYPE hive.set_withdraw_vesting_route_operation AS (
   auto_vest boolean
 );
 
+CREATE TYPE hive.transfer_from_savings_operation AS (
+  "from" hive.account_name_type,
+  request_id int8, -- uint32_t: 4 byte, but unsigned (int8)
+  "to" hive.account_name_type,
+  amount hive.asset,
+  memo hive.memo
+);
+
+CREATE TYPE hive.transfer_operation AS (
+  "from" hive.account_name_type,
+  "to" hive.account_name_type,
+  amount hive.asset,
+  memo hive.memo
+);
+
 CREATE TYPE hive.void_t AS ();

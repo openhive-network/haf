@@ -835,4 +835,18 @@ extern "C"
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::set_withdraw_vesting_route_operation>(op);
   }
+
+  PG_FUNCTION_INFO_V1( operation_to_transfer_from_savings_operation );
+  Datum operation_to_transfer_from_savings_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::transfer_from_savings_operation>(op);
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_transfer_operation );
+  Datum operation_to_transfer_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::transfer_operation>(op);
+  }
 }
