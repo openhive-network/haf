@@ -347,3 +347,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.recurrent_transfer_operation)
   WITH FUNCTION hive._operation_to_recurrent_transfer_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_request_account_recovery_operation(
+  hive.operation
+) RETURNS hive.request_account_recovery_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_request_account_recovery_operation';
+
+CREATE CAST (hive.operation AS hive.request_account_recovery_operation)
+  WITH FUNCTION hive._operation_to_request_account_recovery_operation
+  AS ASSIGNMENT;
