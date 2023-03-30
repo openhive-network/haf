@@ -417,3 +417,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.transfer_to_savings_operation)
   WITH FUNCTION hive._operation_to_transfer_to_savings_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_transfer_to_vesting_operation(
+  hive.operation
+) RETURNS hive.transfer_to_vesting_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_transfer_to_vesting_operation';
+
+CREATE CAST (hive.operation AS hive.transfer_to_vesting_operation)
+  WITH FUNCTION hive._operation_to_transfer_to_vesting_operation
+  AS ASSIGNMENT;
