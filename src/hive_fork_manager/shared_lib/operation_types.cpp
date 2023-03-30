@@ -22,10 +22,14 @@ Datum key_authority_map_to_hstore(const fc::flat_map<hive::protocol::public_key_
 
 template<typename T>
 Datum to_sql_tuple(const T& value);
+Datum to_sql_tuple(uint32_t value);
 Datum to_sql_tuple(const hive::protocol::asset& asset);
 Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions);
 Datum to_sql_tuple(const hive::protocol::future_extensions& extensions);
 Datum to_sql_tuple(const hive::protocol::price& price);
+Datum to_sql_tuple(const hive::protocol::pow2_work& work);
+template<typename T>
+Datum to_sql_tuple(const hive::protocol::fixed_string_impl<T>& string);
 
 template<typename Iter>
 Datum to_sql_array(Iter first, Iter last);
@@ -54,6 +58,10 @@ Datum to_datum(int16_t value)
 Datum to_datum(uint32_t value)
 {
   return Int64GetDatum(value);
+}
+Datum to_datum(uint64_t value)
+{
+  return DirectFunctionCall3(numeric_in, CStringGetDatum(std::to_string(value).c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
 }
 Datum to_datum(const std::string& value)
 {
@@ -100,6 +108,23 @@ Datum to_datum(const hive::protocol::authority& value)
 {
   return to_sql_tuple(value);
 }
+Datum to_datum(const hive::protocol::pow2_input& value)
+{
+  return to_sql_tuple(value);
+}
+Datum to_datum(const fc::equihash::proof& value)
+{
+  return to_sql_tuple(value);
+}
+Datum to_datum(const hive::protocol::pow2_work& value)
+{
+  return to_sql_tuple(value);
+}
+template<typename T>
+Datum to_datum(const hive::protocol::fixed_string_impl<T>& value)
+{
+  return to_sql_tuple(value);
+}
 Datum to_datum(const hive::protocol::authority::account_authority_map& value)
 {
   return account_authority_map_to_hstore(value);
@@ -116,6 +141,23 @@ Datum to_datum(const hive::protocol::public_key_type& value)
 {
   return CStringGetTextDatum(static_cast<std::string>(value).c_str());
 }
+Datum to_datum(const fc::ripemd160& value)
+{
+  return CStringGetTextDatum(static_cast<std::string>(value).c_str());
+}
+Datum to_datum(const fc::sha256& value)
+{
+  return CStringGetTextDatum(static_cast<std::string>(value).c_str());
+}
+Datum to_datum(const fc::time_point_sec& value)
+{
+  return CStringGetTextDatum(static_cast<std::string>(value).c_str());
+}
+template<typename T>
+std::optional<Datum> to_datum(const fc::safe<T>& value)
+{
+  return to_datum(value.value);
+}
 template<typename T>
 std::optional<Datum> to_datum(const fc::optional<T>& value)
 {
@@ -126,6 +168,16 @@ template<typename T>
 Datum to_datum(const fc::flat_set<T>& value)
 {
   return to_sql_array(std::begin(value), std::end(value));
+}
+Datum to_datum(const hive::protocol::legacy_chain_properties& value)
+{
+  // This overload should not be needed, but without it
+  // fc::static_variant<pow2, equihash_pow> is being created from legacy_chain_properties, which fails
+  return to_sql_tuple(value);
+}
+Datum to_datum(const hive::protocol::legacy_hive_asset& value)
+{
+  return to_datum(value.to_asset<false>());
 }
 
 template<typename T>
@@ -167,6 +219,11 @@ Datum to_sql_tuple(const T& value)
   fc::reflector<T>::visit(members_to_sql_tuple_visitor(value, values, nulls));
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
+Datum to_sql_tuple(uint32_t value)
+{
+  return to_datum(value);
 }
 
 Datum to_sql_tuple(const hive::protocol::asset& asset)
@@ -306,6 +363,45 @@ Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extens
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
+
+Datum to_sql_tuple(const hive::protocol::pow2_work& work)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.pow2_work");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    (Datum)0, // pow2
+    (Datum)0, // equihash_pow
+  };
+  bool nulls[] = {
+    true,
+    true,
+  };
+  struct pow_visitor
+  {
+    using result_type = void;
+
+    pow_visitor(Datum* values, bool* nulls) : values(values), nulls(nulls)
+    {}
+    void operator()(const hive::protocol::pow2& pow2)
+    {
+      values[0] = to_sql_tuple(pow2);
+      nulls[0] = false;
+    }
+    void operator()(const hive::protocol::equihash_pow& pow)
+    {
+      values[1] = to_sql_tuple(pow);
+      nulls[1] = false;
+    }
+  private:
+    Datum* values;
+    bool* nulls;
+  };
+  pow_visitor v(values, nulls);
+  work.visit(v);
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
 
 Pairs prop_to_hstore_pair(const std::pair<std::string, std::vector<char>>& prop)
 {
@@ -654,5 +750,12 @@ extern "C"
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::limit_order_create_operation>(op);
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_pow2_operation );
+  Datum operation_to_pow2_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::pow2_operation>(op);
   }
 }

@@ -324,4 +324,46 @@ CREATE TYPE hive.limit_order_create_operation AS (
   expiration timestamp
 );
 
+CREATE TYPE hive.pow2_input AS (
+  worker_account hive.account_name_type,
+  prev_block hive.block_id_type,
+  nonce NUMERIC
+);
+
+CREATE TYPE hive.pow2 AS (
+  input hive.pow2_input,
+  pow_summary int8 -- uint32_t: 4 byte, but unsigned (int8)
+);
+
+CREATE TYPE hive.equihash_proof AS (
+      n int8,
+      k int8,
+      seed TEXT,
+      inputs int8[]
+);
+
+CREATE TYPE hive.equihash_pow AS (
+  input hive.pow2_input,
+  proof bytea,
+  prev_block hive.block_id_type,
+  pow_summary int8 -- uint32_t: 4 byte, but unsigned (int8)
+);
+
+CREATE TYPE hive.pow2_work AS (
+  pow2 hive.pow2,
+  equihash_pow hive.equihash_pow
+);
+
+CREATE TYPE hive.legacy_chain_properties AS (
+  account_creation_fee hive.legacy_hive_asset,
+  maximum_block_size int8, -- uint32_t: 4 byte, but unsigned (int8)
+  hbd_interest_rate int4 -- uint16_t: 2 byte, but unsigned (int4)
+);
+
+CREATE TYPE hive.pow2_operation AS (
+  work hive.pow2_work,
+  new_owner_key hive.public_key_type,
+  props hive.legacy_chain_properties
+);
+
 CREATE TYPE hive.void_t AS ();
