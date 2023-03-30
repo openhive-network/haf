@@ -452,4 +452,9 @@ CREATE TYPE hive.transfer_to_vesting_operation AS (
   amount hive.asset
 );
 
+CREATE TYPE hive.withdraw_vesting_operation AS (
+  "to" hive.account_name_type,
+  vesting_shares hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
