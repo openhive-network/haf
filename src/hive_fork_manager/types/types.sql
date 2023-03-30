@@ -457,4 +457,12 @@ CREATE TYPE hive.withdraw_vesting_operation AS (
   vesting_shares hive.asset
 );
 
+CREATE TYPE hive.witness_update_operation AS (
+  owner hive.account_name_type,
+  url hive.permlink,
+  block_signing_key hive.public_key_type,
+  props hive.legacy_chain_properties,
+  fee hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
