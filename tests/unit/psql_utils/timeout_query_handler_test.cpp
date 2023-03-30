@@ -14,7 +14,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
       .Times( 1 );
     EXPECT_CALL( *m_postgres_mock, disable_timeout( ::testing::_, ::testing::_ )).Times( 1 );
 
-    PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( 1s );
+    PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( []{ return 1s; } );
 
     // check if handlers are changed
     BOOST_ASSERT( ExecutorStart_hook != executorStartHook );
@@ -30,9 +30,8 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     EXPECT_CALL( *m_postgres_mock, disable_timeout( m_expected_timer_id, true )).Times( 1 );
 
     {
-      PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( 1s );
+      PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( []{ return 1s; } );
     }
-
 
     // check if handlers are restored
     BOOST_ASSERT( ExecutorStart_hook == executorStartHook );
@@ -51,7 +50,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
       .WillOnce( ::testing::Return( m_expected_timer_id ) )
     ;
     const std::chrono::milliseconds timeout = 1s;
-    PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( timeout );
+    PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( [timeout]{ return timeout; } );
 
     // THEN
     // setup timeout
@@ -80,7 +79,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
       .WillOnce( ::testing::Return( m_expected_timer_id ) )
       ;
     const std::chrono::milliseconds timeout = 1s;
-    PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( timeout );
+    PsqlTools::PsqlUtils::TimeoutQueryHandler unitUnderTest( [timeout]{ return timeout; } );
 
     // THEN
     // setup timeout

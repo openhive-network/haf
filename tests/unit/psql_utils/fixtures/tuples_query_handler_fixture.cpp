@@ -21,7 +21,7 @@ namespace Fixtures {
     ExecutorEnd_hook = nullptr;
   }
 
-  void TuplesQueryHandlerFixture::moveToRunRootQuery(int _limit ) {
+  void TuplesQueryHandlerFixture::moveToRunRootQuery( PsqlTools::PsqlUtils::TuplesQueryHandler::TuplesLimitGetter _limit ) {
     using namespace testing;
 
     EXPECT_CALL( *m_postgres_mock, InstrAlloc( _, _, _ ) ).WillOnce( Return(&m_instrumentation) );
