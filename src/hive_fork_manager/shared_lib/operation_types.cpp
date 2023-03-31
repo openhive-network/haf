@@ -32,6 +32,7 @@ Datum to_sql_tuple(const hive::protocol::price& price);
 Datum to_sql_tuple(const hive::protocol::pow2_work& work);
 template<typename T>
 Datum to_sql_tuple(const hive::protocol::fixed_string_impl<T>& string);
+Datum to_sql_tuple(const int64_t& value);
 
 template<typename Iter>
 Datum to_sql_array(Iter first, Iter last);
@@ -62,6 +63,10 @@ Datum to_datum(uint32_t value)
   return Int64GetDatum(value);
 }
 Datum to_datum(uint64_t value)
+{
+  return DirectFunctionCall3(numeric_in, CStringGetDatum(std::to_string(value).c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+}
+Datum to_datum(int64_t value)
 {
   return DirectFunctionCall3(numeric_in, CStringGetDatum(std::to_string(value).c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
 }
@@ -254,6 +259,11 @@ Datum to_sql_tuple(const fc::array<T, N>& value)
   return to_datum(value);
 }
 
+Datum to_sql_tuple(const int64_t& value)
+{
+  return to_datum(value);
+}
+
 Datum to_sql_tuple(const hive::protocol::asset& asset)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.asset");
@@ -318,6 +328,11 @@ template<>
 std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<hive::protocol::account_name_type>()
 {
   return {"hive", "account_name_type"};
+}
+template<>
+std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<int64_t>()
+{
+  return {"pg_catalog", "numeric"};
 }
 
 template<typename Iter>
@@ -890,5 +905,12 @@ extern "C"
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::proposal_pay_operation>(op);
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_remove_proposal_operation );
+  Datum operation_to_remove_proposal_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::remove_proposal_operation>(op);
   }
 }

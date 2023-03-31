@@ -485,4 +485,10 @@ CREATE TYPE hive.proposal_pay_operation AS (
   op_in_trx int4 -- uint16_t: 2 bytes, but unsigned (int4)
 );
 
+CREATE TYPE hive.remove_proposal_operation AS (
+  proposal_owner hive.account_name_type,
+  proposal_ids NUMERIC[],
+  extensions hive.extensions_type
+);
+
 CREATE TYPE hive.void_t AS ();
