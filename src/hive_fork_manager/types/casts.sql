@@ -567,3 +567,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.comment_reward_operation)
   WITH FUNCTION hive._operation_to_comment_reward_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_consolidate_treasury_balance_operation(
+  hive.operation
+) RETURNS hive.consolidate_treasury_balance_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_consolidate_treasury_balance_operation';
+
+CREATE CAST (hive.operation AS hive.consolidate_treasury_balance_operation)
+  WITH FUNCTION hive._operation_to_consolidate_treasury_balance_operation
+  AS ASSIGNMENT;

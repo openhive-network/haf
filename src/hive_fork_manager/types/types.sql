@@ -566,4 +566,8 @@ CREATE TYPE hive.comment_reward_operation AS (
   beneficiary_payout_value hive.asset
 );
 
+CREATE TYPE hive.consolidate_treasury_balance_operation AS (
+  total_moved hive.asset[]
+);
+
 CREATE TYPE hive.void_t AS ();
