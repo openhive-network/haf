@@ -537,3 +537,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.clear_null_account_balance_operation)
   WITH FUNCTION hive._operation_to_clear_null_account_balance_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_comment_benefactor_reward_operation(
+  hive.operation
+) RETURNS hive.comment_benefactor_reward_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_comment_benefactor_reward_operation';
+
+CREATE CAST (hive.operation AS hive.comment_benefactor_reward_operation)
+  WITH FUNCTION hive._operation_to_comment_benefactor_reward_operation
+  AS ASSIGNMENT;

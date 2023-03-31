@@ -542,4 +542,13 @@ CREATE TYPE hive.clear_null_account_balance_operation AS (
   total_cleared hive.asset[]
 );
 
+CREATE TYPE hive.comment_benefactor_reward_operation AS (
+  benefactor hive.account_name_type,
+  author hive.account_name_type,
+  permlink hive.permlink,
+  hbd_payout hive.asset,
+  hive_payout hive.asset,
+  vesting_payout hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
