@@ -706,4 +706,9 @@ CREATE TYPE hive.producer_reward_operation AS (
   vesting_shares hive.asset
 );
 
+CREATE TYPE hive.return_vesting_delegation_operation AS (
+  account hive.account_name_type,
+  vesting_shares hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
