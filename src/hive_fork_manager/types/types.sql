@@ -593,4 +593,8 @@ CREATE TYPE hive.effective_comment_vote_operation AS (
   pending_payout hive.asset
 );
 
+CREATE TYPE hive.expired_account_notification_operation AS (
+  account hive.account_name_type
+);
+
 CREATE TYPE hive.void_t AS ();

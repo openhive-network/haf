@@ -607,3 +607,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.effective_comment_vote_operation)
   WITH FUNCTION hive._operation_to_effective_comment_vote_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_expired_account_notification_operation(
+  hive.operation
+) RETURNS hive.expired_account_notification_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_expired_account_notification_operation';
+
+CREATE CAST (hive.operation AS hive.expired_account_notification_operation)
+  WITH FUNCTION hive._operation_to_expired_account_notification_operation
+  AS ASSIGNMENT;
