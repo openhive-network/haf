@@ -538,4 +538,8 @@ CREATE TYPE hive.changed_recovery_account_operation AS (
   new_recovery_account hive.account_name_type
 );
 
+CREATE TYPE hive.clear_null_account_balance_operation AS (
+  total_cleared hive.asset[]
+);
+
 CREATE TYPE hive.void_t AS ();
