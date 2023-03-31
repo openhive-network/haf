@@ -522,4 +522,14 @@ CREATE TYPE hive.account_created_operation AS (
   initial_delegation hive.asset
 );
 
+CREATE TYPE hive.author_reward_operation AS (
+  author hive.account_name_type,
+  permlink hive.permlink,
+  hbd_payout hive.asset,
+  hive_payout hive.asset,
+  vesting_payout hive.asset,
+  curators_vesting_payout hive.asset,
+  payout_must_be_claimed boolean
+);
+
 CREATE TYPE hive.void_t AS ();
