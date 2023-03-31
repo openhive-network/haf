@@ -515,4 +515,11 @@ CREATE TYPE hive.update_proposal_votes_operation AS (
   extensions hive.extensions_type
 );
 
+CREATE TYPE hive.account_created_operation AS (
+  new_account_name hive.account_name_type,
+  creator hive.account_name_type,
+  initial_vesting_shares hive.asset,
+  initial_delegation hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
