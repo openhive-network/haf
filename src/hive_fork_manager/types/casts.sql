@@ -777,3 +777,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.producer_reward_operation)
   WITH FUNCTION hive._operation_to_producer_reward_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_return_vesting_delegation_operation(
+  hive.operation
+) RETURNS hive.return_vesting_delegation_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_return_vesting_delegation_operation';
+
+CREATE CAST (hive.operation AS hive.return_vesting_delegation_operation)
+  WITH FUNCTION hive._operation_to_return_vesting_delegation_operation
+  AS ASSIGNMENT;
