@@ -671,4 +671,8 @@ CREATE TYPE hive.hardfork_hive_restore_operation AS (
   hive_transferred hive.asset
 );
 
+CREATE TYPE hive.hardfork_operation AS (
+  hardfork_id int8 -- uint32_t: 4 bytes, but unsigned (int8)
+);
+
 CREATE TYPE hive.void_t AS ();
