@@ -305,27 +305,27 @@ Datum to_sql_tuple(const hive::protocol::future_extensions& extensions)
 }
 
 template<typename T>
-std::string sql_typename_from_protocol_type()
+std::pair<std::string, std::string> sql_namespace_and_type_name_from_type()
 {
-  return fc::trim_typename_namespace(fc::get_typename<T>::name());
+  return {"hive", fc::trim_typename_namespace(fc::get_typename<T>::name())};
 }
 template<>
-std::string sql_typename_from_protocol_type<hive::protocol::future_extensions>()
+std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<hive::protocol::future_extensions>()
 {
-  return "void_t";
+  return {"hive", "void_t"};
 }
 template<>
-std::string sql_typename_from_protocol_type<hive::protocol::account_name_type>()
+std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<hive::protocol::account_name_type>()
 {
-  return "account_name_type";
+  return {"hive", "account_name_type"};
 }
 
 template<typename Iter>
 Datum to_sql_array(Iter first, Iter last)
 {
   using value_type = typename std::iterator_traits<Iter>::value_type;
-  const std::string type_name = sql_typename_from_protocol_type<value_type>();
-  Oid hiveOid = GetSysCacheOid1(NAMESPACENAME, Anum_pg_namespace_oid, CStringGetDatum("hive"));
+  const auto [namespace_name, type_name] = sql_namespace_and_type_name_from_type<value_type>();
+  Oid hiveOid = GetSysCacheOid1(NAMESPACENAME, Anum_pg_namespace_oid, CStringGetDatum(namespace_name.c_str()));
   Oid elementOid = GetSysCacheOid2(TYPENAMENSP, Anum_pg_type_oid, CStringGetDatum(type_name.c_str()), ObjectIdGetDatum(hiveOid));
 
   if (!OidIsValid(elementOid))
