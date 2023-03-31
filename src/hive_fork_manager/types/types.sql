@@ -508,4 +508,11 @@ CREATE TYPE hive.update_proposal_operation AS (
   extensions hive.update_proposal_extensions_type
 );
 
+CREATE TYPE hive.update_proposal_votes_operation AS (
+  voter hive.account_name_type,
+  proposal_ids NUMERIC[],
+  approve boolean,
+  extensions hive.extensions_type
+);
+
 CREATE TYPE hive.void_t AS ();
