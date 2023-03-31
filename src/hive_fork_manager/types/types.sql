@@ -719,5 +719,11 @@ CREATE TYPE hive.system_warning_operation AS (
   message text
 );
 
+CREATE TYPE hive.transfer_to_vesting_completed_operation AS (
+  from_account hive.account_name_type,
+  to_account hive.account_name_type,
+  hive_vested hive.asset,
+  vesting_shares_received hive.asset
+);
 
 CREATE TYPE hive.void_t AS ();
