@@ -551,4 +551,9 @@ CREATE TYPE hive.comment_benefactor_reward_operation AS (
   vesting_payout hive.asset
 );
 
+CREATE TYPE hive.comment_payout_update_operation AS (
+  author hive.account_name_type,
+  permlink hive.permlink
+);
+
 CREATE TYPE hive.void_t AS ();
