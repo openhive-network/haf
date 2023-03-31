@@ -467,3 +467,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.proposal_pay_operation)
   WITH FUNCTION hive._operation_to_proposal_pay_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_remove_proposal_operation(
+  hive.operation
+) RETURNS hive.remove_proposal_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_remove_proposal_operation';
+
+CREATE CAST (hive.operation AS hive.remove_proposal_operation)
+  WITH FUNCTION hive._operation_to_remove_proposal_operation
+  AS ASSIGNMENT;
