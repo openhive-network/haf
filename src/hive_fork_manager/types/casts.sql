@@ -717,3 +717,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.hardfork_operation)
   WITH FUNCTION hive._operation_to_hardfork_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_ineffective_delete_comment_operation(
+  hive.operation
+) RETURNS hive.ineffective_delete_comment_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_ineffective_delete_comment_operation';
+
+CREATE CAST (hive.operation AS hive.ineffective_delete_comment_operation)
+  WITH FUNCTION hive._operation_to_ineffective_delete_comment_operation
+  AS ASSIGNMENT;
