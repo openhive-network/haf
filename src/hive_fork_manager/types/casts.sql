@@ -597,3 +597,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.delayed_voting_operation)
   WITH FUNCTION hive._operation_to_delayed_voting_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_effective_comment_vote_operation(
+  hive.operation
+) RETURNS hive.effective_comment_vote_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_effective_comment_vote_operation';
+
+CREATE CAST (hive.operation AS hive.effective_comment_vote_operation)
+  WITH FUNCTION hive._operation_to_effective_comment_vote_operation
+  AS ASSIGNMENT;
