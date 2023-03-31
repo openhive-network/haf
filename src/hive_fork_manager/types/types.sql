@@ -465,4 +465,15 @@ CREATE TYPE hive.witness_update_operation AS (
   fee hive.asset
 );
 
+CREATE TYPE hive.create_proposal_operation AS (
+  creator hive.account_name_type,
+  receiver hive.account_name_type,
+  start_date timestamp,
+  end_date timestamp,
+  daily_pay hive.asset,
+  subject TEXT,
+  permlink TEXT,
+  extensions hive.extensions_type
+);
+
 CREATE TYPE hive.void_t AS ();
