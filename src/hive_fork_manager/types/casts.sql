@@ -817,3 +817,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.transfer_to_vesting_completed_operation)
   WITH FUNCTION hive._operation_to_transfer_to_vesting_completed_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_vesting_shares_split_operation(
+  hive.operation
+) RETURNS hive.vesting_shares_split_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_vesting_shares_split_operation';
+
+CREATE CAST (hive.operation AS hive.vesting_shares_split_operation)
+  WITH FUNCTION hive._operation_to_vesting_shares_split_operation
+  AS ASSIGNMENT;

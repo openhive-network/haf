@@ -1198,4 +1198,11 @@ extern "C"
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::transfer_to_vesting_completed_operation>(op);
   }
+
+  PG_FUNCTION_INFO_V1( operation_to_vesting_shares_split_operation );
+  Datum operation_to_vesting_shares_split_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::vesting_shares_split_operation>(op);
+  }
 }

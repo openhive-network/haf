@@ -726,4 +726,10 @@ CREATE TYPE hive.transfer_to_vesting_completed_operation AS (
   vesting_shares_received hive.asset
 );
 
+CREATE TYPE hive.vesting_shares_split_operation AS (
+  "owner" hive.account_name_type,
+  vesting_shares_before_split hive.asset,
+  vesting_shares_after_split hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
