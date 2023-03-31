@@ -696,4 +696,9 @@ CREATE TYPE hive.liquidity_reward_operation AS (
   payout hive.asset
 );
 
+CREATE TYPE hive.pow_reward_operation AS (
+  worker hive.account_name_type,
+  reward hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
