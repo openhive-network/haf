@@ -578,4 +578,9 @@ CREATE TYPE hive.curation_reward_operation AS (
   payout_must_be_claimed boolean
 );
 
+CREATE TYPE hive.delayed_voting_operation AS (
+  voter hive.account_name_type,
+  votes hive.ushare_type
+);
+
 CREATE TYPE hive.void_t AS ();
