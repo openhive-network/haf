@@ -1086,4 +1086,11 @@ extern "C"
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::fill_order_operation>(op);
   }
+
+  PG_FUNCTION_INFO_V1( operation_to_fill_recurrent_transfer_operation );
+  Datum operation_to_fill_recurrent_transfer_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::fill_recurrent_transfer_operation>(op);
+  }
 }
