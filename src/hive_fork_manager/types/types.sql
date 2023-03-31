@@ -583,4 +583,14 @@ CREATE TYPE hive.delayed_voting_operation AS (
   votes hive.ushare_type
 );
 
+CREATE TYPE hive.effective_comment_vote_operation AS (
+  voter hive.account_name_type,
+  author hive.account_name_type,
+  permlink hive.permlink,
+  weight NUMERIC,
+  rshares int8,
+  total_vote_weight NUMERIC,
+  pending_payout hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
