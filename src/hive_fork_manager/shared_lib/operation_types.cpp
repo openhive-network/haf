@@ -51,6 +51,10 @@ Datum to_datum(bool value)
 {
   return BoolGetDatum(value);
 }
+Datum to_datum(uint8_t value)
+{
+  return UInt16GetDatum(value);
+}
 Datum to_datum(uint16_t value)
 {
   return Int32GetDatum(value);
@@ -1053,5 +1057,12 @@ extern "C"
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::expired_account_notification_operation>(op);
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_failed_recurrent_transfer_operation );
+  Datum operation_to_failed_recurrent_transfer_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::failed_recurrent_transfer_operation>(op);
   }
 }
