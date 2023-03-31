@@ -517,3 +517,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.author_reward_operation)
   WITH FUNCTION hive._operation_to_author_reward_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_changed_recovery_account_operation(
+  hive.operation
+) RETURNS hive.changed_recovery_account_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_changed_recovery_account_operation';
+
+CREATE CAST (hive.operation AS hive.changed_recovery_account_operation)
+  WITH FUNCTION hive._operation_to_changed_recovery_account_operation
+  AS ASSIGNMENT;
