@@ -491,4 +491,21 @@ CREATE TYPE hive.remove_proposal_operation AS (
   extensions hive.extensions_type
 );
 
+CREATE TYPE hive.update_proposal_end_date AS (
+  end_date timestamp
+);
+
+CREATE TYPE hive.update_proposal_extensions_type AS (
+  update_proposal_end_date hive.update_proposal_end_date
+);
+
+CREATE TYPE hive.update_proposal_operation AS (
+  proposal_id NUMERIC,
+  creator hive.account_name_type,
+  daily_pay hive.asset,
+  subject hive.proposal_subject,
+  permlink hive.permlink,
+  extensions hive.update_proposal_extensions_type
+);
+
 CREATE TYPE hive.void_t AS ();

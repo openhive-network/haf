@@ -30,6 +30,7 @@ Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extens
 Datum to_sql_tuple(const hive::protocol::future_extensions& extensions);
 Datum to_sql_tuple(const hive::protocol::price& price);
 Datum to_sql_tuple(const hive::protocol::pow2_work& work);
+Datum to_sql_tuple(const hive::protocol::update_proposal_extensions_type& extensions);
 template<typename T>
 Datum to_sql_tuple(const hive::protocol::fixed_string_impl<T>& string);
 Datum to_sql_tuple(const int64_t& value);
@@ -205,6 +206,10 @@ Datum to_datum(const fc::array<T, N>& value)
   std::copy(std::begin(value), std::end(value), VARDATA(bytes));
   SET_VARSIZE(bytes, VARHDRSZ + N);
   PG_RETURN_BYTEA_P(bytes);
+}
+Datum to_datum(const hive::protocol::update_proposal_extensions_type& value)
+{
+  return to_sql_tuple(value);
 }
 
 template<typename T>
@@ -441,6 +446,44 @@ Datum to_sql_tuple(const hive::protocol::pow2_work& work)
   };
   pow_visitor v(values, nulls);
   work.visit(v);
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
+Datum to_sql_tuple(const hive::protocol::update_proposal_extensions_type& extensions)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.update_proposal_extensions_type");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    (Datum)0, // update_proposal_end_date
+  };
+  bool nulls[] = {
+    true,
+  };
+  struct update_proposal_extensions_visitor
+  {
+    using result_type = void;
+
+    update_proposal_extensions_visitor(Datum* values, bool* nulls) : values(values), nulls(nulls)
+    {}
+    void operator()(const hive::protocol::update_proposal_end_date& new_date)
+    {
+      values[0] = to_sql_tuple(new_date);
+      nulls[0] = false;
+    }
+    void operator()(const hive::void_t&)
+    {
+      // do nothing
+    }
+  private:
+    Datum* values;
+    bool* nulls;
+  };
+  update_proposal_extensions_visitor v(values, nulls);
+  for (const auto& extension : extensions)
+  {
+    extension.visit(v);
+  }
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
@@ -912,5 +955,12 @@ extern "C"
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::remove_proposal_operation>(op);
+  }
+
+  PG_FUNCTION_INFO_V1( operation_to_update_proposal_operation );
+  Datum operation_to_update_proposal_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::update_proposal_operation>(op);
   }
 }
