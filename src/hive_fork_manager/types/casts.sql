@@ -647,3 +647,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.fill_convert_request_operation)
   WITH FUNCTION hive._operation_to_fill_convert_request_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_fill_order_operation(
+  hive.operation
+) RETURNS hive.fill_order_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_fill_order_operation';
+
+CREATE CAST (hive.operation AS hive.fill_order_operation)
+  WITH FUNCTION hive._operation_to_fill_order_operation
+  AS ASSIGNMENT;
