@@ -532,4 +532,10 @@ CREATE TYPE hive.author_reward_operation AS (
   payout_must_be_claimed boolean
 );
 
+CREATE TYPE hive.changed_recovery_account_operation AS (
+  account hive.account_name_type,
+  old_recovery_account hive.account_name_type,
+  new_recovery_account hive.account_name_type
+);
+
 CREATE TYPE hive.void_t AS ();
