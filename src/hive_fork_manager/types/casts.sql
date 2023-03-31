@@ -807,3 +807,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.system_warning_operation)
   WITH FUNCTION hive._operation_to_system_warning_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_transfer_to_vesting_completed_operation(
+  hive.operation
+) RETURNS hive.transfer_to_vesting_completed_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_transfer_to_vesting_completed_operation';
+
+CREATE CAST (hive.operation AS hive.transfer_to_vesting_completed_operation)
+  WITH FUNCTION hive._operation_to_transfer_to_vesting_completed_operation
+  AS ASSIGNMENT;
