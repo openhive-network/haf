@@ -685,4 +685,10 @@ CREATE TYPE hive.interest_operation AS (
   interest hive.asset
 );
 
+CREATE TYPE hive.limit_order_cancelled_operation AS (
+  seller hive.account_name_type,
+  orderid int4, -- uint16_t: 2 bytes, but unsigned (int4)
+  amount_back hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
