@@ -711,4 +711,8 @@ CREATE TYPE hive.return_vesting_delegation_operation AS (
   vesting_shares hive.asset
 );
 
+CREATE TYPE hive.shutdown_witness_operation AS (
+  "owner" hive.account_name_type
+);
+
 CREATE TYPE hive.void_t AS ();
