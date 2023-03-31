@@ -691,4 +691,9 @@ CREATE TYPE hive.limit_order_cancelled_operation AS (
   amount_back hive.asset
 );
 
+CREATE TYPE hive.liquidity_reward_operation AS (
+  "owner" hive.account_name_type,
+  payout hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
