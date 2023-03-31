@@ -607,4 +607,12 @@ CREATE TYPE hive.failed_recurrent_transfer_operation AS (
   deleted boolean
 );
 
+CREATE TYPE hive.fill_collateralized_convert_request_operation AS (
+  owner hive.account_name_type,
+  requestid int8, -- uint32_t: 4 bytes, but unsigned (int8)
+  amount_in hive.asset,
+  amount_out hive.asset,
+  excess_collateral hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
