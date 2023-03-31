@@ -556,4 +556,14 @@ CREATE TYPE hive.comment_payout_update_operation AS (
   permlink hive.permlink
 );
 
+CREATE TYPE hive.comment_reward_operation AS (
+  author hive.account_name_type,
+  permlink hive.permlink,
+  payout hive.asset,
+  author_rewards hive.share_type,
+  total_payout_value hive.asset,
+  curator_payout_value hive.asset,
+  beneficiary_payout_value hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
