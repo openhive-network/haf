@@ -675,4 +675,9 @@ CREATE TYPE hive.hardfork_operation AS (
   hardfork_id int8 -- uint32_t: 4 bytes, but unsigned (int8)
 );
 
+CREATE TYPE hive.ineffective_delete_comment_operation AS (
+  author hive.account_name_type,
+  permlink hive.permlink
+);
+
 CREATE TYPE hive.void_t AS ();
