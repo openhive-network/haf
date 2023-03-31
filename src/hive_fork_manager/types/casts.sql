@@ -797,3 +797,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.shutdown_witness_operation)
   WITH FUNCTION hive._operation_to_shutdown_witness_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_system_warning_operation(
+  hive.operation
+) RETURNS hive.system_warning_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_system_warning_operation';
+
+CREATE CAST (hive.operation AS hive.system_warning_operation)
+  WITH FUNCTION hive._operation_to_system_warning_operation
+  AS ASSIGNMENT;
