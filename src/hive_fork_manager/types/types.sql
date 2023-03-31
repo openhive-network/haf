@@ -664,4 +664,11 @@ CREATE TYPE hive.hardfork_hive_operation AS (
   total_hive_from_vests hive.asset
 );
 
+CREATE TYPE hive.hardfork_hive_restore_operation AS (
+  account hive.account_name_type,
+  treasury hive.account_name_type,
+  hbd_transferred hive.asset,
+  hive_transferred hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
