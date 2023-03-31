@@ -680,4 +680,9 @@ CREATE TYPE hive.ineffective_delete_comment_operation AS (
   permlink hive.permlink
 );
 
+CREATE TYPE hive.interest_operation AS (
+  owner hive.account_name_type,
+  interest hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
