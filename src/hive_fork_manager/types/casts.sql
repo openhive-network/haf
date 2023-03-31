@@ -667,3 +667,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.fill_recurrent_transfer_operation)
   WITH FUNCTION hive._operation_to_fill_recurrent_transfer_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_fill_transfer_from_savings_operation(
+  hive.operation
+) RETURNS hive.fill_transfer_from_savings_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_fill_transfer_from_savings_operation';
+
+CREATE CAST (hive.operation AS hive.fill_transfer_from_savings_operation)
+  WITH FUNCTION hive._operation_to_fill_transfer_from_savings_operation
+  AS ASSIGNMENT;
