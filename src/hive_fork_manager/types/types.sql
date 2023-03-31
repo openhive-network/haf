@@ -701,4 +701,9 @@ CREATE TYPE hive.pow_reward_operation AS (
   reward hive.asset
 );
 
+CREATE TYPE hive.producer_reward_operation AS (
+  producer hive.account_name_type,
+  vesting_shares hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
