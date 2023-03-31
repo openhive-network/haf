@@ -707,3 +707,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.hardfork_hive_restore_operation)
   WITH FUNCTION hive._operation_to_hardfork_hive_restore_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_hardfork_operation(
+  hive.operation
+) RETURNS hive.hardfork_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_hardfork_operation';
+
+CREATE CAST (hive.operation AS hive.hardfork_operation)
+  WITH FUNCTION hive._operation_to_hardfork_operation
+  AS ASSIGNMENT;
