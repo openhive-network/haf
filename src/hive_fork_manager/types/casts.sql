@@ -737,3 +737,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.interest_operation)
   WITH FUNCTION hive._operation_to_interest_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_limit_order_cancelled_operation(
+  hive.operation
+) RETURNS hive.limit_order_cancelled_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_limit_order_cancelled_operation';
+
+CREATE CAST (hive.operation AS hive.limit_order_cancelled_operation)
+  WITH FUNCTION hive._operation_to_limit_order_cancelled_operation
+  AS ASSIGNMENT;
