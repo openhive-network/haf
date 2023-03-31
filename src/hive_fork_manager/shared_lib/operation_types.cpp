@@ -1100,4 +1100,11 @@ extern "C"
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::fill_transfer_from_savings_operation>(op);
   }
+
+  PG_FUNCTION_INFO_V1( operation_to_fill_vesting_withdraw_operation );
+  Datum operation_to_fill_vesting_withdraw_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::fill_vesting_withdraw_operation>(op);
+  }
 }

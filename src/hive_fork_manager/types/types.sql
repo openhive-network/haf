@@ -647,4 +647,11 @@ CREATE TYPE hive.fill_transfer_from_savings_operation AS (
   memo hive.memo
 );
 
+CREATE TYPE hive.fill_vesting_withdraw_operation AS (
+  from_account hive.account_name_type,
+  to_account hive.account_name_type,
+  withdrawn hive.asset,
+  deposited hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
