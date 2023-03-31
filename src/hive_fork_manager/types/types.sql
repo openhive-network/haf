@@ -715,4 +715,9 @@ CREATE TYPE hive.shutdown_witness_operation AS (
   "owner" hive.account_name_type
 );
 
+CREATE TYPE hive.system_warning_operation AS (
+  message text
+);
+
+
 CREATE TYPE hive.void_t AS ();
