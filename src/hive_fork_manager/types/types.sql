@@ -570,4 +570,12 @@ CREATE TYPE hive.consolidate_treasury_balance_operation AS (
   total_moved hive.asset[]
 );
 
+CREATE TYPE hive.curation_reward_operation AS (
+  curator hive.account_name_type,
+  reward hive.asset,
+  comment_author hive.account_name_type,
+  comment_permlink hive.permlink,
+  payout_must_be_claimed boolean
+);
+
 CREATE TYPE hive.void_t AS ();
