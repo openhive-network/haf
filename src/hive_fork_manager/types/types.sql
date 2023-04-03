@@ -773,4 +773,14 @@ CREATE TYPE hive.escrow_approved_operation AS (
   fee hive.asset
 );
 
+CREATE TYPE hive.escrow_rejected_operation AS (
+  "from" hive.account_name_type,
+  "to" hive.account_name_type,
+  agent hive.account_name_type,
+  escrow_id int8, -- uint32_t: 4 bytes, but unsigned (int8)
+  hbd_amount hive.asset,
+  hive_amount hive.asset,
+  fee hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
