@@ -16,9 +16,9 @@ extern "C" {
 
 namespace {
 
-Datum props_to_hstore(const fc::flat_map<std::string, std::vector<char>>& props);
-Datum account_authority_map_to_hstore(const fc::flat_map<hive::protocol::account_name_type, hive::protocol::weight_type>& auth);
-Datum key_authority_map_to_hstore(const fc::flat_map<hive::protocol::public_key_type, hive::protocol::weight_type>& auth);
+Datum to_hstore(const fc::flat_map<std::string, std::vector<char>>& props);
+Datum to_hstore(const fc::flat_map<hive::protocol::account_name_type, hive::protocol::weight_type>& auth);
+Datum to_hstore(const fc::flat_map<hive::protocol::public_key_type, hive::protocol::weight_type>& auth);
 
 template<typename T>
 Datum to_sql_tuple(const T& value);
@@ -94,7 +94,7 @@ Datum to_datum(const std::vector<T>& value)
 }
 Datum to_datum(const fc::flat_map<std::string, std::vector<char>>& value)
 {
-  return props_to_hstore(value);
+  return to_hstore(value);
 }
 Datum to_datum(const hive::protocol::account_name_type& value)
 {
@@ -139,11 +139,11 @@ Datum to_datum(const hive::protocol::fixed_string_impl<T>& value)
 }
 Datum to_datum(const hive::protocol::authority::account_authority_map& value)
 {
-  return account_authority_map_to_hstore(value);
+  return to_hstore(value);
 }
 Datum to_datum(const hive::protocol::authority::key_authority_map& value)
 {
-  return key_authority_map_to_hstore(value);
+  return to_hstore(value);
 }
 Datum to_datum(const hive::protocol::extensions_type& value)
 {
@@ -509,7 +509,7 @@ Pairs prop_to_hstore_pair(const std::pair<std::string, std::vector<char>>& prop)
   return p;
 }
 
-Datum props_to_hstore(const fc::flat_map<std::string, std::vector<char>>& props)
+Datum to_hstore(const fc::flat_map<std::string, std::vector<char>>& props)
 {
   auto element_count = props.size();
 
@@ -543,7 +543,7 @@ Pairs account_authority_to_hstore_pair(const std::pair<hive::protocol::account_n
   return p;
 }
 
-Datum account_authority_map_to_hstore(const fc::flat_map<hive::protocol::account_name_type, hive::protocol::weight_type>& auth)
+Datum to_hstore(const fc::flat_map<hive::protocol::account_name_type, hive::protocol::weight_type>& auth)
 {
   auto element_count = auth.size();
 
@@ -577,7 +577,7 @@ Pairs key_authority_to_hstore_pair(const std::pair<hive::protocol::public_key_ty
   return p;
 }
 
-Datum key_authority_map_to_hstore(const fc::flat_map<hive::protocol::public_key_type, hive::protocol::weight_type>& auth)
+Datum to_hstore(const fc::flat_map<hive::protocol::public_key_type, hive::protocol::weight_type>& auth)
 {
   auto element_count = auth.size();
 
