@@ -748,4 +748,8 @@ CREATE TYPE hive.dhf_conversion_operation AS (
   hbd_amount_out hive.asset
 );
 
+CREATE TYPE hive.producer_missed_operation AS (
+  producer hive.account_name_type
+);
+
 CREATE TYPE hive.void_t AS ();
