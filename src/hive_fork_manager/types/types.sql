@@ -759,4 +759,10 @@ CREATE TYPE hive.proposal_fee_operation AS (
   fee hive.asset
 );
 
+CREATE TYPE hive.collateralized_convert_immediate_conversion_operation AS (
+  owner hive.account_name_type,
+  requestid int8, -- uint32_t: 4 bytes, but unsigned (int8)
+  hbd_out hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
