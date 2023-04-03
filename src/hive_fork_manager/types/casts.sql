@@ -887,3 +887,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.collateralized_convert_immediate_conversion_operation)
   WITH FUNCTION hive._operation_to_collateralized_convert_immediate_conversion_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_escrow_approved_operation(
+  hive.operation
+) RETURNS hive.escrow_approved_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_escrow_approved_operation';
+
+CREATE CAST (hive.operation AS hive.escrow_approved_operation)
+  WITH FUNCTION hive._operation_to_escrow_approved_operation
+  AS ASSIGNMENT;
