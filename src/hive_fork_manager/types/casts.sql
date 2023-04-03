@@ -917,3 +917,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.proxy_cleared_operation)
   WITH FUNCTION hive._operation_to_proxy_cleared_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_declined_voting_rights_operation(
+  hive.operation
+) RETURNS hive.declined_voting_rights_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_declined_voting_rights_operation';
+
+CREATE CAST (hive.operation AS hive.declined_voting_rights_operation)
+  WITH FUNCTION hive._operation_to_declined_voting_rights_operation
+  AS ASSIGNMENT;
