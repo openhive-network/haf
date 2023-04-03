@@ -1212,4 +1212,11 @@ extern "C"
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     return operation_to<hive::protocol::witness_block_approve_operation>(op);
   }
+
+  PG_FUNCTION_INFO_V1( operation_to_dhf_funding_operation );
+  Datum operation_to_dhf_funding_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    return operation_to<hive::protocol::dhf_funding_operation>(op);
+  }
 }
