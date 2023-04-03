@@ -732,4 +732,9 @@ CREATE TYPE hive.vesting_shares_split_operation AS (
   vesting_shares_after_split hive.asset
 );
 
+CREATE TYPE hive.witness_block_approve_operation AS (
+  witness hive.account_name_type,
+  block_id hive.block_id_type
+);
+
 CREATE TYPE hive.void_t AS ();
