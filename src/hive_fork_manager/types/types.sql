@@ -783,4 +783,9 @@ CREATE TYPE hive.escrow_rejected_operation AS (
   fee hive.asset
 );
 
+CREATE TYPE hive.proxy_cleared_operation AS (
+  account hive.account_name_type,
+  proxy hive.account_name_type
+);
+
 CREATE TYPE hive.void_t AS ();
