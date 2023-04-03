@@ -837,3 +837,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.witness_block_approve_operation)
   WITH FUNCTION hive._operation_to_witness_block_approve_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_dhf_funding_operation(
+  hive.operation
+) RETURNS hive.dhf_funding_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_dhf_funding_operation';
+
+CREATE CAST (hive.operation AS hive.dhf_funding_operation)
+  WITH FUNCTION hive._operation_to_dhf_funding_operation
+  AS ASSIGNMENT;

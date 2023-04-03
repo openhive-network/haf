@@ -737,4 +737,9 @@ CREATE TYPE hive.witness_block_approve_operation AS (
   block_id hive.block_id_type
 );
 
+CREATE TYPE hive.dhf_funding_operation AS (
+  treasury hive.account_name_type,
+  additional_funds hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
