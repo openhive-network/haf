@@ -21,18 +21,9 @@ variables:
   DATA_CACHE_MAINNET: /cache/replay_data_haf_mainnet_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
 
-  # Variables required by Common CI jobs
-  CI_COMMON_JOB_VERSION: "656cd1670240c01fe05e56ee7158ea04877da555"
-  DOCKER_BUILDER_TAG: "$CI_COMMON_JOB_VERSION"
-  DOCKER_DIND_TAG: "$CI_COMMON_JOB_VERSION"
-  IMAGE_REMOVER_TAG: "$CI_COMMON_JOB_VERSION"
-
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
-  - project: 'hive/common-ci-configuration'
-    ref: 656cd1670240c01fe05e56ee7158ea04877da555
-    file: '/templates/docker_image_jobs.gitlab-ci.yml'
 
 .hive_fork_manager_build:
   stage: build_and_test_phase_1
