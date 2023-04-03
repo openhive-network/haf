@@ -867,3 +867,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.producer_missed_operation)
   WITH FUNCTION hive._operation_to_producer_missed_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_proposal_fee_operation(
+  hive.operation
+) RETURNS hive.proposal_fee_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_proposal_fee_operation';
+
+CREATE CAST (hive.operation AS hive.proposal_fee_operation)
+  WITH FUNCTION hive._operation_to_proposal_fee_operation
+  AS ASSIGNMENT;

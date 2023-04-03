@@ -752,4 +752,11 @@ CREATE TYPE hive.producer_missed_operation AS (
   producer hive.account_name_type
 );
 
+CREATE TYPE hive.proposal_fee_operation AS (
+  creator hive.account_name_type,
+  treasury hive.account_name_type,
+  proposal_id int8, -- uint32_t: 4 bytes, but unsigned (int8)
+  fee hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();
