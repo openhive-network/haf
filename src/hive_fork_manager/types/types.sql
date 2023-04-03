@@ -742,4 +742,10 @@ CREATE TYPE hive.dhf_funding_operation AS (
   additional_funds hive.asset
 );
 
+CREATE TYPE hive.dhf_conversion_operation AS (
+  treasury hive.account_name_type,
+  hive_amount_in hive.asset,
+  hbd_amount_out hive.asset
+);
+
 CREATE TYPE hive.void_t AS ();

@@ -847,3 +847,13 @@ AS 'MODULE_PATHNAME',
 CREATE CAST (hive.operation AS hive.dhf_funding_operation)
   WITH FUNCTION hive._operation_to_dhf_funding_operation
   AS ASSIGNMENT;
+
+CREATE OR REPLACE FUNCTION hive._operation_to_dhf_conversion_operation(
+  hive.operation
+) RETURNS hive.dhf_conversion_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_dhf_conversion_operation';
+
+CREATE CAST (hive.operation AS hive.dhf_conversion_operation)
+  WITH FUNCTION hive._operation_to_dhf_conversion_operation
+  AS ASSIGNMENT;
