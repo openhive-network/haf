@@ -27,14 +27,6 @@ WORKDIR /home/haf_admin
 # Install additionally packages located in user directory
 RUN /usr/local/src/scripts/setup_ubuntu.sh --user
 
-#docker build --target=ci-base-image-5m -t registry.gitlab.syncad.com/hive/haf/ci-base-image-5m:ubuntu20.04-xxx -f Dockerfile .
-FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG AS ci-base-image-5m
-
-USER hived
-RUN  mkdir -p /home/hived/datadir/blockchain && \
-  wget -c https://gtg.openhive.network/get/blockchain/block_log.5M --output-document=/home/hived/datadir/blockchain/block_log
-USER haf_admin
-
 FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG AS build
 
 ARG BUILD_HIVE_TESTNET=OFF
@@ -139,22 +131,3 @@ EXPOSE ${P2P_PORT}
 EXPOSE ${WS_PORT}
 # JSON rpc service
 EXPOSE ${HTTP_PORT}
-
-# Hardcoded as not supported yet (to be eliminated at all together with data image target)
-FROM registry.gitlab.syncad.com/hive/haf/ci-base-image-5m:ubuntu22.04-2 AS block_log_5m_source
-
-FROM ${CI_REGISTRY_IMAGE}base_instance:base_instance-$BUILD_IMAGE_TAG as data
-
-COPY --from=block_log_5m_source --chown=hived:users /home/hived/datadir /home/hived/datadir 
-ADD --chown=hived:users ./docker/config_5M.ini /home/hived/datadir/config.ini
-
-RUN "/home/haf_admin/docker_entrypoint.sh" --force-replay --stop-replay-at-block=5000000 --exit-before-sync
-
-ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
-
-# default command line to be passed for this version (which should be stopped at 5M)
-CMD ["--replay-blockchain", "--stop-replay-at-block=5000000"]
-
-# Embedded postgres service
-EXPOSE 5432
-
