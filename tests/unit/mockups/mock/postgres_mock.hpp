@@ -65,6 +65,21 @@ public:
       GucShowHook
     ) = 0;
 
+    virtual void DefineCustomIntVariable(
+       const char *name,
+       const char *short_desc,
+       const char *long_desc,
+       int *valueAddr,
+       int bootValue,
+       int minValue,
+       int maxValue,
+       GucContext context,
+       int flags,
+       GucIntCheckHook check_hook,
+       GucIntAssignHook assign_hook,
+       GucShowHook show_hook
+    ) = 0;
+
     virtual char *GetConfigOption(const char*, bool, bool) = 0;
     virtual Oid GetSessionUserId() = 0;
 
@@ -125,6 +140,23 @@ public:
         GucShowHook
         )
     );
+
+    MOCK_METHOD( void, DefineCustomIntVariable, (
+       const char*,
+       const char*,
+       const char*,
+       int*,
+       int,
+       int,
+       int,
+       GucContext,
+       int,
+       GucIntCheckHook,
+       GucIntAssignHook,
+       GucShowHook
+       )
+    );
+
     MOCK_METHOD( char*, GetConfigOption, (const char*, bool, bool) );
     MOCK_METHOD( Oid, GetSessionUserId, () );
 

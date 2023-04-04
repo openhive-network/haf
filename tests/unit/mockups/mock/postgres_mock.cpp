@@ -182,6 +182,25 @@ void DefineCustomStringVariable(const char *name,
     );
   }
 
+  void DefineCustomIntVariable(
+    const char *name,
+    const char *short_desc,
+    const char *long_desc,
+    int *valueAddr,
+    int bootValue,
+    int minValue,
+    int maxValue,
+    GucContext context,
+    int flags,
+    GucIntCheckHook check_hook,
+    GucIntAssignHook assign_hook,
+    GucShowHook show_hook
+  ) {
+    return POSTGRES_MOCK.lock()->DefineCustomIntVariable(
+      name, short_desc, long_desc, valueAddr, bootValue, minValue, maxValue, context, flags, check_hook, assign_hook, show_hook
+    );
+  }
+
   const char *GetConfigOption(const char *name, bool missing_ok, bool restrict_privileged) {
     return POSTGRES_MOCK.lock()->GetConfigOption(name,missing_ok,restrict_privileged);
   }
