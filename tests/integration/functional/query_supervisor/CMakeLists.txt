@@ -1,10 +1,19 @@
 ADD_SQL_FUNCTIONAL_TEST( query_timeout/no_limit/no_limited_users_test.sql )
 ADD_SQL_ERROR_FUNCTIONAL_TEST( query_timeout/limit/simple_break_query_after_300ms_test.sql )
-ADD_AUTHORIZATION_ERROR_FUNCTIONAL_TEST( query_timeout/limit/alice_is_limited_and_bob_no.sql libquery_supervisor.so)
+ADD_AUTHORIZATION_ERROR_FUNCTIONAL_TEST( query_timeout/limit/alice_is_limited_and_bob_no.sql )
 
 ADD_SQL_FUNCTIONAL_TEST( query_tuples/nolimit/no_limited_users.sql )
-ADD_SQL_ERROR_FUNCTIONAL_TEST(query_tuples/limit/simple_break_query_when_tuples_limit_exceede.sql libquery_supervisor.so )
+ADD_SQL_ERROR_FUNCTIONAL_TEST( query_tuples/limit/no_break_query_when_tuples_less_than_limit.sql )
+ADD_SQL_ERROR_FUNCTIONAL_TEST( query_tuples/limit/no_break_query_when_tuples_eq_limit.sql )
+ADD_SQL_ERROR_FUNCTIONAL_TEST( query_tuples/limit/simple_break_query_when_tuples_limit_exceede.sql )
 ADD_AUTHORIZATION_ERROR_FUNCTIONAL_TEST( query_tuples/limit/alice_is_limited_and_bob_no.sql )
 
-ADD_AUTHORIZATION_ERROR_FUNCTIONAL_TEST( hardiness/alice_wants_to_override_server_settings.sql libquery_supervisor.so )
-ADD_AUTHORIZATION_ERROR_FUNCTIONAL_TEST( hardiness/alice_wants_to_change_limited_users_list.sql libquery_supervisor.so )
+ADD_AUTHORIZATION_ERROR_FUNCTIONAL_TEST( hardiness/alice_wants_to_override_server_settings.sql )
+ADD_AUTHORIZATION_ERROR_FUNCTIONAL_TEST( hardiness/alice_wants_to_change_limited_users_list.sql )
+ADD_AUTHORIZATION_ERROR_FUNCTIONAL_TEST( hardiness/alice_wants_to_change_tuples_limit.sql )
+
+ADD_SQL_FUNCTIONAL_TEST( options/limited_users_correct_values.sql )
+ADD_SQL_FUNCTIONAL_TEST( options/limited_tuples_correct_values.sql )
+ADD_SQL_FUNCTIONAL_TEST( options/limited_tuples_less_than_zero.sql )
+ADD_SQL_FUNCTIONAL_TEST( options/limited_query_time_less_than_zero.sql )
+ADD_SQL_FUNCTIONAL_TEST( options/limited_timeout_correct_values.sql )
