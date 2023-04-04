@@ -53,3 +53,4 @@ Use `docker container stop haf-instance` to safely stop the service.
 See [dockerized deployment details](./doc/HAF_Detailed_Deployment.md#building-and-deploying-haf-inside-a-docker-container) for further details.
 
 # HAF manual build and deloyment steps are described here: [doc/HAF_Detailed_Deployment.md](./doc/HAF_Detailed_Deployment.md)
+alala
