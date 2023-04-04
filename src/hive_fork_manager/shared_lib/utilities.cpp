@@ -239,6 +239,9 @@ Datum colect_data_and_fill_returned_recordset(Collect collect, FillReturnTuple f
   return (Datum)0;
 }
 
+
+
+
 template<typename Collect, typename FillReturnTuple>
 Datum colect_operation_data_and_fill_returned_recordset(Collect collect,
   FillReturnTuple fill_return_tuple, const char* C_function_name, const char* raw_data, uint32_t data_length) noexcept
