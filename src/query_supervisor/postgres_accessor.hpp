@@ -3,11 +3,11 @@
 #include <memory>
 
 namespace PsqlTools::PsqlUtils {
-  class CustomConfiguration;
   class Backend;
 } // namespace PsqlUtils
 
 namespace PsqlTools::QuerySupervisor {
+  class Configuration;
 
   class PostgresAccessor {
   public:
@@ -15,13 +15,13 @@ namespace PsqlTools::QuerySupervisor {
 
     static PostgresAccessor& getInstance();
 
-    const PsqlUtils::CustomConfiguration& getCustomConfiguration() const;
+    const Configuration& getConfiguration() const;
     const PsqlUtils::Backend& getBackend() const;
 
   private:
     PostgresAccessor();
 
-    std::unique_ptr< PsqlUtils::CustomConfiguration > m_customConfiguration;
+    std::unique_ptr< Configuration > m_configuration;
     std::unique_ptr< PsqlUtils::Backend > m_backend;
   };
 

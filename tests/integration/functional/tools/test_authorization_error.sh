@@ -17,10 +17,10 @@ psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools
 # load tests function
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ${test_path};
 
-users="alice bob"
+users="test_hived alice bob"
 tests="given when error"
 
-# you can use alice_test_given, alice_test_when, alice_test_error and their bob's equivalents
+# you can use alice_test_given, alice_test_when, alice_test_error and their bob's and test_hived equivalents
 
 for user in ${users}; do
   for testfun in ${tests}; do

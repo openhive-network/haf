@@ -1,13 +1,11 @@
 #include "psql_utils/postgres_includes.hpp"
 
+#include "configuration.hpp"
 #include "postgres_accessor.hpp"
 #include "query_handlers.hpp"
 
 #include "psql_utils/backend.h"
-#include "psql_utils/custom_configuration.h"
-#include "psql_utils/spi_session.hpp"
 
-#include <boost/algorithm/string.hpp>
 #include <boost/scope_exit.hpp>
 
 #include <chrono>
@@ -19,17 +17,8 @@ extern "C" {
 
 bool isCurrentUserLimited() {
   using PsqlTools::QuerySupervisor::PostgresAccessor;
-  const auto limitedUsersString = PostgresAccessor::getInstance()
-    .getCustomConfiguration().getOptionAsString( "limited_users" );
-
-  LOG_DEBUG( "Limited users: {%s}", limitedUsersString.c_str() );
-
-  if ( limitedUsersString.empty() ) {
-    return false;
-  }
-
-  std::vector< std::string > users;
-  boost::split( users, limitedUsersString, boost::is_any_of(",") );
+  const auto users = PostgresAccessor::getInstance()
+    .getConfiguration().getBlockedUsers();
 
   auto userIt = std::find( users.begin(), users.end(), PostgresAccessor::getInstance().getBackend().userName() );
   return userIt != users.end();
