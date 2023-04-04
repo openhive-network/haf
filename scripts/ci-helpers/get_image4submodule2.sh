@@ -1,1 +1,0 @@
-../../hive/scripts/ci-helpers/get_image4submodule2.sh

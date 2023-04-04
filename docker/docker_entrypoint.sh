@@ -11,16 +11,13 @@ then
 fi
 
 
-SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-SCRIPTSDIR="$SCRIPTDIR/haf/scripts"
-
-if [ ! -d "$DATADIR" ];
+if sudo -Enu hived test ! -d "$DATADIR"
 then
     echo "Data directory (DATADIR) $DATADIR does not exist. Exiting."
     exit 1
 fi
 
-if [ ! -d "$SHM_DIR" ];
+if sudo -Enu hived test ! -d "$SHM_DIR"
 then
     echo "Shared memory file directory (SHM_DIR) $SHM_DIR does not exist. Exiting."
     exit 1
@@ -28,6 +25,10 @@ fi
 
 HAF_DB_STORE=$DATADIR/haf_db_store
 PGDATA=$DATADIR/haf_db_store/pgdata
+
+
+SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+SCRIPTSDIR="$SCRIPTDIR/haf/scripts"
 
 LOG_FILE="${DATADIR}/${LOG_FILE:-docker_entrypoint.log}"
 sudo -n touch $LOG_FILE
@@ -173,7 +174,8 @@ job_pid=$!
 jobs -l
 
 echo "waiting for job finish: $job_pid."
-wait $job_pid || true
+status=0
+wait $job_pid || status=$?
 
 echo "Exiting docker entrypoint..."
-
+exit $status

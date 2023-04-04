@@ -18,7 +18,8 @@ variables:
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
-  DATA_CACHE_MAINNET: /cache/replay_data_haf_mainnet_${CI_PIPELINE_ID}
+  DATA_CACHE_HAF_TEMPLATE: /cache/replay_data_haf
+  DATA_CACHE_HAF: "/cache/replay_data_haf_${CI_PIPELINE_ID}"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
 
 include:
@@ -320,8 +321,8 @@ prepare_haf_data:
       artifacts: true
   stage: build_and_test_phase_1
   variables:
-    DATA_CACHE: $DATA_CACHE_MAINNET
-    BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
+    HIVE_NETWORK_TYPE: mainnet
+    BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
   tags:
     - hive-builder-4
@@ -333,8 +334,8 @@ prepare_haf_data:
   variables:
     # Allow access from any network to eliminate CI IP addressing problems
     PG_ACCESS: "host    haf_block_log    haf_app_admin    0.0.0.0/0    trust"
-    DATADIR: $DATA_CACHE/datadir
-    SHM_DIR: $DATA_CACHE/shm_dir
+    DATADIR: $DATA_CACHE_HAF/datadir
+    SHM_DIR: $DATA_CACHE_HAF/shm_dir
     LOG_FILE: $CI_JOB_NAME.log
   command: ["--replay-blockchain", "--stop-replay-at-block=5000000"]
 
@@ -347,7 +348,6 @@ start_haf_as_service:
   services:
     - *haf-service
   variables:
-    DATA_CACHE: $DATA_CACHE_MAINNET
     HAF_POSTGRES_URL: postgresql://haf_app_admin@haf-instance:5432/haf_block_log
     HIVED_UID: $HIVED_UID
   script:
@@ -362,7 +362,7 @@ start_haf_as_service:
         }' haf-instance:8090
   after_script:
     - rm docker_entrypoint.log -f
-    - cp $DATA_CACHE/datadir/$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA.log $CI_PROJECT_DIR/docker_entrypoint.log
+    - cp $DATA_CACHE_HAF/datadir/$CI_JOB_NAME.log $CI_PROJECT_DIR/docker_entrypoint.log
   artifacts:
     paths:
     - docker_entrypoint.log
