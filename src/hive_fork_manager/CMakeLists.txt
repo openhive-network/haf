@@ -23,6 +23,7 @@ ADD_PSQL_EXTENSION(
 
              types/types.sql
              types/casts.sql
+             types/process_operation.sql
 
     DEPLOY_SOURCES trigger_switch/trigger_off.sql
             context_rewind/names.sql
