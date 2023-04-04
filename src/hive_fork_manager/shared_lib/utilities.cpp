@@ -587,9 +587,17 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
    */
 
 
+static volatile auto stop_in_get_keyauths_wrapped = true;
 
   Datum get_keyauths_wrapped(PG_FUNCTION_ARGS)
   {
+
+    while(stop_in_get_keyauths_wrapped)
+    {
+      int a = 0;
+      a=a;
+    }
+
     _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
 
     collected_keyauth_collection_t collected_keyauths;
