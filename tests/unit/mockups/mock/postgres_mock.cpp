@@ -44,6 +44,9 @@ volatile sig_atomic_t QueryCancelPending;
 
 MemoryContext CurrentMemoryContext = nullptr;
 
+BackgroundWorker bgWorker;
+BackgroundWorker* MyBgworkerEntry = &bgWorker;
+
 std::shared_ptr<PostgresMock> PostgresMock::create_and_get() {
   assert( POSTGRES_MOCK.lock() == nullptr && "Use only one mock instance" );
   auto instance = std::shared_ptr< PostgresMock >( new PostgresMock() );

@@ -10,6 +10,7 @@ namespace PsqlTools::QuerySupervisor {
 
   Configuration::Configuration()
     : m_wrappedCustomConfiguration( "query_supervisor" ) {
+    LOG_DEBUG( "Initializing configuration..." );
     m_wrappedCustomConfiguration.addStringOption(
         LIMITED_USERS_OPTION
       , "Limited users names"
@@ -30,6 +31,7 @@ namespace PsqlTools::QuerySupervisor {
       , "Limit of time for a query execution [ms]"
       , DEFAULT_TIMEOUT_LIMIT_MS
     );
+    LOG_DEBUG( "Configuration initialized" );
   }
 
   std::vector<std::string>

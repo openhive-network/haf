@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 
 namespace PsqlTools::PsqlUtils {
   class Backend;
@@ -16,7 +17,7 @@ namespace PsqlTools::QuerySupervisor {
     static PostgresAccessor& getInstance();
 
     const Configuration& getConfiguration() const;
-    const PsqlUtils::Backend& getBackend() const;
+    std::optional< std::reference_wrapper< const PsqlUtils::Backend > > getBackend() const;
 
   private:
     PostgresAccessor();

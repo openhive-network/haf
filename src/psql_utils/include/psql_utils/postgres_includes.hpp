@@ -36,6 +36,8 @@ extern "C" {
 
 #include <nodes/makefuncs.h>
 
+#include <postmaster/bgworker.h>
+
 #include <tcop/tcopprot.h>
 
 #include <utils/array.h>
