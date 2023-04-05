@@ -17,10 +17,13 @@ extern "C" {
 
 bool isCurrentUserLimited() {
   using PsqlTools::QuerySupervisor::PostgresAccessor;
+
+  assert( PostgresAccessor::getInstance().getBackend() );
+
   const auto users = PostgresAccessor::getInstance()
     .getConfiguration().getBlockedUsers();
 
-  auto userIt = std::find( users.begin(), users.end(), PostgresAccessor::getInstance().getBackend().userName() );
+  auto userIt = std::find( users.begin(), users.end(), PostgresAccessor::getInstance().getBackend()->get().userName() );
   return userIt != users.end();
 }
 
@@ -35,12 +38,17 @@ void _PG_init(void) {
     LOG_INFO( "query_supervisor.so loaded into backend %d...", getpid() );
   } BOOST_SCOPE_EXIT_END
 
-  if ( !isCurrentUserLimited() ) {
-    LOG_DEBUG( "Current user %s is not limited", PostgresAccessor::getInstance().getBackend().userName().c_str() );
+  if ( PostgresAccessor::getInstance().getBackend() == std::nullopt ) {
+    LOG_DEBUG( "Process %d is not a backend, limitations are not checked", getpid() );
     return;
   }
 
-  LOG_DEBUG( "Current user %s is limited", PostgresAccessor::getInstance().getBackend().userName().c_str() );
+  if ( !isCurrentUserLimited() ) {
+    LOG_DEBUG( "Current user %s is not limited", PostgresAccessor::getInstance().getBackend()->get().userName().c_str() );
+    return;
+  }
+
+  LOG_DEBUG( "Current user %s is limited", PostgresAccessor::getInstance().getBackend()->get().userName().c_str() );
 
   g_queryHandlers = std::make_unique< PsqlTools::QuerySupervisor::QueryHandlers >();
 }
