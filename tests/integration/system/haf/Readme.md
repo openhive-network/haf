@@ -12,6 +12,9 @@ Python is required to be available on system. Tests are working correctly on pyt
 
 libfaketime is also required, it can by installed from ubuntu package repository (`sudo apt-get install libfaketime`) or by compiling from source https://github.com/wolfcw/libfaketime.git and setting LIBFAKETIME_PATH variable to shared object file.
 
+During some tests its required to enable track_functions in postgres, simly type "ALTER SYSTEM SET track_functions TO pl;"
+and "SELECT pg_reload_conf();".
+
 If test envinronment is not prepared by cmake, following environment variables should be set before running tests:
 PYTHONPATH - pointing test_tools and local_tools
 HIVE_BUILD_ROOT_PATH  - pointing to folder where were fuild following executables: hived, cli_wallet, get_dev_key.
