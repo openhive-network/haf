@@ -19,8 +19,6 @@ BLOCKS_AFTER_FORK = 5
 WAIT_FOR_CONTEXT_TIMEOUT = 90.0
 
 
-
-
 def make_fork(networks: Dict[str, tt.Network], main_chain_trxs=[], fork_chain_trxs=[]):
     alpha_net = networks['Alpha']
     beta_net = networks['Beta']
@@ -83,7 +81,6 @@ def prepare_networks(networks: Dict[str, tt.Network], replay_all_nodes = True):
         blocklog_directory = Path(block_logs.__file__).parent
 
     run_networks(list(networks.values()), blocklog_directory)
-
 
 def create_node_with_database(url: str, network: Optional[tt.Network] = None) -> tt.ApiNode:
     api_node = tt.ApiNode(network=network)
@@ -178,3 +175,35 @@ def query_col(session: Session, sql: str, **kwargs) -> list[Any]:
 def query_all(session: Session, sql: str, **kwargs) -> list[Row]:
     """Perform a `SELECT n*m`"""
     return session.execute(sql, params=kwargs).fetchall()
+
+
+def connect_nodes(first_node, second_node) -> None:
+    """
+    This place have to be removed after solving issue https://gitlab.syncad.com/hive/test-tools/-/issues/10
+    """
+    from test_tools.__private.user_handles.get_implementation import get_implementation
+    second_node.config.p2p_seed_node = get_implementation(first_node).get_p2p_endpoint()
+
+
+def prepare_network_with_init_node_and_haf_node(init_node_time_offset: str = None):
+    init_node = tt.InitNode()
+    init_node.run(time_offset=init_node_time_offset)
+
+    haf_node = tt.HafNode()
+
+    return haf_node, init_node
+
+
+def prepare_and_send_transactions(node: tt.InitNode) -> [dict, dict]:
+    wallet = tt.Wallet(attach_to=node)
+    node.wait_for_block_with_number(5)
+    transaction_0 = wallet.api.create_account('initminer', 'alice', '{}')
+    node.wait_for_block_with_number(8)
+    transaction_1 = wallet.api.create_account('initminer', 'bob', '{}')
+    node.wait_for_irreversible_block()
+    return transaction_0, transaction_1
+
+
+def set_time_to_offset(node, shift_in_time: int) -> str:
+    absolute_start_time = node.get_head_block_time() + tt.Time.seconds(shift_in_time)
+    return tt.Time.serialize(absolute_start_time, format_=tt.Time.TIME_OFFSET_FORMAT)
