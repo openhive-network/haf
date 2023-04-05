@@ -1,0 +1,86 @@
+# syntax=docker/dockerfile:1.4
+# docker buildx build --tag registry.gitlab.syncad.com/hive/haf/ci-base-image:$CI_IMAGE_TAG-jmeter --progress=plain --file Dockerfile.jmeter .
+ARG CI_IMAGE_TAG=ubuntu22.04-3
+
+FROM phusion/baseimage:jammy-1.0.1 AS build
+
+COPY <<-EOF /opt/patch.sed
+  s/jtl2junit/m2u/g
+  s/results file/results file (required)/g
+  23 i final Options helpOpt = new Options();
+  23 i helpOpt.addOption("?", "help", false, "");
+  23 i helpOpt.addOption(new Option("i", CMD_OPTION_INPUT, true, ""));
+  23 i helpOpt.addOption(new Option("o", CMD_OPTION_OUTPUT, true, ""));
+  23 i helpOpt.addOption(new Option("t", CMD_OPTION_TESTSUITE_NAME, true, ""));
+  23 i helpOpt.addOption(new Option("f", M2UConstants.JUNIT_FILTER_SWITCH_NAME, true, ""));
+  23 i final CommandLine helpCmd = parser.parse( helpOpt, argv );
+  23 i if (helpCmd.hasOption("help")) {
+  23 i new HelpFormatter().printHelp( APPLICATION_NAME, options );
+  23 i System.exit(0);
+  23 i }
+  72 i options.addOption("?", "help", false, "Show these usage instructions");
+EOF
+
+RUN <<EOF
+  set -e
+
+  # Install system dependencies
+  apt-get update
+  apt-get install -y git unzip wget ca-certificates maven openjdk-8-jdk
+  apt-get clean
+  rm -rf /var/lib/apt/lists/*
+
+  # Prepare tools directory
+  mkdir -p /opt/tools
+  cd /opt/tools
+
+  # Install Apache JMeter
+  wget --quiet https://dlcdn.apache.org//jmeter/binaries/apache-jmeter-5.4.3.zip -O jmeter.zip
+  unzip -qq jmeter.zip
+  rm jmeter.zip
+  mv apache-jmeter-5.4.3 jmeter
+  wget --quiet https://jdbc.postgresql.org/download/postgresql-42.3.1.jar -O /opt/tools/jmeter/lib/postgresql-42.3.1.jar
+
+  # Build m2u from source
+  mkdir -p m2u
+  git clone --single-branch --branch master https://github.com/tguzik/m2u.git m2u-source
+  cd m2u-source
+  find -name CommandLineParser.java -exec sed -i -f /opt/patch.sed {} \;
+  mvn
+
+  # Install m2u
+  mv target/m2u.jar ../m2u/m2u.jar
+  cd ../m2u
+  rm -R ../m2u-source
+  echo 'java -jar /opt/tools/m2u/m2u.jar $@' > m2u
+  chmod +x m2u
+EOF
+
+FROM registry.gitlab.syncad.com/hive/haf/ci-base-image:$CI_IMAGE_TAG
+
+COPY --from=build /opt/tools /opt/tools
+
+USER root
+
+RUN <<EOF
+  set -e
+
+  # Install system dependencies
+  apt-get update
+  apt-get install -y openjdk-8-jre
+  apt-get clean
+  rm -rf /var/lib/apt/lists/*
+
+  # Creater symlinks in bin directory
+  ln -s /opt/tools/jmeter/bin/jmeter /usr/bin/jmeter
+  ln -s /opt/tools/m2u/m2u /usr/bin/m2u
+EOF
+
+USER haf_admin
+
+RUN <<EOF
+  set -e
+
+  # Install user dependencies
+  pip3 install prettytable
+EOF
