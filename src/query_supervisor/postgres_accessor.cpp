@@ -3,14 +3,18 @@
 #include "configuration.hpp"
 
 #include "psql_utils/backend.h"
+#include "include/exceptions.hpp"
 
 #include <cassert>
 
 namespace PsqlTools::QuerySupervisor {
 
   PostgresAccessor::PostgresAccessor() {
-    m_configuration = std::make_unique< Configuration >();
-    m_backend = std::make_unique<PsqlUtils::Backend>();
+    m_configuration = std::make_unique<Configuration>();
+
+    try {
+      m_backend = std::make_unique<PsqlUtils::Backend>();
+    } catch ( ObjectInitializationException& _exception ){}
   }
 
   PostgresAccessor& PostgresAccessor::getInstance() {
@@ -26,8 +30,10 @@ namespace PsqlTools::QuerySupervisor {
     return *m_configuration;
   }
 
-  const PsqlUtils::Backend& PostgresAccessor::getBackend() const {
-    assert( m_backend );
+  std::optional< std::reference_wrapper< const PsqlUtils::Backend > > PostgresAccessor::getBackend() const {
+    if ( m_backend == nullptr ) {
+      return std::nullopt;
+    }
     return *m_backend;
   }
 
