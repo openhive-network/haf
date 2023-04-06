@@ -168,6 +168,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_account_witness_proxy_operation;
+CREATE PROCEDURE check_operation_to_account_witness_proxy_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.account_witness_proxy_operation;
+BEGIN
+  op := '{"type":"account_witness_proxy_operation","value":{"account":"initminer","proxy":"alice"}}'::hive.operation::hive.account_witness_proxy_operation;
+  ASSERT (select op.account = 'initminer'), format('Unexpected value of account_witness_proxy_operation.account: %s', op.account);
+  ASSERT (select op.proxy = 'alice'), format('Unexpected value of account_witness_proxy_operation.proxy: %s', op.proxy);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -184,6 +199,7 @@ BEGIN
   CALL check_operation_to_account_create_with_delegation_operation();
   CALL check_operation_to_account_update2_operation();
   CALL check_operation_to_account_update_operation();
+  CALL check_operation_to_account_witness_proxy_operation();
 END;
 $BODY$
 ;
