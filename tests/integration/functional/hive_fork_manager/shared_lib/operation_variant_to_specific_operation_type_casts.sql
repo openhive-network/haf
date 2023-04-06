@@ -263,6 +263,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_collateralized_convert_operation;
+CREATE PROCEDURE check_operation_to_collateralized_convert_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.collateralized_convert_operation;
+BEGIN
+  op := '{"type":"collateralized_convert_operation","value":{"owner":"carol3ah","requestid":0,"amount":{"amount":"22102","precision":3,"nai":"@@000000021"}}}'::hive.operation::hive.collateralized_convert_operation;
+  ASSERT (select op.owner = 'carol3ah'), format('Unexpected value of collateralized_convert_operation.owner: %s', op.owner);
+  ASSERT (select op.requestid = '0'), format('Unexpected value of collateralized_convert_operation.requestid: %s', op.requestid);
+  ASSERT (select op.amount = '(22102,3,@@000000021)'::hive.asset), format('Unexpected value of collateralized_convert_operation.amount: %s', op.amount);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -285,6 +301,7 @@ BEGIN
   CALL check_operation_to_change_recovery_account_operation();
   CALL check_operation_to_claim_account_operation();
   CALL check_operation_to_claim_reward_balance_operation();
+  CALL check_operation_to_collateralized_convert_operation();
 END;
 $BODY$
 ;
