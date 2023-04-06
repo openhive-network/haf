@@ -214,6 +214,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_change_recovery_account_operation;
+CREATE PROCEDURE check_operation_to_change_recovery_account_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.change_recovery_account_operation;
+BEGIN
+  op := '{"type":"change_recovery_account_operation","value":{"account_to_recover":"initminer","new_recovery_account":"alice","extensions":[]}}'::hive.operation::hive.change_recovery_account_operation;
+  ASSERT (select op.account_to_recover = 'initminer'), format('Unexpected value of change_recovery_account_operation.account_to_recover: %s', op.account_to_recover);
+  ASSERT (select op.new_recovery_account = 'alice'), format('Unexpected value of change_recovery_account_operation.new_recovery_account: %s', op.new_recovery_account);
+  ASSERT (select op.extensions = '{}'), format('Unexpected value of change_recovery_account_operation.extensions: %s', op.extensions);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -233,6 +249,7 @@ BEGIN
   CALL check_operation_to_account_witness_proxy_operation();
   CALL check_operation_to_account_witness_vote_operation();
   CALL check_operation_to_cancel_transfer_from_savings_operation();
+  CALL check_operation_to_change_recovery_account_operation();
 END;
 $BODY$
 ;
