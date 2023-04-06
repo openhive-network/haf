@@ -199,6 +199,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_cancel_transfer_from_savings_operation;
+CREATE PROCEDURE check_operation_to_cancel_transfer_from_savings_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.cancel_transfer_from_savings_operation;
+BEGIN
+  op := '{"type":"cancel_transfer_from_savings_operation","value":{"from":"alice","request_id":1}}'::hive.operation::hive.cancel_transfer_from_savings_operation;
+  ASSERT (select op."from" = 'alice'), format('Unexpected value of cancel_transfer_from_savings_operation.from: %s', op."from");
+  ASSERT (select op.request_id = '1'), format('Unexpected value of cancel_transfer_from_savings_operation.request_id: %s', op.request_id);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -217,6 +232,7 @@ BEGIN
   CALL check_operation_to_account_update_operation();
   CALL check_operation_to_account_witness_proxy_operation();
   CALL check_operation_to_account_witness_vote_operation();
+  CALL check_operation_to_cancel_transfer_from_savings_operation();
 END;
 $BODY$
 ;
