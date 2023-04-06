@@ -123,7 +123,7 @@ CREATE TYPE hive.account_create_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata text
+  json_metadata jsonb
 );
 
 CREATE TYPE hive.account_create_with_delegation_operation AS (
@@ -135,7 +135,7 @@ CREATE TYPE hive.account_create_with_delegation_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata text,
+  json_metadata jsonb,
   extensions hive.extensions_type
 );
 
@@ -145,8 +145,8 @@ CREATE TYPE hive.account_update2_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata text,
-  posting_json_metadata text,
+  json_metadata jsonb,
+  posting_json_metadata jsonb,
   extensions hive.extensions_type
 );
 
@@ -156,7 +156,7 @@ CREATE TYPE hive.account_update_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata text
+  json_metadata jsonb
 );
 
 CREATE TYPE hive.account_witness_proxy_operation AS (
@@ -213,7 +213,7 @@ CREATE TYPE hive.create_claimed_account_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata text,
+  json_metadata jsonb,
   extensions hive.extensions_type
 );
 
@@ -230,7 +230,7 @@ CREATE TYPE hive.custom_json_operation AS (
   required_auths hive.account_name_type[],
   required_posting_auths hive.account_name_type[],
   id hive.custom_id_type,
-  json text
+  json jsonb
 );
 
 CREATE TYPE hive.custom_operation AS (
@@ -293,7 +293,7 @@ CREATE TYPE hive.escrow_transfer_operation AS (
   fee hive.asset,
   ratification_deadline timestamp,
   escrow_expiration timestamp,
-  json_meta text
+  json_meta jsonb
 );
 
 CREATE TYPE hive.feed_publish_operation AS (
