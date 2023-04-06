@@ -279,6 +279,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_convert_operation;
+CREATE PROCEDURE check_operation_to_convert_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.convert_operation;
+BEGIN
+  op := '{"type": "convert_operation","value": {"amount": {"amount": "127144","nai": "@@000000013","precision": 3},"owner": "gtg","requestid": 1467663446}}'::hive.operation::hive.convert_operation;
+  ASSERT (select op.owner = 'gtg'), format('Unexpected value of convert_operation.owner: %s', op.owner);
+  ASSERT (select op.requestid = 1467663446), format('Unexpected value of convert_operation.requestid: %s', op.requestid);
+  ASSERT (select op.amount = '(127144,3,@@000000013)'::hive.asset), format('Unexpected value of convert_operation.amount: %s', op.amount);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -302,6 +318,7 @@ BEGIN
   CALL check_operation_to_claim_account_operation();
   CALL check_operation_to_claim_reward_balance_operation();
   CALL check_operation_to_collateralized_convert_operation();
+  CALL check_operation_to_convert_operation();
 END;
 $BODY$
 ;
