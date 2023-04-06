@@ -1,0 +1,1 @@
+from haf_local_tools.db_adapter.db_adapter import DbAdapter
