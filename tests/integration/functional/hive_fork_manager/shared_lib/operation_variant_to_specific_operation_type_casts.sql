@@ -246,6 +246,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_claim_reward_balance_operation;
+CREATE PROCEDURE check_operation_to_claim_reward_balance_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.claim_reward_balance_operation;
+BEGIN
+  op := '{"type":"claim_reward_balance_operation","value":{"account":"edgar0ah","reward_hive":{"amount":"0","precision":3,"nai":"@@000000021"},"reward_hbd":{"amount":"1","precision":3,"nai":"@@000000013"},"reward_vests":  {"amount":"1","precision":6,"nai":"@@000000037"}}}'::hive.operation::hive.claim_reward_balance_operation;
+  ASSERT (select op.account = 'edgar0ah'), format('Unexpected value of claim_reward_balance_operation.account: %s', op.account);
+  ASSERT (select op.reward_hive = '(0,3,@@000000021)'::hive.asset), format('Unexpected value of claim_reward_balance_operation.reward_hive: %s', op.reward_hive);
+  ASSERT (select op.reward_hbd = '(1,3,@@000000013)'::hive.asset), format('Unexpected value of claim_reward_balance_operation.reward_hbd: %s', op.reward_hbd);
+  ASSERT (select op.reward_vests = '(1,6,@@000000037)'::hive.asset), format('Unexpected value of claim_reward_balance_operation.reward_vests: %s', op.reward_vests);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -267,6 +284,7 @@ BEGIN
   CALL check_operation_to_cancel_transfer_from_savings_operation();
   CALL check_operation_to_change_recovery_account_operation();
   CALL check_operation_to_claim_account_operation();
+  CALL check_operation_to_claim_reward_balance_operation();
 END;
 $BODY$
 ;
