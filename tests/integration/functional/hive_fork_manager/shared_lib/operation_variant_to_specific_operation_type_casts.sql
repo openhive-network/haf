@@ -295,6 +295,27 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_create_claimed_account_operation;
+CREATE PROCEDURE check_operation_to_create_claimed_account_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.create_claimed_account_operation;
+BEGIN
+  op := '{"type":"create_claimed_account_operation","value":{"creator":"alice8ah","new_account_name":"ben8ah","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S",1]]},"active": {"weight_threshold":1,"account_auths":[],"key_auths":[["STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S",1]]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM7F7N2n8RYwoBkS3rCtwDkaTdnbkctCm3V3fn2cDvdx988XMNZv", 1]]},"memo_key":"STM7F7N2n8RYwoBkS3rCtwDkaTdnbkctCm3V3fn2cDvdx988XMNZv","json_metadata":"{}","extensions":[]}}'::hive.operation::hive.create_claimed_account_operation;
+  ASSERT (select op.creator = 'alice8ah'), format('Unexpected value of create_claimed_account_operation.creator: %s', op.creator);
+  ASSERT (select op.new_account_name = 'ben8ah'), format('Unexpected value of create_claimed_account_operation.new_account_name: %s', op.new_account_name);
+  ASSERT (select op.owner = '(1,"","""STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S""=>""1""")'::hive.authority), format('Unexpected value of create_claimed_account_operation.owner: %s', op.owner);
+  ASSERT (select op.active = '(1,"","""STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S""=>""1""")'::hive.authority), format('Unexpected value of create_claimed_account_operation.active: %s', op.active);
+  ASSERT (select op.posting = '(1,"","""STM7F7N2n8RYwoBkS3rCtwDkaTdnbkctCm3V3fn2cDvdx988XMNZv""=>""1""")'::hive.authority), format('Unexpected value of create_claimed_account_operation.posting: %s', op.posting);
+  ASSERT (select op.memo_key = 'STM7F7N2n8RYwoBkS3rCtwDkaTdnbkctCm3V3fn2cDvdx988XMNZv'), format('Unexpected value of create_claimed_account_operation.memo_key: %s', op.memo_key);
+  ASSERT (select op.json_metadata = '{}'), format('Unexpected value of create_claimed_account_operation.json_metadata: %s', op.json_metadata);
+  ASSERT (select op.extensions = '{}'), format('Unexpected value of create_claimed_account_operation.extensions: %s', op.extensions);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -319,6 +340,7 @@ BEGIN
   CALL check_operation_to_claim_reward_balance_operation();
   CALL check_operation_to_collateralized_convert_operation();
   CALL check_operation_to_convert_operation();
+  CALL check_operation_to_create_claimed_account_operation();
 END;
 $BODY$
 ;
