@@ -230,6 +230,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_claim_account_operation;
+CREATE PROCEDURE check_operation_to_claim_account_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.claim_account_operation;
+BEGIN
+  op := '{"type":"claim_account_operation","value":{"creator":"initminer","fee":{"amount":"0","precision":3,"nai":"@@000000021"},"extensions":[]}}'::hive.operation::hive.claim_account_operation;
+  ASSERT (select op.creator = 'initminer'), format('Unexpected value of claim_account_operation.creator: %s', op.creator);
+  ASSERT (select op.fee = '(0,3,@@000000021)'::hive.asset), format('Unexpected value of claim_account_operation.fee: %s', op.fee);
+  ASSERT (select op.extensions = '{}'), format('Unexpected value of claim_account_operation.extensions: %s', op.extensions);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -250,6 +266,7 @@ BEGIN
   CALL check_operation_to_account_witness_vote_operation();
   CALL check_operation_to_cancel_transfer_from_savings_operation();
   CALL check_operation_to_change_recovery_account_operation();
+  CALL check_operation_to_claim_account_operation();
 END;
 $BODY$
 ;
