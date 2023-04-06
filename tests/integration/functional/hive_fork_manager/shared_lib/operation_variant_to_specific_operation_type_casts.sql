@@ -183,6 +183,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_account_witness_vote_operation;
+CREATE PROCEDURE check_operation_to_account_witness_vote_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.account_witness_vote_operation;
+BEGIN
+  op := '{"type":"account_witness_vote_operation","value":{"account":"alice","witness":"initminer","approve":true}}'::hive.operation::hive.account_witness_vote_operation;
+  ASSERT (select op.account = 'alice'), format('Unexpected value of account_witness_vote_operation.account: %s', op.account);
+  ASSERT (select op.witness = 'initminer'), format('Unexpected value of account_witness_vote_operation.witness: %s', op.witness);
+  ASSERT (select op.approve = True), format('Unexpected value of account_witness_vote_operation.approve: %s', op.approve);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -200,6 +216,7 @@ BEGIN
   CALL check_operation_to_account_update2_operation();
   CALL check_operation_to_account_update_operation();
   CALL check_operation_to_account_witness_proxy_operation();
+  CALL check_operation_to_account_witness_vote_operation();
 END;
 $BODY$
 ;
