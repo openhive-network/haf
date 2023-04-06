@@ -51,6 +51,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_vote_operation;
+CREATE PROCEDURE check_operation_to_vote_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.vote_operation;
+BEGIN
+  op := '{"type":"vote_operation","value":{"voter":"anthrovegan","author":"carrinm","permlink":"actifit-carrinm-20200311t080841657z","weight":5000}}'::hive.operation::hive.vote_operation;
+  ASSERT (select op.voter = 'anthrovegan'), format('Unexpected value of vote_operation.voter: %s', op.voter);
+  ASSERT (select op.author = 'carrinm'), format('Unexpected value of vote_operation.author: %s', op.author);
+  ASSERT (select op.permlink = 'actifit-carrinm-20200311t080841657z'), format('Unexpected value of vote_operation.permlink: %s', op.permlink);
+  ASSERT (select op.weight = 5000), format('Unexpected value of vote_operation.weight: %s', op.weight);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -61,6 +78,7 @@ $BODY$
 BEGIN
   CALL check_operation_to_comment_operation();
   CALL check_operation_to_comment_options_operation();
+  CALL check_operation_to_vote_operation();
 END;
 $BODY$
 ;
