@@ -316,6 +316,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_custom_json_operation;
+CREATE PROCEDURE check_operation_to_custom_json_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.custom_json_operation;
+BEGIN
+  op := '{"type":"custom_json_operation","value":{"required_auths":[],"required_posting_auths":["alice"],"id":"follow","json":"{\"type\":\"follow_operation\",\"value\":{\"follower\":\"alice\",\"following\":\"@bob\",\"what\":[\"blog\"]}}"}}'::hive.operation::hive.custom_json_operation;
+  ASSERT (select op.required_auths = '{}'), format('Unexpected value of custom_json_operation.required_auths: %s', op.required_auths);
+  ASSERT (select op.required_posting_auths = '{alice}'), format('Unexpected value of custom_json_operation.required_posting_auths: %s', op.required_posting_auths);
+  ASSERT (select op.id = 'follow'), format('Unexpected value of custom_json_operation.id: %s', op.id);
+  ASSERT (select op.json = '{"type":"follow_operation","value":{"follower":"alice","following":"@bob","what":["blog"]}}'), format('Unexpected value of custom_json_operation.json: %s', op.json);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -341,6 +358,7 @@ BEGIN
   CALL check_operation_to_collateralized_convert_operation();
   CALL check_operation_to_convert_operation();
   CALL check_operation_to_create_claimed_account_operation();
+  CALL check_operation_to_custom_json_operation();
 END;
 $BODY$
 ;
