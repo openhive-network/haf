@@ -1,18 +1,5 @@
-DROP FUNCTION IF EXISTS test_given;
-CREATE FUNCTION test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- haf_admin is limited in the fixture
-END
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS test_error;
-CREATE FUNCTION test_error()
+DROP FUNCTION IF EXISTS alice_test_error;
+CREATE FUNCTION alice_test_error()
     RETURNS void
     LANGUAGE 'plpgsql'
 VOLATILE

@@ -56,8 +56,8 @@ $BODY$
 
 
 
-DROP FUNCTION IF EXISTS test_given;
-CREATE FUNCTION test_given()
+DROP FUNCTION IF EXISTS haf_admin_test_given;
+CREATE FUNCTION haf_admin_test_given()
     RETURNS void
     LANGUAGE 'plpgsql'
 VOLATILE
@@ -113,8 +113,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS test_when;
-CREATE FUNCTION test_when()
+DROP FUNCTION IF EXISTS haf_admin_test_when;
+CREATE FUNCTION haf_admin_test_when()
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -127,8 +127,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS test_then;
-CREATE FUNCTION test_then()
+DROP FUNCTION IF EXISTS haf_admin_test_then;
+CREATE FUNCTION haf_admin_test_then()
     RETURNS void
     LANGUAGE 'plpgsql'
 STABLE
