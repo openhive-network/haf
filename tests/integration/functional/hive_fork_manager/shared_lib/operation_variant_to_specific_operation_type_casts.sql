@@ -364,6 +364,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_delegate_vesting_shares_operation;
+CREATE PROCEDURE check_operation_to_delegate_vesting_shares_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.delegate_vesting_shares_operation;
+BEGIN
+  op := '{"type":"delegate_vesting_shares_operation","value":{"delegator":"alice","delegatee":"bob","vesting_shares":{"amount":"1000000","precision":6,"nai":"@@000000037"}}}'::hive.operation::hive.delegate_vesting_shares_operation;
+  ASSERT (select op.delegator = 'alice'), format('Unexpected value of delegate_vesting_shares_operation.delegator: %s', op.delegator);
+  ASSERT (select op.delegatee = 'bob'), format('Unexpected value of delegate_vesting_shares_operation.delegatee: %s', op.delegatee);
+  ASSERT (select op.vesting_shares = '(1000000,6,@@000000037)'::hive.asset), format('Unexpected value of delegate_vesting_shares_operation.vesting_shares: %s', op.vesting_shares);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -392,6 +408,7 @@ BEGIN
   CALL check_operation_to_custom_json_operation();
   CALL check_operation_to_custom_operation();
   CALL check_operation_to_decline_voting_rights_operation();
+  CALL check_operation_to_delegate_vesting_shares_operation();
 END;
 $BODY$
 ;
