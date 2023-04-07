@@ -380,6 +380,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_delete_comment_operation;
+CREATE PROCEDURE check_operation_to_delete_comment_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.delete_comment_operation;
+BEGIN
+  op := '{"type": "delete_comment_operation","value": {"author": "camilla","permlink": "re-shenanigator-re-kalipo-re-camilla-girl-with-a-pink-bow-20160912t221343480z"}}'::hive.operation::hive.delete_comment_operation;
+  ASSERT (select op.author = 'camilla'), format('Unexpected value of delete_comment_operation.author: %s', op.author);
+  ASSERT (select op.permlink = 're-shenanigator-re-kalipo-re-camilla-girl-with-a-pink-bow-20160912t221343480z'), format('Unexpected value of delete_comment_operation.permlink: %s', op.permlink);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -409,6 +424,7 @@ BEGIN
   CALL check_operation_to_custom_operation();
   CALL check_operation_to_decline_voting_rights_operation();
   CALL check_operation_to_delegate_vesting_shares_operation();
+  CALL check_operation_to_delete_comment_operation();
 END;
 $BODY$
 ;
