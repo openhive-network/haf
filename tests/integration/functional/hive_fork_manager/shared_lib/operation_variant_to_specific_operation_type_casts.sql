@@ -395,6 +395,25 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_escrow_approve_operation;
+CREATE PROCEDURE check_operation_to_escrow_approve_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.escrow_approve_operation;
+BEGIN
+  op := '{"type":"escrow_approve_operation","value":{"from":"initminer","to":"alice","agent":"bob","who":"bob","escrow_id":2,"approve":true}}'::hive.operation::hive.escrow_approve_operation;
+  ASSERT (select op."from" = 'initminer'), format('Unexpected value of escrow_approve_operation.from: %s', op.from);
+  ASSERT (select op."to" = 'alice'), format('Unexpected value of escrow_approve_operation.to: %s', op.to);
+  ASSERT (select op.agent = 'bob'), format('Unexpected value of escrow_approve_operation.agent: %s', op.agent);
+  ASSERT (select op.who = 'bob'), format('Unexpected value of escrow_approve_operation.who: %s', op.who);
+  ASSERT (select op.escrow_id = 2), format('Unexpected value of escrow_approve_operation.escrow_id: %s', op.escrow_id);
+  ASSERT (select op.approve = True), format('Unexpected value of escrow_approve_operation.approve: %s', op.approve);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -425,6 +444,7 @@ BEGIN
   CALL check_operation_to_decline_voting_rights_operation();
   CALL check_operation_to_delegate_vesting_shares_operation();
   CALL check_operation_to_delete_comment_operation();
+  CALL check_operation_to_escrow_approve_operation();
 END;
 $BODY$
 ;
