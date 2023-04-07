@@ -349,6 +349,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_decline_voting_rights_operation;
+CREATE PROCEDURE check_operation_to_decline_voting_rights_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.decline_voting_rights_operation;
+BEGIN
+  op := '{"type":"decline_voting_rights_operation","value":{"account":"initminer","decline":true}}'::hive.operation::hive.decline_voting_rights_operation;
+  ASSERT (select op.account = 'initminer'), format('Unexpected value of decline_voting_rights_operation.account: %s', op.account);
+  ASSERT (select op.decline = True), format('Unexpected value of decline_voting_rights_operation.decline: %s', op.decline);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -376,6 +391,7 @@ BEGIN
   CALL check_operation_to_create_claimed_account_operation();
   CALL check_operation_to_custom_json_operation();
   CALL check_operation_to_custom_operation();
+  CALL check_operation_to_decline_voting_rights_operation();
 END;
 $BODY$
 ;
