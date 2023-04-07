@@ -432,6 +432,27 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_escrow_release_operation;
+CREATE PROCEDURE check_operation_to_escrow_release_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.escrow_release_operation;
+BEGIN
+  op := '{"type":"escrow_release_operation","value":{"from":"initminer","to":"alice","agent":"bob","who":"bob","receiver":"alice","escrow_id":1,"hbd_amount":{"amount":"10000","precision":3,"nai":"@@000000013"},"hive_amount":{"amount":"10000", "precision":3,"nai":"@@000000021"}}}'::hive.operation::hive.escrow_release_operation;
+  ASSERT (select op."from" = 'initminer'), format('Unexpected value of escrow_release_operation.from: %s', op."from");
+  ASSERT (select op."to" = 'alice'), format('Unexpected value of escrow_release_operation.to: %s', op."to");
+  ASSERT (select op.agent = 'bob'), format('Unexpected value of escrow_release_operation.agent: %s', op.agent);
+  ASSERT (select op.who = 'bob'), format('Unexpected value of escrow_release_operation.who: %s', op.who);
+  ASSERT (select op.receiver = 'alice'), format('Unexpected value of escrow_release_operation.receiver: %s', op.receiver);
+  ASSERT (select op.escrow_id = 1), format('Unexpected value of escrow_release_operation.escrow_id: %s', op.escrow_id);
+  ASSERT (select op.hbd_amount = '(10000,3,@@000000013)'::hive.asset), format('Unexpected value of escrow_release_operation.hbd_amount: %s', op.hbd_amount);
+  ASSERT (select op.hive_amount = '(10000,3,@@000000021)'::hive.asset), format('Unexpected value of escrow_release_operation.hive_amount: %s', op.hive_amount);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -464,6 +485,7 @@ BEGIN
   CALL check_operation_to_delete_comment_operation();
   CALL check_operation_to_escrow_approve_operation();
   CALL check_operation_to_escrow_dispute_operation();
+  CALL check_operation_to_escrow_release_operation();
 END;
 $BODY$
 ;
