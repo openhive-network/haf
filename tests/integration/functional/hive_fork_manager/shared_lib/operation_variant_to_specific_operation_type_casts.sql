@@ -333,6 +333,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_custom_operation;
+CREATE PROCEDURE check_operation_to_custom_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.custom_operation;
+BEGIN
+  op := '{"type": "custom_operation","value": {"data":"0a627974656d617374657207737465656d697402a3d13897d82114466ad87a74b73a53292d8331d1bd1d3082da6bfbcff19ed097029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f6d2a8cab6832050078bc5729201e3ea24ea9f7873e6dbdc65a6bd9899053b9acda876dc69f11a13df9ca8b26b6","id": 777,"required_auths": ["bytemaster"]}}'::hive.operation::hive.custom_operation;
+  ASSERT (select op.required_auths = '{bytemaster}'), format('Unexpected value of custom_operation.required_auths: %s', op.required_auths);
+  ASSERT (select op.id = 777), format('Unexpected value of custom_operation.id: %s', op.id);
+  ASSERT (select op.data = '\x0a627974656d617374657207737465656d697402a3d13897d82114466ad87a74b73a53292d8331d1bd1d3082da6bfbcff19ed097029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f6d2a8cab6832050078bc5729201e3ea24ea9f7873e6dbdc65a6bd9899053b9acda876dc69f11a13df9ca8b26b6'), format('Unexpected value of custom_operation.data: %s', op.data);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -359,6 +375,7 @@ BEGIN
   CALL check_operation_to_convert_operation();
   CALL check_operation_to_create_claimed_account_operation();
   CALL check_operation_to_custom_json_operation();
+  CALL check_operation_to_custom_operation();
 END;
 $BODY$
 ;
