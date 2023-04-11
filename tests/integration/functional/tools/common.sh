@@ -49,7 +49,7 @@ setup_test_database() {
 
   sudo -nu postgres psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -a -f ./tools/create_db_roles.sql
 
-  "$setup_scripts_dir_path/setup_db.sh" --port="$postgres_port"  \
+  "${setup_scripts_dir_path}/setup_db.sh" --port="$postgres_port"  \
     --haf-db-admin="haf_admin"  --haf-db-name="$DB_NAME" --haf-app-user="alice" --haf-app-user="bob"
 
   if [ $? -ne 0 ]; then

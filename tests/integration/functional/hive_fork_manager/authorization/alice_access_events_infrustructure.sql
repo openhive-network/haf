@@ -1,5 +1,5 @@
-DROP FUNCTION IF EXISTS hived_test_given;
-CREATE FUNCTION hived_test_given()
+DROP FUNCTION IF EXISTS test_hived_test_given;
+CREATE FUNCTION test_hived_test_given()
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
