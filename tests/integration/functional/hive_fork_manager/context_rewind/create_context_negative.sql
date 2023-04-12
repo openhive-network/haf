@@ -1,16 +1,3 @@
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
--- GOT PREPARED DATA SCHEMA
-END;
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS haf_admin_test_when;
 CREATE FUNCTION haf_admin_test_when()
     RETURNS void

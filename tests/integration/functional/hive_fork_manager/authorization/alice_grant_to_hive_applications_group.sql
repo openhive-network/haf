@@ -1,42 +1,3 @@
-DROP FUNCTION IF EXISTS test_hived_test_given;
-CREATE FUNCTION test_hived_test_given()
-RETURNS void
-LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
--- PREPARE STATE AS HIVED
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS hived_test_when;
-CREATE FUNCTION hived_test_when()
-RETURNS void
-LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
--- EXECUTE ACTION UDER TEST AS HIVED
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS hived_test_then;
-CREATE FUNCTION hived_test_then()
-RETURNS void
-LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
--- CHECK EXPECTED STATE AS HIVED
-END;
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS alice_test_given;
 CREATE FUNCTION alice_test_given()
 RETURNS void
@@ -66,45 +27,6 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS alice_test_then;
-CREATE FUNCTION alice_test_then()
-RETURNS void
-LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
--- CHECK EXPECTED STATE AS ALICE
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS bob_test_given;
-CREATE FUNCTION bob_test_given()
-RETURNS void
-LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
--- PREPARE STATE AS BOB
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS bob_test_when;
-CREATE FUNCTION bob_test_when()
-RETURNS void
-LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
--- EXECUTE ACTION UDER TEST AS BOB
-END;
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS bob_test_then;
 CREATE FUNCTION bob_test_then()
 RETURNS void
@@ -118,7 +40,7 @@ BEGIN
 
     BEGIN
         INSERT INTO alice_tables VALUES( 4 );
-        ASSERT FALSE, 'Bob can intert to alice_table';
+        ASSERT FALSE, 'Bob can insert to alice_table';
     EXCEPTION WHEN OTHERS THEN
     END;
 

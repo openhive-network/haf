@@ -1,16 +1,3 @@
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    --Nothing to do
-END;
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS haf_admin_test_when;
 CREATE FUNCTION haf_admin_test_when()
     RETURNS void
@@ -192,19 +179,6 @@ ASSERT _pattern7_after_hf01 = _test7_after_hf01, 'Broken impacted balances resul
 ASSERT _pattern8_before_hf01 = _test8_before_hf01, 'Broken impacted balances result in "comment_benefactor_reward_operation" method before hf01';
 ASSERT _pattern8_after_hf01 = _test8_after_hf01, 'Broken impacted balances result in "comment_benefactor_reward_operation" method after hf01';
 
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
-AS
-$BODY$
-BEGIN
-    --Nothing to do
 END;
 $BODY$
 ;

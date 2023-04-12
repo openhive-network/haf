@@ -1,29 +1,3 @@
-DROP FUNCTION IF EXISTS test_hived_test_given;
-CREATE FUNCTION test_hived_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- PREPARE STATE AS HIVED
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS hived_test_when;
-CREATE FUNCTION hived_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- EXECUTE ACTION UDER TEST AS HIVED
-END;
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS hived_test_then;
 CREATE FUNCTION hived_test_then()
     RETURNS void
@@ -78,19 +52,6 @@ BEGIN
     PERFORM hive.app_create_context( 'alice_context_detached' );
     PERFORM hive.app_context_detach( 'alice_context_detached' );
     CREATE TABLE alice_table( id INT ) INHERITS( hive.alice_context );
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS alice_test_when;
-CREATE FUNCTION alice_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- EXECUTE ACTION UDER TEST AS ALICE
 END;
 $BODY$
 ;
@@ -188,45 +149,6 @@ BEGIN
         ASSERT FALSE, 'An app can call hive.refresh_irreversible_block_for_all_contexts';
     EXCEPTION WHEN OTHERS THEN
     END;
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS bob_test_given;
-CREATE FUNCTION bob_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- PREPARE STATE AS BOB
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS bob_test_when;
-CREATE FUNCTION bob_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- EXECUTE ACTION UDER TEST AS BOB
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS bob_test_then;
-CREATE FUNCTION bob_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- CHECK EXPECTED STATE AS BOB
 END;
 $BODY$
 ;

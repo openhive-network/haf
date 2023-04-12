@@ -40,21 +40,7 @@ END;
 $BODY$
 ;
 
-
-CREATE OR REPLACE FUNCTION hive.drop_state_provider_tests( _context hive.context_name )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    -- INTENTIONALLY EMPTY - NOT REQUIRED BY THE TEST
-END;
-$BODY$
-;
 ---------------------------END OF TEST PROVIDER -------------------------------------------------------------------
-
-
 
 DROP FUNCTION IF EXISTS haf_admin_test_given;
 CREATE FUNCTION haf_admin_test_given()

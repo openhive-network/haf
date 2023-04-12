@@ -52,19 +52,6 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_when;
-CREATE FUNCTION haf_admin_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    --
-END;
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS haf_admin_test_then;
 CREATE FUNCTION haf_admin_test_then()
     RETURNS void
@@ -75,7 +62,7 @@ $BODY$
 BEGIN
     PERFORM hive.app_state_providers_update( 1, 1, 'context' );
     ASSERT ( SELECT COUNT(*) FROM hive.context_accounts ) = 1, 'Wrong number of accounts 1';
-    RETURN;
+
     ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'from_pow' ), 'from_pow not created';
 
     PERFORM hive.app_next_block( 'context' ); -- 2

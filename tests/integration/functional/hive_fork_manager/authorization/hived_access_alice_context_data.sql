@@ -107,19 +107,6 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS alice_test_when;
-CREATE FUNCTION alice_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- EXECUTE ACTION UDER TEST AS ALICE
-END;
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS alice_test_then;
 CREATE FUNCTION alice_test_then()
     RETURNS void
@@ -131,45 +118,6 @@ BEGIN
     ASSERT EXISTS( SELECT * FROM hive.contexts WHERE name = 'alice_context' ), 'Alice''s context was removed by hived';
     ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name = 'alice_context' ) = 1, 'Alice''s context was updated by hived';
     ASSERT ( SELECT COUNT(*) FROM hive.state_providers_registered ) = 1, 'Alice lost her state providers';
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS bob_test_given;
-CREATE FUNCTION bob_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- PREPARE STATE AS BOB
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS bob_test_when;
-CREATE FUNCTION bob_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- EXECUTE ACTION UDER TEST AS BOB
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS bob_test_then;
-CREATE FUNCTION bob_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- CHECK EXPECTED STATE AS BOB
 END;
 $BODY$
 ;

@@ -1,16 +1,3 @@
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    --Nothing to do
-END;
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS haf_admin_test_when;
 CREATE FUNCTION haf_admin_test_when()
     RETURNS void
@@ -360,19 +347,6 @@ ASSERT _test46 is null, 'Broken impacted balances result in "system_warning_oper
 ASSERT _test47 is null, 'Broken impacted balances result in "failed_recurrent_transfer_operation" method';
 ASSERT _test48 is null, 'Broken impacted balances result in "producer_missed_operation" method';
 
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
-AS
-$BODY$
-BEGIN
-    --Nothing to do
 END;
 $BODY$
 ;

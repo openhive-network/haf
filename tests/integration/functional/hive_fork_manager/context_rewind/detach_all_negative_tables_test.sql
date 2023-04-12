@@ -1,17 +1,4 @@
-﻿DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- nothing to to here
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS haf_admin_test_when;
+﻿DROP FUNCTION IF EXISTS haf_admin_test_when;
 CREATE FUNCTION haf_admin_test_when()
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -26,19 +13,6 @@ BEGIN
     END;
 
     ASSERT FALSE, "DID not catch expected exception";
-END
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
-AS
-$BODY$
-BEGIN
-    -- nothing to do here
 END
 $BODY$
 ;
