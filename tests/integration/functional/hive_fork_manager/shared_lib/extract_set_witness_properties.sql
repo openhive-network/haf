@@ -1,16 +1,3 @@
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-AS
-$BODY$
-BEGIN
-END;
-$BODY$
-;
-
-
-
 DROP FUNCTION IF EXISTS ASSERT_THIS_TEST;
 CREATE FUNCTION ASSERT_THIS_TEST(pname TEXT, pvalue TEXT, expected hive.extract_set_witness_properties_return)
     RETURNS void
@@ -56,19 +43,6 @@ BEGIN
     PERFORM ASSERT_THIS_TEST('maximum_block_size', '00000100', ('maximum_block_size','65536') :: hive.extract_set_witness_properties_return );
     PERFORM ASSERT_THIS_TEST('new_signing_key', '000000000000000000000000000000000000000000000000000000000000000000', ('new_signing_key','"STM1111111111111111111111111111111114T1Anm"') :: hive.extract_set_witness_properties_return );
     PERFORM ASSERT_THIS_TEST('url', '5b68747470733a2f2f7065616b642e636f6d2f686976652d3131313131312f4073686d6f6f676c656f73756b616d692f68656c702d737570706f72742d636869736465616c6864732d686976652d7769746e6573732d736572766572', ('url','"https://peakd.com/hive-111111/@shmoogleosukami/help-support-chisdealhds-hive-witness-server"'));
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
-AS
-$BODY$
-BEGIN
-    -- Nothing to do here
 END;
 $BODY$
 ;

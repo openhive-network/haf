@@ -1,17 +1,3 @@
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-
-BEGIN
-   -- nothing to check here
-END
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS test_error;
 CREATE FUNCTION haf_admin_test_when()
     RETURNS void
@@ -34,18 +20,6 @@ END
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS test_error;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    --NOTHING TO CHECK HERE
-END
-$BODY$
-;
 
 
 

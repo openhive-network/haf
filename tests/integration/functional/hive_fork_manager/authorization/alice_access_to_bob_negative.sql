@@ -22,32 +22,6 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS hived_test_when;
-CREATE FUNCTION hived_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    -- EXECUTE ACTION UDER TEST AS HIVED
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS hived_test_then;
-CREATE FUNCTION hived_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    -- CHECK EXPECTED STATE AS HIVED
-END;
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS alice_test_given;
 CREATE FUNCTION alice_test_given()
     RETURNS void
@@ -66,18 +40,6 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS alice_test_when;
-CREATE FUNCTION alice_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- EXECUTE ACTION UDER TEST AS ALICE
-END;
-$BODY$
-;
 
 DROP FUNCTION IF EXISTS alice_test_then;
 CREATE FUNCTION alice_test_then()
@@ -219,19 +181,6 @@ BEGIN
     PERFORM hive.app_next_block( 'bob_context' );
     INSERT INTO bob_table VALUES( 100 );
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'bob_context' );
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS bob_test_when;
-CREATE FUNCTION bob_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    -- EXECUTE ACTION UDER TEST AS BOB
 END;
 $BODY$
 ;
