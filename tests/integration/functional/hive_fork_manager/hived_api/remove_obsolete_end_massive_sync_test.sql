@@ -53,7 +53,6 @@ STABLE
 AS
 $BODY$
 BEGIN
-    RETURN;
     ASSERT EXISTS ( SELECT FROM hive.events_queue WHERE event = 'MASSIVE_SYNC' AND block_num = 10 ), 'No event added';
     ASSERT ( SELECT COUNT(*) FROM hive.events_queue ) = 2, 'Unexpected number of events';
 END

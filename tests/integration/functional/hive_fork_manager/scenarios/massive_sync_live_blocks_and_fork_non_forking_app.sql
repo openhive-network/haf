@@ -98,7 +98,6 @@ $BODY$
 DECLARE
 __blocks hive.blocks_range;
 BEGIN
-    RETURN;
     PERFORM hive.app_create_context( 'context' );
     CREATE SCHEMA A;
     CREATE TABLE A.table1(id  INTEGER ); -- the table is not registered
@@ -107,7 +106,6 @@ BEGIN
     ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks';
     ASSERT __blocks = (1,6), 'Incorrect first block (1,5)';
     INSERT INTO A.table1(id) VALUES( 1 );
-
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 2
     ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (2,5)';
@@ -138,8 +136,9 @@ BEGIN
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 7 is reveresible, no-forking app will not see it new_block(8)
     ASSERT __blocks IS NULL, 'Null was not returned';
 
+
     PERFORM hive.push_block(
-             ( 10, '\xBADD1010', '\xCAFE1010', '2016-06-22 19:10:25-07'::timestamp )
+             ( 10, '\xBADD1010', '\xCAFE1010', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
             , NULL
             , NULL
             , NULL
@@ -148,40 +147,20 @@ BEGIN
             , NULL
         );
 
+
     PERFORM hive.set_irreversible( 8 );
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
-    ASSERT __blocks IS NULL, 'Instead of NULL something is returned for NEW_BLOCK(9)';
+    ASSERT __blocks IS NOT NULL, 'NULL is returned instead of blocks (7,8)';
+    ASSERT __blocks = (7,8), 'Incorrect range instead of expected (7,8)';
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
-    ASSERT __blocks IS NULL, 'Instead of NULL something is returned for NEW_BLOCK(10)';
+    ASSERT __blocks IS NOT NULL, 'NULL is returned instead of blocks (8,8)';;
+    ASSERT __blocks = (8,8), 'Incorrect range instead of expected (8,8)';;
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
-    ASSERT __blocks IS NULL, 'Instead of NULL something is returned for NEW_BLOCK(9) event';
-
-    SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- irreversible block 7
-    ASSERT __blocks IS NOT NULL, 'Null is returned instead for irreversible block 7';
-    ASSERT __blocks = (7,8), 'Incorrect range (7,8)';
-
-    SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- irreversible block 8
-    ASSERT __blocks IS NOT NULL, 'Null is returned instead for block 8';
-    ASSERT __blocks = (8,8), 'Incorrect range (8,8)';
-
-    SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- block 9 is reversible
-    ASSERT __blocks IS NULL, 'Null was not returned for block 9';
+    ASSERT __blocks IS NULL, 'Instead of NULL something is returned after process all blocks';
 END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
-AS
-$BODY$
-BEGIN
-END
 $BODY$
 ;
 

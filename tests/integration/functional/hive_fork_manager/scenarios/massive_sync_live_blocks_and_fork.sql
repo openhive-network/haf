@@ -108,26 +108,27 @@ RAISE NOTICE 'Blocks: %', __blocks;
 ASSERT __blocks = (1,6), 'Incorrect first block (1,6)';
 INSERT INTO A.table1(id) VALUES( 1 );
 
-RETURN;
-
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 2 NEW_BLOCK(6)
-ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (2,6)';
+SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 2
+ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (2,5)';
+RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks = (2,6), 'Incorrect range (2,6)';
 INSERT INTO A.table1(id) VALUES( 2 );
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 3 NEW_BLOCK(7)
-ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (3,6)';
+SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 3
+ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (3,5)';
+RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks = (3,6), 'Incorrect range (3,6)';
 INSERT INTO A.table1(id) VALUES( 3 );
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 4 NEW_IRREVERSIBLE(6)
-ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (4,6)';
-RAISE NOTICE 'blocks=%', __blocks;
+SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 4
+ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (4,5)';
+RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks = (4,6), 'Incorrect range (4,6)';
 INSERT INTO A.table1(id) VALUES( 4 );
 
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 5
-ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (5,6)';
+ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (5,5)';
+RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks = (5,6), 'Incorrect range (5,6)';
 INSERT INTO A.table1(id) VALUES( 5 );
 
@@ -143,9 +144,8 @@ INSERT INTO A.table1(id) VALUES( 7 );
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- SET_IRREVERSIBLE_EVENT
 ASSERT __blocks IS NULL, 'NUll was not returned for processing SET_IRREVERSIBLE_EVENT';
 
---squash of fork cannot be done because NEW_IRREVERSIBLE blocks it
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
-ASSERT __blocks IS NULL, 'NUll is not returned for procressing back from fork';
+ASSERT __blocks IS NULL, 'NULL was not returned from BACK_FROM_FORK';
 
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 8
 ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 7, 'Wrong number of rows after fork(7)';
@@ -163,59 +163,7 @@ INSERT INTO A.table1(id) VALUES( 9 );
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- no blocks
 ASSERT __blocks IS NULL, 'Null is expected';
 
-PERFORM hive.back_from_fork( 8 );
-PERFORM hive.push_block(
-         ( 9, '\xBADD92', '\xCAFE92', '2016-06-22 19:10:25-07'::timestamp, 5 )
-        , NULL
-        , NULL
-        , NULL
-        , NULL
-        , NULL
-        , NULL
-    );
-
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- BACK_FROM_FORK(8)
-ASSERT __blocks IS NULL, 'Null is expected';
-ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 8, 'Wrong number of rows after fork(8)';
-
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- block 9
-ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (9,9)';
-ASSERT __blocks = (9,9), 'Incorrect range (9,9)';
-ASSERT '\xBADD92'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 9 ), 'Unexpect hash of block 9';
-INSERT INTO A.table1(id) VALUES( 9 );
-
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- no block 10
-ASSERT __blocks IS NULL, 'Null is not returned instead for block 10';
-
-PERFORM hive.push_block(
-         ( 10, '\xBADD1010', '\xCAFE1010', '2016-06-22 19:10:25-07'::timestamp, 5 )
-        , NULL
-        , NULL
-        , NULL
-        , NULL
-        , NULL
-        , NULL
-    );
-
-PERFORM hive.set_irreversible( 8 );
-
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- block 10
-ASSERT __blocks IS NOT NULL, 'Null is returned instead for block 10';
-ASSERT __blocks = (10,10), 'Incorrect range (10,10)';
-
 END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
-AS
-$BODY$
-BEGIN
-END
 $BODY$
 ;
 
