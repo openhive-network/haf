@@ -800,7 +800,7 @@ DECLARE
 BEGIN
   op := '{"type":"remove_proposal_operation","value":{"proposal_owner":"initminer","proposal_ids":[6],"extensions":[]}}'::hive.operation::hive.remove_proposal_operation;
   ASSERT (select op.proposal_owner = 'initminer'), format('Unexpected value of remove_proposal_operation.proposal_owner: %s', op.proposal_owner);
-  ASSERT (select op.proposal_ids = array['6'::Decimal]), format('Unexpected value of remove_proposal_operation.proposal_ids: %s', op.proposal_ids);
+  ASSERT (select op.proposal_ids = array[6::int8]), format('Unexpected value of remove_proposal_operation.proposal_ids: %s', op.proposal_ids);
   ASSERT (select op.extensions = '{}'), format('Unexpected value of remove_proposal_operation.extensions: %s', op.extensions);
 END;
 $BODY$
@@ -835,7 +835,7 @@ DECLARE
 BEGIN
   op := '{"type":"update_proposal_votes_operation","value":{"voter":"alice","proposal_ids":[0],"approve":true,"extensions":[]}}'::hive.operation::hive.update_proposal_votes_operation;
   ASSERT (select op.voter = 'alice'), format('Unexpected value of update_proposal_votes_operation.voter: %s', op.voter);
-  ASSERT (select op.proposal_ids = array[0::Decimal]), format('Unexpected value of update_proposal_votes_operation.proposal_ids: %s', op.proposal_ids);
+  ASSERT (select op.proposal_ids = array[0::int8]), format('Unexpected value of update_proposal_votes_operation.proposal_ids: %s', op.proposal_ids);
   ASSERT (select op.approve = True), format('Unexpected value of update_proposal_votes_operation.approve: %s', op.approve);
   ASSERT (select op.extensions = '{}'), format('Unexpected value of update_proposal_votes_operation.extensions: %s', op.extensions);
 END;

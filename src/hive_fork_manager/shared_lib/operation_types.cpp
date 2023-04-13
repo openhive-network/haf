@@ -73,7 +73,7 @@ Datum to_datum(uint64_t value)
 }
 Datum to_datum(int64_t value)
 {
-  return DirectFunctionCall3(numeric_in, CStringGetDatum(std::to_string(value).c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+  return Int64GetDatum(value);
 }
 Datum to_datum(const std::string& value)
 {
@@ -342,7 +342,7 @@ std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<hive::
 template<>
 std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<int64_t>()
 {
-  return {"pg_catalog", "numeric"};
+  return {"pg_catalog", "int8"};
 }
 
 template<typename Iter>
