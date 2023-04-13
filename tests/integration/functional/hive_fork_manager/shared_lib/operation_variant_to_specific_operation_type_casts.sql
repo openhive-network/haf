@@ -506,6 +506,25 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_limit_order_create2_operation;
+CREATE PROCEDURE check_operation_to_limit_order_create2_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.limit_order_create2_operation;
+BEGIN
+  op := '{"type":"limit_order_create2_operation","value":{"owner":"carol3ah","orderid":2,"amount_to_sell":{"amount":"22075","precision":3,"nai":"@@000000021"},"exchange_rate":{"base":{"amount":"10","precision":3,"nai":"@@000000021"},"quote": {"amount":"10","precision":3,"nai":"@@000000013"}},"fill_or_kill":false,"expiration":"2016-01-29T00:00:12"}}'::hive.operation::hive.limit_order_create2_operation;
+  ASSERT (select op.owner = 'carol3ah'), format('Unexpected value of limit_order_create2_operation.owner: %s', op.owner);
+  ASSERT (select op.orderid = 2), format('Unexpected value of limit_order_create2_operation.orderid: %s', op.orderid);
+  ASSERT (select op.amount_to_sell = '(22075,3,@@000000021)'::hive.asset), format('Unexpected value of limit_order_create2_operation.amount_to_sell: %s', op.amount_to_sell);
+  ASSERT (select op.fill_or_kill = False), format('Unexpected value of limit_order_create2_operation.fill_or_kill: %s', op.fill_or_kill);
+  ASSERT (select op.exchange_rate = '("(10,3,@@000000021)","(10,3,@@000000013)")'::hive.price), format('Unexpected value of limit_order_create2_operation.exchange_rate: %s', op.exchange_rate);
+  ASSERT (select op.expiration = '2016-01-29 00:00:12'), format('Unexpected value of limit_order_create2_operation.expiration: %s', op.expiration);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -542,6 +561,7 @@ BEGIN
   CALL check_operation_to_escrow_transfer_operation();
   CALL check_operation_to_feed_publish_operation();
   CALL check_operation_to_limit_order_cancel_operation();
+  CALL check_operation_to_limit_order_create2_operation();
 END;
 $BODY$
 ;
