@@ -859,6 +859,26 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_author_reward_operation;
+CREATE PROCEDURE check_operation_to_author_reward_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.author_reward_operation;
+BEGIN
+  op := '{"type": "author_reward_operation","value": {"author": "camilla","curators_vesting_payout": {"amount": "395495911","nai": "@@000000037","precision": 6},"hbd_payout": {"amount": "138","nai": "@@000000013", "precision": 3},"hive_payout": {"amount": "0","nai": "@@000000021","precision": 3},"payout_must_be_claimed": false,"permlink": "re-spetey-re-camilla-re-spetey-re-clains-free-will-and-conscious-freedom-20160814t111905211z","vesting_payout": {"amount": "611497524","nai": "@@000000037","precision": 6}}}'::hive.operation::hive.author_reward_operation;
+  ASSERT (select op.author = 'camilla'), format('Unexpected value of author_reward_operation.author: %s', op.author);
+  ASSERT (select op.permlink = 're-spetey-re-camilla-re-spetey-re-clains-free-will-and-conscious-freedom-20160814t111905211z'), format('Unexpected value of author_reward_operation.permlink: %s', op.permlink);
+  ASSERT (select op.hbd_payout = '(138,3,@@000000013)'::hive.asset), format('Unexpected value of author_reward_operation.hbd_payout: %s', op.hbd_payout);
+  ASSERT (select op.hive_payout = '(0,3,@@000000021)'::hive.asset), format('Unexpected value of author_reward_operation.hive_payout: %s', op.hive_payout);
+  ASSERT (select op.vesting_payout = '(611497524,6,@@000000037)'::hive.asset), format('Unexpected value of author_reward_operation.vesting_payout: %s', op.vesting_payout);
+  ASSERT (select op.curators_vesting_payout = '(395495911,6,@@000000037)'::hive.asset), format('Unexpected value of author_reward_operation.curators_vesting_payout: %s', op.curators_vesting_payout);
+  ASSERT (select op.payout_must_be_claimed = False), format('Unexpected value of author_reward_operation.payout_must_be_claimed: %s', op.payout_must_be_claimed);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -915,6 +935,7 @@ BEGIN
   CALL check_operation_to_update_proposal_operation();
   CALL check_operation_to_update_proposal_votes_operation();
   CALL check_operation_to_account_created_operation();
+  CALL check_operation_to_author_reward_operation();
 END;
 $BODY$
 ;
