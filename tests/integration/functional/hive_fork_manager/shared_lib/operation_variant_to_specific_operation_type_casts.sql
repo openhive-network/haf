@@ -928,6 +928,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_comment_payout_update_operation;
+CREATE PROCEDURE check_operation_to_comment_payout_update_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.comment_payout_update_operation;
+BEGIN
+  op := '{"type": "comment_payout_update_operation","value": {"author": "camilla","permlink": "re-camilla-re-btcbtcbtc20155-re-camilla-my-ladybug-drawing-20160806t131222091z"}}'::hive.operation::hive.comment_payout_update_operation;
+  ASSERT (select op.author = 'camilla'), format('Unexpected value of comment_payout_update_operation.author: %s', op.author);
+  ASSERT (select op.permlink = 're-camilla-re-btcbtcbtc20155-re-camilla-my-ladybug-drawing-20160806t131222091z'), format('Unexpected value of comment_payout_update_operation.permlink: %s', op.permlink);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -988,6 +1003,7 @@ BEGIN
   CALL check_operation_to_changed_recovery_account_operation();
   CALL check_operation_to_clear_null_account_balance_operation();
   CALL check_operation_to_comment_benefactor_reward_operation();
+  CALL check_operation_to_comment_payout_update_operation();
 END;
 $BODY$
 ;
