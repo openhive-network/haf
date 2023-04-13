@@ -790,6 +790,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_remove_proposal_operation;
+CREATE PROCEDURE check_operation_to_remove_proposal_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.remove_proposal_operation;
+BEGIN
+  op := '{"type":"remove_proposal_operation","value":{"proposal_owner":"initminer","proposal_ids":[6],"extensions":[]}}'::hive.operation::hive.remove_proposal_operation;
+  ASSERT (select op.proposal_owner = 'initminer'), format('Unexpected value of remove_proposal_operation.proposal_owner: %s', op.proposal_owner);
+  ASSERT (select op.proposal_ids = array['6'::Decimal]), format('Unexpected value of remove_proposal_operation.proposal_ids: %s', op.proposal_ids);
+  ASSERT (select op.extensions = '{}'), format('Unexpected value of remove_proposal_operation.extensions: %s', op.extensions);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -842,6 +858,7 @@ BEGIN
   CALL check_operation_to_witness_update_operation();
   CALL check_operation_to_create_proposal_operation();
   CALL check_operation_to_proposal_pay_operation();
+  CALL check_operation_to_remove_proposal_operation();
 END;
 $BODY$
 ;
