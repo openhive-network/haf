@@ -632,6 +632,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_set_withdraw_vesting_route_operation;
+CREATE PROCEDURE check_operation_to_set_withdraw_vesting_route_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.set_withdraw_vesting_route_operation;
+BEGIN
+  op := '{"type":"set_withdraw_vesting_route_operation","value":{"from_account":"alice","to_account":"bob","percent":30,"auto_vest":true}}'::hive.operation::hive.set_withdraw_vesting_route_operation;
+  ASSERT (select op.from_account = 'alice'), format('Unexpected value of set_withdraw_vesting_route_operation.from_account: %s', op.from_account);
+  ASSERT (select op.to_account = 'bob'), format('Unexpected value of set_withdraw_vesting_route_operation.to_account: %s', op.to_account);
+  ASSERT (select op.percent = 30), format('Unexpected value of set_withdraw_vesting_route_operation.percent: %s', op.percent);
+  ASSERT (select op.auto_vest = True), format('Unexpected value of set_withdraw_vesting_route_operation.auto_vest: %s', op.auto_vest);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -675,6 +692,7 @@ BEGIN
   CALL check_operation_to_recover_account_operation();
   CALL check_operation_to_recurrent_transfer_operation();
   CALL check_operation_to_request_account_recovery_operation();
+  CALL check_operation_to_set_withdraw_vesting_route_operation();
 END;
 $BODY$
 ;
