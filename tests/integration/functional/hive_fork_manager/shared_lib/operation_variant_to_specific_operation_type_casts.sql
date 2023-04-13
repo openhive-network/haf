@@ -806,6 +806,25 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_update_proposal_operation;
+CREATE PROCEDURE check_operation_to_update_proposal_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.update_proposal_operation;
+BEGIN
+  op := '{"type":"update_proposal_operation","value":{"proposal_id":0,"creator":"alice","daily_pay":{"amount":"10000","precision":3,"nai":"@@000000013"},"subject":"subject-1","permlink":"permlink","extensions":[{"type": "update_proposal_end_date","value":{"end_date":"2031-05-01T00:00:00"}}]}}'::hive.operation::hive.update_proposal_operation;
+  ASSERT (select op.proposal_id = 0), format('Unexpected value of update_proposal_operation.proposal_id: %s', op.proposal_id);
+  ASSERT (select op.creator = 'alice'), format('Unexpected value of update_proposal_operation.creator: %s', op.creator);
+  ASSERT (select op.daily_pay = '(10000,3,@@000000013)'::hive.asset), format('Unexpected value of update_proposal_operation.daily_pay: %s', op.daily_pay);
+  ASSERT (select op.subject = 'subject-1'), format('Unexpected value of update_proposal_operation.subject: %s', op.subject);
+  ASSERT (select op.permlink = 'permlink'), format('Unexpected value of update_proposal_operation.permlink: %s', op.permlink);
+  ASSERT (select op.extensions = '("(""2031-05-01 00:00:00"")")'::hive.update_proposal_extensions_type), format('Unexpected value of update_proposal_operation.extensions: %s', op.extensions);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -859,6 +878,7 @@ BEGIN
   CALL check_operation_to_create_proposal_operation();
   CALL check_operation_to_proposal_pay_operation();
   CALL check_operation_to_remove_proposal_operation();
+  CALL check_operation_to_update_proposal_operation();
 END;
 $BODY$
 ;
