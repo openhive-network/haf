@@ -717,6 +717,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_withdraw_vesting_operation;
+CREATE PROCEDURE check_operation_to_withdraw_vesting_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.withdraw_vesting_operation;
+BEGIN
+  op := '{"type":"withdraw_vesting_operation","value":{"account":"alice","vesting_shares":{"amount":"10000000","precision":6,"nai":"@@000000037"}}}'::hive.operation::hive.withdraw_vesting_operation;
+  ASSERT (select op."to" = 'alice'), format('Unexpected value of withdraw_vesting_operation.to: %s', op."to");
+  ASSERT (select op.vesting_shares = '(10000000,6,@@000000037)'::hive.asset), format('Unexpected value of withdraw_vesting_operation.vesting_shares: %s', op.vesting_shares);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -765,6 +780,7 @@ BEGIN
   CALL check_operation_to_transfer_operation();
   CALL check_operation_to_transfer_to_savings_operation();
   CALL check_operation_to_transfer_to_vesting_operation();
+  CALL check_operation_to_withdraw_vesting_operation();
 END;
 $BODY$
 ;
