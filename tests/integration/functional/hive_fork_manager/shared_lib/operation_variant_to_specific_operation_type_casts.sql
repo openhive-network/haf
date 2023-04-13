@@ -491,6 +491,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_limit_order_cancel_operation;
+CREATE PROCEDURE check_operation_to_limit_order_cancel_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.limit_order_cancel_operation;
+BEGIN
+  op := '{"type":"limit_order_cancel_operation","value":{"owner":"alice","orderid":1}}'::hive.operation::hive.limit_order_cancel_operation;
+  ASSERT (select op.owner = 'alice'), format('Unexpected value of limit_order_cancel_operation.owner: %s', op.owner);
+  ASSERT (select op.orderid = 1), format('Unexpected value of limit_order_cancel_operation.orderid: %s', op.orderid);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -526,6 +541,7 @@ BEGIN
   CALL check_operation_to_escrow_release_operation();
   CALL check_operation_to_escrow_transfer_operation();
   CALL check_operation_to_feed_publish_operation();
+  CALL check_operation_to_limit_order_cancel_operation();
 END;
 $BODY$
 ;
