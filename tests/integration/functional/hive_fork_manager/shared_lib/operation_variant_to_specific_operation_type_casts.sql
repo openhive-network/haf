@@ -701,6 +701,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_transfer_to_vesting_operation;
+CREATE PROCEDURE check_operation_to_transfer_to_vesting_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.transfer_to_vesting_operation;
+BEGIN
+  op := '{"type":"transfer_to_vesting_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"100000","precision":3,"nai":"@@000000021"}}}'::hive.operation::hive.transfer_to_vesting_operation;
+  ASSERT (select op."from" = 'initminer'), format('Unexpected value of transfer_to_vesting_operation.from: %s', op."from");
+  ASSERT (select op."to" = 'alice'), format('Unexpected value of transfer_to_vesting_operation.to: %s', op."to");
+  ASSERT (select op.amount = '(100000,3,@@000000021)'::hive.asset), format('Unexpected value of transfer_to_vesting_operation.amount: %s', op.amount);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -748,6 +764,7 @@ BEGIN
   CALL check_operation_to_transfer_from_savings_operation();
   CALL check_operation_to_transfer_operation();
   CALL check_operation_to_transfer_to_savings_operation();
+  CALL check_operation_to_transfer_to_vesting_operation();
 END;
 $BODY$
 ;
