@@ -82,6 +82,20 @@ class BlocksReversible(Base):
     fork_id = Column(BigInteger, primary_key=True)
 
 
+class BlocksView(Base):
+    __tablename__ = "blocks_view"
+
+    num = Column(Integer, primary_key=True)
+    hash = Column(LargeBinary)
+    prev = Column(LargeBinary)
+    created_at = Column(DateTime)
+    producer_account_id = Column(Integer)
+    transaction_merkle_root = Column(LargeBinary)
+    extensions = Column(JSONB)
+    witness_signature = Column(LargeBinary)
+    signing_key = Column(Text)
+
+
 class Operations(Base):
     __tablename__ = "operations"
 
