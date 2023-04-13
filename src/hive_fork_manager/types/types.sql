@@ -49,7 +49,8 @@ CREATE TYPE hive.legacy_hive_asset_symbol_type AS (
 
 CREATE TYPE hive.legacy_hive_asset AS (
   amount hive.share_type,
-  symbol hive.legacy_hive_asset_symbol_type
+  precision int2,
+  nai text
 );
 
 -- basic types
