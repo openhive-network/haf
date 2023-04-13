@@ -163,7 +163,8 @@ Datum to_datum(const fc::sha256& value)
 }
 Datum to_datum(const fc::time_point_sec& value)
 {
-  return CStringGetTextDatum(static_cast<std::string>(value).c_str());
+  const auto str = static_cast<fc::string>(value);
+  return DirectFunctionCall3(timestamp_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
 }
 template<typename T>
 std::optional<Datum> to_datum(const fc::safe<T>& value)
