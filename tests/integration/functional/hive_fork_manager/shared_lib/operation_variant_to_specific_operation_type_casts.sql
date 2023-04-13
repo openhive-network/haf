@@ -771,6 +771,25 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_proposal_pay_operation;
+CREATE PROCEDURE check_operation_to_proposal_pay_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.proposal_pay_operation;
+BEGIN
+  op := '{"type":"proposal_pay_operation","value":{"proposal_id":0,"receiver":"steem.dao","payer":"steem.dao","payment":{"amount":"157","precision":3,"nai":"@@000000013"},"trx_id":"0000000000000000000000000000000000000000","op_in_trx":0}}'::hive.operation::hive.proposal_pay_operation;
+  ASSERT (select op.proposal_id = 0), format('Unexpected value of proposal_pay_operation.proposal_id: %s', op.proposal_id);
+  ASSERT (select op.receiver = 'steem.dao'), format('Unexpected value of proposal_pay_operation.receiver: %s', op.receiver);
+  ASSERT (select op.payer = 'steem.dao'), format('Unexpected value of proposal_pay_operation.payer: %s', op.payer);
+  ASSERT (select op.payment = '(157,3,@@000000013)'::hive.asset), format('Unexpected value of proposal_pay_operation.payment: %s', op.payment);
+  ASSERT (select op.trx_id = '\x30303030303030303030303030303030303030303030303030303030303030303030303030303030'), format('Unexpected value of proposal_pay_operation.trx_id: %s', op.trx_id);
+  ASSERT (select op.op_in_trx = 0), format('Unexpected value of proposal_pay_operation.op_in_trx: %s', op.op_in_trx);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -822,6 +841,7 @@ BEGIN
   CALL check_operation_to_withdraw_vesting_operation();
   CALL check_operation_to_witness_update_operation();
   CALL check_operation_to_create_proposal_operation();
+  CALL check_operation_to_proposal_pay_operation();
 END;
 $BODY$
 ;
