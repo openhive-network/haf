@@ -525,6 +525,25 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_limit_order_create_operation;
+CREATE PROCEDURE check_operation_to_limit_order_create_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.limit_order_create_operation;
+BEGIN
+  op := '{"type":"limit_order_create_operation","value":{"owner":"alice","orderid":1000,"amount_to_sell":{"amount":"1000","precision":3,"nai":"@@000000021"},"min_to_receive":{"amount":"500","precision":3,"nai":"@@000000013"},"fill_or_kill":false,"expiration":"2023-01-02T11:43:07"}}'::hive.operation::hive.limit_order_create_operation;
+  ASSERT (select op.owner = 'alice'), format('Unexpected value of limit_order_create_operation.owner: %s', op.owner);
+  ASSERT (select op.orderid = 1000), format('Unexpected value of limit_order_create_operation.orderid: %s', op.orderid);
+  ASSERT (select op.amount_to_sell = '(1000,3,@@000000021)'::hive.asset), format('Unexpected value of limit_order_create_operation.amount_to_sell: %s', op.amount_to_sell);
+  ASSERT (select op.min_to_receive = '(500,3,@@000000013)'::hive.asset), format('Unexpected value of limit_order_create_operation.min_to_receive: %s', op.min_to_receive);
+  ASSERT (select op.fill_or_kill = False), format('Unexpected value of limit_order_create_operation.fill_or_kill: %s', op.fill_or_kill);
+  ASSERT (select op.expiration = '2023-01-02 11:43:07'), format('Unexpected value of limit_order_create_operation.expiration: %s', op.expiration);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -562,6 +581,7 @@ BEGIN
   CALL check_operation_to_feed_publish_operation();
   CALL check_operation_to_limit_order_cancel_operation();
   CALL check_operation_to_limit_order_create2_operation();
+  CALL check_operation_to_limit_order_create_operation();
 END;
 $BODY$
 ;
