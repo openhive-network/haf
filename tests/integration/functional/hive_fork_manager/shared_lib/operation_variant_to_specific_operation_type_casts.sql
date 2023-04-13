@@ -560,6 +560,24 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_pow_operation;
+CREATE PROCEDURE check_operation_to_pow_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.pow_operation;
+BEGIN
+  op := '{"type": "pow_operation","value": {"block_id": "002104af55d5c492c8c134b5a55c89eac8210a86","nonce": "6317456790497374569","props": {"account_creation_fee": {"amount": "1","nai": "@@000000021","precision": 3}, "hbd_interest_rate": 1000,"maximum_block_size": 131072},"work": {"input": "d28a6c6f0fd04548ef12833d3e95acf7690cfb2bc6f6c8cd3b277d2f234bd908","signature": "20bd759200fb6996e141f1968beb3ef7d37a1692f15dc3a6c930388b27ec8691c07e36d3a0f441de10d12b2b1c98ed0816d3c2dfe1c8be1eacfd27fe5f4dd7f07a","work": "0000000c822c37f6a18985b1ef0eac34ae51f9e87d9ce3a8a217c90c7d74d82e", "worker": "STM5DHtHTDTyr3A4uutu6EsnHPfxAfRo9gQoJRT7jAHw4eU4UWRCK"},"worker_account": "badger3143"}}'::hive.operation::hive.pow_operation;
+  ASSERT (select op.worker_account = 'badger3143'), format('Unexpected value of pow_operation.worker_account: %s', op.worker_account);
+  ASSERT (select op.block_id = '\x30303231303461663535643563343932633863313334623561353563383965616338323130613836'), format('Unexpected value of pow_operation.block_id: %s', op.block_id);
+  ASSERT (select op.nonce = '6317456790497374569'), format('Unexpected value of pow_operation.nonce: %s', op.nonce);
+  ASSERT (select op.work = '(STM5DHtHTDTyr3A4uutu6EsnHPfxAfRo9gQoJRT7jAHw4eU4UWRCK,"\\x64323861366336663066643034353438656631323833336433653935616366373639306366623262633666366338636433623237376432663233346264393038","\\x20bd759200fb6996e141f1968beb3ef7d37a1692f15dc3a6c930388b27ec8691c07e36d3a0f441de10d12b2b1c98ed0816d3c2dfe1c8be1eacfd27fe5f4dd7f07a","\\x30303030303030633832326333376636613138393835623165663065616333346165353166396538376439636533613861323137633930633764373464383265")'::hive.pow), format('Unexpected value of pow_operation.work: %s', op.work);
+  ASSERT (select op.props = '("(1,3,@@000000021)",131072,1000)'::hive.legacy_chain_properties), format('Unexpected value of pow_operation.props: %s', op.props);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -599,6 +617,7 @@ BEGIN
   CALL check_operation_to_limit_order_create2_operation();
   CALL check_operation_to_limit_order_create_operation();
   CALL check_operation_to_pow2_operation();
+  CALL check_operation_to_pow_operation();
 END;
 $BODY$
 ;
