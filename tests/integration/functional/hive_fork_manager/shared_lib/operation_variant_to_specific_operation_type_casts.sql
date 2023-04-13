@@ -453,6 +453,29 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_escrow_transfer_operation;
+CREATE PROCEDURE check_operation_to_escrow_transfer_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.escrow_transfer_operation;
+BEGIN
+  op := '{"type":"escrow_transfer_operation","value":{"from":"initminer","to":"alice","hbd_amount":{"amount":"10000","precision":3,"nai":"@@000000013"},"hive_amount":{"amount":"10000","precision":3,"nai":"@@000000021"},"escrow_id":10,"agent": "bob","fee":{"amount":"10000","precision":3,"nai":"@@000000013"},"json_meta":"{}","ratification_deadline":"2030-01-01T00:00:00","escrow_expiration":"2030-06-01T00:00:00"}}'::hive.operation::hive.escrow_transfer_operation;
+  ASSERT (select op."from" = 'initminer'), format('Unexpected value of escrow_transfer_operation.from: %s', op."from");
+  ASSERT (select op."to" = 'alice'), format('Unexpected value of escrow_transfer_operation.to: %s', op."to");
+  ASSERT (select op.agent = 'bob'), format('Unexpected value of escrow_transfer_operation.agent: %s', op.agent);
+  ASSERT (select op.escrow_id = 10), format('Unexpected value of escrow_transfer_operation.escrow_id: %s', op.escrow_id);
+  ASSERT (select op.hbd_amount = '(10000,3,@@000000013)'::hive.asset), format('Unexpected value of escrow_transfer_operation.hbd_amount: %s', op.hbd_amount);
+  ASSERT (select op.hive_amount = '(10000,3,@@000000021)'::hive.asset), format('Unexpected value of escrow_transfer_operation.hive_amount: %s', op.hive_amount);
+  ASSERT (select op.fee = '(10000,3,@@000000013)'::hive.asset), format('Unexpected value of escrow_transfer_operation.fee: %s', op.fee);
+  ASSERT (select op.ratification_deadline = '2030-01-01 00:00:00'), format('Unexpected value of escrow_transfer_operation.ratification_deadline: %s', op.ratification_deadline);
+  ASSERT (select op.escrow_expiration = '2030-06-01 00:00:00'), format('Unexpected value of escrow_transfer_operation.escrow_expiration: %s', op.escrow_expiration);
+  ASSERT (select op.json_meta = '{}'), format('Unexpected value of escrow_transfer_operation.json_meta: %s', op.json_meta);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -486,6 +509,7 @@ BEGIN
   CALL check_operation_to_escrow_approve_operation();
   CALL check_operation_to_escrow_dispute_operation();
   CALL check_operation_to_escrow_release_operation();
+  CALL check_operation_to_escrow_transfer_operation();
 END;
 $BODY$
 ;
