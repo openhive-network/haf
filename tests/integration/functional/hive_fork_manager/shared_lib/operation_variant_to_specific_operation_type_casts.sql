@@ -578,6 +578,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_recover_account_operation;
+CREATE PROCEDURE check_operation_to_recover_account_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.recover_account_operation;
+BEGIN
+  op := '{"type": "recover_account_operation","value": {"account_to_recover": "gtg","extensions": [],"new_owner_authority": {"account_auths": [],"key_auths": [["STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh",1]],"weight_threshold": 1},"recent_owner_authority": {"account_auths": [],"key_auths": [["STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi",1]],"weight_threshold": 1}}}'::hive.operation::hive.recover_account_operation;
+  ASSERT (select op.account_to_recover = 'gtg'), format('Unexpected value of recover_account_operation.account_to_recover: %s', op.account_to_recover);
+  ASSERT (select op.new_owner_authority = '(1,"","""STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh""=>""1""")'::hive.authority), format('Unexpected value of recover_account_operation.new_owner_authority: %s', op.new_owner_authority);
+  ASSERT (select op.recent_owner_authority = '(1,"","""STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi""=>""1""")'::hive.authority), format('Unexpected value of recover_account_operation.recent_owner_authority: %s', op.recent_owner_authority);
+  ASSERT (select op.extensions = '{}'), format('Unexpected value of recover_account_operation.extensions: %s', op.extensions);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -618,6 +635,7 @@ BEGIN
   CALL check_operation_to_limit_order_create_operation();
   CALL check_operation_to_pow2_operation();
   CALL check_operation_to_pow_operation();
+  CALL check_operation_to_recover_account_operation();
 END;
 $BODY$
 ;
