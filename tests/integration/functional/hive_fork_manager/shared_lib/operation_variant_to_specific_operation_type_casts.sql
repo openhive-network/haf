@@ -732,6 +732,24 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_witness_update_operation;
+CREATE PROCEDURE check_operation_to_witness_update_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.witness_update_operation;
+BEGIN
+  op := '{"type":"witness_update_operation","value":{"owner":"alice","url":"http://url.html","block_signing_key":"STM5P8syqoj7itoDjbtDvCMCb5W3BNJtUjws9v7TDNZKqBLmp3pQW","props":{"account_creation_fee":{"amount":"10000", "precision":3,"nai":"@@000000021"},"maximum_block_size":131072,"hbd_interest_rate":1000},"fee":{"amount":"0","precision":3,"nai":"@@000000021"}}}'::hive.operation::hive.witness_update_operation;
+  ASSERT (select op.owner = 'alice'), format('Unexpected value of witness_update_operation.owner: %s', op.owner);
+  ASSERT (select op.url = 'http://url.html'), format('Unexpected value of witness_update_operation.url: %s', op.url);
+  ASSERT (select op.block_signing_key = 'STM5P8syqoj7itoDjbtDvCMCb5W3BNJtUjws9v7TDNZKqBLmp3pQW'), format('Unexpected value of witness_update_operation.block_signing_key: %s', op.block_signing_key);
+  ASSERT (select op.props = '("(10000,3,@@000000021)",131072,1000)'::hive.legacy_chain_properties), format('Unexpected value of witness_update_operation.props: %s', op.props);
+  ASSERT (select op.fee = '(0,3,@@000000021)'::hive.asset), format('Unexpected value of witness_update_operation.fee: %s', op.fee);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -781,6 +799,7 @@ BEGIN
   CALL check_operation_to_transfer_to_savings_operation();
   CALL check_operation_to_transfer_to_vesting_operation();
   CALL check_operation_to_withdraw_vesting_operation();
+  CALL check_operation_to_witness_update_operation();
 END;
 $BODY$
 ;
