@@ -943,6 +943,26 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_comment_reward_operation;
+CREATE PROCEDURE check_operation_to_comment_reward_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.comment_reward_operation;
+BEGIN
+  op := '{"type": "comment_reward_operation","value": {"author": "camilla","author_rewards": 401,"beneficiary_payout_value": {"amount": "0","nai": "@@000000013","precision": 3},"curator_payout_value": {"amount": "89", "nai": "@@000000013","precision": 3},"payout": {"amount": "366","nai": "@@000000013","precision": 3},"permlink": "re-spetey-re-camilla-re-spetey-re-clains-free-will-and-conscious-freedom-20160814t111905211z", "total_payout_value": {"amount": "276","nai": "@@000000013","precision": 3}}}'::hive.operation::hive.comment_reward_operation;
+  ASSERT (select op.author = 'camilla'), format('Unexpected value of comment_reward_operation.author: %s', op.author);
+  ASSERT (select op.permlink = 're-spetey-re-camilla-re-spetey-re-clains-free-will-and-conscious-freedom-20160814t111905211z'), format('Unexpected value of comment_reward_operation.permlink: %s', op.permlink);
+  ASSERT (select op.payout = '(366,3,@@000000013)'::hive.asset), format('Unexpected value of comment_reward_operation.payout: %s', op.payout);
+  ASSERT (select op.author_rewards = 401), format('Unexpected value of comment_reward_operation.author_rewards: %s', op.author_rewards);
+  ASSERT (select op.total_payout_value = '(276,3,@@000000013)'::hive.asset), format('Unexpected value of comment_reward_operation.total_payout_value: %s', op.total_payout_value);
+  ASSERT (select op.curator_payout_value = '(89,3,@@000000013)'::hive.asset), format('Unexpected value of comment_reward_operation.curator_payout_value: %s', op.curator_payout_value);
+  ASSERT (select op.beneficiary_payout_value = '(0,3,@@000000013)'::hive.asset), format('Unexpected value of comment_reward_operation.beneficiary_payout_value: %s', op.beneficiary_payout_value);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1004,6 +1024,7 @@ BEGIN
   CALL check_operation_to_clear_null_account_balance_operation();
   CALL check_operation_to_comment_benefactor_reward_operation();
   CALL check_operation_to_comment_payout_update_operation();
+  CALL check_operation_to_comment_reward_operation();
 END;
 $BODY$
 ;
