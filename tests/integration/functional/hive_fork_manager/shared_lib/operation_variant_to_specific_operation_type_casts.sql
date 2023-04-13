@@ -595,6 +595,26 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_recurrent_transfer_operation;
+CREATE PROCEDURE check_operation_to_recurrent_transfer_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.recurrent_transfer_operation;
+BEGIN
+  op := '{"type":"recurrent_transfer_operation","value":{"from":"alice","to":"bob","amount":{"amount":"5000","precision":3,"nai":"@@000000021"},"memo":"memo","recurrence":720,"executions":12,"extensions":[]}}'::hive.operation::hive.recurrent_transfer_operation;
+  ASSERT (select op."from" = 'alice'), format('Unexpected value of recurrent_transfer_operation.from: %s', op."from");
+  ASSERT (select op."to" = 'bob'), format('Unexpected value of recurrent_transfer_operation.to: %s', op."to");
+  ASSERT (select op.amount = '(5000,3,@@000000021)'::hive.asset), format('Unexpected value of recurrent_transfer_operation.amount: %s', op.amount);
+  ASSERT (select op.memo = 'memo'), format('Unexpected value of recurrent_transfer_operation.memo: %s', op.memo);
+  ASSERT (select op.recurrence = 720), format('Unexpected value of recurrent_transfer_operation.recurrence: %s', op.recurrence);
+  ASSERT (select op.executions = 12), format('Unexpected value of recurrent_transfer_operation.executions: %s', op.executions);
+  ASSERT (select op.extensions = '{}'), format('Unexpected value of recurrent_transfer_operation.extensions: %s', op.extensions);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -636,6 +656,7 @@ BEGIN
   CALL check_operation_to_pow2_operation();
   CALL check_operation_to_pow_operation();
   CALL check_operation_to_recover_account_operation();
+  CALL check_operation_to_recurrent_transfer_operation();
 END;
 $BODY$
 ;
