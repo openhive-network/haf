@@ -488,7 +488,7 @@ CREATE TYPE hive.proposal_pay_operation AS (
 
 CREATE TYPE hive.remove_proposal_operation AS (
   proposal_owner hive.account_name_type,
-  proposal_ids NUMERIC[],
+  proposal_ids int8[],
   extensions hive.extensions_type
 );
 
@@ -501,7 +501,7 @@ CREATE TYPE hive.update_proposal_extensions_type AS (
 );
 
 CREATE TYPE hive.update_proposal_operation AS (
-  proposal_id NUMERIC,
+  proposal_id int8,
   creator hive.account_name_type,
   daily_pay hive.asset,
   subject hive.proposal_subject,
@@ -511,7 +511,7 @@ CREATE TYPE hive.update_proposal_operation AS (
 
 CREATE TYPE hive.update_proposal_votes_operation AS (
   voter hive.account_name_type,
-  proposal_ids NUMERIC[],
+  proposal_ids int8[],
   approve boolean,
   extensions hive.extensions_type
 );
