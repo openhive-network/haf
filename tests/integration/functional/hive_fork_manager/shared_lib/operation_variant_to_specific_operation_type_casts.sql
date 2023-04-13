@@ -825,6 +825,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_update_proposal_votes_operation;
+CREATE PROCEDURE check_operation_to_update_proposal_votes_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.update_proposal_votes_operation;
+BEGIN
+  op := '{"type":"update_proposal_votes_operation","value":{"voter":"alice","proposal_ids":[0],"approve":true,"extensions":[]}}'::hive.operation::hive.update_proposal_votes_operation;
+  ASSERT (select op.voter = 'alice'), format('Unexpected value of update_proposal_votes_operation.voter: %s', op.voter);
+  ASSERT (select op.proposal_ids = array[0::Decimal]), format('Unexpected value of update_proposal_votes_operation.proposal_ids: %s', op.proposal_ids);
+  ASSERT (select op.approve = True), format('Unexpected value of update_proposal_votes_operation.approve: %s', op.approve);
+  ASSERT (select op.extensions = '{}'), format('Unexpected value of update_proposal_votes_operation.extensions: %s', op.extensions);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -879,6 +896,7 @@ BEGIN
   CALL check_operation_to_proposal_pay_operation();
   CALL check_operation_to_remove_proposal_operation();
   CALL check_operation_to_update_proposal_operation();
+  CALL check_operation_to_update_proposal_votes_operation();
 END;
 $BODY$
 ;
