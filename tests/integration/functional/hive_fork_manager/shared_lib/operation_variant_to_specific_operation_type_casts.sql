@@ -476,6 +476,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_feed_publish_operation;
+CREATE PROCEDURE check_operation_to_feed_publish_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.feed_publish_operation;
+BEGIN
+  op := '{"type":"feed_publish_operation","value":{"publisher":"initminer","exchange_rate":{"base":{"amount":"1","precision":3,"nai":"@@000000013"},"quote":{"amount":"2","precision":3,"nai":"@@000000021"}}}}'::hive.operation::hive.feed_publish_operation;
+  ASSERT (select op.publisher = 'initminer'), format('Unexpected value of feed_publish_operation.publisher: %s', op.publisher);
+  ASSERT (select op.exchange_rate = '("(1,3,@@000000013)","(2,3,@@000000021)")'::hive.price), format('Unexpected value of feed_publish_operation.exchange_rate: %s', op.exchange_rate);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -510,6 +525,7 @@ BEGIN
   CALL check_operation_to_escrow_dispute_operation();
   CALL check_operation_to_escrow_release_operation();
   CALL check_operation_to_escrow_transfer_operation();
+  CALL check_operation_to_feed_publish_operation();
 END;
 $BODY$
 ;
