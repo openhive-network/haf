@@ -750,6 +750,27 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_create_proposal_operation;
+CREATE PROCEDURE check_operation_to_create_proposal_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.create_proposal_operation;
+BEGIN
+  op := '{"type":"create_proposal_operation","value":{"creator":"alice","receiver":"bob","start_date":"2031-01-01T00:00:01","end_date":"2031-06-01T23:59:59","daily_pay":{"amount":"1000000","precision":3,"nai":"@@000000013"},"subject":"subject-1","permlink":"permlink","extensions":[]}}'::hive.operation::hive.create_proposal_operation;
+  ASSERT (select op.creator = 'alice'), format('Unexpected value of create_proposal_operation.creator: %s', op.creator);
+  ASSERT (select op.receiver = 'bob'), format('Unexpected value of create_proposal_operation.receiver: %s', op.receiver);
+  ASSERT (select op.start_date = '2031-01-01 00:00:01'), format('Unexpected value of create_proposal_operation.start_date: %s', op.start_date);
+  ASSERT (select op.end_date = '2031-06-01 23:59:59'), format('Unexpected value of create_proposal_operation.end_date: %s', op.end_date);
+  ASSERT (select op.daily_pay = '(1000000,3,@@000000013)'::hive.asset), format('Unexpected value of create_proposal_operation.daily_pay: %s', op.daily_pay);
+  ASSERT (select op.subject = 'subject-1'), format('Unexpected value of create_proposal_operation.subject: %s', op.subject);
+  ASSERT (select op.permlink = 'permlink'), format('Unexpected value of create_proposal_operation.permlink: %s', op.permlink);
+  ASSERT (select op.extensions = '{}'), format('Unexpected value of create_proposal_operation.extensions: %s', op.extensions);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -800,6 +821,7 @@ BEGIN
   CALL check_operation_to_transfer_to_vesting_operation();
   CALL check_operation_to_withdraw_vesting_operation();
   CALL check_operation_to_witness_update_operation();
+  CALL check_operation_to_create_proposal_operation();
 END;
 $BODY$
 ;
