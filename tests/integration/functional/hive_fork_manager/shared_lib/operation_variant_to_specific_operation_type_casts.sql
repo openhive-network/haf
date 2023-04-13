@@ -895,6 +895,20 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_clear_null_account_balance_operation;
+CREATE PROCEDURE check_operation_to_clear_null_account_balance_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.clear_null_account_balance_operation;
+BEGIN
+  op := '{"type":"clear_null_account_balance_operation","value":{"total_cleared":[{"amount":"2000","precision":3,"nai":"@@000000021"},{"amount":"21702525","precision":3,"nai":"@@000000013"}]}}'::hive.operation::hive.clear_null_account_balance_operation;
+  ASSERT (select op.total_cleared = '{"(2000,3,@@000000021)","(21702525,3,@@000000013)"}'::hive.asset[]), format('Unexpected value of clear_null_account_balance_operation.total_cleared: %s', op.total_cleared);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -953,6 +967,7 @@ BEGIN
   CALL check_operation_to_account_created_operation();
   CALL check_operation_to_author_reward_operation();
   CALL check_operation_to_changed_recovery_account_operation();
+  CALL check_operation_to_clear_null_account_balance_operation();
 END;
 $BODY$
 ;
