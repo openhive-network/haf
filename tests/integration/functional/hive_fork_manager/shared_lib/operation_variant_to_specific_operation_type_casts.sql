@@ -544,6 +544,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_pow2_operation;
+CREATE PROCEDURE check_operation_to_pow2_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.pow2_operation;
+BEGIN
+  op := '{"type": "pow2_operation","value": {"props": {"account_creation_fee": {"amount": "1","nai": "@@000000021","precision": 3},"hbd_interest_rate": 1000,"maximum_block_size": 131072},"work": {"type": "pow2","value": {"input": {"nonce": "2363830237862599931","prev_block": "003ead0c90b0cd80e9145805d303957015c50ef1","worker_account": "thedao"},"pow_summary": 3878270667}}}}'::hive.operation::hive.pow2_operation;
+  ASSERT (select op.work = '("(""(thedao,""""""\\\\\\\\x30303365616430633930623063643830653931343538303564333033393537303135633530656631"""""",2363830237862599931)"",3878270667)",)'::hive.pow2_work), format('Unexpected value of pow2_operation.work: %s', op.work);
+  ASSERT (select op.new_owner_key IS NULL), format('Unexpected value of pow2_operation.new_owner_key: %s', op.new_owner_key);
+  ASSERT (select op.props = '("(1,3,@@000000021)",131072,1000)'::hive.legacy_chain_properties), format('Unexpected value of pow2_operation.props: %s', op.props);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -582,6 +598,7 @@ BEGIN
   CALL check_operation_to_limit_order_cancel_operation();
   CALL check_operation_to_limit_order_create2_operation();
   CALL check_operation_to_limit_order_create_operation();
+  CALL check_operation_to_pow2_operation();
 END;
 $BODY$
 ;
