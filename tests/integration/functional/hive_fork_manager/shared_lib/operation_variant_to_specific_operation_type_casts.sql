@@ -842,6 +842,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_account_created_operation;
+CREATE PROCEDURE check_operation_to_account_created_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.account_created_operation;
+BEGIN
+  op := '{"type": "account_created_operation","value": {"creator": "steem","initial_delegation": {"amount": "0","nai": "@@000000037","precision": 6},"initial_vesting_shares": {"amount": "11541527333","nai": "@@000000037","precision": 6},"new_account_name": "jevt"}}'::hive.operation::hive.account_created_operation;
+  ASSERT (select op.new_account_name = 'jevt'), format('Unexpected value of account_created_operation.new_account_name: %s', op.new_account_name);
+  ASSERT (select op.creator = 'steem'), format('Unexpected value of account_created_operation.creator: %s', op.creator);
+  ASSERT (select op.initial_vesting_shares = '(11541527333,6,@@000000037)'::hive.asset), format('Unexpected value of account_created_operation.initial_vesting_shares: %s', op.initial_vesting_shares);
+  ASSERT (select op.initial_delegation = '(0,6,@@000000037)'::hive.asset), format('Unexpected value of account_created_operation.initial_delegation: %s', op.initial_delegation);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -897,6 +914,7 @@ BEGIN
   CALL check_operation_to_remove_proposal_operation();
   CALL check_operation_to_update_proposal_operation();
   CALL check_operation_to_update_proposal_votes_operation();
+  CALL check_operation_to_account_created_operation();
 END;
 $BODY$
 ;
