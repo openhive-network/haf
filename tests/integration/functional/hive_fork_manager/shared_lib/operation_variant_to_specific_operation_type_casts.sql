@@ -963,6 +963,20 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_consolidate_treasury_balance_operation;
+CREATE PROCEDURE check_operation_to_consolidate_treasury_balance_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.consolidate_treasury_balance_operation;
+BEGIN
+  op := '{"type":"consolidate_treasury_balance_operation","value":{"total_moved":[{"amount":"83353473585","precision":3,"nai":"@@000000021"},{"amount":"560371025","precision":3,"nai":"@@000000013"}]}}'::hive.operation::hive.consolidate_treasury_balance_operation;
+  ASSERT (select op.total_moved = '{"(83353473585,3,@@000000021)","(560371025,3,@@000000013)"}'::hive.asset[]), format('Unexpected value of consolidate_treasury_balance_operation.total_moved: %s', op.total_moved);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1025,6 +1039,7 @@ BEGIN
   CALL check_operation_to_comment_benefactor_reward_operation();
   CALL check_operation_to_comment_payout_update_operation();
   CALL check_operation_to_comment_reward_operation();
+  CALL check_operation_to_consolidate_treasury_balance_operation();
 END;
 $BODY$
 ;
