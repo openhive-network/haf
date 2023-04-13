@@ -909,6 +909,25 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_comment_benefactor_reward_operation;
+CREATE PROCEDURE check_operation_to_comment_benefactor_reward_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.comment_benefactor_reward_operation;
+BEGIN
+  op := '{"type":"comment_benefactor_reward_operation","value":{"benefactor":"good-karma","author":"abit","permlink":"hard-fork-18-how-to-use-author-reward-splitting-feature","hbd_payout":{"amount":"0","precision":3,"nai":"@@000000013"},"hive_payout":{"amount":"7","precision":3,"nai":"@@000000021"},"vesting_payout":{"amount":"4754505657","precision":6,"nai":"@@000000037"},"payout_must_be_claimed":false}}'::hive.operation::hive.comment_benefactor_reward_operation;
+  ASSERT (select op.benefactor = 'good-karma'), format('Unexpected value of comment_benefactor_reward_operation.benefactor: %s', op.benefactor);
+  ASSERT (select op.author = 'abit'), format('Unexpected value of comment_benefactor_reward_operation.author: %s', op.author);
+  ASSERT (select op.permlink = 'hard-fork-18-how-to-use-author-reward-splitting-feature'), format('Unexpected value of comment_benefactor_reward_operation.permlink: %s', op.permlink);
+  ASSERT (select op.hbd_payout = '(0,3,@@000000013)'::hive.asset), format('Unexpected value of comment_benefactor_reward_operation.hbd_payout: %s', op.hbd_payout);
+  ASSERT (select op.hive_payout = '(7,3,@@000000021)'::hive.asset), format('Unexpected value of comment_benefactor_reward_operation.hive_payout: %s', op.hive_payout);
+  ASSERT (select op.vesting_payout = '(4754505657,6,@@000000037)'::hive.asset), format('Unexpected value of comment_benefactor_reward_operation.vesting_payout: %s', op.vesting_payout);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -968,6 +987,7 @@ BEGIN
   CALL check_operation_to_author_reward_operation();
   CALL check_operation_to_changed_recovery_account_operation();
   CALL check_operation_to_clear_null_account_balance_operation();
+  CALL check_operation_to_comment_benefactor_reward_operation();
 END;
 $BODY$
 ;
