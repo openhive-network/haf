@@ -879,6 +879,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_changed_recovery_account_operation;
+CREATE PROCEDURE check_operation_to_changed_recovery_account_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.changed_recovery_account_operation;
+BEGIN
+  op := '{"type": "changed_recovery_account_operation","value": {"account": "barrie","new_recovery_account": "boombastic_new","old_recovery_account": "boombastic_old"}}'::hive.operation::hive.changed_recovery_account_operation;
+  ASSERT (select op.account = 'barrie'), format('Unexpected value of changed_recovery_account_operation.account: %s', op.account);
+  ASSERT (select op.old_recovery_account = 'boombastic_old'), format('Unexpected value of changed_recovery_account_operation.old_recovery_account: %s', op.old_recovery_account);
+  ASSERT (select op.new_recovery_account = 'boombastic_new'), format('Unexpected value of changed_recovery_account_operation.new_recovery_account: %s', op.new_recovery_account);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -936,6 +952,7 @@ BEGIN
   CALL check_operation_to_update_proposal_votes_operation();
   CALL check_operation_to_account_created_operation();
   CALL check_operation_to_author_reward_operation();
+  CALL check_operation_to_changed_recovery_account_operation();
 END;
 $BODY$
 ;
