@@ -615,6 +615,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_request_account_recovery_operation;
+CREATE PROCEDURE check_operation_to_request_account_recovery_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.request_account_recovery_operation;
+BEGIN
+  op := '{"type": "request_account_recovery_operation","value": {"account_to_recover": "tulpa","extensions": [],"new_owner_authority": {"account_auths": [],"key_auths": [["STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS",2]],"weight_threshold": 1},"recovery_account": "nalesnik"}}'::hive.operation::hive.request_account_recovery_operation;
+  ASSERT (select op.recovery_account = 'nalesnik'), format('Unexpected value of request_account_recovery_operation.recovery_account: %s', op.recovery_account);
+  ASSERT (select op.account_to_recover = 'tulpa'), format('Unexpected value of request_account_recovery_operation.account_to_recover: %s', op.account_to_recover);
+  ASSERT (select op.new_owner_authority = '(1,"","""STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS""=>""2""")'::hive.authority), format('Unexpected value of request_account_recovery_operation.new_owner_authority: %s', op.new_owner_authority);
+  ASSERT (select op.extensions = '{}'), format('Unexpected value of request_account_recovery_operation.extensions: %s', op.extensions);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -657,6 +674,7 @@ BEGIN
   CALL check_operation_to_pow_operation();
   CALL check_operation_to_recover_account_operation();
   CALL check_operation_to_recurrent_transfer_operation();
+  CALL check_operation_to_request_account_recovery_operation();
 END;
 $BODY$
 ;
