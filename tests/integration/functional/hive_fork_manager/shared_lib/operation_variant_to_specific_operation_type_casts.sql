@@ -1452,6 +1452,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_witness_block_approve_operation;
+CREATE PROCEDURE check_operation_to_witness_block_approve_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.witness_block_approve_operation;
+BEGIN
+  raise notice 'checking conversion to witness_block_approve_operation';
+  op := '{"type":"witness_block_approve_operation","value":{"witness":"abc","block_id": "002104af55d5c492c8c134b5a55c89eac8210a86"}}'::hive.operation::hive.witness_block_approve_operation;
+  ASSERT (select op.witness = 'abc'), format('Unexpected value of witness_block_approve_operation.from_account: %s', op.witness);
+  ASSERT (select op.block_id = '\x30303231303461663535643563343932633863313334623561353563383965616338323130613836'), format('Unexpected value of witness_block_approve_operation.from_account: %s', op.block_id);
+END;
+$BODY$
+;
+
 DROP PROCEDURE IF EXISTS check_operation_to_vesting_shares_split_operation;
 CREATE PROCEDURE check_operation_to_vesting_shares_split_operation()
 LANGUAGE 'plpgsql'
@@ -1710,6 +1726,7 @@ BEGIN
   CALL check_operation_to_shutdown_witness_operation();
   CALL check_operation_to_system_warning_operation();
   CALL check_operation_to_transfer_to_vesting_completed_operation();
+  CALL check_operation_to_witness_block_approve_operation();
   CALL check_operation_to_vesting_shares_split_operation();
   CALL check_operation_to_dhf_funding_operation();
   CALL check_operation_to_dhf_conversion_operation();
