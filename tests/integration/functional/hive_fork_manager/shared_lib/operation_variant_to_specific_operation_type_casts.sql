@@ -1237,6 +1237,27 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_hardfork_hive_operation;
+CREATE PROCEDURE check_operation_to_hardfork_hive_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.hardfork_hive_operation;
+BEGIN
+  raise notice 'checking conversion to hardfork_hive_operation';
+  op := '{"type":"hardfork_hive_operation","value":{"account":"abduhawab","treasury":"steem.dao","other_affected_accounts":[],"hbd_transferred":{"amount":"6171","precision":3,"nai":"@@000000013"},"hive_transferred": {"amount":"186651","precision":3,"nai":"@@000000021"},"vests_converted":{"amount":"3399458160520","precision":6,"nai":"@@000000037"},"total_hive_from_vests":{"amount":"1735804","precision":3,"nai":"@@000000021"}}}'::hive.operation::hive.hardfork_hive_operation;
+  ASSERT (select op.account = 'abduhawab'), format('Unexpected value of hardfork_hive_operation.account: %s', op.account);
+  ASSERT (select op.treasury = 'steem.dao'), format('Unexpected value of hardfork_hive_operation.treasury: %s', op.treasury);
+  ASSERT (select op.other_affected_accounts = '{}'), format('Unexpected value of hardfork_hive_operation.other_affected_accounts: %s', op.other_affected_accounts);
+  ASSERT (select op.hbd_transferred = '(6171,3,@@000000013)'::hive.asset), format('Unexpected value of hardfork_hive_operation.hbd_transferred: %s', op.hbd_transferred);
+  ASSERT (select op.hive_transferred = '(186651,3,@@000000021)'::hive.asset), format('Unexpected value of hardfork_hive_operation.hive_transferred: %s', op.hive_transferred);
+  ASSERT (select op.vests_converted = '(3399458160520,6,@@000000037)'::hive.asset), format('Unexpected value of hardfork_hive_operation.vests_converted: %s', op.vests_converted);
+  ASSERT (select op.total_hive_from_vests = '(1735804,3,@@000000021)'::hive.asset), format('Unexpected value of hardfork_hive_operation.total_hive_from_vests: %s', op.total_hive_from_vests);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1311,6 +1332,7 @@ BEGIN
   CALL check_operation_to_fill_recurrent_transfer_operation();
   CALL check_operation_to_fill_transfer_from_savings_operation();
   CALL check_operation_to_fill_vesting_withdraw_operation();
+  CALL check_operation_to_hardfork_hive_operation();
 END;
 $BODY$
 ;
