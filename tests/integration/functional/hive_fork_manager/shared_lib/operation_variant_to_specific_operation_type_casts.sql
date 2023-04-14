@@ -1124,6 +1124,25 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_fill_collateralized_convert_request_operation;
+CREATE PROCEDURE check_operation_to_fill_collateralized_convert_request_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.fill_collateralized_convert_request_operation;
+BEGIN
+  raise notice 'checking conversion to fill_collateralized_convert_request_operation';
+  op := '{"type":"fill_collateralized_convert_request_operation","value":{"owner":"carol3ah","requestid":0,"amount_in":{"amount":"11050","precision":3,"nai":"@@000000021"},"amount_out":{"amount":"10524","precision":3,"nai":"@@000000013"},"excess_collateral":{"amount":"11052","precision":3,"nai":"@@000000021"}}}'::hive.operation::hive.fill_collateralized_convert_request_operation;
+  ASSERT (select op.owner = 'carol3ah'), format('Unexpected value of fill_collateralized_convert_request_operation.owner: %s', op.owner);
+  ASSERT (select op.requestid = 0), format('Unexpected value of fill_collateralized_convert_request_operation.requestid: %s', op.requestid);
+  ASSERT (select op.amount_in = '(11050,3,@@000000021)'::hive.asset), format('Unexpected value of fill_collateralized_convert_request_operation.amount_in: %s', op.amount_in);
+  ASSERT (select op.amount_out = '(10524,3,@@000000013)'::hive.asset), format('Unexpected value of fill_collateralized_convert_request_operation.amount_out: %s', op.amount_out);
+  ASSERT (select op.excess_collateral = '(11052,3,@@000000021)'::hive.asset), format('Unexpected value of fill_collateralized_convert_request_operation.excess_collateral: %s', op.excess_collateral);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1192,6 +1211,7 @@ BEGIN
   CALL check_operation_to_effective_comment_vote_operation();
   CALL check_operation_to_expired_account_notification_operation();
   CALL check_operation_to_failed_recurrent_transfer_operation();
+  CALL check_operation_to_fill_collateralized_convert_request_operation();
 END;
 $BODY$
 ;
