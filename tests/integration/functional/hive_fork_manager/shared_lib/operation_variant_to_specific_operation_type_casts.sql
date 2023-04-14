@@ -1323,6 +1323,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_limit_order_cancelled_operation;
+CREATE PROCEDURE check_operation_to_limit_order_cancelled_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.limit_order_cancelled_operation;
+BEGIN
+  raise notice 'checking conversion to limit_order_cancelled_operation';
+  op := '{"type":"limit_order_cancelled_operation","value":{"seller":"carol3ah","orderid":1,"amount_back":{"amount":"11400","precision":3,"nai":"@@000000021"}}}'::hive.operation::hive.limit_order_cancelled_operation;
+  ASSERT (select op.seller = 'carol3ah'), format('Unexpected value of limit_order_cancelled_operation.seller: %s', op.seller);
+  ASSERT (select op.orderid = 1), format('Unexpected value of limit_order_cancelled_operation.orderid: %s', op.orderid);
+  ASSERT (select op.amount_back = '(11400,3,@@000000021)'::hive.asset), format('Unexpected value of limit_order_cancelled_operation.amount_back: %s', op.amount_back);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1402,6 +1419,7 @@ BEGIN
   CALL check_operation_to_hardfork_operation();
   CALL check_operation_to_ineffective_delete_comment_operation();
   CALL check_operation_to_interest_operation();
+  CALL check_operation_to_limit_order_cancelled_operation();
 END;
 $BODY$
 ;
