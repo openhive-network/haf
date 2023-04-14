@@ -1103,6 +1103,27 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_failed_recurrent_transfer_operation;
+CREATE PROCEDURE check_operation_to_failed_recurrent_transfer_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.failed_recurrent_transfer_operation;
+BEGIN
+  raise notice 'checking conversion to failed_recurrent_transfer_operation';
+  op := '{"type":"failed_recurrent_transfer_operation","value":{"from":"blackknight1423","to":"aa111","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"","consecutive_failures":1,"remaining_executions":0,"deleted":false}}'::hive.operation::hive.failed_recurrent_transfer_operation;
+  ASSERT (select op."from" = 'blackknight1423'), format('Unexpected value of failed_recurrent_transfer_operation.from: %s', op."from");
+  ASSERT (select op."to" = 'aa111'), format('Unexpected value of failed_recurrent_transfer_operation.to: %s', op."to");
+  ASSERT (select op.amount = '(1000,3,@@000000021)'::hive.asset), format('Unexpected value of failed_recurrent_transfer_operation.amount: %s', op.amount);
+  ASSERT (select op.memo = ''), format('Unexpected value of failed_recurrent_transfer_operation.memo: %s', op.memo);
+  ASSERT (select op.consecutive_failures = 1), format('Unexpected value of failed_recurrent_transfer_operation.consecutive_failures: %s', op.consecutive_failures);
+  ASSERT (select op.remaining_executions = 0), format('Unexpected value of failed_recurrent_transfer_operation.remaining_executions: %s', op.remaining_executions);
+  ASSERT (select op.deleted = False), format('Unexpected value of failed_recurrent_transfer_operation.deleted: %s', op.deleted);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1170,6 +1191,7 @@ BEGIN
   CALL check_operation_to_delayed_voting_operation();
   CALL check_operation_to_effective_comment_vote_operation();
   CALL check_operation_to_expired_account_notification_operation();
+  CALL check_operation_to_failed_recurrent_transfer_operation();
 END;
 $BODY$
 ;
