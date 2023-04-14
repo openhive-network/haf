@@ -1388,6 +1388,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_return_vesting_delegation_operation;
+CREATE PROCEDURE check_operation_to_return_vesting_delegation_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.return_vesting_delegation_operation;
+BEGIN
+  raise notice 'checking conversion to return_vesting_delegation_operation';
+  op := '{"type":"return_vesting_delegation_operation","value":{"account":"alice4ah","vesting_shares":{"amount":"1","precision":6,"nai":"@@000000037"}}}'::hive.operation::hive.return_vesting_delegation_operation;
+  ASSERT (select op.account = 'alice4ah'), format('Unexpected value of return_vesting_delegation_operation.account: %s', op.account);
+  ASSERT (select op.vesting_shares = '(1,6,@@000000037)'::hive.asset), format('Unexpected value of return_vesting_delegation_operation.vesting_shares: %s', op.vesting_shares);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1471,6 +1487,7 @@ BEGIN
   CALL check_operation_to_liquidity_reward_operation();
   CALL check_operation_to_pow_reward_operation();
   CALL check_operation_to_producer_reward_operation();
+  CALL check_operation_to_return_vesting_delegation_operation();
 END;
 $BODY$
 ;
