@@ -1592,6 +1592,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_proxy_cleared_operation;
+CREATE PROCEDURE check_operation_to_proxy_cleared_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.proxy_cleared_operation;
+BEGIN
+  raise notice 'checking conversion to proxy_cleared_operation';
+  op := '{"type":"proxy_cleared_operation","value":{"account":"lafona5","proxy":"lafona"}}'::hive.operation::hive.proxy_cleared_operation;
+  ASSERT (select op.account = 'lafona5'), format('Unexpected value of proxy_cleared_operation.account: %s', op.account);
+  ASSERT (select op.proxy = 'lafona'), format('Unexpected value of proxy_cleared_operation.proxy: %s', op.proxy);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1687,6 +1703,7 @@ BEGIN
   CALL check_operation_to_collateralized_convert_immediate_conversion_operation();
   CALL check_operation_to_escrow_approved_operation();
   CALL check_operation_to_escrow_rejected_operation();
+  CALL check_operation_to_proxy_cleared_operation();
 END;
 $BODY$
 ;
