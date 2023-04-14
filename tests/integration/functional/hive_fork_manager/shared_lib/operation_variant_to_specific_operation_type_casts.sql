@@ -1161,6 +1161,26 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_fill_order_operation;
+CREATE PROCEDURE check_operation_to_fill_order_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.fill_order_operation;
+BEGIN
+  raise notice 'checking conversion to fill_order_operation';
+  op := '{"type": "fill_order_operation","value": {"current_orderid": 10,"current_owner": "ledzeppelin","current_pays": {"amount": "5000000","nai": "@@000000021","precision": 3},"open_orderid": 556,"open_owner": "adm", "open_pays": {"amount": "14075200","nai": "@@000000013","precision": 3}}}'::hive.operation::hive.fill_order_operation;
+  ASSERT (select op.current_owner = 'ledzeppelin'), format('Unexpected value of fill_order_operation.current_owner: %s', op.current_owner);
+  ASSERT (select op.current_orderid = 10), format('Unexpected value of fill_order_operation.current_orderid: %s', op.current_orderid);
+  ASSERT (select op.current_pays = '(5000000,3,@@000000021)'::hive.asset), format('Unexpected value of fill_order_operation.current_pays: %s', op.current_pays);
+  ASSERT (select op.open_owner = 'adm'), format('Unexpected value of fill_order_operation.open_owner: %s', op.open_owner);
+  ASSERT (select op.open_orderid = 556), format('Unexpected value of fill_order_operation.open_orderid: %s', op.open_orderid);
+  ASSERT (select op.open_pays = '(14075200,3,@@000000013)'::hive.asset), format('Unexpected value of fill_order_operation.open_pays: %s', op.open_pays);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1231,6 +1251,7 @@ BEGIN
   CALL check_operation_to_failed_recurrent_transfer_operation();
   CALL check_operation_to_fill_collateralized_convert_request_operation();
   CALL check_operation_to_fill_convert_request_operation();
+  CALL check_operation_to_fill_order_operation();
 END;
 $BODY$
 ;
