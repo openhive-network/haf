@@ -1356,6 +1356,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_pow_reward_operation;
+CREATE PROCEDURE check_operation_to_pow_reward_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.pow_reward_operation;
+BEGIN
+  raise notice 'checking conversion to pow_reward_operation';
+  op := '{"type": "pow_reward_operation","value": {"reward": {"amount": "21000","nai": "@@000000021","precision": 3},"worker": "admin"}}'::hive.operation::hive.pow_reward_operation;
+  ASSERT (select op.worker = 'admin'), format('Unexpected value of pow_reward_operation.worker: %s', op.worker);
+  ASSERT (select op.reward = '(21000,3,@@000000021)'::hive.asset), format('Unexpected value of pow_reward_operation.reward: %s', op.reward);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1437,6 +1453,7 @@ BEGIN
   CALL check_operation_to_interest_operation();
   CALL check_operation_to_limit_order_cancelled_operation();
   CALL check_operation_to_liquidity_reward_operation();
+  CALL check_operation_to_pow_reward_operation();
 END;
 $BODY$
 ;
