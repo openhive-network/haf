@@ -333,6 +333,26 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_custom_binary_operation;
+CREATE PROCEDURE check_operation_to_custom_binary_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.custom_binary_operation;
+BEGIN
+  raise notice 'checking conversion to custom_binary_operation';
+  op := '{"type":"custom_binary_operation","value":{"required_owner_auths":["owner"],"required_active_auths":["active"],"required_posting_auths":["posting"],"required_auths":[{"weight_threshold":1,"account_auths":[],"key_auths":[["STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S",1]]}],"id":"some_id","data":"0a627974656d617374657207737465656d697402a3d13897d82114466ad87a74b73a53292d8331d1bd1d3082da6bfbcff19ed097029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f6d2a8cab6832050078bc5729201e3ea24ea9f7873e6dbdc65a6bd9899053b9acda876dc69f11a13df9ca8b26b6"}}'::hive.operation::hive.custom_binary_operation;
+  ASSERT (select op.required_owner_auths = array['owner'::hive.account_name_type]), format('Unexpected value of custom_binary_operation.required_owner_auths: %s', op.required_owner_auths);
+  ASSERT (select op.required_active_auths = array['active'::hive.account_name_type]), format('Unexpected value of custom_binary_operation.required_active_auths: %s', op.required_active_auths);
+  ASSERT (select op.required_posting_auths = array['posting'::hive.account_name_type]), format('Unexpected value of custom_binary_operation.required_posting_auths: %s', op.required_posting_auths);
+  ASSERT (select op.required_auths = array['(1,"","""STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S""=>""1""")'::hive.authority]), format('Unexpected value of custom_binary_operation.required_posting_auths: %s', op.required_posting_auths);
+  ASSERT (select op.id = 'some_id'), format('Unexpected value of custom_binary_operation.id: %s', op.id);
+  ASSERT (select op.data = '\x0a627974656d617374657207737465656d697402a3d13897d82114466ad87a74b73a53292d8331d1bd1d3082da6bfbcff19ed097029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f6d2a8cab6832050078bc5729201e3ea24ea9f7873e6dbdc65a6bd9899053b9acda876dc69f11a13df9ca8b26b6'), format('Unexpected value of custom_binary_operation.data: %s', op.data);
+END;
+$BODY$
+;
+
 DROP PROCEDURE IF EXISTS check_operation_to_custom_json_operation;
 CREATE PROCEDURE check_operation_to_custom_json_operation()
 LANGUAGE 'plpgsql'
@@ -1698,6 +1718,7 @@ BEGIN
   CALL check_operation_to_collateralized_convert_operation();
   CALL check_operation_to_convert_operation();
   CALL check_operation_to_create_claimed_account_operation();
+  CALL check_operation_to_custom_binary_operation();
   CALL check_operation_to_custom_json_operation();
   CALL check_operation_to_custom_operation();
   CALL check_operation_to_decline_voting_rights_operation();
