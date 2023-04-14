@@ -287,14 +287,14 @@ CREATE TYPE hive.escrow_release_operation AS (
 CREATE TYPE hive.escrow_transfer_operation AS (
   "from" hive.account_name_type,
   "to" hive.account_name_type,
-  agent hive.account_name_type,
-  escrow_id int8, -- uint32_t: 4 byte, but unsigned (int8)
   hbd_amount hive.asset,
   hive_amount hive.asset,
+  escrow_id int8, -- uint32_t: 4 byte, but unsigned (int8)
+  agent hive.account_name_type,
   fee hive.asset,
+  json_meta jsonb,
   ratification_deadline timestamp,
-  escrow_expiration timestamp,
-  json_meta jsonb
+  escrow_expiration timestamp
 );
 
 CREATE TYPE hive.feed_publish_operation AS (
@@ -311,8 +311,8 @@ CREATE TYPE hive.limit_order_create2_operation AS (
   owner hive.account_name_type,
   orderid int8, -- uint32_t: 4 byte, but unsigned (int8)
   amount_to_sell hive.asset,
-  fill_or_kill boolean,
   exchange_rate hive.price,
+  fill_or_kill boolean,
   expiration timestamp
 );
 
