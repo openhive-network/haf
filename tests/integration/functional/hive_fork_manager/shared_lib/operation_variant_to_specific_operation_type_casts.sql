@@ -1307,6 +1307,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_interest_operation;
+CREATE PROCEDURE check_operation_to_interest_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.interest_operation;
+BEGIN
+  raise notice 'checking conversion to interest_operation';
+  op := '{"type": "interest_operation","value": {"interest": {"amount": "2260","nai": "@@000000013","precision": 3},"is_saved_into_hbd_balance": true,"owner": "camilla"}}'::hive.operation::hive.interest_operation;
+  ASSERT (select op.owner = 'camilla'), format('Unexpected value of interest_operation.owner: %s', op.owner);
+  ASSERT (select op.interest = '(2260,3,@@000000013)'::hive.asset), format('Unexpected value of interest_operation.interest: %s', op.interest);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1385,6 +1401,7 @@ BEGIN
   CALL check_operation_to_hardfork_hive_restore_operation();
   CALL check_operation_to_hardfork_operation();
   CALL check_operation_to_ineffective_delete_comment_operation();
+  CALL check_operation_to_interest_operation();
 END;
 $BODY$
 ;
