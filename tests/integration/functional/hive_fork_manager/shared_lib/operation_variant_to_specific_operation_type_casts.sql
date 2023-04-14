@@ -1143,6 +1143,24 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_fill_convert_request_operation;
+CREATE PROCEDURE check_operation_to_fill_convert_request_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.fill_convert_request_operation;
+BEGIN
+  raise notice 'checking conversion to fill_convert_request_operation';
+  op := '{"type": "fill_convert_request_operation","value": {"amount_in": {"amount": "2000000","nai": "@@000000013","precision": 3},"amount_out": {"amount": "605143","nai": "@@000000021","precision": 3},"owner": "xeroc","requestid": 1468315395}}'::hive.operation::hive.fill_convert_request_operation;
+  ASSERT (select op.owner = 'xeroc'), format('Unexpected value of fill_convert_request_operation.owner: %s', op.owner);
+  ASSERT (select op.requestid = 1468315395), format('Unexpected value of fill_convert_request_operation.requestid: %s', op.requestid);
+  ASSERT (select op.amount_in = '(2000000,3,@@000000013)'::hive.asset), format('Unexpected value of fill_convert_request_operation.amount_in: %s', op.amount_in);
+  ASSERT (select op.amount_out = '(605143,3,@@000000021)'::hive.asset), format('Unexpected value of fill_convert_request_operation.amount_out: %s', op.amount_out);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1212,6 +1230,7 @@ BEGIN
   CALL check_operation_to_expired_account_notification_operation();
   CALL check_operation_to_failed_recurrent_transfer_operation();
   CALL check_operation_to_fill_collateralized_convert_request_operation();
+  CALL check_operation_to_fill_convert_request_operation();
 END;
 $BODY$
 ;
