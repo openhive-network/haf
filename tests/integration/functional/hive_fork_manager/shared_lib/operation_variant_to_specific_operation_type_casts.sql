@@ -1517,6 +1517,24 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_proposal_fee_operation;
+CREATE PROCEDURE check_operation_to_proposal_fee_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.proposal_fee_operation;
+BEGIN
+  raise notice 'checking conversion to proposal_fee_operation';
+  op := '{"type":"proposal_fee_operation","value":{"creator":"alice7ah","treasury":"hive.fund","proposal_id":2,"fee":{"amount":"10000","precision":3,"nai":"@@000000013"}}}'::hive.operation::hive.proposal_fee_operation;
+  ASSERT (select op.creator = 'alice7ah'), format('Unexpected value of proposal_fee_operation.creator: %s', op.creator);
+  ASSERT (select op.treasury = 'hive.fund'), format('Unexpected value of proposal_fee_operation.treasury: %s', op.treasury);
+  ASSERT (select op.proposal_id = 2), format('Unexpected value of proposal_fee_operation.proposal_id: %s', op.proposal_id);
+  ASSERT (select op.fee = '(10000,3,@@000000013)'::hive.asset), format('Unexpected value of proposal_fee_operation.fee: %s', op.fee);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1608,6 +1626,7 @@ BEGIN
   CALL check_operation_to_dhf_funding_operation();
   CALL check_operation_to_dhf_conversion_operation();
   CALL check_operation_to_producer_missed_operation();
+  CALL check_operation_to_proposal_fee_operation();
 END;
 $BODY$
 ;
