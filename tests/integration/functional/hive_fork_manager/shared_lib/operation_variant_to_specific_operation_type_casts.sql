@@ -1010,6 +1010,26 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_effective_comment_vote_operation;
+CREATE PROCEDURE check_operation_to_effective_comment_vote_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.effective_comment_vote_operation;
+BEGIN
+  op := '{"type": "effective_comment_vote_operation","value": {"author": "blocktrades","pending_payout": {"amount": "13419166","nai": "@@000000013","precision": 3},"permlink": "tax-issues-facing-us-based-cryptocurrency- holders-and-miners-intro-and-irs-guidelines","rshares": "29885796722307","total_vote_weight": "38751835134587","voter": "berniesanders","weight": "2523154605731"}}'::hive.operation::hive.effective_comment_vote_operation;
+  ASSERT (select op.voter = 'berniesanders'), format('Unexpected value of effective_comment_vote_operation.voter: %s', op.voter);
+  ASSERT (select op.author = 'blocktrades'), format('Unexpected value of effective_comment_vote_operation.author: %s', op.author);
+  ASSERT (select op.permlink = 'tax-issues-facing-us-based-cryptocurrency- holders-and-miners-intro-and-irs-guidelines'), format('Unexpected value of effective_comment_vote_operation.permlink: %s', op.permlink);
+  ASSERT (select op.weight = 2523154605731), format('Unexpected value of effective_comment_vote_operation.weight: %s', op.weight);
+  ASSERT (select op.rshares = 29885796722307), format('Unexpected value of effective_comment_vote_operation.rshares: %s', op.rshares);
+  ASSERT (select op.total_vote_weight = 38751835134587), format('Unexpected value of effective_comment_vote_operation.total_vote_weight: %s', op.total_vote_weight);
+  ASSERT (select op.pending_payout = '(13419166,3,@@000000013)'::hive.asset), format('Unexpected value of effective_comment_vote_operation.pending_payout: %s', op.pending_payout);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1075,6 +1095,7 @@ BEGIN
   CALL check_operation_to_consolidate_treasury_balance_operation();
   CALL check_operation_to_curation_reward_operation();
   CALL check_operation_to_delayed_voting_operation();
+  CALL check_operation_to_effective_comment_vote_operation();
 END;
 $BODY$
 ;
