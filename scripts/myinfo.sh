@@ -1,5 +1,7 @@
 #! /bin/bash
 
+set -x
+
 echo find / -name postgres*.conf 2>/dev/null
 find / -name postgres*.conf 2>/dev/null
 
