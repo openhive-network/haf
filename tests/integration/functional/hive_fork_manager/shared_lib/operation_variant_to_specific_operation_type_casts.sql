@@ -1469,6 +1469,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_dhf_funding_operation;
+CREATE PROCEDURE check_operation_to_dhf_funding_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.dhf_funding_operation;
+BEGIN
+  raise notice 'checking conversion to dhf_funding_operation';
+  op := '{"type":"dhf_funding_operation","value":{"treasury":"hive.fund","additional_funds":{"amount":"9","precision":3,"nai":"@@000000013"}}}'::hive.operation::hive.dhf_funding_operation;
+  ASSERT (select op.treasury = 'hive.fund'), format('Unexpected value of dhf_funding_operation.treasury: %s', op.treasury);
+  ASSERT (select op.additional_funds = '(9,3,@@000000013)'::hive.asset), format('Unexpected value of dhf_funding_operation.additional_funds: %s', op.additional_funds);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1557,6 +1573,7 @@ BEGIN
   CALL check_operation_to_system_warning_operation();
   CALL check_operation_to_transfer_to_vesting_completed_operation();
   CALL check_operation_to_vesting_shares_split_operation();
+  CALL check_operation_to_dhf_funding_operation();
 END;
 $BODY$
 ;
