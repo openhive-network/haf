@@ -995,6 +995,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_delayed_voting_operation;
+CREATE PROCEDURE check_operation_to_delayed_voting_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.delayed_voting_operation;
+BEGIN
+  op := '{"type":"delayed_voting_operation","value":{"voter":"balte","votes":"33105558106560"}}'::hive.operation::hive.delayed_voting_operation;
+  ASSERT (select op.voter = 'balte'), format('Unexpected value of delayed_voting_operation.voter: %s', op.voter);
+  ASSERT (select op.votes = 33105558106560), format('Unexpected value of delayed_voting_operation.votes: %s', op.votes);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1059,6 +1074,7 @@ BEGIN
   CALL check_operation_to_comment_reward_operation();
   CALL check_operation_to_consolidate_treasury_balance_operation();
   CALL check_operation_to_curation_reward_operation();
+  CALL check_operation_to_delayed_voting_operation();
 END;
 $BODY$
 ;
