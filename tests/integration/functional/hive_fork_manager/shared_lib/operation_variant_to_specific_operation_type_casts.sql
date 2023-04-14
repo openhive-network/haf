@@ -1434,6 +1434,24 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_transfer_to_vesting_completed_operation;
+CREATE PROCEDURE check_operation_to_transfer_to_vesting_completed_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.transfer_to_vesting_completed_operation;
+BEGIN
+  raise notice 'checking conversion to transfer_to_vesting_completed_operation';
+  op := '{"type": "transfer_to_vesting_completed_operation","value": {"from_account": "blocktrades","hive_vested": {"amount": "98876","nai": "@@000000021","precision": 3},"to_account": "michaeldodridge","vesting_shares_received": {"amount": "307332601851","nai": "@@000000037","precision": 6}}}'::hive.operation::hive.transfer_to_vesting_completed_operation;
+  ASSERT (select op.from_account = 'blocktrades'), format('Unexpected value of transfer_to_vesting_completed_operation.from_account: %s', op.from_account);
+  ASSERT (select op.to_account = 'michaeldodridge'), format('Unexpected value of transfer_to_vesting_completed_operation.to_account: %s', op.to_account);
+  ASSERT (select op.hive_vested = '(98876,3,@@000000021)'::hive.asset), format('Unexpected value of transfer_to_vesting_completed_operation.hive_vested: %s', op.hive_vested);
+  ASSERT (select op.vesting_shares_received = '(307332601851,6,@@000000037)'::hive.asset), format('Unexpected value of transfer_to_vesting_completed_operation.vesting_shares_received: %s', op.vesting_shares_received);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1520,6 +1538,7 @@ BEGIN
   CALL check_operation_to_return_vesting_delegation_operation();
   CALL check_operation_to_shutdown_witness_operation();
   CALL check_operation_to_system_warning_operation();
+  CALL check_operation_to_transfer_to_vesting_completed_operation();
 END;
 $BODY$
 ;
