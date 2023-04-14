@@ -1452,6 +1452,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_vesting_shares_split_operation;
+CREATE PROCEDURE check_operation_to_vesting_shares_split_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.vesting_shares_split_operation;
+BEGIN
+  raise notice 'checking conversion to vesting_shares_split_operation';
+  op := '{"type":"vesting_shares_split_operation","value":{"owner":"initminer","vesting_shares_before_split":{"amount":"1000000","precision":6,"nai":"@@000000037"},"vesting_shares_after_split":{"amount":"1000000000000", "precision":6,"nai":"@@000000037"}}}'::hive.operation::hive.vesting_shares_split_operation;
+  ASSERT (select op.owner = 'initminer'), format('Unexpected value of vesting_shares_split_operation.owner: %s', op.owner);
+  ASSERT (select op.vesting_shares_before_split = '(1000000,6,@@000000037)'::hive.asset), format('Unexpected value of vesting_shares_split_operation.vesting_shares_before_split: %s', op.vesting_shares_before_split);
+  ASSERT (select op.vesting_shares_after_split = '(1000000000000,6,@@000000037)'::hive.asset), format('Unexpected value of vesting_shares_split_operation.vesting_shares_after_split: %s', op.vesting_shares_after_split);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1539,6 +1556,7 @@ BEGIN
   CALL check_operation_to_shutdown_witness_operation();
   CALL check_operation_to_system_warning_operation();
   CALL check_operation_to_transfer_to_vesting_completed_operation();
+  CALL check_operation_to_vesting_shares_split_operation();
 END;
 $BODY$
 ;
