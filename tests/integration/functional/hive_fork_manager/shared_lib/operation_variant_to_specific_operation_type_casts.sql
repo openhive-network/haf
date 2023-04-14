@@ -1535,6 +1535,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_collateralized_convert_immediate_conversion_operation;
+CREATE PROCEDURE check_operation_to_collateralized_convert_immediate_conversion_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.collateralized_convert_immediate_conversion_operation;
+BEGIN
+  raise notice 'checking conversion to collateralized_convert_immediate_conversion_operation';
+  op := '{"type":"collateralized_convert_immediate_conversion_operation","value":{"owner":"carol3ah","requestid":3,"hbd_out":{"amount":"10524","precision":3,"nai":"@@000000013"}}}'::hive.operation::hive.collateralized_convert_immediate_conversion_operation;
+  ASSERT (select op.owner = 'carol3ah'), format('Unexpected value of collateralized_convert_immediate_conversion_operation.owner: %s', op.owner);
+  ASSERT (select op.requestid = '3'), format('Unexpected value of collateralized_convert_immediate_conversion_operation.requestid: %s', op.requestid);
+  ASSERT (select op.hbd_out = '(10524,3,@@000000013)'::hive.asset), format('Unexpected value of collateralized_convert_immediate_conversion_operation.hbd_out: %s', op.hbd_out);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1627,6 +1644,7 @@ BEGIN
   CALL check_operation_to_dhf_conversion_operation();
   CALL check_operation_to_producer_missed_operation();
   CALL check_operation_to_proposal_fee_operation();
+  CALL check_operation_to_collateralized_convert_immediate_conversion_operation();
 END;
 $BODY$
 ;
