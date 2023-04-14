@@ -1404,6 +1404,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_shutdown_witness_operation;
+CREATE PROCEDURE check_operation_to_shutdown_witness_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.shutdown_witness_operation;
+BEGIN
+  raise notice 'checking conversion to shutdown_witness_operation';
+  op := '{"type":"shutdown_witness_operation","value":{"owner":"mining1"}}'::hive.operation::hive.shutdown_witness_operation;
+  ASSERT (select op.owner = 'mining1'), format('Unexpected value of shutdown_witness_operation.owner: %s', op.owner);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1488,6 +1503,7 @@ BEGIN
   CALL check_operation_to_pow_reward_operation();
   CALL check_operation_to_producer_reward_operation();
   CALL check_operation_to_return_vesting_delegation_operation();
+  CALL check_operation_to_shutdown_witness_operation();
 END;
 $BODY$
 ;
