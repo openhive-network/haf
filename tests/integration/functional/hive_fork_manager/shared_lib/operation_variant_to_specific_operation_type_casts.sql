@@ -1608,6 +1608,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_declined_voting_rights_operation;
+CREATE PROCEDURE check_operation_to_declined_voting_rights_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.declined_voting_rights_operation;
+BEGIN
+  raise notice 'checking conversion to declined_voting_rights_operation';
+  op := '{"type":"declined_voting_rights_operation","value":{"account":"lafona5"}}'::hive.operation::hive.declined_voting_rights_operation;
+  ASSERT (select op.account = 'lafona5'), format('Unexpected value of declined_voting_rights_operation.account: %s', op.account);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1704,6 +1719,7 @@ BEGIN
   CALL check_operation_to_escrow_approved_operation();
   CALL check_operation_to_escrow_rejected_operation();
   CALL check_operation_to_proxy_cleared_operation();
+  CALL check_operation_to_declined_voting_rights_operation();
 END;
 $BODY$
 ;
