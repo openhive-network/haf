@@ -684,6 +684,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_set_reset_account_operation;
+CREATE PROCEDURE check_operation_to_set_reset_account_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.set_reset_account_operation;
+BEGIN
+  raise notice 'checking conversion to set_reset_account_operation';
+  op := '{"type": "set_reset_account_operation","value": {"account": "tulpa","current_reset_account": "old_account", "reset_account": "new_account"}}'::hive.operation::hive.set_reset_account_operation;
+  ASSERT (select op.account = 'tulpa'), format('Unexpected value of set_reset_account_operation.account: %s', op.account);
+  ASSERT (select op.current_reset_account = 'old_account'), format('Unexpected value of set_reset_account_operation.current_reset_account: %s', op.current_reset_account);
+  ASSERT (select op.reset_account = 'new_account'), format('Unexpected value of set_reset_account_operation.reset_account: %s', op.reset_account);
+END;
+$BODY$
+;
+
 DROP PROCEDURE IF EXISTS check_operation_to_set_withdraw_vesting_route_operation;
 CREATE PROCEDURE check_operation_to_set_withdraw_vesting_route_operation()
 LANGUAGE 'plpgsql'
@@ -1700,6 +1717,7 @@ BEGIN
   CALL check_operation_to_recurrent_transfer_operation();
   CALL check_operation_to_request_account_recovery_operation();
   CALL check_operation_to_reset_account_operation();
+  CALL check_operation_to_set_reset_account_operation();
   CALL check_operation_to_set_withdraw_vesting_route_operation();
   CALL check_operation_to_transfer_from_savings_operation();
   CALL check_operation_to_transfer_operation();
