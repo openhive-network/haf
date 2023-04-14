@@ -1200,6 +1200,25 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_fill_transfer_from_savings_operation;
+CREATE PROCEDURE check_operation_to_fill_transfer_from_savings_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.fill_transfer_from_savings_operation;
+BEGIN
+  raise notice 'checking conversion to fill_transfer_from_savings_operation';
+  op := '{"type":"fill_transfer_from_savings_operation","value":{"from":"alice_from","to":"alice_to","amount":{"amount":"7","precision":3,"nai":"@@000000021"},"request_id":1,"memo":""}}'::hive.operation::hive.fill_transfer_from_savings_operation;
+  ASSERT (select op."from" = 'alice_from'), format('Unexpected value of fill_transfer_from_savings_operation.from: %s', op."from");
+  ASSERT (select op."to" = 'alice_to'), format('Unexpected value of fill_transfer_from_savings_operation.to: %s', op."to");
+  ASSERT (select op.amount = '(7,3,@@000000021)'::hive.asset), format('Unexpected value of fill_transfer_from_savings_operation.amount: %s', op.amount);
+  ASSERT (select op.request_id = 1), format('Unexpected value of fill_transfer_from_savings_operation.request_id: %s', op.request_id);
+  ASSERT (select op.memo = ''), format('Unexpected value of fill_transfer_from_savings_operation.memo: %s', op.memo);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1272,6 +1291,7 @@ BEGIN
   CALL check_operation_to_fill_convert_request_operation();
   CALL check_operation_to_fill_order_operation();
   CALL check_operation_to_fill_recurrent_transfer_operation();
+  CALL check_operation_to_fill_transfer_from_savings_operation();
 END;
 $BODY$
 ;
