@@ -667,6 +667,23 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_reset_account_operation;
+CREATE PROCEDURE check_operation_to_reset_account_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.reset_account_operation;
+BEGIN
+  raise notice 'checking conversion to reset_account_operation';
+  op := '{"type": "reset_account_operation","value": {"account_to_reset": "tulpa","new_owner_authority": {"account_auths": [],"key_auths": [["STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS",2]],"weight_threshold": 1},"reset_account": "nalesnik"}}'::hive.operation::hive.reset_account_operation;
+  ASSERT (select op.reset_account = 'nalesnik'), format('Unexpected value of reset_account_operation.reset_account: %s', op.reset_account);
+  ASSERT (select op.account_to_reset = 'tulpa'), format('Unexpected value of reset_account_operation.account_to_reset: %s', op.account_to_reset);
+  ASSERT (select op.new_owner_authority = '(1,"","""STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS""=>""2""")'::hive.authority), format('Unexpected value of reset_account_operation.new_owner_authority: %s', op.new_owner_authority);
+END;
+$BODY$
+;
+
 DROP PROCEDURE IF EXISTS check_operation_to_set_withdraw_vesting_route_operation;
 CREATE PROCEDURE check_operation_to_set_withdraw_vesting_route_operation()
 LANGUAGE 'plpgsql'
@@ -1682,6 +1699,7 @@ BEGIN
   CALL check_operation_to_recover_account_operation();
   CALL check_operation_to_recurrent_transfer_operation();
   CALL check_operation_to_request_account_recovery_operation();
+  CALL check_operation_to_reset_account_operation();
   CALL check_operation_to_set_withdraw_vesting_route_operation();
   CALL check_operation_to_transfer_from_savings_operation();
   CALL check_operation_to_transfer_operation();
