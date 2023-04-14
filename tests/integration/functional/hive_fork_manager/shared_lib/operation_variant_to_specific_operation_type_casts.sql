@@ -1219,6 +1219,24 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_fill_vesting_withdraw_operation;
+CREATE PROCEDURE check_operation_to_fill_vesting_withdraw_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.fill_vesting_withdraw_operation;
+BEGIN
+  raise notice 'checking conversion to fill_vesting_withdraw_operation';
+  op := '{"type": "fill_vesting_withdraw_operation","value": {"deposited": {"amount": "259543","nai": "@@000000021","precision": 3},"from_account": "adm_from","to_account": "adm_to","withdrawn": {"amount": "1569493022171", "nai": "@@000000037","precision": 6}}}'::hive.operation::hive.fill_vesting_withdraw_operation;
+  ASSERT (select op.from_account = 'adm_from'), format('Unexpected value of fill_vesting_withdraw_operation.from_account: %s', op.from_account);
+  ASSERT (select op.to_account = 'adm_to'), format('Unexpected value of fill_vesting_withdraw_operation.to_account: %s', op.to_account);
+  ASSERT (select op.withdrawn = '(1569493022171,6,@@000000037)'::hive.asset), format('Unexpected value of fill_vesting_withdraw_operation.withdrawn: %s', op.withdrawn);
+  ASSERT (select op.deposited = '(259543,3,@@000000021)'::hive.asset), format('Unexpected value of fill_vesting_withdraw_operation.deposited: %s', op.deposited);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1292,6 +1310,7 @@ BEGIN
   CALL check_operation_to_fill_order_operation();
   CALL check_operation_to_fill_recurrent_transfer_operation();
   CALL check_operation_to_fill_transfer_from_savings_operation();
+  CALL check_operation_to_fill_vesting_withdraw_operation();
 END;
 $BODY$
 ;
