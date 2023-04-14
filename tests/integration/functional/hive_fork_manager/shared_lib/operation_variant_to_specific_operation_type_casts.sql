@@ -1571,6 +1571,27 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_escrow_rejected_operation;
+CREATE PROCEDURE check_operation_to_escrow_rejected_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.escrow_rejected_operation;
+BEGIN
+  raise notice 'checking conversion to escrow_rejected_operation';
+  op := '{"type":"escrow_rejected_operation","value":{"from":"alice6ah","to":"ben6ah","agent":"carol6ah","escrow_id":31,"hbd_amount":{"amount":"0","precision":3,"nai":"@@000000013"},"hive_amount":{"amount":"7","precision":3,"nai":"@@000000021"},"fee":{"amount":"1","precision":3,"nai":"@@000000021"}}}'::hive.operation::hive.escrow_rejected_operation;
+  ASSERT (select op."from" = 'alice6ah'), format('Unexpected value of escrow_rejected_operation.from: %s', op."from");
+  ASSERT (select op."to" = 'ben6ah'), format('Unexpected value of escrow_rejected_operation.to: %s', op."to");
+  ASSERT (select op.agent = 'carol6ah'), format('Unexpected value of escrow_rejected_operation.agent: %s', op.agent);
+  ASSERT (select op.escrow_id = 31), format('Unexpected value of escrow_rejected_operation.escrow_id: %s', op.escrow_id);
+  ASSERT (select op.hbd_amount = '(0,3,@@000000013)'::hive.asset), format('Unexpected value of escrow_rejected_operation.hbd_amount: %s', op.hbd_amount);
+  ASSERT (select op.hive_amount = '(7,3,@@000000021)'::hive.asset), format('Unexpected value of escrow_rejected_operation.hive_amount: %s', op.hive_amount);
+  ASSERT (select op.fee = '(1,3,@@000000021)'::hive.asset), format('Unexpected value of escrow_rejected_operation.fee: %s', op.fee);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1665,6 +1686,7 @@ BEGIN
   CALL check_operation_to_proposal_fee_operation();
   CALL check_operation_to_collateralized_convert_immediate_conversion_operation();
   CALL check_operation_to_escrow_approved_operation();
+  CALL check_operation_to_escrow_rejected_operation();
 END;
 $BODY$
 ;
