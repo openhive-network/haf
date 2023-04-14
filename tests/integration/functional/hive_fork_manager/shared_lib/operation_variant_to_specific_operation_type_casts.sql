@@ -1502,6 +1502,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_producer_missed_operation;
+CREATE PROCEDURE check_operation_to_producer_missed_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.producer_missed_operation;
+BEGIN
+  raise notice 'checking conversion to producer_missed_operation';
+  op := '{"type": "producer_missed_operation","value": {"producer": "dantheman5"}}'::hive.operation::hive.producer_missed_operation;
+  ASSERT (select op.producer = 'dantheman5'), format('Unexpected value of producer_missed_operation.producer: %s', op.producer);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1592,6 +1607,7 @@ BEGIN
   CALL check_operation_to_vesting_shares_split_operation();
   CALL check_operation_to_dhf_funding_operation();
   CALL check_operation_to_dhf_conversion_operation();
+  CALL check_operation_to_producer_missed_operation();
 END;
 $BODY$
 ;
