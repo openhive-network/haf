@@ -1276,6 +1276,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_hardfork_operation;
+CREATE PROCEDURE check_operation_to_hardfork_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.hardfork_operation;
+BEGIN
+  raise notice 'checking conversion to hardfork_operation';
+  op := '{"type": "hardfork_operation","value": {"hardfork_id": 7}}'::hive.operation::hive.hardfork_operation;
+  ASSERT (select op.hardfork_id = 7), format('Unexpected value of hardfork_operation.hardfork_id: %s', op.hardfork_id);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1352,6 +1367,7 @@ BEGIN
   CALL check_operation_to_fill_vesting_withdraw_operation();
   CALL check_operation_to_hardfork_hive_operation();
   CALL check_operation_to_hardfork_hive_restore_operation();
+  CALL check_operation_to_hardfork_operation();
 END;
 $BODY$
 ;
