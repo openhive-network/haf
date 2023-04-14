@@ -1372,6 +1372,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_producer_reward_operation;
+CREATE PROCEDURE check_operation_to_producer_reward_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.producer_reward_operation;
+BEGIN
+  raise notice 'checking conversion to producer_reward_operation';
+  op := '{"type": "producer_reward_operation","value": {"producer": "blocktrades","vesting_shares": {"amount": "9181480764","nai": "@@000000037","precision": 6}}}'::hive.operation::hive.producer_reward_operation;
+  ASSERT (select op.producer = 'blocktrades'), format('Unexpected value of producer_reward_operation.producer: %s', op.producer);
+  ASSERT (select op.vesting_shares = '(9181480764,6,@@000000037)'::hive.asset), format('Unexpected value of producer_reward_operation.vesting_shares: %s', op.vesting_shares);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1454,6 +1470,7 @@ BEGIN
   CALL check_operation_to_limit_order_cancelled_operation();
   CALL check_operation_to_liquidity_reward_operation();
   CALL check_operation_to_pow_reward_operation();
+  CALL check_operation_to_producer_reward_operation();
 END;
 $BODY$
 ;
