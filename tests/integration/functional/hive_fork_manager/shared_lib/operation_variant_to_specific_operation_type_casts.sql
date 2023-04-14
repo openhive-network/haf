@@ -1258,6 +1258,24 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_hardfork_hive_restore_operation;
+CREATE PROCEDURE check_operation_to_hardfork_hive_restore_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.hardfork_hive_restore_operation;
+BEGIN
+  raise notice 'checking conversion to hardfork_hive_restore_operation';
+  op := '{"type":"hardfork_hive_restore_operation","value":{"account":"angelina6688","treasury":"steem.dao","hbd_transferred":{"amount":"25","precision":3,"nai":"@@000000013"},"hive_transferred":{"amount":"2787",  "precision":3,"nai":"@@000000021"}}}'::hive.operation::hive.hardfork_hive_restore_operation;
+  ASSERT (select op.account = 'angelina6688'), format('Unexpected value of hardfork_hive_restore_operation.account: %s', op.account);
+  ASSERT (select op.treasury = 'steem.dao'), format('Unexpected value of hardfork_hive_restore_operation.treasury: %s', op.treasury);
+  ASSERT (select op.hbd_transferred = '(25,3,@@000000013)'::hive.asset), format('Unexpected value of hardfork_hive_restore_operation.hbd_transferred: %s', op.hbd_transferred);
+  ASSERT (select op.hive_transferred = '(2787,3,@@000000021)'::hive.asset), format('Unexpected value of hardfork_hive_restore_operation.hive_transferred: %s', op.hive_transferred);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1333,6 +1351,7 @@ BEGIN
   CALL check_operation_to_fill_transfer_from_savings_operation();
   CALL check_operation_to_fill_vesting_withdraw_operation();
   CALL check_operation_to_hardfork_hive_operation();
+  CALL check_operation_to_hardfork_hive_restore_operation();
 END;
 $BODY$
 ;
