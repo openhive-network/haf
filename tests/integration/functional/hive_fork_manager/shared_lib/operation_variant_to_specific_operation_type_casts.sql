@@ -1340,6 +1340,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_liquidity_reward_operation;
+CREATE PROCEDURE check_operation_to_liquidity_reward_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.liquidity_reward_operation;
+BEGIN
+  raise notice 'checking conversion to liquidity_reward_operation';
+  op := '{"type": "liquidity_reward_operation","value": {"owner": "adm","payout": {"amount": "1200000","nai": "@@000000021","precision": 3}}}'::hive.operation::hive.liquidity_reward_operation;
+  ASSERT (select op.owner = 'adm'), format('Unexpected value of liquidity_reward_operation.owner: %s', op.owner);
+  ASSERT (select op.payout = '(1200000,3,@@000000021)'::hive.asset), format('Unexpected value of liquidity_reward_operation.payout: %s', op.payout);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1420,6 +1436,7 @@ BEGIN
   CALL check_operation_to_ineffective_delete_comment_operation();
   CALL check_operation_to_interest_operation();
   CALL check_operation_to_limit_order_cancelled_operation();
+  CALL check_operation_to_liquidity_reward_operation();
 END;
 $BODY$
 ;
