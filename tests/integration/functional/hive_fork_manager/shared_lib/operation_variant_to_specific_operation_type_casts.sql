@@ -1419,6 +1419,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_system_warning_operation;
+CREATE PROCEDURE check_operation_to_system_warning_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.system_warning_operation;
+BEGIN
+  raise notice 'checking conversion to system_warning_operation';
+  op := '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}'::hive.operation::hive.system_warning_operation;
+  ASSERT (select op.message = 'SIX OPERATION'), format('Unexpected value of system_warning_operation.message: %s', op.message);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1504,6 +1519,7 @@ BEGIN
   CALL check_operation_to_producer_reward_operation();
   CALL check_operation_to_return_vesting_delegation_operation();
   CALL check_operation_to_shutdown_witness_operation();
+  CALL check_operation_to_system_warning_operation();
 END;
 $BODY$
 ;
