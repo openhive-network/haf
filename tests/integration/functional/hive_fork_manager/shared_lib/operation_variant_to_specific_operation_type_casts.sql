@@ -1291,6 +1291,22 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_ineffective_delete_comment_operation;
+CREATE PROCEDURE check_operation_to_ineffective_delete_comment_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.ineffective_delete_comment_operation;
+BEGIN
+  raise notice 'checking conversion to ineffective_delete_comment_operation';
+  op := '{"type": "ineffective_delete_comment_operation","value": {"author": "jsc","permlink": "re-vadimberkut8-just-test-20160603t163718014z"}}'::hive.operation::hive.ineffective_delete_comment_operation;
+  ASSERT (select op.author = 'jsc'), format('Unexpected value of ineffective_delete_comment_operation.author: %s', op.author);
+  ASSERT (select op.permlink = 're-vadimberkut8-just-test-20160603t163718014z'), format('Unexpected value of ineffective_delete_comment_operation.permlink: %s', op.permlink);
+END;
+$BODY$
+;
+
 DROP FUNCTION IF EXISTS test_when;
 CREATE FUNCTION test_when()
     RETURNS void
@@ -1368,6 +1384,7 @@ BEGIN
   CALL check_operation_to_hardfork_hive_operation();
   CALL check_operation_to_hardfork_hive_restore_operation();
   CALL check_operation_to_hardfork_operation();
+  CALL check_operation_to_ineffective_delete_comment_operation();
 END;
 $BODY$
 ;
