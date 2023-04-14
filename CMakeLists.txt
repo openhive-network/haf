@@ -4,14 +4,6 @@ SET( CMAKE_POSITION_INDEPENDENT_CODE ON )
 SET( CMAKE_CXX_STANDARD 17 )
 SET( CMAKE_CXX_STANDARD_REQUIRED ON )
 
-list( APPEND CMAKE_MODULE_PATH
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
-    "${CMAKE_CURRENT_SOURCE_DIR}/hive/cmake"
-    "${CMAKE_CURRENT_SOURCE_DIR}/hive/libraries/fc/GitVersionGen" )
-
-#This must be processed before first project or enable_language statement
-INCLUDE(hive_build_types)
-
 PROJECT( haf )
 
 SET( HAF_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
@@ -20,6 +12,7 @@ FILE( CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/src/sql_serializer ${CMAKE_CURRENT
 ADD_SUBDIRECTORY( hive EXCLUDE_FROM_ALL )
 
 # Read whole HAF revision (using already imported Git tools from Hive project)
+list( APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/hive/libraries/fc/GitVersionGen" )
 include( GetGitRevisionDescription )
 get_git_head_revision_dir("${CMAKE_CURRENT_SOURCE_DIR}" HAF_GIT_REFSPEC HAF_GIT_REVISION_SHA)
 
@@ -42,6 +35,10 @@ ENDIF()
 SET( CMAKE_SKIP_INSTALL_ALL_DEPENDENCY TRUE )
 
 INCLUDE( ExternalProject )
+
+list( APPEND CMAKE_MODULE_PATH
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/hive/cmake" )
 
 INCLUDE( hive_options )
 INCLUDE( hive_targets )
