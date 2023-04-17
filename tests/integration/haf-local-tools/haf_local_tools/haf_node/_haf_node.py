@@ -100,7 +100,7 @@ class HafNode(PreconfiguredNode):
         )
 
     def __is_transaction_in_database(self, trx_id: str) -> bool:
-        sql = "SELECT exists(SELECT 1 FROM hive.transactions_view WHERE trx_hash LIKE decode(:hash, 'hex'));"
+        sql = "SELECT exists(SELECT 1 FROM hive.transactions_view WHERE trx_hash = decode(:hash, 'hex'));"
         return self.query_one(sql, hash=trx_id)
 
     def query_all(self, sql: str, **kwargs) -> list[Row]:
