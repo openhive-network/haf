@@ -30,7 +30,7 @@ hive::protocol::operation raw_to_operation( const char* raw_data, uint32 data_le
   return fc::raw::unpack_from_char_array< hive::protocol::operation >( raw_data, static_cast< uint32_t >( data_length ) );
 }
 
-fc::variant op_to_variant_impl( const char* raw_data, uint32 data_length )
+fc::variant raw_to_variant_impl( const char* raw_data, uint32 data_length )
 {
   if( !data_length )
     return {};
@@ -45,17 +45,17 @@ fc::variant op_to_variant_impl( const char* raw_data, uint32 data_length )
   return v;
 }
 
-std::string op_to_json( const char* raw_data, uint32 data_length )
+std::string raw_to_json( const char* raw_data, uint32 data_length )
 {
-  return fc::json::to_string( op_to_variant_impl( raw_data, data_length ) );
+  return fc::json::to_string( raw_to_variant_impl( raw_data, data_length ) );
 }
 
-std::vector< char > json_to_op( const char* raw_data )
+std::vector< char > json_to_op( const char* json )
 {
-  if( *raw_data == '\0' )
+  if( *json == '\0' )
     return {};
 
-  auto bufstream = fc::buffered_istream( fc::make_svstream( raw_data ) );
+  auto bufstream = fc::buffered_istream( fc::make_svstream( json ) );
   fc::variant v = fc::json::from_stream( bufstream );
 
   hive::protocol::operation op;
@@ -145,7 +145,7 @@ extern "C"
 
     const char* cstring_out = nullptr;
     PsqlTools::PsqlUtils::pg_call_cxx([=, &cstring_out](){
-      std::string json = op_to_json( raw_data, data_length );
+      std::string json = raw_to_json( raw_data, data_length );
       uint32 json_size = json.size() + 1;
       char* chars      = (char*) palloc( json_size );
       cstring_out = (const char*) memcpy( chars, json.c_str(), json_size );
