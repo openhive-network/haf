@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-set -ex
+set -e
 
 MILLIONS_5=5000000
 MILLION_1=1000000
@@ -9,7 +9,19 @@ THOUSAND_1=1000
 THOUSAND_2=2000
 THOUSAND_3=3000
 
+
+if [ $# -eq 0 ]
+  then
+    echo "No arguments supplied"
+    exit 1
+fi
+
 LAST_BLOCK=$MILLIONS_5
+if  [ $1 -eq $1 ] 2>/dev/null; then
+    #The param is a number, so  it is last block
+    LAST_BLOCK=$1
+    shift
+fi
 
 SERIALIZE_TILL_BLOCK=$LAST_BLOCK
 NO_SERIALIZE_TILL_BLOCK=$SERIALIZE_TILL_BLOCK
@@ -179,7 +191,7 @@ DATA_DIR=/home/hived/datadir
 
 killpostgres()
 {
-    sudo killall -9 postgres || true
+    # sudo killall -9 postgres || true
 
     if $(systemctl list-machines)
     then
@@ -217,6 +229,7 @@ build()
 {
 
 local CMAKED=false
+local EXIT_STATUS=0
 
 if [[ "$PWD" =~ debug_build$ ]] 
 then
@@ -239,15 +252,21 @@ fi
 
 if [[ $CMAKED ]]
 then
-    (ninja  hived extension.hive_fork_manager  && sudo ninja install && sudo chown $USER:$USER .ninja_*  && ctest -R keyauth --output-on-failure) ; 
+    ninja  hived extension.hive_fork_manager  \
+        && sudo ninja install \
+        && sudo chown $USER:$USER .ninja_*  \
+        && ctest -R keyauth --output-on-failure \
+        && ctest -R curr --output-on-failure
+    EXIT_STATUS=$?
     sudo chown -R $USER:$USER *
-
 fi
 
+    return $EXIT_STATUS
 }
 
 serializer()
 {
+    echo "Before serializer"
     time $BUILD_DIR/hive/programs/hived/hived \
     --data-dir=$DATA_DIR \
     --exit-before-sync \
@@ -257,6 +276,7 @@ serializer()
     --replay \
     --shared-file-dir=$DATA_DIR/blockchain \
     --stop-replay-at-block=$SERIALIZE_TILL_BLOCK # serializer
+    echo "After serializer"
 }
 
 noserializer()
@@ -339,12 +359,13 @@ app_start()
 app_cont()
 {
     permissions
-    
+    echo "Before app_cont"
     time psql -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing' \
     -c "call cab_app.main('cabc', $RUN_APP_CONT_MAIN_TILL_BLOCK, $RUN_APP_CONT_MAIN_CHUNK_SIZE)" \
     -c 'select * from hive.cabc_c_a_b_s_t limit 30;' -c 'select count(*) from hive.cabc_accounts;' \
     -c 'select SUM(balance) from hive.cabc_c_a_b_s_t' \
     2>&1 | tee -i app.log # run
+    echo "After app_cont"
 }
 
 
@@ -447,7 +468,6 @@ run_all_from_scratch && app_start && time app_cont
 
 if [ $# -eq 0 ]
   then
-    echo "No arguments supplied"
     run
 else
     echo ">>>>>>Invoking $1 <<<<<<<<"

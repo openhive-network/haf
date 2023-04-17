@@ -6,11 +6,7 @@
 #include <fc/io/json.hpp>
 #include <fc/string.hpp>
 
-#include "try_grab_operations.hpp"
-
 #include <vector>
-
-
 
 using hive::protocol::account_name_type;
 using hive::protocol::asset;
@@ -823,16 +819,9 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
    **/
 
 
-volatile static auto stop_in_consensus_state_provider_get_expected_block_num=false;
 
 Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 {
-
-  while(stop_in_consensus_state_provider_get_expected_block_num)
-  {
-    int a = 0 ;
-    a=a;
-  }
 
   const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
 

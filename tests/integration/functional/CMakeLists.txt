@@ -23,6 +23,11 @@ MACRO( ADD_SQL_FUNCTIONAL_TEST sql_test_path )
     ADD_SQL_FUNCTIONAL_TEST_TYPE( ${sql_test_path} gwt )
 ENDMACRO()
 
+MACRO( ADD_SQL_FUNCTIONAL_COMMIT_TEST sql_test_path )
+    ADD_SQL_FUNCTIONAL_TEST_TYPE( ${sql_test_path} commit )
+ENDMACRO()
+
+
 MACRO( ADD_AUTHORIZATION_FUNCTIONAL_TEST_TYPE sql_test_path test_script_type)
     GET_FILENAME_COMPONENT( test_dir ${sql_test_path} DIRECTORY )
     GET_FILENAME_COMPONENT( test_name  ${sql_test_path} NAME_WLE )

@@ -114,19 +114,19 @@ void get_data_from_postgres(int from, int to, const char* postgres_url)
 
 #ifdef MULTISIGS_IN_C
 
-  pqxx::work transactions_multisig_work{c};
-  pqxx::result transactions_multisig{
-    transactions_multisig_work.exec(
-      std::string("SELECT trx_hash,signature FROM hive.transactions_multisig"))};
+  // pqxx::work transactions_multisig_work{c};
+  // pqxx::result transactions_multisig{
+  //   transactions_multisig_work.exec(
+  //     std::string("SELECT trx_hash,signature FROM hive.transactions_multisig"))};
 
 
-  for( auto row : transactions_multisig)
-  {
-    std::string key(std::string(row["trx_hash"].c_str()+2));
-    multisigs.insert(std::make_pair(key, row["signature"].c_str()+2));
-  }
+  // for( auto row : transactions_multisig)
+  // {
+  //   std::string key(std::string(row["trx_hash"].c_str()+2));
+  //   multisigs.insert(std::make_pair(key, row["signature"].c_str()+2));
+  // }
 
-  transactions_multisig_work.commit();
+  // transactions_multisig_work.commit();
 
 #endif
 
@@ -208,10 +208,10 @@ void handle_transactions(int block_num,
 
         transactions_multisig_work.commit();
 #else
-        auto range = multisigs.equal_range(transaction["trx_hash"].c_str() + 2);
-        for (auto it = range.first; it != range.second; ++it) {
-          signa.push_back(it->second);
-        }
+        // auto range = multisigs.equal_range(transaction["trx_hash"].c_str() + 2);
+        // for (auto it = range.first; it != range.second; ++it) {
+        //   signa.push_back(it->second);
+        // }
 #endif
       }
 
