@@ -47,7 +47,6 @@ include:
 #    - cd "$CI_PROJECT_DIR/$CI_JOB_NAME/build" && ctest -j${CTEST_NUMBER_OF_JOBS} --output-on-failure  -R test.functional.hive_fork_manager.*
 #    - $SETUP_SCRIPTS_PATH/myinfo.sh
   artifacts:
-    when: always
     paths:
     - "$CI_JOB_NAME"
     expire_in: 6 hours
@@ -420,7 +419,7 @@ double_haf_replay_tests:
   tags:
     - hived-for-tests
 
-
+mtlk_test:
   extends: .replay_step
   stage: build_and_test_phase_2
   variables:
