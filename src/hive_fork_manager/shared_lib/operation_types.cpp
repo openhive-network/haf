@@ -20,20 +20,44 @@ Datum to_hstore(const fc::flat_map<std::string, std::vector<char>>& props);
 Datum to_hstore(const fc::flat_map<hive::protocol::account_name_type, hive::protocol::weight_type>& auth);
 Datum to_hstore(const fc::flat_map<hive::protocol::public_key_type, hive::protocol::weight_type>& auth);
 
+Datum to_datum(bool value);
+Datum to_datum(uint8_t value);
+Datum to_datum(uint16_t value);
+Datum to_datum(int16_t value);
+Datum to_datum(uint32_t value);
+Datum to_datum(uint64_t value);
+Datum to_datum(int64_t value);
+Datum to_datum(const std::string& value);
+Datum to_datum(const std::vector<char>& value);
 template<typename T>
-Datum to_sql_tuple(const T& value);
-Datum to_sql_tuple(uint32_t value);
+Datum to_datum(const std::vector<T>& value);
+Datum to_datum(const fc::flat_map<std::string, std::vector<char>>& value);
+Datum to_datum(const hive::protocol::account_name_type& value);
+Datum to_datum(const hive::protocol::json_string& value);
+Datum to_datum(const hive::protocol::authority::account_authority_map& value);
+Datum to_datum(const hive::protocol::authority::key_authority_map& value);
+Datum to_datum(const hive::protocol::extensions_type& value);
+Datum to_datum(const hive::protocol::public_key_type& value);
+Datum to_datum(const fc::ripemd160& value);
+Datum to_datum(const fc::sha256& value);
+Datum to_datum(const fc::time_point_sec& value);
+template<typename T>
+Datum to_datum(const fc::flat_set<T>& value);
+template<typename T>
+Datum to_datum(const flat_set_ex<T>& value);
+Datum to_datum(const hive::protocol::legacy_hive_asset& value);
 template<typename T, size_t N>
-Datum to_sql_tuple(const fc::array<T, N>& value);
-Datum to_sql_tuple(const hive::protocol::asset& asset);
-Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions);
-Datum to_sql_tuple(const hive::protocol::future_extensions& extensions);
-Datum to_sql_tuple(const hive::protocol::price& price);
-Datum to_sql_tuple(const hive::protocol::pow2_work& work);
-Datum to_sql_tuple(const hive::protocol::update_proposal_extensions_type& extensions);
+Datum to_datum(const fc::array<T, N>& value);
 template<typename T>
-Datum to_sql_tuple(const hive::protocol::fixed_string_impl<T>& string);
-Datum to_sql_tuple(const int64_t& value);
+Datum to_datum(const T& value);
+Datum to_datum(const hive::protocol::asset& asset);
+Datum to_datum(const hive::protocol::price& price);
+template<typename T>
+Datum to_datum(const hive::protocol::fixed_string_impl<T>& string);
+Datum to_datum(const hive::protocol::future_extensions& extensions);
+Datum to_datum(const hive::protocol::comment_options_extensions_type& extensions);
+Datum to_datum(const hive::protocol::pow2_work& work);
+Datum to_datum(const hive::protocol::update_proposal_extensions_type& extensions);
 
 template<typename Iter>
 Datum to_sql_array(Iter first, Iter last);
@@ -104,39 +128,6 @@ Datum to_datum(const hive::protocol::json_string& value)
 {
   return DirectFunctionCall1(jsonb_in, CStringGetDatum(static_cast<std::string>(value).c_str()));
 }
-Datum to_datum(const hive::protocol::asset& value)
-{
-  return to_sql_tuple(value);
-}
-Datum to_datum(const hive::protocol::price& value)
-{
-  return to_sql_tuple(value);
-}
-Datum to_datum(const hive::protocol::comment_options_extensions_type& value)
-{
-  return to_sql_tuple(value);
-}
-Datum to_datum(const hive::protocol::authority& value)
-{
-  return to_sql_tuple(value);
-}
-Datum to_datum(const hive::protocol::pow2_input& value)
-{
-  return to_sql_tuple(value);
-}
-Datum to_datum(const fc::equihash::proof& value)
-{
-  return to_sql_tuple(value);
-}
-Datum to_datum(const hive::protocol::pow2_work& value)
-{
-  return to_sql_tuple(value);
-}
-template<typename T>
-Datum to_datum(const hive::protocol::fixed_string_impl<T>& value)
-{
-  return to_sql_tuple(value);
-}
 Datum to_datum(const hive::protocol::authority::account_authority_map& value)
 {
   return to_hstore(value);
@@ -182,23 +173,10 @@ Datum to_datum(const fc::flat_set<T>& value)
 {
   return to_sql_array(std::begin(value), std::end(value));
 }
-Datum to_datum(const hive::protocol::legacy_chain_properties& value)
+template<typename T>
+Datum to_datum(const flat_set_ex<T>& value)
 {
-  // This overload should not be needed, but without it
-  // fc::static_variant<pow2, equihash_pow> is being created from legacy_chain_properties, which fails
-  return to_sql_tuple(value);
-}
-Datum to_datum(const hive::protocol::pow& value)
-{
-  // This overload should not be needed, but without it
-  // fc::static_variant<pow2, equihash_pow> is being created from pow, which fails
-  return to_sql_tuple(value);
-}
-Datum to_datum(const fc::ecc::public_key_data& value)
-{
-  // This overload should not be needed, but without it
-  // fc::static_variant<pow2, equihash_pow> is being created from public_key_data, which fails
-  return to_sql_tuple(value);
+  return to_datum(static_cast<const fc::flat_set<T>&>(value));
 }
 Datum to_datum(const hive::protocol::legacy_hive_asset& value)
 {
@@ -212,14 +190,10 @@ Datum to_datum(const fc::array<T, N>& value)
   SET_VARSIZE(bytes, VARHDRSZ + N);
   PG_RETURN_BYTEA_P(bytes);
 }
-Datum to_datum(const hive::protocol::update_proposal_extensions_type& value)
-{
-  return to_sql_tuple(value);
-}
 
 template<typename T>
-struct members_to_sql_tuple_visitor {
-    members_to_sql_tuple_visitor(const T& obj, Datum* values, bool* nulls) : obj(obj), values(values), nulls(nulls)
+struct members_to_datum_visitor {
+    members_to_datum_visitor(const T& obj, Datum* values, bool* nulls) : obj(obj), values(values), nulls(nulls)
     {}
 
     template<typename Member, class Class, Member (Class::*member)>
@@ -246,35 +220,19 @@ struct members_to_sql_tuple_visitor {
 };
 
 template<typename T>
-Datum to_sql_tuple(const T& value)
+Datum to_datum(const T& value)
 {
   const std::string type_name = fc::trim_typename_namespace(fc::get_typename<T>::name());
   TupleDesc desc = RelationNameGetTupleDesc(("hive." + type_name).c_str());
   BlessTupleDesc(desc);
   Datum values[fc::reflector<T>::total_member_count];
   bool nulls[fc::reflector<T>::total_member_count] = {};
-  fc::reflector<T>::visit(members_to_sql_tuple_visitor(value, values, nulls));
+  fc::reflector<T>::visit(members_to_datum_visitor(value, values, nulls));
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
-Datum to_sql_tuple(uint32_t value)
-{
-  return to_datum(value);
-}
-
-template<typename T, size_t N>
-Datum to_sql_tuple(const fc::array<T, N>& value)
-{
-  return to_datum(value);
-}
-
-Datum to_sql_tuple(const int64_t& value)
-{
-  return to_datum(value);
-}
-
-Datum to_sql_tuple(const hive::protocol::asset& asset)
+Datum to_datum(const hive::protocol::asset& asset)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.asset");
   BlessTupleDesc(desc);
@@ -292,7 +250,7 @@ Datum to_sql_tuple(const hive::protocol::asset& asset)
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
-Datum to_sql_tuple(const hive::protocol::price& price)
+Datum to_datum(const hive::protocol::price& price)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.price");
   BlessTupleDesc(desc);
@@ -309,12 +267,12 @@ Datum to_sql_tuple(const hive::protocol::price& price)
 }
 
 template<typename T>
-Datum to_sql_tuple(const hive::protocol::fixed_string_impl<T>& string)
+Datum to_datum(const hive::protocol::fixed_string_impl<T>& string)
 {
   return CStringGetTextDatum(static_cast<std::string>(string).c_str());
 }
 
-Datum to_sql_tuple(const hive::protocol::future_extensions& extensions)
+Datum to_datum(const hive::protocol::future_extensions& extensions)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.void_t");
   BlessTupleDesc(desc);
@@ -368,13 +326,13 @@ Datum to_sql_array(Iter first, Iter last)
   const auto elementCount = std::distance(first, last);
   std::vector<Datum> elements;
   elements.reserve(elementCount);
-  std::transform(first, last, std::begin(elements), [](const auto& v){return to_sql_tuple(v);});
+  std::transform(first, last, std::begin(elements), [](const auto& v){return to_datum(v);});
 
   ArrayType* result = construct_array(elements.data(), elementCount, elementOid, typlen, typbyval, typalign);
   PG_RETURN_ARRAYTYPE_P(result);
 }
 
-Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extensions)
+Datum to_datum(const hive::protocol::comment_options_extensions_type& extensions)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.comment_options_extensions_type");
   BlessTupleDesc(desc);
@@ -394,7 +352,7 @@ Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extens
     {}
     void operator()(const hive::protocol::comment_payout_beneficiaries& payout_beneficiaries)
     {
-      values[0] = to_sql_tuple(payout_beneficiaries);
+      values[0] = to_datum(payout_beneficiaries);
       nulls[0] = false;
     }
 #ifdef HIVE_ENABLE_SMT
@@ -417,7 +375,7 @@ Datum to_sql_tuple(const hive::protocol::comment_options_extensions_type& extens
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
-Datum to_sql_tuple(const hive::protocol::pow2_work& work)
+Datum to_datum(const hive::protocol::pow2_work& work)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.pow2_work");
   BlessTupleDesc(desc);
@@ -437,12 +395,12 @@ Datum to_sql_tuple(const hive::protocol::pow2_work& work)
     {}
     void operator()(const hive::protocol::pow2& pow2)
     {
-      values[0] = to_sql_tuple(pow2);
+      values[0] = to_datum(pow2);
       nulls[0] = false;
     }
     void operator()(const hive::protocol::equihash_pow& pow)
     {
-      values[1] = to_sql_tuple(pow);
+      values[1] = to_datum(pow);
       nulls[1] = false;
     }
   private:
@@ -455,7 +413,7 @@ Datum to_sql_tuple(const hive::protocol::pow2_work& work)
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
-Datum to_sql_tuple(const hive::protocol::update_proposal_extensions_type& extensions)
+Datum to_datum(const hive::protocol::update_proposal_extensions_type& extensions)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.update_proposal_extensions_type");
   BlessTupleDesc(desc);
@@ -473,7 +431,7 @@ Datum to_sql_tuple(const hive::protocol::update_proposal_extensions_type& extens
     {}
     void operator()(const hive::protocol::update_proposal_end_date& new_date)
     {
-      values[0] = to_sql_tuple(new_date);
+      values[0] = to_datum(new_date);
       nulls[0] = false;
     }
     void operator()(const hive::void_t&)
@@ -605,7 +563,7 @@ Datum operation_to(_operation* op)
     {
       const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
       const T& actual_op = operation.get<T>();
-      return to_sql_tuple(actual_op);
+      return to_datum(actual_op);
     }
     catch( const fc::exception& e )
     {
