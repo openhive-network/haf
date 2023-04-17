@@ -13,7 +13,7 @@ packages = [{ include = "haf_local_tools" },
 
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 pandas = "1.4.0"
 psycopg2-binary = "2.9.1"
 pytest = "6.2.5"
