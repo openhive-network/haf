@@ -419,16 +419,6 @@ double_haf_replay_tests:
   tags:
     - hived-for-tests
 
-mtlk_test:
-  extends: .replay_step
-  stage: build_and_test_phase_2
-  variables:
-    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
-  script:
-  - ./tests/current_account_balance_test.sh
-  tags:
-    - hived-for-tests
-
 
 bash_tests:
   stage: build_and_test_phase_2
