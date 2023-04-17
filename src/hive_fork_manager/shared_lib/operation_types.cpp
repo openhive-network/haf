@@ -1,5 +1,7 @@
 #include "operation_base.hpp"
 
+#include "operation_conversion.hpp"
+
 #include <fc/io/raw.hpp>
 #include <fc/crypto/hex.hpp>
 
@@ -61,15 +63,6 @@ Datum to_datum(const hive::protocol::update_proposal_extensions_type& extensions
 
 template<typename Iter>
 Datum to_sql_array(Iter first, Iter last);
-
-// TODO: copied from operation_base.cpp
-hive::protocol::operation raw_to_operation( const char* raw_data, uint32 data_length )
-{
-  if( !data_length )
-    return {};
-
-  return fc::raw::unpack_from_char_array< hive::protocol::operation >( raw_data, static_cast< uint32_t >( data_length ) );
-}
 
 Datum to_datum(bool value)
 {
