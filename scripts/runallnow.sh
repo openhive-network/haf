@@ -3,6 +3,8 @@
 
 set -e
 
+
+BIG=73964098
 MILLIONS_5=5000000
 MILLION_1=1000000
 THOUSAND_1=1000
@@ -15,6 +17,7 @@ if [ $# -eq 0 ]
     echo "No arguments supplied"
     exit 1
 fi
+
 
 LAST_BLOCK=$MILLIONS_5
 if  [ $1 -eq $1 ] 2>/dev/null; then
