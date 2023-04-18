@@ -118,9 +118,14 @@ CREATE TYPE hive.vote_operation AS (
   weight int4 -- uint16_t: 2 byte, but unsigned (4 byte)
 );
 
+CREATE TYPE hive.witness_property AS (
+  name TEXT,
+  value bytea
+);
+
 CREATE TYPE hive.witness_set_properties_operation AS (
   owner hive.account_name_type,
-  props hstore, -- text => bytea
+  props hive.witness_property[],
   extensions hive.extensions_type
 );
 

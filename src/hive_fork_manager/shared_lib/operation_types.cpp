@@ -18,7 +18,6 @@ extern "C" {
 
 namespace {
 
-Datum to_hstore(const fc::flat_map<std::string, std::vector<char>>& props);
 Datum to_hstore(const fc::flat_map<hive::protocol::account_name_type, hive::protocol::weight_type>& auth);
 Datum to_hstore(const fc::flat_map<hive::protocol::public_key_type, hive::protocol::weight_type>& auth);
 
@@ -52,6 +51,7 @@ template<typename T, size_t N>
 Datum to_datum(const fc::array<T, N>& value);
 template<typename T>
 Datum to_datum(const T& value);
+Datum to_datum(const std::pair<std::string, std::vector<char>>& value);
 Datum to_datum(const hive::protocol::asset& asset);
 Datum to_datum(const hive::protocol::price& price);
 template<typename T>
@@ -111,7 +111,7 @@ Datum to_datum(const std::vector<T>& value)
 }
 Datum to_datum(const fc::flat_map<std::string, std::vector<char>>& value)
 {
-  return to_hstore(value);
+  return to_sql_array(std::begin(value), std::end(value));
 }
 Datum to_datum(const hive::protocol::account_name_type& value)
 {
@@ -225,6 +225,22 @@ Datum to_datum(const T& value)
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
+Datum to_datum(const std::pair<std::string, std::vector<char>>& value)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.witness_property");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    CStringGetTextDatum(value.first.c_str()),
+    to_datum(value.second),
+  };
+  bool nulls[] = {
+    false,
+    false,
+  };
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
 Datum to_datum(const hive::protocol::asset& asset)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.asset");
@@ -294,6 +310,11 @@ template<>
 std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<int64_t>()
 {
   return {"pg_catalog", "int8"};
+}
+template<>
+std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<std::pair<std::string, std::vector<char>>>()
+{
+  return {"hive", "witness_property"};
 }
 
 template<typename Iter>
@@ -442,40 +463,6 @@ Datum to_datum(const hive::protocol::update_proposal_extensions_type& extensions
   }
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
-}
-
-
-Pairs prop_to_hstore_pair(const std::pair<std::string, std::vector<char>>& prop)
-{
-  const std::string& key = prop.first;
-  const std::vector<char>& value = prop.second;
-  const auto encodedValue = fc::to_hex(value);
-
-  Pairs p;
-  p.key = VARDATA(CStringGetTextDatum(key.c_str()));
-  p.val = VARDATA(CStringGetTextDatum(encodedValue.c_str())),
-  p.keylen = key.size();
-  p.vallen = encodedValue.size();
-  p.isnull = false;
-  p.needfree = false;
-  return p;
-}
-
-Datum to_hstore(const fc::flat_map<std::string, std::vector<char>>& props)
-{
-  auto element_count = props.size();
-
-  Pairs* pairs = (Pairs*)palloc(element_count * sizeof(Pairs));
-  std::transform(std::begin(props), std::end(props), pairs, prop_to_hstore_pair);
-
-  int32 buflen;
-  void* ptr;
-  // TODO: memoise loading function pointers
-  auto* hstoreUniquePairs = (int (*)(Pairs *, int32, int32*))load_external_function("hstore.so", "hstoreUniquePairs", true, &ptr);
-  element_count = hstoreUniquePairs(pairs, element_count, &buflen);
-  auto* hstorePairs = (HStore* (*)(Pairs*, int32, int32))load_external_function("hstore.so", "hstorePairs", true, &ptr);
-  HStore* out = hstorePairs(pairs, element_count, buflen);
-  PG_RETURN_POINTER(out);
 }
 
 Pairs account_authority_to_hstore_pair(const std::pair<hive::protocol::account_name_type, hive::protocol::weight_type>& auth)
