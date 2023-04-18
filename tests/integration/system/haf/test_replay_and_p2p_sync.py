@@ -11,6 +11,14 @@ from haf_local_tools.system.haf import (
     prepare_and_send_transactions,
 )
 
+def get_truncated_block_log(node, block_count: int):
+    output_block_log_path = tt.context.get_current_directory() / "block_log"
+    output_block_log_path.unlink(missing_ok=True)
+    output_block_log_artifacts_path = (tt.context.get_current_directory() / "block_log.artifacts")
+    output_block_log_artifacts_path.unlink(missing_ok=True)
+    block_log = node.block_log.truncate(tt.context.get_current_directory(), block_count)
+    return block_log
+
 
 @pytest.mark.parametrize(
     "psql_index_threshold,expected_disable_indexes_calls",
@@ -28,15 +36,7 @@ def test_replay_and_p2p_sync(psql_index_threshold, expected_disable_indexes_call
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
 
     init_node.close()
-    output_block_log_path = tt.context.get_current_directory() / "block_log"
-    output_block_log_artifacts_path = (
-        tt.context.get_current_directory() / "block_log.artifacts"
-    )
-    output_block_log_path.unlink(missing_ok=True)
-    output_block_log_artifacts_path.unlink(missing_ok=True)
-    block_log = init_node.block_log.truncate(
-        tt.context.get_current_directory(), transaction_0["block_num"] + 1
-    )
+    block_log = get_truncated_block_log(init_node, transaction_0["block_num"] + 1)
 
     init_node.run()
     connect_nodes(init_node, haf_node)
