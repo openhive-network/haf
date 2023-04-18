@@ -68,7 +68,7 @@ class HafNode(PreconfiguredNode):
             drop_database(self.__database_url)
         create_database(self.__database_url, template="haf_block_log")
 
-        engine = sqlalchemy.create_engine(self.__database_url, echo=False, poolclass=NullPool)
+        engine = sqlalchemy.create_engine(self.__database_url, echo=False, poolclass=NullPool, isolation_level="AUTOCOMMIT")
         session = sessionmaker(bind=engine)
         self.__session = session()
 
