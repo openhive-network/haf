@@ -78,9 +78,23 @@ CREATE TYPE hive.comment_payout_beneficiaries AS (
   beneficiaries hive.beneficiary_route_type[]
 );
 
-CREATE TYPE hive.allowed_vote_assets AS (
-   votable_assets hstore -- hive.asset_symbol => hive_votable_asset_info
+CREATE DOMAIN hive.asset_symbol_type AS int8; -- uint32_t: 4 byte, but unsigned (int8)
+
+CREATE TYPE hive.votable_asset_info_v1 AS (
+  max_accepted_payout hive.share_type,
+  allow_curation_rewards boolean
 );
+
+CREATE TYPE hive.votable_asset_info AS (
+  v1 hive.votable_asset_info_v1
+);
+
+CREATE TYPE hive.allowed_vote_asset AS (
+  asset_symbol_type hive.asset_symbol_type,
+  votable_asset_info hive.votable_asset_info
+);
+
+CREATE DOMAIN hive.allowed_vote_assets AS hive.allowed_vote_asset[];
 
 CREATE TYPE hive.comment_options_extensions_type AS (
   comment_payout_beneficiaries hive.comment_payout_beneficiaries,
