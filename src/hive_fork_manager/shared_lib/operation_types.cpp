@@ -13,7 +13,6 @@ extern "C" {
 #include <utils/syscache.h>
 #include <catalog/pg_type_d.h>
 #include <catalog/pg_namespace_d.h>
-#include <extension/hstore/hstore.h>
 }
 
 namespace {

@@ -5,5 +5,5 @@ module_pathname = '$libdir/libhfm-@HAF_GIT_REVISION_SHA@.so'
 relocatable = false
 schema = hive
 # this extension is required by block_day_stats views performing a PIVOT operation
-requires = 'tablefunc,hstore'
+requires = 'tablefunc'
 
