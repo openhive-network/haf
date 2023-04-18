@@ -37,7 +37,7 @@ BEGIN
 
     DELETE FROM hive.contexts WHERE id = __context_id;
 
-    EXECUTE format( 'DROP TABLE hive.%I', _name );
+    EXECUTE format( 'DROP TABLE IF EXISTS hive.%I', _name );
 END;
 $BODY$
 ;
