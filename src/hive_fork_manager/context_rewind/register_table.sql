@@ -80,20 +80,20 @@ $BODY$
 BEGIN
     -- rewind_insert
     EXECUTE format(
-          'DROP FUNCTION hive.%I_%I_revert_insert'
+          'DROP FUNCTION IF EXISTS hive.%I_%I_revert_insert'
         , _table_schema,  _table_name
         , _table_schema,  _table_name
     );
 
     --rewind delete
     EXECUTE format(
-          'DROP FUNCTION hive.%I_%I_revert_delete'
+          'DROP FUNCTION IF EXISTS hive.%I_%I_revert_delete'
         , _table_schema, _table_name
         , _table_schema, _table_name
     );
 
     EXECUTE format(
-          'DROP FUNCTION hive.%I_%I_revert_update'
+          'DROP FUNCTION IF EXISTS hive.%I_%I_revert_update'
         , _table_schema, _table_name
         , _table_schema, _table_name
     );
@@ -362,7 +362,7 @@ BEGIN
     END IF;
 
     -- drop shadow table
-    EXECUTE format( 'DROP TABLE hive.%s CASCADE', __shadow_table_name );
+    EXECUTE format( 'DROP TABLE IF EXISTS hive.%s CASCADE', __shadow_table_name );
 
     -- remove information about triggers
     DELETE FROM hive.triggers WHERE registered_table_id = __registered_table_id;
@@ -371,17 +371,17 @@ BEGIN
     DELETE FROM hive.registered_tables as hrt  WHERE hrt.origin_table_schema = lower( _table_schema ) AND hrt.origin_table_name = lower( _table_name );
 
     -- drop functions and triggers
-    EXECUTE format( 'DROP FUNCTION %s CASCADE', __hive_triggerfunction_name_insert );
-    EXECUTE format( 'DROP FUNCTION %s CASCADE', __hive_triggerfunction_name_delete );
-    EXECUTE format( 'DROP FUNCTION %s CASCADE', __hive_triggerfunction_name_update );
-    EXECUTE format( 'DROP FUNCTION %s CASCADE', __hive_triggerfunction_name_truncate );
+    EXECUTE format( 'DROP FUNCTION IF EXISTS %s CASCADE', __hive_triggerfunction_name_insert );
+    EXECUTE format( 'DROP FUNCTION IF EXISTS %s CASCADE', __hive_triggerfunction_name_delete );
+    EXECUTE format( 'DROP FUNCTION IF EXISTS %s CASCADE', __hive_triggerfunction_name_update );
+    EXECUTE format( 'DROP FUNCTION IF EXISTS %s CASCADE', __hive_triggerfunction_name_truncate );
 
     -- drop revert functions
     PERFORM hive.drop_revert_functions( _table_schema, _table_name );
 
     -- remove inheritance and sequence
-    EXECUTE format( 'ALTER TABLE %I.%s NO INHERIT hive.%s', lower(_table_schema), lower(_table_name), __context_name );
-    EXECUTE format( 'ALTER TABLE %I.%s DROP COLUMN hive_rowid CASCADE', lower(_table_schema), lower(_table_name)  );
+    EXECUTE format( 'ALTER TABLE IF EXISTS %I.%s NO INHERIT hive.%s', lower(_table_schema), lower(_table_name), __context_name );
+    EXECUTE format( 'ALTER TABLE IF EXISTS %I.%s DROP COLUMN hive_rowid CASCADE', lower(_table_schema), lower(_table_name)  );
 END;
 $BODY$
 ;

@@ -661,7 +661,7 @@ CREATE OR REPLACE FUNCTION hive.drop_applied_hardforks_view( _context_name TEXT 
 AS
 $BODY$
 BEGIN
-    EXECUTE format( 'DROP VIEW hive.%s_applied_hardforks_view;', _context_name );
+    EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_applied_hardforks_view;', _context_name );
 END;
 $BODY$
 ;
