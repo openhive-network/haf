@@ -425,13 +425,6 @@ save_state()
     #permissions
 }
 
-# s->ave blockchain, permissions, app
-
-# # minimal_hived_cont
-# # minimal_hived
-# # permissions
-
-# ->deleterestore blockchain, app
 
 
 run_all_from_scratch()
@@ -444,30 +437,12 @@ run_all_from_scratch()
     build && \
     permissions && #what about blockchain dir - erase? \
     serializer
-    # minimal_hived
-    #permissions
-    #app_start
 }
 
-run(){
-run_all_from_scratch && app_start && time app_cont
-# build && app_start
+run()
+{
+    run_all_from_scratch && app_start && time app_cont
 }
-
-# # # run_from_saved
-
-# # # save_state sav3M5 3500000
-# # # save_state sav1M 1000000
-
-# # save_state sav4M9Rel
-# # # run_from_saved sav3M5Rel
-
-
-# # run_all_from_scratch
-
-
-# rebuild
-# app
 
 if [ $# -eq 0 ]
   then
