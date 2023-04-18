@@ -18,9 +18,6 @@ extern "C" {
 
 namespace {
 
-Datum to_hstore(const fc::flat_map<hive::protocol::account_name_type, hive::protocol::weight_type>& auth);
-Datum to_hstore(const fc::flat_map<hive::protocol::public_key_type, hive::protocol::weight_type>& auth);
-
 Datum to_datum(bool value);
 Datum to_datum(uint8_t value);
 Datum to_datum(uint16_t value);
@@ -52,6 +49,8 @@ Datum to_datum(const fc::array<T, N>& value);
 template<typename T>
 Datum to_datum(const T& value);
 Datum to_datum(const std::pair<std::string, std::vector<char>>& value);
+Datum to_datum(const std::pair<hive::protocol::account_name_type, hive::protocol::weight_type>& value);
+Datum to_datum(const std::pair<hive::protocol::public_key_type, hive::protocol::weight_type>& value);
 Datum to_datum(const hive::protocol::asset& asset);
 Datum to_datum(const hive::protocol::price& price);
 template<typename T>
@@ -123,11 +122,11 @@ Datum to_datum(const hive::protocol::json_string& value)
 }
 Datum to_datum(const hive::protocol::authority::account_authority_map& value)
 {
-  return to_hstore(value);
+  return to_sql_array(std::begin(value), std::end(value));
 }
 Datum to_datum(const hive::protocol::authority::key_authority_map& value)
 {
-  return to_hstore(value);
+  return to_sql_array(std::begin(value), std::end(value));
 }
 Datum to_datum(const hive::protocol::extensions_type& value)
 {
@@ -241,6 +240,38 @@ Datum to_datum(const std::pair<std::string, std::vector<char>>& value)
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
+Datum to_datum(const std::pair<hive::protocol::account_name_type, hive::protocol::weight_type>& value)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.account_auth");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    to_datum(value.first),
+    to_datum(value.second),
+  };
+  bool nulls[] = {
+    false,
+    false,
+  };
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
+Datum to_datum(const std::pair<hive::protocol::public_key_type, hive::protocol::weight_type>& value)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.key_auth");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    to_datum(value.first),
+    to_datum(value.second),
+  };
+  bool nulls[] = {
+    false,
+    false,
+  };
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
 Datum to_datum(const hive::protocol::asset& asset)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.asset");
@@ -315,6 +346,16 @@ template<>
 std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<std::pair<std::string, std::vector<char>>>()
 {
   return {"hive", "witness_property"};
+}
+template<>
+std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<std::pair<hive::protocol::account_name_type, hive::protocol::weight_type>>()
+{
+  return {"hive", "account_auth"};
+}
+template<>
+std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<std::pair<hive::protocol::public_key_type, hive::protocol::weight_type>>()
+{
+  return {"hive", "key_auth"};
 }
 
 template<typename Iter>
@@ -463,74 +504,6 @@ Datum to_datum(const hive::protocol::update_proposal_extensions_type& extensions
   }
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
-}
-
-Pairs account_authority_to_hstore_pair(const std::pair<hive::protocol::account_name_type, hive::protocol::weight_type>& auth)
-{
-  const hive::protocol::account_name_type& key = auth.first;
-  hive::protocol::weight_type value = auth.second;
-  const std::string stringKey = static_cast<std::string>(key);
-  const std::string stringValue = std::to_string(value);
-
-  Pairs p;
-  p.key = VARDATA(CStringGetTextDatum(stringKey.c_str()));
-  p.val = VARDATA(CStringGetTextDatum(stringValue.c_str())),
-  p.keylen = stringKey.size();
-  p.vallen = stringValue.size();
-  p.isnull = false;
-  p.needfree = false;
-  return p;
-}
-
-Datum to_hstore(const fc::flat_map<hive::protocol::account_name_type, hive::protocol::weight_type>& auth)
-{
-  auto element_count = auth.size();
-
-  Pairs* pairs = (Pairs*)palloc(element_count * sizeof(Pairs));
-  std::transform(std::begin(auth), std::end(auth), pairs, account_authority_to_hstore_pair);
-
-  int32 buflen;
-  void* ptr;
-  // TODO: memoise loading function pointers
-  auto* hstoreUniquePairs = (int (*)(Pairs *, int32, int32*))load_external_function("hstore.so", "hstoreUniquePairs", true, &ptr);
-  element_count = hstoreUniquePairs(pairs, element_count, &buflen);
-  auto* hstorePairs = (HStore* (*)(Pairs*, int32, int32))load_external_function("hstore.so", "hstorePairs", true, &ptr);
-  HStore* out = hstorePairs(pairs, element_count, buflen);
-  PG_RETURN_POINTER(out);
-}
-
-Pairs key_authority_to_hstore_pair(const std::pair<hive::protocol::public_key_type, hive::protocol::weight_type>& auth)
-{
-  const hive::protocol::public_key_type& key = auth.first;
-  hive::protocol::weight_type value = auth.second;
-  const std::string stringKey = static_cast<std::string>(key);
-  const std::string stringValue = std::to_string(value);
-
-  Pairs p;
-  p.key = VARDATA(CStringGetTextDatum(stringKey.c_str()));
-  p.val = VARDATA(CStringGetTextDatum(stringValue.c_str())),
-  p.keylen = stringKey.size();
-  p.vallen = stringValue.size();
-  p.isnull = false;
-  p.needfree = false;
-  return p;
-}
-
-Datum to_hstore(const fc::flat_map<hive::protocol::public_key_type, hive::protocol::weight_type>& auth)
-{
-  auto element_count = auth.size();
-
-  Pairs* pairs = (Pairs*)palloc(element_count * sizeof(Pairs));
-  std::transform(std::begin(auth), std::end(auth), pairs, key_authority_to_hstore_pair);
-
-  int32 buflen;
-  void* ptr;
-  // TODO: memoise loading function pointers
-  auto* hstoreUniquePairs = (int (*)(Pairs *, int32, int32*))load_external_function("hstore.so", "hstoreUniquePairs", true, &ptr);
-  element_count = hstoreUniquePairs(pairs, element_count, &buflen);
-  auto* hstorePairs = (HStore* (*)(Pairs*, int32, int32))load_external_function("hstore.so", "hstorePairs", true, &ptr);
-  HStore* out = hstorePairs(pairs, element_count, buflen);
-  PG_RETURN_POINTER(out);
 }
 
 template<typename T>

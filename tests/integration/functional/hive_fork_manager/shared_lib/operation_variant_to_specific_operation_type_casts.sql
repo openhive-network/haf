@@ -101,9 +101,9 @@ BEGIN
   ASSERT (select op.fee = '(0,3,@@000000021)'::hive.asset), format('Unexpected value of account_create_operation.fee: %s', op.fee);
   ASSERT (select op.creator = 'initminer'), format('Unexpected value of account_create_operation.creator: %s', op.creator);
   ASSERT (select op.new_account_name = 'dan'), format('Unexpected value of account_create_operation.new_account_name: %s', op.new_account_name);
-  ASSERT (select op.owner = '(1,"","""STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH""=>""1""")'::hive.authority), format('Unexpected value of account_create_operation.owner: %s', op.owner);
-  ASSERT (select op.active = '(1,"","""STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH""=>""1""")'::hive.authority), format('Unexpected value of account_create_operation.active: %s', op.active);
-  ASSERT (select op.posting = '(1,"","""STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH""=>""1""")'::hive.authority), format('Unexpected value of account_create_operation.posting: %s', op.posting);
+  ASSERT (select op.owner = '(1,"{}","{""(STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH, 1)""}")'::hive.authority), format('Unexpected value of account_create_operation.owner: %s', op.owner);
+  ASSERT (select op.active = '(1,"{}","{""(STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH, 1)""}")'::hive.authority), format('Unexpected value of account_create_operation.active: %s', op.active);
+  ASSERT (select op.posting = '(1,"{}","{""(STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH, 1)""}")'::hive.authority), format('Unexpected value of account_create_operation.posting: %s', op.posting);
   ASSERT (select op.memo_key = 'STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH'), format('Unexpected value of account_create_operation.memo_key: %s', op.memo_key);
   ASSERT (select op.json_metadata = '{}'), format('Unexpected value of account_create_operation.json_metadata: %s', op.json_metadata);
 END;
@@ -124,9 +124,9 @@ BEGIN
   ASSERT (select op.delegation = '(100000000000000,6,@@000000037)'::hive.asset), format('Unexpected value of account_create_with_delegation_operation.delegation: %s', op.delegation);
   ASSERT (select op.creator = 'initminer'), format('Unexpected value of account_create_with_delegation_operation.creator: %s', op.creator);
   ASSERT (select op.new_account_name = 'edgar0ah'), format('Unexpected value of account_create_with_delegation_operation.new_account_name: %s', op.new_account_name);
-  ASSERT (select op.owner = '(1,"","""STM8R8maxJxeBMR3JYmap1n3Pypm886oEUjLYdsetzcnPDFpiq3pZ""=>""1""")'::hive.authority), format('Unexpected value of account_create_with_delegation_operation.owner: %s', op.owner);
-  ASSERT (select op.active = '(1,"","""STM8R8maxJxeBMR3JYmap1n3Pypm886oEUjLYdsetzcnPDFpiq3pZ""=>""1""")'::hive.authority), format('Unexpected value of account_create_with_delegation_operation.active: %s', op.active);
-  ASSERT (select op.posting = '(1,"","""STM8ZCsvwKqttXivgPyJ1MYS4q1r3fBZJh3g1SaBxVbfsqNcmnvD3""=>""1""")'::hive.authority), format('Unexpected value of account_create_with_delegation_operation.posting: %s', op.posting);
+  ASSERT (select op.owner = '(1,"{}","{""(STM8R8maxJxeBMR3JYmap1n3Pypm886oEUjLYdsetzcnPDFpiq3pZ, 1)""}")'::hive.authority), format('Unexpected value of account_create_with_delegation_operation.owner: %s', op.owner);
+  ASSERT (select op.active = '(1,"{}","{""(STM8R8maxJxeBMR3JYmap1n3Pypm886oEUjLYdsetzcnPDFpiq3pZ, 1)""}")'::hive.authority), format('Unexpected value of account_create_with_delegation_operation.active: %s', op.active);
+  ASSERT (select op.posting = '(1,"{}","{""(STM8ZCsvwKqttXivgPyJ1MYS4q1r3fBZJh3g1SaBxVbfsqNcmnvD3, 1)""}")'::hive.authority), format('Unexpected value of account_create_with_delegation_operation.posting: %s', op.posting);
   ASSERT (select op.memo_key = 'STM8ZCsvwKqttXivgPyJ1MYS4q1r3fBZJh3g1SaBxVbfsqNcmnvD3'), format('Unexpected value of account_create_with_delegation_operation.memo_key: %s', op.memo_key);
   ASSERT (select op.json_metadata = '{}'), format('Unexpected value of account_create_with_delegation_operation.json_metadata: %s', op.json_metadata);
   ASSERT (select op.extensions = '{}'), format('Unexpected value of account_create_with_delegation_operation.extensions: %s', op.extensions);
@@ -145,7 +145,7 @@ BEGIN
   raise notice 'checking conversion to account_update2_operation';
   op := '{"type":"account_update2_operation","value":{"account":"ben8ah","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5Wteiod1TC7Wraux73AZvMsjrA5b3E1LTsv1dZa3CB9V4LhXTN",1]]},"memo_key":"STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S","json_metadata":"{\"success\":true}","posting_json_metadata":"{}","extensions":[]}}'::hive.operation::hive.account_update2_operation;
   ASSERT (select op.account = 'ben8ah'), format('Unexpected value of account_update2_operation.account: %s', op.account);
-  ASSERT (select op.owner = '(1,"","""STM5Wteiod1TC7Wraux73AZvMsjrA5b3E1LTsv1dZa3CB9V4LhXTN""=>""1""")'::hive.authority), format('Unexpected value of account_update2_operation.owner: %s', op.owner);
+  ASSERT (select op.owner = '(1,"{}","{""(STM5Wteiod1TC7Wraux73AZvMsjrA5b3E1LTsv1dZa3CB9V4LhXTN, 1)""}")'::hive.authority), format('Unexpected value of account_update2_operation.owner: %s', op.owner);
   ASSERT (select op.active IS NULL), format('Unexpected value of account_update2_operation.active: %s', op.active);
   ASSERT (select op.posting IS NULL), format('Unexpected value of account_update2_operation.posting: %s', op.posting);
   ASSERT (select op.memo_key = 'STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S'), format('Unexpected value of account_update2_operation.memo_key: %s', op.memo_key);
@@ -169,7 +169,7 @@ BEGIN
   ASSERT (select op.account = 'alice'), format('Unexpected value of account_update_operation.account: %s', op.account);
   ASSERT (select op.owner IS NULL), format('Unexpected value of account_update_operation.owner: %s', op.owner);
   ASSERT (select op.active IS NULL), format('Unexpected value of account_update_operation.active: %s', op.active);
-  ASSERT (select op.posting = '(4,"","""STM5P8syqoj7itoDjbtDvCMCb5W3BNJtUjws9v7TDNZKqBLmp3pQW""=>""1""")'::hive.authority), format('Unexpected value of account_update_operation.posting: %s', op.posting);
+  ASSERT (select op.posting = '(4,"{}","{""(STM5P8syqoj7itoDjbtDvCMCb5W3BNJtUjws9v7TDNZKqBLmp3pQW, 1)""}")'::hive.authority), format('Unexpected value of account_update_operation.posting: %s', op.posting);
   ASSERT (select op.memo_key = 'STM5P8syqoj7itoDjbtDvCMCb5W3BNJtUjws9v7TDNZKqBLmp3pQW'), format('Unexpected value of account_update_operation.memo_key: %s', op.memo_key);
   ASSERT (select op.json_metadata = '{}'), format('Unexpected value of account_update_operation.json_metadata: %s', op.json_metadata);
 END;
@@ -323,9 +323,9 @@ BEGIN
   op := '{"type":"create_claimed_account_operation","value":{"creator":"alice8ah","new_account_name":"ben8ah","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S",1]]},"active": {"weight_threshold":1,"account_auths":[],"key_auths":[["STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S",1]]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM7F7N2n8RYwoBkS3rCtwDkaTdnbkctCm3V3fn2cDvdx988XMNZv", 1]]},"memo_key":"STM7F7N2n8RYwoBkS3rCtwDkaTdnbkctCm3V3fn2cDvdx988XMNZv","json_metadata":"{}","extensions":[]}}'::hive.operation::hive.create_claimed_account_operation;
   ASSERT (select op.creator = 'alice8ah'), format('Unexpected value of create_claimed_account_operation.creator: %s', op.creator);
   ASSERT (select op.new_account_name = 'ben8ah'), format('Unexpected value of create_claimed_account_operation.new_account_name: %s', op.new_account_name);
-  ASSERT (select op.owner = '(1,"","""STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S""=>""1""")'::hive.authority), format('Unexpected value of create_claimed_account_operation.owner: %s', op.owner);
-  ASSERT (select op.active = '(1,"","""STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S""=>""1""")'::hive.authority), format('Unexpected value of create_claimed_account_operation.active: %s', op.active);
-  ASSERT (select op.posting = '(1,"","""STM7F7N2n8RYwoBkS3rCtwDkaTdnbkctCm3V3fn2cDvdx988XMNZv""=>""1""")'::hive.authority), format('Unexpected value of create_claimed_account_operation.posting: %s', op.posting);
+  ASSERT (select op.owner = '(1,"{}","{""(STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S, 1)""}")'::hive.authority), format('Unexpected value of create_claimed_account_operation.owner: %s', op.owner);
+  ASSERT (select op.active = '(1,"{}","{""(STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S, 1)""}")'::hive.authority), format('Unexpected value of create_claimed_account_operation.active: %s', op.active);
+  ASSERT (select op.posting = '(1,"{}","{""(STM7F7N2n8RYwoBkS3rCtwDkaTdnbkctCm3V3fn2cDvdx988XMNZv, 1)""}")'::hive.authority), format('Unexpected value of create_claimed_account_operation.posting: %s', op.posting);
   ASSERT (select op.memo_key = 'STM7F7N2n8RYwoBkS3rCtwDkaTdnbkctCm3V3fn2cDvdx988XMNZv'), format('Unexpected value of create_claimed_account_operation.memo_key: %s', op.memo_key);
   ASSERT (select op.json_metadata = '{}'), format('Unexpected value of create_claimed_account_operation.json_metadata: %s', op.json_metadata);
   ASSERT (select op.extensions = '{}'), format('Unexpected value of create_claimed_account_operation.extensions: %s', op.extensions);
@@ -346,7 +346,7 @@ BEGIN
   ASSERT (select op.required_owner_auths = array['owner'::hive.account_name_type]), format('Unexpected value of custom_binary_operation.required_owner_auths: %s', op.required_owner_auths);
   ASSERT (select op.required_active_auths = array['active'::hive.account_name_type]), format('Unexpected value of custom_binary_operation.required_active_auths: %s', op.required_active_auths);
   ASSERT (select op.required_posting_auths = array['posting'::hive.account_name_type]), format('Unexpected value of custom_binary_operation.required_posting_auths: %s', op.required_posting_auths);
-  ASSERT (select op.required_auths = array['(1,"","""STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S""=>""1""")'::hive.authority]), format('Unexpected value of custom_binary_operation.required_posting_auths: %s', op.required_posting_auths);
+  ASSERT (select op.required_auths = array['(1,"{}","{""(STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S, 1)""}")'::hive.authority]), format('Unexpected value of custom_binary_operation.required_posting_auths: %s', op.required_posting_auths);
   ASSERT (select op.id = 'some_id'), format('Unexpected value of custom_binary_operation.id: %s', op.id);
   ASSERT (select op.data = '\x0a627974656d617374657207737465656d697402a3d13897d82114466ad87a74b73a53292d8331d1bd1d3082da6bfbcff19ed097029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f6d2a8cab6832050078bc5729201e3ea24ea9f7873e6dbdc65a6bd9899053b9acda876dc69f11a13df9ca8b26b6'), format('Unexpected value of custom_binary_operation.data: %s', op.data);
 END;
@@ -641,8 +641,8 @@ BEGIN
   raise notice 'checking conversion to recover_account_operation';
   op := '{"type": "recover_account_operation","value": {"account_to_recover": "gtg","extensions": [],"new_owner_authority": {"account_auths": [],"key_auths": [["STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh",1]],"weight_threshold": 1},"recent_owner_authority": {"account_auths": [],"key_auths": [["STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi",1]],"weight_threshold": 1}}}'::hive.operation::hive.recover_account_operation;
   ASSERT (select op.account_to_recover = 'gtg'), format('Unexpected value of recover_account_operation.account_to_recover: %s', op.account_to_recover);
-  ASSERT (select op.new_owner_authority = '(1,"","""STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh""=>""1""")'::hive.authority), format('Unexpected value of recover_account_operation.new_owner_authority: %s', op.new_owner_authority);
-  ASSERT (select op.recent_owner_authority = '(1,"","""STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi""=>""1""")'::hive.authority), format('Unexpected value of recover_account_operation.recent_owner_authority: %s', op.recent_owner_authority);
+  ASSERT (select op.new_owner_authority = '(1,"{}","{""(STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh, 1)""}")'::hive.authority), format('Unexpected value of recover_account_operation.new_owner_authority: %s', op.new_owner_authority);
+  ASSERT (select op.recent_owner_authority = '(1,"{}","{""(STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi, 1)""}")'::hive.authority), format('Unexpected value of recover_account_operation.recent_owner_authority: %s', op.recent_owner_authority);
   ASSERT (select op.extensions = '{}'), format('Unexpected value of recover_account_operation.extensions: %s', op.extensions);
 END;
 $BODY$
@@ -681,7 +681,7 @@ BEGIN
   op := '{"type": "request_account_recovery_operation","value": {"account_to_recover": "tulpa","extensions": [],"new_owner_authority": {"account_auths": [],"key_auths": [["STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS",2]],"weight_threshold": 1},"recovery_account": "nalesnik"}}'::hive.operation::hive.request_account_recovery_operation;
   ASSERT (select op.recovery_account = 'nalesnik'), format('Unexpected value of request_account_recovery_operation.recovery_account: %s', op.recovery_account);
   ASSERT (select op.account_to_recover = 'tulpa'), format('Unexpected value of request_account_recovery_operation.account_to_recover: %s', op.account_to_recover);
-  ASSERT (select op.new_owner_authority = '(1,"","""STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS""=>""2""")'::hive.authority), format('Unexpected value of request_account_recovery_operation.new_owner_authority: %s', op.new_owner_authority);
+  ASSERT (select op.new_owner_authority = '(1,"{}","{""(STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS, 2)""}")'::hive.authority), format('Unexpected value of request_account_recovery_operation.new_owner_authority: %s', op.new_owner_authority);
   ASSERT (select op.extensions = '{}'), format('Unexpected value of request_account_recovery_operation.extensions: %s', op.extensions);
 END;
 $BODY$
@@ -699,7 +699,7 @@ BEGIN
   op := '{"type": "reset_account_operation","value": {"account_to_reset": "tulpa","new_owner_authority": {"account_auths": [],"key_auths": [["STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS",2]],"weight_threshold": 1},"reset_account": "nalesnik"}}'::hive.operation::hive.reset_account_operation;
   ASSERT (select op.reset_account = 'nalesnik'), format('Unexpected value of reset_account_operation.reset_account: %s', op.reset_account);
   ASSERT (select op.account_to_reset = 'tulpa'), format('Unexpected value of reset_account_operation.account_to_reset: %s', op.account_to_reset);
-  ASSERT (select op.new_owner_authority = '(1,"","""STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS""=>""2""")'::hive.authority), format('Unexpected value of reset_account_operation.new_owner_authority: %s', op.new_owner_authority);
+  ASSERT (select op.new_owner_authority = '(1,"{}","{""(STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS, 2)""}")'::hive.authority), format('Unexpected value of reset_account_operation.new_owner_authority: %s', op.new_owner_authority);
 END;
 $BODY$
 ;
