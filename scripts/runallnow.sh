@@ -117,6 +117,8 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # TODO 16 magic number in account                 CHAR(16),
 
+# TODO check if binary data can be taken from hive::operation
+
 
 # bool czy_printowac(int block_num)
 # {
