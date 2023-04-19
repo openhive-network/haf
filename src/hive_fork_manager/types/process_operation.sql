@@ -1,7 +1,10 @@
-CREATE OR REPLACE PROCEDURE hive.process_operation(
+CREATE OR REPLACE FUNCTION hive.process_operation(
   operation hive.operation,
   proc TEXT
-) LANGUAGE plpgsql
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
 AS $BODY$
 DECLARE
   __operation_type TEXT;
