@@ -8,6 +8,8 @@
 
 #include <vector>
 
+#include "consensus_state_provider_replay.hpp"
+
 using hive::protocol::account_name_type;
 using hive::protocol::asset;
 using hive::protocol::serialization_mode_controller;
