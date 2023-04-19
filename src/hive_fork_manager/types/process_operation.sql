@@ -10,10 +10,7 @@ DECLARE
   __operation_type TEXT;
 BEGIN
   -- Find the name of actual operation type
-  SELECT REPLACE(name, 'hive::protocol::', '')
-    INTO STRICT __operation_type
-    FROM hive.operation_types
-    WHERE id = get_byte(operation::bytea, 0);
+  SELECT operation::jsonb->'type' INTO STRICT __operation_type;
 
   BEGIN
     -- Check that given proc exists for actual operation type.
