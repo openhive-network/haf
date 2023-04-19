@@ -11,6 +11,8 @@
 
 #include <hive/chain/util/impacted.hpp>
 #include <hive/chain/util/supplement_operations.hpp>
+#include <hive/chain/util/type_registrar_definition.hpp>
+
 #include <hive/chain/index.hpp>
 
 #include <hive/protocol/config.hpp>
@@ -784,3 +786,6 @@ void sql_serializer_plugin::plugin_shutdown()
 } // namespace sql_serializer
 }    // namespace plugins
 } // namespace hive
+
+
+HIVE_DEFINE_TYPE_REGISTRAR_REGISTER_TYPE(hive::plugins::sql_serializer::account_ops_seq_index)
