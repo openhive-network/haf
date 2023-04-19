@@ -15,12 +15,17 @@ BEGIN
     FROM hive.operation_types
     WHERE id = get_byte(operation::bytea, 0);
 
-  -- Check that given proc exists for actual operation type.
-  -- Cast to regprocedure fails if it doesn't.
-  PERFORM (format('%I(hive.%I)', proc, __operation_type))::regprocedure;
+  BEGIN
+    -- Check that given proc exists for actual operation type.
+    -- Cast to regprocedure fails if it doesn't.
+    -- In that case we catch it t not propagate it to the caller
+    PERFORM (format('%I(hive.%I)', proc, __operation_type))::regprocedure;
 
-  -- Call user provided function
-  EXECUTE format('CALL %I($1::hive.%I)', proc, __operation_type)
-    USING operation;
+    -- Call user provided function
+    EXECUTE format('CALL %I($1::hive.%I)', proc, __operation_type)
+      USING operation;
+  EXCEPTION
+    WHEN undefined_function THEN RETURN;
+  END;
 END;
 $BODY$;
