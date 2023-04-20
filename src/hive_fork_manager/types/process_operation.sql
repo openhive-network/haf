@@ -10,7 +10,7 @@ DECLARE
   __operation_type TEXT;
 BEGIN
   -- Find the name of actual operation type
-  SELECT operation::jsonb->'type' INTO STRICT __operation_type;
+  SELECT hive.operation_type_name(operation) INTO STRICT __operation_type;
 
   BEGIN
     -- Check that given proc exists for actual operation type.
