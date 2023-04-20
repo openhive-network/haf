@@ -13,11 +13,7 @@
 
 #include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
 
-
-namespace hive { namespace app {
-
-std::shared_ptr<hive::chain::full_block_type> from_variant_to_full_block_ptr(const fc::variant& v, int block_num_debug );
-}}
+#include "hive/plugins/database_api/from_variant_to_full_block_ptr.hpp"
 
 #ifdef HAF_SHARED_LIB
 
