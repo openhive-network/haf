@@ -84,7 +84,6 @@ const char* fixHex(const pqxx::field& h)
 }
 
 
-#define MULTISIGS_IN_C
 
 
 struct Postgres2Blocks
@@ -95,7 +94,6 @@ struct Postgres2Blocks
   pqxx::result blocks;
   pqxx::result transactions;
   pqxx::result operations;
-  std::multimap<std::string, std::string> multisigs;
 
   int transaction_expecting_block;
   pqxx::result::const_iterator transactions_it;
@@ -136,23 +134,6 @@ void get_data_from_postgres(int from, int to, const char* postgres_url)
 
 
 
-#ifdef MULTISIGS_IN_C
-
-  // pqxx::work transactions_multisig_work{c};
-  // pqxx::result transactions_multisig{
-  //   transactions_multisig_work.exec(
-  //     std::string("SELECT trx_hash,signature FROM hive.transactions_multisig"))};
-
-
-  // for( auto row : transactions_multisig)
-  // {
-  //   std::string key(std::string(row["trx_hash"].c_str()+2));
-  //   multisigs.insert(std::make_pair(key, row["signature"].c_str()+2));
-  // }
-
-  // transactions_multisig_work.commit();
-
-#endif
 
 }
 
@@ -218,25 +199,6 @@ void handle_transactions(int block_num,
       std::vector<std::string> signa;
       if (strlen(transaction["signature"].c_str())) {
         signa.push_back(transaction["signature"].c_str() + 2);
-
-#ifndef MULTISIGS_IN_C
-        pqxx::work transactions_multisig_work{c};
-        pqxx::result transactions_multisig{transactions_multisig_work.exec(
-            std::string("SELECT signature FROM hive.transactions_multisig "
-                        "WHERE trx_hash  = '") +
-            (transaction["trx_hash"].c_str()) + "'")};
-
-        for (auto row : transactions_multisig) {
-          signa.push_back(row["signature"].c_str() + 2);
-        }
-
-        transactions_multisig_work.commit();
-#else
-        // auto range = multisigs.equal_range(transaction["trx_hash"].c_str() + 2);
-        // for (auto it = range.first; it != range.second; ++it) {
-        //   signa.push_back(it->second);
-        // }
-#endif
       }
 
       fc::variant_object_builder transaction_v;
