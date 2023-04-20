@@ -119,6 +119,8 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # TODO check if binary data can be taken from hive::operation
 
+# TODO use unlink to automatically delete a file when connection (process) goes down
+
 
 # bool czy_printowac(int block_num)
 # {
