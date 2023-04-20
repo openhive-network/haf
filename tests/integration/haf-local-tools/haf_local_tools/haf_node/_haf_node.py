@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 import math
-from typing import Final, TYPE_CHECKING, TypedDict, Union
+from typing import Final, TYPE_CHECKING, TypeAlias, TypedDict, Union
 from uuid import uuid4
 
 import sqlalchemy
@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     class Transaction(TypedDict):
         transaction_id: str
 
+TransactionId = str
 
 class HafNode(PreconfiguredNode):
     DEFAULT_DATABASE_URL: Final[str] = "postgresql:///haf_block_log"
@@ -86,12 +87,17 @@ class HafNode(PreconfiguredNode):
 
     def wait_for_transaction_in_database(
         self,
-        transaction: Transaction,
+        transaction:  Union[Transaction, TransactionId],
         *,
         timeout: float | timedelta = math.inf,
         poll_time: float = 1.0,
     ):
-        transaction_hash = transaction["transaction_id"]
+        if isinstance(transaction, dict):
+            transaction_hash = transaction["transaction_id"]
+
+        if isinstance(transaction, TransactionId):
+            transaction_hash = transaction
+
         Time.wait_for(
             lambda: self.__is_transaction_in_database(transaction_hash),
             timeout=timeout,
