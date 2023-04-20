@@ -13,7 +13,7 @@
 
 #include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
 
-extern consensus_state_provider::cache cache;
+
 namespace hive { namespace app {
 
 std::shared_ptr<hive::chain::full_block_type> from_variant_to_full_block_ptr(const fc::variant& v, int block_num_debug );
@@ -399,18 +399,18 @@ void init(hive::chain::database& db, const char* context)
 
 int initialize_context(const char* context)
 {
-  if(!cache.has_context(context))
+  if(!consensus_state_provider::get_cache().has_context(context))
   {
     hive::chain::database* db = new hive::chain::database;
     init(*db, context);
-    cache.add(context, *db);
+    consensus_state_provider::get_cache().add(context, *db);
     //haf_database_api_impls.emplace(std::make_pair(std::string(context), hive::plugins::database_api::database_api_impl(*db)));
     return db->head_block_num() + 1;
   }
   else
   {
     
-    hive::chain::database& db = cache.get_db(context);
+    hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
     return db.head_block_num() + 1;
   }
 }
@@ -435,7 +435,7 @@ int consume_variant_block_impl(const fc::variant& v, const char* context, int bl
   expected_block_num++;
 
 
-  hive::chain::database& db = cache.get_db(context);
+  hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
   
 
   
@@ -496,12 +496,12 @@ int consensus_state_provider_get_expected_block_num_impl(const char* context)
 namespace hive { namespace app {
 void consensus_state_provider_finish_impl(const char* context)
 {
-  if(cache.has_context(context))
+  if(consensus_state_provider::get_cache().has_context(context))
   {
-      hive::chain::database& db = cache.get_db(context);
+      hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
       db.close();
       db. chainbase::database::wipe( get_context_shared_data_bin_dir()  /  "blockchain" , context);
-      cache.remove(context);
+      consensus_state_provider::get_cache().remove(context);
 
   }
 }
