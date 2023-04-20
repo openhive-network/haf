@@ -38,6 +38,7 @@ def assert_are_blocks_sync_with_haf_db(haf_node: HafNode, limit_block_num: int) 
     blocks_in_database = (
         haf_node.session.query(BlocksView).filter(BlocksView.num <= limit_block_num).count()
     )
+    tt.logger.info(f"assert_are_blocks_sync_with_haf_db actual {blocks_in_database=}, expected {limit_block_num=}")
     assert blocks_in_database == limit_block_num
 
 
@@ -48,6 +49,8 @@ def assert_are_disabled_indexes_of_irreversible_called_correct(
     function_calls = haf_node.query_one(
         "SELECT calls FROM pg_stat_user_functions WHERE funcname = 'disable_indexes_of_irreversible';"
     )
+    tt.logger.info(f"assert_are_disabled_indexes_of_irreversible_called_correct "
+                   f"actual {function_calls=}, expected {expected_disable_indexes_calls=}")
     assert function_calls == expected_disable_indexes_calls
 
 
