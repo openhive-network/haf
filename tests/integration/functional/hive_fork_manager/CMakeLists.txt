@@ -36,6 +36,10 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_public_schema_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_to_two_contexts_negative_test.sql )
 
+ ADD_SQL_FUNCTIONAL_TEST( context_rewind/contexts_limit_eq.sql )
+ ADD_SQL_FUNCTIONAL_TEST( context_rewind/contexts_limit_gt.sql )
+ ADD_SQL_FUNCTIONAL_TEST( context_rewind/contexts_limit_less.sql )
+
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/create_context_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/create_context_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/context_next_block_test.sql )
@@ -208,6 +212,7 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( app_api/applied_hardforks_view_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_next_block_after_attach_2.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_detach_after_next_block.sql )
+ ADD_SQL_FUNCTIONAL_TEST( app_api/contexts_limit_gt.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork.sql )
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork_non_forking_app.sql )
