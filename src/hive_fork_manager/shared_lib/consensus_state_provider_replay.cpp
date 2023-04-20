@@ -11,7 +11,7 @@
 #include <iostream>
 #include <pqxx/pqxx>
 
-#include "consensus_state_provider_cache.hpp"
+#include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
 
 extern consensus_state_provider::cache cache;
 namespace hive { namespace app {
