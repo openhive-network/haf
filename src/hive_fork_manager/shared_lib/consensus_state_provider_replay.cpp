@@ -17,7 +17,7 @@
 namespace hive { namespace app {
 
 
-fc::path get_context_shared_data_bin_dir()
+fc::path get_context_data_dir()
 {
 
     fc::path data_dir;
@@ -31,6 +31,9 @@ fc::path get_context_shared_data_bin_dir()
       data_dir = data_dir.parent_path();
       data_dir = data_dir.parent_path();
     }
+
+    wlog("mtlk data_dir ${data_dir}", ("data_dir", data_dir) );
+
     return data_dir;
 }
 
@@ -283,11 +286,8 @@ void init(hive::chain::database& db, const char* context)
 
 
   hive::chain::open_args db_open_args;
-  db_open_args.data_dir = "/home/dev/mainnet-5m";
-  db_open_args.data_dir = "/home/dev/.consensus_state_provider";
 
-
-  db_open_args.data_dir = hive::app::get_context_shared_data_bin_dir();
+  db_open_args.data_dir = hive::app::get_context_data_dir();
   ilog("mtlk db_open_args.data_dir=${dd}",("dd", db_open_args.data_dir));
 
   db_open_args.shared_mem_dir =  db_open_args.data_dir /  "blockchain"; // "/home/dev/mainnet-5m/blockchain"
@@ -421,7 +421,7 @@ void consensus_state_provider_finish_impl(const char* context)
   {
       hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
       db.close();
-      db. chainbase::database::wipe( get_context_shared_data_bin_dir()  /  "blockchain" , context);
+      db. chainbase::database::wipe( get_context_data_dir()  /  "blockchain" , context);
       consensus_state_provider::get_cache().remove(context);
 
   }

@@ -54,7 +54,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # lock na funckjach w C lub wyżej
 
 #  is it needed ?         bfs::permissions(abs_path, b
-#  better "PGDATA" get_context_shared_data_bin_dir() // //getenv("HAF_DB_STORE");//BLOCK_LOG_DIRECTORY
+#  better "PGDATA" get_context_data_dir() // //getenv("HAF_DB_STORE");//BLOCK_LOG_DIRECTORY
 # why runall script has to clear contest sharedmemory.bin ?
 # funkcja do zwracania + 'blockchain' 
 # test for many contexts
