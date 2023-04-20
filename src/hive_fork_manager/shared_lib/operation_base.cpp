@@ -37,6 +37,12 @@ std::vector< char > json_to_op( const char* json )
   return fc::raw::pack_to_vector( op );
 }
 
+std::string get_operation_nth_type_name(size_t n)
+{
+  hive::protocol::operation v(static_cast<int64_t>(n));
+  return v.get_stored_type_name(true);
+}
+
 } // namespace
 
 extern "C"
@@ -242,5 +248,23 @@ extern "C"
     _operation* rhs = PG_GETARG_HIVE_OPERATION_PP( 1 );
 
     PG_RETURN_INT32( operation_cmp_impl( lhs, rhs ) );
+  }
+
+  PG_FUNCTION_INFO_V1( operation_type_name );
+  Datum operation_type_name( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    uint32 data_length = VARSIZE_ANY_EXHDR( op );
+    const char* raw_data = VARDATA_ANY( op );
+    if (data_length > 0)
+    {
+      const auto index = raw_data[0];
+      const std::string type_name = get_operation_nth_type_name(index);
+      return CStringGetTextDatum(type_name.c_str());
+    }
+    else
+    {
+      ereport( ERROR, ( errcode( ERRCODE_INVALID_PARAMETER_VALUE ), errmsg( "Cannot get type name of zero length operation" ) ) );
+    }
   }
 }
