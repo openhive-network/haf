@@ -8,21 +8,10 @@
 #include "hive/chain/database.hpp"
 #include "hive/protocol/forward_impacted.hpp"
 #include "hive/protocol/operations.hpp"
-#include <iostream>
 #include <pqxx/pqxx>
 
 #include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
-
 #include "hive/plugins/database_api/from_variant_to_full_block_ptr.hpp"
-
-#ifdef HAF_SHARED_LIB
-
-#pragma message ("HAF_SHARED_LIB defined !!! hey")
-
-#endif
-
-
-
 
 
 namespace hive { namespace app {
@@ -45,30 +34,6 @@ fc::path get_context_shared_data_bin_dir()
     return data_dir;
 }
 
-void sanity_check(const char *&postgres_url) 
-{
-    pqxx::connection c{postgres_url};
-    pqxx::work txn{c};
-    pqxx::result r{txn.exec("SELECT COUNT(*) FROM hive.blocks")};
-
-    std::cout << "mtlk columns count=" << r.columns() << "\n";
-    std::cout << "mtlk column name=" << r.column_name(0) << "\n";
-    std::cout << "mtlk rows  count=" << r.size() << "\n";
-
-    for (auto row : r)
-      std::cout
-          // Address column by name.  Use c_str() to get C-style string.
-          << row["count"].c_str()
-          << " makes "
-          // Address column by zero-based index.  Use as<int>() to parse as int.
-          << row[0].as<int>() << "." << std::endl;
-    txn.commit();
-
-  for(auto i = 0u; i < r.columns(); ++i)
-  {
-    std::cout << "Column " << i << " name=" << r.column_name(i) << " type= " << r.column_type(r.column_name(i)) << std::endl;
-  }
-}
 
 std::string fixTime(const pqxx::field& t)
 {
@@ -299,8 +264,6 @@ void run(int from, int to, const char *context, const char *postgres_url)
 void consensus_state_provider_replay_impl(int from, int to, const char *context,
                                 const char *postgres_url) 
 {
-  sanity_check(postgres_url);
-
   Postgres2Blocks p2b;
   p2b.run(from, to, context, postgres_url); 
 }
