@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
     from haf_local_tools.db_adapter.db_adapter import ColumnType, ScalarType
-    from haf_local_tools.haf_node._haf_node import Transaction
+    from haf_local_tools.haf_node._haf_node import Transaction, TransactionId
     from test_tools.__private.user_handles.handles.network_handle import NetworkHandle as Network
 
 
@@ -48,7 +48,7 @@ class HafNodeHandle(NodeHandleBase):
         return self.__implementation.database_url
 
     def wait_for_transaction_in_database(
-        self, transaction: Transaction, *, timeout: float | timedelta = math.inf, poll_time: float = 1.0
+        self, transaction: Union[Transaction, TransactionId], *, timeout: float | timedelta = math.inf, poll_time: float = 1.0
     ):
         """Function that blocks program execution until a transaction appears in the database
 
