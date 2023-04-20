@@ -12,6 +12,7 @@ setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
 trap on_exit EXIT;
 
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
+evaluate_result $?
 
 # add test functions:
 # load tests function
