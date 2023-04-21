@@ -235,7 +235,7 @@ fc::variant block2variant(const pqxx::row& block)
   return block_variant;
 }
 
-void blocks2replay(const char *context)
+void blocks2replay(const char *context, const char* shared_memory_bin_path)
 {
 
 
@@ -248,27 +248,27 @@ void blocks2replay(const char *context)
     //std::string json = fc::json::to_pretty_string(v);
     //wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
 
-    int n = consume_variant_block_impl(v, context, block_num);
+    int n = consume_variant_block_impl(v, context, block_num, shared_memory_bin_path);
     n=n;
   }
 }
 
-void run(int from, int to, const char *context, const char *postgres_url) 
+void run(int from, int to, const char *context, const char *postgres_url, const char* shared_memory_bin_path) 
 {
   get_data_from_postgres(from, to, postgres_url);
 
   prepare_iterators();
   
-  blocks2replay(context);
+  blocks2replay(context, shared_memory_bin_path);
 }
 
 };
 
 void consensus_state_provider_replay_impl(int from, int to, const char *context,
-                                const char *postgres_url) 
+                                const char *postgres_url, const char* shared_memory_bin_path) 
 {
   Postgres2Blocks p2b;
-  p2b.run(from, to, context, postgres_url); 
+  p2b.run(from, to, context, postgres_url, shared_memory_bin_path); 
 }
 
 
@@ -277,7 +277,7 @@ void consensus_state_provider_replay_impl(int from, int to, const char *context,
 
 
 
-void init(hive::chain::database& db, const char* context)
+void init(hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
 {
 
 
@@ -287,6 +287,7 @@ void init(hive::chain::database& db, const char* context)
 
   hive::chain::open_args db_open_args;
 
+  db_open_args.data_dir = shared_memory_bin_path;//mtlk todo now - remove line below
   db_open_args.data_dir = hive::app::get_context_data_dir();
   ilog("mtlk db_open_args.data_dir=${dd}",("dd", db_open_args.data_dir));
 
@@ -318,12 +319,12 @@ void init(hive::chain::database& db, const char* context)
 
 
 
-int initialize_context(const char* context)
+int initialize_context(const char* context, const char* shared_memory_bin_path)
 {
   if(!consensus_state_provider::get_cache().has_context(context))
   {
     hive::chain::database* db = new hive::chain::database;
-    init(*db, context);
+    init(*db, context, shared_memory_bin_path);
     consensus_state_provider::get_cache().add(context, *db);
     //haf_database_api_impls.emplace(std::make_pair(std::string(context), hive::plugins::database_api::database_api_impl(*db)));
     return db->head_block_num() + 1;
@@ -338,7 +339,7 @@ int initialize_context(const char* context)
 
 
 namespace hive { namespace app {
-int consume_variant_block_impl(const fc::variant& v, const char* context, int block_num)
+int consume_variant_block_impl(const fc::variant& v, const char* context, int block_num, const char* shared_memory_bin_path)
 {
 
   static auto first_time = true;
@@ -348,7 +349,7 @@ int consume_variant_block_impl(const fc::variant& v, const char* context, int bl
     wlog("mtlk consume_variant_block_impl pid= ${pid}", ("pid", getpid()));
   }
 
-  int expected_block_num = initialize_context(context);
+  int expected_block_num = initialize_context(context, shared_memory_bin_path);
 
   if(block_num != expected_block_num)
      return expected_block_num;
@@ -408,9 +409,9 @@ int consume_variant_block_impl(const fc::variant& v, const char* context, int bl
 
 
 namespace hive { namespace app {
-int consensus_state_provider_get_expected_block_num_impl(const char* context)
+int consensus_state_provider_get_expected_block_num_impl(const char* context, const char* shared_memory_bin_path)
 {
-  return initialize_context(context);
+  return initialize_context(context, shared_memory_bin_path);
 }
 }}
 

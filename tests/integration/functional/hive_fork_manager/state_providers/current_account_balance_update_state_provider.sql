@@ -56,7 +56,7 @@ CREATE PROCEDURE test_when()
 AS
 $BODY$
 BEGIN
-    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context')), 'consensus_state_provider_get_expected_block_num should return 1';
+    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', 'mtlk todo now')), 'consensus_state_provider_get_expected_block_num should return 1';
     PERFORM hive.update_state_provider_c_a_b_s_t( 1, 6, 'context' );
     COMMIT;
 END;
@@ -70,7 +70,7 @@ AS
 $BODY$
 DECLARE
 BEGIN
-    ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context')), 'consensus_state_provider_get_expected_block_num should return 7';
+    ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', 'mtlk todo now')), 'consensus_state_provider_get_expected_block_num should return 7';
     ASSERT EXISTS ( SELECT * FROM hive.context_c_a_b_s_t WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
     ASSERT EXISTS ( SELECT * FROM hive.context_c_a_b_s_t WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';
     ASSERT EXISTS ( SELECT * FROM hive.context_c_a_b_s_t WHERE account = 'null' AND balance = 0), 'Incorrect balance of null';
@@ -79,7 +79,7 @@ BEGIN
 
     ASSERT (SELECT to_regclass('hive.context_c_a_b_s_t')) IS NOT NULL, 'State provider table should exist';
     PERFORM hive.app_state_provider_drop_all( 'context' );
-    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context'));
+    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', 'mtlk todo now'));
     ASSERT (SELECT to_regclass('hive.context_current_account_balance')) IS NULL, 'State provider table should not exist';
 END;
 $BODY$

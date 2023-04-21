@@ -826,8 +826,9 @@ Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 {
 
   const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
-  int expected_block_num = hive::app::consensus_state_provider_get_expected_block_num_impl(context);
+  int expected_block_num = hive::app::consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path);
 
   PG_RETURN_INT32(expected_block_num); 
   return (Datum)0;
@@ -907,8 +908,9 @@ Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
   int to = PG_GETARG_INT32(1);
   const char* context = text_to_cstring(PG_GETARG_TEXT_PP(2));
   const char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(3));
+  const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(4));
 
-  hive::app::consensus_state_provider_replay_impl(from, to, context, postgres_url);
+  hive::app::consensus_state_provider_replay_impl(from, to, context, postgres_url, shared_memory_bin_path);
 
   return (Datum)0;
 }

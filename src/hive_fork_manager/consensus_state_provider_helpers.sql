@@ -15,7 +15,7 @@ AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
 
 
 
-CREATE OR REPLACE FUNCTION hive.consensus_state_provider_replay(in _from INT, in _to INT, IN _context TEXT, IN _postgres_url TEXT)
+CREATE OR REPLACE FUNCTION hive.consensus_state_provider_replay(in _from INT, in _to INT, IN _context TEXT, IN _postgres_url TEXT, IN shared_memory_bin_path TEXT)
 RETURNS VOID
 AS 'MODULE_PATHNAME', 'consensus_state_provider_replay' LANGUAGE C;
 
@@ -23,6 +23,6 @@ CREATE OR REPLACE FUNCTION hive.consensus_state_provider_finish(IN _context TEXT
 RETURNS VOID
 AS 'MODULE_PATHNAME', 'consensus_state_provider_finish' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.consensus_state_provider_get_expected_block_num(IN _context TEXT)
+CREATE OR REPLACE FUNCTION hive.consensus_state_provider_get_expected_block_num(IN _context TEXT, IN shared_memory_bin_path TEXT)
 RETURNS INTEGER
 AS 'MODULE_PATHNAME', 'consensus_state_provider_get_expected_block_num' LANGUAGE C;
