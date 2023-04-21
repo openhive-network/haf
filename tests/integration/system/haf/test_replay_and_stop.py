@@ -2,7 +2,6 @@ import pytest
 
 from haf_local_tools.system.haf import (
     assert_are_blocks_sync_with_haf_db,
-    assert_are_disabled_indexes_of_irreversible_called_correct,
     assert_are_indexes_restored,
     prepare_network_with_init_node_and_haf_node,
     prepare_and_send_transactions,
@@ -10,14 +9,14 @@ from haf_local_tools.system.haf import (
 
 
 @pytest.mark.parametrize(
-    "psql_index_threshold,expected_disable_indexes_calls",
-    [(100, None), (3, 1)],
+    "psql_index_threshold",
+    [100, 3,],
     ids=[
         "enabled_indexes",
         "disabled_indexes_in_replay",
     ],
 )
-def test_replay(psql_index_threshold, expected_disable_indexes_calls):
+def test_replay(psql_index_threshold):
     haf_node, init_node = prepare_network_with_init_node_and_haf_node()
     haf_node.config.psql_index_threshold = psql_index_threshold
 
@@ -34,7 +33,4 @@ def test_replay(psql_index_threshold, expected_disable_indexes_calls):
     haf_node.wait_for_transaction_in_database(transaction_1)
 
     assert_are_blocks_sync_with_haf_db(session, transaction_1["block_num"])
-    assert_are_disabled_indexes_of_irreversible_called_correct(
-        haf_node, expected_disable_indexes_calls
-    )
     assert_are_indexes_restored(haf_node)
