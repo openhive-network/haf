@@ -107,6 +107,34 @@ namespace PsqlTools::PsqlUtils {
     m_options.emplace( _name, newOption );
   }
 
+
+  void CustomConfiguration::addBooleanOption(
+      const std::string& _name
+    , const std::string& _shortDescription
+    , const std::string& _longDescription
+    , bool _defaultValue
+  ) {
+    using namespace std::string_literals;
+    OptionPlaceholder newOption( new bool( false )  );
+
+    if ( m_options.find( _name ) != m_options.end() ) {
+      THROW_INITIALIZATION_ERROR( "Option already exists: "s + _name );
+    }
+
+    DefineCustomBoolVariable(
+        ( m_prefix + "." + _name ).c_str()
+      , _shortDescription.c_str()
+      , _longDescription.c_str()
+      , std::get< bool* >( newOption )
+      , _defaultValue
+      , GucContext::PGC_SUSET
+      , 0
+      , nullptr, nullptr, nullptr
+    );
+
+    m_options.emplace( _name, newOption );
+  }
+
   std::string CustomConfiguration::getOptionAsString(const std::string& _name ) const {
     // Warning: it can be used only in backend main thread because static variable is used to pass a result
     using namespace std::string_literals;

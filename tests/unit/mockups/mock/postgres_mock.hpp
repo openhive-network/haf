@@ -80,6 +80,19 @@ public:
        GucShowHook show_hook
     ) = 0;
 
+  virtual void DefineCustomBoolVariable(
+      const char *name,
+      const char *short_desc,
+      const char *long_desc,
+      bool *valueAddr,
+      bool bootValue,
+      GucContext context,
+      int flags,
+      GucBoolCheckHook check_hook,
+      GucBoolAssignHook assign_hook,
+      GucShowHook show_hook
+    ) = 0;
+
     virtual char *GetConfigOption(const char*, bool, bool) = 0;
     virtual Oid GetSessionUserId() = 0;
 
@@ -155,6 +168,20 @@ public:
        GucIntAssignHook,
        GucShowHook
        )
+    );
+
+    MOCK_METHOD( void, DefineCustomBoolVariable, (
+      const char *,
+      const char *,
+      const char *,
+      bool *,
+      bool,
+      GucContext,
+      int,
+      GucBoolCheckHook,
+      GucBoolAssignHook,
+      GucShowHook
+      )
     );
 
     MOCK_METHOD( char*, GetConfigOption, (const char*, bool, bool) );

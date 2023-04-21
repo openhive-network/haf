@@ -135,4 +135,26 @@ BOOST_FIXTURE_TEST_SUITE( custom_configuration, GmockFixture )
     BOOST_CHECK( std::holds_alternative< uint32_t >( option ) );
   }
 
+  BOOST_AUTO_TEST_CASE( boolean_option_create ) {
+    using namespace ::testing;
+
+    auto const defaultValue = true;
+
+    CustomConfiguration objectUnderTest( "root" );
+
+    EXPECT_CALL( *m_postgres_mock, DefineCustomBoolVariable(
+        StrEq("root.option")
+      , StrEq("short")
+      , StrEq("long")
+      , _
+      , static_cast< int >( defaultValue )
+      , GucContext::PGC_SUSET, _, _, _, _  )
+    ).Times(1);
+
+    objectUnderTest.addBooleanOption( "option", "short", "long", defaultValue );
+
+    auto option = objectUnderTest.getOption( "option" );
+    BOOST_CHECK( std::holds_alternative< bool >( option ) );
+  }
+
 BOOST_AUTO_TEST_SUITE_END()
