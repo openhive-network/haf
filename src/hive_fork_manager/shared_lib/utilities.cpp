@@ -892,8 +892,9 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_finish);
 Datum consensus_state_provider_finish(PG_FUNCTION_ARGS)
 {
   const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
-  hive::app::consensus_state_provider_finish_impl(context);
+  hive::app::consensus_state_provider_finish_impl(context, shared_memory_bin_path);
 
   return (Datum)0;
 }  

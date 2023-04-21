@@ -19,7 +19,7 @@ CREATE OR REPLACE FUNCTION hive.consensus_state_provider_replay(in _from INT, in
 RETURNS VOID
 AS 'MODULE_PATHNAME', 'consensus_state_provider_replay' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.consensus_state_provider_finish(IN _context TEXT)
+CREATE OR REPLACE FUNCTION hive.consensus_state_provider_finish(IN _context TEXT, IN shared_memory_bin_path TEXT)
 RETURNS VOID
 AS 'MODULE_PATHNAME', 'consensus_state_provider_finish' LANGUAGE C;
 

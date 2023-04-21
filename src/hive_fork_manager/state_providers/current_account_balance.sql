@@ -113,6 +113,8 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_c_a_b_s_t';
+    __config_table_name TEXT := _context || '_c_a_b_s_t_config';
+    __shared_memory_bin_path TEXT;
 BEGIN
     __context_id = hive.get_context_id( _context );
 
@@ -120,9 +122,13 @@ BEGIN
         RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
-    EXECUTE format( 'DROP TABLE hive.%I', __table_name );
+    EXECUTE format('SELECT * FROM hive.%s ', __config_table_name) INTO __shared_memory_bin_path;
+    raise notice '__shared_memory_bin_path=%', __shared_memory_bin_path;
 
-    PERFORM hive.consensus_state_provider_finish('context');
+    EXECUTE format( 'DROP TABLE hive.%I', __table_name );
+    EXECUTE format( 'DROP TABLE hive.%I', __config_table_name );
+
+    PERFORM hive.consensus_state_provider_finish('context', __shared_memory_bin_path);
 END;
 $BODY$
 ;
