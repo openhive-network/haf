@@ -1,3 +1,4 @@
+DROP FUNCTION IF EXISTS hive.process_operation;
 CREATE OR REPLACE FUNCTION hive.process_operation(
   operation hive.operation,
   proc TEXT
