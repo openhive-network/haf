@@ -196,7 +196,7 @@ BEGIN
     PERFORM cab_app.define_schema ();
     PERFORM hive.app_state_provider_import ('KEYAUTH', _appContext);
     PERFORM hive.app_state_provider_import ('ACCOUNTS', _appContext);
-    PERFORM hive.app_state_provider_import ('c_a_b_s_t', _appContext);
+    PERFORM hive.app_state_provider_import ('c_a_b_s_t', _appContext, '/home/hived/datadir/context');
     COMMIT;
   END IF;
   
