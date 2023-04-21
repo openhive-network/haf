@@ -42,6 +42,13 @@ namespace PsqlTools::PsqlUtils {
         , int _defaultValue
       );
 
+      void addBooleanOption(
+          const std::string& _name
+        , const std::string& _shortDescription
+        , const std::string& _longDescription
+        , bool _defaultValue
+      );
+
       /**
        * @brief may throw std::runtime_error when option does not exist
        * it uses postgres api to get the option
@@ -61,7 +68,7 @@ namespace PsqlTools::PsqlUtils {
        * @throw std::runtime_error when option is unknown
        */
 
-      using  Option = std::variant< std::string, int32_t, uint32_t >;
+      using  Option = std::variant< std::string, int32_t, uint32_t, bool >;
       Option getOption( const std::string& _name ) const;
     private:
       const std::string m_prefix;
@@ -69,7 +76,7 @@ namespace PsqlTools::PsqlUtils {
         int m_value = std::numeric_limits< int >::infinity();
         operator uint32_t() const { assert( m_value >= 0 ); return static_cast<uint32_t>(m_value); }
       };
-      using  OptionPlaceholder = std::variant< char**, int32_t*, PositiveInt* >;
+      using  OptionPlaceholder = std::variant< char**, int32_t*, PositiveInt*, bool* >;
 
       std::unordered_map< std::string, OptionPlaceholder > m_options;
   };
