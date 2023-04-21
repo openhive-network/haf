@@ -532,10 +532,132 @@ Datum operation_to(_operation* op)
     }
 }
 
+template<typename Type>
+Datum handle_operation(_operation* op, const std::string& proc_signature)
+{
+  Datum proc = CStringGetDatum(proc_signature.c_str());
+  auto proc_oid = DirectFunctionCall1(regprocedurein, proc);
+  return OidFunctionCall1(proc_oid, operation_to<Type>(op));
+}
+
 }
 
 extern "C"
 {
+  PG_FUNCTION_INFO_V1( process_operation );
+  Datum process_operation( PG_FUNCTION_ARGS )
+  {
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    std::string proc_name = std::string(text_to_cstring(PG_GETARG_TEXT_PP( 1 )));
+    uint32 data_length = VARSIZE_ANY_EXHDR( op );
+    const char* raw_data = VARDATA_ANY( op );
+    if (data_length > 0)
+    {
+      const auto type = raw_data[0];
+      switch (type)
+      {
+        case 0: return handle_operation<hive::protocol::vote_operation>(op, proc_name + "(hive.vote_operation)");
+        case 1: return handle_operation<hive::protocol::comment_operation>(op, proc_name + "(hive.comment_operation)");
+        case 2: return handle_operation<hive::protocol::transfer_operation>(op, proc_name + "(hive.transfer_operation)");
+        case 3: return handle_operation<hive::protocol::transfer_to_vesting_operation>(op, proc_name + "(hive.transfer_to_vesting_operation)");
+        case 4: return handle_operation<hive::protocol::withdraw_vesting_operation>(op, proc_name + "(hive.withdraw_vesting_operation)");
+        case 5: return handle_operation<hive::protocol::limit_order_create_operation>(op, proc_name + "(hive.limit_order_create_operation)");
+        case 6: return handle_operation<hive::protocol::limit_order_cancel_operation>(op, proc_name + "(hive.limit_order_cancel_operation)");
+        case 7: return handle_operation<hive::protocol::feed_publish_operation>(op, proc_name + "(hive.feed_publish_operation)");
+        case 8: return handle_operation<hive::protocol::convert_operation>(op, proc_name + "(hive.convert_operation)");
+        case 9: return handle_operation<hive::protocol::account_create_operation>(op, proc_name + "(hive.account_create_operation)");
+        case 10: return handle_operation<hive::protocol::account_update_operation>(op, proc_name + "(hive.account_update_operation)");
+        case 11: return handle_operation<hive::protocol::witness_update_operation>(op, proc_name + "(hive.witness_update_operation)");
+        case 12: return handle_operation<hive::protocol::account_witness_vote_operation>(op, proc_name + "(hive.account_witness_vote_operation)");
+        case 13: return handle_operation<hive::protocol::account_witness_proxy_operation>(op, proc_name + "(hive.account_witness_proxy_operation)");
+        case 14: return handle_operation<hive::protocol::pow_operation>(op, proc_name + "(hive.pow_operation)");
+        case 15: return handle_operation<hive::protocol::custom_operation>(op, proc_name + "(hive.custom_operation)");
+        case 16: return handle_operation<hive::protocol::witness_block_approve_operation>(op, proc_name + "(hive.witness_block_approve_operation)");
+        case 17: return handle_operation<hive::protocol::delete_comment_operation>(op, proc_name + "(hive.delete_comment_operation)");
+        case 18: return handle_operation<hive::protocol::custom_json_operation>(op, proc_name + "(hive.custom_json_operation)");
+        case 19: return handle_operation<hive::protocol::comment_options_operation>(op, proc_name + "(hive.comment_options_operation)");
+        case 20: return handle_operation<hive::protocol::set_withdraw_vesting_route_operation>(op, proc_name + "(hive.set_withdraw_vesting_route_operation)");
+        case 21: return handle_operation<hive::protocol::limit_order_create2_operation>(op, proc_name + "(hive.limit_order_create2_operation)");
+        case 22: return handle_operation<hive::protocol::claim_account_operation>(op, proc_name + "(hive.claim_account_operation)");
+        case 23: return handle_operation<hive::protocol::create_claimed_account_operation>(op, proc_name + "(hive.create_claimed_account_operation)");
+        case 24: return handle_operation<hive::protocol::request_account_recovery_operation>(op, proc_name + "(hive.request_account_recovery_operation)");
+        case 25: return handle_operation<hive::protocol::recover_account_operation>(op, proc_name + "(hive.recover_account_operation)");
+        case 26: return handle_operation<hive::protocol::change_recovery_account_operation>(op, proc_name + "(hive.change_recovery_account_operation)");
+        case 27: return handle_operation<hive::protocol::escrow_transfer_operation>(op, proc_name + "(hive.escrow_transfer_operation)");
+        case 28: return handle_operation<hive::protocol::escrow_dispute_operation>(op, proc_name + "(hive.escrow_dispute_operation)");
+        case 29: return handle_operation<hive::protocol::escrow_release_operation>(op, proc_name + "(hive.escrow_release_operation)");
+        case 30: return handle_operation<hive::protocol::pow2_operation>(op, proc_name + "(hive.pow2_operation)");
+        case 31: return handle_operation<hive::protocol::escrow_approve_operation>(op, proc_name + "(hive.escrow_approve_operation)");
+        case 32: return handle_operation<hive::protocol::transfer_to_savings_operation>(op, proc_name + "(hive.transfer_to_savings_operation)");
+        case 33: return handle_operation<hive::protocol::transfer_from_savings_operation>(op, proc_name + "(hive.transfer_from_savings_operation)");
+        case 34: return handle_operation<hive::protocol::cancel_transfer_from_savings_operation>(op, proc_name + "(hive.cancel_transfer_from_savings_operation)");
+        case 35: return handle_operation<hive::protocol::custom_binary_operation>(op, proc_name + "(hive.custom_binary_operation)");
+        case 36: return handle_operation<hive::protocol::decline_voting_rights_operation>(op, proc_name + "(hive.decline_voting_rights_operation)");
+        case 37: return handle_operation<hive::protocol::reset_account_operation>(op, proc_name + "(hive.reset_account_operation)");
+        case 38: return handle_operation<hive::protocol::set_reset_account_operation>(op, proc_name + "(hive.set_reset_account_operation)");
+        case 39: return handle_operation<hive::protocol::claim_reward_balance_operation>(op, proc_name + "(hive.claim_reward_balance_operation)");
+        case 40: return handle_operation<hive::protocol::delegate_vesting_shares_operation>(op, proc_name + "(hive.delegate_vesting_shares_operation)");
+        case 41: return handle_operation<hive::protocol::account_create_with_delegation_operation>(op, proc_name + "(hive.account_create_with_delegation_operation)");
+        case 42: return handle_operation<hive::protocol::witness_set_properties_operation>(op, proc_name + "(hive.witness_set_properties_operation)");
+        case 43: return handle_operation<hive::protocol::account_update2_operation>(op, proc_name + "(hive.account_update2_operation)");
+        case 44: return handle_operation<hive::protocol::create_proposal_operation>(op, proc_name + "(hive.create_proposal_operation)");
+        case 45: return handle_operation<hive::protocol::update_proposal_votes_operation>(op, proc_name + "(hive.update_proposal_votes_operation)");
+        case 46: return handle_operation<hive::protocol::remove_proposal_operation>(op, proc_name + "(hive.remove_proposal_operation)");
+        case 47: return handle_operation<hive::protocol::update_proposal_operation>(op, proc_name + "(hive.update_proposal_operation)");
+        case 48: return handle_operation<hive::protocol::collateralized_convert_operation>(op, proc_name + "(hive.collateralized_convert_operation)");
+        case 49: return handle_operation<hive::protocol::recurrent_transfer_operation>(op, proc_name + "(hive.recurrent_transfer_operation)");
+        case 50: return handle_operation<hive::protocol::fill_convert_request_operation>(op, proc_name + "(hive.fill_convert_request_operation)");
+        case 51: return handle_operation<hive::protocol::author_reward_operation>(op, proc_name + "(hive.author_reward_operation)");
+        case 52: return handle_operation<hive::protocol::curation_reward_operation>(op, proc_name + "(hive.curation_reward_operation)");
+        case 53: return handle_operation<hive::protocol::comment_reward_operation>(op, proc_name + "(hive.comment_reward_operation)");
+        case 54: return handle_operation<hive::protocol::liquidity_reward_operation>(op, proc_name + "(hive.liquidity_reward_operation)");
+        case 55: return handle_operation<hive::protocol::interest_operation>(op, proc_name + "(hive.interest_operation)");
+        case 56: return handle_operation<hive::protocol::fill_vesting_withdraw_operation>(op, proc_name + "(hive.fill_vesting_withdraw_operation)");
+        case 57: return handle_operation<hive::protocol::fill_order_operation>(op, proc_name + "(hive.fill_order_operation)");
+        case 58: return handle_operation<hive::protocol::shutdown_witness_operation>(op, proc_name + "(hive.shutdown_witness_operation)");
+        case 59: return handle_operation<hive::protocol::fill_transfer_from_savings_operation>(op, proc_name + "(hive.fill_transfer_from_savings_operation)");
+        case 60: return handle_operation<hive::protocol::hardfork_operation>(op, proc_name + "(hive.hardfork_operation)");
+        case 61: return handle_operation<hive::protocol::comment_payout_update_operation>(op, proc_name + "(hive.comment_payout_update_operation)");
+        case 62: return handle_operation<hive::protocol::return_vesting_delegation_operation>(op, proc_name + "(hive.return_vesting_delegation_operation)");
+        case 63: return handle_operation<hive::protocol::comment_benefactor_reward_operation>(op, proc_name + "(hive.comment_benefactor_reward_operation)");
+        case 64: return handle_operation<hive::protocol::producer_reward_operation>(op, proc_name + "(hive.producer_reward_operation)");
+        case 65: return handle_operation<hive::protocol::clear_null_account_balance_operation>(op, proc_name + "(hive.clear_null_account_balance_operation)");
+        case 66: return handle_operation<hive::protocol::proposal_pay_operation>(op, proc_name + "(hive.proposal_pay_operation)");
+        case 67: return handle_operation<hive::protocol::dhf_funding_operation>(op, proc_name + "(hive.dhf_funding_operation)");
+        case 68: return handle_operation<hive::protocol::hardfork_hive_operation>(op, proc_name + "(hive.hardfork_hive_operation)");
+        case 69: return handle_operation<hive::protocol::hardfork_hive_restore_operation>(op, proc_name + "(hive.hardfork_hive_restore_operation)");
+        case 70: return handle_operation<hive::protocol::delayed_voting_operation>(op, proc_name + "(hive.delayed_voting_operation)");
+        case 71: return handle_operation<hive::protocol::consolidate_treasury_balance_operation>(op, proc_name + "(hive.consolidate_treasury_balance_operation)");
+        case 72: return handle_operation<hive::protocol::effective_comment_vote_operation>(op, proc_name + "(hive.effective_comment_vote_operation)");
+        case 73: return handle_operation<hive::protocol::ineffective_delete_comment_operation>(op, proc_name + "(hive.ineffective_delete_comment_operation)");
+        case 74: return handle_operation<hive::protocol::dhf_conversion_operation>(op, proc_name + "(hive.dhf_conversion_operation)");
+        case 75: return handle_operation<hive::protocol::expired_account_notification_operation>(op, proc_name + "(hive.expired_account_notification_operation)");
+        case 76: return handle_operation<hive::protocol::changed_recovery_account_operation>(op, proc_name + "(hive.changed_recovery_account_operation)");
+        case 77: return handle_operation<hive::protocol::transfer_to_vesting_completed_operation>(op, proc_name + "(hive.transfer_to_vesting_completed_operation)");
+        case 78: return handle_operation<hive::protocol::pow_reward_operation>(op, proc_name + "(hive.pow_reward_operation)");
+        case 79: return handle_operation<hive::protocol::vesting_shares_split_operation>(op, proc_name + "(hive.vesting_shares_split_operation)");
+        case 80: return handle_operation<hive::protocol::account_created_operation>(op, proc_name + "(hive.account_created_operation)");
+        case 81: return handle_operation<hive::protocol::fill_collateralized_convert_request_operation>(op, proc_name + "(hive.fill_collateralized_convert_request_operation)");
+        case 82: return handle_operation<hive::protocol::system_warning_operation>(op, proc_name + "(hive.system_warning_operation)");
+        case 83: return handle_operation<hive::protocol::fill_recurrent_transfer_operation>(op, proc_name + "(hive.fill_recurrent_transfer_operation)");
+        case 84: return handle_operation<hive::protocol::failed_recurrent_transfer_operation>(op, proc_name + "(hive.failed_recurrent_transfer_operation)");
+        case 85: return handle_operation<hive::protocol::limit_order_cancelled_operation>(op, proc_name + "(hive.limit_order_cancelled_operation)");
+        case 86: return handle_operation<hive::protocol::producer_missed_operation>(op, proc_name + "(hive.producer_missed_operation)");
+        case 87: return handle_operation<hive::protocol::proposal_fee_operation>(op, proc_name + "(hive.proposal_fee_operation)");
+        case 88: return handle_operation<hive::protocol::collateralized_convert_immediate_conversion_operation>(op, proc_name + "(hive.collateralized_convert_immediate_conversion_operation)");
+        case 89: return handle_operation<hive::protocol::escrow_approved_operation>(op, proc_name + "(hive.escrow_approved_operation)");
+        case 90: return handle_operation<hive::protocol::escrow_rejected_operation>(op, proc_name + "(hive.escrow_rejected_operation)");
+        case 91: return handle_operation<hive::protocol::proxy_cleared_operation>(op, proc_name + "(hive.proxy_cleared_operation)");
+        case 92: return handle_operation<hive::protocol::declined_voting_rights_operation>(op, proc_name + "(hive.declined_voting_rights_operation)");
+        default: ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Invalid operation type %d", type ) ) );
+      }
+    }
+    else
+    {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Invalid operation data length 0" ) ) );
+    }
+  }
+
   PG_FUNCTION_INFO_V1( operation_to_comment_operation );
   Datum operation_to_comment_operation( PG_FUNCTION_ARGS )
   {

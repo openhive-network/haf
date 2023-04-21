@@ -112,3 +112,32 @@ BEGIN
   END;
 END;
 $BODY$;
+
+DROP FUNCTION IF EXISTS hive.process_operation_c_impl;
+CREATE OR REPLACE FUNCTION hive.process_operation_c_impl(
+  operation hive.operation,
+  proc TEXT
+)
+RETURNS void
+LANGUAGE c
+VOLATILE
+AS 'MODULE_PATHNAME',
+'process_operation';
+
+DROP FUNCTION IF EXISTS hive.process_operation_c;
+CREATE OR REPLACE FUNCTION hive.process_operation_c(
+  operation hive.operation,
+  proc TEXT
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+AS $BODY$
+BEGIN
+  BEGIN
+    PERFORM hive.process_operation_c_impl(operation, proc);
+  EXCEPTION
+    WHEN undefined_function THEN RETURN;
+  END;
+END;
+$BODY$;
