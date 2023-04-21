@@ -311,3 +311,45 @@ BEGIN
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE FUNCTION hive.are_indexes_dropped()
+    RETURNS BOOL
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __number_of_dropped_indexes INT;
+BEGIN
+    SELECT COUNT(*) FROM hive.indexes_constraints
+    WHERE is_index
+    INTO __number_of_dropped_indexes;
+    IF ( __number_of_dropped_indexes = 0 ) THEN
+        RETURN FALSE;
+    ELSE
+        RETURN TRUE;
+    END IF;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.are_fk_dropped()
+    RETURNS BOOL
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __number_of_dropped_fk INT;
+BEGIN
+    SELECT COUNT(*) FROM hive.indexes_constraints
+    WHERE is_foreign_key
+    INTO __number_of_dropped_fk;
+    IF ( __number_of_dropped_fk = 0 ) THEN
+        RETURN FALSE;
+    ELSE
+        RETURN TRUE;
+    END IF;
+END;
+$BODY$
+;

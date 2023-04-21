@@ -126,6 +126,8 @@ GRANT EXECUTE ON FUNCTION
     , hive._operation_to_jsonb(hive.operation)
     , hive.create_database_hash(schema_name TEXT)
     , hive.calculate_schema_hash(schema_name TEXT)
+    , hive.are_indexes_dropped()
+    , hive.are_fk_dropped()
 
 
 TO hived_group;

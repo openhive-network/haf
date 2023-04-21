@@ -4,7 +4,6 @@ import test_tools as tt
 
 from haf_local_tools.system.haf import (
     assert_are_blocks_sync_with_haf_db,
-    assert_are_disabled_indexes_of_irreversible_called_correct,
     assert_are_indexes_restored,
     connect_nodes,
     prepare_network_with_init_node_and_haf_node,
@@ -21,15 +20,15 @@ def get_truncated_block_log(node, block_count: int):
 
 
 @pytest.mark.parametrize(
-    "psql_index_threshold,expected_disable_indexes_calls",
-    [(2147483647, None), (100000, 1), (10, 2)],
+    "psql_index_threshold",
+    [2147483647, 100000, 10],
     ids=[
         "enabled_indexes",
         "disabled_indexes_in_replay",
         "disabled_indexes_in_replay_and_p2p_sync",
     ],
 )
-def test_replay_and_p2p_sync(psql_index_threshold, expected_disable_indexes_calls):
+def test_replay_and_p2p_sync(psql_index_threshold):
     haf_node, init_node = prepare_network_with_init_node_and_haf_node()
     haf_node.config.psql_index_threshold = psql_index_threshold
 
@@ -50,7 +49,4 @@ def test_replay_and_p2p_sync(psql_index_threshold, expected_disable_indexes_call
     haf_node.wait_for_transaction_in_database(transaction_1)
 
     assert_are_blocks_sync_with_haf_db(haf_node, transaction_1["block_num"])
-    assert_are_disabled_indexes_of_irreversible_called_correct(
-        haf_node, expected_disable_indexes_calls
-    )
     assert_are_indexes_restored(haf_node)

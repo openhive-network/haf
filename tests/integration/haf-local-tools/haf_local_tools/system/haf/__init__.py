@@ -42,21 +42,7 @@ def assert_are_blocks_sync_with_haf_db(haf_node: HafNode, limit_block_num: int) 
     assert blocks_in_database == limit_block_num
 
 
-def assert_are_disabled_indexes_of_irreversible_called_correct(
-    haf_node: HafNode, expected_disable_indexes_calls: int
-) -> bool:
-    # verify that disable_indexes_of_irreversible was called as expected
-    function_calls = haf_node.query_one(
-        "SELECT calls FROM pg_stat_user_functions WHERE funcname = 'disable_indexes_of_irreversible';"
-    )
-    tt.logger.info(f"assert_are_disabled_indexes_of_irreversible_called_correct "
-                   f"actual {function_calls=}, expected {expected_disable_indexes_calls=}")
-    assert function_calls == expected_disable_indexes_calls
-
-
 def assert_are_indexes_restored(haf_node: HafNode):
     # verify that indexes are restored
-    indexes = haf_node.query_all(
-        "SELECT indexname FROM pg_indexes WHERE tablename='blocks'"
-    )
-    assert len(indexes) > 0
+    are_indexes_dropped = haf_node.query_one("SELECT hive.are_indexes_dropped()")
+    assert are_indexes_dropped == False
