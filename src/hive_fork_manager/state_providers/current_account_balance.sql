@@ -1,5 +1,5 @@
 DROP FUNCTION if exists  hive.start_provider_c_a_b_s_t;
-CREATE OR REPLACE FUNCTION hive.start_provider_c_a_b_s_t( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.start_provider_c_a_b_s_t( _context hive.context_name, _shared_memory_bin_path TEXT)
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE

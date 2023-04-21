@@ -41,7 +41,7 @@ BEGIN
 
 
     PERFORM hive.app_create_context( 'context' );
-    PERFORM hive.app_state_provider_import( 'c_a_b_s_t', 'context' );
+    PERFORM hive.app_state_provider_import( 'c_a_b_s_t', 'context' ,'/home/hived/datadir/context');
     PERFORM hive.app_context_detach( 'context' );
     UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 5;
     COMMIT;
