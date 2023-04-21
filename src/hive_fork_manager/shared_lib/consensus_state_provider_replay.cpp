@@ -292,7 +292,7 @@ void init(hive::chain::database& db, const char* context, const char* shared_mem
 
   db_open_args.force_replay = false;// false
 
-  db.open( db_open_args, context );
+  db.open( db_open_args);
 
 }
 
@@ -402,7 +402,7 @@ void consensus_state_provider_finish_impl(const char* context, const char* share
       hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
       db.close();
       
-      db. chainbase::database::wipe( fc::path(shared_memory_bin_path)  /  "blockchain" , context);
+      db. chainbase::database::wipe( fc::path(shared_memory_bin_path)  /  "blockchain" );
       consensus_state_provider::get_cache().remove(context);
 
   }
