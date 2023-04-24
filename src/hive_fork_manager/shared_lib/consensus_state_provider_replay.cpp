@@ -378,19 +378,12 @@ int consume_variant_block_impl(const fc::variant& v, const char* context, int bl
 
   return expected_block_num;
 }
-}
 
-
-namespace consensus_state_provider
-{
 int consensus_state_provider_get_expected_block_num_impl(const char* context, const char* shared_memory_bin_path)
 {
   return initialize_context(context, shared_memory_bin_path);
 }
-}
 
-namespace consensus_state_provider
-{
 void consensus_state_provider_finish_impl(const char* context, const char* shared_memory_bin_path)
 {
   if(consensus_state_provider::get_cache().has_context(context))
