@@ -11,12 +11,6 @@ namespace PsqlTools::QuerySupervisor {
   Configuration::Configuration()
     : m_wrappedCustomConfiguration( "query_supervisor" ) {
     LOG_DEBUG( "Initializing configuration..." );
-    m_wrappedCustomConfiguration.addStringOption(
-        LIMITED_USERS_OPTION
-      , "Limited users names"
-      , "List of users separated by commas whose queries are limited by the query_supervisor"
-      , ""
-    );
 
     m_wrappedCustomConfiguration.addPositiveIntOption(
         LIMIT_TUPLES_OPTION
@@ -31,18 +25,14 @@ namespace PsqlTools::QuerySupervisor {
       , "Limit of time for a query execution [ms]"
       , DEFAULT_TIMEOUT_LIMIT_MS
     );
+
+    m_wrappedCustomConfiguration.addBooleanOption(
+         LIMITS_ENABLED
+      , "Are limits enabled"
+      , "If limits are enabled"
+      , false
+    );
     LOG_DEBUG( "Configuration initialized" );
-  }
-
-  std::vector<std::string>
-  Configuration::getBlockedUsers() const {
-    auto blockedUsersOptionValue  =
-      m_wrappedCustomConfiguration.getOption( LIMITED_USERS_OPTION );
-
-    assert( std::holds_alternative< std::string >( blockedUsersOptionValue ) );
-
-    std::vector< std::string > result;
-    return boost::split( result, std::get< std::string >( blockedUsersOptionValue ), boost::is_any_of(",") );
   }
 
   uint32_t
@@ -63,6 +53,16 @@ namespace PsqlTools::QuerySupervisor {
     assert( std::holds_alternative< uint32_t >( timeoutLimit ) );
 
     return std::chrono::milliseconds( std::get< uint32_t >( timeoutLimit ) );
+  }
+
+  bool
+  Configuration::areLimitsEnabled() const {
+    auto option =
+      m_wrappedCustomConfiguration.getOption( LIMITS_ENABLED );
+
+    assert( std::holds_alternative< bool >( option ) );
+
+    return std::get< bool >( option );
   }
 
 }// PsqlTools::QuerySupervisor
