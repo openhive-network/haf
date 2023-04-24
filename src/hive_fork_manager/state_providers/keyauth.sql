@@ -16,7 +16,7 @@ custom_binary_operation ?
 reset_account_operation
 */
 
-CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hive.context_name, _dummy_arg1 TEXT)
+CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hive.context_name, _dummy_arg1 TEXT DEFAULT '')
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE
