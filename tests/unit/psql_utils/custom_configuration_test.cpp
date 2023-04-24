@@ -138,7 +138,7 @@ BOOST_FIXTURE_TEST_SUITE( custom_configuration, GmockFixture )
   BOOST_AUTO_TEST_CASE( boolean_option_create ) {
     using namespace ::testing;
 
-    auto const defaultValue = true;
+    auto const defaultValue = false;
 
     CustomConfiguration objectUnderTest( "root" );
 
@@ -147,7 +147,7 @@ BOOST_FIXTURE_TEST_SUITE( custom_configuration, GmockFixture )
       , StrEq("short")
       , StrEq("long")
       , _
-      , static_cast< int >( defaultValue )
+      , defaultValue
       , GucContext::PGC_SUSET, _, _, _, _  )
     ).Times(1);
 
@@ -155,6 +155,7 @@ BOOST_FIXTURE_TEST_SUITE( custom_configuration, GmockFixture )
 
     auto option = objectUnderTest.getOption( "option" );
     BOOST_CHECK( std::holds_alternative< bool >( option ) );
+    BOOST_CHECK( !std::get< bool >( option ) );
   }
 
 BOOST_AUTO_TEST_SUITE_END()

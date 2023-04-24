@@ -115,7 +115,7 @@ namespace PsqlTools::PsqlUtils {
     , bool _defaultValue
   ) {
     using namespace std::string_literals;
-    OptionPlaceholder newOption( new bool( false )  );
+    OptionPlaceholder newOption( new bool( _defaultValue )  );
 
     if ( m_options.find( _name ) != m_options.end() ) {
       THROW_INITIALIZATION_ERROR( "Option already exists: "s + _name );

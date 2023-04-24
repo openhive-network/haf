@@ -12,9 +12,8 @@ BEGIN
     SELECT GENERATE_SERIES, GENERATE_SERIES % 5
     FROM GENERATE_SERIES(1, 100000);
 
-    EXECUTE  format( 'ALTER ROLE SESSION_USER IN DATABASE %s SET query_supervisor.limited_users TO ''%s'''
+    EXECUTE  format( 'ALTER ROLE SESSION_USER IN DATABASE %s SET query_supervisor.limits_enabled TO true'
         , current_database()
-        , current_user
     );
 END
 $BODY$

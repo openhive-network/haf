@@ -6,8 +6,11 @@ CREATE FUNCTION alice_test_given()
 AS
 $BODY$
 BEGIN
-    ALTER ROLE alice RESET shared_preload_libraries;
-    ALTER ROLE alice RESET local_preload_libraries;
+    BEGIN
+        ALTER ROLE alice RESET shared_preload_libraries;
+        ALTER ROLE alice RESET local_preload_libraries;
+    EXCEPTION WHEN OTHERS THEN
+    END;
 END;
 $BODY$
 ;
