@@ -1,0 +1,10 @@
+BasedOnStyle: Google
+ColumnLimit: 140
+UseTab: Never
+IndentWidth: 2
+BreakBeforeBraces: Allman
+SpaceBeforeParens: Never
+
+SeparateDefinitionBlocks: Always
+EmptyLineBeforeAccessModifier: LogicalBlock
+

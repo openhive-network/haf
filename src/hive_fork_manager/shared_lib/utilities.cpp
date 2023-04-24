@@ -828,7 +828,7 @@ Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
   const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
   const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
-  int expected_block_num = hive::app::consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path);
+  int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path);
 
   PG_RETURN_INT32(expected_block_num); 
   return (Datum)0;
@@ -849,13 +849,13 @@ Datum current_all_accounts_balances_C(PG_FUNCTION_ARGS)
 {
   const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
 
-  hive::app::collected_account_balances_collection_t collected_data;
+  consensus_state_provider::collected_account_balances_collection_t collected_data;
 
   colect_data_and_fill_returned_recordset(
 
     [=, &collected_data]()
     {
-        collected_data = hive::app::collect_current_all_accounts_balances(context);
+        collected_data = consensus_state_provider::collect_current_all_accounts_balances(context);
     }, 
 
     [=, &collected_data]()
@@ -894,7 +894,7 @@ Datum consensus_state_provider_finish(PG_FUNCTION_ARGS)
   const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
   const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
-  hive::app::consensus_state_provider_finish_impl(context, shared_memory_bin_path);
+  consensus_state_provider::consensus_state_provider_finish_impl(context, shared_memory_bin_path);
 
   return (Datum)0;
 }  
@@ -911,7 +911,7 @@ Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
   const char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(3));
   const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(4));
 
-  hive::app::consensus_state_provider_replay_impl(from, to, context, postgres_url, shared_memory_bin_path);
+  consensus_state_provider::consensus_state_provider_replay_impl(from, to, context, postgres_url, shared_memory_bin_path);
 
   return (Datum)0;
 }

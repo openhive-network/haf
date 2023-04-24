@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# sudo rm /home/hived/datadir/context/blockchain/shared_memory.bin; ../haf/scripts/runallnow.sh build
 
 set -e
 

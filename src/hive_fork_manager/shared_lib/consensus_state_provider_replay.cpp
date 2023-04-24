@@ -1,6 +1,4 @@
-
-
-
+#include "consensus_state_provider_replay.hpp"
 #include "fc/variant.hpp"
 #include <fc/io/json.hpp>
 #include <fc/io/sstream.hpp>
@@ -14,9 +12,8 @@
 #include "hive/plugins/database_api/from_variant_to_full_block_ptr.hpp"
 
 
-namespace hive { namespace app {
-
-
+namespace consensus_state_provider
+{
 
 std::string fixTime(const pqxx::field& t)
 {
@@ -135,7 +132,7 @@ void handle_operations(int block_num, int trx_in_block, std::vector<fc::variant>
   }
 }
 void handle_transactions(int block_num, 
-  std::vector<variant>& transaction_ids_vector,
+  std::vector<fc::variant>& transaction_ids_vector,
   std::vector<fc::variant>& trancactions_vector)
  {
   for (; transactions_it != transactions.end(); ++transactions_it) {
@@ -172,8 +169,8 @@ void handle_transactions(int block_num,
 
       transaction_v("operations", operations_vector);
 
-      variant tv;
-      to_variant(transaction_v.get(), tv);
+      fc::variant tv;
+      fc::to_variant(transaction_v.get(), tv);
       trancactions_vector.push_back(tv);
 
     } else {
@@ -188,13 +185,13 @@ fc::variant block2variant(const pqxx::row& block)
 {
   auto block_num = block["num"].as<int>();
 
-  std::vector<variant> transaction_ids_variants;
+  std::vector<fc::variant> transaction_ids_variants;
   std::vector<fc::variant> transaction_variants;
   if(block_num == transaction_expecting_block)
     handle_transactions(block_num, transaction_ids_variants, transaction_variants);
 
   std::string json = block["extensions"].c_str();
-  variant extensions = fc::json::from_string(json.empty() ?"[]":json);
+  fc::variant extensions = fc::json::from_string(json.empty() ?"[]":json);
 
   // fill in block header here
   fc::variant_object_builder block_variant_builder; 
@@ -210,7 +207,7 @@ fc::variant block2variant(const pqxx::row& block)
   ("transaction_merkle_root", fixHex(block["transaction_merkle_root"]))
   ("transaction_ids", transaction_ids_variants);
 
-  variant block_variant;
+  fc::variant block_variant;
   to_variant(block_variant_builder.get(), block_variant);
   return block_variant;
 }
@@ -228,7 +225,7 @@ void blocks2replay(const char *context, const char* shared_memory_bin_path)
     //std::string json = fc::json::to_pretty_string(v);
     //wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
 
-    int n = consume_variant_block_impl(v, context, block_num, shared_memory_bin_path);
+    int n = consensus_state_provider::consume_variant_block_impl(v, context, block_num, shared_memory_bin_path);
     n=n;
   }
 }
@@ -252,8 +249,7 @@ void consensus_state_provider_replay_impl(int from, int to, const char *context,
 }
 
 
-
-}}
+}
 
 
 
@@ -317,7 +313,8 @@ int initialize_context(const char* context, const char* shared_memory_bin_path)
 }
 
 
-namespace hive { namespace app {
+namespace consensus_state_provider
+{
 int consume_variant_block_impl(const fc::variant& v, const char* context, int block_num, const char* shared_memory_bin_path)
 {
 
@@ -346,7 +343,7 @@ int consume_variant_block_impl(const fc::variant& v, const char* context, int bl
 
   
 
-  uint64_t skip_flags = chain::database::skip_block_log;
+  uint64_t skip_flags = hive::chain::database::skip_block_log;
   // skip_flags |= hive::plugins::chain::database::skip_validate_invariants;
   
   //skip_flags |= hive::plugins::chain::database::skip_witness_signature ; //try not to skip it mtlk 
@@ -360,17 +357,17 @@ int consume_variant_block_impl(const fc::variant& v, const char* context, int bl
 
 
 
-      skip_flags |= chain::database::skip_witness_signature |
-      chain::database::skip_transaction_signatures |
-      chain::database::skip_transaction_dupe_check |
-      chain::database::skip_tapos_check |
-      chain::database::skip_merkle_check |
-      chain::database::skip_witness_schedule_check |
-      chain::database::skip_authority_check |
-      chain::database::skip_validate; /// no need to validate operations
+      skip_flags |= hive::chain::database::skip_witness_signature |
+      hive::chain::database::skip_transaction_signatures |
+      hive::chain::database::skip_transaction_dupe_check |
+      hive::chain::database::skip_tapos_check |
+      hive::chain::database::skip_merkle_check |
+      hive::chain::database::skip_witness_schedule_check |
+      hive::chain::database::skip_authority_check |
+      hive::chain::database::skip_validate; /// no need to validate operations
 
 
-  db.set_tx_status( chain::database::TX_STATUS_BLOCK );
+  db.set_tx_status( hive::chain::database::TX_STATUS_BLOCK );
 
 
   db.public_apply_block(fb_ptr, skip_flags);
@@ -384,17 +381,19 @@ int consume_variant_block_impl(const fc::variant& v, const char* context, int bl
 
   return expected_block_num;
 }
-}}
+}
 
 
-namespace hive { namespace app {
+namespace consensus_state_provider
+{
 int consensus_state_provider_get_expected_block_num_impl(const char* context, const char* shared_memory_bin_path)
 {
   return initialize_context(context, shared_memory_bin_path);
 }
-}}
+}
 
-namespace hive { namespace app {
+namespace consensus_state_provider
+{
 void consensus_state_provider_finish_impl(const char* context, const char* shared_memory_bin_path)
 {
   if(consensus_state_provider::get_cache().has_context(context))
@@ -407,4 +406,4 @@ void consensus_state_provider_finish_impl(const char* context, const char* share
 
   }
 }
-}}
+}
