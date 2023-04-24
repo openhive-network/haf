@@ -53,6 +53,7 @@ ADD_PSQL_EXTENSION(
 ADD_SUBDIRECTORY( shared_lib )
 
 ADD_DEPENDENCIES( extension.${EXTENSION_NAME} hfm-${HAF_GIT_REVISION_SHA} )
+ADD_DEPENDENCIES( extension.${EXTENSION_NAME} query_supervisor )
 
 MESSAGE(STATUS "Detected root project git revision: ${HAF_GIT_REVISION_SHA}")
 
