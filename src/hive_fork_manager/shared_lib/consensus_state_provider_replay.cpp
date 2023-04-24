@@ -143,7 +143,7 @@ void handle_transactions(int block_num,
       // fill in transaction here
       std::vector<std::string> signa;
       if (strlen(transaction["signature"].c_str())) {
-        signa.push_back(transaction["signature"].c_str() + 2);
+        signa.push_back(fixHex(transaction["signature"]));
       }
 
       fc::variant_object_builder transaction_v;
@@ -151,7 +151,7 @@ void handle_transactions(int block_num,
           "ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())(
           "expiration", fixTime(transaction["expiration"]))("signatures", signa);
 
-      transaction_ids_vector.push_back(transaction["trx_hash"].c_str() + 2);
+      transaction_ids_vector.push_back(fixHex(transaction["trx_hash"]));
 
 
       // rewind
