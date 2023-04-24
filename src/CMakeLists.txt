@@ -1,6 +1,6 @@
 ADD_SUBDIRECTORY_WITH_INCLUDES( psql_utils )
 ADD_SUBDIRECTORY_WITH_INCLUDES( pq_utils )
+ADD_SUBDIRECTORY( query_supervisor )
 ADD_SUBDIRECTORY( hive_fork_manager )
 ADD_SUBDIRECTORY_WITH_INCLUDES( transaction_controllers )
 ADD_SUBDIRECTORY( filter_utils )
-ADD_SUBDIRECTORY( query_supervisor )
