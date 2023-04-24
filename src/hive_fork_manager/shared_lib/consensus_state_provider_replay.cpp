@@ -104,7 +104,7 @@ void prepare_iterators()
   }
 }
 
-void handle_operations(int block_num, int trx_in_block, std::vector<fc::variant>& operations_vector)
+void operations2variants(int block_num, int trx_in_block, std::vector<fc::variant>& operations_variants)
 {
   for(; operations_it != operations.end(); ++operations_it)
   {
@@ -113,73 +113,71 @@ void handle_operations(int block_num, int trx_in_block, std::vector<fc::variant>
     {
       // fill in op here
 
-      const auto &o = operation["body"];
+      const auto& o = operation["body"];
       std::string json = std::string(o.c_str());
       fc::variant ov = fc::json::from_string(json);
 
       hive::protocol::operation op;
       fc::from_variant(ov, op);
 
-      operations_vector.push_back(ov);
+      operations_variants.push_back(ov);
     }
     else
     {
       operations_expecting_block = operations_it["block_num"].as<int>();
-      operations_expecting_transaction =
-          operations_it["trx_in_block"].as<int>();
+      operations_expecting_transaction = operations_it["trx_in_block"].as<int>();
       break;
     }
   }
 }
-void handle_transactions(int block_num, 
-  std::vector<fc::variant>& transaction_ids_vector,
-  std::vector<fc::variant>& trancactions_vector)
- {
-  for (; transactions_it != transactions.end(); ++transactions_it) {
+
+void transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<fc::variant>& trancaction_variants)
+{
+  for(; transactions_it != transactions.end(); ++transactions_it)
+  {
     const auto transaction = (*transactions_it);
-    if (transaction["block_num"].as<int>() == block_num) {
+    if(transaction["block_num"].as<int>() == block_num)
+    {
       auto trx_in_block = transaction["trx_in_block"].as<int>();
 
-      // fill in transaction here
-      std::vector<std::string> signa;
-      if (strlen(transaction["signature"].c_str())) {
-        signa.push_back(fixHex(transaction["signature"]));
+      std::vector<std::string> signatures;
+      if(strlen(transaction["signature"].c_str()))
+      {
+        signatures.push_back(fixHex(transaction["signature"]));
       }
 
       fc::variant_object_builder transaction_v;
       transaction_v("ref_block_num", transaction["ref_block_num"].as<int>())(
-          "ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())(
-          "expiration", fixTime(transaction["expiration"]))("signatures", signa);
+          "ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())("expiration", fixTime(transaction["expiration"]))("signatures",
+                                                                                                                               signatures);
 
-      transaction_ids_vector.push_back(fixHex(transaction["trx_hash"]));
-
+      transaction_id_variants.push_back(fixHex(transaction["trx_hash"]));
 
       // rewind
-      while (operations_expecting_block < block_num) {
+      while(operations_expecting_block < block_num)
+      {
         operations_it++;
         operations_expecting_block = operations_it["block_num"].as<int>();
-        operations_expecting_transaction =
-            operations_it["trx_in_block"].as<int>();
+        operations_expecting_transaction = operations_it["trx_in_block"].as<int>();
       }
 
-      std::vector<fc::variant> operations_vector;
+      std::vector<fc::variant> operations_variants;
       if(block_num == operations_expecting_block && trx_in_block == operations_expecting_transaction)
-        handle_operations(block_num, trx_in_block, operations_vector);
+        operations2variants(block_num, trx_in_block, operations_variants);
 
-
-      transaction_v("operations", operations_vector);
+      transaction_v("operations", operations_variants);
 
       fc::variant tv;
       fc::to_variant(transaction_v.get(), tv);
-      trancactions_vector.push_back(tv);
-
-    } else {
+      trancaction_variants.push_back(tv);
+    }
+    else
+    {
       transaction_expecting_block = transaction["block_num"].as<int>();
       break;
     }
   }
 }
-
 
 fc::variant block2variant(const pqxx::row& block)
 {
@@ -188,7 +186,7 @@ fc::variant block2variant(const pqxx::row& block)
   std::vector<fc::variant> transaction_ids_variants;
   std::vector<fc::variant> transaction_variants;
   if(block_num == transaction_expecting_block)
-    handle_transactions(block_num, transaction_ids_variants, transaction_variants);
+    transactions2variants(block_num, transaction_ids_variants, transaction_variants);
 
   std::string json = block["extensions"].c_str();
   fc::variant extensions = fc::json::from_string(json.empty() ?"[]":json);
