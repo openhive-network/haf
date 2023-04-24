@@ -249,7 +249,6 @@ void consensus_state_provider_replay_impl(int from, int to, const char *context,
 }
 
 
-}
 
 
 
@@ -313,8 +312,6 @@ int initialize_context(const char* context, const char* shared_memory_bin_path)
 }
 
 
-namespace consensus_state_provider
-{
 int consume_variant_block_impl(const fc::variant& v, const char* context, int block_num, const char* shared_memory_bin_path)
 {
 
