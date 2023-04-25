@@ -133,6 +133,7 @@ BEGIN
       JOIN operation_types AS ot ON split_part(ot.name, '::', 3) = t.typname
       JOIN operations AS o ON o.op_type_id = ot.id
       WHERE p.proname = proc AND o.block_num >= starting_block_num AND o.block_num < starting_block_num + count
+      ORDER BY o.block_num ASC
   LOOP
     CASE op.op_type_id OF
       WHEN 0 THEN EXECUTE format('%I($1::hive.vote_operation)', proc) USING op.body;
