@@ -62,23 +62,23 @@ class Test:
     )
     def test_dump_load_instance_scripts(self, prepared_networks_and_database_1, database, first_run : int, dump_exit_before_sync : int, dump_stop_replay_at_block : int, load_exit_before_sync : int, load_stop_replay_at_block : int, after_dump : int, after_load : int):
         # GIVEN
-        self.run_node_with_db(prepared_networks_and_database_1, database, first_run)
+        db_name = self.run_node_with_db(prepared_networks_and_database_1, database, first_run)
         
 
         # WHEN
         additional_dump_command_line = self.generate_additional_command_line(dump_exit_before_sync, dump_stop_replay_at_block)
-        self.dump_instance(additional_dump_command_line)
-        self.assert_dumped(after_dump)
+        self.dump_instance(db_name, additional_dump_command_line)
+        self.assert_dumped(db_name, after_dump)
         
         additional_load_command_line = self.generate_additional_command_line(load_exit_before_sync, load_stop_replay_at_block)
-        self.load_instance(additional_load_command_line)
+        self.load_instance(db_name, additional_load_command_line)
 
         # THEN
-        self.assert_loaded(after_load)
+        self.assert_loaded(db_name, after_load)
         
 
     def run_node_with_db(self, prepared_networks_and_database_1, database, stop_at_block : int):
-        node, session, self.db_name = prepared_networks_and_database_1(database)
+        node, session, db_name = prepared_networks_and_database_1(database)
 
         self.hived_executable_path =paths_to_executables.get_path_of("hived")
 
@@ -96,35 +96,37 @@ class Test:
         node.run(replay_from=create_block_log_directory_name("block_log") / "block_log", stop_at_block=stop_at_block, exit_before_synchronization=True)
         session.close()
 
+        return db_name
 
-    def dump_instance(self, additional_command_line : str):
+
+    def dump_instance(self, db_name, additional_command_line : str):
         command = f"{self.dump_instance_script} \
         --backup-dir={self.backup_dir} \
         --hived-executable-path={self.hived_executable_path} \
         --hived-data-dir={self.hived_data_dir} \
-        --haf-db-name={self.db_name.database} \
+        --haf-db-name={db_name.database} \
         --override-existing-backup-dir \
         {additional_command_line}"
 
         shell(command)
 
-    def assert_dumped(self, at_block : int):
-        session = create_session(self.db_name)
+    def assert_dumped(self, db_name, at_block : int):
+        session = create_session(db_name)
         assert query_count(session, 'blocks') == at_block
         session.close()
 
-    def load_instance(self, additional_command_line : str):
+    def load_instance(self, db_name, additional_command_line : str):
         command = f"{self.load_instance_script} \
         --backup-dir={self.backup_dir} \
         --hived-executable-path={self.hived_executable_path} \
         --hived-data-dir={self.hived_data_dir} \
-        --haf-db-name={self.db_name.database} \
+        --haf-db-name={db_name.database} \
         {additional_command_line}"
 
         shell(command)
 
-    def assert_loaded(self, after_load : int):
-        session = create_session(self.db_name)
+    def assert_loaded(self, db_name, after_load : int):
+        session = create_session(db_name)
         assert query_count(session, 'blocks') == after_load
         session.close()
 
