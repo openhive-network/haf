@@ -9,7 +9,7 @@
 #include <pqxx/pqxx>
 
 #include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
-#include "hive/plugins/database_api/from_variant_to_full_block_ptr.hpp"
+#include "from_variant_to_full_block_ptr.hpp"
 
 
 namespace consensus_state_provider

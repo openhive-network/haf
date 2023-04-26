@@ -42,6 +42,9 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # we are in build directory
 
+
+# TODO - bash_test assert
+
 # mtlk TODO
 # DONE start/stop on contextual shared mem file
 # DONE What about ON CONFLICT DO NOTHING in src/hive_fork_manager/state_providers/current_account_balance.sql - two accounts in one state ?     texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L) ON CONFLICT DO NOTHING;', __table_name, _context);
@@ -843,7 +846,7 @@ run_all_from_scratch()
 
 run()
 {
-    run_all_from_scratch && app_start && time app_cont
+    remove_context_shared_memory_bin && run_all_from_scratch && app_start && time app_cont
 }
 
 if [ $# -eq 0 ]
