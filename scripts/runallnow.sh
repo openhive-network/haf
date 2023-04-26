@@ -51,6 +51,9 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO eliminate MTLK_FROM_VARIANT_ON_CONSUME_JSON_HACK
 # TODO interface ?
 
+# TODO clang find #include
+$ TODO add .clang-format
+
 
 
 
