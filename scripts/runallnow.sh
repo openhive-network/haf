@@ -824,6 +824,11 @@ save_state()
 
 
 
+remove_context_shared_memory_bin()
+{
+    sudo rm  $DATA_DIR/context/blockchain/shared_memory.bin && echo removed!
+}
+
 run_all_from_scratch()
 {
     sudo_enter && \
