@@ -42,30 +42,47 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # we are in build directory
 
-
+# mtlk TODO:
 # TODO - bash_test assert
+# TODO - recognize existing context_shared_memory_bin
+# TODO why runall script has to clear contest sharedmemory.bin ?
+# TODO cleanup init(db
+# TODO example testing app
+# TODO eliminate MTLK_FROM_VARIANT_ON_CONSUME_JSON_HACK
+# TODO interface ?
 
-# mtlk TODO
+
+
+
+
 # DONE start/stop on contextual shared mem file
 # DONE What about ON CONFLICT DO NOTHING in src/hive_fork_manager/state_providers/current_account_balance.sql - two accounts in one state ?     texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L) ON CONFLICT DO NOTHING;', __table_name, _context);
-# consuming jsons one by one or getting a vector of blocks form haf block api
+# DONE (minor gain )consuming jsons one by one or getting a vector of blocks form haf block api
 # DONE separate C function to get current block_num where we stand
-# in yaml - cp log to . instead of ln -s
-# separate from database_api.cpp, database_api_plugin
+# TODO ? in yaml - cp log to . instead of ln -s
+# TODO separate from database_api.cpp, database_api_plugin
 
-# //na krotkim blocklogu zobacz jak to push blok chodzi
+# TODO //na krotkim blocklogu zobacz jak to push blok chodzi
 
-# lock na funckjach w C lub wyżej
+# TODO ? lock na funckjach w C lub wyżej
 
-#  is it needed ?         bfs::permissions(abs_path, b
-#  better "PGDATA" get_context_data_dir() // //getenv("HAF_DB_STORE");//BLOCK_LOG_DIRECTORY
-# why runall script has to clear contest sharedmemory.bin ?
-# funkcja do zwracania + 'blockchain' 
-# test for many contexts
-# expected_block_num no global var
+# DONE (eliminated) is it needed ?         bfs::permissions(abs_path, b
+# DONE (eliminated in favor of explicit parameter) better "PGDATA" get_context_data_dir() // //getenv("HAF_DB_STORE");//BLOCK_LOG_DIRECTORY
+# TODO funkcja do zwracania + 'blockchain' 
+# TODO test for many contexts
+# DONE expected_block_num no global var
 
-# new a nie ma delete , moze smart pointer ?
-# Opcja data dir do state provid conse
+# TODO new db a nie ma delete , moze smart pointer ?
+# DONE Opcja data dir do state provid conse
+
+# mostly DONE Database api zmniejszyc
+
+# DONE Run serialize 5m app overnight 
+# Run serialize 73m app overnight 
+# Blockloga wlacz zobacz czas
+
+# end mtlk TODO
+
 
 # app_cont full 5M - 155m41.347
 # app_cont only get_block 5M - 119m47.842s
@@ -90,10 +107,6 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 #         'blocks', COALESCE(array_agg(
 
 
-# Database api zmniejszyc
-
-# Run serialize 5m app overnight 
-# Blockloga wlacz zobacz czas
 
 
 # Interesting blocks< 5M
