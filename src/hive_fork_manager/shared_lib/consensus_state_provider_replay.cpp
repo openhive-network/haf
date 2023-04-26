@@ -15,31 +15,29 @@
 namespace consensus_state_provider
 {
 
-std::string fixTime(const pqxx::field& t)
+// value coming from pxx is without 'T' in the middle to be accepted in variant
+std::string fix_pxx_time(const pqxx::field& t)
 {
   std::string r =t.c_str();
   r[10] = 'T';
   return r;
 }
 
-
-const char* fixHex(const pqxx::field& h)
+// value coming from pxx is "\xABCDEF", we need to cut 2 charaters from the front to be accepted in variant
+const char* fix_pxx_hex(const pqxx::field& h)
 {
     return h.c_str() + 2;
 }
 
 
-
-
 struct Postgres2Blocks
 {
-
-
-
+  //values taken from database
   pqxx::result blocks;
   pqxx::result transactions;
   pqxx::result operations;
 
+  //iterators for traversing the values above
   int transaction_expecting_block;
   pqxx::result::const_iterator transactions_it;
   int operations_expecting_block;
@@ -113,14 +111,9 @@ void operations2variants(int block_num, int trx_in_block, std::vector<fc::varian
     {
       // fill in op here
 
-      const auto& o = operation["body"];
-      std::string json = std::string(o.c_str());
-      fc::variant ov = fc::json::from_string(json);
-
-      hive::protocol::operation op;
-      fc::from_variant(ov, op);
-
-      operations_variants.push_back(ov);
+      const auto& body_in_json = operation["body"].c_str();
+      const auto& operation_variant = fc::json::from_string(body_in_json);
+      operations_variants.emplace_back(operation_variant);
     }
     else
     {
@@ -143,17 +136,13 @@ void transactions2variants(int block_num, std::vector<fc::variant>& transaction_
       std::vector<std::string> signatures;
       if(strlen(transaction["signature"].c_str()))
       {
-        signatures.push_back(fixHex(transaction["signature"]));
+        signatures.push_back(fix_pxx_hex(transaction["signature"]));
       }
 
-      fc::variant_object_builder transaction_v;
-      transaction_v("ref_block_num", transaction["ref_block_num"].as<int>())(
-          "ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())("expiration", fixTime(transaction["expiration"]))("signatures",
-                                                                                                                               signatures);
 
-      transaction_id_variants.push_back(fixHex(transaction["trx_hash"]));
+      transaction_id_variants.push_back(fix_pxx_hex(transaction["trx_hash"]));
 
-      // rewind
+      // rewind to current block
       while(operations_expecting_block < block_num)
       {
         operations_it++;
@@ -163,13 +152,21 @@ void transactions2variants(int block_num, std::vector<fc::variant>& transaction_
 
       std::vector<fc::variant> operations_variants;
       if(block_num == operations_expecting_block && trx_in_block == operations_expecting_transaction)
+      {
         operations2variants(block_num, trx_in_block, operations_variants);
+      }
 
-      transaction_v("operations", operations_variants);
+      fc::variant_object_builder transaction_variant_builder;
+      transaction_variant_builder
+        ("ref_block_num", transaction["ref_block_num"].as<int>())
+        ("ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())
+        ("expiration", fix_pxx_time(transaction["expiration"]))
+        ("signatures", signatures)
+        ("operations", operations_variants);
 
-      fc::variant tv;
-      fc::to_variant(transaction_v.get(), tv);
-      trancaction_variants.push_back(tv);
+      fc::variant transaction_variant;
+      fc::to_variant(transaction_variant_builder.get(), transaction_variant);
+      trancaction_variants.emplace_back(transaction_variant);
     }
     else
     {
@@ -195,14 +192,14 @@ fc::variant block2variant(const pqxx::row& block)
   fc::variant_object_builder block_variant_builder; 
   block_variant_builder
   ("witness", block["name"].c_str())
-  ("block_id", fixHex(block["hash"]))
-  ("previous", fixHex(block["prev"]))
-  ("timestamp", fixTime(block["created_at"]))
+  ("block_id", fix_pxx_hex(block["hash"]))
+  ("previous", fix_pxx_hex(block["prev"]))
+  ("timestamp", fix_pxx_time(block["created_at"]))
   ("extensions", extensions)
   ("signing_key", block["signing_key"].c_str())
   ("transactions", transaction_variants)
-  ("witness_signature", fixHex(block["witness_signature"]))
-  ("transaction_merkle_root", fixHex(block["transaction_merkle_root"]))
+  ("witness_signature", fix_pxx_hex(block["witness_signature"]))
+  ("transaction_merkle_root", fix_pxx_hex(block["transaction_merkle_root"]))
   ("transaction_ids", transaction_ids_variants);
 
   fc::variant block_variant;
@@ -212,8 +209,6 @@ fc::variant block2variant(const pqxx::row& block)
 
 void blocks2replay(const char *context, const char* shared_memory_bin_path)
 {
-
-
  for(const auto& block : blocks)
   {
     fc::variant v = block2variant(block);
@@ -246,13 +241,8 @@ void consensus_state_provider_replay_impl(int from, int to, const char *context,
   p2b.run(from, to, context, postgres_url, shared_memory_bin_path); 
 }
 
-
-
-
-
 void init(hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
 {
-
 
   db.set_flush_interval( 10'000 );//10 000
   db.set_require_locking( false );// false 
