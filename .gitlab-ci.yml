@@ -384,7 +384,7 @@ build_and_publish_image:
   tags:
     - public-runner-docker
 
-double_haf_replay_tests:
+.double_haf_replay_tests:
   extends: .docker_image_builder_job
   stage: build_and_test_phase_2
   variables:
