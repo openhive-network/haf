@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Final
+from uuid import uuid4
 
 import pytest
 
@@ -88,7 +89,7 @@ def prepare_source_db(prepare_node, database) -> tuple[Session, URL]:
 
 
 def prepare_target_db(database) -> tuple[Session, URL]:
-    session = database('postgresql:///test_pg_dump_target')
+    session = database('postgresql:///test_pg_dump_target' + '_' + uuid4().hex)
     db_name = session.bind.url
     return session, db_name
 
