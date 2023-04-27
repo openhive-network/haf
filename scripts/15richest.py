@@ -10,7 +10,7 @@ accounts_list = []
 
 while True:
 
-    req = urllib.request.Request(url='http://localhost:8091', data=b'{"jsonrpc":"2.0", "method":"database_api.list_accounts", "params": {"start":"' +  first_account_name + b'", "limit":100, "order":"by_name"}, "id":1}')
+    req = urllib.request.Request(url='http://localhost:8090', data=b'{"jsonrpc":"2.0", "method":"database_api.list_accounts", "params": {"start":"' +  first_account_name + b'", "limit":100, "order":"by_name"}, "id":1}')
 
     with urllib.request.urlopen(req) as f:
         json_string = f.read().decode('utf-8')
