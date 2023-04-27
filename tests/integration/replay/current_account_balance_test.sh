@@ -50,3 +50,9 @@ echo "mtlk Listing3 10 000 last lines of postgres log"
 sudo tail -n 10000 $POSTGRESLOG
 echo "mtlk end listing3 postgres log"
 
+PYTHONSCRIPT=$(find / -name 15richest.py)
+echo $PYTHONSCRIPT
+ls -lah $PYTHONSCRIPT || true
+echo "mtlk calling PYTHONSCRIPT=$PYTHONSCRIPT"
+$python3 PYTHONSCRIPT
+echo "mtlk end calling PYTHONSCRIPT=$PYTHONSCRIPT"
