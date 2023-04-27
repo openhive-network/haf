@@ -647,15 +647,19 @@ DATA_DIR=/home/hived/datadir
 # DATA_DIR=/home/dev/mainnet-5m
 
 
-if [ -z ${CI+x} ]] 
+echo $CI
+
+if [ -z ${CI+x} ] 
 then
     echo NOt In CI
-    CONSENSUS_STORAGE=/home/hived/datadir
+    CONSENSUS_STORAGE=$DATA_DIR
 else
     echo In CI
     CONSENSUS_STORAGE=$PATTERNS_PATH
 fi
 
+
+echo $CONSENSUS_STORAGE
 
 killpostgres()
 {
@@ -833,7 +837,7 @@ app_start()
     
     psql -v "ON_ERROR_STOP=1" -d haf_block_log -f $SRC_DIR/src/hive_fork_manager/state_providers/performance_examination/current_account_balance_app.sql 
     
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing'  -c "call cab_app.main('cabc', $RUN_APP_MAIN_TILL_BLOCK, $RUN_APP_MAIN_CHUNK_SIZE, $CONSENSUS_STORAGE)" -c 'select * from hive.cabc_c_a_b_s_t LIMIT 30;' -c 'select count(*) from hive.cabc_accounts;' 2>&1 | tee -i app.log # run
+    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing'  -c "call cab_app.main('cabc', $RUN_APP_MAIN_TILL_BLOCK, $RUN_APP_MAIN_CHUNK_SIZE, '$CONSENSUS_STORAGE')" -c 'select * from hive.cabc_c_a_b_s_t LIMIT 30;' -c 'select count(*) from hive.cabc_accounts;' 2>&1 | tee -i app.log # run
 }
 
 app_cont()
@@ -841,7 +845,7 @@ app_cont()
     permissions
     echo "Before app_cont"
     time psql -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing' \
-    -c "call cab_app.main('cabc', $RUN_APP_CONT_MAIN_TILL_BLOCK, $RUN_APP_CONT_MAIN_CHUNK_SIZE, $CONSENSUS_STORAGE)" \
+    -c "call cab_app.main('cabc', $RUN_APP_CONT_MAIN_TILL_BLOCK, $RUN_APP_CONT_MAIN_CHUNK_SIZE, '$CONSENSUS_STORAGE')" \
     -c 'select * from hive.cabc_c_a_b_s_t limit 30;' -c 'select count(*) from hive.cabc_accounts;' \
     -c 'select SUM(balance) from hive.cabc_c_a_b_s_t' \
     2>&1 | tee -i app.log # run
