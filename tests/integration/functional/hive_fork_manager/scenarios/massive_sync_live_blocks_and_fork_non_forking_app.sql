@@ -155,8 +155,8 @@ BEGIN
     ASSERT __blocks = (7,8), 'Incorrect range instead of expected (7,8)';
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
-    ASSERT __blocks IS NOT NULL, 'NULL is returned instead of blocks (8,8)';;
-    ASSERT __blocks = (8,8), 'Incorrect range instead of expected (8,8)';;
+    ASSERT __blocks IS NOT NULL, 'NULL is returned instead of blocks (8,8)';
+    ASSERT __blocks = (8,8), 'Incorrect range instead of expected (8,8)';
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
     ASSERT __blocks IS NULL, 'Instead of NULL something is returned after process all blocks';

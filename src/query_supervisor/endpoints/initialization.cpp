@@ -20,11 +20,7 @@ bool isCurrentUserLimited() {
 
   assert( PostgresAccessor::getInstance().getBackend() );
 
-  const auto users = PostgresAccessor::getInstance()
-    .getConfiguration().getBlockedUsers();
-
-  auto userIt = std::find( users.begin(), users.end(), PostgresAccessor::getInstance().getBackend()->get().userName() );
-  return userIt != users.end();
+  return PostgresAccessor::getInstance().getConfiguration().areLimitsEnabled();
 }
 
 std::unique_ptr< PsqlTools::QuerySupervisor::QueryHandlers > g_queryHandlers;
