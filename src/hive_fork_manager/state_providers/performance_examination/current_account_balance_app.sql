@@ -155,7 +155,7 @@ $$;
  - creates HAF application context,
  - starts application main-loop (which iterates infinitely). To stop it call `cab_app.stopProcessing();` from another session and commit its trasaction.
  */
-CREATE OR REPLACE PROCEDURE cab_app.main (IN _appContext varchar, IN _maxBlockLimit int = 0, IN _step int = 0)
+CREATE OR REPLACE PROCEDURE cab_app.main (IN _appContext varchar, IN _maxBlockLimit int = 0, IN _step int = 0, IN _consensus_storage TEXT = '/home/hived/datadir' )
 LANGUAGE 'plpgsql'
 AS $$
 DECLARE
@@ -196,7 +196,7 @@ BEGIN
     PERFORM cab_app.define_schema ();
     PERFORM hive.app_state_provider_import ('KEYAUTH', _appContext);
     PERFORM hive.app_state_provider_import ('ACCOUNTS', _appContext);
-    PERFORM hive.app_state_provider_import ('c_a_b_s_t', _appContext, '/home/hived/datadir/context');
+    PERFORM hive.app_state_provider_import ('c_a_b_s_t', _appContext, _consensus_storage || '/' || _appContext);
     COMMIT;
   END IF;
   

@@ -3,6 +3,7 @@
 # sudo rm /home/hived/datadir/context/blockchain/shared_memory.bin; ../haf/scripts/runallnow.sh build
 
 set -e
+set -x
 
 
 BIG=73964098
@@ -595,6 +596,46 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # for i in range (15):
 #     print(accounts_list[i])
 
+# after /home/haf_admin/build/hive/programs/hived/hived --blockchain-thread-pool-size=1 --data-dir=/home/hived/datadir --replay --force-replay --stop-replay-at-block=100000 --p2p-endpoint=0.0.0.0:2001 --webserver-http-endpoint=0.0.0.0:8090 --webserver-ws-endpoint=0.0.0.0:8091
+# I get:
+# haf_admin@261a1ebca8b7:~$ python3 /home/haf_admin/haf/scripts/15richest.py
+# ('any', 2236000, 0, 1000000)
+# ('steemit1', 2083000, 0, 1000000)
+# ('moderator', 2052000, 0, 1000000)
+# ('steemit10', 1991000, 0, 1000000)
+# ('steemit11', 1923000, 0, 1000000)
+# ('steemit12', 1830000, 0, 1000000)
+# ('steemit13', 1775000, 0, 1000000)
+# ('steemit', 1756000, 0, 3701000000)
+# ('root', 1752000, 0, 1000000)
+# ('steemit17', 1713000, 0, 1000000)
+# ('steemit15', 1712000, 0, 1000000)
+# ('steemit20', 1702000, 0, 1000000)
+# ('steemit18', 1669000, 0, 1000000)
+# ('sminer10', 1637000, 0, 1000000)
+# ('administrator', 1618000, 0, 1000000)
+
+#and  after ~$ /home/haf_admin/build/hive/programs/hived/hived --blockchain-thread-pool-size=1 --data-dir=/home/hived/datadir --replay  --stop-replay-at-block=5000000 --p2p-endpoint=0.0.0.0:2001 --webserver-http-endpoint=0.0.0.0:8090 --webserver-ws-endpoint=0.0.0.0:8091
+# we have:
+#  python3 /home/haf_admin/haf/scripts/15richest.py
+# ('steemit', 4778859891, 70337438, 225671901920188893)
+# ('poloniex', 1931250425, 158946758, 4404577000000)
+# ('bittrex', 499025114, 81920425, 4404642000000)
+# ('steemit2', 197446682, 106543552, 5213443854825)
+# ('aurel', 97417738, 1457, 47962153427941)
+# ('openledger', 52275479, 18607380, 11850514000000)
+# ('ben', 50968139, 1415, 6599654505904881)
+# ('blocktrades', 29594875, 77246982, 8172549681941451)
+# ('steem', 29315310, 500001, 15636871956265)
+# ('imadev', 23787999, 117353589, 445256469401562)
+# ('smooth', 20998219, 599968, 6261692171889459)
+# ('steemit60', 20000000, 31005142, 1000000000000)
+# ('taker', 15014283, 535515, 4596963565191)
+# ('steemit1', 10000205, 134872472, 1005084292327)
+# ('ashold882015', 9895158, 134, 3101147621378)
+
+
+
 
 
 
@@ -606,6 +647,14 @@ DATA_DIR=/home/hived/datadir
 # DATA_DIR=/home/dev/mainnet-5m
 
 
+if [ -z ${CI+x} ]] 
+then
+    echo NOt In CI
+    CONSENSUS_STORAGE=/home/hived/datadir
+else
+    echo In CI
+    CONSENSUS_STORAGE=$PATTERNS_PATH
+fi
 
 
 killpostgres()
@@ -784,7 +833,7 @@ app_start()
     
     psql -v "ON_ERROR_STOP=1" -d haf_block_log -f $SRC_DIR/src/hive_fork_manager/state_providers/performance_examination/current_account_balance_app.sql 
     
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing'  -c "call cab_app.main('cabc', $RUN_APP_MAIN_TILL_BLOCK, $RUN_APP_MAIN_CHUNK_SIZE)" -c 'select * from hive.cabc_c_a_b_s_t LIMIT 30;' -c 'select count(*) from hive.cabc_accounts;' 2>&1 | tee -i app.log # run
+    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing'  -c "call cab_app.main('cabc', $RUN_APP_MAIN_TILL_BLOCK, $RUN_APP_MAIN_CHUNK_SIZE, $CONSENSUS_STORAGE)" -c 'select * from hive.cabc_c_a_b_s_t LIMIT 30;' -c 'select count(*) from hive.cabc_accounts;' 2>&1 | tee -i app.log # run
 }
 
 app_cont()
@@ -792,7 +841,7 @@ app_cont()
     permissions
     echo "Before app_cont"
     time psql -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing' \
-    -c "call cab_app.main('cabc', $RUN_APP_CONT_MAIN_TILL_BLOCK, $RUN_APP_CONT_MAIN_CHUNK_SIZE)" \
+    -c "call cab_app.main('cabc', $RUN_APP_CONT_MAIN_TILL_BLOCK, $RUN_APP_CONT_MAIN_CHUNK_SIZE, $CONSENSUS_STORAGE)" \
     -c 'select * from hive.cabc_c_a_b_s_t limit 30;' -c 'select count(*) from hive.cabc_accounts;' \
     -c 'select SUM(balance) from hive.cabc_c_a_b_s_t' \
     2>&1 | tee -i app.log # run

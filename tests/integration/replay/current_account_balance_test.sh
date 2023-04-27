@@ -34,6 +34,9 @@ ls -lah $P || true
 sudo ls -lah /home/hived/datadir || true
 sudo ls -lah /home/hived/datadir/context || true
 
+sudo ls -lah $PATTERNS_PATH || true
+sudo ls -lah $PATTERNS_PATH/context || true
+
 
 ls -lah $POSTGRESLOG || true
 echo "mtlk Listing 10 000 last lines of postgres log"
