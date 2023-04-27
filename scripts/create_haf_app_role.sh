@@ -15,8 +15,9 @@ print_help () {
     echo "OPTIONS:"
     echo "  --host=VALUE              Allows to specify a PostgreSQL host location (defaults to /var/run/postgresql)"
     echo "  --port=NUMBER             Allows to specify a PostgreSQL operating port (defaults to 5432)"
-    echo "  --postgres-url=URL      Allows to specify PostgreSQL connection url directly"
-    echo "  --haf-app-account=NAME    Allows to specify an account name to be added to the `hive_applications_group` group."
+    echo "  --postgres-url=URL        Allows to specify PostgreSQL connection url directly"
+    echo "  --haf-app-account=NAME    Allows to specify an account name to be added to the 'hive_applications_group' group."
+    echo "  --public                  A public account will be created"
     echo "  --help                    Display this help screen and exit"
     echo
 }
@@ -24,13 +25,21 @@ print_help () {
 create_haf_app_account() {
   local pg_access="$1"
   local haf_app_account="$2"
+  local is_public="$3"
+
+  local base_group="hive_applications_group"
+  local alter_to_public=""
+  $is_public && alter_to_public="ALTER ROLE ${haf_app_account} SET query_supervisor.limits_enabled TO true;"
 
   psql -aw "$pg_access" -v ON_ERROR_STOP=on -f - <<EOF
 DO \$$
 BEGIN
-    CREATE ROLE $haf_app_account WITH LOGIN INHERIT IN ROLE hive_applications_group;
-    EXCEPTION WHEN DUPLICATE_OBJECT THEN
-    RAISE NOTICE '$haf_app_account role already exists';
+    BEGIN
+      CREATE ROLE $haf_app_account WITH LOGIN INHERIT IN ROLE hive_applications_group;
+      EXCEPTION WHEN DUPLICATE_OBJECT THEN
+      RAISE NOTICE '$haf_app_account role already exists';
+    END;
+    ${alter_to_public}
 END
 \$$;
 
@@ -43,6 +52,7 @@ HAF_APP_ACCOUNT="haf_app_admin"
 POSTGRES_HOST="/var/run/postgresql"
 POSTGRES_PORT=5432
 POSTGRES_URL=""
+PUBLIC=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -57,6 +67,9 @@ while [ $# -gt 0 ]; do
         ;;
     --haf-app-account=*)
         HAF_APP_ACCOUNT="${1#*=}"
+        ;;
+    --public)
+        PUBLIC=true
         ;;
     --help)
         print_help
@@ -86,5 +99,5 @@ fi
 
 echo $POSTGRES_ACCESS
 
-create_haf_app_account "$POSTGRES_ACCESS" "$HAF_APP_ACCOUNT"
+create_haf_app_account "$POSTGRES_ACCESS" "$HAF_APP_ACCOUNT" ${PUBLIC}
 
