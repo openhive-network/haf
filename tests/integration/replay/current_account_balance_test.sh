@@ -30,11 +30,15 @@ echo P=$P
 ls -lah $P || true
 
 
+
+sudo ls -lah /home/hived/datadir || true
+sudo ls -lah /home/hived/datadir/context || true
+
+
 ls -lah $POSTGRESLOG || true
 echo "mtlk Listing 10 000 last lines of postgres log"
 sudo tail -n 10000 $POSTGRESLOG
 echo "mtlk end listing postgres log"
-
 
 
 $SETUP_SCRIPTS_PATH/runallnow.sh app_start || true
