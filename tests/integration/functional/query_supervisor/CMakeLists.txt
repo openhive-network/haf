@@ -14,11 +14,11 @@
  ADD_SQL_FUNCTIONAL_TEST( hardiness/alice_wants_to_change_limited_users_list.sql )
  ADD_SQL_FUNCTIONAL_TEST( hardiness/alice_wants_to_change_tuples_limit.sql )
 
- ADD_SQL_FUNCTIONAL_TEST( options/limited_users_correct_values.sql )
  ADD_SQL_FUNCTIONAL_TEST( options/limited_tuples_correct_values.sql )
  ADD_SQL_FUNCTIONAL_TEST( options/limited_tuples_less_than_zero.sql )
  ADD_SQL_FUNCTIONAL_TEST( options/limited_query_time_less_than_zero.sql )
  ADD_SQL_FUNCTIONAL_TEST( options/limited_timeout_correct_values.sql )
+ ADD_SQL_FUNCTIONAL_TEST( options/limits_enabled_correct_values.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( parallel_query/tuples_limit_reached_by_a_subquery.sql )
  ADD_SQL_FUNCTIONAL_TEST( parallel_query/timeout_limit_reached_by_a_subquery.sql )
