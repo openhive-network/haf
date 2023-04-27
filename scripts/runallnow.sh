@@ -20,7 +20,7 @@ if [ $# -eq 0 ]
 fi
 
 
-LAST_BLOCK=$MILLIONS_5
+LAST_BLOCK=100000
 if  [ $1 -eq $1 ] 2>/dev/null; then
     #The param is a number, so  it is last block
     LAST_BLOCK=$1
@@ -710,6 +710,18 @@ noserializer()
     --shared-file-dir=$DATA_DIR/blockchain \
     --stop-replay-at-block=$NO_SERIALIZE_TILL_BLOCK \
     --validate-during-replay \
+    --webserver-http-endpoint=0.0.0.0:8090 \
+    --webserver-ws-endpoint=0.0.0.0:8091 # noserializer
+}
+
+
+naked()
+{
+    time $BUILD_DIR/hive/programs/hived/hived \
+    --blockchain-thread-pool-size=1 \
+    --data-dir=$DATA_DIR \
+    --force-replay \
+    --p2p-endpoint=0.0.0.0:2001 \
     --webserver-http-endpoint=0.0.0.0:8090 \
     --webserver-ws-endpoint=0.0.0.0:8091 # noserializer
 }
