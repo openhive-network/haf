@@ -54,5 +54,5 @@ PYTHONSCRIPT=$(find / -name 15richest.py)
 echo $PYTHONSCRIPT
 ls -lah $PYTHONSCRIPT || true
 echo "mtlk calling PYTHONSCRIPT=$PYTHONSCRIPT"
-$python3 PYTHONSCRIPT
+python3 $PYTHONSCRIPT
 echo "mtlk end calling PYTHONSCRIPT=$PYTHONSCRIPT"
