@@ -28,14 +28,16 @@ create_haf_app_account() {
   local is_public="$3"
 
   local base_group="hive_applications_group"
-  $is_public && base_group="haf_public_group"
+  local alter_to_public=""
+  $is_public && alter_to_public="ALTER ROLE ${haf_app_account} SET query_supervisor.limits_enabled TO true;"
 
   psql -aw "$pg_access" -v ON_ERROR_STOP=on -f - <<EOF
 DO \$$
 BEGIN
-    CREATE ROLE $haf_app_account WITH LOGIN INHERIT IN ROLE ${base_group};
+    CREATE ROLE $haf_app_account WITH LOGIN INHERIT IN ROLE hive_applications_group;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE '$haf_app_account role already exists';
+    ${alter_to_public}
 END
 \$$;
 

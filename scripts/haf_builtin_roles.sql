@@ -36,15 +36,6 @@ $$;
 
 DO $$
 BEGIN
-    CREATE ROLE haf_public_group WITH LOGIN CREATEROLE INHERIT IN ROLE hive_applications_group;
-    EXCEPTION WHEN DUPLICATE_OBJECT THEN
-        RAISE NOTICE 'haf_public_group role already exists';
-    ALTER ROLE haf_public_group SET query_supervisor.limits_enabled TO true;
-END
-$$;
-
-DO $$
-BEGIN
     CREATE ROLE hived WITH LOGIN INHERIT IN ROLE hived_group;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE 'hived role already exists';
