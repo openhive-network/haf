@@ -52,7 +52,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO interface ?
 
 # TODO clang find #include
-$ TODO ?  add .clang-format 
+# TODO ?  add .clang-format 
 
 
 
