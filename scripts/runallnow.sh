@@ -861,20 +861,22 @@ app_cont()
 # Compare if returned 15 top accounts are equal to the pattern
     PSQL_RESULT=$(psql -t -d haf_block_log  -c "(SELECT account, balance, ROW_NUMBER() OVER (ORDER BY balance DESC)  FROM hive.cabc_c_a_b_s_t LIMIT 15)
     EXCEPT
-    (SELECT p.account, p.balance, p.rownum  FROM  (VALUES    (1, 'any', 2236000), 
-                                (2, 'steemit1', 2083000),
-                                (3, 'moderator', 2052000),
-                                (4,'steemit10', 1991000),
-                                (5,'steemit11', 1923000),
-                                (6,'steemit12', 1830000),
-                                (8,'steemit', 1756000),
-                                (9,'root', 1752000),
-                                (10,'steemit17', 1713000),
-                                (11, 'steemit15', 1712000),
-                                (12,'steemit20', 1702000),
-                                (13,'steemit18', 1669000),
-                                (14, 'sminer10', 1637000),
-                                (15,'administrator', 1618000)
+    (SELECT p.account, p.balance, p.rownum  FROM  (VALUES    
+        (1, 'steemit', 4778859891),
+        (2, 'poloniex', 1931250425),
+        (3, 'bittrex', 499025114),
+        (4, 'steemit2', 197446682),
+        (5, 'aurel', 97417738),
+        (6, 'openledger', 52275479),
+        (7, 'ben', 50968139),
+        (8, 'blocktrades', 29594875),
+        (8, 'steem', 29315310),
+        (10, 'imadev', 23787999),
+        (11, 'smooth', 20998219),
+        (12, 'steemit60', 20000000),
+        (13, 'taker', 15014283),
+        (14, 'steemit1', 10000205),
+        (15, 'ashold882015', 9895158))
                                 ) as p(rownum, account, balance)
                                 )";)
 
