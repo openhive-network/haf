@@ -10,28 +10,9 @@ mkdir -p "$SOURCE_DATA_DIR"
 env | sort
 pwd
 
-POSTGRESLOG=$(find / -name postgresql*.log)
+POSTGRESLOG=$(find / -name postgresql*.log) || true
 echo $POSTGRESLOG
-P=$(echo $POSTGRESLOG | cut -d'/' -f-2)
-echo P=$P
-ls -lah $P || true
 
-P=$(echo $POSTGRESLOG | cut -d'/' -f-3)
-echo P=$P
-ls -lah $P || true
-
-P=$(echo $POSTGRESLOG | cut -d'/' -f-4)
-echo P=$P
-ls -lah $P || true
-
-P=$(echo $POSTGRESLOG | cut -d'/' -f-5)
-echo P=$P
-ls -lah $P || true
-
-
-
-sudo ls -lah /home/hived/datadir || true
-sudo ls -lah /home/hived/datadir/context || true
 
 sudo ls -lah $PATTERNS_PATH || true
 sudo ls -lah $PATTERNS_PATH/context || true
