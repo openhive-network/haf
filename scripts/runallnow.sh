@@ -44,12 +44,12 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # we are in build directory
 
 # mtlk TODO:
-# TODO - bash_test assert
-# TODO - recognize existing context_shared_memory_bin
-# TODO why runall script has to clear contest sharedmemory.bin ?
+# TODO* - recognize existing context_shared_memory_bin
+# TODO* - bash_test assert
+# TODO* why runall script has to clear contest sharedmemory.bin ?
 # TODO cleanup init(db
 # TODO example testing app
-# TODO eliminate MTLK_FROM_VARIANT_ON_CONSUME_JSON_HACK
+# TODO* eliminate MTLK_FROM_VARIANT_ON_CONSUME_JSON_HACK
 # TODO interface ?
 
 # TODO clang find #include
@@ -63,7 +63,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # DONE What about ON CONFLICT DO NOTHING in src/hive_fork_manager/state_providers/current_account_balance.sql - two accounts in one state ?     texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L) ON CONFLICT DO NOTHING;', __table_name, _context);
 # DONE (minor gain )consuming jsons one by one or getting a vector of blocks form haf block api
 # DONE separate C function to get current block_num where we stand
-# TODO ? in yaml - cp log to . instead of ln -s
+# TODO* ? in yaml - cp log to . instead of ln -s
 # TODO separate from database_api.cpp, database_api_plugin
 
 # TODO //na krotkim blocklogu zobacz jak to push blok chodzi
