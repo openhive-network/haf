@@ -2,8 +2,8 @@
 
 # sudo rm /home/hived/datadir/context/blockchain/shared_memory.bin; ../haf/scripts/runallnow.sh build
 
-set -euo pipefail
 set -x
+set -euo pipefail
 
 
 BIG=73964098
@@ -50,7 +50,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO* why runall script has to clear contest sharedmemory.bin ?
 # TODO cleanup init(db
 # TODO example testing app
-# TODO* eliminate MTLK_FROM_VARIANT_ON_CONSUME_JSON_HACK
+# TODO eliminate MTLK_FROM_VARIANT_ON_CONSUME_JSON_HACK
 # TODO interface ?
 
 # TODO clang find #include
@@ -657,9 +657,14 @@ else
     echo In CI
     CONSENSUS_STORAGE=$PATTERNS_PATH
 fi
-
-
+P
 echo $CONSENSUS_STORAGE
+
+if [ -z ${USER+x} ] 
+then
+    echo NO USER variable
+    USER=$(whoami)
+fi
 
 killpostgres()
 {
