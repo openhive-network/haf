@@ -56,6 +56,8 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO clang find #include
 # TODO ?  add .clang-format 
 
+# TODO #include <../../../apis/block_api/include/hive/plugins/block_api/block_api_objects.hpp>
+
 
 
 
