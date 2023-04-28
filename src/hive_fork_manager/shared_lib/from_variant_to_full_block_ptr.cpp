@@ -1,4 +1,4 @@
-// #define MTLK_FROM_VARIANT_ON_CONSUME_JSON_HACK
+#define MTLK_FROM_VARIANT_ON_CONSUME_JSON_HACK
 
 #include <hive/chain/hive_fwd.hpp>
 
