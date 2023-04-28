@@ -449,7 +449,8 @@ bash_tests:
     - cd $CI_PROJECT_DIR
     - pwd
     - $CI_PROJECT_DIR/tests/integration/replay/current_account_balance_test.sh
-  timeout: 179 minutes
+    - test "ala" = "makota"
+  timeout: 60 minutes
   interruptible: true
   tags:
     - public-runner-docker
