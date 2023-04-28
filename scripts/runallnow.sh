@@ -847,7 +847,7 @@ app_start()
 
 app_cont()
 {
-    permissions
+    # permissions
     echo "Before app_cont"
     time psql -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing' \
     -c "call cab_app.main('cabc', $RUN_APP_CONT_MAIN_TILL_BLOCK, $RUN_APP_CONT_MAIN_CHUNK_SIZE, '$CONSENSUS_STORAGE')" \
