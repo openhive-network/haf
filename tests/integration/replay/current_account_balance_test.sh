@@ -30,8 +30,22 @@ echo "mtlk Listing2 10 000 last lines of postgres log"
 sudo tail -n 10000 $POSTGRESLOG
 echo "mtlk end listing2 postgres log"
 
+set -E
+
+
+on_error()
+{
+    echo "mtlk Listing on_error 10 000 last lines of postgres log"
+    sudo tail -n 10000 $POSTGRESLOG
+    echo "mtlk end Listing on_error postgres log"
+}
+
+trap on_error ERR
+
 
 $SETUP_SCRIPTS_PATH/runallnow.sh app_cont
+
+set +E
 
 echo "mtlk Listing3 10 000 last lines of postgres log"
 sudo tail -n 10000 $POSTGRESLOG
