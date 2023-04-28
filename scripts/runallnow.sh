@@ -2,7 +2,7 @@
 
 # sudo rm /home/hived/datadir/context/blockchain/shared_memory.bin; ../haf/scripts/runallnow.sh build
 
-set -e
+set -euo pipefail
 set -x
 
 
@@ -46,6 +46,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # mtlk TODO:
 # TODO* - recognize existing context_shared_memory_bin
 # TODO* - bash_test assert
+# TODO* - remove permissions from app_cont
 # TODO* why runall script has to clear contest sharedmemory.bin ?
 # TODO cleanup init(db
 # TODO example testing app
