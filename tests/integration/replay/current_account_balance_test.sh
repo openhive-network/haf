@@ -51,7 +51,7 @@ sudo tail -n 10000 $POSTGRESLOG
 echo "mtlk end listing2 postgres log"
 
 
-$SETUP_SCRIPTS_PATH/runallnow.sh app_cont || true
+$SETUP_SCRIPTS_PATH/runallnow.sh app_cont
 
 echo "mtlk Listing3 10 000 last lines of postgres log"
 sudo tail -n 10000 $POSTGRESLOG

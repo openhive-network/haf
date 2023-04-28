@@ -449,7 +449,7 @@ bash_tests:
     - cd $CI_PROJECT_DIR
     - pwd
     - $CI_PROJECT_DIR/tests/integration/replay/current_account_balance_test.sh
-    - test "ala" = "makota"
+    
   timeout: 60 minutes
   interruptible: true
   tags:
