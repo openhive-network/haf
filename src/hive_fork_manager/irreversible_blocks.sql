@@ -139,7 +139,7 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hive.
 
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hive.operations USING btree(block_num, id);
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hive.operations USING btree (block_num ASC NULLS LAST, trx_in_block ASC NULLS LAST) INCLUDE (op_type_id);
-CREATE INDEX IF NOT EXISTS hive_operations_op_type_id ON hive.operations USING btree (op_type_id);
+CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hive.operations (op_type_id, block_num);
 
 CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_type_account_id_op_seq_idx ON hive.account_operations( op_type_id, account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
 --CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_seq_idx ON hive.account_operations( account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
