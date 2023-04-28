@@ -49,7 +49,7 @@ setup_haf_storage_tablespace() {
   local haf_tablespace_name=${pg_access[-1]} # second to last argument is the tablespace name
   unset 'pg_access[-1]'
 
-  haf_tablespace_abs_path=$(realpath -m "$haf_tablespace_path")
+  haf_tablespace_abs_path=$(realpath -m --no-symlinks "$haf_tablespace_path")
 
   TABLESPACE_PATH=$(sudo -nu postgres psql --quiet --tuples-only --no-align --no-psqlrc --dbname=postgres --no-password "${pg_access[@]}" --variable=ON_ERROR_STOP=on --file=- <<EOF
   SELECT COALESCE((SELECT pg_tablespace_location(oid)
