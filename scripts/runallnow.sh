@@ -21,7 +21,7 @@ if [ $# -eq 0 ]
 fi
 
 
-LAST_BLOCK=100000
+LAST_BLOCK=$MILLIONS_5
 if  [ $1 -eq $1 ] 2>/dev/null; then
     #The param is a number, so  it is last block
     LAST_BLOCK=$1
