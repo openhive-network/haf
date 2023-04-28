@@ -648,7 +648,6 @@ DATA_DIR=/home/hived/datadir
 # DATA_DIR=/home/dev/mainnet-5m
 
 
-echo $CI
 
 if [ -z ${CI+x} ] 
 then
