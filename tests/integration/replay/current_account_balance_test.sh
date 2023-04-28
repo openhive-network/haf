@@ -1,8 +1,7 @@
 #! /bin/bash
 
-
-# set -xeuo pipefail
 set -x
+set -euo pipefail
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 BASE_DIRECTORY=/$(echo "$SCRIPTPATH" | cut -d "/" -f2)

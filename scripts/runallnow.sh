@@ -657,7 +657,7 @@ else
     echo In CI
     CONSENSUS_STORAGE=$PATTERNS_PATH
 fi
-P
+
 echo $CONSENSUS_STORAGE
 
 if [ -z ${USER+x} ] 
