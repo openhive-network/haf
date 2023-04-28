@@ -876,7 +876,7 @@ app_cont()
         (12, 'steemit60', 20000000),
         (13, 'taker', 15014283),
         (14, 'steemit1', 10000205),
-        (15, 'ashold882015', 9895158))
+        (15, 'ashold882015', 9895158)
                                 ) as p(rownum, account, balance)
                                 )";)
 
