@@ -160,7 +160,6 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'irreversible_data' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'blocks' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions_multisig' );
