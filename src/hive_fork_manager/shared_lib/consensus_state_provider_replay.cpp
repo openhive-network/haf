@@ -58,7 +58,7 @@ struct Postgres2Blocks
   pqxx::result::const_iterator transactions_it;
   int current_operation_block_num;
   int current_operation_trx_num;
-  pqxx::result::const_iterator operations_it;
+  pqxx::result::const_iterator current_operation;
 
 
 void get_data_from_postgres(int from, int to, const char* postgres_url) {
@@ -99,7 +99,7 @@ void initialize_iterators()
 
   current_operation_block_num = -1;
   current_operation_trx_num = -1;
-  operations_it = operations.begin();
+  current_operation = operations.begin();
   if(operations.size() > 0)
   {
     const auto& first_operation = operations[0];
@@ -134,15 +134,15 @@ std::vector<fc::variant> operations2variants(int block_num, int trx_in_block)
   std::vector<fc::variant> operations_variants;
   if(is_current_operation(block_num, trx_in_block))
   {
-    for (; operations_it != operations.end(); ++operations_it)
+    for (; current_operation != operations.end(); ++current_operation)
     {
-        if (operation_matches_block_transaction(operations_it, block_num, trx_in_block))
+        if (operation_matches_block_transaction(current_operation, block_num, trx_in_block))
         {
-            add_operation_variant(operations_it, operations_variants);
+            add_operation_variant(current_operation, operations_variants);
         }
         else
         {
-            update_current_operation_numbers(operations_it, current_operation_block_num, current_operation_trx_num);
+            update_current_operation_numbers(current_operation, current_operation_block_num, current_operation_trx_num);
             break;
         }
     }
@@ -211,11 +211,11 @@ std::vector<std::string> build_signatures(const pqxx::result::const_iterator& tr
 
 void rewind_operations_iterator_to_current_block(int block_num)
 {
-  while (current_operation_block_num < block_num && operations_it != operations.end())
+  while (current_operation_block_num < block_num && current_operation != operations.end())
   {
-    ++operations_it;
-    current_operation_block_num = operations_it["block_num"].as<int>();
-    current_operation_trx_num = operations_it["trx_in_block"].as<int>();
+    ++current_operation;
+    current_operation_block_num = current_operation["block_num"].as<int>();
+    current_operation_trx_num = current_operation["trx_in_block"].as<int>();
   }
 }
 
