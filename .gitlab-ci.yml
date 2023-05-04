@@ -20,6 +20,7 @@ variables:
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
   DATA_CACHE_MAINNET: /cache/replay_data_haf_mainnet_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
+  BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /blockchain/block_log_5m_mirrornet
 
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
@@ -52,11 +53,16 @@ hive_fork_manager_testnet:
     BUILD_HIVE_TESTNET: "ON"
   extends: .hive_fork_manager_build
 
+hive_fork_manager_mirrornet:
+  variables:
+    BUILD_HIVE_TESTNET: "OFF"
+  extends: .hive_fork_manager_build
+
 .hived_build:
   stage: build_and_test_phase_1
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
-    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=$BUILD_HIVE_TESTNET" $HIVE_TARGETS
+    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=$BUILD_HIVE_TESTNET -DHIVE_CONVERTER_BUILD=$DHIVE_CONVERTER_BUILD" $HIVE_TARGETS
     # check if sql_serializer compiles with hived
     - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
     # check if sql_serializer plugin is included in hived plugins
@@ -74,12 +80,22 @@ hive_fork_manager_testnet:
 hived:
   variables:
     BUILD_HIVE_TESTNET: "OFF"
+    DHIVE_CONVERTER_BUILD: "OFF"
     HIVE_TARGETS: "hived compress_block_log"
   extends: .hived_build
 
 hived_testnet:
   variables:
     BUILD_HIVE_TESTNET: "ON"
+    DHIVE_CONVERTER_BUILD: "OFF"
+    HIVE_TARGETS: "hived cli_wallet get_dev_key compress_block_log"
+  extends: .hived_build
+  interruptible: true
+
+hived_mirrornet:
+  variables:
+    BUILD_HIVE_TESTNET: "OFF"
+    DHIVE_CONVERTER_BUILD: "ON"
     HIVE_TARGETS: "hived cli_wallet get_dev_key compress_block_log"
   extends: .hived_build
   interruptible: true
@@ -116,6 +132,48 @@ haf_system_tests:
     - "**/generated_by_package_fixtures"
     reports:
       junit: tests/integration/system/haf/report.xml
+    when: always
+    expire_in: 1 week
+  interruptible: true
+  tags:
+    - public-runner-docker
+
+haf_system_tests_mirrornet:
+  stage: build_and_test_phase_2
+  extends: .pytest_based
+  needs:
+    - job: hive_fork_manager_mirrornet
+      artifacts: true
+    - job: hived_mirrornet
+      artifacts: true
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  variables:
+    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_mirrornet/build/hive"
+    DB_NAME: haf_block_log
+  script:
+    - mkdir $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log
+    # copy block_log
+    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log -r
+    # install hive_fork_manager extension built in previous stage
+    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-database-store="$CI_PROJECT_DIR/haf_database_store" --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager_mirrornet/build"
+    # setup template database
+    - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
+    # prepare environment and run tests
+    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
+    - ls -la
+    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log
+    - ls -la
+    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log/block_log_5m_mirrornet
+    - ls -la
+    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
+    - pytest --junitxml report.xml --timeout=600 --block-log-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log/block_log_5m_mirrornet/block_log -n ${PYTEST_NUMBER_OF_PROCESSES}
+
+  artifacts:
+    paths:
+    - "**/generated_during_*"
+    - "**/generated_by_package_fixtures"
+    reports:
+      junit: tests/integration/system/haf/mirrornet_tests/report.xml
     when: always
     expire_in: 1 week
   interruptible: true
