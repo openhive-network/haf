@@ -9,6 +9,7 @@ namespace PsqlTools::QuerySupervisor {
 
   class Configuration {
   public:
+    static constexpr auto LIMITED_GROUPS_OPTION = "limited_groups";
     static constexpr auto LIMIT_TUPLES_OPTION = "limit_tuples";
     static constexpr auto LIMIT_TIMEOUT_OPTION = "limit_timeout";
     static constexpr auto LIMITS_ENABLED = "limits_enabled";
@@ -21,6 +22,7 @@ namespace PsqlTools::QuerySupervisor {
     uint32_t getTuplesLimit() const;
     std::chrono::milliseconds getTimeoutLimit() const;
     bool areLimitsEnabled() const;
+    std::vector< std::string > getLimitedGroups() const;
   private:
     PsqlUtils::CustomConfiguration m_wrappedCustomConfiguration;
   };

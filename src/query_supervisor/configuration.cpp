@@ -12,6 +12,14 @@ namespace PsqlTools::QuerySupervisor {
     : m_wrappedCustomConfiguration( "query_supervisor" ) {
     LOG_DEBUG( "Initializing configuration..." );
 
+    m_wrappedCustomConfiguration.addStringOption(
+        LIMITED_GROUPS_OPTION
+      , "Limited groups names"
+      , "List of groups separated by commas which queries are limited by the query_supervisor"
+      , ""
+    );
+
+
     m_wrappedCustomConfiguration.addPositiveIntOption(
         LIMIT_TUPLES_OPTION
       , "Limited number of tuples"
@@ -63,6 +71,17 @@ namespace PsqlTools::QuerySupervisor {
     assert( std::holds_alternative< bool >( option ) );
 
     return std::get< bool >( option );
+  }
+
+  std::vector< std::string >
+  Configuration::getLimitedGroups() const {
+    auto limitedGroups  =
+      m_wrappedCustomConfiguration.getOption( LIMITED_GROUPS_OPTION );
+
+    assert( std::holds_alternative< std:string >( limitedGroups ) );
+
+    std::vector< std::string > result;
+    return boost::split( result, std::get< std::string >( limitedGroups ), boost::is_any_of(",") );
   }
 
 }// PsqlTools::QuerySupervisor

@@ -20,7 +20,34 @@ bool isCurrentUserLimited() {
 
   assert( PostgresAccessor::getInstance().getBackend() );
 
-  return PostgresAccessor::getInstance().getConfiguration().areLimitsEnabled();
+  if ( PostgresAccessor::getInstance().getConfiguration().areLimitsEnabled() ) {
+    return true;
+  }
+
+  bool a = is_member_of_role( GetUserId(), 397087 );
+
+  /*if ( is_member_of_role( GetUserId(), 397087 ) ) {
+    LOG_INFO( "Jest memberem grupy limitowanej" );
+    return true;
+  }*/
+  LOG_INFO( "NIE Jest memberem grupy limitowanej" );
+
+  /*for ( auto const& groupName : PostgresAccessor::getInstance().getConfiguration().getLimitedGroups() ) {
+
+    auto role_tuple = SearchSysCache1(AUTHNAME, PointerGetDatum(groupName.c_str()));
+    if (HeapTupleIsValid(role_tuple)) {
+      auto role = (Form_pg_authid) GETSTRUCT(role_tuple);
+
+      if ( is_member_of_role( GetUserId(), role->oid ) ) {
+        ReleaseSysCache(role_tuple);
+        return true;
+      }
+
+      ReleaseSysCache(role_tuple);
+    }
+  }*/
+
+  return false;
 }
 
 std::unique_ptr< PsqlTools::QuerySupervisor::QueryHandlers > g_queryHandlers;

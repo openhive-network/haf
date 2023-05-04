@@ -12,7 +12,7 @@ BEGIN
     END IF;
 
     IF NOT EXISTS ( SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'alice' ) THEN
-        CREATE ROLE alice LOGIN PASSWORD 'test' INHERIT IN ROLE hive_applications_group;
+        CREATE ROLE alice LOGIN PASSWORD 'test' INHERIT IN ROLE hive_applications_public_group;
     END IF;
 
     IF NOT EXISTS ( SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'bob' ) THEN

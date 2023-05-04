@@ -15,6 +15,14 @@ END
 $$;
 
 DO $$
+    BEGIN
+        CREATE ROLE hive_applications_public_group WITH NOLOGIN INHERIT IN ROLE hive_applications_group;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+        RAISE NOTICE 'hive_applications_public_group role already exists';
+    END
+$$;
+
+DO $$
 BEGIN
     CREATE ROLE haf_administrators_group WITH NOLOGIN SUPERUSER
     INHERIT
