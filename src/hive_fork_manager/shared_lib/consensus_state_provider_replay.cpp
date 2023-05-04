@@ -123,10 +123,10 @@ void add_operation_variant(const pqxx::const_result_iterator& operation, std::ve
     operations_variants.emplace_back(operation_variant);
 }
 
-void update_current_operation_numbers(const pqxx::const_result_iterator& operation, int& block_num, int& trx_in_block)
+void update_current_operation_numbers()
 {
-    block_num = operation["block_num"].as<int>();
-    trx_in_block = operation["trx_in_block"].as<int>();
+    current_operation_block_num = current_operationn["block_num"].as<int>();
+    current_operation_trx_num = current_operation["trx_in_block"].as<int>();
 }
 
 std::vector<fc::variant> operations2variants(int block_num, int trx_in_block)
@@ -142,7 +142,7 @@ std::vector<fc::variant> operations2variants(int block_num, int trx_in_block)
         }
         else
         {
-            update_current_operation_numbers(current_operation, current_operation_block_num, current_operation_trx_num);
+            update_current_operation_numbers();
             break;
         }
     }
