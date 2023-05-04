@@ -45,7 +45,6 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # we are in build directory
 
 # mtlk TODO:
-# TODO rename transactions_it to current_transaction
 # TODO string_view in t2v ?
 # TODO cleanup init(db
 # TODO example testing app
@@ -77,6 +76,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO - LATER  clang find #include
 # TODO - LATER ?  add .clang-format 
 
+# DONE rename transactions_it to current_transaction
 # DONE? refactor app.main
 # DONE #include <../../../apis/block_api/include/hive/plugins/block_api/block_api_objects.hpp>
 # DONE - recognize existing context_shared_memory_bin
@@ -743,12 +743,7 @@ fi
 if [[ $CMAKED ]]
 then
 #    ninja extension.hive_fork_manager  \
-    ninja  hived extension.hive_fork_manager  \
-        && sudo ninja install \
-        && sudo chown $USER:$USER .ninja_*  \
-        && ctest -R keyauth --output-on-failure \
-        && ctest -R curr --output-on-failure
-    EXIT_STATUS=$?
+    ninja  hived extension.hive_fork_manager          && sudo ninja install         && sudo chown $USER:$USER .ninja_*          && ctest -R keyauth --output-on-failure         && ctest -R curr --output-on-failure    EXIT_STATUS=$?
     sudo chown -R $USER:$USER *
 fi
 
