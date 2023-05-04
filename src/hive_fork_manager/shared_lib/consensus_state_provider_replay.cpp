@@ -55,7 +55,7 @@ struct Postgres2Blocks
 
   //iterators for traversing the values above
   int current_transaction_block_num;
-  pqxx::result::const_iterator transactions_it;
+  pqxx::result::const_iterator current_transaction;
   int current_operation_block_num;
   int current_operation_trx_num;
   pqxx::result::const_iterator current_operation;
@@ -90,7 +90,7 @@ void get_data_from_postgres(int from, int to, const char* postgres_url) {
 void initialize_iterators()
 {
   current_transaction_block_num = -1;
-  transactions_it = transactions.begin();
+  current_transaction = transactions.begin();
   if( transactions.size() > 0)
   {
       const auto& first_transaction = transactions[0];
@@ -156,29 +156,29 @@ bool is_current_operation(int block_num, int trx_in_block) const
 }
 
 
-bool is_current_transaction(const pqxx::result::const_iterator& transactions_it, const int block_num)
+bool is_current_transaction(const pqxx::result::const_iterator& current_transaction, const int block_num)
 {
-    return transactions_it["block_num"].as<int>() == block_num;
+    return current_transaction["block_num"].as<int>() == block_num;
 }
 
 void transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<fc::variant>& trancaction_variants)
 {
-  for(; transactions_it != transactions.end(); ++transactions_it)
+  for(; current_transaction != transactions.end(); ++current_transaction)
   {
     
-    if(is_current_transaction(transactions_it, block_num))
+    if(is_current_transaction(current_transaction, block_num))
     {
-      auto trx_in_block = transactions_it["trx_in_block"].as<int>();
+      auto trx_in_block = current_transaction["trx_in_block"].as<int>();
 
-      std::vector<std::string> signatures = build_signatures(transactions_it);
+      std::vector<std::string> signatures = build_signatures(current_transaction);
 
-      build_transaction_ids(transactions_it, transaction_id_variants);
+      build_transaction_ids(current_transaction, transaction_id_variants);
 
       rewind_operations_iterator_to_current_block(block_num);
 
       std::vector<fc::variant> operations_variants = operations2variants(block_num, trx_in_block);
 
-      fc::variant transaction_variant = build_transaction_variant(transactions_it, signatures, operations_variants);
+      fc::variant transaction_variant = build_transaction_variant(current_transaction, signatures, operations_variants);
 
       trancaction_variants.emplace_back(transaction_variant);
     }
@@ -192,7 +192,7 @@ void transactions2variants(int block_num, std::vector<fc::variant>& transaction_
 
 void update_current_transaction_numbers()
 {
-  current_transaction_block_num = transactions_it["block_num"].as<int>();
+  current_transaction_block_num = current_transaction["block_num"].as<int>();
 }
 
 void build_transaction_ids(const pqxx::result::const_iterator& transaction, std::vector<fc::variant>& transaction_id_variants)
