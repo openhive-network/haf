@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # sudo rm /home/hived/datadir/context/blockchain/shared_memory.bin; ../haf/scripts/runallnow.sh build
+# rsync -avh   /home/haf_admin/haf /home/hived/datadir/src/
 
 set -x
 set -euo pipefail
@@ -44,42 +45,55 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # we are in build directory
 
 # mtlk TODO:
-# TODO* - recognize existing context_shared_memory_bin
-# TODO* - bash_test assert
-# TODO* - remove permissions from app_cont
-# TODO* why runall script has to clear contest sharedmemory.bin ?
+# TODO rename transactions_it to current_transaction
+# TODO string_view in t2v ?
 # TODO cleanup init(db
 # TODO example testing app
-# TODO eliminate MTLK_FROM_VARIANT_ON_CONSUME_JSON_HACK
 # TODO interface ?
+# TODO - ASK + " AND op_type_id <= 49 " //TODO how to determine where vops start ?
+# TODO* why runallnow script has to clear contest sharedmemory.bin ? 
+#    1. different N5boost10wrapexceptISt13runtime_errorEE: Different persistent & runtime environments. Persistent
 
-# TODO clang find #include
-# TODO ?  add .clang-format 
-
-# TODO #include <../../../apis/block_api/include/hive/plugins/block_api/block_api_objects.hpp>
-
+# TODO name consensus provider and current account provider properly
+# TODO* ? in yaml - cp log to . instead of ln -s
+# TODO separate from database_api.cpp, database_api_plugin
 
 
+# TODO ? lock na funckjach w C lub wyżej
+# TODO funkcja do zwracania + 'blockchain' 
+# TODO test for many contexts
+# TODO new db a nie ma delete , moze smart pointer ?
+
+# TODO //na krotkim blocklogu zobacz jak to push blok chodzi
+
+
+# TODO 16 magic number in account                 CHAR(16),
+
+# TODO check if binary data can be taken from hive::operation
+
+# TODO use unlink to automatically delete a file when connection (process) goes down
+
+
+# TODO - LATER  clang find #include
+# TODO - LATER ?  add .clang-format 
+
+# DONE? refactor app.main
+# DONE #include <../../../apis/block_api/include/hive/plugins/block_api/block_api_objects.hpp>
+# DONE - recognize existing context_shared_memory_bin
+# DONE eliminate MTLK_FROM_VARIANT_ON_CONSUME_JSON_HACK
+# DONE - bash_test assert
+# DONE - remove permissions from app_cont
 
 
 # DONE start/stop on contextual shared mem file
 # DONE What about ON CONFLICT DO NOTHING in src/hive_fork_manager/state_providers/current_account_balance.sql - two accounts in one state ?     texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L) ON CONFLICT DO NOTHING;', __table_name, _context);
 # DONE (minor gain )consuming jsons one by one or getting a vector of blocks form haf block api
 # DONE separate C function to get current block_num where we stand
-# TODO* ? in yaml - cp log to . instead of ln -s
-# TODO separate from database_api.cpp, database_api_plugin
-
-# TODO //na krotkim blocklogu zobacz jak to push blok chodzi
-
-# TODO ? lock na funckjach w C lub wyżej
 
 # DONE (eliminated) is it needed ?         bfs::permissions(abs_path, b
 # DONE (eliminated in favor of explicit parameter) better "PGDATA" get_context_data_dir() // //getenv("HAF_DB_STORE");//BLOCK_LOG_DIRECTORY
-# TODO funkcja do zwracania + 'blockchain' 
-# TODO test for many contexts
 # DONE expected_block_num no global var
 
-# TODO new db a nie ma delete , moze smart pointer ?
 # DONE Opcja data dir do state provid conse
 
 # mostly DONE Database api zmniejszyc
@@ -87,6 +101,8 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # DONE Run serialize 5m app overnight 
 # Run serialize 73m app overnight 
 # Blockloga wlacz zobacz czas
+
+
 
 # end mtlk TODO
 
@@ -134,16 +150,11 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # TODO why is needed - otherwise not from 0 - sudo rm  /var/lib/postgresql/blockchain/cabc_shared_memory.bin  || true
 
-# TODO - debug stop_in_failed_verify_authority transaction_util.cpp:80       verify_authority     ] runal jesus2 auth={"weight_threshold":1,"account_auths":[],"key_auths":[["STM8UsRn6HbmRXkQSTtLRsUmXzb1HEvad5xU6AVY2XTugxYdd8s6P",1]]} owner={"weight_threshold":1,"account_auths":[],"key_auths":[["STM82yPKqrrrUEhuVYNEHEEqRWU16b4uyRmW6MXPDEzZgpJey9rsB",1]]} block_num=3705110
+# DONE - debug stop_in_failed_verify_authority transaction_util.cpp:80       verify_authority     ] runal jesus2 auth={"weight_threshold":1,"account_auths":[],"key_auths":[["STM8UsRn6HbmRXkQSTtLRsUmXzb1HEvad5xU6AVY2XTugxYdd8s6P",1]]} owner={"weight_threshold":1,"account_auths":[],"key_auths":[["STM82yPKqrrrUEhuVYNEHEEqRWU16b4uyRmW6MXPDEzZgpJey9rsB",1]]} block_num=3705110
 #    so recompile with O0 , run and attach postgres
 
-# TODO remove file try_grab_operations.hpp
+# DONE remove file try_grab_operations.hpp
 
-# TODO 16 magic number in account                 CHAR(16),
-
-# TODO check if binary data can be taken from hive::operation
-
-# TODO use unlink to automatically delete a file when connection (process) goes down
 
 
 # bool czy_printowac(int block_num)
@@ -654,10 +665,10 @@ DATA_DIR=/home/hived/datadir
 if [ -z ${CI+x} ] 
 then
     echo NOt In CI
-    CONSENSUS_STORAGE=$DATA_DIR
+    CONSENSUS_STORAGE=$DATA_DIR/consensus_state_provider
 else
     echo In CI
-    CONSENSUS_STORAGE=$PATTERNS_PATH
+    CONSENSUS_STORAGE=$PATTERNS_PATH/consensus_state_provider
 fi
 
 echo $CONSENSUS_STORAGE
@@ -731,6 +742,7 @@ fi
 
 if [[ $CMAKED ]]
 then
+#    ninja extension.hive_fork_manager  \
     ninja  hived extension.hive_fork_manager  \
         && sudo ninja install \
         && sudo chown $USER:$USER .ninja_*  \
@@ -849,7 +861,6 @@ app_start()
 
 app_cont()
 {
-    # permissions
     echo "Before app_cont"
     time psql -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing' \
     -c "call cab_app.main('cabc', $RUN_APP_CONT_MAIN_TILL_BLOCK, $RUN_APP_CONT_MAIN_CHUNK_SIZE, '$CONSENSUS_STORAGE')" \
@@ -943,7 +954,10 @@ save_state()
 
 remove_context_shared_memory_bin()
 {
+    
+    sudo rm  -rf $DATA_DIR/consensus_state_provider
     sudo rm  $DATA_DIR/context/blockchain/shared_memory.bin && echo removed! || echo not removed
+    
 }
 
 run_all_from_scratch()

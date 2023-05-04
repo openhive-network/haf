@@ -911,7 +911,9 @@ Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
   const char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(3));
   const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(4));
 
-  consensus_state_provider::consensus_state_provider_replay_impl(from, to, context, postgres_url, shared_memory_bin_path);
+  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(from, to, context, postgres_url, shared_memory_bin_path);
+
+  PG_RETURN_BOOL(ok);
 
   return (Datum)0;
 }

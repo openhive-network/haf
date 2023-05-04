@@ -30,6 +30,22 @@ const char* fix_pxx_hex(const pqxx::field& h)
 }
 
 
+class PostgresDatabase 
+{
+public:
+    PostgresDatabase(const char* url) : conn_(url) {}
+
+    pqxx::result execute_query(const std::string& query) {
+        pqxx::work txn(conn_);
+        pqxx::result res = txn.exec(query);
+        txn.commit();
+        return res;
+    }
+
+private:
+    pqxx::connection conn_;
+};
+
 struct Postgres2Blocks
 {
   //values taken from database
@@ -38,143 +54,186 @@ struct Postgres2Blocks
   pqxx::result operations;
 
   //iterators for traversing the values above
-  int transaction_expecting_block;
+  int current_transaction_block_num;
   pqxx::result::const_iterator transactions_it;
-  int operations_expecting_block;
-  int operations_expecting_transaction;
+  int current_operation_block_num;
+  int current_operation_trx_num;
   pqxx::result::const_iterator operations_it;
 
 
-void get_data_from_postgres(int from, int to, const char* postgres_url)
-{
-  pqxx::connection c{postgres_url};
+void get_data_from_postgres(int from, int to, const char* postgres_url) {
+    PostgresDatabase db(postgres_url);
 
-  pqxx::work blocks_work{c};
-  blocks = {blocks_work.exec("SELECT * FROM hive.blocks JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
-                            + std::to_string(from) 
-                            + " and num <= " 
-                            + std::to_string(to) 
-                            + " ORDER BY num ASC")};
-  blocks_work.commit();
+    auto blocks_query = "SELECT * FROM hive.blocks JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
+                                + std::to_string(from) 
+                                + " and num <= " 
+                                + std::to_string(to) 
+                                + " ORDER BY num ASC";
+    blocks = db.execute_query(blocks_query);
 
-  pqxx::work transactions_work{c};
-  transactions = {transactions_work.exec("SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions WHERE block_num >= " 
-                            + std::to_string(from) 
-                            + " and block_num <= " 
-                            + std::to_string(to) 
-                            + " ORDER BY block_num, trx_in_block ASC")};
-  transactions_work.commit();
+    auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions WHERE block_num >= " 
+                                + std::to_string(from) 
+                                + " and block_num <= " 
+                                + std::to_string(to) 
+                                + " ORDER BY block_num, trx_in_block ASC";
+    transactions = db.execute_query(transactions_query);
 
-
-  pqxx::work operations_work{c};
-  operations = {operations_work.exec("SELECT block_num, body, trx_in_block FROM hive.operations WHERE block_num >= " 
-                            + std::to_string(from) 
-                            + " and block_num <= " 
-                            + std::to_string(to) 
-                            + " AND op_type_id <= 49 "
-                            + " ORDER BY id ASC")};
-  operations_work.commit();
-
-
-
-
+    auto operations_query = "SELECT block_num, body, trx_in_block FROM hive.operations WHERE block_num >= " 
+                                + std::to_string(from) 
+                                + " and block_num <= " 
+                                + std::to_string(to) 
+                                + " AND op_type_id <= 49 "
+                                + " ORDER BY id ASC";
+    operations = db.execute_query(operations_query);
 }
 
-void prepare_iterators()
+void initialize_iterators()
 {
-  transaction_expecting_block = -1;
+  current_transaction_block_num = -1;
   transactions_it = transactions.begin();
   if( transactions.size() > 0)
   {
       const auto& first_transaction = transactions[0];
-      transaction_expecting_block = first_transaction["block_num"].as<int>();
+      current_transaction_block_num = first_transaction["block_num"].as<int>();
   }
 
-  operations_expecting_block = -1;
-  operations_expecting_transaction = -1;
+  current_operation_block_num = -1;
+  current_operation_trx_num = -1;
   operations_it = operations.begin();
   if(operations.size() > 0)
   {
     const auto& first_operation = operations[0];
-    operations_expecting_block =  first_operation["block_num"].as<int>();
-    operations_expecting_transaction = first_operation["trx_in_block"].as<int>();
+    current_operation_block_num =  first_operation["block_num"].as<int>();
+    current_operation_trx_num = first_operation["trx_in_block"].as<int>();
 
   }
 }
 
-void operations2variants(int block_num, int trx_in_block, std::vector<fc::variant>& operations_variants)
-{
-  for(; operations_it != operations.end(); ++operations_it)
-  {
-    const auto operation = (*operations_it);
-    if(operation["block_num"].as<int>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block)
-    {
-      // fill in op here
 
-      const auto& body_in_json = operation["body"].c_str();
-      const auto& operation_variant = fc::json::from_string(body_in_json);
-      operations_variants.emplace_back(operation_variant);
-    }
-    else
+bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block) 
+{
+    return operation["block_num"].as<int>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block;
+}
+
+
+void add_operation_variant(const pqxx::const_result_iterator& operation, std::vector<fc::variant>& operations_variants)
+{
+    const auto& body_in_json = operation["body"].c_str();
+    const auto& operation_variant = fc::json::from_string(body_in_json);
+    operations_variants.emplace_back(operation_variant);
+}
+
+void update_current_operation_numbers(const pqxx::const_result_iterator& operation, int& block_num, int& trx_in_block)
+{
+    block_num = operation["block_num"].as<int>();
+    trx_in_block = operation["trx_in_block"].as<int>();
+}
+
+std::vector<fc::variant> operations2variants(int block_num, int trx_in_block)
+{
+  std::vector<fc::variant> operations_variants;
+  if(is_current_operation(block_num, trx_in_block))
+  {
+    for (; operations_it != operations.end(); ++operations_it)
     {
-      operations_expecting_block = operations_it["block_num"].as<int>();
-      operations_expecting_transaction = operations_it["trx_in_block"].as<int>();
-      break;
+        if (operation_matches_block_transaction(operations_it, block_num, trx_in_block))
+        {
+            add_operation_variant(operations_it, operations_variants);
+        }
+        else
+        {
+            update_current_operation_numbers(operations_it, current_operation_block_num, current_operation_trx_num);
+            break;
+        }
     }
   }
+  return operations_variants;
+}
+
+bool is_current_operation(int block_num, int trx_in_block) const 
+{
+  return block_num == current_operation_block_num && trx_in_block == current_operation_trx_num;
+}
+
+
+bool is_current_transaction(const pqxx::result::const_iterator& transactions_it, const int block_num)
+{
+    return transactions_it["block_num"].as<int>() == block_num;
 }
 
 void transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<fc::variant>& trancaction_variants)
 {
   for(; transactions_it != transactions.end(); ++transactions_it)
   {
-    const auto transaction = (*transactions_it);
-    if(transaction["block_num"].as<int>() == block_num)
+    
+    if(is_current_transaction(transactions_it, block_num))
     {
-      auto trx_in_block = transaction["trx_in_block"].as<int>();
+      auto trx_in_block = transactions_it["trx_in_block"].as<int>();
 
-      std::vector<std::string> signatures;
-      if(strlen(transaction["signature"].c_str()))
-      {
-        signatures.push_back(fix_pxx_hex(transaction["signature"]));
-      }
+      std::vector<std::string> signatures = build_signatures(transactions_it);
 
+      build_transaction_ids(transactions_it, transaction_id_variants);
 
-      transaction_id_variants.push_back(fix_pxx_hex(transaction["trx_hash"]));
+      rewind_operations_iterator_to_current_block(block_num);
 
-      // rewind to current block
-      while(operations_expecting_block < block_num)
-      {
-        operations_it++;
-        operations_expecting_block = operations_it["block_num"].as<int>();
-        operations_expecting_transaction = operations_it["trx_in_block"].as<int>();
-      }
+      std::vector<fc::variant> operations_variants = operations2variants(block_num, trx_in_block);
 
-      std::vector<fc::variant> operations_variants;
-      if(block_num == operations_expecting_block && trx_in_block == operations_expecting_transaction)
-      {
-        operations2variants(block_num, trx_in_block, operations_variants);
-      }
+      fc::variant transaction_variant = build_transaction_variant(transactions_it, signatures, operations_variants);
 
-      fc::variant_object_builder transaction_variant_builder;
-      transaction_variant_builder
-        ("ref_block_num", transaction["ref_block_num"].as<int>())
-        ("ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())
-        ("expiration", fix_pxx_time(transaction["expiration"]))
-        ("signatures", signatures)
-        ("operations", operations_variants);
-
-      fc::variant transaction_variant;
-      fc::to_variant(transaction_variant_builder.get(), transaction_variant);
       trancaction_variants.emplace_back(transaction_variant);
     }
     else
     {
-      transaction_expecting_block = transaction["block_num"].as<int>();
+      update_current_transaction_numbers();
       break;
     }
   }
 }
+
+void update_current_transaction_numbers()
+{
+  current_transaction_block_num = transactions_it["block_num"].as<int>();
+}
+
+void build_transaction_ids(const pqxx::result::const_iterator& transaction, std::vector<fc::variant>& transaction_id_variants)
+{
+  transaction_id_variants.push_back(fix_pxx_hex(transaction["trx_hash"]));
+}
+
+std::vector<std::string> build_signatures(const pqxx::result::const_iterator& transaction) 
+{
+  std::vector<std::string> signatures;
+  if (strlen(transaction["signature"].c_str())) {
+    signatures.push_back(fix_pxx_hex(transaction["signature"]));
+  }
+  return signatures;
+}
+
+void rewind_operations_iterator_to_current_block(int block_num)
+{
+  while (current_operation_block_num < block_num && operations_it != operations.end())
+  {
+    ++operations_it;
+    current_operation_block_num = operations_it["block_num"].as<int>();
+    current_operation_trx_num = operations_it["trx_in_block"].as<int>();
+  }
+}
+
+fc::variant build_transaction_variant(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<fc::variant>& operations_variants)
+{
+  fc::variant_object_builder transaction_variant_builder;
+  transaction_variant_builder
+    ("ref_block_num", transaction["ref_block_num"].as<int>())
+    ("ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())
+    ("expiration", fix_pxx_time(transaction["expiration"]))
+    ("signatures", signatures)
+    ("operations", operations_variants);
+
+  return transaction_variant_builder.get();
+}
+
+
+
 
 fc::variant block2variant(const pqxx::row& block)
 {
@@ -182,7 +241,7 @@ fc::variant block2variant(const pqxx::row& block)
 
   std::vector<fc::variant> transaction_ids_variants;
   std::vector<fc::variant> transaction_variants;
-  if(block_num == transaction_expecting_block)
+  if(block_num == current_transaction_block_num)
     transactions2variants(block_num, transaction_ids_variants, transaction_variants);
 
   std::string json = block["extensions"].c_str();
@@ -218,8 +277,8 @@ void blocks2replay(const char *context, const char* shared_memory_bin_path)
     //std::string json = fc::json::to_pretty_string(v);
     //wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
 
-    int n = consensus_state_provider::consume_variant_block_impl(v, context, block_num, shared_memory_bin_path);
-    n=n;
+    consensus_state_provider::consume_variant_block_impl(v, context, block_num, shared_memory_bin_path);
+    
   }
 }
 
@@ -227,18 +286,26 @@ void run(int from, int to, const char *context, const char *postgres_url, const 
 {
   get_data_from_postgres(from, to, postgres_url);
 
-  prepare_iterators();
+  initialize_iterators();
   
   blocks2replay(context, shared_memory_bin_path);
 }
 
 };
 
-void consensus_state_provider_replay_impl(int from, int to, const char *context,
+bool consensus_state_provider_replay_impl(int from, int to, const char *context,
                                 const char *postgres_url, const char* shared_memory_bin_path) 
 {
+  if(from != consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path))
+  {
+    elog("ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
+        ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
+    return false;
+  }
+
   Postgres2Blocks p2b;
   p2b.run(from, to, context, postgres_url, shared_memory_bin_path); 
+  return true;
 }
 
 void init(hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
@@ -300,22 +367,20 @@ int initialize_context(const char* context, const char* shared_memory_bin_path)
 }
 
 
-int consume_variant_block_impl(const fc::variant& v, const char* context, int block_num, const char* shared_memory_bin_path)
+void consume_variant_block_impl(const fc::variant& v, const char* context, int block_num, const char* shared_memory_bin_path)
 {
 
   static auto first_time = true;
   if(first_time)
   {
     first_time = false;
-    wlog("mtlk consume_variant_block_impl pid= ${pid}", ("pid", getpid()));
+    wlog("mtlk consume_variant_block_impl first_time pid= ${pid}", ("pid", getpid()));
   }
 
-  int expected_block_num = initialize_context(context, shared_memory_bin_path);
 
-  if(block_num != expected_block_num)
-     return expected_block_num;
+  if(block_num != initialize_context(context, shared_memory_bin_path))
+     return;
 
-  expected_block_num++;
 
 
   hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
@@ -362,9 +427,6 @@ int consume_variant_block_impl(const fc::variant& v, const char* context, int bl
 
 
   db.set_revision( db.head_block_num() );
-
-
-  return expected_block_num;
 }
 
 int consensus_state_provider_get_expected_block_num_impl(const char* context, const char* shared_memory_bin_path)

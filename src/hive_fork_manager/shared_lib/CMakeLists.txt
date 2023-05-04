@@ -16,7 +16,7 @@ FIND_LIBRARY(HAF_PQ_LIB pq REQUIRED)
 SET (CMAKE_FIND_LIBRARY_SUFFIXES ${SAVE_ORIGINAL_LIB_SUFFIXES} )
 
 
-TARGET_LINK_LIBRARIES( ${target_name} PUBLIC hive_protocol fc_shared_boost database_api_plugin ${HAF_PQ_LIB} ${HAF_PQXX_LIB})
+TARGET_LINK_LIBRARIES( ${target_name} PUBLIC hive_protocol fc_shared_boost database_api_plugin block_api_plugin ${HAF_PQ_LIB} ${HAF_PQXX_LIB})
 
 INSTALL( TARGETS
   ${target_name}

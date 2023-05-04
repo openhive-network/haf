@@ -16,7 +16,7 @@ AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
 
 
 CREATE OR REPLACE FUNCTION hive.consensus_state_provider_replay(in _from INT, in _to INT, IN _context TEXT, IN _postgres_url TEXT, IN shared_memory_bin_path TEXT)
-RETURNS VOID
+RETURNS BOOLEAN
 AS 'MODULE_PATHNAME', 'consensus_state_provider_replay' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.consensus_state_provider_finish(IN _context TEXT, IN shared_memory_bin_path TEXT)

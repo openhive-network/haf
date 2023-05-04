@@ -59,6 +59,7 @@ DECLARE
     __postgres_url TEXT;
 	__current_pid INT;
     __shared_memory_bin_path TEXT;
+    __consensus_state_provider_replay_call_ok BOOLEAN;
 BEGIN
     __current_pid =  pg_backend_pid();
     __context_id = hive.get_context_id( _context );
@@ -81,7 +82,9 @@ BEGIN
     raise notice '__shared_memory_bin_path=%', __shared_memory_bin_path;
 
 
-    PERFORM hive.consensus_state_provider_replay(_first_block, _last_block, _context , __postgres_url, __shared_memory_bin_path);
+    __consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(_first_block, _last_block, _context , __postgres_url, __shared_memory_bin_path));
+
+    RAISE NOTICE '__consensus_state_provider_replay_call_ok=%', __consensus_state_provider_replay_call_ok;
 
     -- mtlk TODO remove below, maybe move upwards
 IF TRUE THEN -- mtlk try_grab_operations
