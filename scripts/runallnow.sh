@@ -45,10 +45,11 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # we are in build directory
 
 # mtlk TODO:
-# TODO string_view in t2v ?
 # TODO cleanup init(db
-# TODO example testing app
-# TODO interface ?
+# TODO example testing app - move to proper place in directory tree
+# TODO interface ?, name consensu or context or current_acount_balance provider ?
+# TODO from_variant_to_full_block_ptr.cpp file not needed
+# TODO exceptions handling in pqxx usage
 # TODO - ASK + " AND op_type_id <= 49 " //TODO how to determine where vops start ?
 # TODO* why runallnow script has to clear contest sharedmemory.bin ? 
 #    1. different N5boost10wrapexceptISt13runtime_errorEE: Different persistent & runtime environments. Persistent

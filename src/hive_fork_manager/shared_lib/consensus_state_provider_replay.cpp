@@ -23,7 +23,7 @@ std::string fix_pxx_time(const pqxx::field& t)
   return r;
 }
 
-// value coming from pxx is "\xABCDEF", we need to cut 2 charaters from the front to be accepted in variant
+// value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
 const char* fix_pxx_hex(const pqxx::field& h)
 {
     return h.c_str() + 2;
@@ -33,17 +33,19 @@ const char* fix_pxx_hex(const pqxx::field& h)
 class PostgresDatabase 
 {
 public:
-    PostgresDatabase(const char* url) : conn_(url) {}
+ PostgresDatabase(const char* url) : conn(url) 
+ {}
 
-    pqxx::result execute_query(const std::string& query) {
-        pqxx::work txn(conn_);
-        pqxx::result res = txn.exec(query);
-        txn.commit();
-        return res;
-    }
+ pqxx::result execute_query(const std::string& query)
+ {
+   pqxx::work txn(conn);
+   pqxx::result res = txn.exec(query);
+   txn.commit();
+   return res;
+ }
 
 private:
-    pqxx::connection conn_;
+    pqxx::connection conn;
 };
 
 struct Postgres2Blocks
@@ -61,7 +63,8 @@ struct Postgres2Blocks
   pqxx::result::const_iterator current_operation;
 
 
-void get_data_from_postgres(int from, int to, const char* postgres_url) {
+void get_data_from_postgres(int from, int to, const char* postgres_url)
+{
     PostgresDatabase db(postgres_url);
 
     auto blocks_query = "SELECT * FROM hive.blocks JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
@@ -203,7 +206,8 @@ void build_transaction_ids(const pqxx::result::const_iterator& transaction, std:
 std::vector<std::string> build_signatures(const pqxx::result::const_iterator& transaction) 
 {
   std::vector<std::string> signatures;
-  if (strlen(transaction["signature"].c_str())) {
+  if (strlen(transaction["signature"].c_str())) 
+  {
     signatures.push_back(fix_pxx_hex(transaction["signature"]));
   }
   return signatures;
