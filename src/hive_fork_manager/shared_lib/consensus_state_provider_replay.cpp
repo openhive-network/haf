@@ -128,7 +128,7 @@ void add_operation_variant(const pqxx::const_result_iterator& operation, std::ve
 
 void update_current_operation_numbers()
 {
-    current_operation_block_num = current_operationn["block_num"].as<int>();
+    current_operation_block_num = current_operation["block_num"].as<int>();
     current_operation_trx_num = current_operation["trx_in_block"].as<int>();
 }
 
