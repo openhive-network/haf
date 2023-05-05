@@ -42,9 +42,11 @@ RUN_APP_CONT_MAIN_TILL_BLOCK=$LAST_BLOCK
 RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
-# we are in build directory
+
 
 # mtlk TODO:
+# TODO* example testing app - move to proper place in directory tree
+# TODO* ? in yaml - cp log to . instead of ln -s
 # TODO cleanup init(db
 # TODO rename test_givena
 # TODO example testing app - move to proper place in directory tree
@@ -56,7 +58,6 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 #    1. different N5boost10wrapexceptISt13runtime_errorEE: Different persistent & runtime environments. Persistent
 
 # TODO name consensus provider and current account provider properly
-# TODO* ? in yaml - cp log to . instead of ln -s
 # TODO separate from database_api.cpp, database_api_plugin
 
 
@@ -70,11 +71,8 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # TODO 16 magic number in account                 CHAR(16),
 
-# TODO check if binary data can be taken from hive::operation
-
-# TODO use unlink to automatically delete a file when connection (process) goes down
-
-
+# TODO - LATER  clangcheck if binary data can be taken from hive::operation
+# TODO - LATER  clanguse unlink to automatically delete a file when connection (process) goes down
 # TODO - LATER  clang find #include
 # TODO - LATER ?  add .clang-format 
 
