@@ -425,10 +425,6 @@ bash_tests:
     - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL --plugin=sql_serializer --stop-replay-at-block=5000000  2>&1 | tee -i node_logs.log
   script:
-    - pwd
-    - ls -lah
-    - cd $CI_PROJECT_DIR
-    - pwd
     - $CI_PROJECT_DIR/tests/integration/replay/current_account_balance_test.sh
     
   timeout: 60 minutes
