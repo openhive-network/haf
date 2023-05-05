@@ -743,7 +743,7 @@ fi
 if [[ $CMAKED ]]
 then
 #    ninja extension.hive_fork_manager  \
-    ninja  hived extension.hive_fork_manager          && sudo ninja install         && sudo chown $USER:$USER .ninja_*          && ctest -R keyauth --output-on-failure         && ctest -R curr --output-on-failure    EXIT_STATUS=$?
+    ninja  query_supervisor hived extension.hive_fork_manager          && sudo ninja install         && sudo chown $USER:$USER .ninja_*          && ctest -R keyauth --output-on-failure         && ctest -R curr --output-on-failure    EXIT_STATUS=$?
     sudo chown -R $USER:$USER *
 fi
 
