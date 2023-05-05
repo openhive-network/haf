@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any, Tuple, Iterable
 from uuid import uuid4
@@ -23,7 +24,8 @@ class SQLNodesPreparer(NodesPreparer):
 
     def prepare(self, builder: networks.NetworksBuilder):
         for cnt, node in enumerate(builder.prepare_nodes):
-            self.sessions.append( self.database(f"postgresql:///haf_block_log-{cnt}") )
+            DB_URL = os.getenv("DB_URL")
+            self.sessions.append( self.database(f"{DB_URL}-{cnt}") )
 
             node.config.plugin.append('sql_serializer')
             node.config.psql_url = str(self.db_name(cnt))
@@ -67,14 +69,9 @@ def database():
         tt.logger.info(f'Preparing database {url}')
         if database_exists(url):
             drop_database(url)
-        create_database(url)
+        create_database(url, template="haf_block_log")
 
         engine = sqlalchemy.create_engine(url, echo=False, poolclass=NullPool)
-        with engine.connect() as connection:
-            connection.execute('CREATE EXTENSION hive_fork_manager CASCADE;')
-
-        with engine.connect() as connection:
-            connection.execute('SET ROLE hived_group')
 
         Session = sessionmaker(bind=engine)
         session = Session()

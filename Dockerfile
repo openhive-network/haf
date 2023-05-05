@@ -124,8 +124,7 @@ ENV SHM_DIR=/home/hived/shm_dir
 
 STOPSIGNAL SIGINT
 
-# JSON rpc service
-EXPOSE ${HTTP_PORT}
+EXPOSE 5432
 
 ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
 
