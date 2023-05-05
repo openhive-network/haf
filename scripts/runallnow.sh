@@ -46,6 +46,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # mtlk TODO:
 # TODO cleanup init(db
+# TODO rename test_givena
 # TODO example testing app - move to proper place in directory tree
 # TODO interface ?, name consensu or context or current_acount_balance provider ?
 # TODO from_variant_to_full_block_ptr.cpp file not needed
