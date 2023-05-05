@@ -23,10 +23,6 @@ ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_edit_negative_rowid_test.
 ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_drop_test.sql )
 ADD_SQL_FUNCTIONAL_TEST( context_rewind/detach_table_test.sql )
 ADD_SQL_FUNCTIONAL_TEST( context_rewind/attach_table_test.sql )
-
-ADD_SQL_FUNCTIONAL_COMMIT_TEST( state_providers/current_account_balance_update_state_provider.sql )
-
-
 ADD_SQL_FUNCTIONAL_TEST( context_rewind/detach_negative_unregistered_table_test.sql )
 ADD_SQL_FUNCTIONAL_TEST( context_rewind/detach_negative_not_empty_shadow_table_test.sql )
 ADD_SQL_FUNCTIONAL_TEST( context_rewind/detach_all_tables_test.sql )
@@ -231,6 +227,7 @@ ADD_SQL_FUNCTIONAL_TEST( state_providers/context_remove_and_state_provider.sql )
 ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_non_fork.sql )
 ADD_SQL_FUNCTIONAL_TEST( state_providers/switch_state_provider_to_forkable.sql )
 
+ADD_SQL_FUNCTIONAL_COMMIT_TEST( state_providers/current_account_balance_update_state_provider.sql )
 
 ADD_AUTHORIZATION_FUNCTIONAL_TEST( authorization/alice_access_to_bob_negative.sql )
 ADD_AUTHORIZATION_FUNCTIONAL_TEST( authorization/alice_access_events_infrustructure.sql )
