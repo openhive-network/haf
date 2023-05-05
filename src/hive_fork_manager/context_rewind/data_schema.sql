@@ -1,6 +1,7 @@
 -- New versions of PostgreSQL disallow to create schema if not exists statement for any object not belonging to extension, and given schema does not initially.
 
 CREATE DOMAIN hive.context_name AS TEXT;
+CREATE DOMAIN hive.contexts_group AS hive.context_name[] CHECK( VALUE IS NOT NULL AND ( ARRAY_LENGTH( VALUE, 1 ) > 0 ) );
 
 CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' , 'METADATA' );
 
