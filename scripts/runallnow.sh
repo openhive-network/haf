@@ -45,15 +45,25 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
-# TODO* example testing app - move to proper place in directory tree
-# TODO* ? in yaml - cp log to . instead of ln -s
 # TODO cleanup init(db
-# TODO rename test_givena
+# TODO struct Postgres2Blocks into class
+# TODO remove mtlk
+# TODO hierarchical handling of exceptions
+# TODO are all headers included ?
+# TODO #include" vs. #include<
+# TODO remove wlog, and put info where applicable
 # TODO example testing app - move to proper place in directory tree
 # TODO interface ?, name consensu or context or current_acount_balance provider ?
 # TODO from_variant_to_full_block_ptr.cpp file not needed
 # TODO exceptions handling in pqxx usage
+# TODO flag constructors / destructors default
+# TODO contants in collect_current_all_accounts_balances , 
+# TODO clean garbage in /home/hived/datadir/consensus_storage when it cannot start (rg. when going Debug from Release
+# TDOD ask data_processor::handle_exception( std::exception_ptr exception_ptr ) {
+# TODO magic numbers: args.limit = 1000;
 # TODO - ASK + " AND op_type_id <= 49 " //TODO how to determine where vops start ?
+# TODO* example testing app - move to proper place in directory tree
+# TODO* ? in yaml - cp log to . instead of ln -s
 # TODO* why runallnow script has to clear contest sharedmemory.bin ? 
 #    1. different N5boost10wrapexceptISt13runtime_errorEE: Different persistent & runtime environments. Persistent
 
@@ -71,11 +81,13 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # TODO 16 magic number in account                 CHAR(16),
 
+# TODO - LATER try to reconnect ? try_to_restore_connection();
 # TODO - LATER  clangcheck if binary data can be taken from hive::operation
 # TODO - LATER  clanguse unlink to automatically delete a file when connection (process) goes down
 # TODO - LATER  clang find #include
 # TODO - LATER ?  add .clang-format 
 
+# DONE rename test_givena
 # DONE rename transactions_it to current_transaction
 # DONE? refactor app.main
 # DONE #include <../../../apis/block_api/include/hive/plugins/block_api/block_api_objects.hpp>

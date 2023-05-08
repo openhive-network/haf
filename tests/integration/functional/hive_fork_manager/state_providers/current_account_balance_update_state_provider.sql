@@ -1,11 +1,7 @@
--- mtlk TODO : remove this message  CURRENT_ACCOUNT_BALANCE state provider allocates an object during hive.app_state_provider_import on the C++ side
--- Both hive.update_state_provider_current_account_balance and hive.app_state_provider_drop_all operate on that object
--- But test_given, test_when and test_then are called from different processes
--- That's why everything needs to be done in one function (test_given in this case) 
+-- PROCEDURES needed here instead of functions, because pqxx library can see changes only after COMMIT;
 
-
-DROP PROCEDURE IF EXISTS test_givena;
-CREATE PROCEDURE test_givena(_writable_directory TEXT)
+DROP PROCEDURE IF EXISTS test_given;
+CREATE PROCEDURE test_given(_writable_directory TEXT)
     LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -44,7 +40,7 @@ BEGIN
 
 
     PERFORM hive.app_create_context( 'context' );
-    PERFORM hive.app_state_provider_import( 'c_a_b_s_t', 'context' , get_consensus_storage_path(_writable_directory)); -- mtlk todo now
+    PERFORM hive.app_state_provider_import( 'c_a_b_s_t', 'context' , get_consensus_storage_path(_writable_directory));
     PERFORM hive.app_context_detach( 'context' );
     UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 5;
     COMMIT;
@@ -59,7 +55,7 @@ CREATE PROCEDURE test_when(_writable_directory TEXT)
 AS
 $BODY$
 BEGIN
-    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 1'; -- mtlk todo now
+    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 1';
     PERFORM hive.update_state_provider_c_a_b_s_t( 1, 6, 'context' );
     COMMIT;
 END;
@@ -73,7 +69,7 @@ AS
 $BODY$
 DECLARE
 BEGIN
-    ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 7'; -- mtlk todo now
+    ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 7';
     ASSERT EXISTS ( SELECT * FROM hive.context_c_a_b_s_t WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
     ASSERT EXISTS ( SELECT * FROM hive.context_c_a_b_s_t WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';
     ASSERT EXISTS ( SELECT * FROM hive.context_c_a_b_s_t WHERE account = 'null' AND balance = 0), 'Incorrect balance of null';
@@ -82,7 +78,7 @@ BEGIN
 
     ASSERT (SELECT to_regclass('hive.context_c_a_b_s_t')) IS NOT NULL, 'State provider table should exist';
     PERFORM hive.app_state_provider_drop_all( 'context' );
-    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))); -- mtlk todo now
+    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory)));
     ASSERT (SELECT to_regclass('hive.context_current_account_balance')) IS NULL, 'State provider table should not exist';
 END;
 $BODY$
@@ -98,12 +94,10 @@ $BODY$
 DECLARE
   __consensus_state_provider_storage_path TEXT;
 BEGIN
-    __consensus_state_provider_storage_path = _writable_directory;
-
-    IF __consensus_state_provider_storage_path = '' THEN
-        __consensus_state_provider_storage_path := '/home/hived/datadir/consensus_storage'; 
+    IF _writable_directory = '' THEN
+        __consensus_state_provider_storage_path = '/home/hived/datadir/consensus_storage'; 
     ELSE
-        __consensus_state_provider_storage_path = __consensus_state_provider_storage_path || '/consensus_storage';
+        __consensus_state_provider_storage_path = _writable_directory || '/consensus_storage';
     END IF;
 
     RETURN __consensus_state_provider_storage_path;
