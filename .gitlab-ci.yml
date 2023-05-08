@@ -392,6 +392,6 @@ double_haf_replay_tests:
   needs:
     - job: prepare_haf_image
   script:
-  - ./tests/test_double_haf_replay.sh
+  - ./tests/integration/test_double_haf_replay.sh
   tags:
     - hived-for-tests
