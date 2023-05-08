@@ -207,6 +207,7 @@ DECLARE
     __fork_id BIGINT;
     __result hive.blocks_range;
 BEGIN
+    -- TODO{@mickiwicz): start subfunction for find next event for a context
     PERFORM hive.squash_events( _context_name );
 
     SELECT
@@ -230,6 +231,9 @@ BEGIN
 
     SELECT * INTO __next_event_id, __next_event_type,  __next_event_block_num
     FROM hive.find_next_event( _context_name );
+    -- TODO{@mickiwicz): end subfunction for find next event for a context, the same event_id, event_type and next block num
+    -- should be applyed to all contexts in the group
+
 
     CASE __next_event_type
     WHEN 'BACK_FROM_FORK' THEN
@@ -290,6 +294,7 @@ BEGIN
 
     IF __next_block_to_process IS NULL THEN
             -- There is no new and expected block, needs to wait for a new block
+            -- TODO(@mickiewicz): when moving in group only one sleep per group must be executed
             PERFORM pg_sleep( 1.5 );
             RETURN NULL;
     END IF;
