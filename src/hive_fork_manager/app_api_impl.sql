@@ -186,6 +186,150 @@ CREATE TYPE hive.blocks_range AS (
     , last_block INT
     );
 
+
+DROP TYPE IF EXISTS hive.context_state CASCADE;
+CREATE TYPE hive.context_state AS (
+      context_name TEXT
+    , id INT
+    , current_block_num INT
+    , is_attached BOOL
+    , irreversible_block_num INT
+    , next_event_id BIGINT
+    , next_event_type hive.event_type
+    , next_event_block_num INT
+);
+
+
+
+CREATE OR REPLACE FUNCTION hive.squash_and_get_state( _context_name TEXT )
+    RETURNS hive.context_state
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+    DECLARE
+        __context_state hive.context_state;
+    BEGIN
+        PERFORM hive.squash_events( _context_name );
+
+        SELECT
+               _context_name
+             , hac.id
+             , hac.current_block_num
+             , hac.is_attached
+             , hac.irreversible_block
+        FROM hive.contexts hac
+        WHERE hac.name = _context_name
+        INTO __context_state;
+
+        IF __context_state.id IS NULL THEN
+            RAISE EXCEPTION 'No context with name %', _context_name;
+        END IF;
+
+        IF __context_state.is_attached = FALSE THEN
+            RAISE EXCEPTION 'Context % is detached', _context_name;
+        END IF;
+
+        SELECT * INTO __context_state.next_event_id, __context_state.next_event_type,  __context_state.next_event_block_num
+        FROM hive.find_next_event( _context_name );
+
+        RETURN __context_state;
+    END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_process_event( _context_state hive.context_state )
+    RETURNS hive.blocks_range
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __next_block_to_process INT;
+    __last_block_to_process INT;
+    __fork_id BIGINT;
+    __result hive.blocks_range;
+BEGIN
+    CASE _context_state.next_event_type
+        WHEN 'BACK_FROM_FORK' THEN
+            --TODO(@Mickiewicz): only lead context in group  shall find fork_id and __next_event_blocknum
+            SELECT hf.id, hf.block_num INTO __fork_id, _context_state.next_event_block_num
+            FROM hive.fork hf
+            WHERE hf.id = _context_state.next_event_block_num; -- block_num for BFF events = fork_id
+
+            --TODO(@Mickiewicz): is ok per one context in group
+            -- PERFORM hive.context_back_from_fork( _context_state.context_name, _context_state.next_event_block_num );
+
+            UPDATE hive.contexts
+            SET
+                current_block_num = _context_state.next_event_block_num
+              , fork_id = __fork_id
+            WHERE id = _context_state.id;
+            RETURN NULL;
+        WHEN 'NEW_IRREVERSIBLE' THEN
+            -- we may got on context  creation irreversible block based on hive.irreversible_data
+            -- unfortunetly some slow app may prevent to removing this event, so wee need to process it
+            -- but do not update irreversible
+            IF ( _context_state.irreversible_block_num < _context_state.next_event_block_num ) THEN
+                PERFORM hive.context_set_irreversible_block( _context_state.context_name, _context_state.next_event_block_num );
+            END IF;
+            RETURN NULL;
+        WHEN 'MASSIVE_SYNC' THEN
+            --massive events are squashe at the function begin
+            -- we may got on context  creation irreversible block based on hive.irreversible_data
+            -- unfortunetly some slow app may prevent to removing this event, so we need to process it
+            -- but do not update irreversible
+            IF ( _context_state.irreversible_block_num < _context_state.next_event_block_num ) THEN
+                PERFORM hive.context_set_irreversible_block( _context_state.context_name, _context_state.next_event_block_num );
+            END IF;
+        -- no RETURN here because code after the case will continue processing irreversible blocks only
+        WHEN 'NEW_BLOCK' THEN
+            ASSERT  _context_state.next_event_block_num > _context_state.current_block_num, 'We could not process block without consume event';
+            IF _context_state.next_event_block_num = ( _context_state.current_block_num + 1 ) THEN
+                UPDATE hive.contexts
+                SET current_block_num = _context_state.next_event_block_num
+                WHERE id = _context_state.id;
+
+                __result.first_block = _context_state.next_event_block_num;
+                __result.last_block = _context_state.next_event_block_num;
+                RETURN __result ;
+            END IF;
+            -- it is impossible to have hole between __current_block_num and NEW_BLOCK event block_num
+            -- when __current_block_num is not irreversible
+            ASSERT _context_state.current_block_num <= _context_state.irreversible_block_num, 'current_block_num is reversible!';
+        ELSE
+        END CASE;
+
+    -- if there is no event or we still process irreversible blocks
+    SELECT hc.irreversible_block INTO _context_state.irreversible_block_num
+    FROM hive.contexts hc WHERE hc.id = _context_state.id;
+
+    SELECT MIN( hb.num ), MAX( hb.num )
+    FROM hive.blocks hb
+    WHERE hb.num > _context_state.current_block_num AND hb.num <= _context_state.irreversible_block_num
+    INTO __next_block_to_process, __last_block_to_process;
+
+    IF __next_block_to_process IS NULL THEN
+        -- There is no new and expected block, needs to wait for a new block
+        -- TODO(@mickiewicz): when moving in group only one sleep per group must be executed
+        PERFORM pg_sleep( 1.5 );
+        RETURN NULL;
+    END IF;
+
+    UPDATE hive.contexts
+    SET current_block_num = __next_block_to_process
+    WHERE id = _context_state.id;
+
+    __result.first_block = __next_block_to_process;
+    __result.last_block = __last_block_to_process;
+    RETURN __result;
+END;
+$BODY$
+;
+
+
+
+
 CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_name TEXT )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
@@ -193,113 +337,11 @@ CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_name TEXT )
 AS
 $BODY$
 DECLARE
-    __context_id INT;
-    __context_is_attached BOOL;
-    __current_block_num INT;
-    __current_fork BIGINT;
-    __current_event_id BIGINT;
-    __irreversible_block_num INT;
-    __next_event_id BIGINT;
-    __next_event_type hive.event_type;
-    __next_event_block_num INT;
-    __next_block_to_process INT;
-    __last_block_to_process INT;
-    __fork_id BIGINT;
+    __context_state hive.context_state;
     __result hive.blocks_range;
 BEGIN
-    PERFORM hive.squash_events( _context_name );
-
-    SELECT
-        hac.current_block_num
-         , hac.fork_id
-         , hac.events_id
-         , hac.id
-         , hac.is_attached
-         , hac.irreversible_block
-    FROM hive.contexts hac
-    WHERE hac.name = _context_name
-    INTO __current_block_num, __current_fork, __current_event_id, __context_id, __context_is_attached, __irreversible_block_num;
-
-    IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context_name;
-    END IF;
-
-    IF __context_is_attached = FALSE THEN
-        RAISE EXCEPTION 'Context % is detached', _context_name;
-    END IF;
-
-    SELECT * INTO __next_event_id, __next_event_type,  __next_event_block_num
-    FROM hive.find_next_event( _context_name );
-
-    CASE __next_event_type
-    WHEN 'BACK_FROM_FORK' THEN
-        SELECT hf.id, hf.block_num INTO __fork_id, __next_event_block_num
-        FROM hive.fork hf
-        WHERE hf.id = __next_event_block_num; -- block_num for BFF events = fork_id
-
-        PERFORM hive.context_back_from_fork( _context_name, __next_event_block_num );
-
-        UPDATE hive.contexts
-        SET
-            current_block_num = __next_event_block_num
-          , fork_id = __fork_id
-        WHERE id = __context_id;
-        RETURN NULL;
-    WHEN 'NEW_IRREVERSIBLE' THEN
-        -- we may got on context  creation irreversible block based on hive.irreversible_data
-        -- unfortunetly some slow app may prevent to removing this event, so wee need to process it
-        -- but do not update irreversible
-        IF ( __irreversible_block_num < __next_event_block_num ) THEN
-            PERFORM hive.context_set_irreversible_block( _context_name, __next_event_block_num );
-        END IF;
-        RETURN NULL;
-    WHEN 'MASSIVE_SYNC' THEN
-        --massive events are squashe at the function begin
-        -- we may got on context  creation irreversible block based on hive.irreversible_data
-        -- unfortunetly some slow app may prevent to removing this event, so we need to process it
-        -- but do not update irreversible
-        IF ( __irreversible_block_num < __next_event_block_num ) THEN
-            PERFORM hive.context_set_irreversible_block( _context_name, __next_event_block_num );
-        END IF;
-        -- no RETURN here because code after the case will continue processing irreversible blocks only
-    WHEN 'NEW_BLOCK' THEN
-        ASSERT  __next_event_block_num > __current_block_num, 'We could not process block without consume event';
-        IF __next_event_block_num = ( __current_block_num + 1 ) THEN
-            UPDATE hive.contexts
-            SET current_block_num = __next_event_block_num
-            WHERE id = __context_id;
-
-            __result.first_block = __next_event_block_num;
-            __result.last_block = __next_event_block_num;
-            RETURN __result ;
-        END IF;
-        -- it is impossible to have hole between __current_block_num and NEW_BLOCK event block_num
-        -- when __current_block_num is not irreversible
-        ASSERT __current_block_num <= __irreversible_block_num, 'current_block_num is reversible!';
-    ELSE
-    END CASE;
-
-    -- if there is no event or we still process irreversible blocks
-    SELECT hc.irreversible_block INTO __irreversible_block_num
-    FROM hive.contexts hc WHERE hc.id = __context_id;
-
-    SELECT MIN( hb.num ), MAX( hb.num )
-    FROM hive.blocks hb
-    WHERE hb.num > __current_block_num AND hb.num <= __irreversible_block_num
-    INTO __next_block_to_process, __last_block_to_process;
-
-    IF __next_block_to_process IS NULL THEN
-            -- There is no new and expected block, needs to wait for a new block
-            PERFORM pg_sleep( 1.5 );
-            RETURN NULL;
-    END IF;
-
-    UPDATE hive.contexts
-    SET current_block_num = __next_block_to_process
-    WHERE id = __context_id;
-
-    __result.first_block = __next_block_to_process;
-    __result.last_block = __last_block_to_process;
+    SELECT * FROM hive.squash_and_get_state( _context_name ) INTO __context_state;
+    SELECT * FROM hive.app_process_event( __context_state ) INTO __result;
     RETURN __result;
 END;
 $BODY$
@@ -327,6 +369,7 @@ DECLARE
     __max_events_id BIGINT;
     __result hive.blocks_range;
 BEGIN
+    --TODO(@Mickiewicz): make it common with forking app (START)
     PERFORM hive.squash_events( _context_name );
 
     SELECT
@@ -350,6 +393,7 @@ BEGIN
 
     SELECT * INTO __next_event_id, __next_event_type,  __next_event_block_num
     FROM hive.find_next_event( _context_name );
+    --TODO(@Mickiewicz): make it common with forking app (END)
 
     CASE __next_event_type
         WHEN 'NEW_IRREVERSIBLE' THEN
@@ -363,6 +407,7 @@ BEGIN
         ELSE
     END CASE;
 
+    --TODO(@Mickiewicz): try to make it common with forking app (START)
     -- if there is no event or we still process irreversible blocks
     SELECT hc.irreversible_block INTO __irreversible_block_num
     FROM hive.contexts hc WHERE hc.id = __context_id;
@@ -387,6 +432,7 @@ BEGIN
     __result.last_block = __last_block_to_process;
     RETURN __result;
     END;
+    --TODO(@Mickiewicz): try to make it common with forking app (END)
 $BODY$
 ;
 

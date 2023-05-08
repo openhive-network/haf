@@ -136,6 +136,7 @@ BEGIN
 
     PERFORM hive.context_attach( _context, _last_synced_block );
 
+    --TODO(@Mickiewicz): only one context in a group may execute this query, it result must be passed to rest of contexts
     SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= _last_synced_block;
 
     UPDATE hive.contexts
