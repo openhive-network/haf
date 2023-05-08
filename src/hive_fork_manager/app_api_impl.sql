@@ -231,16 +231,18 @@ BEGIN
 
     SELECT * INTO __next_event_id, __next_event_type,  __next_event_block_num
     FROM hive.find_next_event( _context_name );
-    -- TODO{@mickiwicz): end subfunction for find next event for a context, the same event_id, event_type and next block num
+    -- TODO{@mickiewicz): end subfunction for find next event for a context, the same event_id, event_type and next block num
     -- should be applyed to all contexts in the group
 
 
     CASE __next_event_type
     WHEN 'BACK_FROM_FORK' THEN
+        --TODO(@Mickiewicz): only lead context in group  shall find fork_id and __next_event_blocknum
         SELECT hf.id, hf.block_num INTO __fork_id, __next_event_block_num
         FROM hive.fork hf
         WHERE hf.id = __next_event_block_num; -- block_num for BFF events = fork_id
 
+        --TODO(@Mickiewicz): is ok per one context in group
         PERFORM hive.context_back_from_fork( _context_name, __next_event_block_num );
 
         UPDATE hive.contexts
@@ -332,6 +334,7 @@ DECLARE
     __max_events_id BIGINT;
     __result hive.blocks_range;
 BEGIN
+    --TODO(@Mickiewicz): make it common with forking app (START)
     PERFORM hive.squash_events( _context_name );
 
     SELECT
@@ -355,6 +358,7 @@ BEGIN
 
     SELECT * INTO __next_event_id, __next_event_type,  __next_event_block_num
     FROM hive.find_next_event( _context_name );
+    --TODO(@Mickiewicz): make it common with forking app (END)
 
     CASE __next_event_type
         WHEN 'NEW_IRREVERSIBLE' THEN
@@ -368,6 +372,7 @@ BEGIN
         ELSE
     END CASE;
 
+    --TODO(@Mickiewicz): try to make it common with forking app (START)
     -- if there is no event or we still process irreversible blocks
     SELECT hc.irreversible_block INTO __irreversible_block_num
     FROM hive.contexts hc WHERE hc.id = __context_id;
@@ -392,6 +397,7 @@ BEGIN
     __result.last_block = __last_block_to_process;
     RETURN __result;
     END;
+    --TODO(@Mickiewicz): try to make it common with forking app (END)
 $BODY$
 ;
 
