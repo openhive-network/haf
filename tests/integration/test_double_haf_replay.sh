@@ -18,7 +18,7 @@ test "$(docker wait haf-instance-5M)" = 0
 
 "$SETUP_SCRIPTS_PATH"/run_hived_img.sh "$HAF_IMAGE_NAME" --data-dir="$SOURCE_DATA_DIR"/datadir --name=haf-instance-5M --replay --stop-replay-at-block=1 --detach
 docker logs -f haf-instance-5M &
-docker container exec haf-instance-5M /home/haf_admin/haf/scripts/psql_run.sh
+docker container exec haf-instance-5M /home/haf_admin/haf/scripts/get_headblock_from_database.sh
 
 
 echo "CHECK THE NUMBER OF REPLAYED BLOCKS"
@@ -36,7 +36,7 @@ test "$(docker wait haf-instance-5M)" = 0
 
 "$SETUP_SCRIPTS_PATH"/run_hived_img.sh "$HAF_IMAGE_NAME" --data-dir="$SOURCE_DATA_DIR"/datadir --name=haf-instance-5M --replay --stop-replay-at-block=1 --detach
 docker logs -f haf-instance-5M &
-docker container exec haf-instance-5M /home/haf_admin/haf/scripts/psql_run.sh
+docker container exec haf-instance-5M /home/haf_admin/haf/scripts/get_headblock_from_database.sh
 
 echo "CHECK THE NUMBER OF REPLAYED BLOCKS"
 cat "$SOURCE_DATA_DIR"/datadir/psql.log
