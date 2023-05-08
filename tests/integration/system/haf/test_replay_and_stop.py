@@ -1,9 +1,10 @@
 import pytest
 
+import test_tools as tt
+
 from haf_local_tools.system.haf import (
     assert_are_blocks_sync_with_haf_db,
     assert_are_indexes_restored,
-    prepare_network_with_init_node_and_haf_node,
     prepare_and_send_transactions,
 )
 
@@ -16,8 +17,10 @@ from haf_local_tools.system.haf import (
         "disabled_indexes_in_replay",
     ],
 )
-def test_replay(psql_index_threshold):
-    haf_node, init_node = prepare_network_with_init_node_and_haf_node()
+def test_replay(haf_node, psql_index_threshold):
+    init_node = tt.InitNode()
+    init_node.run()
+
     haf_node.config.psql_index_threshold = psql_index_threshold
 
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)

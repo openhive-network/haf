@@ -6,7 +6,6 @@ from haf_local_tools.system.haf import (
     assert_are_blocks_sync_with_haf_db,
     assert_are_indexes_restored,
     connect_nodes,
-    prepare_network_with_init_node_and_haf_node,
     prepare_and_send_transactions,
 )
 
@@ -28,8 +27,10 @@ def get_truncated_block_log(node, block_count: int):
         "disabled_indexes_in_replay_and_p2p_sync",
     ],
 )
-def test_replay_and_p2p_sync(psql_index_threshold):
-    haf_node, init_node = prepare_network_with_init_node_and_haf_node()
+def test_replay_and_p2p_sync(haf_node, psql_index_threshold):
+    init_node = tt.InitNode()
+    init_node.run()
+
     haf_node.config.psql_index_threshold = psql_index_threshold
 
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)

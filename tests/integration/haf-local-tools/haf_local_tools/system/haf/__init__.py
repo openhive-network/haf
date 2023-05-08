@@ -16,15 +16,6 @@ def connect_nodes(first_node, second_node) -> None:
     second_node.config.p2p_seed_node = get_implementation(first_node).get_p2p_endpoint()
 
 
-def prepare_network_with_init_node_and_haf_node(init_node_time_offset: str = None):
-    init_node = tt.InitNode()
-    init_node.run(time_offset=init_node_time_offset)
-
-    haf_node = HafNode(keep_database=True)
-
-    return haf_node, init_node
-
-
 def prepare_and_send_transactions(node: tt.InitNode) -> [dict, dict]:
     wallet = tt.Wallet(attach_to=node)
     transaction_0 = wallet.api.create_account("initminer", "alice", "{}")
