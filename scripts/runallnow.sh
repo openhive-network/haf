@@ -45,6 +45,8 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
+# TODO separate driver for C code
+# TODO ASAN - memory leaks
 # TODO add interface to get a particular account balance
 # TODO cleanup init(db
 # TODO struct Postgres2Blocks into class
