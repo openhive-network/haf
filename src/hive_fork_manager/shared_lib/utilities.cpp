@@ -835,17 +835,17 @@ Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 }
 
 
-PG_FUNCTION_INFO_V1(current_all_accounts_balances_C);
+PG_FUNCTION_INFO_V1(current_all_accounts_balances);
 
   /**
-   ** CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C();
+   ** CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances();
    ** RETURNS SETOF hive.current_account_balance_return_type
-   ** AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
+   ** AS 'MODULE_PATHNAME', 'current_all_accounts_balances' LANGUAGE C;
    **
    ** Returns all accounts information for the given state.
    **/
 
-Datum current_all_accounts_balances_C(PG_FUNCTION_ARGS)
+Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
 {
   const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
 

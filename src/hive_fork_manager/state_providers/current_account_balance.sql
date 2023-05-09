@@ -139,7 +139,7 @@ DECLARE
     __get_balances TEXT;
     __top_richest_accounts_json TEXT;
 BEGIN
-    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L)', _table_name, _context);
+    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances(%L)', _table_name, _context);
     EXECUTE __get_balances;
 
     EXECUTE format('

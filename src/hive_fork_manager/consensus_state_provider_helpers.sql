@@ -9,9 +9,9 @@ CREATE TYPE hive.current_account_balance_return_type  AS
     reward_hbd_balance      BIGINT
 );
 
-CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances_C(IN _context TEXT)
+CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances(IN _context TEXT)
 RETURNS SETOF hive.current_account_balance_return_type
-AS 'MODULE_PATHNAME', 'current_all_accounts_balances_C' LANGUAGE C;
+AS 'MODULE_PATHNAME', 'current_all_accounts_balances' LANGUAGE C;
 
 
 
