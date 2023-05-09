@@ -40,7 +40,7 @@ BEGIN
 
 
     PERFORM hive.app_create_context( 'context' );
-    PERFORM hive.app_state_provider_import( 'c_a_b_s_t', 'context' , get_consensus_storage_path(_writable_directory));
+    PERFORM hive.app_state_provider_import( 'CURRENT_ACCOUNT_BALANCE_STATE_PROVIDER', 'context' , get_consensus_storage_path(_writable_directory));
     PERFORM hive.app_context_detach( 'context' );
     UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 5;
     COMMIT;
@@ -56,7 +56,7 @@ AS
 $BODY$
 BEGIN
     ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 1';
-    PERFORM hive.update_state_provider_c_a_b_s_t( 1, 6, 'context' );
+    PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
     COMMIT;
 END;
 $BODY$
@@ -70,13 +70,13 @@ $BODY$
 DECLARE
 BEGIN
     ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 7';
-    ASSERT EXISTS ( SELECT * FROM hive.context_c_a_b_s_t WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
-    ASSERT EXISTS ( SELECT * FROM hive.context_c_a_b_s_t WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';
-    ASSERT EXISTS ( SELECT * FROM hive.context_c_a_b_s_t WHERE account = 'null' AND balance = 0), 'Incorrect balance of null';
-    ASSERT EXISTS ( SELECT * FROM hive.context_c_a_b_s_t WHERE account = 'temp' AND balance = 0), 'Incorrect balance of temp';
-    ASSERT 5 = ( SELECT COUNT(*) FROM hive.context_c_a_b_s_t), 'Incorrect number of accounts';
+    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
+    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';
+    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'null' AND balance = 0), 'Incorrect balance of null';
+    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'temp' AND balance = 0), 'Incorrect balance of temp';
+    ASSERT 5 = ( SELECT COUNT(*) FROM hive.context_current_account_balance_state_provider), 'Incorrect number of accounts';
 
-    ASSERT (SELECT to_regclass('hive.context_c_a_b_s_t')) IS NOT NULL, 'State provider table should exist';
+    ASSERT (SELECT to_regclass('hive.context_current_account_balance_state_provider')) IS NOT NULL, 'State provider table should exist';
     PERFORM hive.app_state_provider_drop_all( 'context' );
     ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory)));
     ASSERT (SELECT to_regclass('hive.context_current_account_balance')) IS NULL, 'State provider table should not exist';

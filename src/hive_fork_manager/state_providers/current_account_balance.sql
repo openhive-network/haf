@@ -1,5 +1,5 @@
-DROP FUNCTION if exists  hive.start_provider_c_a_b_s_t;
-CREATE OR REPLACE FUNCTION hive.start_provider_c_a_b_s_t( _context hive.context_name, _shared_memory_bin_path TEXT)
+DROP FUNCTION if exists  hive.start_provider_current_account_balance_state_provider;
+CREATE OR REPLACE FUNCTION hive.start_provider_current_account_balance_state_provider( _context hive.context_name, _shared_memory_bin_path TEXT)
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE
@@ -7,8 +7,8 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_c_a_b_s_t';
-    __config_table_name TEXT := _context || '_c_a_b_s_t_config';
+    __table_name TEXT := _context || '_current_account_balance_state_provider';
+    __config_table_name TEXT := _context || '_current_account_balance_state_provider_config';
 BEGIN
 
     __context_id = hive.get_context_id( _context );
@@ -41,7 +41,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.update_state_provider_c_a_b_s_t(
+CREATE OR REPLACE FUNCTION hive.update_state_provider_current_account_balance_state_provider(
     _first_block hive.blocks.num%TYPE,
     _last_block hive.blocks.num%TYPE,
     _context hive.context_name)
@@ -52,8 +52,8 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_c_a_b_s_t';
-    __config_table_name TEXT := _context || '_c_a_b_s_t_config';
+    __table_name TEXT := _context || '_current_account_balance_state_provider';
+    __config_table_name TEXT := _context || '_current_account_balance_state_provider_config';
     __get_balances TEXT;
     __database_name TEXT;
     __postgres_url TEXT;
@@ -157,7 +157,7 @@ BEGIN
 END;
 $BODY$
 ;
-CREATE OR REPLACE FUNCTION hive.drop_state_provider_c_a_b_s_t( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.drop_state_provider_current_account_balance_state_provider( _context hive.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -165,8 +165,8 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_c_a_b_s_t';
-    __config_table_name TEXT := _context || '_c_a_b_s_t_config';
+    __table_name TEXT := _context || '_current_account_balance_state_provider';
+    __config_table_name TEXT := _context || '_current_account_balance_state_provider_config';
     __shared_memory_bin_path TEXT;
 BEGIN
     __context_id = hive.get_context_id( _context );
