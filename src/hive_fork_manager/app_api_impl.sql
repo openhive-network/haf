@@ -189,7 +189,8 @@ CREATE TYPE hive.blocks_range AS (
 
 DROP TYPE IF EXISTS hive.context_state CASCADE;
 CREATE TYPE hive.context_state AS (
-      id INT
+      context_name TEXT
+    , id INT
     , current_block_num INT
     , is_attached BOOL
     , irreversible_block_num INT
@@ -212,7 +213,8 @@ $BODY$
         PERFORM hive.squash_events( _context_name );
 
         SELECT
-               hac.id
+               _context_name
+             , hac.id
              , hac.current_block_num
              , hac.is_attached
              , hac.irreversible_block
@@ -261,7 +263,7 @@ BEGIN
         WHERE hf.id = __context_state.next_event_block_num; -- block_num for BFF events = fork_id
 
         --TODO(@Mickiewicz): is ok per one context in group
-        PERFORM hive.context_back_from_fork( _context_name, __context_state.next_event_block_num );
+        PERFORM hive.context_back_from_fork( __context_state.context_name, __context_state.next_event_block_num );
 
         UPDATE hive.contexts
         SET
@@ -274,7 +276,7 @@ BEGIN
         -- unfortunetly some slow app may prevent to removing this event, so wee need to process it
         -- but do not update irreversible
         IF ( __context_state.irreversible_block_num < __context_state.next_event_block_num ) THEN
-            PERFORM hive.context_set_irreversible_block( _context_name, __context_state.next_event_block_num );
+            PERFORM hive.context_set_irreversible_block( __context_state.context_name, __context_state.next_event_block_num );
         END IF;
         RETURN NULL;
     WHEN 'MASSIVE_SYNC' THEN
@@ -283,7 +285,7 @@ BEGIN
         -- unfortunetly some slow app may prevent to removing this event, so we need to process it
         -- but do not update irreversible
         IF ( __context_state.irreversible_block_num < __context_state.next_event_block_num ) THEN
-            PERFORM hive.context_set_irreversible_block( _context_name, __context_state.next_event_block_num );
+            PERFORM hive.context_set_irreversible_block( __context_state.context_name, __context_state.next_event_block_num );
         END IF;
         -- no RETURN here because code after the case will continue processing irreversible blocks only
     WHEN 'NEW_BLOCK' THEN
