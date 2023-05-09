@@ -125,7 +125,7 @@ haf_system_tests:
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-database-store="$CI_PROJECT_DIR/haf_database_store" --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager_testnet/build"
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf
-    - pytest --junitxml report.xml -n ${PYTEST_NUMBER_OF_PROCESSES} -m not mirrornet
+    - pytest --junitxml report.xml -n ${PYTEST_NUMBER_OF_PROCESSES} -m "not mirrornet"
   artifacts:
     paths:
     - "**/generated_during_*"
