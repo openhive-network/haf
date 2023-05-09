@@ -62,7 +62,7 @@ hive_fork_manager_mirrornet:
   stage: build_and_test_phase_1
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
-    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=$BUILD_HIVE_TESTNET -DHIVE_CONVERTER_BUILD=$DHIVE_CONVERTER_BUILD" $HIVE_TARGETS
+    - $SETUP_SCRIPTS_PATH/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$CI_PROJECT_DIR" --haf-binaries-dir="$CI_PROJECT_DIR/$CI_JOB_NAME/build" --cmake-arg="-DBUILD_HIVE_TESTNET=$BUILD_HIVE_TESTNET" --cmake-arg="-DHIVE_CONVERTER_BUILD=$HIVE_CONVERTER_BUILD" $HIVE_TARGETS
     # check if sql_serializer compiles with hived
     - test -f "$CI_PROJECT_DIR/$CI_JOB_NAME/build/hive/libraries/plugins/sql_serializer/libsql_serializer_plugin.a"
     # check if sql_serializer plugin is included in hived plugins
@@ -80,14 +80,14 @@ hive_fork_manager_mirrornet:
 hived:
   variables:
     BUILD_HIVE_TESTNET: "OFF"
-    DHIVE_CONVERTER_BUILD: "OFF"
+    HIVE_CONVERTER_BUILD: "OFF"
     HIVE_TARGETS: "hived compress_block_log"
   extends: .hived_build
 
 hived_testnet:
   variables:
     BUILD_HIVE_TESTNET: "ON"
-    DHIVE_CONVERTER_BUILD: "OFF"
+    HIVE_CONVERTER_BUILD: "OFF"
     HIVE_TARGETS: "hived cli_wallet get_dev_key compress_block_log"
   extends: .hived_build
   interruptible: true
@@ -95,7 +95,7 @@ hived_testnet:
 hived_mirrornet:
   variables:
     BUILD_HIVE_TESTNET: "OFF"
-    DHIVE_CONVERTER_BUILD: "ON"
+    HIVE_CONVERTER_BUILD: "ON"
     HIVE_TARGETS: "hived cli_wallet get_dev_key compress_block_log"
   extends: .hived_build
   interruptible: true
