@@ -57,7 +57,7 @@ DECLARE
     __get_balances TEXT;
     __database_name TEXT;
     __postgres_url TEXT;
-	__current_pid INT;
+    __current_pid INT;
     __shared_memory_bin_path TEXT;
     __consensus_state_provider_replay_call_ok BOOLEAN;
 BEGIN
@@ -65,48 +65,42 @@ BEGIN
     __context_id = hive.get_context_id( _context );
 
     IF __context_id IS NULL THEN
-             RAISE EXCEPTION 'No context with name %', _context;
+        RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
     EXECUTE format('TRUNCATE TABLE hive.%s', __table_name);
 
-    
     RAISE NOTICE 'consensus_state_provider_replay';
 
     SELECT datname AS database_name FROM pg_stat_activity WHERE pid = __current_pid INTO __database_name;
 
     __postgres_url = 'postgres:///' || __database_name;
     raise notice '__postgres_url=%', __postgres_url;
-    
+
     EXECUTE format('SELECT * FROM hive.%s ', __config_table_name) INTO __shared_memory_bin_path;
     raise notice '__shared_memory_bin_path=%', __shared_memory_bin_path;
-
 
     __consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(_first_block, _last_block, _context , __postgres_url, __shared_memory_bin_path));
 
     RAISE NOTICE '__consensus_state_provider_replay_call_ok=%', __consensus_state_provider_replay_call_ok;
 
-    -- mtlk TODO remove below, maybe move upwards
-IF TRUE THEN -- mtlk try_grab_operations
-    raise notice 'Accounts 15 richest=%', E'\n' || 
+    __get_balances = format('INSERT INTO hive.%I SELECT * FROM LATERAL hive.current_all_accounts_balances_C(%L) t ORDER BY t.balance DESC LIMIT 15', __table_name, _context);
+    EXECUTE __get_balances;
+
+    RAISE NOTICE 'Accounts 15 richest=%', E'\n' || 
     (
         SELECT json_agg(t)
-        FROM (
+        FROM LATERAL (
                 SELECT *
-                FROM hive.current_all_accounts_balances_C(_context) ORDER BY balance DESC LIMIT 15 
+                FROM hive.current_all_accounts_balances_C(_context)
+                ORDER BY balance DESC
+                LIMIT 15 
             ) t
     );
-
-
-    __get_balances = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L);', __table_name, _context);
-    EXECUTE __get_balances;
-END IF;
 
 END;
 $BODY$
 ;
-
-
 CREATE OR REPLACE FUNCTION hive.drop_state_provider_c_a_b_s_t( _context hive.context_name )
     RETURNS void
     LANGUAGE plpgsql
