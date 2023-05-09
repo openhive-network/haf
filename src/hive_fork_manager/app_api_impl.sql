@@ -196,8 +196,6 @@ DECLARE
     __context_id INT;
     __context_is_attached BOOL;
     __current_block_num INT;
-    __current_fork BIGINT;
-    __current_event_id BIGINT;
     __irreversible_block_num INT;
     __next_event_id BIGINT;
     __next_event_type hive.event_type;
@@ -211,15 +209,13 @@ BEGIN
     PERFORM hive.squash_events( _context_name );
 
     SELECT
-        hac.current_block_num
-         , hac.fork_id
-         , hac.events_id
+           hac.current_block_num
          , hac.id
          , hac.is_attached
          , hac.irreversible_block
     FROM hive.contexts hac
     WHERE hac.name = _context_name
-    INTO __current_block_num, __current_fork, __current_event_id, __context_id, __context_is_attached, __irreversible_block_num;
+    INTO __current_block_num, __context_id, __context_is_attached, __irreversible_block_num;
 
     IF __context_id IS NULL THEN
         RAISE EXCEPTION 'No context with name %', _context_name;
