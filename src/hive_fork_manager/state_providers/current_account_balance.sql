@@ -82,7 +82,7 @@ BEGIN
 
     RAISE NOTICE '__consensus_state_provider_replay_call_ok=%', __consensus_state_provider_replay_call_ok;
 
-    PERFORM hive.update_top_richest_accounts(_context, __table_name);
+    PERFORM hive.update_accounts_table(_context, __table_name);
 
 END;
 $BODY$
@@ -112,7 +112,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.get_shared_memory_bin_path(__config_table_name TEXT)
+CREATE OR REPLACE FUNCTION hive.get_shared_memory_bin_path(_config_table_name TEXT)
     RETURNS TEXT
     LANGUAGE plpgsql
     VOLATILE
@@ -121,7 +121,7 @@ $BODY$
 DECLARE
     __shared_memory_bin_path TEXT;
 BEGIN
-    EXECUTE format('SELECT * FROM hive.%s', __config_table_name) INTO __shared_memory_bin_path;
+    EXECUTE format('SELECT * FROM hive.%s', _config_table_name) INTO __shared_memory_bin_path;
     RAISE NOTICE '__shared_memory_bin_path=%', __shared_memory_bin_path;
     RETURN __shared_memory_bin_path;
 END;
@@ -129,9 +129,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.update_top_richest_accounts(
-    _context TEXT,
-    __table_name TEXT)
+CREATE OR REPLACE FUNCTION hive.update_accounts_table(_context TEXT, _table_name TEXT)
 RETURNS void
 LANGUAGE plpgsql
 VOLATILE
@@ -141,7 +139,7 @@ DECLARE
     __get_balances TEXT;
     __top_richest_accounts_json TEXT;
 BEGIN
-    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L)', __table_name, _context);
+    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L)', _table_name, _context);
     EXECUTE __get_balances;
 
     EXECUTE format('
@@ -152,7 +150,7 @@ BEGIN
             ORDER BY balance DESC
             LIMIT 15
         ) t
-    ', __table_name) INTO __top_richest_accounts_json;
+    ', _table_name) INTO __top_richest_accounts_json;
 
     RAISE NOTICE 'Accounts 15 richest=%', E'\n' || __top_richest_accounts_json;
 
