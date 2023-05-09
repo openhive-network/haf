@@ -57,7 +57,7 @@ $BODY$
 BEGIN
     RAISE NOTICE 'consensus_state_provider_get_expected_block_num = %', hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory));
     ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 1';
-    PERFORM hive.update_state_provider_current_account_balancasane_state_provider( 1, 6, 'context' );
+    PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
     COMMIT;
 END;
 $BODY$
