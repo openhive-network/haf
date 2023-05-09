@@ -193,6 +193,9 @@ CREATE TYPE hive.context_state AS (
     , current_block_num INT
     , is_attached BOOL
     , irreversible_block_num INT
+    , next_event_id BIGINT
+    , next_event_type hive.event_type
+    , next_event_block_num INT
 );
 
 
@@ -225,6 +228,9 @@ $BODY$
             RAISE EXCEPTION 'Context % is detached', _context_name;
         END IF;
 
+        SELECT * INTO __context_state.next_event_id, __context_state.next_event_type,  __context_state.next_event_block_num
+        FROM hive.find_next_event( _context_name );
+
         RETURN __context_state;
     END;
 $BODY$
@@ -239,37 +245,27 @@ AS
 $BODY$
 DECLARE
     __context_state hive.context_state;
-    __next_event_id BIGINT;
-    __next_event_type hive.event_type;
-    __next_event_block_num INT;
     __next_block_to_process INT;
     __last_block_to_process INT;
     __fork_id BIGINT;
     __result hive.blocks_range;
 BEGIN
-    -- TODO{@mickiwicz): start subfunction for find next event for a context
+    -- TODO{@mickiewicz): should be applyed to all contexts in the group
     SELECT * FROM hive.squash_and_get_state( _context_name ) INTO __context_state;
 
-
-    SELECT * INTO __next_event_id, __next_event_type,  __next_event_block_num
-    FROM hive.find_next_event( _context_name );
-    -- TODO{@mickiewicz): end subfunction for find next event for a context, the same event_id, event_type and next block num
-    -- should be applyed to all contexts in the group
-
-
-    CASE __next_event_type
+    CASE __context_state.next_event_type
     WHEN 'BACK_FROM_FORK' THEN
         --TODO(@Mickiewicz): only lead context in group  shall find fork_id and __next_event_blocknum
-        SELECT hf.id, hf.block_num INTO __fork_id, __next_event_block_num
+        SELECT hf.id, hf.block_num INTO __fork_id, __context_state.next_event_block_num
         FROM hive.fork hf
-        WHERE hf.id = __next_event_block_num; -- block_num for BFF events = fork_id
+        WHERE hf.id = __context_state.next_event_block_num; -- block_num for BFF events = fork_id
 
         --TODO(@Mickiewicz): is ok per one context in group
-        PERFORM hive.context_back_from_fork( _context_name, __next_event_block_num );
+        PERFORM hive.context_back_from_fork( _context_name, __context_state.next_event_block_num );
 
         UPDATE hive.contexts
         SET
-            current_block_num = __next_event_block_num
+            current_block_num = __context_state.next_event_block_num
           , fork_id = __fork_id
         WHERE id = __context_state.id;
         RETURN NULL;
@@ -277,8 +273,8 @@ BEGIN
         -- we may got on context  creation irreversible block based on hive.irreversible_data
         -- unfortunetly some slow app may prevent to removing this event, so wee need to process it
         -- but do not update irreversible
-        IF ( __context_state.irreversible_block_num < __next_event_block_num ) THEN
-            PERFORM hive.context_set_irreversible_block( _context_name, __next_event_block_num );
+        IF ( __context_state.irreversible_block_num < __context_state.next_event_block_num ) THEN
+            PERFORM hive.context_set_irreversible_block( _context_name, __context_state.next_event_block_num );
         END IF;
         RETURN NULL;
     WHEN 'MASSIVE_SYNC' THEN
@@ -286,19 +282,19 @@ BEGIN
         -- we may got on context  creation irreversible block based on hive.irreversible_data
         -- unfortunetly some slow app may prevent to removing this event, so we need to process it
         -- but do not update irreversible
-        IF ( __context_state.irreversible_block_num < __next_event_block_num ) THEN
-            PERFORM hive.context_set_irreversible_block( _context_name, __next_event_block_num );
+        IF ( __context_state.irreversible_block_num < __context_state.next_event_block_num ) THEN
+            PERFORM hive.context_set_irreversible_block( _context_name, __context_state.next_event_block_num );
         END IF;
         -- no RETURN here because code after the case will continue processing irreversible blocks only
     WHEN 'NEW_BLOCK' THEN
-        ASSERT  __next_event_block_num > __context_state.current_block_num, 'We could not process block without consume event';
-        IF __next_event_block_num = ( __context_state.current_block_num + 1 ) THEN
+        ASSERT  __context_state.next_event_block_num > __context_state.current_block_num, 'We could not process block without consume event';
+        IF __context_state.next_event_block_num = ( __context_state.current_block_num + 1 ) THEN
             UPDATE hive.contexts
-            SET current_block_num = __next_event_block_num
+            SET current_block_num = __context_state.next_event_block_num
             WHERE id = __context_state.id;
 
-            __result.first_block = __next_event_block_num;
-            __result.last_block = __next_event_block_num;
+            __result.first_block = __context_state.next_event_block_num;
+            __result.last_block = __context_state.next_event_block_num;
             RETURN __result ;
         END IF;
         -- it is impossible to have hole between __current_block_num and NEW_BLOCK event block_num
