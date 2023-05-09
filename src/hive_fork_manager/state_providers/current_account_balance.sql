@@ -76,8 +76,7 @@ BEGIN
 
     __postgres_url := hive.get_postgres_url();
 
-    EXECUTE format('SELECT * FROM hive.%s ', __config_table_name) INTO __shared_memory_bin_path;
-    raise notice '__shared_memory_bin_path=%', __shared_memory_bin_path;
+    __shared_memory_bin_path := hive.get_shared_memory_bin_path(__config_table_name);
 
     __consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(_first_block, _last_block, _context , __postgres_url, __shared_memory_bin_path));
 
@@ -112,6 +111,22 @@ END;
 $BODY$
 ;
 
+
+CREATE OR REPLACE FUNCTION hive.get_shared_memory_bin_path(__config_table_name TEXT)
+    RETURNS TEXT
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __shared_memory_bin_path TEXT;
+BEGIN
+    EXECUTE format('SELECT * FROM hive.%s', __config_table_name) INTO __shared_memory_bin_path;
+    RAISE NOTICE '__shared_memory_bin_path=%', __shared_memory_bin_path;
+    RETURN __shared_memory_bin_path;
+END;
+$BODY$
+;
 
 
 CREATE OR REPLACE FUNCTION hive.update_top_richest_accounts(
