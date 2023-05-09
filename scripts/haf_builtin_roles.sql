@@ -41,3 +41,14 @@ BEGIN
     RAISE NOTICE 'hived role already exists';
 END
 $$;
+
+DO $$
+BEGIN
+    BEGIN
+        CREATE ROLE haf_app_public WITH LOGIN INHERIT IN ROLE hive_applications_group;
+        ALTER ROLE haf_app_public SET query_supervisor.limits_enabled TO true;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+        RAISE NOTICE 'haf_app_public role already exists';
+    END;
+END
+$$;
