@@ -92,7 +92,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # DONE? refactor app.main
 # DONE #include <../../../apis/block_api/include/hive/plugins/block_api/block_api_objects.hpp>
 # DONE - recognize existing context_shared_memory_bin
-# DONE eliminate MTLK_FROM_VARIANT_ON_CONSUME_JSON_HACK
+# DONE eliminate _FROM_VARIANT_ON_CONSUME_JSON_HACK
 # DONE - bash_test assert
 # DONE - remove permissions from app_cont
 
