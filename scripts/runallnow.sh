@@ -45,6 +45,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
+# TODO add interface to get a particular account balance
 # TODO cleanup init(db
 # TODO struct Postgres2Blocks into class
 # TODO remove mtlk
