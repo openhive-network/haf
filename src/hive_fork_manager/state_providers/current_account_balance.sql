@@ -101,25 +101,26 @@ AS
 $BODY$
 DECLARE
     __get_balances TEXT;
+    __top_richest_accounts_json TEXT;
 BEGIN
-    __get_balances := format('INSERT INTO hive.%I SELECT * FROM LATERAL hive.current_all_accounts_balances_C(%L) t ORDER BY t.balance DESC LIMIT 15', __table_name, _context);
+    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances_C(%L)', __table_name, _context);
     EXECUTE __get_balances;
 
-    RAISE NOTICE 'Accounts 15 richest=%', E'\n' || 
-    (
+    EXECUTE format('
         SELECT json_agg(t)
-        FROM LATERAL (
-                SELECT *
-                FROM hive.current_all_accounts_balances_C(_context)
-                ORDER BY balance DESC
-                LIMIT 15 
-            ) t
-    );
+        FROM (
+            SELECT *
+            FROM hive.%I
+            ORDER BY balance DESC
+            LIMIT 15
+        ) t
+    ', __table_name) INTO __top_richest_accounts_json;
+
+    RAISE NOTICE 'Accounts 15 richest=%', E'\n' || __top_richest_accounts_json;
 
 END;
 $BODY$
 ;
-
 CREATE OR REPLACE FUNCTION hive.drop_state_provider_c_a_b_s_t( _context hive.context_name )
     RETURNS void
     LANGUAGE plpgsql
