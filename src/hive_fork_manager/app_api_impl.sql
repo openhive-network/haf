@@ -186,6 +186,51 @@ CREATE TYPE hive.blocks_range AS (
     , last_block INT
     );
 
+
+DROP TYPE IF EXISTS hive.context_state CASCADE;
+CREATE TYPE hive.context_state AS (
+      id INT
+    , current_block_num INT
+    , is_attached BOOL
+    , irreversible_block_num INT
+);
+
+
+
+CREATE OR REPLACE FUNCTION hive.squash_and_get_state( _context_name TEXT )
+    RETURNS hive.context_state
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+    DECLARE
+        __context_state hive.context_state;
+    BEGIN
+        PERFORM hive.squash_events( _context_name );
+
+        SELECT
+               hac.id
+             , hac.current_block_num
+             , hac.is_attached
+             , hac.irreversible_block
+        FROM hive.contexts hac
+        WHERE hac.name = _context_name
+        INTO __context_state;
+
+        IF __context_state.id IS NULL THEN
+            RAISE EXCEPTION 'No context with name %', _context_name;
+        END IF;
+
+        IF __context_state.is_attached = FALSE THEN
+            RAISE EXCEPTION 'Context % is detached', _context_name;
+        END IF;
+
+        RETURN __context_state;
+    END;
+$BODY$
+;
+
+
 CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_name TEXT )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
@@ -193,10 +238,7 @@ CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_name TEXT )
 AS
 $BODY$
 DECLARE
-    __context_id INT;
-    __context_is_attached BOOL;
-    __current_block_num INT;
-    __irreversible_block_num INT;
+    __context_state hive.context_state;
     __next_event_id BIGINT;
     __next_event_type hive.event_type;
     __next_event_block_num INT;
@@ -206,24 +248,8 @@ DECLARE
     __result hive.blocks_range;
 BEGIN
     -- TODO{@mickiwicz): start subfunction for find next event for a context
-    PERFORM hive.squash_events( _context_name );
+    SELECT * FROM hive.squash_and_get_state( _context_name ) INTO __context_state;
 
-    SELECT
-           hac.current_block_num
-         , hac.id
-         , hac.is_attached
-         , hac.irreversible_block
-    FROM hive.contexts hac
-    WHERE hac.name = _context_name
-    INTO __current_block_num, __context_id, __context_is_attached, __irreversible_block_num;
-
-    IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context_name;
-    END IF;
-
-    IF __context_is_attached = FALSE THEN
-        RAISE EXCEPTION 'Context % is detached', _context_name;
-    END IF;
 
     SELECT * INTO __next_event_id, __next_event_type,  __next_event_block_num
     FROM hive.find_next_event( _context_name );
@@ -245,13 +271,13 @@ BEGIN
         SET
             current_block_num = __next_event_block_num
           , fork_id = __fork_id
-        WHERE id = __context_id;
+        WHERE id = __context_state.id;
         RETURN NULL;
     WHEN 'NEW_IRREVERSIBLE' THEN
         -- we may got on context  creation irreversible block based on hive.irreversible_data
         -- unfortunetly some slow app may prevent to removing this event, so wee need to process it
         -- but do not update irreversible
-        IF ( __irreversible_block_num < __next_event_block_num ) THEN
+        IF ( __context_state.irreversible_block_num < __next_event_block_num ) THEN
             PERFORM hive.context_set_irreversible_block( _context_name, __next_event_block_num );
         END IF;
         RETURN NULL;
@@ -260,16 +286,16 @@ BEGIN
         -- we may got on context  creation irreversible block based on hive.irreversible_data
         -- unfortunetly some slow app may prevent to removing this event, so we need to process it
         -- but do not update irreversible
-        IF ( __irreversible_block_num < __next_event_block_num ) THEN
+        IF ( __context_state.irreversible_block_num < __next_event_block_num ) THEN
             PERFORM hive.context_set_irreversible_block( _context_name, __next_event_block_num );
         END IF;
         -- no RETURN here because code after the case will continue processing irreversible blocks only
     WHEN 'NEW_BLOCK' THEN
-        ASSERT  __next_event_block_num > __current_block_num, 'We could not process block without consume event';
-        IF __next_event_block_num = ( __current_block_num + 1 ) THEN
+        ASSERT  __next_event_block_num > __context_state.current_block_num, 'We could not process block without consume event';
+        IF __next_event_block_num = ( __context_state.current_block_num + 1 ) THEN
             UPDATE hive.contexts
             SET current_block_num = __next_event_block_num
-            WHERE id = __context_id;
+            WHERE id = __context_state.id;
 
             __result.first_block = __next_event_block_num;
             __result.last_block = __next_event_block_num;
@@ -277,17 +303,17 @@ BEGIN
         END IF;
         -- it is impossible to have hole between __current_block_num and NEW_BLOCK event block_num
         -- when __current_block_num is not irreversible
-        ASSERT __current_block_num <= __irreversible_block_num, 'current_block_num is reversible!';
+        ASSERT __context_state.current_block_num <= __context_state.irreversible_block_num, 'current_block_num is reversible!';
     ELSE
     END CASE;
 
     -- if there is no event or we still process irreversible blocks
-    SELECT hc.irreversible_block INTO __irreversible_block_num
-    FROM hive.contexts hc WHERE hc.id = __context_id;
+    SELECT hc.irreversible_block INTO __context_state.irreversible_block_num
+    FROM hive.contexts hc WHERE hc.id = __context_state.id;
 
     SELECT MIN( hb.num ), MAX( hb.num )
     FROM hive.blocks hb
-    WHERE hb.num > __current_block_num AND hb.num <= __irreversible_block_num
+    WHERE hb.num > __context_state.current_block_num AND hb.num <= __context_state.irreversible_block_num
     INTO __next_block_to_process, __last_block_to_process;
 
     IF __next_block_to_process IS NULL THEN
@@ -299,7 +325,7 @@ BEGIN
 
     UPDATE hive.contexts
     SET current_block_num = __next_block_to_process
-    WHERE id = __context_id;
+    WHERE id = __context_state.id;
 
     __result.first_block = __next_block_to_process;
     __result.last_block = __last_block_to_process;
