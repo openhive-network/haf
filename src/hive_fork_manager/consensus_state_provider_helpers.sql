@@ -13,7 +13,9 @@ CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances(IN _context TEXT)
 RETURNS SETOF hive.current_account_balance_return_type
 AS 'MODULE_PATHNAME', 'current_all_accounts_balances' LANGUAGE C;
 
-
+CREATE OR REPLACE FUNCTION hive.current_account_balance(IN account TEXT, IN _context TEXT)
+RETURNS SETOF hive.current_account_balance_return_type
+AS 'MODULE_PATHNAME', 'current_account_balance' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.consensus_state_provider_replay(in _from INT, in _to INT, IN _context TEXT, IN _postgres_url TEXT, IN shared_memory_bin_path TEXT)
 RETURNS BOOLEAN
