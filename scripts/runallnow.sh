@@ -963,6 +963,7 @@ save_state()
 remove_context_shared_memory_bin()
 {
     
+    sudo rm  -rf $DATA_DIR/consensus_storage
     sudo rm  -rf $DATA_DIR/consensus_state_provider
     sudo rm  $DATA_DIR/context/blockchain/shared_memory.bin && echo removed! || echo not removed
     
