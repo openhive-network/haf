@@ -74,8 +74,7 @@ BEGIN
 
     SELECT datname AS database_name FROM pg_stat_activity WHERE pid = __current_pid INTO __database_name;
 
-    __postgres_url = 'postgres:///' || __database_name;
-    raise notice '__postgres_url=%', __postgres_url;
+    __postgres_url := hive.get_postgres_url();
 
     EXECUTE format('SELECT * FROM hive.%s ', __config_table_name) INTO __shared_memory_bin_path;
     raise notice '__shared_memory_bin_path=%', __shared_memory_bin_path;
@@ -89,6 +88,30 @@ BEGIN
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE FUNCTION hive.get_postgres_url()
+    RETURNS TEXT
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __current_pid INT;
+    __database_name TEXT;
+    __postgres_url TEXT;
+BEGIN
+    __current_pid := pg_backend_pid();
+    SELECT datname AS database_name
+    FROM pg_stat_activity
+    WHERE pid = __current_pid INTO __database_name;
+
+    __postgres_url := 'postgres:///' || __database_name;
+    RAISE NOTICE '__postgres_url=%', __postgres_url;
+    RETURN __postgres_url;
+END;
+$BODY$
+;
+
 
 
 CREATE OR REPLACE FUNCTION hive.update_top_richest_accounts(
