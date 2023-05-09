@@ -55,8 +55,9 @@ CREATE PROCEDURE test_when(_writable_directory TEXT)
 AS
 $BODY$
 BEGIN
+    RAISE NOTICE 'consensus_state_provider_get_expected_block_num = %', hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory));
     ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 1';
-    PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
+    PERFORM hive.update_state_provider_current_account_balancasane_state_provider( 1, 6, 'context' );
     COMMIT;
 END;
 $BODY$
@@ -68,7 +69,13 @@ CREATE PROCEDURE test_then(_writable_directory TEXT)
 AS
 $BODY$
 DECLARE
+    rec hive.current_account_balance_return_type;
 BEGIN
+    --RAISE NOTICE 'hive.current_account_balance of initminer = %', (hive.current_account_balance('initminer'));
+    -- FOR rec IN SELECT * FROM hive.current_account_balance('initminer') LOOP
+    --     RAISE NOTICE 'hive.current_account_balance of initminer: account = %, balance = %, hbd_balance = %, vesting_shares = %, savings_hbd_balance = %, reward_hbd_balance = %',
+    --     rec.account, rec.balance, rec.hbd_balance, rec.vesting_shares, rec.savings_hbd_balance, rec.reward_hbd_balance;
+    -- END LOOP;    
     ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 7';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';
