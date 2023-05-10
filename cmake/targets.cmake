@@ -14,6 +14,17 @@ MACRO( ADD_RUNTIME_LOADED_LIB target_name )
     ADD_POSTGRES_LIBRARIES( ${target_name} )
 ENDMACRO()
 
+MACRO( ADD_RUNTIME_LOADED_EXE target_name )
+    FILE( GLOB_RECURSE sources ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp )
+    ADD_EXECUTABLE( ${target_name} ${sources} )
+
+    SETUP_COMPILER( ${target_name} )
+    SETUP_CLANG_TIDY( ${target_name} )
+
+    ADD_POSTGRES_INCLUDES( ${target_name} )
+    ADD_POSTGRES_LIBRARIES( ${target_name} )
+ENDMACRO()
+
 MACRO( ADD_LOADTIME_LOADED_LIB target_name )
     SET( test_lib test_${target_name} )
     FILE( GLOB_RECURSE sources ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp )

@@ -10,17 +10,19 @@
 
 
 
-#include "postgres.h"
-#include "fmgr.h"
 
-PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
 
-Datum consensus_state_provider_replay(PG_FUNCTION_ARGS);
+#include "consensus_state_provider_replay.hpp"
 
 
 
 int main()
 {
-    consensus_state_provider_replay();
-    return 0;
+    auto ok = consensus_state_provider::consensus_state_provider_replay_impl(
+        1,
+        1000,
+        "driverc",
+        "postgresql:///haf_block_log",
+        "/home/hived/datadir/consensus_state_provider");
+    return ok != 0;
 }
