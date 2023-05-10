@@ -338,9 +338,6 @@ AS
 $BODY$
 DECLARE
     __context_state hive.context_state;
-    __next_block_to_process INT;
-    __last_block_to_process INT;
-    __fork_id BIGINT;
     __result hive.blocks_range;
 BEGIN
     SELECT * FROM hive.squash_and_get_state( _context_name ) INTO __context_state;
