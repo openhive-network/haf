@@ -1,5 +1,61 @@
 #!/bin/bash
 
+
+# root" execution of the PostgreSQL server is not permitted.
+# The server must be started under an unprivileged user ID to prevent
+# possible system security compromise.  See the documentation for
+
+# valgrind --tool=callgrind --instr-atstart=no --callgrind-out-file=./callgrind.out.%p /usr/lib/postgresql/14/bin/postgres --config_file=/etc/postgresql/14/main/postgresql.conf
+
+# proby byly 
+# 1. -static-libasan:
+# SET(HIVE_ASAN_LINK_OPTIONS  -fsanitize=address)  -> SET(HIVE_ASAN_LINK_OPTIONS -static-libasan -fsanitize=address)
+
+# 2. driver of postgres functions 
+# src/hive_fork_manager/shared_lib/CMakeLists.txt:
+# ADD_EXECUTABLE(mtlk_executable
+    
+#   mtlk_main.cpp
+# )
+
+# ADD_POSTGRES_INCLUDES( mtlk_executable )
+# ADD_POSTGRES_LIBRARIES( mtlk_executable )
+
+# target_link_libraries(mtlk_executable
+#     PRIVATE ${target_name}
+# )
+
+#    src/hive_fork_manager/shared_lib/mtlk_main.cpp:
+
+# #include "operation_base.hpp"
+
+# #include <hive/protocol/forward_impacted.hpp>
+# #include <hive/protocol/misc_utilities.hpp>
+
+# #include <fc/io/json.hpp>
+# #include <fc/string.hpp>
+
+# #include <vector>
+
+
+
+# #include "postgres.h"
+# #include "fmgr.h"
+
+# PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
+
+# Datum consensus_state_provider_replay(PG_FUNCTION_ARGS);
+
+
+
+# int main()
+# {
+#     consensus_state_provider_replay();
+#     return 0;
+# }
+
+
+
 # sudo rm /home/hived/datadir/context/blockchain/shared_memory.bin; ../haf/scripts/runallnow.sh build
 # rsync -avh   /home/haf_admin/haf /home/hived/datadir/src/
 
