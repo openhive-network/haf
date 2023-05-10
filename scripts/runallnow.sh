@@ -203,6 +203,16 @@ END_LOG_STEEMIT_10
 # sudo rm /home/hived/datadir/context/blockchain/shared_memory.bin; ../haf/scripts/runallnow.sh build
 # rsync -avh   /home/haf_admin/haf /home/hived/datadir/src/
 
+# valgrind 
+#     --fullpath-after=10   
+#     --show-leak-kinds=all  
+#     --soname-synonyms=somalloc=none 
+#     --track-origins=yes 
+#     --trace-children=yes  
+#     --leak-check=full 
+#     --log-file=valgrind.log  
+#     /usr/lib/postgresql/14/bin/postgres --config_file=/etc/postgresql/14/main/postgresql.conf
+
 set -x
 set -euo pipefail
 
