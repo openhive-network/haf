@@ -2,6 +2,7 @@
 
 
 
+
 # block 23645967 //FC_ASSERT( vo.amount >= 0, "Asset amount cannot be negative" );   - nijeah 
 
 : <<END_COMMENT
@@ -957,6 +958,62 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # ('taker', 15014283, 535515, 4596963565191)
 # ('steemit1', 10000205, 134872472, 1005084292327)
 # ('ashold882015', 9895158, 134, 3101147621378)
+
+
+
+
+# root" execution of the PostgreSQL server is not permitted.
+# The server must be started under an unprivileged user ID to prevent
+# possible system security compromise.  See the documentation for
+
+# valgrind --tool=callgrind --instr-atstart=no --callgrind-out-file=./callgrind.out.%p /usr/lib/postgresql/14/bin/postgres --config_file=/etc/postgresql/14/main/postgresql.conf
+
+# proby byly 
+# 1. -static-libasan:
+# SET(HIVE_ASAN_LINK_OPTIONS  -fsanitize=address)  -> SET(HIVE_ASAN_LINK_OPTIONS -static-libasan -fsanitize=address)
+
+# 2. driver of postgres functions 
+# src/hive_fork_manager/shared_lib/CMakeLists.txt:
+# ADD_EXECUTABLE(mtlk_executable
+    
+#   mtlk_main.cpp
+# )
+
+# ADD_POSTGRES_INCLUDES( mtlk_executable )
+# ADD_POSTGRES_LIBRARIES( mtlk_executable )
+
+# target_link_libraries(mtlk_executable
+#     PRIVATE ${target_name}
+# )
+
+#    src/hive_fork_manager/shared_lib/mtlk_main.cpp:
+
+# #include "operation_base.hpp"
+
+# #include <hive/protocol/forward_impacted.hpp>
+# #include <hive/protocol/misc_utilities.hpp>
+
+# #include <fc/io/json.hpp>
+# #include <fc/string.hpp>
+
+# #include <vector>
+
+
+
+# #include "postgres.h"
+# #include "fmgr.h"
+
+# PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
+
+# Datum consensus_state_provider_replay(PG_FUNCTION_ARGS);
+
+
+
+# int main()
+# {
+#     consensus_state_provider_replay();
+#     return 0;
+# }
 
 
 
