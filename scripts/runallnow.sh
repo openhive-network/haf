@@ -754,12 +754,12 @@ killpostgres()
 {
     # sudo killall -9 postgres || true
 
-    if $(systemctl list-machines)
-    then
-        sudo systemctl restart postgresql;
-    else
-        sudo -n /etc/init.d/postgresql restart
-    fi
+    # if $(systemctl list-machines)
+    # then
+    #     sudo systemctl restart postgresql;
+    # else
+    #     sudo -n /etc/init.d/postgresql restart
+    # fi
     return 0;
 }
 

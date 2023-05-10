@@ -18,6 +18,19 @@ SET (CMAKE_FIND_LIBRARY_SUFFIXES ${SAVE_ORIGINAL_LIB_SUFFIXES} )
 
 TARGET_LINK_LIBRARIES( ${target_name} PUBLIC hive_protocol fc_shared_boost database_api_plugin block_api_plugin ${HAF_PQ_LIB} ${HAF_PQXX_LIB})
 
+
+ADD_EXECUTABLE(mtlk_executable
+    
+  mtlk_main.cpp
+)
+
+ADD_POSTGRES_INCLUDES( mtlk_executable )
+ADD_POSTGRES_LIBRARIES( mtlk_executable )
+
+target_link_libraries(mtlk_executable
+    PRIVATE ${target_name}
+)
+
 INSTALL( TARGETS
   ${target_name}
 
