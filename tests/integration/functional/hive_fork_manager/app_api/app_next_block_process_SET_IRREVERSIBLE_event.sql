@@ -62,7 +62,7 @@ DECLARE
     __result INT;
 BEGIN
     PERFORM hive.set_irreversible( 3 );
-    SELECT hive.app_next_block( 'context' ) INTO __result;
+    SELECT hive.app_next_block( 'context' ).first_block INTO __result;
     ASSERT __result IS NULL, 'Processing  SET_IRREVERSIBLE event did not return NULL';
 END
 $BODY$
