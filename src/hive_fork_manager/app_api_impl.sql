@@ -234,6 +234,10 @@ $BODY$
 $BODY$
 ;
 
+-- Returns
+-- Null -> ask again without waiting
+-- negative range -> no block to process, need to wait for next live block
+-- positive range (including 0 size) -> range of blocks to process
 CREATE OR REPLACE FUNCTION hive.app_process_event( _context TEXT, _context_state hive.context_state )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
@@ -246,6 +250,7 @@ DECLARE
     __fork_id BIGINT;
     __result hive.blocks_range;
 BEGIN
+    -- TODO(@Mickiewicz): get context id to do not repeat searching by name
     CASE _context_state.next_event_type
         WHEN 'BACK_FROM_FORK' THEN
             SELECT hf.id, hf.block_num INTO __fork_id, _context_state.next_event_block_num
@@ -305,9 +310,9 @@ BEGIN
 
     IF __next_block_to_process IS NULL THEN
         -- There is no new and expected block, needs to wait for a new block
-        -- TODO(@mickiewicz): when moving in group only one sleep per group must be executed
-        PERFORM pg_sleep( 1.5 );
-        RETURN NULL;
+        __result.first_block = -1;
+        __result.last_block = -2;
+        RETURN __result;
     END IF;
 
     UPDATE hive.contexts
@@ -337,6 +342,11 @@ BEGIN
 
     SELECT ARRAY_AGG( hive.app_process_event(contexts.*, __context_state) ) INTO __result
     FROM unnest( _context_names ) as contexts;
+
+    IF __result[1].first_block > __result[1].last_block THEN
+        PERFORM pg_sleep( 1.5 );
+        RETURN NULL;
+    END IF;
 
     RETURN __result[1];
 END;
