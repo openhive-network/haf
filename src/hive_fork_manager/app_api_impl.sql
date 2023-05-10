@@ -343,84 +343,8 @@ DECLARE
     __fork_id BIGINT;
     __result hive.blocks_range;
 BEGIN
-    -- TODO{@mickiewicz): should be applyed to all contexts in the group
     SELECT * FROM hive.squash_and_get_state( _context_name ) INTO __context_state;
-
     SELECT * FROM hive.app_process_event( __context_state ) INTO __result;
-    RETURN __result;
-
-    CASE __context_state.next_event_type
-    WHEN 'BACK_FROM_FORK' THEN
-        --TODO(@Mickiewicz): only lead context in group  shall find fork_id and __next_event_blocknum
-        SELECT hf.id, hf.block_num INTO __fork_id, __context_state.next_event_block_num
-        FROM hive.fork hf
-        WHERE hf.id = __context_state.next_event_block_num; -- block_num for BFF events = fork_id
-
-        --TODO(@Mickiewicz): is ok per one context in group
-        PERFORM hive.context_back_from_fork( __context_state.context_name, __context_state.next_event_block_num );
-
-        UPDATE hive.contexts
-        SET
-            current_block_num = __context_state.next_event_block_num
-          , fork_id = __fork_id
-        WHERE id = __context_state.id;
-        RETURN NULL;
-    WHEN 'NEW_IRREVERSIBLE' THEN
-        -- we may got on context  creation irreversible block based on hive.irreversible_data
-        -- unfortunetly some slow app may prevent to removing this event, so wee need to process it
-        -- but do not update irreversible
-        IF ( __context_state.irreversible_block_num < __context_state.next_event_block_num ) THEN
-            PERFORM hive.context_set_irreversible_block( __context_state.context_name, __context_state.next_event_block_num );
-        END IF;
-        RETURN NULL;
-    WHEN 'MASSIVE_SYNC' THEN
-        --massive events are squashe at the function begin
-        -- we may got on context  creation irreversible block based on hive.irreversible_data
-        -- unfortunetly some slow app may prevent to removing this event, so we need to process it
-        -- but do not update irreversible
-        IF ( __context_state.irreversible_block_num < __context_state.next_event_block_num ) THEN
-            PERFORM hive.context_set_irreversible_block( __context_state.context_name, __context_state.next_event_block_num );
-        END IF;
-        -- no RETURN here because code after the case will continue processing irreversible blocks only
-    WHEN 'NEW_BLOCK' THEN
-        ASSERT  __context_state.next_event_block_num > __context_state.current_block_num, 'We could not process block without consume event';
-        IF __context_state.next_event_block_num = ( __context_state.current_block_num + 1 ) THEN
-            UPDATE hive.contexts
-            SET current_block_num = __context_state.next_event_block_num
-            WHERE id = __context_state.id;
-
-            __result.first_block = __context_state.next_event_block_num;
-            __result.last_block = __context_state.next_event_block_num;
-            RETURN __result ;
-        END IF;
-        -- it is impossible to have hole between __current_block_num and NEW_BLOCK event block_num
-        -- when __current_block_num is not irreversible
-        ASSERT __context_state.current_block_num <= __context_state.irreversible_block_num, 'current_block_num is reversible!';
-    ELSE
-    END CASE;
-
-    -- if there is no event or we still process irreversible blocks
-    SELECT hc.irreversible_block INTO __context_state.irreversible_block_num
-    FROM hive.contexts hc WHERE hc.id = __context_state.id;
-
-    SELECT MIN( hb.num ), MAX( hb.num )
-    FROM hive.blocks hb
-    WHERE hb.num > __context_state.current_block_num AND hb.num <= __context_state.irreversible_block_num
-    INTO __next_block_to_process, __last_block_to_process;
-
-    IF __next_block_to_process IS NULL THEN
-            -- There is no new and expected block, needs to wait for a new block
-            -- TODO(@mickiewicz): when moving in group only one sleep per group must be executed
-            PERFORM pg_sleep( 1.5 );
-            RETURN NULL;
-    END IF;
-
-    UPDATE hive.contexts
-    SET current_block_num = __next_block_to_process
-    WHERE id = __context_state.id;
-
-    __result.first_block = __next_block_to_process;
-    __result.last_block = __last_block_to_process;
     RETURN __result;
 END;
 $BODY$
