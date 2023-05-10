@@ -327,6 +327,24 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_name TEXT[] )
+    RETURNS hive.blocks_range
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __context_state hive.context_state;
+    __result hive.blocks_range;
+BEGIN
+    ASSERT array_length( _context_name, 1 ) > 0, 'Empty array of contexts';
+
+    SELECT * FROM hive.squash_and_get_state( _context_name[1] ) INTO __context_state;
+    SELECT * FROM hive.app_process_event( __context_state ) INTO __result;
+    RETURN __result;
+END;
+$BODY$
+;
 
 
 
@@ -337,11 +355,9 @@ CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_name TEXT )
 AS
 $BODY$
 DECLARE
-    __context_state hive.context_state;
     __result hive.blocks_range;
 BEGIN
-    SELECT * FROM hive.squash_and_get_state( _context_name ) INTO __context_state;
-    SELECT * FROM hive.app_process_event( __context_state ) INTO __result;
+    SELECT * FROM hive.app_next_block_forking_app( ARRAY[ _context_name ] ) INTO __result;
     RETURN __result;
 END;
 $BODY$
