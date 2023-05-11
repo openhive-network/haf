@@ -422,7 +422,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_names TEXT[] )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
@@ -432,14 +432,31 @@ DECLARE
     __result hive.blocks_range;
     __context_state hive.context_state;
 BEGIN
-    SELECT * FROM hive.squash_and_get_state( _context_name ) INTO __context_state;
-    SELECT * FROM hive.app_process_event_non_forking( _context_name, __context_state ) INTO __result;
+    ASSERT array_length( _context_names, 1 ) > 0, 'Empty array of contexts';
+
+    SELECT * FROM hive.squash_and_get_state( _context_names[1] ) INTO __context_state;
+    SELECT * FROM hive.app_process_event_non_forking( _context_names[1], __context_state ) INTO __result;
 
     IF __result.first_block > __result.last_block THEN
         PERFORM pg_sleep( 1.5 );
         RETURN NULL;
     END IF;
 
+    RETURN __result;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_name TEXT )
+    RETURNS hive.blocks_range
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __result hive.blocks_range;
+BEGIN
+    SELECT * FROM hive.app_next_block_non_forking_app( ARRAY[ _context_name ] ) INTO __result;
     RETURN __result;
 END;
 $BODY$
