@@ -76,6 +76,34 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.app_are_forking( _context_names TEXT[] )
+    RETURNS BOOL
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __result BOOL[];
+BEGIN
+    ASSERT array_length( _context_names, 1 ) > 0, 'Empty contexts array';
+
+    SELECT ARRAY_AGG( TRUE ) is_forking  INTO __result
+    FROM hive.registered_tables hrt
+    JOIN hive.contexts hc ON hrt.context_id = hc.id
+    WHERE hc.name::TEXT = ANY( _context_names )
+    ;
+
+    IF array_length( __result, 1 ) IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    ASSERT array_length( __result, 1 ) = array_length( _context_names, 1 ), 'Forking and non forking contexts are mixed in the same group';
+
+    RETURN TRUE;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.app_is_forking( _context_name TEXT )
     RETURNS BOOL
     LANGUAGE plpgsql
@@ -83,18 +111,14 @@ CREATE OR REPLACE FUNCTION hive.app_is_forking( _context_name TEXT )
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
     __result BOOL;
 BEGIN
-    __context_id = hive.get_context_id( _context_name );
-
     -- if there there is a registered table for a given context
-    SELECT EXISTS( SELECT 1 FROM hive.registered_tables hrt WHERE hrt.context_id = __context_id ) INTO __result;
+    SELECT  * FROM hive.app_are_forking( ARRAY[ _context_name ] ) INTO __result;
     RETURN __result;
 END;
 $BODY$
 ;
-
 
 CREATE OR REPLACE FUNCTION hive.app_next_block( _context_name TEXT )
     RETURNS hive.blocks_range
@@ -105,13 +129,33 @@ $BODY$
 DECLARE
     __result hive.blocks_range;
 BEGIN
-    -- if there ther is  registered table for given context
+    -- if there there is  registered table for given context
     IF hive.app_is_forking( _context_name )
     THEN
         RETURN hive.app_next_block_forking_app( _context_name );
     END IF;
 
     RETURN hive.app_next_block_non_forking_app( _context_name );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names TEXT[] )
+    RETURNS hive.blocks_range
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __result hive.blocks_range;
+BEGIN
+    -- if there ther is  registered table for given context
+    IF hive.app_is_forking( _context_names )
+    THEN
+        RETURN hive.app_next_block_forking_app( _context_names );
+    END IF;
+
+    RETURN hive.app_next_block_non_forking_app( _context_names );
 END;
 $BODY$
 ;
