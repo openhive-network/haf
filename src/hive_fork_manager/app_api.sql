@@ -120,42 +120,32 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_next_block( _context_name TEXT )
-    RETURNS hive.blocks_range
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-DECLARE
-    __result hive.blocks_range;
-BEGIN
-    -- if there there is  registered table for given context
-    IF hive.app_is_forking( _context_name )
-    THEN
-        RETURN hive.app_next_block_forking_app( _context_name );
-    END IF;
-
-    RETURN hive.app_next_block_non_forking_app( _context_name );
-END;
-$BODY$
-;
-
 CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names TEXT[] )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
-DECLARE
-    __result hive.blocks_range;
 BEGIN
-    -- if there ther is  registered table for given context
-    IF hive.app_is_forking( _context_names )
+    -- if there there is  registered table for given context
+    IF hive.app_are_forking( _context_names )
     THEN
         RETURN hive.app_next_block_forking_app( _context_names );
     END IF;
 
     RETURN hive.app_next_block_non_forking_app( _context_names );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_next_block( _context_name TEXT )
+    RETURNS hive.blocks_range
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+   RETURN hive.app_next_block( ARRAY[ _context_name ] );
 END;
 $BODY$
 ;
