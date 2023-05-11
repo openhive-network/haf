@@ -326,6 +326,58 @@ END;
 $BODY$
 ;
 
+-- Returns
+-- Null -> ask again without waiting
+-- negative range -> no block to process, need to wait for next live block
+-- positive range (including 0 size) -> range of blocks to process
+CREATE OR REPLACE FUNCTION hive.app_process_event_non_forking( _context TEXT, _context_state hive.context_state )
+    RETURNS hive.blocks_range
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __next_block_to_process INT;
+    __last_block_to_process INT;
+    __result hive.blocks_range;
+BEGIN
+    CASE _context_state.next_event_type
+        WHEN 'NEW_IRREVERSIBLE' THEN
+            IF _context_state.next_event_block_num > _context_state.irreversible_block_num THEN
+                PERFORM hive.context_set_irreversible_block( _context, _context_state.next_event_block_num );
+            END IF;
+        WHEN 'MASSIVE_SYNC' THEN
+            IF _context_state.next_event_block_num > _context_state.irreversible_block_num THEN
+                PERFORM hive.context_set_irreversible_block( _context, _context_state.next_event_block_num );
+            END IF;
+        ELSE
+        END CASE;
+
+    --TODO(@Mickiewicz): try to make it common with forking app (START)
+    -- if there is no event or we still process irreversible blocks
+    SELECT MIN( hb.num ), MAX( hb.num )
+    FROM hive.blocks hb
+    WHERE hb.num > _context_state.current_block_num AND hb.num <= _context_state.irreversible_block_num
+    INTO __next_block_to_process, __last_block_to_process;
+
+    IF __next_block_to_process IS NULL THEN
+        -- There is no new and expected block, needs to wait for a new block
+        -- TODO(@Mickiewicz): one sleep per group
+        PERFORM pg_sleep( 1.5 );
+        RETURN NULL;
+    END IF;
+
+    UPDATE hive.contexts
+    SET current_block_num = __next_block_to_process
+    WHERE name = _context;
+
+    __result.first_block = __next_block_to_process;
+    __result.last_block = __last_block_to_process;
+    RETURN __result;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_names TEXT[] )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
@@ -377,49 +429,13 @@ CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_name TE
 AS
 $BODY$
 DECLARE
-    __next_block_to_process INT;
-    __last_block_to_process INT;
     __result hive.blocks_range;
     __context_state hive.context_state;
 BEGIN
     SELECT * FROM hive.squash_and_get_state( _context_name ) INTO __context_state;
-
-
-    CASE __context_state.next_event_type
-        WHEN 'NEW_IRREVERSIBLE' THEN
-            IF __context_state.next_event_block_num > __context_state.irreversible_block_num THEN
-                PERFORM hive.context_set_irreversible_block( _context_name, __context_state.next_event_block_num );
-            END IF;
-        WHEN 'MASSIVE_SYNC' THEN
-            IF __context_state.next_event_block_num > __context_state.irreversible_block_num THEN
-                PERFORM hive.context_set_irreversible_block( _context_name, __context_state.next_event_block_num );
-            END IF;
-        ELSE
-    END CASE;
-
-    --TODO(@Mickiewicz): try to make it common with forking app (START)
-    -- if there is no event or we still process irreversible blocks
-    SELECT MIN( hb.num ), MAX( hb.num )
-    FROM hive.blocks hb
-    WHERE hb.num > __context_state.current_block_num AND hb.num <= __context_state.irreversible_block_num
-    INTO __next_block_to_process, __last_block_to_process;
-
-    IF __next_block_to_process IS NULL THEN
-        -- There is no new and expected block, needs to wait for a new block
-        -- TODO(@Mickiewicz): one sleep per group
-        PERFORM pg_sleep( 1.5 );
-        RETURN NULL;
-    END IF;
-
-    UPDATE hive.contexts
-    SET current_block_num = __next_block_to_process
-    WHERE name = _context_name;
-
-    __result.first_block = __next_block_to_process;
-    __result.last_block = __last_block_to_process;
+    SELECT * FROM hive.app_process_event_non_forking( _context_name, __context_state ) INTO __result;
     RETURN __result;
-    END;
-    --TODO(@Mickiewicz): try to make it common with forking app (END)
+END;
 $BODY$
 ;
 
