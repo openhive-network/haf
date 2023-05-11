@@ -203,6 +203,9 @@ END_LOG_STEEMIT_10
 # sudo rm /home/hived/datadir/context/blockchain/shared_memory.bin; ../haf/scripts/runallnow.sh build
 # rsync -avh   /home/haf_admin/haf /home/hived/datadir/src/
 
+
+# stopping app: select cab_app.stop_processing();
+
 # valgrind 
 #     --fullpath-after=10   
 #     --show-leak-kinds=all  
@@ -255,6 +258,8 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
+# TODO wywal inne state providery np ACCOUNTS
+# TODO wywal w ogóle state providera z cab_app i uzywaj tylko funkcji z src/hive_fork_manager/consensus_state_provider_helpers.sql
 # TODO separate driver for C code
 # TODO ASAN - memory leaks
 # TODO add interface to get a particular account balance
@@ -274,7 +279,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO clean garbage in /home/hived/datadir/consensus_storage when it cannot start (rg. when going Debug from Release
 # TDOD ask data_processor::handle_exception( std::exception_ptr exception_ptr ) {
 # TODO magic numbers: args.limit = 1000;
-# TODO - ASK + " AND op_type_id <= 49 " //TODO how to determine where vops start ?
+# TODO - ASK + " AND op_type_id <= 49 " //TODO how to determine where vops start ? -> //trx_in_block < 0 -> virtual operation
 # TODO* example testing app - move to proper place in directory tree
 # TODO* ? in yaml - cp log to . instead of ln -s
 # TODO* why runallnow script has to clear contest sharedmemory.bin ? 

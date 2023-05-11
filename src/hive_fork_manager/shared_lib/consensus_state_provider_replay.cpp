@@ -116,7 +116,7 @@ struct Postgres2Blocks
                                   + std::to_string(from) 
                                   + " and block_num <= " 
                                   + std::to_string(to) 
-                                  + " AND op_type_id <= 49 "
+                                  + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
                                   + " ORDER BY id ASC";
     operations = db.execute_query(operations_query);
     std::cout << "Operations: " << operations.size() << std::endl;
