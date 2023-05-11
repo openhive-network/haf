@@ -76,6 +76,41 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.app_are_forking( _context_names TEXT[] )
+    RETURNS BOOL
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __result TEXT[];
+BEGIN
+    IF array_length( _context_names, 1 ) = 0 THEN
+        RAISE  EXCEPTION 'Empty contexts array';
+    END IF;
+
+    SELECT ARRAY_AGG( hc.name ) INTO __result
+    FROM hive.contexts hc
+    WHERE hc.name::TEXT = ANY( _context_names )
+    AND EXISTS( SELECT NULL FROM hive.registered_tables hrt WHERE hrt.context_id = hc.id );
+
+    IF array_length( __result, 1 ) IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    IF array_length( __result, 1 ) = 0 THEN
+        RETURN FALSE;
+    END IF;
+
+    IF array_length( __result, 1 ) != array_length( _context_names, 1 ) THEN
+        RAISE EXCEPTION  'Group  %  consists forking and non forking contexts, and only % are forking.', _context_names, __result;
+    END IF;
+
+    RETURN TRUE;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.app_is_forking( _context_name TEXT )
     RETURNS BOOL
     LANGUAGE plpgsql
@@ -83,18 +118,36 @@ CREATE OR REPLACE FUNCTION hive.app_is_forking( _context_name TEXT )
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
     __result BOOL;
 BEGIN
-    __context_id = hive.get_context_id( _context_name );
-
     -- if there there is a registered table for a given context
-    SELECT EXISTS( SELECT 1 FROM hive.registered_tables hrt WHERE hrt.context_id = __context_id ) INTO __result;
+    SELECT  * FROM hive.app_are_forking( ARRAY[ _context_name ] ) INTO __result;
     RETURN __result;
 END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names TEXT[] )
+    RETURNS hive.blocks_range
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    IF EXISTS( SELECT 1 FROM hive.contexts hc WHERE hc.name =ANY( _context_names ) AND hc.is_attached = FALSE ) THEN
+        RAISE EXCEPTION 'Detached context cannot be moved';
+    END IF;
+
+    -- if there there is  registered table for given context
+    IF hive.app_are_forking( _context_names )
+    THEN
+        RETURN hive.app_next_block_forking_app( _context_names );
+    END IF;
+
+    RETURN hive.app_next_block_non_forking_app( _context_names );
+END;
+$BODY$
+;
 
 CREATE OR REPLACE FUNCTION hive.app_next_block( _context_name TEXT )
     RETURNS hive.blocks_range
@@ -102,21 +155,13 @@ CREATE OR REPLACE FUNCTION hive.app_next_block( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
-DECLARE
-    __result hive.blocks_range;
 BEGIN
-    -- if there ther is  registered table for given context
-    IF hive.app_is_forking( _context_name )
-    THEN
-        RETURN hive.app_next_block_forking_app( _context_name );
-    END IF;
-
-    RETURN hive.app_next_block_non_forking_app( _context_name );
+   RETURN hive.app_next_block( ARRAY[ _context_name ] );
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_attach( _context TEXT, _last_synced_block INT )
+CREATE OR REPLACE FUNCTION hive.app_context_attach( _contexts TEXT[], _last_synced_block INT )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -134,25 +179,58 @@ BEGIN
             , _context, _last_synced_block,  __head_of_irreversible_block;
     END IF;
 
-    PERFORM hive.context_attach( _context, _last_synced_block );
-
-    --TODO(@Mickiewicz): only one context in a group may execute this query, it result must be passed to rest of contexts
     SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= _last_synced_block;
 
     UPDATE hive.contexts
     SET   fork_id = __fork_id
-        , irreversible_block = COALESCE( __head_of_irreversible_block, 0 )
-    WHERE name = _context
+      , irreversible_block = COALESCE( __head_of_irreversible_block, 0 )
+    WHERE name =ANY( _contexts )
     ;
 
     -- re-create view which mixes irreversible and reversible data
-    PERFORM hive.create_blocks_view( _context );
-    PERFORM hive.create_transactions_view( _context );
-    PERFORM hive.create_operations_view( _context );
-    PERFORM hive.create_signatures_view( _context );
-    PERFORM hive.create_accounts_view( _context );
-    PERFORM hive.create_account_operations_view( _context );
-    PERFORM hive.create_applied_hardforks_view( _context );
+    PERFORM
+          hive.context_attach( context.*, _last_synced_block )
+        , hive.create_blocks_view(  context.* )
+        , hive.create_transactions_view(  context.* )
+        , hive.create_operations_view(  context.* )
+        , hive.create_signatures_view(  context.* )
+        , hive.create_accounts_view(  context.* )
+        , hive.create_account_operations_view(  context.* )
+        , hive.create_applied_hardforks_view(  context.* )
+    FROM unnest( _contexts ) as context;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_context_attach( _context TEXT, _last_synced_block INT )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.app_context_attach( ARRAY[ _context ], _last_synced_block );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_context_detach( _contexts TEXT[] )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM
+          hive.context_detach( context.* )
+        , hive.create_all_irreversible_blocks_view( context.* )
+        , hive.create_all_irreversible_transactions_view( context.* )
+        , hive.create_all_irreversible_operations_view( context.* )
+        , hive.create_all_irreversible_signatures_view( context.* )
+        , hive.create_all_irreversible_accounts_view( context.* )
+        , hive.create_all_irreversible_account_operations_view( context.* )
+        , hive.create_all_irreversible_applied_hardforks_view( context.* )
+    FROM unnest( _contexts ) as context;
 END;
 $BODY$
 ;
@@ -164,16 +242,7 @@ CREATE OR REPLACE FUNCTION hive.app_context_detach( _context TEXT )
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_detach( _context );
-
-    -- create view which return all irreversible data
-    PERFORM hive.create_all_irreversible_blocks_view( _context );
-    PERFORM hive.create_all_irreversible_transactions_view( _context );
-    PERFORM hive.create_all_irreversible_operations_view( _context );
-    PERFORM hive.create_all_irreversible_signatures_view( _context );
-    PERFORM hive.create_all_irreversible_accounts_view( _context );
-    PERFORM hive.create_all_irreversible_account_operations_view( _context );
-    PERFORM hive.create_all_irreversible_applied_hardforks_view( _context );
+    PERFORM hive.app_context_detach( ARRAY[ _context ] );
 END;
 $BODY$
 ;
@@ -230,45 +299,99 @@ BEGIN
 END;
 $BODY$;
 
-
-CREATE OR REPLACE FUNCTION hive.app_context_is_attached( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.app_context_are_attached( _contexts TEXT[] )
     RETURNS bool
     LANGUAGE plpgsql
     STABLE
 AS
 $BODY$
 DECLARE
-    __result bool;
+    __result bool[];
 BEGIN
-    SELECT hc.is_attached INTO __result
+    SELECT ARRAY_AGG( DISTINCT(hc.is_attached) )  is_attached INTO __result
     FROM hive.contexts hc
-    WHERE hc.name = _context_name;
+    WHERE hc.name =ANY( _contexts );
 
-    IF __result IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context_name;
+    IF __result IS NULL OR ARRAY_LENGTH( __result, 1 ) != ARRAY_LENGTH( _contexts, 1 ) THEN
+        RAISE EXCEPTION 'No contexts or attached and detached contexts are present in a group';
     END IF;
 
-    RETURN __result;
+    RETURN __result[ 1 ];
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_context_detached_save_block_num( _context_name TEXT, _block_num INTEGER )
+
+CREATE OR REPLACE FUNCTION hive.app_context_is_attached( _context TEXT )
+    RETURNS bool
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+BEGIN
+    RETURN hive.app_context_are_attached( ARRAY[ _context ] );
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.app_context_detached_save_block_num( _contexts TEXT[], _block_num INTEGER )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __contexts_id INTEGER[];
 BEGIN
+    SELECT ARRAY_AGG(hc.id) INTO __contexts_id
+    FROM hive.contexts hc
+    WHERE hc.name =ANY( _contexts ) AND hc.is_attached = FALSE;
+
+    IF __contexts_id IS NULL OR ARRAY_LENGTH( __contexts_id, 1 ) != ARRAY_LENGTH( _contexts, 1 ) THEN
+        RAISE EXCEPTION 'Contexts do not exist or are attached';
+    END IF;
+
     UPDATE hive.contexts hc
     SET detached_block_num = _block_num
-    WHERE hc.name = _context_name AND hc.is_attached = FALSE
-    RETURNING hc.id INTO __context_id;
+    WHERE hc.id =ANY( __contexts_id );
+END;
+$BODY$;
 
-    IF __context_id IS NULL  THEN
-        RAISE EXCEPTION 'Context % does not exist or is attached', _context_name;
+CREATE OR REPLACE FUNCTION hive.app_context_detached_save_block_num( _context TEXT, _block_num INTEGER )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.app_context_detached_save_block_num( ARRAY[ _context ], _block_num );
+END;
+$BODY$;
+
+
+CREATE OR REPLACE FUNCTION hive.app_context_detached_get_block_num( _contexts TEXT[] )
+    RETURNS INTEGER
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __result INTEGER[];
+BEGIN
+    SELECT ARRAY_AGG( hc.detached_block_num ) detached_block_num INTO __result
+    FROM hive.contexts hc
+    WHERE hc.name =ANY( _contexts ) AND hc.is_attached = FALSE;
+
+    IF __result IS NULL OR ARRAY_LENGTH( __result, 1 ) != ARRAY_LENGTH( _contexts, 1 ) THEN
+        RAISE EXCEPTION 'Contexts do not exist or are attached';
     END IF;
+
+    SELECT ARRAY_AGG( DISTINCT( blocks.* ) ) INTO __result
+    FROM UNNEST( __result ) as blocks;
+
+    IF ARRAY_LENGTH( __result, 1 ) != 1 THEN
+        RAISE EXCEPTION 'Inconsistent block num in context group';
+    END IF;
+
+    RETURN __result[ 1 ];
 END;
 $BODY$;
 
@@ -278,23 +401,8 @@ CREATE OR REPLACE FUNCTION hive.app_context_detached_get_block_num( _context_nam
     STABLE
 AS
 $BODY$
-DECLARE
-    __result INTEGER;
-    __context_id hive.contexts.id%TYPE;
 BEGIN
-    SELECT hc.id INTO __context_id
-    FROM hive.contexts hc
-    WHERE hc.name = _context_name AND hc.is_attached = FALSE;
-
-    IF __context_id IS NULL  THEN
-        RAISE EXCEPTION 'Context % does not exist or is attached', _context_name;
-    END IF;
-
-    SELECT hc.detached_block_num INTO __result
-    FROM hive.contexts hc
-    WHERE hc.id = __context_id;
-
-    RETURN __result;
+    RETURN hive.app_context_detached_get_block_num( ARRAY[ _context_name ] );
 END;
 $BODY$;
 
