@@ -362,9 +362,9 @@ BEGIN
 
     IF __next_block_to_process IS NULL THEN
         -- There is no new and expected block, needs to wait for a new block
-        -- TODO(@Mickiewicz): one sleep per group
-        PERFORM pg_sleep( 1.5 );
-        RETURN NULL;
+        __result.first_block = -1;
+        __result.last_block = -2;
+        RETURN __result;
     END IF;
 
     UPDATE hive.contexts
@@ -434,6 +434,12 @@ DECLARE
 BEGIN
     SELECT * FROM hive.squash_and_get_state( _context_name ) INTO __context_state;
     SELECT * FROM hive.app_process_event_non_forking( _context_name, __context_state ) INTO __result;
+
+    IF __result.first_block > __result.last_block THEN
+        PERFORM pg_sleep( 1.5 );
+        RETURN NULL;
+    END IF;
+
     RETURN __result;
 END;
 $BODY$
