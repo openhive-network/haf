@@ -405,23 +405,6 @@ END;
 $BODY$
 ;
 
-
-
-CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_name TEXT )
-    RETURNS hive.blocks_range
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-DECLARE
-    __result hive.blocks_range;
-BEGIN
-    SELECT * FROM hive.app_next_block_forking_app( ARRAY[ _context_name ] ) INTO __result;
-    RETURN __result;
-END;
-$BODY$
-;
-
 CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_names TEXT[] )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
@@ -442,21 +425,6 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    RETURN __result;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_name TEXT )
-    RETURNS hive.blocks_range
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-DECLARE
-    __result hive.blocks_range;
-BEGIN
-    SELECT * FROM hive.app_next_block_non_forking_app( ARRAY[ _context_name ] ) INTO __result;
     RETURN __result;
 END;
 $BODY$

@@ -83,17 +83,20 @@ CREATE OR REPLACE FUNCTION hive.app_are_forking( _context_names TEXT[] )
 AS
 $BODY$
 DECLARE
-    __result BOOL[];
+    __result TEXT[];
 BEGIN
     ASSERT array_length( _context_names, 1 ) > 0, 'Empty contexts array';
 
-    SELECT ARRAY_AGG( TRUE ) is_forking  INTO __result
-    FROM hive.registered_tables hrt
-    JOIN hive.contexts hc ON hrt.context_id = hc.id
-    WHERE hc.name::TEXT = ANY( _context_names )
-    ;
+    SELECT ARRAY_AGG( hc.name ) INTO __result
+    FROM hive.contexts hc
+    WHERE hc.name::TEXT = ANY( _context_names ) AND
+    EXISTS( SELECT NULL FROM hive.registered_tables hrt WHERE hrt.context_id = hc.id );
 
     IF array_length( __result, 1 ) IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    IF array_length( __result, 1 ) = 0 THEN
         RETURN FALSE;
     END IF;
 
