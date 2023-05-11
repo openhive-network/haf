@@ -16,6 +16,8 @@
 #include <string>
 #include <vector>
 
+#ifndef DRIVER_ONLY
+
 namespace {
 
 hive::protocol::operation raw_to_operation( const char* raw_data, uint32 data_length )
@@ -258,3 +260,5 @@ extern "C"
     PG_RETURN_INT32( operation_cmp_impl( lhs, rhs ) );
   }
 }
+
+#endif //DRIVER_ONLY

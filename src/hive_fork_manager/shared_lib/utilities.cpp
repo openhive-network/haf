@@ -21,6 +21,7 @@ using hive::app::collected_metadata_collection_t;
 
 #define CUSTOM_LOG(format, ... ) { FILE *pFile = fopen("get-impacted-accounts.log","ae"); fprintf(pFile,format "\n" __VA_OPT__(,) __VA_ARGS__); fclose(pFile); }
 
+#ifndef DRIVER_ONLY
 namespace // anonymous
 {
 
@@ -966,3 +967,5 @@ Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
 }
 
 } //extern "C"
+
+#endif // DRIVER_ONLY
