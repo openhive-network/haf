@@ -12,7 +12,7 @@
 
 #include <iomanip>
 
-#include "/home/haf_admin/haf/src/hive_fork_manager/shared_lib/consensus_state_provider_replay.hpp"
+#include "../../shared_lib/consensus_state_provider_replay.hpp"
 
 
 
