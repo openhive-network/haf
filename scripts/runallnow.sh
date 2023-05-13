@@ -814,7 +814,7 @@ fi
 if [[ $CMAKED ]]
 then
 #    ninja extension.hive_fork_manager  \
-    ninja mtlk_executable query_supervisor hived extension.hive_fork_manager          && sudo ninja install         && sudo chown $USER:$USER .ninja_*          && ctest -R keyauth --output-on-failure         && ctest -R curr --output-on-failure    EXIT_STATUS=$?
+    ninja mtlk_executable           && sudo ninja install         && sudo chown $USER:$USER .ninja_*          && ctest -R keyauth --output-on-failure         && ctest -R curr --output-on-failure    EXIT_STATUS=$?
     sudo chown -R $USER:$USER *
 fi
 
@@ -1031,12 +1031,13 @@ run_all_from_scratch()
 {
     sudo_enter && \
     killpostgres && \
-    erase_haf_block_log_database && \
     reset_app && \
     remove_compiled && \
     build && \
     permissions && #what about blockchain dir - erase? \
     serializer
+#    erase_haf_block_log_database && \
+
 }
 
 run()
