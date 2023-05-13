@@ -20,6 +20,30 @@
 #include <iostream>
 #include <boost/program_options.hpp>
 
+
+
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
+
+unsigned long get_memory_usage_kb() {
+    std::ifstream status_file("/proc/self/status");
+    std::string line;
+
+    while (std::getline(status_file, line)) {
+        if (line.find("VmRSS") != std::string::npos) {
+            std::istringstream iss(line);
+            std::string key;
+            unsigned long value;
+            iss >> key >> value;
+            return value;
+        }
+    }
+
+    return 0;
+}
+
 namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
@@ -87,7 +111,9 @@ int main(int argc, char *argv[]) {
         auto hours = duration.count() / 3600;
         auto minutes = (duration.count() % 3600) / 60;
         auto seconds = duration.count() % 60;
-        std::cout << " took: " << hours << " hours, " << minutes << " minutes, " << seconds << " seconds" << std::endl;
+        std::cout << " took: " << hours << " hours, " << minutes << " minutes, " << seconds << " seconds  ";
+        std::cout << "Memory usage (KB): " << get_memory_usage_kb() << std::endl;
+
 
         if(!step_ok)
         {
