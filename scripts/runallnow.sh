@@ -56,6 +56,149 @@
 
 
 
+: <<'END_COMMENT'
+w stogage big logi:  bylo IF FALSE THEN -- mtlk try_grab_operations
+OTICE:  __consensus_state_provider_replay_call_ok=t
+NOTICE:  Block range: <11836249, 13315529> processed successfully.
+NOTICE:  Processing block range: <13315530, 14794810>
+NOTICE:  consensus_state_provider_replay
+NOTICE:  __postgres_url=postgres:///haf_block_log
+NOTICE:  __shared_memory_bin_path=/home/hived/datadir/consensus_state_provider/cabc
+server closed the connection unexpectedly
+        This probably means the server terminated abnormally
+        before or while processing the request.
+connection to server was lost
+
+real    344m20.536s
+user    0m0.032s
+sys     0m0.012s
+
+real    344m20.536s
+user    0m0.032s
+
+0       SQL statement "SELECT hive.app_state_providers_update(_from, _to, _app_context)"
+        PL/pgSQL function cab_app.process_block_range_data_c(character varying,integer,integer,integer) line 3 at PERFORM
+        SQL statement "SELECT cab_app.process_block_range_data_c(_appContext, b, _last_block)"
+        PL/pgSQL function cab_app.process_block_range_loop(character varying,integer,integer,integer,integer) line 11 at PERFORM
+        SQL statement "CALL cab_app.process_block_range_loop(_appContext, _from, _to, _step, _last_block)"
+        PL/pgSQL function cab_app.do_massive_processing(character varying,integer,integer,integer,integer) line 9 at CALL
+        SQL statement "CALL cab_app.do_massive_processing(_appContext, __from, __to, _step, __last_block)"
+        PL/pgSQL function cab_app.main(character varying,integer,integer,text) line 27 at CALL
+2023-05-12 09:55:44.685 CEST [105827] haf_admin@haf_block_log NOTICE:  __shared_memory_bin_path=/home/hived/datadir/consensus_state_provider/cabc
+2023-05-12 09:55:44.685 CEST [105827] haf_admin@haf_block_log CONTEXT:  PL/pgSQL function hive.update_state_provider_c_a_b_s_t(integer,integer,hive.context_name) line 31 at RAISE
+        SQL statement "SELECT hive.update_state_provider_c_a_b_s_t( 13315530, 14794810, 'cabc' )"
+        PL/pgSQL function hive.update_one_state_providers(integer,integer,hive.state_providers,hive.context_name) line 3 at EXECUTE
+        SQL statement "SELECT hive.update_one_state_providers( _first_block, _last_block, hsp.state_provider, _context )
+            FROM hive.state_providers_registered hsp
+            WHERE hsp.context_id = __context_id"
+        PL/pgSQL function hive.app_state_providers_update(integer,integer,hive.context_name) line 28 at PERFORM
+        SQL statement "SELECT hive.app_state_providers_update(_from, _to, _app_context)"
+        PL/pgSQL function cab_app.process_block_range_data_c(character varying,integer,integer,integer) line 3 at PERFORM
+        SQL statement "SELECT cab_app.process_block_range_data_c(_appContext, b, _last_block)"
+        PL/pgSQL function cab_app.process_block_range_loop(character varying,integer,integer,integer,integer) line 11 at PERFORM
+        SQL statement "CALL cab_app.process_block_range_loop(_appContext, _from, _to, _step, _last_block)"
+        PL/pgSQL function cab_app.do_massive_processing(character varying,integer,integer,integer,integer) line 9 at CALL
+        SQL statement "CALL cab_app.do_massive_processing(_appContext, __from, __to, _step, __last_block)"
+        PL/pgSQL function cab_app.main(character varying,integer,integer,text) line 27 at CALL
+2023-05-12 14:22:14.314 CEST [94480] LOG:  server process (PID 105827) was terminated by signal 9: Killed
+2023-05-12 14:22:14.314 CEST [94480] DETAIL:  Failed process was running: call cab_app.main('cabc', 73964098, 1479281, '/home/hived/datadir/consensus_state_provider')
+2023-05-12 14:22:14.315 CEST [94480] LOG:  terminating any other active server processes
+2023-05-12 14:22:14.360 CEST [94480] LOG:  all server processes terminated; reinitializing
+2023-05-12 14:22:15.671 CEST [107554] LOG:  database system was interrupted; last known up at 2023-05-12 10:48:19 CEST
+2023-05-12 14:22:16.346 CEST [107554] LOG:  database system was not properly shut down; automatic recovery in progress
+2023-05-12 14:22:16.354 CEST [107554] LOG:  invalid record length at 1196/74C97140: wanted 24, got 0
+2023-05-12 14:22:16.354 CEST [107554] LOG:  redo is not required
+2023-05-12 14:22:16.425 CEST [94480] LOG:  database system is ready to accept connections
+dev@zk-29:/storage1
+
+Possibly OOM:
+
+NOTICE:  Block range: <11836249, 13315529> processed successfully.
+NOTICE:  Processing block range: <13315530, 14794810>
+NOTICE:  consensus_state_provider_replay
+NOTICE:  __postgres_url=postgres:///haf_block_log
+NOTICE:  __shared_memory_bin_path=/home/hived/datadir/consensus_state_provider/cabc
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+connection to server was lost
+
+2023-05-12 09:55:44.685 CEST [105827] haf_admin@haf_block_log NOTICE:  __shared_memory_bin_path=/home/hived/datadir/consensus_state_provider/cabc
+2023-05-12 09:55:44.685 CEST [105827] haf_admin@haf_block_log CONTEXT:  PL/pgSQL function hive.update_state_provider_c_a_b_s_t(integer,integer,hive.context_name) line 31 at RAISE
+	SQL statement "SELECT hive.update_state_provider_c_a_b_s_t( 13315530, 14794810, 'cabc' )"
+	PL/pgSQL function hive.update_one_state_providers(integer,integer,hive.state_providers,hive.context_name) line 3 at EXECUTE
+	SQL statement "SELECT hive.update_one_state_providers( _first_block, _last_block, hsp.state_provider, _context )
+	    FROM hive.state_providers_registered hsp
+	    WHERE hsp.context_id = __context_id"
+	PL/pgSQL function hive.app_state_providers_update(integer,integer,hive.context_name) line 28 at PERFORM
+	SQL statement "SELECT hive.app_state_providers_update(_from, _to, _app_context)"
+	PL/pgSQL function cab_app.process_block_range_data_c(character varying,integer,integer,integer) line 3 at PERFORM
+	SQL statement "SELECT cab_app.process_block_range_data_c(_appContext, b, _last_block)"
+	PL/pgSQL function cab_app.process_block_range_loop(character varying,integer,integer,integer,integer) line 11 at PERFORM
+	SQL statement "CALL cab_app.process_block_range_loop(_appContext, _from, _to, _step, _last_block)"
+	PL/pgSQL function cab_app.do_massive_processing(character varying,integer,integer,integer,integer) line 9 at CALL
+	SQL statement "CALL cab_app.do_massive_processing(_appContext, __from, __to, _step, __last_block)"
+	PL/pgSQL function cab_app.main(character varying,integer,integer,text) line 27 at CALL
+2023-05-12 14:22:14.314 CEST [94480] LOG:  server process (PID 105827) was terminated by signal 9: Killed
+2023-05-12 14:22:14.314 CEST [94480] DETAIL:  Failed process was running: call cab_app.main('cabc', 73964098, 1479281, '/home/hived/datadir/consensus_state_provider')
+2023-05-12 14:22:14.315 CEST [94480] LOG:  terminating any other active server processes
+2023-05-12 14:22:14.360 CEST [94480] LOG:  all server processes terminated; reinitializing
+2023-05-12 14:22:15.671 CEST [107554] LOG:  database system was interrupted; last known up at 2023-05-12 10:48:19 CEST
+
+END_COMMENT
+
+: <<END_LOG_STEEMIT_10
+
+NOTICE:  __consensus_state_provider_replay_call_ok=t
+NOTICE:  Accounts 15 richest=
+[{"account":"bittrex","balance":26631803568,"hbd_balance":7440023071,"vesting_shares":8538578636896,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"poloniex","balance":14479859394,"hbd_balance":471584280,"vesting_shares":4404577000000,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"binance-hot","balance":2841822449,"hbd_balance":606,"vesting_shares":1023055299,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"steemit2","balance":2517006058,"hbd_balance":4992066,"vesting_shares":270658494645704,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"ben","balance":1982777755,"hbd_balance":921,"vesting_shares":471404505904935,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"imadev","balance":788297714,"hbd_balance":446,"vesting_shares":445256469401562,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"alpha","balance":460889906,"hbd_balance":1626030,"vesting_shares":82084887877,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"muchfun","balance":415000003,"hbd_balance":102,"vesting_shares":12360924266,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"upbit-exchange","balance":397609092,"hbd_balance":456297979,"vesting_shares":10236655591659,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"gopax-deposit","balance":376411256,"hbd_balance":54070439,"vesting_shares":5157727615249,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"freewallet","balance":326483367,"hbd_balance":1133,"vesting_shares":46804933931,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"val-a","balance":319164942,"hbd_balance":539,"vesting_shares":2184996452620127,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"dan","balance":311501016,"hbd_balance":426221,"vesting_shares":384455200934425,"savings_hbd_balance":0,"reward_hbd_balance":164860}, 
+ {"account":"dantheman","balance":300198007,"hbd_balance":98453,"vesting_shares":212148717653,"savings_hbd_balance":0,"reward_hbd_balance":344}, 
+ {"account":"openledger-dex","balance":298120536,"hbd_balance":28033741,"vesting_shares":1033789880,"savings_hbd_balance":0,"reward_hbd_balance":0}]
+NOTICE:  Block range: <19232654, 20711934> processed successfully.
+NOTICE:  Processing block range: <20711935, 22191215>
+NOTICE:  consensus_state_provider_replay
+NOTICE:  __postgres_url=postgres:///haf_block_log
+NOTICE:  __shared_memory_bin_path=/home/hived/datadir/consensus_state_provider/cabc
+NOTICE:  __consensus_state_provider_replay_call_ok=t
+NOTICE:  Accounts 15 richest=
+[{"account":"bittrex","balance":23234293467,"hbd_balance":8652108199,"vesting_shares":8538578636896,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"poloniex","balance":14479922603,"hbd_balance":471584529,"vesting_shares":4404577000000,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"binance-hot","balance":5652567614,"hbd_balance":3594,"vesting_shares":1023055299,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"ben","balance":2213971486,"hbd_balance":926,"vesting_shares":659751021,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"huobi-withdrawal","balance":2193088215,"hbd_balance":1,"vesting_shares":4079848926560,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"steemit","balance":1600000006,"hbd_balance":8582279,"vesting_shares":90039851836689703,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"steemit2","balance":1185903095,"hbd_balance":4992069,"vesting_shares":232177656843878,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"upbit-exchange","balance":818830175,"hbd_balance":773295567,"vesting_shares":10236655591659,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"imadev","balance":788297714,"hbd_balance":451,"vesting_shares":445256469401562,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"dan","balance":471203857,"hbd_balance":426820,"vesting_shares":58822357508745,"savings_hbd_balance":0,"reward_hbd_balance":166068}, 
+ {"account":"muchfun","balance":415000004,"hbd_balance":102,"vesting_shares":12360924266,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"proskynneo","balance":308538850,"hbd_balance":300,"vesting_shares":1806836645106858,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"dantheman","balance":300198007,"hbd_balance":98520,"vesting_shares":212148717653,"savings_hbd_balance":0,"reward_hbd_balance":344}, 
+ {"account":"amcq","balance":290000001,"hbd_balance":263987,"vesting_shares":8808070581,"savings_hbd_balance":0,"reward_hbd_balance":0}, 
+ {"account":"openledger-dex","balance":286457049,"hbd_balance":35188360,"vesting_shares":1033789880,"savings_hbd_balance":0,"reward_hbd_balance":0}]
+NOTICE:  Block range: <20711935, 22191215> processed successfully.
+NOTICE:  Processing block range: <22191216, 23670496>
+NOTICE:  consensus_state_provider_replay
+NOTICE:  __postgres_url=postgres:///haf_block_log
+NOTICE:  __shared_memory_bin_path=/home/hived/datadir/consensus_state_provider/cabc
+server closed the connection unexpectedly
+        This probably means the server terminated abnormally
+        before or while processing the request.
+
+END_LOG_STEEMIT_10
+
 # sudo rm /home/hived/datadir/context/blockchain/shared_memory.bin; ../haf/scripts/runallnow.sh build
 # rsync -avh   /home/haf_admin/haf /home/hived/datadir/src/
 
