@@ -2,7 +2,12 @@
 
 #include <string>
 #include <vector>
-#include <fc/variant.hpp>
+//#include <fc/variant.hpp>
+
+namespace fc
+{
+  class variant;
+}
 
 namespace consensus_state_provider
 {

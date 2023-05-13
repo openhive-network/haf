@@ -27,11 +27,23 @@ endif()
 
 
 
-ADD_RUNTIME_LOADED_EXE( mtlk_executable mtlk_main.cpp)
+# ADD_RUNTIME_LOADED_EXE( mtlk_executable /home/haf_admin/haf/src/hive_fork_manager/state_providers/driver_main.cpp )
 # ADD_EXECUTABLE(mtlk_executable
     
 #   mtlk_main.cpp
 # )
+
+# FILE( GLOB_RECURSE mtlk_sources ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp )
+ADD_EXECUTABLE( mtlk_executable /home/haf_admin/haf/src/hive_fork_manager/state_providers/driver_main.cpp
+/home/haf_admin/haf/src/hive_fork_manager/shared_lib/consensus_state_provider_replay.cpp
+/home/haf_admin/haf/src/hive_fork_manager/shared_lib/consensus_state_provider_replay.hpp)
+
+# SETUP_COMPILER( mtlk_executable} )
+SETUP_CLANG_TIDY( mtlk_executable )
+
+ADD_POSTGRES_INCLUDES( mtlk_executable)
+ADD_POSTGRES_LIBRARIES( mtlk_executable )
+
 
 SET_TARGET_PROPERTIES( mtlk_executable PROPERTIES EXCLUDE_FROM_ALL FALSE )
 
@@ -48,7 +60,8 @@ find_library(POSTGRESQL_SERVER_LIBRARY
 # target_link_libraries(your_target_name PRIVATE ${POSTGRESQL_SERVER_LIBRARY})
 
 target_link_libraries(mtlk_executable
-    PUBLIC  ${target_name} 
+     PUBLIC 
+     hive_protocol fc_shared_boost database_api_plugin block_api_plugin ${HAF_PQ_LIB} ${HAF_PQXX_LIB}
 )
 
 get_target_property(DEBUG_LIBS mtlk_executable LINK_LIBRARIES)
