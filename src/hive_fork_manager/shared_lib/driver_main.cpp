@@ -8,7 +8,7 @@
 
 #include <vector>
 
-
+#include <chrono>
 
 
 
@@ -16,16 +16,6 @@
 
 
 
-// int main()
-// {
-//     auto ok = consensus_state_provider::consensus_state_provider_replay_impl(
-//         1,
-//         5000000,
-//         "driverc",
-//         "postgresql:///haf_block_log",
-//         "/home/hived/datadir/consensus_state_provider");
-//     return ok ? 0 : 1;
-// }
 
 #include <iostream>
 #include <boost/program_options.hpp>
@@ -64,8 +54,15 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    std::cout << "from: " << from << "\n";
-    std::cout << "to: " << to << "\n";
+
+    std::locale::global(std::locale(""));
+    std::cout.imbue(std::locale());
+
+    
+
+    std::cout << "from: " << std::fixed << std::setprecision(0) << std::showbase << from << "\n";
+    std::cout << "to: " << std::fixed << std::setprecision(0) << std::showbase << to << "\n";
+    std::cout << "step: " << std::fixed << std::setprecision(0) << std::showbase << step << "\n";
     std::cout << "context: " << context << "\n";
     std::cout << "postgres_url: " << postgres_url << "\n";
     std::cout << "consensus_state_provider_storage: " << consensus_state_provider_storage << "\n";
@@ -74,15 +71,24 @@ int main(int argc, char *argv[]) {
     bool ok = true;
     for (int i = from; i < to; i += step)
     {
-        std::cout << "Stepping from " << i << " to " << i + step - 1<< "\n";
+        std::cout << "Stepping from " << std::fixed << std::setprecision(0) << std::showbase << i << " to " << i + step - 1;
 
-       
+        auto start = std::chrono::high_resolution_clock::now();
+
         auto step_ok = consensus_state_provider::consensus_state_provider_replay_impl(
             i,
             i+ step -1,
             context.c_str(),
             postgres_url.c_str(),
             consensus_state_provider_storage.c_str());
+
+        auto end = std::chrono::high_resolution_clock::now();            
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+        auto hours = duration.count() / 3600;
+        auto minutes = (duration.count() % 3600) / 60;
+        auto seconds = duration.count() % 60;
+        std::cout << " took: " << hours << " hours, " << minutes << " minutes, " << seconds << " seconds" << std::endl;
+
         if(!step_ok)
         {
             ok = false;
