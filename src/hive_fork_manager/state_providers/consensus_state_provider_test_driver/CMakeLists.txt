@@ -1,6 +1,5 @@
 
-
-ADD_EXECUTABLE( mtlk_executable /home/haf_admin/haf/src/hive_fork_manager/state_providers/driver_main.cpp
+ADD_EXECUTABLE( mtlk_executable /home/haf_admin/haf/src/hive_fork_manager/state_providers/consensus_state_provider_test_driver/driver_main.cpp
 /home/haf_admin/haf/src/hive_fork_manager/shared_lib/consensus_state_provider_replay.cpp
 /home/haf_admin/haf/src/hive_fork_manager/shared_lib/consensus_state_provider_replay.hpp)
 
