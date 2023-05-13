@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-#ifndef DRIVER_ONLY
+
 
 namespace {
 
@@ -261,4 +261,3 @@ extern "C"
   }
 }
 
-#endif //DRIVER_ONLY

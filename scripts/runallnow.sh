@@ -937,7 +937,7 @@ local EXIT_STATUS=0
 
 if [[ "$PWD" =~ debug_build$ ]] 
 then
-    cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS=" -DDRIVER_ONLY -O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # Debug O0
+    cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS=" -O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # Debug O0
     # cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-O2 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # Debug O2
 
     CMAKED=true
@@ -946,7 +946,7 @@ then
 elif [[ "$PWD" =~ build$ ]]
 then
 
-    cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS=" -DDRIVER_ONLY -fdiagnostics-color=always" -GNinja $SRC_DIR ;  # Release
+    cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="  -fdiagnostics-color=always" -GNinja $SRC_DIR ;  # Release
    
     CMAKED=true
 

@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#ifndef DRIVER_ONLY
+
 namespace {
 
 JsonbValue* push_key_to_jsonb(const std::string& key, JsonbParseState** parseState)
@@ -367,4 +367,3 @@ JsonbValue* operation_to_jsonb_value(const hive::protocol::operation& op)
 }
 
 
-#endif// DRIVER_ONLY
