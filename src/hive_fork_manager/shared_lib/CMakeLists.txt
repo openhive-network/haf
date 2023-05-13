@@ -25,48 +25,6 @@ else()
   message(FATAL_ERROR "PostgreSQL not found")
 endif()
 
-
-
-# ADD_RUNTIME_LOADED_EXE( mtlk_executable /home/haf_admin/haf/src/hive_fork_manager/state_providers/driver_main.cpp )
-# ADD_EXECUTABLE(mtlk_executable
-    
-#   mtlk_main.cpp
-# )
-
-# FILE( GLOB_RECURSE mtlk_sources ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp )
-ADD_EXECUTABLE( mtlk_executable /home/haf_admin/haf/src/hive_fork_manager/state_providers/driver_main.cpp
-/home/haf_admin/haf/src/hive_fork_manager/shared_lib/consensus_state_provider_replay.cpp
-/home/haf_admin/haf/src/hive_fork_manager/shared_lib/consensus_state_provider_replay.hpp)
-
-# SETUP_COMPILER( mtlk_executable} )
-SETUP_CLANG_TIDY( mtlk_executable )
-
-ADD_POSTGRES_INCLUDES( mtlk_executable)
-ADD_POSTGRES_LIBRARIES( mtlk_executable )
-
-
-SET_TARGET_PROPERTIES( mtlk_executable PROPERTIES EXCLUDE_FROM_ALL FALSE )
-
-
-ADD_POSTGRES_INCLUDES( mtlk_executable )
-ADD_POSTGRES_LIBRARIES( mtlk_executable )
-
-find_library(POSTGRESQL_SERVER_LIBRARY
-             NAMES postgres
-             HINTS /usr/lib/postgresql/14/lib/postgres_fdw.so)
-# if(NOT POSTGRESQL_SERVER_LIBRARY)
-#   message(FATAL_ERROR "PostgreSQL server library not found")
-# endif()
-# target_link_libraries(your_target_name PRIVATE ${POSTGRESQL_SERVER_LIBRARY})
-
-target_link_libraries(mtlk_executable
-     PUBLIC 
-     hive_protocol fc_shared_boost database_api_plugin block_api_plugin ${HAF_PQ_LIB} ${HAF_PQXX_LIB}
-)
-
-get_target_property(DEBUG_LIBS mtlk_executable LINK_LIBRARIES)
-message(STATUS "Linked libraries: ${DEBUG_LIBS}")
-
 get_target_property(DEBUG_LIBS ${target_name} LINK_LIBRARIES)
 message(STATUS "Linked libraries: ${DEBUG_LIBS}")
 
