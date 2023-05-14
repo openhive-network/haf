@@ -52,13 +52,13 @@ private:
 
 struct Postgres2Blocks
 {
-  void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path)
+  void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path, bool allow_reevaluate)
   {
     get_data_from_postgres(from, to, postgres_url);
 
     initialize_iterators();
 
-    blocks2replay(context, shared_memory_bin_path);
+    blocks2replay(context, shared_memory_bin_path, allow_reevaluate);
   }
 
   void handle_exception(std::exception_ptr exception_ptr)
@@ -116,7 +116,7 @@ struct Postgres2Blocks
                                   + std::to_string(from) 
                                   + " and block_num <= " 
                                   + std::to_string(to) 
-                                  + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
+                                  + " AND op_type_id <= 49 "
                                   + " ORDER BY id ASC";
     operations = db.execute_query(operations_query);
     std::cout << "Operations: " << operations.size() << std::endl;
@@ -135,7 +135,7 @@ struct Postgres2Blocks
     current_operation = operations.begin();
   }
 
-  void blocks2replay(const char *context, const char* shared_memory_bin_path)
+  void blocks2replay(const char *context, const char* shared_memory_bin_path, bool allow_reevaluate)
   {
   for(const auto& block : blocks)
     {
@@ -146,7 +146,7 @@ struct Postgres2Blocks
       //std::string json = fc::json::to_pretty_string(v);
       //wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
 
-      consensus_state_provider::apply_variant_block(v, context, block_num, shared_memory_bin_path);
+      consensus_state_provider::apply_variant_block(v, context, block_num, shared_memory_bin_path, allow_reevaluate);
       
     }
   }
@@ -325,18 +325,29 @@ struct Postgres2Blocks
 
 
 bool consensus_state_provider_replay_impl(int from, int to, const char *context,
-                                const char *postgres_url, const char* shared_memory_bin_path) 
+                                const char *postgres_url, const char* shared_memory_bin_path
+                                ,
+                                bool allow_reevaluate
+                                 ) 
 {
 
   if(from != consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path))
   {
-    elog("ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
-        ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
-    return false;
+    if(allow_reevaluate)
+    {
+      wlog("WARNING: Cannot replay consensus state provider properly, but reevaluating anyway: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
+          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
+    }
+    else
+    {
+      elog("ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
+          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
+      return false;
+    }
   }
 
   Postgres2Blocks p2b;
-  p2b.run(from, to, context, postgres_url, shared_memory_bin_path); 
+  p2b.run(from, to, context, postgres_url, shared_memory_bin_path, allow_reevaluate); 
   return true;
 }
 
@@ -496,7 +507,7 @@ std::shared_ptr<hive::chain::full_block_type> from_variant_to_full_block_ptr(con
 }
 
 
-void apply_variant_block(const fc::variant& v, const char* context, int block_num, const char* shared_memory_bin_path)
+void apply_variant_block(const fc::variant& v, const char* context, int block_num, const char* shared_memory_bin_path, bool allow_reevaluate)
 {
   auto get_skip_flags = [] () -> uint64_t
   {
@@ -523,8 +534,9 @@ void apply_variant_block(const fc::variant& v, const char* context, int block_nu
   // ===================================
 
   // Main body of the function
-  if (block_num != initialize_context(context, shared_memory_bin_path))
-    return;
+  if(!allow_reevaluate)
+    if (block_num != initialize_context(context, shared_memory_bin_path))
+      return;
 
   hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
   std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);

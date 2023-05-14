@@ -1,9 +1,46 @@
 #!/bin/bash
 
+: <<END_COMMENT
+ 18,993,603
+2,325,194ms database.cpp:211              operator()           ] Attempting to rewind all undo state...
+2,325,194ms database.cpp:215              operator()           ] Rewind undo state done.
+2,325,194ms database.cpp:225              operator()           ] Blockchain state database is AT IRREVERSIBLE state specific to head block: 18,993,619 and LIB: 18,993,603
+2,325,194ms consensus_state_provider_replay.cpp:330 consensus_state_prov ] ERROR: Cannot replay consensus state provider: Initial "from" block number is 1, but current state is expecting 18,993,620
+ took: 0 hours, 0 minutes, 0 seconds
+END_COMMENT
+
+
+: <<END_LAUNCH_DBG_CONFIGURATION
+       {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/../build/bin/mtlk_executable",
+            "args": ["--allow-reevaluate", "--from=23645966"],
+            "stopAtEntry": true,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+END_LAUNCH_DBG_CONFIGURATION
 
 # root" execution of the PostgreSQL server is not permitted.
 # The server must be started under an unprivileged user ID to prevent
 # possible system security compromise.  See the documentation for
+
 
 # valgrind --tool=callgrind --instr-atstart=no --callgrind-out-file=./callgrind.out.%p /usr/lib/postgresql/14/bin/postgres --config_file=/etc/postgresql/14/main/postgresql.conf
 
@@ -203,23 +240,64 @@ END_LOG_STEEMIT_10
 # sudo rm /home/hived/datadir/context/blockchain/shared_memory.bin; ../haf/scripts/runallnow.sh build
 # rsync -avh   /home/haf_admin/haf /home/hived/datadir/src/
 
+# valgrind --tool=callgrind --instr-atstart=no --callgrind-out-file=./callgrind.out.%p /usr/lib/postgresql/14/bin/postgres --config_file=/etc/postgresql/14/main/postgresql.conf
 
-# stopping app: select cab_app.stop_processing();
+# proby byly 
+# 1. -static-libasan:
+# SET(HIVE_ASAN_LINK_OPTIONS  -fsanitize=address)  -> SET(HIVE_ASAN_LINK_OPTIONS -static-libasan -fsanitize=address)
 
-# valgrind 
-#     --fullpath-after=10   
-#     --show-leak-kinds=all  
-#     --soname-synonyms=somalloc=none 
-#     --track-origins=yes 
-#     --trace-children=yes  
-#     --leak-check=full 
-#     --log-file=valgrind.log  
-#     /usr/lib/postgresql/14/bin/postgres --config_file=/etc/postgresql/14/main/postgresql.conf
+# 2. driver of postgres functions 
+# src/hive_fork_manager/shared_lib/CMakeLists.txt:
+# ADD_EXECUTABLE(mtlk_executable
+    
+#   mtlk_main.cpp
+# )
+
+# ADD_POSTGRES_INCLUDES( mtlk_executable )
+# ADD_POSTGRES_LIBRARIES( mtlk_executable )
+
+# target_link_libraries(mtlk_executable
+#     PRIVATE ${target_name}
+# )
+
+#    src/hive_fork_manager/shared_lib/mtlk_main.cpp:
+
+# #include "operation_base.hpp"
+
+# #include <hive/protocol/forward_impacted.hpp>
+# #include <hive/protocol/misc_utilities.hpp>
+
+# #include <fc/io/json.hpp>
+# #include <fc/string.hpp>
+
+# #include <vector>
+
+
+
+# #include "postgres.h"
+# #include "fmgr.h"
+
+# PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
+
+# Datum consensus_state_provider_replay(PG_FUNCTION_ARGS);
+
+
+
+# int main()
+# {
+#     consensus_state_provider_replay();
+#     return 0;
+# }
+
+
+
+# sudo rm /home/hived/datadir/context/blockchain/shared_memory.bin; ../haf/scripts/runallnow.sh build
+# rsync -avh   /home/haf_admin/haf /home/hived/datadir/src/
 
 set -x
 set -euo pipefail
 
-
+BEFORE_PROBLEM=23645964
 BIG=73964098
 MILLIONS_5=5000000
 MILLION_1=1000000
@@ -258,8 +336,6 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
-# TODO wywal inne state providery np ACCOUNTS
-# TODO wywal w ogóle state providera z cab_app i uzywaj tylko funkcji z src/hive_fork_manager/consensus_state_provider_helpers.sql
 # TODO separate driver for C code
 # TODO ASAN - memory leaks
 # TODO add interface to get a particular account balance
@@ -279,7 +355,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO clean garbage in /home/hived/datadir/consensus_storage when it cannot start (rg. when going Debug from Release
 # TDOD ask data_processor::handle_exception( std::exception_ptr exception_ptr ) {
 # TODO magic numbers: args.limit = 1000;
-# TODO - ASK + " AND op_type_id <= 49 " //TODO how to determine where vops start ? -> //trx_in_block < 0 -> virtual operation
+# TODO - ASK + " AND op_type_id <= 49 " //TODO how to determine where vops start ?
 # TODO* example testing app - move to proper place in directory tree
 # TODO* ? in yaml - cp log to . instead of ln -s
 # TODO* why runallnow script has to clear contest sharedmemory.bin ? 
@@ -881,62 +957,6 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 
-# root" execution of the PostgreSQL server is not permitted.
-# The server must be started under an unprivileged user ID to prevent
-# possible system security compromise.  See the documentation for
-
-# valgrind --tool=callgrind --instr-atstart=no --callgrind-out-file=./callgrind.out.%p /usr/lib/postgresql/14/bin/postgres --config_file=/etc/postgresql/14/main/postgresql.conf
-
-# proby byly 
-# 1. -static-libasan:
-# SET(HIVE_ASAN_LINK_OPTIONS  -fsanitize=address)  -> SET(HIVE_ASAN_LINK_OPTIONS -static-libasan -fsanitize=address)
-
-# 2. driver of postgres functions 
-# src/hive_fork_manager/shared_lib/CMakeLists.txt:
-# ADD_EXECUTABLE(mtlk_executable
-    
-#   mtlk_main.cpp
-# )
-
-# ADD_POSTGRES_INCLUDES( mtlk_executable )
-# ADD_POSTGRES_LIBRARIES( mtlk_executable )
-
-# target_link_libraries(mtlk_executable
-#     PRIVATE ${target_name}
-# )
-
-#    src/hive_fork_manager/shared_lib/mtlk_main.cpp:
-
-# #include "operation_base.hpp"
-
-# #include <hive/protocol/forward_impacted.hpp>
-# #include <hive/protocol/misc_utilities.hpp>
-
-# #include <fc/io/json.hpp>
-# #include <fc/string.hpp>
-
-# #include <vector>
-
-
-
-# #include "postgres.h"
-# #include "fmgr.h"
-
-# PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
-
-# Datum consensus_state_provider_replay(PG_FUNCTION_ARGS);
-
-
-
-# int main()
-# {
-#     consensus_state_provider_replay();
-#     return 0;
-# }
-
-
-
-
 
 
 
@@ -1031,6 +1051,7 @@ then
 #    ninja extension.hive_fork_manager  \
     ninja mtlk_executable           && sudo ninja install         && sudo chown $USER:$USER .ninja_*          && ctest -R keyauth --output-on-failure         && ctest -R curr --output-on-failure    
     EXIT_STATUS=$?
+    # ninja mtlk_executable; sudo chown $USER:$USER .ninja_*
     sudo chown -R $USER:$USER *
 fi
 

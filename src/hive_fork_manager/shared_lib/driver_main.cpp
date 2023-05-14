@@ -49,6 +49,7 @@ namespace po = boost::program_options;
 int main(int argc, char *argv[]) {
     int from, to, step;
     std::string  context, postgres_url, consensus_state_provider_storage;
+    bool allow_reevaluate;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -59,6 +60,7 @@ int main(int argc, char *argv[]) {
         ("context,c", po::value<std::string>(&context)->default_value("driverc"), "context (default: driverc)")
         ("postgres_url,p", po::value<std::string>(&postgres_url)->default_value("postgresql:///haf_block_log"), "PostgreSQL URL (default: postgresql:///haf_block_log)")
         ("consensus_state_provider_storage,s", po::value<std::string>(&consensus_state_provider_storage)->default_value("/home/hived/datadir/consensus_state_provider"), "Consensus state provider storage (optional)")
+        ("allow-reevaluate", po::bool_switch(&allow_reevaluate), "allow reevaluate");
         ;
 
 
@@ -90,21 +92,25 @@ int main(int argc, char *argv[]) {
     std::cout << "context: " << context << "\n";
     std::cout << "postgres_url: " << postgres_url << "\n";
     std::cout << "consensus_state_provider_storage: " << consensus_state_provider_storage << "\n";
+    std::cout << "allow-reevaluate: " << (allow_reevaluate? "allowed" : "disallowed=default") << "\n";
 
 
     bool ok = true;
     for (int i = from; i < to; i += step)
     {
-        std::cout << "Stepping from " << std::fixed << std::setprecision(0) << std::showbase << i << " to " << i + step - 1;
+        int current_step_end = std::min(i + step - 1, to);
+
+        std::cout << "Stepping from " << std::fixed << std::setprecision(0) << std::showbase << i << " to " << current_step_end;
 
         auto start = std::chrono::high_resolution_clock::now();
 
         auto step_ok = consensus_state_provider::consensus_state_provider_replay_impl(
             i,
-            i+ step -1,
+            current_step_end,
             context.c_str(),
             postgres_url.c_str(),
-            consensus_state_provider_storage.c_str());
+            consensus_state_provider_storage.c_str(),
+            allow_reevaluate);
 
         auto end = std::chrono::high_resolution_clock::now();            
         auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
