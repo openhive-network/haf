@@ -94,6 +94,9 @@ struct Postgres2Blocks
   {
     try
     {
+      
+      auto start = std::chrono::high_resolution_clock::now();
+
       PostgresDatabase db(postgres_url);
       // clang-format off
       auto blocks_query = "SELECT * FROM hive.blocks JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
@@ -121,6 +124,13 @@ struct Postgres2Blocks
     operations = db.execute_query(operations_query);
     std::cout << "Operations: " << operations.size() << std::endl;
       // clang-format on
+      auto end = std::chrono::high_resolution_clock::now();            
+      auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+      auto hours = duration.count() / 3600;
+      auto minutes = (duration.count() % 3600) / 60;
+      auto seconds = duration.count() % 60;
+      std::cout << " postgres took: " << hours << " hours, " << minutes << " minutes, " << seconds << " seconds" << " ";
+
     }
     catch(...)
     {
