@@ -149,19 +149,15 @@ struct Postgres2Blocks
   {
   for(const auto& block : blocks)
     {
-      fc::variant v = block2variant(block);
 
-      auto block_num = block["num"].as<int>();
 
-      //std::string json = fc::json::to_pretty_string(v);
-      //wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
 
-      apply_variant_block(v, context, block_num, shared_memory_bin_path, allow_reevaluate);
+      apply_variant_block(block, context, shared_memory_bin_path, allow_reevaluate);
       
     }
   }
 
-  void apply_variant_block(const fc::variant& v, const char* context, int block_num, const char* shared_memory_bin_path, bool allow_reevaluate)
+  void apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate)
   {
     auto get_skip_flags = [] () -> uint64_t
     {
@@ -188,6 +184,13 @@ struct Postgres2Blocks
     // ===================================
 
     // Main body of the function
+
+    fc::variant v = block2variant(block);
+    auto block_num = block["num"].as<int>();
+
+    //std::string json = fc::json::to_pretty_string(v);
+    //wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
+
     if(!allow_reevaluate)
       if (block_num != initialize_context(context, shared_memory_bin_path))
         return;
