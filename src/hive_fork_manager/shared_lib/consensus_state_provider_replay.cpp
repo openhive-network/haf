@@ -182,9 +182,8 @@ struct Postgres2Blocks
 
     // End of local functions definitions
     // ===================================
-
+    
     // Main body of the function
-
     fc::variant v = block2variant(block);
     auto block_num = block["num"].as<int>();
 
