@@ -156,10 +156,49 @@ struct Postgres2Blocks
       //std::string json = fc::json::to_pretty_string(v);
       //wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
 
-      consensus_state_provider::apply_variant_block(v, context, block_num, shared_memory_bin_path, allow_reevaluate);
+      apply_variant_block(v, context, block_num, shared_memory_bin_path, allow_reevaluate);
       
     }
   }
+
+  void apply_variant_block(const fc::variant& v, const char* context, int block_num, const char* shared_memory_bin_path, bool allow_reevaluate)
+  {
+    auto get_skip_flags = [] () -> uint64_t
+    {
+      return hive::chain::database::skip_block_log |
+            hive::chain::database::skip_witness_signature |
+            hive::chain::database::skip_transaction_signatures |
+            hive::chain::database::skip_transaction_dupe_check |
+            hive::chain::database::skip_tapos_check |
+            hive::chain::database::skip_merkle_check |
+            hive::chain::database::skip_witness_schedule_check |
+            hive::chain::database::skip_authority_check |
+            hive::chain::database::skip_validate;
+    };
+
+    auto apply_full_block = [](hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags)
+    {
+      db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
+      db.public_apply_block(fb_ptr, skip_flags);
+      db.clear_tx_status();
+      db.set_revision(db.head_block_num());
+    };
+
+    // End of local functions definitions
+    // ===================================
+
+    // Main body of the function
+    if(!allow_reevaluate)
+      if (block_num != initialize_context(context, shared_memory_bin_path))
+        return;
+
+    hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
+    std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
+    uint64_t skip_flags = get_skip_flags();
+
+    apply_full_block(db, fb_ptr, skip_flags);
+  }
+
 
   fc::variant block2variant(const pqxx::row& block)
   {
@@ -517,43 +556,6 @@ std::shared_ptr<hive::chain::full_block_type> from_variant_to_full_block_ptr(con
 }
 
 
-void apply_variant_block(const fc::variant& v, const char* context, int block_num, const char* shared_memory_bin_path, bool allow_reevaluate)
-{
-  auto get_skip_flags = [] () -> uint64_t
-  {
-    return hive::chain::database::skip_block_log |
-          hive::chain::database::skip_witness_signature |
-          hive::chain::database::skip_transaction_signatures |
-          hive::chain::database::skip_transaction_dupe_check |
-          hive::chain::database::skip_tapos_check |
-          hive::chain::database::skip_merkle_check |
-          hive::chain::database::skip_witness_schedule_check |
-          hive::chain::database::skip_authority_check |
-          hive::chain::database::skip_validate;
-  };
-
-  auto apply_full_block = [](hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags)
-  {
-    db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
-    db.public_apply_block(fb_ptr, skip_flags);
-    db.clear_tx_status();
-    db.set_revision(db.head_block_num());
-  };
-
-  // End of local functions definitions
-  // ===================================
-
-  // Main body of the function
-  if(!allow_reevaluate)
-    if (block_num != initialize_context(context, shared_memory_bin_path))
-      return;
-
-  hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
-  std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
-  uint64_t skip_flags = get_skip_flags();
-
-  apply_full_block(db, fb_ptr, skip_flags);
-}
 
 int consensus_state_provider_get_expected_block_num_impl(const char* context, const char* shared_memory_bin_path)
 {
