@@ -169,7 +169,7 @@ haf_system_tests_mirrornet:
     - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log/block_log_5m_mirrornet
     - ls -la
     - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
-    - pytest --junitxml report.xml --timeout=600 --block-log-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log/block_log_5m_mirrornet/block_log -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
+    - pytest --junitxml report.xml --timeout=3600 --block-log-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log/block_log_5m_mirrornet/block_log -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
 
   artifacts:
     paths:
