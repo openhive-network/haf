@@ -1,6 +1,7 @@
 #include "consensus_state_provider_replay.hpp"
 
 #include "fc/variant.hpp"
+#include <chrono>
 #include <fc/io/json.hpp>
 #include <fc/io/sstream.hpp>
 
@@ -52,13 +53,18 @@ private:
 
 struct Postgres2Blocks
 {
+  std::chrono::nanoseconds transformations_duration; 
   void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path, bool allow_reevaluate)
   {
+    transformations_duration = std::chrono::nanoseconds();
     get_data_from_postgres(from, to, postgres_url);
 
     initialize_iterators();
 
     blocks2replay(context, shared_memory_bin_path, allow_reevaluate);
+
+    
+    print_duration("Trans", transformations_duration);
   }
 
   void handle_exception(std::exception_ptr exception_ptr)
@@ -105,7 +111,7 @@ struct Postgres2Blocks
                                   + std::to_string(to) 
                                   + " ORDER BY num ASC";
       blocks = db.execute_query(blocks_query);
-      std::cout << " Blocks: " << blocks.size() << " "; 
+      std::cout << "Blocks:" << blocks.size() << " "; 
 
       auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions WHERE block_num >= " 
                                   + std::to_string(from) 
@@ -113,7 +119,7 @@ struct Postgres2Blocks
                                   + std::to_string(to) 
                                   + " ORDER BY block_num, trx_in_block ASC";
       transactions = db.execute_query(transactions_query);
-      std::cout << "Transactions: " << transactions.size() << " ";
+      std::cout << "Transactions:" << transactions.size() << " ";
 
       auto operations_query = "SELECT block_num, body, trx_in_block FROM hive.operations WHERE block_num >= " 
                                   + std::to_string(from) 
@@ -122,11 +128,11 @@ struct Postgres2Blocks
                                   + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
                                   + " ORDER BY id ASC";
     operations = db.execute_query(operations_query);
-    std::cout << "Operations: " << operations.size() << " ";
+    std::cout << "Operations:" << operations.size() << " ";
       // clang-format on
       auto end = std::chrono::high_resolution_clock::now();            
       auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-      print_duration("Postgres took", duration);
+      print_duration("Postgres", duration);
 
     }
     catch(...)
@@ -181,6 +187,9 @@ struct Postgres2Blocks
     // ===================================
     
     // Main body of the function
+    
+    auto start = std::chrono::high_resolution_clock::now();
+
     fc::variant v = block2variant(block);
     auto block_num = block["num"].as<int>();
 
@@ -193,6 +202,11 @@ struct Postgres2Blocks
 
     hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
     std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::nanoseconds duration = end - start;    
+    transformations_duration += duration;
+
     uint64_t skip_flags = get_skip_flags();
 
     apply_full_block(db, fb_ptr, skip_flags);
@@ -575,9 +589,10 @@ void consensus_state_provider_finish_impl(const char* context, const char* share
 }
 }
 
-void print_duration(const std::string& message, const std::chrono::seconds& duration)
+void print_duration(const std::string& message, const std::chrono::nanoseconds& duration) 
 {
-    auto minutes = duration.count() / 60;
-    auto seconds = duration.count() % 60;
-    std::cout << message << ": " << minutes << " minutes, " << seconds << " seconds" << " ";
+    auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
+    auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration % std::chrono::minutes(1));
+
+    std::cout << message << ":" << minutes.count() << "'" << seconds.count() << "\" ";
 }

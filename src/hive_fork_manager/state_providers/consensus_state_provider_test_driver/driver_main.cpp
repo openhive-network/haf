@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
     bool ok = true;
     for (int i = from; i < to; i += step)
     {
-        std::cout << "Stepping from " << std::fixed << std::setprecision(0) << std::showbase << i << " to " << i + step - 1;
+        std::cout << "Stepping from " << std::fixed << std::setprecision(0) << std::showbase << i << " to " << i + step - 1 << " ";
 
         auto start = std::chrono::high_resolution_clock::now();
 
@@ -109,8 +109,9 @@ int main(int argc, char *argv[]) {
 
         auto end = std::chrono::high_resolution_clock::now();            
         auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-        print_duration("All took", duration);
+        print_duration("All", duration);
         std::cout << "Memory (KB): " << get_memory_usage_kb() << std::endl;
+        
 
 
         if(!step_ok)
