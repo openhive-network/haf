@@ -27,42 +27,12 @@ endif()
 
 
 
-ADD_RUNTIME_LOADED_EXE( mtlk_executable mtlk_main.cpp)
-
-# mtlk conflict of -O0 and -O0 options
-if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    target_compile_options(mtlk_executable PRIVATE -O0)
-endif()
 
 
-# ADD_EXECUTABLE(mtlk_executable
-    
-#   mtlk_main.cpp
-# )
-
-SET_TARGET_PROPERTIES( mtlk_executable PROPERTIES EXCLUDE_FROM_ALL FALSE )
 
 
-ADD_POSTGRES_INCLUDES( mtlk_executable )
-ADD_POSTGRES_LIBRARIES( mtlk_executable )
 
-find_library(POSTGRESQL_SERVER_LIBRARY
-             NAMES postgres
-             HINTS /usr/lib/postgresql/14/lib/postgres_fdw.so)
-# if(NOT POSTGRESQL_SERVER_LIBRARY)
-#   message(FATAL_ERROR "PostgreSQL server library not found")
-# endif()
-# target_link_libraries(your_target_name PRIVATE ${POSTGRESQL_SERVER_LIBRARY})
 
-target_link_libraries(mtlk_executable
-    PUBLIC  ${target_name} 
-)
-
-get_target_property(DEBUG_LIBS mtlk_executable LINK_LIBRARIES)
-message(STATUS "Linked libraries: ${DEBUG_LIBS}")
-
-get_target_property(DEBUG_LIBS ${target_name} LINK_LIBRARIES)
-message(STATUS "Linked libraries: ${DEBUG_LIBS}")
 
 INSTALL( TARGETS
   ${target_name}
