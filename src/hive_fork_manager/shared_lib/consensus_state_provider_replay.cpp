@@ -102,6 +102,7 @@ struct Postgres2Blocks
                                   + std::to_string(to) 
                                   + " ORDER BY num ASC";
       blocks = db.execute_query(blocks_query);
+      std::cout << " Blocks: " << blocks.size() << " "; 
 
       auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions WHERE block_num >= " 
                                   + std::to_string(from) 
@@ -109,6 +110,7 @@ struct Postgres2Blocks
                                   + std::to_string(to) 
                                   + " ORDER BY block_num, trx_in_block ASC";
       transactions = db.execute_query(transactions_query);
+      std::cout << "Transactions: " << transactions.size() << " ";
 
       auto operations_query = "SELECT block_num, body, trx_in_block FROM hive.operations WHERE block_num >= " 
                                   + std::to_string(from) 
@@ -117,6 +119,7 @@ struct Postgres2Blocks
                                   + " AND op_type_id <= 49 "
                                   + " ORDER BY id ASC";
     operations = db.execute_query(operations_query);
+    std::cout << "Operations: " << operations.size() << std::endl;
       // clang-format on
     }
     catch(...)
