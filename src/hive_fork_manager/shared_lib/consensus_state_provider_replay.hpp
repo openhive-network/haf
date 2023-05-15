@@ -11,6 +11,7 @@ namespace fc
 
 #include <hive/chain/full_block.hpp>
 
+void print_duration(const std::string& message, const std::chrono::seconds& duration);
 
 namespace consensus_state_provider
 {

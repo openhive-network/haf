@@ -44,6 +44,7 @@ unsigned long get_memory_usage_kb() {
     return 0;
 }
 
+
 namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
@@ -108,11 +109,8 @@ int main(int argc, char *argv[]) {
 
         auto end = std::chrono::high_resolution_clock::now();            
         auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-        auto hours = duration.count() / 3600;
-        auto minutes = (duration.count() % 3600) / 60;
-        auto seconds = duration.count() % 60;
-        std::cout << " All took: " << hours << " hours, " << minutes << " minutes, " << seconds << " seconds  ";
-        std::cout << "Memory usage (KB): " << get_memory_usage_kb() << std::endl;
+        print_duration("All took", duration);
+        std::cout << "Memory (KB): " << get_memory_usage_kb() << std::endl;
 
 
         if(!step_ok)

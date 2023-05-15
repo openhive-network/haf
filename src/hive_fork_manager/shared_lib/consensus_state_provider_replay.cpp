@@ -122,14 +122,11 @@ struct Postgres2Blocks
                                   + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
                                   + " ORDER BY id ASC";
     operations = db.execute_query(operations_query);
-    std::cout << "Operations: " << operations.size() << std::endl;
+    std::cout << "Operations: " << operations.size() << " ";
       // clang-format on
       auto end = std::chrono::high_resolution_clock::now();            
       auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-      auto hours = duration.count() / 3600;
-      auto minutes = (duration.count() % 3600) / 60;
-      auto seconds = duration.count() % 60;
-      std::cout << " postgres took: " << hours << " hours, " << minutes << " minutes, " << seconds << " seconds" << " ";
+      print_duration("Postgres took", duration);
 
     }
     catch(...)
@@ -576,4 +573,11 @@ void consensus_state_provider_finish_impl(const char* context, const char* share
 
   }
 }
+}
+
+void print_duration(const std::string& message, const std::chrono::seconds& duration)
+{
+    auto minutes = duration.count() / 60;
+    auto seconds = duration.count() % 60;
+    std::cout << message << ": " << minutes << " minutes, " << seconds << " seconds" << " ";
 }
