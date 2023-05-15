@@ -2,7 +2,10 @@ import pytest
 import test_tools as tt
 
 from haf_local_tools.haf_node import HafNode
-from haf_local_tools.system.haf import assert_are_blocks_sync_with_haf_db, assert_are_indexes_restored
+from haf_local_tools.system.haf import (
+    assert_are_blocks_sync_with_haf_db,
+    assert_are_indexes_restored,
+)
 from haf_local_tools.system.haf.mirrornet import get_pytest_sleep_time
 from haf_local_tools.system.haf.mirrornet.constants import (
     SKELETON_KEY,
@@ -12,8 +15,11 @@ from haf_local_tools.system.haf.mirrornet.constants import (
     TRANSACTION_IN_3000001_BLOCK,
     TRANSACTION_IN_5000000_BLOCK,
     TIMESTAMP_5M,
+    WITNESSES_5M,
 )
 
+
+@pytest.mark.mirrornet
 @pytest.mark.parametrize(
     "psql_index_threshold",
     [6000000, 1000000],
@@ -22,28 +28,33 @@ from haf_local_tools.system.haf.mirrornet.constants import (
         "disabled_indexes_in_replay",
     ],
 )
-def test_replay(block_log_5m_path,tmp_path, psql_index_threshold):
+def test_replay(block_log_5m_path, tmp_path, psql_index_threshold):
     sleep_time = get_pytest_sleep_time()
 
     haf_node = HafNode()
     haf_node.config.shared_file_size = "2G"
     haf_node.config.psql_index_threshold = psql_index_threshold
+    haf_node.config.witness = WITNESSES_5M
+    haf_node.config.private_key = "5JNHfZYKGaomSFvd4NUdQ9qMcEAC43kujbfjueTHpVapX1Kzq2n"
+    haf_node.config.shared_file_size = "2G"
+    haf_node.config.enable_stale_production = True
+    haf_node.config.required_participation = 0
 
     block_log_5m = tt.BlockLog(block_log_5m_path)
-    block_log_1m = block_log_5m.truncate(tmp_path, 1000000)
+    block_log = block_log_5m.truncate(tmp_path, 5000000)
 
     haf_node.run(
-        replay_from=block_log_1m,
+        replay_from=block_log,
         time_offset=TIMESTAMP_5M,
-        wait_for_live=False,
+        wait_for_live=True,
         timeout=sleep_time,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],
     )
 
     haf_node.wait_for_transaction_in_database(transaction=TRANSACTION_IN_1092_BLOCK)
-    # haf_node.wait_for_transaction_in_database(transaction=TRANSACTION_IN_2999999_BLOCK)
-    # haf_node.wait_for_transaction_in_database(transaction=TRANSACTION_IN_3000001_BLOCK)
-    # haf_node.wait_for_transaction_in_database(transaction=TRANSACTION_IN_5000000_BLOCK)
+    haf_node.wait_for_transaction_in_database(transaction=TRANSACTION_IN_2999999_BLOCK)
+    haf_node.wait_for_transaction_in_database(transaction=TRANSACTION_IN_3000001_BLOCK)
+    haf_node.wait_for_transaction_in_database(transaction=TRANSACTION_IN_5000000_BLOCK)
 
-    # assert_are_blocks_sync_with_haf_db(haf_node.session, 5000000)
-    # assert_are_indexes_restored(haf_node)
+    assert_are_blocks_sync_with_haf_db(haf_node.session, 5000000)
+    assert_are_indexes_restored(haf_node)
