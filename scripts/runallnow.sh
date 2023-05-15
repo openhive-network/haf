@@ -957,7 +957,8 @@ fi
 if [[ $CMAKED ]]
 then
 #    ninja extension.hive_fork_manager  \
-    ninja mtlk_executable           && sudo ninja install         && sudo chown $USER:$USER .ninja_*          && ctest -R keyauth --output-on-failure         && ctest -R curr --output-on-failure    EXIT_STATUS=$?
+    ninja mtlk_executable           && sudo ninja install         && sudo chown $USER:$USER .ninja_*          && ctest -R keyauth --output-on-failure         && ctest -R curr --output-on-failure    
+    EXIT_STATUS=$?
     sudo chown -R $USER:$USER *
 fi
 
