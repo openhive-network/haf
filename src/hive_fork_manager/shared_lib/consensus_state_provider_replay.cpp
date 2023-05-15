@@ -53,7 +53,6 @@ private:
 
 struct Postgres2Blocks
 {
-  std::chrono::nanoseconds transformations_duration; 
   void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path, bool allow_reevaluate)
   {
     transformations_duration = std::chrono::nanoseconds();
@@ -382,6 +381,7 @@ struct Postgres2Blocks
 
   pqxx::result::const_iterator current_operation;
 
+  std::chrono::nanoseconds transformations_duration; 
 
 }; //struct Postgres2Blocks
 
