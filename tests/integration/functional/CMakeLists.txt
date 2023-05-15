@@ -12,7 +12,7 @@ MACRO( ADD_SQL_FUNCTIONAL_TEST_TYPE sql_test_path test_script_type) # test_scrip
             COMMAND tools/test_${test_script_type}.sh ${sources_under_tests_path} ${tests_folder}/${sql_test_path} ${setup_scripts_dir_path} ${POSTGRES_PORT} ${preloaded_library}
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/integration/functional
             )
-    MESSAGE( STATUS "Added functional tests '${test_target}'" )
+    # MESSAGE( STATUS "Added functional tests '${test_target}'" )
 ENDMACRO()
 
 MACRO( ADD_SQL_ERROR_FUNCTIONAL_TEST sql_test_path )
@@ -41,7 +41,7 @@ MACRO( ADD_AUTHORIZATION_FUNCTIONAL_TEST_TYPE sql_test_path test_script_type)
             COMMAND tools/test_authorization_${test_script_type}.sh ${sources_under_tests_path} ${tests_folder}/${sql_test_path} ${setup_scripts_dir_path} ${POSTGRES_PORT}
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/integration/functional
             )
-    MESSAGE( STATUS "Added functional authorization tests '${test_target}'" )
+    # MESSAGE( STATUS "Added functional authorization tests '${test_target}'" )
 ENDMACRO()
 
 MACRO( ADD_AUTHORIZATION_FUNCTIONAL_TEST sql_test_path)
