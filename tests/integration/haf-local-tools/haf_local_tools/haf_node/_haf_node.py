@@ -46,6 +46,9 @@ class HafNode(PreconfiguredNode):
         self.__keep_database: bool = keep_database
         self.config.plugin.append("sql_serializer")
 
+        self.config.log_appender = '{"appender":"stderr","stream":"std_error"}'
+        self.config.log_logger = '{"name":"default","level":"info","appender":"stderr"}'
+
     @property
     def session(self) -> Session:
         assert self.__session, "Session is not available since node was not run yet! Call the 'run()' method first."
