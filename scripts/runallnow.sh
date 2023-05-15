@@ -147,6 +147,7 @@ connection to server was lost
 
 END_COMMENT
 
+
 : <<END_LOG_STEEMIT_10
 
 NOTICE:  __consensus_state_provider_replay_call_ok=t
