@@ -96,13 +96,15 @@ int main(int argc, char *argv[]) {
     bool ok = true;
     for (int i = from; i < to; i += step)
     {
-        std::cout << "Stepping from " << std::fixed << std::setprecision(0) << std::showbase << i << " to " << i + step - 1 << " ";
+        int current_step_end = std::min(i + step - 1, to);
+
+        std::cout << "Stepping from " << std::fixed << std::setprecision(0) << std::showbase << i << " to " << current_step_end << " ";
 
         auto start = std::chrono::high_resolution_clock::now();
 
         auto step_ok = consensus_state_provider::consensus_state_provider_replay_impl(
             i,
-            i+ step -1,
+            current_step_end,
             context.c_str(),
             postgres_url.c_str(),
             consensus_state_provider_storage.c_str());
