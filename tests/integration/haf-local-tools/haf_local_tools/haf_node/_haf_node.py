@@ -45,6 +45,13 @@ class HafNode(PreconfiguredNode):
         self.__session: Session | None = None
         self.__keep_database: bool = keep_database
         self.config.plugin.append("sql_serializer")
+        self.config.log_logger = (
+            '{"name":"default","level":"debug","appender":"stderr"} '
+            '{"name":"user","level":"debug","appender":"stderr"} '
+            '{"name":"chainlock","level":"error","appender":"p2p"} '
+            '{"name":"sync","level":"error","appender":"p2p"} '
+            '{"name":"p2p","level":"error","appender":"p2p"}'
+        )
 
     @property
     def session(self) -> Session:
