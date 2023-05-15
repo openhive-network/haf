@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
         auto hours = duration.count() / 3600;
         auto minutes = (duration.count() % 3600) / 60;
         auto seconds = duration.count() % 60;
-        std::cout << " took: " << hours << " hours, " << minutes << " minutes, " << seconds << " seconds  ";
+        std::cout << " All took: " << hours << " hours, " << minutes << " minutes, " << seconds << " seconds  ";
         std::cout << "Memory usage (KB): " << get_memory_usage_kb() << std::endl;
 
 
