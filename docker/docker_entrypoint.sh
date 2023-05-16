@@ -130,31 +130,59 @@ cd "$DATADIR"
 prepare_pg_hba_file
 sudo -n /etc/init.d/postgresql restart
 
-HIVED_ARGS=()
-HIVED_ARGS+=("$@")
-export HIVED_ARGS
-
-echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
-
-echo "${BASH_SOURCE[@]}"
-
-{
-sudo --user=hived -En /bin/bash << EOF
-echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
-
-/home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
-  --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
-  --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
-  ${HIVED_ARGS[@]} 2>&1 | tee -i hived.log
-echo "$? Hived process finished execution."
-EOF
-echo "$? Attempting to stop Postgresql..."
 
 postgres_pid=0
 if [ -f "/var/run/postgresql/$POSTGRES_VERSION-main.pid" ];
 then
   postgres_pid=$(cat "/var/run/postgresql/$POSTGRES_VERSION-main.pid")
 fi
+status=0
+
+case "$1" in
+  -*)
+    HIVED_ARGS=()
+    HIVED_ARGS+=("$@")
+    export HIVED_ARGS
+
+    echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
+
+    echo "${BASH_SOURCE[@]}"
+
+    {
+    sudo --user=hived -En /bin/bash << EOF
+    echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
+
+    /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
+      --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
+      --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
+      ${HIVED_ARGS[@]} 2>&1 | tee -i hived.log
+    echo "$? Hived process finished execution."
+EOF
+
+    } &
+
+    job_pid=$!
+
+    jobs -l
+
+    echo "waiting for job finish: $job_pid."
+    wait $job_pid || status=$?
+    ;;
+  postgres)
+    echo "running only postgres"
+    sleep infinity || status=$?
+    ;;
+  *)
+    CMD=()
+    CMD+=("$@")
+    export CMD
+    echo "Attempting to execute binary passed by CMD:" "${CMD[@]}"
+    exec "${CMD[@]}" || status=$?
+    ;;
+esac
+
+echo "$? Attempting to stop Postgresql..."
+
 
 sudo -n /etc/init.d/postgresql stop
 
@@ -166,14 +194,6 @@ fi
 
 echo "Postgres process: $postgres_pid finished."
 
-} &
-
-job_pid=$!
-
-jobs -l
-
-echo "waiting for job finish: $job_pid."
-wait $job_pid || true
 
 echo "Exiting docker entrypoint..."
 
