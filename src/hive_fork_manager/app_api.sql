@@ -313,23 +313,66 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_context_detached_save_block_num( _context_name TEXT, _block_num INTEGER )
+CREATE OR REPLACE FUNCTION hive.app_context_detached_save_block_num( _contexts TEXT[], _block_num INTEGER )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __contexts_id INTEGER[];
 BEGIN
+    SELECT ARRAY_AGG(hc.id) INTO __contexts_id
+    FROM hive.contexts hc
+    WHERE hc.name =ANY( _contexts ) AND hc.is_attached = FALSE;
+
+    IF __contexts_id IS NULL OR ARRAY_LENGTH( __contexts_id, 1 ) != ARRAY_LENGTH( _contexts, 1 ) THEN
+        RAISE EXCEPTION 'Contexts do not exist or are attached';
+    END IF;
+
     UPDATE hive.contexts hc
     SET detached_block_num = _block_num
-    WHERE hc.name = _context_name AND hc.is_attached = FALSE
-    RETURNING hc.id INTO __context_id;
+    WHERE hc.id =ANY( __contexts_id );
+END;
+$BODY$;
 
-    IF __context_id IS NULL  THEN
-        RAISE EXCEPTION 'Context % does not exist or is attached', _context_name;
+CREATE OR REPLACE FUNCTION hive.app_context_detached_save_block_num( _context TEXT, _block_num INTEGER )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.app_context_detached_save_block_num( ARRAY[ _context ], _block_num );
+END;
+$BODY$;
+
+
+CREATE OR REPLACE FUNCTION hive.app_context_detached_get_block_num( _contexts TEXT[] )
+    RETURNS INTEGER
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __result INTEGER[];
+BEGIN
+    SELECT ARRAY_AGG( hc.detached_block_num ) detached_block_num INTO __result
+    FROM hive.contexts hc
+    WHERE hc.name =ANY( _contexts ) AND hc.is_attached = FALSE;
+
+    IF __result IS NULL OR ARRAY_LENGTH( __result, 1 ) != ARRAY_LENGTH( _contexts, 1 ) THEN
+        RAISE EXCEPTION 'Contexts do not exist or are attached';
     END IF;
+
+    SELECT ARRAY_AGG( DISTINCT( blocks.* ) ) INTO __result
+    FROM UNNEST( __result ) as blocks;
+
+    IF ARRAY_LENGTH( __result, 1 ) != 1 THEN
+        RAISE EXCEPTION 'Inconsistent block num in context group';
+    END IF;
+
+    RETURN __result[ 1 ];
 END;
 $BODY$;
 
@@ -339,23 +382,8 @@ CREATE OR REPLACE FUNCTION hive.app_context_detached_get_block_num( _context_nam
     STABLE
 AS
 $BODY$
-DECLARE
-    __result INTEGER;
-    __context_id hive.contexts.id%TYPE;
 BEGIN
-    SELECT hc.id INTO __context_id
-    FROM hive.contexts hc
-    WHERE hc.name = _context_name AND hc.is_attached = FALSE;
-
-    IF __context_id IS NULL  THEN
-        RAISE EXCEPTION 'Context % does not exist or is attached', _context_name;
-    END IF;
-
-    SELECT hc.detached_block_num INTO __result
-    FROM hive.contexts hc
-    WHERE hc.id = __context_id;
-
-    RETURN __result;
+    RETURN hive.app_context_detached_get_block_num( ARRAY[ _context_name ] );
 END;
 $BODY$;
 
