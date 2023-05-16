@@ -77,7 +77,7 @@ $BODY$
 DECLARE
     __result INT;
 BEGIN
-    SELECT hive.app_next_block( 'context' ).first_block INTO __result;
+    SELECT hive.app_next_block( 'context' ) INTO __result;
     ASSERT __result IS NULL, 'Processing  BFF event did not return NULL';
 
     PERFORM hive.app_next_block( 'context2' ); -- BFF EVENT event
