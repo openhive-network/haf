@@ -25,8 +25,20 @@ BEGIN
     END;
 
     BEGIN
+        PERFORM hive.app_next_block( ARRAY[ 'alice_context' ] );
+        ASSERT FALSE, 'Hived can call app_next_block as array';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
         PERFORM hive.app_context_detach( 'alice_context' );
         ASSERT FALSE, 'Hived can call app_context_detach';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_context_detach( ARRAY[ 'alice_context' ] );
+        ASSERT FALSE, 'Hived can call app_context_detach array';
     EXCEPTION WHEN OTHERS THEN
     END;
 
