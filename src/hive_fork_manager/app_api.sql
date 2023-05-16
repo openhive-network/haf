@@ -194,6 +194,27 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.app_context_detach( _contexts TEXT[] )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM
+          hive.context_detach( context.* )
+        , hive.create_all_irreversible_blocks_view( context.* )
+        , hive.create_all_irreversible_transactions_view( context.* )
+        , hive.create_all_irreversible_operations_view( context.* )
+        , hive.create_all_irreversible_signatures_view( context.* )
+        , hive.create_all_irreversible_accounts_view( context.* )
+        , hive.create_all_irreversible_account_operations_view( context.* )
+        , hive.create_all_irreversible_applied_hardforks_view( context.* )
+    FROM unnest( _contexts ) as context;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.app_context_detach( _context TEXT )
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -201,16 +222,7 @@ CREATE OR REPLACE FUNCTION hive.app_context_detach( _context TEXT )
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_detach( _context );
-
-    -- create view which return all irreversible data
-    PERFORM hive.create_all_irreversible_blocks_view( _context );
-    PERFORM hive.create_all_irreversible_transactions_view( _context );
-    PERFORM hive.create_all_irreversible_operations_view( _context );
-    PERFORM hive.create_all_irreversible_signatures_view( _context );
-    PERFORM hive.create_all_irreversible_accounts_view( _context );
-    PERFORM hive.create_all_irreversible_account_operations_view( _context );
-    PERFORM hive.create_all_irreversible_applied_hardforks_view( _context );
+    PERFORM hive.app_context_detach( ARRAY[ _context ] );
 END;
 $BODY$
 ;
