@@ -153,7 +153,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_attach( _context TEXT, _last_synced_block INT )
+CREATE OR REPLACE FUNCTION hive.app_context_attach( _contexts TEXT[], _last_synced_block INT )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -171,25 +171,37 @@ BEGIN
             , _context, _last_synced_block,  __head_of_irreversible_block;
     END IF;
 
-    PERFORM hive.context_attach( _context, _last_synced_block );
-
-    --TODO(@Mickiewicz): only one context in a group may execute this query, it result must be passed to rest of contexts
     SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= _last_synced_block;
 
     UPDATE hive.contexts
     SET   fork_id = __fork_id
-        , irreversible_block = COALESCE( __head_of_irreversible_block, 0 )
-    WHERE name = _context
+      , irreversible_block = COALESCE( __head_of_irreversible_block, 0 )
+    WHERE name =ANY( _contexts )
     ;
 
     -- re-create view which mixes irreversible and reversible data
-    PERFORM hive.create_blocks_view( _context );
-    PERFORM hive.create_transactions_view( _context );
-    PERFORM hive.create_operations_view( _context );
-    PERFORM hive.create_signatures_view( _context );
-    PERFORM hive.create_accounts_view( _context );
-    PERFORM hive.create_account_operations_view( _context );
-    PERFORM hive.create_applied_hardforks_view( _context );
+    PERFORM
+          hive.context_attach( context.*, _last_synced_block )
+        , hive.create_blocks_view(  context.* )
+        , hive.create_transactions_view(  context.* )
+        , hive.create_operations_view(  context.* )
+        , hive.create_signatures_view(  context.* )
+        , hive.create_accounts_view(  context.* )
+        , hive.create_account_operations_view(  context.* )
+        , hive.create_applied_hardforks_view(  context.* )
+    FROM unnest( _contexts ) as context;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_context_attach( _context TEXT, _last_synced_block INT )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.app_context_attach( ARRAY[ _context ], _last_synced_block );
 END;
 $BODY$
 ;
