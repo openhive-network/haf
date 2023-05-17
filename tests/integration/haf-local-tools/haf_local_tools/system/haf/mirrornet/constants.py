@@ -40,7 +40,3 @@ WITNESSES_5M: list[str] = [
 ]
 
 TIMESTAMP_5M: str = "@2016-09-15 19:47:24"
-
-path_block_log_5m: str = (
-    "/workspace/haf/tests/integration/system/haf/mirrornet_tests/block_log_5m/block_log"
-)
