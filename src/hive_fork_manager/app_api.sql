@@ -85,12 +85,14 @@ $BODY$
 DECLARE
     __result TEXT[];
 BEGIN
-    ASSERT array_length( _context_names, 1 ) > 0, 'Empty contexts array';
+    IF array_length( _context_names, 1 ) = 0 THEN
+        RAISE  EXCEPTION 'Empty contexts array';
+    END IF;
 
     SELECT ARRAY_AGG( hc.name ) INTO __result
     FROM hive.contexts hc
-    WHERE hc.name::TEXT = ANY( _context_names ) AND
-    EXISTS( SELECT NULL FROM hive.registered_tables hrt WHERE hrt.context_id = hc.id );
+    WHERE hc.name::TEXT = ANY( _context_names )
+    AND EXISTS( SELECT NULL FROM hive.registered_tables hrt WHERE hrt.context_id = hc.id );
 
     IF array_length( __result, 1 ) IS NULL THEN
         RETURN FALSE;
@@ -100,7 +102,9 @@ BEGIN
         RETURN FALSE;
     END IF;
 
-    ASSERT array_length( __result, 1 ) = array_length( _context_names, 1 ), 'Forking and non forking contexts are mixed in the same group';
+    IF array_length( __result, 1 ) != array_length( _context_names, 1 ) THEN
+        RAISE EXCEPTION  'Forking and non forking contexts are mixed in the same group';
+    END IF;
 
     RETURN TRUE;
 END;
@@ -130,6 +134,10 @@ CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names TEXT[] )
 AS
 $BODY$
 BEGIN
+    IF EXISTS( SELECT 1 FROM hive.contexts hc WHERE hc.name =ANY( _context_names ) AND hc.is_attached = FALSE ) THEN
+        RAISE EXCEPTION 'Detached context cannot be moved';
+    END IF;
+
     -- if there there is  registered table for given context
     IF hive.app_are_forking( _context_names )
     THEN

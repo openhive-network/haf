@@ -418,7 +418,8 @@ BEGIN
     ASSERT array_length( _context_names, 1 ) > 0, 'Empty array of contexts';
 
     SELECT * FROM hive.squash_and_get_state( _context_names[1] ) INTO __context_state;
-    SELECT * FROM hive.app_process_event_non_forking( _context_names[1], __context_state ) INTO __result;
+    SELECT ARRAY_AGG( hive.app_process_event_non_forking(contexts.*, __context_state) ) INTO __result
+    FROM unnest( _context_names ) as contexts;
 
     IF __result.first_block > __result.last_block THEN
         PERFORM pg_sleep( 1.5 );
