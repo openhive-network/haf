@@ -77,8 +77,8 @@ BEGIN
                     metadata.account_name,
                     metadata.block_num DESC,
                     metadata.op_pos DESC
-            ) as get_metadata
-            JOIN hive.accounts_view accounts_view ON accounts_view.name = get_metadata.account_name 
+            ) as t
+            JOIN hive.accounts_view accounts_view ON accounts_view.name = account_name 
         ON CONFLICT (account_id) DO UPDATE
         SET
             json_metadata = EXCLUDED.json_metadata,
