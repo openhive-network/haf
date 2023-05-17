@@ -291,25 +291,36 @@ BEGIN
 END;
 $BODY$;
 
-
-CREATE OR REPLACE FUNCTION hive.app_context_is_attached( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.app_context_are_attached( _contexts TEXT[] )
     RETURNS bool
     LANGUAGE plpgsql
     STABLE
 AS
 $BODY$
 DECLARE
-    __result bool;
+    __result bool[];
 BEGIN
-    SELECT hc.is_attached INTO __result
+    SELECT ARRAY_AGG( DISTINCT(hc.is_attached) )  is_attached INTO __result
     FROM hive.contexts hc
-    WHERE hc.name = _context_name;
+    WHERE hc.name =ANY( _contexts );
 
-    IF __result IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context_name;
+    IF __result IS NULL OR ARRAY_LENGTH( __result, 1 ) != ARRAY_LENGTH( _contexts, 1 ) THEN
+        RAISE EXCEPTION 'No contexts or attached and detached contexts are present in a group';
     END IF;
 
-    RETURN __result;
+    RETURN __result[ 1 ];
+END;
+$BODY$;
+
+
+CREATE OR REPLACE FUNCTION hive.app_context_is_attached( _context TEXT )
+    RETURNS bool
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+BEGIN
+    RETURN hive.app_context_are_attached( ARRAY[ _context ] );
 END;
 $BODY$;
 
