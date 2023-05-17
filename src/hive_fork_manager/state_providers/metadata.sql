@@ -41,14 +41,14 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_metadata';
+    __to_execute TEXT;
 BEGIN
     __context_id = hive.get_context_id( _context );
 
     IF __context_id IS NULL THEN
              RAISE EXCEPTION 'No context with name %', _context;
     END IF;
-
-    EXECUTE format('
+  __to_execute =  format('
         INSERT INTO
             hive.%s_metadata
         SELECT
@@ -58,37 +58,28 @@ BEGIN
         FROM
             (
                 SELECT
-                    DISTINCT ON (account_name) account_name,
-                    json_metadata,
-                    posting_json_metadata
+                    DISTINCT ON (account_name) (hive.get_metadata(ov.body)).account_name,
+                    (hive.get_metadata(ov.body)).json_metadata,
+                    (hive.get_metadata(ov.body)).posting_json_metadata
                 FROM
-                    (
-                        SELECT
-                            *
-                        FROM
-                            (
-                                SELECT
-                                    ov.block_num,
-                                    ov.op_pos,
-                                    (hive.get_metadata(ov.body)).*
-                                FROM
-                                    hive.%s_operations_view ov
-                                WHERE
-                                    hive.is_metadata_operation(ov.body)
-                                    AND ov.block_num BETWEEN %s AND %s
-                            ) as t
-                        ORDER BY
-                            block_num DESC,
-                            op_pos DESC
-                    ) as u
+                    hive.%s_operations_view ov
+                WHERE
+                    hive.is_metadata_operation(ov.body)
+                    AND ov.block_num BETWEEN %s AND %s
+                ORDER BY 
+                    account_name,
+                    ov.block_num DESC,
+                    ov.op_pos DESC
             ) as get_metadata
             JOIN hive.accounts_view accounts_view ON accounts_view.name = get_metadata.account_name 
         ON CONFLICT (account_id) DO UPDATE
         SET
             json_metadata = EXCLUDED.json_metadata,
             posting_json_metadata = EXCLUDED.posting_json_metadata'
-    , _context, _context, _first_block, _last_block, _context, _context
-    );
+        , _context, _context, _first_block, _last_block
+        );
+
+    EXECUTE __to_execute;
 END;
 $BODY$
 ;
