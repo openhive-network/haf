@@ -163,18 +163,14 @@ haf_system_tests_mirrornet:
     - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
-    - ls -la
-    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log
-    - ls -la
-    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log/block_log_5m_mirrornet
-    - ls -la
-    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
     - pytest --junitxml report.xml --timeout=3600 --block-log-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log/block_log_5m_mirrornet/block_log -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
 
   artifacts:
     paths:
     - "**/generated_during_*"
     - "**/generated_by_package_fixtures"
+    exclude:
+    - "**/generated_during_*/**/block_log"
     reports:
       junit: tests/integration/system/haf/mirrornet_tests/report.xml
     when: always
