@@ -58,18 +58,25 @@ BEGIN
         FROM
             (
                 SELECT
-                    DISTINCT ON (account_name) (hive.get_metadata(ov.body)).account_name,
-                    (hive.get_metadata(ov.body)).json_metadata,
-                    (hive.get_metadata(ov.body)).posting_json_metadata
+                    DISTINCT ON (metadata.account_name) metadata.account_name,
+                    metadata.json_metadata,
+                    metadata.posting_json_metadata
                 FROM
-                    hive.%s_operations_view ov
-                WHERE
-                    hive.is_metadata_operation(ov.body)
-                    AND ov.block_num BETWEEN %s AND %s
+                    (
+                        SELECT 
+                            (hive.get_metadata(ov.body)).*,
+                            ov.block_num,
+                            ov.op_pos
+                        FROM 
+                            hive.%s_operations_view ov
+                        WHERE
+                            hive.is_metadata_operation(ov.body)
+                            AND ov.block_num BETWEEN %s AND %s
+                        ) as metadata
                 ORDER BY 
-                    account_name,
-                    ov.block_num DESC,
-                    ov.op_pos DESC
+                    metadata.account_name,
+                    metadata.block_num DESC,
+                    metadata.op_pos DESC
             ) as get_metadata
             JOIN hive.accounts_view accounts_view ON accounts_view.name = get_metadata.account_name 
         ON CONFLICT (account_id) DO UPDATE
