@@ -65,8 +65,7 @@ BEGIN
                     (
                         SELECT 
                             (hive.get_metadata(ov.body)).*,
-                            ov.block_num,
-                            ov.op_pos
+                            ov.id
                         FROM 
                             hive.%s_operations_view ov
                         WHERE
@@ -75,8 +74,7 @@ BEGIN
                         ) as metadata
                 ORDER BY 
                     metadata.account_name,
-                    metadata.block_num DESC,
-                    metadata.op_pos DESC
+                    metadata.id DESC
             ) as t
             JOIN hive.accounts_view accounts_view ON accounts_view.name = account_name 
         ON CONFLICT (account_id) DO UPDATE
