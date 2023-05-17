@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import subprocess
+import os
 from pathlib import Path
+import subprocess
 from typing import TYPE_CHECKING, Callable, Final
 
 import pytest
@@ -82,15 +83,16 @@ def test_pg_dump(prepared_networks_and_database_1, database, pg_restore: Callabl
 
 
 def prepare_source_db(prepare_node, database) -> tuple[Session, URL]:
-    node, session, db_name = prepare_node(database)
+    node, session, db_url = prepare_node(database)
     node.run(replay_from=create_block_log_directory_name("block_log_12_8") / "block_log", stop_at_block=30, exit_before_synchronization=True)
-    return session, db_name
+    return session, db_url
 
 
 def prepare_target_db(database) -> tuple[Session, URL]:
-    session = database('postgresql:///test_pg_dump_target')
-    db_name = session.bind.url
-    return session, db_name
+    DB_URL = os.getenv("DB_URL")
+    session = database(f"{DB_URL}-test_pg_dump_target")
+    db_url = session.bind.url
+    return session, db_url
 
 
 def pg_dump(db_name: str, tmp_path: Path) -> None:

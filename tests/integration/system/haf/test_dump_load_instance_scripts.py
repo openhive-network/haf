@@ -78,7 +78,7 @@ class Test:
         
 
     def run_node_with_db(self, prepared_networks_and_database_1, database, stop_at_block : int):
-        node, session, self.db_name = prepared_networks_and_database_1(database)
+        node, session, self.db_url = prepared_networks_and_database_1(database)
 
         self.hived_executable_path =paths_to_executables.get_path_of("hived")
 
@@ -98,27 +98,29 @@ class Test:
 
 
     def dump_instance(self, additional_command_line : str):
+        postgres_url = os.getenv("DB_URL")
         command = f"{self.dump_instance_script} \
         --backup-dir={self.backup_dir} \
         --hived-executable-path={self.hived_executable_path} \
         --hived-data-dir={self.hived_data_dir} \
-        --haf-db-name={self.db_name.database} \
+        --haf-db-url={postgres_url} \
         --override-existing-backup-dir \
         {additional_command_line}"
 
         shell(command)
 
     def assert_dumped(self, at_block : int):
-        session = create_session(self.db_name)
+        session = create_session(self.db_url)
         assert query_count(session, 'blocks') == at_block
         session.close()
 
     def load_instance(self, additional_command_line : str):
+        postgres_url = os.getenv("DB_URL")
         command = f"{self.load_instance_script} \
         --backup-dir={self.backup_dir} \
         --hived-executable-path={self.hived_executable_path} \
         --hived-data-dir={self.hived_data_dir} \
-        --haf-db-name={self.db_name.database} \
+        --haf-db-name={postgres_url} \
         {additional_command_line}"
 
         shell(command)

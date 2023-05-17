@@ -28,7 +28,7 @@ class SQLNodesPreparer(NodesPreparer):
             self.sessions.append( self.database(f"{DB_URL}-{cnt}") )
 
             node.config.plugin.append('sql_serializer')
-            node.config.psql_url = str(self.db_name(cnt))
+            node.config.psql_url = str(self.db_url(cnt))
 
         for node in builder.nodes:
             node.config.log_logger = '{"name":"default","level":"debug","appender":"stderr,p2p"} '\
@@ -38,7 +38,7 @@ class SQLNodesPreparer(NodesPreparer):
                                     '{"name":"p2p","level":"debug","appender":"p2p"}'
 
 
-    def db_name(self, idx) -> Any:
+    def db_url(self, idx) -> Any:
         assert idx < len(self.sessions)
         return None if self.sessions[idx] is None else self.sessions[idx].get_bind().url
 
@@ -211,6 +211,6 @@ def prepared_networks_and_database_1() -> Tuple[tt.ApiNode, Any, Any]:
         preparer = SQLNodesPreparer(database)
         preparer.prepare(builder)
 
-        return preparer.node(builder, 0), preparer.sessions[0], preparer.db_name(0)
+        return preparer.node(builder, 0), preparer.sessions[0], preparer.db_url(0)
 
     yield make_network

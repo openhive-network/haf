@@ -137,7 +137,6 @@ haf_system_tests:
     CLI_WALLET_PATH: "$CI_PROJECT_DIR/$BINARY_CACHE_PATH/cli_wallet"
     DB_NAME: haf_block_log
     DB_URL: "postgresql://haf_admin@hfm-only-instance:5432/$DB_NAME"
-    POSTGRES_URL: "$DB_URL"
   script:
     - psql "$DB_URL" -c "SELECT 1"
     # prepare environment and run tests
