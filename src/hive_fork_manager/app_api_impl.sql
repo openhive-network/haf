@@ -412,7 +412,7 @@ CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_names T
 AS
 $BODY$
 DECLARE
-    __result hive.blocks_range;
+    __result hive.blocks_range[];
     __context_state hive.context_state;
 BEGIN
     ASSERT array_length( _context_names, 1 ) > 0, 'Empty array of contexts';
@@ -421,12 +421,12 @@ BEGIN
     SELECT ARRAY_AGG( hive.app_process_event_non_forking(contexts.*, __context_state) ) INTO __result
     FROM unnest( _context_names ) as contexts;
 
-    IF __result.first_block > __result.last_block THEN
+    IF __result[1].first_block > __result[1].last_block THEN
         PERFORM pg_sleep( 1.5 );
         RETURN NULL;
     END IF;
 
-    RETURN __result;
+    RETURN __result[1];
 END;
 $BODY$
 ;
