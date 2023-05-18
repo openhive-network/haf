@@ -33,22 +33,17 @@ def mirrornet_witness_node():
 
 
 @pytest.fixture
-def witness_node_with_haf(request):
-    """
-    This fixture extends the functionality of haf_node by adding the ability
-    to remove the HAF database only in tests that have completed successfully.
-    The implementation was taken from the documentation of the pytest module.
-    """
-    haf_node = HafNode(keep_database=True)
+def witness_node_with_haf(haf_node):
     haf_node.config.shared_file_size = "2G"
     haf_node.config.witness = WITNESSES_5M
     haf_node.config.private_key = SKELETON_KEY
     haf_node.config.shared_file_size = "2G"
     haf_node.config.enable_stale_production = True
     haf_node.config.required_participation = 0
-    drop_database_if_test_pass = True
     yield haf_node
-    if drop_database_if_test_pass:
-        report = request.node.stash[phase_report_key]
-        if not report["call"].failed:
-            drop_database(haf_node.database_url)
+
+
+@pytest.fixture
+def haf_node(haf_node):
+    haf_node.config.shared_file_size = "2G"
+    yield haf_node
