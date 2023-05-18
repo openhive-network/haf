@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.find_next_event( _context TEXT )
+CREATE OR REPLACE FUNCTION hive.find_next_event( _contexts TEXT[] )
     RETURNS hive.events_queue
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -15,7 +15,7 @@ BEGIN
          , hc.current_block_num
          , hc.irreversible_block
     INTO __curent_events_id, __current_context_block_num, __current_context_irreversible_block
-    FROM hive.contexts hc WHERE hc.name = _context;
+    FROM hive.contexts hc WHERE hc.name = _contexts[1];
     SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
     IF __current_context_block_num <= __current_context_irreversible_block  AND  __newest_irreversible_block_num IS NOT NULL THEN
         -- here we are sure that context only processing irreversible blocks, we can continue
@@ -42,7 +42,7 @@ BEGIN
         END IF;
 
         UPDATE hive.contexts
-        SET irreversible_block = __newest_irreversible_block_num WHERE name = _context;
+        SET irreversible_block = __newest_irreversible_block_num WHERE name =ANY( _contexts );
     ELSE
         ---- find next event
         SELECT * INTO __result
@@ -54,7 +54,7 @@ BEGIN
     IF __result IS NOT NULL THEN
         UPDATE hive.contexts
         SET events_id = __result.id
-        WHERE name = _context;
+        WHERE name =ANY( _contexts );
     END IF;
 
     RETURN __result;
@@ -63,7 +63,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.squash_fork_events( _context TEXT )
+CREATE OR REPLACE FUNCTION hive.squash_fork_events( _contexts TEXT[] )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -81,7 +81,7 @@ BEGIN
     FROM hive.events_queue heq
     JOIN hive.fork hf ON hf.id = heq.block_num
     JOIN hive.contexts hc ON hc.events_id < heq.id AND hc.current_block_num >= hf.block_num
-    WHERE heq.event = 'BACK_FROM_FORK' AND hc.name = _context
+    WHERE heq.event = 'BACK_FROM_FORK' AND hc.name = _contexts[ 1 ]
     ORDER BY hf.block_num ASC, heq.id DESC
     LIMIT 1;
 
@@ -95,7 +95,7 @@ BEGIN
         SELECT 1
         FROM hive.events_queue heq
         JOIN hive.contexts hc ON heq.id < __next_fork_event_id AND heq.id > hc.events_id
-        WHERE ( heq.event = 'NEW_IRREVERSIBLE' OR heq.event = 'MASSIVE_SYNC' ) AND hc.name = _context
+        WHERE ( heq.event = 'NEW_IRREVERSIBLE' OR heq.event = 'MASSIVE_SYNC' ) AND hc.name = _contexts[1]
     )
     INTO __cannot_jump;
 
@@ -105,12 +105,12 @@ BEGIN
 
     UPDATE hive.contexts
     SET events_id = __next_fork_event_id - 1 -- -1 because we pretend that we stay just before the next fork
-    WHERE id = __context_id;
+    WHERE name =ANY(_contexts);
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.squash_end_massive_sync_events( _context TEXT )
+CREATE OR REPLACE FUNCTION hive.squash_end_massive_sync_events( _contexts TEXT[] )
     RETURNS BOOL
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -128,14 +128,14 @@ BEGIN
     INTO __next_massive_sync_event_id, __context_current_block_num, __context_id, __irreversible_block_num
     FROM hive.events_queue heq
     JOIN hive.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
-    WHERE heq.event = 'MASSIVE_SYNC' AND hc.name = _context
+    WHERE heq.event = 'MASSIVE_SYNC' AND hc.name = _contexts[1]
     ORDER BY heq.id DESC
     LIMIT 1;
 
     SELECT hc.current_block_num
     INTO __context_current_block_num
     FROM hive.contexts hc
-    WHERE hc.name = _context
+    WHERE hc.name = _contexts[1]
     ;
 
     -- no newer MASSIVE_SYNC, nothing to do
@@ -143,21 +143,22 @@ BEGIN
             RETURN FALSE;
     END IF;
 
+    -- TODO(@Mickiewicz): hmm big problem, all contexts need to do this
     -- back form fork is required
-    PERFORM hive.context_back_from_fork( _context, __irreversible_block_num );
+    PERFORM hive.context_back_from_fork( ctx.*, __irreversible_block_num ) FROM unnest(_contexts) ctx;
 
     SELECT MAX( heq.id ) INTO __before_next_massive_sync_event_id
     FROM hive.events_queue heq WHERE heq.id < __next_massive_sync_event_id;
 
     UPDATE hive.contexts
     SET events_id = __before_next_massive_sync_event_id -- it may be null if there is no events before the massive sync
-    WHERE id = __context_id;
+    WHERE name =ANY( _contexts );
     RETURN TRUE;
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.squash_events( _context TEXT )
+CREATE OR REPLACE FUNCTION hive.squash_events( _contexts TEXT[] )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -166,15 +167,15 @@ $BODY$
 DECLARE
     __current_event_id hive.events_queue.id%TYPE;
 BEGIN
-    SELECT hc.events_id INTO __current_event_id FROM hive.contexts hc WHERE hc.name = _context;
+    SELECT hc.events_id INTO __current_event_id FROM hive.contexts hc WHERE hc.name = _contexts[ 1 ];
 
     -- do not squash not initialzed context
     IF __current_event_id = 0  THEN
             RETURN;
     END IF;
 
-    IF NOT hive.squash_end_massive_sync_events( _context ) THEN
-        PERFORM hive.squash_fork_events( _context );
+    IF NOT hive.squash_end_massive_sync_events( _contexts ) THEN
+        PERFORM hive.squash_fork_events( _contexts );
     END IF;
 END;
 $BODY$
@@ -199,7 +200,7 @@ CREATE TYPE hive.context_state AS (
 
 
 
-CREATE OR REPLACE FUNCTION hive.squash_and_get_state( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.squash_and_get_state( _context_name TEXT[] )
     RETURNS hive.context_state
     LANGUAGE plpgsql
     VOLATILE
@@ -215,15 +216,15 @@ $BODY$
              , hac.is_attached
              , hac.irreversible_block
         FROM hive.contexts hac
-        WHERE hac.name = _context_name
+        WHERE hac.name = _context_name[ 1 ]
         INTO __context_state;
 
         IF __context_state.current_block_num IS NULL THEN
-            RAISE EXCEPTION 'No context with name %', _context_name;
+            RAISE EXCEPTION 'No context with name %', _context_name[ 1 ];
         END IF;
 
         IF __context_state.is_attached = FALSE THEN
-            RAISE EXCEPTION 'Context % is detached', _context_name;
+            RAISE EXCEPTION 'Context % is detached', _context_name[ 1 ];
         END IF;
 
         SELECT * INTO __context_state.next_event_id, __context_state.next_event_type,  __context_state.next_event_block_num
@@ -249,19 +250,20 @@ DECLARE
     __last_block_to_process INT;
     __fork_id BIGINT;
     __result hive.blocks_range;
+    __next_event_block_num INT;
 BEGIN
     -- TODO(@Mickiewicz): get context id to do not repeat searching by name
     CASE _context_state.next_event_type
         WHEN 'BACK_FROM_FORK' THEN
-            SELECT hf.id, hf.block_num INTO __fork_id, _context_state.next_event_block_num
+            SELECT hf.id, hf.block_num INTO __fork_id, __next_event_block_num
             FROM hive.fork hf
             WHERE hf.id = _context_state.next_event_block_num; -- block_num for BFF events = fork_id
 
-            PERFORM hive.context_back_from_fork( _context, _context_state.next_event_block_num );
+            PERFORM hive.context_back_from_fork( _context, __next_event_block_num );
 
             UPDATE hive.contexts
             SET
-                current_block_num = _context_state.next_event_block_num
+                current_block_num = __next_event_block_num
               , fork_id = __fork_id
             WHERE name = _context;
             RETURN NULL;
@@ -390,7 +392,7 @@ DECLARE
 BEGIN
     ASSERT array_length( _context_names, 1 ) > 0, 'Empty array of contexts';
 
-    SELECT * FROM hive.squash_and_get_state( _context_names[1] ) INTO __context_state;
+    SELECT * FROM hive.squash_and_get_state( _context_names ) INTO __context_state;
 
     SELECT ARRAY_AGG( hive.app_process_event(contexts.*, __context_state) ) INTO __result
     FROM unnest( _context_names ) as contexts;
@@ -417,7 +419,7 @@ DECLARE
 BEGIN
     ASSERT array_length( _context_names, 1 ) > 0, 'Empty array of contexts';
 
-    SELECT * FROM hive.squash_and_get_state( _context_names[1] ) INTO __context_state;
+    SELECT * FROM hive.squash_and_get_state( _context_names ) INTO __context_state;
     SELECT ARRAY_AGG( hive.app_process_event_non_forking(contexts.*, __context_state) ) INTO __result
     FROM unnest( _context_names ) as contexts;
 
