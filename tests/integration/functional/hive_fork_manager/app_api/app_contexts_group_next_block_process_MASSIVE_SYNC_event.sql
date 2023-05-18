@@ -56,11 +56,14 @@ BEGIN
 
     PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ); --block 1 (squash massive sync)
     INSERT INTO A.table1(id) VALUES ( 1 );
+    INSERT INTO B.table1(id) VALUES ( 1 );
     PERFORM hive.app_next_block( 'context' ); --block 2 - irreversible
     INSERT INTO A.table1(id) VALUES ( 2 );
+    INSERT INTO B.table1(id) VALUES ( 2 );
     PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ); --set irreversible block 2
     PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ); --block 3 --reversible
     INSERT INTO A.table1(id) VALUES ( 3 ); --reversible
+    INSERT INTO B.table1(id) VALUES ( 3 ); --reversible
 
     PERFORM hive.end_massive_sync(6);
 END;
