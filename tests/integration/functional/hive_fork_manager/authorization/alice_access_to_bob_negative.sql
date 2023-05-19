@@ -87,6 +87,12 @@ BEGIN
     END;
 
     BEGIN
+        PERFORM hive.app_context_attach( ARRAY[ 'bob_context_detached' ], 1 );
+        ASSERT FALSE, 'Alice can attach Bob''s context array';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
             PERFORM hive.app_create_context( 'bob_context' );
             ASSERT FALSE, 'Alice can override Bob''s context';
     EXCEPTION WHEN OTHERS THEN
@@ -228,6 +234,12 @@ BEGIN
     BEGIN
         PERFORM hive.app_context_attach( 'alice_context_detached', 1 );
         ASSERT FALSE, 'Bob can attach Alice''s context';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_context_attach( ARRAY[ 'alice_context_detached' ], 1 );
+        ASSERT FALSE, 'Bob can attach Alice''s context array';
     EXCEPTION WHEN OTHERS THEN
     END;
 
