@@ -102,6 +102,7 @@ BEGIN
     CREATE TABLE alice_table( id INT ) INHERITS( hive.alice_context );
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'alice_context' );
     PERFORM hive.app_next_block( 'alice_context' );
+    PERFORM hive.app_next_block( ARRAY[ 'alice_context' ] );
     INSERT INTO alice_table VALUES( 10 );
 END;
 $BODY$
@@ -116,7 +117,7 @@ AS
 $BODY$
 BEGIN
     ASSERT EXISTS( SELECT * FROM hive.contexts WHERE name = 'alice_context' ), 'Alice''s context was removed by hived';
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name = 'alice_context' ) = 1, 'Alice''s context was updated by hived';
+    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name = 'alice_context' ) = 2, 'Alice''s context was updated by hived';
     ASSERT ( SELECT COUNT(*) FROM hive.state_providers_registered ) = 1, 'Alice lost her state providers';
 END;
 $BODY$
