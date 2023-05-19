@@ -33,6 +33,10 @@ BEGIN
     PERFORM hive.app_create_context( 'alice_context' );
     PERFORM hive.app_create_context( 'alice_context_detached' );
     PERFORM hive.app_context_detach( 'alice_context_detached' );
+    PERFORM hive.app_context_detached_save_block_num( 'alice_context_detached', 1 );
+    PERFORM hive.app_context_detached_save_block_num( ARRAY[ 'alice_context_detached' ], 1 );
+    PERFORM hive.app_context_detached_get_block_num( 'alice_context_detached' );
+    PERFORM hive.app_context_detached_get_block_num( ARRAY[ 'alice_context_detached' ] );
     CREATE TABLE alice_table( id INT ) INHERITS( hive.alice_context );
     PERFORM hive.app_next_block( 'alice_context' );
     PERFORM hive.app_next_block( ARRAY[ 'alice_context' ] );
@@ -202,6 +206,8 @@ BEGIN
     PERFORM hive.app_create_context( 'bob_context' );
     PERFORM hive.app_create_context( 'bob_context_detached' );
     PERFORM hive.app_context_detach( 'bob_context_detached' );
+    PERFORM hive.app_context_detached_save_block_num( 'bob_context_detached', 1 );
+    PERFORM hive.app_context_detached_save_block_num( ARRAY[ 'bob_context_detached' ], 1 );
     CREATE TABLE bob_table( id INT ) INHERITS( hive.bob_context );
     PERFORM hive.app_next_block( 'bob_context' );
     PERFORM hive.app_next_block( ARRAY[ 'bob_context' ] );
@@ -325,6 +331,30 @@ BEGIN
     END;
 
     ASSERT ( SELECT COUNT(*) FROM hive.state_providers_registered ) = 1, 'Bob lost his state providers';
+
+    BEGIN
+        PERFORM hive.app_context_detached_save_block_num( 'alice_context_detached', 1 );
+        ASSERT FALSE, 'Bob can save Alice''s contexts block_num';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_context_detached_save_block_num( ARRAY[ 'alice_context_detached' ], 1 );
+        ASSERT FALSE, 'Bob can save Alice''s contexts block_num array';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_context_detached_get_block_num( 'alice_context_detached' );
+        ASSERT FALSE, 'Bob can get Alice''s contexts block_num array';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_context_detached_get_block_num( ARRAY[ 'alice_context_detached' ] );
+        ASSERT FALSE, 'Bob can get Alice''s contexts block_num array';
+    EXCEPTION WHEN OTHERS THEN
+    END;
 END;
 $BODY$
 ;
