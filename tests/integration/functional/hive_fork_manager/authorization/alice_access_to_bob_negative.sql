@@ -75,8 +75,20 @@ BEGIN
     END;
 
     BEGIN
+        PERFORM hive.app_context_detach( ARRAY[ 'bob_context' ] );
+        ASSERT FALSE, 'Alice can detach Bob''s context array';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
         PERFORM hive.app_context_detach( 'bob_context' );
         ASSERT FALSE, 'Alice can detach Bob''s context';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_context_detach( ARRAY[ 'bob_context' ] );
+        ASSERT FALSE, 'Alice can detach Bob''s context array';
     EXCEPTION WHEN OTHERS THEN
     END;
 
@@ -228,6 +240,12 @@ BEGIN
     BEGIN
         PERFORM hive.app_context_detach( 'alice_context' );
         ASSERT FALSE, 'Bob can detach Alice''s context';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_context_detach( ARRAY[ 'alice_context' ] );
+        ASSERT FALSE, 'Bob can detach Alice''s context array';
     EXCEPTION WHEN OTHERS THEN
     END;
 

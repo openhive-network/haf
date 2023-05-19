@@ -37,6 +37,12 @@ BEGIN
     END;
 
     BEGIN
+        PERFORM hive.app_context_detach( ARRAY[ 'alice_context' ] );
+        ASSERT FALSE, 'Hived can call app_context_detach array';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
         CREATE TABLE hived_table(id INT);
         PERFORM hive.app_register_table( 'hived_table' );
         ASSERT FALSE, 'Hived can call app_register_table';

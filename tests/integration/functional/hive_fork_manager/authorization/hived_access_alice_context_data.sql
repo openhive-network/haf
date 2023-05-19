@@ -99,6 +99,8 @@ BEGIN
     PERFORM hive.app_create_context( 'alice_context' );
     PERFORM hive.app_create_context( 'alice_context_detached' );
     PERFORM hive.app_context_detach( 'alice_context_detached' );
+    PERFORM hive.app_context_attach( ARRAY[ 'alice_context_detached' ] , 1 );
+    PERFORM hive.app_context_detach( ARRAY[ 'alice_context_detached' ] );
     CREATE TABLE alice_table( id INT ) INHERITS( hive.alice_context );
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'alice_context' );
     PERFORM hive.app_next_block( 'alice_context' );
