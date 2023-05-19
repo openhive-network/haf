@@ -1089,7 +1089,10 @@ reset_app()
 
 remove_compiled()
 {
-    rm -rf $BUILD_DIR/extensions/hive_fork_manager || true ; sudo rm /usr/share/postgresql/14/extension/hive* || true;    sudo rm /usr/lib/postgresql/14/lib/libhfm* || true; 
+    rm -rf $BUILD_DIR/extensions/hive_fork_manager || true ;
+    sudo rm /usr/share/postgresql/14/extension/hive* || true; 
+    sudo rm /usr/lib/postgresql/14/lib/libhfm* || true; 
+    rm -rf $BUILD_DIR/lib/libhfm* || true;
 }
 
 remove_all_compiled()
