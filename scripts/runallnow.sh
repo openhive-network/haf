@@ -1067,12 +1067,12 @@ killpostgres()
 {
     # sudo killall -9 postgres || true
 
-    # if $(systemctl list-machines)
-    # then
-    #     sudo systemctl restart postgresql;
-    # else
-    #     sudo -n /etc/init.d/postgresql restart
-    # fi
+    if $(systemctl list-machines)
+    then
+        sudo systemctl restart postgresql;
+    else
+        sudo -n /etc/init.d/postgresql restart
+    fi
     return 0;
 }
 
@@ -1357,12 +1357,12 @@ run_all_from_scratch()
 {
     sudo_enter && \
     killpostgres && \
+    erase_haf_block_log_database && \
     reset_app && \
     remove_compiled && \
     build && \
     permissions && #what about blockchain dir - erase? \
     serializer
-#    erase_haf_block_log_database && \
 
 }
 
