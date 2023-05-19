@@ -1292,6 +1292,9 @@ permissions()
     chmod 777 $DATA_DIR/blockchain || true
     sudo chmod 777 $DATA_DIR/blockchain/* || true
 
+
+    psql -d haf_block_log  -c 'ALTER DATABASE haf_block_log SET search_path TO hive,public;'
+
 }
 
 
