@@ -1108,7 +1108,13 @@ local EXIT_STATUS=0
 if [[ "$PWD" =~ debug_build$ ]] 
 then
     cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS=" -O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # Debug O0
-    # cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-O2 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # Debug O2
+
+    CMAKED=true
+
+elif [[ "$PWD" =~ RelWithDebInfo_build$ ]]
+then
+    echo building RelWithDebInfo
+    cmake  -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # RelWithDebInfo
 
     CMAKED=true
 
