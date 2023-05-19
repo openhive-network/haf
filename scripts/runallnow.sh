@@ -1349,6 +1349,7 @@ remove_context_shared_memory_bin()
     sudo rm  -rf $DATA_DIR/consensus_storage
     sudo rm  -rf $DATA_DIR/consensus_state_provider
     sudo rm  $DATA_DIR/context/blockchain/shared_memory.bin && echo removed! || echo not removed
+    sudo rm  $DATA_DIR/consensus_state_provider/blockchain/shared_memory.bin && echo removed! || echo not removed
     
 }
 
@@ -1368,6 +1369,21 @@ run_all_from_scratch()
 run()
 {
     remove_context_shared_memory_bin && run_all_from_scratch && app_start && time app_cont
+}
+
+driver()
+{
+    remove_context_shared_memory_bin && run_all_from_scratch 
+
+    # preconditions for mtlk_executable
+    if [ -d /home/hived/datadir/consensus_state_provider ]
+    then
+        echo /home/hived/datadir/consensus_state_provider Still there!
+    fi
+
+    psql -d haf_block_log -c 'select count(*) from hive.blocks'
+
+    ./bin/mtlk_executable --to=1091
 }
 
 if [ $# -eq 0 ]
