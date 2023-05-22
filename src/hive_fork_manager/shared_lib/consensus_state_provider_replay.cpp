@@ -261,7 +261,7 @@ void Postgres2Blocks::apply_variant_block(const pqxx::row& block, const char* co
 void Postgres2Blocks::modern_apply_op_block(hive::chain::database& db, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block)
 {
   
-  db.modern_apply_block(full_block, get_skip_flags());
+  db.modern_apply_block(full_block, current_operation, get_skip_flags());
 
   //zrób implementację tego obok database.cpp , tylko dodatkowy header pqxx (lub string view)
   //iterate over operations in this block
