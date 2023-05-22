@@ -121,21 +121,16 @@ int main(int argc, char *argv[]) {
             using namespace consensus_state_provider;
             collected_account_balances_collection_t account_balances = collect_current_all_accounts_balances(context.c_str());
 
-            // Sort by balance in descending order
             std::sort(account_balances.begin(), account_balances.end(),
                       [](const collected_account_balances_t& a, const collected_account_balances_t& b) { return a.balance > b.balance; });
 
-            // Take the first 15 results
             collected_account_balances_collection_t top_15_results(account_balances.begin(), account_balances.begin() + 15);
 
-            // Output the results
             for(const auto& account : top_15_results)
             {
               std::cout << "Account: " << account.account_name << ", Balance: " << account.balance << std::endl;
             }
 
-            // Define the expected values
-            // Define the expected values (without the first column)
             // clang-format off
             std::vector<std::tuple<std::string, long long>> expected_values = 
             {
@@ -156,7 +151,7 @@ int main(int argc, char *argv[]) {
                 std::make_tuple("ashold882015", 9895158)
             };
             // clang-format on
-            // Compare the sorted result with the expected values
+
             bool is_equal = std::equal(top_15_results.begin(), top_15_results.end(), expected_values.begin(),
                                        [](const collected_account_balances_t& account, const std::tuple<std::string, long long>& expected) {
                                          return account.account_name == std::get<0>(expected) && account.balance == std::get<1>(expected);
@@ -165,11 +160,11 @@ int main(int argc, char *argv[]) {
             // Output the comparison result
             if(is_equal)
             {
-              std::cout << "The sorted result matches the expected values." << std::endl;
+              std::cout << "The sorted result MATCHES the expected values." << std::endl;
             }
             else
             {
-              std::cout << "The sorted result does not match the expected values." << std::endl;
+              std::cout << "The sorted result does NOT match the expected values." << std::endl;
             }
         }
 
