@@ -237,6 +237,7 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_detach_after_next_block.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_detach_after_next_block.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/contexts_limit_gt.sql )
+ ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_check_sync.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork.sql )
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork_non_forking_app.sql )
