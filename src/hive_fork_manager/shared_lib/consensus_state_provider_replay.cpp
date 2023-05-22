@@ -38,16 +38,26 @@ struct Postgres2Blocks
   void initialize_iterators();
   void blocks2replay(const char *context, const char* shared_memory_bin_path, bool allow_reevaluate);
   void apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
+  static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   fc::variant block2variant(const pqxx::row& block);
   
-  void transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<fc::variant>& trancaction_variants);
+
 
   struct variant_and_binary_type
   {
       fc::variant variant;
       pqxx::binarystring binary_str;
   };
+
+  void transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<fc::variant>& trancaction_variants);
+  
+  static bool is_current_transaction(const pqxx::result::const_iterator& current_transaction, const int block_num);
+  static std::vector<std::string> build_signatures(const pqxx::result::const_iterator& transaction);
+  static void build_transaction_ids(const pqxx::result::const_iterator& transaction, std::vector<fc::variant>& transaction_id_variants);
+  void rewind_operations_iterator_to_current_block(int block_num);
+  static fc::variant build_transaction_variant(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<variant_and_binary_type>& varbin_operations);
+  
 
   std::vector<variant_and_binary_type> operations2variants(int block_num, int trx_in_block);
   int current_transaction_block_num();
@@ -220,18 +230,6 @@ bool consensus_state_provider_replay_impl(int from, int to, const char *context,
 
   void Postgres2Blocks::apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate)
   {
-    auto get_skip_flags = [] () -> uint64_t
-    {
-      return hive::chain::database::skip_block_log |
-            hive::chain::database::skip_witness_signature |
-            hive::chain::database::skip_transaction_signatures |
-            hive::chain::database::skip_transaction_dupe_check |
-            hive::chain::database::skip_tapos_check |
-            hive::chain::database::skip_merkle_check |
-            hive::chain::database::skip_witness_schedule_check |
-            hive::chain::database::skip_authority_check |
-            hive::chain::database::skip_validate;
-    };
 
     // End of local functions definitions
     // ===================================
@@ -305,71 +303,6 @@ bool consensus_state_provider_replay_impl(int from, int to, const char *context,
 
   void Postgres2Blocks::transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<fc::variant>& trancaction_variants)
   {
-    auto is_current_transaction = [](const pqxx::result::const_iterator& current_transaction, const int block_num) -> bool
-    {
-        return current_transaction["block_num"].as<int>() == block_num;
-    };
-
-    auto build_signatures = [](const pqxx::result::const_iterator& transaction)  -> std::vector<std::string>
-    {
-      std::vector<std::string> signatures;
-      if (strlen(transaction["signature"].c_str())) 
-      {
-        signatures.push_back(fix_pxx_hex(transaction["signature"]));
-      }
-      return signatures;
-    };
-
-    auto build_transaction_ids = [](const pqxx::result::const_iterator& transaction, std::vector<fc::variant>& transaction_id_variants)
-    {
-
-  //  https://github.com/jtv/libpqxx/blob/3d97c80bcde96fb70a21c1ae1cf92ad934818210/include/pqxx/field.hxx
-  //   Do not use this for BYTEA values, or other binary values.  To read those,
-  //   convert the value to your desired type using `to()` or `as()`.  For
-  //   example: `f.as<std::basic_string<std::byte>>()`.
-  //  
-  // [[nodiscard]] PQXX_PURE char const *c_str() const &;
-
-
-      pqxx::binarystring blob(transaction["trx_hash"]);
-      auto size = blob.size();
-      auto data = blob.data();
-
-      (void) size;
-      (void) data;
-
-      transaction_id_variants.push_back(fix_pxx_hex(transaction["trx_hash"]));
-    };
-
-    auto rewind_operations_iterator_to_current_block = [this](int block_num)
-    {
-      while (current_operation_block_num() < block_num && current_operation != operations.end())
-      {
-        ++current_operation;
-      }
-    };
-
-    auto build_transaction_variant = [](const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<variant_and_binary_type>& varbin_operations) -> fc::variant
-    {
-      std::vector<fc::variant> only_variants;
-      only_variants.reserve(varbin_operations.size());
-      std::transform(
-          varbin_operations.begin(), varbin_operations.end(),
-          std::back_inserter(only_variants),
-          [](const variant_and_binary_type& vb) { return vb.variant; }
-      );
-
-      fc::variant_object_builder transaction_variant_builder;
-      transaction_variant_builder
-        ("ref_block_num", transaction["ref_block_num"].as<int>())
-        ("ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())
-        ("expiration", fix_pxx_time(transaction["expiration"]))
-        ("signatures", signatures)
-        ("operations", only_variants);
-
-      return transaction_variant_builder.get();
-    };  
-    
     // End of local functions definitions
     // ===================================
 
@@ -392,7 +325,71 @@ bool consensus_state_provider_replay_impl(int from, int to, const char *context,
     }
   }
 
+  bool Postgres2Blocks::is_current_transaction(const pqxx::result::const_iterator& current_transaction, const int block_num)
+  {
+      return current_transaction["block_num"].as<int>() == block_num;
+  }
 
+  std::vector<std::string> Postgres2Blocks::build_signatures(const pqxx::result::const_iterator& transaction)
+  {
+    std::vector<std::string> signatures;
+    if (strlen(transaction["signature"].c_str())) 
+    {
+      signatures.push_back(fix_pxx_hex(transaction["signature"]));
+    }
+    return signatures;
+  }
+
+  void Postgres2Blocks::build_transaction_ids(const pqxx::result::const_iterator& transaction, std::vector<fc::variant>& transaction_id_variants)
+  {
+
+//  https://github.com/jtv/libpqxx/blob/3d97c80bcde96fb70a21c1ae1cf92ad934818210/include/pqxx/field.hxx
+//   Do not use this for BYTEA values, or other binary values.  To read those,
+//   convert the value to your desired type using `to()` or `as()`.  For
+//   example: `f.as<std::basic_string<std::byte>>()`.
+//  
+// [[nodiscard]] PQXX_PURE char const *c_str() const &;
+
+
+    pqxx::binarystring blob(transaction["trx_hash"]);
+    auto size = blob.size();
+    auto data = blob.data();
+
+    (void) size;
+    (void) data;
+
+    transaction_id_variants.push_back(fix_pxx_hex(transaction["trx_hash"]));
+  }
+
+  void Postgres2Blocks::rewind_operations_iterator_to_current_block(int block_num)
+  {
+    while (current_operation_block_num() < block_num && current_operation != operations.end())
+    {
+      ++current_operation;
+    }
+  };
+
+  fc::variant Postgres2Blocks::build_transaction_variant(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<variant_and_binary_type>& varbin_operations)
+  {
+    std::vector<fc::variant> only_variants;
+    only_variants.reserve(varbin_operations.size());
+    std::transform(
+        varbin_operations.begin(), varbin_operations.end(),
+        std::back_inserter(only_variants),
+        [](const variant_and_binary_type& vb) { return vb.variant; }
+    );
+
+    fc::variant_object_builder transaction_variant_builder;
+    transaction_variant_builder
+      ("ref_block_num", transaction["ref_block_num"].as<int>())
+      ("ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())
+      ("expiration", fix_pxx_time(transaction["expiration"]))
+      ("signatures", signatures)
+      ("operations", only_variants);
+
+    return transaction_variant_builder.get();
+  };  
+  
   std::vector<Postgres2Blocks::variant_and_binary_type> Postgres2Blocks::operations2variants(int block_num, int trx_in_block)
   {
     auto is_current_operation = [this](int block_num, int trx_in_block) 
@@ -507,6 +504,20 @@ bool consensus_state_provider_replay_impl(int from, int to, const char *context,
       return std::numeric_limits<int>::max();
     return current_operation["trx_in_block"].as<int>(); 
   }
+
+
+  uint64_t Postgres2Blocks::get_skip_flags()
+  {
+    return hive::chain::database::skip_block_log |
+          hive::chain::database::skip_witness_signature |
+          hive::chain::database::skip_transaction_signatures |
+          hive::chain::database::skip_transaction_dupe_check |
+          hive::chain::database::skip_tapos_check |
+          hive::chain::database::skip_merkle_check |
+          hive::chain::database::skip_witness_schedule_check |
+          hive::chain::database::skip_authority_check |
+          hive::chain::database::skip_validate;
+  };
 
 
 
