@@ -34,6 +34,7 @@ struct Postgres2Blocks
   void initialize_iterators();
   void blocks2replay(const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
   void apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
+  void modern_apply_block(int block_num);
   static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   fc::variant block2variant(const pqxx::row& block);
@@ -217,33 +218,58 @@ void Postgres2Blocks::blocks2replay(const char* context, const char* shared_memo
 void Postgres2Blocks::apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path,
                                           bool allow_reevaluate)
 {
-  // End of local functions definitions
-  // ===================================
-
-  // Main body of the function
-
   auto start = std::chrono::high_resolution_clock::now();
 
-  fc::variant v = block2variant(block);
   auto block_num = block["num"].as<int>();
-
-  // std::string json = fc::json::to_pretty_string(v);
-  // wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
-
   if(!allow_reevaluate)
     if(block_num != initialize_context(context, shared_memory_bin_path)) return;
 
+
+
   hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
-  std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
 
-  auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::nanoseconds duration = end - start;
-  transformations_duration += duration;
+  bool classic_way = true;// (block_num <= 1092);
 
-  uint64_t skip_flags = get_skip_flags();
+  if(classic_way)
+  {
 
-  apply_full_block(db, fb_ptr, skip_flags);
+    fc::variant v = block2variant(block);
+
+    // std::string json = fc::json::to_pretty_string(v);
+    // wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
+
+    std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::nanoseconds duration = end - start;
+    transformations_duration += duration;
+
+    uint64_t skip_flags = get_skip_flags();
+
+    apply_full_block(db, fb_ptr, skip_flags);
+  }
+  else
+  {
+    modern_apply_block(block_num);
+  }
 }
+
+
+void Postgres2Blocks::modern_apply_block(int block_num)
+{
+  //iterate over operations in this block
+    for(; current_operation != operations.end() && current_operation["block_num"].as<int>() == block_num;
+        ++current_operation)
+    {
+      //add_operation_variant(current_operation, varbin_operations);
+      pqxx::binarystring bs(current_operation["bin_body"]);
+
+      //a string __cpp_lib_string_view
+      //zastosuj string view 
+
+    }
+}
+
 
 void Postgres2Blocks::apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr,
                                        uint64_t skip_flags)
@@ -289,10 +315,6 @@ fc::variant Postgres2Blocks::block2variant(const pqxx::row& block)
 void Postgres2Blocks::transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants,
                                             std::vector<fc::variant>& trancaction_variants)
 {
-  // End of local functions definitions
-  // ===================================
-
-  // Main body of the function
   for(; current_transaction != transactions.end() && is_current_transaction(current_transaction, block_num); ++current_transaction)
   {
     auto trx_in_block = current_transaction["trx_in_block"].as<int>();
@@ -377,10 +399,6 @@ fc::variant Postgres2Blocks::build_transaction_variant(const pqxx::result::const
 
 std::vector<Postgres2Blocks::variant_and_binary_type> Postgres2Blocks::operations2variants(int block_num, int trx_in_block)
 {
-  // End of local functions definitions
-  // ===================================
-
-  // Main body of the function
   std::vector<variant_and_binary_type> varbin_operations;
   if(is_current_operation(block_num, trx_in_block))
   {
