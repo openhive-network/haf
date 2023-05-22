@@ -34,7 +34,7 @@ struct Postgres2Blocks
   void initialize_iterators();
   void blocks2replay(const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
   void apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
-  void modern_apply_block(int block_num);
+  void modern_apply_op_block(hive::chain::database& db, int block_num, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr);
   static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   fc::variant block2variant(const pqxx::row& block);
@@ -250,13 +250,20 @@ void Postgres2Blocks::apply_variant_block(const pqxx::row& block, const char* co
   }
   else
   {
-    modern_apply_block(block_num);
+    fc::variant v = block2variant(block);
+    std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
+    modern_apply_op_block(db, block_num, fb_ptr);
+    
   }
 }
 
 
-void Postgres2Blocks::modern_apply_block(int block_num)
+void Postgres2Blocks::modern_apply_op_block(hive::chain::database& db, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block)
 {
+  
+  db.modern_apply_block(full_block, get_skip_flags());
+
+  //zrób implementację tego obok database.cpp , tylko dodatkowy header pqxx (lub string view)
   //iterate over operations in this block
     for(; current_operation != operations.end() && current_operation["block_num"].as<int>() == block_num;
         ++current_operation)
@@ -268,6 +275,9 @@ void Postgres2Blocks::modern_apply_block(int block_num)
       //zastosuj string view 
 
     }
+
+    //ending block funcs
+  //FC_CAPTURE_CALL_LOG_AND_RETHROW( std::bind( &database::notify_fail_apply_block, this, note ), (block_num) )
 }
 
 
