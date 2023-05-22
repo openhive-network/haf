@@ -9,14 +9,102 @@
 #include "hive/protocol/forward_impacted.hpp"
 #include "hive/protocol/operations.hpp"
 #include <limits>
+#include <iomanip>
 #include <pqxx/pqxx>
 
 #include <hive/plugins/block_api/block_api_objects.hpp>
 #include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
 
+#include <hive/protocol/hive_operations.hpp>
 
 namespace consensus_state_provider
 {
+
+
+//struct pre_operation_visitor
+using namespace hive::protocol;
+
+struct conensus_op_visitor_type
+{
+
+  conensus_op_visitor_type( ){}
+
+  typedef void result_type;
+
+  template< typename T >
+  void operator()( const T& )const 
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const hive::protocol::account_create_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const account_create_with_delegation_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const account_update_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const account_update2_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const create_claimed_account_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const recover_account_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const pow_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const pow2_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const hardfork_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+private:
+};
+
 
 // value coming from pxx is without 'T' in the middle to be accepted in variant
 std::string fix_pxx_time(const pqxx::field& t)
@@ -50,6 +138,34 @@ public:
 private:
     pqxx::connection conn;
 };
+
+
+void get_into_op(const pqxx::binarystring& bs)
+{
+
+
+      //_operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
+
+
+        //VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body ));
+
+          using hive::protocol::operation;
+
+          const char* raw_data = reinterpret_cast<const char*>(bs.data());
+          uint32_t data_length = bs.size();
+
+        operation op = fc::raw::unpack_from_char_array< operation >( raw_data, data_length );
+
+        conensus_op_visitor_type conensus_op_visitor;
+        op.visit(conensus_op_visitor);
+
+        //note.op.visit( post_operation_visitor( *this ) );
+
+
+}
+
+
+
 
 struct Postgres2Blocks
 {
@@ -120,7 +236,7 @@ struct Postgres2Blocks
       transactions = db.execute_query(transactions_query);
       std::cout << "Transactions:" << transactions.size() << " ";
 
-      auto operations_query = "SELECT block_num, body, trx_in_block FROM hive.operations WHERE block_num >= " 
+      auto operations_query = "SELECT block_num, body, body::bytea as bin_body, trx_in_block FROM hive.operations WHERE block_num >= " 
                                   + std::to_string(from) 
                                   + " and block_num <= " 
                                   + std::to_string(to) 
@@ -263,6 +379,22 @@ struct Postgres2Blocks
 
     auto build_transaction_ids = [](const pqxx::result::const_iterator& transaction, std::vector<fc::variant>& transaction_id_variants)
     {
+
+  //  https://github.com/jtv/libpqxx/blob/3d97c80bcde96fb70a21c1ae1cf92ad934818210/include/pqxx/field.hxx
+  //   Do not use this for BYTEA values, or other binary values.  To read those,
+  //   convert the value to your desired type using `to()` or `as()`.  For
+  //   example: `f.as<std::basic_string<std::byte>>()`.
+  //  
+  // [[nodiscard]] PQXX_PURE char const *c_str() const &;
+
+
+      pqxx::binarystring blob(transaction["trx_hash"]);
+      auto size = blob.size();
+      auto data = blob.data();
+
+      (void) size;
+      (void) data;
+
       transaction_id_variants.push_back(fix_pxx_hex(transaction["trx_hash"]));
     };
 
@@ -324,9 +456,55 @@ struct Postgres2Blocks
 
     auto add_operation_variant = [](const pqxx::const_result_iterator& operation, std::vector<fc::variant>& operations_variants)
     {
+
+        pqxx::binarystring json(operation["body"]);
+        pqxx::binarystring bs(operation["bin_body"]);
+
+        std::cout << "Json size: " << json.size() << " Json data: " << json.data() << std::endl;
+        std::cout << "Blob size: " << bs.size() << " Blob data: " << bs.data() << std::endl;
+
+        
+        std::cout.copyfmt(std::stringstream()); //reset stream state
+
+        auto data = bs.data();
+        size_t size = bs.size();
+
+
+
+        std::cout << "Binary data: ";
+        for (size_t i = 0; i < size; ++i) {
+            std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>((unsigned char)data[i]);
+        }
+        std::cout << std::dec << "\n";        
+
         const auto& body_in_json = operation["body"].c_str();
-        const auto& operation_variant = fc::json::from_string(body_in_json);
-        operations_variants.emplace_back(operation_variant);
+        const auto& operation_variant1 = fc::json::from_string(body_in_json);
+
+
+
+        get_into_op(bs);
+
+        // //fc::blob val;
+        // //val.data.assign(bs.data(), bs.data() + bs.size());
+
+        // //haf_blob_operation hbo(val);
+
+        
+        hive::protocol::custom_binary_operation cbo;
+        cbo.data.assign(bs.data(), bs.data() + bs.size());
+
+        fc::operation op (cbo);
+
+        fc::string  s =   fc::json::to_string(op);
+        std::cout << "Cbo size: " << s.size() << " Cbo data: " << s << std::endl;
+        // const auto& operation_variant = fc::json::from_string(s);
+
+        fc::variant operation_variant2;
+        to_variant(op, operation_variant2);
+        
+
+        operations_variants.emplace_back(operation_variant1);
+        operations_variants.emplace_back(operation_variant2);
     };
 
     // End of local functions definitions
@@ -595,4 +773,66 @@ void print_duration(const std::string& message, const std::chrono::nanoseconds& 
     auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration % std::chrono::minutes(1));
 
     std::cout << message << ":" << minutes.count() << "'" << seconds.count() << "\" ";
+}
+
+void print_flags(std::ios_base::fmtflags flags) 
+{
+    std::cout << "Format flags: ";
+
+    if (flags & std::ios_base::boolalpha) std::cout << "boolalpha ";
+    if (flags & std::ios_base::dec) std::cout << "dec ";
+    if (flags & std::ios_base::fixed) std::cout << "fixed ";
+    if (flags & std::ios_base::hex) std::cout << "hex ";
+    if (flags & std::ios_base::internal) std::cout << "internal ";
+    if (flags & std::ios_base::left) std::cout << "left ";
+    if (flags & std::ios_base::oct) std::cout << "oct ";
+    if (flags & std::ios_base::right) std::cout << "right ";
+    if (flags & std::ios_base::scientific) std::cout << "scientific ";
+    if (flags & std::ios_base::showbase) std::cout << "showbase ";
+    if (flags & std::ios_base::showpoint) std::cout << "showpoint ";
+    if (flags & std::ios_base::showpos) std::cout << "showpos ";
+    if (flags & std::ios_base::skipws) std::cout << "skipws ";
+    if (flags & std::ios_base::unitbuf) std::cout << "unitbuf ";
+    if (flags & std::ios_base::uppercase) std::cout << "uppercase ";
+    if (flags & std::ios_base::adjustfield) std::cout << "adjustfield ";
+    if (flags & std::ios_base::basefield) std::cout << "basefield ";
+    if (flags & std::ios_base::floatfield) std::cout << "floatfield ";
+
+    std::cout << std::endl;
+}
+
+
+
+
+void reset_stream(std::ostream& os) 
+{
+
+   //std::stringstream dummy;
+   os.copyfmt(std::stringstream());
+   return;
+
+  //  std::stringstream dummy;
+  //  os.flags(dummy.flags());  // reset to default flags
+  //  os.fill(dummy.fill());  // reset to default fill character
+  //  os.precision(dummy.precision());  // reset to default precision
+
+  //  return;
+
+  //   // Clear all error flags
+  //   os.clear();
+
+  //   // Reset to the default formatting state
+  //   os.unsetf(std::ios_base::adjustfield);  // Left-justified
+  //   os.unsetf(std::ios_base::basefield);  // Decimal numbers
+  //   os.unsetf(std::ios_base::floatfield);  // Not fixed nor scientific
+
+  //   // Reset other settings
+  //   os.precision(6);  // Default precision for floating-point output
+  //   os.fill(' ');  // Default fill character
+  //   os.unsetf(std::ios_base::boolalpha);  // bool values are output as 1 and 0
+  //   os.unsetf(std::ios_base::showbase);  // The base prefix is not output
+  //   os.unsetf(std::ios_base::showpoint);  // The decimal point and trailing zeros are output only if necessary
+  //   os.unsetf(std::ios_base::showpos);  // A plus sign is not output for positive numbers
+  //   os.unsetf(std::ios_base::skipws);  // White space is not skipped on input
+  //   os.unsetf(std::ios_base::uppercase);  // Lowercase letters are used for the base prefix and exponent of floating-point values
 }
