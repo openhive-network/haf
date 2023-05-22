@@ -38,6 +38,7 @@ struct Postgres2Blocks
   void initialize_iterators();
   void blocks2replay(const char *context, const char* shared_memory_bin_path, bool allow_reevaluate);
   void apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
+  void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   fc::variant block2variant(const pqxx::row& block);
   
   void transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<fc::variant>& trancaction_variants);
@@ -232,14 +233,6 @@ bool consensus_state_provider_replay_impl(int from, int to, const char *context,
             hive::chain::database::skip_validate;
     };
 
-    auto apply_full_block = [](hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags)
-    {
-      db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
-      db.public_apply_block(fb_ptr, skip_flags);
-      db.clear_tx_status();
-      db.set_revision(db.head_block_num());
-    };
-
     // End of local functions definitions
     // ===================================
     
@@ -269,6 +262,13 @@ bool consensus_state_provider_replay_impl(int from, int to, const char *context,
     apply_full_block(db, fb_ptr, skip_flags);
   }
 
+  void Postgres2Blocks::apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags)
+  {
+    db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
+    db.public_apply_block(fb_ptr, skip_flags);
+    db.clear_tx_status();
+    db.set_revision(db.head_block_num());
+  }
 
   fc::variant Postgres2Blocks::block2variant(const pqxx::row& block)
   {
