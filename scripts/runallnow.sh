@@ -1375,10 +1375,8 @@ run()
     remove_context_shared_memory_bin && run_all_from_scratch && app_start && time app_cont
 }
 
-driver()
+driver_body()
 {
-    remove_context_shared_memory_bin && run_all_from_scratch 
-
     # preconditions for mtlk_executable
     if [ -d /home/hived/datadir/consensus_state_provider ]
     then
@@ -1387,7 +1385,32 @@ driver()
 
     psql -d haf_block_log -c 'select count(*) from hive.blocks'
 
-    ./bin/mtlk_executable --to=1091
+    ./bin/mtlk_executable --to=$LAST_BLOCK
+
+}
+
+
+
+driver_clean()
+{
+    clearterm &&remove_context_shared_memory_bin && run_all_from_scratch &&  driver_body
+}
+
+
+clearterm()
+{
+    clear && printf '\''\e[3J'\'
+}
+
+driver_build()
+{
+    clearterm &&
+    ninja mtlk_executable query_supervisor hived extension.hive_fork_manager &&
+    sudo ninja install &&
+    sudo chown $USER:$USER .ninja_* &&
+    ctest -R keyauth --output-on-failure &&
+    remove_context_shared_memory_bin &&
+    driver_body
 }
 
 if [ $# -eq 0 ]
