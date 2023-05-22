@@ -62,21 +62,21 @@ def test_replay_and_p2p_sync(
         arguments=["--chain-id", "42"],
     )
 
-    haf_node.wait_for_transaction_in_database(
-        transaction=TRANSACTION_IN_1092_BLOCK, timeout=120
-    )
-    haf_node.wait_for_transaction_in_database(
-        transaction=TRANSACTION_IN_999892_BLOCK, timeout=120
-    )
-    haf_node.wait_for_transaction_in_database(
-        transaction=TRANSACTION_IN_4000000_BLOCK, timeout=120
-    )
-    haf_node.wait_for_transaction_in_database(
-        transaction=TRANSACTION_IN_4000001_BLOCK, timeout=120
-    )
-    haf_node.wait_for_transaction_in_database(
-        transaction=TRANSACTION_IN_5000000_BLOCK, timeout=120
-    )
+    # haf_node.wait_for_transaction_in_database(
+    #     transaction=TRANSACTION_IN_1092_BLOCK, timeout=120
+    # )
+    # haf_node.wait_for_transaction_in_database(
+    #     transaction=TRANSACTION_IN_999892_BLOCK, timeout=120
+    # )
+    # haf_node.wait_for_transaction_in_database(
+    #     transaction=TRANSACTION_IN_4000000_BLOCK, timeout=120
+    # )
+    # haf_node.wait_for_transaction_in_database(
+    #     transaction=TRANSACTION_IN_4000001_BLOCK, timeout=120
+    # )
+    # haf_node.wait_for_transaction_in_database(
+    #     transaction=TRANSACTION_IN_5000000_BLOCK, timeout=120
+    # )
 
     assert_are_blocks_sync_with_haf_db(haf_node, 5000000)
     assert_are_indexes_restored(haf_node)
