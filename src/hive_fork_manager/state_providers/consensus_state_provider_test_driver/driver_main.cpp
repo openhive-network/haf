@@ -1,6 +1,6 @@
 //#include "operation_base.hpp"
 
-//#include <hive/protocol/forward_impacted.hpp>
+#include <hive/protocol/forward_impacted.hpp>
 //#include <hive/protocol/misc_utilities.hpp>
 
 //#include <fc/io/json.hpp>
@@ -113,8 +113,65 @@ int main(int argc, char *argv[]) {
         auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
         print_duration("All", duration);
         std::cout << "Memory (KB): " << get_memory_usage_kb() << std::endl;
-        
 
+
+
+        if(current_step_end == 5000000)
+        {
+            using namespace consensus_state_provider;
+            collected_account_balances_collection_t account_balances = collect_current_all_accounts_balances(context.c_str());
+
+            // Sort by balance in descending order
+            std::sort(account_balances.begin(), account_balances.end(),
+                      [](const collected_account_balances_t& a, const collected_account_balances_t& b) { return a.balance > b.balance; });
+
+            // Take the first 15 results
+            collected_account_balances_collection_t top_15_results(account_balances.begin(), account_balances.begin() + 15);
+
+            // Output the results
+            for(const auto& account : top_15_results)
+            {
+              std::cout << "Account: " << account.account_name << ", Balance: " << account.balance << std::endl;
+            }
+
+            // Define the expected values
+            // Define the expected values (without the first column)
+            // clang-format off
+            std::vector<std::tuple<std::string, long long>> expected_values = 
+            {
+                std::make_tuple("steemit", 4778859891),
+                std::make_tuple("poloniex", 1931250425),
+                std::make_tuple("bittrex", 499025114),
+                std::make_tuple("steemit2", 197446682),
+                std::make_tuple("aurel", 97417738),
+                std::make_tuple("openledger", 52275479),
+                std::make_tuple("ben", 50968139),
+                std::make_tuple("blocktrades", 29594875),
+                std::make_tuple("steem", 29315310),
+                std::make_tuple("imadev", 23787999),
+                std::make_tuple("smooth", 20998219),
+                std::make_tuple("steemit60", 20000000),
+                std::make_tuple("taker", 15014283),
+                std::make_tuple("steemit1", 10000205),
+                std::make_tuple("ashold882015", 9895158)
+            };
+            // clang-format on
+            // Compare the sorted result with the expected values
+            bool is_equal = std::equal(top_15_results.begin(), top_15_results.end(), expected_values.begin(),
+                                       [](const collected_account_balances_t& account, const std::tuple<std::string, long long>& expected) {
+                                         return account.account_name == std::get<0>(expected) && account.balance == std::get<1>(expected);
+                                       });
+
+            // Output the comparison result
+            if(is_equal)
+            {
+              std::cout << "The sorted result matches the expected values." << std::endl;
+            }
+            else
+            {
+              std::cout << "The sorted result does not match the expected values." << std::endl;
+            }
+        }
 
         if(!step_ok)
         {
@@ -122,5 +179,7 @@ int main(int argc, char *argv[]) {
             break;
         }
     }    
+
+
     return ok ? 0 : 1;
 }
