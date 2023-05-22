@@ -1,6 +1,7 @@
 #!/bin/bash
 
-
+# ../haf/scripts/runallnow.sh 20000 driver
+# rm /home/hived/datadir/consensus_state_provider/blockchain/shared_memory.bin ; ./bin/mtlk_executable --to 1091
 
 
 # block 23645967 //FC_ASSERT( vo.amount >= 0, "Asset amount cannot be negative" );   - nijeah 
@@ -1137,7 +1138,7 @@ fi
 if [[ $CMAKED ]]
 then
 #    ninja extension.hive_fork_manager  \
-    ninja mtlk_executable query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure         && ctest -R curr --output-on-failure    
+    ninja mtlk_executable query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure         
     EXIT_STATUS=$?
     # ninja mtlk_executable; sudo chown $USER:$USER .ninja_*
     sudo chown -R $USER:$USER *
