@@ -85,6 +85,8 @@ $BODY$
 DECLARE
     __result TEXT[];
 BEGIN
+    PERFORM hive.app_check_contexts_synchronized( _context_names );
+
     IF array_length( _context_names, 1 ) = 0 THEN
         RAISE  EXCEPTION 'Empty contexts array';
     END IF;
@@ -134,6 +136,8 @@ CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names TEXT[] )
 AS
 $BODY$
 BEGIN
+    PERFORM hive.app_check_contexts_synchronized( _context_names );
+
     IF EXISTS( SELECT 1 FROM hive.contexts hc WHERE hc.name =ANY( _context_names ) AND hc.is_attached = FALSE ) THEN
         RAISE EXCEPTION 'Detached context cannot be moved';
     END IF;
@@ -171,6 +175,8 @@ DECLARE
     __head_of_irreversible_block hive.blocks.num%TYPE:=0;
     __fork_id hive.fork.id%TYPE := 1;
 BEGIN
+    PERFORM hive.app_check_contexts_synchronized( _contexts );
+
     SELECT hir.consistent_block INTO __head_of_irreversible_block
     FROM hive.irreversible_data hir;
 
@@ -221,6 +227,8 @@ CREATE OR REPLACE FUNCTION hive.app_context_detach( _contexts TEXT[] )
 AS
 $BODY$
 BEGIN
+    PERFORM hive.app_check_contexts_synchronized( _contexts );
+
     PERFORM
           hive.context_detach( context.* )
         , hive.create_all_irreversible_blocks_view( context.* )
@@ -308,6 +316,8 @@ $BODY$
 DECLARE
     __result bool[];
 BEGIN
+    PERFORM hive.app_check_contexts_synchronized( _contexts );
+
     SELECT ARRAY_AGG( DISTINCT(hc.is_attached) )  is_attached INTO __result
     FROM hive.contexts hc
     WHERE hc.name =ANY( _contexts );
@@ -341,6 +351,8 @@ $BODY$
 DECLARE
     __contexts_id INTEGER[];
 BEGIN
+    PERFORM hive.app_check_contexts_synchronized( _contexts );
+
     SELECT ARRAY_AGG(hc.id) INTO __contexts_id
     FROM hive.contexts hc
     WHERE hc.name =ANY( _contexts ) AND hc.is_attached = FALSE;
@@ -376,6 +388,8 @@ $BODY$
 DECLARE
     __result INTEGER[];
 BEGIN
+    PERFORM hive.app_check_contexts_synchronized( _contexts );
+
     SELECT ARRAY_AGG( hc.detached_block_num ) detached_block_num INTO __result
     FROM hive.contexts hc
     WHERE hc.name =ANY( _contexts ) AND hc.is_attached = FALSE;
@@ -561,5 +575,34 @@ BEGIN
   RAISE EXCEPTION 'HAF instance was not resumed in % s', extract(epoch from (_timeout));
 END
 $BODY$
-LANGUAGE plpgsql VOLATILE; 
+LANGUAGE plpgsql VOLATILE;
 
+
+CREATE OR REPLACE FUNCTION hive.app_check_contexts_synchronized( _contexts TEXT[] )
+    RETURNS VOID
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __number_of_rows INTEGER;
+BEGIN
+    SELECT COUNT(
+        DISTINCT(
+                   ctx.current_block_num
+                 , ctx.irreversible_block
+                 , ctx.is_attached
+                 , ctx.back_from_fork
+                 , ctx.events_id
+                 , ctx.fork_id
+                 , ctx.detached_block_num
+        )
+    ) INTO __number_of_rows
+    FROM hive.contexts ctx
+    WHERE ctx.name =ANY(_contexts);
+
+    IF __number_of_rows != 1 THEN
+        RAISE EXCEPTION 'Contexts % are not synchronized', _contexts;
+    END IF;
+END;
+$BODY$;
