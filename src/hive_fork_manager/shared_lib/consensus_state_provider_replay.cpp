@@ -20,6 +20,7 @@
 namespace consensus_state_provider
 {
 
+void get_into_op(const pqxx::binarystring& bs);
 
 
 
@@ -83,159 +84,6 @@ bool consensus_state_provider_replay_impl(int from, int to, const char *context,
 
 
 //struct pre_operation_visitor
-using namespace hive::protocol;
-
-struct conensus_op_visitor_type
-{
-
-  conensus_op_visitor_type( ){}
-
-  typedef void result_type;
-
-  template< typename T >
-  void operator()( const T& )const 
-  {
-    int a= 0;
-    a = 1; 
-    (void)a; 
-  }
-
-  void operator()( const account_create_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const account_create_with_delegation_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const account_update_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const account_update2_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const create_claimed_account_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const recover_account_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const pow_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const pow2_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const hardfork_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-
-
-  void operator()( const transfer_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-
-  void operator()( const transfer_to_vesting_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-
-  void operator()( const account_witness_vote_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const comment_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const vote_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const withdraw_vesting_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()( const account_witness_proxy_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-
-  void operator()( const feed_publish_operation & op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-
-  void operator()( const witness_update_operation& op )const
-  {
-    int a= 0;
-    a = 1;
-    (void)a;
-  }
-
-
-private:
-};
-
 
 // value coming from pxx is without 'T' in the middle to be accepted in variant
 std::string fix_pxx_time(const pqxx::field& t)
@@ -269,31 +117,6 @@ public:
 private:
     pqxx::connection conn;
 };
-
-
-void get_into_op(const pqxx::binarystring& bs)
-{
-
-
-      //_operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
-
-
-        //VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body ));
-
-          using hive::protocol::operation;
-
-          const char* raw_data = reinterpret_cast<const char*>(bs.data());
-          uint32_t data_length = bs.size();
-
-        operation op = fc::raw::unpack_from_char_array< operation >( raw_data, data_length );
-
-        conensus_op_visitor_type conensus_op_visitor;
-        op.visit(conensus_op_visitor);
-
-        //note.op.visit( post_operation_visitor( *this ) );
-
-
-}
 
 
 
@@ -870,7 +693,191 @@ void consensus_state_provider_finish_impl(const char* context, const char* share
 
   }
 }
+
+
+using namespace hive::protocol;
+
+struct conensus_op_visitor_type
+{
+
+  conensus_op_visitor_type( ){}
+
+  typedef void result_type;
+
+  template< typename T >
+  void operator()( const T& )const 
+  {
+    int a= 0;
+    a = 1; 
+    (void)a; 
+  }
+
+  void operator()( const account_create_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const account_create_with_delegation_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const account_update_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const account_update2_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const create_claimed_account_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const recover_account_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const pow_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const pow2_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const hardfork_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+
+
+  void operator()( const transfer_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+
+  void operator()( const transfer_to_vesting_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+
+  void operator()( const account_witness_vote_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const comment_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const vote_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const withdraw_vesting_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const account_witness_proxy_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+
+  void operator()( const feed_publish_operation & op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+
+  void operator()( const witness_update_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+
+private:
+};
+
+
+
+void get_into_op(const pqxx::binarystring& bs)
+{
+
+
+      //_operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
+
+
+        //VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body ));
+
+          using hive::protocol::operation;
+
+          const char* raw_data = reinterpret_cast<const char*>(bs.data());
+          uint32_t data_length = bs.size();
+
+        operation op = fc::raw::unpack_from_char_array< operation >( raw_data, data_length );
+
+        conensus_op_visitor_type conensus_op_visitor;
+        op.visit(conensus_op_visitor);
+
+        //note.op.visit( post_operation_visitor( *this ) );
+
+
 }
+}// namespace consensus_state_provider
+
+
+
+
 
 void print_duration(const std::string& message, const std::chrono::nanoseconds& duration) 
 {
@@ -941,3 +948,5 @@ void reset_stream(std::ostream& os)
   //   os.unsetf(std::ios_base::skipws);  // White space is not skipped on input
   //   os.unsetf(std::ios_base::uppercase);  // Lowercase letters are used for the base prefix and exponent of floating-point values
 }
+
+
