@@ -21,6 +21,67 @@ namespace consensus_state_provider
 {
 
 
+
+
+struct Postgres2Blocks
+{
+  void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path, bool allow_reevaluate);
+  void handle_exception(std::exception_ptr exception_ptr);
+  void get_data_from_postgres(int from, int to, const char* postgres_url);
+  void initialize_iterators();
+  void blocks2replay(const char *context, const char* shared_memory_bin_path, bool allow_reevaluate);
+  void apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
+  fc::variant block2variant(const pqxx::row& block);
+  
+  void transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<fc::variant>& trancaction_variants);
+
+  struct variant_and_binary_type
+  {
+      fc::variant variant;
+      pqxx::binarystring binary_str;
+  };
+
+  std::vector<variant_and_binary_type> operations2variants(int block_num, int trx_in_block);
+  int current_transaction_block_num();
+  int current_operation_block_num() const;
+  int current_operation_trx_num() const;
+
+  pqxx::result blocks;
+  pqxx::result transactions;
+  pqxx::result operations;
+  pqxx::result::const_iterator current_transaction;
+  pqxx::result::const_iterator current_operation;
+  std::chrono::nanoseconds transformations_duration;
+};
+
+bool consensus_state_provider_replay_impl(int from, int to, const char *context,
+                                const char *postgres_url, const char* shared_memory_bin_path
+                                ,
+                                bool allow_reevaluate
+                                 ) 
+{
+
+  if(from != consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path))
+  {
+    if(allow_reevaluate)
+    {
+      wlog("WARNING: Cannot replay consensus state provider properly, but reevaluating anyway: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
+          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
+    }
+    else
+    {
+      elog("ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
+          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
+      return false;
+    }
+  }
+
+  Postgres2Blocks p2b;
+  p2b.run(from, to, context, postgres_url, shared_memory_bin_path, allow_reevaluate); 
+  return true;
+}
+
+
 //struct pre_operation_visitor
 using namespace hive::protocol;
 
@@ -237,9 +298,8 @@ void get_into_op(const pqxx::binarystring& bs)
 
 
 
-struct Postgres2Blocks
-{
-  void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path, bool allow_reevaluate)
+
+  void Postgres2Blocks::run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path, bool allow_reevaluate)
   {
     transformations_duration = std::chrono::nanoseconds();
     get_data_from_postgres(from, to, postgres_url);
@@ -252,7 +312,7 @@ struct Postgres2Blocks
     print_duration("Trans", transformations_duration);
   }
 
-  void handle_exception(std::exception_ptr exception_ptr)
+  void Postgres2Blocks::handle_exception(std::exception_ptr exception_ptr)
   {
     try
     {
@@ -281,7 +341,7 @@ struct Postgres2Blocks
     }
   }
 
-  void get_data_from_postgres(int from, int to, const char* postgres_url)
+  void Postgres2Blocks::get_data_from_postgres(int from, int to, const char* postgres_url)
   {
     try
     {
@@ -327,13 +387,13 @@ struct Postgres2Blocks
     }
   }
 
-  void initialize_iterators()
+  void Postgres2Blocks::initialize_iterators()
   {
     current_transaction = transactions.begin();
     current_operation = operations.begin();
   }
 
-  void blocks2replay(const char *context, const char* shared_memory_bin_path, bool allow_reevaluate)
+  void Postgres2Blocks::blocks2replay(const char *context, const char* shared_memory_bin_path, bool allow_reevaluate)
   {
   for(const auto& block : blocks)
     {
@@ -345,7 +405,7 @@ struct Postgres2Blocks
     }
   }
 
-  void apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate)
+  void Postgres2Blocks::apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate)
   {
     auto get_skip_flags = [] () -> uint64_t
     {
@@ -398,7 +458,7 @@ struct Postgres2Blocks
   }
 
 
-  fc::variant block2variant(const pqxx::row& block)
+  fc::variant Postgres2Blocks::block2variant(const pqxx::row& block)
   {
     auto block_num = block["num"].as<int>();
 
@@ -429,14 +489,9 @@ struct Postgres2Blocks
     return block_variant;
   }
 
-  struct variant_and_binary_type
-  {
-      fc::variant variant;
-      pqxx::binarystring binary_str;
-  };
 
 
-  void transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<fc::variant>& trancaction_variants)
+  void Postgres2Blocks::transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<fc::variant>& trancaction_variants)
   {
     auto is_current_transaction = [](const pqxx::result::const_iterator& current_transaction, const int block_num) -> bool
     {
@@ -526,7 +581,7 @@ struct Postgres2Blocks
   }
 
 
-  std::vector<variant_and_binary_type> operations2variants(int block_num, int trx_in_block)
+  std::vector<Postgres2Blocks::variant_and_binary_type> Postgres2Blocks::operations2variants(int block_num, int trx_in_block)
   {
     auto is_current_operation = [this](int block_num, int trx_in_block) 
     {
@@ -550,8 +605,8 @@ struct Postgres2Blocks
         
         std::cout.copyfmt(std::stringstream()); //reset stream state
 
-        auto data = bs.data();
-        size_t size = bs.size();
+        // auto data = bs.data();
+        // size_t size = bs.size();
 
 
 
@@ -612,14 +667,8 @@ struct Postgres2Blocks
     return varbin_operations;
   }
 
-
-  //values taken from database
-  pqxx::result blocks;
-  pqxx::result transactions;
-  pqxx::result operations;
-
   //iterators for traversing the values above
-  int current_transaction_block_num() 
+  int Postgres2Blocks::current_transaction_block_num() 
   { 
     if(transactions.empty())
       return -1;
@@ -628,9 +677,8 @@ struct Postgres2Blocks
     return current_transaction["block_num"].as<int>(); 
     }
 
-  pqxx::result::const_iterator current_transaction;
 
-  int current_operation_block_num() const 
+  int Postgres2Blocks::current_operation_block_num() const 
   { 
     if(operations.empty())
       return -1;
@@ -639,47 +687,14 @@ struct Postgres2Blocks
     return current_operation["block_num"].as<int>(); 
   }
 
-  int current_operation_trx_num() const { 
+  int Postgres2Blocks::current_operation_trx_num() const 
+  { 
     if(operations.empty())
       return -1;
     if(operations.end() == current_operation)
       return std::numeric_limits<int>::max();
     return current_operation["trx_in_block"].as<int>(); 
   }
-
-  pqxx::result::const_iterator current_operation;
-
-  std::chrono::nanoseconds transformations_duration; 
-
-}; //struct Postgres2Blocks
-
-
-bool consensus_state_provider_replay_impl(int from, int to, const char *context,
-                                const char *postgres_url, const char* shared_memory_bin_path
-                                ,
-                                bool allow_reevaluate
-                                 ) 
-{
-
-  if(from != consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path))
-  {
-    if(allow_reevaluate)
-    {
-      wlog("WARNING: Cannot replay consensus state provider properly, but reevaluating anyway: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
-          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
-    }
-    else
-    {
-      elog("ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
-          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
-      return false;
-    }
-  }
-
-  Postgres2Blocks p2b;
-  p2b.run(from, to, context, postgres_url, shared_memory_bin_path, allow_reevaluate); 
-  return true;
-}
 
 
 
