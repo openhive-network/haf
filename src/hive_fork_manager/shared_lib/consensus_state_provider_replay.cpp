@@ -22,6 +22,12 @@ namespace consensus_state_provider
 
 void get_into_op(const pqxx::binarystring& bs);
 
+// value coming from pxx is without 'T' in the middle to be accepted in variant
+std::string fix_pxx_time(const pqxx::field& t);
+
+// value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
+const char* fix_pxx_hex(const pqxx::field& h);
+
 
 
 struct Postgres2Blocks
@@ -55,6 +61,27 @@ struct Postgres2Blocks
   std::chrono::nanoseconds transformations_duration;
 };
 
+
+class PostgresDatabase 
+{
+public:
+ PostgresDatabase(const char* url) : conn(url) 
+ {}
+
+ pqxx::result execute_query(const std::string& query)
+ {
+   pqxx::work txn(conn);
+   pqxx::result res = txn.exec(query);
+   txn.commit();
+   return res;
+ }
+
+private:
+    pqxx::connection conn;
+};
+
+
+
 bool consensus_state_provider_replay_impl(int from, int to, const char *context,
                                 const char *postgres_url, const char* shared_memory_bin_path
                                 ,
@@ -83,40 +110,6 @@ bool consensus_state_provider_replay_impl(int from, int to, const char *context,
 }
 
 
-//struct pre_operation_visitor
-
-// value coming from pxx is without 'T' in the middle to be accepted in variant
-std::string fix_pxx_time(const pqxx::field& t)
-{
-  std::string r =t.c_str();
-  r[10] = 'T';
-  return r;
-}
-
-// value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
-const char* fix_pxx_hex(const pqxx::field& h)
-{
-    return h.c_str() + 2;
-}
-
-
-class PostgresDatabase 
-{
-public:
- PostgresDatabase(const char* url) : conn(url) 
- {}
-
- pqxx::result execute_query(const std::string& query)
- {
-   pqxx::work txn(conn);
-   pqxx::result res = txn.exec(query);
-   txn.commit();
-   return res;
- }
-
-private:
-    pqxx::connection conn;
-};
 
 
 
@@ -873,6 +866,23 @@ void get_into_op(const pqxx::binarystring& bs)
 
 
 }
+
+
+// value coming from pxx is without 'T' in the middle to be accepted in variant
+std::string fix_pxx_time(const pqxx::field& t)
+{
+  std::string r =t.c_str();
+  r[10] = 'T';
+  return r;
+}
+
+// value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
+const char* fix_pxx_hex(const pqxx::field& h)
+{
+    return h.c_str() + 2;
+}
+
+
 }// namespace consensus_state_provider
 
 
