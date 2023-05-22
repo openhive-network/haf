@@ -35,11 +35,11 @@ struct conensus_op_visitor_type
   void operator()( const T& )const 
   {
     int a= 0;
-    a = 1;
-    (void)a;
+    a = 1; 
+    (void)a; 
   }
 
-  void operator()( const hive::protocol::account_create_operation& op )const
+  void operator()( const account_create_operation& op )const
   {
     int a= 0;
     a = 1;
@@ -101,6 +101,76 @@ struct conensus_op_visitor_type
     a = 1;
     (void)a;
   }
+
+
+
+  void operator()( const transfer_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+
+  void operator()( const transfer_to_vesting_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+
+  void operator()( const account_witness_vote_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const comment_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const vote_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const withdraw_vesting_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+  void operator()( const account_witness_proxy_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+
+  void operator()( const feed_publish_operation & op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
+
+  void operator()( const witness_update_operation& op )const
+  {
+    int a= 0;
+    a = 1;
+    (void)a;
+  }
+
 
 private:
 };
@@ -460,8 +530,8 @@ struct Postgres2Blocks
         pqxx::binarystring json(operation["body"]);
         pqxx::binarystring bs(operation["bin_body"]);
 
-        std::cout << "Json size: " << json.size() << " Json data: " << json.data() << std::endl;
-        std::cout << "Blob size: " << bs.size() << " Blob data: " << bs.data() << std::endl;
+        //std::cout << "Json size: " << json.size() << " Json data: " << json.data() << std::endl;
+        //std::cout << "Blob size: " << bs.size() << " Blob data: " << bs.data() << std::endl;
 
         
         std::cout.copyfmt(std::stringstream()); //reset stream state
@@ -471,11 +541,11 @@ struct Postgres2Blocks
 
 
 
-        std::cout << "Binary data: ";
-        for (size_t i = 0; i < size; ++i) {
-            std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>((unsigned char)data[i]);
-        }
-        std::cout << std::dec << "\n";        
+        // std::cout << "Binary data: ";
+        // for (size_t i = 0; i < size; ++i) {
+        //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>((unsigned char)data[i]);
+        // }
+        // std::cout << std::dec << "\n";        
 
         const auto& body_in_json = operation["body"].c_str();
         const auto& operation_variant1 = fc::json::from_string(body_in_json);
@@ -490,21 +560,21 @@ struct Postgres2Blocks
         // //haf_blob_operation hbo(val);
 
         
-        hive::protocol::custom_binary_operation cbo;
-        cbo.data.assign(bs.data(), bs.data() + bs.size());
+        // hive::protocol::custom_binary_operation cbo;
+        // cbo.data.assign(bs.data(), bs.data() + bs.size());
 
-        fc::operation op (cbo);
+        // fc::operation op (cbo);
 
-        fc::string  s =   fc::json::to_string(op);
-        std::cout << "Cbo size: " << s.size() << " Cbo data: " << s << std::endl;
-        // const auto& operation_variant = fc::json::from_string(s);
+        // fc::string  s =   fc::json::to_string(op);
+        // std::cout << "Cbo size: " << s.size() << " Cbo data: " << s << std::endl;
+        // // const auto& operation_variant = fc::json::from_string(s);
 
-        fc::variant operation_variant2;
-        to_variant(op, operation_variant2);
+        // fc::variant operation_variant2;
+        // to_variant(op, operation_variant2);
         
 
         operations_variants.emplace_back(operation_variant1);
-        operations_variants.emplace_back(operation_variant2);
+        //operations_variants.emplace_back(operation_variant2);
     };
 
     // End of local functions definitions
