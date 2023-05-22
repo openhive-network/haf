@@ -128,35 +128,6 @@ bool consensus_state_provider_replay_impl(int from, int to, const char *context,
     print_duration("Trans", transformations_duration);
   }
 
-  void Postgres2Blocks::handle_exception(std::exception_ptr exception_ptr)
-  {
-    try
-    {
-      if(exception_ptr)
-      {
-        // do something for all exceptions
-        std::rethrow_exception(exception_ptr);
-      }
-    }
-    catch(const pqxx::broken_connection& ex)
-    {
-      elog("Postgres2Blocks detected connection error: ${e}.", ("e", ex.what()));
-      // try_to_restore_connection(); 
-    }
-    catch(const pqxx::sql_error& ex)
-    {
-      elog("Postgres2Blocks detected SQL statement execution failure. Failing statement: `${q}'.", ("q", ex.query()));
-    }
-    catch(const pqxx::pqxx_exception& ex)
-    {
-      elog("Postgres2Blocks detected SQL execution failure: ${e}.", ("e", ex.base().what()));
-    }
-    catch(...)
-    {
-      elog("Postgres2Blocks execution failed: unknown exception.");
-    }
-  }
-
   void Postgres2Blocks::get_data_from_postgres(int from, int to, const char* postgres_url)
   {
     try
@@ -203,6 +174,35 @@ bool consensus_state_provider_replay_impl(int from, int to, const char *context,
     }
   }
 
+  void Postgres2Blocks::handle_exception(std::exception_ptr exception_ptr)
+  {
+    try
+    {
+      if(exception_ptr)
+      {
+        // do something for all exceptions
+        std::rethrow_exception(exception_ptr);
+      }
+    }
+    catch(const pqxx::broken_connection& ex)
+    {
+      elog("Postgres2Blocks detected connection error: ${e}.", ("e", ex.what()));
+      // try_to_restore_connection(); 
+    }
+    catch(const pqxx::sql_error& ex)
+    {
+      elog("Postgres2Blocks detected SQL statement execution failure. Failing statement: `${q}'.", ("q", ex.query()));
+    }
+    catch(const pqxx::pqxx_exception& ex)
+    {
+      elog("Postgres2Blocks detected SQL execution failure: ${e}.", ("e", ex.base().what()));
+    }
+    catch(...)
+    {
+      elog("Postgres2Blocks execution failed: unknown exception.");
+    }
+  }
+
   void Postgres2Blocks::initialize_iterators()
   {
     current_transaction = transactions.begin();
@@ -211,13 +211,9 @@ bool consensus_state_provider_replay_impl(int from, int to, const char *context,
 
   void Postgres2Blocks::blocks2replay(const char *context, const char* shared_memory_bin_path, bool allow_reevaluate)
   {
-  for(const auto& block : blocks)
+    for(const auto& block : blocks)
     {
-
-
-
       apply_variant_block(block, context, shared_memory_bin_path, allow_reevaluate);
-      
     }
   }
 
