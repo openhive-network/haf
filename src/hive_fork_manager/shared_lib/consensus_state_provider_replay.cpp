@@ -429,6 +429,12 @@ struct Postgres2Blocks
     return block_variant;
   }
 
+  struct variant_and_binary_type
+  {
+      fc::variant variant;
+      pqxx::binarystring binary_str;
+  };
+
 
   void transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<fc::variant>& trancaction_variants)
   {
@@ -476,15 +482,23 @@ struct Postgres2Blocks
       }
     };
 
-    auto build_transaction_variant = [](const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<fc::variant>& operations_variants) -> fc::variant
+    auto build_transaction_variant = [](const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<variant_and_binary_type>& varbin_operations) -> fc::variant
     {
+      std::vector<fc::variant> only_variants;
+      only_variants.reserve(varbin_operations.size());
+      std::transform(
+          varbin_operations.begin(), varbin_operations.end(),
+          std::back_inserter(only_variants),
+          [](const variant_and_binary_type& vb) { return vb.variant; }
+      );
+
       fc::variant_object_builder transaction_variant_builder;
       transaction_variant_builder
         ("ref_block_num", transaction["ref_block_num"].as<int>())
         ("ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())
         ("expiration", fix_pxx_time(transaction["expiration"]))
         ("signatures", signatures)
-        ("operations", operations_variants);
+        ("operations", only_variants);
 
       return transaction_variant_builder.get();
     };  
@@ -503,16 +517,16 @@ struct Postgres2Blocks
 
       rewind_operations_iterator_to_current_block(block_num);
 
-      std::vector<fc::variant> operations_variants = operations2variants(block_num, trx_in_block);
+      std::vector<variant_and_binary_type> varbin_operations = operations2variants(block_num, trx_in_block);
 
-      fc::variant transaction_variant = build_transaction_variant(current_transaction, signatures, operations_variants);
+      fc::variant transaction_variant = build_transaction_variant(current_transaction, signatures, varbin_operations);
 
       trancaction_variants.emplace_back(transaction_variant);
     }
   }
 
 
-  std::vector<fc::variant> operations2variants(int block_num, int trx_in_block)
+  std::vector<variant_and_binary_type> operations2variants(int block_num, int trx_in_block)
   {
     auto is_current_operation = [this](int block_num, int trx_in_block) 
     {
@@ -524,7 +538,7 @@ struct Postgres2Blocks
         return operation["block_num"].as<int>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block;
     };
 
-    auto add_operation_variant = [](const pqxx::const_result_iterator& operation, std::vector<fc::variant>& operations_variants)
+    auto add_operation_variant = [](const pqxx::const_result_iterator& operation, std::vector<variant_and_binary_type>& varbin_operations)
     {
 
         pqxx::binarystring json(operation["body"]);
@@ -548,7 +562,7 @@ struct Postgres2Blocks
         // std::cout << std::dec << "\n";        
 
         const auto& body_in_json = operation["body"].c_str();
-        const auto& operation_variant1 = fc::json::from_string(body_in_json);
+
 
 
 
@@ -573,23 +587,29 @@ struct Postgres2Blocks
         // to_variant(op, operation_variant2);
         
 
-        operations_variants.emplace_back(operation_variant1);
-        //operations_variants.emplace_back(operation_variant2);
+        variant_and_binary_type vb
+        {
+          .variant = fc::json::from_string(body_in_json),
+          .binary_str = bs
+        };
+
+        varbin_operations.emplace_back(vb);
+        //varbin_operations.emplace_back(operation_variant2);
     };
 
     // End of local functions definitions
     // ===================================
 
     // Main body of the function
-    std::vector<fc::variant> operations_variants;
+    std::vector<variant_and_binary_type> varbin_operations; 
     if(is_current_operation(block_num, trx_in_block))
     {
       for(; current_operation != operations.end() && operation_matches_block_transaction(current_operation, block_num, trx_in_block); ++current_operation)
       {
-        add_operation_variant(current_operation, operations_variants);
+        add_operation_variant(current_operation, varbin_operations);
       }
     }
-    return operations_variants;
+    return varbin_operations;
   }
 
 
