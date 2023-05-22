@@ -19,14 +19,18 @@ if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
 
     from test_tools.__private.user_handles.handles.network_handle import NetworkHandle
-    from test_tools.__private.user_handles.handles.node_handles.node_handle_base import NodeHandleBase as NodeHandle
+    from test_tools.__private.user_handles.handles.node_handles.node_handle_base import (
+        NodeHandleBase as NodeHandle,
+    )
 
     from haf_local_tools.db_adapter import ColumnType, ScalarType
 
     class Transaction(TypedDict):
         transaction_id: str
 
+
 TransactionId = str
+
 
 class HafNode(PreconfiguredNode):
     DEFAULT_DATABASE_URL: Final[str] = "postgresql:///haf_block_log"
@@ -52,10 +56,15 @@ class HafNode(PreconfiguredNode):
             '{"name":"sync","level":"error","appender":"p2p"} '
             '{"name":"p2p","level":"error","appender":"p2p"}'
         )
+        # self.config.log_appender = '{"appender":"stderr","stream":"std_error"}'
+        # self.config.log_logger = '{"name":"default","level":"info","appender":"stderr"}'
 
+        
     @property
     def session(self) -> Session:
-        assert self.__session, "Session is not available since node was not run yet! Call the 'run()' method first."
+        assert (
+            self.__session
+        ), "Session is not available since node was not run yet! Call the 'run()' method first."
         return self.__session
 
     @property
@@ -76,7 +85,12 @@ class HafNode(PreconfiguredNode):
             drop_database(self.__database_url)
         create_database(self.__database_url, template="haf_block_log")
 
-        engine = sqlalchemy.create_engine(self.__database_url, echo=False, poolclass=NullPool, isolation_level="AUTOCOMMIT")
+        engine = sqlalchemy.create_engine(
+            self.__database_url,
+            echo=False,
+            poolclass=NullPool,
+            isolation_level="AUTOCOMMIT",
+        )
         session = sessionmaker(bind=engine)
         self.__session = session()
 
@@ -94,7 +108,7 @@ class HafNode(PreconfiguredNode):
 
     def wait_for_transaction_in_database(
         self,
-        transaction:  Union[Transaction, TransactionId],
+        transaction: Union[Transaction, TransactionId],
         *,
         timeout: float | timedelta = math.inf,
         poll_time: float = 1.0,
