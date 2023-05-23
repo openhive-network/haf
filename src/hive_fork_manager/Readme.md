@@ -59,6 +59,16 @@ It is possible that an app's operation will be stopped for some reason during a 
 
 To attach the context, the app has to know the block number of the last processed block. To save and get it, use: `app_context_detached_save_block_num` and `app_context_detached_get_block_num`. These functions may only be used in the datached state, otherwise they will throw exceptions.
 
+#### Using a group of contexts
+In certain situations, it becomes necessary to ensure that multiple contexts are synchronized
+and point to the same block. This synchronization of contexts allows for consistent behavior
+across different applications. To achieve this, there are specific functions available, such as 'hive.app_next_block',
+that operate on an array of contexts and move them synchronously.
+
+When using synchronized contexts, it is of utmost importance to ensure that all the contexts within a group
+are consistently in the same state. This means that the contexts shall always traverse blocks together within 
+the same group of contexts passed to the functions.
+
 ### Non-forking apps
 It is expected that some apps will only want to process blocks after they become irreversible. 
 
@@ -362,6 +372,7 @@ Creates a new context. Context name can contains only characters from the set: `
 Remove the context and unregister all its tables.
 
 ##### hive.app_next_block( _context_name )
+##### hive.app_next_block( _array_of_contexts )
 Returns `hive.blocks_range` -range of blocks numbers to process (or NULL if no blocks to process).
 It is the most important function for any app.
 To ensure correct work of the fork rewind mechanism, any app must process returned blocks and modify their tables according to blockchain state on time where the returned block is a head block.
@@ -375,20 +386,28 @@ fork control (detach of context is required first) or it can still process them 
 hive.app_next_block cannot be used when a context is detached - in such case an exception is thrown.
 
 ##### hive.app_context_detach( context_name )
-Detaches triggers attached to tables registered in a given context. It allows to do a massive sync of irreversible blocks without overhead from triggers. The context's views are recreated to return only all irreversible data.
+##### hive.app_context_detach( array_of_contexts )
+Detaches triggers attached to tables registered in a given context or contexts. It allows to do a massive sync of irreversible blocks without overhead from triggers. The context's views are recreated to return only all irreversible data.
 
 ##### hive.app_context_attach( context_name, block_num )
-Enables triggers attached to registered tables in a given context and sets current context block number. The `block_num` cannot
+##### hive.app_context_attach( array_of_contexts, block_num )
+Enables triggers attached to registered tables in a given context or contexts and sets current contexts block number. The `block_num` cannot
 be greater than the latest irreversible block. The context's views are recreated to return both reversible and irreversible data limited to the context's current block.
 
 ##### hive.app_context_is_attached( context_name )
-Returns TRUE when a given context is attached. It will thrown an exception when there is no a context with the given context_name.
+Returns TRUE when a given context is attached. It will throw an exception when there is no a context with the given context_name.
+
+##### hive.app_context_are_attached( array_of_contexts )
+Equivalent of 'hive.app_context_is_attached' for a group of contexts. When an array of contexts consists attached and detached
+contexts, then an exception is raised.
 
 ##### hive.app_context_detached_save_block_num( _context_name )
+##### hive.app_context_detached_save_block_num( _array_of_contexts )
 The app may use this function to temporarily save the block number which was recently processed in the detached state. This function
 will throw when it is call on an attached context. The saved value is set to NULL when a context is being detached.
 
 ##### hive.app_context_detached_get_block_num( _context_name )
+##### hive.app_context_detached_get_block_num( _array_of_contexts )
 Returns block num recently saved in a detached state. The function will throw when the context is attached. 
 
 #### hive.app_context_exists( context_name )
@@ -403,6 +422,10 @@ When the default is passed (hive.app_get_irreversible_block() ), then it returns
 
 #### hive.app_is_forking( context_name )
 Returns boolean information if a given context is forking ( returns TRUE ) or non-forking ( returns FALSE )
+
+#### hive.app_is_forking( _array_of_contexts )
+Equivalent of 'hive.app_is_forking' for a group of contexts. When an array of contexts consists forking and non-forking
+contexts, then an exception is raised.
 
 #### hive.app_state_provider_import( state_provider, context )
 Imports state provider into contexts - the state provider tables are created and registered in `HIVE.STATE_PROVIDERS_REGISTERED` table.
