@@ -4,6 +4,15 @@
 # rm /home/hived/datadir/consensus_state_provider/blockchain/shared_memory.bin ; ./bin/mtlk_executable --to 1091
 
 
+# remove transactions
+# remove  -  process_header_extensions -> CANNOT because header extensions patch witness verson after fork .of 1934237,  -> if( has_hardfork( HIVE_HARDFORK_0_5__54 ) ) // Cannot remove after hardfork 
+#    and -> 2791017 FC_ASSERTS in hive evaluator
+
+# modern :  8  "Postgres",  221  "Trans", and approximately 544 seconds were spent on "All".  Alltogether:10'35" 10'01" no_transactions = 6'30"
+# classic :Postgres 73 Transf: 227 "ALL:704 , 9'53"
+
+
+
 # block 23645967 //FC_ASSERT( vo.amount >= 0, "Asset amount cannot be negative" );   - nijeah 
 
 : <<END_COMMENT

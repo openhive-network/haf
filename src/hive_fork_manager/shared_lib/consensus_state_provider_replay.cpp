@@ -37,7 +37,7 @@ struct Postgres2Blocks
   void modern_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block);
   static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
-  fc::variant block2variant(const pqxx::row& block);
+  fc::variant block2variant(const pqxx::row& block, bool no_transactions = false);
 
   struct variant_and_binary_type
   {
@@ -229,13 +229,8 @@ void Postgres2Blocks::apply_variant_block(const pqxx::row& block, const char* co
   hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
 
    bool classic_way = (block_num <= 1092);
-
-   if(block_num == 1092)
-   {
-    int a = 0;
-    (void)a;
-   }
-
+   //bool classic_way = true;
+   
   if(classic_way)
   {
 
@@ -256,10 +251,15 @@ void Postgres2Blocks::apply_variant_block(const pqxx::row& block, const char* co
   }
   else
   {
-    pqxx::result::const_iterator current_operation_save = current_operation;
-    fc::variant v = block2variant(block);
+    //pqxx::result::const_iterator current_operation_save = current_operation;
+    fc::variant v = block2variant(block, true);
     std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
-    modern_apply_op_block(db, current_operation_save, operations.end(), block_num, fb_ptr);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::nanoseconds duration = end - start;
+    transformations_duration += duration;
+
+    modern_apply_op_block(db, current_operation, operations.end(), block_num, fb_ptr);
     
   }
 }
@@ -329,13 +329,15 @@ void Postgres2Blocks::apply_full_block(hive::chain::database& db, const std::sha
   db.set_revision(db.head_block_num());
 }
 
-fc::variant Postgres2Blocks::block2variant(const pqxx::row& block)
+fc::variant Postgres2Blocks::block2variant(const pqxx::row& block, bool no_transactions)
 {
   auto block_num = block["num"].as<int>();
 
   std::vector<fc::variant> transaction_ids_variants;
   std::vector<fc::variant> transaction_variants;
-  if(block_num == current_transaction_block_num()) transactions2variants(block_num, transaction_ids_variants, transaction_variants);
+  if(!no_transactions)
+    if(block_num == current_transaction_block_num()) 
+      transactions2variants(block_num, transaction_ids_variants, transaction_variants);
 
   std::string json = block["extensions"].c_str();
   fc::variant extensions = fc::json::from_string(json.empty() ? "[]" : json);
@@ -343,6 +345,20 @@ fc::variant Postgres2Blocks::block2variant(const pqxx::row& block)
   // fill in block header here
   // clang-format off
   fc::variant_object_builder block_variant_builder; 
+  if(no_transactions)
+  {
+    block_variant_builder
+    ("witness", block["name"].c_str())
+    ("block_id", fix_pxx_hex(block["hash"]))
+    ("previous", fix_pxx_hex(block["prev"]))
+    ("timestamp", fix_pxx_time(block["created_at"]))
+    ("extensions", extensions)
+    ("signing_key", block["signing_key"].c_str())
+    ("witness_signature", fix_pxx_hex(block["witness_signature"]))
+    ("transaction_merkle_root", fix_pxx_hex(block["transaction_merkle_root"]))
+    ("transaction_ids", transaction_ids_variants);
+  }
+  else{
   block_variant_builder
   ("witness", block["name"].c_str())
   ("block_id", fix_pxx_hex(block["hash"]))
@@ -354,6 +370,7 @@ fc::variant Postgres2Blocks::block2variant(const pqxx::row& block)
   ("witness_signature", fix_pxx_hex(block["witness_signature"]))
   ("transaction_merkle_root", fix_pxx_hex(block["transaction_merkle_root"]))
   ("transaction_ids", transaction_ids_variants);
+  }
   // clang-format on
 
   fc::variant block_variant;
