@@ -230,6 +230,12 @@ void Postgres2Blocks::apply_variant_block(const pqxx::row& block, const char* co
 
    bool classic_way = (block_num <= 1092);
 
+   if(block_num == 1092)
+   {
+    int a = 0;
+    (void)a;
+   }
+
   if(classic_way)
   {
 
@@ -261,24 +267,48 @@ void Postgres2Blocks::apply_variant_block(const pqxx::row& block, const char* co
 
 void Postgres2Blocks::modern_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block)
 {
-  
+  int current_operation;
 
   db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
 
-  rewind_operations_iterator_to_current_block(block_num);
-  
-  db.modern_apply_block(full_block, cur_op, end_it, get_skip_flags());
+
+    auto cur_op__block_num=[this](pqxx::result::const_iterator& cur_op) -> int
+    {
+      if(operations.empty()) return -1;
+      if(operations.end() == cur_op) return std::numeric_limits<int>::max();
+      return cur_op["block_num"].as<int>();
+    };
+
+  while(cur_op__block_num(cur_op) < block_num && cur_op != end_it)
+  {
+    ++cur_op;
+  }
+
+
+  // rewrite
+  std::vector<std::vector<char>> ops;
+  for(; cur_op != end_it && cur_op["block_num"].as<int>() == block_num; ++cur_op)
+  {
+    pqxx::binarystring bs(cur_op["bin_body"]);
+    const char* raw_data = reinterpret_cast<const char*>(bs.data());
+    uint32_t data_length = bs.size();
+
+    std::vector<char> op(raw_data, raw_data + data_length);
+    ops.push_back(op);      
+  }
+
+  db.modern_apply_block(full_block, ops, get_skip_flags());
 
   db.clear_tx_status();
   db.set_revision(db.head_block_num());
 
   // //zrób implementację tego obok database.cpp , tylko dodatkowy header pqxx (lub string view)
   // //iterate over operations in this block
-  //   for(; current_operation != operations.end() && current_operation["block_num"].as<int>() == block_num;
-  //       ++current_operation)
+  //   for(; cur_op != operations.end() && cur_op["block_num"].as<int>() == block_num;
+  //       ++cur_op)
   //   {
-  //     //add_operation_variant(current_operation, varbin_operations);
-  //     pqxx::binarystring bs(current_operation["bin_body"]);
+  //     //add_operation_variant(cur_op, varbin_operations);
+  //     pqxx::binarystring bs(cur_op["bin_body"]);
 
   //     //a string __cpp_lib_string_view
   //     //zastosuj string view 
