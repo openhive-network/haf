@@ -92,6 +92,7 @@ int main(int argc, char *argv[]) {
     std::cout << "postgres_url: " << postgres_url << "\n";
     std::cout << "consensus_state_provider_storage: " << consensus_state_provider_storage << "\n";
 
+    auto alltogether_start = std::chrono::high_resolution_clock::now();
 
     bool ok = true;
     for (int i = from; i < to; i += step)
@@ -175,6 +176,9 @@ int main(int argc, char *argv[]) {
         }
     }    
 
+    auto alltogether_end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(alltogether_end - alltogether_start);
+    print_duration("Alltogether", duration);
 
     return ok ? 0 : 1;
 }
