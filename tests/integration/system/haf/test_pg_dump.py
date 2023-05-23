@@ -134,7 +134,8 @@ def create_psql_tool_dumped_schema(db_name: str, tmp_path: Path) -> str:
 
 
 def shell(command: str) -> None:
-    subprocess.call(command, shell=True)
+    subprocess.check_call(command, shell=True)
+    #subprocess.call(command, shell=True)
 
 
 def source_database_not_empty_sanity_check(source_session: Session):
