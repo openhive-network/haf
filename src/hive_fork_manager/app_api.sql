@@ -312,8 +312,8 @@ BEGIN
     FROM hive.contexts hc
     WHERE hc.name =ANY( _contexts );
 
-    IF __result IS NULL OR ARRAY_LENGTH( __result, 1 ) != ARRAY_LENGTH( _contexts, 1 ) THEN
-        RAISE EXCEPTION 'No contexts or attached and detached contexts are present in a group';
+    IF __result IS NULL OR ARRAY_LENGTH( __result, 1 ) != 1 THEN
+        RAISE EXCEPTION 'No contexts or attached and detached contexts are present in the same group %', _contexts;
     END IF;
 
     RETURN __result[ 1 ];
