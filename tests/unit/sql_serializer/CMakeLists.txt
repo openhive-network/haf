@@ -7,6 +7,7 @@ TARGET_INCLUDE_DIRECTORIES(
         "${CMAKE_BINARY_DIR}/hive/libraries/protocol/include"
         "${CMAKE_SOURCE_DIR}/hive/libraries/chain/include"
         "${CMAKE_SOURCE_DIR}/hive/libraries/utilities/include"
+        "${CMAKE_SOURCE_DIR}/hive/libraries/appbase/include"
         "${CMAKE_SOURCE_DIR}/src/sql_serializer/include"
 )
 
