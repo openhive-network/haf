@@ -1,5 +1,7 @@
 #include "include/transactions_controller/transaction_controllers.hpp"
 
+#include <appbase/application.hpp>
+
 #include <fc/exception/exception.hpp>
 
 #include <atomic>
@@ -94,7 +96,7 @@ private:
           using namespace std::chrono_literals;
           std::this_thread::sleep_for(500ms);
         }
-      } while(retry < MAX_RETRY_COUNT)
+      } while(retry < MAX_RETRY_COUNT && !appbase::app().is_interrupt_request() )
       ;
 
       elog("Transaction controller: `${d}' permanently lost connection to database: `${url}'. Exiting.", ("d", _owner->_description)("url", _owner->_dbUrl));
