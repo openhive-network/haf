@@ -30,6 +30,7 @@ def haf_node(request):
     drop_database_if_test_pass = True
     yield haf_node
     if drop_database_if_test_pass:
+        haf_node.close()
         report = request.node.stash[phase_report_key]
         if not report["call"].failed:
             drop_database(haf_node.database_url)
