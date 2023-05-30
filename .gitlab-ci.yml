@@ -21,6 +21,7 @@ variables:
   DATA_CACHE_HAF_TEMPLATE: /cache/replay_data_haf
   DATA_CACHE_HAF: "/cache/replay_data_haf_${CI_PIPELINE_ID}"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
+  SNAPSHOTS_PATH: /cache/snapshots_pipeline_${CI_PIPELINE_ID}
 
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
@@ -126,6 +127,42 @@ haf_system_tests:
   interruptible: true
   tags:
     - public-runner-docker
+
+dump_snapshot_5m_mirrornet:
+  stage: build_and_test_phase_1
+  needs:
+  - job: "hived_mirrornet"
+    artifacts: true
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  variables:
+    MIRRORNET_WORKING_DIR: "$CI_PROJECT_DIR/mirrornet_witness_node"
+  script:
+    #Prepare environment for hived run
+    - cd $CI_PROJECT_DIR/docker
+    - mkdir $MIRRORNET_WORKING_DIR
+    - cd $MIRRORNET_WORKING_DIR
+    - mkdir blockchain
+    - cd blockchain
+    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log .
+    #Prepare snapshot storage
+    - mkdir $SNAPSHOTS_PATH
+    - cd $SNAPSHOTS_PATH
+    - mkdir 5m_mirrornet
+    #Prepare snapshot
+    - cd $CI_PROJECT_DIR/hived_mirrornet/build/hive/programs/hived
+    - ./hived -d $MIRRORNET_WORKING_DIR --exit-before-sync --replay
+    - echo "plugin = state_snapshot" >> $MIRRORNET_WORKING_DIR/config.ini
+    - ./hived -d $MIRRORNET_WORKING_DIR --dump-snapshot=snapshot --exit-before-sync
+    #Store snapshot in cache
+    - mv $MIRRORNET_WORKING_DIR/blockchain $SNAPSHOTS_PATH/5m_mirrornet
+    - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot $SNAPSHOTS_PATH/5m_mirrornet
+
+  artifacts:
+    paths:
+    - "$CI_JOB_NAME"
+    expire_in: 6 hours
+  tags:
+    - hive-builder-4
 
 applications_system_tests:
   stage: build_and_test_phase_2
@@ -376,6 +413,15 @@ cleanup_haf_cache_manual:
   stage: cleanup
   variables:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
+  resource_group: ${CI_COMMIT_SHA}
+  tags:
+    - hive-builder-4
+
+cleanup_haf_snapshot_from_cache:
+  extends: .cleanup_cache_manual
+  stage: cleanup
+  variables:
+    CLEANUP_PATH_PATTERN: "/cache/snapshots_pipeline_*"
   resource_group: ${CI_COMMIT_SHA}
   tags:
     - hive-builder-4
