@@ -1,11 +1,11 @@
+SELECT pg_advisory_lock(123321123);
+
 CREATE OR REPLACE FUNCTION create_roles()
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $$
-DECLARE
-    __db_name TEXT;
 BEGIN
     IF NOT EXISTS ( SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'test_hived' ) THEN
         CREATE ROLE test_hived LOGIN PASSWORD 'test' INHERIT IN ROLE hived_group;
@@ -42,3 +42,5 @@ $$
 ;
 
 SELECT create_roles();
+
+SELECT pg_advisory_unlock(123321123);

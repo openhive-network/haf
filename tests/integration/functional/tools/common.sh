@@ -44,8 +44,9 @@ setup_test_database() {
   sql_setup_fixture="./${test_directory}/fixture.sql";
 
   test_name=$(test_name_from_path "$test_path")
+  test_name_crc="$(echo ${test_name} | cksum | sed 's/ /_/')"
 
-  DB_NAME="t_$test_name"
+  DB_NAME="t_${test_name_crc}_${test_name}"
 
   sudo -nu postgres psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -a -f ./tools/create_db_roles.sql
 
