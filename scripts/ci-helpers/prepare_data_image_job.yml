@@ -42,7 +42,10 @@ include:
     - flock "$DATA_CACHE_HAF_COMMIT" $SCRIPTS_PATH/ci-helpers/build_data.sh $HAF_IMAGE_NAME
         --data-cache="$DATA_CACHE_HAF_COMMIT" --block-log-source-dir="$BLOCK_LOG_SOURCE_DIR" --config-ini-source="$CONFIG_INI_SOURCE"
     - mkdir "$DATA_CACHE_HAF"
+    - id
+    - ls -lathR "$DATA_CACHE_HAF_COMMIT" || true
     - sudo cp "$DATA_CACHE_HAF_COMMIT"/* "$DATA_CACHE_HAF" -rp
+    - ls -lathR "$DATA_CACHE_HAF" || true
     - cp "$DATA_CACHE_HAF_COMMIT/datadir/docker_entrypoint.log" "$CI_PROJECT_DIR"
     - echo "HIVED_UID=$(id -u)" > hived_uid.env
     - cat hived_uid.env
