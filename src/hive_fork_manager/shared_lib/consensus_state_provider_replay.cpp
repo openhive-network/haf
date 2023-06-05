@@ -32,8 +32,8 @@ struct Postgres2Blocks
   void handle_exception(std::exception_ptr exception_ptr);
   void get_data_from_postgres(int from, int to, const char* postgres_url);
   void initialize_iterators();
-  void blocks2replay(const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
-  void apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
+  void replay_blocks(const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
+  void replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
   void non_transactional_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block);
   static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
@@ -123,7 +123,7 @@ void Postgres2Blocks::run(int from, int to, const char* context, const char* pos
 
   initialize_iterators();
 
-  blocks2replay(context, shared_memory_bin_path, allow_reevaluate);
+  replay_blocks(context, shared_memory_bin_path, allow_reevaluate);
 
   print_duration("Trans", transformations_duration);
 }
@@ -207,15 +207,15 @@ void Postgres2Blocks::initialize_iterators()
   current_operation = operations.begin();
 }
 
-void Postgres2Blocks::blocks2replay(const char* context, const char* shared_memory_bin_path, bool allow_reevaluate)
+void Postgres2Blocks::replay_blocks(const char* context, const char* shared_memory_bin_path, bool allow_reevaluate)
 {
   for(const auto& block : blocks)
   {
-    apply_variant_block(block, context, shared_memory_bin_path, allow_reevaluate);
+    replay_block(block, context, shared_memory_bin_path, allow_reevaluate);
   }
 }
 
-void Postgres2Blocks::apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path,
+void Postgres2Blocks::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path,
                                           bool allow_reevaluate)
 {
   auto start = std::chrono::high_resolution_clock::now();
@@ -358,7 +358,8 @@ fc::variant Postgres2Blocks::block2variant(const pqxx::row& block, bool no_trans
     ("transaction_merkle_root", fix_pxx_hex(block["transaction_merkle_root"]))
     ("transaction_ids", transaction_ids_variants);
   }
-  else{
+  else
+  {
   block_variant_builder
   ("witness", block["name"].c_str())
   ("block_id", fix_pxx_hex(block["hash"]))
