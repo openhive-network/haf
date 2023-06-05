@@ -279,6 +279,7 @@ void Postgres2Blocks::non_transactional_apply_op_block(hive::chain::database& db
       return cur_op["block_num"].as<int>();
     };
 
+  //rewind
   while(cur_op__block_num(cur_op) < block_num && cur_op != end_it)
   {
     ++cur_op;

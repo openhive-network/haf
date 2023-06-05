@@ -1,6 +1,9 @@
 ADD_EXECUTABLE( mtlk_executable driver_main.cpp
 ../../shared_lib/consensus_state_provider_replay.cpp
-../../shared_lib/consensus_state_provider_replay.hpp)
+../../shared_lib/consensus_state_provider_replay.hpp
+../../shared_lib/pqxx_op_iterator.cpp
+../../shared_lib/pqxx_op_iterator.hpp
+)
 
 SETUP_CLANG_TIDY( mtlk_executable )
 
