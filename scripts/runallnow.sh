@@ -1443,7 +1443,12 @@ driver_build()
     ninja mtlk_executable query_supervisor hived extension.hive_fork_manager &&
     sudo ninja install &&
     sudo chown $USER:$USER .ninja_* &&
-    ctest -R keyauth --output-on-failure &&
+    ctest -R keyauth --output-on-failure
+}
+
+driver_build_and_run()
+{
+    driver_build &&
     remove_context_shared_memory_bin &&
     driver_body
 }
