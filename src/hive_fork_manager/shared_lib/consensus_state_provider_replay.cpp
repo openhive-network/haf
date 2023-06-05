@@ -304,7 +304,7 @@ void Postgres2Blocks::non_transactional_apply_op_block(hive::chain::database& db
   op_iterator_ptr op_it(new pqxx_op_iterator(cur_op,
                    end_it,
                    block_num));
-
+    
   
   db.non_transactional_apply_block(full_block, op_it, get_skip_flags());
 
