@@ -1,4 +1,6 @@
-#include "op_iterator.hpp"
+#pragma once 
+#include <hive/chain/op_iterator.hpp>
+
 #include <pqxx/pqxx>
 
 class pqxx_op_iterator : public op_iterator

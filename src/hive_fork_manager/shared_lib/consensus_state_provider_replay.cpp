@@ -15,6 +15,8 @@
 #include "hive/protocol/forward_impacted.hpp"
 #include "hive/protocol/operations.hpp"
 
+#include "pqxx_op_iterator.hpp"
+
 namespace consensus_state_provider
 {
 
@@ -286,19 +288,25 @@ void Postgres2Blocks::non_transactional_apply_op_block(hive::chain::database& db
   }
 
 
-  // rewrite
-  std::vector<std::vector<char>> ops;
-  for(; cur_op != end_it && cur_op["block_num"].as<int>() == block_num; ++cur_op)
-  {
-    pqxx::binarystring bs(cur_op["bin_body"]);
-    const char* raw_data = reinterpret_cast<const char*>(bs.data());
-    uint32_t data_length = bs.size();
+  // // rewrite
+  // std::vector<std::vector<char>> ops;
+  // for(; cur_op != end_it && cur_op["block_num"].as<int>() == block_num; ++cur_op)
+  // {
+  //   pqxx::binarystring bs(cur_op["bin_body"]);
+  //   const char* raw_data = reinterpret_cast<const char*>(bs.data());
+  //   uint32_t data_length = bs.size();
 
-    std::vector<char> op(raw_data, raw_data + data_length);
-    ops.push_back(op);      
-  }
+  //   std::vector<char> op(raw_data, raw_data + data_length);
+  //   ops.push_back(op);      
+  // }
 
-  db.non_transactional_apply_block(full_block, ops, get_skip_flags());
+
+  op_iterator_ptr op_it(new pqxx_op_iterator(cur_op,
+                   end_it,
+                   block_num));
+
+  
+  db.non_transactional_apply_block(full_block, op_it, get_skip_flags());
 
   db.clear_tx_status();
   db.set_revision(db.head_block_num());
