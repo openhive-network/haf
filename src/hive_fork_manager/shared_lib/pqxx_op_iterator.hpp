@@ -19,5 +19,5 @@ class pqxx_op_iterator : public op_iterator
   }
 
   bool has_next() const override;
-  std::vector<char> next() override;
+  op_view_t next() override;
 };
