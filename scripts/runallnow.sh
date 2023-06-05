@@ -366,9 +366,15 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
+# TODO rename moider to no_transaction - non_transactional_version simple_version direct_operation_version
+# TODO make it truly  switchable with classic version - command line param
+# TODO maybe revert a bit of code in code and pass a lambda ?
+# TODO cond copy and copy operations buffer - use cast or move modern version not pqxx
+# TODO
+# TODO
 # TODO wywal inne state providery np ACCOUNTS
 # TODO wywal w ogóle state providera z cab_app i uzywaj tylko funkcji z src/hive_fork_manager/consensus_state_provider_helpers.sql
-# TODO separate driver for C code
+# DONE separate driver for C code
 # TODO ASAN - memory leaks
 # TODO add interface to get a particular account balance
 # TODO cleanup init(db
@@ -467,7 +473,27 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # CONTEXT:  SQL statement "SELECT jsonb_build_object(
 #         'blocks', COALESCE(array_agg(
 
+: <<NO_TRANS
+Stepping from 68,400,001 to 68,500,000 Blocks:100,000 Transactions:7,864,692 Operations:7,950,520 Postgres:0'56" Trans:0'1" All:1'58" Memory (KB): 25,065,240                              │.cache/               h
+Alltogether:994'0"                                                                                                                                                                         │ive_base_config/     .w
+real    994m1.184s                                                                                                                                                                         │get-hsts
+user    603m4.340s                                                                                                                                                                         │docker_entrypoint.sh  .
+sys     75m56.102s                                                                                                                                                                         │lesshst              
+haf_admin@7136cb35cacd:~/build$   
 
+epping from 73,400,001 to 73,500,000 Blocks:100,000 Transactions:6,098,335 Operations:6,202,895 Postgres:0'53" Trans:0'2" All:1'57" Memory (KB): 30,761,840                              │gnupg/               .s
+Stepping from 73,500,001 to 73,600,000 Blocks:100,000 Transactions:6,098,263 Operations:6,224,850 Postgres:0'53" Trans:0'2" All:1'59" Memory (KB): 30,836,416                              │sh/
+Stepping from 73,600,001 to 73,700,000 Blocks:100,000 Transactions:6,082,636 Operations:6,188,354 Postgres:0'53" Trans:0'2" All:1'55" Memory (KB): 30,845,080                              │build/                h
+Stepping from 73,700,001 to 73,800,000 Blocks:100,000 Transactions:5,689,922 Operations:5,797,091 Postgres:0'50" Trans:0'1" All:1'51" Memory (KB): 30,863,540                              │af/                  .v
+Stepping from 73,800,001 to 73,900,000 Blocks:100,000 Transactions:6,003,454 Operations:6,104,819 Postgres:0'51" Trans:0'2" All:1'54" Memory (KB): 30,775,008                              │scode-server/
+Stepping from 73,900,001 to 73,964,098 Blocks:64,098 Transactions:3,912,128 Operations:3,995,864 Postgres:0'33" Trans:0'1" All:1'14" Memory (KB): 30,847,584                               │.cache/               h
+Alltogether:117'10"                                                                                                                                                                        │ive_base_config/     .w
+real    117m11.664s                                                                                                                                                                        │get-hsts
+user    57m45.463s                                                                                                                                                                         │docker_entrypoint.sh  .
+sys     6m28.349s                                                                                                                                                                          │lesshst              
+haf_admin@7136cb35cacd:~/build$                                                                                                                                                            │haf_admin@7136cb35cacd:
+────────────────────────────────────
+NO_TRANS
 
 
 # Interesting blocks< 5M
