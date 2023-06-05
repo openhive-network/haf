@@ -34,7 +34,7 @@ struct Postgres2Blocks
   void initialize_iterators();
   void blocks2replay(const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
   void apply_variant_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
-  void modern_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block);
+  void non_transactional_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block);
   static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   fc::variant block2variant(const pqxx::row& block, bool no_transactions = false);
@@ -259,13 +259,13 @@ void Postgres2Blocks::apply_variant_block(const pqxx::row& block, const char* co
     std::chrono::nanoseconds duration = end - start;
     transformations_duration += duration;
 
-    modern_apply_op_block(db, current_operation, operations.end(), block_num, fb_ptr);
+    non_transactional_apply_op_block(db, current_operation, operations.end(), block_num, fb_ptr);
     
   }
 }
 
 
-void Postgres2Blocks::modern_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block)
+void Postgres2Blocks::non_transactional_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block)
 {
   int current_operation;
 
@@ -297,7 +297,7 @@ void Postgres2Blocks::modern_apply_op_block(hive::chain::database& db, pqxx::res
     ops.push_back(op);      
   }
 
-  db.modern_apply_block(full_block, ops, get_skip_flags());
+  db.non_transactional_apply_block(full_block, ops, get_skip_flags());
 
   db.clear_tx_status();
   db.set_revision(db.head_block_num());
