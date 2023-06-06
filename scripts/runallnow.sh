@@ -1166,6 +1166,15 @@ then
    
     CMAKED=true
 
+elif [[ "$PWD" =~ Asan$ ]]
+then
+
+    
+    cmake  -DCMAKE_BUILD_TYPE=Asan -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" -GNinja $SRC_DIR ;  # Release
+    
+   
+    CMAKED=true
+
 else
     echo "NOT in build directory!!!"
 fi
