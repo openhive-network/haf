@@ -19,5 +19,5 @@ class pqxx_op_iterator : public op_iterator
   }
 
   bool has_next() const override;
-  op_view_t next() override;
+  op_view_t unpack_from_char_array_and_next() override;
 };
