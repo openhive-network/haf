@@ -896,6 +896,7 @@ Datum current_account_balance(PG_FUNCTION_ARGS)
 {
   const char *account = text_to_cstring(PG_GETARG_TEXT_PP(0));
   const char *context = text_to_cstring(PG_GETARG_TEXT_PP(1));
+  const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
   consensus_state_provider::collected_account_balances_collection_t collected_data;
 
@@ -903,7 +904,7 @@ Datum current_account_balance(PG_FUNCTION_ARGS)
 
     [=, &collected_data]()
     {
-        collected_data = consensus_state_provider::collect_current_account_balance(account, context);
+        collected_data = consensus_state_provider::collect_current_account_balance_impl(account, context, shared_memory_bin_path);
     }, 
 
     [=, &collected_data]()

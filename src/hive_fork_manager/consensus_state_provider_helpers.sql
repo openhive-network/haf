@@ -13,7 +13,7 @@ CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances(IN _context TEXT, 
 RETURNS SETOF hive.current_account_balance_return_type
 AS 'MODULE_PATHNAME', 'current_all_accounts_balances' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.current_account_balance(IN account TEXT, IN _context TEXT)
+CREATE OR REPLACE FUNCTION hive.current_account_balance(IN account TEXT, IN _context TEXT, IN shared_memory_bin_path TEXT)
 RETURNS SETOF hive.current_account_balance_return_type
 AS 'MODULE_PATHNAME', 'current_account_balance' LANGUAGE C;
 

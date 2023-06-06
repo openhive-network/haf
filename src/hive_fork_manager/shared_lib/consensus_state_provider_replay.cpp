@@ -722,6 +722,12 @@ collected_account_balances_collection_t collect_current_all_accounts_balances_im
   return collect_current_all_accounts_balances(context);
 }
 
+collected_account_balances_collection_t collect_current_account_balance_impl(const char* acount, const char* context, const char* shared_memory_bin_path)
+{
+  initialize_context(context, shared_memory_bin_path);
+  return collect_current_account_balance(acount, context);
+}
+
 void consensus_state_provider_finish_impl(const char* context, const char* shared_memory_bin_path)
 {
   if(consensus_state_provider::get_cache().has_context(context))
