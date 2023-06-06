@@ -77,7 +77,7 @@ struct Postgres2Blocks
 class PostgresDatabase
 {
  public:
-  PostgresDatabase(const char* url) : conn(url) {}
+  explicit PostgresDatabase(const char* url) : conn(url) {}
 
   pqxx::result execute_query(const std::string& query)
   {
@@ -306,7 +306,7 @@ void Postgres2Blocks::non_transactional_apply_op_block(hive::chain::database& db
                    block_num));
     
   
-  db.non_transactional_apply_block(full_block, op_it, get_skip_flags());
+  db.non_transactional_apply_block(full_block, std::move(op_it), get_skip_flags());
 
   db.clear_tx_status();
   db.set_revision(db.head_block_num());
@@ -669,7 +669,7 @@ int initialize_context(const char* context, const char* shared_memory_bin_path)
 
 struct fix_hf_version_visitor
 {
-  fix_hf_version_visitor(int a_proper_version) : proper_version(a_proper_version) {}
+  explicit fix_hf_version_visitor(int a_proper_version) : proper_version(a_proper_version) {}
 
   typedef void result_type;
 
