@@ -5,6 +5,11 @@ SET( target_name hfm-${HAF_GIT_REVISION_SHA} )
 
 ADD_RUNTIME_LOADED_LIB( ${target_name} )
 
+if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    target_compile_options(${target_name} PRIVATE -O0)
+endif()
+
+
 
 
 SET (SAVE_ORIGINAL_LIB_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES} )
