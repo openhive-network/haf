@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
         if(current_step_end == 5000000)
         {
             using namespace consensus_state_provider;
-            collected_account_balances_collection_t account_balances = collect_current_all_accounts_balances(context.c_str());
+            collected_account_balances_collection_t account_balances = collect_current_all_accounts_balances_impl(context.c_str(), consensus_state_provider_storage.c_str());
 
             std::sort(account_balances.begin(), account_balances.end(),
                       [](const collected_account_balances_t& a, const collected_account_balances_t& b) { return a.balance > b.balance; });

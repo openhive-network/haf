@@ -82,7 +82,7 @@ BEGIN
 
     RAISE NOTICE '__consensus_state_provider_replay_call_ok=%', __consensus_state_provider_replay_call_ok;
 
-    PERFORM hive.update_accounts_table(_context, __table_name);
+    PERFORM hive.update_accounts_table(_context, __table_name, __shared_memory_bin_path);
 
 END;
 $BODY$
@@ -129,7 +129,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.update_accounts_table(_context TEXT, _table_name TEXT)
+CREATE OR REPLACE FUNCTION hive.update_accounts_table(_context TEXT, _table_name TEXT, _shared_memory_bin_path TEXT)
 RETURNS void
 LANGUAGE plpgsql
 VOLATILE
@@ -139,7 +139,7 @@ DECLARE
     __get_balances TEXT;
     __top_richest_accounts_json TEXT;
 BEGIN
-    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances(%L)', _table_name, _context);
+    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances(%L,%L)', _table_name, _context, _shared_memory_bin_path);
     EXECUTE __get_balances;
 
     EXECUTE format('
