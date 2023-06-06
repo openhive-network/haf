@@ -287,20 +287,6 @@ void Postgres2Blocks::non_transactional_apply_op_block(hive::chain::database& db
     ++cur_op;
   }
 
-
-  // // rewrite
-  // std::vector<std::vector<char>> ops;
-  // for(; cur_op != end_it && cur_op["block_num"].as<int>() == block_num; ++cur_op)
-  // {
-  //   pqxx::binarystring bs(cur_op["bin_body"]);
-  //   const char* raw_data = reinterpret_cast<const char*>(bs.data());
-  //   uint32_t data_length = bs.size();
-
-  //   std::vector<char> op(raw_data, raw_data + data_length);
-  //   ops.push_back(op);      
-  // }
-
-
   op_iterator_ptr op_it(new pqxx_op_iterator(cur_op,
                    end_it,
                    block_num));
@@ -311,20 +297,7 @@ void Postgres2Blocks::non_transactional_apply_op_block(hive::chain::database& db
   db.clear_tx_status();
   db.set_revision(db.head_block_num());
 
-  // //zrób implementację tego obok database.cpp , tylko dodatkowy header pqxx (lub string view)
-  // //iterate over operations in this block
-  //   for(; cur_op != operations.end() && cur_op["block_num"].as<int>() == block_num;
-  //       ++cur_op)
-  //   {
-  //     //add_operation_variant(cur_op, varbin_operations);
-  //     pqxx::binarystring bs(cur_op["bin_body"]);
-
-  //     //a string __cpp_lib_string_view
-  //     //zastosuj string view 
-
-  //   }
-
-    //ending block funcs
+ 
   //FC_CAPTURE_CALL_LOG_AND_RETHROW( std::bind( &database::notify_fail_apply_block, this, note ), (block_num) )
 }
 
