@@ -33,7 +33,6 @@ evaluate_result $?;
 psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c 'SELECT test_then()';
 evaluate_result $?;
 
-clea
 psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE $DB_NAME";
 
 on_exit
