@@ -100,6 +100,7 @@ sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
 # data_directory is hardcoded in postgresql.conf as '/home/hived/datadir/haf_db_store/pgdata' so we create symbolic link to location of HAF_DB_STORE
 test "$HAF_DB_STORE" = "/home/hived/datadir/haf_db_store" || sudo -n ln -s "$HAF_DB_STORE" /home/hived/datadir/haf_db_store
 
+prepare_pg_hba_file
 
 if [ -d "$PGDATA" ]
 then
@@ -135,7 +136,7 @@ fi
 cd "$DATADIR"
 
 # be sure postgres is running and reload pg_hba file
-prepare_pg_hba_file
+
 sudo -n /etc/init.d/postgresql restart
 
 HIVED_ARGS=()
