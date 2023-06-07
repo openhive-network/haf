@@ -65,6 +65,14 @@ fi
 echo "Postgres process: $postgres_pid finished."
 }
 
+perform_instance_dump() {
+  echo "Instance dump code placeholder"
+}
+
+perform_instance_load() {
+  echo "Instance load code placeholder"
+}
+
 
 cleanup () {
   echo "Performing cleanup...."
@@ -170,6 +178,17 @@ echo "Attempting to execute hived using additional command line arguments:" "${H
 
 echo "${BASH_SOURCE[@]}"
 
+if [ ${PERFORM_DUMP} -eq 1 ];
+then
+  echo "Attempting to perform instance snapshot dump"
+  perform_instance_dump "${BACKUP_SOURCE_DIR_NAME}"
+elif [ ${PERFORM_LOAD} -eq 1 ];
+then
+  echo "Attempting to perform instance snapshot load"
+  perform_instance_load "${BACKUP_SOURCE_DIR_NAME}"
+else
+  echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
+
 {
 sudo --user=hived -En /bin/bash << EOF
 echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
@@ -192,6 +211,8 @@ jobs -l
 echo "waiting for job finish: $job_pid."
 status=0
 wait $job_pid || status=$?
+
+fi
 
 echo "Exiting docker entrypoint..."
 exit $status
