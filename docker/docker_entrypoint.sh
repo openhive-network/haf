@@ -83,7 +83,7 @@ prepare_pg_hba_file() {
   sudo -En /bin/bash << EOF
   echo -e "${PG_ACCESS}" > "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
   cat "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf.default" >> "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
-  cat "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
+  #cat "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
 EOF
 }
 
