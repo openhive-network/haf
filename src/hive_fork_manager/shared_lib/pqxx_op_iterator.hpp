@@ -1,9 +1,11 @@
-#pragma once 
+#pragma once
 #include <hive/chain/op_iterator.hpp>
 
 #include <pqxx/pqxx>
 
-class pqxx_op_iterator : public op_iterator
+namespace consensus_state_provider {
+
+class pqxx_op_iterator : public hive::chain::op_iterator
 {
  private:
   pqxx::result::const_iterator& cur_op;
@@ -21,3 +23,5 @@ class pqxx_op_iterator : public op_iterator
   bool has_next() const override;
   op_view_t unpack_from_char_array_and_next() override;
 };
+
+}  // namespace consensus_state_provider
