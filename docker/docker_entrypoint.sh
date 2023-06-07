@@ -156,23 +156,8 @@ echo "Attempting to execute hived using additional command line arguments:" "${H
   ${HIVED_ARGS[@]} 2>&1 | tee -i hived.log
 echo "$? Hived process finished execution."
 EOF
-echo "$? Attempting to stop Postgresql..."
 
-postgres_pid=0
-if [ -f "/var/run/postgresql/$POSTGRES_VERSION-main.pid" ];
-then
-  postgres_pid=$(cat "/var/run/postgresql/$POSTGRES_VERSION-main.pid")
-fi
-
-sudo -n /etc/init.d/postgresql stop
-
-echo "Waiting for postgres process: $postgres_pid finish..."
-if [ "$postgres_pid" -ne 0 ];
-then
-  tail --pid="$postgres_pid" -f /dev/null || true
-fi
-
-echo "Postgres process: $postgres_pid finished."
+stop_postresql
 
 } &
 
