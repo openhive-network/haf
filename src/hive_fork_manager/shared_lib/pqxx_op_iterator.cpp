@@ -8,14 +8,7 @@
 #include <sstream>
 #include <string_view>
 #include <vector>
-std::string to_hex(const char* data, std::size_t size) {
-    std::stringstream ss;
-    ss << std::hex << std::setfill('0');
-    for(std::size_t i = 0; i < size; ++i) {
-        ss << std::setw(2) << static_cast<unsigned>(static_cast<unsigned char>(data[i]));
-    }
-    return ss.str();
-}
+
 
 bool pqxx_op_iterator::has_next() const
 {
