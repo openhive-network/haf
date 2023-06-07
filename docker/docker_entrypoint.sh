@@ -40,6 +40,27 @@ source "$SCRIPTSDIR/common.sh"
 
 export POSTGRES_VERSION=${POSTGRES_VERSION:-14}
 
+stop_postresql() {
+echo "Attempting to stop Postgresql..."
+
+postgres_pid=0
+if [ -f "/var/run/postgresql/$POSTGRES_VERSION-main.pid" ];
+then
+  postgres_pid=$(cat "/var/run/postgresql/$POSTGRES_VERSION-main.pid")
+fi
+
+sudo -n /etc/init.d/postgresql stop
+
+echo "Waiting for postgres process: $postgres_pid finish..."
+if [ "$postgres_pid" -ne 0 ];
+then
+  tail --pid="$postgres_pid" -f /dev/null || true
+fi
+
+echo "Postgres process: $postgres_pid finished."
+}
+
+
 cleanup () {
   echo "Performing cleanup...."
   hived_pid=$(pidof 'hived' || echo '') # pidof returns 1 if hived isn't running, which crashes the script 
