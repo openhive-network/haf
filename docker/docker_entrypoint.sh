@@ -40,6 +40,11 @@ source "$SCRIPTSDIR/common.sh"
 
 export POSTGRES_VERSION=${POSTGRES_VERSION:-14}
 
+DO_MAINTENANCE=0 #Allows to enter some maintenance mode (when postgres is started but hived not yet. Rather for internal debugging/development purposes)
+PERFORM_DUMP=0
+PERFORM_LOAD=0
+BACKUP_SOURCE_DIR_NAME=""
+
 stop_postresql() {
 echo "Attempting to stop Postgresql..."
 
@@ -141,7 +146,24 @@ cd "$DATADIR"
 sudo -n /etc/init.d/postgresql start
 
 HIVED_ARGS=()
-HIVED_ARGS+=("$@")
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dump-stanpshot=*)
+      BACKUP_SOURCE_DIR_NAME="${1#*=}"
+      PERFORM_DUMP=1
+      ;;
+    --load-stanpshot=*)
+      BACKUP_SOURCE_DIR_NAME="${1#*=}"
+      PERFORM_LOAD=1
+      ;;
+    *)
+      HIVED_ARGS+=("$1")
+      ;;
+  esac
+  shift
+done
+
 export HIVED_ARGS
 
 echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
