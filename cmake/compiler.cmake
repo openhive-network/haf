@@ -14,9 +14,5 @@ MACRO( SETUP_COMPILER target_name )
             ${PROJECT_SOURCE_DIR}/common_includes
             "."
             ${GENERATED_FILES_DIRECTORY_ROOT}
-            # form hive project
-            ${HAF_DIRECTORY}/hive/libraries/fc/include
-            ${HAF_DIRECTORY}/hive/libraries/appbase/include
-            ${HAF_DIRECTORY}/hive/libraries/utilities/include
     )
 ENDMACRO()
