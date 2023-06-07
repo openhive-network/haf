@@ -71,11 +71,10 @@ $BODY$
 DECLARE
     rec hive.current_account_balance_return_type;
 BEGIN
-    --RAISE NOTICE 'hive.current_account_balance of initminer = %', (hive.current_account_balance('initminer'));
-    -- FOR rec IN SELECT * FROM hive.current_account_balance('initminer') LOOP
-    --     RAISE NOTICE 'hive.current_account_balance of initminer: account = %, balance = %, hbd_balance = %, vesting_shares = %, savings_hbd_balance = %, reward_hbd_balance = %',
-    --     rec.account, rec.balance, rec.hbd_balance, rec.vesting_shares, rec.savings_hbd_balance, rec.reward_hbd_balance;
-    -- END LOOP;    
+    FOR rec IN SELECT * FROM hive.current_account_balance('initminer','context', get_consensus_storage_path(_writable_directory)) LOOP
+         ASSERT rec.account = 'initminer', 'Account is not ''initminer''';
+         ASSERT rec.balance = 4000, 'Balance should be 4000';
+    END LOOP;    
     ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 7';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';
