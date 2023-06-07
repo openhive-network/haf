@@ -102,7 +102,7 @@ DECLARE
   __consensus_state_provider_storage_path TEXT;
 BEGIN
     IF _writable_directory = '' THEN
-        __consensus_state_provider_storage_path = '/home/hived/datadir/consensus_storage'; 
+        __consensus_state_provider_storage_path = '/home/hived/datadir/consensus_unit_test_storage_dir'; 
     ELSE
         __consensus_state_provider_storage_path = _writable_directory || '/consensus_storage';
     END IF;
