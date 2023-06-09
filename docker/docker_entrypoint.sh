@@ -66,11 +66,47 @@ echo "Postgres process: $postgres_pid finished."
 }
 
 perform_instance_dump() {
-  echo "Instance dump code placeholder"
+  backup_dir_name="${1}"
+  sudo -n mkdir -p "${DATADIR}/${backup_dir_name}"
+  sudo -n chmod -R 774 "${DATADIR}/${backup_dir_name}"
+  sudo -n chown -R hived:users "${DATADIR}/${backup_dir_name}"
+
+  "${SCRIPTSDIR}/dump_instance.sh" --backup-dir="${DATADIR}/${backup_dir_name}" --hived-executable-path=/home/hived/bin/hived \
+    --override-existing-backup-dir --hived-db-role=hived \
+    --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --exit-before-sync \
+    --haf-db-name=haf_block_log --haf-db-admin=haf_admin \
+    --haf-db-port=5432 --haf-db-host=localhost
 }
 
 perform_instance_load() {
   echo "Instance load code placeholder"
+}
+
+run_instance() {
+{
+sudo --user=hived -En /bin/bash << EOF
+echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
+
+/home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
+  --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
+  --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
+  ${HIVED_ARGS[@]} 2>&1 | tee -i hived.log
+echo "$? Hived process finished execution."
+EOF
+
+stop_postresql
+
+} &
+
+job_pid=$!
+
+jobs -l
+
+echo "waiting for job finish: $job_pid."
+local status=0
+wait $job_pid || status=$?
+
+return ${status}
 }
 
 
@@ -155,17 +191,21 @@ sudo -n /etc/init.d/postgresql start
 
 HIVED_ARGS=()
 
+echo "Processing passed arguments...: $@"
+
 while [ $# -gt 0 ]; do
   case "$1" in
-    --dump-stanpshot=*)
+    --dump-snapshot=*)
+      echo "Dump snapshot option found..."
       BACKUP_SOURCE_DIR_NAME="${1#*=}"
       PERFORM_DUMP=1
       ;;
-    --load-stanpshot=*)
+    --load-snapshot=*)
       BACKUP_SOURCE_DIR_NAME="${1#*=}"
       PERFORM_LOAD=1
       ;;
     *)
+      echo "Attempting to collect unknown (hived) option: ${1}"
       HIVED_ARGS+=("$1")
       ;;
   esac
@@ -178,6 +218,8 @@ echo "Attempting to execute hived using additional command line arguments:" "${H
 
 echo "${BASH_SOURCE[@]}"
 
+status=0
+
 if [ ${PERFORM_DUMP} -eq 1 ];
 then
   echo "Attempting to perform instance snapshot dump"
@@ -187,32 +229,9 @@ then
   echo "Attempting to perform instance snapshot load"
   perform_instance_load "${BACKUP_SOURCE_DIR_NAME}"
 else
-  echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
-
-{
-sudo --user=hived -En /bin/bash << EOF
-echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
-
-/home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
-  --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
-  --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
-  ${HIVED_ARGS[@]} 2>&1 | tee -i hived.log
-echo "$? Hived process finished execution."
-EOF
-
-stop_postresql
-
-} &
-
-job_pid=$!
-
-jobs -l
-
-echo "waiting for job finish: $job_pid."
-status=0
-wait $job_pid || status=$?
-
+  run_instance
+  status=$?
 fi
 
-echo "Exiting docker entrypoint..."
+echo "Exiting docker entrypoint with status: ${status}..."
 exit $status
