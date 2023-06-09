@@ -35,6 +35,7 @@ print_help () {
 
     echo "  --haf-db-name=NAME               Allows to specify a name of database to store HAF data, required"
     echo "  --haf-db-admin=NAME              Allows to specify a name of database admin role having permission to create the database"
+    echo "  --hived-db-role=NAME             Allows to specify a name of database role having permission to write to the HAF database"
 
     echo "  --haf-db-host=VALUE              Allows to specify a PostgreSQL host location"
     echo "  --haf-db-port=NUMBER             Allows to specify a PostgreSQL operating port"
@@ -59,6 +60,9 @@ POSTGRES_HOST=""
 POSTGRES_PORT=""
 POSTGRES_URL=""
 
+HIVED_DB_ROLE=""
+HIVED_POSTGRES_URL=""
+
 JOBS=3
 ERASE_CURRENT=false
 
@@ -76,11 +80,21 @@ while [ $# -gt 0 ]; do
     --hived-executable-path=*)
         HIVED_EXECUTABLE_PATH="${1#*=}"
         ;;
+    --data-dir=*)
+        DATA_DIR="${1#*=}"
+        ;;
     --hived-data-dir=*)
         DATA_DIR="${1#*=}"
         ;;
     --haf-db-admin=*)
         POSTGRES_USER="${1#*=}"
+        if [ -z ${HIVED_DB_ROLE} ]
+        then
+          HIVED_DB_ROLE="${1#*=}"
+        fi
+        ;;
+    --hived-db-role=*)
+        HIVED_DB_ROLE="${1#*=}"
         ;;
     --haf-db-name=*)
         POSTGRES_DATABASE="${1#*=}"
@@ -125,6 +139,13 @@ then
   POSTGRES_ACCESS="postgresql://?host=${POSTGRES_HOST}&port=${POSTGRES_PORT}&dbname=${POSTGRES_DATABASE}&user=${POSTGRES_USER}"
 else
   POSTGRES_ACCESS=${POSTGRES_URL}
+fi
+
+if [ -z "${HIVED_POSTGRES_URL}" ]
+then
+  HIVED_POSTGRES_ACCESS="postgresql://?host=${POSTGRES_HOST}&port=${POSTGRES_PORT}&dbname=${POSTGRES_DATABASE}&user=${HIVED_DB_ROLE}"
+else
+  HIVED_POSTGRES_ACCESS=${HIVED_POSTGRES_URL}
 fi
 
 if [ -z ${BACKUP_DIR} ] || [ -z ${HIVED_EXECUTABLE_PATH} ] || [ -z ${DATA_DIR} ] || [ -z ${POSTGRES_DATABASE} ] 
