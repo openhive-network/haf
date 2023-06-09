@@ -9,8 +9,16 @@ validate_environment(){
 
   if [ ${ERASE_CURRENT} = true ];
   then
-    rm -rf ${HIVED_SNAPSHOT_DIR}
+    if [ "${HIVED_DB_ROLE}" != "${POSTGRES_USER}" ];
+    then
+      echo "Switching to separate Hived role to erase previously generated snapshot..."
+      sudo -Enu ${HIVED_DB_ROLE} rm -rf ${HIVED_SNAPSHOT_DIR}
+    else
+      rm -rf ${HIVED_SNAPSHOT_DIR}
+    fi
+
     rm -rf ${POSTGRES_BACKUP_DIR}
+
   else
     if [[ -d ${HIVED_SNAPSHOT_DIR} ]]
     then
@@ -31,11 +39,19 @@ dump_snapshot(){
 
   local call_hived_dump="${HIVED_EXECUTABLE_PATH}
   --data-dir=${DATA_DIR}
-  --plugin=sql_serializer --psql-url=${POSTGRES_ACCESS}
+  --plugin=sql_serializer --psql-url=${HIVED_POSTGRES_ACCESS}
   --plugin=state_snapshot --snapshot-root-dir=${BACKUP_DIR} --dump-snapshot=hived
   ${ADDITIONAL_HIVED_OPTIONS[@]}"
 
-  ${call_hived_dump}
+  echo "Using HIVED_DB_ROLE: ${HIVED_DB_ROLE}, POSTGRES_USER: ${POSTGRES_USER}"
+
+  if [ "${HIVED_DB_ROLE}" != "${POSTGRES_USER}" ];
+  then
+    echo "Switching to separate Hived role..."
+    sudo -Enu "${HIVED_DB_ROLE}" -- "${call_hived_dump}"
+  else
+    ${call_hived_dump}
+  fi
 
 }
 
