@@ -28,9 +28,11 @@ std::string fix_pxx_time(const pqxx::field& t);
 // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
 const char* fix_pxx_hex(const pqxx::field& h);
 
-struct postgres_block_log
+class postgres_block_log
 {
+public:
   void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path, bool allow_reevaluate);
+private:
   void handle_exception(std::exception_ptr exception_ptr);
   void get_data_from_postgres(int from, int to, const char* postgres_url);
   void initialize_iterators();
