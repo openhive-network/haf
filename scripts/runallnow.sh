@@ -367,6 +367,14 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
+   
+# TODO list all blocks and acounts with negative asset (ranges of blocks, maybe)
+#            //FC_ASSERT( vo.amount >= 0, "Asset amount cannot be negative" );
+#         if(vo.amount < 0)
+#           if(mtlk_negative_asset_counter++ % 10000 == 0)
+#             wlog("Asset amount cannot be negative = ${neg_ass}" , ("neg_ass", vo.amount));
+
+
 # TODO in bash_test - nake runallnow.sh or do another file, so that it contains just script
 # TODO - rename - everything should be named csp - consensus state prvider, sometimes only - cab - current_account_balances
 # TODO make it truly  switchable with classic version - command line param = switching from  trans to non trans, -> eliminate ?
