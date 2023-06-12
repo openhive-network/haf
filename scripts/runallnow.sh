@@ -366,6 +366,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
+# TODO in bash_test - nake runallnow.sh or do another file, so that it contains just script
 # TODO measurements of phases for trans and non_trans
 # TODO - rename - everything should be named csp - consensus state prvider, sometimes only - cab - current_account_balances
 # TODO split into commits. for example, "an additional parameter in state providers due to the necessity of passing there the disk path to the storage of the consensus state provider".
