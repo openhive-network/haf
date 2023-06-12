@@ -34,7 +34,7 @@ public:
   void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path);
 private:
   void handle_exception(std::exception_ptr exception_ptr);
-  void get_data_from_postgres(int from, int to, const char* postgres_url);
+  void get_postgres_data(int from, int to, const char* postgres_url);
   void initialize_iterators();
   void replay_blocks(const char* context, const char* shared_memory_bin_path);
   void replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path);
@@ -102,7 +102,7 @@ void postgres_block_log::run(int from,
     
   try
   {
-    get_data_from_postgres(from, to, postgres_url);
+    get_postgres_data(from, to, postgres_url);
 
     initialize_iterators();
 
@@ -145,9 +145,9 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
   }
 }
 
-void postgres_block_log::get_data_from_postgres(int from, int to, const char* postgres_url)
+void postgres_block_log::get_postgres_data(int from, int to, const char* postgres_url)
 {
-  time_probe get_data_from_postgres_time_probe;
+  time_probe get_postgres_data_time_probe;
 
   class postgres_database
   {
@@ -193,7 +193,7 @@ void postgres_block_log::get_data_from_postgres(int from, int to, const char* po
   operations = db.execute_query(operations_query);
   std::cout << "Operations:" << operations.size() << " ";
   // clang-format on
-  get_data_from_postgres_time_probe.print_duration("Postgres");
+  get_postgres_data_time_probe.print_duration("Postgres");
 }
 
 
