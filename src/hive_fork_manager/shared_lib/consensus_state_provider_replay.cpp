@@ -253,13 +253,11 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
 
     transformations_time_probe.stop();
     
-    apply_full_block_time_probe.start();
     
     uint64_t skip_flags = get_skip_flags();
 
     apply_full_block(db, fb_ptr, skip_flags);
     
-    apply_full_block_time_probe.stop();
   }
   else
   {
@@ -269,26 +267,29 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
 
     transformations_time_probe.stop();
 
-    non_transactional_apply_op_block_time_probe.start();
 
     non_transactional_apply_op_block(db, current_operation, operations.end(), block_num, fb_ptr);
 
-    non_transactional_apply_op_block_time_probe.stop();
   }
 }
 
 void postgres_block_log::apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr,
                                        uint64_t skip_flags)
 {
+  apply_full_block_time_probe.start();
+
   db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
   db.public_apply_block(fb_ptr, skip_flags);
   db.clear_tx_status();
   db.set_revision(db.head_block_num());
+
+  apply_full_block_time_probe.stop();
 }
 
 
 void postgres_block_log::non_transactional_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block)
 {
+  non_transactional_apply_op_block_time_probe.start();
   int current_operation;
 
   db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
@@ -317,7 +318,7 @@ void postgres_block_log::non_transactional_apply_op_block(hive::chain::database&
   db.clear_tx_status();
   db.set_revision(db.head_block_num());
 
- 
+  non_transactional_apply_op_block_time_probe.stop();
   //FC_CAPTURE_CALL_LOG_AND_RETHROW( std::bind( &database::notify_fail_apply_block, this, note ), (block_num) )
 }
 
