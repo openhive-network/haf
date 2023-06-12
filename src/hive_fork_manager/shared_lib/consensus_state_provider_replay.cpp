@@ -73,22 +73,7 @@ private:
   time_probe non_transactional_apply_op_block_time_probe;
 };
 
-class PostgresDatabase
-{
- public:
-  explicit PostgresDatabase(const char* url) : conn(url) {}
 
-  pqxx::result execute_query(const std::string& query)
-  {
-    pqxx::work txn(conn);
-    pqxx::result res = txn.exec(query);
-    txn.commit();
-    return res;
-  }
-
- private:
-  pqxx::connection conn;
-};
 
 bool consensus_state_provider_replay_impl(int from, int to, const char* context, const char* postgres_url,
                                           const char* shared_memory_bin_path)
@@ -167,7 +152,24 @@ void postgres_block_log::get_data_from_postgres(int from, int to, const char* po
 {
   time_probe get_data_from_postgres_time_probe;
 
-  PostgresDatabase db(postgres_url);
+  class postgres_database
+  {
+  public:
+    explicit postgres_database(const char* url) : conn(url) {}
+
+    pqxx::result execute_query(const std::string& query)
+    {
+      pqxx::work txn(conn);
+      pqxx::result res = txn.exec(query);
+      txn.commit();
+      return res;
+    }
+
+  private:
+    pqxx::connection conn;
+  };
+
+  postgres_database db(postgres_url);
   // clang-format off
     auto blocks_query = "SELECT * FROM hive.blocks JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
                                 + std::to_string(from) 
