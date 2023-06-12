@@ -367,15 +367,11 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # mtlk TODO:
 # TODO in bash_test - nake runallnow.sh or do another file, so that it contains just script
-# TODO measurements of phases for trans and non_trans
 # TODO - rename - everything should be named csp - consensus state prvider, sometimes only - cab - current_account_balances
-# TODO split into commits. for example, "an additional parameter in state providers due to the necessity of passing there the disk path to the storage of the consensus state provider".
 # TODO make it truly  switchable with classic version - command line param = switching from  trans to non trans, -> eliminate ?
 # TODO cond copy and copy operations buffer - use cast or move modern version not pqxx
 # TODO
 # TODO
-# TODO Remove allow_reevaluate
-# TODO wywal inne state providery z appki np ACCOUNTS
 # TODO wywal w ogóle state providera z cab_app i uzywaj tylko funkcji z src/hive_fork_manager/consensus_state_provider_helpers.sql
 # TODO cleanup init(db
 # TODO remove mtlk
@@ -387,9 +383,11 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO flag constructors / destructors default
 # TODO constants in collect_current_all_accounts_balances , 
 # TODO clean garbage in /home/hived/datadir/consensus_storage when it cannot start (rg. when going Debug from Release
-# TDOD ask data_processor::handle_exception( std::exception_ptr exception_ptr ) {
+# TODO split into commits. for example, "an additional parameter in state providers due to the necessity of passing there the disk path to the storage of the consensus state provider".
+# TODO ask data_processor::handle_exception( std::exception_ptr exception_ptr ) {
 # TODO magic numbers: args.limit = 1000;
 # TODO - ASK + " AND op_type_id <= 49 " //TODO how to determine where vops start ? -> //trx_in_block < 0 -> virtual operation
+# TODO wywal inne state providery z appki np ACCOUNTS
 # TODO* example testing app - move to proper place in directory tree
 # TODO* ? in yaml - cp log to . instead of ln -s
 # TODO* why runallnow script has to clear contest sharedmemory.bin ? 
@@ -416,6 +414,9 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO - LATER  clang find #include
 # TODO - LATER ?  add .clang-format 
 
+
+# DONE Remove allow_reevaluate
+# DONE measurements of phases for trans and non_trans
 # DONE add interface to get a particular account balance
 # DONE ASAN - memory leaks
 # DONE from_variant_to_full_block_ptr.cpp file not needed
@@ -478,6 +479,10 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # ERROR:  total size of jsonb array elements exceeds the maximum of 268435455 bytes
 # CONTEXT:  SQL statement "SELECT jsonb_build_object(
 #         'blocks', COALESCE(array_agg(
+
+
+
+
 
 : <<NO_TRANS
 Stepping from 68,400,001 to 68,500,000 Blocks:100,000 Transactions:7,864,692 Operations:7,950,520 Postgres:0'56" Trans:0'1" All:1'58" Memory (KB): 25,065,240                              │.cache/               h
