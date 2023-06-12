@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ../haf/scripts/runallnow.sh 20000 driver
-# rm /home/hived/datadir/consensus_state_provider/blockchain/shared_memory.bin ; ./bin/mtlk_executable --to 1091
+# rm /home/hived/datadir/consensus_state_provider/blockchain/shared_memory.bin ; ./bin/consp_driver --to 1091
 
 
 # remove transactions
@@ -30,7 +30,7 @@ END_COMMENT
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/../build/bin/mtlk_executable",
+            "program": "${workspaceFolder}/../build/bin/consp_driver",
             "args": ["--allow-reevaluate", "--from=23645966"],
             "stopAtEntry": true,
             "cwd": "${fileDirname}",
@@ -65,15 +65,15 @@ END_LAUNCH_DBG_CONFIGURATION
 
 # 2. driver of postgres functions 
 # src/hive_fork_manager/shared_lib/CMakeLists.txt:
-# ADD_EXECUTABLE(mtlk_executable
+# ADD_EXECUTABLE(consp_driver
     
 #   mtlk_main.cpp
 # )
 
-# ADD_POSTGRES_INCLUDES( mtlk_executable )
-# ADD_POSTGRES_LIBRARIES( mtlk_executable )
+# ADD_POSTGRES_INCLUDES( consp_driver )
+# ADD_POSTGRES_LIBRARIES( consp_driver )
 
-# target_link_libraries(mtlk_executable
+# target_link_libraries(consp_driver
 #     PRIVATE ${target_name}
 # )
 
@@ -264,15 +264,15 @@ END_LOG_STEEMIT_10
 
 # 2. driver of postgres functions 
 # src/hive_fork_manager/shared_lib/CMakeLists.txt:
-# ADD_EXECUTABLE(mtlk_executable
+# ADD_EXECUTABLE(consp_driver
     
 #   mtlk_main.cpp
 # )
 
-# ADD_POSTGRES_INCLUDES( mtlk_executable )
-# ADD_POSTGRES_LIBRARIES( mtlk_executable )
+# ADD_POSTGRES_INCLUDES( consp_driver )
+# ADD_POSTGRES_LIBRARIES( consp_driver )
 
-# target_link_libraries(mtlk_executable
+# target_link_libraries(consp_driver
 #     PRIVATE ${target_name}
 # )
 
@@ -1046,15 +1046,15 @@ NO_TRANS
 
 # 2. driver of postgres functions 
 # src/hive_fork_manager/shared_lib/CMakeLists.txt:
-# ADD_EXECUTABLE(mtlk_executable
+# ADD_EXECUTABLE(consp_driver
     
 #   mtlk_main.cpp
 # )
 
-# ADD_POSTGRES_INCLUDES( mtlk_executable )
-# ADD_POSTGRES_LIBRARIES( mtlk_executable )
+# ADD_POSTGRES_INCLUDES( consp_driver )
+# ADD_POSTGRES_LIBRARIES( consp_driver )
 
-# target_link_libraries(mtlk_executable
+# target_link_libraries(consp_driver
 #     PRIVATE ${target_name}
 # )
 
@@ -1201,9 +1201,9 @@ fi
 if [[ $CMAKED ]]
 then
 #    ninja extension.hive_fork_manager  \
-    ninja mtlk_executable query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure         
+    ninja consp_driver query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure         
     EXIT_STATUS=$?
-    # ninja mtlk_executable; sudo chown $USER:$USER .ninja_*
+    # ninja consp_driver; sudo chown $USER:$USER .ninja_*
     sudo chown -R $USER:$USER *
 fi
 
@@ -1440,7 +1440,7 @@ run()
 
 driver_body()
 {
-    # preconditions for mtlk_executable
+    # preconditions for consp_driver
     if [ -d /home/hived/datadir/consensus_state_provider ]
     then
         echo /home/hived/datadir/consensus_state_provider Still there!
@@ -1448,7 +1448,7 @@ driver_body()
 
     psql -d haf_block_log -c 'select count(*) from hive.blocks'
 
-    ./bin/mtlk_executable --to=$LAST_BLOCK
+    ./bin/consp_driver --to=$LAST_BLOCK
 
 }
 
@@ -1468,7 +1468,7 @@ clearterm()
 driver_build()
 {
     clearterm &&
-    ninja mtlk_executable query_supervisor hived extension.hive_fork_manager &&
+    ninja consp_driver query_supervisor hived extension.hive_fork_manager &&
     sudo ninja install &&
     sudo chown $USER:$USER .ninja_* &&
     ctest -R keyauth --output-on-failure
