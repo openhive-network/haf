@@ -75,6 +75,8 @@ private:
   pqxx::result::const_iterator current_operation;
   std::chrono::nanoseconds transformations_duration;
   time_probe transformations_time_probe;
+  time_probe apply_full_block_time_probe;
+  time_probe non_transactional_apply_op_block_time_probe;
 };
 
 class PostgresDatabase
@@ -128,6 +130,9 @@ void postgres_block_log::run(int from,
                              bool allow_reevaluate)
 {
   transformations_time_probe.reset();
+  apply_full_block_time_probe.reset();;
+  non_transactional_apply_op_block_time_probe.reset();
+    
   try
   {
     get_data_from_postgres(from, to, postgres_url);
@@ -141,7 +146,9 @@ void postgres_block_log::run(int from,
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
-  transformations_time_probe.print_duration("Trans");
+  transformations_time_probe.print_duration("Transformations");
+  apply_full_block_time_probe.print_duration("Transactional_apply_block");;
+  non_transactional_apply_op_block_time_probe.print_duration("Non-transactional_apply_block");
 }
 
 void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
@@ -249,10 +256,14 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
     std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
 
     transformations_time_probe.stop();
-
+    
+    apply_full_block_time_probe.start();
+    
     uint64_t skip_flags = get_skip_flags();
 
     apply_full_block(db, fb_ptr, skip_flags);
+    
+    apply_full_block_time_probe.stop();
   }
   else
   {
@@ -262,8 +273,11 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
 
     transformations_time_probe.stop();
 
+    non_transactional_apply_op_block_time_probe.start();
+
     non_transactional_apply_op_block(db, current_operation, operations.end(), block_num, fb_ptr);
-    
+
+    non_transactional_apply_op_block_time_probe.stop();
   }
 }
 
