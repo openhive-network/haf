@@ -43,12 +43,6 @@ private:
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   fc::variant block2variant(const pqxx::row& block, bool no_transactions = false);
 
-  struct variant_and_binary_type
-  {
-    fc::variant variant;
-    pqxx::binarystring binary_str;
-  };
-
   void transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants,
                              std::vector<fc::variant>& transaction_variants);
 
@@ -57,12 +51,12 @@ private:
   static void build_transaction_ids(const pqxx::result::const_iterator& transaction, std::vector<fc::variant>& transaction_id_variants);
   void rewind_operations_iterator_to_current_block(int block_num);
   static fc::variant build_transaction_variant(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures,
-                                               const std::vector<variant_and_binary_type>& varbin_operations);
+                                               const std::vector<fc::variant>& operation_variants);
 
-  std::vector<variant_and_binary_type> operations2variants(int block_num, int trx_in_block);
+  std::vector<fc::variant> operations2variants(int block_num, int trx_in_block);
   bool is_current_operation(int block_num, int trx_in_block) const;
   static bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block);
-  void add_operation_variant(const pqxx::const_result_iterator& operation, std::vector<variant_and_binary_type>& varbin_operations);
+  void add_operation_variant(const pqxx::const_result_iterator& operation, std::vector<fc::variant>& operation_variants);
 
   int current_transaction_block_num();
   int current_operation_block_num() const;
@@ -376,9 +370,9 @@ void postgres_block_log::transactions2variants(int block_num, std::vector<fc::va
 
     rewind_operations_iterator_to_current_block(block_num);
 
-    std::vector<variant_and_binary_type> varbin_operations = operations2variants(block_num, trx_in_block);
+    std::vector<fc::variant> operation_variants = operations2variants(block_num, trx_in_block);
 
-    fc::variant transaction_variant = build_transaction_variant(current_transaction, signatures, varbin_operations);
+    fc::variant transaction_variant = build_transaction_variant(current_transaction, signatures, operation_variants);
 
     transaction_variants.emplace_back(transaction_variant);
   }
@@ -429,37 +423,33 @@ void postgres_block_log::rewind_operations_iterator_to_current_block(int block_n
 
 fc::variant postgres_block_log::build_transaction_variant(const pqxx::result::const_iterator& transaction,
                                                        const std::vector<std::string>& signatures,
-                                                       const std::vector<variant_and_binary_type>& varbin_operations)
+                                                       const std::vector<fc::variant>& operation_variants)
 {
-  std::vector<fc::variant> only_variants;
-  only_variants.reserve(varbin_operations.size());
-  std::transform(varbin_operations.begin(), varbin_operations.end(), std::back_inserter(only_variants),
-                 [](const variant_and_binary_type& vb) { return vb.variant; });
-    // clang-format off
+      // clang-format off
   fc::variant_object_builder transaction_variant_builder;
   transaction_variant_builder
     ("ref_block_num", transaction["ref_block_num"].as<int>())
     ("ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())
     ("expiration", fix_pxx_time(transaction["expiration"]))
     ("signatures", signatures)
-    ("operations", only_variants);
+    ("operations", operation_variants);
     // clang-format on
 
   return transaction_variant_builder.get();
 }
 
-std::vector<postgres_block_log::variant_and_binary_type> postgres_block_log::operations2variants(int block_num, int trx_in_block)
+std::vector<fc::variant> postgres_block_log::operations2variants(int block_num, int trx_in_block)
 {
-  std::vector<variant_and_binary_type> varbin_operations;
+  std::vector<fc::variant> operation_variants;
   if(is_current_operation(block_num, trx_in_block))
   {
     for(; current_operation != operations.end() && operation_matches_block_transaction(current_operation, block_num, trx_in_block);
         ++current_operation)
     {
-      add_operation_variant(current_operation, varbin_operations);
+      add_operation_variant(current_operation, operation_variants);
     }
   }
-  return varbin_operations;
+  return operation_variants;
 }
 
 bool postgres_block_log::is_current_operation(int block_num, int trx_in_block) const
@@ -472,16 +462,16 @@ bool postgres_block_log::operation_matches_block_transaction(const pqxx::const_r
   return operation["block_num"].as<int>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block;
 }
 
-void postgres_block_log::add_operation_variant(const pqxx::const_result_iterator& operation, std::vector<variant_and_binary_type>& varbin_operations)
+void postgres_block_log::add_operation_variant(const pqxx::const_result_iterator& operation, std::vector<fc::variant>& operation_variants)
 {
     pqxx::binarystring json(operation["body"]);
-    pqxx::binarystring bs(operation["bin_body"]);
+    //pqxx::binarystring bs(operation["bin_body"]);
 
     //std::cout << "Json size: " << json.size() << " Json data: " << json.data() << std::endl;
     //std::cout << "Blob size: " << bs.size() << " Blob data: " << bs.data() << std::endl;
 
     
-    std::cout.copyfmt(std::stringstream()); //reset stream state
+    //std::cout.copyfmt(std::stringstream()); //reset stream state
 
     // auto data = bs.data();
     // size_t size = bs.size();
@@ -499,7 +489,7 @@ void postgres_block_log::add_operation_variant(const pqxx::const_result_iterator
 
 
 
-    get_into_op(bs);
+    //get_into_op(bs);
 
     // //fc::blob val;
     // //val.data.assign(bs.data(), bs.data() + bs.size());
@@ -520,14 +510,10 @@ void postgres_block_log::add_operation_variant(const pqxx::const_result_iterator
     // to_variant(op, operation_variant2);
     
 
-    variant_and_binary_type vb
-    {
-      .variant = fc::json::from_string(body_in_json),
-      .binary_str = bs
-    };
+    //fc::variant vb = fc::json::from_string(body_in_json);
 
-    varbin_operations.emplace_back(vb);
-    //varbin_operations.emplace_back(operation_variant2);
+    operation_variants.emplace_back(fc::json::from_string(body_in_json));
+    //operation_variants.emplace_back(operation_variant2);
 }
 
 
