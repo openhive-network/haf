@@ -50,7 +50,7 @@ private:
   };
 
   void transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants,
-                             std::vector<fc::variant>& trancaction_variants);
+                             std::vector<fc::variant>& transaction_variants);
 
   static bool is_current_transaction(const pqxx::result::const_iterator& current_transaction, const int block_num);
   static std::vector<std::string> build_signatures(const pqxx::result::const_iterator& transaction);
@@ -368,7 +368,7 @@ fc::variant postgres_block_log::block2variant(const pqxx::row& block, bool no_tr
 }
 
 void postgres_block_log::transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants,
-                                            std::vector<fc::variant>& trancaction_variants)
+                                            std::vector<fc::variant>& transaction_variants)
 {
   for(; current_transaction != transactions.end() && is_current_transaction(current_transaction, block_num); ++current_transaction)
   {
@@ -384,7 +384,7 @@ void postgres_block_log::transactions2variants(int block_num, std::vector<fc::va
 
     fc::variant transaction_variant = build_transaction_variant(current_transaction, signatures, varbin_operations);
 
-    trancaction_variants.emplace_back(transaction_variant);
+    transaction_variants.emplace_back(transaction_variant);
   }
 }
 
