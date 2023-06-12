@@ -40,7 +40,6 @@ private:
   void initialize_iterators();
   void replay_blocks(const char* context, const char* shared_memory_bin_path);
   void replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path);
-  void non_transactional_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block);
   static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   fc::variant block_to_variant_with_transactions(const pqxx::row& block);
@@ -48,6 +47,19 @@ private:
   fc::variant build_block_variant(const pqxx::row& block,
                                   const std::vector<fc::variant>& transaction_ids_variants,
                                   const std::vector<fc::variant>& transaction_variants);
+  void apply_non_transactional_operation_block(
+      hive::chain::database& db,
+      pqxx::result::const_iterator& cur_op,
+      const pqxx::result::const_iterator& end_it,
+      int block_num,
+      const std::shared_ptr<hive::chain::full_block_type>& full_block);
+  void measure_before_apply_non_tansactional_operation_block();
+  void measure_after_apply_non_tansactional_operation_block();  
+  int get_current_block_num(pqxx::result::const_iterator& current_operation);
+  void rewind_to_block_num(int current_block_num,
+                           pqxx::result::const_iterator& current_operation,
+                           int block_num,
+                           const pqxx::result::const_iterator& end_it);
   void transactions2variants(int block_num,
                              std::vector<fc::variant>& transaction_id_variants,
                              std::vector<fc::variant>& transaction_variants);
@@ -94,6 +106,8 @@ private:
   private:
     pqxx::connection connection;
   }; 
+  const int BLOCK_NUM_EMPTY = -1;
+  const int BLOCK_NUM_MAX = std::numeric_limits<int>::max();
 };
 
 
@@ -250,26 +264,18 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
     // wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
 
     std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
-
     transformations_time_probe.stop();
-    
-    
-    uint64_t skip_flags = get_skip_flags();
 
-    apply_full_block(db, fb_ptr, skip_flags);
+    apply_full_block(db, fb_ptr, get_skip_flags());
     
   }
   else
   {
-    //pqxx::result::const_iterator current_operation_save = current_operation;
     fc::variant v = block_to_variant_without_transactions(block);
     std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
-
     transformations_time_probe.stop();
 
-
-    non_transactional_apply_op_block(db, current_operation, operations.end(), block_num, fb_ptr);
-
+    apply_non_transactional_operation_block(db, current_operation, operations.end(), block_num, fb_ptr);
   }
 }
 
@@ -287,39 +293,64 @@ void postgres_block_log::apply_full_block(hive::chain::database& db, const std::
 }
 
 
-void postgres_block_log::non_transactional_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block)
+void postgres_block_log::apply_non_transactional_operation_block(
+    hive::chain::database& db,
+    pqxx::result::const_iterator& cur_op,
+    const pqxx::result::const_iterator& end_it,
+    int block_num,
+    const std::shared_ptr<hive::chain::full_block_type>& full_block)
 {
-  non_transactional_apply_op_block_time_probe.start();
-  int current_operation;
+  measure_before_apply_non_tansactional_operation_block();
 
   db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
 
+  int current_block_num = get_current_block_num(cur_op);
 
-    auto cur_op__block_num=[this](pqxx::result::const_iterator& cur_op) -> int
-    {
-      if(operations.empty()) return -1;
-      if(operations.end() == cur_op) return std::numeric_limits<int>::max();
-      return cur_op["block_num"].as<int>();
-    };
-
-  //rewind
-  while(cur_op__block_num(cur_op) < block_num && cur_op != end_it)
-  {
-    ++cur_op;
-  }
+  rewind_to_block_num(current_block_num, cur_op, block_num, end_it);
 
   hive::chain::op_iterator_ptr op_it(new pqxx_op_iterator(cur_op,
-                   end_it,
-                   block_num));
+                    end_it,
+                    block_num));
     
-  
   db.non_transactional_apply_block(full_block, std::move(op_it), get_skip_flags());
 
   db.clear_tx_status();
   db.set_revision(db.head_block_num());
 
+
+  measure_after_apply_non_tansactional_operation_block();
+}
+
+void postgres_block_log::measure_before_apply_non_tansactional_operation_block()
+{
+  // Start time probe here
+  non_transactional_apply_op_block_time_probe.start();
+}
+
+int postgres_block_log::get_current_block_num(pqxx::result::const_iterator& current_operation)
+{
+  // Return the current block number
+  if(operations.empty())
+    return BLOCK_NUM_EMPTY;
+  if(operations.end() == current_operation)
+    return BLOCK_NUM_MAX;
+  return current_operation["block_num"].as<int>();
+}
+
+void postgres_block_log::rewind_to_block_num(int current_block_num,
+                                             pqxx::result::const_iterator& current_operation,
+                                             int block_num,
+                                             const pqxx::result::const_iterator& end_it)
+{
+  while(current_block_num < block_num && current_operation != end_it)
+  {
+    ++current_operation;
+  }
+}
+
+void postgres_block_log::measure_after_apply_non_tansactional_operation_block()
+{
   non_transactional_apply_op_block_time_probe.stop();
-  //FC_CAPTURE_CALL_LOG_AND_RETHROW( std::bind( &database::notify_fail_apply_block, this, note ), (block_num) )
 }
 
 fc::variant postgres_block_log::block_to_variant_with_transactions(const pqxx::row& block)
@@ -537,22 +568,22 @@ void postgres_block_log::add_operation_variant(const pqxx::const_result_iterator
   //iterators for traversing the values above
   int postgres_block_log::current_transaction_block_num()
 {
-  if(transactions.empty()) return -1;
-  if(transactions.end() == current_transaction) return std::numeric_limits<int>::max();
+  if(transactions.empty()) return BLOCK_NUM_EMPTY;
+  if(transactions.end() == current_transaction) return BLOCK_NUM_MAX;
   return current_transaction["block_num"].as<int>();
 }
 
 int postgres_block_log::current_operation_block_num() const
 {
-  if(operations.empty()) return -1;
-  if(operations.end() == current_operation) return std::numeric_limits<int>::max();
+  if(operations.empty()) return BLOCK_NUM_EMPTY;
+  if(operations.end() == current_operation) return BLOCK_NUM_MAX;
   return current_operation["block_num"].as<int>();
 }
 
 int postgres_block_log::current_operation_trx_num() const
 {
-  if(operations.empty()) return -1;
-  if(operations.end() == current_operation) return std::numeric_limits<int>::max();
+  if(operations.empty()) return BLOCK_NUM_EMPTY;
+  if(operations.end() == current_operation) return BLOCK_NUM_MAX;
   return current_operation["trx_in_block"].as<int>();
 }
 
