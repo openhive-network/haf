@@ -374,9 +374,8 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO
 # TODO
 # TODO Remove allow_reevaluate
-# TODO wywal inne state providery np ACCOUNTS
+# TODO wywal inne state providery z appki np ACCOUNTS
 # TODO wywal w ogóle state providera z cab_app i uzywaj tylko funkcji z src/hive_fork_manager/consensus_state_provider_helpers.sql
-# TODO add interface to get a particular account balance
 # TODO cleanup init(db
 # TODO remove mtlk
 # TODO are all headers included ?
@@ -397,7 +396,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # TODO name consensus provider and current account provider properly
 # TODO separate from database_api.cpp, database_api_plugin
-
+# TODO uncomment this test : (check in CI)//BOOST_CHECK_THROW( fc::json::from_string( "{\"amount\":\"-1\",\"precision\":3,\"nai\":\"@@000000021\"}" ).as< asset >(), fc::exception );
 
 # TODO ? lock na funckjach w C lub wyżej
 # TODO funkcja do zwracania + 'blockchain' 
@@ -416,6 +415,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO - LATER  clang find #include
 # TODO - LATER ?  add .clang-format 
 
+# DONE add interface to get a particular account balance
 # DONE ASAN - memory leaks
 # DONE from_variant_to_full_block_ptr.cpp file not needed
 # DONE separate driver for C code
