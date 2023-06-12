@@ -49,17 +49,11 @@ private:
                                   const std::vector<fc::variant>& transaction_variants);
   void apply_non_transactional_operation_block(
       hive::chain::database& db,
-      pqxx::result::const_iterator& cur_op,
       const pqxx::result::const_iterator& end_it,
       int block_num,
       const std::shared_ptr<hive::chain::full_block_type>& full_block);
   void measure_before_apply_non_tansactional_operation_block();
   void measure_after_apply_non_tansactional_operation_block();  
-  int get_current_block_num(pqxx::result::const_iterator& current_operation);
-  void rewind_to_block_num(int current_block_num,
-                           pqxx::result::const_iterator& current_operation,
-                           int block_num,
-                           const pqxx::result::const_iterator& end_it);
   void transactions2variants(int block_num,
                              std::vector<fc::variant>& transaction_id_variants,
                              std::vector<fc::variant>& transaction_variants);
@@ -67,7 +61,7 @@ private:
                                      const int block_num);
   static std::vector<std::string> build_signatures(const pqxx::result::const_iterator& transaction);
   static void build_transaction_ids(const pqxx::result::const_iterator& transaction, std::vector<fc::variant>& transaction_id_variants);
-  void rewind_operations_iterator_to_current_block(int block_num);
+  void rewind_current_operation_to_block(int block_num);
   static fc::variant build_transaction_variant(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures,
                                                const std::vector<fc::variant>& operation_variants);
 
@@ -275,7 +269,7 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
     std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
     transformations_time_probe.stop();
 
-    apply_non_transactional_operation_block(db, current_operation, operations.end(), block_num, fb_ptr);
+    apply_non_transactional_operation_block(db, operations.end(), block_num, fb_ptr);
   }
 }
 
@@ -295,7 +289,6 @@ void postgres_block_log::apply_full_block(hive::chain::database& db, const std::
 
 void postgres_block_log::apply_non_transactional_operation_block(
     hive::chain::database& db,
-    pqxx::result::const_iterator& cur_op,
     const pqxx::result::const_iterator& end_it,
     int block_num,
     const std::shared_ptr<hive::chain::full_block_type>& full_block)
@@ -304,11 +297,9 @@ void postgres_block_log::apply_non_transactional_operation_block(
 
   db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
 
-  int current_block_num = get_current_block_num(cur_op);
+  rewind_current_operation_to_block(block_num);
 
-  rewind_to_block_num(current_block_num, cur_op, block_num, end_it);
-
-  hive::chain::op_iterator_ptr op_it(new pqxx_op_iterator(cur_op,
+  hive::chain::op_iterator_ptr op_it(new pqxx_op_iterator(current_operation,
                     end_it,
                     block_num));
     
@@ -327,26 +318,6 @@ void postgres_block_log::measure_before_apply_non_tansactional_operation_block()
   non_transactional_apply_op_block_time_probe.start();
 }
 
-int postgres_block_log::get_current_block_num(pqxx::result::const_iterator& current_operation)
-{
-  // Return the current block number
-  if(operations.empty())
-    return BLOCK_NUM_EMPTY;
-  if(operations.end() == current_operation)
-    return BLOCK_NUM_MAX;
-  return current_operation["block_num"].as<int>();
-}
-
-void postgres_block_log::rewind_to_block_num(int current_block_num,
-                                             pqxx::result::const_iterator& current_operation,
-                                             int block_num,
-                                             const pqxx::result::const_iterator& end_it)
-{
-  while(current_block_num < block_num && current_operation != end_it)
-  {
-    ++current_operation;
-  }
-}
 
 void postgres_block_log::measure_after_apply_non_tansactional_operation_block()
 {
@@ -415,7 +386,7 @@ void postgres_block_log::transactions2variants(int block_num, std::vector<fc::va
 
     build_transaction_ids(current_transaction, transaction_id_variants);
 
-    rewind_operations_iterator_to_current_block(block_num);
+    rewind_current_operation_to_block(block_num);
 
     std::vector<fc::variant> operation_variants = operations2variants(block_num, trx_in_block);
 
@@ -460,7 +431,7 @@ void postgres_block_log::build_transaction_ids(const pqxx::result::const_iterato
   transaction_id_variants.push_back(fix_pxx_hex(transaction["trx_hash"]));
 }
 
-void postgres_block_log::rewind_operations_iterator_to_current_block(int block_num)
+void postgres_block_log::rewind_current_operation_to_block(int block_num)
 {
   while(current_operation_block_num() < block_num && current_operation != operations.end())
   {
