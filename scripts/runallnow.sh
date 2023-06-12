@@ -366,12 +366,14 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
+# TODO exceptions handling in pqxx usage
+# TODO pfree in utitlities.cpp where needed
 # TODO - rename - everything should be named csp - consensus state prvider, sometimes only - cab - current_account_balances
 # TODO split into commits. for example, "an additional parameter in state providers due to the necessity of passing there the disk path to the storage of the consensus state provider".
 # TODO measurements of phases for trans and non_trans
 # DONE rename moider to no_transaction - non_transactional_version simple_version direct_operation_version
-# TODO make it truly  switchable with classic version - command line param
-# TODO maybe revert a bit of code in code and pass a lambda ?
+# TODO make it truly  switchable with classic version - command line param = switching from  trans to non trans, -> eliminate ?
+# TODO maybe revert a bit of code in code and pass a lambda ??
 # TODO cond copy and copy operations buffer - use cast or move modern version not pqxx
 # TODO
 # TODO
@@ -389,10 +391,9 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO remove wlog, and put info where applicable
 # TODO example testing app - move to proper place in directory tree
 # TODO interface ?, name consensu or context or current_acount_balance provider ?
-# TODO from_variant_to_full_block_ptr.cpp file not needed
-# TODO exceptions handling in pqxx usage
+# DONE from_variant_to_full_block_ptr.cpp file not needed
 # TODO flag constructors / destructors default
-# TODO contants in collect_current_all_accounts_balances , 
+# TODO constants in collect_current_all_accounts_balances , 
 # TODO clean garbage in /home/hived/datadir/consensus_storage when it cannot start (rg. when going Debug from Release
 # TDOD ask data_processor::handle_exception( std::exception_ptr exception_ptr ) {
 # TODO magic numbers: args.limit = 1000;
