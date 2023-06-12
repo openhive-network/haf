@@ -366,6 +366,8 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
+# TODO - rename - everything should be named csp - consensus state prvider, sometimes only - cab - current_account_balances
+# TODO split into commits. for example, "an additional parameter in state providers due to the necessity of passing there the disk path to the storage of the consensus state provider".
 # TODO measurements of phases for trans and non_trans
 # DONE rename moider to no_transaction - non_transactional_version simple_version direct_operation_version
 # TODO make it truly  switchable with classic version - command line param
