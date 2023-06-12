@@ -13,6 +13,7 @@
 #include <iomanip>
 
 #include "../../shared_lib/consensus_state_provider_replay.hpp"
+#include "../../shared_lib/time_probe.hpp" 
 
 
 
@@ -92,7 +93,8 @@ int main(int argc, char *argv[]) {
     std::cout << "postgres_url: " << postgres_url << "\n";
     std::cout << "consensus_state_provider_storage: " << consensus_state_provider_storage << "\n";
 
-    auto alltogether_start = std::chrono::high_resolution_clock::now();
+    consensus_state_provider::time_probe alltogether_time_probe;
+
 
     bool ok = true;
     for (int i = from; i < to; i += step)
@@ -101,7 +103,7 @@ int main(int argc, char *argv[]) {
 
         std::cout << "Stepping from " << std::fixed << std::setprecision(0) << std::showbase << i << " to " << current_step_end << " ";
 
-        auto start = std::chrono::high_resolution_clock::now();
+        consensus_state_provider::time_probe all_time_probe;
 
         auto step_ok = consensus_state_provider::consensus_state_provider_replay_impl(
             i,
@@ -110,9 +112,7 @@ int main(int argc, char *argv[]) {
             postgres_url.c_str(),
             consensus_state_provider_storage.c_str());
 
-        auto end = std::chrono::high_resolution_clock::now();            
-        auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-        print_duration("All", duration);
+        all_time_probe.print_duration("All");
         std::cout << "Memory (KB): " << get_memory_usage_kb() << std::endl;
 
 
@@ -176,9 +176,7 @@ int main(int argc, char *argv[]) {
         }
     }    
 
-    auto alltogether_end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(alltogether_end - alltogether_start);
-    print_duration("Alltogether", duration);
+    alltogether_time_probe.print_duration("Alltogether");
 
     return ok ? 0 : 1;
 }

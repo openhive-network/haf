@@ -1,6 +1,5 @@
 #include "consensus_state_provider_replay.hpp"
 
-#include <chrono>
 #include <fc/io/json.hpp>
 #include <fc/io/sstream.hpp>
 #include <hive/plugins/block_api/block_api_objects.hpp>
@@ -16,6 +15,7 @@
 #include "hive/protocol/operations.hpp"
 
 #include "pqxx_op_iterator.hpp"
+#include "time_probe.hpp" 
 
 namespace consensus_state_provider
 {
@@ -74,6 +74,7 @@ private:
   pqxx::result::const_iterator current_transaction;
   pqxx::result::const_iterator current_operation;
   std::chrono::nanoseconds transformations_duration;
+  time_probe transformations_time_probe;
 };
 
 class PostgresDatabase
@@ -126,7 +127,7 @@ void postgres_block_log::run(int from,
                              const char* shared_memory_bin_path,
                              bool allow_reevaluate)
 {
-  transformations_duration = std::chrono::nanoseconds();
+  transformations_time_probe.reset();
   try
   {
     get_data_from_postgres(from, to, postgres_url);
@@ -140,7 +141,7 @@ void postgres_block_log::run(int from,
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
-  print_duration("Trans", transformations_duration);
+  transformations_time_probe.print_duration("Trans");
 }
 
 void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
@@ -174,7 +175,7 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
 
 void postgres_block_log::get_data_from_postgres(int from, int to, const char* postgres_url)
 {
-  auto start = std::chrono::high_resolution_clock::now();
+  time_probe get_data_from_postgres_time_probe;
 
   PostgresDatabase db(postgres_url);
   // clang-format off
@@ -203,9 +204,7 @@ void postgres_block_log::get_data_from_postgres(int from, int to, const char* po
   operations = db.execute_query(operations_query);
   std::cout << "Operations:" << operations.size() << " ";
   // clang-format on
-  auto end = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-  print_duration("Postgres", duration);
+  get_data_from_postgres_time_probe.print_duration("Postgres");
 }
 
 
@@ -226,7 +225,7 @@ void postgres_block_log::replay_blocks(const char* context, const char* shared_m
 void postgres_block_log::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path,
                                           bool allow_reevaluate)
 {
-  auto start = std::chrono::high_resolution_clock::now();
+  transformations_time_probe.start();
 
   auto block_num = block["num"].as<int>();
   if(!allow_reevaluate)
@@ -249,9 +248,7 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
 
     std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
 
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::nanoseconds duration = end - start;
-    transformations_duration += duration;
+    transformations_time_probe.stop();
 
     uint64_t skip_flags = get_skip_flags();
 
@@ -263,9 +260,7 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
     fc::variant v = block2variant(block, true);
     std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
 
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::nanoseconds duration = end - start;
-    transformations_duration += duration;
+    transformations_time_probe.stop();
 
     non_transactional_apply_op_block(db, current_operation, operations.end(), block_num, fb_ptr);
     
