@@ -119,61 +119,28 @@ bool consensus_state_provider_replay_impl(int from, int to, const char* context,
   return true;
 }
 
-void postgres_block_log::run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path,
-                          bool allow_reevaluate)
+void postgres_block_log::run(int from,
+                             int to,
+                             const char* context,
+                             const char* postgres_url,
+                             const char* shared_memory_bin_path,
+                             bool allow_reevaluate)
 {
   transformations_duration = std::chrono::nanoseconds();
-  get_data_from_postgres(from, to, postgres_url);
-
-  initialize_iterators();
-
-  replay_blocks(context, shared_memory_bin_path, allow_reevaluate);
-
-  print_duration("Trans", transformations_duration);
-}
-
-void postgres_block_log::get_data_from_postgres(int from, int to, const char* postgres_url)
-{
   try
   {
-    auto start = std::chrono::high_resolution_clock::now();
+    get_data_from_postgres(from, to, postgres_url);
 
-    PostgresDatabase db(postgres_url);
-    // clang-format off
-      auto blocks_query = "SELECT * FROM hive.blocks JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
-                                  + std::to_string(from) 
-                                  + " and num <= " 
-                                  + std::to_string(to) 
-                                  + " ORDER BY num ASC";
-      blocks = db.execute_query(blocks_query);
-      std::cout << "Blocks:" << blocks.size() << " "; 
+    initialize_iterators();
 
-      auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions WHERE block_num >= " 
-                                  + std::to_string(from) 
-                                  + " and block_num <= " 
-                                  + std::to_string(to) 
-                                  + " ORDER BY block_num, trx_in_block ASC";
-      transactions = db.execute_query(transactions_query);
-      std::cout << "Transactions:" << transactions.size() << " ";
-
-      auto operations_query = "SELECT block_num, body, body::bytea as bin_body, trx_in_block FROM hive.operations WHERE block_num >= " 
-                                  + std::to_string(from) 
-                                  + " and block_num <= " 
-                                  + std::to_string(to) 
-                                  + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
-                                  + " ORDER BY id ASC";
-    operations = db.execute_query(operations_query);
-    std::cout << "Operations:" << operations.size() << " ";
-    // clang-format on
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-    print_duration("Postgres", duration);
+    replay_blocks(context, shared_memory_bin_path, allow_reevaluate);
   }
   catch(...)
   {
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
+  print_duration("Trans", transformations_duration);
 }
 
 void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
@@ -204,6 +171,43 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
     elog("postgres_block_log execution failed: unknown exception.");
   }
 }
+
+void postgres_block_log::get_data_from_postgres(int from, int to, const char* postgres_url)
+{
+  auto start = std::chrono::high_resolution_clock::now();
+
+  PostgresDatabase db(postgres_url);
+  // clang-format off
+    auto blocks_query = "SELECT * FROM hive.blocks JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
+                                + std::to_string(from) 
+                                + " and num <= " 
+                                + std::to_string(to) 
+                                + " ORDER BY num ASC";
+    blocks = db.execute_query(blocks_query);
+    std::cout << "Blocks:" << blocks.size() << " "; 
+
+    auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions WHERE block_num >= " 
+                                + std::to_string(from) 
+                                + " and block_num <= " 
+                                + std::to_string(to) 
+                                + " ORDER BY block_num, trx_in_block ASC";
+    transactions = db.execute_query(transactions_query);
+    std::cout << "Transactions:" << transactions.size() << " ";
+
+    auto operations_query = "SELECT block_num, body, body::bytea as bin_body, trx_in_block FROM hive.operations WHERE block_num >= " 
+                                + std::to_string(from) 
+                                + " and block_num <= " 
+                                + std::to_string(to) 
+                                + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
+                                + " ORDER BY id ASC";
+  operations = db.execute_query(operations_query);
+  std::cout << "Operations:" << operations.size() << " ";
+  // clang-format on
+  auto end = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+  print_duration("Postgres", duration);
+}
+
 
 void postgres_block_log::initialize_iterators()
 {
