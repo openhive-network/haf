@@ -919,13 +919,7 @@ const char* fix_pxx_hex(const pqxx::field& h) { return h.c_str() + 2; }
 
 }  // namespace consensus_state_provider
 
-void print_duration(const std::string& message, const std::chrono::nanoseconds& duration)
-{
-  auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
-  auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration % std::chrono::minutes(1));
 
-  std::cout << message << ":" << minutes.count() << "'" << seconds.count() << "\" ";
-}
 
 void print_flags(std::ios_base::fmtflags flags)
 {

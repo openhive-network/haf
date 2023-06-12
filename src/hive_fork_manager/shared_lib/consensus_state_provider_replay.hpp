@@ -11,7 +11,6 @@ namespace fc
 
 #include <hive/chain/full_block.hpp>
 
-void print_duration(const std::string& message, const std::chrono::nanoseconds& duration);
 void print_flags(std::ios_base::fmtflags flags) ;
 void reset_stream(std::ostream& os) ;
 
