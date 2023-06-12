@@ -367,13 +367,11 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # mtlk TODO:
 # TODO exceptions handling in pqxx usage
-# TODO pfree in utitlities.cpp where needed
 # TODO - rename - everything should be named csp - consensus state prvider, sometimes only - cab - current_account_balances
 # TODO split into commits. for example, "an additional parameter in state providers due to the necessity of passing there the disk path to the storage of the consensus state provider".
 # TODO measurements of phases for trans and non_trans
 # DONE rename moider to no_transaction - non_transactional_version simple_version direct_operation_version
 # TODO make it truly  switchable with classic version - command line param = switching from  trans to non trans, -> eliminate ?
-# TODO maybe revert a bit of code in code and pass a lambda ??
 # TODO cond copy and copy operations buffer - use cast or move modern version not pqxx
 # TODO
 # TODO
@@ -423,6 +421,8 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO - LATER  clang find #include
 # TODO - LATER ?  add .clang-format 
 
+# DONE maybe revert a bit of code in code and pass a lambda ??
+# DONE pfree in utitlities.cpp where needed
 # DONE rename test_givena
 # DONE rename transactions_it to current_transaction
 # DONE? refactor app.main
