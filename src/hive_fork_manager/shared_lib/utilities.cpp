@@ -21,7 +21,6 @@ using hive::app::collected_metadata_collection_t;
 
 #define CUSTOM_LOG(format, ... ) { FILE *pFile = fopen("get-impacted-accounts.log","ae"); fprintf(pFile,format "\n" __VA_OPT__(,) __VA_ARGS__); fclose(pFile); }
 
-
 namespace // anonymous
 {
 
@@ -826,12 +825,16 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
 Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 {
 
-  const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
-  const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
+  char* context = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
   int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path);
 
-  PG_RETURN_INT32(expected_block_num); 
+  PG_RETURN_INT32(expected_block_num);
+
+  pfree(context);
+  pfree(shared_memory_bin_path);
+
   return (Datum)0;
 }
 
@@ -856,7 +859,7 @@ void collect_data_and_fill_recordset(
             [](const auto& account_data) { return Int64GetDatum(account_data.reward_hbd_balance); });
       },
       __FUNCTION__, [] { return std::string{""}; });
-}
+ }
 
 PG_FUNCTION_INFO_V1(current_all_accounts_balances);
 
@@ -870,8 +873,8 @@ PG_FUNCTION_INFO_V1(current_all_accounts_balances);
 
 Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
 {
-  const char* context = text_to_cstring(PG_GETARG_TEXT_PP(0));
-  const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
+  char* context = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
   consensus_state_provider::collected_account_balances_collection_t collected_data;
   collect_data_and_fill_recordset(
       fcinfo, context, shared_memory_bin_path, collected_data,
@@ -880,10 +883,12 @@ Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
         return consensus_state_provider::collect_current_all_accounts_balances_impl(
             context, shared_memory_bin_path);
       });
+
+  pfree(context);
+  pfree(shared_memory_bin_path);
+
   return (Datum)0;
 }
-
-
 
 std::vector<std::string> extract_string_array_from_datum(ArrayType* arr)
 {
@@ -924,27 +929,28 @@ PG_FUNCTION_INFO_V1(current_account_balances);
  **  Returns queried accounts information for the given state.
  **/
 
-
 Datum current_account_balances(PG_FUNCTION_ARGS)
 {
-    ArrayType* accounts_arr = PG_GETARG_ARRAYTYPE_P(0);
-    const char* context = text_to_cstring(PG_GETARG_TEXT_PP(1));
-    const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(2));
+  ArrayType* accounts_arr = PG_GETARG_ARRAYTYPE_P(0);
+  char* context = text_to_cstring(PG_GETARG_TEXT_PP(1));
+  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(2));
 
-    std::vector<std::string> accounts = extract_string_array_from_datum(accounts_arr);
+  std::vector<std::string> accounts = extract_string_array_from_datum(accounts_arr);
 
-    consensus_state_provider::collected_account_balances_collection_t collected_data;
-    collect_data_and_fill_recordset(
-        fcinfo, context, shared_memory_bin_path, collected_data,
-        [=]()
-        {
-            return consensus_state_provider::collect_current_account_balances_impl(
-                accounts, context, shared_memory_bin_path);
-        });
-    return (Datum)0;
+  consensus_state_provider::collected_account_balances_collection_t collected_data;
+  collect_data_and_fill_recordset(
+      fcinfo, context, shared_memory_bin_path, collected_data,
+      [=]()
+      {
+        return consensus_state_provider::collect_current_account_balances_impl(
+            accounts, context, shared_memory_bin_path);
+      });
+
+  pfree(context);
+  pfree(shared_memory_bin_path);
+
+  return (Datum)0;
 }
-
-
 
 PG_FUNCTION_INFO_V1(consensus_state_provider_finish);
 
@@ -958,10 +964,13 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_finish);
 
 Datum consensus_state_provider_finish(PG_FUNCTION_ARGS)
 {
-  const char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
-  const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
+  char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
   consensus_state_provider::consensus_state_provider_finish_impl(context, shared_memory_bin_path);
+
+  pfree(context);
+  pfree(shared_memory_bin_path);
 
   return (Datum)0;
 }  
@@ -974,13 +983,17 @@ Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
 {
   int from = PG_GETARG_INT32(0);
   int to = PG_GETARG_INT32(1);
-  const char* context = text_to_cstring(PG_GETARG_TEXT_PP(2));
-  const char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(3));
-  const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(4));
+  char* context = text_to_cstring(PG_GETARG_TEXT_PP(2));
+  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(3));
+  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(4));
 
   auto ok = consensus_state_provider::consensus_state_provider_replay_impl(from, to, context, postgres_url, shared_memory_bin_path);
 
   PG_RETURN_BOOL(ok);
+
+  pfree(context);
+  pfree(postgres_url);
+  pfree(shared_memory_bin_path);
 
   return (Datum)0;
 }
