@@ -931,11 +931,10 @@ Datum current_account_balance(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(current_account_balances);
 
   /**
-   ** CREATE OR REPLACE FUNCTION hive.current_account_balance(IN account TEXT, IN _context TEXT)
-   ** RETURNS SETOF hive.current_account_balance_return_type
-   ** AS 'MODULE_PATHNAME', 'current_account_balance' LANGUAGE C;
-   **
-   ** Returns all accounts information for the given state.
+   **  CREATE OR REPLACE FUNCTION hive.current_account_balances(IN accounts TEXT[], IN _context TEXT, IN shared_memory_bin_path TEXT)
+   **  RETURNS SETOF hive.current_account_balance_return_type
+   **  AS 'MODULE_PATHNAME', 'current_account_balances' LANGUAGE C;
+   **  Returns queried accounts information for the given state.
    **/
 
 
