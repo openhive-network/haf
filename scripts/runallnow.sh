@@ -366,15 +366,15 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
-# TODO exceptions handling in pqxx usage
+# TODO measurements of phases for trans and non_trans
 # TODO - rename - everything should be named csp - consensus state prvider, sometimes only - cab - current_account_balances
 # TODO split into commits. for example, "an additional parameter in state providers due to the necessity of passing there the disk path to the storage of the consensus state provider".
-# TODO measurements of phases for trans and non_trans
 # DONE rename moider to no_transaction - non_transactional_version simple_version direct_operation_version
 # TODO make it truly  switchable with classic version - command line param = switching from  trans to non trans, -> eliminate ?
 # TODO cond copy and copy operations buffer - use cast or move modern version not pqxx
 # TODO
 # TODO
+# TODO Remove allow_reevaluate
 # TODO wywal inne state providery np ACCOUNTS
 # TODO wywal w ogóle state providera z cab_app i uzywaj tylko funkcji z src/hive_fork_manager/consensus_state_provider_helpers.sql
 # DONE separate driver for C code
@@ -433,6 +433,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # DONE - remove permissions from app_cont
 
 
+# DONE exceptions handling in pqxx usage
 # DONE start/stop on contextual shared mem file
 # DONE What about ON CONFLICT DO NOTHING in src/hive_fork_manager/state_providers/current_account_balance.sql - two accounts in one state ?     texcik = format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances(%L) ON CONFLICT DO NOTHING;', __table_name, _context);
 # DONE (minor gain )consuming jsons one by one or getting a vector of blocks form haf block api
