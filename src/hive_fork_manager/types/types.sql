@@ -418,6 +418,14 @@ CREATE TYPE hive.recover_account_operation AS (
   extensions hive.extensions_type
 );
 
+CREATE TYPE hive.recurrent_transfer_pair_id AS (
+  pair_id int2 -- uint8_t: 1 byte, but unsigned (int2)
+);
+
+CREATE TYPE hive.recurrent_transfer_extensions_type AS (
+  recurrent_transfer_pair_id hive.recurrent_transfer_pair_id
+);
+
 CREATE TYPE hive.recurrent_transfer_operation AS (
   "from" hive.account_name_type,
   "to" hive.account_name_type,
@@ -425,7 +433,7 @@ CREATE TYPE hive.recurrent_transfer_operation AS (
   memo hive.memo,
   recurrence int4, -- uint16_t: 2 byte, but unsigned (int4)
   executions int4, -- uint16_t: 2 byte, but unsigned (int4)
-  extensions hive.extensions_type
+  extensions hive.recurrent_transfer_extensions_type
 );
 
 CREATE TYPE hive.request_account_recovery_operation AS (

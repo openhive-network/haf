@@ -55,6 +55,8 @@ Datum to_datum(const hive::protocol::price& price);
 template<typename T>
 Datum to_datum(const hive::protocol::fixed_string_impl<T>& string);
 Datum to_datum(const hive::protocol::future_extensions& extensions);
+Datum to_datum(const hive::protocol::recurrent_transfer_pair_id& id);
+Datum to_datum(const hive::protocol::recurrent_transfer_extensions_type& extensions);
 Datum to_datum(const hive::protocol::comment_options_extensions_type& extensions);
 Datum to_datum(const hive::protocol::pow2_work& work);
 Datum to_datum(const hive::protocol::update_proposal_extensions_type& extensions);
@@ -317,6 +319,58 @@ Datum to_datum(const hive::protocol::future_extensions& extensions)
   BlessTupleDesc(desc);
   Datum values[] = {};
   bool nulls[] = {};
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
+Datum to_datum(const hive::protocol::recurrent_transfer_pair_id& id)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.recurrent_transfer_pair_id");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+      Int16GetDatum(id.pair_id),
+  };
+  bool nulls[] = {
+    false,
+  };
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
+Datum to_datum(const hive::protocol::recurrent_transfer_extensions_type& extensions)
+{
+  TupleDesc desc = RelationNameGetTupleDesc("hive.recurrent_transfer_extensions_type");
+  BlessTupleDesc(desc);
+  Datum values[] = {
+    (Datum)0, // recurrent_transfer_pair_id
+  };
+  bool nulls[] = {
+    true,
+  };
+  struct recurrent_transfer_extensions_visitor
+  {
+    using result_type = void;
+
+    recurrent_transfer_extensions_visitor(Datum* values, bool* nulls) : values(values), nulls(nulls)
+    {}
+    void operator()(const hive::protocol::recurrent_transfer_pair_id& extension)
+    {
+      values[0] = to_datum(extension);
+      nulls[0] = false;
+    }
+    void operator()(const hive::void_t&)
+    {
+      // do nothing
+    }
+  private:
+    Datum* values;
+    bool* nulls;
+  };
+  recurrent_transfer_extensions_visitor v(values, nulls);
+  for (const auto& extension : extensions)
+  {
+    extension.visit(v);
+  }
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
