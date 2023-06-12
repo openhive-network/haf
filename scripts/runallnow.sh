@@ -979,7 +979,7 @@ NO_TRANS
 # for i in range (15):
 #     print(accounts_list[i])
 
-# after /home/haf_admin/build/hive/programs/hived/hived --blockchain-thread-pool-size=1 --data-dir=/home/hived/datadir --replay --force-replay --stop-replay-at-block=100000 --p2p-endpoint=0.0.0.0:2001 --webserver-http-endpoint=0.0.0.0:8090 --webserver-ws-endpoint=0.0.0.0:8091
+# after /home/haf_admin/build/hive/programs/hived/hived --blockchain-thread-pool-size=1 --data-dir=/home/hived/datadir --replay --force-replayy --stop-replay-at-block=100000 --p2p-endpoint=0.0.0.0:2001 --webserver-http-endpoint=0.0.0.0:8090 --webserver-ws-endpoint=0.0.0.0:8091
 # I get:
 # haf_admin@261a1ebca8b7:~$ python3 /home/haf_admin/haf/scripts/15richest.py
 # ('any', 2236000, 0, 1000000)
@@ -998,7 +998,7 @@ NO_TRANS
 # ('sminer10', 1637000, 0, 1000000)
 # ('administrator', 1618000, 0, 1000000)
 
-#and  after ~$ /home/haf_admin/build/hive/programs/hived/hived --blockchain-thread-pool-size=1 --data-dir=/home/hived/datadir --replay  --stop-replay-at-block=5000000 --p2p-endpoint=0.0.0.0:2001 --webserver-http-endpoint=0.0.0.0:8090 --webserver-ws-endpoint=0.0.0.0:8091
+#and  after ~$ /home/haf_admin/build/hive/programs/hived/hived --blockchain-thread-pool-size=1 --data-dir=/home/hived/datadir --replay  --stop-replay-at-block=5000000 --p2p-endpoint=0.0.0.0:2001 --webserver-http-endpoint=0.0.0.0:8090 --webserver-ws-endpoint=0.0.0.0:8091 --plugin=database_api
 # we have:
 #  python3 /home/haf_admin/haf/scripts/15richest.py
 # ('steemit', 4778859891, 70337438, 225671901920188893)
