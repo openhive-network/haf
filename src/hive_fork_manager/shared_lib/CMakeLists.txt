@@ -23,20 +23,6 @@ SET (CMAKE_FIND_LIBRARY_SUFFIXES ${SAVE_ORIGINAL_LIB_SUFFIXES} )
 
 TARGET_LINK_LIBRARIES( ${target_name} PUBLIC hive_protocol fc_shared_boost database_api_plugin block_api_plugin ${HAF_PQ_LIB} ${HAF_PQXX_LIB})
 
-find_package(PostgreSQL REQUIRED)
-if(PostgreSQL_FOUND)
-  message(STATUS "PostgreSQL found")
-else()
-  message(FATAL_ERROR "PostgreSQL not found")
-endif()
-
-
-
-
-
-
-
-
 
 
 INSTALL( TARGETS
