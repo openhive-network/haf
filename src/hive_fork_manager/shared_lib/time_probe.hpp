@@ -11,7 +11,6 @@ class time_probe
   time_probe()
   {
     reset();
-    start();
   }
 
   void reset() { duration = std::chrono::nanoseconds(); }
@@ -22,7 +21,6 @@ class time_probe
 
   void print_duration(const std::string& message)
   {
-    stop();
     auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
     auto seconds =
         std::chrono::duration_cast<std::chrono::seconds>(duration % std::chrono::minutes(1));

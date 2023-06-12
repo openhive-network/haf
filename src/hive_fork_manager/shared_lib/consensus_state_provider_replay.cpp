@@ -147,7 +147,7 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
 
 void postgres_block_log::get_postgres_data(int from, int to, const char* postgres_url)
 {
-  time_probe get_postgres_data_time_probe;
+  time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
   class postgres_database
   {
@@ -193,7 +193,7 @@ void postgres_block_log::get_postgres_data(int from, int to, const char* postgre
   operations = db.execute_query(operations_query);
   std::cout << "Operations:" << operations.size() << " ";
   // clang-format on
-  get_postgres_data_time_probe.print_duration("Postgres");
+  get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
 }
 
 
