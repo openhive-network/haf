@@ -369,7 +369,6 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO measurements of phases for trans and non_trans
 # TODO - rename - everything should be named csp - consensus state prvider, sometimes only - cab - current_account_balances
 # TODO split into commits. for example, "an additional parameter in state providers due to the necessity of passing there the disk path to the storage of the consensus state provider".
-# DONE rename moider to no_transaction - non_transactional_version simple_version direct_operation_version
 # TODO make it truly  switchable with classic version - command line param = switching from  trans to non trans, -> eliminate ?
 # TODO cond copy and copy operations buffer - use cast or move modern version not pqxx
 # TODO
@@ -377,18 +376,14 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO Remove allow_reevaluate
 # TODO wywal inne state providery np ACCOUNTS
 # TODO wywal w ogóle state providera z cab_app i uzywaj tylko funkcji z src/hive_fork_manager/consensus_state_provider_helpers.sql
-# DONE separate driver for C code
-# TODO ASAN - memory leaks
 # TODO add interface to get a particular account balance
 # TODO cleanup init(db
 # TODO remove mtlk
-# TODO hierarchical handling of exceptions
 # TODO are all headers included ?
 # TODO #include" vs. #include<
 # TODO remove wlog, and put info where applicable
 # TODO example testing app - move to proper place in directory tree
 # TODO interface ?, name consensu or context or current_acount_balance provider ?
-# DONE from_variant_to_full_block_ptr.cpp file not needed
 # TODO flag constructors / destructors default
 # TODO constants in collect_current_all_accounts_balances , 
 # TODO clean garbage in /home/hived/datadir/consensus_storage when it cannot start (rg. when going Debug from Release
@@ -414,12 +409,17 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 # TODO 16 magic number in account                 CHAR(16),
 
+# TODO hierarchical handling of exceptions
 # TODO - LATER try to reconnect ? try_to_restore_connection();
 # TODO - LATER  clangcheck if binary data can be taken from hive::operation
 # TODO - LATER  clanguse unlink to automatically delete a file when connection (process) goes down
 # TODO - LATER  clang find #include
 # TODO - LATER ?  add .clang-format 
 
+# DONE ASAN - memory leaks
+# DONE from_variant_to_full_block_ptr.cpp file not needed
+# DONE separate driver for C code
+# DONE rename moider to no_transaction - non_transactional_version simple_version direct_operation_version
 # DONE struct postgres_block_log into class
 # DONE maybe revert a bit of code in code and pass a lambda ??
 # DONE pfree in utitlities.cpp where needed
