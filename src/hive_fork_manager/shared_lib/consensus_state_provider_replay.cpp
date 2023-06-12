@@ -28,7 +28,7 @@ std::string fix_pxx_time(const pqxx::field& t);
 // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
 const char* fix_pxx_hex(const pqxx::field& h);
 
-struct Postgres2Blocks
+struct postgres_block_log
 {
   void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path, bool allow_reevaluate);
   void handle_exception(std::exception_ptr exception_ptr);
@@ -112,12 +112,12 @@ bool consensus_state_provider_replay_impl(int from, int to, const char* context,
     }
   }
 
-  Postgres2Blocks p2b;
+  postgres_block_log p2b;
   p2b.run(from, to, context, postgres_url, shared_memory_bin_path, allow_reevaluate);
   return true;
 }
 
-void Postgres2Blocks::run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path,
+void postgres_block_log::run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path,
                           bool allow_reevaluate)
 {
   transformations_duration = std::chrono::nanoseconds();
@@ -130,7 +130,7 @@ void Postgres2Blocks::run(int from, int to, const char* context, const char* pos
   print_duration("Trans", transformations_duration);
 }
 
-void Postgres2Blocks::get_data_from_postgres(int from, int to, const char* postgres_url)
+void postgres_block_log::get_data_from_postgres(int from, int to, const char* postgres_url)
 {
   try
   {
@@ -174,7 +174,7 @@ void Postgres2Blocks::get_data_from_postgres(int from, int to, const char* postg
   }
 }
 
-void Postgres2Blocks::handle_exception(std::exception_ptr exception_ptr)
+void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
 {
   try
   {
@@ -186,30 +186,30 @@ void Postgres2Blocks::handle_exception(std::exception_ptr exception_ptr)
   }
   catch(const pqxx::broken_connection& ex)
   {
-    elog("Postgres2Blocks detected connection error: ${e}.", ("e", ex.what()));
+    elog("postgres_block_log detected connection error: ${e}.", ("e", ex.what()));
     // try_to_restore_connection();
   }
   catch(const pqxx::sql_error& ex)
   {
-    elog("Postgres2Blocks detected SQL statement execution failure. Failing statement: `${q}'.", ("q", ex.query()));
+    elog("postgres_block_log detected SQL statement execution failure. Failing statement: `${q}'.", ("q", ex.query()));
   }
   catch(const pqxx::pqxx_exception& ex)
   {
-    elog("Postgres2Blocks detected SQL execution failure: ${e}.", ("e", ex.base().what()));
+    elog("postgres_block_log detected SQL execution failure: ${e}.", ("e", ex.base().what()));
   }
   catch(...)
   {
-    elog("Postgres2Blocks execution failed: unknown exception.");
+    elog("postgres_block_log execution failed: unknown exception.");
   }
 }
 
-void Postgres2Blocks::initialize_iterators()
+void postgres_block_log::initialize_iterators()
 {
   current_transaction = transactions.begin();
   current_operation = operations.begin();
 }
 
-void Postgres2Blocks::replay_blocks(const char* context, const char* shared_memory_bin_path, bool allow_reevaluate)
+void postgres_block_log::replay_blocks(const char* context, const char* shared_memory_bin_path, bool allow_reevaluate)
 {
   for(const auto& block : blocks)
   {
@@ -217,7 +217,7 @@ void Postgres2Blocks::replay_blocks(const char* context, const char* shared_memo
   }
 }
 
-void Postgres2Blocks::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path,
+void postgres_block_log::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path,
                                           bool allow_reevaluate)
 {
   auto start = std::chrono::high_resolution_clock::now();
@@ -267,7 +267,7 @@ void Postgres2Blocks::replay_block(const pqxx::row& block, const char* context, 
 }
 
 
-void Postgres2Blocks::non_transactional_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block)
+void postgres_block_log::non_transactional_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block)
 {
   int current_operation;
 
@@ -302,7 +302,7 @@ void Postgres2Blocks::non_transactional_apply_op_block(hive::chain::database& db
 }
 
 
-void Postgres2Blocks::apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr,
+void postgres_block_log::apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr,
                                        uint64_t skip_flags)
 {
   db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
@@ -311,7 +311,7 @@ void Postgres2Blocks::apply_full_block(hive::chain::database& db, const std::sha
   db.set_revision(db.head_block_num());
 }
 
-fc::variant Postgres2Blocks::block2variant(const pqxx::row& block, bool no_transactions)
+fc::variant postgres_block_log::block2variant(const pqxx::row& block, bool no_transactions)
 {
   auto block_num = block["num"].as<int>();
 
@@ -361,7 +361,7 @@ fc::variant Postgres2Blocks::block2variant(const pqxx::row& block, bool no_trans
   return block_variant;
 }
 
-void Postgres2Blocks::transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants,
+void postgres_block_log::transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants,
                                             std::vector<fc::variant>& trancaction_variants)
 {
   for(; current_transaction != transactions.end() && is_current_transaction(current_transaction, block_num); ++current_transaction)
@@ -382,12 +382,12 @@ void Postgres2Blocks::transactions2variants(int block_num, std::vector<fc::varia
   }
 }
 
-bool Postgres2Blocks::is_current_transaction(const pqxx::result::const_iterator& current_transaction, const int block_num)
+bool postgres_block_log::is_current_transaction(const pqxx::result::const_iterator& current_transaction, const int block_num)
 {
   return current_transaction["block_num"].as<int>() == block_num;
 }
 
-std::vector<std::string> Postgres2Blocks::build_signatures(const pqxx::result::const_iterator& transaction)
+std::vector<std::string> postgres_block_log::build_signatures(const pqxx::result::const_iterator& transaction)
 {
   std::vector<std::string> signatures;
   if(strlen(transaction["signature"].c_str()))
@@ -397,7 +397,7 @@ std::vector<std::string> Postgres2Blocks::build_signatures(const pqxx::result::c
   return signatures;
 }
 
-void Postgres2Blocks::build_transaction_ids(const pqxx::result::const_iterator& transaction,
+void postgres_block_log::build_transaction_ids(const pqxx::result::const_iterator& transaction,
                                             std::vector<fc::variant>& transaction_id_variants)
 {
   //  https://github.com/jtv/libpqxx/blob/3d97c80bcde96fb70a21c1ae1cf92ad934818210/include/pqxx/field.hxx
@@ -417,7 +417,7 @@ void Postgres2Blocks::build_transaction_ids(const pqxx::result::const_iterator& 
   transaction_id_variants.push_back(fix_pxx_hex(transaction["trx_hash"]));
 }
 
-void Postgres2Blocks::rewind_operations_iterator_to_current_block(int block_num)
+void postgres_block_log::rewind_operations_iterator_to_current_block(int block_num)
 {
   while(current_operation_block_num() < block_num && current_operation != operations.end())
   {
@@ -425,7 +425,7 @@ void Postgres2Blocks::rewind_operations_iterator_to_current_block(int block_num)
   }
 };
 
-fc::variant Postgres2Blocks::build_transaction_variant(const pqxx::result::const_iterator& transaction,
+fc::variant postgres_block_log::build_transaction_variant(const pqxx::result::const_iterator& transaction,
                                                        const std::vector<std::string>& signatures,
                                                        const std::vector<variant_and_binary_type>& varbin_operations)
 {
@@ -446,7 +446,7 @@ fc::variant Postgres2Blocks::build_transaction_variant(const pqxx::result::const
   return transaction_variant_builder.get();
 }
 
-std::vector<Postgres2Blocks::variant_and_binary_type> Postgres2Blocks::operations2variants(int block_num, int trx_in_block)
+std::vector<postgres_block_log::variant_and_binary_type> postgres_block_log::operations2variants(int block_num, int trx_in_block)
 {
   std::vector<variant_and_binary_type> varbin_operations;
   if(is_current_operation(block_num, trx_in_block))
@@ -460,17 +460,17 @@ std::vector<Postgres2Blocks::variant_and_binary_type> Postgres2Blocks::operation
   return varbin_operations;
 }
 
-bool Postgres2Blocks::is_current_operation(int block_num, int trx_in_block) const
+bool postgres_block_log::is_current_operation(int block_num, int trx_in_block) const
 {
   return block_num == current_operation_block_num() && trx_in_block == current_operation_trx_num();
 }
 
-bool Postgres2Blocks::operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block) 
+bool postgres_block_log::operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block) 
 {
   return operation["block_num"].as<int>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block;
 }
 
-void Postgres2Blocks::add_operation_variant(const pqxx::const_result_iterator& operation, std::vector<variant_and_binary_type>& varbin_operations)
+void postgres_block_log::add_operation_variant(const pqxx::const_result_iterator& operation, std::vector<variant_and_binary_type>& varbin_operations)
 {
     pqxx::binarystring json(operation["body"]);
     pqxx::binarystring bs(operation["bin_body"]);
@@ -531,21 +531,21 @@ void Postgres2Blocks::add_operation_variant(const pqxx::const_result_iterator& o
 
 
   //iterators for traversing the values above
-  int Postgres2Blocks::current_transaction_block_num()
+  int postgres_block_log::current_transaction_block_num()
 {
   if(transactions.empty()) return -1;
   if(transactions.end() == current_transaction) return std::numeric_limits<int>::max();
   return current_transaction["block_num"].as<int>();
 }
 
-int Postgres2Blocks::current_operation_block_num() const
+int postgres_block_log::current_operation_block_num() const
 {
   if(operations.empty()) return -1;
   if(operations.end() == current_operation) return std::numeric_limits<int>::max();
   return current_operation["block_num"].as<int>();
 }
 
-int Postgres2Blocks::current_operation_trx_num() const
+int postgres_block_log::current_operation_trx_num() const
 {
   if(operations.empty()) return -1;
   if(operations.end() == current_operation) return std::numeric_limits<int>::max();
@@ -553,7 +553,7 @@ int Postgres2Blocks::current_operation_trx_num() const
 }
 
 
-uint64_t Postgres2Blocks::get_skip_flags()
+uint64_t postgres_block_log::get_skip_flags()
 {
   // clang-format off
   return hive::chain::database::skip_block_log |

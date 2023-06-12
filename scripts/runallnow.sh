@@ -381,7 +381,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # TODO ASAN - memory leaks
 # TODO add interface to get a particular account balance
 # TODO cleanup init(db
-# TODO struct Postgres2Blocks into class
+# TODO struct postgres_block_log into class
 # TODO remove mtlk
 # TODO hierarchical handling of exceptions
 # TODO are all headers included ?
