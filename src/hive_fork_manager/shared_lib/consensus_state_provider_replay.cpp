@@ -152,7 +152,7 @@ void postgres_block_log::get_data_from_postgres(int from, int to, const char* po
 {
   time_probe get_data_from_postgres_time_probe;
 
-  class
+  class postgres_database
   {
   public:
     explicit postgres_database(const char* url) : conn(url) {}
