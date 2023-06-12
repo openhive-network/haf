@@ -722,11 +722,6 @@ collected_account_balances_collection_t collect_current_all_accounts_balances_im
   return collect_current_all_accounts_balances(context);
 }
 
-collected_account_balances_collection_t collect_current_account_balance_impl(const char* acount, const char* context, const char* shared_memory_bin_path)
-{
-  initialize_context(context, shared_memory_bin_path);
-  return collect_current_account_balance(acount, context);
-}
 
 collected_account_balances_collection_t collect_current_account_balances_impl(const std::vector<std::string>& accounts, const char* context, const char* shared_memory_bin_path)
 {

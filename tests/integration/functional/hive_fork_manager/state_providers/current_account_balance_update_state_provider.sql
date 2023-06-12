@@ -90,13 +90,6 @@ BEGIN
 
 
 
-
-    FOR rec IN SELECT * FROM hive.current_account_balance('initminer','context', get_consensus_storage_path(_writable_directory)) LOOP
-         ASSERT rec.account = 'initminer', 'Account is not ''initminer''';
-         ASSERT rec.balance = 4000, 'Balance should be 4000';
-    END LOOP;
-
-
     FOR rec IN SELECT * FROM hive.current_account_balances(ARRAY['initminer', 'miners'],'context', get_consensus_storage_path(_writable_directory)) LOOP
         RAISE NOTICE 'Current record: %', rec;
         

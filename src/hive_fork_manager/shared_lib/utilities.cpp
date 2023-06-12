@@ -883,56 +883,7 @@ Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
   return (Datum)0;
 }
 
-PG_FUNCTION_INFO_V1(current_account_balance);
 
-/**
- ** CREATE OR REPLACE FUNCTION hive.current_account_balance(IN account TEXT, IN _context TEXT)
- ** RETURNS SETOF hive.current_account_balance_return_type
- ** AS 'MODULE_PATHNAME', 'current_account_balance' LANGUAGE C;
- **
- ** Returns all accounts information for the given state.
- **/
-
-Datum current_account_balance(PG_FUNCTION_ARGS)
-{
-  const char* account = text_to_cstring(PG_GETARG_TEXT_PP(0));
-  const char* context = text_to_cstring(PG_GETARG_TEXT_PP(1));
-  const char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(2));
-
-  consensus_state_provider::collected_account_balances_collection_t collected_data;
-
-  colect_data_and_fill_returned_recordset(
-
-      [=, &collected_data]()
-      {
-        collected_data = consensus_state_provider::collect_current_account_balance_impl(
-            account, context, shared_memory_bin_path);
-      },
-
-      [=, &collected_data]()
-      {
-        fill_return_tuples(
-            collected_data, fcinfo,
-            [](const auto& account_data)
-            {
-              fc::string account = account_data.account_name;
-              return CStringGetTextDatum(account.c_str());
-            },
-            [](const auto& account_data) { return Int64GetDatum(account_data.balance); },
-            [](const auto& account_data) { return Int64GetDatum(account_data.hbd_balance); },
-            [](const auto& account_data) { return Int64GetDatum(account_data.vesting_shares); },
-            [](const auto& account_data)
-            { return Int64GetDatum(account_data.savings_hbd_balance); },
-            [](const auto& account_data)
-            { return Int64GetDatum(account_data.reward_hbd_balance); });
-      },
-
-      __FUNCTION__,
-
-      [] { return std::string{""}; });
-
-  return (Datum)0;
-}
 
 std::vector<std::string> extract_string_array_from_datum(ArrayType* arr)
 {
