@@ -86,8 +86,7 @@ bool consensus_state_provider_replay_impl(int from, int to, const char* context,
       return false;
   }
 
-  postgres_block_log p2b;
-  p2b.run(from, to, context, postgres_url, shared_memory_bin_path);
+  postgres_block_log().run(from, to, context, postgres_url, shared_memory_bin_path);
   return true;
 }
 
