@@ -10,8 +10,6 @@ namespace fc
 
 #include <hive/chain/full_block.hpp>
 
-void print_flags(std::ios_base::fmtflags flags);
-void reset_stream(std::ostream& os);
 
 namespace consensus_state_provider {
 bool consensus_state_provider_replay_impl(int from,
