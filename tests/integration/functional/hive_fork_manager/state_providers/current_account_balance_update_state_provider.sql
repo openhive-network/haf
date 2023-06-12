@@ -1,5 +1,8 @@
 -- PROCEDURES needed here instead of functions, because pqxx library can see changes only after COMMIT;
 
+CREATE EXTENSION IF NOT EXISTS hstore;
+
+
 DROP PROCEDURE IF EXISTS test_given;
 CREATE PROCEDURE test_given(_writable_directory TEXT)
     LANGUAGE 'plpgsql'
@@ -70,11 +73,48 @@ AS
 $BODY$
 DECLARE
     rec hive.current_account_balance_return_type;
+
+
+ rec2 RECORD;
+    expected hstore := '"miners"=>"1000", "initminer"=>"4000"';
+    actual hstore := '';
+
 BEGIN
+    FOR rec2 IN SELECT * FROM hive.current_account_balances(akeys(expected),'context', get_consensus_storage_path(_writable_directory)) LOOP
+        actual := actual || format('"%s"=>"%s"', rec2.account, rec2.balance)::hstore;
+    END LOOP;  
+
+    --ASSERT expected = actual, 'Expected:'  || expected::TEXT ;-- || 'but got:' || actual;
+    ASSERT expected = actual, 'Expected: ' || expected::TEXT  || ' but got: ' ||  actual::TEXT;
+
+
+
+
+
     FOR rec IN SELECT * FROM hive.current_account_balance('initminer','context', get_consensus_storage_path(_writable_directory)) LOOP
          ASSERT rec.account = 'initminer', 'Account is not ''initminer''';
          ASSERT rec.balance = 4000, 'Balance should be 4000';
-    END LOOP;    
+    END LOOP;
+
+
+    FOR rec IN SELECT * FROM hive.current_account_balances(ARRAY['initminer', 'miners'],'context', get_consensus_storage_path(_writable_directory)) LOOP
+        RAISE NOTICE 'Current record: %', rec;
+        
+        IF rec.account = 'initminer' THEN
+            ASSERT rec.balance = 4000, 'Balance should be 4000 for initminer';
+            RAISE NOTICE 'Balance checked for initminer.';
+        END IF;
+
+        IF rec.account = 'miners' THEN
+            ASSERT rec.balance = 1000, 'Balance should be 1000 for miners';
+            RAISE NOTICE 'Balance checked for miners.';
+        END IF;
+
+        -- add more checks for more accounts if needed
+    END LOOP;  
+
+
+
     ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 7';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';
