@@ -23,8 +23,8 @@ if TYPE_CHECKING:
 
     from haf_local_tools.db_adapter import ColumnType, ScalarType
 
-    class Transaction(TypedDict):
-        transaction_id: str
+class Transaction(TypedDict):
+    transaction_id: str
 
 TransactionId = str
 

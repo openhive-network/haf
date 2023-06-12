@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 import test_tools as tt
 
-from haf_local_tools.haf_node._haf_node import HafNode
+from haf_local_tools.haf_node._haf_node import HafNode, Transaction, TransactionId
 from haf_local_tools.tables import BlocksView
 
 
@@ -37,3 +37,11 @@ def assert_are_indexes_restored(haf_node: HafNode):
     # verify that indexes are restored
     are_indexes_dropped = haf_node.query_one("SELECT hive.are_indexes_dropped()")
     assert are_indexes_dropped == False
+
+
+def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Transaction, TransactionId]):
+    try:
+        haf_node.wait_for_transaction_in_database(transaction=transaction, timeout=0)
+    except TimeoutError:
+        assert False, "Transaction NOT exist in database"
+    return True

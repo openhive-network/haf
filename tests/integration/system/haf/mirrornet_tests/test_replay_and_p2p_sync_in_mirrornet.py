@@ -6,6 +6,7 @@ from haf_local_tools.system.haf import (
     connect_nodes,
     assert_are_blocks_sync_with_haf_db,
     assert_are_indexes_restored,
+    assert_is_transaction_in_database,
 )
 from haf_local_tools.system.haf.mirrornet.constants import (
     CHAIN_ID,
@@ -59,21 +60,11 @@ def test_replay_and_p2p_sync(
         arguments=["--chain-id", CHAIN_ID],
     )
 
-    haf_node.wait_for_transaction_in_database(
-        transaction=TRANSACTION_IN_1092_BLOCK, timeout=120
-    )
-    haf_node.wait_for_transaction_in_database(
-        transaction=TRANSACTION_IN_999892_BLOCK, timeout=120
-    )
-    haf_node.wait_for_transaction_in_database(
-        transaction=TRANSACTION_IN_4500000_BLOCK, timeout=120
-    )
-    haf_node.wait_for_transaction_in_database(
-        transaction=TRANSACTION_IN_4500001_BLOCK, timeout=120
-    )
-    haf_node.wait_for_transaction_in_database(
-        transaction=TRANSACTION_IN_5000000_BLOCK, timeout=120
-    )
+    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_1092_BLOCK)
+    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_999892_BLOCK)
+    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_4500000_BLOCK)
+    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_4500001_BLOCK)
+    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_5000000_BLOCK)
 
     assert_are_blocks_sync_with_haf_db(haf_node, 5000000)
     assert_are_indexes_restored(haf_node)
