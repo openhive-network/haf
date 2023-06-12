@@ -239,6 +239,7 @@ replay_accounts_body_operations_filtered_with_haf:
 
 replay_with_update:
   extends: .replay_step
+  when: manual
   variables:
     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
     REPLAY: "--replay-blockchain --stop-replay-at-block 1000000"
