@@ -16,10 +16,7 @@ void reset_stream(std::ostream& os) ;
 
 namespace consensus_state_provider
 {
-  bool consensus_state_provider_replay_impl(int from, int to, const char *context, const char *postgres_url, const char* shared_memory_bin_path
-                                ,
-                                bool allow_reevaluate = false
-  );
+  bool consensus_state_provider_replay_impl(int from, int to, const char *context, const char *postgres_url, const char* shared_memory_bin_path);
 
   int initialize_context(const char* context, const char* shared_memory_bin_path);
   std::shared_ptr<hive::chain::full_block_type> from_variant_to_full_block_ptr(const fc::variant& v, int block_num );

@@ -31,13 +31,13 @@ const char* fix_pxx_hex(const pqxx::field& h);
 class postgres_block_log
 {
 public:
-  void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path, bool allow_reevaluate);
+  void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path);
 private:
   void handle_exception(std::exception_ptr exception_ptr);
   void get_data_from_postgres(int from, int to, const char* postgres_url);
   void initialize_iterators();
-  void replay_blocks(const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
-  void replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, bool allow_reevaluate);
+  void replay_blocks(const char* context, const char* shared_memory_bin_path);
+  void replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path);
   void non_transactional_apply_op_block(hive::chain::database& db, pqxx::result::const_iterator& cur_op, const pqxx::result::const_iterator& end_it, int block_num, const std::shared_ptr<hive::chain::full_block_type>& full_block);
   static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
@@ -97,28 +97,18 @@ class PostgresDatabase
 };
 
 bool consensus_state_provider_replay_impl(int from, int to, const char* context, const char* postgres_url,
-                                          const char* shared_memory_bin_path, bool allow_reevaluate)
+                                          const char* shared_memory_bin_path)
 {
   if(from != consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path))
   {
-    if(allow_reevaluate)
-    {
-      wlog(
-          "WARNING: Cannot replay consensus state provider properly, but reevaluating anyway: Initial \"from\" block number is ${from}, "
-          "but current state is expecting ${curr}",
-          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
-    }
-    else
-    {
       elog(
           "ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
           ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
       return false;
-    }
   }
 
   postgres_block_log p2b;
-  p2b.run(from, to, context, postgres_url, shared_memory_bin_path, allow_reevaluate);
+  p2b.run(from, to, context, postgres_url, shared_memory_bin_path);
   return true;
 }
 
@@ -126,8 +116,7 @@ void postgres_block_log::run(int from,
                              int to,
                              const char* context,
                              const char* postgres_url,
-                             const char* shared_memory_bin_path,
-                             bool allow_reevaluate)
+                             const char* shared_memory_bin_path)
 {
   transformations_time_probe.reset();
   apply_full_block_time_probe.reset();;
@@ -139,7 +128,7 @@ void postgres_block_log::run(int from,
 
     initialize_iterators();
 
-    replay_blocks(context, shared_memory_bin_path, allow_reevaluate);
+    replay_blocks(context, shared_memory_bin_path);
   }
   catch(...)
   {
@@ -221,24 +210,22 @@ void postgres_block_log::initialize_iterators()
   current_operation = operations.begin();
 }
 
-void postgres_block_log::replay_blocks(const char* context, const char* shared_memory_bin_path, bool allow_reevaluate)
+void postgres_block_log::replay_blocks(const char* context, const char* shared_memory_bin_path)
 {
   for(const auto& block : blocks)
   {
-    replay_block(block, context, shared_memory_bin_path, allow_reevaluate);
+    replay_block(block, context, shared_memory_bin_path);
   }
 }
 
-void postgres_block_log::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path,
-                                          bool allow_reevaluate)
+void postgres_block_log::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path)
 {
   transformations_time_probe.start();
 
   auto block_num = block["num"].as<int>();
-  if(!allow_reevaluate)
-    if(block_num != initialize_context(context, shared_memory_bin_path)) return;
 
-
+  if(block_num != initialize_context(context, shared_memory_bin_path)) 
+    return;
 
   hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
 
