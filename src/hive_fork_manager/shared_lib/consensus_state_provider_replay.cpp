@@ -125,14 +125,12 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
   {
     if(exception_ptr)
     {
-      // do something for all exceptions
       std::rethrow_exception(exception_ptr);
     }
   }
   catch(const pqxx::broken_connection& ex)
   {
     elog("postgres_block_log detected connection error: ${e}.", ("e", ex.what()));
-    // try_to_restore_connection();
   }
   catch(const pqxx::sql_error& ex)
   {
