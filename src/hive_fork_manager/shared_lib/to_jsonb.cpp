@@ -13,7 +13,6 @@
 #include <string>
 #include <vector>
 
-
 namespace {
 
 JsonbValue* push_key_to_jsonb(const std::string& key, JsonbParseState** parseState)
@@ -365,5 +364,3 @@ JsonbValue* operation_to_jsonb_value(const hive::protocol::operation& op)
 
   return op.visit(static_variant_to_jsonb_visitor(&parseState));
 }
-
-
