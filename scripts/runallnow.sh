@@ -366,7 +366,8 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
-# TODO rename moider to no_transaction - non_transactional_version simple_version direct_operation_version
+# TODO measurements of phases for trans and non_trans
+# DONE rename moider to no_transaction - non_transactional_version simple_version direct_operation_version
 # TODO make it truly  switchable with classic version - command line param
 # TODO maybe revert a bit of code in code and pass a lambda ?
 # TODO cond copy and copy operations buffer - use cast or move modern version not pqxx
