@@ -152,7 +152,7 @@ void postgres_block_log::get_data_from_postgres(int from, int to, const char* po
 {
   time_probe get_data_from_postgres_time_probe;
 
-  class postgres_database
+  class
   {
   public:
     explicit postgres_database(const char* url) : conn(url) {}
@@ -167,9 +167,9 @@ void postgres_block_log::get_data_from_postgres(int from, int to, const char* po
 
   private:
     pqxx::connection conn;
-  };
-
-  postgres_database db(postgres_url);
+  } 
+  db(postgres_url);
+  
   // clang-format off
     auto blocks_query = "SELECT * FROM hive.blocks JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
                                 + std::to_string(from) 
