@@ -20,8 +20,6 @@
 namespace consensus_state_provider
 {
 
-void get_into_op(const pqxx::binarystring& bs);
-
 // value coming from pxx is without 'T' in the middle to be accepted in variant
 std::string fix_pxx_time(const pqxx::field& t);
 
@@ -483,61 +481,11 @@ bool postgres_block_log::operation_matches_block_transaction(const pqxx::const_r
 void postgres_block_log::add_operation_variant(const pqxx::const_result_iterator& operation, std::vector<fc::variant>& operation_variants)
 {
     pqxx::binarystring json(operation["body"]);
-    //pqxx::binarystring bs(operation["bin_body"]);
-
-    //std::cout << "Json size: " << json.size() << " Json data: " << json.data() << std::endl;
-    //std::cout << "Blob size: " << bs.size() << " Blob data: " << bs.data() << std::endl;
-
-    
-    //std::cout.copyfmt(std::stringstream()); //reset stream state
-
-    // auto data = bs.data();
-    // size_t size = bs.size();
-
-
-
-    // std::cout << "Binary data: ";
-    // for (size_t i = 0; i < size; ++i) {
-    //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>((unsigned char)data[i]);
-    // }
-    // std::cout << std::dec << "\n";        
-
     const auto& body_in_json = operation["body"].c_str();
-
-
-
-
-    //get_into_op(bs);
-
-    // //fc::blob val;
-    // //val.data.assign(bs.data(), bs.data() + bs.size());
-
-    // //haf_blob_operation hbo(val);
-
-    
-    // hive::protocol::custom_binary_operation cbo;
-    // cbo.data.assign(bs.data(), bs.data() + bs.size());
-
-    // fc::operation op (cbo);
-
-    // fc::string  s =   fc::json::to_string(op);
-    // std::cout << "Cbo size: " << s.size() << " Cbo data: " << s << std::endl;
-    // // const auto& operation_variant = fc::json::from_string(s);
-
-    // fc::variant operation_variant2;
-    // to_variant(op, operation_variant2);
-    
-
-    //fc::variant vb = fc::json::from_string(body_in_json);
-
     operation_variants.emplace_back(fc::json::from_string(body_in_json));
-    //operation_variants.emplace_back(operation_variant2);
-}
+  }
 
-
-
-  //iterators for traversing the values above
-  int postgres_block_log::current_transaction_block_num()
+int postgres_block_log::current_transaction_block_num()
 {
   if(transactions.empty()) return BLOCK_NUM_EMPTY;
   if(transactions.end() == current_transaction) return BLOCK_NUM_MAX;
@@ -892,24 +840,6 @@ struct conensus_op_visitor_type
  private:
 };
 
-void get_into_op(const pqxx::binarystring& bs)
-{
-  //_operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
-
-  // VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body ));
-
-  using hive::protocol::operation;
-
-  const char* raw_data = reinterpret_cast<const char*>(bs.data());
-  uint32_t data_length = bs.size();
-
-  operation op = fc::raw::unpack_from_char_array<operation>(raw_data, data_length);
-
-  conensus_op_visitor_type conensus_op_visitor;
-  op.visit(conensus_op_visitor);
-
-  // note.op.visit( post_operation_visitor( *this ) );
-}
 
 // value coming from pxx is without 'T' in the middle to be accepted in variant
 std::string fix_pxx_time(const pqxx::field& t)
