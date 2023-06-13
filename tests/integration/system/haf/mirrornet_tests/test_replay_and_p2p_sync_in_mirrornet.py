@@ -30,7 +30,7 @@ from haf_local_tools.system.haf.mirrornet.constants import (
     ],
 )
 def test_replay_and_p2p_sync(
-    mirrornet_witness_node, haf_node, block_log_5m_path, tmp_path, psql_index_threshold
+    mirrornet_witness_node, haf_node, block_log_5m_path, tmp_path, psql_index_threshold, snapshot_path
 ):
     haf_node.config.psql_index_threshold = psql_index_threshold
 
@@ -38,7 +38,7 @@ def test_replay_and_p2p_sync(
     block_log_4_5m = block_log_5m.truncate(tmp_path, 4500000)
 
     mirrornet_witness_node.run(
-        replay_from=block_log_5m,
+        load_snapshot_from=snapshot_path,
         time_offset=TIMESTAMP_5M,
         wait_for_live=True,
         timeout=3600,
