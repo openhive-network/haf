@@ -695,151 +695,6 @@ void consensus_state_provider_finish_impl(const char* context, const char* share
   }
 }
 
-using namespace hive::protocol;
-
-struct conensus_op_visitor_type
-{
-  conensus_op_visitor_type() {}
-
-  typedef void result_type;
-
-  template <typename T>
-  void operator()(const T&) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const account_create_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const account_create_with_delegation_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const account_update_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const account_update2_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const create_claimed_account_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const recover_account_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const pow_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const pow2_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const hardfork_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const transfer_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const transfer_to_vesting_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const account_witness_vote_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const comment_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const vote_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const withdraw_vesting_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const account_witness_proxy_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const feed_publish_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
-  void operator()(const witness_update_operation& op) const
-  {
-    int a = 0;
-    a = 1;
-    (void)a;
-  }
-
- private:
-};
-
 
 // value coming from pxx is without 'T' in the middle to be accepted in variant
 std::string fix_pxx_time(const pqxx::field& t)
@@ -850,6 +705,9 @@ std::string fix_pxx_time(const pqxx::field& t)
 }
 
 // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
-const char* fix_pxx_hex(const pqxx::field& h) { return h.c_str() + 2; }
+const char* fix_pxx_hex(const pqxx::field& h) 
+{ 
+  return h.c_str() + 2; 
+}
 
 }  // namespace consensus_state_provider
