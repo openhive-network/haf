@@ -79,7 +79,13 @@ perform_instance_dump() {
 }
 
 perform_instance_load() {
-  echo "Instance load code placeholder"
+  backup_dir_name="${1}"
+  "${SCRIPTSDIR}/load_instance.sh" --backup-dir="${DATADIR}/${backup_dir_name}" --hived-executable-path=/home/hived/bin/hived \
+    --hived-db-role=hived \
+    --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --exit-before-sync \
+    --haf-db-name=haf_block_log --haf-db-admin=haf_admin \
+    --haf-db-port=5432 --haf-db-host=/var/run/postgresql
+
 }
 
 run_instance() {
