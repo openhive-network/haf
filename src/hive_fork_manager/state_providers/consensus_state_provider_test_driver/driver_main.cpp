@@ -275,7 +275,17 @@ int main(int argc, char *argv[])
             }
         }
 
-        if(!step_ok)
+
+
+
+        auto expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(context.c_str(), consensus_state_provider_storage.c_str());
+        
+        if(expected_block_num < current_step_end)
+        {
+            std::cout << "Exiting at the end of input data: " << expected_block_num - 1 << std::endl;
+        }
+
+        if(!step_ok || expected_block_num < current_step_end)
         {
             ok = false;
             break;
