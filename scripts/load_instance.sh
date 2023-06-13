@@ -58,13 +58,16 @@ load_database(){
 
 load_snapshot_and_run(){
   
-  local call_hived_load="${HIVED_EXECUTABLE_PATH}
-  --data-dir=${DATA_DIR}
-  --plugin=state_snapshot --snapshot-root-dir=${BACKUP_DIR}  --load-snapshot=hived
-  --plugin=sql_serializer --psql-url=${POSTGRES_ACCESS}
-  ${ADDITIONAL_HIVED_OPTIONS[@]}"
+  local call_hived_load="${HIVED_EXECUTABLE_PATH} --data-dir=${DATA_DIR} --plugin=state_snapshot --snapshot-root-dir=${BACKUP_DIR}  --load-snapshot=hived --plugin=sql_serializer --psql-url=${HIVED_POSTGRES_ACCESS} ${ADDITIONAL_HIVED_OPTIONS[@]}"
 
-  ${call_hived_load}
+  if [ "${HIVED_DB_ROLE}" != "${POSTGRES_USER}" ];
+  then
+    echo "Using HIVED_DB_ROLE: '${HIVED_DB_ROLE}', POSTGRES_USER: '${POSTGRES_USER}'"
+    echo "Switching to separate Hived role..."
+    sudo -Enu "${HIVED_DB_ROLE}" -- "${call_hived_load}"
+  else
+    ${call_hived_load}
+  fi
 
 }
 
