@@ -367,12 +367,41 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 # mtlk TODO:
-   
+
+
+# Dgpo
+# Wszystko  z konta
+# connection
+
+# Zablokuj wspoldostęp do sharedmemory file?
+
+
+# Csp_session. Ma pyr do bazy danych 
+# Zamiast globala
+
+
+# Transakcje. Granica transakcji
+
+
+# 2.Push_block zamiast apply block
+# Swoja block control - moze więcej virtualek
+
+# 1.fynna block log ujednolixix kod - hived blockloga head block z góry.
+
+# 0. Varianty wywalić
+
+# DONE Wydajnosc block po bloku. Na obecnej wersji
+
+
+
+
 # TODO list all blocks and acounts with negative asset (ranges of blocks, maybe)
 #            //FC_ASSERT( vo.amount >= 0, "Asset amount cannot be negative" );
 #         if(vo.amount < 0)
 #           if(mtlk_negative_asset_counter++ % 10000 == 0)
 #             wlog("Asset amount cannot be negative = ${neg_ass}" , ("neg_ass", vo.amount));
+
+
 
 
 # TODO in bash_test - nake runallnow.sh or do another file, so that it contains just script
