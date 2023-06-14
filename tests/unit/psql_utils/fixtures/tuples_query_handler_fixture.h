@@ -3,7 +3,7 @@
 #include "mock/gmock_fixture.hpp"
 #include "timeout_query_handler_fixture.h"
 
-#include "psql_utils/query_handler/tuples_query_handler.h"
+#include "psql_utils/query_handler/tuples_statistics_query_handler.hpp"
 
 #include "mock/postgres_mock.hpp"
 
@@ -11,18 +11,26 @@
 
 namespace Fixtures {
 
-  struct TuplesQueryHandlerFixture : public GmockFixture{
-    TuplesQueryHandlerFixture();
+  struct TuplesStatisticsQueryHandlerFixture : public GmockFixture{
+    TuplesStatisticsQueryHandlerFixture();
 
-    ~TuplesQueryHandlerFixture();
+    ~TuplesStatisticsQueryHandlerFixture();
 
-    void moveToRunRootQuery( PsqlTools::PsqlUtils::TuplesQueryHandler::TuplesLimitGetter _limit );
+    void moveToRunRootQuery();
 
     std::unique_ptr<QueryDesc> m_rootQuery;
     std::unique_ptr<QueryDesc> m_subQuery;
     Instrumentation m_instrumentation{};
 
-    std::shared_ptr< PsqlTools::PsqlUtils::TuplesQueryHandler > m_unitUnderTest;
+    class ClassUnderTest : public PsqlTools::PsqlUtils::TuplesStatisticsQueryHandler
+    {
+      public:
+        static constexpr auto LIMIT = 10000u;
+        bool breakQuery() const override {
+          return numberOfAllTuples() > LIMIT;
+        }
+    };
+    std::shared_ptr< ClassUnderTest > m_unitUnderTest;
   };
 
 

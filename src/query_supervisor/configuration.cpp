@@ -20,6 +20,29 @@ namespace PsqlTools::QuerySupervisor {
     );
 
     m_wrappedCustomConfiguration.addPositiveIntOption(
+      LIMIT_INSERTED_TUPLES_OPTION
+      , "Limited number of inserted rows"
+      , "Limit of rows that can be inserted with one query"
+      , DEFAULT_TUPLES_LIMIT
+    );
+
+    m_wrappedCustomConfiguration.addPositiveIntOption(
+      LIMIT_UPDATED_TUPLES_OPTION
+      , "Limited number of updated rows"
+      , "Limit of rows that can be updated with one query"
+      , DEFAULT_TUPLES_LIMIT
+    );
+
+    // does not support TRUNCATE command
+    m_wrappedCustomConfiguration.addPositiveIntOption(
+      LIMIT_DELETE_TUPLES_OPTION
+      , "Limited number of deleted rows"
+      , "Limit of rows that can be deleted with one query"
+      , DEFAULT_TUPLES_LIMIT
+    );
+
+
+    m_wrappedCustomConfiguration.addPositiveIntOption(
         LIMIT_TIMEOUT_OPTION
       , "Limited query time [ms]"
       , "Limit of time for a query execution [ms]"
@@ -39,6 +62,36 @@ namespace PsqlTools::QuerySupervisor {
   Configuration::getTuplesLimit() const {
     auto tuplesLimit  =
       m_wrappedCustomConfiguration.getOption( LIMIT_TUPLES_OPTION );
+
+    assert( std::holds_alternative< uint32_t >( tuplesLimit ) );
+
+    return std::get< uint32_t >( tuplesLimit );
+  }
+
+  uint32_t
+  Configuration::getUpdatesLimit() const {
+    auto tuplesLimit  =
+      m_wrappedCustomConfiguration.getOption( LIMIT_UPDATED_TUPLES_OPTION );
+
+    assert( std::holds_alternative< uint32_t >( tuplesLimit ) );
+
+    return std::get< uint32_t >( tuplesLimit );
+  }
+
+  uint32_t
+  Configuration::getInsertsLimit() const {
+    auto tuplesLimit  =
+      m_wrappedCustomConfiguration.getOption( LIMIT_INSERTED_TUPLES_OPTION );
+
+    assert( std::holds_alternative< uint32_t >( tuplesLimit ) );
+
+    return std::get< uint32_t >( tuplesLimit );
+  }
+
+  uint32_t
+  Configuration::getDeleteLimit() const {
+    auto tuplesLimit  =
+      m_wrappedCustomConfiguration.getOption( LIMIT_DELETE_TUPLES_OPTION );
 
     assert( std::holds_alternative< uint32_t >( tuplesLimit ) );
 
