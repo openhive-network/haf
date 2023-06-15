@@ -9,13 +9,41 @@
 #include <pqxx/pqxx>
 
 #include "fc/variant.hpp"
+#include "hive/chain/block_log.hpp"
 #include "hive/chain/database.hpp"
 #include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
 #include "hive/protocol/forward_impacted.hpp"
 #include "hive/protocol/operations.hpp"
 
 #include "pqxx_op_iterator.hpp"
-#include "time_probe.hpp" 
+#include "time_probe.hpp"
+
+
+
+class postgres_block_log_provider : public hive::chain::block_log
+{
+ public:
+  std::shared_ptr<hive::chain::full_block_type> read_block_by_num(uint32_t block_num) const override;
+  void open(const fc::path& file, bool read_only = false, bool auto_open_artifacts = true) override;
+  void set_compression(bool enabled) override;
+  void set_compression_level(int level) override;
+  std::shared_ptr<hive::chain::full_block_type> head() const override;
+
+  void for_each_block(uint32_t starting_block_number, uint32_t ending_block_number,
+                      block_processor_t processor,
+                      for_each_purpose purpose) const override;
+
+  void close() override;
+
+  hive::protocol::block_id_type read_block_id_by_num(uint32_t block_num) const override;
+  std::vector<std::shared_ptr<hive::chain::full_block_type>> read_block_range_by_num(
+      uint32_t first_block_num, uint32_t count) const override;
+
+  uint64_t append(const std::shared_ptr<hive::chain::full_block_type>& full_block) override;
+
+  void flush() override;
+};
+
 
 namespace consensus_state_provider
 {
@@ -98,6 +126,8 @@ private:
   private:
     pqxx::connection connection;
   }; 
+
+  postgres_block_log_provider a_postgres_block_log_provider;  
   const int BLOCK_NUM_EMPTY = -1;
   const int BLOCK_NUM_MAX = std::numeric_limits<int>::max();
 };
@@ -244,8 +274,8 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
 
   hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
 
-   bool classic_way = (block_num <= 1092);
-   //bool classic_way = true;
+   //bool classic_way = (block_num <= 1092);
+   bool classic_way = true;
    
   if(classic_way)
   {
@@ -522,63 +552,65 @@ uint64_t postgres_block_log::get_skip_flags()
   // clang-format on
 };
 
-int initialize_context(const char* context, const char* shared_memory_bin_path)
+auto create_and_init_database = [](const char* context, const char* shared_memory_bin_path) -> hive::chain::database*
 {
-  auto create_and_init_database = [](const char* context, const char* shared_memory_bin_path) -> hive::chain::database*
+  auto initialize_chain_db = [](hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
   {
-    auto initialize_chain_db = [](hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
+    auto set_open_args_data_dir = [](hive::chain::open_args& db_open_args, const char* shared_memory_bin_path)
     {
-      auto set_open_args_data_dir = [](hive::chain::open_args& db_open_args, const char* shared_memory_bin_path)
-      {
-        db_open_args.data_dir = shared_memory_bin_path;
-        db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
-      };
-
-      auto set_open_args_supply = [](hive::chain::open_args& db_open_args)
-      {
-        db_open_args.initial_supply = HIVE_INIT_SUPPLY;
-        db_open_args.hbd_initial_supply = HIVE_HBD_INIT_SUPPLY;
-      };
-
-      auto set_open_args_other_parameters = [](hive::chain::open_args& db_open_args)
-      {
-        db_open_args.shared_file_size = 25769803776;
-        db_open_args.shared_file_full_threshold = 0;
-        db_open_args.shared_file_scale_rate = 0;
-        db_open_args.chainbase_flags = 0;
-        db_open_args.do_validate_invariants = false;
-        db_open_args.stop_replay_at = 0;
-        db_open_args.exit_after_replay = false;
-        db_open_args.validate_during_replay = false;
-        db_open_args.benchmark_is_enabled = false;
-        db_open_args.replay_in_memory = false;
-        db_open_args.enable_block_log_compression = true;
-        db_open_args.block_log_compression_level = 15;
-        db_open_args.postgres_not_block_log = true;
-        db_open_args.force_replay = false;
-      };
-
-      // End of local functions definitions
-      // ===================================
-
-      // Main body of the function
-      db.set_flush_interval(10'000);
-      db.set_require_locking(false);
-
-      hive::chain::open_args db_open_args;
-
-      set_open_args_data_dir(db_open_args, shared_memory_bin_path);
-      set_open_args_supply(db_open_args);
-      set_open_args_other_parameters(db_open_args);
-
-      db.open(db_open_args);
+      db_open_args.data_dir = shared_memory_bin_path;
+      db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
     };
 
-    hive::chain::database* db = new hive::chain::database;
-    initialize_chain_db(*db, context, shared_memory_bin_path);
-    consensus_state_provider::get_cache().add(context, db);
-    return db;
+    auto set_open_args_supply = [](hive::chain::open_args& db_open_args)
+    {
+      db_open_args.initial_supply = HIVE_INIT_SUPPLY;
+      db_open_args.hbd_initial_supply = HIVE_HBD_INIT_SUPPLY;
+    };
+
+    auto set_open_args_other_parameters = [](hive::chain::open_args& db_open_args)
+    {
+      db_open_args.shared_file_size = 25769803776;
+      db_open_args.shared_file_full_threshold = 0;
+      db_open_args.shared_file_scale_rate = 0;
+      db_open_args.chainbase_flags = 0;
+      db_open_args.do_validate_invariants = false;
+      db_open_args.stop_replay_at = 0;
+      db_open_args.exit_after_replay = false;
+      db_open_args.validate_during_replay = false;
+      db_open_args.benchmark_is_enabled = false;
+      db_open_args.replay_in_memory = false;
+      db_open_args.enable_block_log_compression = true;
+      db_open_args.block_log_compression_level = 15;
+      db_open_args.postgres_not_block_log = true;
+      db_open_args.force_replay = false;
+    };
+
+    // End of local functions definitions
+    // ===================================
+
+    // Main body of the function
+    db.set_flush_interval(10'000);
+    db.set_require_locking(false);
+
+    hive::chain::open_args db_open_args;
+
+    set_open_args_data_dir(db_open_args, shared_memory_bin_path);
+    set_open_args_supply(db_open_args);
+    set_open_args_other_parameters(db_open_args);
+
+    db.open(db_open_args);
   };
+
+  hive::chain::database* db = new hive::chain::database(a_postgres_block_log_provider);
+  initialize_chain_db(*db, context, shared_memory_bin_path);
+  consensus_state_provider::get_cache().add(context, db);
+  return db;
+};
+
+
+int initialize_context(const char* context, const char* shared_memory_bin_path)
+{
 
   hive::chain::database* db;
 
