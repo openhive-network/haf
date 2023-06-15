@@ -827,13 +827,15 @@ Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 
   char* context = text_to_cstring(PG_GETARG_TEXT_PP(0));
   char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
+  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(2));
 
-  int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path);
+  int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path, postgres_url);
 
   PG_RETURN_INT32(expected_block_num);
 
   pfree(context);
   pfree(shared_memory_bin_path);
+  pfree(postgres_url);
 
   return (Datum)0;
 }
@@ -843,7 +845,8 @@ void collect_data_and_fill_recordset(
     const char* context,
     const char* shared_memory_bin_path,
     consensus_state_provider::collected_account_balances_collection_t& collected_data,
-    std::function<consensus_state_provider::collected_account_balances_collection_t()> collect_data_function)
+    std::function<consensus_state_provider::collected_account_balances_collection_t()> collect_data_function,
+    const char* C_function_name)
 {
   colect_data_and_fill_returned_recordset(
       [=, &collected_data]() { collected_data = collect_data_function(); },
@@ -858,7 +861,7 @@ void collect_data_and_fill_recordset(
             [](const auto& account_data) { return Int64GetDatum(account_data.savings_hbd_balance); },
             [](const auto& account_data) { return Int64GetDatum(account_data.reward_hbd_balance); });
       },
-      __FUNCTION__, [] { return std::string{""}; });
+      C_function_name, [] { return std::string{""}; });
  }
 
 PG_FUNCTION_INFO_V1(current_all_accounts_balances);
@@ -875,17 +878,21 @@ Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
 {
   char* context = text_to_cstring(PG_GETARG_TEXT_PP(0));
   char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
+  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(2));
+
   consensus_state_provider::collected_account_balances_collection_t collected_data;
   collect_data_and_fill_recordset(
       fcinfo, context, shared_memory_bin_path, collected_data,
       [=]()
       {
         return consensus_state_provider::collect_current_all_accounts_balances_impl(
-            context, shared_memory_bin_path);
-      });
+            context, shared_memory_bin_path, postgres_url);
+      },
+      __FUNCTION__);
 
   pfree(context);
   pfree(shared_memory_bin_path);
+  pfree(postgres_url);
 
   return (Datum)0;
 }
@@ -934,6 +941,7 @@ Datum current_account_balances(PG_FUNCTION_ARGS)
   ArrayType* accounts_arr = PG_GETARG_ARRAYTYPE_P(0);
   char* context = text_to_cstring(PG_GETARG_TEXT_PP(1));
   char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(2));
+  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(3));
 
   std::vector<std::string> accounts = extract_string_array_from_datum(accounts_arr);
 
@@ -943,11 +951,13 @@ Datum current_account_balances(PG_FUNCTION_ARGS)
       [=]()
       {
         return consensus_state_provider::collect_current_account_balances_impl(
-            accounts, context, shared_memory_bin_path);
-      });
+            accounts, context, shared_memory_bin_path, postgres_url);
+      },
+      __FUNCTION__);
 
   pfree(context);
   pfree(shared_memory_bin_path);
+  pfree(postgres_url);
 
   return (Datum)0;
 }

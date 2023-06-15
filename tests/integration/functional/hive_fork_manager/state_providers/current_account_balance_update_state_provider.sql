@@ -58,8 +58,20 @@ CREATE PROCEDURE test_when(_writable_directory TEXT)
 AS
 $BODY$
 BEGIN
-    RAISE NOTICE 'consensus_state_provider_get_expected_block_num = %', hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory));
-    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 1';
+    RAISE NOTICE 'consensus_state_provider_get_expected_block_num = %', 
+        hive.consensus_state_provider_get_expected_block_num(
+            'context', 
+            get_consensus_storage_path(_writable_directory), 
+            hive.get_postgres_url()
+        );
+
+
+    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(
+                                'context',
+                                get_consensus_storage_path(_writable_directory),
+                                hive.get_postgres_url()
+                                )),
+                             'consensus_state_provider_get_expected_block_num should return 1';
     PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
     COMMIT;
 END;
@@ -80,7 +92,7 @@ DECLARE
     actual hstore := '';
 
 BEGIN
-    FOR rec2 IN SELECT * FROM hive.current_account_balances(akeys(expected),'context', get_consensus_storage_path(_writable_directory)) LOOP
+    FOR rec2 IN SELECT * FROM hive.current_account_balances(akeys(expected),'context', get_consensus_storage_path(_writable_directory), hive.get_postgres_url()) LOOP
         actual := actual || format('"%s"=>"%s"', rec2.account, rec2.balance)::hstore;
     END LOOP;  
 
@@ -90,7 +102,7 @@ BEGIN
 
 
 
-    FOR rec IN SELECT * FROM hive.current_account_balances(ARRAY['initminer', 'miners'],'context', get_consensus_storage_path(_writable_directory)) LOOP
+    FOR rec IN SELECT * FROM hive.current_account_balances(ARRAY['initminer', 'miners'],'context', get_consensus_storage_path(_writable_directory), hive.get_postgres_url()) LOOP
         RAISE NOTICE 'Current record: %', rec;
         
         IF rec.account = 'initminer' THEN
@@ -108,7 +120,12 @@ BEGIN
 
 
 
-    ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory))), 'consensus_state_provider_get_expected_block_num should return 7';
+    ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(
+        'context', 
+        get_consensus_storage_path(_writable_directory), 
+        hive.get_postgres_url()
+        )),
+        'consensus_state_provider_get_expected_block_num should return 7';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'null' AND balance = 0), 'Incorrect balance of null';
@@ -117,7 +134,11 @@ BEGIN
 
     ASSERT (SELECT to_regclass('hive.context_current_account_balance_state_provider')) IS NOT NULL, 'State provider table should exist';
     PERFORM hive.app_state_provider_drop_all( 'context' );
-    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num('context', get_consensus_storage_path(_writable_directory)));
+    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(
+        'context', 
+        get_consensus_storage_path(_writable_directory),
+        hive.get_postgres_url()
+        ));
     ASSERT (SELECT to_regclass('hive.context_current_account_balance')) IS NULL, 'State provider table should not exist';
 END;
 $BODY$
