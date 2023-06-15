@@ -37,20 +37,23 @@ validate_environment(){
 
 dump_snapshot(){
 
-  local call_hived_dump="${HIVED_EXECUTABLE_PATH}
-  --data-dir=${DATA_DIR}
-  --plugin=sql_serializer --psql-url=${HIVED_POSTGRES_ACCESS}
-  --plugin=state_snapshot --snapshot-root-dir=${BACKUP_DIR} --dump-snapshot=hived
-  ${ADDITIONAL_HIVED_OPTIONS[@]}"
+  local hived_args=()
+  hived_args+=(--data-dir="${DATA_DIR}")
+  hived_args+=(--plugin=sql_serializer)
+  hived_args+=(--psql-url="${HIVED_POSTGRES_ACCESS}")
+  hived_args+=(--plugin=state_snapshot)
+  hived_args+=(--snapshot-root-dir="${BACKUP_DIR}")
+  hived_args+=(--dump-snapshot=hived)
+  hived_args+=("${ADDITIONAL_HIVED_OPTIONS[@]}")
 
   echo "Using HIVED_DB_ROLE: ${HIVED_DB_ROLE}, POSTGRES_USER: ${POSTGRES_USER}"
 
   if [ "${HIVED_DB_ROLE}" != "${POSTGRES_USER}" ];
   then
     echo "Switching to separate Hived role..."
-    sudo -Enu "${HIVED_DB_ROLE}" -- "${call_hived_dump}"
+    sudo -Enu ${HIVED_DB_ROLE} "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
   else
-    ${call_hived_dump}
+    "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
   fi
 
 }
@@ -59,12 +62,30 @@ dump_database(){
   
   mkdir -p ${POSTGRES_BACKUP_DIR}
 
-  local call_pg_dump="pg_dump -j ${JOBS} -Fd -f ${POSTGRES_BACKUP_DIR} --dbname=${POSTGRES_ACCESS}"
+  local db_parameters=()
 
-  ${call_pg_dump}
+  if [[ ! -z ${POSTGRES_HOST} ]]
+  then
+    db_parameters+=(--host=${POSTGRES_HOST})
+  fi
 
+  if [[ ! -z ${POSTGRES_DATABASE} ]]
+  then
+    db_parameters+=(--dbname=${POSTGRES_DATABASE})
+  fi
+
+  if [[ ! -z ${POSTGRES_PORT} ]]
+  then
+    db_parameters+=(--port=${POSTGRES_PORT})
+  fi
+
+  if [[ ! -z ${POSTGRES_USER} ]]
+  then
+    db_parameters+=(--username=${POSTGRES_USER})
+  fi
+
+  pg_dump -j ${JOBS} -Fd -f "${POSTGRES_BACKUP_DIR}" "${db_parameters[@]}"
 }
-
 
 
 validate_environment
@@ -74,4 +95,3 @@ mkdir -p ${BACKUP_DIR}
 dump_snapshot
 
 dump_database
-
