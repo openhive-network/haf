@@ -19,53 +19,62 @@ validate_environment(){
   fi
 }
 
-generate_script_db_parameters(){
-  local script_db_parameters=""
+load_database(){
+  
+  local db_parameters=()
+  local script_db_parameters=()
 
   if [[ ! -z ${POSTGRES_HOST} ]]
   then
-    script_db_parameters+=" --host=${POSTGRES_HOST}"
+    script_db_parameters+=(--host=${POSTGRES_HOST})
+    db_parameters+=(--host=${POSTGRES_HOST})
   fi
 
   if [[ ! -z ${POSTGRES_DATABASE} ]]
   then
-    script_db_parameters+=" --haf-db-name=${POSTGRES_DATABASE}"
+    script_db_parameters+=(--haf-db-name=${POSTGRES_DATABASE})
+    db_parameters+=(--dbname=${POSTGRES_DATABASE})
   fi
 
   if [[ ! -z ${POSTGRES_PORT} ]]
   then
-    script_db_parameters+=" --port=${POSTGRES_PORT}"
+    script_db_parameters+=(--port=${POSTGRES_PORT})
+    db_parameters+=(--port=${POSTGRES_PORT})
   fi
 
   if [[ ! -z ${POSTGRES_USER} ]]
   then
-    script_db_parameters+=" --haf-db-admin=${POSTGRES_USER}"
+    script_db_parameters+=(--haf-db-admin=${POSTGRES_USER})
+    db_parameters+=(--username=${POSTGRES_USER})
   fi
-  
-  echo ${script_db_parameters}
-}
 
-load_database(){
-  
-  "${SCRIPTPATH}"/setup_db.sh --no-create-schema $(generate_script_db_parameters)
+  "${SCRIPTPATH}"/setup_db.sh --no-create-schema "${script_db_parameters[@]}"
 
-  pg_restore            --section=pre-data  --disable-triggers                     -d ${POSTGRES_ACCESS} ${POSTGRES_BACKUP_DIR}
-  pg_restore -j ${JOBS} --section=data      --disable-triggers                     -d ${POSTGRES_ACCESS} ${POSTGRES_BACKUP_DIR}
-  pg_restore            --section=post-data --disable-triggers --clean --if-exists -d ${POSTGRES_ACCESS} ${POSTGRES_BACKUP_DIR}
+  pg_restore            --section=pre-data  --disable-triggers                     "${db_parameters[@]}" ${POSTGRES_BACKUP_DIR}
+  pg_restore -j ${JOBS} --section=data      --disable-triggers                     "${db_parameters[@]}" ${POSTGRES_BACKUP_DIR}
+  pg_restore            --section=post-data --disable-triggers --clean --if-exists "${db_parameters[@]}" ${POSTGRES_BACKUP_DIR}
 
 }
 
 
 load_snapshot_and_run(){
   
-  local call_hived_load="${HIVED_EXECUTABLE_PATH} --data-dir=${DATA_DIR} --plugin=state_snapshot --snapshot-root-dir=${BACKUP_DIR}  --load-snapshot=hived --plugin=sql_serializer --psql-url=${HIVED_POSTGRES_ACCESS} ${ADDITIONAL_HIVED_OPTIONS[@]}"
+  local hived_args=()
+  hived_args+=(--data-dir="${DATA_DIR}")
+  hived_args+=(--plugin=sql_serializer)
+  hived_args+=(--psql-url="${HIVED_POSTGRES_ACCESS}")
+  hived_args+=(--plugin=state_snapshot)
+  hived_args+=(--snapshot-root-dir="${BACKUP_DIR}")
+  hived_args+=(--load-snapshot=hived)
+  hived_args+=("${ADDITIONAL_HIVED_OPTIONS[@]}")
 
   if [ ${HIVED_DB_ROLE} -neq ${POSTGRES_USER} ];
   then
+    echo "Using HIVED_DB_ROLE: ${HIVED_DB_ROLE}, POSTGRES_USER: ${POSTGRES_USER}"
     echo "Switching to separate Hived role..."
-    sudo -Enu "${HIVED_DB_ROLE}" -- "${call_hived_load}"
+    sudo -Enu ${HIVED_DB_ROLE} "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
   else
-    ${call_hived_load}
+    "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
   fi
 
 }
