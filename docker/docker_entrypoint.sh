@@ -73,16 +73,16 @@ perform_instance_dump() {
 
   "${SCRIPTSDIR}/dump_instance.sh" --backup-dir="${DATADIR}/${backup_dir_name}" --hived-executable-path=/home/hived/bin/hived \
     --override-existing-backup-dir --hived-db-role=hived \
-    --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --exit-before-sync \
+    --hived-data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --exit-before-sync \
     --haf-db-name=haf_block_log --haf-db-admin=haf_admin \
-    --haf-db-port=5432 --haf-db-host=localhost
+    --haf-db-port=5432 --haf-db-host=/var/run/postgresql
 }
 
 perform_instance_load() {
   backup_dir_name="${1}"
   "${SCRIPTSDIR}/load_instance.sh" --backup-dir="${DATADIR}/${backup_dir_name}" --hived-executable-path=/home/hived/bin/hived \
     --hived-db-role=hived \
-    --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --exit-before-sync \
+    --hived-data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --exit-before-sync \
     --haf-db-name=haf_block_log --haf-db-admin=haf_admin \
     --haf-db-port=5432 --haf-db-host=/var/run/postgresql
 
