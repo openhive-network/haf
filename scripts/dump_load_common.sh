@@ -3,7 +3,6 @@ set -x
 set -euo pipefail 
 
 
-exec > >(tee "${LOG_FILE}") 2>&1
 
 log_exec_params() {
   echo
@@ -156,6 +155,9 @@ then
   print_help ${GENERAL_HELP_DESCRIPTION} ${SPECFIC_OPTIONS_HELP_TEXT}
   exit 0
 fi
+
+exec > >(tee "${DATA_DIR}/${LOG_FILE}") 2>&1
+
 
 echo Script $0 running with options:
 echo --backup-dir=${BACKUP_DIR}
