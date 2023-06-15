@@ -9,13 +9,56 @@
 #include <pqxx/pqxx>
 
 #include "fc/variant.hpp"
+#include "hive/chain/block_log.hpp"
 #include "hive/chain/database.hpp"
 #include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
 #include "hive/protocol/forward_impacted.hpp"
 #include "hive/protocol/operations.hpp"
 
 #include "pqxx_op_iterator.hpp"
-#include "time_probe.hpp" 
+#include "time_probe.hpp"
+
+
+
+class postgres_block_log_provider : public hive::chain::block_log
+{
+  int postgres_block_log_provider_jestem = 1;
+ public:
+  postgres_block_log_provider(std::string a_context,
+                              std::string a_shared_memory_bin_path,
+                              std::string a_postgres_url
+                              )
+      : context(a_context),
+        shared_memory_bin_path(a_shared_memory_bin_path),
+        postgres_url(a_postgres_url)
+  {
+  }
+
+  std::string context;
+  std::string shared_memory_bin_path;
+  std::string postgres_url;
+
+  std::shared_ptr<hive::chain::full_block_type> read_block_by_num(uint32_t block_num) const override;
+  // void open(const fc::path& file, bool read_only = false, bool auto_open_artifacts = true) override;
+  // void set_compression(bool enabled) override;
+  // void set_compression_level(int level) override;
+  // std::shared_ptr<hive::chain::full_block_type> head() const override;
+
+  // void for_each_block(uint32_t starting_block_number, uint32_t ending_block_number,
+  //                     block_processor_t processor,
+  //                     for_each_purpose purpose) const override;
+
+  // void close() override;
+
+  // hive::protocol::block_id_type read_block_id_by_num(uint32_t block_num) const override;
+  // std::vector<std::shared_ptr<hive::chain::full_block_type>> read_block_range_by_num(
+  //     uint32_t first_block_num, uint32_t count) const override;
+
+  // uint64_t append(const std::shared_ptr<hive::chain::full_block_type>& full_block) override;
+
+  //void flush() override;
+};
+
 
 namespace consensus_state_provider
 {
@@ -30,14 +73,19 @@ class postgres_block_log
 {
 public:
   void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path);
+  std::shared_ptr<hive::chain::full_block_type> get_full_block(int block_num,
+                              const char* context,
+                              const char* postgres_url,
+                              const char* shared_memory_bin_path);
 private:
+  std::shared_ptr<hive::chain::full_block_type> block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url);
   void measure_before_run();
   void measure_after_run();
   void handle_exception(std::exception_ptr exception_ptr);
   void get_postgres_data(int from, int to, const char* postgres_url);
   void initialize_iterators();
-  void replay_blocks(const char* context, const char* shared_memory_bin_path);
-  void replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path);
+  void replay_blocks(const char* context, const char* shared_memory_bin_path, const char* postgres_url);
+  void replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url);
   static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   fc::variant block_to_variant_with_transactions(const pqxx::row& block);
@@ -98,6 +146,7 @@ private:
   private:
     pqxx::connection connection;
   }; 
+
   const int BLOCK_NUM_EMPTY = -1;
   const int BLOCK_NUM_MAX = std::numeric_limits<int>::max();
 };
@@ -107,11 +156,11 @@ private:
 bool consensus_state_provider_replay_impl(int from, int to, const char* context, const char* postgres_url,
                                           const char* shared_memory_bin_path)
 {
-  if(from != consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path))
+  if(from != consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path, postgres_url))
   {
       elog(
           "ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
-          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
+          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path, postgres_url)));
       return false;
   }
 
@@ -131,7 +180,7 @@ void postgres_block_log::run(int from,
   {
     get_postgres_data(from, to, postgres_url);
     initialize_iterators();
-    replay_blocks(context, shared_memory_bin_path);
+    replay_blocks(context, shared_memory_bin_path, postgres_url);
   }
   catch(...)
   {
@@ -140,6 +189,42 @@ void postgres_block_log::run(int from,
   }
 
   measure_after_run();
+}
+
+
+std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+{
+  auto block_num_from_postgres = block["num"].as<int>();
+
+  if(block_num_from_postgres != block_num_from_shared_memory_bin) 
+    return {};
+
+  fc::variant v = block_to_variant_with_transactions(block);
+
+  std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num_from_postgres);
+
+  return fb_ptr;
+}
+
+
+
+std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block(int block_num,
+                             const char* context,
+                             const char* postgres_url,
+                             const char* shared_memory_bin_path)
+{
+  try
+  {
+    get_postgres_data(block_num, block_num, postgres_url);
+    initialize_iterators();
+    return block_to_fullblock(block_num, blocks[0], context, shared_memory_bin_path, postgres_url);
+  }
+  catch(...)
+  {
+    auto current_exception = std::current_exception();
+    handle_exception(current_exception);
+  }
+
 }
 
 void postgres_block_log::measure_before_run()
@@ -225,27 +310,27 @@ void postgres_block_log::initialize_iterators()
   current_operation = operations.begin();
 }
 
-void postgres_block_log::replay_blocks(const char* context, const char* shared_memory_bin_path)
+void postgres_block_log::replay_blocks(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   for(const auto& block : blocks)
   {
-    replay_block(block, context, shared_memory_bin_path);
+    replay_block(block, context, shared_memory_bin_path, postgres_url);
   }
 }
 
-void postgres_block_log::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path)
+void postgres_block_log::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   transformations_time_probe.start();
 
   auto block_num = block["num"].as<int>();
 
-  if(block_num != initialize_context(context, shared_memory_bin_path)) 
+  if(block_num != initialize_context(context, shared_memory_bin_path, postgres_url)) 
     return;
 
   hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
 
-   bool classic_way = (block_num <= 1092);
-   //bool classic_way = true;
+   //bool classic_way = (block_num <= 1092);
+   bool classic_way = true;
    
   if(classic_way)
   {
@@ -522,69 +607,76 @@ uint64_t postgres_block_log::get_skip_flags()
   // clang-format on
 };
 
-int initialize_context(const char* context, const char* shared_memory_bin_path)
+auto set_open_args_data_dir = [](hive::chain::open_args& db_open_args, const char* shared_memory_bin_path)
 {
-  auto create_and_init_database = [](const char* context, const char* shared_memory_bin_path) -> hive::chain::database*
-  {
-    auto initialize_chain_db = [](hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
-    {
-      auto set_open_args_data_dir = [](hive::chain::open_args& db_open_args, const char* shared_memory_bin_path)
-      {
-        db_open_args.data_dir = shared_memory_bin_path;
-        db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
-      };
+  db_open_args.data_dir = shared_memory_bin_path;
+  db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
+};
 
-      auto set_open_args_supply = [](hive::chain::open_args& db_open_args)
-      {
-        db_open_args.initial_supply = HIVE_INIT_SUPPLY;
-        db_open_args.hbd_initial_supply = HIVE_HBD_INIT_SUPPLY;
-      };
+auto set_open_args_supply = [](hive::chain::open_args& db_open_args)
+{
+  db_open_args.initial_supply = HIVE_INIT_SUPPLY;
+  db_open_args.hbd_initial_supply = HIVE_HBD_INIT_SUPPLY;
+};
 
-      auto set_open_args_other_parameters = [](hive::chain::open_args& db_open_args)
-      {
-        db_open_args.shared_file_size = 25769803776;
-        db_open_args.shared_file_full_threshold = 0;
-        db_open_args.shared_file_scale_rate = 0;
-        db_open_args.chainbase_flags = 0;
-        db_open_args.do_validate_invariants = false;
-        db_open_args.stop_replay_at = 0;
-        db_open_args.exit_after_replay = false;
-        db_open_args.validate_during_replay = false;
-        db_open_args.benchmark_is_enabled = false;
-        db_open_args.replay_in_memory = false;
-        db_open_args.enable_block_log_compression = true;
-        db_open_args.block_log_compression_level = 15;
-        db_open_args.postgres_not_block_log = true;
-        db_open_args.force_replay = false;
-      };
+auto set_open_args_other_parameters = [](hive::chain::open_args& db_open_args)
+{
+  db_open_args.shared_file_size = 25769803776;
+  db_open_args.shared_file_full_threshold = 0;
+  db_open_args.shared_file_scale_rate = 0;
+  db_open_args.chainbase_flags = 0;
+  db_open_args.do_validate_invariants = false;
+  db_open_args.stop_replay_at = 0;
+  db_open_args.exit_after_replay = false;
+  db_open_args.validate_during_replay = false;
+  db_open_args.benchmark_is_enabled = false;
+  db_open_args.replay_in_memory = false;
+  db_open_args.enable_block_log_compression = true;
+  db_open_args.block_log_compression_level = 15;
+  db_open_args.postgres_not_block_log = true;
+  db_open_args.force_replay = false;
+};
 
-      // End of local functions definitions
-      // ===================================
 
-      // Main body of the function
-      db.set_flush_interval(10'000);
-      db.set_require_locking(false);
+auto initialize_chain_db = [](hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
+{
+  // End of local functions definitions
+  // ===================================
 
-      hive::chain::open_args db_open_args;
+  // Main body of the function
+  db.set_flush_interval(10'000);
+  db.set_require_locking(false);
 
-      set_open_args_data_dir(db_open_args, shared_memory_bin_path);
-      set_open_args_supply(db_open_args);
-      set_open_args_other_parameters(db_open_args);
+  hive::chain::open_args db_open_args;
 
-      db.open(db_open_args);
-    };
+  set_open_args_data_dir(db_open_args, shared_memory_bin_path);
+  set_open_args_supply(db_open_args);
+  set_open_args_other_parameters(db_open_args);
+//mtlk here postgres_block_log_has to_be ready
 
-    hive::chain::database* db = new hive::chain::database;
-    initialize_chain_db(*db, context, shared_memory_bin_path);
-    consensus_state_provider::get_cache().add(context, db);
-    return db;
-  };
+  db.open(db_open_args);
+};
+
+auto create_and_init_database = [](const char* context, const char* shared_memory_bin_path, const char* postgres_url) -> hive::chain::database*
+{
+  
+  auto b = std::make_unique<postgres_block_log_provider>(context, shared_memory_bin_path, postgres_url);
+  hive::chain::database* db = new hive::chain::database(std::move(b));
+  initialize_chain_db(*db, context, shared_memory_bin_path);
+  consensus_state_provider::get_cache().add(context, db);
+  return db;
+};
+
+
+
+int initialize_context(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+{
 
   hive::chain::database* db;
 
   if(!consensus_state_provider::get_cache().has_context(context))
   {
-    db = create_and_init_database(context, shared_memory_bin_path);
+    db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
   }
   else
   {
@@ -664,22 +756,22 @@ std::shared_ptr<hive::chain::full_block_type> from_variant_to_full_block_ptr(con
   return hive::chain::full_block_type::create_from_signed_block(sb);
 }
 
-int consensus_state_provider_get_expected_block_num_impl(const char* context, const char* shared_memory_bin_path)
+int consensus_state_provider_get_expected_block_num_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  return initialize_context(context, shared_memory_bin_path);
+  return initialize_context(context, shared_memory_bin_path, postgres_url);
 }
 
 
-collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const char* context, const char* shared_memory_bin_path)
+collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  initialize_context(context, shared_memory_bin_path);
+  initialize_context(context, shared_memory_bin_path, postgres_url);
   return collect_current_all_accounts_balances(context);
 }
 
 
-collected_account_balances_collection_t collect_current_account_balances_impl(const std::vector<std::string>& accounts, const char* context, const char* shared_memory_bin_path)
+collected_account_balances_collection_t collect_current_account_balances_impl(const std::vector<std::string>& accounts, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  initialize_context(context, shared_memory_bin_path);
+  initialize_context(context, shared_memory_bin_path, postgres_url);
   return collect_current_account_balances(accounts, context);
 }
 
@@ -711,3 +803,9 @@ const char* fix_pxx_hex(const pqxx::field& h)
 }
 
 }  // namespace consensus_state_provider
+
+
+std::shared_ptr<hive::chain::full_block_type> postgres_block_log_provider::read_block_by_num(uint32_t block_num) const
+{
+  return consensus_state_provider::postgres_block_log().get_full_block(block_num, context.c_str(), postgres_url.c_str(), shared_memory_bin_path.c_str());
+}

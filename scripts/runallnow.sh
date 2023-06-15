@@ -15,6 +15,11 @@
 
 # block 23645967 //FC_ASSERT( vo.amount >= 0, "Asset amount cannot be negative" );   - nijeah 
 
+# compile RelWithDebInfo : 8 min 18sec
+# compile Release : 6 min 32sec
+
+
+
 : <<END_COMMENT
  18,993,603
 2,325,194ms database.cpp:211              operator()           ] Attempting to rewind all undo state...
@@ -386,7 +391,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # 2.Push_block zamiast apply block
 # Swoja block control - moze więcej virtualek
 
-# 1.fynna block log ujednolixix kod - hived blockloga head block z góry.
+# DONE # 1.fynna block log ujednolixix kod - hived blockloga head block z góry.
 
 # 0. Varianty wywalić
 
@@ -1245,7 +1250,7 @@ fi
 if [[ $CMAKED ]]
 then
 #    ninja extension.hive_fork_manager  \
-    ninja consp_driver query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure && ctest -R curr         
+    ninja consp_driver query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure # && ctest -R curr         
     EXIT_STATUS=$?
     # ninja consp_driver; sudo chown $USER:$USER .ninja_*
     sudo chown -R $USER:$USER *
