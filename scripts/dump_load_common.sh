@@ -1,5 +1,7 @@
 #! /bin/bash
+set -x
 set -euo pipefail 
+
 
 exec > >(tee "${LOG_FILE}") 2>&1
 
