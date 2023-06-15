@@ -114,7 +114,7 @@ haf_system_tests:
     - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf
-    - pytest --junitxml report.xml -n ${PYTEST_NUMBER_OF_PROCESSES}
+    - pytest --full-trace --junitxml report.xml -n ${PYTEST_NUMBER_OF_PROCESSES}
   artifacts:
     paths:
     - "**/generated_during_*"
