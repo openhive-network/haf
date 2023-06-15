@@ -67,6 +67,9 @@ class Test:
 
         # WHEN
         additional_dump_command_line = self.generate_additional_command_line(dump_exit_before_sync, dump_stop_replay_at_block)
+
+        tt.logger.info(f"Generated additonal dump command line: {additional_dump_command_line}")
+
         self.dump_instance(additional_dump_command_line)
         self.assert_dumped(after_dump)
         
@@ -106,6 +109,7 @@ class Test:
         --override-existing-backup-dir \
         {additional_command_line}"
 
+        tt.logger.info(f"Attempting to execute command: `{command}'")
         shell(command)
 
     def assert_dumped(self, at_block : int):
@@ -121,6 +125,7 @@ class Test:
         --haf-db-name={self.db_name.database} \
         {additional_command_line}"
 
+        tt.logger.info(f"Attempting to execute command: `{command}'")
         shell(command)
 
     def assert_loaded(self, after_load : int):
@@ -138,7 +143,7 @@ class Test:
         return additional_command_line
 
 def shell(command: str) -> None:
-    subprocess.call(command, shell=True)
+    subprocess.check_call(command, shell=True)
 
 def query_count(session, table):
     sql_raw = SQL_TABLE_COUNT.format(table=table)
