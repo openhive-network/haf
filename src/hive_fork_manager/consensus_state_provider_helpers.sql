@@ -9,11 +9,11 @@ CREATE TYPE hive.current_account_balance_return_type  AS
     reward_hbd_balance      BIGINT
 );
 
-CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances(IN _context TEXT, IN shared_memory_bin_path TEXT)
+CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances(IN _context TEXT, IN shared_memory_bin_path TEXT, IN _postgres_url TEXT)
 RETURNS SETOF hive.current_account_balance_return_type
 AS 'MODULE_PATHNAME', 'current_all_accounts_balances' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.current_account_balances(IN accounts TEXT[], IN _context TEXT, IN shared_memory_bin_path TEXT)
+CREATE OR REPLACE FUNCTION hive.current_account_balances(IN accounts TEXT[], IN _context TEXT, IN shared_memory_bin_path TEXT, IN _postgres_url TEXT)
 RETURNS SETOF hive.current_account_balance_return_type
 AS 'MODULE_PATHNAME', 'current_account_balances' LANGUAGE C;
 
@@ -25,6 +25,6 @@ CREATE OR REPLACE FUNCTION hive.consensus_state_provider_finish(IN _context TEXT
 RETURNS VOID
 AS 'MODULE_PATHNAME', 'consensus_state_provider_finish' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.consensus_state_provider_get_expected_block_num(IN _context TEXT, IN shared_memory_bin_path TEXT)
+CREATE OR REPLACE FUNCTION hive.consensus_state_provider_get_expected_block_num(IN _context TEXT, IN shared_memory_bin_path TEXT, IN _postgres_url TEXT)
 RETURNS INTEGER
 AS 'MODULE_PATHNAME', 'consensus_state_provider_get_expected_block_num' LANGUAGE C;
