@@ -552,55 +552,69 @@ uint64_t postgres_block_log::get_skip_flags()
   // clang-format on
 };
 
+auto set_open_args_data_dir = [](hive::chain::open_args& db_open_args, const char* shared_memory_bin_path)
+{
+  db_open_args.data_dir = shared_memory_bin_path;
+  db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
+};
+
+auto set_open_args_supply = [](hive::chain::open_args& db_open_args)
+{
+  db_open_args.initial_supply = HIVE_INIT_SUPPLY;
+  db_open_args.hbd_initial_supply = HIVE_HBD_INIT_SUPPLY;
+};
+
+auto set_open_args_other_parameters = [](hive::chain::open_args& db_open_args)
+{
+  db_open_args.shared_file_size = 25769803776;
+  db_open_args.shared_file_full_threshold = 0;
+  db_open_args.shared_file_scale_rate = 0;
+  db_open_args.chainbase_flags = 0;
+  db_open_args.do_validate_invariants = false;
+  db_open_args.stop_replay_at = 0;
+  db_open_args.exit_after_replay = false;
+  db_open_args.validate_during_replay = false;
+  db_open_args.benchmark_is_enabled = false;
+  db_open_args.replay_in_memory = false;
+  db_open_args.enable_block_log_compression = true;
+  db_open_args.block_log_compression_level = 15;
+  db_open_args.postgres_not_block_log = true;
+  db_open_args.force_replay = false;
+};
+
+
+auto initialize_chain_db = [](hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
+{
+  // End of local functions definitions
+  // ===================================
+
+  // Main body of the function
+  db.set_flush_interval(10'000);
+  db.set_require_locking(false);
+
+  hive::chain::open_args db_open_args;
+
+  set_open_args_data_dir(db_open_args, shared_memory_bin_path);
+  set_open_args_supply(db_open_args);
+  set_open_args_other_parameters(db_open_args);
+//mtlk here postgres_block_log_has to_be ready
+
+  db.open(db_open_args);
+};
+
 auto create_and_init_database = [](const char* context, const char* shared_memory_bin_path) -> hive::chain::database*
 {
-  auto initialize_chain_db = [](hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
-  {
-    auto set_open_args_data_dir = [](hive::chain::open_args& db_open_args, const char* shared_memory_bin_path)
-    {
-      db_open_args.data_dir = shared_memory_bin_path;
-      db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
-    };
 
-    auto set_open_args_supply = [](hive::chain::open_args& db_open_args)
-    {
-      db_open_args.initial_supply = HIVE_INIT_SUPPLY;
-      db_open_args.hbd_initial_supply = HIVE_HBD_INIT_SUPPLY;
-    };
+  hive::chain::database* db = new hive::chain::database;
+  initialize_chain_db(*db, context, shared_memory_bin_path);
+  consensus_state_provider::get_cache().add(context, db);
+  return db;
+};
 
-    auto set_open_args_other_parameters = [](hive::chain::open_args& db_open_args)
-    {
-      db_open_args.shared_file_size = 25769803776;
-      db_open_args.shared_file_full_threshold = 0;
-      db_open_args.shared_file_scale_rate = 0;
-      db_open_args.chainbase_flags = 0;
-      db_open_args.do_validate_invariants = false;
-      db_open_args.stop_replay_at = 0;
-      db_open_args.exit_after_replay = false;
-      db_open_args.validate_during_replay = false;
-      db_open_args.benchmark_is_enabled = false;
-      db_open_args.replay_in_memory = false;
-      db_open_args.enable_block_log_compression = true;
-      db_open_args.block_log_compression_level = 15;
-      db_open_args.postgres_not_block_log = true;
-      db_open_args.force_replay = false;
-    };
 
-    // End of local functions definitions
-    // ===================================
+int initialize_context(const char* context, const char* shared_memory_bin_path)
+{
 
-    // Main body of the function
-    db.set_flush_interval(10'000);
-    db.set_require_locking(false);
-
-    hive::chain::open_args db_open_args;
-
-    set_open_args_data_dir(db_open_args, shared_memory_bin_path);
-    set_open_args_supply(db_open_args);
-    set_open_args_other_parameters(db_open_args);
-
-    db.open(db_open_args);
-  };
 
   hive::chain::database* db = new hive::chain::database(a_postgres_block_log_provider);
   initialize_chain_db(*db, context, shared_memory_bin_path);
