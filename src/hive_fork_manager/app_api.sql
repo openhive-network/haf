@@ -596,6 +596,9 @@ BEGIN
     FROM hive.contexts ctx
     WHERE ctx.name =ANY(_contexts);
 
+    IF CARDINALITY( __current_blocks ) > 1 THEN
+        RAISE EXCEPTION 'Started and not started contexts are mixed in a group
+    END IF;
     RETURN ARRAY_LENGTH( __current_blocks, 1 ) = 1 AND __current_blocks[ 1 ] = 0;
 END;
 $BODY$;
