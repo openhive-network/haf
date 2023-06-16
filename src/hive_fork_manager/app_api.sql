@@ -595,11 +595,8 @@ BEGIN
     SELECT COUNT(
         DISTINCT(
                    ctx.current_block_num
-                 , ctx.irreversible_block
                  , ctx.is_attached
-                 , ctx.back_from_fork
                  , ctx.events_id
-                 , ctx.fork_id
                  , ctx.detached_block_num
         )
     ) INTO __number_of_rows

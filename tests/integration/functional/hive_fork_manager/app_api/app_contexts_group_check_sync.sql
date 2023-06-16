@@ -93,8 +93,8 @@ BEGIN
 
     BEGIN
         PERFORM hive.app_check_contexts_synchronized( ARRAY[ 'attached_context', 'attached_context_not_insync_ir' ] );
-            ASSERT FALSE, 'No expected exception for block irreversible difference';
     EXCEPTION WHEN OTHERS THEN
+        ASSERT FALSE, 'Eexception for block irreversible difference';
     END;
 
     BEGIN
@@ -105,8 +105,8 @@ BEGIN
 
     BEGIN
         PERFORM hive.app_check_contexts_synchronized( ARRAY[ 'attached_context', 'attached_context_not_insync_fr' ] );
-            ASSERT FALSE, 'No expected exception for fork id difference';
     EXCEPTION WHEN OTHERS THEN
+        ASSERT FALSE, 'Exception for fork id difference';
     END;
 
     BEGIN
