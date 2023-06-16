@@ -127,7 +127,6 @@ private:
     pqxx::connection connection;
   }; 
 
-  postgres_block_log_provider a_postgres_block_log_provider;  
   const int BLOCK_NUM_EMPTY = -1;
   const int BLOCK_NUM_MAX = std::numeric_limits<int>::max();
 };
@@ -605,22 +604,12 @@ auto initialize_chain_db = [](hive::chain::database& db, const char* context, co
 auto create_and_init_database = [](const char* context, const char* shared_memory_bin_path) -> hive::chain::database*
 {
 
-  hive::chain::database* db = new hive::chain::database;
+  hive::chain::database* db = new hive::chain::database(std::make_unique<postgres_block_log_provider::block_log>());
   initialize_chain_db(*db, context, shared_memory_bin_path);
   consensus_state_provider::get_cache().add(context, db);
   return db;
 };
 
-
-int initialize_context(const char* context, const char* shared_memory_bin_path)
-{
-
-
-  hive::chain::database* db = new hive::chain::database(a_postgres_block_log_provider);
-  initialize_chain_db(*db, context, shared_memory_bin_path);
-  consensus_state_provider::get_cache().add(context, db);
-  return db;
-};
 
 
 int initialize_context(const char* context, const char* shared_memory_bin_path)
