@@ -582,6 +582,24 @@ END
 $BODY$
 LANGUAGE plpgsql VOLATILE;
 
+CREATE OR REPLACE FUNCTION hive.app_are_contexts_not_started( _contexts hive.contexts_group )
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __current_blocks INTEGER[];
+BEGIN
+    SELECT ARRAY_AGG( DISTINCT( ctx.current_block_num ) )
+    INTO __current_blocks
+    FROM hive.contexts ctx
+    WHERE ctx.name =ANY(_contexts);
+
+    RETURN ARRAY_LENGTH( __current_blocks, 1 ) = 1 AND __current_blocks[ 1 ] = 0;
+END;
+$BODY$;
+
 
 CREATE OR REPLACE FUNCTION hive.app_check_contexts_synchronized( _contexts hive.contexts_group )
     RETURNS VOID
@@ -591,7 +609,15 @@ AS
 $BODY$
 DECLARE
     __number_of_rows INTEGER;
+    __contexts_not_started BOOLEAN;
 BEGIN
+    SELECT hive.app_are_contexts_not_started( _contexts ) INTO __contexts_not_started;
+
+    -- not started contexts are synchronized
+    IF __contexts_not_started = TRUE THEN
+        RETURN;
+    END IF;
+
     SELECT COUNT(
         DISTINCT(
                    ctx.current_block_num
@@ -601,8 +627,9 @@ BEGIN
                  , ctx.events_id
                  , ctx.fork_id
                  , ctx.detached_block_num
+            )
         )
-    ) INTO __number_of_rows
+    INTO __number_of_rows
     FROM hive.contexts ctx
     WHERE ctx.name =ANY(_contexts);
 
