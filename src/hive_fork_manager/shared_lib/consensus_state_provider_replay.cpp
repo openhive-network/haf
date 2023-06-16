@@ -22,26 +22,27 @@
 
 class postgres_block_log_provider : public hive::chain::block_log
 {
+  int postgres_block_log_provider_jestem = 1;
  public:
   std::shared_ptr<hive::chain::full_block_type> read_block_by_num(uint32_t block_num) const override;
-  void open(const fc::path& file, bool read_only = false, bool auto_open_artifacts = true) override;
-  void set_compression(bool enabled) override;
-  void set_compression_level(int level) override;
-  std::shared_ptr<hive::chain::full_block_type> head() const override;
+  // void open(const fc::path& file, bool read_only = false, bool auto_open_artifacts = true) override;
+  // void set_compression(bool enabled) override;
+  // void set_compression_level(int level) override;
+  // std::shared_ptr<hive::chain::full_block_type> head() const override;
 
-  void for_each_block(uint32_t starting_block_number, uint32_t ending_block_number,
-                      block_processor_t processor,
-                      for_each_purpose purpose) const override;
+  // void for_each_block(uint32_t starting_block_number, uint32_t ending_block_number,
+  //                     block_processor_t processor,
+  //                     for_each_purpose purpose) const override;
 
-  void close() override;
+  // void close() override;
 
-  hive::protocol::block_id_type read_block_id_by_num(uint32_t block_num) const override;
-  std::vector<std::shared_ptr<hive::chain::full_block_type>> read_block_range_by_num(
-      uint32_t first_block_num, uint32_t count) const override;
+  // hive::protocol::block_id_type read_block_id_by_num(uint32_t block_num) const override;
+  // std::vector<std::shared_ptr<hive::chain::full_block_type>> read_block_range_by_num(
+  //     uint32_t first_block_num, uint32_t count) const override;
 
-  uint64_t append(const std::shared_ptr<hive::chain::full_block_type>& full_block) override;
+  // uint64_t append(const std::shared_ptr<hive::chain::full_block_type>& full_block) override;
 
-  void flush() override;
+  //void flush() override;
 };
 
 
@@ -603,8 +604,10 @@ auto initialize_chain_db = [](hive::chain::database& db, const char* context, co
 
 auto create_and_init_database = [](const char* context, const char* shared_memory_bin_path) -> hive::chain::database*
 {
-
-  hive::chain::database* db = new hive::chain::database(std::make_unique<postgres_block_log_provider::block_log>());
+  auto a = new postgres_block_log_provider();
+  a=a;
+  auto b = std::make_unique<postgres_block_log_provider>();
+  hive::chain::database* db = new hive::chain::database(std::move(b));
   initialize_chain_db(*db, context, shared_memory_bin_path);
   consensus_state_provider::get_cache().add(context, db);
   return db;
@@ -746,3 +749,11 @@ const char* fix_pxx_hex(const pqxx::field& h)
 }
 
 }  // namespace consensus_state_provider
+
+
+std::shared_ptr<hive::chain::full_block_type> postgres_block_log_provider::read_block_by_num(uint32_t block_num) const
+{
+  //postgres_block_log().run(block_num, block_num, context, postgres_url, shared_memory_bin_path);
+  int a = postgres_block_log_provider_jestem;
+  wlog("From postgres_block_log_provider::read_block_by_num");
+}
