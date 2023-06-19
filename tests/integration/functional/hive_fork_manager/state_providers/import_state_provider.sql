@@ -25,25 +25,35 @@ $BODY$
 ;
 
 ---------------------------END OF TEST PROVIDER -------------------------------------------------------------------
-
 DROP FUNCTION IF EXISTS haf_admin_test_given;
 CREATE FUNCTION haf_admin_test_given()
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    ALTER TYPE hive.state_providers ADD VALUE 'TESTS';
+END;
+$BODY$
+;
+
+DROP FUNCTION IF EXISTS alice_test_given;
+CREATE FUNCTION alice_test_given()
     RETURNS void
     LANGUAGE 'plpgsql'
 VOLATILE
 AS
 $BODY$
 BEGIN
-    ALTER TYPE hive.state_providers ADD VALUE 'TESTS';
-
     PERFORM hive.app_create_context( 'context' );
     CREATE TABLE tab( id INT ) INHERITS( hive.context );
 END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_when;
-CREATE FUNCTION haf_admin_test_when()
+DROP FUNCTION IF EXISTS alice_test_when;
+CREATE FUNCTION alice_test_when()
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
