@@ -1,5 +1,6 @@
 -- PROCEDURES needed here instead of functions, because pqxx library can see changes only after COMMIT;
 
+-- include postgres map/dictionary for this test
 CREATE EXTENSION IF NOT EXISTS hstore;
 
 
