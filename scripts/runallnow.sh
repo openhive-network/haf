@@ -391,7 +391,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # 2.Push_block zamiast apply block
 # Swoja block control - moze więcej virtualek
 
-# 1.fynna block log ujednolixix kod - hived blockloga head block z góry.
+# DONE # 1.fynna block log ujednolixix kod - hived blockloga head block z góry.
 
 # 0. Varianty wywalić
 
