@@ -216,7 +216,7 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
-
+  return {};
 }
 
 void postgres_block_log::measure_before_run()
