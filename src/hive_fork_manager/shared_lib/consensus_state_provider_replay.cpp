@@ -79,8 +79,8 @@ private:
   void handle_exception(std::exception_ptr exception_ptr);
   void get_postgres_data(int from, int to, const char* postgres_url);
   void initialize_iterators();
-  void replay_blocks(const char* context, const char* shared_memory_bin_path);
-  void replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path);
+  void replay_blocks(const char* context, const char* shared_memory_bin_path, const char* postgres_url);
+  void replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url);
   static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   fc::variant block_to_variant_with_transactions(const pqxx::row& block);
@@ -151,11 +151,11 @@ private:
 bool consensus_state_provider_replay_impl(int from, int to, const char* context, const char* postgres_url,
                                           const char* shared_memory_bin_path)
 {
-  if(from != consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path))
+  if(from != consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path, postgres_url))
   {
       elog(
           "ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
-          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path)));
+          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path, postgres_url)));
       return false;
   }
 
@@ -175,7 +175,7 @@ void postgres_block_log::run(int from,
   {
     get_postgres_data(from, to, postgres_url);
     initialize_iterators();
-    replay_blocks(context, shared_memory_bin_path);
+    replay_blocks(context, shared_memory_bin_path, postgres_url);
   }
   catch(...)
   {
@@ -269,21 +269,21 @@ void postgres_block_log::initialize_iterators()
   current_operation = operations.begin();
 }
 
-void postgres_block_log::replay_blocks(const char* context, const char* shared_memory_bin_path)
+void postgres_block_log::replay_blocks(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   for(const auto& block : blocks)
   {
-    replay_block(block, context, shared_memory_bin_path);
+    replay_block(block, context, shared_memory_bin_path, postgres_url);
   }
 }
 
-void postgres_block_log::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path)
+void postgres_block_log::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   transformations_time_probe.start();
 
   auto block_num = block["num"].as<int>();
 
-  if(block_num != initialize_context(context, shared_memory_bin_path)) 
+  if(block_num != initialize_context(context, shared_memory_bin_path, postgres_url)) 
     return;
 
   hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
@@ -715,22 +715,22 @@ std::shared_ptr<hive::chain::full_block_type> from_variant_to_full_block_ptr(con
   return hive::chain::full_block_type::create_from_signed_block(sb);
 }
 
-int consensus_state_provider_get_expected_block_num_impl(const char* context, const char* shared_memory_bin_path)
+int consensus_state_provider_get_expected_block_num_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  return initialize_context(context, shared_memory_bin_path);
+  return initialize_context(context, shared_memory_bin_path, postgres_url);
 }
 
 
-collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const char* context, const char* shared_memory_bin_path)
+collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  initialize_context(context, shared_memory_bin_path);
+  initialize_context(context, shared_memory_bin_path, postgres_url);
   return collect_current_all_accounts_balances(context);
 }
 
 
-collected_account_balances_collection_t collect_current_account_balances_impl(const std::vector<std::string>& accounts, const char* context, const char* shared_memory_bin_path)
+collected_account_balances_collection_t collect_current_account_balances_impl(const std::vector<std::string>& accounts, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  initialize_context(context, shared_memory_bin_path);
+  initialize_context(context, shared_memory_bin_path, postgres_url);
   return collect_current_account_balances(accounts, context);
 }
 
