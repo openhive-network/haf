@@ -994,10 +994,10 @@ Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
   int from = PG_GETARG_INT32(0);
   int to = PG_GETARG_INT32(1);
   char* context = text_to_cstring(PG_GETARG_TEXT_PP(2));
-  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(3));
-  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(4));
+  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(3));
+  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(4));
 
-  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(from, to, context, postgres_url, shared_memory_bin_path);
+  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(from, to, context, shared_memory_bin_path, postgres_url);
 
   PG_RETURN_BOOL(ok);
 
