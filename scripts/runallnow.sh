@@ -408,7 +408,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 
-
+# TODO test na start_fork - DIP 
 # TODO in bash_test - nake runallnow.sh or do another file, so that it contains just script
 # TODO - rename - everything should be named csp - consensus state prvider, sometimes only - cab - current_account_balances
 # TODO make it truly  switchable with classic version - command line param = switching from  trans to non trans, -> eliminate ?
