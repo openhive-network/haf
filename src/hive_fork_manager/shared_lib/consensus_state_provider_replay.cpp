@@ -352,11 +352,23 @@ void postgres_block_log::replay_blocks(const char* context, const char* shared_m
   }
 }
 
+
+auto volatile static stop_in_1934236 = true;
+
 void postgres_block_log::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   transformations_time_probe.start();
+  
 
   auto block_num = block["num"].as<int>();
+
+  if(stop_in_1934236 && block_num == 1934235)
+  {
+  
+      int a = 0 ;
+
+      a= a;
+  }
 
   if(block_num != initialize_context(context, shared_memory_bin_path, postgres_url)) 
     return;
@@ -368,6 +380,14 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
   {
       sbo_t sbo = postgres_block_log::block_to_sbo_with_transactions(block);
       fb_ptr = from_sbo_to_full_block_ptr(sbo, block_num);
+
+    {
+      fc::variant v;
+      fc::to_variant(sbo, v);
+      std::string json = fc::json::to_pretty_string(v);
+      //wlog("REPLAY_BLOCK_SBO block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
+    }
+
   }
   else
   {
@@ -377,6 +397,10 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
     // wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
 
     fb_ptr = from_variant_to_full_block_ptr(v, block_num);
+
+    std::string json = fc::json::to_pretty_string(v);
+    wlog("REPLAY_BLOCK_SBO_VAR block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
+
   }
 
   transformations_time_probe.stop();
@@ -404,6 +428,12 @@ void postgres_block_log::apply_full_block(hive::chain::database& db, const std::
 sbo_t postgres_block_log::block_to_sbo_with_transactions(const pqxx::row& block)
 {
   auto block_num = block["num"].as<int>();
+
+  if(block_num == 1934237)
+  {
+      int a = 0;
+      a =a;
+  }
 
   std::vector<fc::variant> transaction_ids_variants;
   std::vector<fc::variant> transaction_variants;
@@ -525,7 +555,11 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block,
 
 
     if(const auto& field = block["extensions"]; !field.is_null())
-      s2v(std::string(field.c_str()), sb.extensions);
+    {
+      std::string json = block["extensions"].c_str();
+      fc::variant extensions = fc::json::from_string(json.empty() ? "[]" : json);
+      from_variant(extensions, sb.extensions);
+    }
     
     s2v(fix_pxx_hex(block["witness_signature"]), sb.witness_signature);
 
