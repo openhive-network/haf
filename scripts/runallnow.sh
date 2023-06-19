@@ -15,6 +15,11 @@
 
 # block 23645967 //FC_ASSERT( vo.amount >= 0, "Asset amount cannot be negative" );   - nijeah 
 
+# compile RelWithDebInfo : 8 min 18sec
+# compile Release : 6 min 32sec
+
+
+
 : <<END_COMMENT
  18,993,603
 2,325,194ms database.cpp:211              operator()           ] Attempting to rewind all undo state...
