@@ -199,8 +199,6 @@ void postgres_block_log::run(int from,
   measure_after_run();
 }
 
-auto static volatile stop_in_BLOCK_TO_FULLBLOCK_SBO = false;
-
 std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   auto block_num_from_postgres = block["num"].as<int>();
@@ -210,12 +208,6 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullb
 
 if(BLOCK_TO_FULLBLOCK_SBO)
 {
-  while(stop_in_BLOCK_TO_FULLBLOCK_SBO)
-  {
-    int a = 0;
-    a = a;
-
-  }
 
   sbo_t sbo = postgres_block_log::block_to_sbo_with_transactions(block);
   std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_sbo_to_full_block_ptr(sbo, block_num_from_postgres);
@@ -353,22 +345,12 @@ void postgres_block_log::replay_blocks(const char* context, const char* shared_m
 }
 
 
-auto volatile static stop_in_1934236 = true;
-
 void postgres_block_log::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   transformations_time_probe.start();
   
 
   auto block_num = block["num"].as<int>();
-
-  if(stop_in_1934236 && block_num == 1934235)
-  {
-  
-      int a = 0 ;
-
-      a= a;
-  }
 
   if(block_num != initialize_context(context, shared_memory_bin_path, postgres_url)) 
     return;
@@ -382,9 +364,9 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
       fb_ptr = from_sbo_to_full_block_ptr(sbo, block_num);
 
     {
-      fc::variant v;
-      fc::to_variant(sbo, v);
-      std::string json = fc::json::to_pretty_string(v);
+      // fc::variant v;
+      // fc::to_variant(sbo, v);
+      // std::string json = fc::json::to_pretty_string(v);
       //wlog("REPLAY_BLOCK_SBO block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
     }
 
@@ -428,12 +410,6 @@ void postgres_block_log::apply_full_block(hive::chain::database& db, const std::
 sbo_t postgres_block_log::block_to_sbo_with_transactions(const pqxx::row& block)
 {
   auto block_num = block["num"].as<int>();
-
-  if(block_num == 1934237)
-  {
-      int a = 0;
-      a =a;
-  }
 
   std::vector<fc::variant> transaction_ids_variants;
   std::vector<fc::variant> transaction_variants;
@@ -548,15 +524,10 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block,
     s2v(block["name"].c_str(), sb.witness);
     s2v(fix_pxx_hex(block["transaction_merkle_root"]), sb.transaction_merkle_root);
   
-    auto field =  block["extensions"];
-    auto  nu = field.is_null();
-    auto si = field.size();
-
-
-
+ 
     if(const auto& field = block["extensions"]; !field.is_null())
     {
-      std::string json = block["extensions"].c_str();
+      std::string json = field.c_str();
       fc::variant extensions = fc::json::from_string(json.empty() ? "[]" : json);
       from_variant(extensions, sb.extensions);
     }
