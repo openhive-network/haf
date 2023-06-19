@@ -1539,4 +1539,5 @@ else
 fi
 
 
-
+# unit test:
+# sudo -n /etc/init.d/postgresql restart ; sudo rm -rf /home/hived/datadir/consensus_unit_test_storage_dir; clearterm; unbuffer  ../haf/scripts/runallnow.sh 5000000 rebuild ; ctest -R curr --output-on-failure 
