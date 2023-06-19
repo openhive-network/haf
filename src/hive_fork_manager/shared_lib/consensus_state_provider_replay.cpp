@@ -8,10 +8,12 @@
 #include <limits>
 #include <pqxx/pqxx>
 
+#include "fc/time.hpp"
 #include "fc/variant.hpp"
 #include "hive/chain/block_log.hpp"
 #include "hive/chain/database.hpp"
 #include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
+#include "hive/protocol/block.hpp"
 #include "hive/protocol/forward_impacted.hpp"
 #include "hive/protocol/operations.hpp"
 
@@ -62,6 +64,8 @@ class postgres_block_log_provider : public hive::chain::block_log
 namespace consensus_state_provider
 {
 
+using sbo_t = hive::plugins::block_api::api_signed_block_object;
+
 // value coming from pxx is without 'T' in the middle to be accepted in variant
 std::string fix_pxx_time(const pqxx::field& t);
 
@@ -77,6 +81,13 @@ public:
                               const char* shared_memory_bin_path,
                               const char* postgres_url);
 private:
+  sbo_t build_sbo(const pqxx::row& block,
+                                                    const std::vector<fc::variant>& transaction_ids_variants,
+                                                    const std::vector<fc::variant>& transaction_variants);
+
+  sbo_t block_to_sbo_with_transactions(const pqxx::row& block);
+  std::shared_ptr<hive::chain::full_block_type> from_sbo_to_full_block_ptr(sbo_t& sb, int block_num);
+
   std::shared_ptr<hive::chain::full_block_type> block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url);
   void measure_before_run();
   void measure_after_run();
@@ -191,11 +202,19 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullb
   if(block_num_from_postgres != block_num_from_shared_memory_bin) 
     return {};
 
+
+{
   fc::variant v = block_to_variant_with_transactions(block);
 
   std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num_from_postgres);
-
   return fb_ptr;
+}
+
+  // sbo_t sbo = postgres_block_log::block_to_sbo_with_transactions(block);
+  // std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_sbo_to_full_block_ptr(sbo, block_num_from_postgres);
+
+
+  // return fb_ptr;
 }
 
 
@@ -348,6 +367,22 @@ void postgres_block_log::apply_full_block(hive::chain::database& db, const std::
 
 
 
+sbo_t postgres_block_log::block_to_sbo_with_transactions(const pqxx::row& block)
+{
+  auto block_num = block["num"].as<int>();
+
+  std::vector<fc::variant> transaction_ids_variants;
+  std::vector<fc::variant> transaction_variants;
+  
+  if(block_num == current_transaction_block_num()) 
+    transactions2variants(block_num, transaction_ids_variants, transaction_variants);
+  
+  return build_sbo(block, transaction_ids_variants, transaction_variants);
+
+}
+
+
+
 fc::variant postgres_block_log::block_to_variant_with_transactions(const pqxx::row& block)
 {
   auto block_num = block["num"].as<int>();
@@ -357,6 +392,8 @@ fc::variant postgres_block_log::block_to_variant_with_transactions(const pqxx::r
   
   if(block_num == current_transaction_block_num()) 
     transactions2variants(block_num, transaction_ids_variants, transaction_variants);
+  
+  //build_sbo(block, transaction_ids_variants, transaction_variants);
 
   return build_block_variant(block, transaction_ids_variants, transaction_variants);
 }
@@ -389,6 +426,93 @@ fc::variant postgres_block_log::build_block_variant(const pqxx::row& block,
 
   return block_variant;
 }
+
+
+template<typename T>
+void s2v(const std::string s, T& val)
+{
+  fc::variant vo;
+  to_variant(s, vo);
+  from_variant(vo, val);
+}
+
+
+sbo_t postgres_block_log::build_sbo(const pqxx::row& block,
+                                                    const std::vector<fc::variant>& transaction_ids_variants,
+                                                    const std::vector<fc::variant>& transaction_variants)
+{
+
+  {
+    std::string json = block["extensions"].c_str();
+    fc::variant extensions = fc::json::from_string(json.empty() ? "[]" : json);
+
+    fc::variant_object_builder block_variant_builder;
+
+    block_variant_builder
+      ("witness", block["name"].c_str())
+      ("block_id", fix_pxx_hex(block["hash"]))
+      ("previous", fix_pxx_hex(block["prev"]))
+      ("timestamp", fix_pxx_time(block["created_at"]))
+      ("extensions", extensions)
+      ("signing_key", block["signing_key"].c_str())
+      ("witness_signature", fix_pxx_hex(block["witness_signature"]))
+      ("transaction_merkle_root", fix_pxx_hex(block["transaction_merkle_root"]))
+      ("transaction_ids", transaction_ids_variants);
+
+    block_variant_builder("transactions", transaction_variants);
+
+    fc::variant block_variant;
+    to_variant(block_variant_builder.get(), block_variant);
+  }
+
+  using namespace hive::protocol;
+  using std::string;
+  using std::vector;
+
+    sbo_t sb;
+
+
+    // sb.previous = decltype(sb.previous)(fix_pxx_hex(block["prev"]));
+    // sb.timestamp = fc::time_point_sec::from_iso_string(fix_pxx_time(block["created_at"]));
+    // sb.witness = block["name"].c_str();
+    // sb.transaction_merkle_root = decltype(sb.transaction_merkle_root)(fix_pxx_hex(block["transaction_merkle_root"]));
+    // // sb.extensions = block["extensions"].c_str();
+
+
+    s2v(fix_pxx_hex(block["prev"]), sb.previous);
+    s2v(fix_pxx_time(block["created_at"]), sb.timestamp);
+    s2v(block["name"].c_str(), sb.witness);
+    s2v(fix_pxx_hex(block["transaction_merkle_root"]), sb.transaction_merkle_root);
+  
+    s2v(block["extensions"].c_str(), sb.extensions);
+    s2v(fix_pxx_hex(block["witness_signature"]), sb.witness_signature);
+
+
+    s2v(fix_pxx_hex(block["hash"]), sb.block_id);
+    s2v(block["signing_key"].c_str(), sb.signing_key);
+
+    from_variant(transaction_ids_variants, sb.transaction_ids);
+
+
+    //sb.witness_signature = decltype(sb.witness_signature)(fix_pxx_hex(block["witness_signature"]));
+
+        // auto str = var.as_string();
+        // vo.resize(str.size() / 2);
+        // if(vo.size())
+        // {
+        //   size_t r = from_hex(str, vo.data(), vo.size());
+
+    // std::vector<char> ve = v.as< std::vector<char> >();
+    // if( ve.size() )
+    // {
+    //     memcpy(&bi, ve.data(), fc::min<size_t>(ve.size(),sizeof(bi)) );
+
+  from_variant(transaction_variants, sb.transactions);
+
+//  vector<signed_transaction> transactions;
+  return sb;
+}
+
 
 void postgres_block_log::transactions2variants(int block_num, std::vector<fc::variant>& transaction_id_variants,
                                             std::vector<fc::variant>& transaction_variants)
@@ -655,7 +779,7 @@ struct fix_hf_version_visitor
   int proper_version;
 };
 
-void fix_hf_version(hive::plugins::block_api::api_signed_block_object& sb, int proper_hf_version, int block_num)
+void fix_hf_version(sbo_t& sb, int proper_hf_version, int block_num)
 {
   fix_hf_version_visitor visitor(proper_hf_version);
 
@@ -666,9 +790,26 @@ void fix_hf_version(hive::plugins::block_api::api_signed_block_object& sb, int p
   ilog("Fixing minor hardfork version in extension in block ${block_num}", ("block_num", block_num));
 }
 
+
+std::shared_ptr<hive::chain::full_block_type> postgres_block_log::from_sbo_to_full_block_ptr(sbo_t& sb, int block_num)
+{
+  switch(block_num)
+  {
+    // clang-format off
+    case 2726331: fix_hf_version(sb, 489, block_num); break;
+    case 2730591: fix_hf_version(sb, 118, block_num); break;
+    case 2733423: fix_hf_version(sb, 119, block_num); break;
+    case 2768535: fix_hf_version(sb, 116, block_num); break;
+    case 2781318: fix_hf_version(sb, 116, block_num); break;
+    case 2786287: fix_hf_version(sb, 119, block_num); break;
+    // clang-format on
+  }
+  return hive::chain::full_block_type::create_from_signed_block(sb);
+}
+
 std::shared_ptr<hive::chain::full_block_type> from_variant_to_full_block_ptr(const fc::variant& v, int block_num)
 {
-  hive::plugins::block_api::api_signed_block_object sb;
+  sbo_t sb;
 
   fc::from_variant(v, sb);
 
