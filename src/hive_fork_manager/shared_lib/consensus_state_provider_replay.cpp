@@ -73,7 +73,12 @@ class postgres_block_log
 {
 public:
   void run(int from, int to, const char* context, const char* postgres_url, const char* shared_memory_bin_path);
+  std::shared_ptr<hive::chain::full_block_type> get_full_block(int block_num,
+                              const char* context,
+                              const char* postgres_url,
+                              const char* shared_memory_bin_path);
 private:
+  std::shared_ptr<hive::chain::full_block_type> block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url);
   void measure_before_run();
   void measure_after_run();
   void handle_exception(std::exception_ptr exception_ptr);
@@ -184,6 +189,42 @@ void postgres_block_log::run(int from,
   }
 
   measure_after_run();
+}
+
+
+std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+{
+  auto block_num_from_postgres = block["num"].as<int>();
+
+  if(block_num_from_postgres != block_num_from_shared_memory_bin) 
+    return {};
+
+  fc::variant v = block_to_variant_with_transactions(block);
+
+  std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num_from_postgres);
+
+  return fb_ptr;
+}
+
+
+
+std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block(int block_num,
+                             const char* context,
+                             const char* postgres_url,
+                             const char* shared_memory_bin_path)
+{
+  try
+  {
+    get_postgres_data(block_num, block_num, postgres_url);
+    initialize_iterators();
+    return block_to_fullblock(block_num, blocks[0], context, shared_memory_bin_path, postgres_url);
+  }
+  catch(...)
+  {
+    auto current_exception = std::current_exception();
+    handle_exception(current_exception);
+  }
+
 }
 
 void postgres_block_log::measure_before_run()
@@ -766,7 +807,5 @@ const char* fix_pxx_hex(const pqxx::field& h)
 
 std::shared_ptr<hive::chain::full_block_type> postgres_block_log_provider::read_block_by_num(uint32_t block_num) const
 {
-  //postgres_block_log().run(block_num, block_num, context, postgres_url, shared_memory_bin_path);
-  int a = postgres_block_log_provider_jestem;
-  wlog("From postgres_block_log_provider::read_block_by_num");
+  return consensus_state_provider::postgres_block_log().get_full_block(block_num, context.c_str(), postgres_url.c_str(), shared_memory_bin_path.c_str());
 }

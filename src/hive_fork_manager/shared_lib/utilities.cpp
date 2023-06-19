@@ -941,7 +941,7 @@ Datum current_account_balances(PG_FUNCTION_ARGS)
   ArrayType* accounts_arr = PG_GETARG_ARRAYTYPE_P(0);
   char* context = text_to_cstring(PG_GETARG_TEXT_PP(1));
   char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(2));
-  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(2));
+  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(3));
 
   std::vector<std::string> accounts = extract_string_array_from_datum(accounts_arr);
 

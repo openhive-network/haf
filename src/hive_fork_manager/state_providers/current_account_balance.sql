@@ -88,29 +88,6 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_postgres_url()
-    RETURNS TEXT
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-DECLARE
-    __current_pid INT;
-    __database_name TEXT;
-    __postgres_url TEXT;
-BEGIN
-    __current_pid := pg_backend_pid();
-    SELECT datname AS database_name
-    FROM pg_stat_activity
-    WHERE pid = __current_pid INTO __database_name;
-
-    __postgres_url := 'postgres:///' || __database_name;
-    RAISE NOTICE '__postgres_url=%', __postgres_url;
-    RETURN __postgres_url;
-END;
-$BODY$
-;
-
 
 CREATE OR REPLACE FUNCTION hive.get_shared_memory_bin_path(_config_table_name TEXT)
     RETURNS TEXT
@@ -139,7 +116,7 @@ DECLARE
     __get_balances TEXT;
     __top_richest_accounts_json TEXT;
 BEGIN
-    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances(%L,%L)', _table_name, _context, _shared_memory_bin_path);
+    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances(%L,%L,%L)', _table_name, _context, _shared_memory_bin_path, hive.get_postgres_url());
     EXECUTE __get_balances;
 
     EXECUTE format('
