@@ -15,7 +15,6 @@
 #include "hive/protocol/forward_impacted.hpp"
 #include "hive/protocol/operations.hpp"
 
-#include "pqxx_op_iterator.hpp"
 #include "time_probe.hpp"
 
 
@@ -89,15 +88,9 @@ private:
   static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   fc::variant block_to_variant_with_transactions(const pqxx::row& block);
-  fc::variant block_to_variant_without_transactions(const pqxx::row& block);
   fc::variant build_block_variant(const pqxx::row& block,
                                   const std::vector<fc::variant>& transaction_ids_variants,
                                   const std::vector<fc::variant>& transaction_variants);
-  void apply_non_transactional_operation_block(
-      hive::chain::database& db,
-      const pqxx::result::const_iterator& end_it,
-      int block_num,
-      const std::shared_ptr<hive::chain::full_block_type>& full_block);
   void measure_before_apply_non_tansactional_operation_block();
   void measure_after_apply_non_tansactional_operation_block();  
   void transactions2variants(int block_num,
@@ -128,7 +121,6 @@ private:
   std::chrono::nanoseconds transformations_duration;
   time_probe transformations_time_probe;
   time_probe apply_full_block_time_probe;
-  time_probe non_transactional_apply_op_block_time_probe;
 
   class postgres_database_helper
   {
@@ -231,14 +223,12 @@ void postgres_block_log::measure_before_run()
 {
   transformations_time_probe.reset();
   apply_full_block_time_probe.reset();
-  non_transactional_apply_op_block_time_probe.reset();
 }
 
 void postgres_block_log::measure_after_run()
 {
   transformations_time_probe.print_duration("Transformations");
   apply_full_block_time_probe.print_duration("Transactional_apply_block");
-  non_transactional_apply_op_block_time_probe.print_duration("Non-transactional_apply_block");
 }
 
 void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
@@ -329,31 +319,17 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
 
   hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
 
-   //bool classic_way = (block_num <= 1092);
-   bool classic_way = true;
-   
-  if(classic_way)
-  {
 
-    fc::variant v = block_to_variant_with_transactions(block);
+  fc::variant v = block_to_variant_with_transactions(block);
 
-    // std::string json = fc::json::to_pretty_string(v);
-    // wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
+  // std::string json = fc::json::to_pretty_string(v);
+  // wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
 
-    std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
-    transformations_time_probe.stop();
+  std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
+  transformations_time_probe.stop();
 
-    apply_full_block(db, fb_ptr, get_skip_flags());
-    
-  }
-  else
-  {
-    fc::variant v = block_to_variant_without_transactions(block);
-    std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num);
-    transformations_time_probe.stop();
-
-    apply_non_transactional_operation_block(db, operations.end(), block_num, fb_ptr);
-  }
+  apply_full_block(db, fb_ptr, get_skip_flags());
+  
 }
 
 void postgres_block_log::apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr,
@@ -370,42 +346,7 @@ void postgres_block_log::apply_full_block(hive::chain::database& db, const std::
 }
 
 
-void postgres_block_log::apply_non_transactional_operation_block(
-    hive::chain::database& db,
-    const pqxx::result::const_iterator& end_it,
-    int block_num,
-    const std::shared_ptr<hive::chain::full_block_type>& full_block)
-{
-  measure_before_apply_non_tansactional_operation_block();
 
-  db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
-
-  rewind_current_operation_to_block(block_num);
-
-  hive::chain::op_iterator_ptr op_it(new pqxx_op_iterator(current_operation,
-                    end_it,
-                    block_num));
-    
-  db.non_transactional_apply_block(full_block, std::move(op_it), get_skip_flags());
-
-  db.clear_tx_status();
-  db.set_revision(db.head_block_num());
-
-
-  measure_after_apply_non_tansactional_operation_block();
-}
-
-void postgres_block_log::measure_before_apply_non_tansactional_operation_block()
-{
-  // Start time probe here
-  non_transactional_apply_op_block_time_probe.start();
-}
-
-
-void postgres_block_log::measure_after_apply_non_tansactional_operation_block()
-{
-  non_transactional_apply_op_block_time_probe.stop();
-}
 
 fc::variant postgres_block_log::block_to_variant_with_transactions(const pqxx::row& block)
 {
@@ -420,15 +361,7 @@ fc::variant postgres_block_log::block_to_variant_with_transactions(const pqxx::r
   return build_block_variant(block, transaction_ids_variants, transaction_variants);
 }
 
-fc::variant postgres_block_log::block_to_variant_without_transactions(const pqxx::row& block)
-{
-  std::vector<fc::variant> transaction_ids_variants; // Empty as no transactions
-  std::vector<fc::variant> transaction_variants;     // Empty as no transactions
-  
-  return build_block_variant(block, transaction_ids_variants, transaction_variants);
-}
 
-// Common function to build block variant
 fc::variant postgres_block_log::build_block_variant(const pqxx::row& block,
                                                     const std::vector<fc::variant>& transaction_ids_variants,
                                                     const std::vector<fc::variant>& transaction_variants)
@@ -449,8 +382,7 @@ fc::variant postgres_block_log::build_block_variant(const pqxx::row& block,
     ("transaction_merkle_root", fix_pxx_hex(block["transaction_merkle_root"]))
     ("transaction_ids", transaction_ids_variants);
 
-  if (!transaction_variants.empty())
-    block_variant_builder("transactions", transaction_variants);
+  block_variant_builder("transactions", transaction_variants);
 
   fc::variant block_variant;
   to_variant(block_variant_builder.get(), block_variant);
