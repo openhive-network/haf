@@ -24,6 +24,20 @@ class postgres_block_log_provider : public hive::chain::block_log
 {
   int postgres_block_log_provider_jestem = 1;
  public:
+  postgres_block_log_provider(std::string a_context,
+                              std::string a_shared_memory_bin_path,
+                              std::string a_postgres_url
+                              )
+      : context(a_context),
+        shared_memory_bin_path(a_shared_memory_bin_path),
+        postgres_url(a_postgres_url)
+  {
+  }
+
+  std::string context;
+  std::string shared_memory_bin_path;
+  std::string postgres_url;
+
   std::shared_ptr<hive::chain::full_block_type> read_block_by_num(uint32_t block_num) const override;
   // void open(const fc::path& file, bool read_only = false, bool auto_open_artifacts = true) override;
   // void set_compression(bool enabled) override;
@@ -602,11 +616,10 @@ auto initialize_chain_db = [](hive::chain::database& db, const char* context, co
   db.open(db_open_args);
 };
 
-auto create_and_init_database = [](const char* context, const char* shared_memory_bin_path) -> hive::chain::database*
+auto create_and_init_database = [](const char* context, const char* shared_memory_bin_path, const char* postgres_url) -> hive::chain::database*
 {
-  auto a = new postgres_block_log_provider();
-  a=a;
-  auto b = std::make_unique<postgres_block_log_provider>();
+  
+  auto b = std::make_unique<postgres_block_log_provider>(context, shared_memory_bin_path, postgres_url);
   hive::chain::database* db = new hive::chain::database(std::move(b));
   initialize_chain_db(*db, context, shared_memory_bin_path);
   consensus_state_provider::get_cache().add(context, db);
@@ -615,14 +628,14 @@ auto create_and_init_database = [](const char* context, const char* shared_memor
 
 
 
-int initialize_context(const char* context, const char* shared_memory_bin_path)
+int initialize_context(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
 
   hive::chain::database* db;
 
   if(!consensus_state_provider::get_cache().has_context(context))
   {
-    db = create_and_init_database(context, shared_memory_bin_path);
+    db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
   }
   else
   {
