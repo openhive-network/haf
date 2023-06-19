@@ -22,7 +22,7 @@
 namespace{
 
 bool BLOCK_TO_FULLBLOCK_SBO = true;
-bool REPLAY_BLOCK_SBO = false;
+bool REPLAY_BLOCK_SBO = true;
 
 }
 
@@ -366,6 +366,8 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
 
   if(REPLAY_BLOCK_SBO)
   {
+      sbo_t sbo = postgres_block_log::block_to_sbo_with_transactions(block);
+      fb_ptr = from_sbo_to_full_block_ptr(sbo, block_num);
   }
   else
   {
