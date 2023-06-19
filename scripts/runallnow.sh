@@ -398,7 +398,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # DONE Wydajnosc block po bloku. Na obecnej wersji
 
 
-
+# TODO!!!  -- ile zajmuje init - moze mozna go za każdym razem robić i w ten sposób reentrant!!!
 
 # TODO list all blocks and acounts with negative asset (ranges of blocks, maybe)
 #            //FC_ASSERT( vo.amount >= 0, "Asset amount cannot be negative" );
@@ -407,7 +407,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 #             wlog("Asset amount cannot be negative = ${neg_ass}" , ("neg_ass", vo.amount));
 
 
-
+# TODO rename IBlockProvider to Iblock_log
 # TODO test na start_fork - DIP 
 # TODO in bash_test - nake runallnow.sh or do another file, so that it contains just script
 # TODO - rename - everything should be named csp - consensus state prvider, sometimes only - cab - current_account_balances
@@ -1539,4 +1539,8 @@ else
 fi
 
 
+# unit test:
+# sudo -n /etc/init.d/postgresql restart ; sudo rm -rf /home/hived/datadir/consensus_unit_test_storage_dir; clearterm; unbuffer  ../haf/scripts/runallnow.sh 5000000 rebuild ; ctest -R curr --output-on-failure 
 
+# driver:
+# sudo rm -rf /home/hived/datadir/consensus_state_provider/ ; ../haf/scripts/runallnow.sh 2000000 driver_build_and_run 2> /home/hived/datadir/sbo.log 
