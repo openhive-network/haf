@@ -78,7 +78,7 @@ BEGIN
 
     __shared_memory_bin_path := hive.get_shared_memory_bin_path(__config_table_name);
 
-    __consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(_first_block, _last_block, _context , __postgres_url, __shared_memory_bin_path));
+    __consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(_first_block, _last_block, _context , __shared_memory_bin_path, __postgres_url));
 
     RAISE NOTICE '__consensus_state_provider_replay_call_ok=%', __consensus_state_provider_replay_call_ok;
 

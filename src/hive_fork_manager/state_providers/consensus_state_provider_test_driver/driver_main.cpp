@@ -51,7 +51,7 @@ namespace po = boost::program_options;
 int main(int argc, char *argv[]) 
 {
     int from, to, step;
-    std::string  context, postgres_url, consensus_state_provider_storage;
+    std::string  context, consensus_state_provider_storage, postgres_url;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -110,8 +110,8 @@ int main(int argc, char *argv[])
             i,
             current_step_end,
             context.c_str(),
-            postgres_url.c_str(),
-            consensus_state_provider_storage.c_str());
+            consensus_state_provider_storage.c_str(),
+            postgres_url.c_str());
 
         all_time_probe.stop(); all_time_probe.print_duration("All");
         std::cout << "Memory (KB): " << get_memory_usage_kb() << std::endl;
