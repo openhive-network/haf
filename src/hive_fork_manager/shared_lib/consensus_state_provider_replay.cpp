@@ -528,7 +528,7 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block,
     if(const auto& field = block["extensions"]; !field.is_null())
     {
       std::string json = field.c_str();
-      fc::variant extensions = fc::json::from_string(json.empty() ? "[]" : json);
+      fc::variant extensions = fc::json::from_string(json);
       from_variant(extensions, sb.extensions);
     }
     
