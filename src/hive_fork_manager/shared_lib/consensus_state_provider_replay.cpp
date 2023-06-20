@@ -471,11 +471,118 @@ fc::variant postgres_block_log::build_block_variant(const pqxx::row& block,
 template<typename T>
 void s2v(const std::string s, T& val)
 {
+
+  T::Nonexistent_Type = 0; // This line will cause a compile error
+
   fc::variant vo;
   to_variant(s, vo);
   from_variant(vo, val);
 }
 
+
+template<>
+void s2v(const std::string str, fc::ripemd160& bi)
+{
+
+  //T::Nonexistent_Type = 0; // This line will cause a compile error
+
+  // fc::variant vo;
+  // to_variant(s, vo);
+  // from_variant(vo, bi);
+
+
+
+  // auto str = var.as_string();
+      std::vector<char> vo;
+      vo.resize( str.size() / 2 );
+      if( vo.size() )
+      {
+         size_t r = fc::from_hex( str, vo.data(), vo.size() );
+         FC_ASSERT( r == vo.size() );
+      }
+
+
+  // std::vector<char> ve = v.as< std::vector<char> >();
+  if( vo.size() )
+  {
+      memcpy(&bi, vo.data(), fc::min<size_t>(vo.size(),sizeof(bi)) );
+  }
+  else
+      memset( static_cast<void*>(&bi), char(0), sizeof(bi) );
+
+
+}
+
+
+template<>
+void s2v(const std::string s, fc::time_point_sec& t)
+{
+
+  //T::Nonexistent_Type = 0; // This line will cause a compile error
+
+  // fc::variant vo;
+  // to_variant(s, vo);
+  // from_variant(vo, t);
+
+  t = fc::time_point_sec::from_iso_string( s );
+
+
+}
+
+template<>
+void s2v(const std::string s, std::string& val)
+{
+
+  //T::Nonexistent_Type = 0; // This line will cause a compile error
+  val =s;
+  // fc::variant vo;
+  // to_variant(s, vo);
+  // from_variant(vo, val);
+}
+
+
+template<>
+void s2v(const std::string s, hive::protocol::public_key_type& val)
+{
+
+  //T::Nonexistent_Type = 0; // This line will cause a compile error
+
+  // fc::variant vo;
+  // to_variant(s, vo);
+  // from_variant(vo, val);
+
+   val = hive::protocol::public_key_type(s);
+
+
+}
+
+
+template<>
+void s2v(const std::string str, hive::chain::signature_type& bi) // fc::array<unsigned char, 65>’
+{
+
+  //T::Nonexistent_Type = 0; // This line will cause a compile error
+
+  // fc::variant vo;
+  // to_variant(s, vo);
+  // from_variant(vo, val);
+
+    std::vector<char> vo;
+    vo.resize( str.size() / 2 );
+    if( vo.size() )
+    {
+        size_t r = fc::from_hex( str, vo.data(), vo.size() );
+        FC_ASSERT( r == vo.size() );
+    }
+  // std::vector<char> ve = v.as< std::vector<char> >();
+  if( vo.size() )
+  {
+      memcpy(&bi, vo.data(), fc::min<size_t>(vo.size(),sizeof(bi)) );
+  }
+  else
+      memset( static_cast<void*>(&bi), char(0), sizeof(bi) );
+
+}
 
 sbo_t postgres_block_log::build_sbo(const pqxx::row& block,
                                                     const std::vector<fc::variant>& transaction_ids_variants,
