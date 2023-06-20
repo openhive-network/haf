@@ -87,11 +87,14 @@ public:
                               const char* shared_memory_bin_path,
                               const char* postgres_url);
 private:
-  sbo_t build_sbo(const pqxx::row& block, const std::vector<fc::variant>& transaction_ids_variants, const std::vector<hive::protocol::signed_transaction>& transaction_sbos);
+  sbo_t build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos);
   sbo_t block_to_sbo_with_transactions(const pqxx::row& block);
   std::shared_ptr<hive::chain::full_block_type> from_sbo_to_full_block_ptr(sbo_t& sb, int block_num);
 
-  void transactions2sbo(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<hive::protocol::signed_transaction>& transaction_sbos);
+  void build_transaction_ids_sbo(const pqxx::result::const_iterator& transaction,
+                                            std::vector<hive::protocol::transaction_id_type>& transaction_id_sbos);
+
+  void transactions2sbo(int block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_sbos, std::vector<hive::protocol::signed_transaction>& transaction_sbos);
   hive::protocol::signed_transaction build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<hive::protocol::operation>& operation_sbos);
   std::vector<hive::protocol::operation> operations2sbos(int block_num, int trx_in_block);
   void add_operation_sbo(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_sbos);
@@ -414,13 +417,13 @@ sbo_t postgres_block_log::block_to_sbo_with_transactions(const pqxx::row& block)
 {
   auto block_num = block["num"].as<int>();
 
-  std::vector<fc::variant> transaction_ids_variants;
+  std::vector<hive::protocol::transaction_id_type> transaction_ids_sbos;
   std::vector<hive::protocol::signed_transaction> transaction_sbos;
   
   if(block_num == current_transaction_block_num()) 
-    transactions2sbo(block_num, transaction_ids_variants, transaction_sbos);
+    transactions2sbo(block_num, transaction_ids_sbos, transaction_sbos);
   
-  return build_sbo(block, transaction_ids_variants, transaction_sbos);
+  return build_sbo(block, transaction_ids_sbos, transaction_sbos);
 
 }
 
@@ -610,7 +613,7 @@ void s2v(const std::string str, hive::chain::signature_type& bi) // fc::array<un
 
 }
 
-sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<fc::variant>& transaction_ids_variants, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
+sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
 {
 
   // {
@@ -669,7 +672,7 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<fc
     s2v(fix_pxx_hex(block["hash"]), sb.block_id);
     s2v(block["signing_key"].c_str(), sb.signing_key);
 
-    from_variant(transaction_ids_variants, sb.transaction_ids);
+    sb.transaction_ids = std::move(transaction_ids_sbos);
 
 
     //sb.witness_signature = decltype(sb.witness_signature)(fix_pxx_hex(block["witness_signature"]));
@@ -687,10 +690,8 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<fc
 
   //from_variant(transaction_variants, sb.transactions);
   
-  for(const auto& t: transaction_sbos )
-  {
-    sb.transactions.push_back(t);
-  }
+
+  sb.transactions = std::move(transaction_sbos);
 
 //  vector<signed_transaction> transactions;
   return sb;
@@ -718,7 +719,7 @@ void postgres_block_log::transactions2variants(int block_num, std::vector<fc::va
   }
 }
 
-void postgres_block_log::transactions2sbo(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<hive::protocol::signed_transaction>& transaction_sbos)
+void postgres_block_log::transactions2sbo(int block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_sbos, std::vector<hive::protocol::signed_transaction>& transaction_sbos)
 {
   for(; current_transaction != transactions.end() && is_current_transaction(current_transaction, block_num); ++current_transaction)
   {
@@ -726,7 +727,7 @@ void postgres_block_log::transactions2sbo(int block_num, std::vector<fc::variant
 
     std::vector<std::string> signatures = build_signatures(current_transaction);
 
-    build_transaction_ids(current_transaction, transaction_id_variants);
+    build_transaction_ids_sbo(current_transaction, transaction_id_sbos);
 
     rewind_current_operation_to_block(block_num);
 
@@ -771,6 +772,29 @@ void postgres_block_log::build_transaction_ids(const pqxx::result::const_iterato
   (void)data;
 
   transaction_id_variants.push_back(fix_pxx_hex(transaction["trx_hash"]));
+}
+
+void postgres_block_log::build_transaction_ids_sbo(const pqxx::result::const_iterator& transaction,
+                                            std::vector<hive::protocol::transaction_id_type>& transaction_id_sbos)
+{
+  //  https://github.com/jtv/libpqxx/blob/3d97c80bcde96fb70a21c1ae1cf92ad934818210/include/pqxx/field.hxx
+  //   Do not use this for BYTEA values, or other binary values.  To read those,
+  //   convert the value to your desired type using `to()` or `as()`.  For
+  //   example: `f.as<std::basic_string<std::byte>>()`.
+  //
+  // [[nodiscard]] PQXX_PURE char const *c_str() const &;
+
+  pqxx::binarystring blob(transaction["trx_hash"]);
+  auto size = blob.size();
+  auto data = blob.data();
+
+  (void)size;
+  (void)data;
+
+  hive::protocol::transaction_id_type transaction_id_sbo;
+  s2v(fix_pxx_hex(transaction["trx_hash"]), transaction_id_sbo);
+
+  transaction_id_sbos.push_back(transaction_id_sbo);
 }
 
 void postgres_block_log::rewind_current_operation_to_block(int block_num)
