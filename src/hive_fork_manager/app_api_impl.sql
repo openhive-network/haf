@@ -11,6 +11,7 @@ DECLARE
     __current_context_irreversible_block hive.blocks.num%TYPE;
     __lead_context hive.context_name := _contexts[ 1 ];
     __result hive.events_queue%ROWTYPE;
+    item record;
 BEGIN
     SELECT hc.events_id
          , hc.current_block_num
@@ -21,12 +22,21 @@ BEGIN
     IF __current_context_block_num <= __current_context_irreversible_block  AND  __newest_irreversible_block_num IS NOT NULL THEN
         -- here we are sure that context only processing irreversible blocks, we can continue
         -- processing irreversible blocks or find next event after irreversible
+        raise notice 'ezsobma find_next_event __curent_events_id before %', to_json(__curent_events_id);
         SELECT * INTO  __result
         FROM hive.events_queue heq
         WHERE heq.block_num > __newest_irreversible_block_num
               AND heq.event != 'BACK_FROM_FORK'
+              -- AND heq.id >= __curent_events_id -- fix
         ORDER BY heq.id LIMIT 1;
-        raise notice 'find_next_event BEGIN' ;
+        raise notice 'ezsobma find_next_event __result after %', to_json(__result);
+        raise notice 'ezsobma find_next_event __newest_irreversible_block_num %', to_json(__newest_irreversible_block_num);
+        FOR item IN SELECT * FROM hive.events_queue LOOP
+            raise notice 'ezsobma find_next_event hive.events_queue %', to_json(item);
+        END LOOP;
+        FOR item IN SELECT * FROM hive.contexts LOOP
+            raise notice 'ezsobma find_next_event hive.contexts %', to_json(item);
+        END LOOP;
         IF __result IS NULL THEN
             -- there is no reversible blocks event
             -- the last possible event are MASSIVE_SYNC(__newest_irreversible_block_num) or NEW_IRREVERSIBLE(__newest_irreversible_block_num)
@@ -38,25 +48,28 @@ BEGIN
 
             IF __result IS NOT NULL AND __result.id = __curent_events_id THEN
                 -- when there is no event than recently processed
-                raise notice 'find_next_event RETURN NULL' ;
+                raise notice 'ezsobma find_next_event RETURN NULL' ;
                 RETURN NULL;
             END IF;
         END IF;
 
         UPDATE hive.contexts
         SET irreversible_block = __newest_irreversible_block_num WHERE name =ANY( _contexts );
+        raise notice 'find_next_event IF __current_context_block_num <= __current_con... __result %', to_json(__result) ;
     ELSE
         ---- find next event
         SELECT * INTO __result
         FROM hive.events_queue heq
         WHERE heq.id > __curent_events_id
         ORDER BY id LIMIT 1;
+        raise notice 'find_next_event ELSE... __result %', to_json(__result) ;
     END IF;
 
     IF __result IS NOT NULL THEN
         UPDATE hive.contexts
         SET events_id = __result.id
         WHERE name =ANY( _contexts );
+        raise notice 'find_next_event UPDATE hive.contexts %', to_json(__result) ;
     END IF;
 
     raise notice 'find_next_event RETURN __result' ;
@@ -258,6 +271,7 @@ DECLARE
     __result hive.blocks_range;
     __next_event_block_num INT;
 BEGIN
+    raise notice 'ezsobma app_process_event _context, _context_state to_json: % ||| %', to_json(_context), to_json(_context_state);
     -- TODO(@Mickiewicz): get context id to do not repeat searching by name
     CASE _context_state.next_event_type
         WHEN 'BACK_FROM_FORK' THEN
@@ -379,6 +393,7 @@ BEGIN
 
     __result.first_block = __next_block_to_process;
     __result.last_block = __last_block_to_process;
+
     RETURN __result;
 END;
 $BODY$
@@ -398,6 +413,9 @@ BEGIN
 
     SELECT ARRAY_AGG( hive.app_process_event(contexts.*, __context_state) ) INTO __result
     FROM unnest( _context_names ) as contexts;
+
+
+    raise notice 'ezsobma hive.blocks_range __result to_json: %', to_json(__result);
 
     IF __result[1].first_block > __result[1].last_block THEN
         PERFORM pg_sleep( 1.5 );

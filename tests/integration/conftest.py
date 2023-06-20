@@ -35,6 +35,11 @@ class SQLNodesPreparer(NodesPreparer):
                                     '{"name":"chainlock","level":"debug","appender":"p2p"} '\
                                     '{"name":"sync","level":"debug","appender":"p2p"} '\
                                     '{"name":"p2p","level":"debug","appender":"p2p"}'
+            node.config.p2p_parameters = '{"listen_endpoint":"0.0.0.0:0","accept_incoming_connections":"true",'\
+                                    '"wait_if_endpoint_is_busy":"true",'\
+                                    '"desired_number_of_connections":"20","maximum_number_of_connections":"200","peer_connection_retry_timeout":"1",'\
+                                    '"peer_inactivity_timeout":"1","peer_advertising_disabled":"false","maximum_number_of_blocks_to_handle_at_one_time":"200",'\
+                                    '"active_ignored_request_timeout_microseconds":"60000"}'
 
             if isinstance(self.extra_config, list):
                 tt.logger.info(f'will append config {self.extra_config}')

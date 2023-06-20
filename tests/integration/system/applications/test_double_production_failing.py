@@ -15,7 +15,7 @@ from haf_local_tools.system.haf import (
     prepare_and_send_transactions,
 )
 from haf_local_tools import make_fork, wait_for_irreversible_progress
-
+import pytest
 
 #replay_all_nodes==false and TIMEOUT==300s therefore START_TEST_BLOCK has to be less than 100 blocks 
 START_TEST_BLOCK = 50
@@ -24,13 +24,18 @@ CONTEXT_ATTACH_BLOCK = 40
 APPLICATION_CONTEXT = "trx_histogram"
 
 
+def show_context(session):
+    contexts = session.execute( "SELECT * FROM hive.contexts" ).fetchone()
+    tt.logger.info(f'contexts {contexts}')
+
+
 def update_app_continuously(session, application_context, cycles):
     for i in range(cycles):
         blocks_range = session.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( application_context ) ).fetchone()
         (first_block, last_block) = blocks_range
+        tt.logger.info( "next blocks_range: {}\n".format( blocks_range ) )
         if last_block is None:
             continue
-        tt.logger.info( "next blocks_range: {}\n".format( blocks_range ) )
         session.execute( "SELECT public.update_histogram( {}, {} )".format( first_block, last_block ) )
         session.commit()
         ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hive.contexts WHERE NAME = '{}'".format( application_context ) ).fetchone()
@@ -45,6 +50,7 @@ def get_events_id(session, application_context):
     return eid
 
 
+@pytest.mark.repeat(5)
 def test_double_production_failing(prepared_networks_and_database_12_8_with_double_production, extra_witnesses):
     tt.logger.info(f'Start test_double_production')
 
@@ -135,13 +141,22 @@ def test_double_production_failing(prepared_networks_and_database_12_8_with_doub
         ids = [node.api.network_node.get_info()["node_id"] for node in allowed_nodes]
         node_with_restrictions.api.network_node.set_allowed_peers(allowed_peers=ids)
 
-
+    show_context(session_0)
     # first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 125)
     # while first_block is None or first_block <= 137:
     #     first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
+    #     show_context(session_0)
     #     tt.logger.info(f"{first_block=} {last_block=}")
+    show_context(session_0)
 
     restrict_connections(init_node, [api_node_0])
+
+
+
+    # first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 120)
+    # while first_block is None or first_block < 135:
+    #     first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
+    #     tt.logger.info(f"before block 137 {first_block=} {last_block=}")
 
     # sleep(120)
     tt.logger.info(f"before block 137")
@@ -156,13 +171,14 @@ def test_double_production_failing(prepared_networks_and_database_12_8_with_doub
     init_node.wait_for_block_with_number(138)
     witness_node_0.wait_for_block_with_number(138)
     witness_node_1.wait_for_block_with_number(138)
+    api_node_0.wait_for_block_with_number(138)
+    tt.logger.info(f"block 138")
+
 
     # first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
     # while first_block is None or first_block < 138:
     #     first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
-    #     tt.logger.info(f"{first_block=} {last_block=}")
-    # api_node_0.wait_for_block_qwith_number(138)
-    tt.logger.info(f"block 138")
+    #     tt.logger.info(f"after block 138 {first_block=} {last_block=}")
 
 
     def f_init():
@@ -176,7 +192,7 @@ def test_double_production_failing(prepared_networks_and_database_12_8_with_doub
         wallet_1.api.create_account("initminer", "alice1", "{}")
 
     # restrict_connections(init_node, [api_node_0])
-    # restrict_connections(api_node_0, [init_node])
+    restrict_connections(api_node_0, [init_node])
 
     tt.logger.info(f"before trxs send")
     t_init = threading.Thread(target=f_init)
@@ -190,90 +206,123 @@ def test_double_production_failing(prepared_networks_and_database_12_8_with_doub
     t_1.join()
     tt.logger.info(f"after trxs send")
 
+    def print_progress_until_block(b):
+        head_block_number = b-1
+        while head_block_number <= b:
+            head_block_number = api_node_0.api.database.get_dynamic_global_properties()["head_block_number"]
+            tt.logger.info(f"head_block_number {head_block_number}")
+            if head_block_number >= b:
+                break
+            api_node_0.wait_number_of_blocks(1)
 
 
-    from datetime import datetime, timedelta
-    from time import sleep
-    start = datetime.now()
-    while datetime.now() < start + timedelta(seconds=60):
-        tt.logger.info(f"{get_events_id(session_0, 'hivemind')=}")
-        # first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
-        # tt.logger.info(f"{first_block=} {last_block=}")
-        sleep(2)
+    # first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
+    # tt.logger.info(f"before fork")
+    restrict_connections(api_node_0, [])
 
-    witness_node_0.wait_for_block_with_number(139)
+    tt.logger.info("after reconnecting")
+    
+    # while first_block is None or first_block <= 160:
+    #     first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 2)
+    #     show_context(session_0)
+    #     tt.logger.info(f"{first_block=} {last_block=}")
+    
+    api_node_0.wait_for_next_fork(timeout=threading.TIMEOUT_MAX)
+    tt.logger.info(f"after fork")
+    api_node_0.wait_number_of_blocks(20)
+
+    return
+    # first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
+    # for i in range(50):
+    #     first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
+    #     tt.logger.info(f"for loop {first_block=} {last_block=}")
+
+
+    # api_node_0.wait_for_next_fork(timeout=threading.TIMEOUT_MAX)
+    # from datetime import datetime, timedelta
+    # from time import sleep
+    # start = datetime.now()
+    # while datetime.now() < start + timedelta(seconds=60):
+    #     tt.logger.info(f"{get_events_id(session_0, 'hivemind')=}")
+    #     # first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
+    #     # tt.logger.info(f"{first_block=} {last_block=}")
+    #     sleep(2)
+
+    # witness_node_0.wait_for_block_with_number(139)
     # witness_node_1.wait_for_block_with_number(139)
-    # restrict_connections(api_node_0, [])
 
     # first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
     # tt.logger.info(f"{first_block=} {last_block=}")
 
 
 
-    witness_node_0.wait_for_block_with_number(169)
+    witness_node_0.wait_for_block_with_number(180)
+    api_node_1.wait_for_block_with_number(180)
+    tt.logger.info(f"after block 180")
+    show_context(session_0)
 
 
-    start = datetime.now()
-    while datetime.now() < start + timedelta(seconds=60):
-        tt.logger.info(f"{get_events_id(session_0, 'hivemind')=}")
-        # first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
-        # tt.logger.info(f"{first_block=} {last_block=}")
-        sleep(2)
-    return
+    # start = datetime.now()
+    # while datetime.now() < start + timedelta(seconds=60):
+    #     tt.logger.info(f"{get_events_id(session_0, 'hivemind')=}")
+    #     # first_block, last_block = update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
+    #     # tt.logger.info(f"{first_block=} {last_block=}")
+    #     sleep(2)
+    # return
 
 
-    tt.logger.info(f"block 138")
-    tt.logger.info(f"before trxs send")
-    restrict_connections(init_node, [api_node_0])
-    restrict_connections(api_node_0, [init_node])
-    restrict_connections(api_node_0, [])
-    # alpha_net.disconnect_from(beta_net)
-    # restrict_connections(api_node_0, init_node)
+    # tt.logger.info(f"block 138")
+    # tt.logger.info(f"before trxs send")
+    # restrict_connections(init_node, [api_node_0])
+    # restrict_connections(api_node_0, [init_node])
+    # restrict_connections(api_node_0, [])
+    # # alpha_net.disconnect_from(beta_net)
+    # # restrict_connections(api_node_0, init_node)
 
-    # wallet_0.api.create_account("initminer", "alice", "{}")
-    tt.logger.info(f"before trxs send")
-    def f_init():
-        wallet_init.api.create_account("initminer", "aliceinit", "{}")
-    def f_0():
-        wallet_0.api.create_account("initminer", "alice0", "{}")
-    def f_1():
-        wallet_1.api.create_account("initminer", "alice1", "{}")
-    t_init = threading.Thread(target=f_init)
-    t_0 = threading.Thread(target=f_0)
-    t_1 = threading.Thread(target=f_1)
-    t_init.start()
-    t_0.start()
-    t_1.start()
-    t_init.join()
-    t_0.join()
-    t_1.join()
-    tt.logger.info(f"after trxs send")
-    init_node.wait_for_block_with_number(139)
-    witness_node_0.wait_for_block_with_number(140)
-    witness_node_1.wait_for_block_with_number(140)
-    tt.logger.info(f"got block 140")
+    # # wallet_0.api.create_account("initminer", "alice", "{}")
+    # tt.logger.info(f"before trxs send")
+    # def f_init():
+    #     wallet_init.api.create_account("initminer", "aliceinit", "{}")
+    # def f_0():
+    #     wallet_0.api.create_account("initminer", "alice0", "{}")
+    # def f_1():
+    #     wallet_1.api.create_account("initminer", "alice1", "{}")
+    # t_init = threading.Thread(target=f_init)
+    # t_0 = threading.Thread(target=f_0)
+    # t_1 = threading.Thread(target=f_1)
+    # t_init.start()
+    # t_0.start()
+    # t_1.start()
+    # t_init.join()
+    # t_0.join()
+    # t_1.join()
+    # tt.logger.info(f"after trxs send")
+    # init_node.wait_for_block_with_number(139)
+    # witness_node_0.wait_for_block_with_number(140)
+    # witness_node_1.wait_for_block_with_number(140)
+    # tt.logger.info(f"got block 140")
 
-    tt.logger.info(f"will update_app_continuously")
-    update_app_continuously(session_0, APPLICATION_CONTEXT, 19)
-    tt.logger.info(f"did update_app_continuously")
+    # tt.logger.info(f"will update_app_continuously")
+    # update_app_continuously(session_0, APPLICATION_CONTEXT, 19)
+    # tt.logger.info(f"did update_app_continuously")
 
-    restrict_connections(api_node_0, [])
+    # restrict_connections(api_node_0, [])
 
-    api_node_0.wait_for_next_fork(timeout=threading.TIMEOUT_MAX)
+    # api_node_0.wait_for_next_fork(timeout=threading.TIMEOUT_MAX)
 
-    tt.logger.info(f"networks reconnected")
-    update_app_continuously(session_0, APPLICATION_CONTEXT, 10)
-    # tt.logger.info(f"update_app_continuously more")
-    # update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
-    # update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
-    # update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
-    # update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
-    # tt.logger.info(f"update_app_continuously more more")
-    # update_app_continuously(session_0, APPLICATION_CONTEXT, 30)
+    # tt.logger.info(f"networks reconnected")
+    # update_app_continuously(session_0, APPLICATION_CONTEXT, 10)
+    # # tt.logger.info(f"update_app_continuously more")
+    # # update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
+    # # update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
+    # # update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
+    # # update_app_continuously(session_0, APPLICATION_CONTEXT, 1)
+    # # tt.logger.info(f"update_app_continuously more more")
+    # # update_app_continuously(session_0, APPLICATION_CONTEXT, 30)
 
 
-    from time import sleep
-    sleep(60)
+    # from time import sleep
+    # sleep(60)
 
 
     # restrict_connections(init_node, api_node_0)
