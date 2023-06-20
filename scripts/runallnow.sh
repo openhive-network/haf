@@ -398,7 +398,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # DONE Wydajnosc block po bloku. Na obecnej wersji
 
 
-
+# TODO!!!  -- ile zajmuje init - moze mozna go za każdym razem robić i w ten sposób reentrant!!!
 
 # TODO list all blocks and acounts with negative asset (ranges of blocks, maybe)
 #            //FC_ASSERT( vo.amount >= 0, "Asset amount cannot be negative" );
