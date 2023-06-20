@@ -434,7 +434,7 @@ fc::variant postgres_block_log::block_to_variant_with_transactions(const pqxx::r
   if(block_num == current_transaction_block_num()) 
     transactions2variants(block_num, transaction_ids_variants, transaction_variants);
   
-  //build_sbo(block, transaction_ids_variants, transaction_variants);
+  
 
   return build_block_variant(block, transaction_ids_variants, transaction_variants);
 }
