@@ -25,6 +25,7 @@ BEGIN
         FROM hive.events_queue heq
         WHERE heq.block_num > __newest_irreversible_block_num
               AND heq.event != 'BACK_FROM_FORK'
+              AND heq.id >= __curent_events_id
         ORDER BY heq.id LIMIT 1;
 
         IF __result IS NULL THEN
@@ -377,6 +378,7 @@ BEGIN
 
     __result.first_block = __next_block_to_process;
     __result.last_block = __last_block_to_process;
+
     RETURN __result;
 END;
 $BODY$
