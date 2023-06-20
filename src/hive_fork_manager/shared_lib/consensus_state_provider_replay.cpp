@@ -92,8 +92,10 @@ private:
   std::shared_ptr<hive::chain::full_block_type> from_sbo_to_full_block_ptr(sbo_t& sb, int block_num);
 
   void transactions2sbo(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<hive::protocol::signed_transaction>& transaction_sbos);
-  hive::protocol::signed_transaction build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<fc::variant>& operation_variants);
-
+  hive::protocol::signed_transaction build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<hive::protocol::operation>& operation_sbos);
+  std::vector<hive::protocol::operation> operations2sbos(int block_num, int trx_in_block);
+  void add_operation_sbo(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_sbos);
+  
   std::shared_ptr<hive::chain::full_block_type> block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url);
   void measure_before_run();
   void measure_after_run();
@@ -728,9 +730,9 @@ void postgres_block_log::transactions2sbo(int block_num, std::vector<fc::variant
 
     rewind_current_operation_to_block(block_num);
 
-    std::vector<fc::variant> operation_variants = operations2variants(block_num, trx_in_block);
+    std::vector<hive::protocol::operation> operation_sbos = operations2sbos(block_num, trx_in_block);
 
-    hive::protocol::signed_transaction transaction_sbo = build_transaction_sbo(current_transaction, signatures, operation_variants);
+    hive::protocol::signed_transaction transaction_sbo = build_transaction_sbo(current_transaction, signatures, operation_sbos);
 
     transaction_sbos.emplace_back(transaction_sbo);
   }
@@ -797,7 +799,7 @@ fc::variant postgres_block_log::build_transaction_variant(const pqxx::result::co
 }
 
 
-hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<fc::variant>& operation_variants)
+hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<hive::protocol::operation>& operation_sbos)
 {
   hive::protocol::signed_transaction  signed_transaction;
   //     // clang-format off
@@ -823,7 +825,11 @@ hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(con
       signed_transaction.signatures.push_back(signature);
     }
 
-    from_variant(operation_variants, signed_transaction.operations);
+    for(const auto&  op : operation_sbos)
+    {
+      signed_transaction.operations.push_back(op);
+    }
+
     return signed_transaction;
 }
 
@@ -856,7 +862,46 @@ void postgres_block_log::add_operation_variant(const pqxx::const_result_iterator
     pqxx::binarystring json(operation["body"]);
     const auto& body_in_json = operation["body"].c_str();
     operation_variants.emplace_back(fc::json::from_string(body_in_json));
+}
+
+std::vector<hive::protocol::operation> postgres_block_log::operations2sbos(int block_num, int trx_in_block)
+{
+  std::vector<hive::protocol::operation> operation_sbos;
+  if(is_current_operation(block_num, trx_in_block))
+  {
+    for(; current_operation != operations.end() && operation_matches_block_transaction(current_operation, block_num, trx_in_block);
+        ++current_operation)
+    {
+      add_operation_sbo(current_operation, operation_sbos);
+    }
   }
+  return operation_sbos;
+}
+
+
+void postgres_block_log::add_operation_sbo(const pqxx::const_result_iterator& cur_op, std::vector<hive::protocol::operation>& operation_sbos)
+{
+  pqxx::binarystring bs(cur_op["bin_body"]);
+  const char* raw_data = reinterpret_cast<const char*>(bs.data());
+  uint32_t data_length = bs.size();
+ 
+  //++cur_op;
+
+  operation_sbos.push_back(fc::raw::unpack_from_char_array<hive::protocol::operation>(raw_data, data_length));
+}
+
+// hive::chain::op_iterator::op_view_t pqxx_op_iterator::unpack_from_char_array_and_next()
+// {
+//   pqxx::binarystring bs(cur_op["bin_body"]);
+//   const char* raw_data = reinterpret_cast<const char*>(bs.data());
+//   uint32_t data_length = bs.size();
+ 
+//   ++cur_op;
+
+//   return fc::raw::unpack_from_char_array<hive::protocol::operation>(raw_data, data_length);
+// }
+
+
 
 int postgres_block_log::current_transaction_block_num()
 {
