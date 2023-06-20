@@ -503,7 +503,7 @@ template<typename T>
 void s2v(const std::string s, T& val)
 {
 
-  //T::Nonexistent_Type = 0; // This line will cause a compile error
+  T::Nonexistent_Type = 0; // This line will cause a compile error
 
   fc::variant vo;
   to_variant(s, vo);
@@ -818,7 +818,9 @@ hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(con
     
     for(const auto& a_signature : signatures)
     {
-      s2v(a_signature, signed_transaction.signatures);
+      hive::protocol::signature_type signature;
+      s2v(a_signature, signature);
+      signed_transaction.signatures.push_back(signature);
     }
 
     from_variant(operation_variants, signed_transaction.operations);
