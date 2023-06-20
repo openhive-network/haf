@@ -87,11 +87,11 @@ public:
                               const char* shared_memory_bin_path,
                               const char* postgres_url);
 private:
-  sbo_t build_sbo(const pqxx::row& block, const std::vector<fc::variant>& transaction_ids_variants, const std::vector<hive::protocol::transaction>& transaction_sbos);
+  sbo_t build_sbo(const pqxx::row& block, const std::vector<fc::variant>& transaction_ids_variants, const std::vector<hive::protocol::signed_transaction>& transaction_sbos);
   sbo_t block_to_sbo_with_transactions(const pqxx::row& block);
   std::shared_ptr<hive::chain::full_block_type> from_sbo_to_full_block_ptr(sbo_t& sb, int block_num);
 
-  void transactions2sbo(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<hive::protocol::transaction>& transaction_sbos);
+  void transactions2sbo(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<hive::protocol::signed_transaction>& transaction_sbos);
   hive::protocol::signed_transaction build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<fc::variant>& operation_variants);
 
   std::shared_ptr<hive::chain::full_block_type> block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url);
@@ -413,7 +413,7 @@ sbo_t postgres_block_log::block_to_sbo_with_transactions(const pqxx::row& block)
   auto block_num = block["num"].as<int>();
 
   std::vector<fc::variant> transaction_ids_variants;
-  std::vector<hive::protocol::transaction> transaction_sbos;
+  std::vector<hive::protocol::signed_transaction> transaction_sbos;
   
   if(block_num == current_transaction_block_num()) 
     transactions2sbo(block_num, transaction_ids_variants, transaction_sbos);
@@ -474,12 +474,29 @@ template<typename INT, typename T>
 void i2v(INT s, T& val)
 {
 
-  //T::Nonexistent_Type = 0; // This line will cause a compile error
+  T::Nonexistent_Type = 0; // This line will cause a compile error
 
   fc::variant vo;
   to_variant(s, vo);
   from_variant(vo, val);
 }
+
+template<>
+void i2v(int i, unsigned short& val)
+{
+  val = i;
+}
+
+
+template<>
+void i2v(int long i, unsigned int& val)
+{
+  val = i;
+}
+
+//void from_variant( const variant& var,  uint16_t& vo ){ vo = static_cast<uint16_t>(var.as_uint64()); }
+
+//   vo = static_cast<uint32_t>(var.as_uint64());
 
 
 template<typename T>
@@ -591,7 +608,7 @@ void s2v(const std::string str, hive::chain::signature_type& bi) // fc::array<un
 
 }
 
-sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<fc::variant>& transaction_ids_variants, const std::vector<hive::protocol::transaction>& transaction_sbos)
+sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<fc::variant>& transaction_ids_variants, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
 {
 
   // {
@@ -670,8 +687,7 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<fc
   
   for(const auto& t: transaction_sbos )
   {
-    hive::protocol::signed_transaction st = t; //error TODO mtlk object slicing !!!
-    sb.transactions.push_back(st);
+    sb.transactions.push_back(t);
   }
 
 //  vector<signed_transaction> transactions;
@@ -700,7 +716,7 @@ void postgres_block_log::transactions2variants(int block_num, std::vector<fc::va
   }
 }
 
-void postgres_block_log::transactions2sbo(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<hive::protocol::transaction>& transaction_sbos)
+void postgres_block_log::transactions2sbo(int block_num, std::vector<fc::variant>& transaction_id_variants, std::vector<hive::protocol::signed_transaction>& transaction_sbos)
 {
   for(; current_transaction != transactions.end() && is_current_transaction(current_transaction, block_num); ++current_transaction)
   {
@@ -714,7 +730,7 @@ void postgres_block_log::transactions2sbo(int block_num, std::vector<fc::variant
 
     std::vector<fc::variant> operation_variants = operations2variants(block_num, trx_in_block);
 
-    hive::protocol::transaction transaction_sbo = build_transaction_sbo(current_transaction, signatures, operation_variants);
+    hive::protocol::signed_transaction transaction_sbo = build_transaction_sbo(current_transaction, signatures, operation_variants);
 
     transaction_sbos.emplace_back(transaction_sbo);
   }
