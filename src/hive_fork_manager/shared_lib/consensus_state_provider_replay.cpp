@@ -465,6 +465,12 @@ void p2b_hex_to_ripemd160(const char* field_name, const T& block, fc::ripemd160&
   s2v(fix_pxx_hex(block[field_name]), val);
 }
 
+template<typename T>
+void p2b_time_to_time_point_sec(const char* field_name, const T& block, fc::time_point_sec& val)
+{
+  s2v(fix_pxx_time(block[field_name]), val);
+}
+
 sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
 {
   using namespace hive::protocol;
@@ -474,7 +480,7 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hi
   sbo_t sb;
 
   p2b_hex_to_ripemd160("prev", block, sb.previous);
-  s2v(fix_pxx_time(block["created_at"]), sb.timestamp);
+  p2b_time_to_time_point_sec("created_at", block, sb.timestamp);
   s2v(block["name"].c_str(), sb.witness);
   p2b_hex_to_ripemd160("transaction_merkle_root", block, sb.transaction_merkle_root);
  
@@ -564,7 +570,7 @@ hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(con
 
   i2v(transaction["ref_block_num"].as<int>(), signed_transaction.ref_block_num);
   i2v(transaction["ref_block_prefix"].as<int64_t>() ,signed_transaction.ref_block_prefix);
-  s2v(fix_pxx_time(transaction["expiration"]),signed_transaction.expiration);
+  p2b_time_to_time_point_sec("expiration", transaction, signed_transaction.expiration);
   
   for(const auto& a_signature : signatures)
   {
