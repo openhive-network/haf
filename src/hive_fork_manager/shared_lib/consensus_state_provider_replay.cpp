@@ -478,6 +478,12 @@ void p2b_hex_to_signature_type(const char* field_name, const T& block_or_transac
   s2v(fix_pxx_hex(block_or_transaction[field_name]), val);
 }
 
+template<typename T>
+void p2b_public_key(const char* field_name, const T& block_or_transaction, hive::chain::public_key_type& val)
+{
+  s2v(block_or_transaction[field_name].c_str(), val);  
+}
+
 sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
 {
   using namespace hive::protocol;
@@ -503,7 +509,7 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hi
 
 
   p2b_hex_to_ripemd160("hash", block, sb.block_id);
-  s2v(block["signing_key"].c_str(), sb.signing_key);
+  p2b_public_key("signing_key", block, sb.signing_key);
 
   sb.transaction_ids = std::move(transaction_ids_sbos);
 
