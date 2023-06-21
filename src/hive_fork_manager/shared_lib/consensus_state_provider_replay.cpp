@@ -822,18 +822,20 @@ void consensus_state_provider_finish_impl(const char* context, const char* share
 }
 
 
-// value coming from pxx is without 'T' in the middle to be accepted in variant
+// value coming from pxx is without 'T' in the middle to be accepted in our time consumer
 std::string fix_pxx_time(const pqxx::field& t)
 {
+  const auto T_letter_position_in_ascii_time_string = 10;
   std::string r = t.c_str();
-  r[10] = 'T';
+  r[T_letter_position_in_ascii_time_string] = 'T';
   return r;
 }
 
 // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
 const char* fix_pxx_hex(const pqxx::field& h) 
 { 
-  return h.c_str() + 2; 
+  const auto backslash_x_prefix_length = 2; 
+  return h.c_str() + backslash_x_prefix_length; 
 }
 
 }  // namespace consensus_state_provider
