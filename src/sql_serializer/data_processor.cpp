@@ -83,13 +83,13 @@ data_processor::data_processor( std::string description, const data_processing_f
         uint32_t last_block_num_in_stage = _last_block_num;
 
         lk.unlock();
-        dlog("${d} data processor consumed data - notifying trigger process...", ("d", _description));
+        ilog("${d} data processor consumed data - notifying trigger process...", ("d", _description));
         _cv.notify_one();
 
         if(_cancel.load())
           break;
 
-        dlog("${d} data processor starts a data processing...", ("d", _description));
+        ilog("${d} data processor starts a data processing...", ("d", _description));
 
         {
           data_processing_status_notifier notifier(&_is_processing_data, &_data_processing_mtx, &_data_processing_finished_cv);
@@ -100,7 +100,7 @@ data_processor::data_processor( std::string description, const data_processing_f
             _randezvous_trigger->report_complete_thread_stage( last_block_num_in_stage );
         }
 
-        dlog("${d} data processor finished processing a data chunk...", ("d", _description));
+        ilog("${d} data processor finished processing a data chunk...", ("d", _description));
       }
     }
     catch(...)

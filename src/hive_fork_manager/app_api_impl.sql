@@ -26,7 +26,7 @@ BEGIN
         WHERE heq.block_num > __newest_irreversible_block_num
               AND heq.event != 'BACK_FROM_FORK'
         ORDER BY heq.id LIMIT 1;
-
+        raise notice 'find_next_event BEGIN' ;
         IF __result IS NULL THEN
             -- there is no reversible blocks event
             -- the last possible event are MASSIVE_SYNC(__newest_irreversible_block_num) or NEW_IRREVERSIBLE(__newest_irreversible_block_num)
@@ -38,6 +38,7 @@ BEGIN
 
             IF __result IS NOT NULL AND __result.id = __curent_events_id THEN
                 -- when there is no event than recently processed
+                raise notice 'find_next_event RETURN NULL' ;
                 RETURN NULL;
             END IF;
         END IF;
@@ -58,6 +59,7 @@ BEGIN
         WHERE name =ANY( _contexts );
     END IF;
 
+    raise notice 'find_next_event RETURN __result' ;
     RETURN __result;
 END;
 $BODY$
@@ -452,7 +454,15 @@ CREATE OR REPLACE FUNCTION hive.refresh_irreversible_block_for_all_contexts( _ne
     VOLATILE
 AS
 $BODY$
+DECLARE
+    items record;
 BEGIN
+    raise notice 'refresh_irreversible_block_for_all_contexts begin';
+    FOR items IN SELECT * FROM hive.contexts LOOP
+        raise notice 'to_json: %', to_json(items);
+    END LOOP;
+
+    -- raise notice '_new_irreversible_block %', _new_irreversible_block;
     --Increasing `irreversible_block` for every context except contexts that already processed blocks higher than `_new_irreversible_block` value.
     --so as to remove redundant records from `irreversible` tables,
     --because it's no need to hold the same records in both types of tables `reversible`/`irreversible`,
@@ -460,6 +470,7 @@ BEGIN
     UPDATE hive.contexts
     SET irreversible_block = _new_irreversible_block
     WHERE current_block_num <= irreversible_block AND _new_irreversible_block > irreversible_block;
+    raise notice 'refresh_irreversible_block_for_all_contexts end';
 END;
 $BODY$
 ;

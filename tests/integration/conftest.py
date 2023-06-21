@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Tuple, Iterable
+from typing import Any, Iterable, List, Tuple
 from uuid import uuid4
 from functools import partial
 
@@ -16,11 +16,12 @@ import test_tools as tt
 import shared_tools.networks_architecture as networks
 from shared_tools.complex_networks import NodesPreparer, run_whole_network, prepare_time_offsets, create_block_log_directory_name
 
+
 class SQLNodesPreparer(NodesPreparer):
-    def __init__(self, database) -> None:
+    def __init__(self, database, extra_config=None) -> None:
         self.sessions = []
         self.database = database
-
+        self.extra_config = extra_config
     def prepare(self, builder: networks.NetworksBuilder):
         for cnt, node in enumerate(builder.prepare_nodes):
             self.sessions.append( self.database(f"postgresql:///haf_block_log-{cnt}") )
@@ -35,6 +36,12 @@ class SQLNodesPreparer(NodesPreparer):
                                     '{"name":"sync","level":"debug","appender":"p2p"} '\
                                     '{"name":"p2p","level":"debug","appender":"p2p"}'
 
+            if isinstance(self.extra_config, list):
+                tt.logger.info(f'will append config {self.extra_config}')
+                old_config = node.config.write_to_lines()
+
+                node.config.load_from_lines(old_config + self.extra_config)
+
 
     def db_name(self, idx) -> Any:
         assert idx < len(self.sessions)
@@ -46,13 +53,13 @@ class SQLNodesPreparer(NodesPreparer):
         return builder.nodes[idx]
 
 
-def prepare_network_with_1_session(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[networks.NetworksBuilder, Any]:
-    preparer = SQLNodesPreparer(database)
+def prepare_network_with_1_session(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None, extra_config=None) -> Tuple[networks.NetworksBuilder, Any]:
+    preparer = SQLNodesPreparer(database, extra_config)
     return run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions[0]
 
 
-def prepare_network_with_2_sessions(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[networks.NetworksBuilder, Any]:
-    preparer = SQLNodesPreparer(database)
+def prepare_network_with_2_sessions(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None, extra_config=None) -> Tuple[networks.NetworksBuilder, Any]:
+    preparer = SQLNodesPreparer(database, extra_config)
     return run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions
 
 
@@ -123,6 +130,36 @@ def prepared_networks_and_database_12_8_with_2_sessions(database) -> Tuple[netwo
     architecture = networks.NetworksArchitecture()
     architecture.load(config)
     yield prepare_network_with_2_sessions(database, architecture, create_block_log_directory_name('block_log_12_8'), None)
+
+
+@pytest.fixture()
+def extra_witnesses() -> List[str]:
+    witnesses = ["witness2-alpha"]
+    return witnesses
+
+
+@pytest.fixture()
+def prepared_networks_and_database_12_8_with_double_production(database, extra_witnesses) -> Tuple[networks.NetworksBuilder, Any]:
+    config = {
+        "networks": [
+                        {
+                            "InitNode"     : True,
+                            "ApiNode"      : { "Active": True, "Prepare": True },
+                            "WitnessNodes" :[12]
+                        },
+                        {
+                            "ApiNode"      : { "Active": True, "Prepare": True },
+                            "WitnessNodes" :[8]
+                        }
+                    ]
+    }
+    architecture = networks.NetworksArchitecture()
+    architecture.load(config)
+    extra_config = [f"private-key = {tt.Account('random').private_key}"]
+    for witness in extra_witnesses:
+        extra_config += [f"witness = {witness}"]
+    time_offsets = [1, 1, 1, 1, 1]
+    yield prepare_network_with_2_sessions(database, architecture, create_block_log_directory_name('block_log_12_8'), None, extra_config)
 
 
 @pytest.fixture()
