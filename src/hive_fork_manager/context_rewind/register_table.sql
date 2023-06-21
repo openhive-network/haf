@@ -160,7 +160,7 @@ BEGIN
     -- insert information about new registered table
     INSERT INTO hive.registered_tables( context_id, origin_table_schema, origin_table_name, shadow_table_name, origin_table_columns, owner )
     SELECT hc.id, tables.table_schema, tables.origin, tables.shadow, columns, current_user
-    FROM ( SELECT hc.id FROM hive.contexts hc WHERE hc.name =  _context_name ) as hc
+    FROM ( SELECT hc.id, hive.check_owner( hc.name, hc.owner ) FROM hive.contexts hc WHERE hc.name =  _context_name ) as hc
     JOIN ( VALUES( lower(_table_schema), lower(_table_name), __shadow_table_name, __columns_names  )  ) as tables( table_schema, origin, shadow, columns ) ON TRUE
     RETURNING context_id, id INTO __context_id, __registered_table_id
     ;

@@ -436,7 +436,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
 BEGIN
 
-    SELECT hac.id
+    SELECT hac.id, hive.check_owner( hac.name, hac.owner )
     FROM hive.contexts hac
     WHERE hac.name = _context
     INTO __context_id;

@@ -28,6 +28,20 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.check_owner( _context hive.context_name, _context_owner TEXT )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    STABLE
+AS
+$BODY$
+BEGIN
+    IF lower(_context_owner) != lower(CURRENT_USER) THEN
+        RAISE EXCEPTION 'User % is not an owner of context % and cannot register tables into it', CURRENT_USER, _context;
+    END IF;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.register_state_provider_tables( _context hive.context_name )
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -68,7 +82,7 @@ __origin_table_schema TEXT;
 __origin_table_name TEXT;
 __new_columns TEXT[];
 BEGIN
-    SELECT hrt.shadow_table_name, hrt.origin_table_schema, hrt.origin_table_name  FROM
+    SELECT hrt.shadow_table_name, hrt.origin_table_schema, hrt.origin_table_name, hive.check_owner( hc.name, hc.owner )  FROM
         ( SELECT * FROM pg_event_trigger_ddl_commands() ) as tr
         JOIN hive.registered_tables hrt ON ( hrt.origin_table_schema || '.' || hrt.origin_table_name ) = tr.object_identity
         JOIN hive.contexts hc ON hrt.context_id = hc.id
@@ -160,11 +174,12 @@ AS
 $$
 BEGIN
     PERFORM
-          hive.register_state_provider_tables( tables.context )
+          hive.check_owner( tables.context, tables.owner )
+        , hive.register_state_provider_tables( tables.context )
         , hive.register_table( tables.schema_name, tables.relname, tables.context )
         , hive.chceck_constrains(tables.schema_name, tables.relname)
     FROM (
-        SELECT DISTINCT( pgc.relname ), tr.schema_name, hc.name as context
+        SELECT DISTINCT( pgc.relname ), tr.schema_name, hc.name as context, hc.owner as owner
         FROM pg_event_trigger_ddl_commands() as tr
         JOIN pg_catalog.pg_inherits pgi ON tr.objid = pgi.inhrelid
         JOIN pg_class pgc ON pgc.oid = tr.objid

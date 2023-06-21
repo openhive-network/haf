@@ -128,6 +128,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.calculate_schema_hash(schema_name TEXT)
     , hive.are_indexes_dropped()
     , hive.are_fk_dropped()
+    , hive.check_owner( _context hive.context_name, _context_owner TEXT )
 
 
 TO hived_group;
