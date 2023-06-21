@@ -9,7 +9,6 @@
 #include <pqxx/pqxx>
 
 #include "fc/time.hpp"
-#include "fc/variant.hpp"
 #include "hive/chain/block_log.hpp"
 #include "hive/chain/database.hpp"
 #include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
@@ -20,16 +19,9 @@
 #include "hive/protocol/transaction.hpp"
 #include "time_probe.hpp"
 
-namespace{
-
-bool BLOCK_TO_FULLBLOCK_SBO = true;
-bool REPLAY_BLOCK_SBO = true;
-
-}
 
 class postgres_block_log_provider : public hive::chain::block_log
 {
-  //int postgres_block_log_provider_jestem = 1;
  public:
   postgres_block_log_provider(std::string a_context,
                               std::string a_shared_memory_bin_path,
@@ -212,32 +204,10 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullb
   if(block_num_from_postgres != block_num_from_shared_memory_bin) 
     return {};
 
-if(BLOCK_TO_FULLBLOCK_SBO)
-{
-
   sbo_t sbo = postgres_block_log::block_to_sbo_with_transactions(block);
   std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_sbo_to_full_block_ptr(sbo, block_num_from_postgres);
 
-  {
-    fc::variant v;
-    fc::to_variant(sbo, v);
-    std::string json = fc::json::to_pretty_string(v);
-    wlog("BLOCK_TO_FULLBLOCK_SBO block_num_from_postgres=${block_num} header=${j}", ("block_num", block_num_from_postgres) ( "j", json));
-  }
-
   return fb_ptr;
-}
-else
-{
-  fc::variant v = block_to_variant_with_transactions(block);
-  std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_variant_to_full_block_ptr(v, block_num_from_postgres);
-
-  std::string json = fc::json::to_pretty_string(v);
-  wlog("BLOCK_TO_FULLBLOCK_VAR block_num_from_postgres=${block_num} header=${j}", ("block_num", block_num_from_postgres) ( "j", json));
-
-  return fb_ptr;
-
-}
 }
 
 
@@ -364,32 +334,8 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
   hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
   std::shared_ptr<hive::chain::full_block_type> fb_ptr;
 
-  if(REPLAY_BLOCK_SBO)
-  {
-      sbo_t sbo = postgres_block_log::block_to_sbo_with_transactions(block);
-      fb_ptr = from_sbo_to_full_block_ptr(sbo, block_num);
-
-    {
-      // fc::variant v;
-      // fc::to_variant(sbo, v);
-      // std::string json = fc::json::to_pretty_string(v);
-      //wlog("REPLAY_BLOCK_SBO block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
-    }
-
-  }
-  else
-  {
-    fc::variant v = block_to_variant_with_transactions(block);
-
-    // std::string json = fc::json::to_pretty_string(v);
-    // wlog("block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
-
-    fb_ptr = from_variant_to_full_block_ptr(v, block_num);
-
-    std::string json = fc::json::to_pretty_string(v);
-    wlog("REPLAY_BLOCK_SBO_VAR block_num=${block_num} header=${j}", ("block_num", block_num) ( "j", json));
-
-  }
+  sbo_t sbo = postgres_block_log::block_to_sbo_with_transactions(block);
+  fb_ptr = from_sbo_to_full_block_ptr(sbo, block_num);
 
   transformations_time_probe.stop();
 
@@ -499,10 +445,6 @@ void i2v(int long i, unsigned int& val)
   val = i;
 }
 
-//void from_variant( const variant& var,  uint16_t& vo ){ vo = static_cast<uint16_t>(var.as_uint64()); }
-
-//   vo = static_cast<uint32_t>(var.as_uint64());
-
 
 template<typename T>
 void s2v(const std::string s, T& val)
@@ -520,90 +462,54 @@ template<>
 void s2v(const std::string str, fc::ripemd160& bi)
 {
 
-  // fc::variant vo;
-  // to_variant(s, vo);
-  // from_variant(vo, bi);
+  std::vector<char> vo;
+  vo.resize( str.size() / 2 );
+  if( vo.size() )
+  {
+      size_t r = fc::from_hex( str, vo.data(), vo.size() );
+      FC_ASSERT( r == vo.size() );
+  }
 
-
-
-  // auto str = var.as_string();
-      std::vector<char> vo;
-      vo.resize( str.size() / 2 );
-      if( vo.size() )
-      {
-         size_t r = fc::from_hex( str, vo.data(), vo.size() );
-         FC_ASSERT( r == vo.size() );
-      }
-
-
-  // std::vector<char> ve = v.as< std::vector<char> >();
   if( vo.size() )
   {
       memcpy(&bi, vo.data(), fc::min<size_t>(vo.size(),sizeof(bi)) );
   }
   else
       memset( static_cast<void*>(&bi), char(0), sizeof(bi) );
-
-
 }
 
 
 template<>
 void s2v(const std::string s, fc::time_point_sec& t)
 {
-
-  // fc::variant vo;
-  // to_variant(s, vo);
-  // from_variant(vo, t);
-
   t = fc::time_point_sec::from_iso_string( s );
-
-
 }
 
 template<>
 void s2v(const std::string s, std::string& val)
 {
-
   val =s;
-  // fc::variant vo;
-  // to_variant(s, vo);
-  // from_variant(vo, val);
 }
 
 
 template<>
 void s2v(const std::string s, hive::protocol::public_key_type& val)
 {
-
-
-  // fc::variant vo;
-  // to_variant(s, vo);
-  // from_variant(vo, val);
-
    val = hive::protocol::public_key_type(s);
-
-
 }
 
-
+// mtlk TODO - similar function above
 template<>
 void s2v(const std::string str, hive::chain::signature_type& bi) // fc::array<unsigned char, 65>’
 {
+  std::vector<char> vo;
+  vo.resize( str.size() / 2 );
+  if( vo.size() )
+  {
+      size_t r = fc::from_hex( str, vo.data(), vo.size() );
+      FC_ASSERT( r == vo.size() );
+  }
 
-
-  // fc::variant vo;
-  // to_variant(s, vo);
-  // from_variant(vo, val);
-
-    std::vector<char> vo;
-    vo.resize( str.size() / 2 );
-    if( vo.size() )
-    {
-        size_t r = fc::from_hex( str, vo.data(), vo.size() );
-        FC_ASSERT( r == vo.size() );
-    }
-  // std::vector<char> ve = v.as< std::vector<char> >();
   if( vo.size() )
   {
       memcpy(&bi, vo.data(), fc::min<size_t>(vo.size(),sizeof(bi)) );
@@ -615,85 +521,34 @@ void s2v(const std::string str, hive::chain::signature_type& bi) // fc::array<un
 
 sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
 {
-
-  // {
-  //   std::string json = block["extensions"].c_str();
-  //   fc::variant extensions = fc::json::from_string(json.empty() ? "[]" : json);
-
-  //   fc::variant_object_builder block_variant_builder;
-
-  //   block_variant_builder
-  //     ("witness", block["name"].c_str())
-  //     ("block_id", fix_pxx_hex(block["hash"]))
-  //     ("previous", fix_pxx_hex(block["prev"]))
-  //     ("timestamp", fix_pxx_time(block["created_at"]))
-  //     ("extensions", extensions)
-  //     ("signing_key", block["signing_key"].c_str())
-  //     ("witness_signature", fix_pxx_hex(block["witness_signature"]))
-  //     ("transaction_merkle_root", fix_pxx_hex(block["transaction_merkle_root"]))
-  //     ("transaction_ids", transaction_ids_variants);
-
-  //   block_variant_builder("transactions", transaction_variants);
-
-  //   fc::variant block_variant;
-  //   to_variant(block_variant_builder.get(), block_variant);
-  // }
-
   using namespace hive::protocol;
   using std::string;
   using std::vector;
 
-    sbo_t sb;
+  sbo_t sb;
 
-
-    // sb.previous = decltype(sb.previous)(fix_pxx_hex(block["prev"]));
-    // sb.timestamp = fc::time_point_sec::from_iso_string(fix_pxx_time(block["created_at"]));
-    // sb.witness = block["name"].c_str();
-    // sb.transaction_merkle_root = decltype(sb.transaction_merkle_root)(fix_pxx_hex(block["transaction_merkle_root"]));
-    // // sb.extensions = block["extensions"].c_str();
-
-
-    s2v(fix_pxx_hex(block["prev"]), sb.previous);
-    s2v(fix_pxx_time(block["created_at"]), sb.timestamp);
-    s2v(block["name"].c_str(), sb.witness);
-    s2v(fix_pxx_hex(block["transaction_merkle_root"]), sb.transaction_merkle_root);
-  
+  s2v(fix_pxx_hex(block["prev"]), sb.previous);
+  s2v(fix_pxx_time(block["created_at"]), sb.timestamp);
+  s2v(block["name"].c_str(), sb.witness);
+  s2v(fix_pxx_hex(block["transaction_merkle_root"]), sb.transaction_merkle_root);
  
-    if(const auto& field = block["extensions"]; !field.is_null())
-    {
-      std::string json = field.c_str();
-      fc::variant extensions = fc::json::from_string(json);
-      from_variant(extensions, sb.extensions);
-    }
+  if(const auto& field = block["extensions"]; !field.is_null())
+  {
+    std::string json = field.c_str();
+    fc::variant extensions = fc::json::from_string(json);
+    from_variant(extensions, sb.extensions);
+  }
     
-    s2v(fix_pxx_hex(block["witness_signature"]), sb.witness_signature);
+  s2v(fix_pxx_hex(block["witness_signature"]), sb.witness_signature);
 
 
-    s2v(fix_pxx_hex(block["hash"]), sb.block_id);
-    s2v(block["signing_key"].c_str(), sb.signing_key);
+  s2v(fix_pxx_hex(block["hash"]), sb.block_id);
+  s2v(block["signing_key"].c_str(), sb.signing_key);
 
-    sb.transaction_ids = std::move(transaction_ids_sbos);
-
-
-    //sb.witness_signature = decltype(sb.witness_signature)(fix_pxx_hex(block["witness_signature"]));
-
-        // auto str = var.as_string();
-        // vo.resize(str.size() / 2);
-        // if(vo.size())
-        // {
-        //   size_t r = from_hex(str, vo.data(), vo.size());
-
-    // std::vector<char> ve = v.as< std::vector<char> >();
-    // if( ve.size() )
-    // {
-    //     memcpy(&bi, ve.data(), fc::min<size_t>(ve.size(),sizeof(bi)) );
-
-  //from_variant(transaction_variants, sb.transactions);
-  
+  sb.transaction_ids = std::move(transaction_ids_sbos);
 
   sb.transactions = std::move(transaction_sbos);
 
-//  vector<signed_transaction> transactions;
   return sb;
 }
 
@@ -784,13 +639,6 @@ void postgres_block_log::build_transaction_ids_sbo(const pqxx::result::const_ite
   //
   // [[nodiscard]] PQXX_PURE char const *c_str() const &;
 
-  pqxx::binarystring blob(transaction["trx_hash"]);
-  auto size = blob.size();
-  auto data = blob.data();
-
-  (void)size;
-  (void)data;
-
   hive::protocol::transaction_id_type transaction_id_sbo;
   s2v(fix_pxx_hex(transaction["trx_hash"]), transaction_id_sbo);
 
@@ -826,35 +674,24 @@ fc::variant postgres_block_log::build_transaction_variant(const pqxx::result::co
 hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<hive::protocol::operation>& operation_sbos)
 {
   hive::protocol::signed_transaction  signed_transaction;
-  //     // clang-format off
-  // fc::variant_object_builder transaction_variant_builder;
-  // transaction_variant_builder
-  //   ("ref_block_num", transaction["ref_block_num"].as<int>())
-  //   ("ref_block_prefix", transaction["ref_block_prefix"].as<int64_t>())
-  //   ("expiration", fix_pxx_time(transaction["expiration"]))
-  //   ("signatures", signatures)
-  //   ("operations", operation_variants);
-  //   // clang-format on
 
-//  return transaction_variant_builder.get();
+  i2v(transaction["ref_block_num"].as<int>(), signed_transaction.ref_block_num);
+  i2v(transaction["ref_block_prefix"].as<int64_t>() ,signed_transaction.ref_block_prefix);
+  s2v(fix_pxx_time(transaction["expiration"]),signed_transaction.expiration);
+  
+  for(const auto& a_signature : signatures)
+  {
+    hive::protocol::signature_type signature;
+    s2v(a_signature, signature);
+    signed_transaction.signatures.push_back(signature);
+  }
 
-    i2v(transaction["ref_block_num"].as<int>(), signed_transaction.ref_block_num);
-    i2v(transaction["ref_block_prefix"].as<int64_t>() ,signed_transaction.ref_block_prefix);
-    s2v(fix_pxx_time(transaction["expiration"]),signed_transaction.expiration);
-    
-    for(const auto& a_signature : signatures)
-    {
-      hive::protocol::signature_type signature;
-      s2v(a_signature, signature);
-      signed_transaction.signatures.push_back(signature);
-    }
+  for(const auto&  op : operation_sbos)
+  {
+    signed_transaction.operations.push_back(op);
+  }
 
-    for(const auto&  op : operation_sbos)
-    {
-      signed_transaction.operations.push_back(op);
-    }
-
-    return signed_transaction;
+  return signed_transaction;
 }
 
 std::vector<fc::variant> postgres_block_log::operations2variants(int block_num, int trx_in_block)
@@ -908,24 +745,9 @@ void postgres_block_log::add_operation_sbo(const pqxx::const_result_iterator& cu
   pqxx::binarystring bs(cur_op["bin_body"]);
   const char* raw_data = reinterpret_cast<const char*>(bs.data());
   uint32_t data_length = bs.size();
- 
-  //++cur_op;
 
   operation_sbos.push_back(fc::raw::unpack_from_char_array<hive::protocol::operation>(raw_data, data_length));
 }
-
-// hive::chain::op_iterator::op_view_t pqxx_op_iterator::unpack_from_char_array_and_next()
-// {
-//   pqxx::binarystring bs(cur_op["bin_body"]);
-//   const char* raw_data = reinterpret_cast<const char*>(bs.data());
-//   uint32_t data_length = bs.size();
- 
-//   ++cur_op;
-
-//   return fc::raw::unpack_from_char_array<hive::protocol::operation>(raw_data, data_length);
-// }
-
-
 
 int postgres_block_log::current_transaction_block_num()
 {
