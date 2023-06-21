@@ -87,7 +87,7 @@ private:
                                             std::vector<hive::protocol::transaction_id_type>& transaction_id_sbos);
 
   void transactions2sbo(int block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_sbos, std::vector<hive::protocol::signed_transaction>& transaction_sbos);
-  hive::protocol::signed_transaction build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<hive::protocol::operation>& operation_sbos);
+  hive::protocol::signed_transaction build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<hive::protocol::signature_type>& signatures, const std::vector<hive::protocol::operation>& operation_sbos);
   std::vector<hive::protocol::operation> operations2sbos(int block_num, int trx_in_block);
   void add_operation_sbo(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_sbos);
   
@@ -105,7 +105,7 @@ private:
   void measure_after_apply_non_tansactional_operation_block();  
   static bool is_current_transaction(const pqxx::result::const_iterator& current_transaction,
                                      const int block_num);
-  static std::vector<std::string> build_signatures(const pqxx::result::const_iterator& transaction);
+  static std::vector<hive::protocol::signature_type> build_signatures(const pqxx::result::const_iterator& transaction);
   void rewind_current_operation_to_block(int block_num);
   
   bool is_current_operation(int block_num, int trx_in_block) const;
@@ -471,6 +471,11 @@ void p2b_time_to_time_point_sec(const char* field_name, const T& block_or_transa
   s2v(fix_pxx_time(block_or_transaction[field_name]), val);
 }
 
+
+template<typename T>
+void p2b_hex_to_signature_type(const char* field_name, const T& block_or_transaction, hive::chain::signature_type& val)
+{
+  s2v(fix_pxx_hex(block_or_transaction[field_name]), val);
 }
 
 sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
@@ -494,7 +499,7 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hi
     from_variant(extensions, sb.extensions);
   }
     
-  s2v(fix_pxx_hex(block["witness_signature"]), sb.witness_signature);
+  p2b_hex_to_signature_type("witness_signature", block,  sb.witness_signature);
 
 
   p2b_hex_to_ripemd160("hash", block, sb.block_id);
@@ -513,7 +518,7 @@ void postgres_block_log::transactions2sbo(int block_num, std::vector<hive::proto
   {
     auto trx_in_block = current_transaction["trx_in_block"].as<int>();
 
-    std::vector<std::string> signatures = build_signatures(current_transaction);
+    std::vector<hive::protocol::signature_type> signatures = build_signatures(current_transaction);
 
     build_transaction_ids_sbo(current_transaction, transaction_id_sbos);
 
@@ -532,12 +537,14 @@ bool postgres_block_log::is_current_transaction(const pqxx::result::const_iterat
   return current_transaction["block_num"].as<int>() == block_num;
 }
 
-std::vector<std::string> postgres_block_log::build_signatures(const pqxx::result::const_iterator& transaction)
+std::vector<hive::protocol::signature_type> postgres_block_log::build_signatures(const pqxx::result::const_iterator& transaction)
 {
-  std::vector<std::string> signatures;
+  std::vector<hive::protocol::signature_type> signatures;
   if(strlen(transaction["signature"].c_str()))
   {
-    signatures.push_back(fix_pxx_hex(transaction["signature"]));
+    hive::protocol::signature_type signature;
+    p2b_hex_to_signature_type("signature", transaction, signature);
+    signatures.push_back(signature);
   }
   return signatures;
 }
@@ -566,7 +573,7 @@ void postgres_block_log::rewind_current_operation_to_block(int block_num)
   }
 };
 
-hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<std::string>& signatures, const std::vector<hive::protocol::operation>& operation_sbos)
+hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<hive::protocol::signature_type>& signatures, const std::vector<hive::protocol::operation>& operation_sbos)
 {
   hive::protocol::signed_transaction  signed_transaction;
 
@@ -574,12 +581,7 @@ hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(con
   i2v(transaction["ref_block_prefix"].as<int64_t>() ,signed_transaction.ref_block_prefix);
   p2b_time_to_time_point_sec("expiration", transaction, signed_transaction.expiration);
   
-  for(const auto& a_signature : signatures)
-  {
-    hive::protocol::signature_type signature;
-    s2v(a_signature, signature);
-    signed_transaction.signatures.push_back(signature);
-  }
+  signed_transaction.signatures = std::move(signatures);
 
   for(const auto&  op : operation_sbos)
   {
