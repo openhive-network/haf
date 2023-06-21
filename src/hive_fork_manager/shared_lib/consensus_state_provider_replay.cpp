@@ -361,33 +361,23 @@ sbo_t postgres_block_log::block_to_sbo_with_transactions(const pqxx::row& block)
 
 }
 
-template<typename INT, typename T>
-void i2v(INT s, T& val)
+
+template<typename T>
+void p2b_int_to_uint16(const char* field_name, const T& block_or_transaction, uint16_t& val)
 {
-
-  T::Nonexistent_Type = 0; // This line will cause a compile error
-
-  fc::variant vo;
-  to_variant(s, vo);
-  from_variant(vo, val);
+  val = block_or_transaction[field_name]. template as<int>();
 }
 
-template<>
-void i2v(int i, unsigned short& val)
+template<typename T>
+void p2b_int64_to_uint32(const char* field_name, const T& block_or_transaction, uint32_t& val)
 {
-  val = i;
+  val = block_or_transaction[field_name]. template as<int64_t>();
 }
 
-
-template<>
-void i2v(int long i, unsigned int& val)
-{
-  val = i;
-}
 
 
 template<typename T>
-void s2v(const std::string s, T& val)
+void ss22vv(const std::string s, T& val)
 {
 
   T::Nonexistent_Type = 0; // This line will cause a compile error
@@ -399,7 +389,7 @@ void s2v(const std::string s, T& val)
 
 
 template<>
-void s2v(const std::string str, fc::ripemd160& bi)
+void ss22vv(const std::string str, fc::ripemd160& bi)
 {
 
   std::vector<char> vo;
@@ -420,27 +410,27 @@ void s2v(const std::string str, fc::ripemd160& bi)
 
 
 template<>
-void s2v(const std::string s, fc::time_point_sec& t)
+void ss22vv(const std::string s, fc::time_point_sec& t)
 {
   t = fc::time_point_sec::from_iso_string( s );
 }
 
 template<>
-void s2v(const std::string s, std::string& val)
+void ss22vv(const std::string s, std::string& val)
 {
   val =s;
 }
 
 
 template<>
-void s2v(const std::string s, hive::protocol::public_key_type& val)
+void ss22vv(const std::string s, hive::protocol::public_key_type& val)
 {
    val = hive::protocol::public_key_type(s);
 }
 
 // mtlk TODO - similar function above
 template<>
-void s2v(const std::string str, hive::chain::signature_type& bi) // fc::array<unsigned char, 65>’
+void ss22vv(const std::string str, hive::chain::signature_type& bi) // fc::array<unsigned char, 65>’
 {
   std::vector<char> vo;
   vo.resize( str.size() / 2 );
@@ -462,26 +452,32 @@ void s2v(const std::string str, hive::chain::signature_type& bi) // fc::array<un
 template<typename T>
 void p2b_hex_to_ripemd160(const char* field_name, const T& block_or_transaction, fc::ripemd160& val)
 {
-  s2v(fix_pxx_hex(block_or_transaction[field_name]), val);
+  ss22vv(fix_pxx_hex(block_or_transaction[field_name]), val);
 }
 
 template<typename T>
 void p2b_time_to_time_point_sec(const char* field_name, const T& block_or_transaction, fc::time_point_sec& val)
 {
-  s2v(fix_pxx_time(block_or_transaction[field_name]), val);
+  ss22vv(fix_pxx_time(block_or_transaction[field_name]), val);
 }
 
 
 template<typename T>
 void p2b_hex_to_signature_type(const char* field_name, const T& block_or_transaction, hive::chain::signature_type& val)
 {
-  s2v(fix_pxx_hex(block_or_transaction[field_name]), val);
+  ss22vv(fix_pxx_hex(block_or_transaction[field_name]), val);
 }
 
 template<typename T>
-void p2b_public_key(const char* field_name, const T& block_or_transaction, hive::chain::public_key_type& val)
+void p2b_cstr_to_public_key(const char* field_name, const T& block_or_transaction, hive::chain::public_key_type& val)
 {
-  s2v(block_or_transaction[field_name].c_str(), val);  
+  ss22vv(block_or_transaction[field_name].c_str(), val);  
+}
+
+template<typename T>
+void p2b_cstr_to_str(const char* field_name, const T& block_or_transaction, std::string& val)
+{
+  ss22vv(block_or_transaction[field_name].c_str(), val);
 }
 
 sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
@@ -494,7 +490,7 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hi
 
   p2b_hex_to_ripemd160("prev", block, sb.previous);
   p2b_time_to_time_point_sec("created_at", block, sb.timestamp);
-  s2v(block["name"].c_str(), sb.witness);
+  p2b_cstr_to_str("name", block, sb.witness);
   p2b_hex_to_ripemd160("transaction_merkle_root", block, sb.transaction_merkle_root);
  
   if(const auto& field = block["extensions"]; !field.is_null())
@@ -509,7 +505,7 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hi
 
 
   p2b_hex_to_ripemd160("hash", block, sb.block_id);
-  p2b_public_key("signing_key", block, sb.signing_key);
+  p2b_cstr_to_public_key("signing_key", block, sb.signing_key);
 
   sb.transaction_ids = std::move(transaction_ids_sbos);
 
@@ -579,12 +575,14 @@ void postgres_block_log::rewind_current_operation_to_block(int block_num)
   }
 };
 
+
+
 hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<hive::protocol::signature_type>& signatures, const std::vector<hive::protocol::operation>& operation_sbos)
 {
   hive::protocol::signed_transaction  signed_transaction;
 
-  i2v(transaction["ref_block_num"].as<int>(), signed_transaction.ref_block_num);
-  i2v(transaction["ref_block_prefix"].as<int64_t>() ,signed_transaction.ref_block_prefix);
+  p2b_int_to_uint16("ref_block_num", transaction, signed_transaction.ref_block_num);
+  p2b_int64_to_uint32("ref_block_prefix", transaction, signed_transaction.ref_block_prefix);
   p2b_time_to_time_point_sec("expiration", transaction, signed_transaction.expiration);
   
   signed_transaction.signatures = std::move(signatures);
