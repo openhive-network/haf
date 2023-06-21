@@ -364,7 +364,7 @@ sbo_t postgres_block_log::block_to_sbo_with_transactions(const pqxx::row& block)
 
 // mtlk TODO - similar function above
 template<typename T>
-void sss222vvv(const std::string str, T& bi) // fc::array<unsigned char, 65>’
+void hex_to_binary(const std::string str, T& bi)
 {
   std::vector<char> vo;
   vo.resize( str.size() / 2 );
@@ -386,13 +386,13 @@ void sss222vvv(const std::string str, T& bi) // fc::array<unsigned char, 65>’
 template<typename T>
 void p2b_hex_to_ripemd160(const char* field_name, const T& block_or_transaction, fc::ripemd160& val)
 {
-  sss222vvv(fix_pxx_hex(block_or_transaction[field_name]), val);
+  hex_to_binary(fix_pxx_hex(block_or_transaction[field_name]), val);
 }
 
 template<typename T>
 void p2b_hex_to_signature_type(const char* field_name, const T& block_or_transaction, hive::chain::signature_type& val)
 {
-  sss222vvv(fix_pxx_hex(block_or_transaction[field_name]), val);
+  hex_to_binary(fix_pxx_hex(block_or_transaction[field_name]), val);
 }
 
 template<typename T>
