@@ -362,75 +362,9 @@ sbo_t postgres_block_log::block_to_sbo_with_transactions(const pqxx::row& block)
 }
 
 
-template<typename T>
-void p2b_int_to_uint16(const char* field_name, const T& block_or_transaction, uint16_t& val)
-{
-  val = block_or_transaction[field_name]. template as<int>();
-}
-
-template<typename T>
-void p2b_int64_to_uint32(const char* field_name, const T& block_or_transaction, uint32_t& val)
-{
-  val = block_or_transaction[field_name]. template as<int64_t>();
-}
-
-
-
-template<typename T>
-void ss22vv(const std::string s, T& val)
-{
-
-  T::Nonexistent_Type = 0; // This line will cause a compile error
-
-  fc::variant vo;
-  to_variant(s, vo);
-  from_variant(vo, val);
-}
-
-
-template<>
-void ss22vv(const std::string str, fc::ripemd160& bi)
-{
-
-  std::vector<char> vo;
-  vo.resize( str.size() / 2 );
-  if( vo.size() )
-  {
-      size_t r = fc::from_hex( str, vo.data(), vo.size() );
-      FC_ASSERT( r == vo.size() );
-  }
-
-  if( vo.size() )
-  {
-      memcpy(&bi, vo.data(), fc::min<size_t>(vo.size(),sizeof(bi)) );
-  }
-  else
-      memset( static_cast<void*>(&bi), char(0), sizeof(bi) );
-}
-
-
-template<>
-void ss22vv(const std::string s, fc::time_point_sec& t)
-{
-  t = fc::time_point_sec::from_iso_string( s );
-}
-
-template<>
-void ss22vv(const std::string s, std::string& val)
-{
-  val =s;
-}
-
-
-template<>
-void ss22vv(const std::string s, hive::protocol::public_key_type& val)
-{
-   val = hive::protocol::public_key_type(s);
-}
-
 // mtlk TODO - similar function above
-template<>
-void ss22vv(const std::string str, hive::chain::signature_type& bi) // fc::array<unsigned char, 65>’
+template<typename T>
+void sss222vvv(const std::string str, T& bi) // fc::array<unsigned char, 65>’
 {
   std::vector<char> vo;
   vo.resize( str.size() / 2 );
@@ -452,33 +386,48 @@ void ss22vv(const std::string str, hive::chain::signature_type& bi) // fc::array
 template<typename T>
 void p2b_hex_to_ripemd160(const char* field_name, const T& block_or_transaction, fc::ripemd160& val)
 {
-  ss22vv(fix_pxx_hex(block_or_transaction[field_name]), val);
+  sss222vvv(fix_pxx_hex(block_or_transaction[field_name]), val);
+}
+
+template<typename T>
+void p2b_hex_to_signature_type(const char* field_name, const T& block_or_transaction, hive::chain::signature_type& val)
+{
+  sss222vvv(fix_pxx_hex(block_or_transaction[field_name]), val);
 }
 
 template<typename T>
 void p2b_time_to_time_point_sec(const char* field_name, const T& block_or_transaction, fc::time_point_sec& val)
 {
-  ss22vv(fix_pxx_time(block_or_transaction[field_name]), val);
-}
+  val = fc::time_point_sec::from_iso_string( fix_pxx_time(block_or_transaction[field_name]) );
 
-
-template<typename T>
-void p2b_hex_to_signature_type(const char* field_name, const T& block_or_transaction, hive::chain::signature_type& val)
-{
-  ss22vv(fix_pxx_hex(block_or_transaction[field_name]), val);
 }
 
 template<typename T>
 void p2b_cstr_to_public_key(const char* field_name, const T& block_or_transaction, hive::chain::public_key_type& val)
 {
-  ss22vv(block_or_transaction[field_name].c_str(), val);  
+  val = hive::protocol::public_key_type(block_or_transaction[field_name].c_str());
 }
 
 template<typename T>
 void p2b_cstr_to_str(const char* field_name, const T& block_or_transaction, std::string& val)
 {
-  ss22vv(block_or_transaction[field_name].c_str(), val);
+  val = block_or_transaction[field_name].c_str();
 }
+
+
+template<typename T>
+void p2b_int_to_uint16(const char* field_name, const T& block_or_transaction, uint16_t& val)
+{
+  val = block_or_transaction[field_name]. template as<int>();
+}
+
+template<typename T>
+void p2b_int64_to_uint32(const char* field_name, const T& block_or_transaction, uint32_t& val)
+{
+  val = block_or_transaction[field_name]. template as<int64_t>();
+}
+
+
 
 sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
 {
