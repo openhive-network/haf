@@ -460,15 +460,17 @@ void s2v(const std::string str, hive::chain::signature_type& bi) // fc::array<un
 }
 
 template<typename T>
-void p2b_hex_to_ripemd160(const char* field_name, const T& block, fc::ripemd160& val)
+void p2b_hex_to_ripemd160(const char* field_name, const T& block_or_transaction, fc::ripemd160& val)
 {
-  s2v(fix_pxx_hex(block[field_name]), val);
+  s2v(fix_pxx_hex(block_or_transaction[field_name]), val);
 }
 
 template<typename T>
-void p2b_time_to_time_point_sec(const char* field_name, const T& block, fc::time_point_sec& val)
+void p2b_time_to_time_point_sec(const char* field_name, const T& block_or_transaction, fc::time_point_sec& val)
 {
-  s2v(fix_pxx_time(block[field_name]), val);
+  s2v(fix_pxx_time(block_or_transaction[field_name]), val);
+}
+
 }
 
 sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
