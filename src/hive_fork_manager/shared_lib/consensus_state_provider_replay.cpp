@@ -364,64 +364,67 @@ sbo_t postgres_block_log::block_to_sbo_with_transactions(const pqxx::row& block)
 
 // mtlk TODO - similar function above
 template<typename T>
-void hex_to_binary(const std::string str, T& bi)
+void hex_to_binary(const std::string& str, T& binary)
 {
-  std::vector<char> vo;
-  vo.resize( str.size() / 2 );
-  if( vo.size() )
+  std::vector<char> buffer;
+  buffer.resize( str.size() / 2 );
+  if( !buffer.empty() )
   {
-      size_t r = fc::from_hex( str, vo.data(), vo.size() );
-      FC_ASSERT( r == vo.size() );
+      size_t r = fc::from_hex( str, buffer.data(), buffer.size() );
+      FC_ASSERT( r == buffer.size() );
   }
 
-  if( vo.size() )
+  if( !buffer.empty() )
   {
-      memcpy(&bi, vo.data(), fc::min<size_t>(vo.size(),sizeof(bi)) );
+      memcpy(&binary, buffer.data(), fc::min<size_t>(buffer.size(),sizeof(binary)) );
   }
-  else
-      memset( static_cast<void*>(&bi), char(0), sizeof(bi) );
+  else 
+  {
+      memset( static_cast<void*>(&binary), static_cast<char>(0), sizeof(binary) );
+  }
 
 }
 
-template<typename T>
+
+template <typename T>
 void p2b_hex_to_ripemd160(const char* field_name, const T& block_or_transaction, fc::ripemd160& val)
 {
   hex_to_binary(fix_pxx_hex(block_or_transaction[field_name]), val);
 }
 
-template<typename T>
+
+template <typename T>
 void p2b_hex_to_signature_type(const char* field_name, const T& block_or_transaction, hive::chain::signature_type& val)
 {
   hex_to_binary(fix_pxx_hex(block_or_transaction[field_name]), val);
 }
 
-template<typename T>
+template <typename T>
 void p2b_time_to_time_point_sec(const char* field_name, const T& block_or_transaction, fc::time_point_sec& val)
 {
   val = fc::time_point_sec::from_iso_string( fix_pxx_time(block_or_transaction[field_name]) );
 
 }
 
-template<typename T>
+template <typename T>
 void p2b_cstr_to_public_key(const char* field_name, const T& block_or_transaction, hive::chain::public_key_type& val)
 {
   val = hive::protocol::public_key_type(block_or_transaction[field_name].c_str());
 }
 
-template<typename T>
+template <typename T>
 void p2b_cstr_to_str(const char* field_name, const T& block_or_transaction, std::string& val)
 {
   val = block_or_transaction[field_name].c_str();
 }
 
-
-template<typename T>
+template <typename T>
 void p2b_int_to_uint16(const char* field_name, const T& block_or_transaction, uint16_t& val)
 {
   val = block_or_transaction[field_name]. template as<int>();
 }
 
-template<typename T>
+template <typename T>
 void p2b_int64_to_uint32(const char* field_name, const T& block_or_transaction, uint32_t& val)
 {
   val = block_or_transaction[field_name]. template as<int64_t>();
