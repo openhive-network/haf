@@ -79,22 +79,22 @@ public:
                               const char* shared_memory_bin_path,
                               const char* postgres_url);
 private:
-  sbo_t build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos);
+  static sbo_t build_sbo(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_ids_sbos, std::vector<hive::protocol::signed_transaction> transaction_sbos);
   sbo_t block_to_sbo_with_transactions(const pqxx::row& block);
-  std::shared_ptr<hive::chain::full_block_type> from_sbo_to_full_block_ptr(sbo_t& sb, int block_num);
+  static std::shared_ptr<hive::chain::full_block_type> from_sbo_to_full_block_ptr(sbo_t& sb, int block_num);
 
-  void build_transaction_ids_sbo(const pqxx::result::const_iterator& transaction,
+  static void build_transaction_ids_sbo(const pqxx::result::const_iterator& transaction,
                                             std::vector<hive::protocol::transaction_id_type>& transaction_id_sbos);
 
   void transactions2sbo(int block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_sbos, std::vector<hive::protocol::signed_transaction>& transaction_sbos);
-  hive::protocol::signed_transaction build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<hive::protocol::signature_type>& signatures, const std::vector<hive::protocol::operation>& operation_sbos);
+  static hive::protocol::signed_transaction build_transaction_sbo(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_sbos);
   std::vector<hive::protocol::operation> operations2sbos(int block_num, int trx_in_block);
-  void add_operation_sbo(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_sbos);
+  static void add_operation_sbo(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_sbos);
   
   std::shared_ptr<hive::chain::full_block_type> block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url);
   void measure_before_run();
   void measure_after_run();
-  void handle_exception(std::exception_ptr exception_ptr);
+  static void handle_exception(std::exception_ptr exception_ptr);
   void get_postgres_data(int from, int to, const char* postgres_url);
   void initialize_iterators();
   void replay_blocks(const char* context, const char* shared_memory_bin_path, const char* postgres_url);
@@ -120,7 +120,7 @@ private:
   pqxx::result operations;
   pqxx::result::const_iterator current_transaction;
   pqxx::result::const_iterator current_operation;
-  std::chrono::nanoseconds transformations_duration;
+  std::chrono::nanoseconds transformations_duration{};
   time_probe transformations_time_probe;
   time_probe apply_full_block_time_probe;
 
@@ -141,8 +141,11 @@ private:
     pqxx::connection connection;
   }; 
 
-  const int BLOCK_NUM_EMPTY = -1;
-  const int BLOCK_NUM_MAX = std::numeric_limits<int>::max();
+   enum : int 
+   {
+        BLOCK_NUM_EMPTY = -1,
+        BLOCK_NUM_MAX = std::numeric_limits<int>::max()
+   };
 };
 
 
@@ -190,7 +193,9 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullb
   auto block_num_from_postgres = block["num"].as<int>();
 
   if(block_num_from_postgres != block_num_from_shared_memory_bin) 
+  {
     return {};
+  }
 
   sbo_t sbo = postgres_block_log::block_to_sbo_with_transactions(block);
   std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_sbo_to_full_block_ptr(sbo, block_num_from_postgres);
@@ -317,7 +322,9 @@ void postgres_block_log::replay_block(const pqxx::row& block, const char* contex
   auto block_num = block["num"].as<int>();
 
   if(block_num != initialize_context(context, shared_memory_bin_path, postgres_url)) 
+  {
     return;
+  }
 
   hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
   std::shared_ptr<hive::chain::full_block_type> fb_ptr;
@@ -353,11 +360,13 @@ sbo_t postgres_block_log::block_to_sbo_with_transactions(const pqxx::row& block)
 
   std::vector<hive::protocol::transaction_id_type> transaction_ids_sbos;
   std::vector<hive::protocol::signed_transaction> transaction_sbos;
-  
-  if(block_num == current_transaction_block_num()) 
+
+  if(block_num == current_transaction_block_num())
+  {
     transactions2sbo(block_num, transaction_ids_sbos, transaction_sbos);
-  
-  return build_sbo(block, transaction_ids_sbos, transaction_sbos);
+  }
+
+  return build_sbo(block, std::move(transaction_ids_sbos), std::move(transaction_sbos));
 
 }
 
@@ -432,9 +441,8 @@ void p2b_int64_to_uint32(const char* field_name, const T& block_or_transaction, 
 
 
 
-sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
+sbo_t postgres_block_log::build_sbo(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_ids_sbos, std::vector<hive::protocol::signed_transaction> transaction_sbos)
 {
-  using namespace hive::protocol;
   using std::string;
   using std::vector;
 
@@ -480,7 +488,7 @@ void postgres_block_log::transactions2sbo(int block_num, std::vector<hive::proto
 
     std::vector<hive::protocol::operation> operation_sbos = operations2sbos(block_num, trx_in_block);
 
-    hive::protocol::signed_transaction transaction_sbo = build_transaction_sbo(current_transaction, signatures, operation_sbos);
+    hive::protocol::signed_transaction transaction_sbo = build_transaction_sbo(current_transaction, std::move(signatures), std::move(operation_sbos));
 
     transaction_sbos.emplace_back(transaction_sbo);
   }
@@ -494,7 +502,7 @@ bool postgres_block_log::is_current_transaction(const pqxx::result::const_iterat
 std::vector<hive::protocol::signature_type> postgres_block_log::build_signatures(const pqxx::result::const_iterator& transaction)
 {
   std::vector<hive::protocol::signature_type> signatures;
-  if(strlen(transaction["signature"].c_str()))
+  if(!transaction["signature"].is_null())
   {
     hive::protocol::signature_type signature;
     p2b_hex_to_signature_type("signature", transaction, signature);
@@ -529,7 +537,7 @@ void postgres_block_log::rewind_current_operation_to_block(int block_num)
 
 
 
-hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(const pqxx::result::const_iterator& transaction, const std::vector<hive::protocol::signature_type>& signatures, const std::vector<hive::protocol::operation>& operation_sbos)
+hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_sbos)
 {
   hive::protocol::signed_transaction  signed_transaction;
 
@@ -539,10 +547,7 @@ hive::protocol::signed_transaction postgres_block_log::build_transaction_sbo(con
   
   signed_transaction.signatures = std::move(signatures);
 
-  for(const auto&  op : operation_sbos)
-  {
-    signed_transaction.operations.push_back(op);
-  }
+  signed_transaction.operations = std::move(operation_sbos);
 
   return signed_transaction;
 }
@@ -572,13 +577,13 @@ std::vector<hive::protocol::operation> postgres_block_log::operations2sbos(int b
 }
 
 
-void postgres_block_log::add_operation_sbo(const pqxx::const_result_iterator& cur_op, std::vector<hive::protocol::operation>& operation_sbos)
+void postgres_block_log::add_operation_sbo(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_sbos)
 {
-  pqxx::binarystring bs(cur_op["bin_body"]);
-  const char* raw_data = reinterpret_cast<const char*>(bs.data());
-  uint32_t data_length = bs.size();
+  pqxx::binarystring bs(operation["bin_body"]);
+  const unsigned char* raw_data = bs.data();
+  auto data_length = bs.size();
 
-  operation_sbos.push_back(fc::raw::unpack_from_char_array<hive::protocol::operation>(raw_data, data_length));
+  operation_sbos.push_back(fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data), data_length));
 }
 
 int postgres_block_log::current_transaction_block_num()
@@ -618,19 +623,19 @@ uint64_t postgres_block_log::get_skip_flags()
   // clang-format on
 };
 
-auto set_open_args_data_dir = [](hive::chain::open_args& db_open_args, const char* shared_memory_bin_path)
+void set_open_args_data_dir(hive::chain::open_args& db_open_args, const char* shared_memory_bin_path)
 {
   db_open_args.data_dir = shared_memory_bin_path;
   db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
 };
 
-auto set_open_args_supply = [](hive::chain::open_args& db_open_args)
+void set_open_args_supply(hive::chain::open_args& db_open_args)
 {
   db_open_args.initial_supply = HIVE_INIT_SUPPLY;
   db_open_args.hbd_initial_supply = HIVE_HBD_INIT_SUPPLY;
 };
 
-auto set_open_args_other_parameters = [](hive::chain::open_args& db_open_args)
+void set_open_args_other_parameters(hive::chain::open_args& db_open_args)
 {
   db_open_args.shared_file_size = 25769803776;
   db_open_args.shared_file_full_threshold = 0;
@@ -648,7 +653,7 @@ auto set_open_args_other_parameters = [](hive::chain::open_args& db_open_args)
 };
 
 
-auto initialize_chain_db = [](hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
+void initialize_chain_db(hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
 {
   // End of local functions definitions
   // ===================================
@@ -667,11 +672,10 @@ auto initialize_chain_db = [](hive::chain::database& db, const char* context, co
   db.open(db_open_args);
 };
 
-auto create_and_init_database = [](const char* context, const char* shared_memory_bin_path, const char* postgres_url) -> hive::chain::database*
+ hive::chain::database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  
   auto b = std::make_unique<postgres_block_log_provider>(context, shared_memory_bin_path, postgres_url);
-  hive::chain::database* db = new hive::chain::database(std::move(b));
+  auto* db = new hive::chain::database(std::move(b));
   initialize_chain_db(*db, context, shared_memory_bin_path);
   consensus_state_provider::get_cache().add(context, db);
   return db;
@@ -700,7 +704,7 @@ struct fix_hf_version_visitor
 {
   explicit fix_hf_version_visitor(int a_proper_version) : proper_version(a_proper_version) {}
 
-  typedef void result_type;
+  using result_type = void;
 
   void operator()(hive::void_t& obj) const
   {
