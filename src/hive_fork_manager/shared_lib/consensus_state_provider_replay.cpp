@@ -459,6 +459,12 @@ void s2v(const std::string str, hive::chain::signature_type& bi) // fc::array<un
 
 }
 
+template<typename T>
+void p2b_hex_to_ripemd160(const char* field_name, const T& block, fc::ripemd160& val)
+{
+  s2v(fix_pxx_hex(block[field_name]), val);
+}
+
 sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hive::protocol::transaction_id_type>& transaction_ids_sbos, const std::vector<hive::protocol::signed_transaction>& transaction_sbos)
 {
   using namespace hive::protocol;
@@ -467,10 +473,10 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hi
 
   sbo_t sb;
 
-  s2v(fix_pxx_hex(block["prev"]), sb.previous);
+  p2b_hex_to_ripemd160("prev", block, sb.previous);
   s2v(fix_pxx_time(block["created_at"]), sb.timestamp);
   s2v(block["name"].c_str(), sb.witness);
-  s2v(fix_pxx_hex(block["transaction_merkle_root"]), sb.transaction_merkle_root);
+  p2b_hex_to_ripemd160("transaction_merkle_root", block, sb.transaction_merkle_root);
  
   if(const auto& field = block["extensions"]; !field.is_null())
   {
@@ -483,7 +489,7 @@ sbo_t postgres_block_log::build_sbo(const pqxx::row& block, const std::vector<hi
   s2v(fix_pxx_hex(block["witness_signature"]), sb.witness_signature);
 
 
-  s2v(fix_pxx_hex(block["hash"]), sb.block_id);
+  p2b_hex_to_ripemd160("hash", block, sb.block_id);
   s2v(block["signing_key"].c_str(), sb.signing_key);
 
   sb.transaction_ids = std::move(transaction_ids_sbos);
@@ -539,7 +545,7 @@ void postgres_block_log::build_transaction_ids_sbo(const pqxx::result::const_ite
   // [[nodiscard]] PQXX_PURE char const *c_str() const &;
 
   hive::protocol::transaction_id_type transaction_id_sbo;
-  s2v(fix_pxx_hex(transaction["trx_hash"]), transaction_id_sbo);
+  p2b_hex_to_ripemd160("trx_hash", transaction, transaction_id_sbo);
 
   transaction_id_sbos.push_back(transaction_id_sbo);
 }
@@ -833,7 +839,7 @@ std::string fix_pxx_time(const pqxx::field& t)
 
 // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
 const char* fix_pxx_hex(const pqxx::field& h) 
-{ 
+{
   const auto backslash_x_prefix_length = 2; 
   return h.c_str() + backslash_x_prefix_length; 
 }
