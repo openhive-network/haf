@@ -655,7 +655,7 @@ void set_open_args_other_parameters(hive::chain::open_args& db_open_args)
 };
 
 
-void initialize_chain_db(hive::chain::database& db, const char* context, const char* shared_memory_bin_path)
+void initialize_chain_db(hive::chain::database& db, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   // End of local functions definitions
   // ===================================
@@ -671,14 +671,22 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
   set_open_args_other_parameters(db_open_args);
 //mtlk here postgres_block_log_has to_be ready
 
-  db.open(db_open_args);
+    db.open( db_open_args,
+    [&](const hive::chain::database& db_instance)
+      {
+        std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
+          consensus_state_provider::postgres_block_log().
+          get_full_block(db_instance.head_block_num(), context, shared_memory_bin_path, postgres_url);
+        return fb_ptr;
+      }
+    );
 };
 
  hive::chain::database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   auto b = std::make_unique<postgres_block_log_provider>(context, shared_memory_bin_path, postgres_url);
   auto* db = new hive::chain::database(std::move(b));
-  initialize_chain_db(*db, context, shared_memory_bin_path);
+  initialize_chain_db(*db, context, shared_memory_bin_path, postgres_url);
   consensus_state_provider::get_cache().add(context, db);
   return db;
 };
