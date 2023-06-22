@@ -344,6 +344,8 @@ void postgres_block_log::apply_full_block(hive::chain::database& db, const std::
   apply_full_block_time_probe.start();
 
   db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
+  db.public_reset_fork_db();    // override effect of _fork_db.start_block() call in open()
+
   db.public_apply_block(fb_ptr, skip_flags);
   db.clear_tx_status();
   db.set_revision(db.head_block_num());
