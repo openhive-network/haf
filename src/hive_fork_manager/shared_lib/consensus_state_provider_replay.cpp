@@ -20,44 +20,6 @@
 #include "time_probe.hpp"
 
 
-class postgres_block_log_provider : public hive::chain::block_log
-{
- public:
-  postgres_block_log_provider(std::string a_context,
-                              std::string a_shared_memory_bin_path,
-                              std::string a_postgres_url
-                              )
-      : context(a_context),
-        shared_memory_bin_path(a_shared_memory_bin_path),
-        postgres_url(a_postgres_url)
-  {
-  }
-
-  std::string context;
-  std::string shared_memory_bin_path;
-  std::string postgres_url;
-
-  std::shared_ptr<hive::chain::full_block_type> read_block_by_num(uint32_t block_num) const override;
-  // void open(const fc::path& file, bool read_only = false, bool auto_open_artifacts = true) override;
-  // void set_compression(bool enabled) override;
-  // void set_compression_level(int level) override;
-  // std::shared_ptr<hive::chain::full_block_type> head() const override;
-
-  // void for_each_block(uint32_t starting_block_number, uint32_t ending_block_number,
-  //                     block_processor_t processor,
-  //                     for_each_purpose purpose) const override;
-
-  // void close() override;
-
-  // hive::protocol::block_id_type read_block_id_by_num(uint32_t block_num) const override;
-  // std::vector<std::shared_ptr<hive::chain::full_block_type>> read_block_range_by_num(
-  //     uint32_t first_block_num, uint32_t count) const override;
-
-  // uint64_t append(const std::shared_ptr<hive::chain::full_block_type>& full_block) override;
-
-  //void flush() override;
-};
-
 
 namespace consensus_state_provider
 {
@@ -682,10 +644,10 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
     );
 };
 
- hive::chain::database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+
+hive::chain::database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  auto b = std::make_unique<postgres_block_log_provider>(context, shared_memory_bin_path, postgres_url);
-  auto* db = new hive::chain::database(std::move(b));
+  auto* db = new hive::chain::database;
   initialize_chain_db(*db, context, shared_memory_bin_path, postgres_url);
   consensus_state_provider::get_cache().add(context, db);
   return db;
@@ -825,9 +787,3 @@ const char* fix_pxx_hex(const pqxx::field& h)
 }
 
 }  // namespace consensus_state_provider
-
-
-std::shared_ptr<hive::chain::full_block_type> postgres_block_log_provider::read_block_by_num(uint32_t block_num) const
-{
-  return consensus_state_provider::postgres_block_log().get_full_block(block_num, context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str());
-}
