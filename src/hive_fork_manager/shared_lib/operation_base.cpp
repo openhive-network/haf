@@ -54,7 +54,7 @@ std::string op_to_json( const char* raw_data, uint32 data_length )
   }
   catch( ... )
   {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "Unexpected binary to text conversion occured" ) ) );
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "Unexpected binary to text conversion occurred" ) ) );
     return {};
   }
 }
@@ -81,7 +81,7 @@ std::vector< char > json_to_op( const char* raw_data )
   }
   catch( ... )
   {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "Unexpected text to binary conversion occured" ) ) );
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "Unexpected text to binary conversion occurred" ) ) );
     return {};
   }
 }
