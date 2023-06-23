@@ -634,13 +634,16 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
 //mtlk here postgres_block_log_has to_be ready
 
     db.open( db_open_args,
-    [&](const hive::chain::database& db_instance)
-      {
-        std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
-          consensus_state_provider::postgres_block_log().
-          get_full_block(db_instance.head_block_num(), context, shared_memory_bin_path, postgres_url);
-        return fb_ptr;
-      }
+      [&](const hive::chain::database& db_instance)
+        {
+          std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
+            consensus_state_provider::postgres_block_log().
+            get_full_block(db_instance.head_block_num(), context, shared_memory_bin_path, postgres_url);
+          return fb_ptr;
+        },
+        [](hive::chain::database& db, const hive::chain::open_args& args) { }
+
+
     );
 };
 
