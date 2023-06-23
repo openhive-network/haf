@@ -86,6 +86,26 @@ std::vector< char > json_to_op( const char* raw_data )
   }
 }
 
+void validate_raw_data( const char* raw_data, size_t data_length )
+{
+    try
+    {
+      raw_to_operation( raw_data, data_length );
+    }
+    catch( const fc::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
+    }
+    catch( const std::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "%s", e.what() ) ) );
+    }
+    catch( ... )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "Unexpected binary to operation conversion occurred" ) ) );
+    }
+}
+
 } // namespace
 
 extern "C"
@@ -154,31 +174,19 @@ extern "C"
 
   Datum operation_in( PG_FUNCTION_ARGS )
   {
-    const char* t            = PG_GETARG_CSTRING( 0 );
-    if (!t || *t == 0)
-    {
-      ereport( ERROR, ( errcode( ERRCODE_FEATURE_NOT_SUPPORTED ), errmsg( "Cannot convert empty string to hive.operation" ) ) );
-    }
+    const char* data = PG_GETARG_CSTRING( 0 );
 
-    std::vector< char > data = json_to_op( t ); // Get parsed operation in raw bytes
+    Datum bytes = DirectFunctionCall1(byteain, CStringGetDatum(data));
+    validate_raw_data(VARDATA_ANY( bytes ), VARSIZE_ANY_EXHDR( bytes ));
 
-    PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
+    PG_RETURN_HIVE_OPERATION( make_operation( VARDATA_ANY( bytes ), VARSIZE_ANY_EXHDR( bytes ) ) );
   }
 
   Datum operation_out( PG_FUNCTION_ARGS )
   {
-    _operation* op       = PG_GETARG_HIVE_OPERATION_PP( 0 );
-    uint32 data_length   = VARSIZE_ANY_EXHDR( op );
-    const char* raw_data = VARDATA_ANY( op );
-
-    std::string op_str = op_to_json( raw_data, data_length ); // Get json from raw bytes
-
-    uint32 op_ccp_size = op_str.size() + 1;
-    char* op_ccp       = (char*) palloc( op_ccp_size ); // allocate space for postgres cstring
-
-    const char* cstring_out = (const char*) memcpy( op_ccp, op_str.c_str(), op_ccp_size ); // copy json content from std::string to postgres cstring
-
-    PG_RETURN_CSTRING( cstring_out );
+    _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    Datum bytes = DirectFunctionCall1(byteaout, PointerGetDatum(op));
+    PG_RETURN_CSTRING( bytes );
   }
 
   Datum operation_bin_in_internal( PG_FUNCTION_ARGS )
