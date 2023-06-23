@@ -142,6 +142,16 @@ extern "C"
     }
   }
 
+  Datum operation_from_jsonb( PG_FUNCTION_ARGS )
+  {
+    Jsonb *jb = PG_GETARG_JSONB_P(0);
+    // TODO: do smarter conversion that jsonb -> text -> fc::json -> operation
+    const char* out = JsonbToCString(NULL, &jb->root, VARSIZE(jb));
+    std::vector< char > data = json_to_op( out );
+
+    PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
+  }
+
   Datum operation_in( PG_FUNCTION_ARGS )
   {
     const char* t            = PG_GETARG_CSTRING( 0 );

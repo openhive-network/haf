@@ -124,6 +124,7 @@ GRANT EXECUTE ON FUNCTION
     , hive._operation_le(hive.operation, hive.operation)
     , hive._operation_cmp(hive.operation, hive.operation)
     , hive._operation_to_jsonb(hive.operation)
+    , hive._operation_from_jsonb(jsonb)
     , hive.create_database_hash(schema_name TEXT)
     , hive.calculate_schema_hash(schema_name TEXT)
     , hive.are_indexes_dropped()

@@ -10,3 +10,6 @@ CREATE CAST (hive.operation AS bytea)
 
 CREATE CAST (hive.operation AS jsonb)
   WITH FUNCTION hive._operation_to_jsonb;
+
+CREATE CAST (jsonb AS hive.operation)
+  WITH FUNCTION hive._operation_from_jsonb;
