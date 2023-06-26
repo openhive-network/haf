@@ -1,5 +1,8 @@
 import json
 
+from sqlalchemy import cast
+from sqlalchemy.dialects.postgresql import JSONB
+
 import test_tools as tt
 
 from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress
@@ -36,8 +39,8 @@ def test_live_sync(prepared_networks_and_database_12_8):
 
     session.query(Transactions).filter(Transactions.block_num == transaction_block_num).one()
 
-    ops = session.query(Operations).filter(Operations.block_num == transaction_block_num).all()
-    types = [json.loads(op.body)['type'] for op in ops]
+    ops = session.query(Operations).add_columns(cast(Operations.body, JSONB).label('body'), Operations.block_num).filter(Operations.block_num == transaction_block_num).all()
+    types = [op.body['type'] for op in ops]
 
     assert 'transfer_operation' in types
     assert 'producer_reward_operation' in types
