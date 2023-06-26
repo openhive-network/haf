@@ -969,7 +969,7 @@ Datum csp_finish(PG_FUNCTION_ARGS)
   bool wipe_clean_shared_memory_bin = PG_GETARG_BOOL(1);  
 
   
-  consensus_state_provider::consensus_state_provider_finish_impl(handle, wipe_clean_shared_memory_bin);
+  consensus_state_provider::csp_finish_impl(handle, wipe_clean_shared_memory_bin);
 
   return (Datum)0;
 }  

@@ -744,7 +744,7 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
   return collect_current_account_balances(csp_session, accounts);
 }
 
-void consensus_state_provider_finish_impl(csp_session_type* csp_session, bool wipe_clean_shared_memory_bin)
+void csp_finish_impl(csp_session_type* csp_session, bool wipe_clean_shared_memory_bin)
 {
   hive::chain::database* db = csp_session->db;
   
