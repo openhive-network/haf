@@ -14,9 +14,9 @@ CREATE OR REPLACE FUNCTION hive.csp_init(IN _context TEXT, IN shared_memory_bin_
 RETURNS BIGINT
 AS 'MODULE_PATHNAME', 'csp_init' LANGUAGE C;
 
--- CREATE OR REPLACE FUNCTION hive.session_current_all_accounts_balances(IN _session_ptr BIGINT)
--- RETURNS SETOF hive.current_account_balance_return_type
--- AS 'MODULE_PATHNAME', 'session_current_all_accounts_balances' LANGUAGE C;
+CREATE OR REPLACE FUNCTION hive.session_current_all_accounts_balances(IN _session_ptr BIGINT)
+RETURNS SETOF hive.current_account_balance_return_type
+AS 'MODULE_PATHNAME', 'session_current_all_accounts_balances' LANGUAGE C;
 
 -- CREATE OR REPLACE FUNCTION hive.session_current_account_balances(IN _session_ptr BIGINT, IN accounts TEXT[])
 -- RETURNS SETOF hive.current_account_balance_return_type
