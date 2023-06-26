@@ -110,7 +110,7 @@ BEGIN
 
 
      __session_ptr = hive.get_session_ptr(_context);
-    __consensus_state_provider_replay_call_ok = (SELECT hive.session_consensus_state_provider_replay(__session_ptr, _first_block, _last_block));
+    __consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(__session_ptr, _first_block, _last_block));
 
     RAISE NOTICE '__consensus_state_provider_replay_call_ok=%', __consensus_state_provider_replay_call_ok;
 
@@ -130,7 +130,7 @@ DECLARE
     __get_balances TEXT;
     __top_richest_accounts_json TEXT;
 BEGIN
-    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.session_current_all_accounts_balances(%L)', _table_name, _session_ptr);
+    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances(%L)', _table_name, _session_ptr);
     EXECUTE __get_balances;
 
     EXECUTE format('

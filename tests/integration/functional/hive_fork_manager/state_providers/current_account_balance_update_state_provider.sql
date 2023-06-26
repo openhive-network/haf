@@ -57,16 +57,16 @@ BEGIN
     __session_ptr = hive.get_session_ptr('context');
     RAISE NOTICE '__session_ptr=%', __session_ptr;
     RAISE NOTICE 'sesion_consensus_state_provider_get_expected_block_num = %', 
-        hive.session_consensus_state_provider_get_expected_block_num(__session_ptr);
+        hive.consensus_state_provider_get_expected_block_num(__session_ptr);
 
     PERFORM hive.sessions_disconnect();
 
-    -- ASSERT 1 = (SELECT * FROM hive.session_consensus_state_provider_get_expected_block_num(__session_ptr)),
-    --                          'session_consensus_state_provider_get_expected_block_num should return 1';
+    -- ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
+    --                          'consensus_state_provider_get_expected_block_num should return 1';
 
     -- PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
     -- COMMIT;
-    -- ASSERT 7 = (SELECT * FROM hive.session_consensus_state_provider_get_expected_block_num(__session_ptr)),
+    -- ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
     --                          'consensus_state_provider_get_expected_block_num should return 7';
 
 END;
@@ -85,7 +85,7 @@ BEGIN
     PERFORM hive.sessions_reconnect();
     __session_ptr = hive.get_session_ptr('context');
 
-    ASSERT 1 = (SELECT * FROM hive.session_consensus_state_provider_get_expected_block_num(__session_ptr)),
+    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
                              'consensus_state_provider_get_expected_block_num should return 1';
     PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
     COMMIT;
@@ -110,14 +110,14 @@ BEGIN
     __session_ptr = hive.get_session_ptr('context');
 
 
-    FOR rec IN SELECT * FROM hive.session_current_account_balances(__session_ptr, akeys(expected)) LOOP
+    FOR rec IN SELECT * FROM hive.current_account_balances(__session_ptr, akeys(expected)) LOOP
         actual := actual || format('"%s"=>"%s"', rec.account, rec.balance)::hstore;
     END LOOP;  
 
     ASSERT expected = actual, 'Expected: ' || expected::TEXT  || ' but got: ' ||  actual::TEXT;
 
 
-    ASSERT 7 = (SELECT * FROM hive.session_consensus_state_provider_get_expected_block_num(__session_ptr)),
+    ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
         'consensus_state_provider_get_expected_block_num should return 7';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';

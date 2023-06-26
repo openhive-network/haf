@@ -811,10 +811,10 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
 
 
-PG_FUNCTION_INFO_V1(session_consensus_state_provider_get_expected_block_num);
+PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
 
   /**
-   **  CREATE OR REPLACE FUNCTION hive.session_consensus_state_provider_get_expected_block_num(IN _context TEXT)
+   **  CREATE OR REPLACE FUNCTION hive.consensus_state_provider_get_expected_block_num(IN _context TEXT)
    **  RETURNS INTEGER
    ** 
    **  Returns the block number where we stand in hive state.
@@ -822,7 +822,7 @@ PG_FUNCTION_INFO_V1(session_consensus_state_provider_get_expected_block_num);
 
 
 
-Datum session_consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
+Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 {
   consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
 
@@ -856,7 +856,7 @@ void collect_data_and_fill_recordset(
       C_function_name, [] { return std::string{""}; });
  }
 
-PG_FUNCTION_INFO_V1(session_current_all_accounts_balances);
+PG_FUNCTION_INFO_V1(current_all_accounts_balances);
 
   /**
    ** CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances();
@@ -866,7 +866,7 @@ PG_FUNCTION_INFO_V1(session_current_all_accounts_balances);
    ** Returns all accounts information for the given state.
    **/
 
-Datum session_current_all_accounts_balances(PG_FUNCTION_ARGS)
+Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
 {
   consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
 
@@ -913,7 +913,7 @@ std::vector<std::string> extract_string_array_from_datum(ArrayType* arr)
 }
 
 
-PG_FUNCTION_INFO_V1(session_current_account_balances);
+PG_FUNCTION_INFO_V1(current_account_balances);
 
 /**
  **  CREATE OR REPLACE FUNCTION hive.current_account_balances(IN accounts TEXT[], IN _context TEXT,
@@ -923,7 +923,7 @@ PG_FUNCTION_INFO_V1(session_current_account_balances);
  **  Returns queried accounts information for the given state.
  **/
 
-Datum session_current_account_balances(PG_FUNCTION_ARGS)
+Datum current_account_balances(PG_FUNCTION_ARGS)
 {
   consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
   ArrayType* accounts_arr = PG_GETARG_ARRAYTYPE_P(1);
@@ -973,9 +973,9 @@ Datum csp_finish(PG_FUNCTION_ARGS)
 
 ////////
 
-PG_FUNCTION_INFO_V1(session_consensus_state_provider_replay);
+PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
 
-Datum session_consensus_state_provider_replay(PG_FUNCTION_ARGS)
+Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
 {
   consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
   int from = PG_GETARG_INT32(1);
