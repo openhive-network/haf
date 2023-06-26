@@ -26,7 +26,7 @@ csp_session_type* csp_init_impl(const char* context,
                                const char* shared_memory_bin_path,
                                const char* postgres_url);
 
-void consensus_state_provider_finish_impl(csp_session_type*);
+void consensus_state_provider_finish_impl(csp_session_type*, bool wipe_clean_shared_memory_bin);
 int consensus_state_provider_get_expected_block_num_impl(consensus_state_provider::csp_session_type* csp_session);
                                                          
 

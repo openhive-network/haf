@@ -113,6 +113,7 @@ LANGUAGE plpgsql
 AS
 $$
 BEGIN
+  DELETE FROM hive.sessions WHERE name = _name;
 END;
 $$
 ;

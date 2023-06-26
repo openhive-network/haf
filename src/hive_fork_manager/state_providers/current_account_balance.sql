@@ -177,6 +177,7 @@ DECLARE
     __table_name TEXT := _context || '_current_account_balance_state_provider';
     __config_table_name TEXT := _context || '_current_account_balance_state_provider_config';
     __shared_memory_bin_path TEXT;
+    __session_ptr BIGINT;
 BEGIN
     __context_id = hive.get_context_id( _context );
 
@@ -190,7 +191,14 @@ BEGIN
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
     EXECUTE format( 'DROP TABLE hive.%I', __config_table_name );
 
-    PERFORM hive.consensus_state_provider_finish('context', __shared_memory_bin_path);
+    __session_ptr = hive.get_session_ptr(_context);
+
+    -- wipe clean
+    PERFORM hive.csp_finish(__session_ptr, _wipe_clean_shared_memory_bin := TRUE); 
+
+    --delete session entry from the sessions table
+    PERFORM hive.destroy_session(_context);
+
 END;
 $BODY$
 ;

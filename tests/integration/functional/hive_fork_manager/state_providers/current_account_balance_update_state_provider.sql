@@ -47,8 +47,13 @@ BEGIN
 
     PERFORM hive.app_create_context( 'context' );
     
+    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.create_session (via app_state_provider_import)';
+
     -- creates csp_session
     PERFORM hive.app_state_provider_import( 'CURRENT_ACCOUNT_BALANCE_STATE_PROVIDER', 'context' , get_consensus_storage_path(_writable_directory));
+
+    -- check if sessions table is filled
+    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.create_session (via app_state_provider_import)';
 
     PERFORM hive.app_context_detach( 'context' );
     UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 5;
@@ -126,12 +131,13 @@ BEGIN
     ASSERT 5 = ( SELECT COUNT(*) FROM hive.context_current_account_balance_state_provider), 'Incorrect number of accounts';
 
     ASSERT (SELECT to_regclass('hive.context_current_account_balance_state_provider')) IS NOT NULL, 'State provider table should exist';
-    -- PERFORM hive.app_state_provider_drop_all( 'context' );
-    -- ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(
-    --     'context', 
-    --     get_consensus_storage_path(_writable_directory),
-    --     hive.get_postgres_url()
-    --     ));
+
+    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context');
+
+    PERFORM hive.app_state_provider_drop_all( 'context' ), 'Sessions table should contain ''context'' entry before hive.destroy_session (via app_state_provider_drop_all)';
+
+    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry after hive.destroy_session (via app_state_provider_drop_all)';
+
     -- ASSERT (SELECT to_regclass('hive.context_current_account_balance')) IS NULL, 'State provider table should not exist';
 END;
 $BODY$

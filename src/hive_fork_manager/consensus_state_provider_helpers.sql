@@ -26,7 +26,7 @@ CREATE OR REPLACE FUNCTION hive.consensus_state_provider_replay(IN _session_ptr 
 RETURNS BOOLEAN
 AS 'MODULE_PATHNAME', 'consensus_state_provider_replay' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.csp_finish(IN _session_ptr BIGINT)
+CREATE OR REPLACE FUNCTION hive.csp_finish(IN _session_ptr BIGINT, IN _wipe_clean_shared_memory_bin BOOLEAN DEFAULT FALSE)
 RETURNS VOID
 AS 'MODULE_PATHNAME', 'csp_finish' LANGUAGE C;
 

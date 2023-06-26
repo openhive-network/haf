@@ -965,8 +965,11 @@ Datum csp_finish(PG_FUNCTION_ARGS)
     (void)a;
   }
   consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
+
+  bool wipe_clean_shared_memory_bin = PG_GETARG_BOOL(1);  
+
   
-  //consensus_state_provider::consensus_state_provider_finish_impl(handle);
+  consensus_state_provider::consensus_state_provider_finish_impl(handle, wipe_clean_shared_memory_bin);
 
   return (Datum)0;
 }  
