@@ -18,9 +18,9 @@ CREATE OR REPLACE FUNCTION hive.session_current_all_accounts_balances(IN _sessio
 RETURNS SETOF hive.current_account_balance_return_type
 AS 'MODULE_PATHNAME', 'session_current_all_accounts_balances' LANGUAGE C;
 
--- CREATE OR REPLACE FUNCTION hive.session_current_account_balances(IN _session_ptr BIGINT, IN accounts TEXT[])
--- RETURNS SETOF hive.current_account_balance_return_type
--- AS 'MODULE_PATHNAME', 'session_current_account_balances' LANGUAGE C;
+CREATE OR REPLACE FUNCTION hive.session_current_account_balances(IN _session_ptr BIGINT, IN accounts TEXT[])
+RETURNS SETOF hive.current_account_balance_return_type
+AS 'MODULE_PATHNAME', 'session_current_account_balances' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.session_consensus_state_provider_replay(IN _session_ptr BIGINT, in _from INT, in _to INT)
 RETURNS BOOLEAN

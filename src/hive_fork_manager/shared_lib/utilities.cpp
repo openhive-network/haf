@@ -860,7 +860,7 @@ PG_FUNCTION_INFO_V1(session_current_all_accounts_balances);
 
   /**
    ** CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances();
-   ** RETURNS SETOF hive.current_account_balance_return_type
+   ** RETURNS SETOF hive.current_all_account_balance_return_type
    ** AS 'MODULE_PATHNAME', 'current_all_accounts_balances' LANGUAGE C;
    **
    ** Returns all accounts information for the given state.
@@ -913,7 +913,7 @@ std::vector<std::string> extract_string_array_from_datum(ArrayType* arr)
 }
 
 
-PG_FUNCTION_INFO_V1(current_account_balances);
+PG_FUNCTION_INFO_V1(session_current_account_balances);
 
 /**
  **  CREATE OR REPLACE FUNCTION hive.current_account_balances(IN accounts TEXT[], IN _context TEXT,
