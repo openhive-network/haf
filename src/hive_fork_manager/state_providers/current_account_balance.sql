@@ -10,7 +10,7 @@ DECLARE
     __table_name TEXT := _context || '_current_account_balance_state_provider';
     __config_table_name TEXT := _context || '_current_account_balance_state_provider_config';
     __handle BIGINT;
-    __disconnect_string TEXT;
+    __disconnect_function TEXT;
     __reconnect_string TEXT;
 BEGIN
 
@@ -47,7 +47,7 @@ BEGIN
 
     __reconnect_string = format('SELECT hive.csp_init(%L, %L, %L)', _context,_shared_memory_bin_path, hive.get_postgres_url());
 
-    __disconnect_string = format('SELECT hive.csp_fini(%L, %L, %L)', _context,_shared_memory_bin_path, hive.get_postgres_url());
+    __disconnect_function = format('PERFORM hive.session_consensus_state_provider_finish');
 
     PERFORM hive.create_session(
         _context, 
@@ -55,7 +55,7 @@ BEGIN
             'shared_memory_bin_path', _shared_memory_bin_path,
             'postgres_url', hive.get_postgres_url(),
             'reconnect_string', __reconnect_string,
-            'disconnect_function', __disconnect_string,
+            'disconnect_function', __disconnect_function,
             'session_handle', __handle
         )
     );

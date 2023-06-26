@@ -101,10 +101,7 @@ CREATE PROCEDURE test_then(_writable_directory TEXT)
 AS
 $BODY$
 DECLARE
-    rec hive.current_account_balance_return_type;
-
-
- rec2 RECORD;
+    rec RECORD;
     expected hstore := '"miners"=>"1000", "initminer"=>"4000"';
     actual hstore := '';
     __session_ptr BIGINT;
@@ -113,8 +110,8 @@ BEGIN
     __session_ptr = hive.get_session_ptr('context');
 
 
-    FOR rec2 IN SELECT * FROM hive.session_current_account_balances(__session_ptr, akeys(expected)) LOOP
-        actual := actual || format('"%s"=>"%s"', rec2.account, rec2.balance)::hstore;
+    FOR rec IN SELECT * FROM hive.session_current_account_balances(__session_ptr, akeys(expected)) LOOP
+        actual := actual || format('"%s"=>"%s"', rec.account, rec.balance)::hstore;
     END LOOP;  
 
     ASSERT expected = actual, 'Expected: ' || expected::TEXT  || ' but got: ' ||  actual::TEXT;
