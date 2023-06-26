@@ -62,6 +62,8 @@ BEGIN
     ASSERT 1 = (SELECT * FROM hive.session_consensus_state_provider_get_expected_block_num(__session_ptr)),
                              'session_consensus_state_provider_get_expected_block_num should return 1';
 
+    PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
+    COMMIT;
 
 END;
 $BODY$

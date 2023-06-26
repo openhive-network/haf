@@ -27,15 +27,15 @@ struct csp_sesion_type
   hive::chain::database* db;
 };
 
+bool consensus_state_provider_replay_impl(csp_sesion_type* csp_session,  int from, int to);                                          
+
 csp_sesion_type* csp_init_impl(const char* context,
                                const char* shared_memory_bin_path,
                                const char* postgres_url);
 
 int initialize_context(const char* context, const char* shared_memory_bin_path, const char*  postgres_url);
 void consensus_state_provider_finish_impl(const char* context, const char* shared_memory_bin_path);
-int consensus_state_provider_get_expected_block_num_impl(const char* context,
-                                                         const char* shared_memory_bin_path, const char* postgres_url);
-int session_consensus_state_provider_get_expected_block_num_impl(consensus_state_provider::csp_sesion_type* csp_session);
+int consensus_state_provider_get_expected_block_num_impl(consensus_state_provider::csp_sesion_type* csp_session);
                                                          
 
 }  // namespace consensus_state_provider

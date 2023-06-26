@@ -828,7 +828,7 @@ Datum session_consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 
   consensus_state_provider::csp_sesion_type* handle = reinterpret_cast<consensus_state_provider::csp_sesion_type*>(PG_GETARG_POINTER(0));
 
-  int expected_block_num = consensus_state_provider::session_consensus_state_provider_get_expected_block_num_impl(handle);
+  int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(handle);
 
   PG_RETURN_INT32(expected_block_num);
 
@@ -982,23 +982,17 @@ Datum consensus_state_provider_finish(PG_FUNCTION_ARGS)
 
 ////////
 
-PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
+PG_FUNCTION_INFO_V1(session_consensus_state_provider_replay);
 
-Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
+Datum session_consensus_state_provider_replay(PG_FUNCTION_ARGS)
 {
-  int from = PG_GETARG_INT32(0);
-  int to = PG_GETARG_INT32(1);
-  char* context = text_to_cstring(PG_GETARG_TEXT_PP(2));
-  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(3));
-  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(4));
+  consensus_state_provider::csp_sesion_type* handle = reinterpret_cast<consensus_state_provider::csp_sesion_type*>(PG_GETARG_POINTER(0));
+  int from = PG_GETARG_INT32(1);
+  int to = PG_GETARG_INT32(2);
 
-  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(from, to, context, shared_memory_bin_path, postgres_url);
+  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(handle, from, to);
 
   PG_RETURN_BOOL(ok);
-
-  pfree(context);
-  pfree(postgres_url);
-  pfree(shared_memory_bin_path);
 
   return (Datum)0;
 }

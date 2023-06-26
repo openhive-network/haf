@@ -100,14 +100,13 @@ BEGIN
 
 
 
-    --__consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(_first_block, _last_block, _context , __shared_memory_bin_path, __postgres_url));
 
      __session_ptr = hive.get_session_ptr(_context);
     __consensus_state_provider_replay_call_ok = (SELECT hive.session_consensus_state_provider_replay(__session_ptr, _first_block, _last_block));
 
     RAISE NOTICE '__consensus_state_provider_replay_call_ok=%', __consensus_state_provider_replay_call_ok;
 
-    PERFORM hive.update_accounts_table(__session_ptr, __table_name);
+    -- PERFORM hive.update_accounts_table(__session_ptr, __table_name);
 
 END;
 $BODY$
