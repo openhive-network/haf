@@ -11,7 +11,6 @@
 #include "fc/time.hpp"
 #include "hive/chain/block_log.hpp"
 #include "hive/chain/database.hpp"
-#include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
 #include "hive/protocol/block.hpp"
 #include "hive/protocol/forward_impacted.hpp"
 #include "hive/protocol/operations.hpp"
@@ -649,7 +648,6 @@ hive::chain::database* create_and_init_database(const char* context, const char*
 {
   auto* db = new hive::chain::database;
   initialize_chain_db(*db, context, shared_memory_bin_path, postgres_url);
-  get_cache().add(context, db);
   return db;
 };
 
@@ -660,23 +658,6 @@ csp_session_type* csp_init_impl(const char* context, const char* shared_memory_b
     hive::chain::database* db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
     auto* csp_session =  new csp_session_type{context, shared_memory_bin_path, postgres_url, db};
     return csp_session;
-}
-
-int initialize_context(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
-{
-
-  hive::chain::database* db;
-
-  if(!get_cache().has_context(context))
-  {
-    db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
-  }
-  else
-  {
-    db = &get_cache().get_db(context);
-  }
-
-  return db->head_block_num() + 1;
 }
 
 struct fix_hf_version_visitor
