@@ -943,7 +943,7 @@ Datum session_current_account_balances(PG_FUNCTION_ARGS)
   return (Datum)0;
 }
 
-PG_FUNCTION_INFO_V1(session_consensus_state_provider_finish);
+PG_FUNCTION_INFO_V1(csp_finish);
 
   /**
    ** 
@@ -953,11 +953,20 @@ PG_FUNCTION_INFO_V1(session_consensus_state_provider_finish);
    **  Erase the context_sharedmemory.bin file.
    **/
 
-Datum session_consensus_state_provider_finish(PG_FUNCTION_ARGS)
-{
-  consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
+auto volatile static stop_in_csp_finish = false;
 
-  consensus_state_provider::consensus_state_provider_finish_impl(handle);
+Datum csp_finish(PG_FUNCTION_ARGS)
+{
+
+  while(stop_in_csp_finish)
+  {
+    int a,b = 0;
+    a=b;
+    (void)a;
+  }
+  consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
+  
+  //consensus_state_provider::consensus_state_provider_finish_impl(handle);
 
   return (Datum)0;
 }  

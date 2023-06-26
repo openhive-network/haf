@@ -13,6 +13,8 @@ BEGIN
     __reconnect_string := __session.params ->> 'reconnect_string';
 
     RAISE NOTICE 'Executing reconnect function for session: %', __session.name;
+
+    RAISE NOTICE 'reconnect string is %', __reconnect_string;
     EXECUTE __reconnect_string INTO __session_handle; -- mtlk security issue ?
     RAISE NOTICE 'Reconnect function execution completed for session: %. Returned value: %', __session.name, __session_handle;
 
@@ -33,10 +35,32 @@ RETURNS VOID
 LANGUAGE plpgsql
 AS
 $$
+DECLARE
+    __session RECORD;
+    __func_to_exec TEXT;
+    __session_handle_param BIGINT;
+    __to_execute TEXT;
 BEGIN
+    FOR __session IN SELECT name, params FROM hive.sessions LOOP
+        __func_to_exec := __session.params ->> 'disconnect_function';
+        __session_handle_param := __session.params -> 'session_handle';
+
+        RAISE NOTICE 'Processing session: %, function: %, session handle: %', __session.name, __func_to_exec, __session_handle_param;
+
+        IF __func_to_exec IS NOT NULL THEN
+            RAISE NOTICE 'Executing function: % with session handle: %', __func_to_exec, __session_handle_param;
+            __to_execute = format(__func_to_exec, __session_handle_param);
+            RAISE NOTICE '__to_execute1=%', __to_execute;
+            EXECUTE __to_execute;
+            RAISE NOTICE 'Function % executed successfully', __func_to_exec;
+        ELSE
+            RAISE NOTICE 'No function to execute for session: %', __session.name;
+        END IF;
+    END LOOP;
 END;
 $$
 ;
+
 
 
 CREATE OR REPLACE FUNCTION hive.create_session(IN _name TEXT, IN _params JSONB)--IN shared_memory_bin_path TEXT, IN _postgres_url TEXT)

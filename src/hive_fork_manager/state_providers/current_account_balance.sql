@@ -47,7 +47,7 @@ BEGIN
 
     __reconnect_string = format('SELECT hive.csp_init(%L, %L, %L)', _context,_shared_memory_bin_path, hive.get_postgres_url());
 
-    __disconnect_function = format('PERFORM hive.session_consensus_state_provider_finish');
+    __disconnect_function = 'SELECT hive.csp_finish(%s)';
 
     PERFORM hive.create_session(
         _context, 
