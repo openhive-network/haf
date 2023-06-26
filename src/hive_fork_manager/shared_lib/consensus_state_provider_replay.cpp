@@ -657,13 +657,8 @@ hive::chain::database* create_and_init_database(const char* context, const char*
 };
 
 
-struct csp_sesion_type
-{
-    std::string context, shared_memory_bin_path, postgres_url;
-    hive::chain::database* db;
-};
 
-void* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+csp_sesion_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
     hive::chain::database* db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
     auto* csp_session =  new csp_sesion_type{context, shared_memory_bin_path, postgres_url, db};
@@ -753,11 +748,15 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::from_sbo_to_fu
   return hive::chain::full_block_type::create_from_signed_block(sb);
 }
 
+int session_consensus_state_provider_get_expected_block_num_impl(consensus_state_provider::csp_sesion_type* csp_session)
+{
+  return csp_session->db->head_block_num() + 1;
+}
+
 int consensus_state_provider_get_expected_block_num_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   return initialize_context(context, shared_memory_bin_path, postgres_url);
 }
-
 
 collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {

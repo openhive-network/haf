@@ -811,10 +811,10 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
 
 
-PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
+PG_FUNCTION_INFO_V1(session_consensus_state_provider_get_expected_block_num);
 
   /**
-   **  CREATE OR REPLACE FUNCTION hive.consensus_state_provider_get_expected_block_num(IN _context TEXT)
+   **  CREATE OR REPLACE FUNCTION hive.session_consensus_state_provider_get_expected_block_num(IN _context TEXT)
    **  RETURNS INTEGER
    ** 
    **  Returns the block number where we stand in hive state.
@@ -822,20 +822,15 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
 
 
 
-Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
+Datum session_consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 {
 
-  char* context = text_to_cstring(PG_GETARG_TEXT_PP(0));
-  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
-  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(2));
 
-  int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path, postgres_url);
+  consensus_state_provider::csp_sesion_type* handle = reinterpret_cast<consensus_state_provider::csp_sesion_type*>(PG_GETARG_POINTER(0));
+
+  int expected_block_num = consensus_state_provider::session_consensus_state_provider_get_expected_block_num_impl(handle);
 
   PG_RETURN_INT32(expected_block_num);
-
-  pfree(context);
-  pfree(shared_memory_bin_path);
-  pfree(postgres_url);
 
   return (Datum)0;
 }
@@ -1019,7 +1014,7 @@ Datum csp_init(PG_FUNCTION_ARGS)
   char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_P(1));
   char* postgres_url = text_to_cstring(PG_GETARG_TEXT_P(2));
 
-  void* handle = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
+  consensus_state_provider::csp_sesion_type* handle = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
 
   PG_RETURN_POINTER(handle);
   pfree(context);

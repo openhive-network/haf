@@ -48,8 +48,7 @@ BEGIN
         jsonb_build_object(       
             'shared_memory_bin_path', _shared_memory_bin_path,
             'postgres_url', hive.get_postgres_url(),
-            'invoking_function', 'my_function',
-            'invoking_function_param', '0'
+            'session_handle', __handle
         )
     );
 
@@ -77,6 +76,7 @@ DECLARE
     __current_pid INT;
     __shared_memory_bin_path TEXT;
     __consensus_state_provider_replay_call_ok BOOLEAN;
+    __session_ptr BIGINT;
 BEGIN
     __current_pid =  pg_backend_pid();
     __context_id = hive.get_context_id( _context );
@@ -95,11 +95,48 @@ BEGIN
 
     __shared_memory_bin_path := hive.get_shared_memory_bin_path(__config_table_name);
 
-    __consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(_first_block, _last_block, _context , __shared_memory_bin_path, __postgres_url));
+
+
+
+
+
+    --__consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(_first_block, _last_block, _context , __shared_memory_bin_path, __postgres_url));
+
+     __session_ptr = hive.get_session_ptr(_context);
+    __consensus_state_provider_replay_call_ok = (SELECT hive.session_consensus_state_provider_replay(__session_ptr, _first_block, _last_block));
 
     RAISE NOTICE '__consensus_state_provider_replay_call_ok=%', __consensus_state_provider_replay_call_ok;
 
-    PERFORM hive.update_accounts_table(_context, __table_name, __shared_memory_bin_path);
+    PERFORM hive.update_accounts_table(__session_ptr, __table_name);
+
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.update_accounts_table(IN _session_ptr BIGINT, IN _table_name TEXT)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+AS
+$BODY$
+DECLARE
+    __get_balances TEXT;
+    __top_richest_accounts_json TEXT;
+BEGIN
+    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.session_current_all_accounts_balances(%L)', _session_ptr);
+    EXECUTE __get_balances;
+
+    EXECUTE format('
+        SELECT json_agg(t)
+        FROM (
+            SELECT *
+            FROM hive.%I
+            ORDER BY balance DESC
+            LIMIT 15
+        ) t
+    ', _table_name) INTO __top_richest_accounts_json;
+
+    RAISE NOTICE 'Accounts 15 richest=%', E'\n' || __top_richest_accounts_json;
 
 END;
 $BODY$
@@ -122,35 +159,6 @@ END;
 $BODY$
 ;
 
-
-CREATE OR REPLACE FUNCTION hive.update_accounts_table(_context TEXT, _table_name TEXT, _shared_memory_bin_path TEXT)
-RETURNS void
-LANGUAGE plpgsql
-VOLATILE
-AS
-$BODY$
-DECLARE
-    __get_balances TEXT;
-    __top_richest_accounts_json TEXT;
-BEGIN
-    __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances(%L,%L,%L)', _table_name, _context, _shared_memory_bin_path, hive.get_postgres_url());
-    EXECUTE __get_balances;
-
-    EXECUTE format('
-        SELECT json_agg(t)
-        FROM (
-            SELECT *
-            FROM hive.%I
-            ORDER BY balance DESC
-            LIMIT 15
-        ) t
-    ', _table_name) INTO __top_richest_accounts_json;
-
-    RAISE NOTICE 'Accounts 15 richest=%', E'\n' || __top_richest_accounts_json;
-
-END;
-$BODY$
-;
 CREATE OR REPLACE FUNCTION hive.drop_state_provider_current_account_balance_state_provider( _context hive.context_name )
     RETURNS void
     LANGUAGE plpgsql
