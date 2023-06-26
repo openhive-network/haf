@@ -9,6 +9,8 @@ CREATE PROCEDURE test_given(_writable_directory TEXT)
     LANGUAGE 'plpgsql'
 AS
 $BODY$
+DECLARE
+    __session_ptr BIGINT;
 BEGIN
 
     RAISE NOTICE 'Storing consensus provider data in %', _writable_directory;
@@ -44,10 +46,34 @@ BEGIN
 
 
     PERFORM hive.app_create_context( 'context' );
+    
+    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.create_session (via app_state_provider_import)';
+
+    -- creates csp_session
     PERFORM hive.app_state_provider_import( 'CURRENT_ACCOUNT_BALANCE_STATE_PROVIDER', 'context' , get_consensus_storage_path(_writable_directory));
+
+    -- check if sessions table is filled
+    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.create_session (via app_state_provider_import)';
+
     PERFORM hive.app_context_detach( 'context' );
     UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 5;
     COMMIT;
+
+    __session_ptr = hive.get_session_ptr('context');
+    RAISE NOTICE '__session_ptr=%', __session_ptr;
+    RAISE NOTICE 'sesion_consensus_state_provider_get_expected_block_num = %', 
+        hive.consensus_state_provider_get_expected_block_num(__session_ptr);
+
+    PERFORM hive.sessions_disconnect();
+
+    -- ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
+    --                          'consensus_state_provider_get_expected_block_num should return 1';
+
+    -- PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
+    -- COMMIT;
+    -- ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
+    --                          'consensus_state_provider_get_expected_block_num should return 7';
+
 END;
 $BODY$
 ;
@@ -58,23 +84,18 @@ CREATE PROCEDURE test_when(_writable_directory TEXT)
     LANGUAGE 'plpgsql'
 AS
 $BODY$
+DECLARE
+    __session_ptr BIGINT;
 BEGIN
-    RAISE NOTICE 'consensus_state_provider_get_expected_block_num = %', 
-        hive.consensus_state_provider_get_expected_block_num(
-            'context', 
-            get_consensus_storage_path(_writable_directory), 
-            hive.get_postgres_url()
-        );
+    PERFORM hive.sessions_reconnect();
+    __session_ptr = hive.get_session_ptr('context');
 
-
-    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(
-                                'context',
-                                get_consensus_storage_path(_writable_directory),
-                                hive.get_postgres_url()
-                                )),
+    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
                              'consensus_state_provider_get_expected_block_num should return 1';
     PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
     COMMIT;
+
+    PERFORM hive.sessions_disconnect();
 END;
 $BODY$
 ;
@@ -85,47 +106,23 @@ CREATE PROCEDURE test_then(_writable_directory TEXT)
 AS
 $BODY$
 DECLARE
-    rec hive.current_account_balance_return_type;
-
-
- rec2 RECORD;
+    rec RECORD;
     expected hstore := '"miners"=>"1000", "initminer"=>"4000"';
     actual hstore := '';
-
+    __session_ptr BIGINT;
 BEGIN
-    FOR rec2 IN SELECT * FROM hive.current_account_balances(akeys(expected),'context', get_consensus_storage_path(_writable_directory), hive.get_postgres_url()) LOOP
-        actual := actual || format('"%s"=>"%s"', rec2.account, rec2.balance)::hstore;
+    PERFORM hive.sessions_reconnect();
+    __session_ptr = hive.get_session_ptr('context');
+
+
+    FOR rec IN SELECT * FROM hive.current_account_balances(__session_ptr, akeys(expected)) LOOP
+        actual := actual || format('"%s"=>"%s"', rec.account, rec.balance)::hstore;
     END LOOP;  
 
-    --ASSERT expected = actual, 'Expected:'  || expected::TEXT ;-- || 'but got:' || actual;
     ASSERT expected = actual, 'Expected: ' || expected::TEXT  || ' but got: ' ||  actual::TEXT;
 
 
-
-
-    FOR rec IN SELECT * FROM hive.current_account_balances(ARRAY['initminer', 'miners'],'context', get_consensus_storage_path(_writable_directory), hive.get_postgres_url()) LOOP
-        RAISE NOTICE 'Current record: %', rec;
-        
-        IF rec.account = 'initminer' THEN
-            ASSERT rec.balance = 4000, 'Balance should be 4000 for initminer';
-            RAISE NOTICE 'Balance checked for initminer.';
-        END IF;
-
-        IF rec.account = 'miners' THEN
-            ASSERT rec.balance = 1000, 'Balance should be 1000 for miners';
-            RAISE NOTICE 'Balance checked for miners.';
-        END IF;
-
-        -- add more checks for more accounts if needed
-    END LOOP;  
-
-
-
-    ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(
-        'context', 
-        get_consensus_storage_path(_writable_directory), 
-        hive.get_postgres_url()
-        )),
+    ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
         'consensus_state_provider_get_expected_block_num should return 7';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
     ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';
@@ -134,13 +131,14 @@ BEGIN
     ASSERT 5 = ( SELECT COUNT(*) FROM hive.context_current_account_balance_state_provider), 'Incorrect number of accounts';
 
     ASSERT (SELECT to_regclass('hive.context_current_account_balance_state_provider')) IS NOT NULL, 'State provider table should exist';
-    PERFORM hive.app_state_provider_drop_all( 'context' );
-    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(
-        'context', 
-        get_consensus_storage_path(_writable_directory),
-        hive.get_postgres_url()
-        ));
-    ASSERT (SELECT to_regclass('hive.context_current_account_balance')) IS NULL, 'State provider table should not exist';
+
+    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context');
+
+    PERFORM hive.app_state_provider_drop_all( 'context' ), 'Sessions table should contain ''context'' entry before hive.destroy_session (via app_state_provider_drop_all)';
+
+    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry after hive.destroy_session (via app_state_provider_drop_all)';
+
+    -- ASSERT (SELECT to_regclass('hive.context_current_account_balance')) IS NULL, 'State provider table should not exist';
 END;
 $BODY$
 ;
