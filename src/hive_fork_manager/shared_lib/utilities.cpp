@@ -824,26 +824,18 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
 
 Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 {
+  consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
 
-  char* context = text_to_cstring(PG_GETARG_TEXT_PP(0));
-  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
-  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(2));
-
-  int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path, postgres_url);
+  int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(handle);
 
   PG_RETURN_INT32(expected_block_num);
-
-  pfree(context);
-  pfree(shared_memory_bin_path);
-  pfree(postgres_url);
 
   return (Datum)0;
 }
 
 void collect_data_and_fill_recordset(
     PG_FUNCTION_ARGS,
-    const char* context,
-    const char* shared_memory_bin_path,
+    consensus_state_provider::csp_session_type* csp_session,
     consensus_state_provider::collected_account_balances_collection_t& collected_data,
     std::function<consensus_state_provider::collected_account_balances_collection_t()> collect_data_function,
     const char* C_function_name)
@@ -868,7 +860,7 @@ PG_FUNCTION_INFO_V1(current_all_accounts_balances);
 
   /**
    ** CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances();
-   ** RETURNS SETOF hive.current_account_balance_return_type
+   ** RETURNS SETOF hive.current_all_account_balance_return_type
    ** AS 'MODULE_PATHNAME', 'current_all_accounts_balances' LANGUAGE C;
    **
    ** Returns all accounts information for the given state.
@@ -876,23 +868,18 @@ PG_FUNCTION_INFO_V1(current_all_accounts_balances);
 
 Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
 {
-  char* context = text_to_cstring(PG_GETARG_TEXT_PP(0));
-  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
-  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(2));
+  consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
 
   consensus_state_provider::collected_account_balances_collection_t collected_data;
   collect_data_and_fill_recordset(
-      fcinfo, context, shared_memory_bin_path, collected_data,
+      fcinfo, handle, collected_data,
       [=]()
       {
         return consensus_state_provider::collect_current_all_accounts_balances_impl(
-            context, shared_memory_bin_path, postgres_url);
+            handle);
       },
       __FUNCTION__);
 
-  pfree(context);
-  pfree(shared_memory_bin_path);
-  pfree(postgres_url);
 
   return (Datum)0;
 }
@@ -938,31 +925,25 @@ PG_FUNCTION_INFO_V1(current_account_balances);
 
 Datum current_account_balances(PG_FUNCTION_ARGS)
 {
-  ArrayType* accounts_arr = PG_GETARG_ARRAYTYPE_P(0);
-  char* context = text_to_cstring(PG_GETARG_TEXT_PP(1));
-  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(2));
-  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(3));
+  consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
+  ArrayType* accounts_arr = PG_GETARG_ARRAYTYPE_P(1);
 
   std::vector<std::string> accounts = extract_string_array_from_datum(accounts_arr);
 
   consensus_state_provider::collected_account_balances_collection_t collected_data;
   collect_data_and_fill_recordset(
-      fcinfo, context, shared_memory_bin_path, collected_data,
+      fcinfo, handle, collected_data,
       [=]()
       {
         return consensus_state_provider::collect_current_account_balances_impl(
-            accounts, context, shared_memory_bin_path, postgres_url);
+            handle, accounts);
       },
       __FUNCTION__);
-
-  pfree(context);
-  pfree(shared_memory_bin_path);
-  pfree(postgres_url);
 
   return (Datum)0;
 }
 
-PG_FUNCTION_INFO_V1(consensus_state_provider_finish);
+PG_FUNCTION_INFO_V1(csp_finish);
 
   /**
    ** 
@@ -972,15 +953,23 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_finish);
    **  Erase the context_sharedmemory.bin file.
    **/
 
-Datum consensus_state_provider_finish(PG_FUNCTION_ARGS)
+auto volatile static stop_in_csp_finish = false;
+
+Datum csp_finish(PG_FUNCTION_ARGS)
 {
-  char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
-  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
-  consensus_state_provider::consensus_state_provider_finish_impl(context, shared_memory_bin_path);
+  while(stop_in_csp_finish)
+  {
+    int a,b = 0;
+    a=b;
+    (void)a;
+  }
+  consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
 
-  pfree(context);
-  pfree(shared_memory_bin_path);
+  bool wipe_clean_shared_memory_bin = PG_GETARG_BOOL(1);  
+
+  
+  consensus_state_provider::csp_finish_impl(handle, wipe_clean_shared_memory_bin);
 
   return (Datum)0;
 }  
@@ -991,22 +980,38 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
 
 Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
 {
-  int from = PG_GETARG_INT32(0);
-  int to = PG_GETARG_INT32(1);
-  char* context = text_to_cstring(PG_GETARG_TEXT_PP(2));
-  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(3));
-  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_PP(4));
+  consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
+  int from = PG_GETARG_INT32(1);
+  int to = PG_GETARG_INT32(2);
 
-  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(from, to, context, shared_memory_bin_path, postgres_url);
+  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(handle, from, to);
 
   PG_RETURN_BOOL(ok);
 
+  return (Datum)0;
+}
+
+PG_FUNCTION_INFO_V1(csp_init);
+
+// CREATE OR REPLACE FUNCTION hive.csp_init(IN _context TEXT, IN shared_memory_bin_path TEXT, IN _postgres_url TEXT)
+// RETURNS BIGINT
+// AS 'MODULE_PATHNAME', 'csp_init' LANGUAGE C;
+Datum csp_init(PG_FUNCTION_ARGS)
+{
+  char* context = text_to_cstring(PG_GETARG_TEXT_P(0));
+  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_P(1));
+  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_P(2));
+
+  consensus_state_provider::csp_session_type* handle = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
+
+  PG_RETURN_POINTER(handle);
   pfree(context);
   pfree(postgres_url);
   pfree(shared_memory_bin_path);
 
   return (Datum)0;
 }
+
 
 } //extern "C"
 

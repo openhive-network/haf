@@ -1,5 +1,5 @@
 BasedOnStyle: Google
-ColumnLimit: 100
+ColumnLimit: 140
 UseTab: Never
 IndentWidth: 2
 SpaceBeforeParens: Never
