@@ -763,16 +763,15 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
   return collect_current_account_balances(csp_session, accounts);
 }
 
-void consensus_state_provider_finish_impl(const char* context, const char* shared_memory_bin_path)
+void consensus_state_provider_finish_impl(csp_session_type* csp_session)
 {
-  if(get_cache().has_context(context))
-  {
-    hive::chain::database& db = get_cache().get_db(context);
-    db.close();
+  hive::chain::database& db = *csp_session->db;
+  
+  db.close();
 
-    db.chainbase::database::wipe(fc::path(shared_memory_bin_path) / "blockchain");
-    get_cache().remove(context);
-  }
+  db.chainbase::database::wipe(fc::path(csp_session->shared_memory_bin_path) / "blockchain");
+
+  delete &db;
 }
 
 

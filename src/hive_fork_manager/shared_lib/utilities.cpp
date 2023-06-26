@@ -943,7 +943,7 @@ Datum session_current_account_balances(PG_FUNCTION_ARGS)
   return (Datum)0;
 }
 
-PG_FUNCTION_INFO_V1(consensus_state_provider_finish);
+PG_FUNCTION_INFO_V1(session_consensus_state_provider_finish);
 
   /**
    ** 
@@ -953,15 +953,11 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_finish);
    **  Erase the context_sharedmemory.bin file.
    **/
 
-Datum consensus_state_provider_finish(PG_FUNCTION_ARGS)
+Datum session_consensus_state_provider_finish(PG_FUNCTION_ARGS)
 {
-  char *context = text_to_cstring(PG_GETARG_TEXT_PP(0));
-  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_PP(1));
+  consensus_state_provider::csp_session_type* handle = reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
 
-  consensus_state_provider::consensus_state_provider_finish_impl(context, shared_memory_bin_path);
-
-  pfree(context);
-  pfree(shared_memory_bin_path);
+  consensus_state_provider::consensus_state_provider_finish_impl(handle);
 
   return (Datum)0;
 }  
