@@ -11,7 +11,6 @@
 #include "fc/time.hpp"
 #include "hive/chain/block_log.hpp"
 #include "hive/chain/database.hpp"
-#include "hive/plugins/database_api/consensus_state_provider_cache.hpp"
 #include "hive/protocol/block.hpp"
 #include "hive/protocol/forward_impacted.hpp"
 #include "hive/protocol/operations.hpp"
@@ -35,7 +34,7 @@ const char* fix_pxx_hex(const pqxx::field& h);
 class postgres_block_log
 {
 public:
-  void run(int from, int to, const char* context, const char* shared_memory_bin_path, const char* postgres_url);
+  void run(csp_session_type* csp_session, int from, int to);
   std::shared_ptr<hive::chain::full_block_type> get_full_block(int block_num,
                               const char* context,
                               const char* shared_memory_bin_path,
@@ -59,8 +58,8 @@ private:
   static void handle_exception(std::exception_ptr exception_ptr);
   void get_postgres_data(int from, int to, const char* postgres_url);
   void initialize_iterators();
-  void replay_blocks(const char* context, const char* shared_memory_bin_path, const char* postgres_url);
-  void replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url);
+  void replay_blocks(csp_session_type* csp_session);
+  void replay_block(csp_session_type* csp_session, const pqxx::row& block);
   static uint64_t get_skip_flags();
   void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   void measure_before_apply_non_tansactional_operation_block();
@@ -112,34 +111,31 @@ private:
 
 
 
-bool consensus_state_provider_replay_impl(int from, int to, const char* context,
-                                          const char* shared_memory_bin_path, const char* postgres_url)
+
+bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int to)
 {
-  if(from != consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path, postgres_url))
+  if(from != consensus_state_provider_get_expected_block_num_impl(csp_session))
   {
       elog(
           "ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
-          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(context, shared_memory_bin_path, postgres_url)));
+          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(csp_session)));
       return false;
   }
 
-  postgres_block_log().run(from, to, context, shared_memory_bin_path, postgres_url);
+  postgres_block_log().run(csp_session, from, to);
   return true;
 }
 
-void postgres_block_log::run(int from,
-                             int to,
-                             const char* context,
-                             const char* shared_memory_bin_path,
-                             const char* postgres_url)
+
+void postgres_block_log::run(csp_session_type* csp_session, int from, int to)
 {
   measure_before_run();
 
   try
   {
-    get_postgres_data(from, to, postgres_url);
+    get_postgres_data(from, to, csp_session->postgres_url.c_str());
     initialize_iterators();
-    replay_blocks(context, shared_memory_bin_path, postgres_url);
+    replay_blocks(csp_session);
   }
   catch(...)
   {
@@ -267,28 +263,28 @@ void postgres_block_log::initialize_iterators()
   current_operation = operations.begin();
 }
 
-void postgres_block_log::replay_blocks(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+void postgres_block_log::replay_blocks(csp_session_type* csp_session)
 {
   for(const auto& block : blocks)
   {
-    replay_block(block, context, shared_memory_bin_path, postgres_url);
+    replay_block(csp_session, block);
   }
 }
 
 
-void postgres_block_log::replay_block(const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+void postgres_block_log::replay_block(csp_session_type* csp_session, const pqxx::row& block)
 {
   transformations_time_probe.start();
   
 
   auto block_num = block["num"].as<int>();
 
-  if(block_num != initialize_context(context, shared_memory_bin_path, postgres_url)) 
+  if(block_num !=  consensus_state_provider_get_expected_block_num_impl(csp_session)) 
   {
     return;
   }
 
-  hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
+  hive::chain::database& db = *csp_session->db;
   std::shared_ptr<hive::chain::full_block_type> fb_ptr;
 
   sbo_t sbo = postgres_block_log::block_to_sbo_with_transactions(block);
@@ -637,7 +633,7 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
       [&](const hive::chain::database& db_instance)
         {
           std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
-            consensus_state_provider::postgres_block_log().
+            postgres_block_log().
             get_full_block(db_instance.head_block_num(), context, shared_memory_bin_path, postgres_url);
           return fb_ptr;
         },
@@ -652,27 +648,16 @@ hive::chain::database* create_and_init_database(const char* context, const char*
 {
   auto* db = new hive::chain::database;
   initialize_chain_db(*db, context, shared_memory_bin_path, postgres_url);
-  consensus_state_provider::get_cache().add(context, db);
   return db;
 };
 
 
 
-int initialize_context(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-
-  hive::chain::database* db;
-
-  if(!consensus_state_provider::get_cache().has_context(context))
-  {
-    db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
-  }
-  else
-  {
-    db = &consensus_state_provider::get_cache().get_db(context);
-  }
-
-  return db->head_block_num() + 1;
+    hive::chain::database* db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
+    auto* csp_session =  new csp_session_type{context, shared_memory_bin_path, postgres_url, db};
+    return csp_session;
 }
 
 struct fix_hf_version_visitor
@@ -741,35 +726,34 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::from_sbo_to_fu
   return hive::chain::full_block_type::create_from_signed_block(sb);
 }
 
-int consensus_state_provider_get_expected_block_num_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+int consensus_state_provider_get_expected_block_num_impl(csp_session_type* csp_session)
 {
-  return initialize_context(context, shared_memory_bin_path, postgres_url);
+  return csp_session->db->head_block_num() + 1;
 }
 
 
-collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+
+collected_account_balances_collection_t collect_current_all_accounts_balances_impl(csp_session_type* csp_session)
 {
-  initialize_context(context, shared_memory_bin_path, postgres_url);
-  return collect_current_all_accounts_balances(context);
+  return collect_current_all_accounts_balances(csp_session);
 }
 
 
-collected_account_balances_collection_t collect_current_account_balances_impl(const std::vector<std::string>& accounts, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+collected_account_balances_collection_t collect_current_account_balances_impl(csp_session_type* csp_session, const std::vector<std::string>& accounts)
 {
-  initialize_context(context, shared_memory_bin_path, postgres_url);
-  return collect_current_account_balances(accounts, context);
+  return collect_current_account_balances(csp_session, accounts);
 }
 
-void consensus_state_provider_finish_impl(const char* context, const char* shared_memory_bin_path)
+void csp_finish_impl(csp_session_type* csp_session, bool wipe_clean_shared_memory_bin)
 {
-  if(consensus_state_provider::get_cache().has_context(context))
-  {
-    hive::chain::database& db = consensus_state_provider::get_cache().get_db(context);
-    db.close();
+  hive::chain::database* db = csp_session->db;
+  
+  db->close();
 
-    db.chainbase::database::wipe(fc::path(shared_memory_bin_path) / "blockchain");
-    consensus_state_provider::get_cache().remove(context);
-  }
+  if(wipe_clean_shared_memory_bin)
+    db->chainbase::database::wipe(fc::path(csp_session->shared_memory_bin_path) / "blockchain");
+
+  delete db;
 }
 
 

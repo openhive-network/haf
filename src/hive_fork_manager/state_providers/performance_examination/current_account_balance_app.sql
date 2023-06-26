@@ -16,6 +16,8 @@ DECLARE
   __last_block int;
   __next_block_range hive.blocks_range;
 BEGIN
+  PERFORM hive.sessions_reconnect();
+
   CALL cab_app.prepare_app_data(_appContext, _consensus_storage, __last_block);
   
   RAISE NOTICE 'Entering application main loop...';
@@ -24,28 +26,30 @@ BEGIN
   LOOP
       __next_block_range := hive.app_next_block(_appContext);
       IF __next_block_range IS NULL THEN
-        RAISE WARNING 'Waiting for next block...';
-        EXIT;
+          RAISE WARNING 'Waiting for next block...';
+          EXIT;
       ELSE
-        __from = __next_block_range.first_block;
-        __to = __next_block_range.last_block;
+          __from = __next_block_range.first_block;
+          __to = __next_block_range.last_block;
 
-        CALL cab_app.adjust_block_range(__from , __to , _maxBlockLimit);
+          CALL cab_app.adjust_block_range(__from , __to , _maxBlockLimit);
 
-        RAISE NOTICE 'Processing block range: <%,%>', __from, __to;
+          RAISE NOTICE 'Processing block range: <%,%>', __from, __to;
 
-        IF __from != __to THEN
-          CALL cab_app.do_massive_processing(_appContext, __from, __to, _step, __last_block);
-        ELSE
-          PERFORM cab_app.do_single_block_processing(_appContext, __to);
-          __last_block := __to;
-        END IF;
+          IF __from != __to THEN
+              CALL cab_app.do_massive_processing(_appContext, __from, __to, _step, __last_block);
+          ELSE
+              PERFORM cab_app.do_single_block_processing(_appContext, __to);
+              __last_block := __to;
+          END IF;
       END IF;
-    END LOOP;
+  END LOOP;
 
   RAISE NOTICE 'Exiting application main loop at processed block: %.', __last_block;
 
   CALL cab_app.finalize_app(_appContext, _consensus_storage , __last_block);
+
+  PERFORM hive.sessions_disconnect();
 
 END$$;
 
