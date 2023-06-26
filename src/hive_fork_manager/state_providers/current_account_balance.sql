@@ -10,6 +10,8 @@ DECLARE
     __table_name TEXT := _context || '_current_account_balance_state_provider';
     __config_table_name TEXT := _context || '_current_account_balance_state_provider_config';
     __handle BIGINT;
+    __disconnect_string TEXT;
+    __reconnect_string TEXT;
 BEGIN
 
     __context_id = hive.get_context_id( _context );
@@ -43,11 +45,17 @@ BEGIN
     
     __handle = (SELECT hive.csp_init(_context,_shared_memory_bin_path, hive.get_postgres_url()));
 
+    __reconnect_string = format('SELECT hive.csp_init(%L, %L, %L)', _context,_shared_memory_bin_path, hive.get_postgres_url());
+
+    __disconnect_string = format('SELECT hive.csp_fini(%L, %L, %L)', _context,_shared_memory_bin_path, hive.get_postgres_url());
+
     PERFORM hive.create_session(
         _context, 
         jsonb_build_object(       
             'shared_memory_bin_path', _shared_memory_bin_path,
             'postgres_url', hive.get_postgres_url(),
+            'reconnect_string', __reconnect_string,
+            'disconnect_function', __disconnect_string,
             'session_handle', __handle
         )
     );

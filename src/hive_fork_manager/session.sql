@@ -3,10 +3,30 @@ RETURNS VOID
 LANGUAGE plpgsql
 AS
 $$
+DECLARE
+  __session RECORD;
+  __reconnect_string TEXT;
+  __session_handle BIGINT;
 BEGIN
+  FOR __session IN SELECT name, params FROM hive.sessions
+  LOOP
+    __reconnect_string := __session.params ->> 'reconnect_string';
+
+    RAISE NOTICE 'Executing reconnect function for session: %', __session.name;
+    EXECUTE __reconnect_string INTO __session_handle; -- mtlk security issue ?
+    RAISE NOTICE 'Reconnect function execution completed for session: %. Returned value: %', __session.name, __session_handle;
+
+    -- update the session_handle field in the params column
+    UPDATE hive.sessions
+    SET params = jsonb_set(params::jsonb, '{session_handle}', to_jsonb(__session_handle::bigint))
+    WHERE name = __session.name;
+
+    RAISE NOTICE 'Updated session_handle for session: % after reconnect function execution', __session.name;
+  END LOOP;
 END;
 $$
 ;
+
 
 CREATE OR REPLACE FUNCTION hive.sessions_disconnect()
 RETURNS VOID
