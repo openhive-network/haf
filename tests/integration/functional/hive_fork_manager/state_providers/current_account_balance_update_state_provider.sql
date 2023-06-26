@@ -87,8 +87,10 @@ BEGIN
 
     ASSERT 1 = (SELECT * FROM hive.session_consensus_state_provider_get_expected_block_num(__session_ptr)),
                              'consensus_state_provider_get_expected_block_num should return 1';
-    -- -- PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
-    -- -- COMMIT;
+    PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
+    COMMIT;
+
+    PERFORM hive.sessions_disconnect();
 END;
 $BODY$
 ;
@@ -98,15 +100,18 @@ CREATE PROCEDURE test_then(_writable_directory TEXT)
     LANGUAGE 'plpgsql'
 AS
 $BODY$
--- DECLARE
---     rec hive.current_account_balance_return_type;
+DECLARE
+    rec hive.current_account_balance_return_type;
 
 
---  rec2 RECORD;
---     expected hstore := '"miners"=>"1000", "initminer"=>"4000"';
---     actual hstore := '';
+ rec2 RECORD;
+    expected hstore := '"miners"=>"1000", "initminer"=>"4000"';
+    actual hstore := '';
 
 BEGIN
+    PERFORM hive.sessions_reconnect();
+
+
     -- FOR rec2 IN SELECT * FROM hive.current_account_balances(akeys(expected),'context', get_consensus_storage_path(_writable_directory), hive.get_postgres_url()) LOOP
     --     actual := actual || format('"%s"=>"%s"', rec2.account, rec2.balance)::hstore;
     -- END LOOP;  
