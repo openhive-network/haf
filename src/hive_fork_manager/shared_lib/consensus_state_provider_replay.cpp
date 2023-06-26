@@ -657,6 +657,18 @@ hive::chain::database* create_and_init_database(const char* context, const char*
 };
 
 
+struct csp_sesion_type
+{
+    std::string context, shared_memory_bin_path, postgres_url;
+    hive::chain::database* db;
+};
+
+void* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+{
+    hive::chain::database* db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
+    auto* csp_session =  new csp_sesion_type{context, shared_memory_bin_path, postgres_url, db};
+    return csp_session;
+}
 
 int initialize_context(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {

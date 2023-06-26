@@ -9,6 +9,12 @@ CREATE TYPE hive.current_account_balance_return_type  AS
     reward_hbd_balance      BIGINT
 );
 
+
+CREATE OR REPLACE FUNCTION hive.csp_init(IN _context TEXT, IN shared_memory_bin_path TEXT, IN _postgres_url TEXT)
+RETURNS BIGINT
+AS 'MODULE_PATHNAME', 'csp_init' LANGUAGE C;
+
+
 CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances(IN _context TEXT, IN shared_memory_bin_path TEXT, IN _postgres_url TEXT)
 RETURNS SETOF hive.current_account_balance_return_type
 AS 'MODULE_PATHNAME', 'current_all_accounts_balances' LANGUAGE C;

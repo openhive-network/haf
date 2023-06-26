@@ -9,6 +9,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_current_account_balance_state_provider';
     __config_table_name TEXT := _context || '_current_account_balance_state_provider_config';
+    __handle BIGINT;
 BEGIN
 
     __context_id = hive.get_context_id( _context );
@@ -32,9 +33,25 @@ BEGIN
 
     EXECUTE format('DROP TABLE IF EXISTS hive.%I', __config_table_name);
 
+    
+    -- mtlk to remove in session
     EXECUTE format('CREATE TABLE hive.%I (shared_memory_bin_path TEXT)', __config_table_name);
 
+    -- mtlk to remove in session
     EXECUTE format('INSERT INTO hive.%I VALUES (%L)', __config_table_name, _shared_memory_bin_path);
+
+    
+    __handle = (SELECT hive.csp_init(_context,_shared_memory_bin_path, hive.get_postgres_url()));
+
+    PERFORM hive.create_session(
+        _context, 
+        jsonb_build_object(       
+            'shared_memory_bin_path', _shared_memory_bin_path,
+            'postgres_url', hive.get_postgres_url(),
+            'invoking_function', 'my_function',
+            'invoking_function_param', '0'
+        )
+    );
 
     RETURN ARRAY[ __table_name,  __config_table_name ];
 END;
