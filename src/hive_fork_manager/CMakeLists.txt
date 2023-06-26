@@ -12,6 +12,7 @@ ADD_PSQL_EXTENSION(
              types/operation/operation_cmp.sql
              types/operation/operation_casts.sql
              irreversible_blocks.sql
+             session.sql
              reversible_blocks.sql
              block_views_for_head_block.sql
              block_day_stats_view.sql
