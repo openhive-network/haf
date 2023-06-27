@@ -645,7 +645,7 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
 
 hive::chain::database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  auto* db = new hive::chain::database;
+  auto* db = new hive::chain::full_database;
   initialize_chain_db(*db, context, shared_memory_bin_path, postgres_url);
   return db;
 };
