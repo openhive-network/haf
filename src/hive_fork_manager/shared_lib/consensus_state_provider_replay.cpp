@@ -19,34 +19,46 @@
 #include "time_probe.hpp"
 
 
+
+#define myASSERT(condition, message) \
+    do { \
+        if (!(condition)) { \
+            std::cerr << "Assertion `" #condition "` failed in " << __FILE__ \
+                      << " line " << __LINE__ << ": " << message << std::endl; \
+            exit(EXIT_FAILURE); \
+        } \
+    } while (0)
+
+
 using hive::chain::open_args;
 using hive::chain::full_block_type;
 using hive::chain::block_id_type;
 
 
+
 class haf_full_database : public hive::chain::database
 {
-  uint32_t reindex_internal( const open_args& args, const std::shared_ptr<full_block_type>& start_block ) override{}
+  uint32_t reindex_internal( const open_args& args, const std::shared_ptr<full_block_type>& start_block ) override{myASSERT(0, "STOP mtlk");}
 
 public:
-  bool is_reindex_complete( uint64_t* head_block_num_origin, uint64_t* head_block_num_state ) const override{}
-  uint32_t reindex( const open_args& args ) override{}
-  void close(bool rewind = true) override{}
+  bool is_reindex_complete( uint64_t* head_block_num_origin, uint64_t* head_block_num_state ) const override{myASSERT(0, "STOP mtlk");}
+  uint32_t reindex( const open_args& args ) override{myASSERT(0, "STOP mtlk");}
+  void close(bool rewind = true) override{myASSERT(1, "STOP mtlk");}
 private:
-  bool is_known_block( const block_id_type& id )const override{}
-  bool is_known_block_unlocked(const block_id_type& id)const override{}
-  block_id_type              find_block_id_for_num( uint32_t block_num )const override{}
+  bool is_known_block( const block_id_type& id )const override{myASSERT(0, "STOP mtlk");}
+  bool is_known_block_unlocked(const block_id_type& id)const override{myASSERT(0, "STOP mtlk");}
+  block_id_type              find_block_id_for_num( uint32_t block_num )const override{myASSERT(0, "STOP mtlk");}
   std::vector<std::shared_ptr<full_block_type>>  fetch_block_range( const uint32_t starting_block_num, const uint32_t count, 
-                                                                      fc::microseconds wait_for_microseconds = fc::microseconds() ) override{}
-  std::shared_ptr<full_block_type> fetch_block_by_number( uint32_t num, fc::microseconds wait_for_microseconds = fc::microseconds() )const override{}
+                                                                      fc::microseconds wait_for_microseconds = fc::microseconds() ) override{myASSERT(0, "STOP mtlk");}
+  std::shared_ptr<full_block_type> fetch_block_by_number( uint32_t num, fc::microseconds wait_for_microseconds = fc::microseconds() )const override{myASSERT(0, "STOP mtlk");}
   
-  std::shared_ptr<full_block_type> fetch_block_by_id(const block_id_type& id)const override{}
-  void migrate_irreversible_state(uint32_t old_last_irreversible) override{}
-  std::vector<block_id_type> get_blockchain_synopsis(const block_id_type& reference_point, uint32_t number_of_blocks_after_reference_point) override{}
-  bool is_included_block_unlocked(const block_id_type& block_id) override{}
-  std::vector<block_id_type> get_block_ids(const std::vector<block_id_type>& blockchain_synopsis, uint32_t& remaining_item_count, uint32_t limit) override{}
-  std::shared_ptr<full_block_type> get_head_block() const override{}
-  void open_block_log(const open_args& args) override{}
+  std::shared_ptr<full_block_type> fetch_block_by_id(const block_id_type& id)const override{myASSERT(0, "STOP mtlk");}
+  void migrate_irreversible_state(uint32_t old_last_irreversible) override{myASSERT(1, "STOP mtlk");}
+  std::vector<block_id_type> get_blockchain_synopsis(const block_id_type& reference_point, uint32_t number_of_blocks_after_reference_point) override{myASSERT(0, "STOP mtlk");}
+  bool is_included_block_unlocked(const block_id_type& block_id) override{myASSERT(0, "STOP mtlk");}
+  std::vector<block_id_type> get_block_ids(const std::vector<block_id_type>& blockchain_synopsis, uint32_t& remaining_item_count, uint32_t limit) override{myASSERT(0, "STOP mtlk");}
+  std::shared_ptr<full_block_type> get_head_block() const override{myASSERT(0, "STOP mtlk");}
+  void open_block_log(const open_args& args) override{myASSERT(0, "STOP mtlk");}
 
 };
 
