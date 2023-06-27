@@ -20,7 +20,7 @@
 
 
 
-: <<END_COMMENT
+: <<'END_COMMENT'
  18,993,603
 2,325,194ms database.cpp:211              operator()           ] Attempting to rewind all undo state...
 2,325,194ms database.cpp:215              operator()           ] Rewind undo state done.
@@ -30,7 +30,7 @@
 END_COMMENT
 
 
-: <<END_LAUNCH_DBG_CONFIGURATION
+: <<'END_LAUNCH_DBG_CONFIGURATION'
        {
             "name": "(gdb) Launch",
             "type": "cppdbg",
@@ -205,7 +205,7 @@ connection to server was lost
 END_COMMENT
 
 
-: <<END_LOG_STEEMIT_10
+: <<'END_LOG_STEEMIT_10'
 
 NOTICE:  __consensus_state_provider_replay_call_ok=t
 NOTICE:  Accounts 15 richest=
@@ -374,6 +374,12 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # mtlk TODO:
 
 
+
+# Odpal
+#     bool database::_push_block(const block_flow_control& block_ctrl)
+# zamiast apply_block
+
+
 # Dgpo
 # Wszystko  z konta
 # connection
@@ -527,7 +533,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 
-: <<NO_TRANS
+: <<'NO_TRANS'
 Stepping from 68,400,001 to 68,500,000 Blocks:100,000 Transactions:7,864,692 Operations:7,950,520 Postgres:0'56" Trans:0'1" All:1'58" Memory (KB): 25,065,240                              │.cache/               h
 Alltogether:994'0"                                                                                                                                                                         │ive_base_config/     .w
 real    994m1.184s                                                                                                                                                                         │get-hsts
@@ -1225,6 +1231,13 @@ then
 
     CMAKED=true
 
+elif [[ "$PWD" =~ testnet_build$ ]]
+then
+    echo building testnet_build
+    cmake  -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_HIVE_TESTNET=ON -DCMAKE_CXX_FLAGS="-O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # testnet_build
+
+    CMAKED=true
+
 
 elif [[ "$PWD" =~ build$ ]]
 then
@@ -1540,7 +1553,121 @@ fi
 
 
 # unit test:
-# sudo -n /etc/init.d/postgresql restart ; sudo rm -rf /home/hived/datadir/consensus_unit_test_storage_dir; clearterm; unbuffer  ../haf/scripts/runallnow.sh 5000000 rebuild ; ctest -R curr --output-on-failure 
+# sudo -n /etc/init.d/postgresql restart ; sudo rm -rf /home/hived/datadir/consensus_unit_test_storage_dir; clearterm; ../haf/scripts/runallnow.sh 5000000 rebuild ; ctest -R curr --output-on-failure 
 
 # driver:
 # sudo rm -rf /home/hived/datadir/consensus_state_provider/ ; ../haf/scripts/runallnow.sh 2000000 driver_build_and_run 2> /home/hived/datadir/sbo.log 
+
+# hived sync:
+# (cd /home/haf_admin/.hived/blockchain && rm block_log.artifacts shared_memory.bin;  cp block_log_initial_copy block_log) && /home/haf_admin/build/hive/programs/hived/hived --replay
+
+# hived tests:
+# cd /home/haf_admin/testnet_build
+# rm -rf *
+# rm -rf .*
+# cmake  -DCMAKE_BUILD_TYPE=Release   -DBUILD_HIVE_TESTNET=ON -GNinja ../haf
+# ninja get_dev_key cli_wallet hived chain_test && \
+# (cd ../haf/hive/tests/functional/python_tests/hf26_tests && pytest) || (exit $?) && \
+# # (cd ../haf/hive/tests/functional/python_tests/foundation_layer_tests && pytest) || (exit $?) && \
+# # ./hive/tests/unit/chain_test  --run_test=operation_tests || (exit $?) &&  \
+# echo ok || echo notok
+
+
+: <<'virtuals'
+
+Directly using _block_log on the left:
+
+DONE reindex_internal<-reindex
+DONE reindex<-chain_plugin_impl::replay_blockchain
+DONE is_reindex_complete<-chain_plugin_impl::check_data_consistency
+
+DONE(wipe not needed) close<-*wipe
+DONE close<-chain_plugin::plugin_shutdown
+
+DONE is_known_block<-chain_plugin::block_is_on_preferred_chain
+DONE is_known_block<-p2p_plugin_impl::has_item
+
+DONE is_known_block_unlocked<-*find_first_item_not_in_blockchain
+DONE *find_first_item_not_in_blockchain
+
+DONE find_block_id_for_num<-*get_block_id_for_num
+DONE *get_block_id_for_num
+
+DONE fetch_block_range<-DEFINE_API_IMPL( block_api_impl, get_block_range )
+
+fetch_block_by_number<-DEFINE_API_IMPL( account_history_api_rocksdb_impl, get_transaction )
+fetch_block_by_number<-DEFINE_API_IMPL( block_api_impl, get_block_header )
+fetch_block_by_number<-DEFINE_API_IMPL( block_api_impl, get_block )
+fetch_block_by_number<-DEFINE_API_IMPL( debug_node_api_impl, debug_get_head_block )
+fetch_block_by_number<-DEFINE_API_IMPL( transaction_status_api_impl, find_transaction )
+fetch_block_by_number<-transaction_status_impl::get_earliest_transaction_in_range
+fetch_block_by_number<-transaction_status_impl::get_latest_transaction_in_range
+fetch_block_by_number<-transaction_status_impl::rebuild_state
+DONE - process_optional_actions does not exist any more  fetch_block_by_number<-*process_optional_actions (process_optional_actions propagates to _apply_block)
+
+DONE fetch_block_by_id<-*pop_block
+DONE fetch_block_by_id<-p2p_plugin_impl::get_full_block
+DONE fetch_block_by_id<-p2p_plugin_impl::get_block_time
+
+migrate_irreversible_state<-*_apply_block
+migrate_irreversible_state<-*process_fast_confirm_transaction
+
+DONE get_blockchain_synopsis<-p2p_plugin_impl::get_blockchain_synopsis
+DONE is_included_block_unlocked<-get_block_ids
+DONE get_block_ids<-p2p_plugin_impl::get_block_ids
+
+get_head_block<-*load_state_initial_data
+open_block_log<-*initialize_state_independent_data
+
+virtuals
+
+
+
+: <<'launch_hived__in_sync_mode'
+
+
+# debug block number in gdb: full_block->get_block().num_from_id(full_block->get_block_id()),d
+
+
+launch.json
+  {
+            "name": "(gdb) DEBUG Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/haf_admin/debug_build/hive/programs/hived/hived",
+            "args": ["--replay"],
+            "preLaunchTask" : "clean_dot_hived",
+            "stopAtEntry": true,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+
+
+tasks.json
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "clean_dot_hived",
+            "type": "shell",
+            "command": "(cd /home/haf_admin/.hived/blockchain && rm block_log.artifacts shared_memory.bin;  cp block_log_initial_copy block_log)"
+        }
+    ]
+}        
+launch_hived__in_sync_mode
