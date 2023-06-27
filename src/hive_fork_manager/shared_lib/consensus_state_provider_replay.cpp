@@ -20,8 +20,57 @@
 
 
 
+#define myASSERT(condition, message) \
+    do { \
+        if (!(condition)) { \
+            std::cerr << "Assertion `" #condition "` failed in " << __FILE__ \
+                      << " line " << __LINE__ << ": " << message << std::endl; \
+            exit(EXIT_FAILURE); \
+        } \
+    } while (0)
+
+
 namespace consensus_state_provider
 {
+
+using hive::chain::open_args;
+using hive::chain::full_block_type;
+using hive::chain::block_id_type;
+
+
+
+class haf_full_database : public hive::chain::database
+{
+  public:
+    haf_full_database(const char* a_context, const char* a_shared_memory_bin_path, const char* a_postgres_url)
+      :
+      context(a_context),
+      shared_memory_bin_path(a_shared_memory_bin_path),
+      postgres_url(a_postgres_url)
+    {
+
+    }
+  private:
+   std:: string context, shared_memory_bin_path, postgres_url;
+
+
+public:
+private:
+  
+  
+  //void migrate_irreversible_state(uint32_t old_last_irreversible) override{myASSERT(1, "STOP mtlk");}
+
+  
+
+  std::shared_ptr<full_block_type> get_head_block() const override;
+
+  
+
+
+};
+
+
+
 
 using block_bin_t = hive::plugins::block_api::api_signed_block_object;
 
@@ -108,6 +157,15 @@ private:
         BLOCK_NUM_MAX = std::numeric_limits<int>::max()
    };
 };
+
+std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
+{
+    std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
+          postgres_block_log().
+          get_full_block(this->head_block_num(), context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str());
+    return fb_ptr;
+  
+}
 
 
 
@@ -301,12 +359,7 @@ void postgres_block_log::apply_full_block(hive::chain::database& db, const std::
 {
   apply_full_block_time_probe.start();
 
-  db.set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
-  db.public_reset_fork_db();    // override effect of _fork_db.start_block() call in open()
-
-  db.public_apply_block(fb_ptr, skip_flags);
-  db.clear_tx_status();
-  db.set_revision(db.head_block_num());
+  db._push_block_simplified(fb_ptr, skip_flags);
 
   apply_full_block_time_probe.stop();
 }
@@ -628,24 +681,13 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
   set_open_args_other_parameters(db_open_args);
 //mtlk here postgres_block_log_has to_be ready
 
-    db.open( db_open_args,
-      [&](const hive::chain::database& db_instance)
-        {
-          std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
-            postgres_block_log().
-            get_full_block(db_instance.head_block_num(), context, shared_memory_bin_path, postgres_url);
-          return fb_ptr;
-        },
-        [](hive::chain::database& db, const hive::chain::open_args& args) { }
-
-
-    );
+  db.open(db_open_args);
 };
 
 
 hive::chain::database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  auto* db = new hive::chain::database;
+  auto* db = new haf_full_database(context, shared_memory_bin_path, postgres_url);
   initialize_chain_db(*db, context, shared_memory_bin_path, postgres_url);
   return db;
 };
@@ -761,4 +803,68 @@ const char* fix_pxx_hex(const pqxx::field& h)
   return h.c_str() + backslash_x_prefix_length; 
 }
 
+
+namespace{
+ std::unordered_map <std::string,  std::unique_ptr<hive::chain::database>> chain_databases;
+}
+
+
+
+auto& get_database(csp_session_type* csp_session)
+{
+    return *csp_session->db;
+}
+
+collected_account_balances_t extract_account_balances(
+    const hive::chain::account_object* account)
+{
+  collected_account_balances_t account_balances;
+  account_balances.account_name = account->get_name();
+  account_balances.balance = account->balance.amount.value;
+  account_balances.hbd_balance = account->hbd_balance.amount.value;
+  account_balances.vesting_shares = account->vesting_shares.amount.value;
+  account_balances.savings_hbd_balance = account->savings_hbd_balance.amount.value;
+  account_balances.reward_hbd_balance = account->reward_hbd_balance.amount.value;
+
+  return account_balances;
+}
+
+collected_account_balances_collection_t collect_current_account_balances(csp_session_type* csp_session,
+                                                                         const std::vector<std::string>& account_names)
+{
+  auto& db = get_database(csp_session);
+
+  collected_account_balances_collection_t collected_balances;
+
+  for( auto& a : account_names )
+  {
+    auto acct = db.find< hive::chain::account_object, hive::chain::by_name >( a );
+    if( acct != nullptr )
+    {
+      collected_balances.emplace_back(extract_account_balances(acct));
+    }
+  }
+
+  return collected_balances;
+}
+
+collected_account_balances_collection_t collect_current_all_accounts_balances(csp_session_type* csp_session)
+{
+
+  auto& db = get_database(csp_session);
+
+  collected_account_balances_collection_t collected_balances;
+
+  auto& idx = db.get_index< hive::chain::account_index, hive::chain::by_name >();
+  auto itr = idx.lower_bound( "" );
+  //auto filter = &filter_default< hive::chain::account_object >;
+  auto end = idx.end();
+
+  while( itr != end )
+  {
+    collected_balances.emplace_back(extract_account_balances(&(*itr)));
+    ++itr;
+  }
+  return collected_balances;
+}
 }  // namespace consensus_state_provider
