@@ -18,11 +18,8 @@ CREATE FUNCTION ASSERT_THIS_TEST(op TEXT)
 AS
 $BODY$
 BEGIN
-  -- Make sure direct conversion (operation::jsonb) results in the same jsonb as indirect one (operation::text::jsonb).
-  ASSERT ( SELECT op::hive.operation::text::jsonb = op::hive.operation::jsonb), 'operation::text::jsonb conversion doesn''t match operation::jsonb conversion';
-
   -- Make sure operation converted to jsonb can be converted back to operation of equal value.
-  ASSERT ( SELECT op::hive.operation::jsonb::text::hive.operation = op::hive.operation), 'Converting operation to jsonb and back doesn''t match original operation';
+  ASSERT ( SELECT op::jsonb::hive.operation::jsonb::hive.operation = op::jsonb::hive.operation), 'Converting operation to jsonb and back doesn''t match original operation';
 END;
 $BODY$
 ;
@@ -36,20 +33,20 @@ AS
 $BODY$
 BEGIN
   -- Make sure that integer < 0xffffffff is converted to jsonb as numeric type
-  ASSERT (select '{"type":"pow_operation","value":{"worker_account":"sminer10","block_id":"00015d56d6e721ede5aad1babb0fe818203cbeeb","nonce":"42","work":{"worker":"STM6tC4qRjUPKmkqkug5DvSgkeND5DHhnfr3XTgpp4b4nejMEwn9k","input":"c55811a1a9cf6a281acad3aba38223027158186cfd280c41fffe5e2b0d2d6e0b","signature":"1fbce97f375ac548c185905ac8e44a9c8b50b7e618bf4a7559816d8316e3b09ff54da096c2f5eddcca1229cf0b9da9597eac2ae676e424bdb432a7855295cd81aa","work":"000000049711861bce6185671b672696eca64398586a66319eacd875155b77fc"},"props":{"account_creation_fee":{"amount":"100000","precision":3,"nai":"@@000000021"},"maximum_block_size":131072,"hbd_interest_rate":1000}}}'::hive.operation::jsonb #> '{"value", "nonce"}' = '42'::jsonb), 'Small nonce value should be converted to jsonb as numeric type';
+  ASSERT (select '{"type":"pow_operation","value":{"worker_account":"sminer10","block_id":"00015d56d6e721ede5aad1babb0fe818203cbeeb","nonce":"42","work":{"worker":"STM6tC4qRjUPKmkqkug5DvSgkeND5DHhnfr3XTgpp4b4nejMEwn9k","input":"c55811a1a9cf6a281acad3aba38223027158186cfd280c41fffe5e2b0d2d6e0b","signature":"1fbce97f375ac548c185905ac8e44a9c8b50b7e618bf4a7559816d8316e3b09ff54da096c2f5eddcca1229cf0b9da9597eac2ae676e424bdb432a7855295cd81aa","work":"000000049711861bce6185671b672696eca64398586a66319eacd875155b77fc"},"props":{"account_creation_fee":{"amount":"100000","precision":3,"nai":"@@000000021"},"maximum_block_size":131072,"hbd_interest_rate":1000}}}'::jsonb::hive.operation::jsonb #> '{"value", "nonce"}' = '42'::jsonb), 'Small nonce value should be converted to jsonb as numeric type';
 
   -- Make sure that integer > 0xffffffff is converted to jsonb as string type
-  ASSERT (select '{"type":"pow_operation","value":{"worker_account":"sminer10","block_id":"00015d56d6e721ede5aad1babb0fe818203cbeeb","nonce":"682570897433907950","work":{"worker":"STM6tC4qRjUPKmkqkug5DvSgkeND5DHhnfr3XTgpp4b4nejMEwn9k","input":"c55811a1a9cf6a281acad3aba38223027158186cfd280c41fffe5e2b0d2d6e0b","signature":"1fbce97f375ac548c185905ac8e44a9c8b50b7e618bf4a7559816d8316e3b09ff54da096c2f5eddcca1229cf0b9da9597eac2ae676e424bdb432a7855295cd81aa","work":"000000049711861bce6185671b672696eca64398586a66319eacd875155b77fc"},"props":{"account_creation_fee":{"amount":"100000","precision":3,"nai":"@@000000021"},"maximum_block_size":131072,"hbd_interest_rate":1000}}}'::hive.operation::jsonb #> '{"value", "nonce"}' = '"682570897433907950"'::jsonb), 'Large nonce value should be converted to jsonb as string type';
+  ASSERT (select '{"type":"pow_operation","value":{"worker_account":"sminer10","block_id":"00015d56d6e721ede5aad1babb0fe818203cbeeb","nonce":"682570897433907950","work":{"worker":"STM6tC4qRjUPKmkqkug5DvSgkeND5DHhnfr3XTgpp4b4nejMEwn9k","input":"c55811a1a9cf6a281acad3aba38223027158186cfd280c41fffe5e2b0d2d6e0b","signature":"1fbce97f375ac548c185905ac8e44a9c8b50b7e618bf4a7559816d8316e3b09ff54da096c2f5eddcca1229cf0b9da9597eac2ae676e424bdb432a7855295cd81aa","work":"000000049711861bce6185671b672696eca64398586a66319eacd875155b77fc"},"props":{"account_creation_fee":{"amount":"100000","precision":3,"nai":"@@000000021"},"maximum_block_size":131072,"hbd_interest_rate":1000}}}'::jsonb::hive.operation::jsonb #> '{"value", "nonce"}' = '"682570897433907950"'::jsonb), 'Large nonce value should be converted to jsonb as string type';
 
   -- Make sure that integer = 0xffffffff is converted to jsonb as numeric type
-  ASSERT (select '{"type":"limit_order_cancel_operation","value":{"owner":"complexring","orderid":4294967295}}'::hive.operation::jsonb #> '{"value", "orderid"}' = '4294967295'::jsonb), '4294967295 value should be converted to jsonb as numeric type';
+  ASSERT (select '{"type":"limit_order_cancel_operation","value":{"owner":"complexring","orderid":4294967295}}'::jsonb::hive.operation::jsonb #> '{"value", "orderid"}' = '4294967295'::jsonb), '4294967295 value should be converted to jsonb as numeric type';
 
   -- Make sure that negative integer is converted to jsonb as numeric type
-  ASSERT (select '{"type":"vote_operation","value":{"voter":"dantheman","author":"red","permlink":"888","weight":-100}}'::hive.operation::jsonb #> '{"value", "weight"}' = '-100'::jsonb), 'Negative value should be converted to jsonb as numeric type';
+  ASSERT (select '{"type":"vote_operation","value":{"voter":"dantheman","author":"red","permlink":"888","weight":-100}}'::jsonb::hive.operation::jsonb #> '{"value", "weight"}' = '-100'::jsonb), 'Negative value should be converted to jsonb as numeric type';
 
   -- Make sure that boolean values are converted to textual form
-  ASSERT (select '{"type": "account_witness_vote_operation", "value": {"account": "donalddrumpf", "approve": true, "witness": "berniesanders"}}'::hive.operation::jsonb #> '{"value", "approve"}' = 'true'::jsonb), 'Boolean true should be converted to textual form';
-  ASSERT (select '{"type": "account_witness_vote_operation", "value": {"account": "donalddrumpf", "approve": false, "witness": "berniesanders"}}'::hive.operation::jsonb #> '{"value", "approve"}' = 'false'::jsonb), 'Boolean false should be converted to textual form';
+  ASSERT (select '{"type": "account_witness_vote_operation", "value": {"account": "donalddrumpf", "approve": true, "witness": "berniesanders"}}'::jsonb::hive.operation::jsonb #> '{"value", "approve"}' = 'true'::jsonb), 'Boolean true should be converted to textual form';
+  ASSERT (select '{"type": "account_witness_vote_operation", "value": {"account": "donalddrumpf", "approve": false, "witness": "berniesanders"}}'::jsonb::hive.operation::jsonb #> '{"value", "approve"}' = 'false'::jsonb), 'Boolean false should be converted to textual form';
 
   PERFORM ASSERT_THIS_TEST('{"type":"transfer_operation","value":{"from":"admin","to":"steemit","amount":{"amount":"833000","precision":3,"nai":"@@000000021"},"memo":""}}');
   PERFORM ASSERT_THIS_TEST('{"type":"system_warning_operation","value":{"message":"no impacted accounts"}}');

@@ -70,7 +70,7 @@ BEGIN
                 "extensions": []
             }
         }            
-        '),
+        '::jsonb::hive.operation),
 
         --empty json and posting metadata
         ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
@@ -82,7 +82,7 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'
+            }'::jsonb::hive.operation
         ),
 
 
@@ -96,7 +96,7 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'
+            }'::jsonb::hive.operation
         ),
 
         --posting metadata equal to ""
@@ -109,7 +109,7 @@ BEGIN
                 "posting_json_metadata": "\"\"",
                 "extensions": []
             }
-        }'),
+        }'::jsonb::hive.operation),
 
         --posting_metadata equal to {}
         ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
@@ -122,7 +122,7 @@ BEGIN
                     "posting_json_metadata": "{}",
                     "extensions": []
                 }
-            }'
+            }'::jsonb::hive.operation
         ),
 
     -- account_create operation 
@@ -171,7 +171,7 @@ BEGIN
                     "memo_key": "STM84bJQnKmM7rMAbsFPXZpQTQi5rBscbpuXkJ6XuVYEundE2Q1yx",
                     "json_metadata": ""
                 }
-            }'),
+            }'::jsonb::hive.operation),
 
         -- json metadata equal to  ""
         ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
@@ -218,7 +218,7 @@ BEGIN
                     "memo_key": "STM6NrLK9cwh9aAdouhSL3KhucAXU4ejReXF1vPvCeWXKrisMcoa8",
                     "json_metadata": "\"\""
                 }
-            }'),
+            }'::jsonb::hive.operation),
 
         --json metadata equal to {}
         ( 8, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
@@ -265,7 +265,7 @@ BEGIN
                     "memo_key": "STM5eK3sJ42oUd6KB5AZU5AHXdxBBK6tcfw69rTx7phnHH3yBmQxk",
                     "json_metadata": "{}"
                 }
-            }'),
+            }'::jsonb::hive.operation),
 
         -- json metadata with a non empty value
         ( 9, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
@@ -312,7 +312,7 @@ BEGIN
                     "memo_key": "STM5Da24pp7ZztCipiUjp32eYxHXiQPDApY43PiMTfs9ivbhBrdgX",
                     "json_metadata": "{\"profile\":{\"about\":\"This account was instantly created via @hivewallet.app - available for iOS and Android!\",\"website\":\"https://hivewallet.app\"}}"
                 }
-            }'
+            }'::jsonb::hive.operation
         ),
 
     -- account_create_with_delegation_operation 
@@ -381,7 +381,7 @@ BEGIN
                     "json_metadata": "{\"owner\":\"genievot\"}",
                     "extensions": []
                 }
-            }'
+            }'::jsonb::hive.operation
         ),
 
     -- account_update2_operation
@@ -394,7 +394,7 @@ BEGIN
                     "posting_json_metadata": "{\"profile\":{\"name\":\"Jeremy\",\"about\":\"               \",\"cover_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg\",\"profile_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg\",\"website\":\" \",\"location\":\"NC, USA\",\"pinned\":\"\",\"version\":2,\"portfolio\":\"enabled\",\"trail\":true,\"collections\":\"enabled\"}}",
                     "extensions": []
                 }
-            }'),
+            }'::jsonb::hive.operation),
 
     -- account_update_operation 
         ( 12, 12, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
@@ -464,7 +464,7 @@ BEGIN
                     "memo_key": "STM6jwfUrLcnd47hX87JQv6Q78UwUZm7RPAfjqjtQ2K7793Jsjuoy",
                     "json_metadata": "{\"beneficiaries\":[{\"name\":\"threespeak\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}"
                 }
-            }'),
+            }'::jsonb::hive.operation),
 
     -- create_claimed_account_operation
         ( 13, 13, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
@@ -507,7 +507,7 @@ BEGIN
                     "json_metadata": "{\"beneficiaries\":[{\"name\":\"fractalnode\",\"weight\":300,\"label\":\"referrer\"},{\"name\":\"ocdb\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}",
                     "extensions": []
                 }
-            }'
+            }'::jsonb::hive.operation
         ),
 
         -- second update for the same account in the blocks range
@@ -520,7 +520,7 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'
+            }'::jsonb::hive.operation
         )
 
 
@@ -549,8 +549,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
+DROP FUNCTION IF EXISTS haf_admin_test_then; CREATE
+FUNCTION haf_admin_test_then()
     RETURNS void
     LANGUAGE 'plpgsql'
 STABLE

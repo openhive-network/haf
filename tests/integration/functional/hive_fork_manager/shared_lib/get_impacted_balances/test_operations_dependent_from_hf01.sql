@@ -64,92 +64,92 @@ BEGIN
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test0_before_hf01
-FROM hive.get_impacted_balances('{"type":"claim_reward_balance_operation","value":{"account":"ocrdu","reward_hive":{"amount":"17","precision":3,"nai":"@@000000021"},"reward_hbd":{"amount":"11","precision":3,"nai":"@@000000013"},"reward_vests":{"amount":"185025103","precision":6,"nai":"@@000000037"}}}', FALSE) f
+FROM hive.get_impacted_balances('{"type":"claim_reward_balance_operation","value":{"account":"ocrdu","reward_hive":{"amount":"17","precision":3,"nai":"@@000000021"},"reward_hbd":{"amount":"11","precision":3,"nai":"@@000000013"},"reward_vests":{"amount":"185025103","precision":6,"nai":"@@000000037"}}}' :: jsonb :: hive.operation, FALSE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test0_after_hf01
-FROM hive.get_impacted_balances('{"type":"claim_reward_balance_operation","value":{"account":"ocrdu","reward_hive":{"amount":"17","precision":3,"nai":"@@000000021"},"reward_hbd":{"amount":"11","precision":3,"nai":"@@000000013"},"reward_vests":{"amount":"185025103","precision":6,"nai":"@@000000037"}}}', TRUE) f
+FROM hive.get_impacted_balances('{"type":"claim_reward_balance_operation","value":{"account":"ocrdu","reward_hive":{"amount":"17","precision":3,"nai":"@@000000021"},"reward_hbd":{"amount":"11","precision":3,"nai":"@@000000013"},"reward_vests":{"amount":"185025103","precision":6,"nai":"@@000000037"}}}' :: jsonb :: hive.operation, TRUE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test1_before_hf01
-FROM hive.get_impacted_balances('{"type":"fill_vesting_withdraw_operation","value":{"from_account":"randaletouri","to_account":"randaletouri","withdrawn":{"amount":"26475","precision":6,"nai":"@@000000037"},"deposited":{"amount":"710","precision":3,"nai":"@@000000021"}}}', FALSE) f
+FROM hive.get_impacted_balances('{"type":"fill_vesting_withdraw_operation","value":{"from_account":"randaletouri","to_account":"randaletouri","withdrawn":{"amount":"26475","precision":6,"nai":"@@000000037"},"deposited":{"amount":"710","precision":3,"nai":"@@000000021"}}}' :: jsonb :: hive.operation, FALSE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test1_after_hf01
-FROM hive.get_impacted_balances('{"type":"fill_vesting_withdraw_operation","value":{"from_account":"randaletouri","to_account":"randaletouri","withdrawn":{"amount":"26475","precision":6,"nai":"@@000000037"},"deposited":{"amount":"710","precision":3,"nai":"@@000000021"}}}', TRUE) f
+FROM hive.get_impacted_balances('{"type":"fill_vesting_withdraw_operation","value":{"from_account":"randaletouri","to_account":"randaletouri","withdrawn":{"amount":"26475","precision":6,"nai":"@@000000037"},"deposited":{"amount":"710","precision":3,"nai":"@@000000021"}}}' :: jsonb :: hive.operation, TRUE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test2_before_hf01
-FROM hive.get_impacted_balances('{"type":"transfer_to_vesting_completed_operation","value":{"from_account":"faddy","to_account":"faddy","hive_vested":{"amount":"357000","precision":3,"nai":"@@000000021"},"vesting_shares_received":{"amount":"357000000","precision":6,"nai":"@@000000037"}}}', FALSE) f
+FROM hive.get_impacted_balances('{"type":"transfer_to_vesting_completed_operation","value":{"from_account":"faddy","to_account":"faddy","hive_vested":{"amount":"357000","precision":3,"nai":"@@000000021"},"vesting_shares_received":{"amount":"357000000","precision":6,"nai":"@@000000037"}}}' :: jsonb :: hive.operation, FALSE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test2_after_hf01
-FROM hive.get_impacted_balances('{"type":"transfer_to_vesting_completed_operation","value":{"from_account":"faddy","to_account":"faddy","hive_vested":{"amount":"357000","precision":3,"nai":"@@000000021"},"vesting_shares_received":{"amount":"357000000","precision":6,"nai":"@@000000037"}}}', TRUE) f
+FROM hive.get_impacted_balances('{"type":"transfer_to_vesting_completed_operation","value":{"from_account":"faddy","to_account":"faddy","hive_vested":{"amount":"357000","precision":3,"nai":"@@000000021"},"vesting_shares_received":{"amount":"357000000","precision":6,"nai":"@@000000037"}}}' :: jsonb :: hive.operation, TRUE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test3_before_hf01
-FROM hive.get_impacted_balances('{"type":"author_reward_operation","value":{"author":"kaylinart","permlink":"should-you-start-a-drop-shipping-business","hbd_payout":{"amount":"9048","precision":3,"nai":"@@000000013"},"hive_payout":{"amount":"5790","precision":3,"nai":"@@000000021"},"vesting_payout":{"amount":"67826998226","precision":6,"nai":"@@000000037"},"curators_vesting_payout":{"amount":"16466162191","precision":6,"nai":"@@000000037"},"payout_must_be_claimed":false}}', FALSE) f
+FROM hive.get_impacted_balances('{"type":"author_reward_operation","value":{"author":"kaylinart","permlink":"should-you-start-a-drop-shipping-business","hbd_payout":{"amount":"9048","precision":3,"nai":"@@000000013"},"hive_payout":{"amount":"5790","precision":3,"nai":"@@000000021"},"vesting_payout":{"amount":"67826998226","precision":6,"nai":"@@000000037"},"curators_vesting_payout":{"amount":"16466162191","precision":6,"nai":"@@000000037"},"payout_must_be_claimed":false}}' :: jsonb :: hive.operation, FALSE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test3_after_hf01
-FROM hive.get_impacted_balances('{"type":"author_reward_operation","value":{"author":"kaylinart","permlink":"should-you-start-a-drop-shipping-business","hbd_payout":{"amount":"9048","precision":3,"nai":"@@000000013"},"hive_payout":{"amount":"5790","precision":3,"nai":"@@000000021"},"vesting_payout":{"amount":"67826998226","precision":6,"nai":"@@000000037"},"curators_vesting_payout":{"amount":"16466162191","precision":6,"nai":"@@000000037"},"payout_must_be_claimed":false}}', TRUE) f
+FROM hive.get_impacted_balances('{"type":"author_reward_operation","value":{"author":"kaylinart","permlink":"should-you-start-a-drop-shipping-business","hbd_payout":{"amount":"9048","precision":3,"nai":"@@000000013"},"hive_payout":{"amount":"5790","precision":3,"nai":"@@000000021"},"vesting_payout":{"amount":"67826998226","precision":6,"nai":"@@000000037"},"curators_vesting_payout":{"amount":"16466162191","precision":6,"nai":"@@000000037"},"payout_must_be_claimed":false}}' :: jsonb :: hive.operation, TRUE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test4_before_hf01
-FROM hive.get_impacted_balances('{"type":"producer_reward_operation","value":{"producer":"initminer","vesting_shares":{"amount":"1000000","precision":6,"nai":"@@000000037"}}}', FALSE) f
+FROM hive.get_impacted_balances('{"type":"producer_reward_operation","value":{"producer":"initminer","vesting_shares":{"amount":"1000000","precision":6,"nai":"@@000000037"}}}' :: jsonb :: hive.operation, FALSE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test4_after_hf01
-FROM hive.get_impacted_balances('{"type":"producer_reward_operation","value":{"producer":"initminer","vesting_shares":{"amount":"1000000","precision":6,"nai":"@@000000037"}}}', True) f
+FROM hive.get_impacted_balances('{"type":"producer_reward_operation","value":{"producer":"initminer","vesting_shares":{"amount":"1000000","precision":6,"nai":"@@000000037"}}}' :: jsonb :: hive.operation, True) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test5_before_hf01
-FROM hive.get_impacted_balances('{"type":"account_create_operation","value":{"fee":{"amount":"100000","precision":3,"nai":"@@000000021"},"creator":"murdock5","new_account_name":"proskynneo","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"memo_key":"STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb","json_metadata":""}}', FALSE) f
+FROM hive.get_impacted_balances('{"type":"account_create_operation","value":{"fee":{"amount":"100000","precision":3,"nai":"@@000000021"},"creator":"murdock5","new_account_name":"proskynneo","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"memo_key":"STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb","json_metadata":""}}' :: jsonb :: hive.operation, FALSE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test5_after_hf01
-FROM hive.get_impacted_balances('{"type":"account_create_operation","value":{"fee":{"amount":"100000","precision":3,"nai":"@@000000021"},"creator":"murdock5","new_account_name":"proskynneo","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"memo_key":"STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb","json_metadata":""}}', True) f
+FROM hive.get_impacted_balances('{"type":"account_create_operation","value":{"fee":{"amount":"100000","precision":3,"nai":"@@000000021"},"creator":"murdock5","new_account_name":"proskynneo","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb",1]]},"memo_key":"STM5sj5VtPtXr2UqJES3SGhPocFMTtm2SfTowfBEjNLuG51EUcmGb","json_metadata":""}}' :: jsonb :: hive.operation, True) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test6_before_hf01
-FROM hive.get_impacted_balances('{"type":"curation_reward_operation","value":{"curator":"steemroller","reward":{"amount":"2623363281","precision":6,"nai":"@@000000037"},"comment_author":"brookdemar","comment_permlink":"reflections-from-life-on-the-streets","payout_must_be_claimed":false}}', FALSE) f
+FROM hive.get_impacted_balances('{"type":"curation_reward_operation","value":{"curator":"steemroller","reward":{"amount":"2623363281","precision":6,"nai":"@@000000037"},"comment_author":"brookdemar","comment_permlink":"reflections-from-life-on-the-streets","payout_must_be_claimed":false}}' :: jsonb :: hive.operation, FALSE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test6_after_hf01
-FROM hive.get_impacted_balances('{"type":"curation_reward_operation","value":{"curator":"steemroller","reward":{"amount":"2623363281","precision":6,"nai":"@@000000037"},"comment_author":"brookdemar","comment_permlink":"reflections-from-life-on-the-streets","payout_must_be_claimed":false}}', True) f
+FROM hive.get_impacted_balances('{"type":"curation_reward_operation","value":{"curator":"steemroller","reward":{"amount":"2623363281","precision":6,"nai":"@@000000037"},"comment_author":"brookdemar","comment_permlink":"reflections-from-life-on-the-streets","payout_must_be_claimed":false}}' :: jsonb :: hive.operation, True) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test7_before_hf01
-FROM hive.get_impacted_balances('{"type":"account_created_operation","value":{"new_account_name":"witnesses","creator":"steem","initial_vesting_shares":{"amount":"72763034396","precision":6,"nai":"@@000000037"},"initial_delegation":{"amount":"220000000000","precision":6,"nai":"@@000000037"}}}', FALSE) f
+FROM hive.get_impacted_balances('{"type":"account_created_operation","value":{"new_account_name":"witnesses","creator":"steem","initial_vesting_shares":{"amount":"72763034396","precision":6,"nai":"@@000000037"},"initial_delegation":{"amount":"220000000000","precision":6,"nai":"@@000000037"}}}' :: jsonb :: hive.operation, FALSE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test7_after_hf01
-FROM hive.get_impacted_balances('{"type":"account_created_operation","value":{"new_account_name":"witnesses","creator":"steem","initial_vesting_shares":{"amount":"72763034396","precision":6,"nai":"@@000000037"},"initial_delegation":{"amount":"220000000000","precision":6,"nai":"@@000000037"}}}', TRUE) f
+FROM hive.get_impacted_balances('{"type":"account_created_operation","value":{"new_account_name":"witnesses","creator":"steem","initial_vesting_shares":{"amount":"72763034396","precision":6,"nai":"@@000000037"},"initial_delegation":{"amount":"220000000000","precision":6,"nai":"@@000000037"}}}' :: jsonb :: hive.operation, TRUE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test8_before_hf01
-FROM hive.get_impacted_balances('{"type":"comment_benefactor_reward_operation","value":{"benefactor":"dpoll.curation","author":"sereze","permlink":"which-instrument-would-you-like-to-play","hbd_payout":{"amount":"27","precision":3,"nai":"@@000000013"},"hive_payout":{"amount":"2","precision":3,"nai":"@@000000021"},"vesting_payout":{"amount":"118862104","precision":6,"nai":"@@000000037"},"payout_must_be_claimed":false}}', FALSE) f
+FROM hive.get_impacted_balances('{"type":"comment_benefactor_reward_operation","value":{"benefactor":"dpoll.curation","author":"sereze","permlink":"which-instrument-would-you-like-to-play","hbd_payout":{"amount":"27","precision":3,"nai":"@@000000013"},"hive_payout":{"amount":"2","precision":3,"nai":"@@000000021"},"vesting_payout":{"amount":"118862104","precision":6,"nai":"@@000000037"},"payout_must_be_claimed":false}}' :: jsonb :: hive.operation, FALSE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test8_after_hf01
-FROM hive.get_impacted_balances('{"type":"comment_benefactor_reward_operation","value":{"benefactor":"dpoll.curation","author":"sereze","permlink":"which-instrument-would-you-like-to-play","hbd_payout":{"amount":"27","precision":3,"nai":"@@000000013"},"hive_payout":{"amount":"2","precision":3,"nai":"@@000000021"},"vesting_payout":{"amount":"118862104","precision":6,"nai":"@@000000037"},"payout_must_be_claimed":false}}', TRUE) f
+FROM hive.get_impacted_balances('{"type":"comment_benefactor_reward_operation","value":{"benefactor":"dpoll.curation","author":"sereze","permlink":"which-instrument-would-you-like-to-play","hbd_payout":{"amount":"27","precision":3,"nai":"@@000000013"},"hive_payout":{"amount":"2","precision":3,"nai":"@@000000021"},"vesting_payout":{"amount":"118862104","precision":6,"nai":"@@000000037"},"payout_must_be_claimed":false}}' :: jsonb :: hive.operation, TRUE) f
 ;
 
 ASSERT _pattern0_before_hf01 = _test0_before_hf01, 'Broken impacted balances result in "claim_reward_balance_operation" method before hf01';

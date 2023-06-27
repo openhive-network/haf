@@ -86,12 +86,10 @@ BEGIN
                     "json_metadata": ""
                 }
             }
-            
-            ' ) 
+            '::jsonb::hive.operation ) 
 
         -- three keys from one owner
             , ( 2, 2, 0, 0, 2, '2016-06-22 19:10:21-07'::timestamp, '
-            
                 {
                     "type": "account_update_operation",
                     "value": {
@@ -118,8 +116,8 @@ BEGIN
                         "json_metadata": ""
                     }
                 }
-            ') 
-        
+            '::jsonb::hive.operation)
+
         -- recover_account_operation
             , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
                 {
@@ -148,8 +146,8 @@ BEGIN
                         },
                         "extensions": []
                     }
-                }            
-            ' )
+                }
+            '::jsonb::hive.operation )
 
             -- request_account_recovery_operation
             , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
@@ -171,9 +169,9 @@ BEGIN
                         "extensions": []
                     }
                 }
-            ' )
-            , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"account_update_operation","value":{"account":"recursive","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB",1],["STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx",1],["STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR",1]]},"memo_key":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","json_metadata":""}}' )
-            , ( 6, 5, 0, 1, 6, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"other"}}' )
+            '::jsonb::hive.operation )
+            , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"account_update_operation","value":{"account":"recursive","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB",1],["STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx",1],["STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR",1]]},"memo_key":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","json_metadata":""}}' :: jsonb :: hive.operation )
+            , ( 6, 5, 0, 1, 6, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hive.operation )
         ;
 
     PERFORM hive.app_create_context( 'context' );
