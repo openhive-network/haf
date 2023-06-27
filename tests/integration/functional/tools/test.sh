@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -x
 
@@ -55,7 +55,7 @@ postgres_procedure_exists() {
     local procedure_name="$2"
 
     # Run the SQL function and remove leading/trailing white space
-    local result=$(psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -c "SELECT postgres_procedure_exists('$schema_name', '$procedure_name');")
+    local result=$(psql -p $postgres_port -d $DB_NAME -A -t -v ON_ERROR_STOP=on -c "SELECT toolbox.procedure_exists('$schema_name', '$procedure_name');")
     # Print the result
     echo $result
 }
@@ -80,8 +80,22 @@ tests="given when error then"
 
 # you can use alice_test_given, alice_test_when, alice_test_error, alice_test_then and their bob's and test_hived equivalents
 
+counter=0
+
 for testfun in ${tests}; do
   for user in ${users}; do
+
+    fun_proc_name="${user}_test_${testfun}"
+    output=$(postgres_procedure_exists 'public' $fun_proc_name)
+    echo output=$output
+    # Check if the procedure exists
+    if [[ "$output" == *"t"* ]]; then
+        counter=$((counter+1))
+        echo "The procedure exists."
+    else
+        echo "The procedure does not exist."
+    fi
+
 
    if [ "${user}" = "haf_admin_procedure" ]; then
       exists=$(postgres_procedure_exists "public" "${user}_test_${testfun}")
@@ -118,6 +132,18 @@ for testfun in ${tests}; do
     fi
   done
 done
+
+if [ $counter -eq 0 ]; then
+    echo "No functions executed in test"
+  #     # mtlk - uncomment below when tests fixed
+   # evaluate_result false
+  # these are not called
+  # 114 - test.functional.hive_fork_manager.hived_api.are_indexes_dropped_test (Failed)
+  # 	115 - test.functional.hive_fork_manager.hived_api.are_indexes_dropped_2_test (Failed)
+  # 	116 - test.functional.hive_fork_manager.hived_api.are_fk_dropped_2_test (Failed)
+  # 	117 - test.functional.hive_fork_manager.hived_api.are_fk_dropped_test (Failed)
+  # 	238 - test.functional.hive_fork_manager.authorization.hived_to_api_access (Failed)    
+fi
 
 on_exit
 psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
