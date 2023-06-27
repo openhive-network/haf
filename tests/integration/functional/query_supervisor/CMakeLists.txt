@@ -9,6 +9,7 @@
  ADD_SQL_FUNCTIONAL_TEST(query_tuples/select/limit/simple_break_query_when_tuples_limit_exceede.sql)
  ADD_SQL_FUNCTIONAL_TEST(query_tuples/select/limit/alice_is_limited_and_bob_no.sql)
  ADD_SQL_FUNCTIONAL_TEST(query_tuples/select/limit/tuples_limit_0.sql)
+ ADD_SQL_FUNCTIONAL_TEST(query_tuples/select/limit/select_in_create_table.sql)
 
  ADD_SQL_FUNCTIONAL_TEST(query_tuples/update/nolimit/no_limited_users.sql)
  ADD_SQL_FUNCTIONAL_TEST(query_tuples/update/limit/no_break_query_when_tuples_less_than_limit.sql)
