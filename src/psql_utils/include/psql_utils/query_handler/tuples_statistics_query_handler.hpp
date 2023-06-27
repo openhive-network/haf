@@ -42,6 +42,7 @@ namespace PsqlTools::PsqlUtils {
     void onSubQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) final;
     void onRootQueryFinish( QueryDesc* _queryDesc ) final;
     void onSubQueryFinish( QueryDesc* _queryDesc ) final;
+    void onError( const QueryDesc& _queryDesc ) final;
 
     void addInstrumentation( QueryDesc* _queryDesc ) const;
     void checkTuplesLimit();

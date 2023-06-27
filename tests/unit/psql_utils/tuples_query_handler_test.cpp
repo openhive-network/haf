@@ -288,10 +288,15 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesStatisticsQueryH
 
   BOOST_AUTO_TEST_CASE( handler_error_handling_from_finish ) {
     using namespace ::testing;
+    using PsqlTools::PsqlUtils::TuplesStatisticsQueryHandler;
+    using SqlCommand = TuplesStatisticsQueryHandler::SqlCommand;
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( []{ return tuplesLimit; } );
+    moveToRunRootQuery();
+
+    m_rootQuery->operation = CMD_SELECT;
+    m_instrumentation.tuplecount = tuplesLimit;
 
     // we pretend an error by jumping to the beginning of a handler's body
     ON_CALL( *m_postgres_mock, executorFinishHook( _ ) ).WillByDefault(
@@ -303,16 +308,30 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesStatisticsQueryH
 
     // THEN
     // a postgres error shall reset handler state
-    BOOST_ASSERT( !m_unitUnderTest->isRootQueryPending());
+    BOOST_ASSERT( !m_unitUnderTest->isRootQueryPending() );
+    BOOST_CHECK_EQUAL( m_unitUnderTest->getStatistics().at( SqlCommand::SELECT ), 0u );
+    BOOST_CHECK_EQUAL( m_unitUnderTest->getStatistics().at( SqlCommand::UPDATE ), 0u );
+    BOOST_CHECK_EQUAL( m_unitUnderTest->getStatistics().at( SqlCommand::INSERT ), 0u );
+    BOOST_CHECK_EQUAL( m_unitUnderTest->getStatistics().at( SqlCommand::DELETE ), 0u );
+    BOOST_CHECK_EQUAL( m_unitUnderTest->getStatistics().at( SqlCommand::OTHER ), 0u );
   }
 
   BOOST_AUTO_TEST_CASE( handler_error_handling_from_end ) {
     using namespace ::testing;
+    using PsqlTools::PsqlUtils::TuplesStatisticsQueryHandler;
+    using SqlCommand = TuplesStatisticsQueryHandler::SqlCommand;
+
     // GIVEN
-    const auto tuplesLimit = 100;
+    const auto tuplesLimit = 50;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( []{ return tuplesLimit; } );
+    moveToRunRootQuery();
+
+    m_rootQuery->operation = CMD_SELECT;
+    m_instrumentation.tuplecount = tuplesLimit;
+
     ExecutorFinish_hook( m_rootQuery.get() );
+
+    BOOST_CHECK_EQUAL( m_unitUnderTest->getStatistics().at( SqlCommand::SELECT ), 50 );
 
     // we pretend an error by jumping to the beginning of a handler's body
     ON_CALL( *m_postgres_mock, executorEndHook( _ ) ).WillByDefault(
@@ -324,7 +343,12 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesStatisticsQueryH
 
     // THEN
     // a postgres error shall reset handler state
-    BOOST_ASSERT( !m_unitUnderTest->isRootQueryPending());
+    BOOST_ASSERT( !m_unitUnderTest->isRootQueryPending() );
+    BOOST_CHECK_EQUAL( m_unitUnderTest->getStatistics().at( SqlCommand::SELECT ), 0u );
+    BOOST_CHECK_EQUAL( m_unitUnderTest->getStatistics().at( SqlCommand::UPDATE ), 0u );
+    BOOST_CHECK_EQUAL( m_unitUnderTest->getStatistics().at( SqlCommand::INSERT ), 0u );
+    BOOST_CHECK_EQUAL( m_unitUnderTest->getStatistics().at( SqlCommand::DELETE ), 0u );
+    BOOST_CHECK_EQUAL( m_unitUnderTest->getStatistics().at( SqlCommand::OTHER ), 0u );
   }
 
 BOOST_AUTO_TEST_SUITE_END()

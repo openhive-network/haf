@@ -9,6 +9,14 @@ BEGIN
     EXECUTE format( 'ALTER ROLE alice IN DATABASE %s SET query_supervisor.limits_enabled TO true'
         , current_database()
         );
+
+    EXECUTE  format( 'ALTER ROLE haf_admin IN DATABASE %s SET query_supervisor.limit_timeout TO ''999999'''
+        , current_database()
+        );
+
+    EXECUTE  format( 'ALTER ROLE alice IN DATABASE %s SET query_supervisor.limit_timeout TO ''999999'''
+        , current_database()
+    );
 END;
 $BODY$
 ;

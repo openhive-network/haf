@@ -26,7 +26,7 @@ namespace PsqlTools::PsqlUtils {
     virtual void onSubQueryEnd( QueryDesc* _queryDesc ) {}
     virtual void onSubQueryRun(  QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {}
     virtual void onSubQueryFinish( QueryDesc* _queryDesc ) {}
-    virtual void onError( const QueryDesc& _queryDesc ) override;
+    void onError( const QueryDesc& _queryDesc ) override;
 
     QueryDesc* getRootQuery() const;
 

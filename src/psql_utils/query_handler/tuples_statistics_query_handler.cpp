@@ -50,6 +50,11 @@ namespace PsqlTools::PsqlUtils {
     checkTuplesLimit();
   }
 
+  void TuplesStatisticsQueryHandler::onError( const QueryDesc& _queryDesc ) {
+    resetStatistics();
+    RootQueryHandler::onError(_queryDesc);
+  }
+
   void TuplesStatisticsQueryHandler::checkTuplesLimit() {
     if ( breakQuery() ) {
       LOG_WARNING( "Query %s was broken because of tuples limit reached", getRootQuery()->sourceText );
