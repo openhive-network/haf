@@ -19,6 +19,39 @@
 #include "time_probe.hpp"
 
 
+using hive::chain::open_args;
+using hive::chain::full_block_type;
+using hive::chain::block_id_type;
+
+
+class haf_full_database : public hive::chain::database
+{
+  uint32_t reindex_internal( const open_args& args, const std::shared_ptr<full_block_type>& start_block ) override{}
+
+public:
+  bool is_reindex_complete( uint64_t* head_block_num_origin, uint64_t* head_block_num_state ) const override{}
+  uint32_t reindex( const open_args& args ) override{}
+  void close(bool rewind = true) override{}
+private:
+  bool is_known_block( const block_id_type& id )const override{}
+  bool is_known_block_unlocked(const block_id_type& id)const override{}
+  block_id_type              find_block_id_for_num( uint32_t block_num )const override{}
+  std::vector<std::shared_ptr<full_block_type>>  fetch_block_range( const uint32_t starting_block_num, const uint32_t count, 
+                                                                      fc::microseconds wait_for_microseconds = fc::microseconds() ) override{}
+  std::shared_ptr<full_block_type> fetch_block_by_number( uint32_t num, fc::microseconds wait_for_microseconds = fc::microseconds() )const override{}
+  
+  std::shared_ptr<full_block_type> fetch_block_by_id(const block_id_type& id)const override{}
+  void migrate_irreversible_state(uint32_t old_last_irreversible) override{}
+  std::vector<block_id_type> get_blockchain_synopsis(const block_id_type& reference_point, uint32_t number_of_blocks_after_reference_point) override{}
+  bool is_included_block_unlocked(const block_id_type& block_id) override{}
+  std::vector<block_id_type> get_block_ids(const std::vector<block_id_type>& blockchain_synopsis, uint32_t& remaining_item_count, uint32_t limit) override{}
+  std::shared_ptr<full_block_type> get_head_block() const override{}
+  void open_block_log(const open_args& args) override{}
+
+};
+
+
+
 
 namespace consensus_state_provider
 {
@@ -108,9 +141,6 @@ private:
         BLOCK_NUM_MAX = std::numeric_limits<int>::max()
    };
 };
-
-
-
 
 bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int to)
 {
@@ -645,7 +675,7 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
 
 hive::chain::database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  auto* db = new hive::chain::full_database;
+  auto* db = new haf_full_database;
   initialize_chain_db(*db, context, shared_memory_bin_path, postgres_url);
   return db;
 };
