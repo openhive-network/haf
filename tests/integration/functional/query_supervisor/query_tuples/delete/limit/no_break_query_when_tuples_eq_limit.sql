@@ -13,7 +13,7 @@ END
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS test_error;
+DROP FUNCTION IF EXISTS haf_admin_test_when;
 CREATE FUNCTION haf_admin_test_when()
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -21,6 +21,11 @@ VOLATILE
 AS
 $BODY$
 BEGIN
+    -- to check if other types of queries do not interfere
+    SET query_supervisor.limit_selects TO 1;
+    SET query_supervisor.limit_updates TO 1;
+    SET query_supervisor.limit_inserts TO 1;
+
     -- by default limit is 1000
     DELETE FROM numbers;
 END
