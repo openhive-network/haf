@@ -30,6 +30,9 @@
     } while (0)
 
 
+namespace consensus_state_provider
+{
+
 using hive::chain::open_args;
 using hive::chain::full_block_type;
 using hive::chain::block_id_type;
@@ -38,6 +41,18 @@ using hive::chain::block_id_type;
 
 class haf_full_database : public hive::chain::database
 {
+  public:
+    haf_full_database(const char* a_context, const char* a_shared_memory_bin_path, const char* a_postgres_url)
+      :
+      context(a_context),
+      shared_memory_bin_path(a_shared_memory_bin_path),
+      postgres_url(a_postgres_url)
+    {
+
+    }
+  private:
+   std:: string context, shared_memory_bin_path, postgres_url;
+
   uint32_t reindex_internal( const open_args& args, const std::shared_ptr<full_block_type>& start_block ) override{myASSERT(0, "STOP mtlk");}
 
 public:
@@ -53,20 +68,24 @@ private:
   std::shared_ptr<full_block_type> fetch_block_by_number( uint32_t num, fc::microseconds wait_for_microseconds = fc::microseconds() )const override{myASSERT(0, "STOP mtlk");}
   
   std::shared_ptr<full_block_type> fetch_block_by_id(const block_id_type& id)const override{myASSERT(0, "STOP mtlk");}
+  
   void migrate_irreversible_state(uint32_t old_last_irreversible) override{myASSERT(1, "STOP mtlk");}
+  
   std::vector<block_id_type> get_blockchain_synopsis(const block_id_type& reference_point, uint32_t number_of_blocks_after_reference_point) override{myASSERT(0, "STOP mtlk");}
   bool is_included_block_unlocked(const block_id_type& block_id) override{myASSERT(0, "STOP mtlk");}
   std::vector<block_id_type> get_block_ids(const std::vector<block_id_type>& blockchain_synopsis, uint32_t& remaining_item_count, uint32_t limit) override{myASSERT(0, "STOP mtlk");}
-  std::shared_ptr<full_block_type> get_head_block() const override{myASSERT(0, "STOP mtlk");}
-  void open_block_log(const open_args& args) override{myASSERT(1, "STOP mtlk");} //Intentionally empty
+
+  std::shared_ptr<full_block_type> get_head_block() const override;
+
+  void open_block_log(const open_args& args) override
+  {
+    // Intentionally empty
+  } 
 
 };
 
 
 
-
-namespace consensus_state_provider
-{
 
 using block_bin_t = hive::plugins::block_api::api_signed_block_object;
 
@@ -153,6 +172,16 @@ private:
         BLOCK_NUM_MAX = std::numeric_limits<int>::max()
    };
 };
+
+std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
+{
+    std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
+          postgres_block_log().
+          get_full_block(this->head_block_num(), context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str());
+    return fb_ptr;
+  
+}
+
 
 bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int to)
 {
@@ -670,21 +699,13 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
   set_open_args_other_parameters(db_open_args);
 //mtlk here postgres_block_log_has to_be ready
 
-    db.open( db_open_args,
-      [&](const hive::chain::database& db_instance)
-        {
-          std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
-            postgres_block_log().
-            get_full_block(db_instance.head_block_num(), context, shared_memory_bin_path, postgres_url);
-          return fb_ptr;
-        }
-    );
+  db.open(db_open_args);
 };
 
 
 hive::chain::database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  auto* db = new haf_full_database;
+  auto* db = new haf_full_database(context, shared_memory_bin_path, postgres_url);
   initialize_chain_db(*db, context, shared_memory_bin_path, postgres_url);
   return db;
 };
