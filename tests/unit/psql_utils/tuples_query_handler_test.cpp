@@ -291,7 +291,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesStatisticsQueryH
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( []{ return tuplesLimit; } );
+    moveToRunRootQuery();
 
     // we pretend an error by jumping to the beginning of a handler's body
     ON_CALL( *m_postgres_mock, executorFinishHook( _ ) ).WillByDefault(
@@ -311,7 +311,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesStatisticsQueryH
     // GIVEN
     const auto tuplesLimit = 100;
     std::chrono::milliseconds timeout = 1s;
-    moveToRunRootQuery( []{ return tuplesLimit; } );
+    moveToRunRootQuery();
     ExecutorFinish_hook( m_rootQuery.get() );
 
     // we pretend an error by jumping to the beginning of a handler's body
