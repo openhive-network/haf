@@ -58,7 +58,7 @@ private:
   bool is_included_block_unlocked(const block_id_type& block_id) override{myASSERT(0, "STOP mtlk");}
   std::vector<block_id_type> get_block_ids(const std::vector<block_id_type>& blockchain_synopsis, uint32_t& remaining_item_count, uint32_t limit) override{myASSERT(0, "STOP mtlk");}
   std::shared_ptr<full_block_type> get_head_block() const override{myASSERT(0, "STOP mtlk");}
-  void open_block_log(const open_args& args) override{myASSERT(0, "STOP mtlk");}
+  void open_block_log(const open_args& args) override{myASSERT(1, "STOP mtlk");} //Intentionally empty
 
 };
 
@@ -677,10 +677,7 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
             postgres_block_log().
             get_full_block(db_instance.head_block_num(), context, shared_memory_bin_path, postgres_url);
           return fb_ptr;
-        },
-        [](hive::chain::database& db, const hive::chain::open_args& args) { }
-
-
+        }
     );
 };
 
