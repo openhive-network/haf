@@ -36,7 +36,7 @@ def test_operations_after_switchng_fork(prepared_networks_and_database_12_8):
     wait_for_irreversible_progress(node_under_test, after_fork_block)
     trx = session.query(Transactions).filter(Transactions.block_num > START_TEST_BLOCK).one()
 
-    ops = session.query(Operations).add_columns(cast(Operations.body, JSONB).label('body'), Operations.block_num).filter(Operations.block_num == trx.block_num).all()
+    ops = session.query(Operations).add_columns(cast(Operations.body_binary, JSONB).label('body'), Operations.block_num).filter(Operations.block_num == trx.block_num).all()
     types = [op.body['type'] for op in ops]
 
     assert 'producer_reward_operation' in types

@@ -39,7 +39,7 @@ def test_live_sync(prepared_networks_and_database_12_8):
 
     session.query(Transactions).filter(Transactions.block_num == transaction_block_num).one()
 
-    ops = session.query(Operations).add_columns(cast(Operations.body, JSONB).label('body'), Operations.block_num).filter(Operations.block_num == transaction_block_num).all()
+    ops = session.query(Operations).add_columns(cast(Operations.body_binary, JSONB).label('body'), Operations.block_num).filter(Operations.block_num == transaction_block_num).all()
     types = [op.body['type'] for op in ops]
 
     assert 'transfer_operation' in types

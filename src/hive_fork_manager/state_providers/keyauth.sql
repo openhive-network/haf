@@ -76,10 +76,10 @@ BEGIN
 
     EXECUTE format(
         'INSERT INTO hive.%s_keyauth 
-        SELECT (hive.get_keyauths( ov.body )).*
+        SELECT (hive.get_keyauths( ov.body_binary )).*
         FROM hive.%s_operations_view ov
         WHERE
-                hive.is_keyauths_operation(ov.body)
+                hive.is_keyauths_operation(ov.body_binary)
             AND 
                 ov.block_num BETWEEN %s AND %s
         ON CONFLICT DO NOTHING'

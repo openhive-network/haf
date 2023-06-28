@@ -58,7 +58,7 @@ BEGIN
 
     EXECUTE format(
         'INSERT INTO hive.%s_accounts( name )
-        SELECT hive.get_created_from_account_create_operations( ov.body ) as name
+        SELECT hive.get_created_from_account_create_operations( ov.body_binary ) as name
         FROM hive.%s_operations_view ov
         JOIN hive.operation_types ot ON ov.op_type_id = ot.id
         WHERE

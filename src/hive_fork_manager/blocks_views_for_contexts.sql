@@ -254,7 +254,7 @@ EXECUTE format(
             t.op_pos,
             t.op_type_id,
             t.timestamp,
-            t.body
+            t.body_binary
           FROM hive.%s_context_data_view c,
           LATERAL
           (
@@ -265,7 +265,7 @@ EXECUTE format(
               ho.op_pos,
               ho.op_type_id,
               ho.timestamp,
-              ho.body
+              ho.body_binary
               FROM hive.operations ho
               WHERE ho.block_num <= c.min_block
             UNION ALL
@@ -276,7 +276,7 @@ EXECUTE format(
                 o.op_pos,
                 o.op_type_id,
                 o.timestamp,
-                o.body
+                o.body_binary
               FROM hive.operations_reversible o
               -- Reversible operations view must show ops comming from newest fork (specific to app-context)
               -- and also hide ops present at earlier forks for given block
@@ -311,7 +311,7 @@ EXECUTE format(
             ho.op_pos,
             ho.op_type_id,
             ho.timestamp,
-            ho.body
+            ho.body_binary
         FROM hive.operations ho
         ;', _context_name
     );

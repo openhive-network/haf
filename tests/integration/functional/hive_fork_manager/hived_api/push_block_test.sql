@@ -135,7 +135,7 @@ BEGIN
               AND op_pos = 0
               AND op_type_id = 1
               AND timestamp = '2016-06-22 19:10:21-07'::timestamp
-              AND body = '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation
+              AND body_binary = '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation
               AND fork_id = 1
     ) = 1, 'Wrong data of operation 1';
 
@@ -147,7 +147,7 @@ BEGIN
            AND op_pos = 0
            AND op_type_id = 2
            AND timestamp = '2016-06-22 19:10:21-07'::timestamp
-           AND body = '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation
+           AND body_binary = '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation
            AND fork_id = 1
      ) = 1, 'Wrong data of operation 2';
 

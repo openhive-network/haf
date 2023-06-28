@@ -185,7 +185,7 @@ SELECT t.id,
        t.op_pos,
        t.op_type_id,
        t.timestamp,
-       t.body
+       t.body_binary
 FROM
 (
     SELECT
@@ -195,7 +195,7 @@ FROM
           ho.op_pos,
           ho.op_type_id,
           ho.timestamp,
-          ho.body
+          ho.body_binary
     FROM hive.operations ho
     UNION ALL
       SELECT
@@ -205,7 +205,7 @@ FROM
         o.op_pos,
         o.op_type_id,
         o.timestamp,
-        o.body
+        o.body_binary
       FROM hive.operations_reversible o
       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
       -- and also hide ops present at earlier forks for given block

@@ -80,7 +80,7 @@ BEGIN
          , ( '\xDEED1102', '\xBEEF13',  3 ) -- block 10
     ;
 
-    INSERT INTO hive.operations_reversible
+    INSERT INTO hive.operations_reversible(id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body_binary, fork_id)
     VALUES
            ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation, 1 )
          , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hive.operation, 1 )
@@ -226,7 +226,7 @@ BEGIN
     ASSERT EXISTS( SELECT * FROM hive.operations_reversible ), 'No reversible operations';
 
     ASSERT NOT EXISTS (
-    SELECT * FROM hive.operations_reversible
+    SELECT id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body_binary, fork_id FROM hive.operations_reversible
     EXCEPT SELECT * FROM ( VALUES
            ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
          , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hive.operation, 2 )

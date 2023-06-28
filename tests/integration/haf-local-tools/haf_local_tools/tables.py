@@ -105,7 +105,7 @@ class Operations(Base):
     op_pos = Column(Integer)
     op_type_id = Column(SmallInteger)
     timestamp = Column(DateTime)
-    body = Column(HiveOperation)
+    body_binary = Column(HiveOperation)
 
 
 class OperationsReversible(Base):
@@ -117,7 +117,7 @@ class OperationsReversible(Base):
     op_pos = Column(Integer)
     op_type_id = Column(SmallInteger)
     timestamp = Column(DateTime)
-    body = Column(HiveOperation)
+    body_binary = Column(HiveOperation)
     fork_id = Column(BigInteger, primary_key=True)
 
 

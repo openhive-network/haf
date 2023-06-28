@@ -92,7 +92,7 @@ BEGIN
          , hor.op_pos
          , hor.op_type_id
          , hor.timestamp
-         , hor.body
+         , hor.body_binary
     FROM
         hive.operations_reversible hor
         JOIN (
