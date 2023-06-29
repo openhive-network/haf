@@ -19,7 +19,9 @@ namespace Fixtures {
     void moveToRunRootQuery( PsqlTools::PsqlUtils::TuplesQueryHandler::TuplesLimitGetter _limit );
 
     std::unique_ptr<QueryDesc> m_rootQuery;
+    std::unique_ptr<DestReceiver> m_rootDestReceiver;
     std::unique_ptr<QueryDesc> m_subQuery;
+    std::unique_ptr<DestReceiver> m_subDestReceiver;
     Instrumentation m_instrumentation{};
 
     std::shared_ptr< PsqlTools::PsqlUtils::TuplesQueryHandler > m_unitUnderTest;

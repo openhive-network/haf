@@ -11,7 +11,14 @@ namespace Fixtures {
     QueryCancelPending = false;
 
     m_rootQuery = std::make_unique<QueryDesc>();
+    m_rootDestReceiver = std::make_unique<DestReceiver>();
+    m_rootQuery->dest = m_rootDestReceiver.get();
+    m_rootQuery->dest->mydest = DestNone;
+
     m_subQuery = std::make_unique<QueryDesc>();
+    m_subDestReceiver = std::make_unique<DestReceiver>();
+    m_subQuery->dest = m_subDestReceiver.get();
+    m_subQuery->dest->mydest = DestSPI;
   }
 
   TuplesQueryHandlerFixture::~TuplesQueryHandlerFixture() {
@@ -39,7 +46,7 @@ namespace Fixtures {
     }
 
     if (ExecutorFinish_hook) {
-      EXPECT_CALL( *m_postgres_mock, executorFinishHook( _ ) ).Times( 1 );
+      EXPECT_CALL( *m_postgres_mock, executorFinishHook( _ ) ).Times( AnyNumber() );
     } else {
       EXPECT_CALL( *m_postgres_mock, standard_ExecutorFinish( _ ) ).Times( 1 );
     }

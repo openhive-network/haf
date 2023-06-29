@@ -24,7 +24,7 @@ namespace PsqlTools::PsqlUtils {
     disable_timeout( m_pendingQueryTimeout, true );
   }
 
-  void TimeoutQueryHandler::onRootQueryStart( QueryDesc* _queryDesc, int _eflags ) {
+  void TimeoutQueryHandler::onRootQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {
     assert(_queryDesc);
 
     if ( isQueryCancelPending() ) {

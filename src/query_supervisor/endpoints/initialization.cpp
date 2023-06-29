@@ -28,10 +28,10 @@ std::unique_ptr< PsqlTools::QuerySupervisor::QueryHandlers > g_queryHandlers;
 void _PG_init(void) {
   using PsqlTools::QuerySupervisor::PostgresAccessor;
 
-  LOG_INFO( "Loading query_supervisor.so into backend %d...", getpid() );
+  LOG_DEBUG( "Loading query_supervisor.so into backend %d...", getpid() );
 
   BOOST_SCOPE_EXIT(void) {
-    LOG_INFO( "query_supervisor.so loaded into backend %d...", getpid() );
+      LOG_DEBUG( "query_supervisor.so loaded into backend %d...", getpid() );
   } BOOST_SCOPE_EXIT_END
 
   if ( PostgresAccessor::getInstance().getBackend() == std::nullopt ) {
@@ -50,9 +50,9 @@ void _PG_init(void) {
 }
 
 void _PG_fini(void) {
-  LOG_INFO( "Unloading query_supervisor.so from backend %d...", getpid() );
+  LOG_DEBUG( "Unloading query_supervisor.so from backend %d...", getpid() );
   BOOST_SCOPE_EXIT(void) {
-      LOG_INFO( "query_supervisor.so unloaded from backend %d...", getpid() );
+      LOG_DEBUG( "query_supervisor.so unloaded from backend %d...", getpid() );
   } BOOST_SCOPE_EXIT_END
 
   g_queryHandlers.reset();

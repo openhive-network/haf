@@ -17,12 +17,10 @@ namespace PsqlTools::PsqlUtils {
     RootQueryHandler() = default;
     ~RootQueryHandler() override = default;
 
-    virtual void onRootQueryStart( QueryDesc* _queryDesc, int _eflags ) {}
     virtual void onRootQueryEnd( QueryDesc* _queryDesc ) {}
-    virtual void onRootQueryRun(  QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {}
+    virtual void onRootQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {}
     virtual void onRootQueryFinish( QueryDesc* _queryDesc ) {}
 
-    virtual void onSubQueryStart( QueryDesc* _queryDesc, int _eflags ) {}
     virtual void onSubQueryEnd( QueryDesc* _queryDesc ) {}
     virtual void onSubQueryRun(  QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {}
     virtual void onSubQueryFinish( QueryDesc* _queryDesc ) {}
@@ -30,13 +28,13 @@ namespace PsqlTools::PsqlUtils {
     QueryDesc* getRootQuery() const;
 
   private:
-    void onStartQuery( QueryDesc* _queryDesc, int _eflags ) override;
     void onEndQuery( QueryDesc* _queryDesc ) override;
     void onRunQuery( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) override;
     void onFinishQuery( QueryDesc* _queryDesc ) override;
 
     bool isPendingRootQuery(QueryDesc* _queryDesc) const;
     void endOfRootQuery();
+    bool isRootQuery( const QueryDesc& _queryDesc ) const;
   private:
     QueryDesc* m_rootQuery = nullptr;
   };

@@ -41,7 +41,6 @@ namespace PsqlTools::PsqlUtils {
     assert( _queryDesc );
     assert( m_limitOfTuplesPerRootQuery );
 
-    LOG_DEBUG( "Finish sub query: %s with tuples:  %lf", _queryDesc->sourceText, _queryDesc->totaltime->tuplecount );
     if ( isQueryCancelPending() ) {
       return;
     }

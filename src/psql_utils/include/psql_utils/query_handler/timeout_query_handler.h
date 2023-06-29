@@ -28,7 +28,7 @@ namespace PsqlTools::PsqlUtils {
     TimeoutQueryHandler( TimeoutLimitGetter _limitGetter );
     ~TimeoutQueryHandler() override;
 
-    void onRootQueryStart( QueryDesc* _queryDesc, int _eflags ) override;
+    void onRootQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) override;
     void onRootQueryEnd( QueryDesc* _queryDesc ) override;
 
     private:

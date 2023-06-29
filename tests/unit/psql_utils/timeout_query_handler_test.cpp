@@ -41,9 +41,13 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
   }
 
   BOOST_AUTO_TEST_CASE( star_query_previous_hook_set ) {
+    using namespace ::testing;
+
     // GIVEN
     auto rootQuery = std::make_unique< QueryDesc >();
-    const auto flags = 0;
+    auto rootDestReceiver = std::make_unique<DestReceiver>();
+    rootQuery->dest = rootDestReceiver.get();
+    rootQuery->dest->mydest = DestNone;
 
     EXPECT_CALL( *m_postgres_mock, RegisterTimeout( USER_TIMEOUT, testing::_ ) )
       .Times( 1 )
@@ -56,23 +60,25 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     // setup timeout
     EXPECT_CALL( *m_postgres_mock, enable_timeout_after( m_expected_timer_id, timeout.count() ) ).Times(1);
     // call previous hook
-    EXPECT_CALL( *m_postgres_mock, executorStartHook( rootQuery.get(), flags ) ).Times(1);
-    // previous hook is responsible for calling standard executor
-    EXPECT_CALL( *m_postgres_mock, standard_ExecutorStart( m_rootQuery.get(), flags ) ).Times(0);
+    EXPECT_CALL( *m_postgres_mock, executorRunHook( rootQuery.get(), _, _, _ ) ).Times(1);
     EXPECT_CALL( *m_postgres_mock, disable_timeout( m_expected_timer_id, true ) ).Times(1); // dtor disables timeout
 
     // WHEN
     // pretend executor hook call
-    ExecutorStart_hook( rootQuery.get(), flags );
+    ExecutorRun_hook( rootQuery.get(), BackwardScanDirection, 0, true );
 
     BOOST_ASSERT( unitUnderTest.isRootQueryPending() );
   }
 
   BOOST_AUTO_TEST_CASE( star_query_previous_hook_not_set ) {
+    using namespace ::testing;
+
     // GIVEN
     ExecutorStart_hook = nullptr;
     auto rootQuery = std::make_unique< QueryDesc >();
-    const auto flags = 0;
+    auto rootDestReceiver = std::make_unique<DestReceiver>();
+    rootQuery->dest = rootDestReceiver.get();
+    rootQuery->dest->mydest = DestNone;
 
     EXPECT_CALL( *m_postgres_mock, RegisterTimeout( USER_TIMEOUT, testing::_ ) )
       .Times( 1 )
@@ -84,13 +90,13 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     // THEN
     // setup timeout
     EXPECT_CALL( *m_postgres_mock, enable_timeout_after( m_expected_timer_id, timeout.count() ) ).Times(1);
-    EXPECT_CALL( *m_postgres_mock, executorStartHook( rootQuery.get(), flags ) ).Times(0);
-    EXPECT_CALL( *m_postgres_mock, standard_ExecutorStart( rootQuery.get(), flags ) ).Times(1);
+    EXPECT_CALL( *m_postgres_mock, executorRunHook( rootQuery.get(), _, _, _ ) ).Times(1);
+    EXPECT_CALL( *m_postgres_mock, standard_ExecutorRun( rootQuery.get(), _, _, _ ) ).Times(0);
     EXPECT_CALL( *m_postgres_mock, disable_timeout( m_expected_timer_id, true ) ).Times(1); // dtor disables timeout
 
     // WHEN
     // pretend executor hook call
-    ExecutorStart_hook( rootQuery.get(), flags );
+    ExecutorRun_hook( rootQuery.get(), BackwardScanDirection, 0, true );
 
     BOOST_ASSERT( unitUnderTest.isRootQueryPending() );
   }
@@ -294,6 +300,33 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     // WHEN
     // pretend that PostgreSQL calls our timeout handler
     m_timoutHandler();
+
+    // THEN PART 2
+    BOOST_ASSERT( !PsqlTools::PsqlUtils::QueryHandler::isQueryCancelPending() );
+  }
+
+  BOOST_AUTO_TEST_CASE( root_query_after_root_query ) {
+      /** If pending root query was broken then the handler is not informed about this
+     *  a new root query will arrive what should reset internal handler state
+     *  and restart time measurement*/
+     using namespace ::testing;
+
+    // GIVEN
+    moveToPendingRootQuery();
+    const ScanDirection direction = BackwardScanDirection;
+    const uint64 count = 15;
+    const bool executeOnce = true;
+    // pretend executor hook call
+    EXPECT_CALL( *m_postgres_mock, executorRunHook( m_rootQuery.get(), _, _, _ ) ).Times(1);
+    ExecutorRun_hook( m_rootQuery.get(), direction, count, executeOnce );
+
+    // THEN PART 1
+    EXPECT_CALL( *m_postgres_mock, enable_timeout_after( m_expected_timer_id, _ ) ).Times(1);
+    EXPECT_CALL( *m_postgres_mock, executorRunHook( m_rootQuery.get(), _, _, _ ) ).Times(1);
+
+    // WHEN
+    // pretend that during pending a root query a new root query has started
+    ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 0, true );
 
     // THEN PART 2
     BOOST_ASSERT( !PsqlTools::PsqlUtils::QueryHandler::isQueryCancelPending() );
