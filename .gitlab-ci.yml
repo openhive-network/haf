@@ -178,7 +178,7 @@ dump_snapshot_5m_mirrornet:
     - "$CI_JOB_NAME"
     expire_in: 6 hours
   tags:
-    - hive-builder-4
+    - data-cache-storage
 
 haf_system_tests_mirrornet:
   stage: build_and_test_phase_2
@@ -217,7 +217,7 @@ haf_system_tests_mirrornet:
     expire_in: 1 week
   interruptible: true
   tags:
-    - hive-builder-4
+    - data-cache-storage
 
 applications_system_tests:
   stage: build_and_test_phase_2
@@ -405,7 +405,7 @@ prepare_haf_image:
     BINARY_CACHE_PATH: "haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
   tags:
-    - hive-builder-4
+    - data-cache-storage
 
 prepare_haf_data:
   extends: .prepare_haf_data_5m
@@ -418,7 +418,7 @@ prepare_haf_data:
     BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
   tags:
-    - hive-builder-4
+    - data-cache-storage
   resource_group: ${CI_COMMIT_SHA}
 
 .haf-service: &haf-service
@@ -460,7 +460,7 @@ start_haf_as_service:
     paths:
     - docker_entrypoint.log
   tags:
-    - hive-builder-4
+    - data-cache-storage
   resource_group: ${CI_COMMIT_SHA}
 
 cleanup_haf_cache_manual:
@@ -470,7 +470,7 @@ cleanup_haf_cache_manual:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
   resource_group: ${CI_COMMIT_SHA}
   tags:
-    - hive-builder-4
+    - data-cache-storage
 
 cleanup_haf_snapshot_from_cache:
   extends: .cleanup_cache_manual
@@ -479,7 +479,7 @@ cleanup_haf_snapshot_from_cache:
     CLEANUP_PATH_PATTERN: "/cache/snapshots_pipeline_*"
   resource_group: ${CI_COMMIT_SHA}
   tags:
-    - hive-builder-4
+    - data-cache-storage
 
 build_and_publish_image:
   stage: publish
