@@ -44,6 +44,18 @@ CREATE OR REPLACE FUNCTION hive._operation_from_jsonb(
 AS 'MODULE_PATHNAME',
 'operation_from_jsonb';
 
+CREATE OR REPLACE FUNCTION hive.operation_to_jsontext(
+  hive.operation
+) RETURNS text LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_jsontext';
+
+CREATE OR REPLACE FUNCTION hive.operation_from_jsontext(
+  text
+) RETURNS hive.operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_from_jsontext';
+
 CREATE OR REPLACE FUNCTION hive._operation_eq(
   hive.operation, hive.operation
 ) RETURNS bool LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE

@@ -21,6 +21,12 @@ extern "C"
   PG_FUNCTION_INFO_V1( operation_from_jsonb );
   Datum operation_from_jsonb( PG_FUNCTION_ARGS );
 
+  PG_FUNCTION_INFO_V1( operation_from_jsontext );
+  Datum operation_from_jsontext( PG_FUNCTION_ARGS );
+
+  PG_FUNCTION_INFO_V1( operation_to_jsontext );
+  Datum operation_to_jsontext( PG_FUNCTION_ARGS );
+
   PG_FUNCTION_INFO_V1( operation_in );
   Datum operation_in( PG_FUNCTION_ARGS );
 

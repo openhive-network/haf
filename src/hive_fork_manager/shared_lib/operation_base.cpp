@@ -172,6 +172,29 @@ extern "C"
     PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
   }
 
+  Datum operation_from_jsontext( PG_FUNCTION_ARGS )
+  {
+    const text* str = PG_GETARG_TEXT_P( 0 );
+
+    std::vector< char > data = json_to_op( text_to_cstring( str ) );
+
+    PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
+  }
+
+  Datum operation_to_jsontext( PG_FUNCTION_ARGS )
+  {
+    _operation* op       = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    uint32 data_length   = VARSIZE_ANY_EXHDR( op );
+    const char* raw_data = VARDATA_ANY( op );
+
+    std::string json = op_to_json( raw_data, data_length );
+    uint32 json_size = json.size() + 1;
+    char* chars       = (char*) palloc( json_size );
+
+    const char* cstring_out = (const char*) memcpy( chars, json.c_str(), json_size );
+    PG_RETURN_TEXT_P(cstring_to_text(cstring_out));
+  }
+
   Datum operation_in( PG_FUNCTION_ARGS )
   {
     const char* data = PG_GETARG_CSTRING( 0 );
