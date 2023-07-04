@@ -18,8 +18,11 @@ CREATE FUNCTION ASSERT_THIS_TEST(op TEXT)
 AS
 $BODY$
 BEGIN
+  -- Make sure direct conversion (operation::jsonb) results in the same jsonb as indirect one (operation::text::jsonb).
+  ASSERT ( SELECT hive.operation_to_jsontext(hive.operation_from_jsontext(op))::jsonb = hive.operation_from_jsontext(op)::jsonb), 'operation::text::jsonb conversion doesn''t match operation::jsonb conversion';
+
   -- Make sure operation converted to jsonb can be converted back to operation of equal value.
-  ASSERT ( SELECT op::jsonb::hive.operation::jsonb::hive.operation = op::jsonb::hive.operation), 'Converting operation to jsonb and back doesn''t match original operation';
+  ASSERT ( SELECT hive.operation_from_jsontext(op)::jsonb::hive.operation = hive.operation_from_jsontext(op)), 'Converting operation to jsonb and back doesn''t match original operation';
 END;
 $BODY$
 ;
