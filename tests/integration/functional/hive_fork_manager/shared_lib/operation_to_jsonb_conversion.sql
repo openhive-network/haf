@@ -1,16 +1,3 @@
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    --Nothing to do
-END;
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS ASSERT_THIS_TEST;
 CREATE FUNCTION ASSERT_THIS_TEST(op TEXT)
     RETURNS void
