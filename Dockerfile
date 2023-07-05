@@ -54,9 +54,9 @@ RUN \
   --cmake-arg="-DBUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}" \
   --cmake-arg="-DENABLE_SMT_SUPPORT=${ENABLE_SMT_SUPPORT}" \
   --cmake-arg="-DHIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}" \
-  --cmake-arg="-DHIVE_LINT=${HIVE_LINT}" \
-  && \
-  cd ./build && \
+  --cmake-arg="-DHIVE_LINT=${HIVE_LINT}"
+  # && \
+  # cd ./build && \
   # find . -name *.o  -type f -delete && \
   # find . -name *.a  -type f -delete
 
