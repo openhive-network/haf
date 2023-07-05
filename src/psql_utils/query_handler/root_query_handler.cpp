@@ -73,4 +73,13 @@ namespace PsqlTools::PsqlUtils {
     return m_rootQuery;
   }
 
+  void
+  RootQueryHandler::onError(const QueryDesc& _queryDesc) {
+    QueryHandler::onError(_queryDesc);
+    if ( isRootQueryPending() ) {
+      // subquery could call onError already
+      endOfRootQuery();
+    }
+  }
+
 } // namespace PsqlTools::PsqlUtils

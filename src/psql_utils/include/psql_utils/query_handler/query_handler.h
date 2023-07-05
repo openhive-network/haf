@@ -41,6 +41,11 @@ namespace PsqlTools::PsqlUtils {
       virtual void onRunQuery( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {}
       virtual void onFinishQuery( QueryDesc* _queryDesc ) {}
 
+      /**
+       * Called when during query execution on any of its stage (start/run/end/finish) an error occure
+       */
+      virtual void onError(const QueryDesc& _queryDesc);
+
       QueryHandler* previousHandler();
       ExecutorStart_hook_type originalStartHook() const { return m_originalStarExecutorHook; }
       ExecutorEnd_hook_type originalEndHook() const { return m_originalEndExecutorHook; }

@@ -7,7 +7,7 @@
 
 namespace {
   void timeoutHandler() {
-    LOG_INFO( "The query was terminated due to a timeout being reached." );
+    LOG_WARNING( "The query was terminated due to a timeout being reached." );
     StatementCancelHandler(0);
   }
 } // namespace
@@ -26,23 +26,17 @@ namespace PsqlTools::PsqlUtils {
 
   void TimeoutQueryHandler::onRootQueryStart( QueryDesc* _queryDesc, int _eflags ) {
     assert(_queryDesc);
-
-    if ( isQueryCancelPending() ) {
-      return;
-    }
-
     spawnTimer();
   }
 
   void TimeoutQueryHandler::onRootQueryEnd( QueryDesc* _queryDesc ) {
     assert(_queryDesc);
-
-    //Warning: onEndQuery won't be called when pending root query was broken;
-    if ( isQueryCancelPending() ) {
-      return;
-    }
-
     disable_timeout( m_pendingQueryTimeout, false );
+  }
+
+  void TimeoutQueryHandler::onError(const QueryDesc& _queryDesc) {
+    disable_timeout( m_pendingQueryTimeout, false );
+    RootQueryHandler::onError(_queryDesc);
   }
 
   void TimeoutQueryHandler::spawnTimer() {

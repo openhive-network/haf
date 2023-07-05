@@ -30,6 +30,7 @@ namespace PsqlTools::PsqlUtils {
 
     void onRootQueryStart( QueryDesc* _queryDesc, int _eflags ) override;
     void onRootQueryEnd( QueryDesc* _queryDesc ) override;
+    void onError(const QueryDesc& _queryDesc) override;
 
     private:
     void spawnTimer();

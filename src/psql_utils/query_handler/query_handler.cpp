@@ -3,23 +3,41 @@
 namespace {
   PsqlTools::PsqlUtils::QueryHandler* g_topHandler{nullptr};
 
+  void callErrorOnAllHandlers(const QueryDesc& _queryDesc) {
+    for (
+      auto* currentHandler = g_topHandler
+      ; currentHandler
+      ; currentHandler = currentHandler->previousHandler() ) {
+      currentHandler->onError(_queryDesc);
+    }
+  }
+
   void startQueryHook(QueryDesc *_queryDesc, int _eflags) {
     assert( g_topHandler );
 
     for (
-        auto* currentHandler = g_topHandler
-      ; currentHandler
-      ; currentHandler = currentHandler->previousHandler() ) {
-      currentHandler->onStartQuery( _queryDesc, _eflags );
+      auto *currentHandler = g_topHandler; currentHandler; currentHandler = currentHandler->previousHandler()) {
+        PG_TRY();
+        {
+            currentHandler->onStartQuery( _queryDesc, _eflags );
 
-      if ( !currentHandler->previousHandler() ) { // bottom handler
-        if ( currentHandler->originalStartHook() ) {
-          currentHandler->originalStartHook()(_queryDesc, _eflags);
-        } else {
-          standard_ExecutorStart(_queryDesc, _eflags);
+            if (!currentHandler->previousHandler()) { // bottom handler
+              if (currentHandler->originalStartHook()) {
+                currentHandler->originalStartHook()( _queryDesc, _eflags );
+              } else {
+                standard_ExecutorStart( _queryDesc, _eflags );
+              }
+            }
+        } //PG_TRY();
+        PG_CATCH();
+        {
+          callErrorOnAllHandlers(*_queryDesc);
+          PG_RE_THROW();
         }
-      }
+        PG_END_TRY();
     } // for
+  }
+
   }
 
   void endQueryHook(QueryDesc* _queryDesc) {
@@ -29,15 +47,24 @@ namespace {
       auto* currentHandler = g_topHandler
       ; currentHandler
       ; currentHandler = currentHandler->previousHandler() ) {
-      currentHandler->onEndQuery( _queryDesc );
+        PG_TRY();
+        {
+          currentHandler->onEndQuery( _queryDesc );
 
-      if ( !currentHandler->previousHandler() ) { // bottom handler
-        if ( currentHandler->originalEndHook() ) {
-          currentHandler->originalEndHook()( _queryDesc );
-        } else {
-          standard_ExecutorEnd( _queryDesc );
+          if (!currentHandler->previousHandler()) { // bottom handler
+            if (currentHandler->originalEndHook()) {
+              currentHandler->originalEndHook()( _queryDesc );
+            } else {
+              standard_ExecutorEnd( _queryDesc );
+            }
+          }
+        } // PG_TRY();
+        PG_CATCH();
+        {
+          callErrorOnAllHandlers(*_queryDesc);
+          PG_RE_THROW();
         }
-      }
+        PG_END_TRY();
     } // for
   }
 
@@ -48,15 +75,24 @@ namespace {
       auto* currentHandler = g_topHandler
       ; currentHandler
       ; currentHandler = currentHandler->previousHandler() ) {
-      currentHandler->onRunQuery( _queryDesc, _direction, _count, _execute_once );
+      PG_TRY();
+      {
+        currentHandler->onRunQuery( _queryDesc, _direction, _count, _execute_once );
 
-      if ( !currentHandler->previousHandler() ) { // bottom handler
-        if ( currentHandler->originalRunHook() ) {
-          currentHandler->originalRunHook()( _queryDesc, _direction, _count, _execute_once );
-        } else {
-          standard_ExecutorRun( _queryDesc, _direction, _count, _execute_once );
+        if (!currentHandler->previousHandler()) { // bottom handler
+          if (currentHandler->originalRunHook()) {
+            currentHandler->originalRunHook()( _queryDesc, _direction, _count, _execute_once );
+          } else {
+            standard_ExecutorRun( _queryDesc, _direction, _count, _execute_once );
+          }
         }
       }
+      PG_CATCH();
+      {
+        callErrorOnAllHandlers(*_queryDesc);
+        PG_RE_THROW();
+      }
+      PG_END_TRY();
     } // for
   }
 
@@ -67,18 +103,26 @@ namespace {
       auto* currentHandler = g_topHandler
       ; currentHandler
       ; currentHandler = currentHandler->previousHandler() ) {
-      currentHandler->onFinishQuery( _queryDesc );
+      PG_TRY();
+      {
+        currentHandler->onFinishQuery( _queryDesc );
 
-      if ( !currentHandler->previousHandler() ) { // bottom handler
-        if ( currentHandler->originalFinishHook() ) {
-          currentHandler->originalFinishHook()( _queryDesc );
-        } else {
-          standard_ExecutorFinish( _queryDesc );
+        if (!currentHandler->previousHandler()) { // bottom handler
+          if (currentHandler->originalFinishHook()) {
+            currentHandler->originalFinishHook()( _queryDesc );
+          } else {
+            standard_ExecutorFinish( _queryDesc );
+          }
         }
       }
+      PG_CATCH();
+        {
+          callErrorOnAllHandlers(*_queryDesc);
+          PG_RE_THROW();
+        }
+      PG_END_TRY();
     } // for
   }
-}
 
 namespace PsqlTools::PsqlUtils {
   QueryHandler::QueryHandler() {
@@ -120,6 +164,11 @@ namespace PsqlTools::PsqlUtils {
   void
   QueryHandler::breakPendingRootQuery() {
     StatementCancelHandler(0);
+  }
+
+  void
+  QueryHandler::onError(const QueryDesc& _queryDesc) {
+    LOG_DEBUG( "Error during processing a query %s", _queryDesc.sourceText );
   }
 } // namespace PsqlTools::PsqlUtils
 
