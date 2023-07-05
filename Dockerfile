@@ -57,8 +57,8 @@ RUN \
   --cmake-arg="-DHIVE_LINT=${HIVE_LINT}" \
   && \
   cd ./build && \
-  find . -name *.o  -type f -delete && \
-  find . -name *.a  -type f -delete
+  # find . -name *.o  -type f -delete && \
+  # find . -name *.a  -type f -delete
 
 # Here we could use a smaller image without packages specific to build requirements
 FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG as base_instance
