@@ -287,6 +287,9 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/extract_set_witness_properties.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/operation_to_jsonb_conversion.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/calculate_schema_hash.sql )
+ ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_vesting_balance/get_vesting_balance.sql )
  ADD_SQL_FUNCTIONAL_TEST( sanity_check/test_tables_and_sequences_properly_flagged_for_dump.sql )
+
+
 
 
