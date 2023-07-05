@@ -33,6 +33,7 @@ ADD_PSQL_EXTENSION(
             blocks_views_for_contexts.sql
             get_keyauths.sql
             get_metadata.sql
+            get_vesting_balance.sql
             state_providers/accounts.sql
             state_providers/keyauth.sql
             state_providers/metadata.sql
