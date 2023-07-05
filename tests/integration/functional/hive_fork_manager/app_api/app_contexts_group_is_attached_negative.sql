@@ -12,7 +12,7 @@ BEGIN
     PERFORM hive.app_create_context( 'context_detached_a' );
     PERFORM hive.app_create_context( 'context_detached_b' );
     PERFORM hive.app_create_context( 'context_detached_c' );
-    PERFORM hive.app_detach_context( ARRAY[ 'context_detached_a', 'context_detached_b', 'context_detached_c' ] );
+    PERFORM hive.app_context_detach( ARRAY[ 'context_detached_a', 'context_detached_b', 'context_detached_c' ] );
 END;
 $BODY$
 ;
