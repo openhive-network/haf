@@ -16,7 +16,7 @@ END
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS test_error;
+DROP FUNCTION IF EXISTS haf_admin_test_when;
 CREATE FUNCTION haf_admin_test_when()
     RETURNS void
     LANGUAGE 'plpgsql'
