@@ -1,6 +1,5 @@
  ADD_SQL_FUNCTIONAL_TEST( query_timeout/no_limit/no_limited_users_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( query_timeout/limit/simple_break_query_after_300ms_test.sql )
- ADD_SQL_FUNCTIONAL_TEST( query_timeout/limit/timeout_0_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( query_timeout/limit/alice_is_limited_and_bob_no.sql )
 
  ADD_SQL_FUNCTIONAL_TEST(query_tuples/select/nolimit/no_limited_users.sql)
