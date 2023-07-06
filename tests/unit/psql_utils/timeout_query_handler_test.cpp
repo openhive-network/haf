@@ -299,4 +299,69 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     BOOST_ASSERT( !PsqlTools::PsqlUtils::QueryHandler::isQueryCancelPending() );
   }
 
+  BOOST_AUTO_TEST_CASE( handler_error_handling_run ) {
+    using namespace ::testing;
+    // GIVEN
+    moveToPendingRootQuery();
+
+    EXPECT_CALL( *m_postgres_mock, disable_timeout( _, _ ) ).Times(1);
+
+    // we pretend an error by jumping to the beginning of a handler's body
+    ON_CALL( *m_postgres_mock, executorRunHook( _, _, _, _ ) ).WillByDefault(
+        []{ MAKE_POSTGRES_ERROR;}
+    );
+
+    // WHEN
+    EXPECT_PG_ERROR( ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 15, true ) );
+
+    // THEN
+    // a postgres error shall reset handler state
+    BOOST_ASSERT( !m_unitUnderTest->isRootQueryPending());
+  }
+
+  BOOST_AUTO_TEST_CASE( handler_error_handling_finish ) {
+    using namespace ::testing;
+    // GIVEN
+    moveToPendingRootQuery();
+    EXPECT_CALL( *m_postgres_mock, executorRunHook( _, _, _, _ ) ).Times(1);
+    ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 15, true );
+    EXPECT_CALL( *m_postgres_mock, disable_timeout( _, _ ) ).Times(1);
+
+    // we pretend an error by jumping to the beginning of a handler's body
+    ON_CALL( *m_postgres_mock, executorFinishHook( _ ) ).WillByDefault(
+      []{ MAKE_POSTGRES_ERROR;}
+    );
+
+    // WHEN
+    EXPECT_PG_ERROR( ExecutorFinish_hook( m_rootQuery.get() ) );
+
+    // THEN
+    // a postgres error shall reset handler state
+    BOOST_ASSERT( !m_unitUnderTest->isRootQueryPending());
+  }
+
+  BOOST_AUTO_TEST_CASE( handler_error_handling_end ) {
+    using namespace ::testing;
+    // GIVEN
+    moveToPendingRootQuery();
+    EXPECT_CALL( *m_postgres_mock, executorRunHook( _, _, _, _ ) ).Times(1);
+    EXPECT_CALL( *m_postgres_mock, disable_timeout( _, _ ) ).Times(2); // 1 -on end, 2 -on error
+    EXPECT_CALL( *m_postgres_mock, executorFinishHook( _ ) ).Times( 1 );
+    ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 15, true );
+    ExecutorFinish_hook( m_rootQuery.get() );
+
+    // we pretend an error by jumping to the beginning of a handler's body
+    ON_CALL( *m_postgres_mock, executorEndHook( _ ) ).WillByDefault(
+      []{ MAKE_POSTGRES_ERROR;}
+    );
+
+    // WHEN
+    EXPECT_PG_ERROR( ExecutorEnd_hook( m_rootQuery.get() ) );
+
+    // THEN
+    // a postgres error shall reset handler state
+    BOOST_ASSERT( !m_unitUnderTest->isRootQueryPending());
+  }
+
   BOOST_AUTO_TEST_SUITE_END()
+

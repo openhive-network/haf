@@ -18,10 +18,12 @@ struct GmockFixture {
     m_pq_mock = PqMock::create_and_get();
   }
 
-  ~GmockFixture() {
+  virtual ~GmockFixture() {
     BOOST_REQUIRE( ::testing::Mock::VerifyAndClear( m_postgres_mock.get() ) );
     BOOST_REQUIRE( ::testing::Mock::VerifyAndClear( m_spi_mock.get() ) );
     BOOST_REQUIRE( ::testing::Mock::VerifyAndClear( m_pq_mock.get() ) );
+
+    m_postgres_mock.reset();
   }
 
   std::shared_ptr<PostgresMock> m_postgres_mock;

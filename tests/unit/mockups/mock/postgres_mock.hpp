@@ -5,6 +5,8 @@
 #undef Max
 #undef Assert
 
+#include <optional>
+
 #include <gmock/gmock.h>
 
 // mock-ed global variables
@@ -19,6 +21,25 @@ void executorStartHook(QueryDesc* _queryDesc, int _eflags);
 void executorRunHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once);
 void executorFinishHook(QueryDesc* _queryDesc);
 void executorEndHook(QueryDesc* _queryDesc);
+
+// use macro to generate an error, just like Postgres will do this
+#define MAKE_POSTGRES_ERROR siglongjmp( *PG_exception_stack, 0 );
+
+extern sigjmp_buf STACK_ON_TEST_FUNCTION;
+extern bool STACK_IS_SAVED;
+
+// use macro below to test if a code under test correctly generate pg errors
+#define EXPECT_PG_ERROR( _function )                          \
+   {                                                          \
+     if ( sigsetjmp( STACK_ON_TEST_FUNCTION, 0 ) == 0 ) {     \
+        STACK_IS_SAVED = true;                                \
+        _function;                                            \
+        FAIL() << "No expected pg error";                     \
+     } else {                                                 \
+     SUCCEED() << "Got expected pg error";                    \
+     }                                                        \
+     STACK_IS_SAVED = false;                                  \
+   }                                                          \
 
 class IPostgresMock {
 public:
@@ -107,7 +128,7 @@ public:
     virtual void executorFinishHook(QueryDesc *queryDesc) = 0;
     virtual void executorEndHook(QueryDesc *queryDesc) = 0;
 
-
+    virtual void pg_re_throw() = 0;
 };
 
 class PostgresMock : public IPostgresMock {
@@ -199,6 +220,8 @@ public:
     MOCK_METHOD( void, executorFinishHook, (QueryDesc*) );
     MOCK_METHOD( void, executorEndHook, (QueryDesc*) );
     MOCK_METHOD( void, StatementCancelHandler, (int) );
+
+    MOCK_METHOD( void, pg_re_throw, () );
 
     static std::shared_ptr<PostgresMock> create_and_get();
 

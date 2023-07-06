@@ -29,6 +29,4 @@ bool errstart_cold([[maybe_unused]] int elevel, [[maybe_unused]] const char *dom
   return true;
 }
 
-void pg_re_throw(void) { abort(); }
-
 } // extern "C"
