@@ -43,6 +43,13 @@ BEGIN
         "worker_account": "sminer10"
     }
 }'::jsonb);
+
+BEGIN
+  PERFORM hive.operation_to_jsontext('\x52');
+  RAISE EXCEPTION 'Not enough bytes to convert to operation';
+EXCEPTION WHEN invalid_binary_representation THEN
+END;
+
 END;
 $BODY$
 ;
