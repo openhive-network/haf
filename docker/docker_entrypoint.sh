@@ -201,6 +201,10 @@ echo "Processing passed arguments...: $@"
 
 while [ $# -gt 0 ]; do
   case "$1" in
+    --postgres*)
+      echo "Will run postgres only..."
+      DO_MAINTENANCE=1
+      ;;
     --dump-snapshot=*)
       echo "Dump snapshot option found..."
       BACKUP_SOURCE_DIR_NAME="${1#*=}"
@@ -226,7 +230,12 @@ echo "${BASH_SOURCE[@]}"
 
 status=0
 
-if [ ${PERFORM_DUMP} -eq 1 ];
+if [ ${DO_MAINTENANCE} -eq 1 ];
+then
+  echo "Running postgres only"
+  sleep infinity
+  stop_postresql
+elif [ ${PERFORM_DUMP} -eq 1 ];
 then
   echo "Attempting to perform instance snapshot dump"
   perform_instance_dump "${BACKUP_SOURCE_DIR_NAME}"
