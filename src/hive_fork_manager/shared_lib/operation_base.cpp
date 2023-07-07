@@ -1,8 +1,9 @@
-#include "pq_operation_base.hpp"
+#include "operation_base.hpp"
 
 #include "to_jsonb.hpp"
 #include "svstream.hpp"
 
+#include <psql_utils/postgres_includes.hpp>
 #include <hive/protocol/operations.hpp>
 
 #include <fc/exception/exception.hpp>
