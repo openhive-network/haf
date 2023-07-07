@@ -132,6 +132,7 @@ extern "C"
     return memcmp( VARDATA_ANY( lhs ), VARDATA_ANY( rhs ), VARSIZE_ANY_EXHDR( lhs ) );
   }
 
+  PG_FUNCTION_INFO_V1( operation_to_jsonb );
   Datum operation_to_jsonb( PG_FUNCTION_ARGS )
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
@@ -162,6 +163,7 @@ extern "C"
     }
   }
 
+  PG_FUNCTION_INFO_V1( operation_from_jsonb );
   Datum operation_from_jsonb( PG_FUNCTION_ARGS )
   {
     Jsonb *jb = PG_GETARG_JSONB_P(0);
@@ -172,6 +174,7 @@ extern "C"
     PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
   }
 
+  PG_FUNCTION_INFO_V1( operation_from_jsontext );
   Datum operation_from_jsontext( PG_FUNCTION_ARGS )
   {
     const text* str = PG_GETARG_TEXT_P( 0 );
@@ -181,6 +184,7 @@ extern "C"
     PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
   }
 
+  PG_FUNCTION_INFO_V1( operation_to_jsontext );
   Datum operation_to_jsontext( PG_FUNCTION_ARGS )
   {
     _operation* op       = PG_GETARG_HIVE_OPERATION_PP( 0 );
@@ -195,6 +199,7 @@ extern "C"
     PG_RETURN_TEXT_P(cstring_to_text(cstring_out));
   }
 
+  PG_FUNCTION_INFO_V1( operation_in );
   Datum operation_in( PG_FUNCTION_ARGS )
   {
     const char* data = PG_GETARG_CSTRING( 0 );
@@ -205,6 +210,7 @@ extern "C"
     PG_RETURN_HIVE_OPERATION( make_operation( VARDATA_ANY( bytes ), VARSIZE_ANY_EXHDR( bytes ) ) );
   }
 
+  PG_FUNCTION_INFO_V1( operation_out );
   Datum operation_out( PG_FUNCTION_ARGS )
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
@@ -212,6 +218,7 @@ extern "C"
     PG_RETURN_CSTRING( bytes );
   }
 
+  PG_FUNCTION_INFO_V1( operation_bin_in_internal );
   Datum operation_bin_in_internal( PG_FUNCTION_ARGS )
   {
     StringInfo buf = (StringInfo) PG_GETARG_POINTER( 0 ); // Should contain raw bytes
@@ -220,6 +227,7 @@ extern "C"
     PG_RETURN_HIVE_OPERATION( make_operation( buf->data, buf->len - 1 /* skip trailing null terminating byte */ ) );
   }
 
+  PG_FUNCTION_INFO_V1( operation_bin_in );
   Datum operation_bin_in( PG_FUNCTION_ARGS )
   { // Same as operation_bin_in_internal, but accepts bytea instead of internal
     bytea* data          = PG_GETARG_BYTEA_PP( 0 );
@@ -231,6 +239,7 @@ extern "C"
     PG_RETURN_HIVE_OPERATION( op );
   }
 
+  PG_FUNCTION_INFO_V1( operation_bin_out );
   Datum operation_bin_out( PG_FUNCTION_ARGS )
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
@@ -243,6 +252,7 @@ extern "C"
     PG_RETURN_BYTEA_P( data );
   }
 
+  PG_FUNCTION_INFO_V1( operation_eq );
   Datum operation_eq( PG_FUNCTION_ARGS )
   {
     _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
@@ -251,6 +261,7 @@ extern "C"
     PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) == 0 );
   }
 
+  PG_FUNCTION_INFO_V1( operation_ne );
   Datum operation_ne( PG_FUNCTION_ARGS )
   {
     _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
@@ -259,6 +270,7 @@ extern "C"
     PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) != 0 );
   }
 
+  PG_FUNCTION_INFO_V1( operation_gt );
   Datum operation_gt( PG_FUNCTION_ARGS )
   {
     _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
@@ -267,6 +279,7 @@ extern "C"
     PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) > 0 );
   }
 
+  PG_FUNCTION_INFO_V1( operation_ge );
   Datum operation_ge( PG_FUNCTION_ARGS )
   {
     _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
@@ -275,6 +288,7 @@ extern "C"
     PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) >= 0 );
   }
 
+  PG_FUNCTION_INFO_V1( operation_lt );
   Datum operation_lt( PG_FUNCTION_ARGS )
   {
     _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
@@ -283,6 +297,7 @@ extern "C"
     PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) < 0 );
   }
 
+  PG_FUNCTION_INFO_V1( operation_le );
   Datum operation_le( PG_FUNCTION_ARGS )
   {
     _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );
@@ -291,6 +306,7 @@ extern "C"
     PG_RETURN_BOOL( operation_cmp_impl( lhs, rhs ) <= 0 );
   }
 
+  PG_FUNCTION_INFO_V1( operation_cmp );
   Datum operation_cmp( PG_FUNCTION_ARGS )
   {
     _operation* lhs = PG_GETARG_HIVE_OPERATION_PP( 0 );

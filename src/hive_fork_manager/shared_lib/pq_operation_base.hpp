@@ -15,53 +15,37 @@ extern "C"
   // SQL functions
 
   /// operation casts
-  PG_FUNCTION_INFO_V1( operation_to_jsonb );
   Datum operation_to_jsonb( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_from_jsonb );
   Datum operation_from_jsonb( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_from_jsontext );
   Datum operation_from_jsontext( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_to_jsontext );
   Datum operation_to_jsontext( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_in );
   Datum operation_in( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_out );
   Datum operation_out( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_bin_in_internal );
   Datum operation_bin_in_internal( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_bin_in );
   Datum operation_bin_in( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_bin_out );
   Datum operation_bin_out( PG_FUNCTION_ARGS );
 
   /// operation comparison
-  PG_FUNCTION_INFO_V1( operation_eq );
   Datum operation_eq( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_ne );
   Datum operation_ne( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_gt );
   Datum operation_gt( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_ge );
   Datum operation_ge( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_lt );
   Datum operation_lt( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_le );
   Datum operation_le( PG_FUNCTION_ARGS );
 
-  PG_FUNCTION_INFO_V1( operation_cmp );
   Datum operation_cmp( PG_FUNCTION_ARGS );
 
 } /// extern "C"
