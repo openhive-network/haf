@@ -1250,8 +1250,7 @@ fi
 if [[ $CMAKED ]]
 then
 #    ninja extension.hive_fork_manager  \
-    # ninja  consp_driver query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure # && ctest -R curr         
-    ninja  query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure # && ctest -R curr         
+    ninja consp_driver query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure # && ctest -R curr         
     EXIT_STATUS=$?
     # ninja consp_driver; sudo chown $USER:$USER .ninja_*
     sudo chown -R $USER:$USER *
