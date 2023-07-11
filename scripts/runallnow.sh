@@ -1570,6 +1570,7 @@ fetch_block_by_number<-DEFINE_API_IMPL( transaction_status_api_impl, find_transa
 fetch_block_by_number<-transaction_status_impl::get_earliest_transaction_in_range
 fetch_block_by_number<-transaction_status_impl::get_latest_transaction_in_range
 fetch_block_by_number<-transaction_status_impl::rebuild_state
+fetch_block_by_number<-process_optional_actions
 fetch_block_by_id<-pop_block
 fetch_block_by_id<-p2p_plugin_impl::get_full_block
 fetch_block_by_id<-p2p_plugin_impl::get_block_time
