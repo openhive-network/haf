@@ -55,7 +55,6 @@ class haf_full_database : public hive::chain::database
 
 
 public:
-  void close(bool rewind = true) override{myASSERT(1, "STOP mtlk");}
 private:
   bool is_known_block_unlocked(const block_id_type& id)const override{myASSERT(0, "STOP mtlk");}
   block_id_type              find_block_id_for_num( uint32_t block_num )const override{myASSERT(0, "STOP mtlk");}
