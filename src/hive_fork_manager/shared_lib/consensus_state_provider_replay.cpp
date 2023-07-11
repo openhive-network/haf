@@ -53,7 +53,6 @@ class haf_full_database : public hive::chain::database
   private:
    std:: string context, shared_memory_bin_path, postgres_url;
 
-  uint32_t reindex_internal( const open_args& args, const std::shared_ptr<full_block_type>& start_block ) override{myASSERT(0, "STOP mtlk");}
 
 public:
   bool is_reindex_complete( uint64_t* head_block_num_origin, uint64_t* head_block_num_state ) const override{myASSERT(0, "STOP mtlk");}
