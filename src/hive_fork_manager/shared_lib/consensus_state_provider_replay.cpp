@@ -55,7 +55,6 @@ class haf_full_database : public hive::chain::database
 
 
 public:
-  bool is_reindex_complete( uint64_t* head_block_num_origin, uint64_t* head_block_num_state ) const override{myASSERT(0, "STOP mtlk");}
   uint32_t reindex( const open_args& args ) override{myASSERT(0, "STOP mtlk");}
   void close(bool rewind = true) override{myASSERT(1, "STOP mtlk");}
 private:
