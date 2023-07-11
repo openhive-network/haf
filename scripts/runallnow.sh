@@ -1544,3 +1544,41 @@ fi
 
 # driver:
 # sudo rm -rf /home/hived/datadir/consensus_state_provider/ ; ../haf/scripts/runallnow.sh 2000000 driver_build_and_run 2> /home/hived/datadir/sbo.log 
+
+
+
+
+: <<virtuals
+
+Directty using _block_log on the left:
+
+reindex_internal<-reindex
+reindex<-chain_plugin_impl::replay_blockchain
+is_reindex_complete<-chain_plugin_impl::check_data_consistency
+close<-wipe
+close<-chain_plugin::plugin_shutdown
+is_known_block<-chain_plugin::block_is_on_preferred_chain
+is_known_block<-p2p_plugin_impl::has_item
+is_known_block_unlocked<-find_first_item_not_in_blockchain
+find_block_id_for_num<-get_block_id_for_num
+fetch_block_range<-DEFINE_API_IMPL( block_api_impl, get_block_range )
+fetch_block_by_number<-DEFINE_API_IMPL( account_history_api_rocksdb_impl, get_transaction )
+fetch_block_by_number<-DEFINE_API_IMPL( block_api_impl, get_block_header )
+fetch_block_by_number<-DEFINE_API_IMPL( block_api_impl, get_block )
+fetch_block_by_number<-DEFINE_API_IMPL( debug_node_api_impl, debug_get_head_block )
+fetch_block_by_number<-DEFINE_API_IMPL( transaction_status_api_impl, find_transaction )
+fetch_block_by_number<-transaction_status_impl::get_earliest_transaction_in_range
+fetch_block_by_number<-transaction_status_impl::get_latest_transaction_in_range
+fetch_block_by_number<-transaction_status_impl::rebuild_state
+fetch_block_by_id<-pop_block
+fetch_block_by_id<-p2p_plugin_impl::get_full_block
+fetch_block_by_id<-p2p_plugin_impl::get_block_time
+migrate_irreversible_state<-_apply_block
+migrate_irreversible_state<-process_fast_confirm_transaction
+get_blockchain_synopsis<-p2p_plugin_impl::get_blockchain_synopsis
+is_included_block_unlocked<-get_block_ids
+get_block_ids<-p2p_plugin_impl::get_block_ids
+get_head_block<-load_state_initial_data
+open_block_log<-initialize_state_independent_data
+
+virtuals
