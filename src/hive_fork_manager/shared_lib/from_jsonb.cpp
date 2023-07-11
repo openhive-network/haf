@@ -59,31 +59,47 @@ class static_variant_from_jsonb_visitor
 // TODO: rename
 hive::protocol::operation operation_from_jsonb_value(Jsonb* jsonb)
 {
-  // TODO: copied from fc::from_variant( const fc::variant& v, fc::static_variant<T...>& s )
-  static std::map< std::string, int64_t > to_tag = []()
+  try
   {
-    std::map< std::string, int64_t > name_map;
-    for( int i = 0; i < hive::protocol::operation::count(); ++i )
+    // TODO: copied from fc::from_variant( const fc::variant& v, fc::static_variant<T...>& s )
+    static std::map< std::string, int64_t > to_tag = []()
     {
-      hive::protocol::operation tmp;
-      tmp.set_which(i);
-      std::string n;
-      tmp.visit( get_static_variant_name( n ) );
-      name_map[n] = i;
-    }
-    return name_map;
-  }();
-  hive::protocol::operation op;
-  JsonbValue type;
-  JsonbValue value;
-  getKeyJsonValueFromContainer(&jsonb->root, "type", 4, &type);
-  getKeyJsonValueFromContainer(&jsonb->root, "value", 5, &value);
-  FC_ASSERT(type.type == jbvString);
-  FC_ASSERT(value.type == jbvBinary);
-  auto itr = to_tag.find(std::string(type.val.string.val, type.val.string.len));
-  FC_ASSERT( itr != to_tag.end(), "Invalid object name: ${n}", ("n", "TODO") );
-  const int64_t which = itr->second;
-  op.set_which(which);
-  op.visit(static_variant_from_jsonb_visitor(&op, value));
-  return op;
+      std::map< std::string, int64_t > name_map;
+      for( int i = 0; i < hive::protocol::operation::count(); ++i )
+      {
+        hive::protocol::operation tmp;
+        tmp.set_which(i);
+        std::string n;
+        tmp.visit( get_static_variant_name( n ) );
+        name_map[n] = i;
+      }
+      return name_map;
+    }();
+    hive::protocol::operation op;
+    JsonbValue type;
+    JsonbValue value;
+    getKeyJsonValueFromContainer(&jsonb->root, "type", 4, &type);
+    getKeyJsonValueFromContainer(&jsonb->root, "value", 5, &value);
+    FC_ASSERT(type.type == jbvString);
+    FC_ASSERT(value.type == jbvBinary);
+    auto tag = std::string(type.val.string.val, type.val.string.len);
+    auto itr = to_tag.find(tag);
+    FC_ASSERT( itr != to_tag.end(), "Invalid object name: ${n}", ("n", tag) );
+    const int64_t which = itr->second;
+    op.set_which(which);
+    op.visit(static_variant_from_jsonb_visitor(&op, value));
+    return op;
+  }
+  catch( const fc::exception& e )
+  {
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
+  }
+  catch( const std::exception& e )
+  {
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "%s", e.what() ) ) );
+  }
+  catch( ... )
+  {
+    ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "Unexpected error during jsonb to operation conversion occurred" ) ) );
+  }
 }
