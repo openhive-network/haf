@@ -65,6 +65,51 @@ void set_member(uint64_t& member, const JsonbValue& json)
   // TODO: error on overflow?
   member = static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, NumericGetDatum(json.val.numeric))));
 }
+void set_member(hive::protocol::legacy_asset& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvString);
+  const auto str = std::string(json.val.string.val, json.val.string.len);
+  member = hive::protocol::legacy_asset::from_string(str);
+}
+void set_member(hive::protocol::asset& member, const JsonbValue& json)
+{
+  if(hive::protocol::serialization_mode_controller::legacy_enabled())
+  {
+    hive::protocol::legacy_asset a;
+    set_member(a, json);
+    member = a.to_asset();
+  }
+  else
+  {
+    FC_ASSERT(json.type == jbvBinary);
+    JsonbValue amount {};
+    JsonbValue precision {};
+    JsonbValue nai {};
+    getKeyJsonValueFromContainer(json.val.binary.data, "amount", 6, &amount);
+    getKeyJsonValueFromContainer(json.val.binary.data, "precision", 9, &precision);
+    getKeyJsonValueFromContainer(json.val.binary.data, "nai", 3, &nai);
+    FC_ASSERT(amount.type == jbvString);
+    FC_ASSERT(precision.type == jbvNumeric);
+    FC_ASSERT(nai.type == jbvString);
+    const auto amountStr = std::string(amount.val.string.val, amount.val.string.len);
+    const auto naiStr = std::string(nai.val.string.val, nai.val.string.len);
+    uint8_t precisionInt;
+    set_member(precisionInt, precision);
+    member.amount = boost::lexical_cast<int64_t>(amountStr);
+    member.symbol = hive::protocol::asset_symbol_type::from_nai_string(naiStr.c_str(), precisionInt);
+  }
+}
+void set_member(fc::time_point_sec& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvString);
+  const auto str = std::string(json.val.string.val, json.val.string.len);
+  member = fc::time_point_sec::from_iso_string(str);
+}
+void set_member(bool& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvBool);
+  member = json.val.boolean;
+}
 template <typename T>
 void set_member(T& member, const JsonbValue& json)
 {
