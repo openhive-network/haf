@@ -21,6 +21,50 @@ void set_member(std::string& member, const JsonbValue& json)
   FC_ASSERT(json.type == jbvString);
   member = std::string(json.val.string.val, json.val.string.len);
 }
+void set_member(int8_t& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvNumeric);
+  // TODO: error on overflow?
+  member = static_cast<int8_t>(DatumGetUInt8(DirectFunctionCall1(numeric_int2, NumericGetDatum(json.val.numeric))));
+}
+void set_member(uint8_t& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvNumeric);
+  member = DatumGetUInt8(DirectFunctionCall1(numeric_int2, NumericGetDatum(json.val.numeric)));
+}
+void set_member(int16_t& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvNumeric);
+  member = DatumGetInt16(DirectFunctionCall1(numeric_int2, NumericGetDatum(json.val.numeric)));
+}
+void set_member(uint16_t& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvNumeric);
+  // TODO: error on overflow?
+  member = static_cast<uint16_t>(DatumGetInt16(DirectFunctionCall1(numeric_int4, NumericGetDatum(json.val.numeric))));
+}
+void set_member(int32_t& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvNumeric);
+  member = DatumGetInt32(DirectFunctionCall1(numeric_int4, NumericGetDatum(json.val.numeric)));
+}
+void set_member(uint32_t& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvNumeric);
+  // TODO: error on overflow?
+  member = static_cast<uint32_t>(DatumGetInt32(DirectFunctionCall1(numeric_int8, NumericGetDatum(json.val.numeric))));
+}
+void set_member(int64_t& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvNumeric);
+  member = DatumGetInt64(DirectFunctionCall1(numeric_int8, NumericGetDatum(json.val.numeric)));
+}
+void set_member(uint64_t& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvNumeric);
+  // TODO: error on overflow?
+  member = static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, NumericGetDatum(json.val.numeric))));
+}
 template <typename T>
 void set_member(T& member, const JsonbValue& json)
 {
