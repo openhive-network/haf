@@ -5,6 +5,28 @@
 #include <map>
 #include <string>
 
+template <typename Storage>
+void set_member(hive::protocol::fixed_string_impl<Storage>& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvString);
+  member = std::string(json.val.string.val, json.val.string.len);
+}
+void set_member(hive::protocol::json_string& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvString);
+  member = std::string(json.val.string.val, json.val.string.len);
+}
+void set_member(std::string& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvString);
+  member = std::string(json.val.string.val, json.val.string.len);
+}
+template <typename T>
+void set_member(T& member, const JsonbValue& json)
+{
+  ereport( NOTICE, ( errmsg( "%s", fc::get_typename<T>::name() ) ) );
+}
+
 template<typename T>
 class member_from_jsonb_visitor
 {
@@ -16,7 +38,12 @@ class member_from_jsonb_visitor
     template<typename Member, class Class, Member (Class::*member)>
     void operator()(const char* name) const
     {
-      op->*member = Member{};
+      JsonbValue value;
+      FC_ASSERT(jsonb.type == jbvBinary);
+      if (getKeyJsonValueFromContainer(jsonb.val.binary.data, name, strlen(name), &value))
+      {
+        set_member(op->*member, value);
+      }
     }
 
   private:
