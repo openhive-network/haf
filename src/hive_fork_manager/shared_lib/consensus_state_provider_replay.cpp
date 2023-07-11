@@ -57,7 +57,6 @@ class haf_full_database : public hive::chain::database
 public:
 private:
   bool is_known_block_unlocked(const block_id_type& id)const override{myASSERT(0, "STOP mtlk");}
-  block_id_type              find_block_id_for_num( uint32_t block_num )const override{myASSERT(0, "STOP mtlk");}
   std::shared_ptr<full_block_type> fetch_block_by_number( uint32_t num, fc::microseconds wait_for_microseconds = fc::microseconds() )const override{myASSERT(0, "STOP mtlk");}
   
   std::shared_ptr<full_block_type> fetch_block_by_id(const block_id_type& id)const override{myASSERT(0, "STOP mtlk");}
