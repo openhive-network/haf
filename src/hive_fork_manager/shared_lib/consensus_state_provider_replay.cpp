@@ -57,7 +57,6 @@ class haf_full_database : public hive::chain::database
 public:
   void close(bool rewind = true) override{myASSERT(1, "STOP mtlk");}
 private:
-  bool is_known_block( const block_id_type& id )const override{myASSERT(0, "STOP mtlk");}
   bool is_known_block_unlocked(const block_id_type& id)const override{myASSERT(0, "STOP mtlk");}
   block_id_type              find_block_id_for_num( uint32_t block_num )const override{myASSERT(0, "STOP mtlk");}
   std::vector<std::shared_ptr<full_block_type>>  fetch_block_range( const uint32_t starting_block_num, const uint32_t count, 
@@ -68,8 +67,6 @@ private:
   
   void migrate_irreversible_state(uint32_t old_last_irreversible) override{myASSERT(1, "STOP mtlk");}
   
-  std::vector<block_id_type> get_blockchain_synopsis(const block_id_type& reference_point, uint32_t number_of_blocks_after_reference_point) override{myASSERT(0, "STOP mtlk");}
-  std::vector<block_id_type> get_block_ids(const std::vector<block_id_type>& blockchain_synopsis, uint32_t& remaining_item_count, uint32_t limit) override{myASSERT(0, "STOP mtlk");}
 
   std::shared_ptr<full_block_type> get_head_block() const override;
 
