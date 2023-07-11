@@ -82,7 +82,7 @@ class member_from_jsonb_visitor
     template<typename Member, class Class, Member (Class::*member)>
     void operator()(const char* name) const
     {
-      JsonbValue value;
+      JsonbValue value {};
       FC_ASSERT(jsonb.type == jbvBinary);
       if (getKeyJsonValueFromContainer(jsonb.val.binary.data, name, strlen(name), &value))
       {
@@ -147,8 +147,8 @@ hive::protocol::operation operation_from_jsonb_value(Jsonb* jsonb)
       return name_map;
     }();
     hive::protocol::operation op;
-    JsonbValue type;
-    JsonbValue value;
+    JsonbValue type {};
+    JsonbValue value {};
     getKeyJsonValueFromContainer(&jsonb->root, "type", 4, &type);
     getKeyJsonValueFromContainer(&jsonb->root, "value", 5, &value);
     FC_ASSERT(type.type == jbvString);
