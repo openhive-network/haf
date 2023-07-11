@@ -57,7 +57,6 @@ class haf_full_database : public hive::chain::database
 public:
 private:
   bool is_known_block_unlocked(const block_id_type& id)const override{myASSERT(0, "STOP mtlk");}
-  std::shared_ptr<full_block_type> fetch_block_by_number( uint32_t num, fc::microseconds wait_for_microseconds = fc::microseconds() )const override{myASSERT(0, "STOP mtlk");}
   
   
   void migrate_irreversible_state(uint32_t old_last_irreversible) override{myASSERT(1, "STOP mtlk");}
