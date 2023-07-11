@@ -1556,14 +1556,15 @@ DONE reindex_internal<-reindex
 DONE reindex<-chain_plugin_impl::replay_blockchain
 DONE is_reindex_complete<-chain_plugin_impl::check_data_consistency
 
-close<-*wipe
-close<-chain_plugin::plugin_shutdown
+DONE(wipe not needed) close<-*wipe
+DONE close<-chain_plugin::plugin_shutdown
 
 DONE is_known_block<-chain_plugin::block_is_on_preferred_chain
 DONE is_known_block<-p2p_plugin_impl::has_item
 DONE is_known_block_unlocked<-find_first_item_not_in_blockchain
 
-find_block_id_for_num<-*get_block_id_for_num
+DONE find_block_id_for_num<-*get_block_id_for_num
+DONE *get_block_id_for_num
 
 DONE fetch_block_range<-DEFINE_API_IMPL( block_api_impl, get_block_range )
 
