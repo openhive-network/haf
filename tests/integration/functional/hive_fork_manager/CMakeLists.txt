@@ -101,6 +101,8 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/performance_delete_rows_one_by_one_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/performance_update_rows_one_by_one_test.sql )
 
+ ADD_SQL_FUNCTIONAL_TEST( context_rewind/identifier_validations.sql )
+
  ADD_SQL_FUNCTIONAL_TEST( hived_api/schema_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/back_from_fork_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/push_block_test.sql )
