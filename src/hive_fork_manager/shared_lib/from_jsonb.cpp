@@ -5,6 +5,9 @@
 #include <map>
 #include <string>
 
+template <typename T>
+void fill_members(T& obj, const JsonbValue& json);
+
 template <typename Storage>
 void set_member(hive::protocol::fixed_string_impl<Storage>& member, const JsonbValue& json)
 {
@@ -139,6 +142,7 @@ class member_from_jsonb_visitor
     T* op;
     const JsonbValue& jsonb;
 };
+
 class static_variant_from_jsonb_visitor
 {
   public:
@@ -150,7 +154,7 @@ class static_variant_from_jsonb_visitor
     template<typename T>
     void operator()(T& op) const
     {
-      fc::reflector<T>::visit(member_from_jsonb_visitor(&op, jsonb));
+      fill_members(op, jsonb);
     }
 
   private:
@@ -171,6 +175,12 @@ class static_variant_from_jsonb_visitor
          name = fc::trim_typename_namespace( fc::get_typename< T >::name() );
       }
    };
+
+template <typename T>
+void fill_members(T& obj, const JsonbValue& json)
+{
+  fc::reflector<T>::visit(member_from_jsonb_visitor(&obj, json));
+}
 
 // TODO: rename
 hive::protocol::operation operation_from_jsonb_value(Jsonb* jsonb)
