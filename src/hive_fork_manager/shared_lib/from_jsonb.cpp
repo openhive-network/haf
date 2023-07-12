@@ -148,7 +148,7 @@ class static_variant_from_jsonb_visitor
   public:
     using result_type = void;
 
-    static_variant_from_jsonb_visitor(hive::protocol::operation* op, const JsonbValue& jsonb) : op(op), jsonb(jsonb)
+    static_variant_from_jsonb_visitor(const JsonbValue& jsonb) : jsonb(jsonb)
     {}
 
     template<typename T>
@@ -158,7 +158,6 @@ class static_variant_from_jsonb_visitor
     }
 
   private:
-    hive::protocol::operation* op;
     const JsonbValue& jsonb;
 };
 
@@ -213,7 +212,7 @@ hive::protocol::operation operation_from_jsonb_value(Jsonb* jsonb)
     FC_ASSERT( itr != to_tag.end(), "Invalid object name: ${n}", ("n", tag) );
     const int64_t which = itr->second;
     op.set_which(which);
-    op.visit(static_variant_from_jsonb_visitor(&op, value));
+    op.visit(static_variant_from_jsonb_visitor(value));
     return op;
   }
   catch( const fc::exception& e )
