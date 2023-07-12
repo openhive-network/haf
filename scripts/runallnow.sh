@@ -1561,7 +1561,9 @@ DONE close<-chain_plugin::plugin_shutdown
 
 DONE is_known_block<-chain_plugin::block_is_on_preferred_chain
 DONE is_known_block<-p2p_plugin_impl::has_item
-DONE is_known_block_unlocked<-find_first_item_not_in_blockchain
+
+DONE is_known_block_unlocked<-*find_first_item_not_in_blockchain
+DONE *find_first_item_not_in_blockchain
 
 DONE find_block_id_for_num<-*get_block_id_for_num
 DONE *get_block_id_for_num
