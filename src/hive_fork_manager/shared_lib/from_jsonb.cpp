@@ -24,6 +24,12 @@ void set_member(std::string& member, const JsonbValue& json)
   FC_ASSERT(json.type == jbvString);
   member = std::string(json.val.string.val, json.val.string.len);
 }
+void set_member(hive::protocol::public_key_type& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvString);
+  const auto str = std::string(json.val.string.val, json.val.string.len);
+  member = hive::protocol::public_key_type(str);
+}
 void set_member(int8_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
@@ -74,6 +80,12 @@ void set_member(hive::protocol::legacy_asset& member, const JsonbValue& json)
   const auto str = std::string(json.val.string.val, json.val.string.len);
   member = hive::protocol::legacy_asset::from_string(str);
 }
+void set_member(hive::protocol::legacy_hive_asset& member, const JsonbValue& json)
+{
+  hive::protocol::asset a;
+  set_member(a, json);
+  member = hive::protocol::legacy_hive_asset::from_asset(a);
+}
 void set_member(hive::protocol::asset& member, const JsonbValue& json)
 {
   if(hive::protocol::serialization_mode_controller::legacy_enabled())
@@ -108,10 +120,141 @@ void set_member(fc::time_point_sec& member, const JsonbValue& json)
   const auto str = std::string(json.val.string.val, json.val.string.len);
   member = fc::time_point_sec::from_iso_string(str);
 }
+void set_member(fc::sha256& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvString);
+  if (json.val.string.len > 0)
+  {
+    std::vector<char> data;
+    set_member(data, json);
+    memcpy(&member, data.data(), fc::min<size_t>(data.size(), sizeof(member)));
+  }
+  else
+  {
+    member = {};
+  }
+}
+void set_member(fc::ripemd160& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvString);
+  if (json.val.string.len > 0)
+  {
+    std::vector<char> data;
+    set_member(data, json);
+    memcpy(&member, data.data(), fc::min<size_t>(data.size(), sizeof(member)));
+  }
+  else
+  {
+    member = {};
+  }
+}
+template<typename T, size_t N>
+void set_member(fc::array<T, N>& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvString);
+  if (json.val.string.len > 0)
+  {
+    std::vector<char> data;
+    set_member(data, json);
+    memcpy(&member, data.data(), fc::min<size_t>(data.size(), sizeof(member)));
+  }
+  else
+  {
+    member = {};
+  }
+}
 void set_member(bool& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvBool);
   member = json.val.boolean;
+}
+template <typename A, typename B>
+void set_member(std::pair<A, B>& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvBinary);
+  const auto elementCount = JsonContainerSize(json.val.binary.data);
+  FC_ASSERT(elementCount == 2);
+  A a{};
+  B b{};
+  set_member(a, *getIthJsonbValueFromContainer(json.val.binary.data, 0));
+  set_member(b, *getIthJsonbValueFromContainer(json.val.binary.data, 1));
+  member = std::pair(a, b);
+}
+template <typename T>
+void set_member(fc::optional<T>& member, const JsonbValue& json)
+{
+  if (json.type == jbvNull)
+  {
+    member = {};
+  }
+  else
+  {
+    T tmp{};
+    set_member(tmp, json);
+    member = tmp;
+  }
+}
+void set_member(std::vector<char>& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvString);
+  const auto buflen = json.val.string.len / 2;
+  member.resize(buflen, 0);
+  const fc::string str = std::string(json.val.string.val, json.val.string.len);
+  fc::from_hex(str, member.data(), buflen);
+}
+template <typename T>
+void set_member(std::vector<T>& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvBinary);
+  const auto elementCount = JsonContainerSize(json.val.binary.data);
+  member.resize(elementCount);
+  for (uint32 n = 0; n < elementCount; ++n)
+  {
+    set_member(member[n], *getIthJsonbValueFromContainer(json.val.binary.data, n));
+  }
+}
+template <typename T>
+void set_member(boost::container::flat_set<T>& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvBinary);
+  const auto elementCount = JsonContainerSize(json.val.binary.data);
+  member.reserve(elementCount);
+  for (uint32 n = 0; n < elementCount; ++n)
+  {
+    T t {};
+    set_member(t, *getIthJsonbValueFromContainer(json.val.binary.data, n));
+    member.insert(std::move(t));
+  }
+}
+template <typename T>
+void set_member(flat_set_ex<T>& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvBinary);
+  const auto elementCount = JsonContainerSize(json.val.binary.data);
+  member.reserve(elementCount);
+  for (uint32 n = 0; n < elementCount; ++n)
+  {
+    T tmp {};
+    set_member(tmp, *getIthJsonbValueFromContainer(json.val.binary.data, n));
+    if (!member.empty())
+    {
+      FC_ASSERT(tmp > *member.rbegin(), "Items should be unique and sorted");
+    }
+    member.insert(std::move(tmp));
+  }
+}
+template<typename K, typename T>
+void set_member(boost::container::flat_map<K, T>& member, const JsonbValue& json)
+{
+  FC_ASSERT(json.type == jbvBinary);
+  const auto elementCount = JsonContainerSize(json.val.binary.data);
+  member.reserve(elementCount);
+  for (uint32 n = 0; n < elementCount; ++n)
+  {
+    std::pair<K, T> tmp {};
+    set_member(tmp, *getIthJsonbValueFromContainer(json.val.binary.data, n));
+    member.insert(std::move(tmp));
+  }
 }
 template <typename T>
 void set_member(T& member, const JsonbValue& json)
