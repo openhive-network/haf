@@ -20,15 +20,18 @@ $$
 
 CREATE SCHEMA toolbox;
 
-CREATE FUNCTION toolbox.get_consensus_storage_path()
-    RETURNS TEXT
-    LANGUAGE 'plpgsql'
-AS
-$BODY$
-DECLARE
-  __consensus_state_provider_storage_path TEXT;
-BEGIN
-     __consensus_state_provider_storage_path = '/home/hived/datadir/consensus_unit_test_storage_dir'; 
-    RETURN __consensus_state_provider_storage_path;
-END$BODY$;
 
+CREATE OR REPLACE FUNCTION toolbox.procedure_exists(schema_name text, procedure_name text)
+RETURNS boolean
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM   pg_catalog.pg_proc p
+    JOIN   pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+    WHERE  n.nspname = schema_name
+    AND    p.proname = procedure_name
+  );
+END;
+$$;

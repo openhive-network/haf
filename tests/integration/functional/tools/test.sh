@@ -17,6 +17,48 @@ psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools
 evaluate_result $?
 
 
+
+# Default storage path
+STORAGE_PATH='/home/hived/datadir/consensus_unit_test_storage_dir'
+
+# If the CI_PROJECT_DIR environment variable is set and it's not empty,
+# use it as the storage path
+if [[ -n "$CI_PROJECT_DIR" ]]; then
+    STORAGE_PATH="$CI_PROJECT_DIR"
+fi
+
+
+
+
+psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f - <<-EOF
+CREATE OR REPLACE FUNCTION toolbox.get_consensus_storage_path() 
+RETURNS TEXT 
+LANGUAGE 'plpgsql' 
+AS 
+\$BODY$
+DECLARE 
+  __consensus_state_provider_storage_path TEXT; 
+BEGIN 
+  __consensus_state_provider_storage_path = '$STORAGE_PATH'; 
+  RETURN __consensus_state_provider_storage_path; 
+END
+\$BODY$;
+EOF
+
+evaluate_result $?
+
+
+postgres_procedure_exists() {
+    local schema_name="$1"
+    local procedure_name="$2"
+
+    # Run the SQL function and remove leading/trailing white space
+    local result=$(psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -c "SELECT postgres_procedure_exists('$schema_name', '$procedure_name');")
+    # Print the result
+    echo $result
+}
+
+
 # psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "SET myapp.myvariable to 'myvalue'";
 # psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "SELECT current_setting('myapp.myvariable')";
 # psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "SET my_environment.CI_PROJECT_DIR to '$CI_PROJECT_DIR'";
@@ -40,7 +82,13 @@ for testfun in ${tests}; do
   for user in ${users}; do
 
    if [ "${user}" = "haf_admin_procedure" ]; then
-      sql_code_no_error="CALL ${user}_test_${testfun}();";
+      exists=$(postgres_procedure_exists "public" "${user}_test_${testfun}")
+      if [ "$exists" = "t" ]; then
+          echo "Procedure exists"
+          sql_code_no_error="CALL ${user}_test_${testfun}();";
+      else
+          continue;
+      fi
     else
       sql_code_no_error="DO \$\$
       BEGIN
