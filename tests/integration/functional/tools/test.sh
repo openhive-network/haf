@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 extension_path=$1
 test_path=$2;
 setup_scripts_dir_path=$3;
@@ -13,6 +15,12 @@ trap on_exit EXIT;
 
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
 evaluate_result $?
+
+
+# psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "SET myapp.myvariable to 'myvalue'";
+# psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "SELECT current_setting('myapp.myvariable')";
+# psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "SET my_environment.CI_PROJECT_DIR to '$CI_PROJECT_DIR'";
+# psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "SET my_environment.CI_PROJECT_DIR to 'myval'";
 
 # add test functions:
 # load tests function
@@ -29,7 +37,7 @@ for testfun in ${tests}; do
     sql_code_no_error="DO \$\$
     BEGIN
       BEGIN
-        PERFORM ${user}_test_${testfun}();
+        CALL ${user}_test_${testfun}();
       EXCEPTION WHEN undefined_function THEN
       END;
     END \$\$;"
