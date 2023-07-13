@@ -105,14 +105,41 @@ void set_member(uint32_t& member, const JsonbValue& json)
 }
 void set_member(int64_t& member, const JsonbValue& json)
 {
-  FC_ASSERT(json.type == jbvNumeric);
-  member = DatumGetInt64(DirectFunctionCall1(numeric_int8, NumericGetDatum(json.val.numeric)));
+  if (json.type == jbvNumeric)
+  {
+    // TODO: error on overflow?
+    member = DatumGetInt64(DirectFunctionCall1(numeric_int8, NumericGetDatum(json.val.numeric)));
+  }
+  else if (json.type == jbvString)
+  {
+    // TODO: error on overflow?
+    const auto str = std::string(json.val.string.val, json.val.string.len);
+    Datum num = DirectFunctionCall1(numeric_in, CStringGetDatum(str.c_str()));
+    member = DatumGetInt64(DirectFunctionCall1(numeric_int8, num));
+  }
+  else
+  {
+    FC_THROW_EXCEPTION(fc::invalid_arg_exception, "Must be numeric or string type");
+  }
 }
 void set_member(uint64_t& member, const JsonbValue& json)
 {
-  FC_ASSERT(json.type == jbvNumeric);
-  // TODO: error on overflow?
-  member = static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, NumericGetDatum(json.val.numeric))));
+  if (json.type == jbvNumeric)
+  {
+    // TODO: error on overflow?
+    member = static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, NumericGetDatum(json.val.numeric))));
+  }
+  else if (json.type == jbvString)
+  {
+    // TODO: error on overflow?
+    const auto str = std::string(json.val.string.val, json.val.string.len);
+    Datum num = DirectFunctionCall1(numeric_in, CStringGetDatum(str.c_str()));
+    member = static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, num)));
+  }
+  else
+  {
+    FC_THROW_EXCEPTION(fc::invalid_arg_exception, "Must be numeric or string type");
+  }
 }
 void set_member(hive::protocol::legacy_asset& member, const JsonbValue& json)
 {
