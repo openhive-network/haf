@@ -53,7 +53,7 @@ for testfun in ${tests}; do
   for user in ${users}; do
     query="SELECT ${user}_test_${testfun}();";
 
-    if [ "$user" =  "haf_admin" ]; then
+    if [ "$user" = "haf_admin" ] || [ "$user" = "haf_admin_procedure" ]; then
       pg_call="-p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c"
     else
       pg_call="postgresql://${user}:test@localhost:$postgres_port/$DB_NAME --username=${user} -a -v ON_ERROR_STOP=on -c"
