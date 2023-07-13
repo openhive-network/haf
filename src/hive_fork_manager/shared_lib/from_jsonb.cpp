@@ -117,6 +117,8 @@ template <typename T>
 void set_member(T& member, const JsonbValue& json)
 {
   ereport( NOTICE, ( errmsg( "%s", fc::get_typename<T>::name() ) ) );
+  FC_ASSERT(json.type == jbvBinary);
+  fill_members(member, json);
 }
 
 template<typename T>
@@ -154,7 +156,7 @@ class static_variant_from_jsonb_visitor
     template<typename T>
     void operator()(T& op) const
     {
-      fill_members(op, jsonb);
+      set_member(op, jsonb);
     }
 
   private:
