@@ -5,6 +5,46 @@
 #include <map>
 #include <string>
 
+template <typename Storage>
+void set_member(hive::protocol::fixed_string_impl<Storage>& member, const JsonbValue& json);
+void set_member(hive::protocol::json_string& member, const JsonbValue& json);
+void set_member(std::string& member, const JsonbValue& json);
+void set_member(hive::protocol::public_key_type& member, const JsonbValue& json);
+void set_member(int8_t& member, const JsonbValue& json);
+void set_member(uint8_t& member, const JsonbValue& json);
+void set_member(int16_t& member, const JsonbValue& json);
+void set_member(uint16_t& member, const JsonbValue& json);
+void set_member(int32_t& member, const JsonbValue& json);
+void set_member(uint32_t& member, const JsonbValue& json);
+void set_member(int64_t& member, const JsonbValue& json);
+void set_member(uint64_t& member, const JsonbValue& json);
+void set_member(hive::protocol::legacy_asset& member, const JsonbValue& json);
+void set_member(hive::protocol::legacy_hive_asset& member, const JsonbValue& json);
+void set_member(hive::protocol::asset& member, const JsonbValue& json);
+void set_member(fc::time_point_sec& member, const JsonbValue& json);
+void set_member(fc::sha256& member, const JsonbValue& json);
+void set_member(fc::ripemd160& member, const JsonbValue& json);
+template<typename T, size_t N>
+void set_member(fc::array<T, N>& member, const JsonbValue& json);
+void set_member(bool& member, const JsonbValue& json);
+template <typename A, typename B>
+void set_member(std::pair<A, B>& member, const JsonbValue& json);
+template <typename T>
+void set_member(fc::optional<T>& member, const JsonbValue& json);
+void set_member(std::vector<char>& member, const JsonbValue& json);
+template <typename T>
+void set_member(std::vector<T>& member, const JsonbValue& json);
+template <typename T>
+void set_member(boost::container::flat_set<T>& member, const JsonbValue& json);
+template <typename T>
+void set_member(flat_set_ex<T>& member, const JsonbValue& json);
+template <typename K, typename T>
+void set_member(boost::container::flat_map<K, T>& member, const JsonbValue& json);
+template <typename T>
+void set_member(T& member, const JsonbValue& json);
+template <typename... Types>
+void set_member(fc::static_variant<Types...>& member, const JsonbValue& json);
+
 template <typename T>
 void fill_members(T& obj, const JsonbValue& json);
 
