@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 extension_path=$1
 test_path=$2;
 setup_scripts_dir_path=$3;
@@ -49,7 +51,15 @@ evaluate_result $?
 
 for testfun in ${tests}; do
   for user in ${users}; do
-    query="SELECT ${user}_test_${testfun}();";
+    sql_code_no_error="DO \$\$
+    BEGIN
+      BEGIN
+        CALL ${user}_test_${testfun}();
+      EXCEPTION WHEN undefined_function THEN
+      END;
+    END \$\$;"
+
+    sql_code_error="SELECT ${user}_test_${testfun}();";
 
     if [ "$user" =  "haf_admin" ]; then
       pg_call="-p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c"
