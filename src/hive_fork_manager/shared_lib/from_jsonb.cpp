@@ -175,6 +175,38 @@ class static_variant_from_jsonb_visitor
       }
    };
 
+template <typename... Types>
+void set_member(fc::static_variant<Types...>& member, const JsonbValue& json)
+{
+  // TODO: copied from fc::from_variant( const fc::variant& v, fc::static_variant<T...>& s )
+  static std::map< std::string, int64_t > to_tag = []()
+  {
+    std::map< std::string, int64_t > name_map;
+    for( int i = 0; i < fc::static_variant<Types...>::count(); ++i )
+    {
+      fc::static_variant<Types...> tmp;
+      tmp.set_which(i);
+      std::string n;
+      tmp.visit(get_static_variant_name(n));
+      name_map[n] = i;
+    }
+    return name_map;
+  }();
+  FC_ASSERT(json.type == jbvBinary);
+  JsonbValue type {};
+  JsonbValue value {};
+  getKeyJsonValueFromContainer(json.val.binary.data, "type", 4, &type);
+  getKeyJsonValueFromContainer(json.val.binary.data, "value", 5, &value);
+  FC_ASSERT(type.type == jbvString);
+  FC_ASSERT(value.type == jbvBinary);
+  const auto tag = std::string(type.val.string.val, type.val.string.len);
+  const auto itr = to_tag.find(tag);
+  FC_ASSERT( itr != to_tag.end(), "Invalid object name: ${n}", ("n", tag) );
+  const int64_t which = itr->second;
+  member.set_which(which);
+  member.visit(static_variant_from_jsonb_visitor(value));
+}
+
 template <typename T>
 void fill_members(T& obj, const JsonbValue& json)
 {
@@ -186,33 +218,10 @@ hive::protocol::operation operation_from_jsonb_value(Jsonb* jsonb)
 {
   try
   {
-    // TODO: copied from fc::from_variant( const fc::variant& v, fc::static_variant<T...>& s )
-    static std::map< std::string, int64_t > to_tag = []()
-    {
-      std::map< std::string, int64_t > name_map;
-      for( int i = 0; i < hive::protocol::operation::count(); ++i )
-      {
-        hive::protocol::operation tmp;
-        tmp.set_which(i);
-        std::string n;
-        tmp.visit( get_static_variant_name( n ) );
-        name_map[n] = i;
-      }
-      return name_map;
-    }();
     hive::protocol::operation op;
-    JsonbValue type {};
-    JsonbValue value {};
-    getKeyJsonValueFromContainer(&jsonb->root, "type", 4, &type);
-    getKeyJsonValueFromContainer(&jsonb->root, "value", 5, &value);
-    FC_ASSERT(type.type == jbvString);
-    FC_ASSERT(value.type == jbvBinary);
-    auto tag = std::string(type.val.string.val, type.val.string.len);
-    auto itr = to_tag.find(tag);
-    FC_ASSERT( itr != to_tag.end(), "Invalid object name: ${n}", ("n", tag) );
-    const int64_t which = itr->second;
-    op.set_which(which);
-    op.visit(static_variant_from_jsonb_visitor(value));
+    JsonbValue json {};
+    JsonbToJsonbValue(jsonb, &json);
+    set_member(op, json);
     return op;
   }
   catch( const fc::exception& e )
