@@ -73,7 +73,7 @@ AS
 $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT FROM hive.events_queue WHERE id = 1 AND event = 'NEW_BLOCK' AND block_num = 101 ), 'No event added';
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue ) = 2, 'Unexpected number of events';
+    ASSERT ( SELECT COUNT(*) FROM hive.events_queue ) = 3, 'Unexpected number of events';
 
     ASSERT ( SELECT COUNT(*) FROM hive.blocks_reversible ) = 1, 'Unexpected number of blocks';
     ASSERT ( SELECT COUNT(*) FROM hive.transactions_reversible ) = 2, 'Unexpected number of transactions';

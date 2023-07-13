@@ -354,3 +354,24 @@ BEGIN
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE FUNCTION hive.initialize_extension_data()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __events_id BIGINT := 0;
+BEGIN
+    INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
+    INSERT INTO hive.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
+    INSERT INTO hive.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
+    SELECT MAX(eq.id) + 1 FROM hive.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
+    PERFORM SETVAL( 'hive.events_queue_id_seq', __events_id, false );
+
+    INSERT INTO hive.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
+    PERFORM hive.create_database_hash('hive');
+END;
+$BODY$
+;

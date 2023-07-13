@@ -6,8 +6,8 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context' );
-    PERFORM hive.app_create_context( 'context_b' );
+    PERFORM hive.app_create_context( 'context', FALSE );
+    PERFORM hive.app_create_context( 'context_b', FALSE );
 
     -- hived inserts once irreversible block
     INSERT INTO hive.blocks

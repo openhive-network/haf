@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.context_create( _name hive.context_name, _fork_id BIGINT = 1, _irreversible_block INT = 0 )
+CREATE OR REPLACE FUNCTION hive.context_create( _name hive.context_name, _fork_id BIGINT = 1, _irreversible_block INT = 0, _is_forking BOOLEAN = TRUE )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -10,8 +10,8 @@ BEGIN
     END IF;
 
     EXECUTE format( 'CREATE TABLE hive.%I( hive_rowid BIGSERIAL )', _name );
-    INSERT INTO hive.contexts( name, current_block_num, irreversible_block, is_attached, events_id, fork_id, owner )
-    VALUES( _name, 0, _irreversible_block, TRUE, 0, _fork_id, current_user );
+    INSERT INTO hive.contexts( name, current_block_num, irreversible_block, is_attached, events_id, fork_id, owner, is_forking )
+    VALUES( _name, 0, _irreversible_block, TRUE, 0, _fork_id, current_user, _is_forking );
 END;
 $BODY$
 ;
@@ -115,12 +115,17 @@ $BODY$
 DECLARE
     __context_id INTEGER := NULL;
     __current_block_num INTEGER := NULL;
+    __current_irreversible_block INTEGER := NULL;
 BEGIN
-    SELECT ct.id, ct.current_block_num FROM hive.contexts ct WHERE ct.name=_context INTO __context_id, __current_block_num;
+    SELECT ct.id, ct.current_block_num, ct.irreversible_block
+    FROM hive.contexts ct WHERE ct.name=_context
+    INTO __context_id, __current_block_num, __current_irreversible_block;
 
     IF __context_id IS NULL THEN
         RAISE EXCEPTION 'Unknown context %', _context;
     END IF;
+
+    PERFORM hive.context_back_from_fork( _context, __current_irreversible_block );
 
     PERFORM
     hive.remove_obsolete_operations( hrt.shadow_table_name, __current_block_num )
@@ -136,6 +141,7 @@ BEGIN
     UPDATE hive.contexts
     SET is_attached = FALSE,
         detached_block_num = NULL,
+        events_id = hive.unreachable_event_id(),
         current_block_num = CASE WHEN current_block_num = 0 THEN 0 ELSE current_block_num - 1 END
     WHERE id = __context_id;
 END;
@@ -174,6 +180,7 @@ BEGIN
     SET
         current_block_num = _last_synced_block
       , is_attached = TRUE
+      , events_id = 0
     WHERE id = __context_id;
 END;
 $BODY$

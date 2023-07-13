@@ -143,7 +143,7 @@ BEGIN
                , NULL
                );
 
-    PERFORM hive.app_create_context('context');
+    PERFORM hive.app_create_context('context', FALSE);
     PERFORM hive.app_next_block('context'); -- (1,6)
     PERFORM hive.app_context_detach('context');
     PERFORM hive.app_context_detached_save_block_num('context', 6);

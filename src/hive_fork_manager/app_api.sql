@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.app_create_context( _name hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_create_context( _name hive.context_name, _is_forking BOOLEAN = TRUE )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -11,6 +11,7 @@ BEGIN
         _name
         , ( SELECT MAX( hf.id ) FROM hive.fork hf ) -- current fork id
         , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
+        , _is_forking
     );
 
     PERFORM hive.create_context_data_view( _name );
@@ -89,8 +90,7 @@ BEGIN
 
     SELECT ARRAY_AGG( hc.name ) INTO __result
     FROM hive.contexts hc
-    WHERE hc.name::TEXT = ANY( _context_names )
-    AND EXISTS( SELECT NULL FROM hive.registered_tables hrt WHERE hrt.context_id = hc.id );
+    WHERE hc.name::TEXT = ANY( _context_names ) AND hc.is_forking = TRUE;
 
     IF array_length( __result, 1 ) IS NULL THEN
         RETURN FALSE;
@@ -186,6 +186,7 @@ BEGIN
     UPDATE hive.contexts
     SET   fork_id = __fork_id
       , irreversible_block = COALESCE( __head_of_irreversible_block, 0 )
+      , events_id = 0 -- during app_next_block correct event will be found
     WHERE name =ANY( _contexts )
     ;
 
@@ -239,7 +240,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_detach( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_context_detach(  _context hive.context_name )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -247,6 +248,87 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.app_context_detach( ARRAY[ _context ] );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _contexts hive.contexts_group  )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.app_check_contexts_synchronized( _contexts );
+
+    -- detaching is the best method to remove reversible data and triggers
+    PERFORM
+          hive.context_detach( context.* )
+    FROM unnest( _contexts ) as context;
+
+    UPDATE hive.contexts hc
+    SET is_forking = false
+    WHERE hc.name = ANY( _contexts );
+
+    -- we are reattaching the contexts but the triggers won't be recreated
+    -- because now the contexts are non-forking
+    PERFORM
+        hive.context_attach( context.text, hc.irreversible_block )
+    FROM hive.contexts hc
+    JOIN unnest( _contexts ) as context ON context.text = hc.name;
+END;
+$BODY$
+;
+
+
+CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _context hive.context_name )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.app_context_set_non_forking( ARRAY[ _context ] );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_context_set_forking( _contexts hive.contexts_group  )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.app_check_contexts_synchronized( _contexts );
+
+    -- detaching is the best method to remove reversible data and triggers
+    PERFORM
+        hive.context_detach( context.* )
+    FROM unnest( _contexts ) as context;
+
+    UPDATE hive.contexts hc
+    SET is_forking = true
+    WHERE hc.name = ANY( _contexts );
+
+    -- to recreate triggers
+    PERFORM
+        hive.context_attach( context.text, hc.irreversible_block )
+    FROM hive.contexts hc
+    JOIN unnest( _contexts ) as context ON context.text = hc.name;
+END;
+$BODY$
+;
+
+
+CREATE OR REPLACE FUNCTION hive.app_context_set_forking( _context hive.context_name )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.app_context_set_forking( ARRAY[ _context ] );
 END;
 $BODY$
 ;
@@ -598,6 +680,7 @@ BEGIN
                  , ctx.is_attached
                  , ctx.events_id
                  , ctx.detached_block_num
+                 , ctx.is_forking
         )
     ) INTO __number_of_rows
     FROM hive.contexts ctx

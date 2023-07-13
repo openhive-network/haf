@@ -79,21 +79,24 @@ $BODY$
 DECLARE
     __table_id INTEGER := NULL;
     __shadow_table_name TEXT;
-    __trigger_name TEXT;
+    __context_is_forking BOOLEAN := NULL;
 BEGIN
-    SELECT hrt.id, hrt.shadow_table_name
+    SELECT hrt.id, hrt.shadow_table_name, hc.is_forking
     FROM hive.registered_tables hrt
     JOIN hive.contexts hc ON hc.id = hrt.context_id
     WHERE
           hrt.origin_table_schema = lower( _table_schema )
       AND hrt.origin_table_name = _table_name
       AND hc.is_attached = FALSE
-    INTO __table_id, __shadow_table_name;
+    INTO __table_id, __shadow_table_name, __context_is_forking;
 
     IF __table_id IS NULL THEN
             RAISE EXCEPTION 'Table %.% is not registered or is already attached', _table_schema, _table_name;
     END IF;
 
+    IF __context_is_forking = FALSE THEN
+        RETURN;
+    END IF;
     PERFORM hive.create_triggers( _table_schema, _table_name, _context_id );
 END;
 $BODY$

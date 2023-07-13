@@ -8,7 +8,7 @@ $BODY$
 BEGIN
     INSERT INTO hive.operation_types
     VALUES
-    ( 1, 'hive::protocol::account_created_operation', TRUE )
+           ( 1, 'hive::protocol::account_created_operation', TRUE )
          , ( 6, 'other', FALSE ) -- non creating accounts
     ;
 
@@ -143,8 +143,8 @@ BEGIN
                , NULL
                );
 
-    PERFORM hive.app_create_context('context');
-    PERFORM hive.app_create_context('context_b');
+    PERFORM hive.app_create_context('context', FALSE);
+    PERFORM hive.app_create_context('context_b', FALSE);
     PERFORM hive.app_next_block( ARRAY[ 'context_b', 'context' ] ); -- (1,6)
     PERFORM hive.app_context_detach( ARRAY[ 'context_b', 'context' ] );
     PERFORM hive.app_context_detached_save_block_num( ARRAY[ 'context_b', 'context' ], 6 );

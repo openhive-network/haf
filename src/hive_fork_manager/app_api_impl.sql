@@ -26,6 +26,7 @@ BEGIN
         WHERE heq.block_num > __newest_irreversible_block_num
               AND heq.event != 'BACK_FROM_FORK'
               AND heq.id >= __curent_events_id
+              AND heq.id != hive.unreachable_event_id()
         ORDER BY heq.id LIMIT 1;
 
         IF __result IS NULL THEN
@@ -35,6 +36,7 @@ BEGIN
             FROM hive.events_queue heq
             WHERE heq.block_num = __newest_irreversible_block_num
               AND ( heq.event = 'MASSIVE_SYNC' OR heq.event = 'NEW_IRREVERSIBLE' )
+              AND heq.id != hive.unreachable_event_id()
             ORDER BY heq.id LIMIT 1;
 
             IF __result IS NOT NULL AND __result.id = __curent_events_id THEN
@@ -49,7 +51,7 @@ BEGIN
         ---- find next event
         SELECT * INTO __result
         FROM hive.events_queue heq
-        WHERE heq.id > __curent_events_id
+        WHERE heq.id > __curent_events_id AND heq.id != hive.unreachable_event_id()
         ORDER BY id LIMIT 1;
     END IF;
 

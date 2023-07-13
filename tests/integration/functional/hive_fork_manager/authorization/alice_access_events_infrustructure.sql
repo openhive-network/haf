@@ -194,6 +194,12 @@ BEGIN
         ASSERT FALSE, 'Alice can call hive.set_irreversible_not_dirty';
     EXCEPTION WHEN OTHERS THEN
     END;
+
+    BEGIN
+        PERFORM hive.initialize_extension_data();
+        ASSERT FALSE, 'Alice can call hive.initialize_extension_data()';
+    EXCEPTION WHEN OTHERS THEN
+    END;
 END;
 $BODY$
 ;

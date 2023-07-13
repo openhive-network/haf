@@ -20,8 +20,8 @@ BEGIN
 
     PERFORM hive.end_massive_sync(4);
 
-    PERFORM hive.app_create_context( 'context' );
-    PERFORM hive.app_create_context( 'context_b' );
+    PERFORM hive.app_create_context( 'context', FALSE );
+    PERFORM hive.app_create_context( 'context_b', FALSE );
 END;
 $BODY$
 ;

@@ -98,7 +98,7 @@ $BODY$
 DECLARE
 __blocks hive.blocks_range;
 BEGIN
-    PERFORM hive.app_create_context( 'context' );
+    PERFORM hive.app_create_context( 'context', FALSE );
     CREATE SCHEMA A;
     CREATE TABLE A.table1(id  INTEGER ); -- the table is not registered
 

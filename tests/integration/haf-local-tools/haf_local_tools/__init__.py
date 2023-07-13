@@ -188,11 +188,11 @@ def wait_until_irreversible_without_new_block(session, final_block, limit):
         time.sleep(0.5)
 
          #Last event is `NEW_IRREVERSIBLE` instead of `MASSIVE_SYNC`.
-        events = session.query(EventsQueue).all()
+        events = session.query(EventsQueue).order_by(EventsQueue.id).all()
 
         tt.logger.info(f'number of events: {len(events)} block number of last event: {0 if len(events) == 0 else events[len(events) - 1].block_num}')
 
-        if len(events) == 2 and events[1].block_num == final_block:
+        if len(events) == 3 and events[1].block_num == final_block:
             return
 
         cnt += 1

@@ -19,6 +19,7 @@ ADD_PSQL_EXTENSION(
              state_provider.sql
              hived_connections.sql
              hived_api_impl_indexes.sql
+             hived_api.sql
 
     DEPLOY_SOURCES trigger_switch/trigger_off.sql
             context_rewind/names.sql

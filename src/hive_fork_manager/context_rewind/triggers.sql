@@ -79,7 +79,7 @@ DECLARE
 BEGIN
         -- register insert trigger
     EXECUTE format(
-            'DROP TRIGGER %I ON %s.%s'
+            'DROP TRIGGER IF EXISTS %I ON %s.%s'
             , __hive_insert_trigger_name
             , _table_schema
             , _table_name
@@ -87,7 +87,7 @@ BEGIN
 
     -- register delete trigger
     EXECUTE format(
-            'DROP TRIGGER %I ON %s.%s'
+            'DROP TRIGGER IF EXISTS %I ON %s.%s'
             , __hive_delete_trigger_name
             , _table_schema
             , _table_name
@@ -95,7 +95,7 @@ BEGIN
 
     -- register update trigger
     EXECUTE format(
-            'DROP TRIGGER %I ON %s.%s'
+            'DROP TRIGGER IF EXISTS %I ON %s.%s'
             , __hive_update_trigger_name
             , _table_schema
             , _table_name
@@ -103,7 +103,7 @@ BEGIN
 
     -- register truncate trigger
     EXECUTE format(
-            'DROP TRIGGER %I ON %s.%s'
+            'DROP TRIGGER IF EXISTS %I ON %s.%s'
             , __hive_truncate_trigger_name
             , _table_schema
             , _table_name
@@ -131,23 +131,6 @@ $BODY$
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION contexts_update_trigger()
-    RETURNS trigger
-    LANGUAGE plpgsql
-AS
-$BODY$
-BEGIN
-    IF OLD.is_forking != NEW.is_forking THEN
-        RAISE EXCEPTION 'Update hive.contexts.is_forking is forbidden';
-    END IF;
-    RETURN NEW;
-END;
-$BODY$
-;
 
 DROP TRIGGER IF EXISTS hive_contexts_limit_trigger ON hive.contexts;
 CREATE TRIGGER hive_contexts_limit_trigger AFTER INSERT ON hive.contexts FOR EACH ROW EXECUTE FUNCTION contexts_insert_trigger();
-
-DROP TRIGGER IF EXISTS hive_contexts_update_trigger ON hive.contexts;
-CREATE TRIGGER hive_contexts_update_trigger BEFORE UPDATE ON hive.contexts FOR EACH ROW EXECUTE FUNCTION contexts_update_trigger();
-

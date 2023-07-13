@@ -134,7 +134,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.are_fk_dropped()
     , hive.check_owner( _context hive.context_name, _context_owner TEXT )
 
-
+    , hive.unreachable_event_id()
+    , hive.initialize_extension_data()
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION
@@ -150,5 +151,6 @@ REVOKE EXECUTE ON FUNCTION
     , hive.remove_obsolete_reversible_data( _new_irreversible_block INT )
     , hive.remove_unecessary_events( _new_irreversible_block INT )
     , hive.refresh_irreversible_block_for_all_contexts( _new_irreversible_block INT )
+    , hive.initialize_extension_data()
 FROM hive_applications_group;
 

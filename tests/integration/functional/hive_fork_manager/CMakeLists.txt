@@ -244,6 +244,15 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_are_attached.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_check_sync.sql )
 
+ ADD_SQL_FUNCTIONAL_TEST(app_api/app_context_set_non_forking.sql)
+ ADD_SQL_FUNCTIONAL_TEST(app_api/app_contexts_set_non-forking.sql)
+ ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_set_forking.sql )
+ ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_set_forking.sql )
+ ADD_SQL_FUNCTIONAL_TEST(app_api/app_contexts_set_non_forking_and_back_and_again.sql)
+ ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_set_forking_back_and_again.sql )
+
+ ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_create_and_hole_in_events.sql )
+
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork.sql )
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork_non_forking_app.sql )
 

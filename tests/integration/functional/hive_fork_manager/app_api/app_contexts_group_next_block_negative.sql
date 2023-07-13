@@ -6,9 +6,9 @@ VOLATILE
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'attached_context' );
-    PERFORM hive.app_create_context( 'attached_context_not_insync' );
-    PERFORM hive.app_create_context( 'detached_context' );
+    PERFORM hive.app_create_context( 'attached_context', FALSE );
+    PERFORM hive.app_create_context( 'attached_context_not_insync', FALSE );
+    PERFORM hive.app_create_context( 'detached_context', FALSE );
     PERFORM hive.app_create_context( 'forking_context' );
     PERFORM hive.app_context_detach( 'detached_context' );
 

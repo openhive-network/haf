@@ -25,12 +25,6 @@ BEGIN
         ASSERT FALSE, 'Alice can update the context''s owner';
     EXCEPTION WHEN OTHERS THEN
     END;
-
-    BEGIN
-        UPDATE hive.contexts SET is_forking = false;
-        ASSERT FALSE, 'Alice can change context''s is_forking value';
-    EXCEPTION WHEN OTHERS THEN
-    END;
 END;
 $BODY$
 ;

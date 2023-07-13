@@ -76,9 +76,16 @@ For example, some apps perform irreversible external operations such as a transf
 
 Other apps require very high performance, and don't want to incur the extra performance overhead associated with maintaining the data required to rollback blocks in the case of a fork. In such case, it may make sense to trade off the responsiveness of presenting the most recent blockchain data in order to create an app that can respond to api queries faster and support more users.
 
-An "irreversible-only" app of this sort should avoid registering any of its tables in its context. HAF is designed so that any context without registered any tables (aka an 'irreversible context') will only traverse irreversible block data. This means that calls to `hive.app_next_block` will return only the range of irreversible blocks which are not already processed or NULL (blocks that are not yet marked as irreversible will be excluded). Similarly, the set of views for an irreversible context only deliver a snapshot of irreversible data up to the block already processed by the app.
+HAF distinguish which appl will only traverse irreversible block data. This means that calls to `hive.app_next_block` will return only the range of irreversible blocks which are not already processed or NULL (blocks that are not yet marked as irreversible will be excluded). Similarly, the set of views for an irreversible context only deliver a snapshot of irreversible data up to the block already processed by the app.
+The user needs to decide if an application is non-forking, he can do this during creation af a context with 'hive.app_create_context' and passing an argument
+'_is_forking' = FALSE.
 
-In summary, a non-forking HAF appl is coded in much the same way as a forking app (making it relatively easy to change the app's code to operate in either of these two modes), but a non-forking app does not register its tables with its context, and it is only served up information about irreversible blocks.
+It is possible to change an already created context from non-forking to forking and vice versa with methods
+`app_context_set_non_forking(context_name)` and `hive.app_context_set_forking(context_name)`
+
+:warning: **Switching from forking to non-forking appl will delete all its reversible data**
+
+In summary, a non-forking HAF appl is coded in much the same way as a forking app (making it relatively easy to change the app's code to operate in either of these two modes), but a non-forking app only served up information about irreversible blocks.
 
 ### Sharing tables with other HAF apps
 If an app wants to expose some of its tables for reading by other apps, then it  only needs to grant the SELECT privilege on such tables to hive_apps_group.
@@ -365,8 +372,9 @@ Reads the 'dirty' flag.
 #### APP API
 The functions which should be used by a HAF app
 
-##### hive.app_create_context( _name )
-Creates a new context. Context name can contains only characters from the set: `a-zA-Z0-9_`
+##### hive.app_create_context( _name, _is_forking )
+Creates a new context. Context name can contain only characters from the set: `a-zA-Z0-9_`.
+Parameter '_is_forking' sets contexts as forking or non-forking.
 
 ##### hive.app_remove_context( _name hive.context_name )
 Remove the context and unregister all its tables.
@@ -426,6 +434,19 @@ Returns boolean information if a given context is forking ( returns TRUE ) or no
 #### hive.app_is_forking( _array_of_contexts )
 Equivalent of 'hive.app_is_forking' for a group of contexts. When an array of contexts consists forking and non-forking
 contexts, then an exception is raised.
+
+#### hive.app_context_set_non_forking( _context_name )
+Sets given context as non-forking - means process only irreversible data. All the context's reversible data will be deleted.
+The context will back to last processed irreversible block. 
+
+#### hive.app_contexts_set_non_forking( _array_of_contexts )
+Equivalent of 'hive.app_contexts_set_non_forking' for a group of contexts.
+
+#### hive.app_context_set_forking( _context_name )
+Sets given context as forking - means process also reversible data and rewind them during back form abandoned fork.
+
+#### hive.app_context_set_forking( _array_of_contexts )
+Equivalent of 'hive.app_context_set_forking' for a group of contexts.
 
 #### hive.app_state_provider_import( state_provider, context )
 Imports state provider into contexts - the state provider tables are created and registered in `HIVE.STATE_PROVIDERS_REGISTERED` table.

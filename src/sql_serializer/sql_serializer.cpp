@@ -78,12 +78,8 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
     , [&is_irreversible_dirty](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
       
       // these tables need to be empty in haf extension script because of pg_dump/pg/restore
-      tx.exec("INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;");
-      tx.exec("INSERT INTO hive.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;");
-      tx.exec("INSERT INTO hive.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;");
-      tx.exec("SELECT hive.create_database_hash('hive');");
+      tx.exec("SELECT hive.initialize_extension_data();");
 
-  
       pqxx::result data = tx.exec("select hive.is_irreversible_dirty() as _result;");
       FC_ASSERT( !data.empty(), "No response from database" );
       FC_ASSERT( data.size() == 1, "Wrong data size" );

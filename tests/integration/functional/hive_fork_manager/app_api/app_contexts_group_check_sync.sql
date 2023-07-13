@@ -30,6 +30,7 @@ BEGIN
     PERFORM hive.app_create_context( 'attached_context_not_insync_ev' );
     PERFORM hive.app_create_context( 'attached_context_not_insync_fr' );
     PERFORM hive.app_create_context( 'attached_context_not_insync_db' );
+    PERFORM hive.app_create_context( 'attached_context_not_insync_is_forking', FALSE );
 
     UPDATE hive.contexts ctx
     SET
@@ -70,6 +71,7 @@ BEGIN
         detached_block_num = 2
     WHERE ctx.name = 'attached_context_not_insync_db'
     ;
+
 END;
 $BODY$
 ;
@@ -112,6 +114,12 @@ BEGIN
     BEGIN
         PERFORM hive.app_check_contexts_synchronized( ARRAY[ 'attached_context', 'attached_context_not_insync_db' ] );
         ASSERT FALSE, 'No expected exception for detached block num difference';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_check_contexts_synchronized( ARRAY[ 'attached_context', 'attached_context_not_insync_is_forking' ] );
+        ASSERT FALSE, 'No expected exception for is_forking difference';
     EXCEPTION WHEN OTHERS THEN
     END;
 

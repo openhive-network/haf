@@ -16,6 +16,7 @@ BEGIN
     PERFORM hive.set_irreversible_dirty();
     PERFORM hive.set_irreversible_not_dirty();
     PERFORM hive.is_irreversible_dirty();
+    PERFORM hive.initialize_extension_data();
 END;
 $BODY$
 ;

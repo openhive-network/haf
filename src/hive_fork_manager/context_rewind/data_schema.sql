@@ -7,6 +7,17 @@ CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' , 'METADATA' );
 
 CREATE TYPE hive.event_type AS ENUM( 'BACK_FROM_FORK', 'NEW_BLOCK', 'NEW_IRREVERSIBLE', 'MASSIVE_SYNC' );
 
+CREATE OR REPLACE FUNCTION hive.unreachable_event_id()
+    RETURNS BIGINT
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$$
+BEGIN
+    RETURN 9223372036854775807; -- MAX BIGINT
+END
+$$;
+
 CREATE TABLE IF NOT EXISTS hive.contexts(
     id SERIAL NOT NULL,
     name hive.context_name NOT NULL,

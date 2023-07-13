@@ -48,6 +48,37 @@ BEGIN
         ASSERT FALSE, 'Hived can call app_register_table';
     EXCEPTION WHEN OTHERS THEN
     END;
+
+    BEGIN
+        PERFORM hive.initialize_extension_data();
+        ASSERT FALSE, 'Hived can call initialize_extension_data';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_context_set_non_forking( ARRAY[ 'alice_context' ] );
+        ASSERT FALSE, 'Hived can call app_context_set_non_forking';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_context_set_non_forking( 'alice_context' );
+            ASSERT FALSE, 'Hived can call app_context_set_non_forking';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_context_set_forking( ARRAY[ 'alice_context' ]  );
+        ASSERT FALSE, 'Hived can call hive.app_context_set_forking';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_context_set_forking( 'alice_context' );
+        ASSERT FALSE, 'Hived can call hive.app_context_set_forking';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
 END;
 $BODY$
 ;
@@ -84,6 +115,12 @@ DECLARE
     __signatures1 hive.transactions_multisig%ROWTYPE;
     __signatures2 hive.transactions_multisig%ROWTYPE;
 BEGIN
+    BEGIN
+        PERFORM hive.initialize_extension_data();
+        ASSERT FALSE, 'An app can call hive.initialize_extension_data';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
     BEGIN
         PERFORM hive.back_from_fork( 1 );
         ASSERT FALSE, 'An app can call hive.back_from_fork';
