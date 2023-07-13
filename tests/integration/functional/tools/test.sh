@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 extension_path=$1
 test_path=$2;
 setup_scripts_dir_path=$3;

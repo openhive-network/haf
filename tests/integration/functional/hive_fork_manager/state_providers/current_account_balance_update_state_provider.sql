@@ -4,8 +4,8 @@
 CREATE EXTENSION IF NOT EXISTS hstore;
 
 
-DROP PROCEDURE IF EXISTS test_given;
-CREATE PROCEDURE test_given(_writable_directory TEXT)
+DROP PROCEDURE IF EXISTS haf_admin_test_given;
+CREATE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -13,7 +13,7 @@ DECLARE
     __session_ptr BIGINT;
 BEGIN
 
-    RAISE NOTICE 'Storing consensus provider data in %', _writable_directory;
+    RAISE NOTICE 'Storing consensus provider data in %', toolbox.get_consensus_storage_path();
 
     INSERT INTO hive.operation_types (id, name, is_virtual) VALUES
         (0,	'hive::protocol::vote_operation',	false),
@@ -50,7 +50,7 @@ BEGIN
     ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.create_session (via app_state_provider_import)';
 
     -- creates csp_session
-    PERFORM hive.app_state_provider_import( 'CURRENT_ACCOUNT_BALANCE_STATE_PROVIDER', 'context' , get_consensus_storage_path(_writable_directory));
+    PERFORM hive.app_state_provider_import( 'CURRENT_ACCOUNT_BALANCE_STATE_PROVIDER', 'context' , toolbox.get_consensus_storage_path());
 
     -- check if sessions table is filled
     ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.create_session (via app_state_provider_import)';
@@ -66,27 +66,20 @@ BEGIN
 
     PERFORM hive.sessions_disconnect();
 
-    -- ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
-    --                          'consensus_state_provider_get_expected_block_num should return 1';
-
-    -- PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
-    -- COMMIT;
-    -- ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
-    --                          'consensus_state_provider_get_expected_block_num should return 7';
-
 END;
 $BODY$
 ;
 
 
-DROP PROCEDURE IF EXISTS test_when;
-CREATE PROCEDURE test_when(_writable_directory TEXT)
-    LANGUAGE 'plpgsql'
+DROP PROCEDURE IF EXISTS haf_admin_test_when;
+CREATE PROCEDURE haf_admin_test_when()
 AS
 $BODY$
 DECLARE
     __session_ptr BIGINT;
 BEGIN
+
+    ASSERT FALSE, 'Assert mtlk In function ';
     PERFORM hive.sessions_reconnect();
     __session_ptr = hive.get_session_ptr('context');
 
@@ -98,10 +91,10 @@ BEGIN
     PERFORM hive.sessions_disconnect();
 END;
 $BODY$
-;
+LANGUAGE 'plpgsql';
 
-DROP PROCEDURE IF EXISTS test_then;
-CREATE PROCEDURE test_then(_writable_directory TEXT)
+DROP PROCEDURE IF EXISTS haf_admin_test_then;
+CREATE PROCEDURE haf_admin_test_then()
     LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -142,23 +135,4 @@ BEGIN
 END;
 $BODY$
 ;
-
-
-
-CREATE FUNCTION get_consensus_storage_path(IN _writable_directory TEXT)
-    RETURNS TEXT
-    LANGUAGE 'plpgsql'
-AS
-$BODY$
-DECLARE
-  __consensus_state_provider_storage_path TEXT;
-BEGIN
-    IF _writable_directory = '' THEN
-        __consensus_state_provider_storage_path = '/home/hived/datadir/consensus_unit_test_storage_dir'; 
-    ELSE
-        __consensus_state_provider_storage_path = _writable_directory || '/consensus_storage';
-    END IF;
-
-    RETURN __consensus_state_provider_storage_path;
-END$BODY$;
 
