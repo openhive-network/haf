@@ -272,6 +272,7 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_grant_to_hive_applications_group.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/hived_to_api_access.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_to_head_block_views.sql )
+ ADD_SQL_FUNCTIONAL_TEST(authorization/alice_cannot_change_context_owner_and_forking.sql)
 
  ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/forking_application.py )
  ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/non_forking_application.py )

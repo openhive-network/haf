@@ -131,6 +131,23 @@ $BODY$
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION contexts_update_trigger()
+    RETURNS trigger
+    LANGUAGE plpgsql
+AS
+$BODY$
+BEGIN
+    IF OLD.is_forking != NEW.is_forking THEN
+        RAISE EXCEPTION 'Update hive.contexts.is_forking is forbidden';
+    END IF;
+    RETURN NEW;
+END;
+$BODY$
+;
+
 DROP TRIGGER IF EXISTS hive_contexts_limit_trigger ON hive.contexts;
 CREATE TRIGGER hive_contexts_limit_trigger AFTER INSERT ON hive.contexts FOR EACH ROW EXECUTE FUNCTION contexts_insert_trigger();
+
+DROP TRIGGER IF EXISTS hive_contexts_update_trigger ON hive.contexts;
+CREATE TRIGGER hive_contexts_update_trigger BEFORE UPDATE ON hive.contexts FOR EACH ROW EXECUTE FUNCTION contexts_update_trigger();
 

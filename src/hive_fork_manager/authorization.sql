@@ -29,6 +29,7 @@ GRANT ALL ON hive.triggers TO hive_applications_group;
 GRANT ALL ON hive.state_providers_registered TO hive_applications_group;
 
 -- protect an application rows aginst other applications
+REVOKE UPDATE( is_forking, owner ) ON hive.contexts FROM GROUP hive_applications_group;
 ALTER TABLE hive.contexts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS dp_hive_context ON hive.contexts CASCADE;

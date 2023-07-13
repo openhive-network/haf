@@ -57,7 +57,7 @@ DECLARE
   _pattern16 TEXT[] = '{"(applied_hardforks_reversible,f5129d5e-5b98-7f93-b786-d55899b5b8b5,d6cca068-2076-4e87-5c24-85618ff564ac,fee57151-3162-0c46-424a-da912e742160,3eeef00d-0e16-421e-659e-7ee2b12aa7eb)"}';
   _test16 TEXT[];
 
-  _pattern17 TEXT[] = '{"(contexts,e463f3df-87a5-a38d-3bb9-bad3bc7d3782,6328f066-eb45-a60e-0395-2eff483185f8,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)"}';
+  _pattern17 TEXT[] = '{"(contexts,f6bb4c44-6eaa-34f4-48d9-4d1a39546db5,e890d53e-05bd-76fc-d529-58ca2bc63a22,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)"}';
   _test17 TEXT[];
 
 BEGIN
