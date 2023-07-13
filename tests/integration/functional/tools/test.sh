@@ -27,24 +27,33 @@ evaluate_result $?
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ${test_path};
 evaluate_result $?
 
-users="haf_admin test_hived alice bob"
+users="haf_admin_procedure haf_admin test_hived alice bob"
 tests="given when error then"
+
+# mtlk this was working without surrounding block
+# psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "CALL haf_admin_procedure_test_given()";
+# evaluate_result $?;
 
 # you can use alice_test_given, alice_test_when, alice_test_error, alice_test_then and their bob's and test_hived equivalents
 
 for testfun in ${tests}; do
   for user in ${users}; do
-    sql_code_no_error="DO \$\$
-    BEGIN
+
+   if [ "${user}" = "haf_admin_procedure" ]; then
+      sql_code_no_error="CALL ${user}_test_${testfun}();";
+    else
+      sql_code_no_error="DO \$\$
       BEGIN
-        CALL ${user}_test_${testfun}();
-      EXCEPTION WHEN undefined_function THEN
-      END;
-    END \$\$;"
+        BEGIN
+          PERFORM ${user}_test_${testfun}();
+          EXCEPTION WHEN undefined_function THEN
+        END;
+      END \$\$;"
+    fi
 
     sql_code_error="SELECT ${user}_test_${testfun}();";
 
-    if [ "$user" =  "haf_admin" ]; then
+    if [ "$user" = "haf_admin" ] || [ "$user" = "haf_admin_procedure" ]; then
       pg_call="-p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c"
     else
       pg_call="postgresql://${user}:test@localhost:$postgres_port/$DB_NAME --username=${user} -a -v ON_ERROR_STOP=on -c"
