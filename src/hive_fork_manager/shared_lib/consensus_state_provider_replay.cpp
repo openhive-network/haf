@@ -681,17 +681,6 @@ struct fix_hf_version_visitor
     static_cast<hive::protocol::version&>(ver) = hive::protocol::version(0, 0, proper_version);
   }
 
-#ifdef IS_TEST_NET
-  void operator()(const hive::chain::required_automated_actions& req_actions) const
-  {
-    // Nothing to do.
-  }
-
-  void operator()(const hive::chain::optional_automated_actions& opt_actions) const
-  {
-    // Nothing to do.
-  }
-#endif
 
  private:
   int proper_version;
