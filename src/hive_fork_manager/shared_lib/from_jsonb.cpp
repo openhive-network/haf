@@ -164,6 +164,7 @@ void set_member(hive::protocol::asset& member, const JsonbValue& json)
   else
   {
     FC_ASSERT(json.type == jbvBinary);
+    FC_ASSERT(JsonContainerIsObject(json.val.binary.data));
     JsonbValue amount {};
     JsonbValue precision {};
     JsonbValue nai {};
@@ -177,7 +178,9 @@ void set_member(hive::protocol::asset& member, const JsonbValue& json)
     const auto naiStr = std::string(nai.val.string.val, nai.val.string.len);
     uint8_t precisionInt;
     set_member(precisionInt, precision);
-    member.amount = boost::lexical_cast<int64_t>(amountStr);
+    const auto amountInt = boost::lexical_cast<int64_t>(amountStr);
+    FC_ASSERT(amountInt >= 0, "Asset amount cannot be negative");
+    member.amount = amountInt;
     member.symbol = hive::protocol::asset_symbol_type::from_nai_string(naiStr.c_str(), precisionInt);
   }
 }
@@ -239,6 +242,7 @@ template <typename A, typename B>
 void set_member(std::pair<A, B>& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvBinary);
+  FC_ASSERT(JsonContainerIsArray(json.val.binary.data));
   const auto elementCount = JsonContainerSize(json.val.binary.data);
   FC_ASSERT(elementCount == 2);
   A a{};
@@ -273,6 +277,7 @@ template <typename T>
 void set_member(std::vector<T>& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvBinary);
+  FC_ASSERT(JsonContainerIsArray(json.val.binary.data));
   const auto elementCount = JsonContainerSize(json.val.binary.data);
   member.resize(elementCount);
   for (uint32 n = 0; n < elementCount; ++n)
@@ -284,6 +289,7 @@ template <typename T>
 void set_member(boost::container::flat_set<T>& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvBinary);
+  FC_ASSERT(JsonContainerIsArray(json.val.binary.data));
   const auto elementCount = JsonContainerSize(json.val.binary.data);
   member.reserve(elementCount);
   for (uint32 n = 0; n < elementCount; ++n)
@@ -297,6 +303,7 @@ template <typename T>
 void set_member(flat_set_ex<T>& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvBinary);
+  FC_ASSERT(JsonContainerIsArray(json.val.binary.data));
   const auto elementCount = JsonContainerSize(json.val.binary.data);
   member.reserve(elementCount);
   for (uint32 n = 0; n < elementCount; ++n)
@@ -314,6 +321,7 @@ template<typename K, typename T>
 void set_member(boost::container::flat_map<K, T>& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvBinary);
+  FC_ASSERT(JsonContainerIsArray(json.val.binary.data));
   const auto elementCount = JsonContainerSize(json.val.binary.data);
   member.reserve(elementCount);
   for (uint32 n = 0; n < elementCount; ++n)
@@ -328,6 +336,7 @@ void set_member(T& member, const JsonbValue& json)
 {
   ereport( NOTICE, ( errmsg( "%s", fc::get_typename<T>::name() ) ) );
   FC_ASSERT(json.type == jbvBinary);
+  FC_ASSERT(JsonContainerIsObject(json.val.binary.data));
   fill_members(member, json);
 }
 
@@ -337,13 +346,15 @@ class member_from_jsonb_visitor
   public:
     member_from_jsonb_visitor(T* op, const JsonbValue& jsonb) :
       op(op), jsonb(jsonb)
-    {}
+    {
+      FC_ASSERT(jsonb.type == jbvBinary);
+      FC_ASSERT(JsonContainerIsObject(jsonb.val.binary.data));
+    }
 
     template<typename Member, class Class, Member (Class::*member)>
     void operator()(const char* name) const
     {
       JsonbValue value {};
-      FC_ASSERT(jsonb.type == jbvBinary);
       if (getKeyJsonValueFromContainer(jsonb.val.binary.data, name, strlen(name), &value))
       {
         set_member(op->*member, value);
@@ -405,12 +416,14 @@ void set_member(fc::static_variant<Types...>& member, const JsonbValue& json)
     return name_map;
   }();
   FC_ASSERT(json.type == jbvBinary);
+  FC_ASSERT(JsonContainerIsObject(json.val.binary.data));
   JsonbValue type {};
   JsonbValue value {};
   getKeyJsonValueFromContainer(json.val.binary.data, "type", 4, &type);
   getKeyJsonValueFromContainer(json.val.binary.data, "value", 5, &value);
   FC_ASSERT(type.type == jbvString);
   FC_ASSERT(value.type == jbvBinary);
+  FC_ASSERT(JsonContainerIsObject(value.val.binary.data));
   const auto tag = std::string(type.val.string.val, type.val.string.len);
   const auto itr = to_tag.find(tag);
   FC_ASSERT( itr != to_tag.end(), "Invalid object name: ${n}", ("n", tag) );
