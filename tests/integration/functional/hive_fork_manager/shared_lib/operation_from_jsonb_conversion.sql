@@ -147,6 +147,260 @@ BEGIN
 
   ASSERT (SELECT '{"type":"recurrent_transfer_operation","value":{"from":"alice","to":"bob","amount":{"amount":"5000","precision":3,"nai":"@@000000021"},"memo":"memo","recurrence":720,"executions":12,"extensions":[]}}'::jsonb::hive.operation = '\x3105616c69636503626f62881300000000000003535445454d0000046d656d6fd0020c0000');
 
+  -- virtual operations:
+
+  ASSERT (SELECT '{
+  "type": "fill_convert_request_operation",
+  "value": {
+    "amount_in": {
+      "amount": "2000000",
+      "nai": "@@000000013",
+      "precision": 3
+    },
+    "amount_out": {
+      "amount": "605143",
+      "nai": "@@000000021",
+      "precision": 3
+    },
+    "owner": "xeroc",
+    "requestid": 1468315395
+  }
+}'::jsonb::hive.operation = '\x32057865726f6303b7845780841e00000000000353424400000000d73b09000000000003535445454d0000');
+
+  ASSERT (SELECT '{
+  "type": "author_reward_operation",
+  "value": {
+    "author": "xeroc",
+    "curators_vesting_payout": {
+      "amount": "0",
+      "nai": "@@000000037",
+      "precision": 6
+    },
+    "hbd_payout": {
+      "amount": "21",
+      "nai": "@@000000013",
+      "precision": 3
+    },
+    "hive_payout": {
+      "amount": "0",
+      "nai": "@@000000021",
+      "precision": 3
+    },
+    "permlink": "this-piston-rocks-public-steem-steem-api-for-piston-users-and-developers",
+    "vesting_payout": {
+      "amount": "29859881",
+      "nai": "@@000000037",
+      "precision": 6
+    }
+  }
+}'::jsonb::hive.operation = '\x33057865726f6348746869732d706973746f6e2d726f636b732d7075626c69632d737465656d2d737465656d2d6170692d666f722d706973746f6e2d75736572732d616e642d646576656c6f7065727315000000000000000353424400000000000000000000000003535445454d000029a0c7010000000006564553545300000000000000000000065645535453000000');
+
+  ASSERT (SELECT '{
+  "type": "curation_reward_operation",
+  "value": {
+    "comment_author": "anca3drandom",
+    "comment_permlink": "steemart-the-art-of-quilling-paper-steemit-logo",
+    "curator": "camilla",
+    "payout_must_be_claimed": false,
+    "reward": {
+      "amount": "80336806",
+      "nai": "@@000000037",
+      "precision": 6
+    }
+  }
+}'::jsonb::hive.operation = '\x340763616d696c6c61a6d7c9040000000006564553545300000c616e6361336472616e646f6d2f737465656d6172742d7468652d6172742d6f662d7175696c6c696e672d70617065722d737465656d69742d6c6f676f00');
+
+  ASSERT (SELECT '{
+  "type": "comment_reward_operation",
+  "value": {
+    "author": "xeroc",
+    "author_rewards": 13,
+    "beneficiary_payout_value": {
+      "amount": "0",
+      "nai": "@@000000013",
+      "precision": 3
+    },
+    "curator_payout_value": {
+      "amount": "388196",
+      "nai": "@@000000013",
+      "precision": 3
+    },
+    "payout": {
+      "amount": "45",
+      "nai": "@@000000013",
+      "precision": 3
+    },
+    "permlink": "this-piston-rocks-public-steem-steem-api-for-piston-users-and-developers",
+    "total_payout_value": {
+      "amount": "967021",
+      "nai": "@@000000013",
+      "precision": 3
+    }
+  }
+}'::jsonb::hive.operation = '\x35057865726f6348746869732d706973746f6e2d726f636b732d7075626c69632d737465656d2d737465656d2d6170692d666f722d706973746f6e2d75736572732d616e642d646576656c6f706572732d0000000000000003534244000000000d000000000000006dc10e0000000000035342440000000064ec050000000000035342440000000000000000000000000353424400000000');
+
+  ASSERT (SELECT '{
+  "type": "liquidity_reward_operation",
+  "value": {
+    "owner": "adm",
+    "payout": {
+      "amount": "1200000",
+      "nai": "@@000000021",
+      "precision": 3
+    }
+  }
+}'::jsonb::hive.operation = '\x360361646d804f12000000000003535445454d0000');
+
+  ASSERT (SELECT '{
+  "type": "interest_operation",
+  "value": {
+    "interest": {
+      "amount": "247",
+      "nai": "@@000000013",
+      "precision": 3
+    },
+    "owner": "xeroc"
+  }
+}'::jsonb::hive.operation = '\x37057865726f63f700000000000000035342440000000000');
+
+  ASSERT (SELECT '{
+  "type": "fill_vesting_withdraw_operation",
+  "value": {
+    "deposited": {
+      "amount": "26",
+      "nai": "@@000000021",
+      "precision": 3
+    },
+    "from_account": "bu328118",
+    "to_account": "bu328118",
+    "withdrawn": {
+      "amount": "89319545",
+      "nai": "@@000000037",
+      "precision": 6
+    }
+  }
+}'::jsonb::hive.operation = '\x3808627533323831313808627533323831313879e852050000000006564553545300001a0000000000000003535445454d0000');
+
+  ASSERT (SELECT '{
+  "type": "fill_order_operation",
+  "value": {
+    "current_orderid": 10,
+    "current_owner": "ledzeppelin",
+    "current_pays": {
+      "amount": "1088582",
+      "nai": "@@000000013",
+      "precision": 3
+    },
+    "open_orderid": 2454834171,
+    "open_owner": "adm",
+    "open_pays": {
+      "amount": "385205",
+      "nai": "@@000000021",
+      "precision": 3
+    }
+  }
+}'::jsonb::hive.operation = '\x390b6c65647a657070656c696e0a000000469c10000000000003534244000000000361646dfbcb5192b5e005000000000003535445454d0000');
+
+  ASSERT (SELECT '{"type":"hardfork_operation","value":{"hardfork_id":7}}'::jsonb::hive.operation = '\x3c07000000');
+
+  ASSERT (SELECT '{"type":"comment_payout_update_operation","value":{"author":"fatima992002","permlink":"thev-new-germanic-medicine"}}'::jsonb::hive.operation = '\x3d0c666174696d613939323030321a746865762d6e65772d6765726d616e69632d6d65646963696e65');
+
+  ASSERT (SELECT '{
+  "type": "producer_reward_operation",
+  "value": {
+    "producer": "leigh",
+    "vesting_shares": {
+      "amount": "14928815403",
+      "nai": "@@000000037",
+      "precision": 6
+    }
+  }
+}'::jsonb::hive.operation = '\x40056c656967682ba5d379030000000656455354530000');
+
+  ASSERT (SELECT '{
+  "type": "effective_comment_vote_operation",
+  "value": {
+    "author": "watchonline",
+    "pending_payout": {
+      "amount": "3",
+      "nai": "@@000000013",
+      "precision": 3
+    },
+    "permlink": "suicide-squad-2016-watch-full-movie-stream-online-free",
+    "rshares": 59675015,
+    "total_vote_weight": 0,
+    "voter": "massmindrape",
+    "weight": 0
+  }
+}'::jsonb::hive.operation = '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d66726565000000000000000087918e0300000000000000000000000003000000000000000353424400000000');
+
+  ASSERT (SELECT '{"type":"ineffective_delete_comment_operation","value":{"author":"jsc","permlink":"just-test-20160603t163718014z"}}'::jsonb::hive.operation = '\x49036a73631d6a7573742d746573742d3230313630363033743136333731383031347a');
+
+  ASSERT (SELECT '{
+  "type": "changed_recovery_account_operation",
+  "value": {
+    "account": "barrie",
+    "new_recovery_account": "boombastic",
+    "old_recovery_account": "steem"
+  }
+}'::jsonb::hive.operation = '\x4c0662617272696505737465656d0a626f6f6d626173746963');
+
+  ASSERT (SELECT '{
+  "type": "transfer_to_vesting_completed_operation",
+  "value": {
+    "from_account": "blocktrades",
+    "hive_vested": {
+      "amount": "691177",
+      "nai": "@@000000021",
+      "precision": 3
+    },
+    "to_account": "kripto",
+    "vesting_shares_received": {
+      "amount": "2237516892686",
+      "nai": "@@000000037",
+      "precision": 6
+    }
+  }
+}'::jsonb::hive.operation = '\x4d0b626c6f636b747261646573066b726970746fe98b0a000000000003535445454d00000e4a66f6080200000656455354530000');
+
+  ASSERT (SELECT '{
+  "type": "pow_reward_operation",
+  "value": {
+    "reward": {
+      "amount": "6003711911",
+      "nai": "@@000000037",
+      "precision": 6
+    },
+    "worker": "dele-puppy"
+  }
+}'::jsonb::hive.operation = '\x4e0a64656c652d7075707079a75fd965010000000656455354530000');
+
+  ASSERT (SELECT '{
+  "type": "account_created_operation",
+  "value": {
+    "creator": "steem",
+    "initial_delegation": {
+      "amount": "0",
+      "nai": "@@000000037",
+      "precision": 6
+    },
+    "initial_vesting_shares": {
+      "amount": "12373786546",
+      "nai": "@@000000037",
+      "precision": 6
+    },
+    "new_account_name": "singapore"
+  }
+}'::jsonb::hive.operation = '\x500973696e6761706f726505737465656db2ff88e102000000065645535453000000000000000000000656455354530000');
+
+  ASSERT (SELECT '{"type":"system_warning_operation","value":{"message":"Changingmaximumblocksizefrom2097152to131072"}}'::jsonb::hive.operation = '\x522b4368616e67696e676d6178696d756d626c6f636b73697a6566726f6d32303937313532746f313331303732');
+
+  ASSERT (SELECT '{"type":"producer_missed_operation","value":{"producer":"ladygaga"}}'::jsonb::hive.operation = '\x56086c61647967616761');
+
+  ASSERT (SELECT '{"type":"failed_recurrent_transfer_operation","value":{"from":"alice","to":"bob","amount":{"amount":"1","precision":3,"nai":"@@000000021"},"memo":"xx","consecutive_failures":12,"remaining_executions":12,"deleted":false}}'::jsonb::hive.operation = '\x5405616c69636503626f62010000000000000003535445454d00000278780c0c0000');
+
+  -- negative tests:
+
 BEGIN
   PERFORM '{}'::jsonb::hive.operation;
   RAISE EXCEPTION 'Operation cannot be created from an empty object';
