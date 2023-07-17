@@ -18,6 +18,8 @@ void set_member(int32_t& member, const JsonbValue& json);
 void set_member(uint32_t& member, const JsonbValue& json);
 void set_member(int64_t& member, const JsonbValue& json);
 void set_member(uint64_t& member, const JsonbValue& json);
+template <typename T>
+void set_member(fc::safe<T>& member, const JsonbValue& json);
 void set_member(hive::protocol::legacy_asset& member, const JsonbValue& json);
 void set_member(hive::protocol::legacy_hive_asset& member, const JsonbValue& json);
 void set_member(hive::protocol::asset& member, const JsonbValue& json);
@@ -140,6 +142,13 @@ void set_member(uint64_t& member, const JsonbValue& json)
   {
     FC_THROW_EXCEPTION(fc::invalid_arg_exception, "Must be numeric or string type");
   }
+}
+template <typename T>
+void set_member(fc::safe<T>& member, const JsonbValue& json)
+{
+  T tmp;
+  set_member(tmp, json);
+  member.value = tmp;
 }
 void set_member(hive::protocol::legacy_asset& member, const JsonbValue& json)
 {
