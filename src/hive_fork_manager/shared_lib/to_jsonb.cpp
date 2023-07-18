@@ -103,7 +103,6 @@ template<typename T>
 void to_jsonb(const std::vector<T>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename A, typename B>
 void to_jsonb(const std::pair<A, B>& value, JsonbIteratorToken token, JsonbParseState** parseState);
-void to_jsonb(const hive::protocol::fixed_string<16>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename Storage>
 void to_jsonb(const hive::protocol::fixed_string_impl<Storage>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 void to_jsonb(const hive::protocol::json_string& value, JsonbIteratorToken token, JsonbParseState** parseState);
@@ -235,15 +234,6 @@ void to_jsonb(const std::pair<A, B>& value, JsonbIteratorToken token, JsonbParse
   to_jsonb(value.first, WJB_ELEM, parseState);
   to_jsonb(value.second, WJB_ELEM, parseState);
   pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
-}
-void to_jsonb(const hive::protocol::fixed_string<16>& value, JsonbIteratorToken token, JsonbParseState** parseState)
-{
-  const std::string str = static_cast<std::string>(value);
-  JsonbValue jb;
-  jb.type = jbvString;
-  jb.val.string.len = str.length();
-  jb.val.string.val = pstrdup(str.c_str());
-  pushJsonbValue(parseState, token, &jb);
 }
 template<typename Storage>
 void to_jsonb(const hive::protocol::fixed_string_impl<Storage>& value, JsonbIteratorToken token, JsonbParseState** parseState)
