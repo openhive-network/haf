@@ -466,14 +466,11 @@ void fill_members(T& obj, const JsonbValue& json)
   fc::reflector<T>::visit(member_from_jsonb_visitor(&obj, json));
 }
 
-// TODO: rename
-hive::protocol::operation operation_from_jsonb_value(Jsonb* jsonb)
+hive::protocol::operation operation_from_jsonb_value(const JsonbValue& json)
 {
   try
   {
     hive::protocol::operation op;
-    JsonbValue json {};
-    JsonbToJsonbValue(jsonb, &json);
     set_member(op, json);
     return op;
   }

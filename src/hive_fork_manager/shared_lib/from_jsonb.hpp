@@ -3,7 +3,7 @@
 
 extern "C"
 {
-typedef Jsonb Jsonb;
+struct JsonbValue;
 }
 
-hive::protocol::operation operation_from_jsonb_value(Jsonb* json);
+hive::protocol::operation operation_from_jsonb_value(const JsonbValue& json);
