@@ -1,6 +1,7 @@
 #include "operation_base.hpp"
 
 #include "to_jsonb.hpp"
+#include "from_jsonb.hpp"
 #include "svstream.hpp"
 
 #include <psql_utils/postgres_includes.hpp>
@@ -168,9 +169,9 @@ extern "C"
   Datum operation_from_jsonb( PG_FUNCTION_ARGS )
   {
     Jsonb *jb = PG_GETARG_JSONB_P(0);
-    // TODO: do smarter conversion that jsonb -> text -> fc::json -> operation
-    const char* out = JsonbToCString(NULL, &jb->root, VARSIZE(jb));
-    std::vector< char > data = json_to_op( out );
+
+    hive::protocol::operation op = operation_from_jsonb_value(jb);
+    std::vector<char> data = fc::raw::pack_to_vector(op);
 
     PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
   }
