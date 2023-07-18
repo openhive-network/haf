@@ -343,7 +343,6 @@ void set_member(boost::container::flat_map<K, T>& member, const JsonbValue& json
 template <typename T>
 void set_member(T& member, const JsonbValue& json)
 {
-  ereport( NOTICE, ( errmsg( "%s", fc::get_typename<T>::name() ) ) );
   static_assert(fc::reflector<T>::is_defined::value);
   FC_ASSERT(json.type == jbvBinary);
   FC_ASSERT(JsonContainerIsObject(json.val.binary.data));
