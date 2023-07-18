@@ -47,6 +47,27 @@ void set_member(T& member, const JsonbValue& json);
 template <typename... Types>
 void set_member(fc::static_variant<Types...>& member, const JsonbValue& json);
 
+uint64_t numeric_to_uint64(Datum num)
+{
+  const auto int64max = PG_INT64_MAX;
+  const std::string str64max = std::to_string(int64max);
+  Datum num64max = DirectFunctionCall3(numeric_in, CStringGetDatum(str64max.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+  const bool needs64bits = DatumGetBool(DirectFunctionCall2(numeric_gt, num, num64max));
+  if (needs64bits)
+  {
+    // We can't use numeric_int8 directly, because it will overflow.
+    // Instead, first subtract INT64_MAX from input numeric, convert that and add INT64_MAX back.
+    Datum subnum = DirectFunctionCall2(numeric_sub, num, num64max);
+    const uint64_t value = static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, subnum)));
+    return value + int64max;
+  }
+  else
+  {
+    // We can just use Postgres' numeric_int8 as it will not overflow
+    return static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, NumericGetDatum(num))));
+  }
+}
+
 template <typename T>
 void fill_members(T& obj, const JsonbValue& json);
 
@@ -128,15 +149,13 @@ void set_member(uint64_t& member, const JsonbValue& json)
 {
   if (json.type == jbvNumeric)
   {
-    // TODO: error on overflow?
-    member = static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, NumericGetDatum(json.val.numeric))));
+    member = numeric_to_uint64(NumericGetDatum(json.val.numeric));
   }
   else if (json.type == jbvString)
   {
-    // TODO: error on overflow?
     const auto str = std::string(json.val.string.val, json.val.string.len);
     Datum num = DirectFunctionCall3(numeric_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
-    member = static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, num)));
+    member = numeric_to_uint64(num);
   }
   else
   {
