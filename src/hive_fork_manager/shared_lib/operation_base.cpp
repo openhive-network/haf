@@ -170,7 +170,9 @@ extern "C"
   {
     Jsonb *jb = PG_GETARG_JSONB_P(0);
 
-    hive::protocol::operation op = operation_from_jsonb_value(jb);
+    JsonbValue json {};
+    JsonbToJsonbValue(jb, &json);
+    hive::protocol::operation op = operation_from_jsonb_value(json);
     std::vector<char> data = fc::raw::pack_to_vector(op);
 
     PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
