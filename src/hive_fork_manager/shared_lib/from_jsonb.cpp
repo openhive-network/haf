@@ -116,7 +116,7 @@ void set_member(int64_t& member, const JsonbValue& json)
   {
     // TODO: error on overflow?
     const auto str = std::string(json.val.string.val, json.val.string.len);
-    Datum num = DirectFunctionCall1(numeric_in, CStringGetDatum(str.c_str()));
+    Datum num = DirectFunctionCall3(numeric_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
     member = DatumGetInt64(DirectFunctionCall1(numeric_int8, num));
   }
   else
@@ -135,7 +135,7 @@ void set_member(uint64_t& member, const JsonbValue& json)
   {
     // TODO: error on overflow?
     const auto str = std::string(json.val.string.val, json.val.string.len);
-    Datum num = DirectFunctionCall1(numeric_in, CStringGetDatum(str.c_str()));
+    Datum num = DirectFunctionCall3(numeric_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
     member = static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, num)));
   }
   else
