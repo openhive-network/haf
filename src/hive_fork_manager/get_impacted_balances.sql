@@ -11,6 +11,18 @@ CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body hive.op
 RETURNS SETOF impacted_balances_return
 AS 'MODULE_PATHNAME', 'get_impacted_balances' LANGUAGE C;
 
+CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body text, IN _is_hf01 bool)
+  RETURNS SETOF impacted_balances_return
+  LANGUAGE plpgsql
+  VOLATILE
+AS
+$BODY$
+BEGIN
+  RETURN QUERY SELECT * FROM hive.get_impacted_balances(_operation_body::jsonb::hive.operation, _is_hf01);
+END;
+$BODY$
+;
+
 --- Returns set of operations which impact account balances.
 
 CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body hive.operation, IN _operation_block_number INT)

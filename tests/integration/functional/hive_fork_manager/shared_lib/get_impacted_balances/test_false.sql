@@ -28,7 +28,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test0
-    FROM hive.get_impacted_balances('{}'::jsonb::hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('{}', FALSE) f
     ;
 
     ASSERT FALSE, 'TEST0 should throw exception: "invalid_text_representation"';
@@ -43,7 +43,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test1
-    FROM hive.get_impacted_balances('', FALSE) f
+    FROM hive.get_impacted_balances(''::hive.operation, FALSE) f
     ;
 
     ASSERT FALSE, 'TEST1 should throw exception: "feature_not_supported"';
@@ -58,7 +58,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test2
-    FROM hive.get_impacted_balances('{"type":"not_existing_type","value":{"from":"anonymtest","to":"someguy123","agent":"xtar","who":"xtar","receiver":"someguy123","escrow_id":72526562,"hbd_amount":{"amount":"5000","precision":3,"nai":"@@000000013"},"hive_amount":{"amount":"0","precision":3,"nai":"@@000000021"}}}' :: jsonb :: hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('{"type":"not_existing_type","value":{"from":"anonymtest","to":"someguy123","agent":"xtar","who":"xtar","receiver":"someguy123","escrow_id":72526562,"hbd_amount":{"amount":"5000","precision":3,"nai":"@@000000013"},"hive_amount":{"amount":"0","precision":3,"nai":"@@000000021"}}}', FALSE) f
     ;
 
     ASSERT FALSE, 'TEST2 should throw exception: "invalid_text_representation"';
@@ -73,7 +73,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test3
-    FROM hive.get_impacted_balances('{"type":"escrow_release_operation","value":{"from":"anonymtest","to":"someguy123","agent":"xtar","who":"xtar","receiver":"someguy123","escrow_id":72526562,"hbd_amount":{"amount":"5000","precision":3,"nai":"@@000000013"},"hive_amount":{"amount":"0","precision":3,"nai":"@@000000021"}}}' :: jsonb :: hive.operation, 100.0) f
+    FROM hive.get_impacted_balances('{"type":"escrow_release_operation","value":{"from":"anonymtest","to":"someguy123","agent":"xtar","who":"xtar","receiver":"someguy123","escrow_id":72526562,"hbd_amount":{"amount":"5000","precision":3,"nai":"@@000000013"},"hive_amount":{"amount":"0","precision":3,"nai":"@@000000021"}}}', 100.0) f
     ;
 
     ASSERT FALSE, 'TEST3 should throw exception: "undefined_function"';
@@ -103,7 +103,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test5
-    FROM hive.get_impacted_balances('[1,3,34,543,34]'::jsonb::hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('[1,3,34,543,34]', FALSE) f
     ;
 
     ASSERT FALSE, 'TEST5 should throw exception: "invalid_text_representation"';
@@ -118,7 +118,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test6
-    FROM hive.get_impacted_balances('{"value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":3,"nai":"@@000000013"}}}'::jsonb::hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('{"value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":3,"nai":"@@000000013"}}}', FALSE) f
     ;
 
     ASSERT FALSE, 'TEST6 should throw exception: "invalid_text_representation"';
@@ -133,7 +133,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test7
-    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"precision":3,"nai":"@@000000013"}}}' :: jsonb :: hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"precision":3,"nai":"@@000000013"}}}', FALSE) f
     ;
 
     ASSERT FALSE, 'TEST7 should throw exception: "invalid_text_representation"';
@@ -148,7 +148,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test8
-    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","nai":"@@000000013"}}}' :: jsonb :: hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","nai":"@@000000013"}}}', FALSE) f
     ;
 
     ASSERT FALSE, 'TEST8 should throw exception: "invalid_text_representation"';
@@ -163,7 +163,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test9
-    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":3}}}' :: jsonb :: hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":3}}}', FALSE) f
     ;
 
     ASSERT FALSE, 'TEST9 should throw exception: "invalid_text_representation"';
@@ -178,7 +178,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test10
-    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":5000,"precision":3,"nai":"@@000000013"}}}' :: jsonb :: hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":5000,"precision":3,"nai":"@@000000013"}}}', FALSE) f
     ;
 
     ASSERT FALSE, 'TEST10 should throw exception: "invalid_text_representation"';
@@ -193,7 +193,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test11
-    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":"some_string","nai":"@@000000013"}}}' :: jsonb :: hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":"some_string","nai":"@@000000013"}}}', FALSE) f
     ;
 
     ASSERT FALSE, 'TEST11 should throw exception: "invalid_text_representation"';
@@ -208,7 +208,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test12
-    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":3,"nai":"@@000000099"}}}' :: jsonb :: hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"5000","precision":3,"nai":"@@000000099"}}}', FALSE) f
     ;
 
     ASSERT FALSE, 'TEST12 should throw exception: "invalid_text_representation"';
@@ -223,7 +223,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test13
-    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"some_string","precision":3,"nai":"@@000000013"}}}' :: jsonb :: hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('{"type":"convert_operation","value":{"owner":"summon","requestid":1467592156,"amount":{"amount":"some_string","precision":3,"nai":"@@000000013"}}}', FALSE) f
     ;
 
     ASSERT FALSE, 'TEST13 should throw exception: "invalid_text_representation"';
@@ -238,7 +238,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test14
-    FROM hive.get_impacted_balances('{"type":"transfer_to_savings_operation","value":{"amount":{"amount":"1000","precision":3,"nai":"@@000000013"},"memo":""}}' :: jsonb :: hive.operation, FALSE) f
+    FROM hive.get_impacted_balances('{"type":"transfer_to_savings_operation","value":{"amount":{"amount":"1000","precision":3,"nai":"@@000000013"},"memo":""}}', FALSE) f
     ;
 
     ASSERT pattern14 = test14, 'Broken impacted balances result in TEST14';
