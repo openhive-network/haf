@@ -63,6 +63,11 @@ private:
 
   std::shared_ptr<full_block_type> get_head_block() const override;
 
+  void close(bool rewind = true) override
+  {
+    // Intentionally empty
+  }
+
   void open_block_log(const open_args& args) override
   {
     // Intentionally empty
