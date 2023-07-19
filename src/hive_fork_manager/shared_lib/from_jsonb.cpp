@@ -5,6 +5,8 @@
 #include <map>
 #include <string>
 
+namespace {
+
 template <typename Storage>
 void set_member(hive::protocol::fixed_string_impl<Storage>& member, const JsonbValue& json);
 void set_member(hive::protocol::json_string& member, const JsonbValue& json);
@@ -464,6 +466,8 @@ template <typename T>
 void fill_members(T& obj, const JsonbValue& json)
 {
   fc::reflector<T>::visit(member_from_jsonb_visitor(&obj, json));
+}
+
 }
 
 hive::protocol::operation operation_from_jsonb_value(const JsonbValue& json)
