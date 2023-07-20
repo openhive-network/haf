@@ -170,12 +170,27 @@ extern "C"
   {
     Jsonb *jb = PG_GETARG_JSONB_P(0);
 
-    JsonbValue json {};
-    JsonbToJsonbValue(jb, &json);
-    hive::protocol::operation op = operation_from_jsonb_value(json);
-    std::vector<char> data = fc::raw::pack_to_vector(op);
+    try
+    {
+      JsonbValue json {};
+      JsonbToJsonbValue(jb, &json);
+      hive::protocol::operation op = operation_from_jsonb_value(json);
+      std::vector<char> data = fc::raw::pack_to_vector(op);
 
-    PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
+      PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
+    }
+    catch( const fc::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
+    }
+    catch( const std::exception& e )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "%s", e.what() ) ) );
+    }
+    catch( ... )
+    {
+      ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "Unexpected error during jsonb to operation conversion occurred" ) ) );
+    }
   }
 
   PG_FUNCTION_INFO_V1( operation_from_jsontext );
