@@ -66,7 +66,7 @@ uint64_t numeric_to_uint64(Datum num)
   else
   {
     // We can just use Postgres' numeric_int8 as it will not overflow
-    return static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, NumericGetDatum(num))));
+    return static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, num)));
   }
 }
 
