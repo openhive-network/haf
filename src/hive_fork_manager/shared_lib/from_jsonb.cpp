@@ -472,22 +472,9 @@ void fill_members(T& obj, const JsonbValue& json)
 
 hive::protocol::operation operation_from_jsonb_value(const JsonbValue& json)
 {
-  try
   {
     hive::protocol::operation op;
     set_member(op, json);
     return op;
-  }
-  catch( const fc::exception& e )
-  {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
-  }
-  catch( const std::exception& e )
-  {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "%s", e.what() ) ) );
-  }
-  catch( ... )
-  {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "Unexpected error during jsonb to operation conversion occurred" ) ) );
   }
 }
