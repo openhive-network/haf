@@ -58,7 +58,8 @@ public:
 private:
   
   
-  void migrate_irreversible_state(uint32_t old_last_irreversible) override{myASSERT(1, "STOP mtlk");}
+  //void migrate_irreversible_state(uint32_t old_last_irreversible) override{myASSERT(1, "STOP mtlk");}
+
   
 
   std::shared_ptr<full_block_type> get_head_block() const override;
@@ -72,6 +73,17 @@ private:
   {
     // Intentionally empty
   } 
+
+
+  void append_to_block_log(const std::shared_ptr<full_block_type>& full_block) override
+  {
+    // Intentionally empty
+  }
+
+  void flush_block_log() override
+  {
+    // Intentionally empty
+  }
 
 };
 
