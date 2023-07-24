@@ -68,7 +68,7 @@ postgres_procedure_exists() {
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ${test_path};
 evaluate_result $?
 
-users="haf_admin_procedure haf_admin"
+users="haf_admin_procedure haf_admin test_hived alice bob"
 tests="given when error then"
 
 # mtlk this was working without surrounding block
