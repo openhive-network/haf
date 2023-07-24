@@ -34,6 +34,7 @@ namespace hive::plugins::sql_serializer {
         , uint32_t psql_account_operations_threads_number
         , uint32_t psql_index_threshold
         , uint32_t psql_livesync_threshold
+        , uint32_t psql_first_block
       );
       ~indexation_state() = default;
       indexation_state& operator=( indexation_state& ) = delete;
@@ -41,19 +42,11 @@ namespace hive::plugins::sql_serializer {
       indexation_state& operator=( indexation_state&& ) = delete;
       indexation_state( indexation_state&& ) = delete;
 
-      /* functions which change state of syncing
-       * Syncing state-transition table:
-       * START is starting state
-       *          | on_pre_reindex  | on_post_reindex | on_end_of_syncing | on first block |
-       * START    | REINDEX or LIVE | -               |       LIVE        |  P2P or LIVE   |
-       * P2P      |     REINDEX     | -               |       LIVE        | -              |
-       * REINDEX  | -               |       P2P       |       LIVE        | -              |
-       * LIVE     | -               | -               | -                 | -              |
-       */
       void on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t number_of_blocks_to_add );
       void on_post_reindex( cached_data_t& cached_data, uint32_t last_block_num, uint32_t _stop_replay_at );
       void on_end_of_syncing( cached_data_t& cached_data, int last_block_num );
-      void on_first_block();
+      void on_first_block( int last_block_num );
+      void on_block( int last_block_num );
 
       // call when fork occurs, block_num -> first abanoned block
       void on_switch_fork( cached_data_t& cached_data, uint32_t block_num );
@@ -61,8 +54,19 @@ namespace hive::plugins::sql_serializer {
       // trying triggers flushing data to databes, cahed data ma by modified (shrinked) or not
       void trigger_data_flush( cached_data_t& cached_data, int last_block_num );
 
+      // is current state allow to collect blocks
+      bool collect_blocks() const;
+
     private:
-      enum class INDEXATION{ START, P2P, REINDEX, LIVE };
+      static constexpr uint32_t COLLECT_BLOCKS_MASK = 0xA0;
+      enum class INDEXATION : uint32_t {
+           START=0x00
+         , WAIT=0x01
+         , REINDEX_WAIT=0x02
+         , REINDEX=0xA0
+         , P2P=0xA1
+         , LIVE=0xA2
+      };
       static constexpr auto UNKNOWN = std::numeric_limits< uint32_t >::max();
       void update_state( INDEXATION state, cached_data_t& cached_data, uint32_t last_block_num, uint32_t number_of_blocks_to_add = UNKNOWN );
 
@@ -81,6 +85,7 @@ namespace hive::plugins::sql_serializer {
       const uint32_t _psql_operations_threads_number;
       const uint32_t _psql_account_operations_threads_number;
       const uint32_t _psql_livesync_threshold;
+      const uint32_t _psql_first_block;
 
       boost::signals2::connection _on_irreversible_block_conn;
       INDEXATION _state{ INDEXATION::P2P };

@@ -205,6 +205,7 @@ public:
     , uint32_t _psql_account_operations_threads_number
     , uint32_t _psql_index_threshold
     , uint32_t _psql_livesync_threshold
+    , uint32_t _psql_first_block
     , bool     _psql_enable_filter
   )
   : _indexation_state( _main_plugin, _chain_db, url, app,
@@ -212,7 +213,8 @@ public:
                           _psql_operations_threads_number,
                           _psql_account_operations_threads_number,
                           _psql_index_threshold,
-                          _psql_livesync_threshold
+                          _psql_livesync_threshold,
+                          _psql_first_block
                           ),
       db_url{url},
       chain_db{_chain_db},
@@ -221,6 +223,7 @@ public:
       psql_transactions_threads_number( _psql_transactions_threads_number ),
       psql_operations_threads_number( _psql_operations_threads_number ),
       psql_account_operations_threads_number( _psql_account_operations_threads_number ),
+      psql_first_block( _psql_first_block ),
       filter( _psql_enable_filter, op_extractor )
   {
     HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
@@ -273,6 +276,7 @@ public:
   uint32_t psql_transactions_threads_number = 2;
   uint32_t psql_operations_threads_number = 5;
   uint32_t psql_account_operations_threads_number = 2;
+  uint32_t psql_first_block = 1u;
   bool     psql_dump_account_operations = true;
   uint32_t head_block_number = 0;
 
@@ -374,6 +378,7 @@ public:
   }
 
   bool skip_reversible_block(uint32_t block);
+  bool can_collect_blocks(uint32_t block_num);
 };
 
 void sql_serializer_plugin_impl::inform_hfm_about_starting() {
@@ -393,6 +398,7 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
 
 void sql_serializer_plugin_impl::connect_signals()
 {
+  // data collection
   _on_pre_apply_operation_con = chain_db.add_pre_apply_operation_handler([&](const operation_notification& note) { on_pre_apply_operation(note); }, main_plugin);
   _pre_apply_operation_blocker = std::make_unique< boost::signals2::shared_connection_block >( _on_pre_apply_operation_con );
 
@@ -427,12 +433,15 @@ void sql_serializer_plugin_impl::disconnect_signals()
 
 void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& note)
 {
+  _indexation_state.on_block( note.block_num );
+  if ( !can_collect_blocks(note.block_num) )
+    return;
+
   ilog("Entering a resync data init for block: ${b}...", ("b", note.block_num));
 
-  /// Let's init our database before applying first block (resync case)...
+  /// Let's init our database before applying first block (resync case)...:
   inform_hfm_about_starting();
-  init_database(note.block_num == 1, note.block_num);
-  _indexation_state.on_first_block();
+  init_database(note.block_num == psql_first_block, note.block_num);
 
   /// And disconnect to avoid subsequent inits
   if(__on_pre_apply_block_con_initialization.connected())
@@ -472,7 +481,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   if(!is_effective_operation(note.op))
     return;
 
-  if(skip_reversible_block(note.block))
+  if(!can_collect_blocks(note.block))
     return;
 
   hive::util::supplement_operation(note.op, chain_db);
@@ -538,7 +547,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
 
 void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& note)
 {
-  if(skip_reversible_block(note.block_num))
+  if(!can_collect_blocks(note.block_num))
     return;
 
   handle_transactions(note.full_block->get_full_transactions(), note.block_num);
@@ -651,13 +660,6 @@ void sql_serializer_plugin_impl::handle_transactions(const vector<std::shared_pt
 void sql_serializer_plugin_impl::on_pre_reindex(const reindex_notification& note)
 {
   ilog("Entering a reindex init...");
-  /// Let's init our database before applying first block...
-  inform_hfm_about_starting();
-  init_database(note.force_replay, note.max_block_number);
-
-  /// Disconnect pre-apply-block handler to avoid another initialization (for resync case).
-  if(__on_pre_apply_block_con_initialization.connected())
-    chain::util::disconnect_signal(__on_pre_apply_block_con_initialization);
 
   if ( note.args.stop_replay_at ) {
     _indexation_state.on_pre_reindex( *currently_caching_data, _last_block_num, ( note.args.stop_replay_at - _last_block_num ) );
@@ -703,6 +705,10 @@ bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
   return false;
 }
 
+bool sql_serializer_plugin_impl::can_collect_blocks(uint32_t block_num) {
+  return _indexation_state.collect_blocks() && !skip_reversible_block(block_num);
+}
+
 void sql_serializer_plugin_impl::collect_account_operations(
     int64_t operation_id
   , const hive::protocol::operation& op
@@ -732,6 +738,7 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
                     ("psql-track-operations", boost::program_options::value< std::vector<std::string> >()->composing(), "Defines operations' types to track. Can be specified multiple times.")
                     ("psql-track-body-operations", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "For a type of operation it's defined a regex that filters body of operation and decides if it's excluded. Can be specified multiple times. A complex regex can cause slowdown or processing can be even abandoned due to complexity.")
                     ("psql-enable-filter", appbase::bpo::value<bool>()->default_value( true ), "enable filtering accounts and operations")
+                    ("psql-first-block", appbase::bpo::value<uint32_t>()->default_value( 1u ), "first synced block")
                     ;
 }
 
@@ -741,6 +748,12 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
   FC_ASSERT(options.count("psql-url"), "`psql-url` is required argument");
 
   auto& db = get_app().get_plugin<hive::plugins::chain::chain_plugin>().db();
+
+  FC_ASSERT(
+      options["psql-first-block"].as<uint32_t>() > 0u
+    , "psql-first-block option value ${v} is less than 1"
+    , ("v", options["psql-first-block"].as<uint32_t>() )
+  );
 
   FC_ASSERT( is_database_correct( options["psql-url"].as<fc::string>(), options["psql-force-open-inconsistent"].as<bool>(), get_app() )
               , "SQL database is in invalid state"
@@ -756,6 +769,7 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , options["psql-account-operations-threads-number"].as<uint32_t>()
     , options["psql-index-threshold"].as<uint32_t>()
     , options["psql-livesync-threshold"].as<uint32_t>()
+    , options["psql-first-block"].as<uint32_t>()
     , options["psql-enable-filter"].as<bool>()
   );
 

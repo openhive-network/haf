@@ -2,6 +2,7 @@
 
 #include <hive/plugins/sql_serializer/cached_data.h>
 #include <hive/plugins/sql_serializer/sql_serializer_plugin.hpp>
+#include <hive/plugins/sql_serializer/fake_data_dumper.h>
 #include <hive/plugins/sql_serializer/livesync_data_dumper.h>
 #include <hive/plugins/sql_serializer/reindex_data_dumper.h>
 
@@ -61,6 +62,11 @@ class indexation_state::flush_trigger {
 public:
   virtual ~flush_trigger() = default;
   virtual void flush( cached_data_t& cached_data, int32_t last_block_num, int32_t irreversible_block_num ) = 0;
+};
+
+class fake_flush_trigger : public indexation_state::flush_trigger {
+public:
+  void flush( cached_data_t& cached_data, int32_t last_block_num, int32_t irreversible_block_num ) override {}
 };
 
 class reindex_flush_trigger : public indexation_state::flush_trigger {
@@ -135,6 +141,7 @@ indexation_state::indexation_state(
   , uint32_t psql_account_operations_threads_number
   , uint32_t psql_index_threshold
   , uint32_t psql_livesync_threshold
+  , uint32_t psql_first_block
 )
   : _main_plugin( main_plugin )
   , _chain_db( chain_db )
@@ -144,9 +151,11 @@ indexation_state::indexation_state(
   , _psql_operations_threads_number( psql_operations_threads_number )
   , _psql_account_operations_threads_number( psql_account_operations_threads_number )
   , _psql_livesync_threshold( psql_livesync_threshold )
+  , _psql_first_block( psql_first_block )
   , _irreversible_block_num( NO_IRREVERSIBLE_BLOCK )
   , _indexes_controler( db_url, psql_index_threshold, app )
 {
+  FC_ASSERT( _psql_first_block >= 1, "psql-first-block=${v} < 1", ("v", _psql_first_block) );
   cached_data_t empty_data{0};
   update_state( INDEXATION::START, empty_data, 0 );
 
@@ -158,61 +167,102 @@ indexation_state::indexation_state(
 
 void
 indexation_state::on_pre_reindex( cached_data_t& cached_data, int last_block_num, uint32_t number_of_blocks_to_add ) {
-  if ( _state != INDEXATION::START ) {
-    // on_end_of_syncing may already change the state to live
-    return;
+  switch ( _state ) {
+    case INDEXATION::P2P:
+    case INDEXATION::LIVE:
+    case INDEXATION::WAIT:
+    case INDEXATION::REINDEX:
+    case INDEXATION::REINDEX_WAIT:
+    case INDEXATION::START:
+      if ( can_move_to_livesync() ) {
+        update_state( INDEXATION::WAIT, cached_data, 0 );
+        return;
+      }
+      update_state( INDEXATION::REINDEX_WAIT, cached_data, last_block_num, number_of_blocks_to_add );
   }
-
-  if ( can_move_to_livesync() ) {
-    cached_data_t empty_cache{0};
-    update_state( INDEXATION::LIVE, empty_cache, 0 );
-    return;
-  }
-
-  update_state( INDEXATION::REINDEX, cached_data, last_block_num, number_of_blocks_to_add );
 }
 
 void
 indexation_state::on_post_reindex( cached_data_t& cached_data, uint32_t last_block_num, uint32_t _stop_replay_at ) {
-  if ( _state != INDEXATION::REINDEX ) {
-    // on_end_of_syncing may already change the state
-    return;
-  }
+  auto end_of_syncing = [this, _stop_replay_at, last_block_num, &cached_data]{
+    if ( !_stop_replay_at )
+      return false;
 
-  // when option stop-replay-at is used then we finish synchronization when limit block is reached
-  if ( _stop_replay_at && _stop_replay_at == last_block_num ) {
+    if ( _stop_replay_at != last_block_num )
+      return false;
+
     force_trigger_flush_with_all_data( cached_data, last_block_num );
     _trigger.reset();
     _dumper.reset();
     _indexes_controler.enable_indexes();
     _indexes_controler.enable_constrains();
-    return;
-  }
+    return true;
+  };
 
-  update_state( INDEXATION::P2P, cached_data, last_block_num, UNKNOWN );
+  switch ( _state ) {
+    case INDEXATION::START:
+    case INDEXATION::P2P:
+    case INDEXATION::LIVE:
+    case INDEXATION::WAIT:
+      return;
+    case INDEXATION::REINDEX:
+      if ( end_of_syncing() )
+        return;
+
+      update_state( INDEXATION::P2P, cached_data, last_block_num, UNKNOWN );
+      return;
+    case INDEXATION::REINDEX_WAIT:
+      if ( end_of_syncing() )
+        return;
+
+      update_state( INDEXATION::WAIT, cached_data, last_block_num, UNKNOWN );
+      return;
+  }
 }
 
 void
 indexation_state::on_end_of_syncing( cached_data_t& cached_data, int last_block_num ) {
-  if ( _state == INDEXATION::LIVE ) {
+  if ( _state == INDEXATION::LIVE || _state == INDEXATION::WAIT ) {
     return;
   }
   update_state( INDEXATION::LIVE, cached_data, last_block_num, UNKNOWN );
 }
 
 void
-indexation_state::on_first_block() {
-  if ( _state != INDEXATION::START ) {
-    // end_of_syncing may already change the state
-    return;
-  }
+indexation_state::on_first_block( int last_block_num ) {
   cached_data_t empty_cache{0};
-  if ( can_move_to_livesync() ) {
-    update_state( INDEXATION::LIVE, empty_cache, 0 );
-    return;
+  switch( _state ) {
+    case INDEXATION::START:
+    case INDEXATION::WAIT:
+      if ( can_move_to_livesync() ) {
+        update_state( INDEXATION::LIVE, empty_cache, last_block_num );
+        return;
+      }
+      update_state( INDEXATION::P2P, empty_cache, last_block_num );
+      return;
+    case INDEXATION::REINDEX_WAIT:
+      update_state( INDEXATION::REINDEX, empty_cache, last_block_num );
+      return;
+    case INDEXATION::REINDEX:
+    case INDEXATION::P2P:
+    case INDEXATION::LIVE:
+      return;
+  }
+}
+
+void
+indexation_state::on_block( int last_block_num ) {
+  switch( _state ) {
+    case INDEXATION::START: {
+      cached_data_t empty_cache{0};
+      update_state( INDEXATION::WAIT, empty_cache, last_block_num );
+      break;
+      }
   }
 
-  update_state( INDEXATION::P2P, empty_cache, 0 );
+  if ( last_block_num >= _psql_first_block ) {
+    on_first_block( last_block_num );
+  }
 }
 
 bool
@@ -263,7 +313,7 @@ indexation_state::update_state(
       break;
     case INDEXATION::REINDEX:
       ilog("PROFILE: Entering REINDEX sync from start state, dropping constraints: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
-      FC_ASSERT( _state == INDEXATION::START, "Reindex always starts after START" );
+      FC_ASSERT( _state == INDEXATION::START || _state == INDEXATION::REINDEX_WAIT , "Reindex always starts after START or REINDEX_WAIT" );
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
@@ -317,6 +367,20 @@ indexation_state::update_state(
       ilog("PROFILE: Entered LIVE sync from start state: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       break;
       }
+   case INDEXATION::WAIT:
+      ilog( "Entered WAIT sync state" );
+      _trigger.reset();
+      _dumper.reset();
+      _trigger = std::make_shared< fake_flush_trigger >();
+      _dumper = std::make_shared< fake_data_dumper >();
+      break;
+    case INDEXATION::REINDEX_WAIT:
+      ilog( "Entered REINDEX_WAIT sync state" );
+      _trigger.reset();
+      _dumper.reset();
+      _trigger = std::make_shared< fake_flush_trigger >();
+      _dumper = std::make_shared< fake_data_dumper >();
+      break;
     default:
       FC_ASSERT( false, "Unknown INDEXATION state" );
   }
@@ -381,6 +445,11 @@ indexation_state::on_switch_fork( cached_data_t& cached_data, uint32_t block_num
   erase_items_greater_than_block( cached_data.applied_hardforks, block_num );
 
   ilog( "Cached reversible data removed" );
+}
+
+bool
+indexation_state::collect_blocks() const {
+  return static_cast< uint32_t >( _state ) & COLLECT_BLOCKS_MASK;
 }
 
 }}} // namespace hive{ namespace plugins{ namespace sql_serializer
