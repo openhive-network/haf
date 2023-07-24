@@ -73,7 +73,15 @@ SELECT t.num,
        t.transaction_merkle_root,
        t.extensions,
        t.witness_signature,
-       t.signing_key
+       t.signing_key,
+       t.hbd_interest_rate,
+       t.total_vesting_fund_hive,
+       t.total_vesting_shares,
+       t.total_reward_fund_hive,
+       t.virtual_supply,
+       t.current_supply,
+       t.current_hbd_supply,
+       t.dhf_interval_ledger
 FROM (
     SELECT hb.num,
         hb.hash,
@@ -83,7 +91,15 @@ FROM (
         hb.transaction_merkle_root,
         hb.extensions,
         hb.witness_signature,
-        hb.signing_key
+        hb.signing_key,
+        hb.hbd_interest_rate,
+        hb.total_vesting_fund_hive,
+        hb.total_vesting_shares,
+        hb.total_reward_fund_hive,
+        hb.virtual_supply,
+        hb.current_supply,
+        hb.current_hbd_supply,
+        hb.dhf_interval_ledger
     FROM hive.blocks hb
     UNION ALL
     SELECT hbr.num,
@@ -94,7 +110,15 @@ FROM (
         hbr.transaction_merkle_root,
         hbr.extensions,
         hbr.witness_signature,
-        hbr.signing_key
+        hbr.signing_key,
+        hbr.hbd_interest_rate,
+        hbr.total_vesting_fund_hive,
+        hbr.total_vesting_shares,
+        hbr.total_reward_fund_hive,
+        hbr.virtual_supply,
+        hbr.current_supply,
+        hbr.current_hbd_supply,
+        hbr.dhf_interval_ledger
     FROM hive.blocks_reversible hbr
     JOIN
     (
