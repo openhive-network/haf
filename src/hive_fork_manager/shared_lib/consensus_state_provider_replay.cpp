@@ -85,6 +85,12 @@ private:
     // Intentionally empty
   }
 
+  std::shared_ptr<full_block_type> get_block_log_head() const
+  {
+    // Intentionally empty - should not be used in migrate_irreversible_state, becuse active skip_block_log flag 
+  }
+  
+
 };
 
 
@@ -184,6 +190,8 @@ std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
     return fb_ptr;
   
 }
+
+
 
 
 bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int to)
