@@ -42,7 +42,7 @@ The sql_serializer extends hived with these new parameters:
 * **psql-livesync-threshold**[default: 100'000] limit of number of blocks required to sync to reach the network HEAD_BLOCK. After starting the HAF, if the number of blocks to sync is 
   greater than the limit, then synchronization process will move through massive sync states (reindex and p2p), otherwise it will imeddiatly moves to 'live' state what saves time to
   disable and enable indexes and foreigh keys. 
-
+* **psql-first-block**[default: 1] Allow to start collect information about blocks staring from a given block num. 
 ## Filter parameters
 * **psql-enable-filter**[default: true] enable filtering accounts and operations
 * **psql-track-account-range**[default: empty] defines a range of accounts to track as a json pair [\"from\",\"to\"] [from,to]. Can be specified multiple times.
