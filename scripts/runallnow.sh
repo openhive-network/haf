@@ -374,6 +374,12 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # mtlk TODO:
 
 
+
+# Odpal
+#     bool database::_push_block(const block_flow_control& block_ctrl)
+# zamiast apply_block
+
+
 # Dgpo
 # Wszystko  z konta
 # connection
@@ -1552,8 +1558,8 @@ fi
 # driver:
 # sudo rm -rf /home/hived/datadir/consensus_state_provider/ ; ../haf/scripts/runallnow.sh 2000000 driver_build_and_run 2> /home/hived/datadir/sbo.log 
 
-
-
+# hived sync:
+# (cd /home/haf_admin/.hived/blockchain && rm block_log.artifacts shared_memory.bin;  cp block_log_initial_copy block_log) && /home/haf_admin/build/hive/programs/hived/hived --replay
 
 : <<virtuals
 
@@ -1602,3 +1608,54 @@ get_head_block<-*load_state_initial_data
 open_block_log<-*initialize_state_independent_data
 
 virtuals
+
+
+
+: <<launch_hived__in_sync_mode
+
+
+# debug block number in gdb: full_block->get_block().num_from_id(full_block->get_block_id()),d
+
+
+launch.json
+  {
+            "name": "(gdb) DEBUG Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/haf_admin/debug_build/hive/programs/hived/hived",
+            "args": ["--replay"],
+            "preLaunchTask" : "clean_dot_hived",
+            "stopAtEntry": true,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+
+
+tasks.json
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "clean_dot_hived",
+            "type": "shell",
+            "command": "(cd /home/haf_admin/.hived/blockchain && rm block_log.artifacts shared_memory.bin;  cp block_log_initial_copy block_log)"
+        }
+    ]
+}        
+launch_hived__in_sync_mode
