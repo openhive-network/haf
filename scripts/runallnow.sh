@@ -1225,6 +1225,13 @@ then
 
     CMAKED=true
 
+elif [[ "$PWD" =~ testnet_build$ ]]
+then
+    echo building testnet_build
+    cmake  -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_HIVE_TESTNET=ON -DCMAKE_CXX_FLAGS="-O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # testnet_build
+
+    CMAKED=true
+
 
 elif [[ "$PWD" =~ build$ ]]
 then
@@ -1540,7 +1547,7 @@ fi
 
 
 # unit test:
-# sudo -n /etc/init.d/postgresql restart ; sudo rm -rf /home/hived/datadir/consensus_unit_test_storage_dir; clearterm; unbuffer  ../haf/scripts/runallnow.sh 5000000 rebuild ; ctest -R curr --output-on-failure 
+# sudo -n /etc/init.d/postgresql restart ; sudo rm -rf /home/hived/datadir/consensus_unit_test_storage_dir; clearterm; ../haf/scripts/runallnow.sh 5000000 rebuild ; ctest -R curr --output-on-failure 
 
 # driver:
 # sudo rm -rf /home/hived/datadir/consensus_state_provider/ ; ../haf/scripts/runallnow.sh 2000000 driver_build_and_run 2> /home/hived/datadir/sbo.log 
