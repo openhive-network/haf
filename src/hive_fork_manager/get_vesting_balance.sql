@@ -12,7 +12,7 @@ BEGIN
 
 	SELECT total_vesting_shares, total_vesting_fund_hive 
 	INTO __total_vesting_shares, __total_vesting_fund_hive
-	FROM hive.blocks WHERE num= _block_num;
+	FROM hive.blocks_view WHERE num= _block_num;
 	
     __hp := (_current_vesting_shares * __total_vesting_fund_hive) / NULLIF(__total_vesting_shares, 0);
 	
