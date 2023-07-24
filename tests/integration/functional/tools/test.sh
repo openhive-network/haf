@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -x
 
 extension_path=$1
 test_path=$2;
@@ -131,6 +132,7 @@ for testfun in ${tests}; do
 done
 
 if [ $counter -eq 0 ]; then
+    echo "No functions executed in test"
     evaluate_result false
 fi
 
