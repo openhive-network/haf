@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any, Tuple, Iterable
 from uuid import uuid4
@@ -23,10 +24,11 @@ class SQLNodesPreparer(NodesPreparer):
 
     def prepare(self, builder: networks.NetworksBuilder):
         for cnt, node in enumerate(builder.prepare_nodes):
-            self.sessions.append( self.database(f"postgresql:///haf_block_log-{cnt}") )
+            DB_URL = os.getenv("DB_URL")
+            self.sessions.append( self.database(f"{DB_URL}-{cnt}") )
 
             node.config.plugin.append('sql_serializer')
-            node.config.psql_url = str(self.db_name(cnt))
+            node.config.psql_url = str(self.db_url(cnt))
 
         for node in builder.nodes:
             node.config.log_logger = '{"name":"default","level":"debug","appender":"stderr,p2p"} '\
@@ -36,7 +38,7 @@ class SQLNodesPreparer(NodesPreparer):
                                     '{"name":"p2p","level":"debug","appender":"p2p"}'
 
 
-    def db_name(self, idx) -> Any:
+    def db_url(self, idx) -> Any:
         assert idx < len(self.sessions)
         return None if self.sessions[idx] is None else self.sessions[idx].get_bind().url
 
@@ -67,14 +69,9 @@ def database():
         tt.logger.info(f'Preparing database {url}')
         if database_exists(url):
             drop_database(url)
-        create_database(url)
+        create_database(url, template="haf_block_log")
 
         engine = sqlalchemy.create_engine(url, echo=False, poolclass=NullPool)
-        with engine.connect() as connection:
-            connection.execute('CREATE EXTENSION hive_fork_manager CASCADE;')
-
-        with engine.connect() as connection:
-            connection.execute('SET ROLE hived_group')
 
         Session = sessionmaker(bind=engine)
         session = Session()
@@ -214,6 +211,6 @@ def prepared_networks_and_database_1() -> Tuple[tt.ApiNode, Any, Any]:
         preparer = SQLNodesPreparer(database)
         preparer.prepare(builder)
 
-        return preparer.node(builder, 0), preparer.sessions[0], preparer.db_name(0)
+        return preparer.node(builder, 0), preparer.sessions[0], preparer.db_url(0)
 
     yield make_network

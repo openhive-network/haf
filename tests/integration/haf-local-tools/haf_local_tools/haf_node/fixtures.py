@@ -1,3 +1,4 @@
+import os
 from typing import Dict
 import pytest
 from pytest import StashKey, CollectReport
@@ -26,7 +27,8 @@ def haf_node(request):
     to remove the HAF database only in tests that have completed successfully.
     The implementation was taken from the documentation of the pytest module.
     """
-    haf_node =  HafNode(keep_database=True)
+    DB_URL = os.getenv("DB_URL")
+    haf_node =  HafNode(keep_database=True, database_url=DB_URL)
     drop_database_if_test_pass = True
     yield haf_node
     if drop_database_if_test_pass:

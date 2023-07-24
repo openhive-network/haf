@@ -39,6 +39,7 @@ print_help () {
 
     echo "  --haf-db-host=VALUE              Specify a PostgreSQL host location."
     echo "  --haf-db-port=NUMBER             Specify a PostgreSQL operating port."
+    echo "  --haf-db-url=URL                 Specify full url to PostgreSQL, possibly overriding previous settings"
     echo "  --haf-db-jobs=NUMBER             Specify how many processes are run during dump/restore."
     if [ ! -z "${SPECFIC_OPTIONS_HELP_TEXT}" ] 
     then
@@ -104,6 +105,9 @@ while [ $# -gt 0 ]; do
         ;;
     --haf-db-port=*)
         POSTGRES_PORT="${1#*=}"
+        ;;
+    --haf-db-url=*)
+        POSTGRES_URL="${1#*=}"
         ;;
     --haf-db-jobs=*)
         set_postgres_jobs_option $1

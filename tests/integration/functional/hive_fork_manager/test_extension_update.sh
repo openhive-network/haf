@@ -73,6 +73,7 @@ test_extension_update() {
     git -C $DIR add src/hive_fork_manager/hived_api.sql
     git -C $DIR commit -m "test"
     # rebuild haf
+    test -n "$HAF_DIR" && rm "$HAF_DIR"/* -rf
     $SETUP_DIR/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$DIR" --haf-binaries-dir="$HAF_DIR" extension.hive_fork_manager
     (cd $HAF_DIR; sudo ninja install)
     # run generator script

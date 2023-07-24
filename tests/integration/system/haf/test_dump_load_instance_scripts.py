@@ -57,7 +57,6 @@ class Test:
           (30,         40,                       41,                          30,         41),
           (30,         40,                       50,                          30,         50),
 
-
         ]
     )
     def test_dump_load_instance_scripts(self, prepared_networks_and_database_1, database, first_run : int, dump_exit_before_sync : int, dump_stop_replay_at_block : int, load_exit_before_sync : int, load_stop_replay_at_block : int, after_dump : int, after_load : int):
@@ -81,7 +80,7 @@ class Test:
         
 
     def run_node_with_db(self, prepared_networks_and_database_1, database, stop_at_block : int):
-        node, session, self.db_name = prepared_networks_and_database_1(database)
+        node, session, self.db_url = prepared_networks_and_database_1(database)
 
         self.hived_executable_path =paths_to_executables.get_path_of("hived")
 
@@ -105,7 +104,10 @@ class Test:
         --backup-dir={self.backup_dir} \
         --hived-executable-path={self.hived_executable_path} \
         --hived-data-dir={self.hived_data_dir} \
-        --haf-db-name={self.db_name.database} \
+        --haf-db-admin={self.db_url.username} \
+        --haf-db-host={self.db_url.host} \
+        --haf-db-port={self.db_url.port} \
+        --haf-db-name={self.db_url.database} \
         --override-existing-backup-dir \
         {additional_command_line}"
 
@@ -113,7 +115,7 @@ class Test:
         shell(command)
 
     def assert_dumped(self, at_block : int):
-        session = create_session(self.db_name)
+        session = create_session(self.db_url)
         assert query_count(session, 'blocks') == at_block
         session.close()
 
@@ -122,14 +124,17 @@ class Test:
         --backup-dir={self.backup_dir} \
         --hived-executable-path={self.hived_executable_path} \
         --hived-data-dir={self.hived_data_dir} \
-        --haf-db-name={self.db_name.database} \
+        --haf-db-admin={self.db_url.username} \
+        --haf-db-host={self.db_url.host} \
+        --haf-db-port={self.db_url.port} \
+        --haf-db-name={self.db_url.database} \
         {additional_command_line}"
 
         tt.logger.info(f"Attempting to execute command: `{command}'")
         shell(command)
 
     def assert_loaded(self, after_load : int):
-        session = create_session(self.db_name)
+        session = create_session(self.db_url)
         assert query_count(session, 'blocks') == after_load
         session.close()
 

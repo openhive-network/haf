@@ -21,7 +21,10 @@ print_help () {
     echo "  --ci_project_dir=NAME     "
     echo "  --build_root_dir=NAME     "
     echo "  --pattern_dir=NAME     "
-    echo "  --psql-url=NAME      "
+    echo "  --db-admin=NAME "
+    echo "  --db-name=NAME "
+    echo "  --host=POSTGRES_HOST "
+    echo "  --port=POSTGRES_PORT "
     echo "  --help                    Display this help screen and exit"
     echo
 }
@@ -29,6 +32,11 @@ print_help () {
 SETUP_DIR=""
 HAF_DIR=""
 DIR=""
+
+DB_ADMIN="haf_admin"
+DB_NAME="haf_block_log"
+POSTGRES_HOST="/var/run/postgresql"
+POSTGRES_PORT=5432
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -47,8 +55,17 @@ while [ $# -gt 0 ]; do
     --pattern_dir=*)
         PATTERNS_PATH="${1#*=}"
         ;;
-    --psql-url=*)
-        DB_URL="${1#*=}"
+    --db-admin=*)
+        DB_ADMIN="${1#*=}"
+        ;;
+    --db-name=*)
+        DB_NAME="${1#*=}"
+        ;;
+    --host=*)
+        POSTGRES_HOST="${1#*=}"
+        ;;
+    --port=*)
+        POSTGRES_PORT="${1#*=}"
         ;;
     --help)
         print_help
@@ -70,10 +87,6 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-POSTGRES_HOST="/var/run/postgresql"
-POSTGRES_PORT=5432
-DB_ADMIN="haf_admin"
-
 POSTGRES_ACCESS="--host $POSTGRES_HOST --port $POSTGRES_PORT"
 
 test_extension_update() {
@@ -86,7 +99,7 @@ test_extension_update() {
     POSTGRES_VERSION=14
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh 2>&1 | tee -i update.txt || true
     if grep -q "Table schema is inconsistent" update.txt; then
-        echo 
+        echo "Update test succeed"
     else
         echo "Update test failed"
         exit 1
