@@ -88,6 +88,7 @@ private:
   std::shared_ptr<full_block_type> get_block_log_head() const
   {
     // Intentionally empty - should not be used in migrate_irreversible_state, becuse active skip_block_log flag 
+    return {};
   }
   
 
