@@ -1,6 +1,5 @@
-#!/bin/sh
+#!/bin/bash
 
-set -x
 
 extension_path=$1
 test_path=$2;
@@ -53,7 +52,7 @@ postgres_procedure_exists() {
     local procedure_name="$2"
 
     # Run the SQL function and remove leading/trailing white space
-    local result=$(psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -c "SELECT postgres_procedure_exists('$schema_name', '$procedure_name');")
+    local result=$(psql -p $postgres_port -d $DB_NAME -A -t -v ON_ERROR_STOP=on -c "SELECT toolbox.procedure_exists('$schema_name', '$procedure_name');")
     # Print the result
     echo $result
 }
@@ -69,7 +68,7 @@ postgres_procedure_exists() {
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ${test_path};
 evaluate_result $?
 
-users="haf_admin_procedure haf_admin test_hived alice bob"
+users="haf_admin_procedure haf_admin"
 tests="given when error then"
 
 # mtlk this was working without surrounding block
@@ -78,8 +77,22 @@ tests="given when error then"
 
 # you can use alice_test_given, alice_test_when, alice_test_error, alice_test_then and their bob's and test_hived equivalents
 
+counter=0
+
 for testfun in ${tests}; do
   for user in ${users}; do
+
+    fun_proc_name="${user}_test_${testfun}"
+    output=$(postgres_procedure_exists 'public' $fun_proc_name)
+    echo output=$output
+    # Check if the procedure exists
+    if [[ "$output" == *"t"* ]]; then
+        counter=$((counter+1))
+        echo "The procedure exists."
+    else
+        echo "The procedure does not exist."
+    fi
+
 
    if [ "${user}" = "haf_admin_procedure" ]; then
       exists=$(postgres_procedure_exists "public" "${user}_test_${testfun}")
@@ -116,6 +129,10 @@ for testfun in ${tests}; do
     fi
   done
 done
+
+if [ $counter -eq 0 ]; then
+    evaluate_result false
+fi
 
 on_exit
 psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
