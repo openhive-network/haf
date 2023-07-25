@@ -472,9 +472,7 @@ void fill_members(T& obj, const JsonbValue& json)
 
 hive::protocol::operation operation_from_jsonb_value(const JsonbValue& json)
 {
-  {
-    hive::protocol::operation op;
-    set_member(op, json);
-    return op;
-  }
+  hive::protocol::operation op;
+  set_member(op, json);
+  return op;
 }
