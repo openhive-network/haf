@@ -20,8 +20,8 @@ BEGIN
 
     EXECUTE format( 'CREATE TABLE hive.%I(
                        account_id INTEGER
-                     , json_metadata TEXT
-                     , posting_json_metadata TEXT
+                     , json_metadata TEXT DEFAULT ''''
+                     , posting_json_metadata TEXT DEFAULT ''''
                    , PRIMARY KEY ( account_id )
                    )', __table_name);
     RETURN ARRAY[ __table_name ];
@@ -42,6 +42,7 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_metadata';
     __to_execute TEXT;
+    __to_execute_posting TEXT;
 BEGIN
     __context_id = hive.get_context_id( _context );
 
@@ -50,16 +51,48 @@ BEGIN
     END IF;
   __to_execute =  format('
         INSERT INTO
-            hive.%s_metadata
+            hive.%s_metadata(account_id, json_metadata)
         SELECT
             accounts_view.id,
-            json_metadata,
+            json_metadata
+        FROM
+            (
+                SELECT
+                    DISTINCT ON (metadata.account_name) metadata.account_name,
+                    metadata.json_metadata
+                FROM
+                    (
+                        SELECT 
+                            (hive.get_metadata(ov.body)).*,
+                            ov.id
+                        FROM 
+                            hive.%s_operations_view ov
+                        WHERE
+                            hive.is_metadata_operation(ov.body)
+                            AND ov.block_num BETWEEN %s AND %s
+                        ) as metadata
+                WHERE metadata.json_metadata != ''''
+                ORDER BY 
+                    metadata.account_name,
+                    metadata.id DESC
+            ) as t
+            JOIN hive.accounts_view accounts_view ON accounts_view.name = account_name 
+        ON CONFLICT (account_id) DO UPDATE
+        SET
+            json_metadata = EXCLUDED.json_metadata;'
+        , _context,  _context, _first_block, _last_block
+        );
+
+    __to_execute_posting =  format('       
+        INSERT INTO
+            hive.%s_metadata(account_id, posting_json_metadata)
+        SELECT
+            accounts_view.id,
             posting_json_metadata
         FROM
             (
                 SELECT
                     DISTINCT ON (metadata.account_name) metadata.account_name,
-                    metadata.json_metadata,
                     metadata.posting_json_metadata
                 FROM
                     (
@@ -72,6 +105,7 @@ BEGIN
                             hive.is_metadata_operation(ov.body_binary)
                             AND ov.block_num BETWEEN %s AND %s
                         ) as metadata
+                WHERE metadata.posting_json_metadata != ''''
                 ORDER BY 
                     metadata.account_name,
                     metadata.id DESC
@@ -79,12 +113,15 @@ BEGIN
             JOIN hive.accounts_view accounts_view ON accounts_view.name = account_name 
         ON CONFLICT (account_id) DO UPDATE
         SET
-            json_metadata = EXCLUDED.json_metadata,
-            posting_json_metadata = EXCLUDED.posting_json_metadata'
-        , _context, _context, _first_block, _last_block
+            posting_json_metadata = EXCLUDED.posting_json_metadata;'
+        , _context,  _context, _first_block, _last_block
         );
 
+
     EXECUTE __to_execute;
+    EXECUTE __to_execute_posting;
+
+
 END;
 $BODY$
 ;

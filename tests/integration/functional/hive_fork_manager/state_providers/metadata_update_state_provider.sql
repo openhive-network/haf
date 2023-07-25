@@ -28,6 +28,8 @@ BEGIN
          , (12, '\xBADDC0', '\xCAFEC0', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , (13, '\xBADDD0', '\xCAFED0', '2016-06-22 19:10:33-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , (14, '\xBADDD0', '\xCAFED0', '2016-06-22 19:10:33-09'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , (15, '\xBADDD0', '\xCAFED0', '2016-06-22 19:10:33-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , (16, '\xBADDD0', '\xCAFED0', '2016-06-22 19:10:33-09'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
      ;
 
     INSERT INTO hive.accounts( id, name, block_num )
@@ -74,6 +76,18 @@ BEGIN
 
         --empty json and posting metadata
         ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
+            {
+                "type": "account_update2_operation",
+                "value": {
+                    "account": "howo",
+                    "json_metadata": "{}",
+                    "posting_json_metadata": "\"\"",
+                    "extensions": []
+                }
+            }'
+        ),
+
+        ( 15, 15, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -169,9 +183,21 @@ BEGIN
                         ]
                     },
                     "memo_key": "STM84bJQnKmM7rMAbsFPXZpQTQi5rBscbpuXkJ6XuVYEundE2Q1yx",
-                    "json_metadata": ""
+                    "json_metadata": "{}"
                 }
             }'::jsonb::hive.operation),
+
+        ( 16, 16, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
+            {
+                "type": "account_update2_operation",
+                "value": {
+                    "account": "sloth.buzz",
+                    "json_metadata": "",
+                    "posting_json_metadata": "",
+                    "extensions": []
+                }
+            }'
+        ),
 
         -- json metadata equal to  ""
         ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
@@ -530,7 +556,7 @@ BEGIN
     PERFORM hive.app_state_provider_import( 'METADATA', 'context' );
     PERFORM hive.app_context_detach( 'context' );
 
-    UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 14;
+    UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 16;
 
 END;
 $BODY$
@@ -544,7 +570,7 @@ CREATE FUNCTION haf_admin_test_when()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.update_state_provider_metadata(1, 14, 'context');
+    PERFORM hive.update_state_provider_metadata(1, 16, 'context');
 END;
 $BODY$
 ;
@@ -558,11 +584,11 @@ AS
 $BODY$
 BEGIN
     PERFORM ASSERT_METADATA_VALUES(6 /*'test-safari'*/   , '','{"profile":{"name":"Leonardo Da VinciXX","about":"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..","website":"http://www.davincilife.com/","location":"Florence","cover_image":"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg","profile_image":"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg"}}');
-    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '', '');
+    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '""');
     PERFORM ASSERT_METADATA_VALUES(8 /*'bassman077'*/    , '{"maleficiaries":[{"name":"oracle-d","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"},{"name":"spk.beneficiary","label":"referrer","weight":300}]}', '');
     PERFORM ASSERT_METADATA_VALUES(9 /*'spscontest'*/    ,'','""');
     PERFORM ASSERT_METADATA_VALUES(10 /*'xenomorphosis'*/,'','{}');
-    PERFORM ASSERT_METADATA_VALUES(11 /*'sloth.buzz'*/   ,'','');
+    PERFORM ASSERT_METADATA_VALUES(11 /*'sloth.buzz'*/   ,'{}','');
     PERFORM ASSERT_METADATA_VALUES(12 /*'simple-app'*/   ,'""','');
     PERFORM ASSERT_METADATA_VALUES(13 /*'dorrebeca2'*/   ,'{}','');
     PERFORM ASSERT_METADATA_VALUES(14 /*'margemnlpz08'*/ ,'{"profile":{"about":"This account was instantly created via @hivewallet.app - available for iOS and Android!","website":"https://hivewallet.app"}}','');
