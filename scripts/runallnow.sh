@@ -20,7 +20,7 @@
 
 
 
-: <<END_COMMENT
+: <<'END_COMMENT'
  18,993,603
 2,325,194ms database.cpp:211              operator()           ] Attempting to rewind all undo state...
 2,325,194ms database.cpp:215              operator()           ] Rewind undo state done.
@@ -30,7 +30,7 @@
 END_COMMENT
 
 
-: <<END_LAUNCH_DBG_CONFIGURATION
+: <<'END_LAUNCH_DBG_CONFIGURATION'
        {
             "name": "(gdb) Launch",
             "type": "cppdbg",
@@ -205,7 +205,7 @@ connection to server was lost
 END_COMMENT
 
 
-: <<END_LOG_STEEMIT_10
+: <<'END_LOG_STEEMIT_10'
 
 NOTICE:  __consensus_state_provider_replay_call_ok=t
 NOTICE:  Accounts 15 richest=
@@ -533,7 +533,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 
-: <<NO_TRANS
+: <<'NO_TRANS'
 Stepping from 68,400,001 to 68,500,000 Blocks:100,000 Transactions:7,864,692 Operations:7,950,520 Postgres:0'56" Trans:0'1" All:1'58" Memory (KB): 25,065,240                              │.cache/               h
 Alltogether:994'0"                                                                                                                                                                         │ive_base_config/     .w
 real    994m1.184s                                                                                                                                                                         │get-hsts
@@ -1573,7 +1573,7 @@ fi
 # echo ok || echo notok
 
 
-: <<virtuals
+: <<'virtuals'
 
 Directly using _block_log on the left:
 
@@ -1623,7 +1623,7 @@ virtuals
 
 
 
-: <<launch_hived__in_sync_mode
+: <<'launch_hived__in_sync_mode'
 
 
 # debug block number in gdb: full_block->get_block().num_from_id(full_block->get_block_id()),d
