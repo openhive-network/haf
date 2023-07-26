@@ -69,12 +69,6 @@ private:
     // Intentionally empty
   }
 
-  void open_block_log(const open_args& args) override
-  {
-    // Intentionally empty
-  } 
-
-
   void append_to_block_log(const std::shared_ptr<full_block_type>& full_block) override
   {
     // Intentionally empty
@@ -85,12 +79,23 @@ private:
     // Intentionally empty
   }
 
-  std::shared_ptr<full_block_type> get_block_log_head() const
+  void migrate_irreversible_state(uint32_t old_last_irreversible)
   {
-    // Intentionally empty - should not be used in migrate_irreversible_state, becuse active skip_block_log flag 
-    return {};
+    migrate_irreversible_state_begin(old_last_irreversible);
+    migrate_irreversible_state_finish(old_last_irreversible);
   }
-  
+
+  void open( const open_args& args)
+  {
+    try
+    {
+      open_begin(args);
+
+      open_finish(args);
+
+    }
+    FC_CAPTURE_LOG_AND_RETHROW( (args.data_dir)(args.shared_mem_dir)(args.shared_file_size) )
+  }
 
 };
 
@@ -384,7 +389,7 @@ void postgres_block_log::apply_full_block(hive::chain::database& db, const std::
 {
   apply_full_block_time_probe.start();
 
-  db._push_block_simplified(fb_ptr, skip_flags);
+  FC_ASSERT(false);//db._push_block_simplified(fb_ptr, skip_flags);
 
   apply_full_block_time_probe.stop();
 }

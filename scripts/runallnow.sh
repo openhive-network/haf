@@ -1561,6 +1561,18 @@ fi
 # hived sync:
 # (cd /home/haf_admin/.hived/blockchain && rm block_log.artifacts shared_memory.bin;  cp block_log_initial_copy block_log) && /home/haf_admin/build/hive/programs/hived/hived --replay
 
+# hived tests:
+# cd /home/haf_admin/testnet_build
+# rm -rf *
+# rm -rf .*
+# cmake  -DCMAKE_BUILD_TYPE=Release   -DBUILD_HIVE_TESTNET=ON -GNinja ../haf
+# ninja get_dev_key cli_wallet hived chain_test && \
+# (cd ../haf/hive/tests/functional/python_tests/hf26_tests && pytest) || (exit $?) && \
+# # (cd ../haf/hive/tests/functional/python_tests/foundation_layer_tests && pytest) || (exit $?) && \
+# # ./hive/tests/unit/chain_test  --run_test=operation_tests || (exit $?) &&  \
+# echo ok || echo notok
+
+
 : <<virtuals
 
 Directly using _block_log on the left:
