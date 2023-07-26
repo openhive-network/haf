@@ -380,7 +380,7 @@ void postgres_block_log::apply_full_block(hive::chain::database& db, const std::
 {
   apply_full_block_time_probe.start();
 
-  FC_ASSERT(false);//db._push_block_simplified(fb_ptr, skip_flags);
+  db._push_block_simplified(fb_ptr, skip_flags);
 
   apply_full_block_time_probe.stop();
 }
