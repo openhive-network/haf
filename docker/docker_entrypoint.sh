@@ -126,7 +126,7 @@ cleanup () {
   [[ -z "$hived_pid" ]] || sudo -n kill -INT "$hived_pid"
 
   echo "Waiting for hived finish..."
-  [[ -z "$hived_pid" ]] || tail --pid="$hived_pid" -f /dev/null
+  [[ -z "$hived_pid" ]] || tail --pid="$hived_pid" -f /dev/null || true
   echo "Hived finish done."
 
   stop_postresql
