@@ -63,22 +63,22 @@ RUN \
 # Here we could use a smaller image without packages specific to build requirements
 FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG as base_instance
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu20.04-5}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu22.04-3}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
 
-ARG WS_PORT=8091
+ARG WS_PORT=8090
 ENV WS_PORT=${WS_PORT}
 
-ARG HTTP_PORT=8090
+ARG HTTP_PORT=8091
 ENV HTTP_PORT=${HTTP_PORT}
 
 # Environment variable which allows to override default postgres access specification in pg_hba.conf
 ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\nhost    all     pghero    172.0.0.0/8    trust"
 
-#variable defined to simplify image direct usage (without run_hived_img.sh script).
-ENV HIVED_UID=0
+# Always define default value of HIVED_UID variable to make possible direct spawn of docker image (without run_hived_img.sh wrapper)
+ENV HIVED_UID=1000
 
 SHELL ["/bin/bash", "-c"]
 
@@ -112,7 +112,8 @@ COPY --chown=postgres:postgres ./docker/pg_hba.conf /etc/postgresql/$POSTGRES_VE
 VOLUME [ "/home/hived/datadir", "/home/hived/shm_dir" ]
 
 ENV DATADIR=/home/hived/datadir
-ENV SHM_DIR=/home/hived/shm_dir
+# Use default location (inside datadir) of shm file. If SHM should be placed on some different device, then set it to mapped volume `/home/hived/shm_dir` and map it in docker run
+ENV SHM_DIR=${DATADIR}/blockchain
 
 STOPSIGNAL SIGINT
 
