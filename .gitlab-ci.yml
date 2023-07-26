@@ -453,7 +453,7 @@ start_haf_as_service:
     HAF_POSTGRES_URL: postgresql://haf_app_admin@haf-instance:5432/haf_block_log
     HIVED_UID: $HIVED_UID
   script:
-    - curl -I haf-instance:8090 || (echo "error connecting to service hived-instance" && false)
+    - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
     - |
         curl -XPOST -d '{
         "jsonrpc": "2.0",
@@ -461,7 +461,7 @@ start_haf_as_service:
         "params": {
         },
         "id": 2
-        }' haf-instance:8090
+        }' haf-instance:8091
   after_script:
     - rm docker_entrypoint.log -f
     - cp $DATA_CACHE_HAF/datadir/$CI_JOB_NAME.log $CI_PROJECT_DIR/docker_entrypoint.log
