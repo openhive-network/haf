@@ -38,12 +38,15 @@ class HafNode(PreconfiguredNode):
         network: NetworkHandle | None = None,
         database_url: str = DEFAULT_DATABASE_URL,
         keep_database: bool = False,
+        create_unique_database: bool = True,
         handle: NodeHandle | None = None,
     ) -> None:
         super().__init__(name=name, network=network, handle=handle)
-        self.__database_url: str = self.__create_unique_url(database_url)
+        self.__database_url: str = self.__create_unique_url(database_url) if create_unique_database else database_url
         self.__session: Session | None = None
         self.__keep_database: bool = keep_database
+        self.create_unique_database: bool = create_unique_database
+
         self.config.plugin.append("sql_serializer")
 
         self.config.log_appender = '{"appender":"stderr","stream":"std_error"}'
@@ -67,10 +70,12 @@ class HafNode(PreconfiguredNode):
 
     def __make_database(self) -> None:
         self.config.psql_url = self.__database_url
-        self._logger.info(f"Preparing database {self.__database_url}")
-        if database_exists(self.__database_url):
-            drop_database(self.__database_url)
-        create_database(self.__database_url, template="haf_block_log")
+
+        if self.create_unique_database:
+            self._logger.info(f"Preparing database {self.__database_url}")
+            if database_exists(self.__database_url):
+                drop_database(self.__database_url)
+            create_database(self.__database_url, template="haf_block_log")
 
         engine = sqlalchemy.create_engine(self.__database_url, echo=False, poolclass=NullPool, isolation_level="AUTOCOMMIT")
         session = sessionmaker(bind=engine)

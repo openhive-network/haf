@@ -23,12 +23,15 @@ class HafNodeHandle(RunnableNodeHandle):
         network: Optional[Network] = None,
         database_url: str = HafNode.DEFAULT_DATABASE_URL,
         keep_database: bool = False,
+        create_unique_database: bool = True,
+
     ) -> None:
         super().__init__(
             implementation=HafNode(
                 network=get_implementation(network),
                 database_url=database_url,
                 keep_database=keep_database,
+                create_unique_database=create_unique_database,
                 handle=self,
             )
         )
