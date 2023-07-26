@@ -257,8 +257,9 @@ applications_system_tests:
       artifacts: true
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
+    PATTERNS_PATH: "" #Should be overriden in derived jobs
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
-    BLOCK_LOG_DIRECTORY: "/blockchain"
+    RO_BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
     DB_NAME: haf_block_log
     DB_URL: "postgresql:///$DB_NAME"
     DB_ADMIN: "haf_admin"
@@ -274,10 +275,9 @@ applications_system_tests:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):replay[collapsed=true]\r\e[0KExecuting replay..."
       test -n "$PATTERNS_PATH"
+      mkdir -vp "${PATTERNS_PATH}/blockchain"
+      cp "${RO_BLOCK_LOG_DIRECTORY}/block_log" "${PATTERNS_PATH}/blockchain/"
       cd $CI_PROJECT_DIR/tests/integration/replay
-      mkdir $PATTERNS_PATH/blockchain
-      ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
-      $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
       $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs.log
       echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
   script:
