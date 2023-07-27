@@ -72,17 +72,17 @@ private:
   
   void migrate_irreversible_state(uint32_t old_last_irreversible)
   {
-    migrate_irreversible_state_begin(old_last_irreversible);
-    migrate_irreversible_state_finish(old_last_irreversible);
+    migrate_irreversible_state_check(old_last_irreversible);
+    migrate_irreversible_state_perform(old_last_irreversible);
   }
 
   void open( const open_args& args)
   {
     try
     {
-      open_begin(args);
+      open_state_independent(args);
 
-      open_finish(args);
+      open_state_dependent(args);
 
     }
     FC_CAPTURE_LOG_AND_RETHROW( (args.data_dir)(args.shared_mem_dir)(args.shared_file_size) )
