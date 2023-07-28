@@ -31,10 +31,10 @@ BEGIN
     INSERT INTO hive.transactions (block_num, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature) VALUES
                                   (6, 0, '\x4bf285b77aa9efc2d29d82b4a545dde0ef68a9fe',	25501	, 4211555470, 	'2016-03-24T16:30:45', '\x204ffd40d4feefdf309780a62058e7944b6833595c500603f3bb66ddbbca2ea661391196a97aa7dde53fdcca8aeb31f8c63aee4f47a20238f3749d9f4cb77f03f5');
                                                                                                                     
-    INSERT INTO hive.operations (id, block_num, trx_in_block, op_pos, op_type_id, "timestamp", body) VALUES
-                                (28817,	6,	0,	0,	2,	'2016-03-25 13:49:03', '{"type":"transfer_operation","value":{"from":"initminer","to":"miners","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"mtlk_transaction"}}');
-    INSERT INTO hive.operations (id, block_num, trx_in_block, op_pos, op_type_id, "timestamp", body) VALUES
-                                (28818,	6,	-1,	1,	64,	'2016-03-25 13:49:06', '{"type":"producer_reward_operation","value":{"producer":"emily","vesting_shares":{"amount":"1000","precision":3,"nai":"@@000000021"}}}');
+    INSERT INTO hive.operations (id, block_num, trx_in_block, op_pos, op_type_id, "timestamp", body_binary) VALUES
+                                (28817,	6,	0,	0,	2,	'2016-03-25 13:49:03', '{"type":"transfer_operation","value":{"from":"initminer","to":"miners","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"mtlk_transaction"}}':: jsonb :: hive.operation);
+    INSERT INTO hive.operations (id, block_num, trx_in_block, op_pos, op_type_id, "timestamp", body_binary) VALUES
+                                (28818,	6,	-1,	1,	64,	'2016-03-25 13:49:06', '{"type":"producer_reward_operation","value":{"producer":"emily","vesting_shares":{"amount":"1000","precision":3,"nai":"@@000000021"}}}':: jsonb :: hive.operation);
 
     INSERT INTO  hive.accounts  (id, name, block_num) VALUES 
                                 (0	,'miners',	1),

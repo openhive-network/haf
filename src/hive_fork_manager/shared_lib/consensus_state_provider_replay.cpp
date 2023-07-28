@@ -323,7 +323,7 @@ void postgres_block_log::get_postgres_data(int from, int to, const char* postgre
     transactions = db.execute_query(transactions_query);
     std::cout << "Transactions:" << transactions.size() << " ";
 
-    auto operations_query = "SELECT block_num, body, body::bytea as bin_body, trx_in_block FROM hive.operations WHERE block_num >= " 
+    auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations WHERE block_num >= " 
                                 + std::to_string(from) 
                                 + " and block_num <= " 
                                 + std::to_string(to) 

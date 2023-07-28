@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+
 
 extension_path=$1
 test_path=$2;
@@ -16,8 +16,6 @@ trap on_exit EXIT;
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
 evaluate_result $?
 
-users="haf_admin test_hived alice bob"
-tests="given when error then"
 
 
 # Default storage path
@@ -124,10 +122,10 @@ for testfun in ${tests}; do
     fi
 
     if [ "${testfun}" = "error" ]; then
-      psql ${pg_call} "${query}";
+      psql ${pg_call} "${sql_code_error}";
       evaluate_error_result $?
     else
-      psql ${pg_call} "${query}";
+      psql ${pg_call} "${sql_code_no_error}";
       evaluate_result $?
     fi
   done
