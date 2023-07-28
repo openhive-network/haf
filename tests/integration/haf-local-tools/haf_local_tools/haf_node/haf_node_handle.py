@@ -6,7 +6,7 @@ from typing import cast, Optional, TYPE_CHECKING, Union
 
 from haf_local_tools.haf_node._haf_node import HafNode
 from test_tools.__private.user_handles.get_implementation import get_implementation
-from test_tools.__private.user_handles.handles.node_handles.node_handle_base import NodeHandleBase
+from test_tools.__private.user_handles.handles.node_handles.runnable_node_handle import RunnableNodeHandle
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from test_tools.__private.user_handles.handles.network_handle import NetworkHandle as Network
 
 
-class HafNodeHandle(NodeHandleBase):
+class HafNodeHandle(RunnableNodeHandle):
     def __init__(
         self,
         network: Optional[Network] = None,
