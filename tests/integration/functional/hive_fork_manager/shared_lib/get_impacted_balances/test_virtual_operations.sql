@@ -94,7 +94,7 @@ FROM hive.get_impacted_balances('{"type":"fill_transfer_from_savings_operation",
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
 INTO _test6
-FROM hive.get_impacted_balances('{"type":"proposal_pay_operation","value":{"proposal_id":0,"receiver":"steem.dao","payer":"steem.dao","payment":{"amount":"157","precision":3,"nai":"@@000000013"},"trx_id":"0000000000000000000000000000000000000000","op_in_trx":40683}}' :: jsonb :: hive.operation, FALSE) f
+FROM hive.get_impacted_balances('{"type":"proposal_pay_operation","value":{"proposal_id":0,"receiver":"steem.dao","payer":"steem.dao","payment":{"amount":"157","precision":3,"nai":"@@000000013"}}}' :: jsonb :: hive.operation, FALSE) f
 ;
 
 SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
