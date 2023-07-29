@@ -196,14 +196,14 @@ haf_system_tests_mirrornet:
     DB_NAME: haf_block_log
   script:
     # copy block_log
-    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests -r
+    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/
     # install hive_fork_manager extension built in previous stage
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-database-store="$CI_PROJECT_DIR/haf_database_store" --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager_mirrornet/build"
     # setup template database
     - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
-    - pytest --junitxml report.xml --timeout=3600 --block-log-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log_5m_mirrornet/block_log --snapshot-path=$SNAPSHOTS_PATH/5m_mirrornet/snapshot -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
+    - pytest --junitxml report.xml --timeout=3600 --block-log-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --snapshot-path=$SNAPSHOTS_PATH/5m_mirrornet/snapshot -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
 
   artifacts:
     paths:
