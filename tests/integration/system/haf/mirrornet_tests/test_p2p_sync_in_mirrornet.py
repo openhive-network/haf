@@ -1,3 +1,4 @@
+import os
 import pytest
 
 import test_tools as tt
@@ -24,12 +25,13 @@ from haf_local_tools.system.haf.mirrornet.constants import (
     ids=["enabled_indexes", "disabled_indexes_in_p2p_sync"],
 )
 def test_p2p_sync(
-    mirrornet_witness_node, haf_node, block_log_5m_path, tmp_path, psql_index_threshold
+    mirrornet_witness_node, haf_node, block_log_5m, tmp_path, psql_index_threshold
 ):
     haf_node.config.psql_index_threshold = psql_index_threshold
 
-    block_log_5m = tt.BlockLog(block_log_5m_path)
-    block_log_1m = block_log_5m.truncate(tmp_path, 1000000)
+    truncated_block_log_dir = tmp_path/"output-block-log-directory"
+    os.mkdir(truncated_block_log_dir)
+    block_log_1m = block_log_5m.truncate(truncated_block_log_dir, 1000000)
 
     mirrornet_witness_node.run(
         replay_from=block_log_1m,

@@ -1,3 +1,4 @@
+import os
 import pytest
 
 import test_tools as tt
@@ -17,6 +18,15 @@ def pytest_addoption(parser):
 @pytest.fixture
 def block_log_5m_path(request):
     return request.config.getoption("--block-log-path")
+
+
+@pytest.fixture(scope="function")
+def block_log_5m(block_log_5m_path, tmp_path):
+    read_only_block_log = tt.BlockLog(block_log_5m_path)
+    copied_block_log_dir = tmp_path/"input-block-log-directory"
+    os.mkdir(copied_block_log_dir)
+    copied_block_log = read_only_block_log.copy_to(copied_block_log_dir/"block_log", artifacts="excluded")
+    return copied_block_log
 
 
 @pytest.fixture

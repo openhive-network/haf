@@ -26,12 +26,12 @@ from haf_local_tools.system.haf.mirrornet.constants import (
         "disabled_indexes_in_replay",
     ],
 )
-def test_replay(witness_node_with_haf, block_log_5m_path, psql_index_threshold):
+def test_replay(witness_node_with_haf, block_log_5m, psql_index_threshold):
 
     witness_node_with_haf.config.psql_index_threshold = psql_index_threshold
 
     witness_node_with_haf.run(
-        replay_from=block_log_5m_path,
+        replay_from=block_log_5m.path,
         time_offset=TIMESTAMP_5M,
         wait_for_live=True,
         timeout=3600,
