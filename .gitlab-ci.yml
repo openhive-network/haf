@@ -195,8 +195,14 @@ haf_system_tests_mirrornet:
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_mirrornet/build/hive"
     DB_NAME: haf_block_log
   script:
-    # copy block_log
-    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/
+    # copy block_log to tmp location
+    - mkdir $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
+    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
+    # copy block_log and generate new artifacts with compress_block_log util
+    - cd $CI_PROJECT_DIR/hived_mirrornet/build/hive/programs/util/
+    - time ./compress_block_log --input-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log -o $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests --decompress
+    # drop tmp location
+    - rm -r $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
     # install hive_fork_manager extension built in previous stage
     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=haf_admin --haf-database-store="$CI_PROJECT_DIR/haf_database_store" --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager_mirrornet/build"
     # setup template database
