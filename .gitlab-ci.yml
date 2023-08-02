@@ -195,8 +195,11 @@ haf_system_tests_mirrornet:
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived_mirrornet/build/hive"
     DB_NAME: haf_block_log
   script:
-    # copy block_log to tmp location
     - mkdir $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
+    # This cp and call to compress_block_log is to keep backcompatibility with pipelines on master branch (where still 1.27.X line is present until next HF will apply),
+    # where nodes does not support new format of block_log.artifacts file;
+    # Issue: https://gitlab.syncad.com/hive/haf/-/issues/151
+    # copy block_log to tmp location
     - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
     # copy block_log and generate new artifacts with compress_block_log util
     - cd $CI_PROJECT_DIR/hived_mirrornet/build/hive/programs/util/
