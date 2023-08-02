@@ -29,9 +29,9 @@ namespace PsqlTools::PsqlUtils {
     }
 
     DefineCustomStringVariable(
-        ( m_prefix + "." + _name ).c_str()
-      , _shortDescription.c_str()
-      , _longDescription.c_str()
+        ( m_prefix + "." + _name ).c_str() // strdup made by psql
+      , strdup( _shortDescription.c_str() )
+      , strdup( _longDescription.c_str() )
       , std::get<char**>(newOption)
       , _defaultValue.c_str()
       , GucContext::PGC_SUSET
@@ -63,9 +63,9 @@ namespace PsqlTools::PsqlUtils {
     }
 
     DefineCustomIntVariable(
-      ( m_prefix + "." + _name ).c_str()
-      , _shortDescription.c_str()
-      , _longDescription.c_str()
+      ( m_prefix + "." + _name ).c_str() // strdup made by psql
+      , strdup( _shortDescription.c_str() )
+      , strdup( _longDescription.c_str() )
       , &std::get< PositiveInt* >( newOption )->m_value
       , static_cast< int >( _defaultValue )
       , 0
@@ -92,9 +92,9 @@ namespace PsqlTools::PsqlUtils {
     }
 
     DefineCustomIntVariable(
-        ( m_prefix + "." + _name ).c_str()
-      , _shortDescription.c_str()
-      , _longDescription.c_str()
+        ( m_prefix + "." + _name ).c_str() // strdup made by psql
+      , strdup( _shortDescription.c_str() )
+      , strdup( _longDescription.c_str() )
       , std::get< int* >( newOption )
       , _defaultValue
       , std::numeric_limits< int >::min()
@@ -122,9 +122,9 @@ namespace PsqlTools::PsqlUtils {
     }
 
     DefineCustomBoolVariable(
-        ( m_prefix + "." + _name ).c_str()
-      , _shortDescription.c_str()
-      , _longDescription.c_str()
+        ( m_prefix + "." + _name ).c_str() // strdup made by psql
+      , strdup( _shortDescription.c_str() )
+      , strdup( _longDescription.c_str() )
       , std::get< bool* >( newOption )
       , _defaultValue
       , GucContext::PGC_SUSET
