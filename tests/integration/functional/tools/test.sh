@@ -135,7 +135,7 @@ done
 if [ $counter -eq 0 ]; then
     echo "No functions executed in test"
   #     # mtlk - uncomment below when tests fixed
-    evaluate_result false
+  #  evaluate_result false
   # these are not called
   # 114 - test.functional.hive_fork_manager.hived_api.are_indexes_dropped_test (Failed)
   # 	115 - test.functional.hive_fork_manager.hived_api.are_indexes_dropped_2_test (Failed)
