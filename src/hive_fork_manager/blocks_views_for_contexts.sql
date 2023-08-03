@@ -254,7 +254,8 @@ EXECUTE format(
             t.op_pos,
             t.op_type_id,
             t.timestamp,
-            t.body_binary
+            t.body_binary,
+            t.body_binary::jsonb AS body
           FROM hive.%s_context_data_view c,
           LATERAL
           (
@@ -311,7 +312,8 @@ EXECUTE format(
             ho.op_pos,
             ho.op_type_id,
             ho.timestamp,
-            ho.body_binary
+            ho.body_binary,
+            ho.body_binary::jsonb AS body
         FROM hive.operations ho
         ;', _context_name
     );
