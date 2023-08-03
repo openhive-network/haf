@@ -89,16 +89,17 @@ for testfun in ${tests}; do
     # Check if the procedure exists
     if [[ "$output" == *"t"* ]]; then
         counter=$((counter+1))
-        echo "The procedure exists."
+        # echo "The procedure exists."
     else
-        echo "The procedure does not exist."
+      :
+       # echo "The procedure does not exist."
     fi
 
 
    if [ "${user}" = "haf_admin_procedure" ]; then
       exists=$(postgres_procedure_exists "public" "${user}_test_${testfun}")
       if [ "$exists" = "t" ]; then
-          echo "Procedure exists"
+          # echo "Procedure exists"
           sql_code_no_error="CALL ${user}_test_${testfun}();";
       else
           continue;
@@ -134,7 +135,7 @@ done
 if [ $counter -eq 0 ]; then
     echo "No functions executed in test"
   #     # mtlk - uncomment below when tests fixed
-   # evaluate_result false
+    evaluate_result false
   # these are not called
   # 114 - test.functional.hive_fork_manager.hived_api.are_indexes_dropped_test (Failed)
   # 	115 - test.functional.hive_fork_manager.hived_api.are_indexes_dropped_2_test (Failed)
