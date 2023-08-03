@@ -430,6 +430,84 @@ prepare_haf_data:
     - data-cache-storage
   resource_group: ${CI_COMMIT_SHA}
 
+network_per_build_test_job1:
+  image: ubuntu
+  stage: build_and_test_phase_1
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: "/certs"
+    FF_NETWORK_PER_BUILD: 1
+  services:
+    - name: registry.gitlab.syncad.com/hive/common-ci-configuration/docker-dind:27bf7a315f3cacdf45336501112e6ac414d39006
+      alias: docker
+  script:
+    - apt update
+    - apt install -y iproute2 iputils-ping
+    - ip add
+    - timeout 120 ping $IP || true
+    - timeout 120 ping docker || true
+  tags:
+    - data-cache-storage
+  when: manual
+
+network_per_build_test_job2:
+  image: ubuntu
+  stage: build_and_test_phase_1
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: "/certs"
+    FF_NETWORK_PER_BUILD: 1
+  services:
+    - name: registry.gitlab.syncad.com/hive/common-ci-configuration/docker-dind:27bf7a315f3cacdf45336501112e6ac414d39006
+      alias: docker
+  script:
+    - apt update
+    - apt install -y iproute2 iputils-ping
+    - ip add
+    - timeout 120 ping $IP || true
+    - timeout 120 ping docker || true
+  tags:
+    - data-cache-storage
+  when: manual
+
+network_per_build_test_job3:
+  image: ubuntu
+  stage: build_and_test_phase_1
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: "/certs"
+  services:
+    - name: registry.gitlab.syncad.com/hive/common-ci-configuration/docker-dind:27bf7a315f3cacdf45336501112e6ac414d39006
+      alias: docker
+  script:
+    - apt update
+    - apt install -y iproute2 iputils-ping
+    - ip add
+    - timeout 120 ping $IP || true
+    - timeout 120 ping docker || true
+  tags:
+    - data-cache-storage
+  when: manual
+
+network_per_build_test_job4:
+  image: ubuntu
+  stage: build_and_test_phase_1
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: "/certs"
+  services:
+    - name: registry.gitlab.syncad.com/hive/common-ci-configuration/docker-dind:27bf7a315f3cacdf45336501112e6ac414d39006
+      alias: docker
+  script:
+    - apt update
+    - apt install -y iproute2 iputils-ping
+    - ip add
+    - timeout 120 ping $IP || true
+    - timeout 120 ping docker || true
+  tags:
+    - data-cache-storage
+  when: manual
+
 .haf-service: &haf-service
   name: $HAF_IMAGE_NAME
   alias: haf-instance

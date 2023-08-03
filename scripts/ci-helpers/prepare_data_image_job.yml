@@ -40,7 +40,12 @@ include:
   script:
     - id
     - ls -lath /cache
-    - ls $DATA_CACHE_HAF_COMMIT -lath || true
+    - ls $DATA_CACHE_HAF_COMMIT -lath || echo fail
+    - ls -lath /cache/replay_data_haf_7ee36b5b1bb0e5170c483670d5ae197046587fd4/datadir || echo fail
+    - rm /cache/replay_data_haf_7ee36b5b1bb0e5170c483670d5ae197046587fd4/datadir -rfv || echo fail
+    - ls -lathR /cache/replay_data_haf_7ee36b5b1bb0e5170c483670d5ae197046587fd4 || echo fail
+    - ls -lath /cache/replay_data_haf_7ee36b5b1bb0e5170c483670d5ae197046587fd4/datadir || echo fail
+    - ls -lath /cache/replay_data_haf_7ee36b5b1bb0e5170c483670d5ae197046587fd4/datadir/haf_db_store || echo fail
     - mkdir "$DATA_CACHE_HAF_COMMIT" -p
     - flock "$DATA_CACHE_HAF_COMMIT" $SCRIPTS_PATH/ci-helpers/build_data.sh $HAF_IMAGE_NAME
         --data-cache="$DATA_CACHE_HAF_COMMIT" --block-log-source-dir="$BLOCK_LOG_SOURCE_DIR" --config-ini-source="$CONFIG_INI_SOURCE"
