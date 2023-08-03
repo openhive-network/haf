@@ -45,6 +45,7 @@ BEGIN
     ;
 
     INSERT INTO hive.operations
+      (id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body_binary)
     VALUES
           ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
         , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
@@ -113,17 +114,17 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_operations_view' ), 'No context operations view';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.context_operations_view
+        SELECT o.id, o.block_num, o.trx_in_block, o.op_pos, o.op_type_id, o.timestamp, o.body_binary, o.body FROM hive.context_operations_view o
         EXCEPT SELECT * FROM ( VALUES
-              ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
-            , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
-            , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hive.operation )
-            , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation )
-            , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hive.operation )
-            , ( 6, 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hive.operation )
-            , ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive.operation )
-            , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive.operation )
-            , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive.operation )
+              ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}'::jsonb )
+            , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}'::jsonb )
+            , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}'::jsonb )
+            , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}'::jsonb )
+            , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}'::jsonb )
+            , ( 6, 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}'::jsonb )
+            , ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}'::jsonb )
+            , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}'::jsonb )
+            , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}'::jsonb )
         ) as pattern
     ) , 'Unexpected rows in the view';
 
@@ -140,7 +141,7 @@ BEGIN
             , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive.operation )
             , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive.operation )
         ) as pattern
-        EXCEPT SELECT * FROM hive.context_operations_view
+        EXCEPT SELECT o.id, o.block_num, o.trx_in_block, o.op_pos, o.op_type_id, o.timestamp, o.body_binary FROM hive.context_operations_view o
     ) , 'Unexpected rows in the view2';
 END;
 $BODY$
