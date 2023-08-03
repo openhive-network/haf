@@ -824,4 +824,68 @@ const char* fix_pxx_hex(const pqxx::field& h)
   return h.c_str() + backslash_x_prefix_length; 
 }
 
+
+namespace{
+ std::unordered_map <std::string,  std::unique_ptr<hive::chain::database>> chain_databases;
+}
+
+
+
+auto& get_database(csp_session_type* csp_session)
+{
+    return *csp_session->db;
+}
+
+collected_account_balances_t extract_account_balances(
+    const hive::chain::account_object* account)
+{
+  collected_account_balances_t account_balances;
+  account_balances.account_name = account->get_name();
+  account_balances.balance = account->balance.amount.value;
+  account_balances.hbd_balance = account->hbd_balance.amount.value;
+  account_balances.vesting_shares = account->vesting_shares.amount.value;
+  account_balances.savings_hbd_balance = account->savings_hbd_balance.amount.value;
+  account_balances.reward_hbd_balance = account->reward_hbd_balance.amount.value;
+
+  return account_balances;
+}
+
+collected_account_balances_collection_t collect_current_account_balances(csp_session_type* csp_session,
+                                                                         const std::vector<std::string>& account_names)
+{
+  auto& db = get_database(csp_session);
+
+  collected_account_balances_collection_t collected_balances;
+
+  for( auto& a : account_names )
+  {
+    auto acct = db.find< hive::chain::account_object, hive::chain::by_name >( a );
+    if( acct != nullptr )
+    {
+      collected_balances.emplace_back(extract_account_balances(acct));
+    }
+  }
+
+  return collected_balances;
+}
+
+collected_account_balances_collection_t collect_current_all_accounts_balances(csp_session_type* csp_session)
+{
+
+  auto& db = get_database(csp_session);
+
+  collected_account_balances_collection_t collected_balances;
+
+  auto& idx = db.get_index< hive::chain::account_index, hive::chain::by_name >();
+  auto itr = idx.lower_bound( "" );
+  //auto filter = &filter_default< hive::chain::account_object >;
+  auto end = idx.end();
+
+  while( itr != end )
+  {
+    collected_balances.emplace_back(extract_account_balances(&(*itr)));
+    ++itr;
+  }
+  return collected_balances;
+}
 }  // namespace consensus_state_provider
