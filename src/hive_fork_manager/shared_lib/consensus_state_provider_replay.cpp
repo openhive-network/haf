@@ -64,29 +64,8 @@ private:
 
   std::shared_ptr<full_block_type> get_head_block() const override;
 
-  void close(bool rewind = true) override
-  {
-    // Intentionally empty
-  }
-
   
-  void migrate_irreversible_state(uint32_t old_last_irreversible)
-  {
-    migrate_irreversible_state_check(old_last_irreversible);
-    migrate_irreversible_state_perform(old_last_irreversible);
-  }
 
-  void open( const open_args& args)
-  {
-    try
-    {
-      open_state_independent(args);
-
-      open_state_dependent(args);
-
-    }
-    FC_CAPTURE_LOG_AND_RETHROW( (args.data_dir)(args.shared_mem_dir)(args.shared_file_size) )
-  }
 
 };
 
