@@ -5,6 +5,8 @@
 #include "svstream.hpp"
 
 #include <psql_utils/postgres_includes.hpp>
+#include <psql_utils/error_reporting.h>
+
 #include <hive/protocol/operations.hpp>
 
 #include <fc/exception/exception.hpp>
@@ -45,67 +47,21 @@ fc::variant op_to_variant_impl( const char* raw_data, uint32 data_length )
 
 std::string op_to_json( const char* raw_data, uint32 data_length )
 {
-  try
-  {
-    return fc::json::to_string( op_to_variant_impl( raw_data, data_length ) );
-  }
-  catch( const fc::exception& e )
-  {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
-    return {};
-  }
-  catch( ... )
-  {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "Unexpected binary to text conversion occurred" ) ) );
-    return {};
-  }
+  return fc::json::to_string( op_to_variant_impl( raw_data, data_length ) );
 }
 
 std::vector< char > json_to_op( const char* raw_data )
 {
-  try
-  {
-    if( *raw_data == '\0' )
-      return {};
-
-    auto bufstream = fc::buffered_istream( fc::make_svstream( raw_data ) );
-    fc::variant v = fc::json::from_stream( bufstream );
-
-    hive::protocol::operation op;
-    fc::from_variant( v, op );
-
-    return fc::raw::pack_to_vector( op );
-  }
-  catch( const fc::exception& e )
-  {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
+  if( *raw_data == '\0' )
     return {};
-  }
-  catch( ... )
-  {
-    ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "Unexpected text to binary conversion occurred" ) ) );
-    return {};
-  }
-}
 
-void validate_raw_data( const char* raw_data, size_t data_length )
-{
-    try
-    {
-      raw_to_operation( raw_data, data_length );
-    }
-    catch( const fc::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
-    }
-    catch( const std::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "%s", e.what() ) ) );
-    }
-    catch( ... )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_INVALID_BINARY_REPRESENTATION ), errmsg( "Unexpected binary to operation conversion occurred" ) ) );
-    }
+  auto bufstream = fc::buffered_istream( fc::make_svstream( raw_data ) );
+  fc::variant v = fc::json::from_stream( bufstream );
+
+  hive::protocol::operation op;
+  fc::from_variant( v, op );
+
+  return fc::raw::pack_to_vector( op );
 }
 
 } // namespace
@@ -141,56 +97,29 @@ extern "C"
     uint32 data_length = VARSIZE_ANY_EXHDR( op );
     const char* raw_data = VARDATA_ANY( op );
 
-    try
-    {
+    Jsonb* jsonb = nullptr;
+    PsqlTools::PsqlUtils::call_cxx([=, &jsonb](){
       const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
-      JsonbValue* jsonb = operation_to_jsonb_value(operation);
-
-      PG_RETURN_POINTER(JsonbValueToJsonb(jsonb));
-    }
-    catch( const fc::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.to_string().c_str() ) ) );
-      return {};
-    }
-    catch( const std::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", e.what() ) ) );
-      return {};
-    }
-    catch( ... )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "Could not convert operation to jsonb" ) ) );
-      return {};
-    }
+      JsonbValue* jsonbValue = operation_to_jsonb_value(operation);
+      jsonb = JsonbValueToJsonb(jsonbValue);
+    });
+    PG_RETURN_POINTER(jsonb);
   }
 
   PG_FUNCTION_INFO_V1( operation_from_jsonb );
   Datum operation_from_jsonb( PG_FUNCTION_ARGS )
   {
     Jsonb *jb = PG_GETARG_JSONB_P(0);
-
-    try
-    {
+    _operation* op = nullptr;
+    PsqlTools::PsqlUtils::call_cxx([=, &op](){
       JsonbValue json {};
       JsonbToJsonbValue(jb, &json);
-      hive::protocol::operation op = operation_from_jsonb_value(json);
-      std::vector<char> data = fc::raw::pack_to_vector(op);
-
-      PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
-    }
-    catch( const fc::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "%s", e.to_string().c_str() ) ) );
-    }
-    catch( const std::exception& e )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "%s", e.what() ) ) );
-    }
-    catch( ... )
-    {
-      ereport( ERROR, ( errcode( ERRCODE_INVALID_TEXT_REPRESENTATION ), errmsg( "Unexpected error during jsonb to operation conversion occurred" ) ) );
-    }
+      hive::protocol::operation operation = operation_from_jsonb_value(json);
+      operation_from_jsonb_value(json);
+      std::vector<char> data = fc::raw::pack_to_vector(operation);
+      op = make_operation( data.data(), data.size() );
+    });
+    PG_RETURN_HIVE_OPERATION( op );
   }
 
   PG_FUNCTION_INFO_V1( operation_from_jsontext );
@@ -198,9 +127,13 @@ extern "C"
   {
     const text* str = PG_GETARG_TEXT_P( 0 );
 
-    std::vector< char > data = json_to_op( text_to_cstring( str ) );
+    _operation* op = nullptr;
+    PsqlTools::PsqlUtils::call_cxx([=, &op](){
+      std::vector< char > data = json_to_op( text_to_cstring( str ) );
+      op = make_operation( data.data(), data.size() );
+    });
 
-    PG_RETURN_HIVE_OPERATION( make_operation( data.data(), data.size() ) );
+    PG_RETURN_HIVE_OPERATION( op );
   }
 
   PG_FUNCTION_INFO_V1( operation_to_jsontext );
@@ -210,11 +143,13 @@ extern "C"
     uint32 data_length   = VARSIZE_ANY_EXHDR( op );
     const char* raw_data = VARDATA_ANY( op );
 
-    std::string json = op_to_json( raw_data, data_length );
-    uint32 json_size = json.size() + 1;
-    char* chars       = (char*) palloc( json_size );
-
-    const char* cstring_out = (const char*) memcpy( chars, json.c_str(), json_size );
+    const char* cstring_out = nullptr;
+    PsqlTools::PsqlUtils::call_cxx([=, &cstring_out](){
+      std::string json = op_to_json( raw_data, data_length );
+      uint32 json_size = json.size() + 1;
+      char* chars      = (char*) palloc( json_size );
+      cstring_out = (const char*) memcpy( chars, json.c_str(), json_size );
+    });
     PG_RETURN_TEXT_P(cstring_to_text(cstring_out));
   }
 
@@ -224,7 +159,9 @@ extern "C"
     const char* data = PG_GETARG_CSTRING( 0 );
 
     Datum bytes = DirectFunctionCall1(byteain, CStringGetDatum(data));
-    validate_raw_data(VARDATA_ANY( bytes ), VARSIZE_ANY_EXHDR( bytes ));
+    PsqlTools::PsqlUtils::call_cxx([=](){
+      raw_to_operation( VARDATA_ANY( bytes ), VARSIZE_ANY_EXHDR( bytes ) );
+    });
 
     PG_RETURN_HIVE_OPERATION( make_operation( VARDATA_ANY( bytes ), VARSIZE_ANY_EXHDR( bytes ) ) );
   }
