@@ -7,7 +7,6 @@ AS
 $BODY$
 BEGIN
 
-    raise warning 'mtlk ---- %', toolbox.get_consensus_storage_path();
     INSERT INTO hive.operation_types
     VALUES
           ( 1, 'hive::protocol::account_create_operation', FALSE )
