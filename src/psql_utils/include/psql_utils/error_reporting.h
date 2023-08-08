@@ -29,26 +29,23 @@ namespace PsqlTools::PsqlUtils {
    * This function is a safe way to invoke lambda with C++ code from Postgres code.
    * This catches any exception thrown by called lambda and translates them into Postgres errors using ereport call.
    * This also catches any Postgres errors raised from lambda unguarded by PG_TRY,PG_CATCH.
+   * If any result is needed to be returned from c++, it should be captured and modified inside lambda.
    */
-  template <typename F, typename RetType = std::invoke_result_t<F>>
-  auto call_cxx(F f) -> RetType
+  template <typename F>
+  void call_cxx(F f)
   {
     // We want lambda to contain only trivial captures, so that it's safe to be `longjmp`ed over.
     // We could use is_trivial_v, but in C++17 compilers disagree whether type of lambda is trivial or not. The standard explicitly says it's implementation defined.
     // So instead we use is_trivially_destructible_v. All of clang,gcc,msvc agree that type of a lambda is trivially destructible if all its captures are.
     static_assert(std::is_trivially_destructible_v<F>);
-    // We also require the lambda return type to be trivial. It most likely be a pointer anyway.
-    static_assert(std::is_trivial_v<std::invoke_result_t<F>>);
     // volatile to silence 'might be clobbered by ‘longjmp’ or ‘vfork’' warning
-    volatile RetType ret;
     const char* volatile error_message = nullptr;
     volatile MemoryContext oldcontext = CurrentMemoryContext;
     PG_TRY();
     {
       try
       {
-        // PG_TRY cannot contain return statement, so store it in a temporary and return after PG_END_TRY.
-        ret = f();
+        f();
       }
       catch (const PsqlTools::PsqlUtils::PostgresException& e)
       {
@@ -83,7 +80,6 @@ namespace PsqlTools::PsqlUtils {
     PG_END_TRY();
     if ( error_message )
       ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", error_message) ) );
-    return ret;
   }
 
 } // namespace PsqlTools::PsqlUtils
