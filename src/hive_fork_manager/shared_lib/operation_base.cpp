@@ -102,7 +102,7 @@ extern "C"
       const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
       JsonbValue* jsonbValue = operation_to_jsonb_value(operation);
       jsonb = JsonbValueToJsonb(jsonbValue);
-    });
+    }, ERRCODE_DATA_EXCEPTION);
     PG_RETURN_POINTER(jsonb);
   }
 
@@ -118,7 +118,7 @@ extern "C"
       operation_from_jsonb_value(json);
       std::vector<char> data = fc::raw::pack_to_vector(operation);
       op = make_operation( data.data(), data.size() );
-    });
+    }, ERRCODE_INVALID_TEXT_REPRESENTATION);
     PG_RETURN_HIVE_OPERATION( op );
   }
 
@@ -131,7 +131,7 @@ extern "C"
     PsqlTools::PsqlUtils::call_cxx([=, &op](){
       std::vector< char > data = json_to_op( text_to_cstring( str ) );
       op = make_operation( data.data(), data.size() );
-    });
+    }, ERRCODE_INVALID_TEXT_REPRESENTATION);
 
     PG_RETURN_HIVE_OPERATION( op );
   }
@@ -149,7 +149,7 @@ extern "C"
       uint32 json_size = json.size() + 1;
       char* chars      = (char*) palloc( json_size );
       cstring_out = (const char*) memcpy( chars, json.c_str(), json_size );
-    });
+    }, ERRCODE_INVALID_BINARY_REPRESENTATION);
     PG_RETURN_TEXT_P(cstring_to_text(cstring_out));
   }
 
@@ -161,7 +161,7 @@ extern "C"
     Datum bytes = DirectFunctionCall1(byteain, CStringGetDatum(data));
     PsqlTools::PsqlUtils::call_cxx([=](){
       raw_to_operation( VARDATA_ANY( bytes ), VARSIZE_ANY_EXHDR( bytes ) );
-    });
+    }, ERRCODE_INVALID_BINARY_REPRESENTATION);
 
     PG_RETURN_HIVE_OPERATION( make_operation( VARDATA_ANY( bytes ), VARSIZE_ANY_EXHDR( bytes ) ) );
   }
