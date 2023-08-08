@@ -32,7 +32,7 @@ namespace PsqlTools::PsqlUtils {
    * If any result is needed to be returned from c++, it should be captured and modified inside lambda.
    */
   template <typename F>
-  void call_cxx(F f)
+  void call_cxx(F f, int errorcode=ERRCODE_DATA_EXCEPTION)
   {
     // We want lambda to contain only trivial captures, so that it's safe to be `longjmp`ed over.
     // We could use is_trivial_v, but in C++17 compilers disagree whether type of lambda is trivial or not. The standard explicitly says it's implementation defined.
@@ -79,7 +79,7 @@ namespace PsqlTools::PsqlUtils {
     }
     PG_END_TRY();
     if ( error_message )
-      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", error_message) ) );
+      ereport( ERROR, ( errcode( errorcode ), errmsg( "%s", error_message) ) );
   }
 
 } // namespace PsqlTools::PsqlUtils
