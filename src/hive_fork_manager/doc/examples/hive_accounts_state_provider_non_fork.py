@@ -7,17 +7,17 @@ APPLICATION_CONTEXT = "accounts_ctx"
 
 def create_db_engine(db_name, pg_port):
     return sqlalchemy.create_engine(
-                "postgresql://alice:test@localhost:{}/psql_tools_test_db".format(pg_port), # this is only example of db
-                isolation_level="READ COMMITTED",
-                pool_size=1,
-                pool_recycle=3600,
-                echo=False)
+        "postgresql://alice:test@localhost:{}/{}".format(pg_port, db_name), # this is only example of db
+        isolation_level="READ COMMITTED",
+        pool_size=1,
+        pool_recycle=3600,
+        echo=False)
 
 def prepare_application_data( db_connection ):
         # create a new context only if it not already exists
         exist = db_connection.execute( "SELECT hive.app_context_exists( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone();
         if exist[ 0 ] == False:
-            db_connection.execute( "SELECT hive.app_create_context( '{}' )".format( APPLICATION_CONTEXT ) )
+            db_connection.execute( "SELECT hive.app_create_context( '{}', FALSE )".format( APPLICATION_CONTEXT ) )
 
         # import accounts state provider
         db_connection.execute( "SELECT hive.app_state_provider_import( 'ACCOUNTS', '{}' )".format( APPLICATION_CONTEXT ) );

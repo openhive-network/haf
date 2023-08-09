@@ -11,8 +11,10 @@ def test_example( example_path, db_name, pg_port ):
     application.expect( "Blocks range \(3, 6\)" )
     application.expect( "Blocks range \(4, 6\)" )
     application.expect( "Blocks range \(5, 6\)" )
-    application.expect( "Blocks range \(6, 6\)" )
-    application.expect( "Blocks range \(None, None\)" )
+    application.expect( "Blocks range \(6, 6\)\r\n" )
+    # no more irreversible blocks, (None, None) must be returned
+    last_expected_line =  application.readline()
+    assert last_expected_line == b'Blocks range (None, None)\r\n', f"Unexpected message {last_expected_line}"
     application.kill( 0 )
 
 if __name__ == '__main__':

@@ -24,7 +24,7 @@ def prepare_application_data( db_connection ):
         # create a new context only if it not already exists
         exist = db_connection.execute( "SELECT hive.app_context_exists( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone();
         if exist[ 0 ] == False:
-            db_connection.execute( "SELECT hive.app_create_context( '{}' )".format( APPLICATION_CONTEXT ) )
+            db_connection.execute( "SELECT hive.app_create_context( '{}', TRUE )".format( APPLICATION_CONTEXT ) )
 
         # create and register a table
         db_connection.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE )
