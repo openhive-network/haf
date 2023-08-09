@@ -2,6 +2,8 @@
 
 #include "psql_utils/postgres_includes.hpp"
 
+#include "fc/exception/exception.hpp"
+
 #include <string>
 #include <stdexcept>
 
