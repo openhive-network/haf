@@ -523,7 +523,7 @@ bash_tests:
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
-    BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
+    RO_BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
     DB_NAME: haf_block_log
     DB_URL: "postgresql:///$DB_NAME"
     DB_ADMIN: "haf_admin"
@@ -535,10 +535,10 @@ bash_tests:
     - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
     # replay
     - test -n "$PATTERNS_PATH"
+    - mkdir -vp "${PATTERNS_PATH}/blockchain"
+    - cp "${RO_BLOCK_LOG_DIRECTORY}/block_log" "${PATTERNS_PATH}/blockchain/"    
     - cd $CI_PROJECT_DIR/tests/integration/replay
-    - mkdir $PATTERNS_PATH/blockchain
     - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
-    - $HIVE_BUILD_ROOT_PATH/programs/util/compress_block_log --input-block-log $BLOCK_LOG_DIRECTORY --output-block-log $PATTERNS_PATH/blockchain --decompress --block-count 5000000
     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL --plugin=sql_serializer --stop-replay-at-block=5000000  2>&1 | tee -i node_logs.log
   script:
     - cd $CI_PROJECT_DIR
