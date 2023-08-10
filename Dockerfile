@@ -2,11 +2,11 @@
 # docker build --target=ci-base-image -t registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-xxx -f Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=:ubuntu22.04-3
+ARG CI_IMAGE_TAG=:ubuntu22.04-4
 
 ARG BUILD_IMAGE_TAG
 
-FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu22.04-3 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu22.04-6 AS ci-base-image
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
@@ -18,7 +18,7 @@ COPY ./hive/scripts/setup_ubuntu.sh /usr/local/src/hive/scripts/
 COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 
 # Install development packages and create required accounts
-RUN ./scripts/setup_ubuntu.sh --dev --haf-admin-account="haf_admin" --hived-account="hived" \ 
+RUN ./scripts/setup_ubuntu.sh --dev --haf-admin-account="haf_admin" --hived-account="hived" \
   && rm -rf /var/lib/apt/lists/*
 
 USER haf_admin
