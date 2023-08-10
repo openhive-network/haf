@@ -76,6 +76,22 @@ BEGIN
 
     ASSERT ( SELECT COUNT(*) FROM hive.blocks_view ) = 10, 'Wrong numbe rof rows';
 
+
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='irreversible_blocks_view' ), 'No irreversible blocks view';
+
+    ASSERT NOT EXISTS (
+        SELECT * FROM hive.irreversible_blocks_view
+        EXCEPT SELECT * FROM ( VALUES
+                                  ( 1, '\xBADD10'::bytea, '\xCAFE10'::bytea, '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007'::bytea, E'[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+                                , ( 2, '\xBADD20'::bytea, '\xCAFE20'::bytea, '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007'::bytea, E'[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+                                , ( 3, '\xBADD30'::bytea, '\xCAFE30'::bytea, '2016-06-22 19:10:23-07'::timestamp, 5, '\x4007'::bytea, E'[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+                                , ( 4, '\xBADD40'::bytea, '\xCAFE40'::bytea, '2016-06-22 19:10:24-07'::timestamp, 5, '\x4007'::bytea, E'[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+                                , ( 5, '\xBADD50'::bytea, '\xCAFE50'::bytea, '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007'::bytea, E'[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+                             ) as pattern
+    ) , 'Unexpected rows in the irreversible view';
+
+    ASSERT ( SELECT COUNT(*) FROM hive.irreversible_blocks_view ) = 5, 'Wrong number of irreversible rows';
+
 END
 $BODY$
 ;

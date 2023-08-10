@@ -134,14 +134,19 @@ Instead such apps can just read the data for the current HEAD BLOCK using the vi
 * hive.transactions_view
 * hive.operations_view
 * hive.transactions_multisig_view
+* hive.applied_hardforks_view
 
 #### It is possible to get only irreversible block data
-The apps without their own tables may be interested only in data from blocks that have become irreversible. 
+The apps without their own tables may be interested only in data from blocks that have become irreversible.
+Here are views which return only irreversible data:
+* hive.irreversible_account_operations_view
+* hive.irreversible_accounts_view
+* hive.irreversible_blocks_view
+* hive.irreversible_transactions_view
+* hive.irreversible_operations_view
+* hive.irreversible_transactions_multisig_view
+* hive.irreversible_applied_hardforks_view
 
-The views listed above return both reversible and irreversible blocks, and there is no method to distinguish which block is reversible and which is not using those views. To get access only to irreversible block an app has to:
-1. create its own context
-2. immediately detach the context
-3. use the context's view -  these views will only return the irreversible blocks up to the head block.
 
 ## Shared lib
 There are some functions that can be done efficiently only with low-level code such as C/C++. Moreover, sometimes there is a need to

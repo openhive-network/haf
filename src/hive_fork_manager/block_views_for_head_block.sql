@@ -280,3 +280,25 @@ FROM forks
 JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hor.block_num
 JOIN hive.applied_hardforks_reversible hjr ON forks.max_fork_id = hjr.fork_id AND hjr.hardfork_vop_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
 );
+
+-- only irreversible data
+CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS SELECT * FROM hive.account_operations;
+CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS SELECT * FROM  hive.accounts;
+CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS SELECT * FROM hive.blocks;
+CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS SELECT * FROM hive.transactions;
+
+CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
+    SELECT
+        op.id,
+        op.block_num,
+        op.trx_in_block,
+        op.op_pos,
+        op.op_type_id,
+        op.timestamp,
+        op.body_binary,
+        op.body_binary::jsonb AS body
+    FROM hive.operations op;
+
+
+CREATE OR REPLACE VIEW hive.irreversible_transactions_multisig_view AS SELECT * FROM hive.transactions_multisig;
+CREATE OR REPLACE VIEW hive.irreversible_applied_hardforks_view AS SELECT * FROM hive.applied_hardforks;

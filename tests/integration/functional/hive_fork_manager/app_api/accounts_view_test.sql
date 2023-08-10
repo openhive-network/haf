@@ -94,6 +94,21 @@ BEGIN
     ) , 'Unexpected rows in the view';
 
     ASSERT ( SELECT COUNT(*) FROM hive.accounts_view ) = 11, 'Wrong number of rows';
+
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='irreversible_accounts_view' ), 'No irreversible accounts view';
+
+    ASSERT NOT EXISTS (
+        SELECT * FROM hive.irreversible_accounts_view
+        EXCEPT SELECT * FROM ( VALUES
+                                  ( 100, 'alice1', 1 )
+                                , ( 200, 'alice2', 2 )
+                                , ( 300, 'alice3', 3 )
+                                , ( 400, 'alice4', 4 )
+                                , ( 500, 'alice5', 5 )
+                             ) as pattern
+    ) , 'Unexpected rows in the view';
+
+    ASSERT ( SELECT COUNT(*) FROM hive.irreversible_accounts_view ) = 5, 'Wrong number of rows';
 END
 $BODY$
 ;

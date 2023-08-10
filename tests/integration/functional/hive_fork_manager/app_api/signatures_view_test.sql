@@ -121,7 +121,22 @@ BEGIN
          ) as pattern
     ) , 'Unexpected rows in the view';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig_view ) = 11, 'Wrong numbe rof rows';
+    ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig_view ) = 11, 'Wrong number of rows';
+
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='irreversible_transactions_multisig_view' ), 'No irreversible transactions multisig view';
+
+    ASSERT NOT EXISTS (
+        SELECT * FROM hive.irreversible_transactions_multisig_view
+        EXCEPT SELECT * FROM ( VALUES
+                                  ( '\xDEED10'::bytea, '\xBAAD10'::bytea )
+                                , ( '\xDEED20'::bytea, '\xBAAD20'::bytea )
+                                , ( '\xDEED30'::bytea, '\xBAAD30'::bytea )
+                                , ( '\xDEED40'::bytea, '\xBAAD40'::bytea )
+                                , ( '\xDEED50'::bytea, '\xBAAD50'::bytea )
+                             ) as pattern
+    ) , 'Unexpected rows in the irreversible view';
+
+    ASSERT ( SELECT COUNT(*) FROM hive.irreversible_transactions_multisig_view ) = 5, 'Wrong number of irreversible rows';
 END;
 $BODY$
 ;

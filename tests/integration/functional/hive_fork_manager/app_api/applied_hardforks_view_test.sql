@@ -132,7 +132,23 @@ BEGIN
         ) as pattern
     ) , 'Unexpected rows in the view';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.operations_view ) = 11, 'Wrong number of applied_hardforks';
+    ASSERT ( SELECT COUNT(*) FROM hive.applied_hardforks_view ) = 11, 'Wrong number of applied_hardforks';
+
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='irreversible_applied_hardforks_view' ), 'No applied_hardforks view';
+
+    ASSERT NOT EXISTS (
+        SELECT * FROM hive.irreversible_applied_hardforks_view
+        EXCEPT SELECT * FROM ( VALUES
+                                  ( 1, 1, 1 )
+                                , ( 2, 2, 2 )
+                                , ( 3, 3, 3 )
+                                , ( 4, 4, 4 )
+                                , ( 5, 5, 5 )
+                             ) as pattern
+    ) , 'Unexpected rows in the irreversible view';
+
+    ASSERT ( SELECT COUNT(*) FROM hive.irreversible_applied_hardforks_view ) = 5, 'Wrong number of irreversible applied_hardforks';
+
 END;
 $BODY$
 ;

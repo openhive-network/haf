@@ -157,6 +157,21 @@ BEGIN
 
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations_view ) = 13, 'Not all rows are visible';
 
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='irreversible_account_operations_view' ), 'No account operations view';
+
+    ASSERT NOT EXISTS (
+        SELECT aov.block_num, aov.account_id, aov.account_op_seq_no, aov.operation_id, aov.op_type_id
+        FROM hive.irreversible_account_operations_view aov
+        EXCEPT SELECT * FROM ( VALUES
+                                  ( 1, 100, 1, 1, 1 )
+                                , ( 2, 100, 2, 2, 1 )
+                                , ( 2, 200, 1, 2, 1 )
+                                , ( 3, 300, 1, 3, 1 )
+                                , ( 4, 400, 1, 4, 1 )
+                             ) as pattern
+    ) , 'Unexpected rows in the irreversible view';
+
+    ASSERT ( SELECT COUNT(*) FROM hive.irreversible_account_operations_view ) = 5, 'Not all rows are visible in irreversible view';
 END
 $BODY$
 ;

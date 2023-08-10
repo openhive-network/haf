@@ -96,6 +96,21 @@ BEGIN
     ) , 'Unexpected rows in the view';
 
     ASSERT ( SELECT COUNT(*) FROM hive.transactions_view ) = 11, 'Wrong number of rows';
+
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='irreversible_transactions_view' ), 'No irreversible transactions view';
+
+    ASSERT NOT EXISTS (
+        SELECT * FROM hive.irreversible_transactions_view
+        EXCEPT SELECT * FROM ( VALUES
+                                  ( 1, 0::SMALLINT, '\xDEED10'::bytea, 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF'::bytea )
+                                , ( 2, 0::SMALLINT, '\xDEED20'::bytea, 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF'::bytea )
+                                , ( 3, 0::SMALLINT, '\xDEED30'::bytea, 101, 100, '2016-06-22 19:10:23-07'::timestamp, '\xBEEF'::bytea )
+                                , ( 4, 0::SMALLINT, '\xDEED40'::bytea, 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF'::bytea )
+                                , ( 5, 0::SMALLINT, '\xDEED50'::bytea, 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF'::bytea )
+                             ) as pattern
+    ) , 'Unexpected rows in the irreversible view';
+
+    ASSERT ( SELECT COUNT(*) FROM hive.transactions_view ) = 11, 'Wrong number of irreversible rows';
 END
 $BODY$
 ;

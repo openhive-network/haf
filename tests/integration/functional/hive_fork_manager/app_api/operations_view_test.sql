@@ -123,6 +123,22 @@ BEGIN
     ) , 'Unexpected rows in the view';
 
     ASSERT ( SELECT COUNT(*) FROM hive.operations_view ) = 11, 'Wrong number of operations';
+
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='irreversible_operations_view' ), 'No irreversible operations view';
+
+    ASSERT NOT EXISTS (
+        SELECT * FROM hive.irreversible_operations_view
+        EXCEPT SELECT * FROM ( VALUES
+                                  ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520e5a45524f204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
+                                , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d4f4e45204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb )
+                                , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d54574f204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb )
+                                , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520f5448524545204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb )
+                                , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520e46495645204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb )
+
+                             ) as pattern
+    ) , 'Unexpected rows in the irreversible view';
+
+    ASSERT ( SELECT COUNT(*) FROM hive.irreversible_operations_view ) = 5, 'Wrong number of irreversible operations';
 END;
 $BODY$
 ;
