@@ -523,7 +523,7 @@ bash_tests:
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
-    BLOCK_LOG_DIRECTORY: "/blockchain"
+    BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
     DB_NAME: haf_block_log
     DB_URL: "postgresql:///$DB_NAME"
     DB_ADMIN: "haf_admin"
