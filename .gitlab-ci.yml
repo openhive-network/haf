@@ -29,6 +29,7 @@ include:
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
 
 .hive_fork_manager_build:
+  extends: .job-defaults
   stage: build_and_test_phase_1
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
@@ -62,6 +63,7 @@ hive_fork_manager_mirrornet:
   extends: .hive_fork_manager_build
 
 .hived_build:
+  extends: .job-defaults
   stage: build_and_test_phase_1
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   script:
@@ -104,6 +106,7 @@ hived_mirrornet:
   interruptible: true
 
 .pytest_based:
+  extends: .job-defaults
   before_script:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
@@ -145,6 +148,7 @@ haf_system_tests:
     - public-runner-docker
 
 dump_snapshot_5m_mirrornet:
+  extends: .job-defaults
   stage: build_and_test_phase_1
   needs:
   - job: "hived_mirrornet"
@@ -183,6 +187,7 @@ dump_snapshot_5m_mirrornet:
 haf_system_tests_mirrornet:
   stage: build_and_test_phase_2
   extends: .pytest_based
+  timeout: 2h
   needs:
     - job: hive_fork_manager_mirrornet
       artifacts: true
@@ -258,6 +263,7 @@ applications_system_tests:
     - public-runner-docker
 
 .replay_step:
+  extends: .job-defaults
   stage: build_and_test_phase_2
   needs:
     - job: hive_fork_manager
@@ -442,6 +448,7 @@ prepare_haf_data:
   command: ["--replay-blockchain", "--stop-replay-at-block=5000000"]
 
 start_haf_as_service:
+  extends: .job-defaults
   stage: build_and_test_phase_2
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   needs:
