@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE( postgres_error_is_caught )
 {
   int res = 0;
   EXPECT_PG_ERROR(PsqlTools::PsqlUtils::call_cxx([&res](){
-    MAKE_POSTGRES_ERROR;
+    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ) ) );
   }));
   BOOST_CHECK(res == 0);
 }

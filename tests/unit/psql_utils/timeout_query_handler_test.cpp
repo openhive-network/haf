@@ -308,7 +308,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
 
     // we pretend an error by jumping to the beginning of a handler's body
     ON_CALL( *m_postgres_mock, executorRunHook( _, _, _, _ ) ).WillByDefault(
-        []{ MAKE_POSTGRES_ERROR;}
+        []{ ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ) ) );}
     );
 
     // WHEN
@@ -329,7 +329,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
 
     // we pretend an error by jumping to the beginning of a handler's body
     ON_CALL( *m_postgres_mock, executorFinishHook( _ ) ).WillByDefault(
-      []{ MAKE_POSTGRES_ERROR;}
+      []{ ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ) ) );}
     );
 
     // WHEN
@@ -352,7 +352,7 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
 
     // we pretend an error by jumping to the beginning of a handler's body
     ON_CALL( *m_postgres_mock, executorEndHook( _ ) ).WillByDefault(
-      []{ MAKE_POSTGRES_ERROR;}
+      []{ ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ) ) );}
     );
 
     // WHEN
