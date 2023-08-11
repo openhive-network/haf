@@ -50,7 +50,7 @@ BEGIN
     ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.create_session (via app_state_provider_import)';
 
     -- creates csp_session
-    PERFORM hive.app_state_provider_import( 'CURRENT_ACCOUNT_BALANCE_STATE_PROVIDER', 'context' , toolbox.get_consensus_storage_path());
+    PERFORM hive.app_state_provider_import( 'CSP', 'context' , toolbox.get_consensus_storage_path());
 
     -- check if sessions table is filled
     ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.create_session (via app_state_provider_import)';
@@ -64,6 +64,7 @@ BEGIN
     RAISE NOTICE 'sesion_consensus_state_provider_get_expected_block_num = %', 
         hive.consensus_state_provider_get_expected_block_num(__session_ptr);
 
+    --disconnect sessions because we are leaving the current process
     PERFORM hive.sessions_disconnect();
 
 END;
@@ -84,7 +85,7 @@ BEGIN
 
     ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
                              'consensus_state_provider_get_expected_block_num should return 1';
-    PERFORM hive.update_state_provider_current_account_balance_state_provider( 1, 6, 'context' );
+    PERFORM hive.update_state_provider_csp( 1, 6, 'context' );
     COMMIT;
 
     PERFORM hive.sessions_disconnect();
@@ -116,13 +117,13 @@ BEGIN
 
     ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
         'consensus_state_provider_get_expected_block_num should return 7';
-    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
-    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';
-    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'null' AND balance = 0), 'Incorrect balance of null';
-    ASSERT EXISTS ( SELECT * FROM hive.context_current_account_balance_state_provider WHERE account = 'temp' AND balance = 0), 'Incorrect balance of temp';
-    ASSERT 5 = ( SELECT COUNT(*) FROM hive.context_current_account_balance_state_provider), 'Incorrect number of accounts';
+    ASSERT EXISTS ( SELECT * FROM hive.context_csp WHERE account = 'initminer' AND balance = 4000), 'Incorrect balance of initminer';
+    ASSERT EXISTS ( SELECT * FROM hive.context_csp WHERE account = 'miners' AND balance = 1000),'Incorrect balance of miners';
+    ASSERT EXISTS ( SELECT * FROM hive.context_csp WHERE account = 'null' AND balance = 0), 'Incorrect balance of null';
+    ASSERT EXISTS ( SELECT * FROM hive.context_csp WHERE account = 'temp' AND balance = 0), 'Incorrect balance of temp';
+    ASSERT 5 = ( SELECT COUNT(*) FROM hive.context_csp), 'Incorrect number of accounts';
 
-    ASSERT (SELECT to_regclass('hive.context_current_account_balance_state_provider')) IS NOT NULL, 'State provider table should exist';
+    ASSERT (SELECT to_regclass('hive.context_csp')) IS NOT NULL, 'State provider table should exist';
 
     ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context');
 
