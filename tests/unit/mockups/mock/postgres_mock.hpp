@@ -34,9 +34,9 @@ extern bool STACK_IS_SAVED;
      if ( sigsetjmp( STACK_ON_TEST_FUNCTION, 0 ) == 0 ) {     \
         STACK_IS_SAVED = true;                                \
         _function;                                            \
-        FAIL() << "No expected pg error";                     \
+        BOOST_FAIL("No expected pg error");                   \
      } else {                                                 \
-     SUCCEED() << "Got expected pg error";                    \
+       BOOST_CHECK_MESSAGE(true, "Got expected pg error");    \
      }                                                        \
      STACK_IS_SAVED = false;                                  \
    }                                                          \
