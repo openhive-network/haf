@@ -38,7 +38,7 @@ bool errstart(int elevel, [[maybe_unused]] const char *domain) {
 void errfinish([[maybe_unused]] const char *filename, [[maybe_unused]] int lineno, [[maybe_unused]] const char *funcname) {
   if (last_elevel >= ERROR)
   {
-    siglongjmp( STACK_ON_TEST_FUNCTION, 1 );
+    siglongjmp( *PG_exception_stack, 1 );
   }
 }
 

@@ -8,9 +8,6 @@
 #include <cassert>
 #include <memory>
 
-sigjmp_buf STACK_ON_TEST_FUNCTION{};
-bool STACK_IS_SAVED = false;
-
 namespace {
   // NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
   std::weak_ptr<PostgresMock> POSTGRES_MOCK;
@@ -25,7 +22,7 @@ namespace {
    * possible to use mocked pg_rethrow similar to other mock function since it
    * is declared as non-returning function. The only way to check if an error
    * was correctly handled by the code under test is to use macro EXPECT_PG_ERROR.
-   * To thrown pg error in mocked postgres please use macro MAKE_POSTGRES_ERROR
+   * To thrown pg error in mocked postgres a call to ereport(ERROR, ...) should be made.
    *
    */
   sigjmp_buf STACK_FOR_PG_RETHROW_MOC{};
@@ -41,7 +38,7 @@ namespace {
         return BOTTOM_STACK_MOCK->function_call;                             \
       }                                                                      \
       BOTTOM_STACK_MOCK.reset();                                             \
-      siglongjmp( STACK_ON_TEST_FUNCTION, 0 );                               \
+      siglongjmp( *PG_exception_stack, 1 );                                  \
 
 
 } // namespace
@@ -278,7 +275,7 @@ void InstrAggNode(Instrumentation *dst, Instrumentation *add) {
   }
 
   void pg_re_throw(void) {
-    if ( !STACK_IS_SAVED ) {
+    if ( !PG_exception_stack ) {
       std::cerr << "Unexpected pg error occur." << std::endl;
       abort();
     }
