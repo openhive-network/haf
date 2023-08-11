@@ -22,23 +22,19 @@ void executorRunHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _co
 void executorFinishHook(QueryDesc* _queryDesc);
 void executorEndHook(QueryDesc* _queryDesc);
 
-// use macro to generate an error, just like Postgres will do this
-#define MAKE_POSTGRES_ERROR siglongjmp( *PG_exception_stack, 0 );
-
-extern sigjmp_buf STACK_ON_TEST_FUNCTION;
-extern bool STACK_IS_SAVED;
-
 // use macro below to test if a code under test correctly generate pg errors
 #define EXPECT_PG_ERROR( _function )                          \
    {                                                          \
-     if ( sigsetjmp( STACK_ON_TEST_FUNCTION, 0 ) == 0 ) {     \
-        STACK_IS_SAVED = true;                                \
-        _function;                                            \
-        BOOST_FAIL("No expected pg error");                   \
-     } else {                                                 \
+     PG_TRY();                                                \
+     {                                                        \
+       _function;                                             \
+       BOOST_FAIL("No expected pg error");                    \
+     }                                                        \
+     PG_CATCH();                                              \
+     {                                                        \
        BOOST_CHECK_MESSAGE(true, "Got expected pg error");    \
      }                                                        \
-     STACK_IS_SAVED = false;                                  \
+     PG_END_TRY();                                            \
    }                                                          \
 
 class IPostgresMock {
