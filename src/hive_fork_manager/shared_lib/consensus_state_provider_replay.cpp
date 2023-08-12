@@ -168,10 +168,18 @@ std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
 }
 
 
-
+volatile bool static stop_in_consensus_state_provider_replay_impl = false;
 
 bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int to)
 {
+
+  while(stop_in_consensus_state_provider_replay_impl)
+  {
+    int a = 0 ;
+    a=a;
+  }
+
+  
   if(from != consensus_state_provider_get_expected_block_num_impl(csp_session))
   {
       elog(
@@ -354,9 +362,19 @@ void postgres_block_log::replay_block(csp_session_type* csp_session, const pqxx:
   
 }
 
+volatile static auto stop_in_apply_full_block = true;
+
 void postgres_block_log::apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr,
                                        uint64_t skip_flags)
 {
+
+
+  while(stop_in_apply_full_block)
+  {
+    int a = 0;
+    a=a;
+  }
+  
   apply_full_block_time_probe.start();
 
   db._push_block_simplified(fb_ptr, skip_flags);

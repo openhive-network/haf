@@ -993,11 +993,21 @@ Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
 
 PG_FUNCTION_INFO_V1(csp_init);
 
+volatile auto static stop_in_csp_init = false;
+
 // CREATE OR REPLACE FUNCTION hive.csp_init(IN _context TEXT, IN shared_memory_bin_path TEXT, IN _postgres_url TEXT)
 // RETURNS BIGINT
 // AS 'MODULE_PATHNAME', 'csp_init' LANGUAGE C;
 Datum csp_init(PG_FUNCTION_ARGS)
 {
+
+  while(stop_in_csp_init)
+  {
+    int a = 0 ;
+    a=a;
+  }
+
+
   char* context = text_to_cstring(PG_GETARG_TEXT_P(0));
   char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_P(1));
   char* postgres_url = text_to_cstring(PG_GETARG_TEXT_P(2));

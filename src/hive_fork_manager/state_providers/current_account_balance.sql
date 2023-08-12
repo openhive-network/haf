@@ -14,8 +14,11 @@ DECLARE
     __reconnect_string TEXT;
 BEGIN
 
+    RAISE NOTICE 'mtlk in hive.start_provider_csp 01';
+
     __context_id = hive.get_context_id( _context );
 
+    RAISE NOTICE 'mtlk in hive.start_provider_csp 02';
 
     IF __context_id IS NULL THEN
          RAISE EXCEPTION 'No context with name %', _context;
@@ -42,12 +45,22 @@ BEGIN
     -- mtlk to remove in session
     EXECUTE format('INSERT INTO hive.%I VALUES (%L)', __config_table_name, _shared_memory_bin_path);
 
+    RAISE NOTICE 'mtlk in hive.start_provider_csp 20';
     
     __handle = (SELECT hive.csp_init(_context,_shared_memory_bin_path, hive.get_postgres_url()));
 
+
+    RAISE NOTICE 'mtlk in hive.start_provider_csp 30';
+
     __reconnect_string = format('SELECT hive.csp_init(%L, %L, %L)', _context,_shared_memory_bin_path, hive.get_postgres_url());
 
+
+    RAISE NOTICE 'mtlk in hive.start_provider_csp 40';
+
     __disconnect_function = 'SELECT hive.csp_finish(%s)';
+
+    RAISE NOTICE 'mtlk in hive.start_provider_csp 50';
+
 
     PERFORM hive.create_session(
         _context, 
@@ -59,6 +72,9 @@ BEGIN
             'session_handle', __handle
         )
     );
+
+    RAISE NOTICE 'mtlk in hive.start_provider_csp 60';
+
 
     RETURN ARRAY[ __table_name,  __config_table_name ];
 END;

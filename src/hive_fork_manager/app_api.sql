@@ -131,6 +131,8 @@ CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive.contexts_gro
     VOLATILE
 AS
 $BODY$
+DECLARE
+    result hive.blocks_range;
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
@@ -141,10 +143,13 @@ BEGIN
     -- if there there is  registered table for given context
     IF hive.app_are_forking( _context_names )
     THEN
-        RETURN hive.app_next_block_forking_app( _context_names );
+        result =  hive.app_next_block_forking_app( _context_names );
+    ELSE
+        result =  hive.app_next_block_non_forking_app( _context_names );
     END IF;
 
-    RETURN hive.app_next_block_non_forking_app( _context_names );
+    RAISE NOTICE 'mtlk app_next_block=<%,%>', result.first_block, result.last_block;
+    RETURN result;
 END;
 $BODY$
 ;
@@ -436,10 +441,15 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
 BEGIN
 
+    RAISE NOTICE 'mtlk app_state_provider_import 01';
+
     SELECT hac.id, hive.check_owner( hac.name, hac.owner )
     FROM hive.contexts hac
     WHERE hac.name = _context
     INTO __context_id;
+
+
+    RAISE NOTICE 'mtlk app_state_provider_import 02';
 
     __context_id = hive.get_context_id( _context );
 
@@ -448,6 +458,15 @@ BEGIN
         RETURN;
     END IF;
 
+    RAISE NOTICE 'mtlk app_state_provider_import 03';
+
+
+    RAISE NOTICE 'mtlk EXECUTE: %',  format(
+        'INSERT INTO hive.state_providers_registered( context_id, state_provider, tables, owner )
+        SELECT %s , %L, hive.start_provider_%s( %L , %L ), current_user
+        ON CONFLICT DO NOTHING', __context_id, _state_provider, _state_provider, _context, _arg1
+    );
+
 
     EXECUTE format(
         'INSERT INTO hive.state_providers_registered( context_id, state_provider, tables, owner )
@@ -455,14 +474,23 @@ BEGIN
         ON CONFLICT DO NOTHING', __context_id, _state_provider, _state_provider, _context, _arg1
     );
 
+    RAISE NOTICE 'mtlk app_state_provider_import 04';
+
+
     IF NOT hive.app_is_forking( _context ) THEN
         RETURN;
     END IF;
+
+
+    RAISE NOTICE 'mtlk app_state_provider_import 05';
 
     -- register tables
     PERFORM hive.app_register_table( 'hive', unnest( hsp.tables ), _context )
     FROM hive.state_providers_registered hsp
     WHERE hsp.context_id = __context_id AND hsp.state_provider = _state_provider;
+
+    RAISE NOTICE 'mtlk app_state_provider_import 06';
+
 END;
 $BODY$
 ;

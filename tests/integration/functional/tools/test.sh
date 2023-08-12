@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+
 
 extension_path=$1
 test_path=$2;
@@ -40,6 +40,7 @@ DECLARE
   __consensus_state_provider_storage_path TEXT; 
 BEGIN 
   __consensus_state_provider_storage_path = '$STORAGE_PATH'; 
+  RAISE NOTICE 'mtlk in toolbox.get_consensus_storage_path=%', __consensus_state_provider_storage_path;
   RETURN __consensus_state_provider_storage_path; 
 END
 \$BODY$;
