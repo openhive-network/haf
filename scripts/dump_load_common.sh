@@ -26,25 +26,25 @@ print_help () {
     echo
     echo "${GENERAL_HELP_DESCRIPTION}"
     echo "OPTIONS:"
-    echo "  --backup-dir=DIR                 Allows to specify where the dumps are located, required"
+    echo "  --backup-dir=DIR                 Specify where database dumps are located (required)."
 
 
-    echo "  --hived-executable-path=PATH     Allows to specify where the main executable is located, required"
-    echo "  --hived-data-dir=DIR             Allows to specify where node data is located, required"
+    echo "  --hived-executable-path=PATH     Specify where the hived executable is located (required)."
+    echo "  --hived-data-dir=DIR             Specify where hived data is located (required)."
 
 
-    echo "  --haf-db-name=NAME               Allows to specify a name of database to store HAF data, required"
-    echo "  --haf-db-admin=NAME              Allows to specify a name of database admin role having permission to create the database"
-    echo "  --hived-db-role=NAME             Allows to specify a name of database role having permission to write to the HAF database"
+    echo "  --haf-db-name=NAME               Specify the name of the HAF database (required)."
+    echo "  --haf-db-admin=NAME              Specify the database admin role with permission to create the database."
+    echo "  --hived-db-role=NAME             Specify the database role with permission to write to the database."
 
-    echo "  --haf-db-host=VALUE              Allows to specify a PostgreSQL host location"
-    echo "  --haf-db-port=NUMBER             Allows to specify a PostgreSQL operating port"
-    echo "  --haf-db-jobs=NUMBER             Allows to specify how many processes are run during dump/restore"
+    echo "  --haf-db-host=VALUE              Specify a PostgreSQL host location."
+    echo "  --haf-db-port=NUMBER             Specify a PostgreSQL operating port."
+    echo "  --haf-db-jobs=NUMBER             Specify how many processes are run during dump/restore."
     if [ ! -z "${SPECFIC_OPTIONS_HELP_TEXT}" ] 
     then
       echo "${SPECFIC_OPTIONS_HELP_TEXT}"
     fi
-    echo "  --help                           Display this help screen and exit"
+    echo "  --help                           Display this help screen and exit."
     echo
 }
 
@@ -150,7 +150,7 @@ fi
 
 if [ -z ${BACKUP_DIR} ] || [ -z ${HIVED_EXECUTABLE_PATH} ] || [ -z ${DATA_DIR} ] || [ -z ${POSTGRES_DATABASE} ] 
 then
-  echo "Missing required option"
+  echo "Missing required option."
   print_help ${GENERAL_HELP_DESCRIPTION} ${SPECFIC_OPTIONS_HELP_TEXT}
   exit 0
 fi

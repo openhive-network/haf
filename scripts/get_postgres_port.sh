@@ -2,7 +2,7 @@
 
 set -euo pipefail 
 
-# Helper script to check the port used by specified version of postgres database
+# Helper script to check the port used by the specified version of postgres database
 
 POSTGRES_VERSION=$1
 

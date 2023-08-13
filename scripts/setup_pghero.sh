@@ -16,18 +16,18 @@ log_exec_params "$@"
 print_help() {
     echo "Usage: $0 [OPTION[=VALUE]]..."
     echo
-    echo "Script installs [pghero](https://github.com/ankane/pghero) monitoring stuff into specified database"
+    echo "Script installs [pghero](https://github.com/ankane/pghero) monitoring into the specified database."
     echo "OPTIONS:"
-    echo "  --host=VALUE         Allows to specify a PostgreSQL host location (defaults to /var/run/postgresql)"
-    echo "  --port=NUMBER        Allows to specify a PostgreSQL operating port (defaults to 5432)"
-    echo "  --database=VALUE     Allows to specify a PostgreSQL database (defaults to haf_block_log)"
-    echo "  --help               Display this help screen and exit"
+    echo "  --host=VALUE         Specify a PostgreSQL host location (defaults to /var/run/postgresql)."
+    echo "  --port=NUMBER        Specify a PostgreSQL operating port (defaults to 5432)."
+    echo "  --database=VALUE     Specify a PostgreSQL database (defaults to haf_block_log)."
+    echo "  --help               Display this help screen and exit."
     echo
 }
 
 setup_pghero() {
   local pg_access="$1"
-  echo "Attempting to install pghero stuff"
+  echo "Attempting to install pghero in the database."
   sudo -nu postgres psql -d postgres -aw $pg_access -v ON_ERROR_STOP=on -f $SCRIPTPATH/pghero.sql
 }
 
@@ -51,13 +51,13 @@ while [ $# -gt 0 ]; do
         exit 0
         ;;
     -*)
-        echo "ERROR: '$1' is not a valid option"
+        echo "ERROR: '$1' is not a valid option."
         echo
         print_help
         exit 1
         ;;
     *)
-        echo "ERROR: '$1' is not a valid argument"
+        echo "ERROR: '$1' is not a valid argument."
         echo
         print_help
         exit 2
@@ -69,7 +69,7 @@ done
 POSTGRES_ACCESS="--host $POSTGRES_HOST --port $POSTGRES_PORT -d $POSTGRES_DATABASE"
 
 if [ "$EUID" -ne 0 ]
-  then echo "Please run as root"
+  then echo "Please run as root."
   exit 1
 fi
 

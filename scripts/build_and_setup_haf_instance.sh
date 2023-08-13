@@ -30,7 +30,7 @@ print_help () {
     echo "  --option-file=FILE     Specify a file containing other options specific to this script's arguments. This file cannot contain another --option-file option within it."
     echo "  --haf-database-store=DIRECTORY_PATH"
     echo "                         Specify a directory where the HAF database will be stored. "
-    echo "  --branch=branch        Secify a branch of HAF to checkout and build. Defaults to develop branch."
+    echo "  --branch=branch        Specify a branch of HAF to checkout and build. Defaults to develop branch."
     echo "  --use-source-dir=PATH  Specify an existing local HAF source directory instead of performing a git checkout."
     echo "  --help                 Display this help screen and exit."
     echo

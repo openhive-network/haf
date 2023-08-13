@@ -10,19 +10,19 @@ source "$SCRIPTPATH/../hive/scripts/common.sh"
 
 log_exec_params "$@"
 
-#Script purpose is to build all (or selected) targets in the HAF project.
+#This script builds all (or selected) targets in the HAF project.
 
 print_help () {
     echo "Usage: $0 [OPTION[=VALUE]]... [target]..."
     echo
-    echo "Allows to build HAF sources "
+    echo "Build HAF targets from a HAF source tree."
     echo "  --haf-source-dir=DIRECTORY_PATH"
-    echo "                       Allows to specify a directory containing a HAF source tree."
+    echo "                       Specify a directory containing a HAF source tree."
     echo "  --haf-binaries-dir=DIRECTORY_PATH"
-    echo "                       Allows to specify a directory to store a build output (HAF binaries)."
-    echo "                       Usually it is a \`build\` subdirectory in the HAF source tree."
-    echo "  --cmake-arg=ARG      Allows to specify additional arguments to the CMake tool spawn"
-    echo "  --help               Display this help screen and exit"
+    echo "                       Specify a directory to store the build output (HAF binaries)."
+    echo "                       Usually it is the \`build\` subdirectory in the HAF source tree."
+    echo "  --cmake-arg=ARG      Specify additional arguments to CMake."
+    echo "  --help               Display this help screen and exit."
     echo
 }
 
@@ -51,7 +51,7 @@ while [ $# -gt 0 ]; do
         exit 0
         ;;
     -*)
-        echo "ERROR: '$1' is not a valid option"
+        echo "ERROR: '$1' is not a valid option."
         echo
         print_help
         exit 1

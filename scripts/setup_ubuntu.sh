@@ -5,20 +5,20 @@ SRC_DIR="$SCRIPT_DIR/.."
 
 set -euo pipefail
 
-# Script purpose is an installation of all packages required to build and run HAF instance.
+# This script installs all packages required to build and run a HAF instance.
 # After changing it, please also update and push to the registry a docker image defined in https://gitlab.syncad.com/hive/haf/-/blob/develop/Dockerfile
-# Updated docker image must be also explicitly referenced in the https://gitlab.syncad.com/hive/haf/-/blob/develop/.gitlab-ci.yml#L7
+# The updated docker image must also be explicitly referenced on line https://gitlab.syncad.com/hive/haf/-/blob/develop/.gitlab-ci.yml#L7
 
 print_help () {
     echo "Usage: $0 [OPTION[=VALUE]]..."
     echo
-    echo "Allows to setup this machine for HAF installation"
+    echo "Setup this machine for HAF installation."
     echo "OPTIONS:"
-    echo "  --dev                     Allows to install all packages required to build and run haf project."
-    echo "  --user                    Allows to install all packages being stored in the user's home directory."
-    echo "  --haf-admin-account=NAME  Allows to specify the account name to be used for HAF administration. (it is associated to the PostgreSQL role)"
-    echo "  --hived-account=NAME      Allows to specify the account name to be used for hived process. (it is accociated to PostgreSQL role)."
-    echo "  --help                    Display this help screen and exit"
+    echo "  --dev                     Install packages required to build and run a HAF server."
+    echo "  --user                    Install packages to a subdirectory of the user's home directory."
+    echo "  --haf-admin-account=NAME  Specify the unix account name to be used for HAF administration (will be associated with the PostgreSQL role)."
+    echo "  --hived-account=NAME      Specify the unix account name to be used for hived (will be associated with the PostgreSQL role)."
+    echo "  --help                    Display this help screen and exit."
     echo
 }
 
@@ -27,7 +27,7 @@ hived_unix_account="hived"
 
 assert_is_root() {
   if [ "$EUID" -ne 0 ]
-    then echo "Please run as root"
+    then echo "Please run as root."
     exit 1
   fi
 }
@@ -101,13 +101,13 @@ while [ $# -gt 0 ]; do
         exit 0
         ;;
     -*)
-        echo "ERROR: '$1' is not a valid option"
+        echo "ERROR: '$1' is not a valid option."
         echo
         print_help
         exit 1
         ;;
     *)
-        echo "ERROR: '$1' is not a valid argument"
+        echo "ERROR: '$1' is not a valid argument."
         echo
         print_help
         exit 2

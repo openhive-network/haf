@@ -4,8 +4,8 @@ set -euo pipefail
 
 LOG_FILE=setup_haf_instance.log
 
-# Because this script should work as standalone script being just downloaded from gitlab repo, and next use internal
-# scripts from a cloned repo, logging code is duplicated.
+# This script should work as standalone script directly downloaded from the gitlab repo, and next use internal
+# scripts from a cloned repo, so logging code is duplicated.
 
 exec > >(tee -i "${LOG_FILE}") 2>&1
 
@@ -21,17 +21,17 @@ log_exec_params "$@"
 print_help () {
     echo "Usage: $0 [OPTION[=VALUE]]..."
     echo
-    echo "One-step setup for a HAF server instance"
+    echo "One-step setup for a HAF server instance."
     echo "OPTIONS:"
-    echo "  --host=VALUE           Optionally specify a PostgreSQL host location (defaults to /var/run/postgresql)"
-    echo "  --port=NUMBER          Optionally specify a PostgreSQL operating port (defaults to 5432)"
-    echo "  --hived-data-dir=PATH  Optionally specify a path where hived node will store its data. For faster setup, put a recent blockchain/block_log and block_log.index file in this directory before running this script."
-    echo "  --hived-option=OPTION  Optionally specify a hived option to be passed to the automatically spawned hived process (this option can be repeated to pass multiple hived options)."
-    echo "  --option-file=FILE     Optionally specify a file containing other options specific to this script's arguments. This file cannot contain another --option-file option within it."
+    echo "  --host=VALUE           Specify a PostgreSQL host location (defaults to /var/run/postgresql)."
+    echo "  --port=NUMBER          Specify a PostgreSQL operating port (defaults to 5432)."
+    echo "  --hived-data-dir=PATH  Specify a path where hived will store its data. For faster setup, put a recent blockchain/block_log and block_log.index file in this directory before running this script."
+    echo "  --hived-option=OPTION  Specify a hived option to be passed to the automatically spawned hived process (this option can be repeated to pass multiple hived options)."
+    echo "  --option-file=FILE     Specify a file containing other options specific to this script's arguments. This file cannot contain another --option-file option within it."
     echo "  --haf-database-store=DIRECTORY_PATH"
-    echo "                         Optionally specify a directory where Postgres SQL data specific to the HAF database will be stored. "
-    echo "  --haf-binaries-dir=PATH  Allows to specify a directory containing already built HAF binaries to be used as HAF instance setup. build. Defaults to ./build path"
-    echo "  --help                 Display this help screen and exit"
+    echo "                         Specify a directory where the HAF database will be stored."
+    echo "  --haf-binaries-dir=PATH Specify a directory containing pre-built HAF binaries to use. Default path is ./build"
+    echo "  --help                 Display this help screen and exit."
     echo
 }
 
@@ -104,13 +104,13 @@ process_option() {
         exit 0
         ;;
     -*)
-        echo "ERROR: '$1' is not a valid option"
+        echo "ERROR: '$1' is not a valid option."
         echo
         print_help
         exit 1
         ;;
     *)
-        echo "ERROR: '$1' is not a valid argument"
+        echo "ERROR: '$1' is not a valid argument."
         echo
         print_help
         exit 2
@@ -156,15 +156,15 @@ spawn_hived() {
 
   if [ -z "$data_dir" ]
   then
-    echo "Using default data directory for hived node..."
+    echo "Using default data directory for hived..."
   else
     if [ -d "$HIVED_DATADIR" ]
     then
       data_dir=`realpath -e "$HIVED_DATADIR"`
-      echo "Changing an ownership of hived data directory: $data_dir..."
+      echo "Changing ownership of the hived data directory: $data_dir..."
       sudo -n chown -Rc $HIVED_ACCOUNT:$HIVED_ACCOUNT "$data_dir"
     fi
-    echo "Using explicit hived data directory: $data_dir"
+    echo "Using explicitly specified hived data directory: $data_dir"
 
     data_dir="--data-dir=\"$data_dir\""
 
@@ -181,7 +181,7 @@ spawn_hived() {
 }
 
 if [ "$EUID" -eq 0 ]
-  then echo "Please DO NOT run as root"
+  then echo "Please DO NOT run as root."
   exit 1
 fi
 

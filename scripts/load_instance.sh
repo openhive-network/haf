@@ -3,7 +3,7 @@
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 LOG_FILE=load_instance.log
-source ${SCRIPTPATH}/dump_load_common.sh false "Allows to load hived and haf states." "" $@
+source ${SCRIPTPATH}/dump_load_common.sh false "Load hived and haf states." "" $@
 
 
 validate_environment(){

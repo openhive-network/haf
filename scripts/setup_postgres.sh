@@ -8,29 +8,27 @@ source "$SCRIPTPATH/common.sh"
 
 log_exec_params "$@"
 
-# Script reponsible for setup of specified postgres instance. This script execution requires root priviledges.
+# This script configures a postgres cluster for HAF. This script must be run with root priviledges.
 #
-# - installs (previously built !!) hive_fork_manager PostgreSQL extension
-# - creates all builtin HAF roles on pointed PostgreSQL server instance
-# - creates (if missing) and associates specified user to the builtin haf_admin role.
+# - Installs a previously built hive_fork_manager PostgreSQL extension.
+# - Creates all builtin HAF roles on the PostgreSQL cluster.
+# - Creates an admin role (if missing) for the HAF database and adds it to the haf_administrators_group.
 
 print_help () {
     echo "Usage: $0 [OPTION[=VALUE]]..."
     echo
-    echo "Allows to setup a pointed PostgreSQL instance for HAF installation"
+    echo "Configure a PostgreSQL cluster for HAF installation."
     echo "OPTIONS:"
-    echo "  --host=VALUE         Allows to specify a PostgreSQL host location (defaults to /var/run/postgresql)"
-    echo "  --port=NUMBER        Allows to specify a PostgreSQL operating port (defaults to 5432)"
+    echo "  --host=VALUE         Specify a PostgreSQL host location (defaults to /var/run/postgresql)."
+    echo "  --port=NUMBER        Specify a PostgreSQL operating port (defaults to 5432)."
     echo "  --haf-binaries-dir=DIRECTORY_PATH"
-    echo "                       Allows to specify a directory containing a built HAF binaries."
+    echo "                       Specify a directory containing pre-built HAF binaries to copy into the postgres cluster."
     echo "                       Usually it is a \`build\` subdirectory in the HAF source tree."
-    echo "                       Required to execute an installation step there and put HAF binaries"
-    echo "                       to the PostgreSQL directories"
-    echo "  --haf-admin-account=NAME  Allows to specify an account name to be added to group 'haf_administrators_group'."
-    echo "  --haf-database-store=DIRECTORY_PATH"
-    echo "                       Allows to specify a directory where Postgres SQL data specific to the HAF database will be stored. "
+    echo "  --haf-admin-account=NAME  Specify a db role to be added to the 'haf_administrators_group'."
     echo "                       Specified role is created on the server if needed."
-    echo "  --help               Display this help screen and exit"
+    echo "  --haf-database-store=DIRECTORY_PATH"
+    echo "                       Specify a directory where the HAF database will be stored."
+    echo "  --help               Display this help screen and exit."
     echo
 }
 
@@ -61,16 +59,16 @@ EOF
 if [[ -n "$TABLESPACE_PATH" ]]; then
   if [ "$TABLESPACE_PATH" = "$haf_tablespace_abs_path" ]; then
       if [[ ! -d "$haf_tablespace_abs_path" || -z $(ls -A "$haf_tablespace_abs_path") ]]; then
-        echo "WARNING: Tablespace $haf_tablespace_name already exists, points to the same location, but target directory does not exists or is empty. Enforcing another tablespace creation"
+        echo "WARNING: The tablespace $haf_tablespace_name already points to the specified location, but the target directory does not exists or is empty. Creating a new tablespace there."
         sudo -nu postgres psql --dbname=postgres --echo-all --no-password "${pg_access[@]}" --variable=ON_ERROR_STOP=on --file=- <<EOF
           DROP TABLESPACE $haf_tablespace_name;
 EOF
       else
-        echo "WARNING: Tablespace $haf_tablespace_name already exists, and points to the same location. Skipping another creation"
+        echo "WARNING: The tablespace $haf_tablespace_name already exists at the specified location. Skipping another creation."
         return 0
       fi
     else
-      echo "ERROR: Tablespace $haf_tablespace_name already exists, but points to different location: $TABLESPACE_PATH. Aborting"
+      echo "ERROR: The tablespace $haf_tablespace_name already exists, but points to a different location: $TABLESPACE_PATH. Aborting script execution."
       exit 2
   fi
 fi
@@ -126,13 +124,13 @@ while [ $# -gt 0 ]; do
         exit 0
         ;;
     -*)
-        echo "ERROR: '$1' is not a valid option"
+        echo "ERROR: '$1' is not a valid option."
         echo
         print_help
         exit 1
         ;;
     *)
-        echo "ERROR: '$1' is not a valid argument"
+        echo "ERROR: '$1' is not a valid argument."
         echo
         print_help
         exit 2
@@ -144,7 +142,7 @@ done
 POSTGRES_ACCESS=("--host=$POSTGRES_HOST" "--port=$POSTGRES_PORT")
 
 if [ "$EUID" -ne 0 ]
-  then echo "Please run as root"
+  then echo "Please run as root."
   exit 1
 fi
 

@@ -11,11 +11,11 @@ log_exec_params "$@"
 print_help () {
     echo "Usage: $0 [OPTION[=VALUE]]..."
     echo
-    echo "Allows to create a HAF admin role on specified PostgreSQL instance"
+    echo "Creates a HAF admin role for a PostgreSQL cluster."
     echo "OPTIONS:"
-    echo "  --host=VALUE              Allows to specify a PostgreSQL host location (defaults to /var/run/postgresql)"
-    echo "  --port=NUMBER             Allows to specify a PostgreSQL operating port (defaults to 5432)"
-    echo "  --haf-admin-account=NAME  Allows to specify an account name to be added to the `haf_administrators_group` group."
+    echo "  --host=VALUE              Specify a PostgreSQL host location (defaults to /var/run/postgresql)"
+    echo "  --port=NUMBER             Specify a PostgreSQL operating port (defaults to 5432)"
+    echo "  --haf-admin-account=NAME  Specify an account name to be added to the `haf_administrators_group` group."
     echo "  --help                    Display this help screen and exit"
     echo
 }
@@ -68,13 +68,13 @@ while [ $# -gt 0 ]; do
         exit 0
         ;;
     -*)
-        echo "ERROR: '$1' is not a valid option"
+        echo "ERROR: '$1' is not a valid option."
         echo
         print_help
         exit 1
         ;;
     *)
-        echo "ERROR: '$1' is not a valid argument"
+        echo "ERROR: '$1' is not a valid argument."
         echo
         print_help
         exit 2

@@ -3,7 +3,7 @@
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 LOG_FILE=dump_instance.log
-source ${SCRIPTPATH}/dump_load_common.sh true "Allows to dump hived and haf states." "  --override-existing-backup-dir   Erases backup directory and its contents" $@
+source ${SCRIPTPATH}/dump_load_common.sh true "Dump hived and haf states." "  --override-existing-backup-dir   Erases backup directory and its contents." $@
 
 validate_environment(){
 
@@ -11,7 +11,7 @@ validate_environment(){
   then
     if [ "${HIVED_DB_ROLE}" != "${POSTGRES_USER}" ];
     then
-      echo "Switching to separate Hived role to erase previously generated snapshot..."
+      echo "Switching to a separate hived role to erase previously generated snapshot..."
       sudo -Enu ${HIVED_DB_ROLE} rm -rf ${HIVED_SNAPSHOT_DIR}
     else
       rm -rf ${HIVED_SNAPSHOT_DIR}
@@ -46,11 +46,11 @@ dump_snapshot(){
   hived_args+=(--dump-snapshot=hived)
   hived_args+=("${ADDITIONAL_HIVED_OPTIONS[@]}")
 
-  echo "Using HIVED_DB_ROLE: ${HIVED_DB_ROLE}, POSTGRES_USER: ${POSTGRES_USER}"
+  echo "Using HIVED_DB_ROLE: ${HIVED_DB_ROLE}, POSTGRES_USER: ${POSTGRES_USER}."
 
   if [ "${HIVED_DB_ROLE}" != "${POSTGRES_USER}" ];
   then
-    echo "Switching to separate Hived role..."
+    echo "Switching to a separate hived role..."
     sudo -Enu ${HIVED_DB_ROLE} "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
   else
     "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"

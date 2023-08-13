@@ -18,11 +18,11 @@ EXPORT_BINARIES_ARG=""
 print_help () {
     echo "Usage: $0 <commit> <registry_url> [OPTION[=VALUE]]..."
     echo
-    echo "Allows to build docker image containing HAF installation built from pointed COMMIT"
+    echo "Builds a docker image containing HAF installation built from pointed COMMIT."
     echo "OPTIONS:"
-    echo "  --network-type=TYPE       Allows to specify type of blockchain network supported by built hived. Allowed values: mainnet, testnet, mirrornet"
-    echo "  --export-binaries=PATH    Allows to specify a path where binaries shall be exported from built image"
-    echo "  --help                    Display this help screen and exit"
+    echo "  --network-type=TYPE       Specify type of blockchain network supported by built hived. Allowed values: mainnet, testnet, mirrornet."
+    echo "  --export-binaries=PATH    Specify a path where binaries shall be exported from the built image."
+    echo "  --help                    Display this help screen and exit."
     echo
 }
 
@@ -37,7 +37,7 @@ while [ $# -gt 0 ]; do
         EXPORT_BINARIES_ARG="--export-binaries=${export_path}"
         ;;
     -*)
-        echo "ERROR: '$1' is not a valid option"
+        echo "ERROR: '$1' is not a valid option."
         exit 1
         ;;
     *)
@@ -48,7 +48,7 @@ while [ $# -gt 0 ]; do
         then
           REGISTRY=$1
         else
-          echo "ERROR: '$1' is not a valid positional argument"
+          echo "ERROR: '$1' is not a valid positional argument."
           echo
           print_help
           exit 2
@@ -58,8 +58,8 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-TST_COMMIT=${COMMIT:?"Missing arg #1 to specify a COMMIT"}
-TST_REGISTRY=${REGISTRY:?"Missing arg #2 to specify target container registry"}
+TST_COMMIT=${COMMIT:?"Missing arg #1 to specify a COMMIT."}
+TST_REGISTRY=${REGISTRY:?"Missing arg #2 to specify target container registry."}
 
 BUILD_IMAGE_TAG=$COMMIT
 

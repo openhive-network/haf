@@ -7,31 +7,29 @@ source "$SCRIPTPATH/common.sh"
 
 log_exec_params "$@"
 
-# Script reponsible for execution of all actions required to finish configuration of the database holding a HAF database
-# Linux account executing this script, must be associated to the $DB_ADMIN role which allows to:
-# Unix user executing given script should be a member of specified DB_ADMIN (haf_admin) SQL role, to allow peer authentication
-# - DROP !!! the existing database (if present)
-# - create target database
-# - install the extension there
+# This script performs all steps required to configure a HAF database.
+# The unix user account executing this script must be associated to the $DB_ADMIN role which allows it to:
+# - DROP !!! the existing database (if present).
+# - Create a new target database.
+# - Install the HAF extension there.
 
 print_help () {
     echo "Usage: $0 [OPTION[=VALUE]]..."
     echo
-    echo "Allows to create and setup a database to be filled by HAF instance. DROPs already existing database !!!"
+    echo "Create and setup a database to be filled with HAF data. Drops any already existing HAF database!!!"
     echo "OPTIONS:"
-    echo "  --host=VALUE                    Allows to specify a PostgreSQL host location (defaults to /var/run/postgresql)"
-    echo "  --port=NUMBER                   Allows to specify a PostgreSQL operating port (defaults to 5432)"
-    echo "  --haf-db-name=NAME              Allows to specify a name of database to store a HAF data"
-    echo "  --haf-app-user=NAME             Allows to specify a name of database role to be specified as an APP user of HAF database."
-    echo "                                  Can be specified multiple times, if user would like to add multiple roles."
-    echo "                                  Role MUST be earlier created on pointed Postgres instance !!!"
+    echo "  --host=VALUE                    Specify a PostgreSQL host location (defaults to /var/run/postgresql)."
+    echo "  --port=NUMBER                   Specify a PostgreSQL operating port (defaults to 5432)."
+    echo "  --haf-db-name=NAME              Specify the HAF database name to use."
+    echo "  --haf-app-user=NAME             Specify name of a database role to act as an APP user of the HAF database."
+    echo "                                  Specify multiple times to add multiple roles."
+    echo "                                  The role MUST already exist on the Postgres cluster!!!"
     echo "                                  If omitted, defaults to haf_app_admin role."
-    echo "  --haf-db-admin=NAME             Allows to specify a name of database admin role having permission to create the database"
-    echo "                       and install an exension inside."
-    echo "                                  Role MUST be earlier created on pointed Postgres instance !!!"
+    echo "  --haf-db-admin=NAME             Specify name of a database admin role with permission to create the database and install the HAF exension."
+    echo "                                  The role MUST already exist on the Postgres cluster!!!"
     echo "                                  If omitted, defaults to haf_admin role."
-    echo "  --no-create-schema              Skips the final steps of creating schema, extension and database roles"
-    echo "  --help                          Display this help screen and exit"
+    echo "  --no-create-schema              Skips the final steps of creating the schema, extension and database roles."
+    echo "  --help                          Display this help screen and exit."
     echo
 }
 
@@ -72,13 +70,13 @@ while [ $# -gt 0 ]; do
         NO_CREATE_SCHEMA=true
         ;;
     -*)
-        echo "ERROR: '$1' is not a valid option"
+        echo "ERROR: '$1' is not a valid option."
         echo
         print_help
         exit 1
         ;;
     *)
-        echo "ERROR: '$1' is not a valid argument"
+        echo "ERROR: '$1' is not a valid argument."
         echo
         print_help
         exit 2
@@ -91,7 +89,7 @@ POSTGRES_ACCESS="--host $POSTGRES_HOST --port $POSTGRES_PORT"
 
 DB_USERS+=("${DEFAULT_DB_USERS[@]}")
 
-# Seems that -v does not work correctly together with -c. Altough it works fine when -f is used (variable substitution works then)
+# Seems that -v does not work correctly together with -c. Although it works fine when -f is used (variable substitution works then).
   
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
   DROP DATABASE IF EXISTS "$DB_NAME";
