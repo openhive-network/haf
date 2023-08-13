@@ -4,8 +4,8 @@ set -euo pipefail
 
 LOG_FILE=build_and_setup_haf_instance.log
 
-# Because this script should work as standalone script being just downloaded from gitlab repo, and next use internal
-# scripts from a cloned repo, logging code is duplicated.
+# This script should work as a standalone script directly downloaded from the gitlab repo, and next use internal
+# scripts from a cloned repo, so the logging code is duplicated.
 
 exec > >(tee -i "${LOG_FILE}") 2>&1
 
@@ -21,26 +21,26 @@ log_exec_params "$@"
 print_help () {
     echo "Usage: $0 [OPTION[=VALUE]]..."
     echo
-    echo "One-step setup for a HAF server instance"
+    echo "One-step script for setting up a HAF server instance."
     echo "OPTIONS:"
-    echo "  --host=VALUE           Optionally specify a PostgreSQL host location (defaults to /var/run/postgresql)"
-    echo "  --port=NUMBER          Optionally specify a PostgreSQL operating port (defaults to 5432)"
-    echo "  --hived-data-dir=PATH  Optionally specify a path where hived node will store its data. For faster setup, put a recent blockchain/block_log and block_log.index file in this directory before running this script."
-    echo "  --hived-option=OPTION  Optionally specify a hived option to be passed to the automatically spawned hived process (this option can be repeated to pass multiple hived options)."
-    echo "  --option-file=FILE     Optionally specify a file containing other options specific to this script's arguments. This file cannot contain another --option-file option within it."
+    echo "  --host=VALUE           Specify a PostgreSQL host location (defaults to /var/run/postgresql)."
+    echo "  --port=NUMBER          Specify a PostgreSQL operating port (defaults to 5432)."
+    echo "  --hived-data-dir=PATH  Specify a path where hived node will store its data. For faster setup, put a recent blockchain/block_log and block_log.index file in this directory before running this script."
+    echo "  --hived-option=OPTION  Specify a hived option to be passed to the automatically spawned hived process (this option can be repeated to pass multiple hived options)."
+    echo "  --option-file=FILE     Specify a file containing other options specific to this script's arguments. This file cannot contain another --option-file option within it."
     echo "  --haf-database-store=DIRECTORY_PATH"
-    echo "                         Optionally specify a directory where Postgres SQL data specific to the HAF database will be stored. "
-    echo "  --branch=branch        Optionally specify a branch of HAF to checkout and build. Defaults to develop branch."
-    echo "  --use-source-dir=PATH  Allows to specify explicit HAF source directory instead of performing git checkout."
-    echo "  --help                 Display this help screen and exit"
+    echo "                         Specify a directory where the HAF database will be stored. "
+    echo "  --branch=branch        Secify a branch of HAF to checkout and build. Defaults to develop branch."
+    echo "  --use-source-dir=PATH  Specify an existing local HAF source directory instead of performing a git checkout."
+    echo "  --help                 Display this help screen and exit."
     echo
 }
 
 HIVED_ACCOUNT="hived"
 HIVED_DATADIR=""
-HIVED_ARGS=() # Set of options to be directly passed to the spawned hived.
+HIVED_ARGS=() # Set of options to be directly passed to the spawned hived process.
 
-FORWARDED_ARGS=() # set of parameters to be forwarded to setup_haf_instance script
+FORWARDED_ARGS=() # set of parameters to be forwarded to the setup_haf_instance script
 
 HAF_ADMIN_ACCOUNT="haf_admin"
 HAF_TABLESPACE_LOCATION=""
@@ -91,13 +91,13 @@ process_option() {
         exit 0
         ;;
     -*)
-        echo "ERROR: '$1' is not a valid option"
+        echo "ERROR: '$1' is not a valid option."
         echo
         print_help
         exit 1
         ;;
     *)
-        echo "ERROR: '$1' is not a valid argument"
+        echo "ERROR: '$1' is not a valid argument."
         echo
         print_help
         exit 2
@@ -147,7 +147,7 @@ do_clone() {
 }
 
 if [ "$EUID" -eq 0 ]
-  then echo "Please DO NOT run as root"
+  then echo "Please DO NOT run as root."
   exit 1
 fi
 
