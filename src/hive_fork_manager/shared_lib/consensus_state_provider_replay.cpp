@@ -362,7 +362,7 @@ void postgres_block_log::replay_block(csp_session_type* csp_session, const pqxx:
   
 }
 
-volatile static auto stop_in_apply_full_block = true;
+volatile static auto stop_in_apply_full_block = false; // true;
 
 void postgres_block_log::apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr,
                                        uint64_t skip_flags)
