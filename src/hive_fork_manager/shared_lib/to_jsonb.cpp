@@ -1,6 +1,7 @@
 #include "to_jsonb.hpp"
 
 #include <psql_utils/postgres_includes.hpp>
+#include <psql_utils/error_reporting.h>
 
 #include <fc/exception/exception.hpp>
 #include <fc/crypto/hex.hpp>
@@ -23,7 +24,7 @@ JsonbValue* push_key_to_jsonb(const std::string& key, JsonbParseState** parseSta
   jb.type = jbvString;
   jb.val.string.len = len;
   jb.val.string.val = pstrdup(str);
-  return pushJsonbValue(parseState, WJB_KEY, &jb);
+  return PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_KEY, &jb);
 }
 
 JsonbValue* push_string_to_jsonb(const std::string& value, JsonbIteratorToken token, JsonbParseState** parseState)
@@ -34,7 +35,7 @@ JsonbValue* push_string_to_jsonb(const std::string& value, JsonbIteratorToken to
   jb.type = jbvString;
   jb.val.string.len = len;
   jb.val.string.val = pstrdup(str);
-  return pushJsonbValue(parseState, token, &jb);
+  return PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, token, &jb);
 }
 
 JsonbValue* push_bool_to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState)
@@ -42,7 +43,7 @@ JsonbValue* push_bool_to_jsonb(bool value, JsonbIteratorToken token, JsonbParseS
   JsonbValue jb;
   jb.type = jbvBool;
   jb.val.boolean = value;
-  return pushJsonbValue(parseState, token, &jb);
+  return PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, token, &jb);
 }
 
 JsonbValue* push_numeric_to_jsonb(const std::string& num, JsonbIteratorToken token, JsonbParseState** parseState)
@@ -50,11 +51,12 @@ JsonbValue* push_numeric_to_jsonb(const std::string& num, JsonbIteratorToken tok
   JsonbValue jb;
   jb.type = jbvNumeric;
   // Call the builtin Postgres function that converts text to numeric type.
-  jb.val.numeric = DatumGetNumeric(DirectFunctionCall3(numeric_in,
-      CStringGetDatum(num.c_str()),
-      ObjectIdGetDatum(InvalidOid), // not used
-      Int32GetDatum(-1))); // default type modifier
-  return pushJsonbValue(parseState, token, &jb);
+  Datum dat = PsqlTools::PsqlUtils::cxx_call_pg(DirectFunctionCall3Coll, numeric_in, InvalidOid,
+    CStringGetDatum(num.c_str()),
+    ObjectIdGetDatum(InvalidOid), // not used
+    Int32GetDatum(-1)); // default type modifier
+  jb.val.numeric = DatumGetNumeric(dat);
+  return PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, token, &jb);
 }
 
 JsonbValue* push_uint64_to_jsonb(const uint64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
@@ -159,7 +161,7 @@ class static_variant_to_jsonb_visitor
     template<typename T>
     JsonbValue* operator()(const T& o) const
     {
-      pushJsonbValue(parseState, WJB_BEGIN_OBJECT, NULL);
+      PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_BEGIN_OBJECT, nullptr);
       // type
       const auto type_name = fc::trim_typename_namespace(fc::get_typename<T>::name());
       push_key_to_jsonb("type", parseState);
@@ -167,7 +169,7 @@ class static_variant_to_jsonb_visitor
       // value
       push_key_to_jsonb("value", parseState);
       to_jsonb(o, WJB_VALUE, parseState);
-      return pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
+      return PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_END_OBJECT, nullptr);
     }
 
   private:
@@ -177,9 +179,9 @@ class static_variant_to_jsonb_visitor
 template<typename T>
 void to_jsonb(const T& t, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  pushJsonbValue(parseState, WJB_BEGIN_OBJECT, NULL);
+  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_BEGIN_OBJECT, nullptr);
   fc::reflector<T>::visit(member_to_jsonb_visitor<T>(t, parseState));
-  pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
+  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_END_OBJECT, nullptr);
 }
 void to_jsonb(bool value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
@@ -220,20 +222,20 @@ void to_jsonb(const std::vector<char>& value, JsonbIteratorToken token, JsonbPar
 template<typename T>
 void to_jsonb(const std::vector<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  pushJsonbValue(parseState, WJB_BEGIN_ARRAY, NULL);
+  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_BEGIN_ARRAY, nullptr);
   for (const auto& elem : value)
   {
     to_jsonb(elem, WJB_ELEM, parseState);
   }
-  pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
+  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_END_ARRAY, nullptr);
 }
 template<typename A, typename B>
 void to_jsonb(const std::pair<A, B>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  pushJsonbValue(parseState, WJB_BEGIN_ARRAY, NULL);
+  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_BEGIN_ARRAY, nullptr);
   to_jsonb(value.first, WJB_ELEM, parseState);
   to_jsonb(value.second, WJB_ELEM, parseState);
-  pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
+  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_END_ARRAY, nullptr);
 }
 template<typename Storage>
 void to_jsonb(const hive::protocol::fixed_string_impl<Storage>& value, JsonbIteratorToken token, JsonbParseState** parseState)
@@ -247,7 +249,7 @@ void to_jsonb(const hive::protocol::json_string& value, JsonbIteratorToken token
   jb.type = jbvString;
   jb.val.string.len = str.length();
   jb.val.string.val = pstrdup(str.c_str());
-  pushJsonbValue(parseState, token, &jb);
+  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, token, &jb);
 }
 void to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
@@ -257,7 +259,7 @@ void to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken token, Json
   }
   else
   {
-    pushJsonbValue(parseState, WJB_BEGIN_OBJECT, NULL);
+    PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_BEGIN_OBJECT, nullptr);
     const auto amount = boost::lexical_cast<std::string>(value.amount.value);
     const auto precision = std::to_string(value.symbol.decimals());
     const auto nai = value.symbol.to_nai_string();
@@ -267,7 +269,7 @@ void to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken token, Json
     push_numeric_to_jsonb(precision, WJB_VALUE, parseState);
     push_key_to_jsonb("nai", parseState);
     push_string_to_jsonb(nai, WJB_VALUE, parseState);
-    pushJsonbValue(parseState, WJB_END_OBJECT, NULL);
+    PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_END_OBJECT, nullptr);
   }
 }
 void to_jsonb(const hive::protocol::legacy_asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
@@ -323,12 +325,12 @@ void to_jsonb(const fc::sha256& value, JsonbIteratorToken token, JsonbParseState
 template<typename T>
 void to_jsonb(const boost::container::flat_set<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  pushJsonbValue(parseState, WJB_BEGIN_ARRAY, NULL);
+  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_BEGIN_ARRAY, nullptr);
   for (const auto& elem : value)
   {
     to_jsonb(elem, WJB_ELEM, parseState);
   }
-  pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
+  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_END_ARRAY, nullptr);
 }
 template<typename T>
 void to_jsonb(const flat_set_ex<T>& value, JsonbIteratorToken token, JsonbParseState** parseState)
@@ -338,12 +340,12 @@ void to_jsonb(const flat_set_ex<T>& value, JsonbIteratorToken token, JsonbParseS
 template<typename K, typename... T>
 void to_jsonb(const boost::container::flat_map<K, T...>& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  pushJsonbValue(parseState, WJB_BEGIN_ARRAY, NULL);
+  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_BEGIN_ARRAY, nullptr);
   for (const auto& kv : value)
   {
     to_jsonb(kv, WJB_ELEM, parseState);
   }
-  pushJsonbValue(parseState, WJB_END_ARRAY, NULL);
+  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_END_ARRAY, nullptr);
 }
 
 }
