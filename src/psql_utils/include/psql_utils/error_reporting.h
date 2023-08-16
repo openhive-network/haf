@@ -5,9 +5,18 @@
 #include "fc/exception/exception.hpp"
 
 #include <string>
+#include <optional>
 #include <stdexcept>
 
 namespace PsqlTools::PsqlUtils {
+
+  /**
+   * Exception thrown by cxx_call_pg when executed function raise an ERROR.
+   */
+  struct PgError : public std::runtime_error {
+    PgError(const char* msg) : std::runtime_error(msg)
+    {}
+  };
 
   class PostgresException {
   public:
@@ -82,6 +91,37 @@ namespace PsqlTools::PsqlUtils {
     PG_END_TRY();
     if ( error_message )
       ereport( ERROR, ( errcode( errorcode ), errmsg( "%s", error_message) ) );
+  }
+
+  /**
+   * Function intended to wrap calls to Postgres functions from c++ code.
+   * This catches any ERROR and turns it into c++ exception, so that any c++ object can be properly destructed.
+   * Intended to be used with call_cxx to turn the exception back into ERROR to be passed to calling Postgres code.
+   *
+   * Fp must not throw exceptions, but we can't enforce that, because C functions are not noexcept.
+   */
+  template <typename Fp, typename... Args>
+  auto cxx_call_pg(Fp&& f, Args&&... args) -> std::invoke_result_t<Fp, Args...>
+  {
+    using RetType = std::invoke_result_t<Fp, Args...>;
+
+    std::optional<RetType> ret;
+    const char* error_message = nullptr;
+    MemoryContext oldcontext = CurrentMemoryContext;
+    PG_TRY();
+    {
+      ret = f(std::forward<Args>(args)...);
+    }
+    PG_CATCH();
+    {
+      MemoryContext errorContext = MemoryContextSwitchTo(oldcontext);
+      ErrorData *edata = CopyErrorData();
+      error_message = edata->message;
+      MemoryContextSwitchTo(errorContext);
+    }
+    PG_END_TRY();
+    if (ret.has_value()) return ret.value();
+    else throw PgError(error_message ? error_message : "");
   }
 
 } // namespace PsqlTools::PsqlUtils
