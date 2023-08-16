@@ -52,6 +52,13 @@ END;
 $BODY$
 ;
 
+drop type if exists hive.events_queue_record cascade;
+create type hive.events_queue_record as (
+    id int,
+    event text,
+    block_num int
+);
+
 CREATE OR REPLACE FUNCTION hive.set_irreversible( _block_num INT )
     RETURNS void
     LANGUAGE plpgsql
@@ -60,8 +67,12 @@ AS
 $BODY$
 DECLARE
     __irreversible_head_block hive.blocks.num%TYPE;
+    eq hive.events_queue_record[];
 BEGIN
-    raise notice 'set_irreversible BEGIN' ;
+    raise notice 'sssss ezsobma set_irreversible BEGIN';
+    SELECT array_agg((id, event, block_num) order by id asc) INTO eq FROM hive.events_queue;
+    raise notice 'sssss ezsobma set_irreversible for num % events_queue: %', to_json(_block_num), to_json(eq);
+
     SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hive.blocks;
     IF ( _block_num < __irreversible_head_block ) THEN
         RETURN;
@@ -73,7 +84,7 @@ BEGIN
     VALUES( 'NEW_IRREVERSIBLE', _block_num );
 
     -- copy to irreversible
-    raise notice 'set_irreversible copying begin' ;
+    raise notice 'ttttt ezsobma set_irreversible copying begin' ;
     PERFORM hive.copy_blocks_to_irreversible( __irreversible_head_block, _block_num );
     PERFORM hive.copy_transactions_to_irreversible( __irreversible_head_block, _block_num );
     PERFORM hive.copy_operations_to_irreversible( __irreversible_head_block, _block_num );
@@ -81,19 +92,21 @@ BEGIN
     PERFORM hive.copy_accounts_to_irreversible( __irreversible_head_block, _block_num );
     PERFORM hive.copy_account_operations_to_irreversible( __irreversible_head_block, _block_num );
     PERFORM hive.copy_applied_hardforks_to_irreversible( __irreversible_head_block, _block_num );
-    raise notice 'set_irreversible copying end' ;
+    raise notice 'ttttt ezsobma set_irreversible copying end' ;
 
     --try to increase irreversible blocks for every context
     PERFORM hive.refresh_irreversible_block_for_all_contexts( _block_num );
 
-    raise notice 'set_irreversible refresh_irreversible_block_for_all_contexts end' ;
+    raise notice 'ttttt ezsobma set_irreversible refresh_irreversible_block_for_all_contexts end' ;
     -- remove unneeded blocks and events
     PERFORM hive.remove_obsolete_reversible_data( _block_num );
 
-    raise notice 'set_irreversible remove_obsolete_reversible_data end' ;
+    SELECT array_agg((id, event, block_num) order by id asc) INTO eq FROM hive.events_queue;
+    raise notice 'ttttt ezsobma set_irreversible events_queue: %', to_json(eq);
+    raise notice 'ttttt ezsobma set_irreversible remove_obsolete_reversible_data end' ;
 
     UPDATE hive.irreversible_data SET consistent_block = _block_num;
-    raise notice 'set_irreversible END' ;
+    raise notice 'ttttt ezsobma set_irreversible END' ;
 END;
 $BODY$
 ;

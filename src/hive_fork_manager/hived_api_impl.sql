@@ -279,6 +279,13 @@ END;
 $BODY$
 ;
 
+drop type if exists hive.events_queue_record cascade;
+create type hive.events_queue_record as (
+    id int,
+    event text,
+    block_num int
+);
+
 CREATE OR REPLACE FUNCTION hive.remove_unecessary_events( _new_irreversible_block INT )
     RETURNS void
     LANGUAGE plpgsql
@@ -289,13 +296,23 @@ DECLARE
     __upper_bound_events_id BIGINT := NULL;
     __max_block_num INTEGER := NULL;
     item record;
+    item1 record;
+    item2 record;
+    ct record;
+    lowest_event INTEGER;
+    me INTEGER;
+    eq hive.events_queue_record[];
 BEGIN
+    SELECT array_agg((id, event, block_num) order by id asc) INTO eq FROM hive.events_queue;
+    raise notice 'ttttt ezsobma remove_unecessary_events BEGIN events_queue: %', to_json(eq);
     SELECT consistent_block INTO __max_block_num FROM hive.irreversible_data;
 
     -- find the upper bound of events possible to remove
     SELECT MIN(heq.id) INTO __upper_bound_events_id
     FROM hive.events_queue heq
     WHERE heq.event != 'BACK_FROM_FORK' AND heq.block_num = ( _new_irreversible_block + 1 ); --next block after irreversible
+    raise notice 'ttttt ezsobma remove_unecessary_events _new_irreversible_block: %', to_json(_new_irreversible_block);
+    raise notice 'ttttt ezsobma remove_unecessary_events __upper_bound_events_id: %', to_json(__upper_bound_events_id);
 
     -- You may think that SELECT FOR UPDATE needs to be used here in USING clause
     -- but SELECT FOR UPDATE will lock hive.contexts, so it want to acquire lock
@@ -311,16 +328,42 @@ BEGIN
     -- It means that SELECT from USING clause will return min event = 10, but in case of a bug an application
     -- context may back to event 9 and then when DELETE is being committed it will violate FK(event_queue(id)<->contexts(events_id))
 
-    FOR item IN SELECT * FROM hive.events_queue LOOP
-        raise notice 'ezsobma remove_unecessary_events hive.events_queue %', to_json(item);
-    END LOOP;
-    FOR item IN SELECT * FROM hive.contexts LOOP
-        raise notice 'ezsobma remove_unecessary_events hive.contexts %', to_json(item);
-    END LOOP;
+    -- FOR item IN SELECT * FROM hive.events_queue LOOP
+    --     raise notice 'ezsobma remove_unecessary_events hive.events_queue %', to_json(item);
+    -- END LOOP;
+    -- FOR item IN SELECT * FROM hive.contexts LOOP
+    --     raise notice 'ezsobma remove_unecessary_events hive.contexts %', to_json(item);
+    -- END LOOP;
+
+    SELECT * INTO item1 FROM hive.contexts;
+    SELECT * INTO item2 FROM hive.irreversible_data;
+    raise notice 'uuuuu ezsobma remove_unecessary_events context % irreversible_data %', to_json(item1), to_json(item2);
+
+    SELECT id INTO lowest_event FROM hive.events_queue where id != 0 order by id asc limit 1;
+    SELECT array_agg((id, event, block_num) order by id asc) INTO eq FROM hive.events_queue;
+    raise notice 'uuuuu ezsobma remove_unecessary_events events_queue before DELETE lowest_event % full array %', to_json(lowest_event), to_json(eq);
+
+    SELECT MIN( hc.events_id) INTO me FROM hive.contexts hc;
+    raise notice 'before wwwww ezsobma remove_unecessary_events min_event: %', to_json(me);
+    SELECT array_agg((id, event, block_num) order by id asc) INTO eq FROM hive.events_queue;
+    raise notice 'before wwwww ezsobma remove_unecessary_events full events_queue: %', to_json(eq);
+    SELECT * INTO ct FROM hive.contexts;
+    raise notice 'before wwwww ezsobma remove_unecessary_events contexts: %', to_json(ct);
     DELETE FROM hive.events_queue heq
     USING ( SELECT MIN( hc.events_id) as id FROM hive.contexts hc ) as min_event
     WHERE ( heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL )  AND ( heq.id < min_event.id OR min_event.id IS NULL ) AND heq.id != 0;
 
+    SELECT MIN( hc.events_id) INTO me FROM hive.contexts hc;
+    raise notice 'after wwwww ezsobma remove_unecessary_events min_event: %', to_json(me);
+    SELECT array_agg((id, event, block_num) order by id asc) INTO eq FROM hive.events_queue;
+    raise notice 'after wwwww ezsobma remove_unecessary_events full events_queue: %', to_json(eq);
+    SELECT * INTO ct FROM hive.contexts;
+    raise notice 'after wwwww ezsobma remove_unecessary_events contexts: %', to_json(ct);
+
+    SELECT id INTO lowest_event FROM hive.events_queue where id != 0 order by id asc limit 1;
+    SELECT array_agg((id, event, block_num) order by id asc) INTO eq FROM hive.events_queue;
+    raise notice 'uuuuu ezsobma remove_unecessary_events events_queue after DELETE lowest_event % full array %', to_json(lowest_event), to_json(eq);
+    raise notice 'ttttt ezsobma remove_unecessary_events END';
 END;
 $BODY$
 ;

@@ -131,7 +131,10 @@ CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive.contexts_gro
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __result hive.blocks_range[];
 BEGIN
+    raise notice 'ezsobma app_next_block';
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
     IF EXISTS( SELECT 1 FROM hive.contexts hc WHERE hc.name =ANY( _context_names ) AND hc.is_attached = FALSE ) THEN

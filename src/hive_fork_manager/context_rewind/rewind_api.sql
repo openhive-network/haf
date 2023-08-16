@@ -79,6 +79,7 @@ DECLARE
     __registerd_table_schema TEXT;
     __registerd_table_name TEXT;
 BEGIN
+    raise notice 'eeeee ezsobma context_back_from_fork context % block_num_before_fork %', to_json(_context), to_json(_block_num_before_fork);
     -- we need a flag for back_from_fork to returns from triggers immediatly
     -- we cannot use ALTER TABLE DISABLE TRIGGERS because DDL event trigger cause an error:
     -- Cannot ALTER TABLE "table" because it has pending trigger events, but only when origin tables have contstraints

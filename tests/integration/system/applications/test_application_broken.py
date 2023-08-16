@@ -29,7 +29,6 @@ def update_app_continuously(session, application_context, cycles):
 def test_application_broken(prepared_networks_and_database_12_8_without_block_log):
     tt.logger.info(f'Start test_application_broken')
 
-
     #What is tested?
         #UPDATE hive.contexts
         #SET irreversible_block = _new_irreversible_block
