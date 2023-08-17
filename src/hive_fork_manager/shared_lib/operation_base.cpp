@@ -98,7 +98,7 @@ extern "C"
     const char* raw_data = VARDATA_ANY( op );
 
     Jsonb* jsonb = nullptr;
-    PsqlTools::PsqlUtils::call_cxx([=, &jsonb](){
+    PsqlTools::PsqlUtils::pg_call_cxx([=, &jsonb](){
       const hive::protocol::operation operation = raw_to_operation( raw_data, data_length );
       JsonbValue* jsonbValue = operation_to_jsonb_value(operation);
       jsonb = JsonbValueToJsonb(jsonbValue);
@@ -111,7 +111,7 @@ extern "C"
   {
     Jsonb *jb = PG_GETARG_JSONB_P(0);
     _operation* op = nullptr;
-    PsqlTools::PsqlUtils::call_cxx([=, &op](){
+    PsqlTools::PsqlUtils::pg_call_cxx([=, &op](){
       JsonbValue json {};
       JsonbToJsonbValue(jb, &json);
       hive::protocol::operation operation = operation_from_jsonb_value(json);
@@ -128,7 +128,7 @@ extern "C"
     const text* str = PG_GETARG_TEXT_P( 0 );
 
     _operation* op = nullptr;
-    PsqlTools::PsqlUtils::call_cxx([=, &op](){
+    PsqlTools::PsqlUtils::pg_call_cxx([=, &op](){
       std::vector< char > data = json_to_op( text_to_cstring( str ) );
       op = make_operation( data.data(), data.size() );
     }, ERRCODE_INVALID_TEXT_REPRESENTATION);
@@ -144,7 +144,7 @@ extern "C"
     const char* raw_data = VARDATA_ANY( op );
 
     const char* cstring_out = nullptr;
-    PsqlTools::PsqlUtils::call_cxx([=, &cstring_out](){
+    PsqlTools::PsqlUtils::pg_call_cxx([=, &cstring_out](){
       std::string json = op_to_json( raw_data, data_length );
       uint32 json_size = json.size() + 1;
       char* chars      = (char*) palloc( json_size );
@@ -159,7 +159,7 @@ extern "C"
     const char* data = PG_GETARG_CSTRING( 0 );
 
     Datum bytes = DirectFunctionCall1(byteain, CStringGetDatum(data));
-    PsqlTools::PsqlUtils::call_cxx([=](){
+    PsqlTools::PsqlUtils::pg_call_cxx([=](){
       raw_to_operation( VARDATA_ANY( bytes ), VARSIZE_ANY_EXHDR( bytes ) );
     }, ERRCODE_INVALID_BINARY_REPRESENTATION);
 

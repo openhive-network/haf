@@ -24,9 +24,9 @@ BOOST_AUTO_TEST_CASE( cxx_call_pg_turns_pg_error_into_cpp_exception )
   );
 }
 
-BOOST_AUTO_TEST_CASE( cxx_call_pg_in_call_cxx_turns_pg_error_back_into_pg_error )
+BOOST_AUTO_TEST_CASE( cxx_call_pg_in_pg_call_cxx_turns_pg_error_back_into_pg_error )
 {
-  EXPECT_PG_ERROR(PsqlTools::PsqlUtils::call_cxx([](){
+  EXPECT_PG_ERROR(PsqlTools::PsqlUtils::pg_call_cxx([](){
     PsqlTools::PsqlUtils::cxx_call_pg([]() -> int {
       ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ) ) );
     });

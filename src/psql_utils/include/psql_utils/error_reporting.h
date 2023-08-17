@@ -43,7 +43,7 @@ namespace PsqlTools::PsqlUtils {
    * If any result is needed to be returned from c++, it should be captured and modified inside lambda.
    */
   template <typename F>
-  void call_cxx(F f, int errorcode=ERRCODE_DATA_EXCEPTION)
+  void pg_call_cxx(F f, int errorcode=ERRCODE_DATA_EXCEPTION)
   {
     // We want lambda to contain only trivial captures, so that it's safe to be `longjmp`ed over.
     // We could use is_trivial_v, but in C++17 compilers disagree whether type of lambda is trivial or not. The standard explicitly says it's implementation defined.
@@ -96,7 +96,7 @@ namespace PsqlTools::PsqlUtils {
   /**
    * Function intended to wrap calls to Postgres functions from c++ code.
    * This catches any ERROR and turns it into c++ exception, so that any c++ object in the calling code can be properly destructed.
-   * Intended to be used with call_cxx to turn the exception back into ERROR to be passed to calling Postgres code.
+   * Intended to be used with pg_call_cxx to turn the exception back into ERROR to be passed to calling Postgres code.
    *
    * This is intended for calling a single Postgres function that can raise an ERROR.
    * Any exception thrown by called function is transformed into PgError exception.
