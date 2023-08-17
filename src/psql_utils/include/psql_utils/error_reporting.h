@@ -136,6 +136,24 @@ namespace PsqlTools::PsqlUtils {
   template <>
   struct DirectFunctionCallNColl<3>
   { constexpr static auto value = DirectFunctionCall3Coll; };
+  template <>
+  struct DirectFunctionCallNColl<4>
+  { constexpr static auto value = DirectFunctionCall4Coll; };
+  template <>
+  struct DirectFunctionCallNColl<5>
+  { constexpr static auto value = DirectFunctionCall5Coll; };
+  template <>
+  struct DirectFunctionCallNColl<6>
+  { constexpr static auto value = DirectFunctionCall6Coll; };
+  template <>
+  struct DirectFunctionCallNColl<7>
+  { constexpr static auto value = DirectFunctionCall7Coll; };
+  template <>
+  struct DirectFunctionCallNColl<8>
+  { constexpr static auto value = DirectFunctionCall8Coll; };
+  template <>
+  struct DirectFunctionCallNColl<9>
+  { constexpr static auto value = DirectFunctionCall9Coll; };
 
   /**
    * Same as cxx_call_pg, but automatically call provided function via correct DirectFunctionCallXColl Postgres function, so that the caller doesn't have to.
