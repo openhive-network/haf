@@ -18,24 +18,6 @@ namespace PsqlTools::PsqlUtils {
     {}
   };
 
-  class PostgresException {
-  public:
-    PostgresException(std::string str) : message(str)
-    {}
-    PostgresException(const std::exception& e) : message(e.what())
-    {}
-    PostgresException(const fc::exception& e) : message(e.to_string())
-    {}
-
-    const std::string& msg() const
-    {
-      return message;
-    }
-
-  private:
-    std::string message;
-  };
-
   /**
    * This function is a safe way to invoke lambda with C++ code from Postgres code.
    * This catches any exception thrown by called lambda and translates them into Postgres errors using ereport call.
@@ -57,10 +39,6 @@ namespace PsqlTools::PsqlUtils {
       try
       {
         f();
-      }
-      catch (const PsqlTools::PsqlUtils::PostgresException& e)
-      {
-        error_message = pstrdup(e.msg().c_str());
       }
       catch (const fc::exception& e)
       {
