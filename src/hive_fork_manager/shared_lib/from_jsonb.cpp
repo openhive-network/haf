@@ -1,4 +1,5 @@
 #include <psql_utils/postgres_includes.hpp>
+#include <psql_utils/error_reporting.h>
 
 #include <hive/protocol/operations.hpp>
 
@@ -53,20 +54,20 @@ uint64_t numeric_to_uint64(Datum num)
 {
   const auto int64max = PG_INT64_MAX;
   const std::string str64max = std::to_string(int64max);
-  Datum num64max = DirectFunctionCall3(numeric_in, CStringGetDatum(str64max.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
-  const bool needs64bits = DatumGetBool(DirectFunctionCall2(numeric_gt, num, num64max));
+  Datum num64max = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum(str64max.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+  const bool needs64bits = DatumGetBool(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_gt, num, num64max));
   if (needs64bits)
   {
     // We can't use numeric_int8 directly, because it will overflow.
     // Instead, first subtract INT64_MAX from input numeric, convert that and add INT64_MAX back.
-    Datum subnum = DirectFunctionCall2(numeric_sub, num, num64max);
-    const uint64_t value = static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, subnum)));
+    Datum subnum = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_sub, num, num64max);
+    const uint64_t value = static_cast<uint64_t>(DatumGetInt64(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, subnum)));
     return value + int64max;
   }
   else
   {
     // We can just use Postgres' numeric_int8 as it will not overflow
-    return static_cast<uint64_t>(DatumGetInt64(DirectFunctionCall1(numeric_int8, num)));
+    return static_cast<uint64_t>(DatumGetInt64(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, num)));
   }
 }
 
@@ -99,48 +100,48 @@ void set_member(int8_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
   // TODO: error on overflow?
-  member = static_cast<int8_t>(DatumGetUInt8(DirectFunctionCall1(numeric_int2, NumericGetDatum(json.val.numeric))));
+  member = static_cast<int8_t>(DatumGetUInt8(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int2, NumericGetDatum(json.val.numeric))));
 }
 void set_member(uint8_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
-  member = DatumGetUInt8(DirectFunctionCall1(numeric_int2, NumericGetDatum(json.val.numeric)));
+  member = DatumGetUInt8(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int2, NumericGetDatum(json.val.numeric)));
 }
 void set_member(int16_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
-  member = DatumGetInt16(DirectFunctionCall1(numeric_int2, NumericGetDatum(json.val.numeric)));
+  member = DatumGetInt16(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int2, NumericGetDatum(json.val.numeric)));
 }
 void set_member(uint16_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
   // TODO: error on overflow?
-  member = static_cast<uint16_t>(DatumGetInt16(DirectFunctionCall1(numeric_int4, NumericGetDatum(json.val.numeric))));
+  member = static_cast<uint16_t>(DatumGetInt16(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int4, NumericGetDatum(json.val.numeric))));
 }
 void set_member(int32_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
-  member = DatumGetInt32(DirectFunctionCall1(numeric_int4, NumericGetDatum(json.val.numeric)));
+  member = DatumGetInt32(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int4, NumericGetDatum(json.val.numeric)));
 }
 void set_member(uint32_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
   // TODO: error on overflow?
-  member = static_cast<uint32_t>(DatumGetInt32(DirectFunctionCall1(numeric_int8, NumericGetDatum(json.val.numeric))));
+  member = static_cast<uint32_t>(DatumGetInt32(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, NumericGetDatum(json.val.numeric))));
 }
 void set_member(int64_t& member, const JsonbValue& json)
 {
   if (json.type == jbvNumeric)
   {
     // TODO: error on overflow?
-    member = DatumGetInt64(DirectFunctionCall1(numeric_int8, NumericGetDatum(json.val.numeric)));
+    member = DatumGetInt64(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, NumericGetDatum(json.val.numeric)));
   }
   else if (json.type == jbvString)
   {
     // TODO: error on overflow?
     const auto str = std::string(json.val.string.val, json.val.string.len);
-    Datum num = DirectFunctionCall3(numeric_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
-    member = DatumGetInt64(DirectFunctionCall1(numeric_int8, num));
+    Datum num = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+    member = DatumGetInt64(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, num));
   }
   else
   {
@@ -156,7 +157,7 @@ void set_member(uint64_t& member, const JsonbValue& json)
   else if (json.type == jbvString)
   {
     const auto str = std::string(json.val.string.val, json.val.string.len);
-    Datum num = DirectFunctionCall3(numeric_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+    Datum num = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
     member = numeric_to_uint64(num);
   }
   else
@@ -198,9 +199,9 @@ void set_member(hive::protocol::asset& member, const JsonbValue& json)
     JsonbValue amount {};
     JsonbValue precision {};
     JsonbValue nai {};
-    getKeyJsonValueFromContainer(json.val.binary.data, "amount", 6, &amount);
-    getKeyJsonValueFromContainer(json.val.binary.data, "precision", 9, &precision);
-    getKeyJsonValueFromContainer(json.val.binary.data, "nai", 3, &nai);
+    PsqlTools::PsqlUtils::cxx_call_pg(getKeyJsonValueFromContainer, json.val.binary.data, "amount", 6, &amount);
+    PsqlTools::PsqlUtils::cxx_call_pg(getKeyJsonValueFromContainer, json.val.binary.data, "precision", 9, &precision);
+    PsqlTools::PsqlUtils::cxx_call_pg(getKeyJsonValueFromContainer, json.val.binary.data, "nai", 3, &nai);
     FC_ASSERT(amount.type == jbvString);
     FC_ASSERT(precision.type == jbvNumeric);
     FC_ASSERT(nai.type == jbvString);
@@ -277,8 +278,8 @@ void set_member(std::pair<A, B>& member, const JsonbValue& json)
   FC_ASSERT(elementCount == 2);
   A a{};
   B b{};
-  set_member(a, *getIthJsonbValueFromContainer(json.val.binary.data, 0));
-  set_member(b, *getIthJsonbValueFromContainer(json.val.binary.data, 1));
+  set_member(a, *PsqlTools::PsqlUtils::cxx_call_pg(getIthJsonbValueFromContainer, json.val.binary.data, 0));
+  set_member(b, *PsqlTools::PsqlUtils::cxx_call_pg(getIthJsonbValueFromContainer, json.val.binary.data, 1));
   member = std::pair(a, b);
 }
 template <typename T>
@@ -312,7 +313,7 @@ void set_member(std::vector<T>& member, const JsonbValue& json)
   member.resize(elementCount);
   for (uint32 n = 0; n < elementCount; ++n)
   {
-    set_member(member[n], *getIthJsonbValueFromContainer(json.val.binary.data, n));
+    set_member(member[n], *PsqlTools::PsqlUtils::cxx_call_pg(getIthJsonbValueFromContainer, json.val.binary.data, n));
   }
 }
 template <typename T>
@@ -325,7 +326,7 @@ void set_member(boost::container::flat_set<T>& member, const JsonbValue& json)
   for (uint32 n = 0; n < elementCount; ++n)
   {
     T t {};
-    set_member(t, *getIthJsonbValueFromContainer(json.val.binary.data, n));
+    set_member(t, *PsqlTools::PsqlUtils::cxx_call_pg(getIthJsonbValueFromContainer, json.val.binary.data, n));
     member.insert(std::move(t));
   }
 }
@@ -339,7 +340,7 @@ void set_member(flat_set_ex<T>& member, const JsonbValue& json)
   for (uint32 n = 0; n < elementCount; ++n)
   {
     T tmp {};
-    set_member(tmp, *getIthJsonbValueFromContainer(json.val.binary.data, n));
+    set_member(tmp, *PsqlTools::PsqlUtils::cxx_call_pg(getIthJsonbValueFromContainer, json.val.binary.data, n));
     if (!member.empty())
     {
       FC_ASSERT(tmp > *member.rbegin(), "Items should be unique and sorted");
@@ -357,7 +358,7 @@ void set_member(boost::container::flat_map<K, T>& member, const JsonbValue& json
   for (uint32 n = 0; n < elementCount; ++n)
   {
     std::pair<K, T> tmp {};
-    set_member(tmp, *getIthJsonbValueFromContainer(json.val.binary.data, n));
+    set_member(tmp, *PsqlTools::PsqlUtils::cxx_call_pg(getIthJsonbValueFromContainer, json.val.binary.data, n));
     member.insert(std::move(tmp));
   }
 }
@@ -385,7 +386,7 @@ class member_from_jsonb_visitor
     void operator()(const char* name) const
     {
       JsonbValue value {};
-      if (getKeyJsonValueFromContainer(jsonb.val.binary.data, name, strlen(name), &value))
+      if (PsqlTools::PsqlUtils::cxx_call_pg(getKeyJsonValueFromContainer, jsonb.val.binary.data, name, strlen(name), &value))
       {
         set_member(op->*member, value);
       }
@@ -449,8 +450,8 @@ void set_member(fc::static_variant<Types...>& member, const JsonbValue& json)
   FC_ASSERT(JsonContainerIsObject(json.val.binary.data));
   JsonbValue type {};
   JsonbValue value {};
-  getKeyJsonValueFromContainer(json.val.binary.data, "type", 4, &type);
-  getKeyJsonValueFromContainer(json.val.binary.data, "value", 5, &value);
+  PsqlTools::PsqlUtils::cxx_call_pg(getKeyJsonValueFromContainer, json.val.binary.data, "type", 4, &type);
+  PsqlTools::PsqlUtils::cxx_call_pg(getKeyJsonValueFromContainer, json.val.binary.data, "value", 5, &value);
   FC_ASSERT(type.type == jbvString);
   FC_ASSERT(value.type == jbvBinary);
   FC_ASSERT(JsonContainerIsObject(value.val.binary.data));
