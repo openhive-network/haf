@@ -74,5 +74,18 @@ BOOST_AUTO_TEST_CASE( postgres_warning_is_not_an_error )
   BOOST_CHECK(res == 8);
 }
 
+BOOST_AUTO_TEST_CASE( call_cxx_resets_PG_exception_stack_on_exit )
+{
+  BOOST_REQUIRE_EQUAL(PG_exception_stack, nullptr);
+  EXPECT_PG_ERROR(PsqlTools::PsqlUtils::call_cxx([](){
+    ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", "error") ) );
+  }));
+  BOOST_REQUIRE_EQUAL(PG_exception_stack, nullptr);
+  PsqlTools::PsqlUtils::call_cxx([](){
+    ereport( NOTICE, ( errcode( ERRCODE_DATA_EXCEPTION ), errmsg( "%s", "notice") ) );
+  });
+  BOOST_REQUIRE_EQUAL(PG_exception_stack, nullptr);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
