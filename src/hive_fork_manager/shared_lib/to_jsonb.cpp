@@ -51,7 +51,7 @@ JsonbValue* push_numeric_to_jsonb(const std::string& num, JsonbIteratorToken tok
   JsonbValue jb;
   jb.type = jbvNumeric;
   // Call the builtin Postgres function that converts text to numeric type.
-  Datum dat = PsqlTools::PsqlUtils::cxx_call_pg(DirectFunctionCall3Coll, numeric_in, InvalidOid,
+  Datum dat = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in,
     CStringGetDatum(num.c_str()),
     ObjectIdGetDatum(InvalidOid), // not used
     Int32GetDatum(-1)); // default type modifier
