@@ -1,5 +1,9 @@
 #pragma once
 
+/**
+ * Header intended for Postgress/c++ interop definitions.
+ */
+
 #include "psql_utils/postgres_includes.hpp"
 
 #include "fc/exception/exception.hpp"
