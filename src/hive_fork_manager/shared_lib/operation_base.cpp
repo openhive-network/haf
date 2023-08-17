@@ -5,7 +5,7 @@
 #include "svstream.hpp"
 
 #include <psql_utils/postgres_includes.hpp>
-#include <psql_utils/error_reporting.h>
+#include <psql_utils/pg_cxx.hpp>
 
 #include <hive/protocol/operations.hpp>
 

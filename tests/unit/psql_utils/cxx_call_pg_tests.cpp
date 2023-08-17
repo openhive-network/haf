@@ -2,7 +2,7 @@
 
 #include "mock/gmock_fixture.hpp"
 
-#include <psql_utils/error_reporting.h>
+#include <psql_utils/pg_cxx.hpp>
 
 BOOST_FIXTURE_TEST_SUITE( cxx_call_pg_tests, GmockFixture )
 
