@@ -73,7 +73,7 @@ namespace PsqlTools::PsqlUtils {
       }
       catch (...)
       {
-       error_message = "Unexpected error";
+       error_message = "Unexpected error calling cpp function";
       }
     } /* PG_TRY() */
     PG_CATCH();
@@ -95,10 +95,11 @@ namespace PsqlTools::PsqlUtils {
 
   /**
    * Function intended to wrap calls to Postgres functions from c++ code.
-   * This catches any ERROR and turns it into c++ exception, so that any c++ object can be properly destructed.
+   * This catches any ERROR and turns it into c++ exception, so that any c++ object in the calling code can be properly destructed.
    * Intended to be used with call_cxx to turn the exception back into ERROR to be passed to calling Postgres code.
    *
-   * Fp must not throw exceptions, but we can't enforce that, because C functions are not noexcept.
+   * This is intended for calling a single Postgres function that can raise an ERROR.
+   * Any exception thrown by called function is transformed into PgError exception.
    */
   template <typename Fp, typename... Args>
   auto cxx_call_pg(Fp&& f, Args&&... args) -> std::invoke_result_t<Fp, Args...>
@@ -110,7 +111,25 @@ namespace PsqlTools::PsqlUtils {
     MemoryContext oldcontext = CurrentMemoryContext;
     PG_TRY();
     {
-      ret = f(std::forward<Args>(args)...);
+      const char* emsg = nullptr;
+      try
+      {
+        ret = f(std::forward<Args>(args)...);
+      }
+      catch (const fc::exception& e)
+      {
+        const auto msg = e.to_string();
+        emsg = pnstrdup(msg.c_str(), msg.length());
+      }
+      catch (const std::exception& e)
+      {
+        emsg = pstrdup(e.what());
+      }
+      catch (...)
+      {
+       emsg = "Unexpected error calling pg function";
+      }
+      if (!ret.has_value()) ereport( ERROR, ( errmsg( "%s", emsg ) ) );
     }
     PG_CATCH();
     {

@@ -33,4 +33,31 @@ BOOST_AUTO_TEST_CASE( cxx_call_pg_in_call_cxx_turns_pg_error_back_into_pg_error 
   }));
 }
 
+BOOST_AUTO_TEST_CASE( cxx_call_pg_restores_PG_exception_stack_on_exit )
+{
+  BOOST_REQUIRE_EQUAL(PG_exception_stack, nullptr);
+  BOOST_CHECK_THROW(
+    PsqlTools::PsqlUtils::cxx_call_pg([]() -> int {
+      ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ) ) );
+    }),
+    PsqlTools::PsqlUtils::PgError
+  );
+  BOOST_REQUIRE_EQUAL(PG_exception_stack, nullptr);
+}
+
+BOOST_AUTO_TEST_CASE( cxx_call_pg_can_be_nested )
+{
+  BOOST_REQUIRE_EQUAL(PG_exception_stack, nullptr);
+  BOOST_CHECK_THROW(
+    PsqlTools::PsqlUtils::cxx_call_pg([]() -> int {
+      PsqlTools::PsqlUtils::cxx_call_pg([]() -> int {
+        ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ) ) );
+      });
+      return 0;
+    }),
+    PsqlTools::PsqlUtils::PgError
+  );
+  BOOST_REQUIRE_EQUAL(PG_exception_stack, nullptr);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
