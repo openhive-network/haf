@@ -124,4 +124,28 @@ namespace PsqlTools::PsqlUtils {
     else throw PgError(error_message ? error_message : "");
   }
 
+  template <size_t N>
+  struct DirectFunctionCallNColl
+  { static_assert(N != N, "Missing specialisation for DirectFunctionCallNColl for requested value of N"); };
+  template <>
+  struct DirectFunctionCallNColl<1>
+  { constexpr static auto value = DirectFunctionCall1Coll; };
+  template <>
+  struct DirectFunctionCallNColl<2>
+  { constexpr static auto value = DirectFunctionCall2Coll; };
+  template <>
+  struct DirectFunctionCallNColl<3>
+  { constexpr static auto value = DirectFunctionCall3Coll; };
+
+  /**
+   * Same as cxx_call_pg, but automatically call provided function via correct DirectFunctionCallXColl Postgres function, so that the caller doesn't have to.
+   * Fp needs to return Datum.
+   */
+  template <typename Fp, typename... Args>
+  auto cxx_direct_call_pg(Fp&& f, Args&&... args) -> Datum
+  {
+    auto DirectFunctionCallN = DirectFunctionCallNColl<sizeof...(Args)>::value;
+    return cxx_call_pg(DirectFunctionCallN, std::forward<Fp>(f), InvalidOid, std::forward<Args>(args)...);
+  }
+
 } // namespace PsqlTools::PsqlUtils
