@@ -694,7 +694,7 @@ BEGIN
   WHILE (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP() <= _timeout) LOOP
     __retry := __retry + 1;
     IF hive.is_instance_ready() THEN
-      RAISE NOTICE 'HAF instance is ready. Existing...';
+      RAISE NOTICE 'HAF instance is ready. Exiting wait loop...';
       RETURN;
     END IF;
     RAISE NOTICE '# %, waiting time: % s - waiting for another % s', __retry, extract(epoch from (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP())), extract(epoch from (__wait_time));

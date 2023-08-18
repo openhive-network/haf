@@ -396,6 +396,7 @@ DECLARE
     __context_state hive.context_state;
     __result hive.blocks_range[];
 BEGIN
+    PERFORM hive.wait_for_ready_instance('178000000 years'::interval);
     SELECT * FROM hive.squash_and_get_state( _context_names ) INTO __context_state;
 
     SELECT ARRAY_AGG( hive.app_process_event(contexts.*, __context_state) ) INTO __result
@@ -421,6 +422,7 @@ DECLARE
     __result hive.blocks_range[];
     __context_state hive.context_state;
 BEGIN
+    PERFORM hive.wait_for_ready_instance('178000000 years'::interval);
     SELECT * FROM hive.squash_and_get_state( _context_names ) INTO __context_state;
     SELECT ARRAY_AGG( hive.app_process_event_non_forking(contexts.*, __context_state) ) INTO __result
     FROM unnest( _context_names ) as contexts;
