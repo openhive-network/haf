@@ -67,8 +67,12 @@ extern "C" {
   #pragma GCC diagnostic pop
 #endif
 
-#ifdef POP_ELOG
+#ifdef elog
+  // Undefine Postgres elog, please use ereport instead
   #undef elog
+#endif
+#ifdef POP_ELOG
+  // Bring back fc elog
   #pragma pop_macro( "elog" )
   #undef POP_ELOG
 #endif 
