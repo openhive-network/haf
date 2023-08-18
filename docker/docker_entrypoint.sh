@@ -17,7 +17,7 @@ then
     exit 1
 fi
 
-if sudo -Enu hived test ! -d "$SHM_DIR"
+if sudo -Enu hived test ! -d "$SHM_DIR" && test "$SHM_DIR" != "$DATADIR/blockchain"
 then
     echo "Shared memory file directory (SHM_DIR) $SHM_DIR does not exist. Exiting."
     exit 1
@@ -44,6 +44,7 @@ DO_MAINTENANCE=0 #Allows to enter some maintenance mode (when postgres is starte
 PERFORM_DUMP=0
 PERFORM_LOAD=0
 BACKUP_SOURCE_DIR_NAME=""
+MAINTENANCE_SCRIPT_NAME=""
 
 stop_postresql() {
 echo "Attempting to stop Postgresql..."
@@ -163,7 +164,7 @@ then
   echo "Attempting to setup postgres instance already containing HAF database..."
 
   # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
-  sudo -n ./haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace"
+  sudo -n /home/haf_admin/haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace"
   sudo -n "/usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh" --haf-admin-account=haf_admin --haf-db-name=haf_block_log
 
   echo "Postgres instance setup completed."
@@ -180,13 +181,13 @@ else
 
   echo "Attempting to setup postgres instance: running setup_postgres.sh..."
 
-  sudo -n ./haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace"
+  sudo -n /home/haf_admin/haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace"
 
   echo "Postgres instance setup completed."
 
-  ./haf/scripts/setup_db.sh --haf-db-admin=haf_admin --haf-db-name=haf_block_log --haf-app-user=haf_app_admin
+  /home/haf_admin/haf/scripts/setup_db.sh --haf-db-admin=haf_admin --haf-db-name=haf_block_log --haf-app-user=haf_app_admin
 
-  sudo -n ./haf/scripts/setup_pghero.sh --database=haf_block_log
+  sudo -n /home/haf_admin/haf/scripts/setup_pghero.sh --database=haf_block_log
 fi
 
 cd "$DATADIR"
@@ -201,6 +202,11 @@ echo "Processing passed arguments...: $@"
 
 while [ $# -gt 0 ]; do
   case "$1" in
+    --execute-maintenance-script*)
+      echo "Will run maintenance script $MAINTENANCE_SCRIPT_NAME..."
+      MAINTENANCE_SCRIPT_NAME="${1#*=}"
+      DO_MAINTENANCE=1
+      ;;
     --dump-snapshot=*)
       echo "Dump snapshot option found..."
       BACKUP_SOURCE_DIR_NAME="${1#*=}"
@@ -226,7 +232,11 @@ echo "${BASH_SOURCE[@]}"
 
 status=0
 
-if [ ${PERFORM_DUMP} -eq 1 ];
+if [ ${DO_MAINTENANCE} -eq 1 ];
+then
+  echo "Running maintance script located at $MAINTENANCE_SCRIPT_NAME"
+  $MAINTENANCE_SCRIPT_NAME
+elif [ ${PERFORM_DUMP} -eq 1 ];
 then
   echo "Attempting to perform instance snapshot dump"
   perform_instance_dump "${BACKUP_SOURCE_DIR_NAME}"
