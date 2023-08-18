@@ -6,7 +6,7 @@ services:
     image: ${HAF_IMAGE}
     ports:
       - ${HAF_PORT}:8090
-      - ${DB_PORT}:5432
+    #   - ${DB_PORT}:5432
     networks:
       - haf-network
     tty: true
@@ -15,11 +15,19 @@ services:
     entrypoint:
       - /home/haf_admin/docker_entrypoint.sh
       - ${ARGUMENTS}
+    environment:
+      PG_ACCESS: "
+        host    haf_block_log    haf_app_admin    all    trust\n
+        host    haf_block_log    haf_admin        all    trust\n
+        host    postgres         haf_admin        all    trust\n
+        host    haf_block_log    pghero           all    trust\n
+        host    postgres         pghero           all    trust\n
+        "
     volumes:
       - haf_datadir:/home/hived/datadir
       - haf_shmdir:/home/hived/shm_dir
     healthcheck:
-      test: ["CMD-SHELL","curl -f localhost:8090"]
+      test: ["CMD-SHELL","curl -f localhost:8091"]
       interval: 10s
       timeout: 2s
       retries: 10
