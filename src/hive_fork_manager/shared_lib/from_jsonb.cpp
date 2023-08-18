@@ -13,10 +13,12 @@ void set_member(hive::protocol::fixed_string_impl<Storage>& member, const JsonbV
 void set_member(hive::protocol::json_string& member, const JsonbValue& json);
 void set_member(std::string& member, const JsonbValue& json);
 void set_member(hive::protocol::public_key_type& member, const JsonbValue& json);
+[[maybe_unused]]
 void set_member(int8_t& member, const JsonbValue& json);
 void set_member(uint8_t& member, const JsonbValue& json);
 void set_member(int16_t& member, const JsonbValue& json);
 void set_member(uint16_t& member, const JsonbValue& json);
+[[maybe_unused]]
 void set_member(int32_t& member, const JsonbValue& json);
 void set_member(uint32_t& member, const JsonbValue& json);
 void set_member(int64_t& member, const JsonbValue& json);
