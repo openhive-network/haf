@@ -66,7 +66,7 @@ BEGIN
 
     --disconnect sessions because we are leaving the current process
     PERFORM hive.sessions_disconnect();
-
+    
 END;
 $BODY$
 ;
@@ -78,7 +78,7 @@ AS
 $BODY$
 DECLARE
     __session_ptr BIGINT;
-BEGIN
+    BEGIN
 
     PERFORM hive.sessions_reconnect();
     __session_ptr = hive.get_session_ptr('context');
@@ -104,15 +104,27 @@ DECLARE
     actual hstore := '';
     __session_ptr BIGINT;
 BEGIN
+
+    RAISE NOTICE 'haf_admin_procedure_test_then 10';
     PERFORM hive.sessions_reconnect();
     __session_ptr = hive.get_session_ptr('context');
 
 
+    RAISE NOTICE 'in then consensus_state_provider_get_expected_block_num=%',(SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr));    
+
+    RAISE NOTICE 'haf_admin_procedure_test_then 20';
+
     FOR rec IN SELECT * FROM hive.current_account_balances(__session_ptr, akeys(expected)) LOOP
+        RAISE NOTICE 'haf_admin_procedure_test_then 30';
         actual := actual || format('"%s"=>"%s"', rec.account, rec.balance)::hstore;
     END LOOP;  
 
+    RAISE NOTICE 'haf_admin_procedure_test_then 40';
+
+
     ASSERT expected = actual, 'Expected: ' || expected::TEXT  || ' but got: ' ||  actual::TEXT;
+
+    RAISE NOTICE 'haf_admin_procedure_test_then 50';
 
 
     ASSERT 7 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),

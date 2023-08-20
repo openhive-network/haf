@@ -39,7 +39,7 @@ int consensus_state_provider_get_expected_block_num_impl(consensus_state_provide
   struct collected_account_balances_t
   {
     std::string account_name;
-    long long balance;
+    long long balance; //mtlk change to prooer type
     long long hbd_balance;
     long long vesting_shares;
     long long savings_hbd_balance;
@@ -50,7 +50,7 @@ int consensus_state_provider_get_expected_block_num_impl(consensus_state_provide
   struct csp_session_type
   {
     std::string context, shared_memory_bin_path, postgres_url;
-    hive::chain::database* db;
+    hive::chain::database* db = nullptr;
   };
 
   collected_account_balances_collection_t collect_current_all_accounts_balances(csp_session_type* csp_session);

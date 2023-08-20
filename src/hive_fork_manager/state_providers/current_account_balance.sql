@@ -102,6 +102,7 @@ DECLARE
     __consensus_state_provider_replay_call_ok BOOLEAN;
     __session_ptr BIGINT;
 BEGIN
+    RAISE NOTICE 'mtlk in hive.update_state_provider_csp 70';
     __current_pid =  pg_backend_pid();
     __context_id = hive.get_context_id( _context );
 
@@ -115,10 +116,15 @@ BEGIN
 
     SELECT datname AS database_name FROM pg_stat_activity WHERE pid = __current_pid INTO __database_name;
 
+    RAISE NOTICE 'mtlk in hive.update_state_provider_csp 80';
+
     __postgres_url := hive.get_postgres_url();
+
+    RAISE NOTICE 'mtlk in hive.start_provider_csp 90';
 
     __shared_memory_bin_path := hive.get_shared_memory_bin_path(__config_table_name);
 
+    RAISE NOTICE 'mtlk in hive.update_state_provider_csp 90';
 
 
 
@@ -126,11 +132,15 @@ BEGIN
 
 
      __session_ptr = hive.get_session_ptr(_context);
+    RAISE NOTICE 'mtlk in hive.update_state_provider_csp 100';
     __consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(__session_ptr, _first_block, _last_block));
+    RAISE NOTICE 'mtlk in hive.update_state_provider_csp 110';
 
     RAISE NOTICE '__consensus_state_provider_replay_call_ok=%', __consensus_state_provider_replay_call_ok;
 
     PERFORM hive.update_accounts_table(__session_ptr, __table_name);
+
+    RAISE NOTICE 'mtlk in hive.update_state_provider_csp 120';
 
 END;
 $BODY$
@@ -195,25 +205,41 @@ DECLARE
     __shared_memory_bin_path TEXT;
     __session_ptr BIGINT;
 BEGIN
+    RAISE NOTICE 'mtlk in hive.drop_state_provider_csp 130';
+
     __context_id = hive.get_context_id( _context );
 
     IF __context_id IS NULL THEN
         RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
+    RAISE NOTICE 'mtlk in hive.drop_state_provider_csp 140';
+
     EXECUTE format('SELECT * FROM hive.%s ', __config_table_name) INTO __shared_memory_bin_path;
     raise notice '__shared_memory_bin_path=%', __shared_memory_bin_path;
+
+    RAISE NOTICE 'mtlk in hive.drop_state_provider_csp 150';
+
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
     EXECUTE format( 'DROP TABLE hive.%I', __config_table_name );
 
+    RAISE NOTICE 'mtlk in hive.drop_state_provider_csp 160';
+
     __session_ptr = hive.get_session_ptr(_context);
+
+    RAISE NOTICE 'mtlk in hive.drop_state_provider_csp 170';
 
     -- wipe clean
     PERFORM hive.csp_finish(__session_ptr, _wipe_clean_shared_memory_bin := TRUE); 
 
+    RAISE NOTICE 'mtlk in hive.drop_state_provider_csp 180';
+
     --delete session entry from the sessions table
     PERFORM hive.destroy_session(_context);
+
+    RAISE NOTICE 'mtlk in hive.drop_state_provider_csp 190';
+
 
 END;
 $BODY$

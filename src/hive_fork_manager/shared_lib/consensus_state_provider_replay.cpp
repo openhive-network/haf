@@ -167,11 +167,56 @@ std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
   
 }
 
+// Function to log a single variable
+template <typename T>
+inline void log_var(const char* name, T value) {
+    //std::cout << " " << name << "=" << value;
+    wlog("${name}=${value}", ("name", name) ("value", value));
+}
+
+// Base case to end recursion
+inline void log_all() {}
+
+// Recursive function to log multiple variables
+template<typename T, typename... Args>
+void log_all(const char* name, T value, Args... args) {
+    log_var(name, value);
+    if constexpr (sizeof...(args) > 0) {
+        log_all(args...);
+    }
+}
+
+#define PAIR(name) #name, name
+
+#define GET_MACRO(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, NAME, ...) NAME
+#define MACRO_PAIRS(...) GET_MACRO(__VA_ARGS__, PAIRS10, PAIRS9, PAIRS8, PAIRS7, PAIRS6, PAIRS5, PAIRS4, PAIRS3, PAIRS2, PAIRS1)(__VA_ARGS__)
+
+#define PAIRS1(x) PAIR(x)
+#define PAIRS2(x, y) PAIR(x), PAIR(y)
+#define PAIRS3(x, y, z) PAIR(x), PAIR(y), PAIR(z)
+#define PAIRS4(w, x, y, z) PAIR(w), PAIR(x), PAIR(y), PAIR(z)
+// ... Extend as needed
+
+#define WLOG(message, ...) do { \
+        std::cout << message; \
+        log_all(MACRO_PAIRS(__VA_ARGS__)); \
+        std::cout << std::endl; \
+    } while(0)
+
+int main() {
+    int a = 1, b = 2, c = 3, d = 4;
+    WLOG("mtlk", a, b);
+    WLOG("mtlk", a, b, c);
+    WLOG("mtlk", a, b, c, d);
+    return 0;
+}
 
 volatile bool static stop_in_consensus_state_provider_replay_impl = false;
 
 bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int to)
 {
+
+  wlog("pid =${pid}", ("pid", getpid()));
 
   while(stop_in_consensus_state_provider_replay_impl)
   {
@@ -179,7 +224,11 @@ bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int fr
     a=a;
   }
 
+  auto csp_expected_block =  consensus_state_provider_get_expected_block_num_impl(csp_session);
+  //wlog("mtlk csp_expected_block=${csp_expected_block} from=${from} to=${to}", ("csp_expected_block",csp_expected_block)("from",from)("to",to));
   
+  WLOG(csp_expected_block, from, to);
+
   if(from != consensus_state_provider_get_expected_block_num_impl(csp_session))
   {
       elog(
@@ -362,7 +411,7 @@ void postgres_block_log::replay_block(csp_session_type* csp_session, const pqxx:
   
 }
 
-volatile static auto stop_in_apply_full_block = false; // true;
+volatile static auto stop_in_apply_full_block = false;
 
 void postgres_block_log::apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr,
                                        uint64_t skip_flags)
@@ -794,6 +843,7 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
 
 void csp_finish_impl(csp_session_type* csp_session, bool wipe_clean_shared_memory_bin)
 {
+  wlog("csp_finish_impl with wipe_clean_shared_memory_bin=${wipe_clean_shared_memory_bin}", ("wipe_clean_shared_memory_bin", wipe_clean_shared_memory_bin));
   hive::chain::database* db = csp_session->db;
   
   db->close();
@@ -847,9 +897,20 @@ collected_account_balances_t extract_account_balances(
   return account_balances;
 }
 
+auto volatile static stop_in_collect_current_account_balances = false;
+
 collected_account_balances_collection_t collect_current_account_balances(csp_session_type* csp_session,
                                                                          const std::vector<std::string>& account_names)
 {
+
+  wlog("pid =${pid}", ("pid", getpid()));
+
+  while(stop_in_collect_current_account_balances)
+  {
+    int a = 0 ;
+    a=a;
+  }
+
   auto& db = get_database(csp_session);
 
   collected_account_balances_collection_t collected_balances;

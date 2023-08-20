@@ -83,6 +83,17 @@ tests="given when then"
 
 counter=0
 
+
+# psql -d $DB_NAME -c "call haf_admin_procedure_test_given()"
+# psql -d $DB_NAME -c "call haf_admin_procedure_test_when()"
+
+# (cd /home/haf_admin/debug_build && ../haf/scripts/runallnow.sh 5000000 rebuild)
+
+# psql -d $DB_NAME -c "call haf_admin_procedure_test_then()"
+
+
+# exit 0
+
 for testfun in ${tests}; do
   for user in ${users}; do
 
