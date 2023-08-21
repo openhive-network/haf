@@ -526,6 +526,76 @@ BEGIN
     RAISE EXCEPTION 'Operation should not be created because proposals ids are not unique';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
+
+  -- big values:
+
+  PERFORM ASSERT_THIS_TEST('{"type":"vote_operation","value":{"voter":"initminer","author":"alice","permlink":"permlink","weight":999999999999999999}}',
+    '\x0009696e69746d696e657205616c696365087065726d6c696e6bffff');
+  PERFORM ASSERT_THIS_TEST('{"type":"vote_operation","value":{"voter":"initminer","author":"alice","permlink":"permlink","weight":-999999999999999999}}',
+    '\x0009696e69746d696e657205616c696365087065726d6c696e6b0100');
+  PERFORM ASSERT_THIS_TEST('{"type":"recurrent_transfer_operation","value":{"from":"alice","to":"bob","amount":{"amount":"5000","precision":3,"nai":"@@000000021"},"memo":"memo","recurrence":720,"executions":12,"extensions":[{"type":"recurrent_transfer_pair_id","value":{"pair_id":999999}}]}}',
+    '\x3105616c69636503626f62881300000000000003535445454d0000046d656d6fd0020c0001013f');
+  PERFORM ASSERT_THIS_TEST('{"type":"recurrent_transfer_operation","value":{"from":"alice","to":"bob","amount":{"amount":"5000","precision":3,"nai":"@@000000021"},"memo":"memo","recurrence":720,"executions":12,"extensions":[{"type":"recurrent_transfer_pair_id","value":{"pair_id":-9999999999}}]}}',
+    '\x3105616c69636503626f62881300000000000003535445454d0000046d656d6fd0020c00010101');
+  PERFORM ASSERT_THIS_TEST('{"type":"set_withdraw_vesting_route_operation","value":{"from_account":"alice","to_account":"bob","percent":999999999999,"auto_vest":true}}',
+    '\x1405616c69636503626f62ff0f01');
+  PERFORM ASSERT_THIS_TEST('{"type":"set_withdraw_vesting_route_operation","value":{"from_account":"alice","to_account":"bob","percent":-999999999999999999,"auto_vest":true}}',
+    '\x1405616c69636503626f62010001');
+  PERFORM ASSERT_THIS_TEST('{"type": "convert_operation","value": {"amount": {"amount": "127144","nai": "@@000000013","precision": 3},"owner": "gtg","requestid": 9999999999999999999}}',
+    '\x0803677467ffffe789a8f00100000000000353424400000000');
+  PERFORM ASSERT_THIS_TEST('{"type": "convert_operation","value": {"amount": {"amount": "127144","nai": "@@000000013","precision": 3},"owner": "gtg","requestid": -9223372036854775808}}',
+    '\x080367746700000000a8f00100000000000353424400000000');
+  PERFORM ASSERT_THIS_TEST('{
+    "type": "effective_comment_vote_operation",
+    "value": {
+      "author": "watchonline",
+      "pending_payout": {
+        "amount": "3",
+        "nai": "@@000000013",
+        "precision": 3
+      },
+      "permlink": "suicide-squad-2016-watch-full-movie-stream-online-free",
+      "rshares": 18446744073709551615,
+      "total_vote_weight": 0,
+      "voter": "massmindrape",
+      "weight": 0
+    }
+  }',
+  '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d667265650000000000000000ffffffffffffffff000000000000000003000000000000000353424400000000');
+  PERFORM ASSERT_THIS_TEST('{
+    "type": "effective_comment_vote_operation",
+    "value": {
+      "author": "watchonline",
+      "pending_payout": {
+        "amount": "3",
+        "nai": "@@000000013",
+        "precision": 3
+      },
+      "permlink": "suicide-squad-2016-watch-full-movie-stream-online-free",
+      "rshares": 59675015,
+      "total_vote_weight": 0,
+      "voter": "massmindrape",
+      "weight": 18446744073709551615
+    }
+  }',
+  '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d66726565ffffffffffffffff87918e0300000000000000000000000003000000000000000353424400000000');
+  PERFORM ASSERT_THIS_TEST('{
+    "type": "effective_comment_vote_operation",
+    "value": {
+      "author": "watchonline",
+      "pending_payout": {
+        "amount": "3",
+        "nai": "@@000000013",
+        "precision": 3
+      },
+      "permlink": "suicide-squad-2016-watch-full-movie-stream-online-free",
+      "rshares": 59675015,
+      "total_vote_weight": 0,
+      "voter": "massmindrape",
+      "weight": "-18446744073709551615"
+    }
+  }',
+  '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d66726565010000000000000087918e0300000000000000000000000003000000000000000353424400000000');
 END;
 $BODY$
 ;
