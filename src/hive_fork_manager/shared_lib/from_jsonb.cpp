@@ -102,48 +102,48 @@ void set_member(int8_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
   // TODO: error on overflow?
-  member = static_cast<int8_t>(DatumGetUInt8(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int2, NumericGetDatum(json.val.numeric))));
+  member = static_cast<int8_t>(numeric_to_uint64(NumericGetDatum(json.val.numeric)));
 }
 void set_member(uint8_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
-  member = DatumGetUInt8(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int2, NumericGetDatum(json.val.numeric)));
+  member = static_cast<uint8_t>(numeric_to_uint64(NumericGetDatum(json.val.numeric)));
 }
 void set_member(int16_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
-  member = DatumGetInt16(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int2, NumericGetDatum(json.val.numeric)));
+  member = static_cast<int16_t>(numeric_to_uint64(NumericGetDatum(json.val.numeric)));
 }
 void set_member(uint16_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
   // TODO: error on overflow?
-  member = static_cast<uint16_t>(DatumGetInt16(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int4, NumericGetDatum(json.val.numeric))));
+  member = static_cast<uint16_t>(numeric_to_uint64(NumericGetDatum(json.val.numeric)));
 }
 void set_member(int32_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
-  member = DatumGetInt32(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int4, NumericGetDatum(json.val.numeric)));
+  member = static_cast<int32_t>(numeric_to_uint64(NumericGetDatum(json.val.numeric)));
 }
 void set_member(uint32_t& member, const JsonbValue& json)
 {
   FC_ASSERT(json.type == jbvNumeric);
   // TODO: error on overflow?
-  member = static_cast<uint32_t>(DatumGetInt32(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, NumericGetDatum(json.val.numeric))));
+  member = static_cast<uint32_t>(numeric_to_uint64(NumericGetDatum(json.val.numeric)));
 }
 void set_member(int64_t& member, const JsonbValue& json)
 {
   if (json.type == jbvNumeric)
   {
     // TODO: error on overflow?
-    member = DatumGetInt64(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, NumericGetDatum(json.val.numeric)));
+    member = static_cast<int64_t>(numeric_to_uint64(NumericGetDatum(json.val.numeric)));
   }
   else if (json.type == jbvString)
   {
     // TODO: error on overflow?
     const auto str = std::string(json.val.string.val, json.val.string.len);
     Datum num = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
-    member = DatumGetInt64(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, num));
+    member = static_cast<int64_t>(numeric_to_uint64(num));
   }
   else
   {
