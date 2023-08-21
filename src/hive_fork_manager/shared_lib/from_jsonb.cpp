@@ -54,10 +54,12 @@ void set_member(fc::static_variant<Types...>& member, const JsonbValue& json);
 
 uint64_t numeric_to_uint64(Datum num)
 {
-  const auto int64max = PG_INT64_MAX;
+  const uint64_t int64max = uint64_t(PG_INT64_MAX) + 1;
   const std::string str64max = std::to_string(int64max);
   Datum num64max = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum(str64max.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
-  const bool needs64bits = DatumGetBool(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_gt, num, num64max));
+  Datum zero = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum("0"), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+  Datum neg64max = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_sub, zero, num64max);
+  const bool needs64bits = DatumGetBool(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_ge, num, num64max));
   if (needs64bits)
   {
     // We can't use numeric_int8 directly, because it will overflow.
@@ -65,6 +67,15 @@ uint64_t numeric_to_uint64(Datum num)
     Datum subnum = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_sub, num, num64max);
     const uint64_t value = static_cast<uint64_t>(DatumGetInt64(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, subnum)));
     return value + int64max;
+  }
+  else if (DatumGetBool(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_le, num, neg64max)))
+  {
+    const uint64_t u64max = uint64_t(PG_UINT64_MAX);
+    const std::string stru64max = std::to_string(u64max);
+    Datum numu64max = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum(stru64max.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+    Datum subnum = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_add, num, numu64max);
+    const uint64_t value = static_cast<uint64_t>(DatumGetInt64(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, subnum)));
+    return value - u64max;
   }
   else
   {
