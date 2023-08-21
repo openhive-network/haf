@@ -3,6 +3,8 @@
 #include <psql_utils/postgres_includes.hpp>
 #include <psql_utils/pg_cxx.hpp>
 
+#include <fc/variant.hpp>
+
 #include <map>
 #include <string>
 
@@ -52,36 +54,19 @@ void set_member(T& member, const JsonbValue& json);
 template <typename... Types>
 void set_member(fc::static_variant<Types...>& member, const JsonbValue& json);
 
+uint64_t string_to_uint64(const fc::string& str)
+{
+  // Use fc to convert string to integer. This should guarantee that direct conversion from jsonb yields the same results as indirect one
+  uint64_t i = 0;
+  fc::variant v(str);
+  fc::from_variant(v, i);
+  return i;
+}
+
 uint64_t numeric_to_uint64(Datum num)
 {
-  const uint64_t int64max = uint64_t(PG_INT64_MAX) + 1;
-  const std::string str64max = std::to_string(int64max);
-  Datum num64max = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum(str64max.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
-  Datum zero = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum("0"), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
-  Datum neg64max = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_sub, zero, num64max);
-  const bool needs64bits = DatumGetBool(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_ge, num, num64max));
-  if (needs64bits)
-  {
-    // We can't use numeric_int8 directly, because it will overflow.
-    // Instead, first subtract INT64_MAX from input numeric, convert that and add INT64_MAX back.
-    Datum subnum = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_sub, num, num64max);
-    const uint64_t value = static_cast<uint64_t>(DatumGetInt64(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, subnum)));
-    return value + int64max;
-  }
-  else if (DatumGetBool(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_le, num, neg64max)))
-  {
-    const uint64_t u64max = uint64_t(PG_UINT64_MAX);
-    const std::string stru64max = std::to_string(u64max);
-    Datum numu64max = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum(stru64max.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
-    Datum subnum = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_add, num, numu64max);
-    const uint64_t value = static_cast<uint64_t>(DatumGetInt64(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, subnum)));
-    return value - u64max;
-  }
-  else
-  {
-    // We can just use Postgres' numeric_int8 as it will not overflow
-    return static_cast<uint64_t>(DatumGetInt64(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_int8, num)));
-  }
+  const char* str = DatumGetCString(PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_out, num));
+  return string_to_uint64(str);
 }
 
 template <typename T>
@@ -152,9 +137,8 @@ void set_member(int64_t& member, const JsonbValue& json)
   else if (json.type == jbvString)
   {
     // TODO: error on overflow?
-    const auto str = std::string(json.val.string.val, json.val.string.len);
-    Datum num = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
-    member = static_cast<int64_t>(numeric_to_uint64(num));
+    const auto str = fc::string(json.val.string.val, json.val.string.len);
+    member = static_cast<int64_t>(string_to_uint64(str));
   }
   else
   {
@@ -169,9 +153,8 @@ void set_member(uint64_t& member, const JsonbValue& json)
   }
   else if (json.type == jbvString)
   {
-    const auto str = std::string(json.val.string.val, json.val.string.len);
-    Datum num = PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
-    member = numeric_to_uint64(num);
+    const auto str = fc::string(json.val.string.val, json.val.string.len);
+    member = string_to_uint64(str);
   }
   else
   {
