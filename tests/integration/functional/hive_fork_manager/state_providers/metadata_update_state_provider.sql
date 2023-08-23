@@ -84,7 +84,7 @@ BEGIN
                     "posting_json_metadata": "\"\"",
                     "extensions": []
                 }
-            }'
+            }'::jsonb::hive.operation
         ),
 
         ( 15, 15, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
@@ -196,7 +196,7 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'
+            }'::jsonb::hive.operation
         ),
 
         -- json metadata equal to  ""

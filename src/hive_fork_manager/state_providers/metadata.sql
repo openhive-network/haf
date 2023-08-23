@@ -63,12 +63,12 @@ BEGIN
                 FROM
                     (
                         SELECT 
-                            (hive.get_metadata(ov.body)).*,
+                            (hive.get_metadata(ov.body_binary)).*,
                             ov.id
                         FROM 
                             hive.%s_operations_view ov
                         WHERE
-                            hive.is_metadata_operation(ov.body)
+                            hive.is_metadata_operation(ov.body_binary)
                             AND ov.block_num BETWEEN %s AND %s
                         ) as metadata
                 WHERE metadata.json_metadata != ''''
