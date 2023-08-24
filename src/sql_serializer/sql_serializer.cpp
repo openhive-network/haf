@@ -68,7 +68,7 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
   db_checker.join();
 
   if ( !is_extension_created ) {
-    elog( "The exstenion 'hive_fork_manager' is not created" );
+    elog( "The extension 'hive_fork_manager' is not created." );
     return false;
   }
 
@@ -272,7 +272,7 @@ public:
   bool     psql_dump_account_operations = true;
   uint32_t head_block_number = 0;
 
-  int64_t op_sequence_id = 0;
+  std::optional<int64_t> op_sequence_id;
 
   cached_containter_t currently_caching_data;
   std::unique_ptr<accounts_collector> collector;
@@ -342,8 +342,8 @@ public:
   {
     ilog("Loading operation's last id ...");
 
-    op_sequence_id = 0;
     psql_block_number = 0;
+    op_sequence_id = std::nullopt;
 
     queries_commit_data_processor block_loader(db_url, "Block loader",
                                                 [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
@@ -363,30 +363,9 @@ public:
 
     block_loader.trigger(data_processor::data_chunk_ptr(), 0);
 
-    queries_commit_data_processor sequence_loader(db_url, "Sequence loader",
-                                                  [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
-      {
-        pqxx::result data = tx.exec("SELECT ho.id AS _max FROM hive.operations ho ORDER BY ho.id DESC LIMIT 1;");
-        if( !data.empty() )
-        {
-          FC_ASSERT( data.size() == 1, "Data size 2" );
-          const auto& record = data[0];
-          op_sequence_id = record["_max"].as<int64_t>();
-          //because newly created operation has to have subsequent number
-          ++op_sequence_id;
-        }
-        return data_processing_status();
-      }
-      , nullptr
-    );
-
-    sequence_loader.trigger(data_processor::data_chunk_ptr(), 0);
-
-    sequence_loader.join();
     block_loader.join();
 
-    ilog("Next operation id: ${s} psql block number: ${pbn}.",
-      ("s", op_sequence_id)("pbn", psql_block_number));
+    ilog("psql block number: ${pbn}.", ("pbn", psql_block_number));
   }
 
   bool skip_reversible_block(uint32_t block);
@@ -396,7 +375,7 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
   using namespace std::string_literals;
   ilog( "Inform Hive Fork Manager about starting..." );
 
-  // inform the db about starting hivd
+  // inform the db about starting hived
   auto connect_to_the_db = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx){
     const auto CONNECT_QUERY = "SELECT hive.connect('"s + fc::git_revision_sha + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER);"s;
     tx.exec( CONNECT_QUERY );
@@ -496,7 +475,33 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   const bool is_virtual = hive::protocol::is_virtual_operation(note.op);
   FC_ASSERT( is_virtual || note.trx_in_block >= 0,  "Non is_producing real operation with trx_in_block = -1" );
 
-  collect_account_operations( op_sequence_id, note.op, note.block );
+  if (!op_sequence_id)
+  {
+    queries_commit_data_processor sequence_loader(db_url, "Sequence loader",
+                                                  [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
+      {
+        pqxx::result data = tx.exec("SELECT ho.id AS _max FROM hive.operations ho ORDER BY ho.id DESC LIMIT 1;");
+        if( !data.empty() )
+        {
+          FC_ASSERT( data.size() == 1, "Data size 2" );
+          const auto& record = data[0];
+          op_sequence_id = record["_max"].as<int64_t>();
+          //because newly created operation has to have subsequent number
+          ++*op_sequence_id;
+        }
+        else
+          op_sequence_id = 0;
+        return data_processing_status();
+      }
+      , nullptr
+    );
+
+    sequence_loader.trigger(data_processor::data_chunk_ptr(), 0);
+    sequence_loader.join();
+    ilog("operation sequence id: ${op_sequence_id}", (op_sequence_id));
+  }
+
+  collect_account_operations( *op_sequence_id, note.op, note.block );
 
   if( collector->is_op_accepted() )
   {
@@ -510,12 +515,12 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
       cdtf->applied_hardforks.emplace_back(
         hardfork_num,
         note.block,
-        op_sequence_id
+        *op_sequence_id
       );
     }
 
     cdtf->operations.emplace_back(
-      op_sequence_id,
+      *op_sequence_id,
       note.block,
       note.trx_in_block,
       note.op_in_trx,
@@ -523,7 +528,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
       note.op
     );
   }
-  ++op_sequence_id;
+  ++*op_sequence_id;
 }
 
 void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& note)

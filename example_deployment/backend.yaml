@@ -32,6 +32,3 @@ services:
     volumes:
       - ./haf-datadir/pgadmin/data:/var/lib/pgadmin:rw
       - ./haf-datadir/pgadmin/servers.json:/pgadmin4/servers.json:ro
-    depends_on:
-      haf:
-        condition: service_healthy
