@@ -343,7 +343,7 @@ void postgres_block_log::get_postgres_data(int from, int to, const char* postgre
   postgres_database_helper db{postgres_url};
   
   // clang-format off
-    auto blocks_query = "SELECT * FROM hive.blocks JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
+    auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
                                 + std::to_string(from) 
                                 + " and num <= " 
                                 + std::to_string(to) 
