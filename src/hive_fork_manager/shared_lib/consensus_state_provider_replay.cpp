@@ -167,37 +167,47 @@ std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
   
 }
 
+void undo_blocks(csp_session_type* csp_session , int shift)
+{
+  hive::chain::database& db = *csp_session->db;
+  while(shift > 0)
+  {
+    db.pop_block();
+    shift--;
+  }
+}
 
 volatile bool static stop_in_consensus_state_provider_replay_impl = false;
 
 static volatile auto stop_in_WARNING = true;
 
 
-bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int to)
+bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int)
 {
 
   wlog("pid =${pid}", ("pid", getpid()));
 
-  while(stop_in_consensus_state_provider_replay_impl)
-  {
-    int a = 0 ;
-    a=a;
-  }
 
-  auto csp_expected_block =  consensus_state_provider_get_expected_block_num_impl(csp_session);
-  //wlog("mtlk csp_expected_block=${csp_expected_block} from=${from} to=${to}", ("csp_expected_block",csp_expected_block)("from",from)("to",to));
+  auto csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
   
+  int to = from;
+
   wlog("csp_expected_block=${var1} from=${var2} to=${var3}", ("var1", csp_expected_block)("var2", from)("var3", to));
 
-  if(from==10)
+  if(from < csp_expected_block)
   {
-    while(stop_in_WARNING)
-    {
-        int a = 0;
-        a=a;
-    }
-
+    undo_blocks(csp_session, consensus_state_provider_get_expected_block_num_impl(csp_session) - from);
   }
+  else
+  {
+    from = csp_expected_block;
+    to = from;
+  }
+  wlog("csp_expected_block=${var1} from=${var2} to=${var3}", ("var1", csp_expected_block)("var2", from)("var3", to));
+
+
+
+
 
   if(from != consensus_state_provider_get_expected_block_num_impl(csp_session))
   {
