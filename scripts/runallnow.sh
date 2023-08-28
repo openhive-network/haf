@@ -380,6 +380,10 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 # zamiast apply_block
 
 
+# TODO taking data from hive.block_view , perhaps from hive.operations, hive.transactions - views ?
+
+
+
 # Dgpo
 # Wszystko  z konta
 # connection
