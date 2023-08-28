@@ -5,6 +5,15 @@ on_exit() {
   echo "On exit $?"
 }
 
+dump_postgres_log(){
+  echo "FAILED with result ${result}";
+  echo "mtlk dumping postgres log begin"
+  echo $(find /var -name postgres*.log 2>/dev/null)  
+  cat $(find /var -name postgres*.log 2>/dev/null)
+
+  echo "mtlk dumping postgres log end"
+}
+
 evaluate_result() {
   local result=$1;
 
@@ -12,6 +21,8 @@ evaluate_result() {
   then
     return;
   fi
+  
+  dump_postgres_log
 
   echo "FAILED with result ${result}";
   exit 1;
