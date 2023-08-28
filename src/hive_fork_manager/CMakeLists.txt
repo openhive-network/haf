@@ -30,6 +30,8 @@ ADD_PSQL_EXTENSION(
             context_rewind/back_from_fork.sql
             context_rewind/irreversible.sql
             context_rewind/rewind_api.sql
+            # This file must be also specified here, as it contains functions which definitions should be always overwritten.
+            types/operation/operation_flow.sql
             tools.sql
             blocks_views_for_contexts.sql
             get_keyauths.sql
