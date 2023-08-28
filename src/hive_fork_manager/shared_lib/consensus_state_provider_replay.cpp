@@ -372,7 +372,6 @@ void postgres_block_log::replay_block(csp_session_type* csp_session, const pqxx:
     // return;
   }
 
-  hive::chain::database& db = *csp_session->db;
   std::shared_ptr<hive::chain::full_block_type> fb_ptr;
 
   block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
@@ -383,6 +382,7 @@ void postgres_block_log::replay_block(csp_session_type* csp_session, const pqxx:
 
   transformations_time_probe.stop();
 
+  hive::chain::database& db = *csp_session->db;
   apply_full_block(db, fb_ptr, get_skip_flags());
   
 }
