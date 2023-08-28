@@ -1,6 +1,9 @@
 # Test
 input_string = '"Head: ", _head->get_block_num(), _head->get_block_id(), _head->get_block_timestamp()'
 input_string = 'WLOG: , csp_expected_block, from, to'
+input_string = 'mtlk8 , signed_block_object.block_id'
+input_string = 'mlk10 , sb.previous'
+input_string = 'mtlk10, blocks[0]["num"].c_str(), block[0]["hash"].c_str(), block[0]["prev"].c_str(), block[0]["created_at"].c_str()'
 
 def transform_input(input_string):
     # Splitting the input string based on commas
