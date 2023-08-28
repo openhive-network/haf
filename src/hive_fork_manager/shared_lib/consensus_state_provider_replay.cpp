@@ -194,7 +194,7 @@ bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int fr
       elog(
           "ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
           ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(csp_session)));
-      return false;
+      //return false;
   }
 
   postgres_block_log().run(csp_session, from, to);
@@ -356,7 +356,7 @@ void postgres_block_log::replay_block(csp_session_type* csp_session, const pqxx:
 
   if(block_num !=  consensus_state_provider_get_expected_block_num_impl(csp_session)) 
   {
-    return;
+    // return;
   }
 
   hive::chain::database& db = *csp_session->db;
