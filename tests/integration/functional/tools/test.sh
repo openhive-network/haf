@@ -70,10 +70,10 @@ postgres_procedure_exists() {
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ${test_path};
 evaluate_result $?
 
-#users="haf_admin_procedure haf_admin test_hived alice bob"
-#tests="given when error then"
-users="haf_admin_procedure"
-tests="given when then"
+users="haf_admin_procedure haf_admin test_hived alice bob"
+tests="given when error then"
+# users="haf_admin_procedure"
+# tests="given when then"
 
 # mtlk this was working without surrounding block
 # psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "CALL haf_admin_procedure_test_given()";
@@ -81,17 +81,23 @@ tests="given when then"
 
 # you can use alice_test_given, alice_test_when, alice_test_error, alice_test_then and their bob's and test_hived equivalents
 
+
 counter=0
 
+echo DB_NAME $DB_NAME
+
+# # # psql -d $DB_NAME -c "call haf_admin_procedure_test_given()"
+# # # exit 0
 
 # psql -d $DB_NAME -c "call haf_admin_procedure_test_given()"
 # psql -d $DB_NAME -c "call haf_admin_procedure_test_when()"
 
-# (cd /home/haf_admin/debug_build && ../haf/scripts/runallnow.sh 5000000 rebuild)
+# # # psql -d $DB_NAME -c "call haf_admin_procedure_test_then()"
 
-# psql -d $DB_NAME -c "call haf_admin_procedure_test_then()"
+# # # (cd /home/haf_admin/debug_build && ../haf/scripts/runallnow.sh 5000000 rebuild)
+# # # killpostgres
 
-
+# # # psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
 # exit 0
 
 for testfun in ${tests}; do
@@ -105,7 +111,7 @@ for testfun in ${tests}; do
         counter=$((counter+1))
         # echo "The procedure exists."
     else
-      :
+      continue
        # echo "The procedure does not exist."
     fi
 
@@ -159,7 +165,7 @@ if [ $counter -eq 0 ]; then
 fi
 
 on_exit
-psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
+# psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
 
 echo "PASSED";
 trap - EXIT;
