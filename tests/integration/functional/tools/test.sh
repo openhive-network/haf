@@ -165,7 +165,7 @@ if [ $counter -eq 0 ]; then
 fi
 
 on_exit
-# psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
+psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
 
 echo "PASSED";
 trap - EXIT;
