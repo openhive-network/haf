@@ -78,7 +78,7 @@ AS
 $BODY$
 DECLARE
     __session_ptr BIGINT;
-    BEGIN
+BEGIN
 
     PERFORM hive.sessions_reconnect();
     __session_ptr = hive.get_session_ptr('context');
@@ -86,6 +86,11 @@ DECLARE
     ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
                              'consensus_state_provider_get_expected_block_num should return 1';
     PERFORM hive.update_state_provider_csp( 1, 6, 'context' );
+    PERFORM hive.update_state_provider_csp( 2, 6, 'context' );
+    PERFORM hive.update_state_provider_csp( 3, 6, 'context' );
+    PERFORM hive.update_state_provider_csp( 4, 6, 'context' );
+    PERFORM hive.update_state_provider_csp( 5, 6, 'context' );
+    PERFORM hive.update_state_provider_csp( 6, 6, 'context' );
     COMMIT;
 
     PERFORM hive.sessions_disconnect();
