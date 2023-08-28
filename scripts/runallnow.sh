@@ -379,7 +379,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 #     bool database::_push_block(const block_flow_control& block_ctrl)
 # zamiast apply_block
 
-
+# TODO - eliminate removing undo_all at the beginning
 # TODO taking data from hive.block_view , perhaps from hive.operations, hive.transactions - views ?
 
 
