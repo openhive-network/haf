@@ -187,12 +187,22 @@ bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int fr
   auto csp_expected_block =  consensus_state_provider_get_expected_block_num_impl(csp_session);
   //wlog("mtlk csp_expected_block=${csp_expected_block} from=${from} to=${to}", ("csp_expected_block",csp_expected_block)("from",from)("to",to));
   
-  WLOG(csp_expected_block, from, to);
+  wlog("csp_expected_block=${var1} from=${var2} to=${var3}", ("var1", csp_expected_block)("var2", from)("var3", to));
+
+  if(from==10)
+  {
+    while(stop_in_WARNING)
+    {
+        int a = 0;
+        a=a;
+    }
+
+  }
 
   if(from != consensus_state_provider_get_expected_block_num_impl(csp_session))
   {
       elog(
-          "ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
+          "WARNING: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
           ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(csp_session)));
       //return false;
   }
@@ -310,6 +320,9 @@ void postgres_block_log::get_postgres_data(int from, int to, const char* postgre
                                 + " ORDER BY num ASC";
     blocks = db.execute_query(blocks_query);
     std::cout << "Blocks:" << blocks.size() << " "; 
+    wlog("mtlk10 blocks[0][\"num\"].c_str()=${var1} block[0][\"hash\"].c_str()=${var2} block[0][\"prev\"].c_str()=${var3} block[0][\"created_at\"].c_str()=${var4}", ("var1", blocks[0]["num"].c_str())("var2", blocks[0]["hash"].c_str())("var3", blocks[0]["prev"].c_str())("var4", blocks[0]["created_at"].c_str()));
+
+
 
     auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions WHERE block_num >= " 
                                 + std::to_string(from) 
@@ -363,7 +376,10 @@ void postgres_block_log::replay_block(csp_session_type* csp_session, const pqxx:
   std::shared_ptr<hive::chain::full_block_type> fb_ptr;
 
   block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
+  
+  wlog("mtlk8 signed_block_object.block_id=${var1} signed_block_object.previous=${var2}", ("var1", signed_block_object.block_id)("var2", signed_block_object.previous));
   fb_ptr = from_bin_to_full_block_ptr(signed_block_object, block_num);
+  wlog("mtlk8 fb_ptr->get_block_id()=${var1}", ("var1", fb_ptr->get_block_id()));
 
   transformations_time_probe.stop();
 
@@ -488,6 +504,8 @@ block_bin_t postgres_block_log::build_block_bin(const pqxx::row& block, std::vec
   block_bin_t sb;
 
   p2b_hex_to_ripemd160("prev", block, sb.previous);
+  wlog("mlk10 sb.previous=${var1}", ("var1", sb.previous));
+
   p2b_time_to_time_point_sec("created_at", block, sb.timestamp);
   p2b_cstr_to_str("name", block, sb.witness);
   p2b_hex_to_ripemd160("transaction_merkle_root", block, sb.transaction_merkle_root);
