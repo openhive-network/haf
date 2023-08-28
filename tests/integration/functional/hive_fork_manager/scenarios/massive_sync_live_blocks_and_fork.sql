@@ -1,4 +1,3 @@
-CREATE EXTENSION pldbgapi;
 
 
 DROP PROCEDURE IF EXISTS haf_admin_procedure_test_given;
