@@ -245,6 +245,7 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_check_sync.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork.sql )
+ ADD_SQL_FUNCTIONAL_TEST( scenarios/csp_massive_sync_live_blocks_and_fork.sql )
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork_non_forking_app.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_negative.sql )
