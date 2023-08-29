@@ -736,7 +736,7 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
   set_open_args_other_parameters(db_open_args);
 //mtlk here postgres_block_log_has to_be ready
 
-  db.open(db_open_args);
+    db.open(db_open_args);
 };
 
 
@@ -751,8 +751,20 @@ hive::chain::database* create_and_init_database(const char* context, const char*
 
 csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
+    wlog("Started csp_init_impl with context=${var1} shared_memory_bin_path=${var2} postgres_url=${var3}", ("var1", context)("var2", shared_memory_bin_path)("var3", postgres_url));
+    
     hive::chain::database* db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
     auto* csp_session =  new csp_session_type{context, shared_memory_bin_path, postgres_url, db};
+
+    if(csp_session)
+    {
+      wlog("Returning from csp_init_impl with csp_session->context=${var1} csp_session->shared_memory_bin_path=${var2} csp_session->postgres_url=${var3}", ("var1", csp_session->context)("var2", csp_session->shared_memory_bin_path)("var3", csp_session->postgres_url));    
+    }   
+    else
+    {
+      wlog("returning from csp_init_impl with csp_session=nullptr");
+    }
+
     return csp_session;
 }
 
