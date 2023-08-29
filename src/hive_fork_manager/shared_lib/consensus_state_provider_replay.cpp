@@ -352,15 +352,20 @@ void postgres_block_log::get_postgres_data(int from, int to, const char* postgre
 
   postgres_database_helper db{postgres_url};
   
-  // clang-format off
+try{  // clang-format off
     auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
                                 + std::to_string(from) 
                                 + " and num <= " 
                                 + std::to_string(to) 
                                 + " ORDER BY num ASC";
+
     blocks = db.execute_query(blocks_query);
+} FC_LOG_AND_RETHROW() 
     std::cout << "Blocks:" << blocks.size() << " "; 
+
+try{
     wlog("mtlk10 blocks[0][\"num\"].c_str()=${var1} block[0][\"hash\"].c_str()=${var2} block[0][\"prev\"].c_str()=${var3} block[0][\"created_at\"].c_str()=${var4}", ("var1", blocks[0]["num"].c_str())("var2", blocks[0]["hash"].c_str())("var3", blocks[0]["prev"].c_str())("var4", blocks[0]["created_at"].c_str()));
+} FC_LOG_AND_RETHROW() 
 
 
 
