@@ -22,6 +22,9 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_edit_negative_rowid_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_drop_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/detach_table_test.sql )
+ 
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/current_account_balance_update_state_provider.sql )
+
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/attach_table_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/detach_negative_unregistered_table_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/detach_negative_not_empty_shadow_table_test.sql )
@@ -297,4 +300,4 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_vesting_balance/get_vesting_balance.sql )
  ADD_SQL_FUNCTIONAL_TEST( sanity_check/test_tables_and_sequences_properly_flagged_for_dump.sql )
  
- ADD_SQL_FUNCTIONAL_TEST( state_providers/current_account_balance_update_state_provider.sql )
+ 
