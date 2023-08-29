@@ -310,6 +310,14 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
   {
     elog("postgres_block_log detected SQL execution failure: ${e}.", ("e", ex.base().what()));
   }
+  catch( const fc::exception& e )
+  {
+    wlog( "fc::exception ${e}", ("e", e.to_string()) );
+  }
+  catch( const std::exception& e )
+  {
+    wlog("std::exception e.what=${var1}", ("var1", e.what()));
+  }
   catch(...)
   {
     elog("postgres_block_log execution failed: unknown exception.");
@@ -947,3 +955,46 @@ collected_account_balances_collection_t collect_current_all_accounts_balances(cs
   return collected_balances;
 }
 }  // namespace consensus_state_provider
+
+
+
+// #include <stdio.h>
+// #include <time.h>
+ 
+// static FILE *fp_trace;
+ 
+// void
+// __attribute__ ((constructor))
+// trace_begin (void)
+// {
+//  fp_trace = fopen("trace.out", "w");
+// }
+ 
+// void
+// __attribute__ ((destructor))
+// trace_end (void)
+// {
+//  if(fp_trace != NULL) {
+//  fclose(fp_trace);
+//  }
+// }
+ 
+// void
+// __cyg_profile_func_enter (void *func,  void *caller)
+// {
+//  if(fp_trace != NULL) {
+//  fprintf(fp_trace, "e %p %p %lu\n", func, caller, time(NULL) );
+//  }
+// }
+ 
+// void
+// __cyg_profile_func_exit (void *func, void *caller)
+// {
+//  if(fp_trace != NULL) {
+//  fprintf(fp_trace, "x %p %p %lu\n", func, caller, time(NULL));
+//  }
+// }
+
+
+
+
