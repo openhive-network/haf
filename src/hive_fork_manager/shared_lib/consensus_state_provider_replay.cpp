@@ -263,6 +263,7 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block
                              const char* shared_memory_bin_path,
                              const char* postgres_url)
 {
+  wlog("postgres_block_log::get_full_block context=${var1} shared_memory_bin_path=${var2} postgres_url=${var3}", ("var1", context)("var2", shared_memory_bin_path)("var3", postgres_url));
   // try
   // {
     get_postgres_data(block_num, block_num, postgres_url);
