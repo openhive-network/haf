@@ -8,6 +8,7 @@ on_exit() {
 dump_postgres_log(){
   echo "FAILED with result ${result}";
   echo "mtlk dumping postgres log begin"
+  env | sort
   echo $(find /var -name postgres*.log 2>/dev/null)  
   find /var -name postgres*.log 2>/dev/null | xargs sudo cat | awk '{print "POSTGRESLOG> " $0}'
 
