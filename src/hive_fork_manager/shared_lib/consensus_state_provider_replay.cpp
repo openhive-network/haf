@@ -18,6 +18,8 @@
 #include "hive/protocol/transaction.hpp"
 #include "time_probe.hpp"
 
+#include <fc/exception/exception.hpp>
+
 
 
 #define myASSERT(condition, message) \
@@ -179,7 +181,7 @@ void undo_blocks(csp_session_type* csp_session , int shift)
 
 volatile bool static stop_in_consensus_state_provider_replay_impl = false;
 
-static volatile auto stop_in_WARNING = true;
+static volatile auto stop_in_WARNING = false;
 
 
 bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int)
@@ -258,17 +260,36 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullb
 
 
 
+static volatile auto stop_in_get_full_block = false;
+
 std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block(int block_num,
                              const char* context,
                              const char* shared_memory_bin_path,
                              const char* postgres_url)
 {
-  wlog("postgres_block_log::get_full_block context=${var1} shared_memory_bin_path=${var2} postgres_url=${var3}", ("var1", context)("var2", shared_memory_bin_path)("var3", postgres_url));
+
+  wlog("pid =${pid}", ("pid", getpid()));
+  while(stop_in_get_full_block)
+  {
+    int a = 0;
+    a=a;
+  }
+
+  wlog("postgres_block_log::get_full_block block_num=${block_num} context=${var1} shared_memory_bin_path=${var2} postgres_url=${var3}", ("block_num", block_num)("var1", context)("var2", shared_memory_bin_path)("var3", postgres_url));
   // try
   // {
-    get_postgres_data(block_num, block_num, postgres_url);
-    initialize_iterators();
-    return block_to_fullblock(block_num, blocks[0], context, shared_memory_bin_path, postgres_url);
+
+    try {
+      get_postgres_data(block_num, block_num, postgres_url);
+    } FC_LOG_AND_RETHROW() 
+    
+    try {
+      initialize_iterators();
+    } FC_LOG_AND_RETHROW() 
+
+    try {
+      return block_to_fullblock(block_num, blocks[0], context, shared_memory_bin_path, postgres_url);
+    } FC_LOG_AND_RETHROW() 
   // }
   // catch(...)
   // {
