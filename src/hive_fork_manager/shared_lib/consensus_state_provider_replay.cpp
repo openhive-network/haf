@@ -226,17 +226,17 @@ void postgres_block_log::run(csp_session_type* csp_session, int from, int to)
 {
   measure_before_run();
 
-  try
-  {
+  // try
+  // {
     get_postgres_data(from, to, csp_session->postgres_url.c_str());
     initialize_iterators();
     replay_blocks(csp_session);
-  }
-  catch(...)
-  {
-    auto current_exception = std::current_exception();
-    handle_exception(current_exception);
-  }
+  // }
+  // catch(...)
+  // {
+  //   auto current_exception = std::current_exception();
+  //   handle_exception(current_exception);
+  // }
 
   measure_after_run();
 }
