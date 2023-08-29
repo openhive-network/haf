@@ -263,18 +263,18 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block
                              const char* shared_memory_bin_path,
                              const char* postgres_url)
 {
-  try
-  {
+  // try
+  // {
     get_postgres_data(block_num, block_num, postgres_url);
     initialize_iterators();
     return block_to_fullblock(block_num, blocks[0], context, shared_memory_bin_path, postgres_url);
-  }
-  catch(...)
-  {
-    auto current_exception = std::current_exception();
-    handle_exception(current_exception);
-  }
-  return {};
+  // }
+  // catch(...)
+  // {
+  //   auto current_exception = std::current_exception();
+  //   handle_exception(current_exception);
+  // }
+  // return {};
 }
 
 void postgres_block_log::measure_before_run()
