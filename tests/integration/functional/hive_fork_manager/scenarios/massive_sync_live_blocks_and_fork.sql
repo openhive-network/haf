@@ -296,7 +296,7 @@ COMMIT;
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (10,10)';
 ASSERT __blocks = (10,10), 'Incorrect range (10,10)';
-ASSERT '\0000000ac0b1f742de471556c998352c5b9866b3'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 10 ), 'Unexpect hash of block 10 2nd';
+ASSERT '\x0000000ac0b1f742de471556c998352c5b9866b3'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 10 ), 'Unexpect hash of block 10 2nd';
 INSERT INTO A.table1(id) VALUES( 10 );
 
 raise notice 'PUSHED_QUERY_FROM_C_block10:=%',
