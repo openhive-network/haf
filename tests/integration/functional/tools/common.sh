@@ -9,7 +9,8 @@ dump_postgres_log(){
   echo "FAILED with result ${result}";
   echo "mtlk dumping postgres log begin"
   echo $(find /var -name postgres*.log 2>/dev/null)  
-  sudo cat $(find /var -name postgres*.log 2>/dev/null)
+  find /var -name postgres*.log 2>/dev/null | xargs sudo cat | awk '{print "POSTGRESLOG> " $0}'
+
 
   echo "mtlk dumping postgres log end"
 }
