@@ -27,7 +27,9 @@ if [[ -n "$CI_PROJECT_DIR" ]]; then
     STORAGE_PATH="$CI_PROJECT_DIR"
 fi
 
+STORAGE_PATH=$STORAGE_PATH/$DB_NAME/consensus_unit_test_storage_dir
 
+rm -rf $STORAGE_PATH
 
 
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f - <<-EOF
