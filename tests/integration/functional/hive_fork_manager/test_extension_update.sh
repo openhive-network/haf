@@ -60,6 +60,10 @@ done
 
 
 test_extension_update() {
+
+    POSTGRES_VERSION=14
+    # old libhfm has to be removed so in case of an corrupted setup of haf the old libhfm won't be used
+    sudo rm -rf /usr/lib/postgresql/${POSTGRES_VERSION}/lib/libhfm-*
     # modify the hived_api.sql file 
     echo -e "CREATE OR REPLACE FUNCTION hive.test() \n    RETURNS void \n    LANGUAGE plpgsql \n    VOLATILE AS \n\$BODY\$ \nBEGIN \nRAISE NOTICE 'test'; \nEND; \n\$BODY\$;" >> $DIR/src/hive_fork_manager/hived_api.sql
     # commit changes to make a new hash
@@ -72,7 +76,6 @@ test_extension_update() {
     $SETUP_DIR/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$DIR" --haf-binaries-dir="$HAF_DIR" extension.hive_fork_manager
     (cd $HAF_DIR; sudo ninja install)
     # run generator script
-    POSTGRES_VERSION=14
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh
 }
 
