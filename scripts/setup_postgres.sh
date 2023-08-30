@@ -150,16 +150,6 @@ fi
 
 install_extension "$HAF_BINARY_DIR"
 
-# Be sure PostgreSQL is started.
-/etc/init.d/postgresql start
-
-deploy_builtin_roles "${POSTGRES_ACCESS[@]}"
-"$SCRIPTPATH/create_haf_admin_role.sh" "${POSTGRES_ACCESS[@]}" --haf-admin-account="$HAF_ADMIN_ACCOUNT"
-setup_haf_storage_tablespace "${POSTGRES_ACCESS[@]}" "$HAF_TABLESPACE_NAME" "$HAF_TABLESPACE_LOCATION"
-
-# Allow everyone to overwrite/remove our log
-chmod a+w "$LOG_FILE"
-
 
 echo in setup_postgres.sh ls -lah /home
 sudo ls -lah /home
@@ -170,10 +160,26 @@ sudo ls -lah /home/hived
 echo in setup_postgres.sh ls -lah /home/hived/datadir
 sudo ls -lah /home/hived/datadir
 
+mkdir /home/hived/datadir/haf_postgresql_conf.d
 echo in setup_postgres.sh  ls -lah /home/hived/datadir/haf_postgresql_conf.d
 sudo ls -lah /home/hived/datadir/haf_postgresql_conf.d
+
+echo log_timezone = 'Europe/Warsaw'  >> /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
+echo log_statement = 'all'  >> /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
 
 echo in setup_postgres.sh ls -lah /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
 sudo ls -lah /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
 
+
+
+
+# Be sure PostgreSQL is started.
+/etc/init.d/postgresql start
+
+deploy_builtin_roles "${POSTGRES_ACCESS[@]}"
+"$SCRIPTPATH/create_haf_admin_role.sh" "${POSTGRES_ACCESS[@]}" --haf-admin-account="$HAF_ADMIN_ACCOUNT"
+setup_haf_storage_tablespace "${POSTGRES_ACCESS[@]}" "$HAF_TABLESPACE_NAME" "$HAF_TABLESPACE_LOCATION"
+
+# Allow everyone to overwrite/remove our log
+chmod a+w "$LOG_FILE"
 
