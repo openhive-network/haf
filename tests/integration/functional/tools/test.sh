@@ -19,7 +19,7 @@ evaluate_result $?
 
 
 # Default storage path
-STORAGE_PATH='/home/hived/datadir/consensus_unit_test_storage_dir'
+STORAGE_PATH='/home/hived/datadir
 
 # If the CI_PROJECT_DIR environment variable is set and it's not empty,
 # use it as the storage path
@@ -29,7 +29,6 @@ fi
 
 STORAGE_PATH=$STORAGE_PATH/$DB_NAME/consensus_unit_test_storage_dir
 
-rm -rf $STORAGE_PATH
 
 
 psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f - <<-EOF
@@ -183,7 +182,7 @@ fi
 
 on_exit
 psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
-
+sudo rm -rf $STORAGE_PATH
 
 echo "PASSED";
 trap - EXIT;
