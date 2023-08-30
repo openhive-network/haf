@@ -160,16 +160,20 @@ setup_haf_storage_tablespace "${POSTGRES_ACCESS[@]}" "$HAF_TABLESPACE_NAME" "$HA
 # Allow everyone to overwrite/remove our log
 chmod a+w "$LOG_FILE"
 
-echo in setup_postgres.sh show config_file:
-psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -c  'show config_file';
+
+echo in setup_postgres.sh ls -lah /home
+sudo ls -lah /home
+
+echo in setup_postgres.sh ls -lah /home/hived
+sudo ls -lah /home/hived
 
 echo in setup_postgres.sh ls -lah /home/hived/datadir
-ls -lah /home/hived/datadir
+sudo ls -lah /home/hived/datadir
 
 echo in setup_postgres.sh  ls -lah /home/hived/datadir/haf_postgresql_conf.d
-ls -lah /home/hived/datadir/haf_postgresql_conf.d
+sudo ls -lah /home/hived/datadir/haf_postgresql_conf.d
 
 echo in setup_postgres.sh ls -lah /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
-ls -lah /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
+sudo ls -lah /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
 
 
