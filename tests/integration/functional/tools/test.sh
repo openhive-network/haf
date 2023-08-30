@@ -87,18 +87,6 @@ counter=0
 
 echo DB_NAME $DB_NAME
 
-echo show config_file:
-psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -c  'show config_file';
-
-echo ls -lah /home/hived/datadir
-ls -lah /home/hived/datadir
-
-echo ls -lah /home/hived/datadir/haf_postgresql_conf.d
-ls -lah /home/hived/datadir/haf_postgresql_conf.d
-
-echo ls -lah /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
-ls -lah /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
-
 
 
 

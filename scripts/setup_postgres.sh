@@ -150,38 +150,9 @@ fi
 
 install_extension "$HAF_BINARY_DIR"
 
-
-echo in setup_postgres.sh ls -lah /home
-sudo ls -lah /home
-
-echo in setup_postgres.sh ls -lah /home/hived
-sudo ls -lah /home/hived
-
-mkdir /home/hived/datadir
-sudo chmod 777 /home/hived/datadir
-
-echo in setup_postgres.sh ls -lah /home/hived/datadir
-sudo ls -lah /home/hived/datadir
-
-mkdir /home/hived/datadir/haf_postgresql_conf.d
-sudo chmod 777 /home/hived/datadir/haf_postgresql_conf.d
-
-echo in setup_postgres.sh  ls -lah /home/hived/datadir/haf_postgresql_conf.d
-sudo ls -lah /home/hived/datadir/haf_postgresql_conf.d
-
-echo log_timezone = 'Europe/Warsaw'  >> /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
-echo log_statement = 'all'  >> /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
-sudo chmod 777 /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
-
+# For logging all statements in postgres log
 echo log_timezone = 'Europe/Warsaw'  >> /etc/postgresql/14/main/postgresql.conf
 echo log_statement = 'all'  >> /etc/postgresql/14/main/postgresql.conf
-
-
-echo in setup_postgres.sh ls -lah /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
-sudo ls -lah /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
-
-
-
 
 # Be sure PostgreSQL is started.
 /etc/init.d/postgresql start
@@ -192,10 +163,4 @@ setup_haf_storage_tablespace "${POSTGRES_ACCESS[@]}" "$HAF_TABLESPACE_NAME" "$HA
 
 # Allow everyone to overwrite/remove our log
 chmod a+w "$LOG_FILE"
-
-echo show config_file:
-sudo -u postgres  psql -c  'show config_file'
-
-echo config_file contents:
-sudo cat /etc/postgresql/14/main/postgresql.conf
 
