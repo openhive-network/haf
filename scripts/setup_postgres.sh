@@ -173,6 +173,10 @@ echo log_timezone = 'Europe/Warsaw'  >> /home/hived/datadir/haf_postgresql_conf.
 echo log_statement = 'all'  >> /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
 sudo chmod 777 /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
 
+echo log_timezone = 'Europe/Warsaw'  >> /etc/postgresql/14/main/postgresql.conf
+echo log_statement = 'all'  >> /etc/postgresql/14/main/postgresql.conf
+
+
 echo in setup_postgres.sh ls -lah /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
 sudo ls -lah /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf
 
