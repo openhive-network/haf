@@ -157,6 +157,7 @@ sudo ls -lah /home
 echo in setup_postgres.sh ls -lah /home/hived
 sudo ls -lah /home/hived
 
+mkdir /home/hived/datadir
 echo in setup_postgres.sh ls -lah /home/hived/datadir
 sudo ls -lah /home/hived/datadir
 
