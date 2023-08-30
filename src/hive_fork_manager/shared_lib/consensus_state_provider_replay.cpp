@@ -346,6 +346,14 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
   }
 }
 
+std::string c_stdstr(auto a)
+{
+  if(a.c_str() == nullptr)
+    return "null";
+  else
+    return a.c_str();
+}
+
 void postgres_block_log::get_postgres_data(int from, int to, const char* postgres_url)
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
@@ -364,7 +372,11 @@ try{  // clang-format off
     std::cout << "Blocks:" << blocks.size() << " "; 
 
 try{
-    //wlog("mtlk10 blocks[0][\"num\"].c_str()=${var1} block[0][\"hash\"].c_str()=${var2} block[0][\"prev\"].c_str()=${var3} block[0][\"created_at\"].c_str()=${var4}", ("var1", blocks[0]["num"].c_str())("var2", blocks[0]["hash"].c_str())("var3", blocks[0]["prev"].c_str())("var4", blocks[0]["created_at"].c_str()));
+    wlog("mtlk10 blocks[0][\"num\"].c_str()=${var1} block[0][\"hash\"].c_str()=${var2} block[0][\"prev\"].c_str()=${var3} block[0][\"created_at\"].c_str()=${var4}", 
+    ("var1", c_stdstr(blocks[0]["num"]))
+    ("var2", c_stdstr(blocks[0]["hash"]))
+    ("var3", c_stdstr(blocks[0]["prev"]))
+    ("var4", c_stdstr(blocks[0]["created_at"])));
 } FC_LOG_AND_RETHROW() 
 
 
