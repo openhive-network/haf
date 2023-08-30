@@ -158,13 +158,13 @@ echo in setup_postgres.sh ls -lah /home/hived
 sudo ls -lah /home/hived
 
 mkdir /home/hived/datadir
-sudo chmod 777 mkdir /home/hived/datadir
+sudo chmod 777 /home/hived/datadir
 
 echo in setup_postgres.sh ls -lah /home/hived/datadir
 sudo ls -lah /home/hived/datadir
 
 mkdir /home/hived/datadir/haf_postgresql_conf.d
-sudo chmod 777 mkdir /home/hived/datadir/haf_postgresql_conf.d
+sudo chmod 777 /home/hived/datadir/haf_postgresql_conf.d
 
 echo in setup_postgres.sh  ls -lah /home/hived/datadir/haf_postgresql_conf.d
 sudo ls -lah /home/hived/datadir/haf_postgresql_conf.d
