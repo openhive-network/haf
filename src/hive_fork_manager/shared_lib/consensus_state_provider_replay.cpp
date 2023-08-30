@@ -364,7 +364,7 @@ try{  // clang-format off
     std::cout << "Blocks:" << blocks.size() << " "; 
 
 try{
-    wlog("mtlk10 blocks[0][\"num\"].c_str()=${var1} block[0][\"hash\"].c_str()=${var2} block[0][\"prev\"].c_str()=${var3} block[0][\"created_at\"].c_str()=${var4}", ("var1", blocks[0]["num"].c_str())("var2", blocks[0]["hash"].c_str())("var3", blocks[0]["prev"].c_str())("var4", blocks[0]["created_at"].c_str()));
+    //wlog("mtlk10 blocks[0][\"num\"].c_str()=${var1} block[0][\"hash\"].c_str()=${var2} block[0][\"prev\"].c_str()=${var3} block[0][\"created_at\"].c_str()=${var4}", ("var1", blocks[0]["num"].c_str())("var2", blocks[0]["hash"].c_str())("var3", blocks[0]["prev"].c_str())("var4", blocks[0]["created_at"].c_str()));
 } FC_LOG_AND_RETHROW() 
 
 
