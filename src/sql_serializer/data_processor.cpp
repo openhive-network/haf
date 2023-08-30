@@ -51,6 +51,7 @@ data_processor::data_processor( std::string description, const data_processing_f
   _total_processed_records(0),
   _randezvous_trigger( std::move( api_trigger ) )
 {
+  elog("BEGIN ${d}", ("d", _description));
   auto body = [this, dataProcessor]() -> void
   {
     ilog("Entering data processor thread: ${d}", ("d", _description));
@@ -69,8 +70,10 @@ data_processor::data_processor( std::string description, const data_processing_f
       while(_continue.load())
       {
         dlog("${d} data processor is waiting for DATA-READY signal...", ("d", _description));
+        elog("LOCK ${d}", ("d", _description));
         std::unique_lock<std::mutex> lk(_mtx);
         _cv.wait(lk, [this] {return _dataPtr.valid() || _continue.load() == false; });
+        elog("UNLOCK ${d}", ("d", _description));
 
         dlog("${d} data processor resumed by DATA-READY signal...", ("d", _description));
 
@@ -109,6 +112,7 @@ data_processor::data_processor( std::string description, const data_processing_f
       handle_exception( current_exception );
     }
     ilog("Leaving data processor thread: ${d}", ("d", _description));
+    elog("END ${d}", ("d", _description));
   };
 
   _future = std::async(std::launch::async, body);
