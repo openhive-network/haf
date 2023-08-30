@@ -184,3 +184,9 @@ setup_haf_storage_tablespace "${POSTGRES_ACCESS[@]}" "$HAF_TABLESPACE_NAME" "$HA
 # Allow everyone to overwrite/remove our log
 chmod a+w "$LOG_FILE"
 
+echo show config_file:
+psql -d postgres -c  'show config_file'
+
+echo config_file contents:
+sudo cat /etc/postgresql/14/main/postgresql.conf
+
