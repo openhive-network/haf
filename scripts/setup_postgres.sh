@@ -150,10 +150,6 @@ fi
 
 install_extension "$HAF_BINARY_DIR"
 
-# For logging all statements in postgres log
-echo log_timezone = 'Europe/Warsaw'  >> /etc/postgresql/14/main/postgresql.conf
-echo log_statement = 'all'  >> /etc/postgresql/14/main/postgresql.conf
-
 # Be sure PostgreSQL is started.
 /etc/init.d/postgresql start
 

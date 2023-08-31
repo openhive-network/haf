@@ -187,14 +187,14 @@ static volatile auto stop_in_WARNING = false;
 bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int)
 {
 
-  wlog("pid =${pid}", ("pid", getpid()));
+  my_wlog("pid =${pid}", ("pid", getpid()));
 
 
   auto csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
   
   int to = from;
 
-  wlog("csp_expected_block=${var1} from=${var2} to=${var3}", ("var1", csp_expected_block)("var2", from)("var3", to));
+  my_wlog("csp_expected_block=${var1} from=${var2} to=${var3}", ("var1", csp_expected_block)("var2", from)("var3", to));
 
   if(from < csp_expected_block)
   {
@@ -205,7 +205,7 @@ bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int fr
     from = csp_expected_block;
     to = from;
   }
-  wlog("csp_expected_block=${var1} from=${var2} to=${var3}", ("var1", csp_expected_block)("var2", from)("var3", to));
+  my_wlog("csp_expected_block=${var1} from=${var2} to=${var3}", ("var1", csp_expected_block)("var2", from)("var3", to));
 
 
 
@@ -268,14 +268,14 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block
                              const char* postgres_url)
 {
 
-  wlog("pid =${pid}", ("pid", getpid()));
+  my_wlog("pid =${pid}", ("pid", getpid()));
   while(stop_in_get_full_block)
   {
     int a = 0;
     a=a;
   }
 
-  wlog("postgres_block_log::get_full_block block_num=${block_num} context=${var1} shared_memory_bin_path=${var2} postgres_url=${var3}", ("block_num", block_num)("var1", context)("var2", shared_memory_bin_path)("var3", postgres_url));
+  my_wlog("postgres_block_log::get_full_block block_num=${block_num} context=${var1} shared_memory_bin_path=${var2} postgres_url=${var3}", ("block_num", block_num)("var1", context)("var2", shared_memory_bin_path)("var3", postgres_url));
   // try
   // {
 
@@ -334,11 +334,11 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
   }
   catch( const fc::exception& e )
   {
-    wlog( "fc::exception ${e}", ("e", e.to_string()) );
+    my_wlog( "fc::exception ${e}", ("e", e.to_string()) );
   }
   catch( const std::exception& e )
   {
-    wlog("std::exception e.what=${var1}", ("var1", e.what()));
+    my_wlog("std::exception e.what=${var1}", ("var1", e.what()));
   }
   catch(...)
   {
@@ -372,7 +372,7 @@ try{  // clang-format off
     std::cout << "Blocks:" << blocks.size() << " "; 
 
 try{
-    wlog("mtlk10 blocks[0][\"num\"].c_str()=${var1} block[0][\"hash\"].c_str()=${var2} block[0][\"prev\"].c_str()=${var3} block[0][\"created_at\"].c_str()=${var4}", 
+    my_wlog("mtlk10 blocks[0][\"num\"].c_str()=${var1} block[0][\"hash\"].c_str()=${var2} block[0][\"prev\"].c_str()=${var3} block[0][\"created_at\"].c_str()=${var4}", 
     ("var1", c_stdstr(blocks[0]["num"]))
     ("var2", c_stdstr(blocks[0]["hash"]))
     ("var3", c_stdstr(blocks[0]["prev"]))
@@ -433,9 +433,9 @@ void postgres_block_log::replay_block(csp_session_type* csp_session, const pqxx:
 
   block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
   
-  wlog("mtlk8 signed_block_object.block_id=${var1} signed_block_object.previous=${var2}", ("var1", signed_block_object.block_id)("var2", signed_block_object.previous));
+  my_wlog("mtlk8 signed_block_object.block_id=${var1} signed_block_object.previous=${var2}", ("var1", signed_block_object.block_id)("var2", signed_block_object.previous));
   fb_ptr = from_bin_to_full_block_ptr(signed_block_object, block_num);
-  wlog("mtlk8 fb_ptr->get_block_id()=${var1}", ("var1", fb_ptr->get_block_id()));
+  my_wlog("mtlk8 fb_ptr->get_block_id()=${var1}", ("var1", fb_ptr->get_block_id()));
 
   transformations_time_probe.stop();
 
@@ -561,7 +561,7 @@ block_bin_t postgres_block_log::build_block_bin(const pqxx::row& block, std::vec
   block_bin_t sb;
 
   p2b_hex_to_ripemd160("prev", block, sb.previous);
-  wlog("mlk10 sb.previous=${var1}", ("var1", sb.previous));
+  my_wlog("mlk10 sb.previous=${var1}", ("var1", sb.previous));
 
   p2b_time_to_time_point_sec("created_at", block, sb.timestamp);
   p2b_cstr_to_str("name", block, sb.witness);
@@ -798,18 +798,18 @@ hive::chain::database* create_and_init_database(const char* context, const char*
 
 csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-    wlog("Started csp_init_impl with context=${var1} shared_memory_bin_path=${var2} postgres_url=${var3}", ("var1", context)("var2", shared_memory_bin_path)("var3", postgres_url));
+    my_wlog("Started csp_init_impl with context=${var1} shared_memory_bin_path=${var2} postgres_url=${var3}", ("var1", context)("var2", shared_memory_bin_path)("var3", postgres_url));
     
     hive::chain::database* db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
     auto* csp_session =  new csp_session_type{context, shared_memory_bin_path, postgres_url, db};
 
     if(csp_session)
     {
-      wlog("Returning from csp_init_impl with csp_session->context=${var1} csp_session->shared_memory_bin_path=${var2} csp_session->postgres_url=${var3}", ("var1", csp_session->context)("var2", csp_session->shared_memory_bin_path)("var3", csp_session->postgres_url));    
+      my_wlog("Returning from csp_init_impl with csp_session->context=${var1} csp_session->shared_memory_bin_path=${var2} csp_session->postgres_url=${var3}", ("var1", csp_session->context)("var2", csp_session->shared_memory_bin_path)("var3", csp_session->postgres_url));    
     }   
     else
     {
-      wlog("returning from csp_init_impl with csp_session=nullptr");
+      my_wlog("returning from csp_init_impl with csp_session=nullptr");
     }
 
     return csp_session;
@@ -890,7 +890,7 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
 
 void csp_finish_impl(csp_session_type* csp_session, bool wipe_clean_shared_memory_bin)
 {
-  wlog("csp_finish_impl with wipe_clean_shared_memory_bin=${wipe_clean_shared_memory_bin}", ("wipe_clean_shared_memory_bin", wipe_clean_shared_memory_bin));
+  my_wlog("csp_finish_impl with wipe_clean_shared_memory_bin=${wipe_clean_shared_memory_bin}", ("wipe_clean_shared_memory_bin", wipe_clean_shared_memory_bin));
   hive::chain::database* db = csp_session->db;
   
   db->close();
@@ -950,7 +950,7 @@ collected_account_balances_collection_t collect_current_account_balances(csp_ses
                                                                          const std::vector<std::string>& account_names)
 {
 
-  wlog("pid =${pid}", ("pid", getpid()));
+  my_wlog("pid =${pid}", ("pid", getpid()));
 
   while(stop_in_collect_current_account_balances)
   {
