@@ -39,7 +39,7 @@ BEGIN
           -- IF __from != __to THEN
           --     CALL cab_app.do_massive_processing(_appContext, __from, __to, _step, __last_block);
           -- ELSE
-              PERFORM cab_app.do_single_block_processing(_appContext, __to);
+              CALL cab_app.do_single_block_processing(_appContext, __to);
               __last_block := __to;
           -- END IF;
       END IF;
@@ -174,7 +174,7 @@ BEGIN
 
 END$$;
 
-CREATE OR REPLACE FUNCTION cab_app.do_single_block_processing(IN _appContext VARCHAR, IN _block INT) RETURNS VOID LANGUAGE 'plpgsql' AS $$
+CREATE OR REPLACE PROCEDURE cab_app.do_single_block_processing(IN _appContext VARCHAR, IN _block INT) LANGUAGE 'plpgsql' AS $$
 BEGIN
   PERFORM cab_app.set_temp_time_start(now());
 
