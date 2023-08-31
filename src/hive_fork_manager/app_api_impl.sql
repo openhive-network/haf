@@ -127,6 +127,8 @@ DECLARE
     __before_next_massive_sync_event_id BIGINT := NULL;
     __lead_context hive.context_name := _contexts[ 1 ];
 BEGIN
+    RAISE NOTICE 'Entering hive.squash_end_massive_sync_events(%)', _contexts;
+
     -- first find a newer massive_sync nearest current block
     SELECT heq.id, hc.current_block_num, hc.id, hc.irreversible_block
     INTO __next_massive_sync_event_id, __context_current_block_num, __context_id, __irreversible_block_num
@@ -144,6 +146,7 @@ BEGIN
 
     -- no newer MASSIVE_SYNC, nothing to do
     IF __next_massive_sync_event_id IS NULL THEN
+            RAISE NOTICE 'Exiting hive.squash_end_massive_sync_events';
             RETURN FALSE;
     END IF;
 
@@ -157,6 +160,9 @@ BEGIN
     UPDATE hive.contexts
     SET events_id = __before_next_massive_sync_event_id -- it may be null if there is no events before the massive sync
     WHERE name =ANY( _contexts );
+
+    RAISE NOTICE 'Exiting hive.squash_end_massive_sync_events';
+
     RETURN TRUE;
 END;
 $BODY$
@@ -171,6 +177,7 @@ $BODY$
 DECLARE
     __current_event_id hive.events_queue.id%TYPE;
 BEGIN
+    RAISE NOTICE 'In hive.squash_events(%)',  _contexts;
     SELECT hc.events_id INTO __current_event_id FROM hive.contexts hc WHERE hc.name = _contexts[ 1 ];
 
     -- do not squash not initialzed context
@@ -214,6 +221,7 @@ $BODY$
         __context_state hive.context_state;
         __lead_context hive.context_name := _contexts[ 1 ];
     BEGIN
+        RAISE NOTICE 'In hive.squash_and_get_state(%)', _contexts;
         PERFORM hive.squash_events( _contexts );
 
         SELECT
@@ -348,6 +356,8 @@ DECLARE
     __last_block_to_process INT;
     __result hive.blocks_range;
 BEGIN
+    RAISE NOTICE 'Entering hive.app_process_event_non_forking(context: %, context_state: %)', _context, j son_agg(_context_state);
+
     CASE _context_state.next_event_type
         WHEN 'NEW_IRREVERSIBLE' THEN
             IF _context_state.next_event_block_num > _context_state.irreversible_block_num THEN
@@ -369,6 +379,7 @@ BEGIN
         -- There is no new and expected block, needs to wait for a new block
         __result.first_block = -1;
         __result.last_block = -2;
+        RAISE NOTICE 'Exiting hive.app_process_event_non_forking with %', __result;
         RETURN __result;
     END IF;
 
@@ -378,6 +389,8 @@ BEGIN
 
     __result.first_block = __next_block_to_process;
     __result.last_block = __last_block_to_process;
+
+    RAISE NOTICE 'Exiting hive.app_process_event_non_forking with %', __result;
 
     RETURN __result;
 END;
@@ -419,6 +432,7 @@ DECLARE
     __result hive.blocks_range[];
     __context_state hive.context_state;
 BEGIN
+    RAISE NOTICE  'In hive.app_next_block_non_forking_app(%)',  _context_names;
     SELECT * FROM hive.squash_and_get_state( _context_names ) INTO __context_state;
     SELECT ARRAY_AGG( hive.app_process_event_non_forking(contexts.*, __context_state) ) INTO __result
     FROM unnest( _context_names ) as contexts;

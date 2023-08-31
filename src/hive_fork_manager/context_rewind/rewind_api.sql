@@ -79,6 +79,8 @@ DECLARE
     __registerd_table_schema TEXT;
     __registerd_table_name TEXT;
 BEGIN
+    RAISE NOTICE 'Entering hive.context_back_from_fork(context: %, block_num_before_fork: %)', _context, _block_num_before_fork;
+
     -- we need a flag for back_from_fork to returns from triggers immediatly
     -- we cannot use ALTER TABLE DISABLE TRIGGERS because DDL event trigger cause an error:
     -- Cannot ALTER TABLE "table" because it has pending trigger events, but only when origin tables have contstraints
@@ -102,6 +104,9 @@ BEGIN
     SET   current_block_num = _block_num_before_fork
         , back_from_fork = FALSE
     WHERE name = _context AND current_block_num > _block_num_before_fork;
+
+    RAISE NOTICE 'Exiting hive.context_back_from_fork';
+
 END;
 $BODY$
 ;
@@ -188,6 +193,9 @@ $BODY$
 DECLARE
     __current_irreversible INTEGER;
 BEGIN
+RAISE 
+    RAISE NOTICE 'Entering hive.context_set_irreversible_block(context: %, block_num: %)', _context, _block_num;
+
     -- validate new irreversible
     SELECT irreversible_block FROM hive.contexts hc WHERE hc.name = _context INTO __current_irreversible;
 
@@ -203,6 +211,8 @@ BEGIN
             JOIN hive.contexts hc ON hc.id = hrt.context_id
             WHERE hc.name = _context
             ORDER BY hrt.id;
+    RAISE NOTICE 'Exiting hive.context_set_irreversible_block';
+
 END;
 $BODY$
 ;

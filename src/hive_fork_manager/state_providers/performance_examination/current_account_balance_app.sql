@@ -32,6 +32,8 @@ BEGIN
           __from = __next_block_range.first_block;
           __to = __next_block_range.last_block;
 
+          -- __to = __from;
+
           CALL cab_app.adjust_block_range(__from , __to , _maxBlockLimit);
 
           RAISE NOTICE 'Processing block range: <%,%>', __from, __to;
@@ -39,8 +41,8 @@ BEGIN
           -- IF __from != __to THEN
           --     CALL cab_app.do_massive_processing(_appContext, __from, __to, _step, __last_block);
           -- ELSE
-              CALL cab_app.do_single_block_processing(_appContext, __to);
-              __last_block := __to;
+          --     CALL cab_app.do_single_block_processing(_appContext, __to);
+          --     __last_block := __to;
           -- END IF;
       END IF;
   END LOOP;

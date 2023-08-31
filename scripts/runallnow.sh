@@ -1363,7 +1363,7 @@ minimal_hived_cont()
 
 app_start()
 {
-
+set -x
     psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select * FROM hive.irreversible_data;" 
     psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select * FROM hive.events_queue;" 
     psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select * FROM hive.fork;" 
@@ -1375,7 +1375,7 @@ app_start()
     sudo -u postgres rm -f /var/lib/postgresql/blockchain/*
     sudo rm  /var/lib/postgresql/blockchain/cabc_shared_memory.bin  || true
 
-    psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select hive.app_reset_data('cabc');"
+    # psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select hive.app_reset_data('cabc');"
     
     psql -v "ON_ERROR_STOP=1" -d haf_block_log -f $SRC_DIR/src/hive_fork_manager/state_providers/performance_examination/current_account_balance_app.sql 
     
@@ -1500,6 +1500,12 @@ run_all_from_scratch()
     serializer
 
 }
+
+run_wo_app()
+{
+    remove_context_shared_memory_bin && run_all_from_scratch
+}
+
 
 run()
 {

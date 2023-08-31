@@ -134,6 +134,8 @@ $BODY$
 DECLARE
     result hive.blocks_range;
 BEGIN
+    RAISE NOTICE 'In hive.app_next_block(%)', _context_names;
+
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
     IF EXISTS( SELECT 1 FROM hive.contexts hc WHERE hc.name =ANY( _context_names ) AND hc.is_attached = FALSE ) THEN
@@ -161,6 +163,8 @@ CREATE OR REPLACE FUNCTION hive.app_next_block( _context_name hive.context_name 
 AS
 $BODY$
 BEGIN
+    RAISE NOTICE 'In hive.app_next_block(%)', _context_name;
+  
    RETURN hive.app_next_block( ARRAY[ _context_name ] );
 END;
 $BODY$
@@ -620,6 +624,7 @@ $BODY$
 DECLARE
     __number_of_rows INTEGER;
 BEGIN
+    RAISE NOTICE 'In app_check_contexts_synchronized(%)',  _contexts;
     SELECT COUNT(
         DISTINCT(
                    ctx.current_block_num
