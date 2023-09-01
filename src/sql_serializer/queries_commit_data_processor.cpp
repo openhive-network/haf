@@ -23,6 +23,11 @@ queries_commit_data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blo
 }
 
 void
+queries_commit_data_processor::wait() {
+  m_wrapped_processor->wait();
+}
+
+void
 queries_commit_data_processor::complete_data_processing() {
   m_wrapped_processor->complete_data_processing();
 }

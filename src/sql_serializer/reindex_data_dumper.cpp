@@ -45,12 +45,27 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void reindex_data_dumper::trigger_data_flush( cached_data_t& cached_data, int last_block_num ) {
     _block_writer->trigger( std::move( cached_data.blocks ), last_block_num );
+    // _block_writer->wait();
     _transaction_writer->trigger( std::move( cached_data.transactions ), last_block_num);
+    // _transaction_writer->wait();
     _operation_writer->trigger( std::move( cached_data.operations ), last_block_num );
+    // _operation_writer->wait();
     _transaction_multisig_writer->trigger( std::move( cached_data.transactions_multisig ), last_block_num );
+    // _transaction_multisig_writer->wait();
     _account_writer->trigger( std::move( cached_data.accounts ), last_block_num );
+    // _account_writer->wait();
     _account_operations_writer->trigger( std::move( cached_data.account_operations ), last_block_num );
+    // _account_operations_writer->wait();
     _applied_hardforks_writer->trigger( std::move( cached_data.applied_hardforks ), last_block_num );
+    // _applied_hardforks_writer->wait();
+
+    _block_writer->wait();
+    _transaction_writer->wait();
+    _operation_writer->wait();
+    _transaction_multisig_writer->wait();
+    _account_writer->wait();
+    _account_operations_writer->wait();
+    _applied_hardforks_writer->wait();
   }
 
   void reindex_data_dumper::join() {

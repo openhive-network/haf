@@ -44,6 +44,7 @@ public:
   data_processor& operator=(const data_processor&) = delete;
 
   void trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum);
+  void wait();
   //where there the chunk is empty, only confirms that the bunch of blocks was processed by the processor
   void only_report_batch_finished( uint32_t _block_num );
   /// Allows to hold execution of calling thread, until data processing thread will consume data and starts awaiting for another trigger call.

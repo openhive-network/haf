@@ -19,6 +19,7 @@ namespace hive::plugins::sql_serializer {
       chunks_for_writers_splitter_base& operator=( chunks_for_writers_splitter_base&& ) = delete;
 
       void trigger( typename TableWriter::DataContainerType::container&& data, uint32_t last_block_num );
+      void wait();
       void join();
       void complete_data_processing();
 
@@ -145,6 +146,14 @@ namespace hive::plugins::sql_serializer {
       typename TableWriter::DataContainerType batch( data_ptr, begin_range_it, end_range_it );
       writer.trigger( std::move(batch), last_block_num );
       ++writer_num;
+    }
+  }
+
+  template< typename TableWriter >
+  inline void
+  chunks_for_writers_splitter_base< TableWriter >::wait() {
+    for ( auto& writer : writers ) {
+      writer.wait();
     }
   }
 

@@ -65,6 +65,7 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
       );
 
   db_checker.trigger(data_processor::data_chunk_ptr(), 0);
+  db_checker.wait();
   db_checker.join();
 
   if ( !is_extension_created ) {
@@ -91,6 +92,7 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
       );
 
   db_consistency_checker.trigger(data_processor::data_chunk_ptr(), 0);
+  db_consistency_checker.wait();
   db_consistency_checker.join();
 
   if ( !is_irreversible_dirty ) {
@@ -319,6 +321,7 @@ public:
       };
       queries_commit_data_processor processor( db_url, "Get type definitions", get_type_definitions, nullptr );
       processor.trigger( nullptr, 0 );
+      processor.wait();
       processor.join();
     }
   }
@@ -335,6 +338,7 @@ public:
     };
     queries_commit_data_processor processor( db_url, "Connect to the db", connect_to_the_db, nullptr );
     processor.trigger( nullptr, 0 );
+    processor.wait();
     processor.join();
   }
 
@@ -382,6 +386,8 @@ public:
 
     sequence_loader.trigger(data_processor::data_chunk_ptr(), 0);
 
+    sequence_loader.wait();
+    block_loader.wait();
     sequence_loader.join();
     block_loader.join();
 
@@ -404,6 +410,7 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
   };
   queries_commit_data_processor processor( db_url, "Connect to the db", connect_to_the_db, nullptr );
   processor.trigger( nullptr, 0 );
+  processor.wait();
   processor.join();
 }
 

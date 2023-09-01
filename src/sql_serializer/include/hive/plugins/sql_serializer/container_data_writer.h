@@ -41,6 +41,7 @@ namespace hive::plugins::sql_serializer {
         }
 
         void trigger(DataContainer&& data, uint32_t last_block_num);
+        void wait();
         void complete_data_processing();
         void join();
 
@@ -78,6 +79,13 @@ namespace hive::plugins::sql_serializer {
     }
 
     FC_ASSERT(data.empty(), "DATA empty 1");
+  }
+
+  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor>
+  inline void
+  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::wait()
+  {
+      _processor->wait();
   }
 
   template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor>

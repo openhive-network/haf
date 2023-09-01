@@ -70,15 +70,15 @@ data_processor::data_processor( std::string description, const data_processing_f
       while(_continue.load())
       {
         dlog("${d} data processor is waiting for DATA-READY signal...", ("d", _description));
-        elog("LOCK ${d}", ("d", _description));
+        // elog("LOCK ${d}", ("d", _description));
         std::unique_lock<std::mutex> lk(_mtx);
         _cv.wait(lk, [this] {return _dataPtr.valid() || _continue.load() == false; });
-        elog("UNLOCK ${d}", ("d", _description));
 
         dlog("${d} data processor resumed by DATA-READY signal...", ("d", _description));
 
         if(_continue.load() == false) {
           dlog("${d} data processor _continue.load() == false", ("d", _description));
+          // elog("UNLOCK ${d}", ("d", _description));
           break;
         }
 
@@ -86,6 +86,7 @@ data_processor::data_processor( std::string description, const data_processing_f
         uint32_t last_block_num_in_stage = _last_block_num;
 
         lk.unlock();
+        // elog("UNLOCK ${d}", ("d", _description));
         dlog("${d} data processor consumed data - notifying trigger process...", ("d", _description));
         _cv.notify_one();
 
@@ -103,6 +104,7 @@ data_processor::data_processor( std::string description, const data_processing_f
             _randezvous_trigger->report_complete_thread_stage( last_block_num_in_stage );
         }
 
+        // _cv.notify_one();
         dlog("${d} data processor finished processing a data chunk...", ("d", _description));
       }
     }
@@ -133,22 +135,43 @@ void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
   _is_processing_data = true;
 
   {
+    const auto& d = _description;
   dlog("Trying to trigger data processor: ${d}...", ("d", _description));
+    // elog("LOCK ${d}", ("d", d));
   std::lock_guard<std::mutex> lk(_mtx);
   _dataPtr = std::move(dataPtr);
   _last_block_num = last_blocknum;
   dlog("Data processor: ${d} triggerred...", ("d", _description));
+    // elog("UNLOCK ${d}", ("d", d));
   }
   _cv.notify_one();
 
   /// wait for the worker
   {
-    dlog("Waiting until data_processor ${d} will consume a data...", ("d", _description));
-    std::unique_lock<std::mutex> lk(_mtx);
-    _cv.wait(lk, [this] {return _dataPtr.valid() == false; });
+    // // const auto d = fc::thread::current().name();
+    // // const auto& d = _description;
+    // dlog("Waiting until data_processor ${d} will consume a data...", ("d", _description));
+    // // elog("LOCK ${d}", ("d", d));
+    // std::unique_lock<std::mutex> lk(_mtx);
+    // _cv.wait(lk, [this] {return _dataPtr.valid() == false; });
+    // // elog("UNLOCK ${d}", ("d", d));
   }
 
   dlog("Leaving trigger of data data processor: ${d}...", ("d", _description));
+}
+
+void data_processor::wait()
+{
+  /// wait for the worker
+  {
+    // const auto d = fc::thread::current().name();
+    // const auto& d = _description;
+    dlog("Waiting until data_processor ${d} will consume a data...", ("d", _description));
+    // elog("LOCK ${d}", ("d", d));
+    std::unique_lock<std::mutex> lk(_mtx);
+    _cv.wait(lk, [this] {return _dataPtr.valid() == false; });
+    // elog("UNLOCK ${d}", ("d", d));
+  }
 }
 
 void
