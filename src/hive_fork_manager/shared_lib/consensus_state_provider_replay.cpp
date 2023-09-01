@@ -184,7 +184,7 @@ volatile bool static stop_in_consensus_state_provider_replay_impl = false;
 static volatile auto stop_in_WARNING = false;
 
 
-bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int)
+bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int to)
 {
 
   my_wlog("pid =${pid}", ("pid", getpid()));
@@ -192,7 +192,6 @@ bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int fr
 
   auto csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
   
-  int to = from;
 
   my_wlog("csp_expected_block=${var1} from=${var2} to=${var3}", ("var1", csp_expected_block)("var2", from)("var3", to));
 
@@ -203,7 +202,6 @@ bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int fr
   else
   {
     from = csp_expected_block;
-    to = from;
   }
   my_wlog("csp_expected_block=${var1} from=${var2} to=${var3}", ("var1", csp_expected_block)("var2", from)("var3", to));
 
@@ -226,6 +224,7 @@ bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int fr
 
 void postgres_block_log::run(csp_session_type* csp_session, int from, int to)
 {
+
   measure_before_run();
 
   // try
