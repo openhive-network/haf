@@ -346,7 +346,8 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
   }
 }
 
-std::string c_stdstr(auto a)
+template<typename au>
+std::string c_stdstr(au a)
 {
   if(a.c_str() == nullptr)
     return "null";
