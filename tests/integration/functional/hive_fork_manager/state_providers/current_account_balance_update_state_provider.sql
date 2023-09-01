@@ -104,11 +104,20 @@ DECLARE
     actual hstore := '';
     __session_ptr BIGINT;
 BEGIN
-
+   
     RAISE NOTICE 'haf_admin_procedure_test_then 10';
+
     PERFORM hive.sessions_reconnect();
     __session_ptr = hive.get_session_ptr('context');
 
+    -- After  reconnecting - automatic undo has been performed:
+    ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
+                             'consensus_state_provider_get_expected_block_num should return 1';
+
+
+    -- So we need to push it once again
+    PERFORM hive.update_state_provider_csp( 1, 6, 'context' );
+    COMMIT;
 
     RAISE NOTICE 'in then consensus_state_provider_get_expected_block_num=%',(SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr));    
 

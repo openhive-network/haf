@@ -379,6 +379,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 #     bool database::_push_block(const block_flow_control& block_ctrl)
 # zamiast apply_block
 
+# TODO mtlk  -- generally can move rewind_undo_state functionality where it was
 # TODO remove replay_blocks out of class
 # TODO - erase nodes from fork db after pop_block
 # TODO - eliminate removing undo_all at the beginning
@@ -1269,7 +1270,7 @@ fi
 if [[ $CMAKED ]]
 then
 #    ninja extension.hive_fork_manager  \
-    ninja csp_driver query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* # && ctest -R keyauth --output-on-failure # && ctest -R curr --output-on-failure 
+    ninja  tests/unit/all csp_driver query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* # && ctest -R keyauth --output-on-failure # && ctest -R curr --output-on-failure 
     EXIT_STATUS=$?
     # ninja consp_driver; sudo chown $USER:$USER .ninja_*
     sudo chown -R $USER:$USER *
