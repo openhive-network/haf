@@ -356,18 +356,38 @@ DECLARE
     __last_block_to_process INT;
     __result hive.blocks_range;
 BEGIN
-    RAISE NOTICE 'Entering hive.app_process_event_non_forking(context: %, context_state: %)', _context, j son_agg(_context_state);
+    RAISE NOTICE 'Entering hive.app_process_event_non_forking(context: %, context_state: %)', _context, json_agg(_context_state);
+
+    RAISE NOTICE 'Evaluating next_event_type: %', _context_state.next_event_type;
 
     CASE _context_state.next_event_type
         WHEN 'NEW_IRREVERSIBLE' THEN
+            RAISE NOTICE 'Detected next_event_type as NEW_IRREVERSIBLE.';
+
             IF _context_state.next_event_block_num > _context_state.irreversible_block_num THEN
+                RAISE NOTICE 'next_event_block_num (%) is greater than irreversible_block_num (%). Updating irreversible block...', _context_state.next_event_block_num, _context_state.irreversible_block_num;
+
                 PERFORM hive.context_set_irreversible_block( _context, _context_state.next_event_block_num );
+
+                RAISE NOTICE 'Updated irreversible block to %', _context_state.next_event_block_num;
+            ELSE
+                RAISE NOTICE 'next_event_block_num is not greater than irreversible_block_num. No update needed.';
             END IF;
         WHEN 'MASSIVE_SYNC' THEN
+            RAISE NOTICE 'Detected next_event_type as MASSIVE_SYNC.';
+
             IF _context_state.next_event_block_num > _context_state.irreversible_block_num THEN
+                RAISE NOTICE 'next_event_block_num (%) is greater than irreversible_block_num (%). Updating irreversible block...', _context_state.next_event_block_num, _context_state.irreversible_block_num;
+
                 PERFORM hive.context_set_irreversible_block( _context, _context_state.next_event_block_num );
+
+                RAISE NOTICE 'Updated irreversible block to %', _context_state.next_event_block_num;
+            ELSE
+                RAISE NOTICE 'next_event_block_num is not greater than irreversible_block_num. No update needed.';
+                RAISE NOTICE 'next_event_block_num (%) is not greater than irreversible_block_num (%). ', _context_state.next_event_block_num, _context_state.irreversible_block_num;
             END IF;
         ELSE
+            RAISE NOTICE 'Detected next_event_type as neither NEW_IRREVERSIBLE nor MASSIVE_SYNC. No action taken.';
         END CASE;
 
     SELECT MIN( hb.num ), MAX( hb.num )
@@ -375,17 +395,26 @@ BEGIN
     WHERE hb.num > _context_state.current_block_num AND hb.num <= _context_state.irreversible_block_num
     INTO __next_block_to_process, __last_block_to_process;
 
+    RAISE NOTICE 'Queried blocks. Next block to process: %, Last block to process: %', __next_block_to_process, __last_block_to_process;
+
     IF __next_block_to_process IS NULL THEN
         -- There is no new and expected block, needs to wait for a new block
+        RAISE NOTICE 'No new and expected block found. Setting results to default values (-1, -2).';
+    
         __result.first_block = -1;
         __result.last_block = -2;
+
         RAISE NOTICE 'Exiting hive.app_process_event_non_forking with %', __result;
         RETURN __result;
     END IF;
 
+    RAISE NOTICE 'Updating current block number in hive.contexts table to %', __next_block_to_process;
+
     UPDATE hive.contexts
     SET current_block_num = __next_block_to_process
     WHERE name = _context;
+
+    RAISE NOTICE 'Updated hive.contexts. Setting result blocks for processing.';
 
     __result.first_block = __next_block_to_process;
     __result.last_block = __last_block_to_process;
