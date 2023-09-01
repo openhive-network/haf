@@ -193,7 +193,6 @@ $BODY$
 DECLARE
     __current_irreversible INTEGER;
 BEGIN
-RAISE 
     RAISE NOTICE 'Entering hive.context_set_irreversible_block(context: %, block_num: %)', _context, _block_num;
 
     -- validate new irreversible
