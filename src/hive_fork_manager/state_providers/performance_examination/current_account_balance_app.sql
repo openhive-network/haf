@@ -38,12 +38,12 @@ BEGIN
 
           RAISE NOTICE 'Processing block range: <%,%>', __from, __to;
 
-          -- IF __from != __to THEN
-          --     CALL cab_app.do_massive_processing(_appContext, __from, __to, _step, __last_block);
-          -- ELSE
-          --     CALL cab_app.do_single_block_processing(_appContext, __to);
-          --     __last_block := __to;
-          -- END IF;
+          IF __from != __to THEN
+              CALL cab_app.do_massive_processing(_appContext, __from, __to, _step, __last_block);
+          ELSE
+              CALL cab_app.do_single_block_processing(_appContext, __to);
+              __last_block := __to;
+          END IF;
       END IF;
   END LOOP;
 
