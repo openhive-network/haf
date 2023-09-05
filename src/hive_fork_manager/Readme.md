@@ -54,7 +54,6 @@ When a range of block numbers is returned by app_next_block, the app may edit it
 data by querying the 'hive.{context_name}_{ blocks | transactions | operations | transactions_multisig }' views. These view present a data snapshot for the first block in the returned block range. If the number of blocks in the returned range is large, then it may be more efficient for the app to do a "massive sync" instead of syncing block-by-block.
 
 To perform a massive sync, the app should detach the context, execute its sync algorithm using the block data, then reattach the context. This will eliminate the performance overhead associated with the  triggers installed by the fork manager that monitor changes to the app's tables.
-Commit is mandatory immediately after attaching context with a function 'hive.app_context_attach'.
 
 It is possible that an app's operation will be stopped for some reason during a massive sync (i.e. when its context is detached). To deal with this potential scenario, when an app is restarted it should check if its context is attached using `hive.app_context_is_attached`, and if not then it needs to attach again using `hive.app_context_attach` and then 'COMMIT' a pending transaction.
 
@@ -399,19 +398,32 @@ fork control (detach of context is required first) or it can still process them 
 
 hive.app_next_block cannot be used when a context is detached - in such case an exception is thrown.
 
+##### hive.appproc_context_detach( context_name )
+##### hive.appproc_context_detach( array_of_contexts )
+Stored procedures.
+Detaches triggers attached to tables registered in a given context or contexts. It allows to do a massive sync of irreversible blocks without overhead from triggers. The context's views are recreated to return only all irreversible data.
+
 ##### hive.app_context_detach( context_name )
 ##### hive.app_context_detach( array_of_contexts )
-Detaches triggers attached to tables registered in a given context or contexts. It allows to do a massive sync of irreversible blocks without overhead from triggers. The context's views are recreated to return only all irreversible data.
+:warning: These functions have been deprecated and will be removed in future releases. They perform the same tasks as their procedural equivalents presented above, which should be used instead.
+
+
+##### hive.appproc_context_attach( context_name, block_num )
+##### hive.appproc_context_attach( array_of_contexts, block_num )
+Stored procedures. Enables triggers attached to registered tables in a given context or contexts and sets current contexts block number. The `block_num` cannot
+be greater than the latest irreversible block. The context's views are recreated to return both reversible and irreversible data limited to the context's current block.
+
 
 ##### hive.app_context_attach( context_name, block_num )
 ##### hive.app_context_attach( array_of_contexts, block_num )
-Enables triggers attached to registered tables in a given context or contexts and sets current contexts block number. The `block_num` cannot
-be greater than the latest irreversible block. The context's views are recreated to return both reversible and irreversible data limited to the context's current block.
+:warning: These functions have been deprecated and will be removed in future releases. They perform the same tasks as their procedural equivalents presented above, which should be used instead.
 Committing pending transaction with 'COMMIT' after attaching context is mandatory, otherwise intermittent problems with finding a first event to process will occur - race conditions
 between hived process and an application being moving to the next event after attach.
 
 ##### hive.app_context_is_attached( context_name )
 Returns TRUE when a given context is attached. It will throw an exception when there is no a context with the given context_name.
+Committing pending transaction with 'COMMIT' after attaching context is mandatory, otherwise intermittent problems with finding a first event to process will occur - race conditions
+between hived process and an application being moving to the next event after attach.
 
 ##### hive.app_context_are_attached( array_of_contexts )
 Equivalent of 'hive.app_context_is_attached' for a group of contexts. When an array of contexts consists attached and detached
