@@ -1,8 +1,5 @@
-DROP FUNCTION IF EXISTS hived_test_then;
-CREATE FUNCTION hived_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+CREATE OR REPLACE PROCEDURE test_hived_test_then()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
@@ -50,12 +47,6 @@ BEGIN
     END;
 
     BEGIN
-        PERFORM hive.initialize_extension_data();
-        ASSERT FALSE, 'Hived can call initialize_extension_data';
-    EXCEPTION WHEN OTHERS THEN
-    END;
-
-    BEGIN
         PERFORM hive.app_context_set_non_forking( ARRAY[ 'alice_context' ] );
         ASSERT FALSE, 'Hived can call app_context_set_non_forking';
     EXCEPTION WHEN OTHERS THEN
@@ -83,11 +74,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS alice_test_given;
-CREATE FUNCTION alice_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+CREATE OR REPLACE PROCEDURE alice_test_given()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
@@ -99,11 +87,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS alice_test_then;
-CREATE FUNCTION alice_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+CREATE OR REPLACE PROCEDURE alice_test_then()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 DECLARE

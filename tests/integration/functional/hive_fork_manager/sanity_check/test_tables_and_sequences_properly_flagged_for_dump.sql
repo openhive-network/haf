@@ -2,11 +2,9 @@
 --in order to be emitted by pg_dump (normally extension tables and sequences are not dumped)
 
 
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
+
+CREATE OR REPLACE PROCEDURE haf_admin_test_given()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 DECLARE
@@ -53,7 +51,6 @@ DROP FUNCTION IF EXISTS format_assert_message;
 CREATE FUNCTION format_assert_message(IN intext TEXT, IN alla TEXT[], IN flagged TEXT[])
     RETURNS TEXT
     LANGUAGE 'plpgsql'
-STABLE
 AS
 $BODY$
 BEGIN

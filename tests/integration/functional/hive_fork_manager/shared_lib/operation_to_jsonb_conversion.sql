@@ -1,7 +1,7 @@
 DROP FUNCTION IF EXISTS ASSERT_THIS_TEST;
 CREATE FUNCTION ASSERT_THIS_TEST(op TEXT)
-    RETURNS void
-    LANGUAGE 'plpgsql'
+        RETURNS void
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
@@ -14,12 +14,9 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_when;
-CREATE FUNCTION haf_admin_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE haf_admin_test_when()
+LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
   -- Make sure that integer < 0xffffffff is converted to jsonb as numeric type

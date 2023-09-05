@@ -1,8 +1,6 @@
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+
+CREATE OR REPLACE PROCEDURE haf_admin_test_given()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
@@ -22,12 +20,9 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_when;
-CREATE FUNCTION haf_admin_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE haf_admin_test_when()
+LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     -- NOTHING TO DO HERE
@@ -35,11 +30,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
+CREATE OR REPLACE PROCEDURE haf_admin_test_then()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 DECLARE

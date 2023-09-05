@@ -1,9 +1,6 @@
-DROP FUNCTION IF EXISTS haf_admin_test_when;
-CREATE FUNCTION haf_admin_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE haf_admin_test_when()
+LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     PERFORM hive.disable_indexes_of_reversible();
@@ -15,8 +12,7 @@ DROP FUNCTION IF EXISTS is_any_index_for_table;
 CREATE FUNCTION is_any_index_for_table( _table OID )
     RETURNS bool
     LANGUAGE 'plpgsql'
-    STABLE
-AS
+    AS
 $BODY$
 DECLARE
     __result bool;
@@ -38,8 +34,7 @@ DROP FUNCTION IF EXISTS is_any_fk_for_hive_table;
 CREATE FUNCTION is_any_fk_for_hive_table( _table_name TEXT )
     RETURNS bool
     LANGUAGE 'plpgsql'
-    STABLE
-AS
+    AS
 $BODY$
 DECLARE
 __result bool;
@@ -55,11 +50,8 @@ $BODY$
 
 SELECT * FROM information_schema.table_constraints WHERE table_schema='hive' AND table_name='contexts' AND constraint_type = 'FOREIGN KEY' LIMIT 1;
 
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
+CREATE OR REPLACE PROCEDURE haf_admin_test_then()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN

@@ -1,8 +1,6 @@
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+
+CREATE OR REPLACE PROCEDURE haf_admin_test_given()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
@@ -35,12 +33,9 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_when;
-CREATE FUNCTION haf_admin_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE haf_admin_test_when()
+LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     PERFORM constraint_index_checker( TRUE );
@@ -65,8 +60,7 @@ DROP FUNCTION IF EXISTS is_constraint_exists;
 CREATE FUNCTION is_constraint_exists( _schema TEXT, _table_name TEXT, _constraint_name TEXT )
     RETURNS bool
     LANGUAGE 'plpgsql'
-    STABLE
-AS
+    AS
 $BODY$
 DECLARE
 __result bool;
@@ -87,8 +81,7 @@ DROP FUNCTION IF EXISTS is_index_exists;
 CREATE FUNCTION is_index_exists( _schema TEXT, _table_name TEXT, _index_name TEXT )
     RETURNS bool
     LANGUAGE 'plpgsql'
-    STABLE
-AS
+    AS
 $BODY$
 DECLARE
 __result bool;
@@ -105,10 +98,9 @@ $BODY$
 
 DROP FUNCTION IF EXISTS constraint_index_checker;
 CREATE FUNCTION constraint_index_checker( _expected_value BOOL )
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    STABLE
-AS
+        RETURNS void
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
 	ASSERT ( SELECT is_constraint_exists( 'public', 'table_with_constraints', 'table_with_constraints_1' ) = _expected_value ) , 'Problem with table_with_constraints_1';
@@ -121,11 +113,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
+CREATE OR REPLACE PROCEDURE haf_admin_test_then()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN

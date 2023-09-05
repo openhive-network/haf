@@ -1,9 +1,7 @@
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+
+CREATE OR REPLACE PROCEDURE haf_admin_test_given()
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     INSERT INTO hive.operation_types
@@ -49,12 +47,9 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_when;
-CREATE FUNCTION haf_admin_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE haf_admin_test_when()
+LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     -- now it is time to switch to forking context
@@ -63,12 +58,9 @@ END
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE haf_admin_test_then()
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 DECLARE
     __second_blocks hive.blocks_range;

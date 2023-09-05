@@ -1,11 +1,8 @@
 -- the test check a real scenario with hived and applciation role, the order of fucntion call is:
 -- test_hived_test_given->alice_test_given->hived_test_when->alice_test_when->hived_test_then->alice_test_then
 
-DROP FUNCTION IF EXISTS test_hived_test_given;
-CREATE FUNCTION test_hived_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+CREATE OR REPLACE PROCEDURE test_hived_test_given()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
@@ -91,11 +88,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS hived_test_when;
-CREATE FUNCTION hived_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+CREATE OR REPLACE PROCEDURE test_hived_test_when()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
@@ -113,11 +107,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS hived_test_then;
-CREATE FUNCTION hived_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+CREATE OR REPLACE PROCEDURE test_hived_test_then()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN

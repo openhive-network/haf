@@ -1,7 +1,7 @@
 DROP FUNCTION IF EXISTS ASSERT_THIS_TEST;
 CREATE FUNCTION ASSERT_THIS_TEST(pname TEXT, pvalue TEXT, expected hive.extract_set_witness_properties_return)
-    RETURNS void
-    LANGUAGE 'plpgsql'
+        RETURNS void
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 DECLARE
@@ -26,10 +26,8 @@ $BODY$
 ;
 
 
-DROP FUNCTION IF EXISTS haf_admin_test_when;
-CREATE FUNCTION haf_admin_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
+CREATE OR REPLACE PROCEDURE haf_admin_test_when()
+LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN

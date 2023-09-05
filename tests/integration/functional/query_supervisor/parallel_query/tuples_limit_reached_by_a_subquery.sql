@@ -1,9 +1,7 @@
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+
+CREATE OR REPLACE PROCEDURE haf_admin_test_given()
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     CREATE TABLE test_table( A INTEGER, B INTEGER );
@@ -19,12 +17,9 @@ END
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_error;
-CREATE FUNCTION haf_admin_test_error()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE haf_admin_test_error()
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     SET max_parallel_workers_per_gather = 4;

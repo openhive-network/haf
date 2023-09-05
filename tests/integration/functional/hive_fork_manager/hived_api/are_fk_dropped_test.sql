@@ -1,22 +1,6 @@
-DROP FUNCTION IF EXISTS test_given;
-CREATE FUNCTION test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    -- nothing to do here
-END;
-$BODY$
-;
-
-DROP FUNCTION IF EXISTS test_when;
-CREATE FUNCTION test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE haf_admin_test_when()
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     PERFORM hive.disable_fk_of_irreversible();
@@ -25,11 +9,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS test_then;
-CREATE FUNCTION test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
+CREATE OR REPLACE PROCEDURE haf_admin_test_then()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN

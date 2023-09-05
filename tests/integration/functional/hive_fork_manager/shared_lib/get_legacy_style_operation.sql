@@ -1,8 +1,7 @@
 CREATE OR REPLACE FUNCTION validate_pattern( legacy_name TEXT, pattern TEXT )
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+        RETURNS void
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 DECLARE
     pattern_json JSON;
@@ -25,12 +24,9 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_when;
-CREATE FUNCTION haf_admin_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE haf_admin_test_when()
+LANGUAGE 'plpgsql'
+    AS
 $BODY$
 DECLARE
   vote_operation                                  VARCHAR := '{"type":"vote_operation","value":{"voter":"andzzz","author":"signalandnoise","permlink":"hello-","weight":-10000}}';

@@ -1,9 +1,6 @@
-DROP FUNCTION IF EXISTS haf_admin_test_when;
-CREATE FUNCTION haf_admin_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE haf_admin_test_when()
+LANGUAGE 'plpgsql'
+    AS
 $BODY$
 DECLARE
   _pattern0_before_hf01 hive.impacted_balances_return[] = '{"(ocrdu,17,3,21)","(ocrdu,11,3,13)","(ocrdu,185025103000000,6,37)"}';

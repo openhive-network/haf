@@ -1,8 +1,5 @@
-DROP FUNCTION IF EXISTS alice_test_given;
-CREATE FUNCTION alice_test_given()
-RETURNS void
+CREATE OR REPLACE PROCEDURE alice_test_given()
 LANGUAGE 'plpgsql'
-VOLATILE
 AS
 $BODY$
 BEGIN
@@ -14,11 +11,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS alice_test_when;
-CREATE FUNCTION alice_test_when()
-RETURNS void
+CREATE OR REPLACE PROCEDURE alice_test_when()
 LANGUAGE 'plpgsql'
-VOLATILE
 AS
 $BODY$
 BEGIN
@@ -27,11 +21,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS bob_test_then;
-CREATE FUNCTION bob_test_then()
-RETURNS void
+CREATE OR REPLACE PROCEDURE bob_test_then()
 LANGUAGE 'plpgsql'
-VOLATILE
 AS
 $BODY$
 BEGIN

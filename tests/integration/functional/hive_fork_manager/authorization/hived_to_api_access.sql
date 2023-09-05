@@ -1,8 +1,5 @@
-DROP FUNCTION IF EXISTS hived_test_then;
-CREATE FUNCTION hived_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+CREATE OR REPLACE PROCEDURE test_hived_test_then()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN

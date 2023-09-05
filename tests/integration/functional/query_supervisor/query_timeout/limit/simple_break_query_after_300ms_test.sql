@@ -1,8 +1,5 @@
-DROP FUNCTION IF EXISTS alice_test_error;
-CREATE FUNCTION alice_test_error()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+CREATE OR REPLACE PROCEDURE alice_test_error()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN

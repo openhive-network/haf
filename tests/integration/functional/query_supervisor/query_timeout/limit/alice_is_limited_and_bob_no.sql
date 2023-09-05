@@ -1,9 +1,6 @@
-DROP FUNCTION IF EXISTS alice_test_error;
-CREATE FUNCTION alice_test_error()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE alice_test_error()
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     PERFORM pg_sleep( 5 );
@@ -12,12 +9,9 @@ $BODY$
 ;
 
 
-DROP FUNCTION IF EXISTS bob_test_when;
-CREATE FUNCTION bob_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE bob_test_when()
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     PERFORM pg_sleep( 5 );

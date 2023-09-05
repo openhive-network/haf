@@ -25,10 +25,8 @@ for testfun in ${tests}; do
       body=""
     fi
     query="
-CREATE OR REPLACE FUNCTION ${user}_test_${testfun}()
-RETURNS void
+CREATE OR REPLACE PROCEDURE ${user}_test_${testfun}()
 LANGUAGE plpgsql
-VOLATILE
 AS
 \$\$
 BEGIN
@@ -49,7 +47,7 @@ evaluate_result $?
 
 for testfun in ${tests}; do
   for user in ${users}; do
-    query="SELECT ${user}_test_${testfun}();";
+    query="CALL ${user}_test_${testfun}();";
 
     if [ "$user" =  "haf_admin" ]; then
       pg_call="-p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c"

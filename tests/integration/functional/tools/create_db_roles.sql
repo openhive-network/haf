@@ -1,10 +1,10 @@
 SELECT pg_advisory_lock(123321123);
 
 CREATE OR REPLACE FUNCTION create_roles()
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
+        RETURNS void
+        LANGUAGE plpgsql
+        VOLATILE
+    AS
 $$
 BEGIN
     IF NOT EXISTS ( SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'test_hived' ) THEN
@@ -23,10 +23,10 @@ $$
 ;
 
 CREATE OR REPLACE FUNCTION drop_roles()
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
+        RETURNS void
+        LANGUAGE plpgsql
+        VOLATILE
+    AS
 $$
 BEGIN
     DROP OWNED BY hive_applications_group;

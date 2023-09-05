@@ -1,8 +1,5 @@
-DROP FUNCTION IF EXISTS haf_admin_test_error;
-CREATE FUNCTION haf_admin_test_error()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+CREATE OR REPLACE PROCEDURE haf_admin_test_error()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN

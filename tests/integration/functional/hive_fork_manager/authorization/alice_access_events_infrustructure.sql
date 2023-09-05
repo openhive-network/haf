@@ -1,9 +1,6 @@
-DROP FUNCTION IF EXISTS test_hived_test_given;
-CREATE FUNCTION test_hived_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE test_hived_test_given()
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     INSERT INTO hive.blocks
@@ -25,12 +22,9 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS alice_test_then;
-CREATE FUNCTION alice_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE alice_test_then()
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     BEGIN

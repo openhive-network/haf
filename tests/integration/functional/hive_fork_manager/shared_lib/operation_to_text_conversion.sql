@@ -1,9 +1,6 @@
-DROP FUNCTION IF EXISTS haf_admin_test_when;
-CREATE FUNCTION haf_admin_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE haf_admin_test_when()
+LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
   ASSERT (select '{"type":"system_warning_operation","value":{"message":""}}'::jsonb::hive.operation::text = '\x5200');

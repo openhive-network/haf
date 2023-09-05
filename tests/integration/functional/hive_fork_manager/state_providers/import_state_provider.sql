@@ -2,8 +2,7 @@
 CREATE OR REPLACE FUNCTION hive.start_provider_tests( _context hive.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
-    VOLATILE
-AS
+    AS
 $BODY$
 DECLARE
     __table_1_name TEXT := _context || '_tests1';
@@ -25,12 +24,10 @@ $BODY$
 ;
 
 ---------------------------END OF TEST PROVIDER -------------------------------------------------------------------
-DROP FUNCTION IF EXISTS haf_admin_test_given;
-CREATE FUNCTION haf_admin_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+
+CREATE OR REPLACE PROCEDURE haf_admin_test_given()
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     ALTER TYPE hive.state_providers ADD VALUE 'TESTS';
@@ -38,11 +35,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS alice_test_given;
-CREATE FUNCTION alice_test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
+CREATE OR REPLACE PROCEDURE alice_test_given()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
@@ -52,12 +46,9 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS alice_test_when;
-CREATE FUNCTION alice_test_when()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    VOLATILE
-AS
+CREATE OR REPLACE PROCEDURE alice_test_when()
+        LANGUAGE 'plpgsql'
+    AS
 $BODY$
 BEGIN
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'context' );
@@ -66,11 +57,8 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS haf_admin_test_then;
-CREATE FUNCTION haf_admin_test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
+CREATE OR REPLACE PROCEDURE haf_admin_test_then()
+        LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
