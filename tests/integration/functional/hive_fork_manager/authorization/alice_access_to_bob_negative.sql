@@ -26,7 +26,7 @@ $BODY$
 BEGIN
     PERFORM hive.app_create_context( 'alice_context' );
     PERFORM hive.app_create_context( 'alice_context_detached' );
-    PERFORM hive.app_context_detach( 'alice_context_detached' );
+    CALL hive.appproc_context_detach( 'alice_context_detached' );
     PERFORM hive.app_context_detached_save_block_num( 'alice_context_detached', 1 );
     PERFORM hive.app_context_detached_save_block_num( ARRAY[ 'alice_context_detached' ], 1 );
     PERFORM hive.app_context_detached_get_block_num( 'alice_context_detached' );
@@ -64,37 +64,37 @@ BEGIN
     END;
 
     BEGIN
-        PERFORM hive.app_context_detach( 'bob_context' );
+        CALL hive.appproc_context_detach( 'bob_context' );
         ASSERT FALSE, 'Alice can detach Bob''s context';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM hive.app_context_detach( ARRAY[ 'bob_context' ] );
+        CALL hive.appproc_context_detach( ARRAY[ 'bob_context' ] );
         ASSERT FALSE, 'Alice can detach Bob''s context array';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM hive.app_context_detach( 'bob_context' );
+        CALL hive.appproc_context_detach( 'bob_context' );
         ASSERT FALSE, 'Alice can detach Bob''s context';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM hive.app_context_detach( ARRAY[ 'bob_context' ] );
+        CALL hive.appproc_context_detach( ARRAY[ 'bob_context' ] );
         ASSERT FALSE, 'Alice can detach Bob''s context array';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM hive.app_context_attach( 'bob_context_detached', 1 );
+        CALL hive.appproc_context_attach( 'bob_context_detached', 1 );
         ASSERT FALSE, 'Alice can attach Bob''s context';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM hive.app_context_attach( ARRAY[ 'bob_context_detached' ], 1 );
+        CALL hive.appproc_context_attach( ARRAY[ 'bob_context_detached' ], 1 );
         ASSERT FALSE, 'Alice can attach Bob''s context array';
     EXCEPTION WHEN OTHERS THEN
     END;
@@ -193,7 +193,7 @@ $BODY$
 BEGIN
     PERFORM hive.app_create_context( 'bob_context' );
     PERFORM hive.app_create_context( 'bob_context_detached' );
-    PERFORM hive.app_context_detach( 'bob_context_detached' );
+    CALL hive.appproc_context_detach( 'bob_context_detached' );
     PERFORM hive.app_context_detached_save_block_num( 'bob_context_detached', 1 );
     PERFORM hive.app_context_detached_save_block_num( ARRAY[ 'bob_context_detached' ], 1 );
     CREATE TABLE bob_table( id INT ) INHERITS( hive.bob_context );
@@ -229,25 +229,25 @@ BEGIN
     END;
 
     BEGIN
-        PERFORM hive.app_context_detach( 'alice_context' );
+        CALL hive.appproc_context_detach( 'alice_context' );
         ASSERT FALSE, 'Bob can detach Alice''s context';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM hive.app_context_detach( ARRAY[ 'alice_context' ] );
+        CALL hive.appproc_context_detach( ARRAY[ 'alice_context' ] );
         ASSERT FALSE, 'Bob can detach Alice''s context array';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM hive.app_context_attach( 'alice_context_detached', 1 );
+        CALL hive.appproc_context_attach( 'alice_context_detached', 1 );
         ASSERT FALSE, 'Bob can attach Alice''s context';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM hive.app_context_attach( ARRAY[ 'alice_context_detached' ], 1 );
+        CALL hive.appproc_context_attach( ARRAY[ 'alice_context_detached' ], 1 );
         ASSERT FALSE, 'Bob can attach Alice''s context array';
     EXCEPTION WHEN OTHERS THEN
     END;

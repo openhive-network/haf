@@ -28,13 +28,13 @@ BEGIN
     END;
 
     BEGIN
-        PERFORM hive.app_context_detach( 'alice_context' );
+        CALL hive.appproc_context_detach( 'alice_context' );
         ASSERT FALSE, 'Hived can call app_context_detach';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM hive.app_context_detach( ARRAY[ 'alice_context' ] );
+        CALL hive.appproc_context_detach( ARRAY[ 'alice_context' ] );
         ASSERT FALSE, 'Hived can call app_context_detach array';
     EXCEPTION WHEN OTHERS THEN
     END;
@@ -81,7 +81,7 @@ $BODY$
 BEGIN
     PERFORM hive.app_create_context( 'alice_context' );
     PERFORM hive.app_create_context( 'alice_context_detached' );
-    PERFORM hive.app_context_detach( 'alice_context_detached' );
+    CALL hive.appproc_context_detach( 'alice_context_detached' );
     CREATE TABLE alice_table( id INT ) INHERITS( hive.alice_context );
 END;
 $BODY$
