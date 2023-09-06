@@ -17,7 +17,7 @@ AS
 $BODY$
 BEGIN
     BEGIN
-        PERFORM hive.app_context_detach( 'not_existed_context' );
+        CALL hive.appproc_context_detach( 'not_existed_context' );
         ASSERT FALSE, 'No expected exception for a non existed context';
     EXCEPTION WHEN OTHERS THEN
     END;

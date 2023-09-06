@@ -144,7 +144,7 @@ BEGIN
     PERFORM hive.app_create_context('context', FALSE);
     PERFORM hive.app_create_context('context_b', FALSE);
     PERFORM hive.app_next_block( ARRAY[ 'context_b', 'context' ] ); -- (1,6)
-    PERFORM hive.app_context_detach( ARRAY[ 'context_b', 'context' ] );
+    CALL hive.appproc_context_detach( ARRAY[ 'context_b', 'context' ] );
     PERFORM hive.app_context_detached_save_block_num( ARRAY[ 'context_b', 'context' ], 6 );
 END;
 $BODY$
@@ -155,7 +155,7 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-    PERFORM hive.app_context_attach( ARRAY[ 'context_b', 'context' ], 6 );
+    CALL hive.appproc_context_attach( ARRAY[ 'context_b', 'context' ], 6 );
 END
 $BODY$
 ;

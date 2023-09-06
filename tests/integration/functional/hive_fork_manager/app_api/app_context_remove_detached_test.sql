@@ -7,7 +7,7 @@ BEGIN
     PERFORM hive.app_create_context( 'context' );
     CREATE TABLE table1( id INT ) INHERITS( hive.context );
 
-    PERFORM hive.app_context_detach( 'context' );
+    CALL hive.appproc_context_detach( 'context' );
 END;
 $BODY$
 ;

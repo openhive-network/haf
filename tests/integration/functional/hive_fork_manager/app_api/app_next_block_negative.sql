@@ -5,7 +5,7 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.app_create_context( 'detached_context' );
-    PERFORM hive.app_context_detach( 'detached_context' );
+    CALL hive.appproc_context_detach( 'detached_context' );
 END;
 $BODY$
 ;

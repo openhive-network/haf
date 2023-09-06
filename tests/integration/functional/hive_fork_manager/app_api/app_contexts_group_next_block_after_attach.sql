@@ -58,7 +58,7 @@ BEGIN
 
     PERFORM hive.set_irreversible( 2 );
     PERFORM hive.app_next_block( ARRAY[ 'context_b', 'context' ] ); --block 1,2
-    PERFORM hive.app_context_detach( ARRAY[ 'context_b', 'context' ] );
+    CALL hive.appproc_context_detach( ARRAY[ 'context_b', 'context' ] );
 END;
 $BODY$
 ;
@@ -70,7 +70,7 @@ $BODY$
 BEGIN
     -- reproduce issue #13: problem with switching to live synchronization
     PERFORM hive.set_irreversible( 4 );
-    PERFORM hive.app_context_attach( ARRAY[ 'context_b', 'context' ], 2 );
+    CALL hive.appproc_context_attach( ARRAY[ 'context_b', 'context' ], 2 );
 END
 $BODY$
 ;

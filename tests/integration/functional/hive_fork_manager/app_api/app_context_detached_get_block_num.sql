@@ -18,7 +18,7 @@ BEGIN
     PERFORM hive.app_create_context( 'context' );
     CREATE SCHEMA A;
     CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
-    PERFORM hive.app_context_detach( 'context' );
+    CALL hive.appproc_context_detach( 'context' );
 END;
 $BODY$
 ;

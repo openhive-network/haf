@@ -8,7 +8,7 @@ BEGIN
     PERFORM hive.app_create_context( 'attached_context_not_insync', FALSE );
     PERFORM hive.app_create_context( 'detached_context', FALSE );
     PERFORM hive.app_create_context( 'forking_context' );
-    PERFORM hive.app_context_detach( 'detached_context' );
+    CALL hive.appproc_context_detach( 'detached_context' );
 
     UPDATE hive.contexts ctx
     SET current_block_num = 100

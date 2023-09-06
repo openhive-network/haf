@@ -19,7 +19,7 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-    PERFORM hive.app_context_detach( ARRAY[ 'context_detached_a', 'context_detached_b', 'context_detached_c' ] );
+    CALL hive.appproc_context_detach( ARRAY[ 'context_detached_a', 'context_detached_b', 'context_detached_c' ] );
 END;
 $BODY$
 ;

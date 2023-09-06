@@ -29,7 +29,7 @@ LANGUAGE 'plpgsql'
 $BODY$
 BEGIN
     PERFORM hive.context_next_block( 'context' ); -- move to block 1
-    PERFORM hive.app_context_detach( 'context' ); -- back to block 0
+    CALL hive.appproc_context_detach( 'context' ); -- back to block 0
     INSERT INTO A.table1( id ) VALUES (10);
 END;
 $BODY$

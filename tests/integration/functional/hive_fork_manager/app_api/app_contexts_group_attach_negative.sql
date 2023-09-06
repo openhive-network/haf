@@ -25,7 +25,7 @@ BEGIN
     CREATE TABLE B.table1(id  INTEGER ) INHERITS( hive.context_b );
     CREATE SCHEMA C;
     CREATE TABLE C.table1(id  INTEGER ) INHERITS( hive.context_c );
-    PERFORM hive.app_context_detach( ARRAY[ 'context_a', 'context_b', 'context_c' ] );
+    CALL hive.appproc_context_detach( ARRAY[ 'context_a', 'context_b', 'context_c' ] );
 END;
 $BODY$
 ;
@@ -36,7 +36,7 @@ LANGUAGE 'plpgsql'
 $BODY$
 BEGIN
     BEGIN
-        PERFORM hive.app_context_attach( ARRAY [ 'context_a', 'context_b', 'context_c' ], 5 );
+        CALL hive.appproc_context_attach( ARRAY [ 'context_a', 'context_b', 'context_c' ], 5 );
         ASSERT FALSE, 'Cannot raise expected exception when block is greater than top of irreversible';
     EXCEPTION WHEN OTHERS THEN
     END;

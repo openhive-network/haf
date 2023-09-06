@@ -73,7 +73,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_context_detach( 'context' );
+    CALL hive.appproc_context_detach( 'context' );
 END
 $BODY$
 ;

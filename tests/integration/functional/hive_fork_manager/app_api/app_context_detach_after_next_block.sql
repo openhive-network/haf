@@ -30,7 +30,7 @@ BEGIN
 
     ASSERT ( SELECT count(*) FROM hive.shadow_a_table1 ) = 4, 'shadow table has to be filled';
 
-    PERFORM hive.app_context_detach( 'context' );
+    CALL hive.appproc_context_detach( 'context' );
 END;
 $BODY$
 ;

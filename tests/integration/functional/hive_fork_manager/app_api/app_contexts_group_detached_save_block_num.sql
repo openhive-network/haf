@@ -28,7 +28,7 @@ BEGIN
     CREATE SCHEMA C;
     CREATE TABLE C.table1(id  INTEGER ) INHERITS( hive.context_c );
 
-    PERFORM hive.app_context_detach( ARRAY[ 'context_a', 'context_b', 'context_c' ] );
+    CALL hive.appproc_context_detach( ARRAY[ 'context_a', 'context_b', 'context_c' ] );
 END;
 $BODY$
 ;

@@ -46,7 +46,7 @@ BEGIN
     ASSERT ( SELECT count(*) FROM hive.shadow_b_table1 ) = 4, 'shadow table has to be filled b';
     ASSERT ( SELECT count(*) FROM hive.shadow_c_table1 ) = 4, 'shadow table has to be filled c';
 
-    PERFORM hive.app_context_detach( ARRAY[ 'context_a', 'context_b', 'context_c' ] );
+    CALL hive.appproc_context_detach( ARRAY[ 'context_a', 'context_b', 'context_c' ] );
 END;
 $BODY$
 ;

@@ -19,7 +19,7 @@ BEGIN
     PERFORM hive.app_create_context( 'context' );
     CREATE SCHEMA A;
     CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
-    PERFORM hive.app_context_detach( 'context' );
+    CALL hive.appproc_context_detach( 'context' );
 END;
 $BODY$
 ;
@@ -30,7 +30,7 @@ AS
 $BODY$
 BEGIN
     BEGIN
-        PERFORM hive.app_context_attach( 'context', 5 );
+        CALL hive.appproc_context_attach( 'context', 5 );
         ASSERT FALSE, 'Cannot raise expected exception when block is greater than top of irreversible';
     EXCEPTION WHEN OTHERS THEN
     END;

@@ -35,7 +35,7 @@ LANGUAGE 'plpgsql'
 $BODY$
 BEGIN
     PERFORM hive.app_next_block( ARRAY [ 'context_a', 'context_b', 'context_c' ] ); -- move to block 1
-    PERFORM hive.app_context_detach( ARRAY [ 'context_a', 'context_b', 'context_c' ] ); -- back to block 0
+    CALL hive.appproc_context_detach( ARRAY [ 'context_a', 'context_b', 'context_c' ] ); -- back to block 0
     INSERT INTO A.table1( id ) VALUES (10);
     INSERT INTO B.table1( id ) VALUES (10);
     INSERT INTO C.table1( id ) VALUES (10);
