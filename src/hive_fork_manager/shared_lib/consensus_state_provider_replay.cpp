@@ -167,7 +167,7 @@ std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
   
 }
 
-void undo_blocks(csp_session_type* csp_session , int shift)
+void undo_blocks(csp_session_type* csp_session, int shift)
 {
   hive::chain::database& db = *csp_session->db;
   while(shift > 0)
