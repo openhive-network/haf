@@ -37,6 +37,8 @@ void
 indexes_controler::enable_indexes() {
   if (appbase::app().is_interrupt_request())
     return;
+  ilog( "Restoring HAF indexes..." );
+  fc::time_point restore_indexes_start_time = fc::time_point::now();
 
   auto restore_blocks_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.blocks' )", "enable indexes" );
   auto restore_irreversible_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.irreversible_data' )", "enable indexes" );
@@ -56,7 +58,8 @@ indexes_controler::enable_indexes() {
   restore_accounts_idxs->join();
   restore_applied_hardforks_idxs->join();
 
-  ilog( "All irreversible blocks tables indexes are re-created" );
+  fc::microseconds restore_indexes_time = fc::time_point::now() - restore_indexes_start_time;
+  ilog( "PROFILE: Restored HAF table indexes: ${t}s", ("t",restore_indexes_time.to_seconds()) );
 }
 
 void
@@ -73,6 +76,9 @@ void
 indexes_controler::enable_constrains() {
   if (appbase::app().is_interrupt_request())
     return;
+
+  ilog("Restoring HAF constraints...");
+  fc::time_point restore_constraints_start_time = fc::time_point::now();
 
   auto restore_irreversible_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.irreversible_data' )", "enable indexes" );
   auto restore_transactions_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.transactions' )", "enable indexes" );
@@ -93,7 +99,8 @@ indexes_controler::enable_constrains() {
   auto restore_blocks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.blocks' )", "enable indexes" );
   restore_blocks_fks->join();
 
-  ilog( "All irreversible blocks tables foreign keys are re-created" );
+  fc::microseconds restore_constraints_time = fc::time_point::now() - restore_constraints_start_time;
+  ilog( "PROFILE: Restored HAF constraints: ${t}s", ("t",restore_constraints_time.to_seconds()) );
 }
 
 std::unique_ptr<queries_commit_data_processor>

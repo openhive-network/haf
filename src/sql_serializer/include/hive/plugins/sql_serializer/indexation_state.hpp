@@ -3,6 +3,7 @@
 #include <hive/plugins/sql_serializer/indexes_controler.h>
 
 #include <boost/signals2.hpp>
+#include <fc/time.hpp>
 
 #include <limits>
 #include <memory>
@@ -85,6 +86,8 @@ namespace hive::plugins::sql_serializer {
       std::shared_ptr< flush_trigger > _trigger;
       int32_t _irreversible_block_num;
       indexes_controler _indexes_controler;
+
+      fc::time_point _start_state_time;
   };
 
 } // namespace hive::plugins::sql_serializer

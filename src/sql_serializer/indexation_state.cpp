@@ -233,6 +233,7 @@ indexation_state::update_state(
   switch ( state ) {
     case INDEXATION::START:
       ilog( "Entered START sync state" );
+      _start_state_time = fc::time_point::now();
       break;
     case INDEXATION::P2P:
       ilog("Entering P2P sync...");
@@ -255,7 +256,7 @@ indexation_state::update_state(
             force_trigger_flush_with_all_data( cached_data, last_block_num );
           }
       );
-      ilog("Entered P2P sync");
+      ilog("PROFILE: Entered P2P sync from start state: ${t}",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       break;
     case INDEXATION::REINDEX:
       ilog("Entering REINDEX sync...");
@@ -280,34 +281,36 @@ indexation_state::update_state(
           force_trigger_flush_with_all_data( cached_data, last_block_num );
         }
       );
-      ilog("Entered REINDEX sync");
+      ilog("PROFILE: Entered REINDEX sync from start state: ${t}",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       break;
-      case INDEXATION::LIVE: {
-        ilog("Entering LIVE sync...");
-        if ( _state != INDEXATION::START ) {
-          auto irreversible_cached_data = move_irreveresible_blocks(cached_data, _irreversible_block_num );
-          force_trigger_flush_with_all_data( irreversible_cached_data, _irreversible_block_num );
+    case INDEXATION::LIVE: 
+      {
+      ilog("Entering LIVE sync...");
+      if ( _state != INDEXATION::START )
+        {
+        auto irreversible_cached_data = move_irreveresible_blocks(cached_data, _irreversible_block_num );
+        force_trigger_flush_with_all_data( irreversible_cached_data, _irreversible_block_num );
         }
-        _trigger.reset();
-        _dumper.reset();
-        _indexes_controler.enable_indexes();
-        _indexes_controler.enable_constrains();
-        _dumper = std::make_unique< livesync_data_dumper >(
-          _db_url
-          , _main_plugin
-          , _chain_db
-          , _psql_operations_threads_number
-          , _psql_transactions_threads_number
-          , _psql_account_operations_threads_number
-          );
-        _trigger = std::make_unique< live_flush_trigger >(
-          [this]( cached_data_t& cached_data, int last_block_num ) {
-            force_trigger_flush_with_all_data( cached_data, last_block_num );
-          }
-          );
-        flush_all_data_to_reversible( cached_data );
-        ilog("Entered LIVE sync");
-        break;
+      _trigger.reset();
+      _dumper.reset();
+      _indexes_controler.enable_indexes();
+      _indexes_controler.enable_constrains();
+      _dumper = std::make_unique< livesync_data_dumper >(
+        _db_url
+        , _main_plugin
+        , _chain_db
+        , _psql_operations_threads_number
+        , _psql_transactions_threads_number
+        , _psql_account_operations_threads_number
+        );
+      _trigger = std::make_unique< live_flush_trigger >(
+        [this]( cached_data_t& cached_data, int last_block_num ) {
+          force_trigger_flush_with_all_data( cached_data, last_block_num );
+        }
+        );
+      flush_all_data_to_reversible( cached_data );
+      ilog("PROFILE: Entered LIVE sync from start state: ${t}",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
+      break;
       }
     default:
       FC_ASSERT( false, "Unknown INDEXATION state" );
