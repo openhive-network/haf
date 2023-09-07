@@ -1,3 +1,38 @@
+--- Helper function able to verify roles authority relationship and returns true when _role_to_check has granted rights to impersonate as _required_role.
+CREATE OR REPLACE FUNCTION hive.can_impersonate(_role_to_check IN TEXT, _required_role IN TEXT)
+RETURNS BOOLEAN
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+DECLARE
+  __retval BOOLEAN := FALSE;
+BEGIN
+  --- Trivial case
+  IF (_role_to_check = _required_role) THEN
+    RETURN TRUE;
+  END IF;
+
+  WITH RECURSIVE role_membership AS MATERIALIZED
+  (
+     SELECT oid FROM pg_roles WHERE rolname = _role_to_check
+     UNION
+     SELECT m.roleid
+     FROM role_membership rm
+     JOIN pg_auth_members m ON m.member = rm.oid
+  ),membership AS
+  (
+    SELECT oid::regrole::text AS rolename FROM role_membership
+  )
+  SELECT into __retval EXISTS(SELECT NULL FROM membership m WHERE m.rolename = _required_role);
+
+--raise notice '_role_to_check: %, _required_role: %', _role_to_check, _required_role;
+  RETURN __retval;
+END
+$$
+;
+
+
 ALTER TABLE hive.operation_types OWNER TO hived_group;
 ALTER TABLE hive.blocks OWNER TO hived_group;
 ALTER TABLE hive.transactions OWNER TO hived_group;
@@ -133,7 +168,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.are_indexes_dropped()
     , hive.are_fk_dropped()
     , hive.check_owner( _context hive.context_name, _context_owner TEXT )
-
+    , hive.can_impersonate(_role_to_check IN TEXT, _required_role IN TEXT)
     , hive.unreachable_event_id()
     , hive.initialize_extension_data()
 TO hived_group;
