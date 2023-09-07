@@ -179,6 +179,26 @@ void undo_blocks(csp_session_type* csp_session , int shift)
 
 
 
+// void undo_blocks(csp_session_type* csp_session , int shift)
+// {
+//   hive::chain::database& db = *csp_session->db;
+//   while(shift > 0)
+//   {
+//     try
+//     {
+//       FC_ASSERT(!_pending_tx_session);
+//       //_pending_tx_session.reset(); ????
+//     }
+//     FC_CAPTURE_AND_RETHROW()
+
+//     db.undo();
+
+
+//     shift--;
+//   }
+// }
+
+
 bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int from, int to)
 {
 
