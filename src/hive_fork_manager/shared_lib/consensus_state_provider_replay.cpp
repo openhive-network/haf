@@ -186,18 +186,18 @@ bool consensus_state_provider_replay_impl(csp_session_type* csp_session,  int fr
 
   if(from < csp_expected_block)
   {
-    undo_blocks(csp_session, consensus_state_provider_get_expected_block_num_impl(csp_session) - from);
+    undo_blocks(csp_session, csp_expected_block - from);
   }
   else
   {
     from = csp_expected_block;
   }
 
-  if(from != consensus_state_provider_get_expected_block_num_impl(csp_session))
+  if(from != csp_expected_block)
   {
       elog(
           "WARNING: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
-          ("from", from)("curr", consensus_state_provider_get_expected_block_num_impl(csp_session)));
+          ("from", from)("curr", csp_expected_block));
       //return false;
   }
 
