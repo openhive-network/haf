@@ -78,6 +78,10 @@ AS
 $BODY$
 DECLARE
     __session_ptr BIGINT;
+    rec RECORD;
+    expected hstore := '"miners"=>"1000", "initminer"=>"4000"';
+    actual hstore := '';
+
 BEGIN
 
     PERFORM hive.sessions_reconnect();
@@ -87,6 +91,12 @@ BEGIN
                              'consensus_state_provider_get_expected_block_num should return 1';
     PERFORM hive.update_state_provider_csp( 1, 6, 'context' );
     COMMIT;
+
+
+    FOR rec IN SELECT * FROM hive.current_account_balances(__session_ptr, akeys(expected)) LOOP
+        actual := actual || format('"%s"=>"%s"', rec.account, rec.balance)::hstore;
+    END LOOP;  
+    ASSERT expected = actual, 'AExpected: ' || expected::TEXT  || ' Abut got: ' ||  actual::TEXT;
 
     PERFORM hive.sessions_disconnect();
 END;

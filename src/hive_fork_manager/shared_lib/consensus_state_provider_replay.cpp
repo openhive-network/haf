@@ -51,6 +51,13 @@ class haf_full_database : public hive::chain::database
 
     }
   private:
+
+  void start_fork_db(std::shared_ptr<full_block_type>)
+  {
+    std::shared_ptr<full_block_type> head_block = get_head_block();
+    database::start_fork_db(head_block);
+  }
+
    std:: string context, shared_memory_bin_path, postgres_url;
 
 
@@ -62,7 +69,7 @@ private:
 
   
 
-  std::shared_ptr<full_block_type> get_head_block() const override;
+  std::shared_ptr<full_block_type> get_head_block() const ;
 
   
 
@@ -327,6 +334,135 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
     elog("postgres_block_log execution failed: unknown exception.");
   }
 }
+
+/*
+///////////////////////////////////////////////////////////////
+
+-- Create a PL/pgSQL function to wrap the C++ function and get the connection
+CREATE OR REPLACE FUNCTION my_plpgsql_function() RETURNS void AS $$
+DECLARE
+  conn pg_catalog.pg_stat_activity%ROWTYPE;
+BEGIN
+  -- Connect to SPI (Server Programming Interface)
+  PERFORM SPI_connect();
+
+  -- Get the current PostgreSQL connection
+  SELECT * INTO conn FROM pg_catalog.pg_stat_activity WHERE pg_backend_pid() = procpid;
+  
+  -- Call your C++ function, passing the connection details as needed
+  PERFORM my_cpp_function(conn);
+
+  -- Disconnect from SPI
+  PERFORM SPI_finish();
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a stored procedure that calls the PL/pgSQL function
+CREATE OR REPLACE FUNCTION my_stored_procedure() RETURNS void AS $$
+BEGIN
+  -- Call the PL/pgSQL function to invoke the C++ function
+  PERFORM my_plpgsql_function();
+END;
+$$ LANGUAGE plpgsql;
+
+
+#include <iostream>
+#include <libpq-fe.h>
+
+void my_cpp_function(PGconn* connection) {
+    // Check if the connection is valid
+    if (connection == nullptr) {
+        std::cerr << "Invalid PostgreSQL connection." << std::endl;
+        return;
+    }
+
+    // Execute a SQL query using the provided connection
+    PGresult* result = PQexec(connection, "SELECT * FROM your_table");
+
+    // Check for query execution errors
+    if (PQresultStatus(result) != PGRES_TUPLES_OK) {
+        std::cerr << "Query execution failed: " << PQerrorMessage(connection) << std::endl;
+        PQclear(result);
+        return;
+    }
+
+    // Process the query result
+    int numRows = PQntuples(result);
+    int numCols = PQnfields(result);
+
+    for (int row = 0; row < numRows; ++row) {
+        for (int col = 0; col < numCols; ++col) {
+            const char* value = PQgetvalue(result, row, col);
+            std::cout << "Row " << row << ", Column " << col << ": " << value << std::endl;
+        }
+    }
+
+    // Free the result and close the connection
+    PQclear(result);
+    PQfinish(connection);
+}
+
+int main() {
+    // Your main program logic here
+    // ...
+    
+    // Example: Obtain a PostgreSQL connection using libpq
+    PGconn* connection = PQconnectdb("dbname=mydb user=myuser password=mypassword host=localhost port=5432");
+
+    // Call your C++ function with the connection
+    my_cpp_function(connection);
+
+    return 0;
+}
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <postgresql/libpq-fe.h>
+
+// Function to execute a query and return the result
+PGresult* execute_query(PGconn* conn, const char* query) {
+    PGresult* result;
+    result = PQexec(conn, query);
+    if (PQresultStatus(result) != PGRES_TUPLES_OK) {
+        fprintf(stderr, "Query execution failed: %s", PQerrorMessage(conn));
+        PQclear(result);
+        return NULL;
+    }
+    return result;
+}
+
+int main() {
+    const char* conninfo = "dbname=mydb user=myuser password=mypassword";
+    PGconn* conn = PQconnectdb(conninfo);
+
+    if (PQstatus(conn) == CONNECTION_BAD) {
+        fprintf(stderr, "Connection to database failed: %s\n", PQerrorMessage(conn));
+        PQfinish(conn);
+        return 1;
+    }
+
+    int from = 1;
+    int to = 10;
+
+    char blocks_query[256];
+    snprintf(blocks_query, sizeof(blocks_query), "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON id = producer_account_id WHERE num >= %d and num <= %d ORDER BY num ASC", from, to);
+
+    PGresult* blocks = execute_query(conn, blocks_query);
+
+    // Process the query result here
+
+    // Don't forget to free the result and close the connection
+    PQclear(blocks);
+    PQfinish(conn);
+
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////
+*/
 
 void postgres_block_log::get_postgres_data(int from, int to, const char* postgres_url)
 {
