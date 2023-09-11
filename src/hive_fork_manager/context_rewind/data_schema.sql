@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS hive.contexts(
     detached_block_num INTEGER, -- place where application can save last processed block num in detached state
     registering_state_provider BOOL NOT NULL DEFAULT FALSE,
     is_forking BOOL NOT NULL DEFAULT TRUE,
+    last_processed_block_num INTEGER NOT NULL DEFAULT 0, -- last block number fully processed by the app
     CONSTRAINT pk_hive_contexts PRIMARY KEY( id ),
     CONSTRAINT uq_hive_context_name UNIQUE ( name )
 );

@@ -138,6 +138,12 @@ BEGIN
         RAISE EXCEPTION 'Detached context cannot be moved';
     END IF;
 
+    -- Since the caller is asking for more blocks, assume they have finished processing the blocks
+    -- we gave them in the previous call (we recorded the last block number we gave them in current_block_num)
+    UPDATE hive.contexts
+    SET last_processed_block_num = current_block_num
+    WHERE name = ANY(_context_names);
+
     -- if there there is  registered table for given context
     IF hive.app_are_forking( _context_names )
     THEN
@@ -734,3 +740,51 @@ BEGIN
     END IF;
 END;
 $BODY$;
+
+
+CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _contexts hive.contexts_group  )
+    RETURNS BOOLEAN
+    LANGUAGE 'plpgsql'
+    STABLE
+AS
+$BODY$
+BEGIN
+    RETURN COALESCE((SELECT MAX(consistent_block - last_processed_block_num) <= 1
+                     FROM hive.contexts, hive.irreversible_data
+                     WHERE name = ANY(_contexts)), FALSE);
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _context hive.context_name )
+    RETURNS BOOLEAN
+    LANGUAGE 'plpgsql'
+    STABLE
+AS
+$BODY$
+BEGIN
+    RETURN hive.is_app_in_sync( ARRAY[ _context ] );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.set_last_processed_block_num( _contexts hive.contexts_group, _block_num INTEGER )
+    RETURNS void
+    LANGUAGE plpgsql
+AS
+$BODY$
+BEGIN
+    UPDATE hive.contexts SET last_processed_block_num = _block_num WHERE name = ANY(_contexts);
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.set_last_processed_block_num( _context hive.context_name, _block_num INTEGER )
+    RETURNS void
+    LANGUAGE plpgsql
+AS
+$BODY$
+BEGIN
+    PERFORM hive.set_last_processed_block_num( ARRAY[ _context ], _block_num );
+END;
+$BODY$;
+

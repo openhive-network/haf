@@ -54,7 +54,7 @@ DECLARE
   _pattern16 TEXT[] = '{"(applied_hardforks_reversible,f5129d5e-5b98-7f93-b786-d55899b5b8b5,d6cca068-2076-4e87-5c24-85618ff564ac,fee57151-3162-0c46-424a-da912e742160,3eeef00d-0e16-421e-659e-7ee2b12aa7eb)"}';
   _test16 TEXT[];
 
-  _pattern17 TEXT[] = '{"(contexts,f6bb4c44-6eaa-34f4-48d9-4d1a39546db5,e890d53e-05bd-76fc-d529-58ca2bc63a22,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)"}';
+  _pattern17 TEXT[] = '{"(contexts,251123e4-9688-9a0b-ec54-998872ff7c06,5e5972fc-e405-2cd3-751f-68ec5b6b59f8,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)"}';
   _test17 TEXT[];
 
 BEGIN
@@ -167,7 +167,6 @@ ASSERT _pattern14 = _test14, 'Broken result of calculate_schema_hash in "account
 ASSERT _pattern15 = _test15, 'Broken result of calculate_schema_hash in "account_operations_reversible" row';
 ASSERT _pattern16 = _test16, 'Broken result of calculate_schema_hash in "applied_hardforks_reversible" row';
 ASSERT _pattern17 = _test17, 'Broken result of calculate_schema_hash in "contexts" row';
-
 
 END;
 $BODY$
