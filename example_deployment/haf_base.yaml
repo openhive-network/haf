@@ -23,29 +23,29 @@ services:
         host    haf_block_log    pghero           all    trust\n
         host    postgres         pghero           all    trust\n
         "
+    # after requesting a shutdown with SIGTERM, allow the container two minutes to exit
+    # before killing it.  The default of ten seconds isn't enough for postgresql to 
+    # cleanly shut down, and would often make PostgreSQL perform crash recovery at the
+    # next startup
+    stop_grace_period: 2m
+    # when mounting volumes, declare the directories you want to bind-mount here, 
+    # using either the short or long syntax.  Don't declare them as top-level named
+    # volumes and mount them by name.  Declaring them inline here always results
+    # in a recursive bind.  The behavior when declaring the volumes at the top-level 
+    # seems to vary from system to system (even when `o: rbind` is specified).
     volumes:
-      - haf_datadir:/home/hived/datadir
-      - haf_shmdir:/home/hived/shm_dir
+      - type: bind
+        source: ${HAF_DATA_DIRECTORY}/
+        target: /home/hived/datadir
+      - type: bind
+        source: ${HAF_SHM_DIRECTORY}/
+        target: /home/hived/shm_dir
     healthcheck:
       test: ["CMD-SHELL","curl -f localhost:8091"]
       interval: 10s
       timeout: 2s
       retries: 10
       start_period: 30s
-
-volumes:
-  haf_datadir:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ${HAF_DATA_DIRECTORY}/
-  haf_shmdir:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ${HAF_SHM_DIRECTORY}/
 
 networks:
   haf-network:
