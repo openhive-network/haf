@@ -256,10 +256,10 @@ indexation_state::update_state(
             force_trigger_flush_with_all_data( cached_data, last_block_num );
           }
       );
-      ilog("PROFILE: Entered P2P sync from start state: ${t}",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
+      ilog("PROFILE: Entered P2P sync from start state: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       break;
     case INDEXATION::REINDEX:
-      ilog("Entering REINDEX sync...");
+      ilog("PROFILE: Entering REINDEX sync from start state, dropping constraints: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       FC_ASSERT( _state == INDEXATION::START, "Reindex always starts after START" );
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
@@ -281,11 +281,11 @@ indexation_state::update_state(
           force_trigger_flush_with_all_data( cached_data, last_block_num );
         }
       );
-      ilog("PROFILE: Entered REINDEX sync from start state: ${t}",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
+      ilog("PROFILE: Entered REINDEX sync from start state: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       break;
     case INDEXATION::LIVE: 
       {
-      ilog("Entering LIVE sync...");
+      ilog("PROFILE: Entering LIVE sync, creating indexes/constraints as needed: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       if ( _state != INDEXATION::START )
         {
         auto irreversible_cached_data = move_irreveresible_blocks(cached_data, _irreversible_block_num );
@@ -309,7 +309,7 @@ indexation_state::update_state(
         }
         );
       flush_all_data_to_reversible( cached_data );
-      ilog("PROFILE: Entered LIVE sync from start state: ${t}",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
+      ilog("PROFILE: Entered LIVE sync from start state: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       break;
       }
     default:
