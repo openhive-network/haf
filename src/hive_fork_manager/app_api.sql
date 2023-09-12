@@ -734,3 +734,30 @@ BEGIN
     END IF;
 END;
 $BODY$;
+
+CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _contexts hive.contexts_group  )
+    RETURNS BOOLEAN
+    LANGUAGE 'plpgsql'
+    STABLE
+AS
+$BODY$
+BEGIN
+    RETURN COALESCE((SELECT BOOL_AND(hive.contexts.id IS NOT NULL AND is_attached AND consistent_block - current_block_num <= 1)
+                     FROM UNNEST(_contexts) AS context_names(name)
+                     LEFT JOIN hive.contexts USING(name)
+                     CROSS JOIN hive.irreversible_data), FALSE);
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _context hive.context_name )
+    RETURNS BOOLEAN
+    LANGUAGE 'plpgsql'
+    STABLE
+AS
+$BODY$
+BEGIN
+    RETURN hive.is_app_in_sync( ARRAY[ _context ] );
+END;
+$BODY$
+;
