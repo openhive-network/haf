@@ -137,7 +137,7 @@ auto MemoryContextSwitcher(MemoryContext new_ctx, T statements) -> decltype(stat
 
 Tuplestorestate* init_tuple_store(ReturnSetInfo *rsinfo, TupleDesc retvalDescription)
 {
-  return MemoryContextSwitcher(rsinfo->econtext->ecxt_per_query_memory,
+  return MemoryContextSwitcher(rsinfo->econtext->ecxt_per_tuple_memory,
     [=](){
         Tuplestorestate *tupstore  = tuplestore_begin_heap(true, false, work_mem);
         rsinfo->returnMode = SFRM_Materialize;
