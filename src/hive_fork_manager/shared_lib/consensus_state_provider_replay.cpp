@@ -63,7 +63,7 @@ private:
   
   //void migrate_irreversible_state(uint32_t old_last_irreversible) override{myASSERT(1, "STOP mtlk");}
 
-  
+  std::shared_ptr<full_block_type> get_head_block() const override;  
 
   
 
@@ -161,14 +161,14 @@ private:
    };
 };
 
-// std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
-// {
-//     std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
-//           postgres_block_log().
-//           get_full_block(this->head_block_num(), context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str());
-//     return fb_ptr;
+std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
+{
+    std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
+          postgres_block_log().
+          get_full_block(this->head_block_num(), context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str());
+    return fb_ptr;
   
-// }
+}
 
 void undo_blocks(csp_session_type* csp_session, int shift)
 {
