@@ -43,6 +43,7 @@ install_all_dev_packages() {
           systemd \
           postgresql \
           postgresql-contrib \
+          postgresql-plpython3 \
           libpqxx-dev \
           tox \
           joe \
