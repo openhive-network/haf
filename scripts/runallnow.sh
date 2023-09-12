@@ -379,6 +379,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 #     bool database::_push_block(const block_flow_control& block_ctrl)
 # zamiast apply_block
 
+# TODO lambda, open_state
 # TODO remove _dummy_arg1
 # DONE remove CREATE SCHEMA toolbox;
 # TODO sessions functional tests

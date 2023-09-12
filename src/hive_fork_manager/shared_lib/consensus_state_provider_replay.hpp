@@ -48,10 +48,11 @@ int consensus_state_provider_get_expected_block_num_impl(consensus_state_provide
   };
   typedef std::vector<collected_account_balances_t> collected_account_balances_collection_t;
 
+  class haf_full_database;
   struct csp_session_type
   {
     std::string context, shared_memory_bin_path, postgres_url;
-    hive::chain::database* db;
+    haf_full_database* db;
   };
 
   collected_account_balances_collection_t collect_current_all_accounts_balances(csp_session_type* csp_session);

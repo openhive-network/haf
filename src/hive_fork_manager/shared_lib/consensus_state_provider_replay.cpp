@@ -41,15 +41,18 @@ using hive::chain::block_id_type;
 
 class haf_full_database : public hive::chain::database
 {
-  public:
-    haf_full_database(const char* a_context, const char* a_shared_memory_bin_path, const char* a_postgres_url)
-      :
-      context(a_context),
-      shared_memory_bin_path(a_shared_memory_bin_path),
-      postgres_url(a_postgres_url)
-    {
+public:
+  haf_full_database(const char* a_context, const char* a_shared_memory_bin_path, const char* a_postgres_url)
+    :
+    context(a_context),
+    shared_memory_bin_path(a_shared_memory_bin_path),
+    postgres_url(a_postgres_url)
+  {
+    
+  }
 
-    }
+  void _push_block_simplified(const std::shared_ptr<full_block_type>& full_block, uint32_t skip);
+
   private:
    std:: string context, shared_memory_bin_path, postgres_url;
 
@@ -62,7 +65,7 @@ private:
 
   
 
-  std::shared_ptr<full_block_type> get_head_block() const override;
+  
 
   
 
@@ -110,7 +113,7 @@ private:
   void replay_blocks(csp_session_type* csp_session);
   void replay_block(csp_session_type* csp_session, const pqxx::row& block);
   static uint64_t get_skip_flags();
-  void apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
+  void apply_full_block(haf_full_database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   void measure_before_apply_non_tansactional_operation_block();
   void measure_after_apply_non_tansactional_operation_block();  
   static bool is_current_transaction(const pqxx::result::const_iterator& current_transaction,
@@ -158,14 +161,14 @@ private:
    };
 };
 
-std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
-{
-    std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
-          postgres_block_log().
-          get_full_block(this->head_block_num(), context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str());
-    return fb_ptr;
+// std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
+// {
+//     std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
+//           postgres_block_log().
+//           get_full_block(this->head_block_num(), context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str());
+//     return fb_ptr;
   
-}
+// }
 
 void undo_blocks(csp_session_type* csp_session, int shift)
 {
@@ -391,7 +394,7 @@ void postgres_block_log::replay_block(csp_session_type* csp_session, const pqxx:
     // return;
   }
 
-  hive::chain::database& db = *csp_session->db;
+  haf_full_database& db = *csp_session->db;
   std::shared_ptr<hive::chain::full_block_type> fb_ptr;
 
   block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
@@ -403,8 +406,7 @@ void postgres_block_log::replay_block(csp_session_type* csp_session, const pqxx:
   
 }
 
-void postgres_block_log::apply_full_block(hive::chain::database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr,
-                                       uint64_t skip_flags)
+void postgres_block_log::apply_full_block(haf_full_database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags)
 {
   apply_full_block_time_probe.start();
 
@@ -414,6 +416,16 @@ void postgres_block_log::apply_full_block(hive::chain::database& db, const std::
 }
 
 
+void haf_full_database::_push_block_simplified(const std::shared_ptr<full_block_type>& full_block, uint32_t skip)
+{
+  try
+  {
+    _node_property_object.skip_flags = skip;
+    hive::chain::existing_block_flow_control flow_control(full_block);
+    push_block(flow_control, skip);
+
+  }FC_CAPTURE_AND_RETHROW() 
+}
 
 
 block_bin_t postgres_block_log::block_to_bin(const pqxx::row& block)
@@ -734,7 +746,7 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
 };
 
 
-hive::chain::database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+haf_full_database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   auto* db = new haf_full_database(context, shared_memory_bin_path, postgres_url);
   initialize_chain_db(*db, context, shared_memory_bin_path, postgres_url);
@@ -745,9 +757,9 @@ hive::chain::database* create_and_init_database(const char* context, const char*
 
 csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-    hive::chain::database* db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
-    auto* csp_session =  new csp_session_type{context, shared_memory_bin_path, postgres_url, db};
-    return csp_session;
+  haf_full_database* db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
+  auto* csp_session =  new csp_session_type{context, shared_memory_bin_path, postgres_url, db};
+  return csp_session;
 }
 
 struct fix_hf_version_visitor
