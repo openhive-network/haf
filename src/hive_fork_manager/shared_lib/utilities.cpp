@@ -137,7 +137,7 @@ auto MemoryContextSwitcher(MemoryContext new_ctx, T statements) -> decltype(stat
 
 Tuplestorestate* init_tuple_store(ReturnSetInfo *rsinfo, TupleDesc retvalDescription)
 {
-  return MemoryContextSwitcher(rsinfo->econtext->ecxt_per_tuple_memory,
+  return MemoryContextSwitcher(rsinfo->econtext->ecxt_per_query_memory,
     [=](){
         Tuplestorestate *tupstore  = tuplestore_begin_heap(true, false, work_mem);
         rsinfo->returnMode = SFRM_Materialize;
@@ -721,10 +721,13 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
       [=, &collected_metadata]()
       {
-        fill_return_tuples(collected_metadata, fcinfo,
+        ReturnSetInfo* rsinfo = reinterpret_cast<ReturnSetInfo*>(fcinfo->resultinfo); //NOLINT
+        MemoryContextSwitcher( rsinfo->econtext->ecxt_per_query_memory,
+        [&]{fill_return_tuples(collected_metadata, fcinfo,
           [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.account_name.c_str());},
           [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.json_metadata.c_str());},
           [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.posting_json_metadata.c_str());}
+          );}
         );
       },
 
