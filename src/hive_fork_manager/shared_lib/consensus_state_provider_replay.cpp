@@ -51,27 +51,13 @@ public:
     
   }
 
-  void state_dependent_open( const open_args& args, hive::chain::get_block_by_num_t get_head_block_func );
+  void state_dependent_open( const open_args& args, hive::chain::get_block_by_num_t get_block_by_num_func );
 
 
   void _push_block_simplified(const std::shared_ptr<full_block_type>& full_block, uint32_t skip);
 
   private:
    std:: string context, shared_memory_bin_path, postgres_url;
-
-
-public:
-private:
-  
-  
-  //void migrate_irreversible_state(uint32_t old_last_irreversible) override{myASSERT(1, "STOP mtlk");}
-
-  std::shared_ptr<full_block_type> get_head_block() const override;  
-
-  
-
-  
-
 
 };
 
@@ -164,16 +150,8 @@ private:
    };
 };
 
-std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
-{
-    std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
-          postgres_block_log().
-          get_full_block(this->head_block_num(), context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str());
-    return fb_ptr;
-  
-}
 
-void haf_full_database::state_dependent_open( const open_args& args, hive::chain::get_block_by_num_t get_head_block_func )
+void haf_full_database::state_dependent_open( const open_args& args, hive::chain::get_block_by_num_t get_block_by_num_func )
 {
     database::state_dependent_open(args, [this](int block_num) 
       { 

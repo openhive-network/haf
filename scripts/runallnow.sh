@@ -379,7 +379,7 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 #     bool database::_push_block(const block_flow_control& block_ctrl)
 # zamiast apply_block
 
-# TODO friend? instead of public: //(used by load snapshot plugin)       void state_dependent_open( const open_args& args, get_block_by_num_t get_head_block_func ) override;
+# TODO friend? instead of public: //(used by load snapshot plugin)       void state_dependent_open( const open_args& args, get_block_by_num_t get_block_by_num_func ) override;
 # TODO lambda, open_state
 # TODO remove _dummy_arg1
 # DONE remove CREATE SCHEMA toolbox;
