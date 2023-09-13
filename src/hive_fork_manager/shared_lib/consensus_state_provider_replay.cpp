@@ -37,6 +37,12 @@ using hive::chain::open_args;
 using hive::chain::full_block_type;
 using hive::chain::block_id_type;
 
+ csp_session_type::csp_session_type(std::string a_context, std::string a_shared_memory_bin_path, std::string a_postgres_url, haf_full_database* a_db, postgres_database_helper* a_conn)
+: context(a_context),
+shared_memory_bin_path(a_shared_memory_bin_path),
+postgres_url(a_postgres_url),
+conn(a_conn)
+{}
 
 
 class haf_full_database : public hive::chain::database
@@ -53,28 +59,36 @@ public:
 
   void state_dependent_open( const open_args& args, hive::chain::get_block_by_num_t get_head_block_func );
 
+  void set_session(csp_session_type* session){csp_session = session;}
+
 
   void _push_block_simplified(const std::shared_ptr<full_block_type>& full_block, uint32_t skip);
 
-  private:
+private:
    std:: string context, shared_memory_bin_path, postgres_url;
 
-
+   csp_session_type* csp_session;
 public:
-private:
-  
-  
-  //void migrate_irreversible_state(uint32_t old_last_irreversible) override{myASSERT(1, "STOP mtlk");}
-
-  std::shared_ptr<full_block_type> get_head_block() const override;  
-
-  
-
-  
-
 
 };
 
+
+class postgres_database_helper
+{
+public:
+  explicit postgres_database_helper(const char* url) : connection(url) {}
+
+  pqxx::result execute_query(const std::string& query)
+  {
+    pqxx::work txn(connection);
+    pqxx::result query_result = txn.exec(query);
+    txn.commit();
+    return query_result;
+  }
+
+private:
+  pqxx::connection connection;
+}; 
 
 
 
@@ -93,7 +107,8 @@ public:
   std::shared_ptr<hive::chain::full_block_type> get_full_block(int block_num,
                               const char* context,
                               const char* shared_memory_bin_path,
-                              const char* postgres_url);
+                              const char* postgres_url,
+                              csp_session_type* csp_session);
 private:
   static block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
   block_bin_t block_to_bin(const pqxx::row& block);
@@ -111,7 +126,7 @@ private:
   void measure_before_run();
   void measure_after_run();
   static void handle_exception(std::exception_ptr exception_ptr);
-  void get_postgres_data(int from, int to, const char* postgres_url);
+  void get_postgres_data(int from, int to, const char* postgres_url, csp_session_type* csp_session);
   void initialize_iterators();
   void replay_blocks(csp_session_type* csp_session);
   void replay_block(csp_session_type* csp_session, const pqxx::row& block);
@@ -140,23 +155,6 @@ private:
   time_probe transformations_time_probe;
   time_probe apply_full_block_time_probe;
 
-  class postgres_database_helper
-  {
-  public:
-    explicit postgres_database_helper(const char* url) : connection(url) {}
-
-    pqxx::result execute_query(const std::string& query)
-    {
-      pqxx::work txn(connection);
-      pqxx::result query_result = txn.exec(query);
-      txn.commit();
-      return query_result;
-    }
-
-  private:
-    pqxx::connection connection;
-  }; 
-
    enum : int 
    {
         BLOCK_NUM_EMPTY = -1,
@@ -164,24 +162,16 @@ private:
    };
 };
 
-std::shared_ptr<full_block_type> haf_full_database::get_head_block() const
-{
-    std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
-          postgres_block_log().
-          get_full_block(this->head_block_num(), context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str());
-    return fb_ptr;
-  
-}
 
 void haf_full_database::state_dependent_open( const open_args& args, hive::chain::get_block_by_num_t get_head_block_func )
 {
     database::state_dependent_open(args, [this](int block_num) 
       { 
-        std::shared_ptr<hive::chain::full_block_type> fb_ptr = 
+        std::shared_ptr<hive::chain::full_block_type> full_block = 
           postgres_block_log().
-          get_full_block(this->head_block_num(), context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str());
+          get_full_block(this->head_block_num(), context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str(), csp_session);
 
-        return fb_ptr;
+        return full_block;
       });
 }
 
@@ -251,7 +241,7 @@ void postgres_block_log::run(csp_session_type* csp_session, int from, int to)
 
   try
   {
-    get_postgres_data(from, to, csp_session->postgres_url.c_str());
+    get_postgres_data(from, to, csp_session->postgres_url.c_str(), csp_session);
     initialize_iterators();
     replay_blocks(csp_session);
   }
@@ -284,11 +274,12 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullb
 std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block(int block_num,
                              const char* context,
                              const char* shared_memory_bin_path,
-                             const char* postgres_url)
+                             const char* postgres_url,
+                             csp_session_type*  csp_session)
 {
   try
   {
-    get_postgres_data(block_num, block_num, postgres_url);
+    get_postgres_data(block_num, block_num, postgres_url, csp_session);
     initialize_iterators();
     return block_to_fullblock(block_num, blocks[0], context, shared_memory_bin_path, postgres_url);
   }
@@ -347,11 +338,11 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
   }
 }
 
-void postgres_block_log::get_postgres_data(int from, int to, const char* postgres_url)
+void postgres_block_log::get_postgres_data(int from, int to, const char* postgres_url, csp_session_type* csp_session)
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
-  postgres_database_helper db{postgres_url};
+  consensus_state_provider::postgres_database_helper& db = *(csp_session->conn);
   
   // clang-format off
     auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= " 
@@ -774,7 +765,9 @@ haf_full_database* create_and_init_database(const char* context, const char* sha
 csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
   haf_full_database* db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
-  auto* csp_session =  new csp_session_type{context, shared_memory_bin_path, postgres_url, db};
+  auto* csp_session =  new csp_session_type{context, shared_memory_bin_path, postgres_url, db, new postgres_database_helper {postgres_url}};
+  db->set_session(csp_session);
+
   return csp_session;
 }
 
@@ -853,7 +846,7 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
 
 void csp_finish_impl(csp_session_type* csp_session, bool wipe_clean_shared_memory_bin)
 {
-  hive::chain::database* db = csp_session->db;
+  hive::chain::database* db = csp_session->db.get();
   
   db->close();
 
@@ -945,3 +938,135 @@ collected_account_balances_collection_t collect_current_all_accounts_balances(cs
   return collected_balances;
 }
 }  // namespace consensus_state_provider
+
+
+/*
+///////////////////////////////////////////////////////////////
+
+-- Create a PL/pgSQL function to wrap the C++ function and get the connection
+CREATE OR REPLACE FUNCTION my_plpgsql_function() RETURNS void AS $$
+DECLARE
+  conn pg_catalog.pg_stat_activity%ROWTYPE;
+BEGIN
+  -- Connect to SPI (Server Programming Interface)
+  PERFORM SPI_connect();
+
+  -- Get the current PostgreSQL connection
+  SELECT * INTO conn FROM pg_catalog.pg_stat_activity WHERE pg_backend_pid() = procpid;
+  
+  -- Call your C++ function, passing the connection details as needed
+  PERFORM my_cpp_function(conn);
+
+  -- Disconnect from SPI
+  PERFORM SPI_finish();
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a stored procedure that calls the PL/pgSQL function
+CREATE OR REPLACE FUNCTION my_stored_procedure() RETURNS void AS $$
+BEGIN
+  -- Call the PL/pgSQL function to invoke the C++ function
+  PERFORM my_plpgsql_function();
+END;
+$$ LANGUAGE plpgsql;
+
+
+#include <iostream>
+#include <libpq-fe.h>
+
+void my_cpp_function(PGconn* connection) {
+    // Check if the connection is valid
+    if (connection == nullptr) {
+        std::cerr << "Invalid PostgreSQL connection." << std::endl;
+        return;
+    }
+
+    // Execute a SQL query using the provided connection
+    PGresult* result = PQexec(connection, "SELECT * FROM your_table");
+
+    // Check for query execution errors
+    if (PQresultStatus(result) != PGRES_TUPLES_OK) {
+        std::cerr << "Query execution failed: " << PQerrorMessage(connection) << std::endl;
+        PQclear(result);
+        return;
+    }
+
+    // Process the query result
+    int numRows = PQntuples(result);
+    int numCols = PQnfields(result);
+
+    for (int row = 0; row < numRows; ++row) {
+        for (int col = 0; col < numCols; ++col) {
+            const char* value = PQgetvalue(result, row, col);
+            std::cout << "Row " << row << ", Column " << col << ": " << value << std::endl;
+        }
+    }
+
+    // Free the result and close the connection
+    PQclear(result);
+    PQfinish(connection);
+}
+
+int main() {
+    // Your main program logic here
+    // ...
+    
+    // Example: Obtain a PostgreSQL connection using libpq
+    PGconn* connection = PQconnectdb("dbname=mydb user=myuser password=mypassword host=localhost port=5432");
+
+    // Call your C++ function with the connection
+    my_cpp_function(connection);
+
+    return 0;
+}
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <postgresql/libpq-fe.h>
+
+// Function to execute a query and return the result
+PGresult* execute_query(PGconn* conn, const char* query) {
+    PGresult* result;
+    result = PQexec(conn, query);
+    if (PQresultStatus(result) != PGRES_TUPLES_OK) {
+        fprintf(stderr, "Query execution failed: %s", PQerrorMessage(conn));
+        PQclear(result);
+        return NULL;
+    }
+    return result;
+}
+
+int main() {
+    const char* conninfo = "dbname=mydb user=myuser password=mypassword";
+    PGconn* conn = PQconnectdb(conninfo);
+
+    if (PQstatus(conn) == CONNECTION_BAD) {
+        fprintf(stderr, "Connection to database failed: %s\n", PQerrorMessage(conn));
+        PQfinish(conn);
+        return 1;
+    }
+
+    int from = 1;
+    int to = 10;
+
+    char blocks_query[256];
+    snprintf(blocks_query, sizeof(blocks_query), "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON id = producer_account_id WHERE num >= %d and num <= %d ORDER BY num ASC", from, to);
+
+    PGresult* blocks = execute_query(conn, blocks_query);
+
+    // Process the query result here
+
+    // Don't forget to free the result and close the connection
+    PQclear(blocks);
+    PQfinish(conn);
+
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////
+*/
+
+
