@@ -51,6 +51,12 @@ public:
     
   }
 
+  void state_dependent_open( const open_args& args, std::function<std::shared_ptr<full_block_type>(const database&)> get_head_block_func )
+  {
+      database::state_dependent_open(args, [](const database& db) { return db.get_head_block(); });
+  }
+
+
   void _push_block_simplified(const std::shared_ptr<full_block_type>& full_block, uint32_t skip);
 
   private:
