@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS hive.transactions (
     expiration timestamp without time zone NOT NULL,
     signature bytea DEFAULT NULL,
     CONSTRAINT pk_hive_transactions PRIMARY KEY ( trx_hash ),
-    CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num)
+    CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions', '');
 
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
     trx_hash bytea NOT NULL,
     signature bytea NOT NULL,
     CONSTRAINT pk_hive_transactions_multisig PRIMARY KEY ( trx_hash, signature ),
-    CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash) REFERENCES hive.transactions (trx_hash)
+    CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash) REFERENCES hive.transactions (trx_hash) NOT VALID
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions_multisig', '');
 
@@ -90,8 +90,8 @@ CREATE TABLE IF NOT EXISTS hive.operations (
     timestamp TIMESTAMP NOT NULL,
     body_binary hive.operation  DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id ),
-    CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num),
-    CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id)
+    CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID,
+    CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.operations', '');
 
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS hive.accounts (
     , block_num INTEGER NOT NULL
     , CONSTRAINT pk_hive_accounts_id PRIMARY KEY( id )
     , CONSTRAINT uq_hive_accounst_name UNIQUE ( name )
-    , CONSTRAINT fk_1_hive_accounts FOREIGN KEY (block_num) REFERENCES hive.blocks (num)
+    , CONSTRAINT fk_1_hive_accounts FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.accounts', '');
 
@@ -124,9 +124,9 @@ CREATE TABLE IF NOT EXISTS hive.account_operations
     , account_op_seq_no INTEGER NOT NULL --- Operation sequence number specific to given account.
     , operation_id BIGINT NOT NULL --- Id of operation held in hive_opreations table.
     , op_type_id SMALLINT NOT NULL --- The same as hive.operations.op_type_id. A redundant field is required due to performance.
-    , CONSTRAINT hive_account_operations_fk_1 FOREIGN KEY (account_id) REFERENCES hive.accounts(id)
-    , CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hive.operations(id)
-    , CONSTRAINT hive_account_operations_fk_3 FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id)
+    , CONSTRAINT hive_account_operations_fk_1 FOREIGN KEY (account_id) REFERENCES hive.accounts(id) NOT VALID
+    , CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hive.operations(id) NOT VALID
+    , CONSTRAINT hive_account_operations_fk_3 FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID
     , CONSTRAINT hive_account_operations_uq_1 UNIQUE( account_id, account_op_seq_no )
     , CONSTRAINT hive_account_operations_uq2 UNIQUE ( account_id, operation_id )
 );
@@ -154,5 +154,5 @@ CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hive.accounts USING bt
 CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hive.blocks (producer_account_id);
 CREATE INDEX IF NOT EXISTS hive_blocks_created_at_idx ON hive.blocks USING btree ( created_at );
 
-ALTER TABLE hive.blocks ADD CONSTRAINT fk_1_hive_blocks FOREIGN KEY (producer_account_id) REFERENCES hive.accounts (id) DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE hive.blocks ADD CONSTRAINT fk_1_hive_blocks FOREIGN KEY (producer_account_id) REFERENCES hive.accounts (id) NOT VALID DEFERRABLE INITIALLY DEFERRED;
 
