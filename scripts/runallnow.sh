@@ -375,11 +375,13 @@ RUN_APP_CONT_MAIN_CHUNK_SIZE=$(expr $RUN_APP_CONT_MAIN_TILL_BLOCK / 50)
 
 
 
+
 # Odpal
 #     bool database::_push_block(const block_flow_control& block_ctrl)
 # zamiast apply_block
 
-# TODO friend? instead of public: //(used by load snapshot plugin)       void state_dependent_open( const open_args& args, get_block_by_num_t get_block_by_num_func ) override;
+# TODO configuracja csp gdzie get_consensus_storage_path -  static constexpr auto LIMIT_TUPLES_OPTION = "limit_tuples"; in /home/haf_admin/playground/haf/src/query_supervisor/configuration.hpp
+# TODO friend? instead of public: //(used by load snapshot plugin)       void state_dependent_open( const open_args& args, get_block_by_num_function_type get_block_by_num_function ) override;
 # TODO lambda, open_state
 # TODO remove _dummy_arg1
 # DONE remove CREATE SCHEMA toolbox;

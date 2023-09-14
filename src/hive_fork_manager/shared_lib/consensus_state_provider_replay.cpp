@@ -51,7 +51,7 @@ public:
     
   }
 
-  void state_dependent_open( const open_args& args, hive::chain::get_block_by_num_t get_block_by_num_func );
+  void state_dependent_open( const open_args& args, hive::chain::get_block_by_num_function_type get_block_by_num_function );
 
 
   void _push_block_simplified(const std::shared_ptr<full_block_type>& full_block, uint32_t skip);
@@ -151,7 +151,7 @@ private:
 };
 
 
-void haf_full_database::state_dependent_open( const open_args& args, hive::chain::get_block_by_num_t get_block_by_num_func )
+void haf_full_database::state_dependent_open( const open_args& args, hive::chain::get_block_by_num_function_type get_block_by_num_function )
 {
     database::state_dependent_open(args, [this](int block_num) 
       { 
