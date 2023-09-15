@@ -52,6 +52,12 @@ conn(a_conn)
 {}
 
 
+void csp_session_type::set_db(haf_full_database* a_db)
+{
+  db.reset(a_db);
+}
+
+
 class haf_full_database : public hive::chain::database
 {
 public:
@@ -760,9 +766,11 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
 };
 
 
-haf_full_database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+haf_full_database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url, csp_session_type* csp_session)
 {
   auto* db = new haf_full_database(context, shared_memory_bin_path, postgres_url);
+  db->set_session(csp_session);
+  csp_session->set_db(db);
   initialize_chain_db(*db, context, shared_memory_bin_path, postgres_url);
   return db;
 };
@@ -771,9 +779,8 @@ haf_full_database* create_and_init_database(const char* context, const char* sha
 
 csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  haf_full_database* db = create_and_init_database(context, shared_memory_bin_path, postgres_url);
-  auto* csp_session =  new csp_session_type{context, shared_memory_bin_path, postgres_url, db, new postgres_database_helper {postgres_url}};
-  db->set_session(csp_session);
+  auto* csp_session =  new csp_session_type{context, shared_memory_bin_path, postgres_url, nullptr, new postgres_database_helper {postgres_url}};
+  create_and_init_database(context, shared_memory_bin_path, postgres_url, csp_session);
 
   return csp_session;
 }
