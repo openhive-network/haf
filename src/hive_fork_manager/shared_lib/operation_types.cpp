@@ -30,7 +30,7 @@ template<typename T>
 Datum to_datum(const std::vector<T>& value);
 Datum to_datum(const fc::flat_map<std::string, std::vector<char>>& value);
 Datum to_datum(const hive::protocol::account_name_type& value);
-Datum to_datum(const hive::protocol::json_string& value);
+std::optional<Datum> to_datum(const hive::protocol::json_string& value);
 Datum to_datum(const hive::protocol::authority::account_authority_map& value);
 Datum to_datum(const hive::protocol::authority::key_authority_map& value);
 Datum to_datum(const hive::protocol::extensions_type& value);
@@ -117,9 +117,10 @@ Datum to_datum(const hive::protocol::account_name_type& value)
 {
   return CStringGetTextDatum(static_cast<std::string>(value).c_str());
 }
-Datum to_datum(const hive::protocol::json_string& value)
+std::optional<Datum> to_datum(const hive::protocol::json_string& value)
 {
-  return DirectFunctionCall1(jsonb_in, CStringGetDatum(static_cast<std::string>(value).c_str()));
+  if (value.empty()) return {};
+  else return DirectFunctionCall1(jsonb_in, CStringGetDatum(static_cast<std::string>(value).c_str()));
 }
 Datum to_datum(const hive::protocol::authority::account_authority_map& value)
 {
