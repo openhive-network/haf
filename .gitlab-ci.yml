@@ -542,7 +542,7 @@ bash_tests:
     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL --plugin=sql_serializer --stop-replay-at-block=5000000  2>&1 | tee -i node_logs.log
   script:
     - cd $CI_PROJECT_DIR
-    - $CI_PROJECT_DIR/tests/integration/replay/current_account_balance_test.sh
+    - $CI_PROJECT_DIR/src/hive_fork_manager/state_providers/consensus_state_provider/scripts/current_account_balance_test.sh
     
   timeout: 60 minutes
   interruptible: true
