@@ -15,7 +15,7 @@ sudo tail -n 10000 $POSTGRESLOG
 echo "POSTGRESLOG ### Finished ### after init"
 
 
-$SETUP_SCRIPTS_PATH/runallnow.sh app_start || true
+$SETUP_SCRIPTS_PATH/../src/hive_fork_manager/state_providers/consensus_state_provider/scripts/runallnow.sh app_start || true
 
 echo "POSTGRESLOG ### Starting ### after app_start"
 sudo tail -n 10000 $POSTGRESLOG
@@ -33,7 +33,7 @@ on_error()
 trap on_error ERR
 
 
-$SETUP_SCRIPTS_PATH/runallnow.sh app_cont
+$SETUP_SCRIPTS_PATH/../src/hive_fork_manager/state_providers/consensus_state_provider/scripts/runallnow.sh app_cont
 
 set +E
 
