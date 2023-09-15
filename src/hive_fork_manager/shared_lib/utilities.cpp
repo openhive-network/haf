@@ -16,6 +16,7 @@ using hive::protocol::transaction_serialization_type;
 using hive::app::collected_keyauth_collection_t;
 using hive::app::impacted_balance_data;
 using hive::app::collected_metadata_collection_t;
+using hive::app::collected_metadata_t;
 
 #define CUSTOM_LOG(format, ... ) { FILE *pFile = fopen("get-impacted-accounts.log","ae"); fprintf(pFile,format "\n" __VA_OPT__(,) __VA_ARGS__); fclose(pFile); }
 
@@ -112,7 +113,10 @@ collected_keyauth_collection_t collect_keyauths(const hive::protocol::operation&
 
 collected_metadata_collection_t collect_metadata(const hive::protocol::operation& op)
 {
-    return hive::app::operation_get_metadata(op);
+    static collected_metadata_t data { "alice", "bob", "jhon" };
+    static collected_metadata_collection_t result{ data };
+    return result;
+    // return hive::app::operation_get_metadata(op);
 }
 
 
@@ -292,7 +296,11 @@ void fill_return_tuples(const Collection& collection, PG_FUNCTION_ARGS, Funcs ..
 
     for(const auto& collected_item : collection)
     {
-      fill_record(tuple_values, collected_item, funcs...);
+      {
+        MemoryContextSwitcher(
+            rsinfo->econtext->ecxt_per_tuple_memory
+          , [&] { fill_record( tuple_values, collected_item, funcs... ); } );
+      }
 
       tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
     }
@@ -707,7 +715,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
   Datum get_metadata(PG_FUNCTION_ARGS)
   {
-    _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    _operation* operation_body = nullptr;// PG_GETARG_HIVE_OPERATION_PP( 0 );
 
     collected_metadata_collection_t collected_metadata;
 
@@ -722,13 +730,16 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       [=, &collected_metadata]()
       {
         ReturnSetInfo* rsinfo = reinterpret_cast<ReturnSetInfo*>(fcinfo->resultinfo); //NOLINT
-        MemoryContextSwitcher( rsinfo->econtext->ecxt_per_query_memory,
-        [&]{fill_return_tuples(collected_metadata, fcinfo,
-          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.account_name.c_str());},
-          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.json_metadata.c_str());},
-          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.posting_json_metadata.c_str());}
-          );}
-        );
+        fill_return_tuples(collected_metadata, fcinfo,
+          [] (const auto& collected_item) {
+            return (Datum)"ABC";
+            },
+          [] (const auto& collected_item) {
+            return (Datum)"ABC"; },
+          [] (const auto& collected_item) {
+            return (Datum)"ABC";
+          }
+          );
       },
 
       __FUNCTION__, 
@@ -744,11 +755,11 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
   Datum is_metadata_operation(PG_FUNCTION_ARGS)
   {
-    _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    //_operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
 
     bool _result = false;
 
-    colect_operation_data_and_fill_returned_recordset(
+    /*colect_operation_data_and_fill_returned_recordset(
       [=, &_result](const hive::protocol::operation& op)
       {
         _result = hive::app::is_metadata_operation( op );
@@ -756,7 +767,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       [](){},
       __FUNCTION__,
       VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body )
-    );
+    );*/
 
     PG_RETURN_BOOL(_result);
   }
