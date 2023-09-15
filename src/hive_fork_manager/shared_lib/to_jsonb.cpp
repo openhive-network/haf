@@ -357,3 +357,11 @@ JsonbValue* operation_to_jsonb_value(const hive::protocol::operation& op)
 
   return op.visit(static_variant_to_jsonb_visitor(&parseState));
 }
+JsonbValue* jsonstring_to_jsonb_value(const hive::protocol::json_string& str)
+{
+  JsonbParseState* parseState = nullptr;
+
+  pushJsonbValue(&parseState, WJB_BEGIN_ARRAY, NULL);
+  to_jsonb(str, WJB_ELEM, &parseState);
+  return pushJsonbValue(&parseState, WJB_END_ARRAY, NULL);
+}
