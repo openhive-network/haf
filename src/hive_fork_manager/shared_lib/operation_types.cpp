@@ -1,6 +1,7 @@
 #include "operation_base.hpp"
 
 #include "operation_conversion.hpp"
+#include "to_jsonb.hpp"
 
 #include <fc/io/raw.hpp>
 #include <fc/crypto/hex.hpp>
@@ -120,7 +121,7 @@ Datum to_datum(const hive::protocol::account_name_type& value)
 std::optional<Datum> to_datum(const hive::protocol::json_string& value)
 {
   if (value.empty()) return {};
-  else return DirectFunctionCall1(jsonb_in, CStringGetDatum(static_cast<std::string>(value).c_str()));
+  else return PointerGetDatum(JsonbValueToJsonb(jsonstring_to_jsonb_value(value)));
 }
 Datum to_datum(const hive::protocol::authority::account_authority_map& value)
 {
