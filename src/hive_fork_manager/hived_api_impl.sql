@@ -390,7 +390,7 @@ BEGIN
     SELECT
           DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
-        , CASE position('NOT VALID' in pg_get_constraintdef(pgc.oid)) > 0 
+        , CASE WHEN position('NOT VALID' in pg_get_constraintdef(pgc.oid)) > 0 
         THEN 'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name || ' ADD CONSTRAINT ' || pgc.conname || ' ' || pg_get_constraintdef(pgc.oid)
         ELSE 'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name || ' ADD CONSTRAINT ' || pgc.conname || ' ' || pg_get_constraintdef(pgc.oid) || ' ' || 'NOT VALID' 
         END as command
