@@ -480,21 +480,21 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
     queries_commit_data_processor sequence_loader(db_url, "Sequence loader",
                                                   [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
       {
-        pqxx::result data = tx.exec("SELECT ho.id AS _max FROM hive.operations ho ORDER BY ho.id DESC LIMIT 1;");
-        if( !data.empty() )
-        {
-          FC_ASSERT( data.size() == 1, "Data size 2" );
-          const auto& record = data[0];
-          op_sequence_id = record["_max"].as<int64_t>();
-          //because newly created operation has to have subsequent number
-          ++*op_sequence_id;
-        }
-        else
-          op_sequence_id = 0;
+        // get the next unused operation id from the database.
+        // first check if there are any reversible operations; if so, their IDs will be higher than the irreversible
+        // ones, and it's always going to be a much smaller table.
+        // if reversible is empty (the usual case), get the max id number from the irreversible table
+        // (which can be slow if there are no indexes)
+        pqxx::result operation_id_result = tx.exec("-- operation sequence loader\n"
+                                                   "SELECT CASE WHEN (SELECT EXISTS (SELECT FROM hive.operations_reversible))\n"
+                                                   "            THEN (SELECT MAX(id) + 1 FROM hive.operations_reversible)\n"
+                                                   "            ELSE (SELECT COALESCE(MAX(id) + 1, 0) FROM hive.operations)\n"
+                                                   "       END as next_operation_id\n");
+        assert(operation_id_result.size() == 1);
+        FC_ASSERT(operation_id_result.size() == 1, "Wrong number of rows returned");
+        op_sequence_id = operation_id_result[0]["next_operation_id"].as<int64_t>();
         return data_processing_status();
-      }
-      , nullptr
-    );
+      }, nullptr);
 
     sequence_loader.trigger(data_processor::data_chunk_ptr(), 0);
     sequence_loader.join();
