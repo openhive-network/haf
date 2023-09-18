@@ -37,25 +37,6 @@ using hive::chain::open_args;
 using hive::chain::full_block_type;
 using hive::chain::block_id_type;
 
-csp_session_type::csp_session_type(
-  std::string a_context, 
-  std::string a_shared_memory_bin_path,
-  std::string a_postgres_url,
-  haf_full_database* a_db,
-  postgres_database_helper* a_conn)
-:
-context(a_context),
-shared_memory_bin_path(a_shared_memory_bin_path),
-postgres_url(a_postgres_url),
-db(a_db),
-conn(a_conn)
-{}
-
-
-void csp_session_type::set_db(haf_full_database* a_db)
-{
-  db.reset(a_db);
-}
 
 
 class haf_full_database : public hive::chain::database
@@ -86,6 +67,7 @@ public:
 };
 
 
+
 class postgres_database_helper
 {
 public:
@@ -102,6 +84,22 @@ public:
 private:
   pqxx::connection connection;
 }; 
+
+csp_session_type::csp_session_type(
+  const char* a_context, 
+  const char* a_shared_memory_bin_path,
+  const char* a_postgres_url)
+:
+context(a_context),
+shared_memory_bin_path(a_shared_memory_bin_path),
+postgres_url(a_postgres_url)
+{
+     conn = std::make_unique<postgres_database_helper>(a_postgres_url);
+    
+     db = std::make_unique<haf_full_database>(a_context, a_shared_memory_bin_path, a_postgres_url);
+    db->set_session(this);
+
+}
 
 
 
@@ -766,23 +764,19 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
 };
 
 
-haf_full_database* create_and_init_database(const char* context, const char* shared_memory_bin_path, const char* postgres_url, csp_session_type* csp_session)
-{
-  auto* db = new haf_full_database(context, shared_memory_bin_path, postgres_url);
-  db->set_session(csp_session);
-  csp_session->set_db(db);
-  initialize_chain_db(*db, context, shared_memory_bin_path, postgres_url);
-  return db;
-};
 
 
 
 csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  auto* csp_session =  new csp_session_type{context, shared_memory_bin_path, postgres_url, nullptr, new postgres_database_helper {postgres_url}};
-  create_and_init_database(context, shared_memory_bin_path, postgres_url, csp_session);
 
-  return csp_session;
+    // Dynamically allocate csp_session_type. Ownership transfers to hive.session
+    auto csp_session = new csp_session_type(context, shared_memory_bin_path, postgres_url);
+
+
+    initialize_chain_db(*csp_session->db, context, shared_memory_bin_path, postgres_url);
+
+    return csp_session;
 }
 
 struct fix_hf_version_visitor
@@ -867,7 +861,7 @@ void csp_finish_impl(csp_session_type* csp_session, bool wipe_clean_shared_memor
   if(wipe_clean_shared_memory_bin)
     db->chainbase::database::wipe(fc::path(csp_session->shared_memory_bin_path) / "blockchain");
 
-  delete db;
+  delete csp_session;
 }
 
 
