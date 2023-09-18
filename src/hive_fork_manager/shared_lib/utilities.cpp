@@ -1012,6 +1012,62 @@ Datum csp_init(PG_FUNCTION_ARGS)
   return (Datum)0;
 }
 
+struct test_struct
+{
+  std::string str1;
+  std::string str2;
+};
+
+
+// For functional hive.sessions test
+PG_FUNCTION_INFO_V1(test_in_c_create_a_structure);
+Datum test_in_c_create_a_structure(PG_FUNCTION_ARGS)
+{
+  char* str1 = text_to_cstring(PG_GETARG_TEXT_P(0));
+  char* str2 = text_to_cstring(PG_GETARG_TEXT_P(1));
+
+  auto handle = new test_struct{str1, str2};
+
+  PG_RETURN_POINTER(handle);
+
+  return (Datum)0;
+}
+
+
+// PG_FUNCTION_INFO_V1(test_in_c_set_name);
+// Datum test_in_c_set_name(PG_FUNCTION_ARGS)
+// {
+//   test_struct* stru = reinterpret_cast<test_struct*>PG_GETARG_POINTER(0);
+//   char* name = text_to_cstring(PG_GETARG_TEXT_P(1));
+
+//   stru->name = name;
+
+//   return (Datum)0;
+// }
+
+
+PG_FUNCTION_INFO_V1(test_in_c_get_strings_len);
+Datum test_in_c_get_strings_len(PG_FUNCTION_ARGS)
+{
+  test_struct* stru = reinterpret_cast<test_struct*>PG_GETARG_POINTER(0);
+
+  int len = stru->str1.size() + stru->str2.size();
+
+  PG_RETURN_INT32(len);
+
+  return (Datum)0;
+}
+
+
+PG_FUNCTION_INFO_V1(test_in_c_destroy);
+Datum test_in_c_destroy(PG_FUNCTION_ARGS)
+{
+  test_struct* stru = reinterpret_cast<test_struct*>PG_GETARG_POINTER(0);
+
+  delete stru;
+
+  return (Datum)0;
+}
 
 } //extern "C"
 

@@ -1,3 +1,9 @@
+CREATE TABLE IF NOT EXISTS hive.memory_between_procedures (
+    pid integer,
+    session_ptr BIGINT
+);
+
+
 
 DROP PROCEDURE IF EXISTS haf_admin_procedure_test_given;
 CREATE PROCEDURE haf_admin_procedure_test_given()
@@ -6,9 +12,32 @@ AS
 $BODY$
 DECLARE
     __session_ptr BIGINT;
+    __reconnect_string TEXT;
+    __disconnect_function TEXT;
 BEGIN
+    __session_ptr = (SELECT hive.test_in_c_create_a_structure('auto', 'matics'));
+    __reconnect_string = format('SELECT hive.test_in_c_create_a_structure(%L, %L)', 'auto', 'matics');
+    __disconnect_function = 'SELECT hive.test_in_c_destroy(%s)';
+
+
+    PERFORM hive.create_session(
+        'context', 
+        jsonb_build_object(       
+            'reconnect_string', __reconnect_string,
+            'disconnect_function', __disconnect_function,
+            'session_handle', __session_ptr
+        )
+    );
+
     --disconnect sessions because we are leaving the current process
     PERFORM hive.sessions_disconnect();
+
+    RAISE NOTICE 'Current backend PID is: %', pg_backend_pid();
+
+    INSERT INTO hive.memory_between_procedures (pid, session_ptr)
+    VALUES (pg_backend_pid(), __session_ptr);
+
+
 
 END;
 $BODY$
@@ -21,13 +50,21 @@ AS
 $BODY$
 DECLARE
     __session_ptr BIGINT;
+    previous_pid INTEGER;
+    prevoius_session_ptr BIGINT;
 BEGIN
+    -- ASSERT -- different getpid
+    SELECT pid, session_ptr INTO previous_pid, prevoius_session_ptr FROM hive.memory_between_procedures;
 
-    -- PERFORM hive.sessions_reconnect();
-    -- __session_ptr = hive.get_session_ptr('context');
+    ASSERT(pg_backend_pid() <> previous_pid);
+    PERFORM hive.sessions_reconnect();
 
-    -- ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
-    --                          'consensus_state_provider_get_expected_block_num should return 1';
+
+    __session_ptr = hive.get_session_ptr('context');
+    ASSERT(__session_ptr <> prevoius_session_ptr);
+
+    RAISE NOTICE 'returned %', (SELECT hive.test_in_c_get_strings_len(__session_ptr));
+
 
     PERFORM hive.sessions_disconnect();
 END;
@@ -41,16 +78,11 @@ CREATE PROCEDURE haf_admin_procedure_test_then()
 AS
 $BODY$
 DECLARE
-    rec RECORD;
     __session_ptr BIGINT;
 BEGIN
     PERFORM hive.sessions_reconnect();
-    -- __session_ptr = hive.get_session_ptr('context');
-
-    -- -- After  reconnecting - automatic undo has been performed:
-    -- ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
-    --                          'consensus_state_provider_get_expected_block_num should return 1';
-
+    __session_ptr = hive.get_session_ptr('context');
+    PERFORM hive.test_in_c_destroy(__session_ptr);
 
 END;
 $BODY$

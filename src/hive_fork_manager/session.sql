@@ -117,3 +117,25 @@ BEGIN
 END;
 $$
 ;
+
+
+-------------------------- TESTS --------------------------
+
+CREATE OR REPLACE FUNCTION hive.test_in_c_create_a_structure(str1 TEXT, str2 TEXT)
+RETURNS BIGINT
+AS 'MODULE_PATHNAME', 'test_in_c_create_a_structure' LANGUAGE C;
+
+-- CREATE OR REPLACE FUNCTION hive.test_in_c_set_name(IN _session_ptr BIGINT, IN name TEXT)
+-- RETURNS VOID
+-- AS 'MODULE_PATHNAME', 'test_in_c_set_name' LANGUAGE C;
+
+CREATE OR REPLACE FUNCTION hive.test_in_c_get_strings_len(IN _session_ptr BIGINT)
+RETURNS INTEGER
+AS 'MODULE_PATHNAME', 'test_in_c_get_strings_len' LANGUAGE C;
+
+
+CREATE OR REPLACE FUNCTION hive.test_in_c_destroy(IN _session_ptr BIGINT)
+RETURNS VOID
+AS 'MODULE_PATHNAME', 'test_in_c_destroy' LANGUAGE C;
+
+
