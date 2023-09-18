@@ -1015,6 +1015,7 @@ BEGIN
   ASSERT (select op.hbd_payout = '(0,3,@@000000013)'::hive.asset), format('Unexpected value of comment_benefactor_reward_operation.hbd_payout: %s', op.hbd_payout);
   ASSERT (select op.hive_payout = '(7,3,@@000000021)'::hive.asset), format('Unexpected value of comment_benefactor_reward_operation.hive_payout: %s', op.hive_payout);
   ASSERT (select op.vesting_payout = '(4754505657,6,@@000000037)'::hive.asset), format('Unexpected value of comment_benefactor_reward_operation.vesting_payout: %s', op.vesting_payout);
+  ASSERT (select op.payout_must_be_claimed = false), format('Unexpected value of comment_benefactor_reward_operation.payout_must_be_claimed: %s', op.payout_must_be_claimed);
 END;
 $BODY$
 ;
