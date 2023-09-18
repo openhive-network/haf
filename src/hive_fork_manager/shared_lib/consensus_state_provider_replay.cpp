@@ -130,6 +130,13 @@ private:
 };
 
 
+void undo_blocks(const csp_session_type* const csp_session, int shift);
+void initialize_chain_db(const csp_session_type* const csp_session);
+
+void set_open_args_data_dir(open_args& db_open_args, const char* shared_memory_bin_path);
+void set_open_args_supply(open_args& db_open_args);
+void set_open_args_other_parameters(open_args& db_open_args);
+
 //lower level helpers
 block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
 full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, int block_num);
@@ -142,12 +149,6 @@ bool is_current_transaction(const pqxx::result::const_iterator& current_transact
 std::vector<hive::protocol::signature_type> build_signatures(const pqxx::result::const_iterator& transaction);
 bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block);
 
-void undo_blocks(const csp_session_type* const csp_session, int shift);
-void initialize_chain_db(const csp_session_type* const csp_session);
-
-void set_open_args_data_dir(open_args& db_open_args, const char* shared_memory_bin_path);
-void set_open_args_supply(open_args& db_open_args);
-void set_open_args_other_parameters(open_args& db_open_args);
 
 
 // value coming from pxx is without 'T' in the middle to be accepted in variant
