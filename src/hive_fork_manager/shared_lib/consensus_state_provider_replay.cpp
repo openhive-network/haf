@@ -148,17 +148,16 @@ private:
 void haf_state_database::state_dependent_open( const open_args& args, get_block_by_num_function_type get_head_block_func )
 {
     database::state_dependent_open(args, [this](int block_num) 
-      { 
-        full_block_ptr full_block = postgres_block_log().get_full_block(head_block_num(), csp_session);
-
-        return full_block;
-      });
+    { 
+      auto full_block = postgres_block_log().get_full_block(head_block_num(), csp_session);
+      return full_block;
+    });
 }
 
 
 void undo_blocks(const csp_session_type* const csp_session, int shift)
 {
-  hive::chain::database& db = *csp_session->db;
+  auto& db = *csp_session->db;
   while(shift > 0)
   {
     db.pop_block();
@@ -223,9 +222,9 @@ full_block_ptr postgres_block_log::block_to_fullblock(int block_num_from_shared_
   }
 
   block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
-  full_block_ptr fb_ptr = from_bin_to_full_block_ptr(signed_block_object, block_num_from_postgres);
+  auto full_block = from_bin_to_full_block_ptr(signed_block_object, block_num_from_postgres);
 
-  return fb_ptr;
+  return full_block;
 }
 
 
@@ -357,14 +356,14 @@ void postgres_block_log::replay_block(const csp_session_type* const csp_session,
   }
 
   haf_state_database& db = *csp_session->db;
-  full_block_ptr fb_ptr;
+  
 
   block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
-  fb_ptr = from_bin_to_full_block_ptr(signed_block_object, block_num);
+  auto full_block = from_bin_to_full_block_ptr(signed_block_object, block_num);
 
   transformations_time_probe.stop();
 
-  apply_full_block(db, fb_ptr, get_skip_flags());
+  apply_full_block(db, full_block, get_skip_flags());
   
 }
 
@@ -691,10 +690,6 @@ void set_open_args_other_parameters(open_args& db_open_args)
 
 void initialize_chain_db(const csp_session_type* const csp_session)
 {
-  // End of local functions definitions
-  // ===================================
-
-  // Main body of the function
 
   hive::chain::database& db = *csp_session->db;
 
@@ -706,19 +701,15 @@ void initialize_chain_db(const csp_session_type* const csp_session)
   set_open_args_data_dir(db_open_args, csp_session->shared_memory_bin_path.c_str());
   set_open_args_supply(db_open_args);
   set_open_args_other_parameters(db_open_args);
-//mtlk here postgres_block_log_has to_be ready
 
   db.open(db_open_args);
 };
 
 
-
-
-
 const csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
 
-  // Dynamically allocate csp_session_type. Ownership transfers to hive.session
+  // Dynamically allocate csp_session_type. Ownership transfers to SQL hive.session
   auto csp_session = new csp_session_type(context, shared_memory_bin_path, postgres_url);
 
   initialize_chain_db(csp_session);
@@ -748,9 +739,8 @@ struct fix_hf_version_visitor
     static_cast<hive::protocol::version&>(ver) = hive::protocol::version(0, 0, proper_version);
   }
 
-
- private:
-  int proper_version;
+  private:
+    int proper_version;
 };
 
 void fix_hf_version(block_bin_t& sb, int proper_hf_version, int block_num)
@@ -761,6 +751,7 @@ void fix_hf_version(block_bin_t& sb, int proper_hf_version, int block_num)
   {
     extension.visit(visitor);
   }
+
   ilog("Fixing minor hardfork version in extension in block ${block_num}", ("block_num", block_num));
 }
 
@@ -785,7 +776,6 @@ int consensus_state_provider_get_expected_block_num_impl(const csp_session_type*
 {
   return csp_session->db->head_block_num() + 1;
 }
-
 
 
 collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const csp_session_type* const csp_session)
