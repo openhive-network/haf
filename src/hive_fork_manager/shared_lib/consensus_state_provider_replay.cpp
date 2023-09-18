@@ -141,11 +141,11 @@ private:
   time_probe transformations_time_probe;
   time_probe replay_full_block_time_probe;
 
-   enum : int 
-   {
-        BLOCK_NUM_EMPTY = -1,
-        BLOCK_NUM_MAX = std::numeric_limits<int>::max()
-   };
+  enum : int 
+  {
+      BLOCK_NUM_EMPTY = -1,
+      BLOCK_NUM_MAX = std::numeric_limits<int>::max()
+  };
 };
 
 
