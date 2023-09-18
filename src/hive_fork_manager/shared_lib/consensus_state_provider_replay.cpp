@@ -316,7 +316,9 @@ full_block_ptr postgres_block_log::get_full_block(int block_num)
   return {};
 }
 
-
+// We get blocks, transactions and operations containers from SQL
+// and set up iterators to transaction and operation
+// so that the iterators always point to the transactions and operations belonging to the currently replayed block
 void postgres_block_log::prepare_postgres_data(int from, int to)
 {
   get_postgres_data(from, to);
