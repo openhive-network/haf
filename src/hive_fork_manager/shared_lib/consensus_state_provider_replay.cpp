@@ -145,24 +145,100 @@ private:
 };
 
 
-void haf_state_database::state_dependent_open( const open_args& args, get_block_by_num_function_type get_head_block_func )
+void undo_blocks(const csp_session_type* const csp_session, int shift);
+void initialize_chain_db(const csp_session_type* const csp_session);
+
+void set_open_args_data_dir(open_args& db_open_args, const char* shared_memory_bin_path);
+void set_open_args_supply(open_args& db_open_args);
+void set_open_args_other_parameters(open_args& db_open_args);
+
+
+const csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-    database::state_dependent_open(args, [this](int block_num) 
-    { 
-      auto full_block = postgres_block_log().get_full_block(head_block_num(), csp_session);
-      return full_block;
-    });
+
+  // Dynamically allocate csp_session_type. Ownership transfers to SQL hive.session
+  auto csp_session = new csp_session_type(context, shared_memory_bin_path, postgres_url);
+
+  initialize_chain_db(csp_session);
+
+  return csp_session;
+}
+
+void initialize_chain_db(const csp_session_type* const csp_session)
+{
+
+  hive::chain::database& db = *csp_session->db;
+
+  db.set_flush_interval(10'000);
+  db.set_require_locking(false);
+
+  open_args db_open_args;
+
+  set_open_args_data_dir(db_open_args, csp_session->shared_memory_bin_path.c_str());
+  set_open_args_supply(db_open_args);
+  set_open_args_other_parameters(db_open_args);
+
+  db.open(db_open_args);
+};
+
+void set_open_args_data_dir(open_args& db_open_args, const char* shared_memory_bin_path)
+{
+  db_open_args.data_dir = shared_memory_bin_path;
+  db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
+};
+
+void set_open_args_supply(open_args& db_open_args)
+{
+  db_open_args.initial_supply = HIVE_INIT_SUPPLY;
+  db_open_args.hbd_initial_supply = HIVE_HBD_INIT_SUPPLY;
+};
+
+void set_open_args_other_parameters(open_args& db_open_args)
+{
+  db_open_args.shared_file_size = 25769803776;
+  db_open_args.shared_file_full_threshold = 0;
+  db_open_args.shared_file_scale_rate = 0;
+  db_open_args.chainbase_flags = 0;
+  db_open_args.do_validate_invariants = false;
+  db_open_args.stop_replay_at = 0;
+  db_open_args.exit_after_replay = false;
+  db_open_args.validate_during_replay = false;
+  db_open_args.benchmark_is_enabled = false;
+  db_open_args.replay_in_memory = false;
+  db_open_args.enable_block_log_compression = true;
+  db_open_args.block_log_compression_level = 15;
+  db_open_args.force_replay = false;
+};
+
+
+void csp_finish_impl(const csp_session_type* const csp_session, bool wipe_clean_shared_memory_bin)
+{
+  hive::chain::database* db = csp_session->db.get();
+  
+  db->close();
+
+  if(wipe_clean_shared_memory_bin)
+    db->chainbase::database::wipe(fc::path(csp_session->shared_memory_bin_path) / "blockchain");
+
+  delete csp_session;
 }
 
 
-void undo_blocks(const csp_session_type* const csp_session, int shift)
+int consensus_state_provider_get_expected_block_num_impl(const csp_session_type* const csp_session)
 {
-  auto& db = *csp_session->db;
-  while(shift > 0)
-  {
-    db.pop_block();
-    shift--;
-  }
+  return csp_session->db->head_block_num() + 1;
+}
+
+
+collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const csp_session_type* const csp_session)
+{
+  return collect_current_all_accounts_balances(csp_session);
+}
+
+
+collected_account_balances_collection_t collect_current_account_balances_impl(const csp_session_type* const csp_session, const std::vector<std::string>& accounts)
+{
+  return collect_current_account_balances(csp_session, accounts);
 }
 
 
@@ -192,6 +268,15 @@ bool consensus_state_provider_replay_impl(const csp_session_type* const csp_sess
   return true;
 }
 
+void undo_blocks(const csp_session_type* const csp_session, int shift)
+{
+  auto& db = *csp_session->db;
+  while(shift > 0)
+  {
+    db.pop_block();
+    shift--;
+  }
+}
 
 void postgres_block_log::run(const csp_session_type* const csp_session, int from, int to)
 {
@@ -212,85 +297,6 @@ void postgres_block_log::run(const csp_session_type* const csp_session, int from
   measure_after_run();
 }
 
-full_block_ptr postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* const csp_session)
-{
-  auto block_num_from_postgres = block["num"].as<int>();
-
-  if(block_num_from_postgres != block_num_from_shared_memory_bin) 
-  {
-    return {};
-  }
-
-  block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
-  auto full_block = from_bin_to_full_block_ptr(signed_block_object, block_num_from_postgres);
-
-  return full_block;
-}
-
-
-
-full_block_ptr postgres_block_log::get_full_block(int block_num, const csp_session_type* const csp_session)
-{
-  try
-  {
-    get_postgres_data(block_num, block_num, csp_session);
-    initialize_iterators();
-    return block_to_fullblock(block_num, blocks[0], csp_session);
-  }
-  catch(...)
-  {
-    auto current_exception = std::current_exception();
-    handle_exception(current_exception);
-  }
-  return {};
-}
-
-void postgres_block_log::measure_before_run()
-{
-  transformations_time_probe.reset();
-  apply_full_block_time_probe.reset();
-}
-
-void postgres_block_log::measure_after_run()
-{
-  transformations_time_probe.print_duration("Transformations");
-  apply_full_block_time_probe.print_duration("Transactional_apply_block");
-}
-
-void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
-{
-  try
-  {
-    if(exception_ptr)
-    {
-      std::rethrow_exception(exception_ptr);
-    }
-  }
-  catch(const pqxx::broken_connection& ex)
-  {
-    elog("postgres_block_log detected connection error: ${e}.", ("e", ex.what()));
-  }
-  catch(const pqxx::sql_error& ex)
-  {
-    elog("postgres_block_log detected SQL statement execution failure. Failing statement: `${q}'.", ("q", ex.query()));
-  }
-  catch(const pqxx::pqxx_exception& ex)
-  {
-    elog("postgres_block_log detected SQL execution failure: ${e}.", ("e", ex.base().what()));
-  }
-  catch( const fc::exception& e )
-  {
-    elog( "fc::exception ${e}", ("e", e.to_string()) );
-  }
-  catch( const std::exception& e )
-  {
-    elog("std::exception e.what=${var1}", ("var1", e.what()));
-  }
-  catch(...)
-  {
-    elog("postgres_block_log execution failed: unknown exception.");
-  }
-}
 
 void postgres_block_log::get_postgres_data(int from, int to, const csp_session_type* const csp_session)
 {
@@ -386,6 +392,97 @@ void haf_state_database::_push_block_simplified(const full_block_ptr& full_block
     push_block(flow_control, skip);
 
   }FC_CAPTURE_AND_RETHROW() 
+}
+
+
+void haf_state_database::state_dependent_open( const open_args& args, get_block_by_num_function_type get_head_block_func )
+{
+    database::state_dependent_open(args, [this](int block_num) 
+    { 
+      auto full_block = postgres_block_log().get_full_block(head_block_num(), csp_session);
+      return full_block;
+    });
+}
+
+full_block_ptr postgres_block_log::get_full_block(int block_num, const csp_session_type* const csp_session)
+{
+  try
+  {
+    get_postgres_data(block_num, block_num, csp_session);
+    initialize_iterators();
+    return block_to_fullblock(block_num, blocks[0], csp_session);
+  }
+  catch(...)
+  {
+    auto current_exception = std::current_exception();
+    handle_exception(current_exception);
+  }
+  return {};
+}
+
+
+full_block_ptr postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* const csp_session)
+{
+  auto block_num_from_postgres = block["num"].as<int>();
+
+  if(block_num_from_postgres != block_num_from_shared_memory_bin) 
+  {
+    return {};
+  }
+
+  block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
+  auto full_block = from_bin_to_full_block_ptr(signed_block_object, block_num_from_postgres);
+
+  return full_block;
+}
+
+
+
+void postgres_block_log::measure_before_run()
+{
+  transformations_time_probe.reset();
+  apply_full_block_time_probe.reset();
+}
+
+void postgres_block_log::measure_after_run()
+{
+  transformations_time_probe.print_duration("Transformations");
+  apply_full_block_time_probe.print_duration("Transactional_apply_block");
+}
+
+void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
+{
+  try
+  {
+    if(exception_ptr)
+    {
+      std::rethrow_exception(exception_ptr);
+    }
+  }
+  catch(const pqxx::broken_connection& ex)
+  {
+    elog("postgres_block_log detected connection error: ${e}.", ("e", ex.what()));
+  }
+  catch(const pqxx::sql_error& ex)
+  {
+    elog("postgres_block_log detected SQL statement execution failure. Failing statement: `${q}'.", ("q", ex.query()));
+  }
+  catch(const pqxx::pqxx_exception& ex)
+  {
+    elog("postgres_block_log detected SQL execution failure: ${e}.", ("e", ex.base().what()));
+  }
+  catch( const fc::exception& e )
+  {
+    elog( "fc::exception ${e}", ("e", e.to_string()) );
+  }
+  catch( const std::exception& e )
+  {
+    elog("std::exception e.what=${var1}", ("var1", e.what()));
+  }
+  catch(...)
+  {
+    elog("postgres_block_log execution failed: unknown exception.");
+  }
 }
 
 
@@ -658,64 +755,8 @@ uint64_t postgres_block_log::get_skip_flags()
 }
 
 
-void set_open_args_data_dir(open_args& db_open_args, const char* shared_memory_bin_path)
-{
-  db_open_args.data_dir = shared_memory_bin_path;
-  db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
-};
-
-void set_open_args_supply(open_args& db_open_args)
-{
-  db_open_args.initial_supply = HIVE_INIT_SUPPLY;
-  db_open_args.hbd_initial_supply = HIVE_HBD_INIT_SUPPLY;
-};
-
-void set_open_args_other_parameters(open_args& db_open_args)
-{
-  db_open_args.shared_file_size = 25769803776;
-  db_open_args.shared_file_full_threshold = 0;
-  db_open_args.shared_file_scale_rate = 0;
-  db_open_args.chainbase_flags = 0;
-  db_open_args.do_validate_invariants = false;
-  db_open_args.stop_replay_at = 0;
-  db_open_args.exit_after_replay = false;
-  db_open_args.validate_during_replay = false;
-  db_open_args.benchmark_is_enabled = false;
-  db_open_args.replay_in_memory = false;
-  db_open_args.enable_block_log_compression = true;
-  db_open_args.block_log_compression_level = 15;
-  db_open_args.force_replay = false;
-};
 
 
-void initialize_chain_db(const csp_session_type* const csp_session)
-{
-
-  hive::chain::database& db = *csp_session->db;
-
-  db.set_flush_interval(10'000);
-  db.set_require_locking(false);
-
-  open_args db_open_args;
-
-  set_open_args_data_dir(db_open_args, csp_session->shared_memory_bin_path.c_str());
-  set_open_args_supply(db_open_args);
-  set_open_args_other_parameters(db_open_args);
-
-  db.open(db_open_args);
-};
-
-
-const csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
-{
-
-  // Dynamically allocate csp_session_type. Ownership transfers to SQL hive.session
-  auto csp_session = new csp_session_type(context, shared_memory_bin_path, postgres_url);
-
-  initialize_chain_db(csp_session);
-
-  return csp_session;
-}
 
 struct fix_hf_version_visitor
 {
@@ -771,36 +812,6 @@ full_block_ptr postgres_block_log::from_bin_to_full_block_ptr(block_bin_t& sb, i
   }
   return full_block_type::create_from_signed_block(sb);
 }
-
-int consensus_state_provider_get_expected_block_num_impl(const csp_session_type* const csp_session)
-{
-  return csp_session->db->head_block_num() + 1;
-}
-
-
-collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const csp_session_type* const csp_session)
-{
-  return collect_current_all_accounts_balances(csp_session);
-}
-
-
-collected_account_balances_collection_t collect_current_account_balances_impl(const csp_session_type* const csp_session, const std::vector<std::string>& accounts)
-{
-  return collect_current_account_balances(csp_session, accounts);
-}
-
-void csp_finish_impl(const csp_session_type* const csp_session, bool wipe_clean_shared_memory_bin)
-{
-  hive::chain::database* db = csp_session->db.get();
-  
-  db->close();
-
-  if(wipe_clean_shared_memory_bin)
-    db->chainbase::database::wipe(fc::path(csp_session->shared_memory_bin_path) / "blockchain");
-
-  delete csp_session;
-}
-
 
 // value coming from pxx is without 'T' in the middle to be accepted in our time consumer
 std::string fix_pxx_time(const pqxx::field& t)
