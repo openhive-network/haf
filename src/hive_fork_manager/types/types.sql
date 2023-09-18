@@ -584,7 +584,8 @@ CREATE TYPE hive.comment_benefactor_reward_operation AS (
   permlink hive.permlink,
   hbd_payout hive.asset,
   hive_payout hive.asset,
-  vesting_payout hive.asset
+  vesting_payout hive.asset,
+  payout_must_be_claimed BOOL
 );
 
 CREATE TYPE hive.comment_payout_update_operation AS (
