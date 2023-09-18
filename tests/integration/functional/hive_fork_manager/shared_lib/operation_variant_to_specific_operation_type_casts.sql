@@ -1359,6 +1359,7 @@ BEGIN
   op := '{"type": "interest_operation","value": {"interest": {"amount": "2260","nai": "@@000000013","precision": 3},"is_saved_into_hbd_balance": true,"owner": "camilla"}}'::JSONB::hive.operation::hive.interest_operation;
   ASSERT (select op.owner = 'camilla'), format('Unexpected value of interest_operation.owner: %s', op.owner);
   ASSERT (select op.interest = '(2260,3,@@000000013)'::hive.asset), format('Unexpected value of interest_operation.interest: %s', op.interest);
+  ASSERT (select op.is_saved_into_hbd_balance = true), format('Unexpected value of interest_operation.is_saved_into_hbd_balance: %s', op.is_saved_into_hbd_balance);
 END;
 $BODY$
 ;
