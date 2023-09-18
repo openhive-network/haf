@@ -44,7 +44,7 @@ namespace consensus_state_provider
   };
   typedef std::vector<collected_account_balances_t> collected_account_balances_collection_t;
 
-  class haf_full_database;
+  class haf_state_database;
   class postgres_database_helper;
   struct csp_session_type
   {
@@ -52,7 +52,7 @@ namespace consensus_state_provider
       
       std::string shared_memory_bin_path;
       std::unique_ptr<postgres_database_helper> conn;
-      std::unique_ptr<haf_full_database> db;
+      std::unique_ptr<haf_state_database> db;
   };
 
   collected_account_balances_collection_t collect_current_all_accounts_balances(const csp_session_type* const csp_session);

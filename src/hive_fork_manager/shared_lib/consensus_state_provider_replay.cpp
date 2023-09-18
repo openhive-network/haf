@@ -20,33 +20,26 @@
 
 
 
-#define myASSERT(condition, message) \
-    do { \
-        if (!(condition)) { \
-            std::cerr << "Assertion `" #condition "` failed in " << __FILE__ \
-                      << " line " << __LINE__ << ": " << message << std::endl; \
-            exit(EXIT_FAILURE); \
-        } \
-    } while (0)
-
-
 namespace consensus_state_provider
 {
 
 using hive::chain::open_args;
 using hive::chain::full_block_type;
 using hive::chain::block_id_type;
+using hive::chain::get_block_by_num_function_type;
+using hive::chain::open_args;
+using full_block_ptr = std::shared_ptr<full_block_type>;
 
 
 
-class haf_full_database : public hive::chain::database
+class haf_state_database : public hive::chain::database
 {
 public:
-  haf_full_database(const csp_session_type* const csp_session):csp_session(csp_session){}
+  haf_state_database(const csp_session_type* const csp_session):csp_session(csp_session){}
 
-  void state_dependent_open( const open_args& args, hive::chain::get_block_by_num_function_type get_block_by_num_function );
+  void state_dependent_open( const open_args& args, get_block_by_num_function_type get_block_by_num_function );
 
-  void _push_block_simplified(const std::shared_ptr<full_block_type>& full_block, uint32_t skip);
+  void _push_block_simplified(const full_block_ptr& full_block, uint32_t skip);
 
 private:
 
@@ -80,7 +73,7 @@ csp_session_type::csp_session_type(
   :
   shared_memory_bin_path(shared_memory_bin_path),
   conn(std::make_unique<postgres_database_helper>(postgres_url)),
-  db(std::make_unique<haf_full_database>(this))
+  db(std::make_unique<haf_state_database>(this))
   {}
 
 
@@ -97,11 +90,11 @@ class postgres_block_log
 {
 public:
   void run(const csp_session_type* const csp_session, int from, int to);
-  std::shared_ptr<hive::chain::full_block_type> get_full_block(int block_num, const csp_session_type* const csp_session);
+  full_block_ptr get_full_block(int block_num, const csp_session_type* const csp_session);
 private:
   static block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
   block_bin_t block_to_bin(const pqxx::row& block);
-  static std::shared_ptr<hive::chain::full_block_type> from_bin_to_full_block_ptr(block_bin_t& sb, int block_num);
+  static full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, int block_num);
 
   static void build_transaction_id_bins(const pqxx::result::const_iterator& transaction,
                                             std::vector<hive::protocol::transaction_id_type>& transaction_id_bins);
@@ -111,7 +104,7 @@ private:
   std::vector<hive::protocol::operation> operations2bins(int block_num, int trx_in_block);
   static void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
   
-  std::shared_ptr<hive::chain::full_block_type> block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* const csp_session);
+  full_block_ptr block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* const csp_session);
   void measure_before_run();
   void measure_after_run();
   static void handle_exception(std::exception_ptr exception_ptr);
@@ -120,7 +113,7 @@ private:
   void replay_blocks(const csp_session_type* const csp_session);
   void replay_block(const csp_session_type* const csp_sessionessionessionessionessionession, const pqxx::row& block);
   static uint64_t get_skip_flags();
-  void apply_full_block(haf_full_database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
+  void apply_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags);
   void measure_before_apply_non_tansactional_operation_block();
   void measure_after_apply_non_tansactional_operation_block();  
   static bool is_current_transaction(const pqxx::result::const_iterator& current_transaction,
@@ -152,11 +145,11 @@ private:
 };
 
 
-void haf_full_database::state_dependent_open( const open_args& args, hive::chain::get_block_by_num_function_type get_head_block_func )
+void haf_state_database::state_dependent_open( const open_args& args, get_block_by_num_function_type get_head_block_func )
 {
     database::state_dependent_open(args, [this](int block_num) 
       { 
-        std::shared_ptr<hive::chain::full_block_type> full_block = postgres_block_log().get_full_block(head_block_num(), csp_session);
+        full_block_ptr full_block = postgres_block_log().get_full_block(head_block_num(), csp_session);
 
         return full_block;
       });
@@ -220,7 +213,7 @@ void postgres_block_log::run(const csp_session_type* const csp_session, int from
   measure_after_run();
 }
 
-std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* const csp_session)
+full_block_ptr postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* const csp_session)
 {
   auto block_num_from_postgres = block["num"].as<int>();
 
@@ -230,14 +223,14 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullb
   }
 
   block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
-  std::shared_ptr<hive::chain::full_block_type> fb_ptr = from_bin_to_full_block_ptr(signed_block_object, block_num_from_postgres);
+  full_block_ptr fb_ptr = from_bin_to_full_block_ptr(signed_block_object, block_num_from_postgres);
 
   return fb_ptr;
 }
 
 
 
-std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block(int block_num, const csp_session_type* const csp_session)
+full_block_ptr postgres_block_log::get_full_block(int block_num, const csp_session_type* const csp_session)
 {
   try
   {
@@ -363,8 +356,8 @@ void postgres_block_log::replay_block(const csp_session_type* const csp_session,
     // return;
   }
 
-  haf_full_database& db = *csp_session->db;
-  std::shared_ptr<hive::chain::full_block_type> fb_ptr;
+  haf_state_database& db = *csp_session->db;
+  full_block_ptr fb_ptr;
 
   block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
   fb_ptr = from_bin_to_full_block_ptr(signed_block_object, block_num);
@@ -375,7 +368,7 @@ void postgres_block_log::replay_block(const csp_session_type* const csp_session,
   
 }
 
-void postgres_block_log::apply_full_block(haf_full_database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags)
+void postgres_block_log::apply_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags)
 {
   apply_full_block_time_probe.start();
 
@@ -385,7 +378,7 @@ void postgres_block_log::apply_full_block(haf_full_database& db, const std::shar
 }
 
 
-void haf_full_database::_push_block_simplified(const std::shared_ptr<full_block_type>& full_block, uint32_t skip)
+void haf_state_database::_push_block_simplified(const full_block_ptr& full_block, uint32_t skip)
 {
   try
   {
@@ -652,32 +645,33 @@ int postgres_block_log::current_operation_trx_num() const
 
 uint64_t postgres_block_log::get_skip_flags()
 {
-  // clang-format off
-  return hive::chain::database::skip_block_log |
-        hive::chain::database::skip_witness_signature |
-        hive::chain::database::skip_transaction_signatures |
-        hive::chain::database::skip_transaction_dupe_check |
-        hive::chain::database::skip_tapos_check |
-        hive::chain::database::skip_merkle_check |
-        hive::chain::database::skip_witness_schedule_check |
-        hive::chain::database::skip_authority_check |
-        hive::chain::database::skip_validate;
-  // clang-format on
-};
+  using flags = hive::chain::database::validation_steps;
+  
+  return flags::skip_block_log |
+         flags::skip_witness_signature |
+         flags::skip_transaction_signatures |
+         flags::skip_transaction_dupe_check |
+         flags::skip_tapos_check |
+         flags::skip_merkle_check |
+         flags::skip_witness_schedule_check |
+         flags::skip_authority_check |
+         flags::skip_validate;
+}
 
-void set_open_args_data_dir(hive::chain::open_args& db_open_args, const char* shared_memory_bin_path)
+
+void set_open_args_data_dir(open_args& db_open_args, const char* shared_memory_bin_path)
 {
   db_open_args.data_dir = shared_memory_bin_path;
   db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
 };
 
-void set_open_args_supply(hive::chain::open_args& db_open_args)
+void set_open_args_supply(open_args& db_open_args)
 {
   db_open_args.initial_supply = HIVE_INIT_SUPPLY;
   db_open_args.hbd_initial_supply = HIVE_HBD_INIT_SUPPLY;
 };
 
-void set_open_args_other_parameters(hive::chain::open_args& db_open_args)
+void set_open_args_other_parameters(open_args& db_open_args)
 {
   db_open_args.shared_file_size = 25769803776;
   db_open_args.shared_file_full_threshold = 0;
@@ -707,7 +701,7 @@ void initialize_chain_db(const csp_session_type* const csp_session)
   db.set_flush_interval(10'000);
   db.set_require_locking(false);
 
-  hive::chain::open_args db_open_args;
+  open_args db_open_args;
 
   set_open_args_data_dir(db_open_args, csp_session->shared_memory_bin_path.c_str());
   set_open_args_supply(db_open_args);
@@ -771,7 +765,7 @@ void fix_hf_version(block_bin_t& sb, int proper_hf_version, int block_num)
 }
 
 
-std::shared_ptr<hive::chain::full_block_type> postgres_block_log::from_bin_to_full_block_ptr(block_bin_t& sb, int block_num)
+full_block_ptr postgres_block_log::from_bin_to_full_block_ptr(block_bin_t& sb, int block_num)
 {
   switch(block_num)
   {
@@ -784,7 +778,7 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::from_bin_to_fu
     case 2786287: fix_hf_version(sb, 119, block_num); break;
     // clang-format on
   }
-  return hive::chain::full_block_type::create_from_signed_block(sb);
+  return full_block_type::create_from_signed_block(sb);
 }
 
 int consensus_state_provider_get_expected_block_num_impl(const csp_session_type* const csp_session)
@@ -852,7 +846,7 @@ collected_account_balances_t extract_account_balances(
 collected_account_balances_collection_t collect_current_account_balances(const csp_session_type* const csp_session,
                                                                          const std::vector<std::string>& account_names)
 {
-  auto& db = get_database(csp_session);
+  auto& db = *csp_session->db;
 
   collected_account_balances_collection_t collected_balances;
 
@@ -877,7 +871,7 @@ collected_account_balances_collection_t collect_current_all_accounts_balances(co
 
   auto& idx = db.get_index< hive::chain::account_index, hive::chain::by_name >();
   auto itr = idx.lower_bound( "" );
-  //auto filter = &filter_default< hive::chain::account_object >;
+  
   auto end = idx.end();
 
   while( itr != end )
@@ -888,135 +882,3 @@ collected_account_balances_collection_t collect_current_all_accounts_balances(co
   return collected_balances;
 }
 }  // namespace consensus_state_provider
-
-
-/*
-///////////////////////////////////////////////////////////////
-
--- Create a PL/pgSQL function to wrap the C++ function and get the connection
-CREATE OR REPLACE FUNCTION my_plpgsql_function() RETURNS void AS $$
-DECLARE
-  conn pg_catalog.pg_stat_activity%ROWTYPE;
-BEGIN
-  -- Connect to SPI (Server Programming Interface)
-  PERFORM SPI_connect();
-
-  -- Get the current PostgreSQL connection
-  SELECT * INTO conn FROM pg_catalog.pg_stat_activity WHERE pg_backend_pid() = procpid;
-  
-  -- Call your C++ function, passing the connection details as needed
-  PERFORM my_cpp_function(conn);
-
-  -- Disconnect from SPI
-  PERFORM SPI_finish();
-END;
-$$ LANGUAGE plpgsql;
-
--- Create a stored procedure that calls the PL/pgSQL function
-CREATE OR REPLACE FUNCTION my_stored_procedure() RETURNS void AS $$
-BEGIN
-  -- Call the PL/pgSQL function to invoke the C++ function
-  PERFORM my_plpgsql_function();
-END;
-$$ LANGUAGE plpgsql;
-
-
-#include <iostream>
-#include <libpq-fe.h>
-
-void my_cpp_function(PGconn* connection) {
-    // Check if the connection is valid
-    if (connection == nullptr) {
-        std::cerr << "Invalid PostgreSQL connection." << std::endl;
-        return;
-    }
-
-    // Execute a SQL query using the provided connection
-    PGresult* result = PQexec(connection, "SELECT * FROM your_table");
-
-    // Check for query execution errors
-    if (PQresultStatus(result) != PGRES_TUPLES_OK) {
-        std::cerr << "Query execution failed: " << PQerrorMessage(connection) << std::endl;
-        PQclear(result);
-        return;
-    }
-
-    // Process the query result
-    int numRows = PQntuples(result);
-    int numCols = PQnfields(result);
-
-    for (int row = 0; row < numRows; ++row) {
-        for (int col = 0; col < numCols; ++col) {
-            const char* value = PQgetvalue(result, row, col);
-            std::cout << "Row " << row << ", Column " << col << ": " << value << std::endl;
-        }
-    }
-
-    // Free the result and close the connection
-    PQclear(result);
-    PQfinish(connection);
-}
-
-int main() {
-    // Your main program logic here
-    // ...
-    
-    // Example: Obtain a PostgreSQL connection using libpq
-    PGconn* connection = PQconnectdb("dbname=mydb user=myuser password=mypassword host=localhost port=5432");
-
-    // Call your C++ function with the connection
-    my_cpp_function(connection);
-
-    return 0;
-}
-
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <postgresql/libpq-fe.h>
-
-// Function to execute a query and return the result
-PGresult* execute_query(PGconn* conn, const char* query) {
-    PGresult* result;
-    result = PQexec(conn, query);
-    if (PQresultStatus(result) != PGRES_TUPLES_OK) {
-        fprintf(stderr, "Query execution failed: %s", PQerrorMessage(conn));
-        PQclear(result);
-        return NULL;
-    }
-    return result;
-}
-
-int main() {
-    const char* conninfo = "dbname=mydb user=myuser password=mypassword";
-    PGconn* conn = PQconnectdb(conninfo);
-
-    if (PQstatus(conn) == CONNECTION_BAD) {
-        fprintf(stderr, "Connection to database failed: %s\n", PQerrorMessage(conn));
-        PQfinish(conn);
-        return 1;
-    }
-
-    int from = 1;
-    int to = 10;
-
-    char blocks_query[256];
-    snprintf(blocks_query, sizeof(blocks_query), "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON id = producer_account_id WHERE num >= %d and num <= %d ORDER BY num ASC", from, to);
-
-    PGresult* blocks = execute_query(conn, blocks_query);
-
-    // Process the query result here
-
-    // Don't forget to free the result and close the connection
-    PQclear(blocks);
-    PQfinish(conn);
-
-    return 0;
-}
-
-///////////////////////////////////////////////////////////////
-*/
-
-
