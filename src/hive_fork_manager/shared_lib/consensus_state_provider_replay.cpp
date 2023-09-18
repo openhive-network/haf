@@ -86,23 +86,24 @@ class postgres_block_log
 public:
   explicit postgres_block_log(const csp_session_type* const csp_session):csp_session(csp_session){}
   void run(int from, int to);
-  full_block_ptr get_full_block(int block_num);
+  full_block_ptr read_full_block(int block_num);
 private:
-  block_bin_t block_to_bin(const pqxx::row& block);
-
-
-  void transactions2bin(int block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins);
-  std::vector<hive::protocol::operation> operations2bins(int block_num, int trx_in_block);
-  
-  full_block_ptr block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block);
-  void measure_before_run();
-  void measure_after_run();
   void prepare_postgres_data(int from, int to);
-  void get_postgres_data(int from, int to);
-  void initialize_iterators();
   void replay_blocks();
   void replay_block(const pqxx::row& block);
   void replay_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags);
+
+  void read_postgres_data(int from, int to);
+  void initialize_iterators();
+
+  full_block_ptr block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block);
+  
+  block_bin_t block_to_bin(const pqxx::row& block);
+  void transactions2bin(int block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins);
+  std::vector<hive::protocol::operation> operations2bins(int block_num, int trx_in_block);
+  
+  void measure_before_run();
+  void measure_after_run();
   void rewind_current_operation_to_block(int block_num);
   
   bool is_current_operation(int block_num, int trx_in_block) const;
@@ -301,7 +302,7 @@ void postgres_block_log::run(int from, int to)
   measure_after_run();
 }
 
-full_block_ptr postgres_block_log::get_full_block(int block_num)
+full_block_ptr postgres_block_log::read_full_block(int block_num)
 {
   try
   {
@@ -321,12 +322,12 @@ full_block_ptr postgres_block_log::get_full_block(int block_num)
 // so that the iterators always point to the transactions and operations belonging to the currently replayed block
 void postgres_block_log::prepare_postgres_data(int from, int to)
 {
-  get_postgres_data(from, to);
+  read_postgres_data(from, to);
   initialize_iterators();
 }
 
 
-void postgres_block_log::get_postgres_data(int from, int to)
+void postgres_block_log::read_postgres_data(int from, int to)
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
@@ -431,7 +432,7 @@ void haf_state_database::state_dependent_open( const open_args& args, get_block_
 {
     database::state_dependent_open(args, [this](int block_num) 
     { 
-      auto full_block = postgres_block_log(csp_session).get_full_block(head_block_num());
+      auto full_block = postgres_block_log(csp_session).read_full_block(head_block_num());
       return full_block;
     });
 }
