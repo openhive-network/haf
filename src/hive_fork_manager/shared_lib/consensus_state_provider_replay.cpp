@@ -80,11 +80,6 @@ csp_session_type::csp_session_type(
 
 using block_bin_t = hive::plugins::block_api::api_signed_block_object;
 
-// value coming from pxx is without 'T' in the middle to be accepted in variant
-std::string fix_pxx_time(const pqxx::field& t);
-
-// value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
-const char* fix_pxx_hex(const pqxx::field& h);
 
 class postgres_block_log
 {
@@ -93,38 +88,24 @@ public:
   void run(int from, int to);
   full_block_ptr get_full_block(int block_num);
 private:
-  static block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
   block_bin_t block_to_bin(const pqxx::row& block);
-  static full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, int block_num);
 
-  static void build_transaction_id_bins(const pqxx::result::const_iterator& transaction,
-                                            std::vector<hive::protocol::transaction_id_type>& transaction_id_bins);
 
   void transactions2bin(int block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins);
-  static hive::protocol::signed_transaction build_transaction_bin(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins);
   std::vector<hive::protocol::operation> operations2bins(int block_num, int trx_in_block);
-  static void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
   
   full_block_ptr block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block);
   void measure_before_run();
   void measure_after_run();
-  static void handle_exception(std::exception_ptr exception_ptr);
   void prepare_postgres_data(int from, int to);
   void get_postgres_data(int from, int to);
   void initialize_iterators();
   void replay_blocks();
   void replay_block(const pqxx::row& block);
-  static uint64_t get_skip_flags();
   void replay_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags);
-  void measure_before_apply_non_tansactional_operation_block();
-  void measure_after_apply_non_tansactional_operation_block();  
-  static bool is_current_transaction(const pqxx::result::const_iterator& current_transaction,
-                                     const int block_num);
-  static std::vector<hive::protocol::signature_type> build_signatures(const pqxx::result::const_iterator& transaction);
   void rewind_current_operation_to_block(int block_num);
   
   bool is_current_operation(int block_num, int trx_in_block) const;
-  static bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block);
 
   int current_transaction_block_num();
   int current_operation_block_num() const;
@@ -149,12 +130,31 @@ private:
 };
 
 
+//lower level helpers
+block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
+full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, int block_num);
+void build_transaction_id_bins(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins);
+hive::protocol::signed_transaction build_transaction_bin(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins);
+void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
+void handle_exception(std::exception_ptr exception_ptr);
+uint64_t get_skip_flags();
+bool is_current_transaction(const pqxx::result::const_iterator& current_transaction, const int block_num);
+std::vector<hive::protocol::signature_type> build_signatures(const pqxx::result::const_iterator& transaction);
+bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block);
+
 void undo_blocks(const csp_session_type* const csp_session, int shift);
 void initialize_chain_db(const csp_session_type* const csp_session);
 
 void set_open_args_data_dir(open_args& db_open_args, const char* shared_memory_bin_path);
 void set_open_args_supply(open_args& db_open_args);
 void set_open_args_other_parameters(open_args& db_open_args);
+
+
+// value coming from pxx is without 'T' in the middle to be accepted in variant
+std::string fix_pxx_time(const pqxx::field& t);
+
+// value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
+const char* fix_pxx_hex(const pqxx::field& h);
 
 
 const csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
@@ -448,7 +448,7 @@ void postgres_block_log::measure_after_run()
   replay_full_block_time_probe.print_duration("Transactional_apply_block");
 }
 
-void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
+void handle_exception(std::exception_ptr exception_ptr)
 {
   try
   {
@@ -570,7 +570,7 @@ void p2b_int64_to_uint32(const char* field_name, const T& block_or_transaction, 
 
 
 
-block_bin_t postgres_block_log::build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins)
+block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins)
 {
   using std::string;
   using std::vector;
@@ -623,12 +623,12 @@ void postgres_block_log::transactions2bin(int block_num, std::vector<hive::proto
   }
 }
 
-bool postgres_block_log::is_current_transaction(const pqxx::result::const_iterator& current_transaction, const int block_num)
+bool is_current_transaction(const pqxx::result::const_iterator& current_transaction, const int block_num)
 {
   return current_transaction["block_num"].as<int>() == block_num;
 }
 
-std::vector<hive::protocol::signature_type> postgres_block_log::build_signatures(const pqxx::result::const_iterator& transaction)
+std::vector<hive::protocol::signature_type> build_signatures(const pqxx::result::const_iterator& transaction)
 {
   std::vector<hive::protocol::signature_type> signatures;
   if(!transaction["signature"].is_null())
@@ -640,7 +640,7 @@ std::vector<hive::protocol::signature_type> postgres_block_log::build_signatures
   return signatures;
 }
 
-void postgres_block_log::build_transaction_id_bins(const pqxx::result::const_iterator& transaction,
+void build_transaction_id_bins(const pqxx::result::const_iterator& transaction,
                                             std::vector<hive::protocol::transaction_id_type>& transaction_id_bins)
 {
   //  https://github.com/jtv/libpqxx/blob/3d97c80bcde96fb70a21c1ae1cf92ad934818210/include/pqxx/field.hxx
@@ -666,7 +666,7 @@ void postgres_block_log::rewind_current_operation_to_block(int block_num)
 
 
 
-hive::protocol::signed_transaction postgres_block_log::build_transaction_bin(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins)
+hive::protocol::signed_transaction build_transaction_bin(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins)
 {
   hive::protocol::signed_transaction  signed_transaction;
 
@@ -686,7 +686,7 @@ bool postgres_block_log::is_current_operation(int block_num, int trx_in_block) c
   return block_num == current_operation_block_num() && trx_in_block == current_operation_trx_num();
 }
 
-bool postgres_block_log::operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block) 
+bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block) 
 {
   return operation["block_num"].as<int>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block;
 }
@@ -706,7 +706,7 @@ std::vector<hive::protocol::operation> postgres_block_log::operations2bins(int b
 }
 
 
-void postgres_block_log::add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins)
+void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins)
 {
   pqxx::binarystring bs(operation["bin_body"]);
   const unsigned char* raw_data = bs.data();
@@ -737,7 +737,7 @@ int postgres_block_log::current_operation_trx_num() const
 }
 
 
-uint64_t postgres_block_log::get_skip_flags()
+uint64_t get_skip_flags()
 {
   using flags = hive::chain::database::validation_steps;
   
@@ -795,7 +795,7 @@ void fix_hf_version(block_bin_t& sb, int proper_hf_version, int block_num)
 }
 
 
-full_block_ptr postgres_block_log::from_bin_to_full_block_ptr(block_bin_t& sb, int block_num)
+full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, int block_num)
 {
   switch(block_num)
   {
