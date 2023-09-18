@@ -378,26 +378,29 @@ void postgres_block_log::replay_blocks()
 void postgres_block_log::replay_block(const pqxx::row& block)
 {
   transformations_time_probe.start();
-  
 
-  auto block_num = block["num"].as<int>();
+  auto full_block = block_to_fullblock(consensus_state_provider_get_expected_block_num_impl(csp_session) , block);
 
-  if(block_num !=  consensus_state_provider_get_expected_block_num_impl(csp_session)) 
-  {
-    // return;
-  }
-
-  haf_state_database& db = *csp_session->db;
-  
-
-  block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
-  auto full_block = from_bin_to_full_block_ptr(signed_block_object, block_num);
+  FC_ASSERT(full_block, "No full block to process");
 
   transformations_time_probe.stop();
 
-  apply_full_block(db, full_block, get_skip_flags());
+  apply_full_block(*csp_session->db, full_block, get_skip_flags());
   
 }
+
+full_block_ptr postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block)
+{
+  auto block_num_from_postgres = block["num"].as<int>();
+
+  FC_ASSERT(block_num_from_postgres == block_num_from_shared_memory_bin, "Requested block has different number than the block in the state database");
+
+  block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
+  auto full_block = from_bin_to_full_block_ptr(signed_block_object, block_num_from_postgres);
+
+  return full_block;
+}
+
 
 void postgres_block_log::apply_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags)
 {
@@ -430,21 +433,6 @@ void haf_state_database::state_dependent_open( const open_args& args, get_block_
     });
 }
 
-
-full_block_ptr postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block)
-{
-  auto block_num_from_postgres = block["num"].as<int>();
-
-  if(block_num_from_postgres != block_num_from_shared_memory_bin) 
-  {
-    return {};
-  }
-
-  block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
-  auto full_block = from_bin_to_full_block_ptr(signed_block_object, block_num_from_postgres);
-
-  return full_block;
-}
 
 
 
