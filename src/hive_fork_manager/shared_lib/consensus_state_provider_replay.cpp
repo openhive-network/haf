@@ -296,7 +296,7 @@ void postgres_block_log::get_postgres_data(int from, int to, const csp_session_t
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
-  consensus_state_provider::postgres_database_helper& db = *(csp_session->conn);
+  auto& conn = *(csp_session->conn);
   
   // clang-format off
     auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= " 
@@ -304,7 +304,7 @@ void postgres_block_log::get_postgres_data(int from, int to, const csp_session_t
                                 + " and num <= " 
                                 + std::to_string(to) 
                                 + " ORDER BY num ASC";
-    blocks = db.execute_query(blocks_query);
+    blocks = conn.execute_query(blocks_query);
     std::cout << "Blocks:" << blocks.size() << " "; 
 
     auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= " 
@@ -312,7 +312,7 @@ void postgres_block_log::get_postgres_data(int from, int to, const csp_session_t
                                 + " and block_num <= " 
                                 + std::to_string(to) 
                                 + " ORDER BY block_num, trx_in_block ASC";
-    transactions = db.execute_query(transactions_query);
+    transactions = conn.execute_query(transactions_query);
     std::cout << "Transactions:" << transactions.size() << " ";
 
     auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= " 
@@ -321,7 +321,7 @@ void postgres_block_log::get_postgres_data(int from, int to, const csp_session_t
                                 + std::to_string(to) 
                                 + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
                                 + " ORDER BY id ASC";
-  operations = db.execute_query(operations_query);
+  operations = conn.execute_query(operations_query);
   std::cout << "Operations:" << operations.size() << " ";
   // clang-format on
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
