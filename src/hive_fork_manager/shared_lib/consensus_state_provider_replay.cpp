@@ -139,14 +139,13 @@ void set_open_args_supply(open_args& db_open_args);
 void set_open_args_other_parameters(open_args& db_open_args);
 
 //lower level helpers
+void handle_exception(std::exception_ptr exception_ptr);
+uint64_t get_skip_flags();
 block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
 full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, int block_num);
 void build_transaction_id_bins(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins);
 hive::protocol::signed_transaction build_transaction_bin(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins);
 void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
-void handle_exception(std::exception_ptr exception_ptr);
-uint64_t get_skip_flags();
-bool is_current_transaction(const pqxx::result::const_iterator& current_transaction, const int block_num);
 std::vector<hive::protocol::signature_type> build_signatures(const pqxx::result::const_iterator& transaction);
 bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block);
 
