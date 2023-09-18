@@ -1,16 +1,3 @@
-DROP FUNCTION IF EXISTS test_given;
-CREATE FUNCTION test_given()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-VOLATILE
-AS
-$BODY$
-BEGIN
-    --Nothing to do
-END;
-$BODY$
-;
-
 DROP PROCEDURE IF EXISTS check_operation_to_comment_operation;
 CREATE PROCEDURE check_operation_to_comment_operation()
 LANGUAGE 'plpgsql'
@@ -1797,18 +1784,4 @@ BEGIN
 END;
 $BODY$
 ;
-
-DROP FUNCTION IF EXISTS test_then;
-CREATE FUNCTION test_then()
-    RETURNS void
-    LANGUAGE 'plpgsql'
-STABLE
-AS
-$BODY$
-BEGIN
-    --Nothing to do
-END;
-$BODY$
-;
-
 
