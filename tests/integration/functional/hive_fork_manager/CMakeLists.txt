@@ -14,6 +14,9 @@ MACRO( ADD_EXAMPLES_FUNCTIONAL_TESTS example_test_path)
     # mtlk to restore, this line should go to my_develop branch/commit  MESSAGE( STATUS "Added functional examples tests '${test_target}'" )
 ENDMACRO()
 
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/sessions.sql )
+ 
+
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/schema_test.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_test.sql )
@@ -308,3 +311,4 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( sanity_check/test_tables_and_sequences_properly_flagged_for_dump.sql )
  
  ADD_SQL_FUNCTIONAL_TEST( state_providers/current_account_balance_update_state_provider.sql )
+ 
