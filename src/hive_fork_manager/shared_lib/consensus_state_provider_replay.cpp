@@ -835,17 +835,6 @@ const char* fix_pxx_hex(const pqxx::field& h)
 }
 
 
-namespace{
- std::unordered_map <std::string,  std::unique_ptr<hive::chain::database>> chain_databases;
-}
-
-
-
-auto& get_database(const csp_session_type* const csp_session)
-{
-    return *csp_session->db;
-}
-
 collected_account_balances_t extract_account_balances(
     const hive::chain::account_object* account)
 {
@@ -882,7 +871,7 @@ collected_account_balances_collection_t collect_current_account_balances(const c
 collected_account_balances_collection_t collect_current_all_accounts_balances(const csp_session_type* const csp_session)
 {
 
-  auto& db = get_database(csp_session);
+  auto& db = *csp_session->db;
 
   collected_account_balances_collection_t collected_balances;
 
