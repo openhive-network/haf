@@ -1680,11 +1680,9 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS test_when;
-CREATE FUNCTION test_when()
-    RETURNS void
+DROP PROCEDURE IF EXISTS haf_admin_test_when;
+CREATE PROCEDURE haf_admin_test_when()
     LANGUAGE 'plpgsql'
-    VOLATILE
 AS
 $BODY$
 BEGIN
