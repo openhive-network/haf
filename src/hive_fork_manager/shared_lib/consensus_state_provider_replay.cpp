@@ -109,6 +109,7 @@ private:
   void measure_before_run();
   void measure_after_run();
   static void handle_exception(std::exception_ptr exception_ptr);
+  void prepare_postgres_data(int from, int to);
   void get_postgres_data(int from, int to);
   void initialize_iterators();
   void replay_blocks();
@@ -287,7 +288,7 @@ void postgres_block_log::run(int from, int to)
 
   try
   {
-    get_postgres_data(from, to);
+    prepare_postgres_data(from, to);
     replay_blocks();
   }
   catch(...)
@@ -303,7 +304,7 @@ full_block_ptr postgres_block_log::get_full_block(int block_num)
 {
   try
   {
-    get_postgres_data(block_num, block_num);
+    prepare_postgres_data(block_num, block_num);
     return block_to_fullblock(block_num, blocks[0]);
   }
   catch(...)
@@ -314,6 +315,12 @@ full_block_ptr postgres_block_log::get_full_block(int block_num)
   return {};
 }
 
+
+void postgres_block_log::prepare_postgres_data(int from, int to)
+{
+  get_postgres_data(from, to);
+  initialize_iterators();
+}
 
 
 void postgres_block_log::get_postgres_data(int from, int to)
@@ -348,7 +355,6 @@ void postgres_block_log::get_postgres_data(int from, int to)
   operations = conn.execute_query(operations_query);
   std::cout << "Operations:" << operations.size() << " ";
 
-  initialize_iterators();
   // clang-format on
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
 }
