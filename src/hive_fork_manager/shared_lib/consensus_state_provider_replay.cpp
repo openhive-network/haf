@@ -106,6 +106,7 @@ private:
   void rewind_current_operation_to_block(int block_num);
   
   bool is_current_operation(int block_num, int trx_in_block) const;
+  bool current_transaction_belongs_to_block(const int block_num);
 
   int current_transaction_block_num();
   int current_operation_block_num() const;
@@ -606,7 +607,7 @@ block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::
 
 void postgres_block_log::transactions2bin(int block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins)
 {
-  for(; current_transaction != transactions.end() && is_current_transaction(current_transaction, block_num); ++current_transaction)
+  for(; current_transaction != transactions.end() && current_transaction_belongs_to_block(block_num); ++current_transaction)
   {
     auto trx_in_block = current_transaction["trx_in_block"].as<int>();
 
@@ -624,7 +625,7 @@ void postgres_block_log::transactions2bin(int block_num, std::vector<hive::proto
   }
 }
 
-bool is_current_transaction(const pqxx::result::const_iterator& current_transaction, const int block_num)
+bool postgres_block_log::current_transaction_belongs_to_block(const int block_num)
 {
   return current_transaction["block_num"].as<int>() == block_num;
 }
