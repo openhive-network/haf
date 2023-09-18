@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 
     consensus_state_provider::time_probe alltogether_time_probe; alltogether_time_probe.start();
 
-    const consensus_state_provider::csp_session_type* csp_session = consensus_state_provider::csp_init_impl(context.c_str(), consensus_state_provider_storage.c_str(), postgres_url.c_str());
+    const consensus_state_provider::csp_session_type* const csp_session = consensus_state_provider::csp_init_impl(context.c_str(), consensus_state_provider_storage.c_str(), postgres_url.c_str());
 
     bool ok = true;
     for (int i = from; i < to; i += step)

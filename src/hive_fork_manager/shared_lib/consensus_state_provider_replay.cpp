@@ -42,7 +42,7 @@ using hive::chain::block_id_type;
 class haf_full_database : public hive::chain::database
 {
 public:
-  haf_full_database(const csp_session_type* csp_session):csp_session(csp_session){}
+  haf_full_database(const csp_session_type* const csp_session):csp_session(csp_session){}
 
   void state_dependent_open( const open_args& args, hive::chain::get_block_by_num_function_type get_block_by_num_function );
 
@@ -50,7 +50,7 @@ public:
 
 private:
 
-   const csp_session_type* csp_session;
+   const csp_session_type* const csp_session;
 
 };
 
@@ -96,8 +96,8 @@ const char* fix_pxx_hex(const pqxx::field& h);
 class postgres_block_log
 {
 public:
-  void run(const csp_session_type* csp_session, int from, int to);
-  std::shared_ptr<hive::chain::full_block_type> get_full_block(int block_num, const csp_session_type* csp_session);
+  void run(const csp_session_type* const csp_session, int from, int to);
+  std::shared_ptr<hive::chain::full_block_type> get_full_block(int block_num, const csp_session_type* const csp_session);
 private:
   static block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
   block_bin_t block_to_bin(const pqxx::row& block);
@@ -111,14 +111,14 @@ private:
   std::vector<hive::protocol::operation> operations2bins(int block_num, int trx_in_block);
   static void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
   
-  std::shared_ptr<hive::chain::full_block_type> block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* csp_session);
+  std::shared_ptr<hive::chain::full_block_type> block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* const csp_session);
   void measure_before_run();
   void measure_after_run();
   static void handle_exception(std::exception_ptr exception_ptr);
-  void get_postgres_data(int from, int to,const csp_session_type* csp_session);
+  void get_postgres_data(int from, int to,const csp_session_type* const csp_session);
   void initialize_iterators();
-  void replay_blocks(const csp_session_type* csp_session);
-  void replay_block(const csp_session_type* csp_session, const pqxx::row& block);
+  void replay_blocks(const csp_session_type* const csp_session);
+  void replay_block(const csp_session_type* const csp_sessionessionessionessionessionession, const pqxx::row& block);
   static uint64_t get_skip_flags();
   void apply_full_block(haf_full_database& db, const std::shared_ptr<hive::chain::full_block_type>& fb_ptr, uint64_t skip_flags);
   void measure_before_apply_non_tansactional_operation_block();
@@ -163,7 +163,7 @@ void haf_full_database::state_dependent_open( const open_args& args, hive::chain
 }
 
 
-void undo_blocks(const csp_session_type* csp_session, int shift)
+void undo_blocks(const csp_session_type* const csp_session, int shift)
 {
   hive::chain::database& db = *csp_session->db;
   while(shift > 0)
@@ -174,7 +174,7 @@ void undo_blocks(const csp_session_type* csp_session, int shift)
 }
 
 
-bool consensus_state_provider_replay_impl(const csp_session_type* csp_session,  int from, int to)
+bool consensus_state_provider_replay_impl(const csp_session_type* const csp_session,  int from, int to)
 {
 
   auto csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
@@ -201,7 +201,7 @@ bool consensus_state_provider_replay_impl(const csp_session_type* csp_session,  
 }
 
 
-void postgres_block_log::run(const csp_session_type* csp_session, int from, int to)
+void postgres_block_log::run(const csp_session_type* const csp_session, int from, int to)
 {
   measure_before_run();
 
@@ -220,7 +220,7 @@ void postgres_block_log::run(const csp_session_type* csp_session, int from, int 
   measure_after_run();
 }
 
-std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* csp_session)
+std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* const csp_session)
 {
   auto block_num_from_postgres = block["num"].as<int>();
 
@@ -237,7 +237,7 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullb
 
 
 
-std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block(int block_num, const csp_session_type*  csp_session)
+std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block(int block_num, const csp_session_type* const csp_session)
 {
   try
   {
@@ -300,7 +300,7 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
   }
 }
 
-void postgres_block_log::get_postgres_data(int from, int to, const csp_session_type* csp_session)
+void postgres_block_log::get_postgres_data(int from, int to, const csp_session_type* const csp_session)
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
@@ -342,7 +342,7 @@ void postgres_block_log::initialize_iterators()
   current_operation = operations.begin();
 }
 
-void postgres_block_log::replay_blocks(const csp_session_type* csp_session)
+void postgres_block_log::replay_blocks(const csp_session_type* const csp_session)
 {
   for(const auto& block : blocks)
   {
@@ -351,7 +351,7 @@ void postgres_block_log::replay_blocks(const csp_session_type* csp_session)
 }
 
 
-void postgres_block_log::replay_block(const csp_session_type* csp_session, const pqxx::row& block)
+void postgres_block_log::replay_block(const csp_session_type* const csp_session, const pqxx::row& block)
 {
   transformations_time_probe.start();
   
@@ -695,7 +695,7 @@ void set_open_args_other_parameters(hive::chain::open_args& db_open_args)
 };
 
 
-void initialize_chain_db(const csp_session_type* csp_session)
+void initialize_chain_db(const csp_session_type* const csp_session)
 {
   // End of local functions definitions
   // ===================================
@@ -787,25 +787,25 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::from_bin_to_fu
   return hive::chain::full_block_type::create_from_signed_block(sb);
 }
 
-int consensus_state_provider_get_expected_block_num_impl(const csp_session_type* csp_session)
+int consensus_state_provider_get_expected_block_num_impl(const csp_session_type* const csp_session)
 {
   return csp_session->db->head_block_num() + 1;
 }
 
 
 
-collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const csp_session_type* csp_session)
+collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const csp_session_type* const csp_session)
 {
   return collect_current_all_accounts_balances(csp_session);
 }
 
 
-collected_account_balances_collection_t collect_current_account_balances_impl(const csp_session_type* csp_session, const std::vector<std::string>& accounts)
+collected_account_balances_collection_t collect_current_account_balances_impl(const csp_session_type* const csp_session, const std::vector<std::string>& accounts)
 {
   return collect_current_account_balances(csp_session, accounts);
 }
 
-void csp_finish_impl(const csp_session_type* csp_session, bool wipe_clean_shared_memory_bin)
+void csp_finish_impl(const csp_session_type* const csp_session, bool wipe_clean_shared_memory_bin)
 {
   hive::chain::database* db = csp_session->db.get();
   
@@ -841,7 +841,7 @@ namespace{
 
 
 
-auto& get_database(const csp_session_type* csp_session)
+auto& get_database(const csp_session_type* const csp_session)
 {
     return *csp_session->db;
 }
@@ -860,7 +860,7 @@ collected_account_balances_t extract_account_balances(
   return account_balances;
 }
 
-collected_account_balances_collection_t collect_current_account_balances(const csp_session_type* csp_session,
+collected_account_balances_collection_t collect_current_account_balances(const csp_session_type* const csp_session,
                                                                          const std::vector<std::string>& account_names)
 {
   auto& db = get_database(csp_session);
@@ -879,7 +879,7 @@ collected_account_balances_collection_t collect_current_account_balances(const c
   return collected_balances;
 }
 
-collected_account_balances_collection_t collect_current_all_accounts_balances(const csp_session_type* csp_session)
+collected_account_balances_collection_t collect_current_all_accounts_balances(const csp_session_type* const csp_session)
 {
 
   auto& db = get_database(csp_session);
