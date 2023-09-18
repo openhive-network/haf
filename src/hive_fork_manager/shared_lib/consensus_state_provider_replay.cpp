@@ -89,8 +89,9 @@ const char* fix_pxx_hex(const pqxx::field& h);
 class postgres_block_log
 {
 public:
-  void run(const csp_session_type* const csp_session, int from, int to);
-  full_block_ptr get_full_block(int block_num, const csp_session_type* const csp_session);
+  explicit postgres_block_log(const csp_session_type* const csp_session):csp_session(csp_session){}
+  void run(int from, int to);
+  full_block_ptr get_full_block(int block_num);
 private:
   static block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
   block_bin_t block_to_bin(const pqxx::row& block);
@@ -104,14 +105,14 @@ private:
   std::vector<hive::protocol::operation> operations2bins(int block_num, int trx_in_block);
   static void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
   
-  full_block_ptr block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* const csp_session);
+  full_block_ptr block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block);
   void measure_before_run();
   void measure_after_run();
   static void handle_exception(std::exception_ptr exception_ptr);
-  void get_postgres_data(int from, int to,const csp_session_type* const csp_session);
+  void get_postgres_data(int from, int to);
   void initialize_iterators();
-  void replay_blocks(const csp_session_type* const csp_session);
-  void replay_block(const csp_session_type* const csp_sessionessionessionessionessionession, const pqxx::row& block);
+  void replay_blocks();
+  void replay_block(const pqxx::row& block);
   static uint64_t get_skip_flags();
   void apply_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags);
   void measure_before_apply_non_tansactional_operation_block();
@@ -127,6 +128,8 @@ private:
   int current_transaction_block_num();
   int current_operation_block_num() const;
   int current_operation_trx_num() const;
+
+  const csp_session_type* const csp_session;
 
   pqxx::result blocks;
   pqxx::result transactions;
@@ -264,7 +267,7 @@ bool consensus_state_provider_replay_impl(const csp_session_type* const csp_sess
       //return false;
   }
 
-  postgres_block_log().run(csp_session, from, to);
+  postgres_block_log(csp_session).run(from, to);
   return true;
 }
 
@@ -278,15 +281,15 @@ void undo_blocks(const csp_session_type* const csp_session, int shift)
   }
 }
 
-void postgres_block_log::run(const csp_session_type* const csp_session, int from, int to)
+void postgres_block_log::run(int from, int to)
 {
   measure_before_run();
 
   try
   {
-    get_postgres_data(from, to, csp_session);
+    get_postgres_data(from, to);
     initialize_iterators();
-    replay_blocks(csp_session);
+    replay_blocks();
   }
   catch(...)
   {
@@ -297,8 +300,25 @@ void postgres_block_log::run(const csp_session_type* const csp_session, int from
   measure_after_run();
 }
 
+full_block_ptr postgres_block_log::get_full_block(int block_num)
+{
+  try
+  {
+    get_postgres_data(block_num, block_num);
+    initialize_iterators();
+    return block_to_fullblock(block_num, blocks[0]);
+  }
+  catch(...)
+  {
+    auto current_exception = std::current_exception();
+    handle_exception(current_exception);
+  }
+  return {};
+}
 
-void postgres_block_log::get_postgres_data(int from, int to, const csp_session_type* const csp_session)
+
+
+void postgres_block_log::get_postgres_data(int from, int to)
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
@@ -340,16 +360,16 @@ void postgres_block_log::initialize_iterators()
   current_operation = operations.begin();
 }
 
-void postgres_block_log::replay_blocks(const csp_session_type* const csp_session)
+void postgres_block_log::replay_blocks()
 {
   for(const auto& block : blocks)
   {
-    replay_block(csp_session, block);
+    replay_block(block);
   }
 }
 
 
-void postgres_block_log::replay_block(const csp_session_type* const csp_session, const pqxx::row& block)
+void postgres_block_log::replay_block(const pqxx::row& block)
 {
   transformations_time_probe.start();
   
@@ -399,29 +419,13 @@ void haf_state_database::state_dependent_open( const open_args& args, get_block_
 {
     database::state_dependent_open(args, [this](int block_num) 
     { 
-      auto full_block = postgres_block_log().get_full_block(head_block_num(), csp_session);
+      auto full_block = postgres_block_log(csp_session).get_full_block(head_block_num());
       return full_block;
     });
 }
 
-full_block_ptr postgres_block_log::get_full_block(int block_num, const csp_session_type* const csp_session)
-{
-  try
-  {
-    get_postgres_data(block_num, block_num, csp_session);
-    initialize_iterators();
-    return block_to_fullblock(block_num, blocks[0], csp_session);
-  }
-  catch(...)
-  {
-    auto current_exception = std::current_exception();
-    handle_exception(current_exception);
-  }
-  return {};
-}
 
-
-full_block_ptr postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const csp_session_type* const csp_session)
+full_block_ptr postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block)
 {
   auto block_num_from_postgres = block["num"].as<int>();
 
