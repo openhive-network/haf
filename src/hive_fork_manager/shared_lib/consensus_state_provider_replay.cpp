@@ -288,7 +288,6 @@ void postgres_block_log::run(int from, int to)
   try
   {
     get_postgres_data(from, to);
-    initialize_iterators();
     replay_blocks();
   }
   catch(...)
@@ -305,7 +304,6 @@ full_block_ptr postgres_block_log::get_full_block(int block_num)
   try
   {
     get_postgres_data(block_num, block_num);
-    initialize_iterators();
     return block_to_fullblock(block_num, blocks[0]);
   }
   catch(...)
@@ -349,6 +347,8 @@ void postgres_block_log::get_postgres_data(int from, int to)
                                 + " ORDER BY id ASC";
   operations = conn.execute_query(operations_query);
   std::cout << "Operations:" << operations.size() << " ";
+
+  initialize_iterators();
   // clang-format on
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
 }
