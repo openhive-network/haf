@@ -1002,7 +1002,7 @@ Datum csp_init(PG_FUNCTION_ARGS)
   char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_P(1));
   char* postgres_url = text_to_cstring(PG_GETARG_TEXT_P(2));
 
-  consensus_state_provider::csp_session_type* handle = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
+  const consensus_state_provider::csp_session_type* handle = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
 
   PG_RETURN_POINTER(handle);
   pfree(context);
