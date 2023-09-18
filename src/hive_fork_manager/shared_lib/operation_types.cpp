@@ -218,8 +218,10 @@ Datum to_datum(const T& value)
   const std::string type_name = fc::trim_typename_namespace(fc::get_typename<T>::name());
   TupleDesc desc = RelationNameGetTupleDesc(("hive." + type_name).c_str());
   BlessTupleDesc(desc);
-  Datum values[fc::reflector<T>::total_member_count];
-  bool nulls[fc::reflector<T>::total_member_count] = {};
+  const auto member_count = fc::reflector<T>::total_member_count;
+  FC_ASSERT(member_count == desc->natts, "Fatal: mismatch between member count and tuple size for ${t} type", ("t", type_name));
+  Datum values[member_count];
+  bool nulls[member_count] = {};
   fc::reflector<T>::visit(members_to_datum_visitor(value, values, nulls));
   HeapTuple tuple = heap_form_tuple(desc, values, nulls);
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
