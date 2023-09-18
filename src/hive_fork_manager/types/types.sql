@@ -719,7 +719,8 @@ CREATE TYPE hive.ineffective_delete_comment_operation AS (
 
 CREATE TYPE hive.interest_operation AS (
   owner hive.account_name_type,
-  interest hive.asset
+  interest hive.asset,
+  is_saved_into_hbd_balance BOOL
 );
 
 CREATE TYPE hive.limit_order_cancelled_operation AS (
