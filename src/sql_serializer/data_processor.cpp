@@ -136,12 +136,12 @@ void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
 
   {
     const auto& d = _description;
-  dlog("Trying to trigger data processor: ${d}...", ("d", _description));
+  elog("Trying to trigger data processor: ${d}...", ("d", _description));
     // elog("LOCK ${d}", ("d", d));
   std::lock_guard<std::mutex> lk(_mtx);
   _dataPtr = std::move(dataPtr);
   _last_block_num = last_blocknum;
-  dlog("Data processor: ${d} triggerred...", ("d", _description));
+  elog("Data processor: ${d} triggerred...", ("d", _description));
     // elog("UNLOCK ${d}", ("d", d));
   }
   _cv.notify_one();
@@ -166,11 +166,12 @@ void data_processor::wait()
   {
     // const auto d = fc::thread::current().name();
     // const auto& d = _description;
-    dlog("Waiting until data_processor ${d} will consume a data...", ("d", _description));
+    elog("Waiting until data_processor ${d} will consume a data...", ("d", _description));
     // elog("LOCK ${d}", ("d", d));
     std::unique_lock<std::mutex> lk(_mtx);
     _cv.wait(lk, [this] {return _dataPtr.valid() == false; });
     // elog("UNLOCK ${d}", ("d", d));
+    elog("data_processor ${d} consumed data", ("d", _description));
   }
 }
 
