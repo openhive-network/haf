@@ -31,7 +31,7 @@ using hive::chain::open_args;
 using full_block_ptr = std::shared_ptr<full_block_type>;
 
 
-
+//This is the override class of the chain::database used in consensus_state_provide - more info mtlk todo
 class haf_state_database : public hive::chain::database
 {
 public:
