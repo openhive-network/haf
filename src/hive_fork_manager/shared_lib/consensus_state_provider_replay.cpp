@@ -39,7 +39,7 @@ public:
 
   void state_dependent_open( const open_args& args, get_block_by_num_function_type get_block_by_num_function );
 
-  void _push_block_simplified(const full_block_ptr& full_block, uint32_t skip);
+  void push_haf_block(const full_block_ptr& full_block, uint32_t skip);
 
 private:
 
@@ -115,7 +115,7 @@ private:
   void replay_blocks();
   void replay_block(const pqxx::row& block);
   static uint64_t get_skip_flags();
-  void apply_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags);
+  void replay_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags);
   void measure_before_apply_non_tansactional_operation_block();
   void measure_after_apply_non_tansactional_operation_block();  
   static bool is_current_transaction(const pqxx::result::const_iterator& current_transaction,
@@ -139,7 +139,7 @@ private:
   pqxx::result::const_iterator current_operation;
   std::chrono::nanoseconds transformations_duration{};
   time_probe transformations_time_probe;
-  time_probe apply_full_block_time_probe;
+  time_probe replay_full_block_time_probe;
 
    enum : int 
    {
@@ -385,7 +385,7 @@ void postgres_block_log::replay_block(const pqxx::row& block)
 
   transformations_time_probe.stop();
 
-  apply_full_block(*csp_session->db, full_block, get_skip_flags());
+  replay_full_block(*csp_session->db, full_block, get_skip_flags());
   
 }
 
@@ -402,17 +402,17 @@ full_block_ptr postgres_block_log::block_to_fullblock(int block_num_from_shared_
 }
 
 
-void postgres_block_log::apply_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags)
+void postgres_block_log::replay_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags)
 {
-  apply_full_block_time_probe.start();
+  replay_full_block_time_probe.start();
 
-  db._push_block_simplified(fb_ptr, skip_flags);
+  db.push_haf_block(fb_ptr, skip_flags);
 
-  apply_full_block_time_probe.stop();
+  replay_full_block_time_probe.stop();
 }
 
 
-void haf_state_database::_push_block_simplified(const full_block_ptr& full_block, uint32_t skip)
+void haf_state_database::push_haf_block(const full_block_ptr& full_block, uint32_t skip)
 {
   try
   {
@@ -439,13 +439,13 @@ void haf_state_database::state_dependent_open( const open_args& args, get_block_
 void postgres_block_log::measure_before_run()
 {
   transformations_time_probe.reset();
-  apply_full_block_time_probe.reset();
+  replay_full_block_time_probe.reset();
 }
 
 void postgres_block_log::measure_after_run()
 {
   transformations_time_probe.print_duration("Transformations");
-  apply_full_block_time_probe.print_duration("Transactional_apply_block");
+  replay_full_block_time_probe.print_duration("Transactional_apply_block");
 }
 
 void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
