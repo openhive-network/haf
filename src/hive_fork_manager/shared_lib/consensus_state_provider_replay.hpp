@@ -50,17 +50,13 @@ int consensus_state_provider_get_expected_block_num_impl(consensus_state_provide
 
   class haf_full_database;
   class postgres_database_helper;
-  class csp_session_type
+  struct csp_session_type
   {
-    public:
-      explicit csp_session_type(
-        const char* a_context,
-        const char* a_shared_memory_bin_path,
-        const char* a_postgres_url);
-
-      std::string context, shared_memory_bin_path, postgres_url;
-      std::unique_ptr<haf_full_database> db;
+      csp_session_type(const char* context, const char* shared_memory_bin_path, const char* postgres_url);
+      
+      std::string shared_memory_bin_path;
       std::unique_ptr<postgres_database_helper> conn;
+      std::unique_ptr<haf_full_database> db;
   };
 
   collected_account_balances_collection_t collect_current_all_accounts_balances(csp_session_type* csp_session);

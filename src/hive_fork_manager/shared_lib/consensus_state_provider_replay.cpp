@@ -42,14 +42,7 @@ using hive::chain::block_id_type;
 class haf_full_database : public hive::chain::database
 {
 public:
-  haf_full_database(const char* a_context, const char* a_shared_memory_bin_path, const char* a_postgres_url)
-    :
-    context(a_context),
-    shared_memory_bin_path(a_shared_memory_bin_path),
-    postgres_url(a_postgres_url)
-  {
-    
-  }
+  haf_full_database(csp_session_type* csp_session):csp_session(csp_session){}
 
   void state_dependent_open( const open_args& args, hive::chain::get_block_by_num_function_type get_block_by_num_function );
 
@@ -59,10 +52,8 @@ public:
   void _push_block_simplified(const std::shared_ptr<full_block_type>& full_block, uint32_t skip);
 
 private:
-   std:: string context, shared_memory_bin_path, postgres_url;
 
    csp_session_type* csp_session;
-public:
 
 };
 
@@ -86,20 +77,14 @@ private:
 }; 
 
 csp_session_type::csp_session_type(
-  const char* a_context, 
-  const char* a_shared_memory_bin_path,
-  const char* a_postgres_url)
-:
-context(a_context),
-shared_memory_bin_path(a_shared_memory_bin_path),
-postgres_url(a_postgres_url)
-{
-     conn = std::make_unique<postgres_database_helper>(a_postgres_url);
-    
-     db = std::make_unique<haf_full_database>(a_context, a_shared_memory_bin_path, a_postgres_url);
-    db->set_session(this);
-
-}
+  const char* context, 
+  const char* shared_memory_bin_path,
+  const char* postgres_url)
+  :
+  shared_memory_bin_path(shared_memory_bin_path),
+  conn(std::make_unique<postgres_database_helper>(postgres_url)),
+  db(std::make_unique<haf_full_database>(this))
+  {}
 
 
 
@@ -115,11 +100,7 @@ class postgres_block_log
 {
 public:
   void run(csp_session_type* csp_session, int from, int to);
-  std::shared_ptr<hive::chain::full_block_type> get_full_block(int block_num,
-                              const char* context,
-                              const char* shared_memory_bin_path,
-                              const char* postgres_url,
-                              csp_session_type* csp_session);
+  std::shared_ptr<hive::chain::full_block_type> get_full_block(int block_num, csp_session_type* csp_session);
 private:
   static block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
   block_bin_t block_to_bin(const pqxx::row& block);
@@ -133,11 +114,11 @@ private:
   std::vector<hive::protocol::operation> operations2bins(int block_num, int trx_in_block);
   static void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
   
-  std::shared_ptr<hive::chain::full_block_type> block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url);
+  std::shared_ptr<hive::chain::full_block_type> block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, csp_session_type* csp_session);
   void measure_before_run();
   void measure_after_run();
   static void handle_exception(std::exception_ptr exception_ptr);
-  void get_postgres_data(int from, int to, const char* postgres_url, csp_session_type* csp_session);
+  void get_postgres_data(int from, int to,csp_session_type* csp_session);
   void initialize_iterators();
   void replay_blocks(csp_session_type* csp_session);
   void replay_block(csp_session_type* csp_session, const pqxx::row& block);
@@ -178,9 +159,7 @@ void haf_full_database::state_dependent_open( const open_args& args, hive::chain
 {
     database::state_dependent_open(args, [this](int block_num) 
       { 
-        std::shared_ptr<hive::chain::full_block_type> full_block = 
-          postgres_block_log().
-          get_full_block(this->head_block_num(), context.c_str(), shared_memory_bin_path.c_str(), postgres_url.c_str(), csp_session);
+        std::shared_ptr<hive::chain::full_block_type> full_block = postgres_block_log().get_full_block(head_block_num(), csp_session);
 
         return full_block;
       });
@@ -252,7 +231,7 @@ void postgres_block_log::run(csp_session_type* csp_session, int from, int to)
 
   try
   {
-    get_postgres_data(from, to, csp_session->postgres_url.c_str(), csp_session);
+    get_postgres_data(from, to, csp_session);
     initialize_iterators();
     replay_blocks(csp_session);
   }
@@ -265,7 +244,7 @@ void postgres_block_log::run(csp_session_type* csp_session, int from, int to)
   measure_after_run();
 }
 
-std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block, csp_session_type* csp_session)
 {
   auto block_num_from_postgres = block["num"].as<int>();
 
@@ -282,17 +261,13 @@ std::shared_ptr<hive::chain::full_block_type> postgres_block_log::block_to_fullb
 
 
 
-std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block(int block_num,
-                             const char* context,
-                             const char* shared_memory_bin_path,
-                             const char* postgres_url,
-                             csp_session_type*  csp_session)
+std::shared_ptr<hive::chain::full_block_type> postgres_block_log::get_full_block(int block_num, csp_session_type*  csp_session)
 {
   try
   {
-    get_postgres_data(block_num, block_num, postgres_url, csp_session);
+    get_postgres_data(block_num, block_num, csp_session);
     initialize_iterators();
-    return block_to_fullblock(block_num, blocks[0], context, shared_memory_bin_path, postgres_url);
+    return block_to_fullblock(block_num, blocks[0], csp_session);
   }
   catch(...)
   {
@@ -349,7 +324,7 @@ void postgres_block_log::handle_exception(std::exception_ptr exception_ptr)
   }
 }
 
-void postgres_block_log::get_postgres_data(int from, int to, const char* postgres_url, csp_session_type* csp_session)
+void postgres_block_log::get_postgres_data(int from, int to, csp_session_type* csp_session)
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
@@ -744,18 +719,21 @@ void set_open_args_other_parameters(hive::chain::open_args& db_open_args)
 };
 
 
-void initialize_chain_db(hive::chain::database& db, const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+void initialize_chain_db(csp_session_type* csp_session)
 {
   // End of local functions definitions
   // ===================================
 
   // Main body of the function
+
+  hive::chain::database& db = *csp_session->db;
+
   db.set_flush_interval(10'000);
   db.set_require_locking(false);
 
   hive::chain::open_args db_open_args;
 
-  set_open_args_data_dir(db_open_args, shared_memory_bin_path);
+  set_open_args_data_dir(db_open_args, csp_session->shared_memory_bin_path.c_str());
   set_open_args_supply(db_open_args);
   set_open_args_other_parameters(db_open_args);
 //mtlk here postgres_block_log_has to_be ready
@@ -770,13 +748,12 @@ void initialize_chain_db(hive::chain::database& db, const char* context, const c
 csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
 
-    // Dynamically allocate csp_session_type. Ownership transfers to hive.session
-    auto csp_session = new csp_session_type(context, shared_memory_bin_path, postgres_url);
+  // Dynamically allocate csp_session_type. Ownership transfers to hive.session
+  auto csp_session = new csp_session_type(context, shared_memory_bin_path, postgres_url);
 
+  initialize_chain_db(csp_session);
 
-    initialize_chain_db(*csp_session->db, context, shared_memory_bin_path, postgres_url);
-
-    return csp_session;
+  return csp_session;
 }
 
 struct fix_hf_version_visitor
