@@ -29,6 +29,21 @@ BEGIN
         )
     );
 
+    --inside the same process:
+    
+    ASSERT __session_ptr = hive.get_session_ptr('context') ;
+
+    RAISE NOTICE 'returned %', (SELECT hive.test_in_c_get_strings_sum(__session_ptr));
+    ASSERT 'automatics' = (SELECT hive.test_in_c_get_strings_sum(__session_ptr));
+
+    PERFORM hive.test_in_c_destroy(__session_ptr);
+
+    -- ASSERT 'context; not in sessions
+
+    __session_ptr = (SELECT hive.test_in_c_create_a_structure('auto', 'moto'));
+
+
+
     --disconnect sessions because we are leaving the current process
     PERFORM hive.sessions_disconnect();
 
@@ -63,7 +78,7 @@ BEGIN
     __session_ptr = hive.get_session_ptr('context');
     ASSERT(__session_ptr <> prevoius_session_ptr);
 
-    RAISE NOTICE 'returned %', (SELECT hive.test_in_c_get_strings_len(__session_ptr));
+    RAISE NOTICE 'returned %', (SELECT hive.test_in_c_get_strings_sum(__session_ptr));
 
 
     PERFORM hive.sessions_disconnect();

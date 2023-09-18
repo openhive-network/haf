@@ -1034,26 +1034,19 @@ Datum test_in_c_create_a_structure(PG_FUNCTION_ARGS)
 }
 
 
-// PG_FUNCTION_INFO_V1(test_in_c_set_name);
-// Datum test_in_c_set_name(PG_FUNCTION_ARGS)
-// {
-//   test_struct* stru = reinterpret_cast<test_struct*>PG_GETARG_POINTER(0);
-//   char* name = text_to_cstring(PG_GETARG_TEXT_P(1));
-
-//   stru->name = name;
-
-//   return (Datum)0;
-// }
-
-
-PG_FUNCTION_INFO_V1(test_in_c_get_strings_len);
-Datum test_in_c_get_strings_len(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(test_in_c_get_strings_sum);
+Datum test_in_c_get_strings_sum(PG_FUNCTION_ARGS)
 {
   test_struct* stru = reinterpret_cast<test_struct*>PG_GETARG_POINTER(0);
 
   int len = stru->str1.size() + stru->str2.size();
 
-  PG_RETURN_INT32(len);
+  PG_RETURN_TEXT_P(
+    cstring_to_text
+    (
+      (stru->str1 + stru->str2).c_str()
+    )
+  );
 
   return (Datum)0;
 }

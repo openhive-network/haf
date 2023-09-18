@@ -129,9 +129,9 @@ AS 'MODULE_PATHNAME', 'test_in_c_create_a_structure' LANGUAGE C;
 -- RETURNS VOID
 -- AS 'MODULE_PATHNAME', 'test_in_c_set_name' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.test_in_c_get_strings_len(IN _session_ptr BIGINT)
-RETURNS INTEGER
-AS 'MODULE_PATHNAME', 'test_in_c_get_strings_len' LANGUAGE C;
+CREATE OR REPLACE FUNCTION hive.test_in_c_get_strings_sum(IN _session_ptr BIGINT)
+RETURNS TEXT
+AS 'MODULE_PATHNAME', 'test_in_c_get_strings_sum' LANGUAGE C;
 
 
 CREATE OR REPLACE FUNCTION hive.test_in_c_destroy(IN _session_ptr BIGINT)
