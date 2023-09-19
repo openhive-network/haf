@@ -53,7 +53,7 @@ BEGIN
          __disconnect_function
     );
 
-    PERFORM hive.session_start(_context');
+    PERFORM hive.session_start('context');
 
     RETURN ARRAY[ __table_name,  __config_table_name ];
 END;
