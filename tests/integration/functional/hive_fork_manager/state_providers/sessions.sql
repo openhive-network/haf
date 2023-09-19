@@ -19,6 +19,7 @@ BEGIN
     __reconnect_string = format('SELECT hive.test_in_c_create_a_structure(%L, %L)', 'auto', 'matics');
     __disconnect_function = 'SELECT hive.test_in_c_destroy(%s)';
 
+    RAISE NOTICE '0 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
     PERFORM hive.setup_session(
         'context', 
@@ -29,8 +30,12 @@ BEGIN
         )
     );
 
-    --PERFORM hive.session_reconnect('context');
-    PERFORM hive.sessions_reconnect();
+    RAISE NOTICE '1 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
+
+    PERFORM hive.session_start('context');
+    --PERFORM hive.sessions_reconnect();
+
+    RAISE NOTICE '2 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
     --inside the same process:
     

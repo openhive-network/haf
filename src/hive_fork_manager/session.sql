@@ -4,16 +4,19 @@ LANGUAGE plpgsql
 AS
 $$
 DECLARE
-    _debug_msg JSON;
+    _debug_msg JSON = Null;
 BEGIN
 
   -- Display hive.sessions table before insert
     SELECT INTO _debug_msg json_agg(row_to_json(t))
     FROM (SELECT name, params FROM hive.sessions) t;
+    
+    
+    RAISE NOTICE 'Beforee insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
+
     RAISE NOTICE 'Before insert: %', COALESCE(_debug_msg::text, 'hive.sessions is empty');
 
     INSERT INTO hive.sessions(name, params) VALUES (_session_name, _params);
-
 
     -- Display hive.sessions table after insert
     SELECT INTO _debug_msg json_agg(row_to_json(t))
@@ -53,7 +56,7 @@ END;
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hive.session_reconnect(_session_name TEXT)
+CREATE OR REPLACE FUNCTION hive.session_start(_session_name TEXT)
 RETURNS VOID
 LANGUAGE plpgsql
 AS
@@ -61,18 +64,25 @@ $$
 DECLARE
   __reconnect_string TEXT;
   __session_handle BIGINT;
-  params JSONB;
+  __params JSONB;
 BEGIN
 
-    SELECT INTO params
-    FROM hive.sessions
-    WHERE name = _session_name;
+    RAISE NOTICE '0 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
-    __reconnect_string := params ->> 'reconnect_string';
+    RAISE NOTICE 'OOO %', (SELECT params  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
+    __params = (SELECT params  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
+
+    RAISE NOTICE '1 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
+
+
+    RAISE NOTICE 'params is %', __params;
+
+    __reconnect_string := __params ->> 'reconnect_string';
+
+    RAISE NOTICE '2 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
     RAISE NOTICE 'Executing reconnect function for session: %', _session_name;
 
-    RAISE NOTICE 'params is %', params;
     RAISE NOTICE 'reconnect string is %', __reconnect_string;
     EXECUTE __reconnect_string INTO __session_handle; -- mtlk security issue ?
     RAISE NOTICE 'Reconnect function execution completed for session: %. Returned value: %', _session_name, __session_handle;
@@ -80,9 +90,9 @@ BEGIN
     -- update the session_handle field in the params column
     UPDATE hive.sessions
     SET params = jsonb_set(params::jsonb, '{session_handle}', to_jsonb(__session_handle::bigint))
-    WHERE name = __session_name;
+    WHERE name = _session_name;
 
-    RAISE NOTICE 'Updated session_handle for session: % after reconnect function execution', __session_name;
+    RAISE NOTICE 'Updated session_handle for session: % after reconnect function execution', _session_name;
 END;
 $$
 ;
