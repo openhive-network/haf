@@ -49,10 +49,8 @@ BEGIN
 
     PERFORM hive.setup_session(
         _context, 
-        jsonb_build_object(       
-            'reconnect_string', __reconnect_string,
-            'disconnect_function', __disconnect_function
-        )
+         __reconnect_string,
+         __disconnect_function
     );
 
     PERFORM hive.session_start('context');

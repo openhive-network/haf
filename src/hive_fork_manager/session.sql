@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.setup_session(IN _session_name TEXT, IN _params JSONB)
+CREATE OR REPLACE FUNCTION hive.setup_session(IN _session_name TEXT, IN _reconnect_string TEXT, IN _disconnect_function TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 AS
@@ -9,18 +9,18 @@ BEGIN
 
   -- Display hive.sessions table before insert
     SELECT INTO _debug_msg json_agg(row_to_json(t))
-    FROM (SELECT name, params FROM hive.sessions) t;
+    FROM (SELECT * FROM hive.sessions) t;
     
     
-    RAISE NOTICE 'Beforee insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
+    RAISE NOTICE 'Beforee insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, * FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
     RAISE NOTICE 'Before insert: %', COALESCE(_debug_msg::text, 'hive.sessions is empty');
 
-    INSERT INTO hive.sessions(name, params) VALUES (_session_name, _params);
+    INSERT INTO hive.sessions(name, reconnect_string, disconnect_function) VALUES (_session_name, _reconnect_string, _disconnect_function);
 
     -- Display hive.sessions table after insert
     SELECT INTO _debug_msg json_agg(row_to_json(t))
-    FROM (SELECT name, params FROM hive.sessions) t;
+    FROM (SELECT * FROM hive.sessions) t;
     RAISE NOTICE 'After insert: %', _debug_msg::text;
 
     RETURN TRUE;
@@ -34,11 +34,9 @@ LANGUAGE plpgsql
 AS
 $$
 DECLARE
-    __params JSONB;
     __session_ptr BIGINT;
 BEGIN
-    __params = (SELECT params FROM hive.sessions WHERE name = _session_name);
-    __session_ptr = __params->'session_handle';
+    __session_ptr  = (SELECT session_handle FROM hive.sessions WHERE name = _session_name);
     return __session_ptr;
 END;
 $$
@@ -64,22 +62,17 @@ $$
 DECLARE
   __reconnect_string TEXT;
   __session_handle BIGINT;
-  __params JSONB;
 BEGIN
 
-    RAISE NOTICE '0 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
+    RAISE NOTICE '0 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
-    RAISE NOTICE 'OOO %', (SELECT params  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
-    __params = (SELECT params  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
+    RAISE NOTICE 'OOO %', (SELECT (name || reconnect_string || disconnect_function)  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
+    __reconnect_string = (SELECT reconnect_string  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
 
-    RAISE NOTICE '1 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
+    RAISE NOTICE '1 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
 
-    RAISE NOTICE 'params is %', __params;
-
-    __reconnect_string := __params ->> 'reconnect_string';
-
-    RAISE NOTICE '2 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
+    RAISE NOTICE '2 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
     RAISE NOTICE 'Executing reconnect function for session: %', _session_name;
 
@@ -89,7 +82,7 @@ BEGIN
 
     -- update the session_handle field in the params column
     UPDATE hive.sessions
-    SET params = jsonb_set(params::jsonb, '{session_handle}', to_jsonb(__session_handle::bigint))
+    SET session_handle = __session_handle
     WHERE name = _session_name;
 
     RAISE NOTICE 'Updated session_handle for session: % after reconnect function execution', _session_name;
@@ -109,9 +102,9 @@ DECLARE
   __reconnect_string TEXT;
   __session_handle BIGINT;
 BEGIN
-  FOR __session IN SELECT name, params FROM hive.sessions
+  FOR __session IN SELECT * FROM hive.sessions
   LOOP
-    __reconnect_string := __session.params ->> 'reconnect_string';
+    __reconnect_string := __session.reconnect_string;
 
     RAISE NOTICE 'Executing reconnect function for session: %', __session.name;
 
@@ -121,7 +114,7 @@ BEGIN
 
     -- update the session_handle field in the params column
     UPDATE hive.sessions
-    SET params = jsonb_set(params::jsonb, '{session_handle}', to_jsonb(__session_handle::bigint))
+    SET session_handle = __session_handle
     WHERE name = __session.name;
 
     RAISE NOTICE 'Updated session_handle for session: % after reconnect function execution', __session.name;
@@ -142,9 +135,9 @@ DECLARE
     __session_handle_param BIGINT;
     __to_execute TEXT;
 BEGIN
-    FOR __session IN SELECT name, params FROM hive.sessions LOOP
-        __func_to_exec := __session.params ->> 'disconnect_function';
-        __session_handle_param := __session.params -> 'session_handle';
+    FOR __session IN SELECT * FROM hive.sessions LOOP
+        __func_to_exec := __session.disconnect_function;
+        __session_handle_param := __session.session_handle;
 
         RAISE NOTICE 'Processing session: %, function: %, session handle: %', __session.name, __func_to_exec, __session_handle_param;
 

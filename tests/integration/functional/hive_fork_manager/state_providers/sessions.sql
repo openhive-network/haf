@@ -18,22 +18,20 @@ BEGIN
     __reconnect_string = format('SELECT hive.test_in_c_create_a_structure(%L, %L)', 'auto', 'matics');
     __disconnect_function = 'SELECT hive.test_in_c_destroy(%s)';
 
-    RAISE NOTICE '0 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
+    RAISE NOTICE '0 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
     PERFORM hive.setup_session(
         'context', 
-        jsonb_build_object(       
-            'reconnect_string', __reconnect_string,
-            'disconnect_function', __disconnect_function
-        )
+         __reconnect_string,
+        __disconnect_function
     );
 
-    RAISE NOTICE '1 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
+    RAISE NOTICE '1 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
     PERFORM hive.session_start('context');
     --PERFORM hive.sessions_reconnect();
 
-    RAISE NOTICE '2 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT name, params FROM hive.sessions) t)::text, 'hive.sessions is empty');
+    RAISE NOTICE '2 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
     --inside the same process:
     
