@@ -15,7 +15,7 @@ DECLARE
     __reconnect_string TEXT;
     __disconnect_function TEXT;
 BEGIN
-    __session_ptr = (SELECT hive.test_in_c_create_a_structure('auto', 'matics'));
+    --__session_ptr = (SELECT hive.test_in_c_create_a_structure('auto', 'matics'));
     __reconnect_string = format('SELECT hive.test_in_c_create_a_structure(%L, %L)', 'auto', 'matics');
     __disconnect_function = 'SELECT hive.test_in_c_destroy(%s)';
 
@@ -29,9 +29,12 @@ BEGIN
         )
     );
 
+    --PERFORM hive.session_reconnect('context');
+    PERFORM hive.sessions_reconnect();
+
     --inside the same process:
     
-    ASSERT __session_ptr = hive.get_session_ptr('context') ;
+    __session_ptr = hive.get_session_ptr('context') ;
 
     RAISE NOTICE 'returned %', (SELECT hive.test_in_c_get_strings_sum(__session_ptr));
     ASSERT 'automatics' = (SELECT hive.test_in_c_get_strings_sum(__session_ptr));
@@ -42,6 +45,7 @@ BEGIN
 
     __session_ptr = (SELECT hive.test_in_c_create_a_structure('auto', 'moto'));
 
+    ASSERT __session_ptr = hive.get_session_ptr('context') ;
 
 
     --disconnect sessions because we are leaving the current process
