@@ -361,7 +361,12 @@ JsonbValue* jsonstring_to_jsonb_value(const hive::protocol::json_string& str)
 {
   JsonbParseState* parseState = nullptr;
 
-  pushJsonbValue(&parseState, WJB_BEGIN_ARRAY, NULL);
+  // This actually creates a single element JsonbValue, not an array
+  JsonbValue arr;
+  arr.type = jbvArray;
+  arr.val.array.rawScalar = true;
+  arr.val.array.nElems = 1;
+  pushJsonbValue(&parseState, WJB_BEGIN_ARRAY, &arr);
   to_jsonb(str, WJB_ELEM, &parseState);
   return pushJsonbValue(&parseState, WJB_END_ARRAY, NULL);
 }
