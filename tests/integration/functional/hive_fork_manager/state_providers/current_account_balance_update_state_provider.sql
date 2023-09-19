@@ -17,6 +17,7 @@ BEGIN
 
     RAISE NOTICE 'pg_tablespace_location=%', (SELECT pg_tablespace_location(oid)  FROM pg_tablespace WHERE spcname = 'haf_tablespace');
     RAISE NOTICE '2pg_tablespace_location=%', (SELECT hive.get_tablespace_location());
+    RAISE NOTICE '3pg_tablespace_location=%', (SELECT hive.get_shmem_path ( 'context' ));
 
     
 
