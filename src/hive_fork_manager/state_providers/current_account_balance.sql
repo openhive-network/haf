@@ -1,5 +1,5 @@
 DROP FUNCTION if exists  hive.start_provider_csp;
-CREATE OR REPLACE FUNCTION hive.start_provider_csp( _context hive.context_name, _shared_memory_bin_path TEXT)
+CREATE OR REPLACE FUNCTION hive.start_provider_csp( _context hive.context_name, smbp TEXT)
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE
@@ -8,10 +8,13 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_csp';
-    __config_table_name TEXT := _context || '_csp_config';
     __disconnect_function TEXT;
     __reconnect_string TEXT;
+    __shared_memory_bin_path TEXT := (SELECT hive.get_shmem_path(_context));
 BEGIN
+
+
+    RAISE NOTICE 'get_shmem_path=%', (SELECT hive.get_shmem_path(_context));
 
     __context_id = hive.get_context_id( _context );
 
@@ -32,18 +35,18 @@ BEGIN
                         PRIMARY KEY ( account )
                    )', __table_name);
 
-    EXECUTE format('DROP TABLE IF EXISTS hive.%I', __config_table_name);
+    --EXECUTE format('DROP TABLE IF EXISTS hive.%I', __config_table_name);
 
     
-    -- mtlk to remove in session
-    EXECUTE format('CREATE TABLE hive.%I (shared_memory_bin_path TEXT)', __config_table_name);
+    -- -- mtlk to remove in session
+    -- EXECUTE format('CREATE TABLE hive.%I (shared_memory_bin_path TEXT)', __config_table_name);
 
-    -- mtlk to remove in session
-    EXECUTE format('INSERT INTO hive.%I VALUES (%L)', __config_table_name, _shared_memory_bin_path);
+    -- -- mtlk to remove in session
+    -- EXECUTE format('INSERT INTO hive.%I VALUES (%L)', __config_table_name, __shared_memory_bin_path);
 
     
 
-    __reconnect_string = format('SELECT hive.csp_init(%L, %L, %L)', _context,_shared_memory_bin_path, hive.get_postgres_url());
+    __reconnect_string = format('SELECT hive.csp_init(%L, %L, %L)', _context, __shared_memory_bin_path, hive.get_postgres_url());
 
     __disconnect_function = 'SELECT hive.csp_finish(%s)';
 
@@ -55,7 +58,7 @@ BEGIN
 
     PERFORM hive.session_start(_context);
 
-    RETURN ARRAY[ __table_name,  __config_table_name ];
+    RETURN ARRAY[ __table_name ];
 END;
 $BODY$
 ;
@@ -72,12 +75,11 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_csp';
-    __config_table_name TEXT := _context || '_csp_config';
     __get_balances TEXT;
     __database_name TEXT;
     __postgres_url TEXT;
     __current_pid INT;
-    __shared_memory_bin_path TEXT;
+    __shared_memory_bin_path TEXT := hive.get_shmem_path(_context);
     __consensus_state_provider_replay_call_ok BOOLEAN;
     __session_ptr BIGINT;
 BEGIN
@@ -96,7 +98,7 @@ BEGIN
 
     __postgres_url := hive.get_postgres_url();
 
-    __shared_memory_bin_path := hive.get_shared_memory_bin_path(__config_table_name);
+    
 
 
 
@@ -144,23 +146,6 @@ END;
 $BODY$
 ;
 
-
-CREATE OR REPLACE FUNCTION hive.get_shared_memory_bin_path(_config_table_name TEXT)
-    RETURNS TEXT
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-DECLARE
-    __shared_memory_bin_path TEXT;
-BEGIN
-    EXECUTE format('SELECT * FROM hive.%s', _config_table_name) INTO __shared_memory_bin_path;
-    RAISE NOTICE '__shared_memory_bin_path=%', __shared_memory_bin_path;
-    RETURN __shared_memory_bin_path;
-END;
-$BODY$
-;
-
 CREATE OR REPLACE FUNCTION hive.drop_state_provider_csp( _context hive.context_name )
     RETURNS void
     LANGUAGE plpgsql
@@ -170,8 +155,7 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_csp';
-    __config_table_name TEXT := _context || '_csp_config';
-    __shared_memory_bin_path TEXT;
+    __shared_memory_bin_path TEXT := hive.get_shmem_path(_context);
     __session_ptr BIGINT;
 BEGIN
     __context_id = hive.get_context_id( _context );
@@ -180,11 +164,9 @@ BEGIN
         RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
-    EXECUTE format('SELECT * FROM hive.%s ', __config_table_name) INTO __shared_memory_bin_path;
     raise notice '__shared_memory_bin_path=%', __shared_memory_bin_path;
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
-    EXECUTE format( 'DROP TABLE hive.%I', __config_table_name );
 
     __session_ptr = hive.get_session_ptr(_context);
 
@@ -197,3 +179,26 @@ BEGIN
 END;
 $BODY$
 ;
+
+
+CREATE OR REPLACE FUNCTION hive.get_shmem_path(context TEXT) RETURNS TEXT AS $$
+DECLARE
+    dir_path TEXT;
+    combined_path TEXT;
+    shmem_path TEXT;
+BEGIN
+    -- Fetch the dir_path from the tools function
+    SELECT hive.get_tablespace_location() INTO dir_path;
+
+    -- Erase the last segment
+    SELECT regexp_replace(dir_path, '/[^/]*$', '') INTO dir_path;
+
+    -- Combine dir_path with the context parameter
+    combined_path := dir_path ||'/shmem/' || context;
+
+    RAISE NOTICE 'Returning from hive.get_shmem_path=%', combined_path;
+
+
+    RETURN combined_path;
+END;
+$$ LANGUAGE plpgsql;
