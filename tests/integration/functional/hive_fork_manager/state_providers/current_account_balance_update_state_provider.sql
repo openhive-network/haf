@@ -15,6 +15,10 @@ BEGIN
 
     RAISE NOTICE 'Storing consensus provider data in %', hive.get_consensus_storage_path();
 
+    RAISE NOTICE 'pg_tablespace_location=%', (SELECT pg_tablespace_location(oid)  FROM pg_tablespace WHERE spcname = 'haf_tablespace');
+
+
+
     INSERT INTO hive.operation_types (id, name, is_virtual) VALUES
         (0,	'hive::protocol::vote_operation',	false),
         (1,	'hive::protocol::comment_operation',	false),
