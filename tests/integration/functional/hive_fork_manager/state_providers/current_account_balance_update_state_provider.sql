@@ -47,13 +47,13 @@ BEGIN
 
     PERFORM hive.app_create_context( 'context' );
     
-    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.create_session (via app_state_provider_import)';
+    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.setup_session (via app_state_provider_import)';
 
     -- creates csp_session
     PERFORM hive.app_state_provider_import( 'CSP', 'context' , hive.get_consensus_storage_path());
 
     -- check if sessions table is filled
-    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.create_session (via app_state_provider_import)';
+    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.setup_session (via app_state_provider_import)';
 
     PERFORM hive.app_context_detach( 'context' );
     UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 5;

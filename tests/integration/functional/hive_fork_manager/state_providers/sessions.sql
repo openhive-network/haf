@@ -20,7 +20,7 @@ BEGIN
     __disconnect_function = 'SELECT hive.test_in_c_destroy(%s)';
 
 
-    PERFORM hive.create_session(
+    PERFORM hive.setup_session(
         'context', 
         jsonb_build_object(       
             'reconnect_string', __reconnect_string,

@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.create_session(IN _session_name TEXT, IN _params JSONB)
+CREATE OR REPLACE FUNCTION hive.setup_session(IN _session_name TEXT, IN _params JSONB)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 AS

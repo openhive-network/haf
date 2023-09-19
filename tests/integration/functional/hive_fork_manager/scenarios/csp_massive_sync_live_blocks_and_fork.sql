@@ -89,13 +89,13 @@ PERFORM hive.app_create_context( 'context' );
 CREATE SCHEMA A;
 CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
     -- csp creates csp_session
-    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.create_session (via app_state_provider_import)';
+    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.setup_session (via app_state_provider_import)';
     
     -- csp creates csp_session
     PERFORM hive.app_state_provider_import('CSP', 'context' , hive.get_consensus_storage_path());
 
     -- csp check if sessions table is filled
-    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.create_session (via app_state_provider_import)';
+    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.setup_session (via app_state_provider_import)';
 
 
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 1 MASSIVE SYNC EVENT

@@ -49,7 +49,7 @@ BEGIN
 
     __disconnect_function = 'SELECT hive.csp_finish(%s)';
 
-    PERFORM hive.create_session(
+    PERFORM hive.setup_session(
         _context, 
         jsonb_build_object(       
             'shared_memory_bin_path', _shared_memory_bin_path,
