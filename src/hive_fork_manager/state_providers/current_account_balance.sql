@@ -9,7 +9,6 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_csp';
     __config_table_name TEXT := _context || '_csp_config';
-    __handle BIGINT;
     __disconnect_function TEXT;
     __reconnect_string TEXT;
 BEGIN
@@ -43,7 +42,6 @@ BEGIN
     EXECUTE format('INSERT INTO hive.%I VALUES (%L)', __config_table_name, _shared_memory_bin_path);
 
     
-    __handle = (SELECT hive.csp_init(_context,_shared_memory_bin_path, hive.get_postgres_url()));
 
     __reconnect_string = format('SELECT hive.csp_init(%L, %L, %L)', _context,_shared_memory_bin_path, hive.get_postgres_url());
 
@@ -52,13 +50,12 @@ BEGIN
     PERFORM hive.setup_session(
         _context, 
         jsonb_build_object(       
-            'shared_memory_bin_path', _shared_memory_bin_path,
-            'postgres_url', hive.get_postgres_url(),
             'reconnect_string', __reconnect_string,
-            'disconnect_function', __disconnect_function,
-            'session_handle', __handle
+            'disconnect_function', __disconnect_function
         )
     );
+
+    PERFORM hive.session_start('context');
 
     RETURN ARRAY[ __table_name,  __config_table_name ];
 END;

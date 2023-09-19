@@ -15,7 +15,6 @@ DECLARE
     __reconnect_string TEXT;
     __disconnect_function TEXT;
 BEGIN
-    --__session_ptr = (SELECT hive.test_in_c_create_a_structure('auto', 'matics'));
     __reconnect_string = format('SELECT hive.test_in_c_create_a_structure(%L, %L)', 'auto', 'matics');
     __disconnect_function = 'SELECT hive.test_in_c_destroy(%s)';
 
@@ -25,8 +24,7 @@ BEGIN
         'context', 
         jsonb_build_object(       
             'reconnect_string', __reconnect_string,
-            'disconnect_function', __disconnect_function,
-            'session_handle', __session_ptr
+            'disconnect_function', __disconnect_function
         )
     );
 
