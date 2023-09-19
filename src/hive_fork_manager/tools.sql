@@ -43,3 +43,28 @@ END;
 $BODY$
 ;
 
+-- This function is used by the consensus state provider to save its state here.
+CREATE OR REPLACE FUNCTION hive.get_tablespace_location() RETURNS TEXT AS $BODY$
+DECLARE
+    tablespace_name TEXT;
+    tablespace_location TEXT;
+BEGIN
+    -- Fetch the tablespace name for the current database ('haf_block_log')
+    SELECT pg_tablespace.spcname 
+    INTO tablespace_name
+    FROM 
+        pg_database 
+    JOIN 
+        pg_tablespace ON pg_database.dattablespace = pg_tablespace.oid 
+    WHERE 
+        datname = current_database();
+
+    -- Get the location of that tablespace
+    SELECT pg_tablespace_location(oid) 
+    INTO tablespace_location
+    FROM pg_tablespace 
+    WHERE spcname = tablespace_name;
+
+    RETURN tablespace_location;
+END;
+$BODY$ LANGUAGE plpgsql;
