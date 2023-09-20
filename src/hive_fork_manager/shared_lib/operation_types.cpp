@@ -121,7 +121,7 @@ Datum to_datum(const hive::protocol::account_name_type& value)
 std::optional<Datum> to_datum(const hive::protocol::json_string& value)
 {
   if (value.empty()) return {};
-  else return PointerGetDatum(JsonbValueToJsonb(jsonstring_to_jsonb_value(value)));
+  else return to_datum(static_cast<std::string>(value));
 }
 Datum to_datum(const hive::protocol::authority::account_authority_map& value)
 {
@@ -161,7 +161,7 @@ template<typename T>
 std::optional<Datum> to_datum(const fc::optional<T>& value)
 {
   if (value.valid()) return {to_datum(value.value())};
-  else return std::nullopt; // NULL
+  else return std::nullopt;
 }
 template<typename T>
 Datum to_datum(const fc::flat_set<T>& value)
