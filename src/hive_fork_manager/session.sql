@@ -101,9 +101,10 @@ DECLARE
   __session RECORD;
   __func_to_exec TEXT;
   __session_handle_param TEXT;
+  __to_execute TEXT;
 BEGIN
 
-  __session = (SELECT *  FROM hive.sessions WHERE name = _session_name LIMIT 1) ;
+  SELECT * INTO __session FROM hive.sessions WHERE name = _session_name LIMIT 1 ;
 
     __func_to_exec := __session.disconnect_function;
     __session_handle_param := __session.session_handle;
