@@ -1,5 +1,5 @@
 DROP FUNCTION if exists  hive.start_provider_csp;
-CREATE OR REPLACE FUNCTION hive.start_provider_csp( _context hive.context_name, smbp TEXT)
+CREATE OR REPLACE FUNCTION hive.start_provider_csp( _context hive.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE

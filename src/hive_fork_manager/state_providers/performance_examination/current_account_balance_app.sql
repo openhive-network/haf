@@ -91,7 +91,7 @@ BEGIN
     PERFORM cab_app.define_schema();
     PERFORM hive.app_state_provider_import('KEYAUTH', _appContext);
     PERFORM hive.app_state_provider_import('ACCOUNTS', _appContext);
-    PERFORM hive.app_state_provider_import('CSP', _appContext, _consensus_storage || '/' || _appContext);
+    PERFORM hive.app_state_provider_import('CSP', _appContext);
     COMMIT;
   END IF;
 

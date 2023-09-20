@@ -1,7 +1,7 @@
 -- Collects all created accounts into table hive.<context_name>_accounts
 -- Table has two columns: id INT, name TEXT
 
-CREATE OR REPLACE FUNCTION hive.start_provider_accounts( _context hive.context_name, _dummy_arg1 TEXT DEFAULT '')
+CREATE OR REPLACE FUNCTION hive.start_provider_accounts( _context hive.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE

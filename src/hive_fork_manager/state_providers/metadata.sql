@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.start_provider_metadata( _context hive.context_name, _dummy_arg1 TEXT DEFAULT '')
+CREATE OR REPLACE FUNCTION hive.start_provider_metadata( _context hive.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE

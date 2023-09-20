@@ -92,7 +92,7 @@ CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
     ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.session_setup (via app_state_provider_import)';
     
     -- csp creates csp_session
-    PERFORM hive.app_state_provider_import('CSP', 'context' , hive.get_consensus_storage_path());
+    PERFORM hive.app_state_provider_import('CSP', 'context');
 
     -- csp check if sessions table is filled
     ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.session_setup (via app_state_provider_import)';
