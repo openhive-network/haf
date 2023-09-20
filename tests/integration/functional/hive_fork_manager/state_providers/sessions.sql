@@ -16,7 +16,7 @@ BEGIN
     __reconnect_string = format('SELECT hive.testincstructure_create(%L, %L)', 'auto', 'matics');
     __disconnect_function = 'SELECT hive.testincstructure_destroy(%s)';
 
-    RAISE NOTICE '0 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
+
 
     PERFORM hive.setup_session(
         'context', 
@@ -24,18 +24,18 @@ BEGIN
         __disconnect_function
     );
 
-    RAISE NOTICE '1 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
+
 
     PERFORM hive.session_start('context');
     --PERFORM hive.sessions_reconnect();
 
-    RAISE NOTICE '2 insert: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
+
 
     --inside the same process:
     
     __session_ptr = hive.get_session_ptr('context') ;
 
-    RAISE NOTICE 'returned %', (SELECT hive.testincstructure_sum(__session_ptr));
+
     ASSERT 'automatics' = (SELECT hive.testincstructure_sum(__session_ptr)), 'A1';
 
     PERFORM hive.testincstructure_destroy(__session_ptr);
@@ -52,7 +52,7 @@ BEGIN
     --disconnect sessions because we are leaving the current process
     PERFORM hive.sessions_disconnect();
 
-    RAISE NOTICE 'Current backend PID is: %', pg_backend_pid();
+
 
     INSERT INTO hive.memory_between_procedures (pid, session_ptr)
     VALUES (pg_backend_pid(), __session_ptr);
@@ -83,7 +83,7 @@ BEGIN
     __session_ptr = hive.get_session_ptr('context');
     ASSERT(__session_ptr <> prevoius_session_ptr), 'A4 ' || '__session_ptr=' || __session_ptr || ' prevoius_session_ptr=' || prevoius_session_ptr  ;
 
-    RAISE NOTICE 'returned %', (SELECT hive.testincstructure_sum(__session_ptr));
+
 
 
     PERFORM hive.sessions_disconnect();
@@ -139,7 +139,7 @@ INSERT INTO hive.test_struct VALUES ('david', 'garcia', 111);
 
 
 -- For functional hive.sessions test
--- We are emulating allocatin a two string structure with pointer
+-- We are emulating allocatin a two string structure with a pointer
 CREATE OR REPLACE FUNCTION hive.testincstructure_create(IN s1 TEXT, IN s2 TEXT)
 RETURNS BIGINT
 LANGUAGE plpgsql
