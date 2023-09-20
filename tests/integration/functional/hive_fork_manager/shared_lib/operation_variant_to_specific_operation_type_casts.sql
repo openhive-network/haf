@@ -19,6 +19,21 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_comment_operation_invalid_json_metadata;
+CREATE PROCEDURE check_operation_to_comment_operation_invalid_json_metadata()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.comment_operation;
+BEGIN
+  raise notice 'checking conversion to comment_operation (invalid json metadata)';
+  op := '{"type": "comment_operation", "value": {"body": "Welcome all to squeek.io. Please enjoy your stay!", "title": "Welcome all to squeek.io. Please enjoy your stay! <a href=\"https://steemit.com/steem/@picokernel/alpha-v2-introducing-screem-feeds-followers-settings-oh-my\">CREATED BY SCREEM V0.3</a>", "author": "picokernel", "permlink": "re-picokernel-masterthread-alpha-v3-testing-week-21472228034", "json_metadata": "{\"tags\":[\"screem\",], \"created\":\"1472228034\", \"used-by\":\"screem\"}", "parent_author": "picokernel", "parent_permlink": "masterthread-alpha-v3-testing-week-2"}}'::JSONB::hive.operation::hive.comment_operation;
+  ASSERT (select op.json_metadata = '{"tags":["screem",], "created":"1472228034", "used-by":"screem"}'), format('Unexpected value of comment_operation.json_metadata: %s', op.json_metadata);
+END;
+$BODY$
+;
+
 DROP PROCEDURE IF EXISTS check_operation_to_comment_options_operation;
 CREATE PROCEDURE check_operation_to_comment_options_operation()
 LANGUAGE 'plpgsql'
@@ -93,6 +108,21 @@ BEGIN
   ASSERT (select op.posting = '(1,"{}","{""(STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH, 1)""}")'::hive.authority), format('Unexpected value of account_create_operation.posting: %s', op.posting);
   ASSERT (select op.memo_key = 'STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH'), format('Unexpected value of account_create_operation.memo_key: %s', op.memo_key);
   ASSERT (select op.json_metadata = '{}'), format('Unexpected value of account_create_operation.json_metadata: %s', op.json_metadata);
+END;
+$BODY$
+;
+
+DROP PROCEDURE IF EXISTS check_operation_to_account_create_operation_empty_json_metadata;
+CREATE PROCEDURE check_operation_to_account_create_operation_empty_json_metadata()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.account_create_operation;
+BEGIN
+  raise notice 'checking conversion to account_create_operation (empty json metadata)';
+  op := '{"type":"account_create_operation","value":{"fee":{"amount":"0","precision":3,"nai":"@@000000021"},"creator":"initminer","new_account_name":"dan","owner":{"weight_threshold":1,"account_auths":[],"key_auths": [["STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH",1]]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH",1]]},"posting": {"weight_threshold":1,"account_auths":[],"key_auths":[["STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH",1]]},"memo_key":"STM5vYywCazmCT3XSRhxoPPHEznNJqQHzSDnGsGYTKR6VkU88E1gH"}}'::JSONB::hive.operation::hive.account_create_operation;
+  ASSERT (select op.json_metadata IS NULL), format('Unexpected value of account_create_operation.json_metadata: %s', op.json_metadata);
 END;
 $BODY$
 ;
@@ -354,6 +384,21 @@ BEGIN
   ASSERT (select op.required_posting_auths = '{alice}'), format('Unexpected value of custom_json_operation.required_posting_auths: %s', op.required_posting_auths);
   ASSERT (select op.id = 'follow'), format('Unexpected value of custom_json_operation.id: %s', op.id);
   ASSERT (select op.json = '{"type":"follow_operation","value":{"follower":"alice","following":"@bob","what":["blog"]}}'), format('Unexpected value of custom_json_operation.json: %s', op.json);
+END;
+$BODY$
+;
+
+DROP PROCEDURE IF EXISTS check_operation_to_custom_json_operation_empty_json_string;
+CREATE PROCEDURE check_operation_to_custom_json_operation_empty_json_string()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.custom_json_operation;
+BEGIN
+  raise notice 'checking conversion to custom_json_operation';
+  op := '{"type":"custom_json_operation","value":{"required_auths":[],"required_posting_auths":["alice"],"id":"follow"}}'::JSONB::hive.operation::hive.custom_json_operation;
+  ASSERT (select op.json IS NULL), format('Unexpected value of custom_json_operation.json: %s', op.json);
 END;
 $BODY$
 ;
@@ -1687,10 +1732,12 @@ AS
 $BODY$
 BEGIN
   CALL check_operation_to_comment_operation();
+  CALL check_operation_to_comment_operation_invalid_json_metadata();
   CALL check_operation_to_comment_options_operation();
   CALL check_operation_to_vote_operation();
   CALL check_operation_to_witness_set_properties_operation();
   CALL check_operation_to_account_create_operation();
+  CALL check_operation_to_account_create_operation_empty_json_metadata();
   CALL check_operation_to_account_create_with_delegation_operation();
   CALL check_operation_to_account_update2_operation();
   CALL check_operation_to_account_update_operation();
@@ -1705,6 +1752,7 @@ BEGIN
   CALL check_operation_to_create_claimed_account_operation();
   CALL check_operation_to_custom_binary_operation();
   CALL check_operation_to_custom_json_operation();
+  CALL check_operation_to_custom_json_operation_empty_json_string();
   CALL check_operation_to_custom_operation();
   CALL check_operation_to_decline_voting_rights_operation();
   CALL check_operation_to_delegate_vesting_shares_operation();
