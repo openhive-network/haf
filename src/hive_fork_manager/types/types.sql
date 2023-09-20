@@ -66,7 +66,7 @@ CREATE TYPE hive.comment_operation AS (
   permlink hive.permlink,
   title hive.comment_title,
   body text,
-  json_metadata jsonb
+  json_metadata TEXT
 );
 
 CREATE TYPE hive.beneficiary_route_type AS (
@@ -153,7 +153,7 @@ CREATE TYPE hive.account_create_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata jsonb
+  json_metadata TEXT
 );
 
 CREATE TYPE hive.account_create_with_delegation_operation AS (
@@ -165,7 +165,7 @@ CREATE TYPE hive.account_create_with_delegation_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata jsonb,
+  json_metadata TEXT,
   extensions hive.extensions_type
 );
 
@@ -175,8 +175,8 @@ CREATE TYPE hive.account_update2_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata jsonb,
-  posting_json_metadata jsonb,
+  json_metadata TEXT,
+  posting_json_metadata TEXT,
   extensions hive.extensions_type
 );
 
@@ -186,7 +186,7 @@ CREATE TYPE hive.account_update_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata jsonb
+  json_metadata TEXT
 );
 
 CREATE TYPE hive.account_witness_proxy_operation AS (
@@ -243,7 +243,7 @@ CREATE TYPE hive.create_claimed_account_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata jsonb,
+  json_metadata TEXT,
   extensions hive.extensions_type
 );
 
@@ -260,7 +260,7 @@ CREATE TYPE hive.custom_json_operation AS (
   required_auths hive.account_name_type[],
   required_posting_auths hive.account_name_type[],
   id hive.custom_id_type,
-  json jsonb
+  json TEXT
 );
 
 CREATE TYPE hive.custom_operation AS (
@@ -321,7 +321,7 @@ CREATE TYPE hive.escrow_transfer_operation AS (
   escrow_id int8, -- uint32_t: 4 byte, but unsigned (int8)
   agent hive.account_name_type,
   fee hive.asset,
-  json_meta jsonb,
+  json_meta TEXT,
   ratification_deadline timestamp,
   escrow_expiration timestamp
 );
