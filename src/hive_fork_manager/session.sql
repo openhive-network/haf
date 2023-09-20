@@ -155,21 +155,3 @@ END;
 $$
 ;
 
-
--------------------------- TESTS --------------------------
-
-CREATE OR REPLACE FUNCTION hive.test_in_c_create_a_structure(str1 TEXT, str2 TEXT)
-RETURNS BIGINT
-AS 'MODULE_PATHNAME', 'test_in_c_create_a_structure' LANGUAGE C;
-
-
-CREATE OR REPLACE FUNCTION hive.test_in_c_get_strings_sum(IN _session_ptr BIGINT)
-RETURNS TEXT
-AS 'MODULE_PATHNAME', 'test_in_c_get_strings_sum' LANGUAGE C;
-
-
-CREATE OR REPLACE FUNCTION hive.test_in_c_destroy(IN _session_ptr BIGINT)
-RETURNS VOID
-AS 'MODULE_PATHNAME', 'test_in_c_destroy' LANGUAGE C;
-
-
