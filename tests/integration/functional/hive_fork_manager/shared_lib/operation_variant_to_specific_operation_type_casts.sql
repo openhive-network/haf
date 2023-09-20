@@ -14,7 +14,7 @@ BEGIN
   ASSERT (select op.permlink = 'wednesday-walk-in-buttonwood-park-hive-155530'), format('Unexpected value of comment_operation.permlink: %s', op.permlink);
   ASSERT (select op.title = 'Wednesday Walk in Buttonwood Park'), format('Unexpected value of comment_operation.title: %s', op.title);
   ASSERT (select op.body = 'This is a cross post of [@tattoodjay/wednesday-walk-in-buttonwood-park](/hive-194913/@tattoodjay/wednesday-walk-in-buttonwood-park) by @tattoodjay.<br><br>A walk around Buttonwood Park'), format('Unexpected value of comment_operation.body: %s', op.body);
-  ASSERT (select op.json_metadata = '"{\"app\":\"peakd/2023.2.2\",\"tags\":[\"cross-post\"],\"image\":[],\"original_author\":\"tattoodjay\", \"original_permlink\":\"wednesday-walk-in-buttonwood-park\"}"'), format('Unexpected value of comment_operation.json_metadata: %s', op.json_metadata);
+  ASSERT (select op.json_metadata = '{"app":"peakd/2023.2.2","tags":["cross-post"],"image":[],"original_author":"tattoodjay", "original_permlink":"wednesday-walk-in-buttonwood-park"}'), format('Unexpected value of comment_operation.json_metadata: %s', op.json_metadata);
 END;
 $BODY$
 ;
@@ -28,7 +28,7 @@ DECLARE
   op hive.comment_options_operation;
 BEGIN
   raise notice 'checking conversion to comment_options_operation';
-  op := '{"type": "comment_options_operation", "value": {"allow_curation_rewards": false, "allow_votes": true, "author": "tattoodjay", "extensions": [{"type":"comment_payout_beneficiaries", "value": {"beneficiaries": [{"account": "bob", "weight": 100}, {"account": "eva", "weight": 50}]}},], "max_accepted_payout": {"nai": "@@000000013", "amount": "332", "precision": 3}, "percent_hbd": 10000, "permlink": "wednesday-walk-in-buttonwood-park-hive-155530"}}'::JSONB::hive.operation::hive.comment_options_operation;
+  op := '{"type": "comment_options_operation", "value": {"allow_curation_rewards": false, "allow_votes": true, "author": "tattoodjay", "extensions": [{"type":"comment_payout_beneficiaries", "value": {"beneficiaries": [{"account": "bob", "weight": 100}, {"account": "eva", "weight": 50}]}}], "max_accepted_payout": {"nai": "@@000000013", "amount": "332", "precision": 3}, "percent_hbd": 10000, "permlink": "wednesday-walk-in-buttonwood-park-hive-155530"}}'::JSONB::hive.operation::hive.comment_options_operation;
   ASSERT (select op.author = 'tattoodjay'), format('Unexpected value of comment_options_operation.author: %s', op.author);
   ASSERT (select op.permlink = 'wednesday-walk-in-buttonwood-park-hive-155530'), format('Unexpected value of comment_options_operation.permlink: %s', op.permlink);
   ASSERT (select op.max_accepted_payout = '(332,3,@@000000013)'::hive.asset), format('Unexpected value of comment_options_operation.max_accepted_payout: %s', op.max_accepted_payout);
@@ -136,7 +136,7 @@ BEGIN
   ASSERT (select op.active IS NULL), format('Unexpected value of account_update2_operation.active: %s', op.active);
   ASSERT (select op.posting IS NULL), format('Unexpected value of account_update2_operation.posting: %s', op.posting);
   ASSERT (select op.memo_key = 'STM7NVJSvcpYMSVkt1mzJ7uo8Ema7uwsuSypk9wjNjEK9cDyN6v3S'), format('Unexpected value of account_update2_operation.memo_key: %s', op.memo_key);
-  ASSERT (select op.json_metadata = '{"success": true}'), format('Unexpected value of account_update2_operation.json_metadata: %s', op.json_metadata);
+  ASSERT (select op.json_metadata = '{"success":true}'), format('Unexpected value of account_update2_operation.json_metadata: %s', op.json_metadata);
   ASSERT (select op.posting_json_metadata = '{}'), format('Unexpected value of account_update2_operation.posting_json_metadata: %s', op.posting_json_metadata);
   ASSERT (select op.extensions = '{}'), format('Unexpected value of account_update2_operation.extensions: %s', op.extensions);
 END;
@@ -651,7 +651,7 @@ BEGIN
   ASSERT (select op.memo = 'memo'), format('Unexpected value of recurrent_transfer_operation.memo: %s', op.memo);
   ASSERT (select op.recurrence = 720), format('Unexpected value of recurrent_transfer_operation.recurrence: %s', op.recurrence);
   ASSERT (select op.executions = 12), format('Unexpected value of recurrent_transfer_operation.executions: %s', op.executions);
-  ASSERT (select op.extensions = '{}'), format('Unexpected value of recurrent_transfer_operation.extensions: %s', op.extensions);
+  ASSERT (select op.extensions = '()'::hive.recurrent_transfer_extensions_type), format('Unexpected value of recurrent_transfer_operation.extensions: %s', op.extensions);
 END;
 $BODY$
 ;
