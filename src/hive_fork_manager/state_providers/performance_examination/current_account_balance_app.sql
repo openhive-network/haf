@@ -16,7 +16,7 @@ DECLARE
   __last_block int;
   __next_block_range hive.blocks_range;
 BEGIN
-  PERFORM hive.sessions_reconnect();
+  PERFORM hive.session_reconnect_all();
 
   CALL cab_app.prepare_app_data(_appContext, _consensus_storage, __last_block);
   
@@ -49,7 +49,7 @@ BEGIN
 
   CALL cab_app.finalize_app(_appContext, _consensus_storage , __last_block);
 
-  PERFORM hive.sessions_disconnect();
+  PERFORM hive.session_disconnect_all();
 
 END$$;
 

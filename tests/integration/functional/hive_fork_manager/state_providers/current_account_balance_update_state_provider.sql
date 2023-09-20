@@ -53,25 +53,25 @@ BEGIN
 
     PERFORM hive.app_create_context( 'context' );
     
-    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.setup_session (via app_state_provider_import)';
+    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.session_setup (via app_state_provider_import)';
 
     -- creates csp_session
     PERFORM hive.app_state_provider_import( 'CSP', 'context' , hive.get_consensus_storage_path());
 
     -- check if sessions table is filled
-    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.setup_session (via app_state_provider_import)';
+    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.session_setup (via app_state_provider_import)';
 
     PERFORM hive.app_context_detach( 'context' );
     UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 5;
     COMMIT;
 
-    __session_ptr = hive.get_session_ptr('context');
+    __session_ptr = hive.session_get_managed_object_handle('context');
     RAISE NOTICE '__session_ptr=%', __session_ptr;
     RAISE NOTICE 'sesion_consensus_state_provider_get_expected_block_num = %', 
         hive.consensus_state_provider_get_expected_block_num(__session_ptr);
 
     --disconnect sessions because we are leaving the current process
-    PERFORM hive.sessions_disconnect();
+    PERFORM hive.session_disconnect_all();
 
 END;
 $BODY$
@@ -86,15 +86,15 @@ DECLARE
     __session_ptr BIGINT;
 BEGIN
 
-    PERFORM hive.sessions_reconnect();
-    __session_ptr = hive.get_session_ptr('context');
+    PERFORM hive.session_reconnect_all();
+    __session_ptr = hive.session_get_managed_object_handle('context');
 
     ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
                              'consensus_state_provider_get_expected_block_num should return 1';
     PERFORM hive.update_state_provider_csp( 1, 6, 'context' );
     COMMIT;
 
-    PERFORM hive.sessions_disconnect();
+    PERFORM hive.session_disconnect_all();
 END;
 $BODY$
 LANGUAGE 'plpgsql';
@@ -110,8 +110,8 @@ DECLARE
     actual hstore := '';
     __session_ptr BIGINT;
 BEGIN
-    PERFORM hive.sessions_reconnect();
-    __session_ptr = hive.get_session_ptr('context');
+    PERFORM hive.session_reconnect_all();
+    __session_ptr = hive.session_get_managed_object_handle('context');
 
     -- After  reconnecting - automatic undo has been performed:
     ASSERT 1 = (SELECT * FROM hive.consensus_state_provider_get_expected_block_num(__session_ptr)),
@@ -141,9 +141,9 @@ BEGIN
 
     ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context');
 
-    PERFORM hive.app_state_provider_drop_all( 'context' ), 'Sessions table should contain ''context'' entry before hive.destroy_session (via app_state_provider_drop_all)';
+    PERFORM hive.app_state_provider_drop_all( 'context' ), 'Sessions table should contain ''context'' entry before hive.session_forget (via app_state_provider_drop_all)';
 
-    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry after hive.destroy_session (via app_state_provider_drop_all)';
+    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry after hive.session_forget (via app_state_provider_drop_all)';
 
     -- ASSERT (SELECT to_regclass('hive.context_current_account_balance')) IS NULL, 'State provider table should not exist';
 END;

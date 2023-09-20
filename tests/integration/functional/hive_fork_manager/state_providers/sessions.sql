@@ -18,7 +18,7 @@ BEGIN
 
 
 
-    PERFORM hive.setup_session(
+    PERFORM hive.session_setup(
         'context', 
          __reconnect_string,
         __disconnect_function
@@ -26,14 +26,14 @@ BEGIN
 
 
 
-    PERFORM hive.session_start('context');
-    --PERFORM hive.sessions_reconnect();
+    PERFORM hive.session_managed_object_start('context');
+    --PERFORM hive.session_reconnect_all();
 
 
 
     --inside the same process:
     
-    __session_ptr = hive.get_session_ptr('context') ;
+    __session_ptr = hive.session_get_managed_object_handle('context') ;
 
 
     ASSERT 'automatics' = (SELECT hive.testincstructure_sum(__session_ptr)), 'A1';
@@ -42,15 +42,18 @@ BEGIN
 
     -- ASSERT 'context; not in sessions
 
+
+
+
     __session_ptr = (SELECT hive.testincstructure_create('auto', 'moto'));
-    __session_ptr2 =  hive.get_session_ptr('context');
+    __session_ptr2 =  hive.session_get_managed_object_handle('context');
 
     --ASSERT __session_ptr =__session_ptr2, 'A2 __session_ptr=' || __session_ptr || ' __session_ptr2='  || __session_ptr2;
 
 
 
     --disconnect sessions because we are leaving the current process
-    PERFORM hive.sessions_disconnect();
+    PERFORM hive.session_disconnect_all();
 
 
 
@@ -77,16 +80,16 @@ BEGIN
     SELECT pid, session_ptr INTO previous_pid, prevoius_session_ptr FROM hive.memory_between_procedures;
 
     ASSERT(pg_backend_pid() <> previous_pid), 'A3';
-    PERFORM hive.sessions_reconnect();
+    PERFORM hive.session_reconnect_all();
 
 
-    __session_ptr = hive.get_session_ptr('context');
+    __session_ptr = hive.session_get_managed_object_handle('context');
     ASSERT(__session_ptr <> prevoius_session_ptr), 'A4 ' || '__session_ptr=' || __session_ptr || ' prevoius_session_ptr=' || prevoius_session_ptr  ;
 
 
 
 
-    PERFORM hive.sessions_disconnect();
+    PERFORM hive.session_disconnect_all();
 END;
 $BODY$
 LANGUAGE 'plpgsql';
@@ -100,8 +103,8 @@ $BODY$
 DECLARE
     __session_ptr BIGINT;
 BEGIN
-    PERFORM hive.sessions_reconnect();
-    __session_ptr = hive.get_session_ptr('context');
+    PERFORM hive.session_reconnect_all();
+    __session_ptr = hive.session_get_managed_object_handle('context');
     PERFORM hive.testincstructure_destroy(__session_ptr);
 
 END;

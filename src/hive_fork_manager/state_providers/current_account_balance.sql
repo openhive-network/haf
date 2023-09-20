@@ -50,13 +50,13 @@ BEGIN
 
     __disconnect_function = 'SELECT hive.csp_finish(%s)';
 
-    PERFORM hive.setup_session(
+    PERFORM hive.session_setup(
         _context, 
          __reconnect_string,
          __disconnect_function
     );
 
-    PERFORM hive.session_start(_context);
+    PERFORM hive.session_managed_object_start(_context);
 
     RETURN ARRAY[ __table_name ];
 END;
@@ -106,7 +106,7 @@ BEGIN
 
 
 
-     __session_ptr = hive.get_session_ptr(_context);
+     __session_ptr = hive.session_get_managed_object_handle(_context);
     __consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(__session_ptr, _first_block, _last_block));
 
     RAISE NOTICE '__consensus_state_provider_replay_call_ok=%', __consensus_state_provider_replay_call_ok;
@@ -168,13 +168,13 @@ BEGIN
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
 
-    __session_ptr = hive.get_session_ptr(_context);
+    __session_ptr = hive.session_get_managed_object_handle(_context);
 
     -- wipe clean
     PERFORM hive.csp_finish(__session_ptr, _wipe_clean_shared_memory_bin := TRUE); 
 
     --delete session entry from the sessions table
-    PERFORM hive.destroy_session(_context);
+    PERFORM hive.session_forget(_context);
 
 END;
 $BODY$

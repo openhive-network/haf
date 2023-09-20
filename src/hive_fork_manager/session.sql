@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.setup_session(IN _session_name TEXT, IN _reconnect_string TEXT, IN _disconnect_function TEXT)
+CREATE OR REPLACE FUNCTION hive.session_setup(IN _session_name TEXT, IN _reconnect_string TEXT, IN _disconnect_function TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 AS
@@ -28,22 +28,7 @@ END;
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_session_ptr(IN _session_name TEXT)
-RETURNS BIGINT
-LANGUAGE plpgsql
-AS
-$$
-DECLARE
-    __session_ptr BIGINT;
-BEGIN
-    __session_ptr  = (SELECT session_handle FROM hive.sessions WHERE name = _session_name);
-    return __session_ptr;
-END;
-$$
-;
-
-
-CREATE OR REPLACE FUNCTION hive.destroy_session(IN _session_name TEXT)
+CREATE OR REPLACE FUNCTION hive.session_forget(IN _session_name TEXT)
 RETURNS VOID
 LANGUAGE plpgsql
 AS
@@ -54,7 +39,8 @@ END;
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hive.session_start(_session_name TEXT)
+
+CREATE OR REPLACE FUNCTION hive.session_managed_object_start(_session_name TEXT)
 RETURNS VOID
 LANGUAGE plpgsql
 AS
@@ -64,15 +50,15 @@ DECLARE
   __session_handle BIGINT;
 BEGIN
 
-    RAISE NOTICE '0 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
+    RAISE NOTICE '0 in session_managed_object_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
     RAISE NOTICE 'OOO %', (SELECT (name || reconnect_string || disconnect_function)  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
     __reconnect_string = (SELECT reconnect_string  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
 
-    RAISE NOTICE '1 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
+    RAISE NOTICE '1 in session_managed_object_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
 
-    RAISE NOTICE '2 in session_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
+    RAISE NOTICE '2 in session_managed_object_start: %', COALESCE((SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM hive.sessions) t)::text, 'hive.sessions is empty');
 
     RAISE NOTICE 'Executing reconnect function for session: %', _session_name;
 
@@ -91,8 +77,54 @@ $$
 ;
 
 
+CREATE OR REPLACE FUNCTION hive.session_get_managed_object_handle(IN _session_name TEXT)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    __session_ptr BIGINT;
+BEGIN
+    __session_ptr  = (SELECT session_handle FROM hive.sessions WHERE name = _session_name);
+    return __session_ptr;
+END;
+$$
+;
 
-CREATE OR REPLACE FUNCTION hive.sessions_reconnect()
+
+CREATE OR REPLACE FUNCTION hive.session_managed_object_stop(_session_name TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+  __session RECORD;
+  __func_to_exec TEXT;
+  __session_handle_param TEXT;
+BEGIN
+
+  __session = (SELECT *  FROM hive.sessions WHERE name = _session_name LIMIT 1) ;
+
+    __func_to_exec := __session.disconnect_function;
+    __session_handle_param := __session.session_handle;
+
+    RAISE NOTICE 'Processing session: %, function: %, session handle: %', __session.name, __func_to_exec, __session_handle_param;
+
+    IF __func_to_exec IS NOT NULL THEN
+        RAISE NOTICE 'Executing function: % with session handle: %', __func_to_exec, __session_handle_param;
+        __to_execute = format(__func_to_exec, __session_handle_param);
+        RAISE NOTICE '__to_execute1=%', __to_execute;
+        EXECUTE __to_execute;
+        RAISE NOTICE 'Function % executed successfully', __func_to_exec;
+    ELSE
+        RAISE NOTICE 'No function to execute for session: %', __session.name;
+    END IF;
+END;
+$$
+;
+
+
+CREATE OR REPLACE FUNCTION hive.session_reconnect_all()
 RETURNS VOID
 LANGUAGE plpgsql
 AS
@@ -124,7 +156,7 @@ $$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.sessions_disconnect()
+CREATE OR REPLACE FUNCTION hive.session_disconnect_all()
 RETURNS VOID
 LANGUAGE plpgsql
 AS
@@ -154,4 +186,3 @@ BEGIN
 END;
 $$
 ;
-
