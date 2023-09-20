@@ -30,22 +30,6 @@ fi
 STORAGE_PATH=$STORAGE_PATH/$DB_NAME/consensus_unit_test_storage_dir
 
 
-
-psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f - <<-EOF
-CREATE OR REPLACE FUNCTION hive.get_consensus_storage_path() 
-RETURNS TEXT 
-LANGUAGE 'plpgsql' 
-AS 
-\$BODY$
-DECLARE 
-  __consensus_state_provider_storage_path TEXT; 
-BEGIN 
-  __consensus_state_provider_storage_path = '$STORAGE_PATH'; 
-  RETURN __consensus_state_provider_storage_path; 
-END
-\$BODY$;
-EOF
-
 evaluate_result $?
 
 
