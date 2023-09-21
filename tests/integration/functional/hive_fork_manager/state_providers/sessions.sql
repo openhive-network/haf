@@ -44,14 +44,19 @@ BEGIN
     -- -- --ASSERT __session_ptr =__session_ptr2, 'A2 __session_ptr=' || __session_ptr || ' __session_ptr2='  || __session_ptr2;
 
 
-  -- 2. Start it again to test reconnection after changing process
-    -- a. Configure the service
+  -- 2. Start a few to test reconnection after changing process
+    -- a. Configure the services
     __reconnect_string = format('SELECT this_test.testobject_create(%L, %L)', 'auto', 'matics');
     __disconnect_function = 'SELECT this_test.testobject_destroy(%s)';
     PERFORM hive.session_setup('context', __reconnect_string, __disconnect_function);
 
+    __reconnect_string = format('SELECT this_test.testobject_create(%L, %L)', 'how', 'about');
+    __disconnect_function = 'SELECT this_test.testobject_destroy(%s)';
+    PERFORM hive.session_setup('another_context', __reconnect_string, __disconnect_function);
+
     -- b. Start the service
     PERFORM hive.session_managed_object_start('context');
+    PERFORM hive.session_managed_object_start('another_context');
 
     -- c. Save session and pid for later comparison
     __session_ptr = hive.session_get_managed_object_handle('context') ;
@@ -88,6 +93,12 @@ BEGIN
     __session_ptr = hive.session_get_managed_object_handle('context');
     Raise Notice '__session_ptr=%', __session_ptr;
     ASSERT __session_ptr <> prevoius_session_ptr, 'A4 ' || '__session_ptr=' || __session_ptr  || ' prevoius_session_ptr=' || prevoius_session_ptr  ;
+
+    -- c. Peform service specific operations
+    __session_ptr = hive.session_get_managed_object_handle('context') ;
+    ASSERT 'automatics' = (SELECT this_test.testobject_sum(__session_ptr)), 'A0';
+    __session_ptr = hive.session_get_managed_object_handle('another_context') ;
+    ASSERT 'howabout' = (SELECT this_test.testobject_sum(__session_ptr)), 'A00' || ' __session_ptr=' || __session_ptr || ' sum= ' || (SELECT this_test.testobject_sum(__session_ptr)) ;
 
       -- c. Normal stopping before the process exit
     PERFORM hive.session_disconnect_all();
