@@ -17,22 +17,22 @@ BEGIN
 
   -- 1. normal usage in one process
 
-  -- a. Configure the service
+    -- a. Configure the service
     __reconnect_string = format('SELECT this_test.testobject_create(%L, %L)', 'auto', 'matics');
     __disconnect_function = 'SELECT this_test.testobject_destroy(%s)';
     PERFORM hive.session_setup('context', __reconnect_string, __disconnect_function);
 
-  -- b. Start the service
+    -- b. Start the service
     PERFORM hive.session_managed_object_start('context');
 
-  -- c. Peform service specific operations
+    -- c. Peform service specific operations
     __session_ptr = hive.session_get_managed_object_handle('context') ;
     ASSERT 'automatics' = (SELECT this_test.testobject_sum(__session_ptr)), 'A0';
 
-  -- d. Stop the service (destroying underlying objects in memory)
+    -- d. Stop the service (destroying underlying objects in memory)
     PERFORM hive.session_managed_object_stop('context');
 
-  -- e. Unlink the service
+    -- e. Unlink the service
     PERFORM hive.session_forget('context');
 
 
@@ -45,20 +45,20 @@ BEGIN
 
 
   -- 2. Start it again to test reconnection after changing process
-  -- a. Configure the service
+    -- a. Configure the service
     __reconnect_string = format('SELECT this_test.testobject_create(%L, %L)', 'auto', 'matics');
     __disconnect_function = 'SELECT this_test.testobject_destroy(%s)';
     PERFORM hive.session_setup('context', __reconnect_string, __disconnect_function);
 
-  -- b. Start the service
+    -- b. Start the service
     PERFORM hive.session_managed_object_start('context');
 
-  -- c. Save session and pid for later comparison
+    -- c. Save session and pid for later comparison
     __session_ptr = hive.session_get_managed_object_handle('context') ;
     INSERT INTO this_test.memory_between_procedures (pid, session_ptr)
     VALUES (pg_backend_pid(), __session_ptr);
   
-  -- d. disconnect sessions because we are leaving the current process
+    -- d. disconnect sessions because we are leaving the current process
     PERFORM hive.session_disconnect_all();
 
 END;
@@ -81,15 +81,15 @@ BEGIN
 
     ASSERT(pg_backend_pid() <> previous_pid), 'Consecutive psql calls should run in different processes';
 
-    -- a. Restore service after changing process
+      -- a. Restore service after changing process
     PERFORM hive.session_reconnect_all();
 
-    -- b. restored underlying object has different pointer in this new process
+      -- b. restored underlying object has different pointer in this new process
     __session_ptr = hive.session_get_managed_object_handle('context');
     Raise Notice '__session_ptr=%', __session_ptr;
     ASSERT __session_ptr <> prevoius_session_ptr, 'A4 ' || '__session_ptr=' || __session_ptr  || ' prevoius_session_ptr=' || prevoius_session_ptr  ;
 
-    -- c. Normal stopping before the process exit
+      -- c. Normal stopping before the process exit
     PERFORM hive.session_disconnect_all();
 
   RAISE NOTICE 'B6';
