@@ -11,9 +11,6 @@ SET( extension_path  "${CMAKE_BINARY_DIR}/extensions/${EXTENSION_NAME}" )
 
 FILE( MAKE_DIRECTORY "${extension_path}" )
 
-# SET(HAF_GIT_REVISION_SHA "e733be375a203cacaaf3da6766347e9e053f3f44" )
-# message(STATUS "mtlk Variable HAF_GIT_REVISION_SHA value: ${HAF_GIT_REVISION_SHA}")
-
 SET( UPDATE_NAME "${EXTENSION_NAME}_update--${HAF_GIT_REVISION_SHA}" )
 
 SET( update_control_script ${UPDATE_NAME}.sql )
