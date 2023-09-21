@@ -37,7 +37,6 @@ BEGIN
     WHERE pid = __current_pid INTO __database_name;
 
     __postgres_url := 'postgres:///' || __database_name;
-    RAISE NOTICE '__postgres_url=%', __postgres_url;
     RETURN __postgres_url;
 END;
 $BODY$
