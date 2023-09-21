@@ -817,7 +817,7 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
    **  CREATE OR REPLACE FUNCTION hive.consensus_state_provider_get_expected_block_num(IN _context TEXT)
    **  RETURNS INTEGER
    ** 
-   **  Returns the block number where we stand in hive state.
+   **  Returns the block number where we stand in hive state (head + 1).
    **/
 
 
