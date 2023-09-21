@@ -1,6 +1,4 @@
-#!/bin/bash
-
-
+#!/usr/bin/env bash
 
 extension_path=$1
 test_path=$2;
