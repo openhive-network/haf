@@ -27,7 +27,12 @@ hive::protocol::operation raw_to_operation( const char* raw_data, uint32 data_le
   if( !data_length )
     return {};
 
-  return fc::raw::unpack_from_char_array< hive::protocol::operation >( raw_data, static_cast< uint32_t >( data_length ) );
+  std::vector<char> buffer(raw_data, raw_data + data_length);
+
+  //return fc::raw::unpack_from_char_array< hive::protocol::operation >( raw_data, static_cast< uint32_t >( data_length ) );
+  hive::protocol::operation op;
+  fc::raw::unpack_from_vector(buffer, op);
+  return op;
 }
 
 fc::variant op_to_variant_impl( const char* raw_data, uint32 data_length )
@@ -37,7 +42,12 @@ fc::variant op_to_variant_impl( const char* raw_data, uint32 data_length )
 
   using hive::protocol::operation;
 
-  operation op = fc::raw::unpack_from_char_array< operation >( raw_data, static_cast< uint32_t >( data_length ) );
+  std::vector<char> buffer(raw_data, raw_data + data_length);
+
+  hive::protocol::operation op;
+  fc::raw::unpack_from_vector(buffer, op);
+
+  //operation op = fc::raw::unpack_from_char_array< operation >( raw_data, static_cast< uint32_t >( data_length ) );
 
   fc::variant v;
   fc::to_variant( op, v );
