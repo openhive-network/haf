@@ -120,7 +120,16 @@ fi
 on_exit
 psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
 
+
 echo "PASSED";
+
+  POSTGRESLOG=$(find /var/log -name postgresql*.log) || true
+  echo $POSTGRESLOG || true
+  sudo ls -lah $POSTGRESLOG || true
+  echo "mtlk Listing 10 000 last lines of postgres log"
+  sudo tail -n 10000 $POSTGRESLOG
+  echo "mtlk end listing postgres log"
+
 trap - EXIT;
 exit 0;
 
