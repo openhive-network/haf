@@ -254,7 +254,6 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_create_and_hole_in_events.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork.sql )
- ADD_SQL_FUNCTIONAL_TEST( state_providers/csp_massive_sync_live_blocks_and_fork.sql )
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork_non_forking_app.sql )
  
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_negative.sql )
@@ -273,6 +272,9 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_negative_non_context_owner.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_negative_non_context_owner_create_table.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/switch_state_provider_to_forkable.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/csp_massive_sync_live_blocks_and_fork.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/consensus_state_provider_update_state_provider.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/sessions.sql )
  
 
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_to_bob_negative.sql )
@@ -308,5 +310,3 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_vesting_balance/get_vesting_balance.sql )
  ADD_SQL_FUNCTIONAL_TEST( sanity_check/test_tables_and_sequences_properly_flagged_for_dump.sql )
  
- ADD_SQL_FUNCTIONAL_TEST( state_providers/consensus_state_provider_update_state_provider.sql )
- ADD_SQL_FUNCTIONAL_TEST( state_providers/sessions.sql )
