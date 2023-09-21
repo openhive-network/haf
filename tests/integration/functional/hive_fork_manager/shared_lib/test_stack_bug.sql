@@ -3,12 +3,7 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-
-    ASSERT ( SELECT COUNT(*) FROM hive.get_impacted_accounts('{"type":"transfer_operation","value":{"from":"admin","to":"steemit","amount":{"amount":"833000","precision":3,"nai":"@@000000021"},"memo":""}}' :: jsonb :: hive.operation) ) = 2, 'Incorrect number of impacted accounts';
-    ASSERT ( SELECT COUNT(*) FROM hive.get_impacted_accounts('{"type":"escrow_transfer_operation","value":{"from":"xtar","to":"testz","hbd_amount":{"amount":"0","precision":3,"nai":"@@000000013"},"hive_amount":{"amount":"1","precision":3,"nai":"@@000000021"},"escrow_id":123456,"agent":"fabien","fee":{"amount":"1","precision":3,"nai":"@@000000021"},"json_meta":"","ratification_deadline":"2017-02-15T15:15:11","escrow_expiration":"2017-02-16T15:15:11"}}' :: jsonb :: hive.operation) ) = 3, 'Incorrect number of impacted accounts';
-    -- Initminer:
-    ASSERT ( SELECT COUNT(*) FROM hive.get_impacted_accounts('{"type":"system_warning_operation","value":{"message":"no impacted accounts"}}' :: jsonb :: hive.operation) ) = 1, 'Incorrect number of impacted accounts';
-
+    PERFORM '\x09102700000000000003535445454d000005737465656d076b65666164657801000000000103a78888f1cd1f039e63ef93314fc1fb196cc38d5b2090c8df49b806eeda4f3e350100010000000001031c0e33a27bcec921d6a9c3caf2e1ce4052d55bcd6a684372e90690d9c232c9c70100010000000001036da5bc9de6ff2110751f32c1919704a5116adeee0b2b7f28df244fca847ba559010003f74879a44d3fe215232098bf428d6412ff22051313e7132df1f06ed840aae81b00'::hive.operation;
 END;
 $BODY$
 ;
