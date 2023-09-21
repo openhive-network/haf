@@ -83,108 +83,108 @@ $BODY$
 DECLARE
 __blocks hive.blocks_range;
 BEGIN
-PERFORM hive.app_create_context( 'context' );
+PERFORM hive.app_create_context( 'massive_context' );
 
 
 
 CREATE SCHEMA A;
-CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
+CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.massive_context );
     -- csp creates csp_session
-    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should not contain ''context'' entry before hive.session_setup (via app_state_provider_import)';
+    ASSERT  NOT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'massive_context'), 'Sessions table should not contain ''massive_context'' entry before hive.session_setup (via app_state_provider_import)';
     
     -- csp creates csp_session
-    PERFORM hive.app_state_provider_import('CSP', 'context');
+    PERFORM hive.app_state_provider_import('CSP', 'massive_context');
 
     -- csp check if sessions table is filled
-    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'context'), 'Sessions table should contain ''context'' entry after hive.session_setup (via app_state_provider_import)';
+    ASSERT EXISTS (SELECT 1 FROM hive.sessions WHERE name = 'massive_context'), 'Sessions table should contain ''massive_context'' entry after hive.session_setup (via app_state_provider_import)';
 
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 1 MASSIVE SYNC EVENT
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 1 MASSIVE SYNC EVENT
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks';
 RAISE NOTICE 'Blocks: %', __blocks;
 ASSERT __blocks = (1,6), 'Incorrect first block (1,6)';
 INSERT INTO A.table1(id) VALUES( 1 );
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
 
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 2
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 2
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (2,5)';
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks = (2,6), 'Incorrect range (2,6)';
 INSERT INTO A.table1(id) VALUES( 2 );
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 3
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 3
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (3,5)';
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks = (3,6), 'Incorrect range (3,6)';
 INSERT INTO A.table1(id) VALUES( 3 );
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 4
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 4
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (4,5)';
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks = (4,6), 'Incorrect range (4,6)';
 INSERT INTO A.table1(id) VALUES( 4 );
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 5
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 5
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (5,5)';
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks = (5,6), 'Incorrect range (5,6)';
 INSERT INTO A.table1(id) VALUES( 5 );
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 6
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 6
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (6,6)';
 ASSERT __blocks = (6,6), 'Incorrect range (6,6)';
 INSERT INTO A.table1(id) VALUES( 6 );
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 7
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 7
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (7,7)';
 ASSERT __blocks = (7,7), 'Incorrect range (7,7)';
 INSERT INTO A.table1(id) VALUES( 7 );
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- SET_IRREVERSIBLE_EVENT
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; -- SET_IRREVERSIBLE_EVENT
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks IS NULL, 'NUll was not returned for processing SET_IRREVERSIBLE_EVENT';
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 8
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 8
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 7, 'Wrong number of rows before after fork(7)';
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (8,8)';
 ASSERT __blocks = (8,8), 'Incorrect range (8,8)';
-ASSERT '\x000000084f957cc170a27c8330293a3343f82c23'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 8 ), 'Unexpect hash of block 8 1st';
+ASSERT '\x000000084f957cc170a27c8330293a3343f82c23'::bytea = ( SELECT hash FROM hive.massive_context_blocks_view WHERE num = 8 ), 'Unexpect hash of block 8 1st';
 INSERT INTO A.table1(id) VALUES( 8 );
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 9
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 9
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (9,9)';
 ASSERT __blocks = (9,9), 'Incorrect range (9,9)';
-ASSERT '\x00000009f35198cfd8a866868538bed3482d61a4'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 9 ), 'Unexpect hash of block 9 1st';
+ASSERT '\x00000009f35198cfd8a866868538bed3482d61a4'::bytea = ( SELECT hash FROM hive.massive_context_blocks_view WHERE num = 9 ), 'Unexpect hash of block 9 1st';
 INSERT INTO A.table1(id) VALUES( 9 );
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
 
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 9
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 9
 RAISE NOTICE 'blocks: %', __blocks;
 
 
 PERFORM hive.back_from_fork( 7 );
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 9
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 9
 RAISE NOTICE 'blocks: %', __blocks;
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 9
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 9
 RAISE NOTICE 'blocks: %', __blocks;
 
 PERFORM hive.push_block(
@@ -198,15 +198,15 @@ PERFORM hive.push_block(
         , NULL
     );
 COMMIT;    
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 8
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 8
 RAISE NOTICE 'blocks: %', __blocks;
 
 ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 7, 'Wrong number of rows before after fork(7)';
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (8,8)';
 ASSERT __blocks = (8,8), 'Incorrect range (8,8)';
-ASSERT '\x00000008e189194814783f9b4fee1d0036aa7098'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 8 ), 'Unexpect hash of block 8 1.5';
+ASSERT '\x00000008e189194814783f9b4fee1d0036aa7098'::bytea = ( SELECT hash FROM hive.massive_context_blocks_view WHERE num = 8 ), 'Unexpect hash of block 8 1.5';
 INSERT INTO A.table1(id) VALUES( 8 );
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
 PERFORM hive.push_block(
         ( 9, '\x00000009d361e47148af8fe7598c4f2db74237ed', '\x00000008e189194814783f9b4fee1d0036aa7098', '2016-03-24 16:05:57', 3, '\x0000000000000000000000000000000000000000', NULL, '\x2044cd87f6f0a98b37c520b61349de4b36ab82aa8cc799c7ce0f14635ae2a266b02412af616deecba6cda06bc1f3823b2abd252cfe592643920e67ccdc73aef6f9', 'STM8GC13uCZbP44HzMLV6zPZGwVQ8Nt4Kji8PapsPiNq1BK153XTX', 0, 1000, 1000000, 18000, 27000, 27000, 0, 0)
@@ -222,13 +222,13 @@ COMMIT;
 
 
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 9
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 9
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (9,9)';
 ASSERT __blocks = (9,9), 'Incorrect range (9,9)';
-ASSERT '\x00000009d361e47148af8fe7598c4f2db74237ed'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 9 ), 'Unexpect hash of block 9 2nd';
+ASSERT '\x00000009d361e47148af8fe7598c4f2db74237ed'::bytea = ( SELECT hash FROM hive.massive_context_blocks_view WHERE num = 9 ), 'Unexpect hash of block 9 2nd';
 INSERT INTO A.table1(id) VALUES( 9 );
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
 
 PERFORM hive.push_block(
@@ -242,22 +242,22 @@ PERFORM hive.push_block(
     );
 
 
-SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 10
+SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; --block 10
 COMMIT;
 RAISE NOTICE 'blocks: %', __blocks;
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (10,10)';
 ASSERT __blocks = (10,10), 'Incorrect range (10,10)';
-ASSERT '\x0000000ac0b1f742de471556c998352c5b9866b3'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 10 ), 'Unexpect hash of block 10 2nd';
+ASSERT '\x0000000ac0b1f742de471556c998352c5b9866b3'::bytea = ( SELECT hash FROM hive.massive_context_blocks_view WHERE num = 10 ), 'Unexpect hash of block 10 2nd';
 INSERT INTO A.table1(id) VALUES( 10 );
 
 
-    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'context');
+    PERFORM hive.update_state_provider_csp(__blocks.first_block, __blocks.last_block, 'massive_context');
 
 
--- SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
+-- SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks;
 -- ASSERT __blocks IS NULL, 'NULL was not returned from BACK_FROM_FORK';
 
--- SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- no blocks
+-- SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; -- no blocks
 -- ASSERT __blocks IS NULL, 'Null is expected';
 
 END;
