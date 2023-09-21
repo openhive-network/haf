@@ -1,3 +1,4 @@
+-- Testing consensus state provider with blocks being reversed due to a fork
 DROP PROCEDURE IF EXISTS haf_admin_procedure_test_given;
 CREATE PROCEDURE haf_admin_procedure_test_given()
     LANGUAGE 'plpgsql'
