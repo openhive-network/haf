@@ -11,6 +11,12 @@ then
 fi
 
 
+SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+SCRIPTSDIR="$SCRIPTDIR/haf/scripts"
+
+"$SCRIPTSDIR/copy_datadir.sh"
+
+
 if sudo -Enu hived test ! -d "$DATADIR"
 then
     echo "Data directory (DATADIR) $DATADIR does not exist. Exiting."
@@ -23,13 +29,6 @@ then
     exit 1
 fi
 
-HAF_DB_STORE="$DATADIR/haf_db_store"
-PGDATA="$HAF_DB_STORE/pgdata"
-
-
-SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-SCRIPTSDIR="$SCRIPTDIR/haf/scripts"
-
 LOG_FILE="${DATADIR}/${LOG_FILE:-docker_entrypoint.log}"
 sudo -n touch "$LOG_FILE"
 sudo -n chown -Rc hived:users "$LOG_FILE"
@@ -37,6 +36,9 @@ sudo -n chmod a+rw "$LOG_FILE"
 
 # shellcheck source=../scripts/common.sh
 source "$SCRIPTSDIR/common.sh"
+
+HAF_DB_STORE="$DATADIR/haf_db_store"
+PGDATA=$HAF_DB_STORE/pgdata
 
 export POSTGRES_VERSION=${POSTGRES_VERSION:-14}
 
@@ -97,7 +99,7 @@ echo "Attempting to execute hived using additional command line arguments:" "${H
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
   --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
   --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
-  ${HIVED_ARGS[@]} 2>&1 | tee -i hived.log
+  ${HIVED_ARGS[@]} 2>&1 | tee -i "$DATADIR/hived.log"
 echo "$? Hived process finished execution."
 EOF
 

@@ -18,8 +18,7 @@ variables:
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
-  DATA_CACHE_HAF_TEMPLATE: /cache/replay_data_haf
-  DATA_CACHE_HAF: "/cache/replay_data_haf_${CI_PIPELINE_ID}"
+  DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   SNAPSHOTS_PATH: /cache/snapshots_pipeline_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /cache/block_log_5m_mirrornet
@@ -61,8 +60,7 @@ haf_image_build_mirrornet:
     PG_ACCESS: |
                 "host    all              haf_admin        0.0.0.0/0    trust"
                 "host    all              haf_app_admin    0.0.0.0/0    trust"
-    DATADIR: $DATA_CACHE_HAF/datadir
-    SHM_DIR: $DATA_CACHE_HAF/shm_dir
+    DATA_SOURCE: "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
     LOG_FILE: $CI_JOB_NAME.log
   command: ["--replay-blockchain", "--stop-replay-at-block=5000000"]
 
@@ -441,7 +439,6 @@ prepare_haf_data:
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
   tags:
     - data-cache-storage
-  resource_group: ${CI_COMMIT_SHA}
 
 start_haf_as_service:
   extends: .job-defaults
@@ -455,6 +452,7 @@ start_haf_as_service:
   variables:
     HAF_POSTGRES_URL: postgresql://haf_app_admin@haf-instance:5432/haf_block_log
     HIVED_UID: $HIVED_UID
+    HAF_COMMIT: $HAF_COMMIT
   script:
     - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
     - |
@@ -467,20 +465,18 @@ start_haf_as_service:
         }' haf-instance:8091
   after_script:
     - rm docker_entrypoint.log -f
-    - cp $DATA_CACHE_HAF/datadir/$CI_JOB_NAME.log $CI_PROJECT_DIR/docker_entrypoint.log
+    - cp "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir/$CI_JOB_NAME.log" "$CI_PROJECT_DIR/docker_entrypoint.log"
   artifacts:
     paths:
     - docker_entrypoint.log
   tags:
     - data-cache-storage
-  resource_group: ${CI_COMMIT_SHA}
 
 cleanup_haf_cache_manual:
   extends: .cleanup_cache_manual
   stage: cleanup
   variables:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
-  resource_group: ${CI_COMMIT_SHA}
   tags:
     - data-cache-storage
 
@@ -489,7 +485,6 @@ cleanup_haf_snapshot_from_cache:
   stage: cleanup
   variables:
     CLEANUP_PATH_PATTERN: "/cache/snapshots_pipeline_*"
-  resource_group: ${CI_COMMIT_SHA}
   tags:
     - data-cache-storage
 

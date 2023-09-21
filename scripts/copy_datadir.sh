@@ -1,0 +1,1 @@
+../hive/scripts/copy_datadir.sh
