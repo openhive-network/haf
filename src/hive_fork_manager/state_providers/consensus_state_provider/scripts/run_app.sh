@@ -80,6 +80,7 @@ app_start()
     rm -f  $DATA_DIR/blockchain/cabc_shared_memory.bin 
     sudo -u postgres rm -f /var/lib/postgresql/blockchain/*
     sudo rm  /var/lib/postgresql/blockchain/cabc_shared_memory.bin  || true
+    sudo rm -rf /home/hived/datadir/haf_db_store/shmem/ || true
 
     psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select hive.app_reset_data('cabc');"
     
