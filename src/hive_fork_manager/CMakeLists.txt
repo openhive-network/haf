@@ -42,7 +42,7 @@ ADD_PSQL_EXTENSION(
             state_providers/accounts.sql
             state_providers/keyauth.sql
             state_providers/metadata.sql
-            state_providers/current_account_balance.sql
+            state_providers/consensus_state_provider.sql
             hived_api_impl.sql
             app_api_impl.sql
             hived_api.sql
