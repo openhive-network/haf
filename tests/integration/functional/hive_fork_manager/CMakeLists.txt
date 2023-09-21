@@ -308,5 +308,5 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_vesting_balance/get_vesting_balance.sql )
  ADD_SQL_FUNCTIONAL_TEST( sanity_check/test_tables_and_sequences_properly_flagged_for_dump.sql )
  
- ADD_SQL_FUNCTIONAL_TEST( state_providers/current_account_balance_update_state_provider.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/consensus_state_provider_update_state_provider.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/sessions.sql )
