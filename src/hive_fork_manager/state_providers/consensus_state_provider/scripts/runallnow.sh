@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ../haf/scripts/runallnow.sh 20000 driver
-# rm /home/hived/datadir/consensus_state_provider/blockchain/shared_memory.bin ; ./bin/consp_driver --to 1091
+# rm /home/hived/datadir/consensus_state_provider/blockchain/shared_memory.bin ; ./bin/csp_driver --to 1091
 
 
 # remove transactions
@@ -35,7 +35,7 @@ END_COMMENT
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/../build/bin/consp_driver",
+            "program": "${workspaceFolder}/../build/bin/csp_driver",
             "args": ["--allow-reevaluate", "--from=23645966"],
             "stopAtEntry": true,
             "cwd": "${fileDirname}",
@@ -70,15 +70,15 @@ END_LAUNCH_DBG_CONFIGURATION
 
 # 2. driver of postgres functions 
 # src/hive_fork_manager/shared_lib/CMakeLists.txt:
-# ADD_EXECUTABLE(consp_driver
+# ADD_EXECUTABLE(csp_driver
     
 #   mtlk_main.cpp
 # )
 
-# ADD_POSTGRES_INCLUDES( consp_driver )
-# ADD_POSTGRES_LIBRARIES( consp_driver )
+# ADD_POSTGRES_INCLUDES( csp_driver )
+# ADD_POSTGRES_LIBRARIES( csp_driver )
 
-# target_link_libraries(consp_driver
+# target_link_libraries(csp_driver
 #     PRIVATE ${target_name}
 # )
 
@@ -269,15 +269,15 @@ END_LOG_STEEMIT_10
 
 # 2. driver of postgres functions 
 # src/hive_fork_manager/shared_lib/CMakeLists.txt:
-# ADD_EXECUTABLE(consp_driver
+# ADD_EXECUTABLE(csp_driver
     
 #   mtlk_main.cpp
 # )
 
-# ADD_POSTGRES_INCLUDES( consp_driver )
-# ADD_POSTGRES_LIBRARIES( consp_driver )
+# ADD_POSTGRES_INCLUDES( csp_driver )
+# ADD_POSTGRES_LIBRARIES( csp_driver )
 
-# target_link_libraries(consp_driver
+# target_link_libraries(csp_driver
 #     PRIVATE ${target_name}
 # )
 
@@ -1116,15 +1116,15 @@ NO_TRANS
 
 # 2. driver of postgres functions 
 # src/hive_fork_manager/shared_lib/CMakeLists.txt:
-# ADD_EXECUTABLE(consp_driver
+# ADD_EXECUTABLE(csp_driver
     
 #   mtlk_main.cpp
 # )
 
-# ADD_POSTGRES_INCLUDES( consp_driver )
-# ADD_POSTGRES_LIBRARIES( consp_driver )
+# ADD_POSTGRES_INCLUDES( csp_driver )
+# ADD_POSTGRES_LIBRARIES( csp_driver )
 
-# target_link_libraries(consp_driver
+# target_link_libraries(csp_driver
 #     PRIVATE ${target_name}
 # )
 
@@ -1278,9 +1278,9 @@ fi
 if [[ $CMAKED ]]
 then
 #    ninja extension.hive_fork_manager  \
-    ninja consp_driver query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure && ctest -R curr --output-on-failure 
+    ninja csp_driver query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure && ctest -R curr --output-on-failure 
     EXIT_STATUS=$?
-    # ninja consp_driver; sudo chown $USER:$USER .ninja_*
+    # ninja csp_driver; sudo chown $USER:$USER .ninja_*
     sudo chown -R $USER:$USER *
 fi
 
@@ -1517,7 +1517,7 @@ run()
 
 driver_body()
 {
-    # preconditions for consp_driver
+    # preconditions for csp_driver
     if [ -d /home/hived/datadir/consensus_state_provider ]
     then
         echo /home/hived/datadir/consensus_state_provider Still there!
@@ -1525,7 +1525,7 @@ driver_body()
 
     psql -d haf_block_log -c 'select count(*) from hive.blocks'
 
-    ./bin/consp_driver --to=$LAST_BLOCK
+    ./bin/csp_driver --to=$LAST_BLOCK
 
 }
 
@@ -1545,7 +1545,7 @@ clearterm()
 driver_build()
 {
     clearterm &&
-    ninja consp_driver query_supervisor hived extension.hive_fork_manager &&
+    ninja csp_driver query_supervisor hived extension.hive_fork_manager &&
     sudo ninja install &&
     sudo chown $USER:$USER .ninja_* &&
     ctest -R keyauth --output-on-failure
