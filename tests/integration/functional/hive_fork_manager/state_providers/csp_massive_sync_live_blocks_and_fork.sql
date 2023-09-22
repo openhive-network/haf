@@ -259,7 +259,20 @@ INSERT INTO A.table1(id) VALUES( 10 );
 
 -- SELECT * FROM hive.app_next_block( 'massive_context' ) INTO __blocks; -- no blocks
 -- ASSERT __blocks IS NULL, 'Null is expected';
+    PERFORM hive.session_disconnect_all();
 
 END;
 $BODY$
 ;
+
+DROP PROCEDURE IF EXISTS haf_admin_procedure_test_then;
+CREATE PROCEDURE haf_admin_procedure_test_then()
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+BEGIN
+    PERFORM hive.session_reconnect_all();
+
+    PERFORM hive.app_state_provider_drop('CSP', 'massive_context');
+END
+$BODY$;
