@@ -166,16 +166,16 @@ BEGIN
 
     raise notice '__shared_memory_bin_path=%', __shared_memory_bin_path;
 
-    EXECUTE format( 'DROP TABLE hive.%I', __table_name );
 
     __session_ptr = hive.session_get_managed_object_handle(_context);
 
     -- wipe clean
-    PERFORM hive.csp_finish(__session_ptr, _wipe_clean_shared_memory_bin := TRUE); 
+    PERFORM hive.csp_finish(__session_ptr, TRUE); 
 
     --delete session entry from the sessions table
     PERFORM hive.session_forget(_context);
 
+    EXECUTE format( 'DROP TABLE hive.%I', __table_name );
 END;
 $BODY$
 ;
