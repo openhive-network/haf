@@ -156,8 +156,12 @@ sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
 # data_directory is hardcoded in postgresql.conf as '/home/hived/datadir/haf_db_store/pgdata' so we create symbolic link to location of HAF_DB_STORE
 test "$HAF_DB_STORE" = "/home/hived/datadir/haf_db_store" || sudo -n ln -s "$HAF_DB_STORE" /home/hived/datadir/haf_db_store
 
-#Prepare HBA file before starting PostgreSQL
+# Prepare HBA file before starting PostgreSQL
 prepare_pg_hba_file
+
+# Handle PGCTLTIMEOUT if set
+[[ -n ${PGCTLTIMEOUT:-}  ]] && echo "PGCTLTIMEOUT = ${PGCTLTIMEOUT}" | sudo tee "/etc/postgresql/${POSTGRES_VERSION}/main/environment"
+# cat "/etc/postgresql/${POSTGRES_VERSION}/main/environment"
 
 if [ -d "$PGDATA" ]
 then
