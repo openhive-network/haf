@@ -194,7 +194,7 @@ BEGIN
     SELECT regexp_replace(dir_path, '/[^/]*$', '') INTO dir_path;
 
     -- Combine dir_path with the context parameter
-    combined_path := dir_path ||'/shmem/' || context;
+    combined_path := dir_path ||'/shmem/' || context || '-' || (SELECT uuid_generate_v4());
 
     RAISE NOTICE 'Returning from hive.get_shmem_path=%', combined_path;
 
