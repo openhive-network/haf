@@ -63,7 +63,6 @@ DECLARE
     __database_name TEXT;
     __postgres_url TEXT;
     __current_pid INT;
-    __shared_memory_bin_dir TEXT := hive.get_shared_memory_bin_dir(_context);
     __consensus_state_provider_replay_call_ok BOOLEAN;
     __session_ptr BIGINT;
 BEGIN
@@ -112,7 +111,6 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_csp';
-    __shared_memory_bin_dir TEXT := hive.get_shared_memory_bin_dir(_context);
     __session_ptr BIGINT;
 BEGIN
     __context_id = hive.get_context_id( _context );
