@@ -32,14 +32,14 @@ AS
 $$
 DECLARE
   __reconnect_command TEXT;
-  __session_handle BIGINT;
+  __managed_object_ptr BIGINT;
 BEGIN
      __reconnect_command = (SELECT  reconnect_command  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
-    EXECUTE __reconnect_command INTO __session_handle; -- mtlk security issue ? However there are many places where EXECUTE calls a string.
+    EXECUTE __reconnect_command INTO __managed_object_ptr; -- mtlk security issue ? However there are many places where EXECUTE calls a string.
 
-    -- update the session_handle field in the params column
+    -- update the managed_object_ptr field in the params column
     UPDATE hive.sessions
-    SET session_handle = __session_handle
+    SET managed_object_ptr = __managed_object_ptr
     WHERE name = _session_name;
 
 END;
@@ -55,7 +55,7 @@ $$
 DECLARE
 BEGIN
 
-    RETURN (SELECT session_handle FROM hive.sessions WHERE name = _session_name);
+    RETURN (SELECT managed_object_ptr FROM hive.sessions WHERE name = _session_name);
 
 END;
 $$
@@ -70,16 +70,16 @@ $$
 DECLARE
   __session RECORD;
   __func_to_exec TEXT;
-  __session_handle_param TEXT;
+  __managed_object_ptr_param TEXT;
 BEGIN
 
   SELECT * INTO __session FROM hive.sessions WHERE name = _session_name LIMIT 1 ;
 
     __func_to_exec := __session.disconnect_command;
-    __session_handle_param := __session.session_handle;
+    __managed_object_ptr_param := __session.managed_object_ptr;
 
     IF __func_to_exec IS NOT NULL THEN
-        EXECUTE format(__func_to_exec, __session_handle_param);
+        EXECUTE format(__func_to_exec, __managed_object_ptr_param);
     END IF;
 END;
 $$
@@ -94,17 +94,17 @@ $$
 DECLARE
   __session RECORD;
   __reconnect_command TEXT;
-  __session_handle BIGINT;
+  __managed_object_ptr BIGINT;
 BEGIN
   FOR __session IN SELECT * FROM hive.sessions
   LOOP
     __reconnect_command := __session.reconnect_command;
 
-    EXECUTE __reconnect_command INTO __session_handle; -- mtlk security issue ?
+    EXECUTE __reconnect_command INTO __managed_object_ptr; -- mtlk security issue ?
 
-    -- update the session_handle field in the params column
+    -- update the managed_object_ptr field in the params column
     UPDATE hive.sessions
-    SET session_handle = __session_handle
+    SET managed_object_ptr = __managed_object_ptr
     WHERE name = __session.name;
 
   END LOOP;
@@ -121,15 +121,15 @@ $$
 DECLARE
     __session RECORD;
     __func_to_exec TEXT;
-    __session_handle_param BIGINT;
+    __managed_object_ptr_param BIGINT;
 BEGIN
     FOR __session IN SELECT * FROM hive.sessions LOOP
         __func_to_exec := __session.disconnect_command;
-        __session_handle_param := __session.session_handle;
+        __managed_object_ptr_param := __session.managed_object_ptr;
 
 
         IF __func_to_exec IS NOT NULL THEN
-            EXECUTE format(__func_to_exec, __session_handle_param);
+            EXECUTE format(__func_to_exec, __managed_object_ptr_param);
         END IF;
     END LOOP;
 END;

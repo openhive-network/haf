@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS hive.sessions (
     name TEXT PRIMARY KEY,
     reconnect_command TEXT,
     disconnect_command TEXT,
-    session_handle TEXT
+    managed_object_ptr TEXT
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.sessions', '');
 
