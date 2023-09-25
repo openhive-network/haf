@@ -1,6 +1,7 @@
 #include "consensus_state_provider_replay.hpp"
 #include <iomanip>
 #include <limits>
+#include <boost/scope_exit.hpp>
 #include <fc/io/json.hpp>
 #include <fc/io/sstream.hpp>
 #include "fc/time.hpp"
@@ -428,9 +429,19 @@ void haf_state_database::push_haf_block(const full_block_ptr& full_block, uint32
 {
   try
   {
+     BOOST_SCOPE_EXIT(this_) { this_->clear_tx_status(); } BOOST_SCOPE_EXIT_END
+
+    set_tx_status(database::TX_STATUS_P2P_BLOCK);
     _node_property_object.skip_flags = skip;
     hive::chain::existing_block_flow_control flow_control(full_block);
-    push_block(flow_control, skip);
+    auto session = start_undo_session();
+    //bool is_pushed_block = (*iter)->get_block_id() == block_ctrl.get_full_block()->get_block_id();
+    apply_block(full_block, skip, &flow_control);
+    session.push();
+
+    // _node_property_object.skip_flags = skip;
+    // hive::chain::existing_block_flow_control flow_control(full_block);
+    // push_block(flow_control, skip);
 
   }FC_CAPTURE_AND_RETHROW() 
 }
