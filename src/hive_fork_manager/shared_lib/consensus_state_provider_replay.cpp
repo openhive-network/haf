@@ -342,7 +342,7 @@ void postgres_block_log::read_postgres_data(int from, int to)
   auto& conn = *(csp_session->conn);
   
   // clang-format off
-    auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= " 
+    auto blocks_query = "SELECT * FROM hive.blocks JOIN hive.accounts ON  id = producer_account_id WHERE num >= " 
                                 + std::to_string(from) 
                                 + " and num <= " 
                                 + std::to_string(to) 
@@ -350,7 +350,7 @@ void postgres_block_log::read_postgres_data(int from, int to)
     blocks = conn.execute_query(blocks_query);
     std::cout << "Blocks:" << blocks.size() << " "; 
 
-    auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= " 
+    auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions WHERE block_num >= " 
                                 + std::to_string(from) 
                                 + " and block_num <= " 
                                 + std::to_string(to) 
@@ -358,7 +358,7 @@ void postgres_block_log::read_postgres_data(int from, int to)
     transactions = conn.execute_query(transactions_query);
     std::cout << "Transactions:" << transactions.size() << " ";
 
-    auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= " 
+    auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations WHERE block_num >= " 
                                 + std::to_string(from) 
                                 + " and block_num <= " 
                                 + std::to_string(to) 
