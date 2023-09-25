@@ -1,11 +1,11 @@
-CREATE OR REPLACE FUNCTION hive.session_setup(IN _session_name TEXT, IN _reconnect_string TEXT, IN _disconnect_function TEXT)
+CREATE OR REPLACE FUNCTION hive.session_setup(IN _session_name TEXT, IN _reconnect_command TEXT, IN _disconnect_command TEXT)
 RETURNS void
 LANGUAGE plpgsql
 AS
 $$
 BEGIN
 
-    INSERT INTO hive.sessions(name, reconnect_string, disconnect_function) VALUES (_session_name, _reconnect_string, _disconnect_function);
+    INSERT INTO hive.sessions(name, reconnect_command, disconnect_command) VALUES (_session_name, _reconnect_command, _disconnect_command);
 
 END;
 $$
@@ -31,11 +31,11 @@ LANGUAGE plpgsql
 AS
 $$
 DECLARE
-  __reconnect_string TEXT;
+  __reconnect_command TEXT;
   __session_handle BIGINT;
 BEGIN
-    __reconnect_string = (SELECT reconnect_string  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
-    EXECUTE __reconnect_string INTO __session_handle; -- mtlk security issue ? However there are many places where EXECUTE calls a string.
+     __reconnect_command = (SELECT  reconnect_command  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
+    EXECUTE __reconnect_command INTO __session_handle; -- mtlk security issue ? However there are many places where EXECUTE calls a string.
 
     -- update the session_handle field in the params column
     UPDATE hive.sessions
@@ -75,7 +75,7 @@ BEGIN
 
   SELECT * INTO __session FROM hive.sessions WHERE name = _session_name LIMIT 1 ;
 
-    __func_to_exec := __session.disconnect_function;
+    __func_to_exec := __session.disconnect_command;
     __session_handle_param := __session.session_handle;
 
     IF __func_to_exec IS NOT NULL THEN
@@ -93,14 +93,14 @@ AS
 $$
 DECLARE
   __session RECORD;
-  __reconnect_string TEXT;
+  __reconnect_command TEXT;
   __session_handle BIGINT;
 BEGIN
   FOR __session IN SELECT * FROM hive.sessions
   LOOP
-    __reconnect_string := __session.reconnect_string;
+    __reconnect_command := __session.reconnect_command;
 
-    EXECUTE __reconnect_string INTO __session_handle; -- mtlk security issue ?
+    EXECUTE __reconnect_command INTO __session_handle; -- mtlk security issue ?
 
     -- update the session_handle field in the params column
     UPDATE hive.sessions
@@ -124,7 +124,7 @@ DECLARE
     __session_handle_param BIGINT;
 BEGIN
     FOR __session IN SELECT * FROM hive.sessions LOOP
-        __func_to_exec := __session.disconnect_function;
+        __func_to_exec := __session.disconnect_command;
         __session_handle_param := __session.session_handle;
 
 

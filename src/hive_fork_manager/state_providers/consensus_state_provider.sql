@@ -8,8 +8,8 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_csp';
-    __disconnect_function TEXT;
-    __reconnect_string TEXT;
+    __disconnect_command TEXT;
+    __reconnect_command TEXT;
     __shared_memory_bin_path TEXT := (SELECT hive.get_shmem_path(_context));
 BEGIN
 
@@ -46,14 +46,14 @@ BEGIN
 
     
 
-    __reconnect_string = format('SELECT hive.csp_init(%L, %L, %L)', _context, __shared_memory_bin_path, hive.get_postgres_url());
+    __reconnect_command = format('SELECT hive.csp_init(%L, %L, %L)', _context, __shared_memory_bin_path, hive.get_postgres_url());
 
-    __disconnect_function = 'SELECT hive.csp_finish(%s)';
+    __disconnect_command = 'SELECT hive.csp_finish(%s)';
 
     PERFORM hive.session_setup(
         _context, 
-         __reconnect_string,
-         __disconnect_function
+         __reconnect_command,
+         __disconnect_command
     );
 
     PERFORM hive.session_managed_object_start(_context);

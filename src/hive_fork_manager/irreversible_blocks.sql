@@ -6,8 +6,8 @@ CREATE DOMAIN hive.interest_rate AS INT4 NOT NULL;
 
 CREATE TABLE IF NOT EXISTS hive.sessions (
     name TEXT PRIMARY KEY,
-    reconnect_string TEXT,
-    disconnect_function TEXT,
+    reconnect_command TEXT,
+    disconnect_command TEXT,
     session_handle TEXT
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.sessions', '');

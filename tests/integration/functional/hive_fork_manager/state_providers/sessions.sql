@@ -9,8 +9,8 @@ AS
 $BODY$
 DECLARE
     __ptr BIGINT;
-    __reconnect_string TEXT;
-    __disconnect_function TEXT;
+    __reconnect_command TEXT;
+    __disconnect_command TEXT;
 BEGIN
   -- TODO(mtlk): Consider revising the test to be independent of pid and random. 
   -- We currently rely on pid to ensure distinctiveness between the next process and the finished one. 
@@ -20,9 +20,9 @@ BEGIN
   -- 1. normal usage in one process
 
     -- a. Configure the service
-    __reconnect_string = format('SELECT this_test.testobject_create(%L, %L)', 'auto', 'matics');
-    __disconnect_function = 'SELECT this_test.testobject_destroy(%s)';
-    PERFORM hive.session_setup('context', __reconnect_string, __disconnect_function);
+    __reconnect_command = format('SELECT this_test.testobject_create(%L, %L)', 'auto', 'matics');
+    __disconnect_command = 'SELECT this_test.testobject_destroy(%s)';
+    PERFORM hive.session_setup('context', __reconnect_command, __disconnect_command);
 
     -- b. Start the service
     PERFORM hive.session_managed_object_start('context');
@@ -39,13 +39,13 @@ BEGIN
 
   -- 2. Start a few to test reconnection after changing process
     -- a. Configure the services
-    __reconnect_string = format('SELECT this_test.testobject_create(%L, %L)', 'auto', 'matics');
-    __disconnect_function = 'SELECT this_test.testobject_destroy(%s)';
-    PERFORM hive.session_setup('context', __reconnect_string, __disconnect_function);
+    __reconnect_command = format('SELECT this_test.testobject_create(%L, %L)', 'auto', 'matics');
+    __disconnect_command = 'SELECT this_test.testobject_destroy(%s)';
+    PERFORM hive.session_setup('context', __reconnect_command, __disconnect_command);
 
-    __reconnect_string = format('SELECT this_test.testobject_create(%L, %L)', 'how', 'about');
-    __disconnect_function = 'SELECT this_test.testobject_destroy(%s)';
-    PERFORM hive.session_setup('another_context', __reconnect_string, __disconnect_function);
+    __reconnect_command = format('SELECT this_test.testobject_create(%L, %L)', 'how', 'about');
+    __disconnect_command = 'SELECT this_test.testobject_destroy(%s)';
+    PERFORM hive.session_setup('another_context', __reconnect_command, __disconnect_command);
 
     -- b. Start the services
     PERFORM hive.session_managed_object_start('context');
