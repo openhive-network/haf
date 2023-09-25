@@ -216,6 +216,7 @@ void csp_finish_impl(const csp_session_type* const csp_session, bool wipe_clean_
   {
     db->chainbase::database::wipe(fc::path(csp_session->shared_memory_bin_path) / "blockchain");
 
+    // Use std::cout like in database::wipe
     std::string log("Removing also:\n- " + csp_session->shared_memory_bin_path + "\n");
     std::cout << log;
     boost::filesystem::remove_all( fc::path(csp_session->shared_memory_bin_path));
