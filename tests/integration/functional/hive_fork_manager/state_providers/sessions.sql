@@ -12,7 +12,11 @@ DECLARE
     __reconnect_string TEXT;
     __disconnect_function TEXT;
 BEGIN
-  -- mtlk TODO - maybe we should make this test independent of pid and random.
+  -- TODO(mtlk): Consider revising the test to be independent of pid and random. 
+  -- We currently rely on pid to ensure distinctiveness between the next process and the finished one. 
+  -- The random() function is used to emulate an allocated memory pointer, 
+  -- which will be different in consecutive calls.
+
   -- 1. normal usage in one process
 
     -- a. Configure the service
