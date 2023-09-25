@@ -109,7 +109,6 @@ private:
   pqxx::result operations;
   pqxx::result::const_iterator current_transaction;
   pqxx::result::const_iterator current_operation;
-  std::chrono::nanoseconds transformations_duration{};
   time_probe transformations_time_probe;
   time_probe replay_full_block_time_probe;
 
