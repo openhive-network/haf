@@ -5,8 +5,7 @@ SET( CMAKE_CXX_STANDARD 17 )
 SET( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 # Enable export of compile_commands.json in the build directory.
-# This file is useful to see detailed compiler invocations.
-# It is also set to "ON" in the hived project.
+# This file is useful to see detailed compiler invocations like in the hived project.
 SET(CMAKE_EXPORT_COMPILE_COMMANDS "ON")
 
 list( APPEND CMAKE_MODULE_PATH
