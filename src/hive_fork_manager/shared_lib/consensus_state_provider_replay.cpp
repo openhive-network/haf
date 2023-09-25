@@ -151,12 +151,23 @@ const char* fix_pxx_hex(const pqxx::field& h);
 const csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
 
-  // Dynamically allocate csp_session_type. Ownership transfers to SQL hive.session
-  auto csp_session = new csp_session_type(context, shared_memory_bin_path, postgres_url);
+  try
+  {
+    // Dynamically allocate csp_session_type. Ownership transfers to SQL hive.session
+    auto csp_session = new csp_session_type(context, shared_memory_bin_path, postgres_url);
 
-  initialize_chain_db(csp_session);
+    initialize_chain_db(csp_session);
 
-  return csp_session;
+    return csp_session;
+  }
+  catch(...)
+  {
+    auto current_exception = std::current_exception();
+    handle_exception(current_exception);
+  }
+
+  return 0;
+
 }
 
 void initialize_chain_db(const csp_session_type* const csp_session)
@@ -208,21 +219,31 @@ void set_open_args_other_parameters(open_args& db_open_args)
 
 void csp_finish_impl(const csp_session_type* const csp_session, bool wipe_clean_shared_memory_bin)
 {
-  hive::chain::database* db = csp_session->db.get();
-  
-  db->close();
-
-  if(wipe_clean_shared_memory_bin)
+  try
   {
-    db->chainbase::database::wipe(fc::path(csp_session->shared_memory_bin_path) / "blockchain");
 
-    // Use std::cout like in database::wipe
-    std::string log("Removing also:\n- " + csp_session->shared_memory_bin_path + "\n");
-    std::cout << log;
-    boost::filesystem::remove_all( fc::path(csp_session->shared_memory_bin_path));
+    hive::chain::database* db = csp_session->db.get();
+
+    db->close();
+
+    if(wipe_clean_shared_memory_bin)
+    {
+      db->chainbase::database::wipe(fc::path(csp_session->shared_memory_bin_path) / "blockchain");
+
+      // Use std::cout like in database::wipe
+      std::string log("Removing also:\n- " + csp_session->shared_memory_bin_path + "\n");
+      std::cout << log;
+      boost::filesystem::remove_all( fc::path(csp_session->shared_memory_bin_path));
+    }
+
+    delete csp_session;
+  }
+  catch(...)
+  {
+    auto current_exception = std::current_exception();
+    handle_exception(current_exception);
   }
 
-  delete csp_session;
 }
 
 
@@ -246,31 +267,35 @@ collected_account_balances_collection_t collect_current_account_balances_impl(co
 
 bool consensus_state_provider_replay_impl(const csp_session_type* const csp_session,  int from, int to)
 {
-
-  auto csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
-
-  if(from < csp_expected_block)
+  try
   {
-    undo_blocks(csp_session, csp_expected_block - from);
-    csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
+
+    auto csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
+
+    if(from < csp_expected_block)
+    {
+      undo_blocks(csp_session, csp_expected_block - from);
+      csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
+    }
+    else
+    {
+      from = csp_expected_block;
+    }
+
+    FC_ASSERT(from == csp_expected_block,
+      "ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
+      ("from", from)("curr", csp_expected_block));
+
+    postgres_block_log(csp_session).run(from, to);
+    return true;
   }
-  else
+  catch(...)
   {
-    from = csp_expected_block;
+    auto current_exception = std::current_exception();
+    handle_exception(current_exception);
   }
 
-  if(from != csp_expected_block)
-  {
-      elog(
-          "WARNING: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
-          ("from", from)("curr", csp_expected_block));
-
-      FC_ASSERT(0);
-  }
-
-
-  postgres_block_log(csp_session).run(from, to);
-  return true;
+  return false;
 }
 
 void undo_blocks(const csp_session_type* const csp_session, int shift)
@@ -287,33 +312,18 @@ void postgres_block_log::run(int from, int to)
 {
   measure_before_run();
 
-  try
-  {
-    prepare_postgres_data(from, to);
-    replay_blocks();
-  }
-  catch(...)
-  {
-    auto current_exception = std::current_exception();
-    handle_exception(current_exception);
-  }
+  prepare_postgres_data(from, to);
+  replay_blocks();
 
   measure_after_run();
 }
 
 full_block_ptr postgres_block_log::read_full_block(int block_num)
 {
-  try
-  {
-    prepare_postgres_data(block_num, block_num);
-    return block_to_fullblock(block_num, blocks[0]);
-  }
-  catch(...)
-  {
-    auto current_exception = std::current_exception();
-    handle_exception(current_exception);
-  }
-  return {};
+
+  prepare_postgres_data(block_num, block_num);
+  return block_to_fullblock(block_num, blocks[0]);
+
 }
 
 // We get blocks, transactions and operations containers from SQL
