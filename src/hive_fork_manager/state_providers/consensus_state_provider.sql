@@ -13,11 +13,7 @@ DECLARE
     __shared_memory_bin_dir TEXT := (SELECT hive.get_shared_memory_bin_dir(_context));
 BEGIN
 
-
-    RAISE NOTICE 'get_shared_memory_bin_dir=%', (SELECT hive.get_shared_memory_bin_dir(_context));
-
     __context_id = hive.get_context_id( _context );
-
 
     IF __context_id IS NULL THEN
          RAISE EXCEPTION 'No context with name %', _context;
@@ -64,7 +60,6 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_csp';
-    __get_balances TEXT;
     __database_name TEXT;
     __postgres_url TEXT;
     __current_pid INT;
@@ -81,24 +76,11 @@ BEGIN
 
     EXECUTE format('TRUNCATE TABLE hive.%s', __table_name);
 
-    RAISE NOTICE 'consensus_state_provider_replay';
-
     SELECT datname AS database_name FROM pg_stat_activity WHERE pid = __current_pid INTO __database_name;
 
     __postgres_url := hive.get_postgres_url();
-
-    
-
-
-
-
-
-
-
-     __session_ptr = hive.session_get_managed_object_handle(_context);
-    __consensus_state_provider_replay_call_ok = (SELECT hive.consensus_state_provider_replay(__session_ptr, _first_block, _last_block));
-
-    RAISE NOTICE '__consensus_state_provider_replay_call_ok=%', __consensus_state_provider_replay_call_ok;
+    __session_ptr = hive.session_get_managed_object_handle(_context);
+    PERFORM hive.consensus_state_provider_replay(__session_ptr, _first_block, _last_block);
 
     PERFORM hive.update_accounts_table(__session_ptr, __table_name);
 
@@ -114,23 +96,9 @@ AS
 $BODY$
 DECLARE
     __get_balances TEXT;
-    __top_richest_accounts_json TEXT;
 BEGIN
     __get_balances := format('INSERT INTO hive.%I SELECT * FROM hive.current_all_accounts_balances(%L)', _table_name, _session_ptr);
     EXECUTE __get_balances;
-
-    EXECUTE format('
-        SELECT json_agg(t)
-        FROM (
-            SELECT *
-            FROM hive.%I
-            ORDER BY balance DESC
-            LIMIT 15
-        ) t
-    ', _table_name) INTO __top_richest_accounts_json;
-
-    RAISE NOTICE 'Accounts 15 richest=%', E'\n' || __top_richest_accounts_json;
-
 END;
 $BODY$
 ;
@@ -153,15 +121,12 @@ BEGIN
         RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
-    raise notice '__shared_memory_bin_dir=%', __shared_memory_bin_dir;
-
-
     __session_ptr = hive.session_get_managed_object_handle(_context);
 
-    -- wipe clean
+    -- Wipe clean
     PERFORM hive.csp_finish(__session_ptr, TRUE); 
 
-    --delete session entry from the sessions table
+    -- Delete session entry from the sessions table
     PERFORM hive.session_forget(_context);
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
@@ -184,9 +149,6 @@ BEGIN
 
     -- Combine dir_path with the context parameter
     combined_path := dir_path ||'/shmem/' || context || '-' || (SELECT uuid_generate_v4());
-
-    RAISE NOTICE 'Returning from hive.get_shared_memory_bin_dir=%', combined_path;
-
 
     RETURN combined_path;
 END;
