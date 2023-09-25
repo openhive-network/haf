@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION hive.session_setup(IN _session_name TEXT, IN _reconnect_string TEXT, IN _disconnect_function TEXT)
-RETURNS BOOLEAN
+RETURNS void
 LANGUAGE plpgsql
 AS
 $$
@@ -23,7 +23,7 @@ BEGIN
     FROM (SELECT * FROM hive.sessions) t;
     RAISE NOTICE 'After insert: %', _debug_msg::text;
 
-    RETURN TRUE;
+    RETURN;
 END;
 $$
 ;
