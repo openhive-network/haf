@@ -1,24 +1,13 @@
 #include "consensus_state_provider_replay.hpp"
-
-#include <fc/io/json.hpp>
-#include <fc/io/sstream.hpp>
-#include <hive/plugins/block_api/block_api_objects.hpp>
-#include <hive/protocol/hive_operations.hpp>
 #include <iomanip>
 #include <limits>
+#include <fc/io/json.hpp>
+#include <fc/io/sstream.hpp>
+#include "fc/time.hpp"
 #include <pqxx/pqxx>
 
-#include "fc/time.hpp"
-#include "hive/chain/block_log.hpp"
-#include "hive/chain/database.hpp"
-#include "hive/protocol/block.hpp"
-#include "hive/protocol/forward_impacted.hpp"
-#include "hive/protocol/operations.hpp"
-
-#include "hive/protocol/transaction.hpp"
+#include <hive/plugins/block_api/block_api_objects.hpp>
 #include "time_probe.hpp"
-
-
 
 namespace consensus_state_provider
 {
