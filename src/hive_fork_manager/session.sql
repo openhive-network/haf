@@ -34,6 +34,7 @@ DECLARE
   __reconnect_command TEXT;
   __managed_object_ptr BIGINT;
 BEGIN
+
      __reconnect_command = (SELECT  reconnect_command  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
     EXECUTE __reconnect_command INTO __managed_object_ptr; -- mtlk security issue ? However there are many places where EXECUTE calls a string.
 
@@ -72,7 +73,7 @@ DECLARE
   __managed_object_ptr_param TEXT;
 BEGIN
 
-  SELECT * INTO __session FROM hive.sessions WHERE name = _session_name LIMIT 1 ;
+    SELECT * INTO __session FROM hive.sessions WHERE name = _session_name LIMIT 1 ;
 
     __func_to_exec := __session.disconnect_command;
     __managed_object_ptr_param := __session.managed_object_ptr;
@@ -80,6 +81,7 @@ BEGIN
     IF __func_to_exec IS NOT NULL THEN
         EXECUTE format(__func_to_exec, __managed_object_ptr_param);
     END IF;
+
 END;
 $$
 ;
@@ -97,14 +99,8 @@ DECLARE
 BEGIN
   FOR __session IN SELECT * FROM hive.sessions
   LOOP
-    __reconnect_command := __session.reconnect_command;
 
-    EXECUTE __reconnect_command INTO __managed_object_ptr; -- mtlk security issue ?
-
-    -- update the managed_object_ptr field in the params column
-    UPDATE hive.sessions
-    SET managed_object_ptr = __managed_object_ptr
-    WHERE name = __session.name;
+    PERFORM hive.session_managed_object_start(__session.name);
 
   END LOOP;
 END;
@@ -126,10 +122,10 @@ BEGIN
         __func_to_exec := __session.disconnect_command;
         __managed_object_ptr_param := __session.managed_object_ptr;
 
-
         IF __func_to_exec IS NOT NULL THEN
             EXECUTE format(__func_to_exec, __managed_object_ptr_param);
         END IF;
+
     END LOOP;
 END;
 $$
