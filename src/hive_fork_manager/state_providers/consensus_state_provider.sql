@@ -10,11 +10,11 @@ DECLARE
     __table_name TEXT := _context || '_csp';
     __disconnect_command TEXT;
     __reconnect_command TEXT;
-    __shared_memory_bin_path TEXT := (SELECT hive.get_shmem_path(_context));
+    __shared_memory_bin_dir TEXT := (SELECT hive.get_shared_memory_bin_dir(_context));
 BEGIN
 
 
-    RAISE NOTICE 'get_shmem_path=%', (SELECT hive.get_shmem_path(_context));
+    RAISE NOTICE 'get_shared_memory_bin_dir=%', (SELECT hive.get_shared_memory_bin_dir(_context));
 
     __context_id = hive.get_context_id( _context );
 
@@ -35,18 +35,7 @@ BEGIN
                         PRIMARY KEY ( account )
                    )', __table_name);
 
-    --EXECUTE format('DROP TABLE IF EXISTS hive.%I', __config_table_name);
-
-    
-    -- -- mtlk to remove in session
-    -- EXECUTE format('CREATE TABLE hive.%I (shared_memory_bin_path TEXT)', __config_table_name);
-
-    -- -- mtlk to remove in session
-    -- EXECUTE format('INSERT INTO hive.%I VALUES (%L)', __config_table_name, __shared_memory_bin_path);
-
-    
-
-    __reconnect_command = format('SELECT hive.csp_init(%L, %L, %L)', _context, __shared_memory_bin_path, hive.get_postgres_url());
+    __reconnect_command = format('SELECT hive.csp_init(%L, %L, %L)', _context, __shared_memory_bin_dir, hive.get_postgres_url());
 
     __disconnect_command = 'SELECT hive.csp_finish(%s)';
 
@@ -79,7 +68,7 @@ DECLARE
     __database_name TEXT;
     __postgres_url TEXT;
     __current_pid INT;
-    __shared_memory_bin_path TEXT := hive.get_shmem_path(_context);
+    __shared_memory_bin_dir TEXT := hive.get_shared_memory_bin_dir(_context);
     __consensus_state_provider_replay_call_ok BOOLEAN;
     __session_ptr BIGINT;
 BEGIN
@@ -155,7 +144,7 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_csp';
-    __shared_memory_bin_path TEXT := hive.get_shmem_path(_context);
+    __shared_memory_bin_dir TEXT := hive.get_shared_memory_bin_dir(_context);
     __session_ptr BIGINT;
 BEGIN
     __context_id = hive.get_context_id( _context );
@@ -164,7 +153,7 @@ BEGIN
         RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
-    raise notice '__shared_memory_bin_path=%', __shared_memory_bin_path;
+    raise notice '__shared_memory_bin_dir=%', __shared_memory_bin_dir;
 
 
     __session_ptr = hive.session_get_managed_object_handle(_context);
@@ -181,7 +170,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.get_shmem_path(context TEXT) RETURNS TEXT AS $$
+CREATE OR REPLACE FUNCTION hive.get_shared_memory_bin_dir(context TEXT) RETURNS TEXT AS $$
 DECLARE
     dir_path TEXT;
     combined_path TEXT;
@@ -196,7 +185,7 @@ BEGIN
     -- Combine dir_path with the context parameter
     combined_path := dir_path ||'/shmem/' || context || '-' || (SELECT uuid_generate_v4());
 
-    RAISE NOTICE 'Returning from hive.get_shmem_path=%', combined_path;
+    RAISE NOTICE 'Returning from hive.get_shared_memory_bin_dir=%', combined_path;
 
 
     RETURN combined_path;
