@@ -37,7 +37,6 @@ BEGIN
      __reconnect_command = (SELECT  reconnect_command  FROM hive.sessions     WHERE name = _session_name LIMIT 1) ;
     EXECUTE __reconnect_command INTO __managed_object_ptr; -- mtlk security issue ? However there are many places where EXECUTE calls a string.
 
-    -- update the managed_object_ptr field in the params column
     UPDATE hive.sessions
     SET managed_object_ptr = __managed_object_ptr
     WHERE name = _session_name;
