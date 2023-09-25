@@ -1,8 +1,7 @@
 -- PROCEDURES needed here instead of functions, because pqxx library can see changes only after COMMIT;
 
--- include postgres map/dictionary for this test
+-- Include postgres map/dictionary for this test
 CREATE EXTENSION IF NOT EXISTS hstore;
-
 
 DROP PROCEDURE IF EXISTS haf_admin_procedure_test_given;
 CREATE PROCEDURE haf_admin_procedure_test_given()
@@ -12,12 +11,6 @@ $BODY$
 DECLARE
     __session_ptr BIGINT;
 BEGIN
-
-    RAISE NOTICE 'pg_tablespace_location=%', (SELECT pg_tablespace_location(oid)  FROM pg_tablespace WHERE spcname = 'haf_tablespace');
-    RAISE NOTICE '2pg_tablespace_location=%', (SELECT hive.get_tablespace_location());
-    RAISE NOTICE '3pg_tablespace_location=%', (SELECT hive.get_shmem_path ( 'context' ));
-
-    
 
     INSERT INTO hive.operation_types (id, name, is_virtual) VALUES
         (0,	'hive::protocol::vote_operation',	false),
@@ -62,11 +55,6 @@ BEGIN
     PERFORM hive.app_context_detach( 'context' );
     UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 5;
     COMMIT;
-
-    __session_ptr = hive.session_get_managed_object_handle('context');
-    RAISE NOTICE '__session_ptr=%', __session_ptr;
-    RAISE NOTICE 'sesion_consensus_state_provider_get_expected_block_num = %', 
-        hive.consensus_state_provider_get_expected_block_num(__session_ptr);
 
     --disconnect sessions because we are leaving the current process
     PERFORM hive.session_disconnect_all();
