@@ -251,6 +251,7 @@ bool consensus_state_provider_replay_impl(const csp_session_type* const csp_sess
   if(from < csp_expected_block)
   {
     undo_blocks(csp_session, csp_expected_block - from);
+    csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
   }
   else
   {
