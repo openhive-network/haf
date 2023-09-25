@@ -263,8 +263,10 @@ bool consensus_state_provider_replay_impl(const csp_session_type* const csp_sess
       elog(
           "WARNING: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
           ("from", from)("curr", csp_expected_block));
-      //return false;
+
+      FC_ASSERT(0);
   }
+
 
   postgres_block_log(csp_session).run(from, to);
   return true;
