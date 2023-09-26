@@ -8,7 +8,12 @@ name = "haf_local_tools"
 version = "0.0.0"
 description = "A collective library containing all the tools required by haf python tests."
 authors = ["Mateusz Żebrak <mzebrak@syncad.com>"]
-packages = [{ include = "haf_local_tools" },
+packages = [
+    { include = "haf_local_tools" },
+]
+source = [
+    { name = "PyPI", priority = "primary" },
+    { name = "gitlab-wax", url = "https://gitlab.syncad.com/api/v4/projects/419/packages/pypi/simple", priority = "supplemental" },
 ]
 
 
