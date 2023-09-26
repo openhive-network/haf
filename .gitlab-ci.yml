@@ -388,7 +388,7 @@ update_with_wrong_table_schema:
 
 block_api_tests:
   extends: .replay_step
-  image: $CI_REGISTRY_IMAGE/ci-base-image:ubuntu22.04-3-jmeter
+  image: $CI_REGISTRY_IMAGE/ci-base-image:ubuntu22.04-5-jmeter
   needs:
     - job: haf_image_build
       artifacts: true
