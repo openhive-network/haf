@@ -23,16 +23,17 @@ then
     exit 1
 fi
 
-HAF_DB_STORE=$DATADIR/haf_db_store
-PGDATA=$DATADIR/haf_db_store/pgdata
+HAF_DB_STORE="$DATADIR/haf_db_store"
+CUSTOM_POSTGRES_CONFIG="$DATADIR/haf_postgresql_conf.d/custom_postgres.conf"
+PGDATA="$DATADIR/haf_db_store/pgdata"
 
 
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTDIR/haf/scripts"
 
 LOG_FILE="${DATADIR}/${LOG_FILE:-docker_entrypoint.log}"
-sudo -n touch $LOG_FILE
-sudo -n chown -Rc hived:users $LOG_FILE
+sudo -n touch "$LOG_FILE"
+sudo -n chown -Rc hived:users "$LOG_FILE"
 sudo -n chmod a+rw "$LOG_FILE"
 
 # shellcheck source=../scripts/common.sh
@@ -116,7 +117,7 @@ wait $job_pid || status=$?
 return ${status}
 }
 
-
+# shellcheck disable=SC2317
 cleanup () {
   echo "Performing cleanup...."
   hived_pid=$(pidof 'hived' || echo '') # pidof returns 1 if hived isn't running, which crashes the script 
@@ -154,7 +155,15 @@ trap cleanup EXIT
 sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
 
 # data_directory is hardcoded in postgresql.conf as '/home/hived/datadir/haf_db_store/pgdata' so we create symbolic link to location of HAF_DB_STORE
-test "$HAF_DB_STORE" = "/home/hived/datadir/haf_db_store" || sudo -n ln -s "$HAF_DB_STORE" /home/hived/datadir/haf_db_store
+# If the link already exists (ie. the container was restarted rather than recreated) we forcinly recreate the link to avoid error:
+# ln: failed to create symbolic link '/home/hived/datadir/haf_db_store/haf_db_store': File exists
+test "$HAF_DB_STORE" = "/home/hived/datadir/haf_db_store" || sudo -n ln -sf "$HAF_DB_STORE" /home/hived/datadir/haf_db_store
+
+CUSTOM_POSTGRES_CONFIG_DEFAULT="/home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf"
+POSTGRES_CONFIG="/etc/postgresql/${POSTGRES_VERSION}/main/postgresql.conf"
+if [[ "$CUSTOM_POSTGRES_CONFIG" != "$CUSTOM_POSTGRES_CONFIG_DEFAULT" ]] && ! grep -q "$CUSTOM_POSTGRES_CONFIG" "$POSTGRES_CONFIG"; then
+	echo "include_if_exists = '$CUSTOM_POSTGRES_CONFIG'" | sudo --user=postgres tee --append "$POSTGRES_CONFIG"
+fi
 
 # Prepare HBA file before starting PostgreSQL
 prepare_pg_hba_file
@@ -202,7 +211,7 @@ sudo -n /etc/init.d/postgresql start
 
 HIVED_ARGS=()
 
-echo "Processing passed arguments...: $@"
+echo "Processing passed arguments...: $*"
 
 while [ $# -gt 0 ]; do
   case "$1" in
