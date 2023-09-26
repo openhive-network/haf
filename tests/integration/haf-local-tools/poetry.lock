@@ -984,19 +984,21 @@ files = [
 
 [[package]]
 name = "schemas"
-version = "0.0.0"
+version = "0.0.0.post236.dev0+5f473da"
 description = "Tools for checking if message fits expected format"
 optional = false
-python-versions = "^3.10"
-files = []
-develop = true
+python-versions = ">=3.10,<4.0"
+files = [
+    {file = "schemas-0.0.0.post236.dev0+5f473da-py3-none-any.whl", hash = "sha256:54fc8d28ec78f9f6cb4443866b54c8b38499337961482ffcb5c7c6a6a6e9e904"},
+]
 
 [package.dependencies]
 pydantic = "1.10.11"
 
 [package.source]
-type = "directory"
-url = "../../../hive/tests/hive-local-tools/test-tools/schemas"
+type = "legacy"
+url = "https://gitlab.syncad.com/api/v4/projects/362/packages/pypi/simple"
+reference = "gitlab-schemas"
 
 [[package]]
 name = "setuptools"
@@ -1183,7 +1185,7 @@ develop = true
 abstractcp = "0.9.9"
 python-dateutil = "2.8.2"
 requests = "2.27.1"
-schemas = {path = "schemas", develop = true}
+schemas = "0.0.0.post236.dev0+5f473da"
 
 [package.source]
 type = "directory"
@@ -1311,4 +1313,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "71327d51459069308892706b38d6a358997ac4355cde449540b9a65cfa8e7ca7"
+content-hash = "0ab5ef5ce3a36e791c92785ff047649f9a254b5fab0e699e98381ad65b9e9615"
