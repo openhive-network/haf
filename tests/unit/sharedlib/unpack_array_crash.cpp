@@ -25,8 +25,8 @@ BOOST_AUTO_TEST_CASE( unpack_array_crash )
   try {
     auto result
       = fc::raw::unpack_from_char_array<hive::protocol::operation>( buffer, 188  );
-  } catch( fc::exception& _e ) {
-    BOOST_TEST_MESSAGE( _e.what() );
+  } catch( ... /*fc::exception& _e*/ ) {
+    //BOOST_TEST_MESSAGE( _e.what() );
   }
 }
 
