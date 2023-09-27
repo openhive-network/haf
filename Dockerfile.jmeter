@@ -35,7 +35,7 @@ RUN <<EOF
   cd /opt/tools
 
   # Install Apache JMeter
-  wget --quiet https://dlcdn.apache.org//jmeter/binaries/apache-jmeter-5.4.3.zip -O jmeter.zip
+  wget --quiet https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.4.3.zip -O jmeter.zip
   unzip -qq jmeter.zip
   rm jmeter.zip
   mv apache-jmeter-5.4.3 jmeter
