@@ -26,7 +26,7 @@ using full_block_ptr = std::shared_ptr<full_block_type>;
 class haf_state_database : public hive::chain::database
 {
 public:
-  haf_state_database(const csp_session_type* const csp_session):csp_session(csp_session){}
+  haf_state_database(csp_session_ref_type csp_session):csp_session(csp_session){}
 
   virtual void state_dependent_open( const open_args& args ) override;
 
@@ -34,7 +34,7 @@ public:
 
 private:
 
-   const csp_session_type* const csp_session;
+   csp_session_ref_type csp_session;
 
 };
 
@@ -64,7 +64,7 @@ csp_session_type::csp_session_type(
   :
   shared_memory_bin_path(shared_memory_bin_path),
   conn(std::make_unique<postgres_database_helper>(postgres_url)),
-  db(std::make_unique<haf_state_database>(this))
+  db(std::make_unique<haf_state_database>(*this))
   {}
 
 
@@ -75,7 +75,7 @@ using block_bin_t = hive::plugins::block_api::api_signed_block_object;
 class postgres_block_log
 {
 public:
-  explicit postgres_block_log(const csp_session_type* const csp_session):csp_session(csp_session){}
+  explicit postgres_block_log(csp_session_ref_type csp_session):csp_session(csp_session){}
   void run(int from, int to);
   full_block_ptr read_full_block(int block_num);
 private:
@@ -104,7 +104,7 @@ private:
   int current_operation_block_num() const;
   int current_operation_trx_num() const;
 
-  const csp_session_type* const csp_session;
+  csp_session_ref_type csp_session;
 
   pqxx::result blocks;
   pqxx::result transactions;
@@ -122,8 +122,8 @@ private:
 };
 
 
-void undo_blocks(const csp_session_type* const csp_session, int shift);
-void initialize_chain_db(const csp_session_type* const csp_session);
+void undo_blocks(csp_session_ref_type, int shift);
+void initialize_chain_db(csp_session_ref_type csp_session);
 
 void set_open_args_data_dir(open_args& db_open_args, const char* shared_memory_bin_path);
 void set_open_args_supply(open_args& db_open_args);
@@ -149,17 +149,17 @@ std::string fix_pxx_time(const pqxx::field& t);
 const char* fix_pxx_hex(const pqxx::field& h);
 
 
-const csp_session_type* csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+csp_session_ref_type csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
 
   try
   {
     // Dynamically allocate csp_session_type. Ownership transfers to SQL hive.session
-    auto csp_session = new csp_session_type(context, shared_memory_bin_path, postgres_url);
+    auto csp_session_ptr = new csp_session_type(context, shared_memory_bin_path, postgres_url);
 
-    initialize_chain_db(csp_session);
+    initialize_chain_db(*csp_session_ptr);
 
-    return csp_session;
+    return *csp_session_ptr;
   }
   catch(...)
   {
@@ -167,21 +167,21 @@ const csp_session_type* csp_init_impl(const char* context, const char* shared_me
     handle_exception(current_exception);
   }
 
-  return 0;
+  // TODO(ntlk) - return pointer return 0;
 
 }
 
-void initialize_chain_db(const csp_session_type* const csp_session)
+void initialize_chain_db(csp_session_ref_type csp_session)
 {
 
-  hive::chain::database& db = *csp_session->db;
+  hive::chain::database& db = *csp_session.db;
 
   db.set_flush_interval(10'000);
   db.set_require_locking(false);
 
   open_args db_open_args;
 
-  set_open_args_data_dir(db_open_args, csp_session->shared_memory_bin_path.c_str());
+  set_open_args_data_dir(db_open_args, csp_session.shared_memory_bin_path.c_str());
   set_open_args_supply(db_open_args);
   set_open_args_other_parameters(db_open_args);
 
@@ -218,26 +218,26 @@ void set_open_args_other_parameters(open_args& db_open_args)
 };
 
 
-void csp_finish_impl(const csp_session_type* const csp_session, bool wipe_clean_shared_memory_bin)
+void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_memory_bin)
 {
   try
   {
 
-    hive::chain::database* db = csp_session->db.get();
+    hive::chain::database* db = csp_session.db.get();
 
     db->close();
 
     if(wipe_clean_shared_memory_bin)
     {
-      db->chainbase::database::wipe(fc::path(csp_session->shared_memory_bin_path) / "blockchain");
+      db->chainbase::database::wipe(fc::path(csp_session.shared_memory_bin_path) / "blockchain");
 
       // Use std::cout like in database::wipe
-      std::string log("Removing also:\n- " + csp_session->shared_memory_bin_path + "\n");
+      std::string log("Removing also:\n- " + csp_session.shared_memory_bin_path + "\n");
       std::cout << log;
-      boost::filesystem::remove_all( fc::path(csp_session->shared_memory_bin_path));
+      boost::filesystem::remove_all( fc::path(csp_session.shared_memory_bin_path));
     }
 
-    delete csp_session;
+    delete &csp_session;
   }
   catch(...)
   {
@@ -248,25 +248,25 @@ void csp_finish_impl(const csp_session_type* const csp_session, bool wipe_clean_
 }
 
 
-int consensus_state_provider_get_expected_block_num_impl(const csp_session_type* const csp_session)
+int consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session)
 {
-  return csp_session->db->head_block_num() + 1;
+  return csp_session.db->head_block_num() + 1;
 }
 
 
-collected_account_balances_collection_t collect_current_all_accounts_balances_impl(const csp_session_type* const csp_session)
+collected_account_balances_collection_t collect_current_all_accounts_balances_impl(csp_session_ref_type csp_session)
 {
   return collect_current_all_accounts_balances(csp_session);
 }
 
 
-collected_account_balances_collection_t collect_current_account_balances_impl(const csp_session_type* const csp_session, const std::vector<std::string>& accounts)
+collected_account_balances_collection_t collect_current_account_balances_impl(csp_session_ref_type csp_session, const std::vector<std::string>& accounts)
 {
   return collect_current_account_balances(csp_session, accounts);
 }
 
 
-bool consensus_state_provider_replay_impl(const csp_session_type* const csp_session,  int from, int to)
+bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session,  int from, int to)
 {
   try
   {
@@ -299,9 +299,9 @@ bool consensus_state_provider_replay_impl(const csp_session_type* const csp_sess
   return false;
 }
 
-void undo_blocks(const csp_session_type* const csp_session, int shift)
+void undo_blocks(csp_session_ref_type csp_session, int shift)
 {
-  auto& db = *csp_session->db;
+  auto& db = *csp_session.db;
   while(shift > 0)
   {
     db.pop_block();
@@ -341,7 +341,7 @@ void postgres_block_log::read_postgres_data(int from, int to)
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
-  auto& conn = *(csp_session->conn);
+  auto& conn = *(csp_session.conn);
 
   // clang-format off
     auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
@@ -399,7 +399,7 @@ void postgres_block_log::replay_block(const pqxx::row& block)
 
   transformations_time_probe.stop();
 
-  replay_full_block(*csp_session->db, full_block, get_skip_flags());
+  replay_full_block(*csp_session.db, full_block, get_skip_flags());
 
 }
 
@@ -857,10 +857,10 @@ collected_account_balances_t extract_account_balances(
   return account_balances;
 }
 
-collected_account_balances_collection_t collect_current_account_balances(const csp_session_type* const csp_session,
+collected_account_balances_collection_t collect_current_account_balances(csp_session_ref_type csp_session,
                                                                          const std::vector<std::string>& account_names)
 {
-  auto& db = *csp_session->db;
+  auto& db = *csp_session.db;
 
   collected_account_balances_collection_t collected_balances;
 
@@ -876,10 +876,10 @@ collected_account_balances_collection_t collect_current_account_balances(const c
   return collected_balances;
 }
 
-collected_account_balances_collection_t collect_current_all_accounts_balances(const csp_session_type* const csp_session)
+collected_account_balances_collection_t collect_current_all_accounts_balances(csp_session_ref_type csp_session)
 {
 
-  auto& db = *csp_session->db;
+  auto& db = *csp_session.db;
 
   collected_account_balances_collection_t collected_balances;
 

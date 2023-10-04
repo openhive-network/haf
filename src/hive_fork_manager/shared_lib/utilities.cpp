@@ -824,7 +824,7 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
 
 Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 {
-  const consensus_state_provider::csp_session_type* const handle = reinterpret_cast<const consensus_state_provider::csp_session_type* const>(PG_GETARG_POINTER(0));
+  consensus_state_provider::csp_session_ref_type handle = *reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
 
   int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(handle);
 
@@ -835,7 +835,7 @@ Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 
 void collect_data_and_fill_recordset(
     PG_FUNCTION_ARGS,
-    const consensus_state_provider::csp_session_type* const csp_session,
+    consensus_state_provider::csp_session_ref_type csp_session,
     consensus_state_provider::collected_account_balances_collection_t& collected_data,
     std::function<consensus_state_provider::collected_account_balances_collection_t()> collect_data_function,
     const char* C_function_name)
@@ -868,12 +868,12 @@ PG_FUNCTION_INFO_V1(current_all_accounts_balances);
 
 Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
 {
-  const consensus_state_provider::csp_session_type* const handle = reinterpret_cast<const consensus_state_provider::csp_session_type* const>(PG_GETARG_POINTER(0));
+  consensus_state_provider::csp_session_ref_type handle = *reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
 
   consensus_state_provider::collected_account_balances_collection_t collected_data;
   collect_data_and_fill_recordset(
       fcinfo, handle, collected_data,
-      [=]()
+      [&handle]()
       {
         return consensus_state_provider::collect_current_all_accounts_balances_impl(
             handle);
@@ -925,7 +925,7 @@ PG_FUNCTION_INFO_V1(current_account_balances);
 
 Datum current_account_balances(PG_FUNCTION_ARGS)
 {
-  const consensus_state_provider::csp_session_type* const handle = reinterpret_cast<const consensus_state_provider::csp_session_type* const>(PG_GETARG_POINTER(0));
+  consensus_state_provider::csp_session_ref_type handle = *reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
   ArrayType* accounts_arr = PG_GETARG_ARRAYTYPE_P(1);
 
   std::vector<std::string> accounts = extract_string_array_from_datum(accounts_arr);
@@ -933,7 +933,7 @@ Datum current_account_balances(PG_FUNCTION_ARGS)
   consensus_state_provider::collected_account_balances_collection_t collected_data;
   collect_data_and_fill_recordset(
       fcinfo, handle, collected_data,
-      [=]()
+      [=, &handle]()
       {
         return consensus_state_provider::collect_current_account_balances_impl(
             handle, accounts);
@@ -956,7 +956,7 @@ PG_FUNCTION_INFO_V1(csp_finish);
 Datum csp_finish(PG_FUNCTION_ARGS)
 {
 
-  const consensus_state_provider::csp_session_type* const handle = reinterpret_cast<const consensus_state_provider::csp_session_type* const>(PG_GETARG_POINTER(0));
+  consensus_state_provider::csp_session_ref_type handle = *reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
 
   bool wipe_clean_shared_memory_bin = PG_GETARG_BOOL(1);
 
@@ -972,7 +972,7 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
 
 Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
 {
-  const consensus_state_provider::csp_session_type* const handle = reinterpret_cast<const consensus_state_provider::csp_session_type* const>(PG_GETARG_POINTER(0));
+  consensus_state_provider::csp_session_ref_type handle = *reinterpret_cast<consensus_state_provider::csp_session_type*>(PG_GETARG_POINTER(0));
   int from = PG_GETARG_INT32(1);
   int to = PG_GETARG_INT32(2);
 
@@ -994,7 +994,7 @@ Datum csp_init(PG_FUNCTION_ARGS)
   char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_P(1));
   char* postgres_url = text_to_cstring(PG_GETARG_TEXT_P(2));
 
-  const consensus_state_provider::csp_session_type* const handle = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
+  const consensus_state_provider::csp_session_type* const handle = &consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
 
   PG_RETURN_POINTER(handle);
   pfree(context);
