@@ -44,7 +44,7 @@ SRC_DIR=../haf
 DATA_DIR=/home/hived/datadir
 
 
-if [ -z ${CI+x} ] 
+if [ -z ${CI+x} ]
 then
     echo NOt In CI
     CONSENSUS_STORAGE=$DATA_DIR/consensus_state_provider
@@ -55,7 +55,7 @@ fi
 
 echo $CONSENSUS_STORAGE
 
-if [ -z ${USER+x} ] 
+if [ -z ${USER+x} ]
 then
     echo NO USER variable
     USER=$(whoami)
@@ -88,8 +88,8 @@ reset_app()
 remove_compiled()
 {
     rm -rf $BUILD_DIR/extensions/hive_fork_manager || true ;
-    sudo rm /usr/share/postgresql/14/extension/hive* || true; 
-    sudo rm /usr/lib/postgresql/14/lib/libhfm* || true; 
+    sudo rm /usr/share/postgresql/14/extension/hive* || true;
+    sudo rm /usr/lib/postgresql/14/lib/libhfm* || true;
     rm -rf $BUILD_DIR/lib/libhfm* || true;
 }
 
@@ -98,7 +98,7 @@ remove_all_compiled()
     remove_compiled
     rm -rf $BUILD_DIR/*
     rm -rf $BUILD_DIR/.* | true
-}   
+}
 
 build()
 {
@@ -106,23 +106,23 @@ build()
 local CMAKED=false
 local EXIT_STATUS=0
 
-if [[ "$PWD" =~ debug_build$ ]] 
+if [[ "$PWD" =~ debug_build$ ]]
 then
-    cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS=" -O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # Debug O0
+    cmake  -DCMAKE_BUILD_TYPE=Debug -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS=" -O0 -fdiagnostics-color=always -Werror=return-type" -GNinja $SRC_DIR ; # Debug O0
 
     CMAKED=true
 
 elif [[ "$PWD" =~ RelWithDebInfo_build$ ]]
 then
     echo building RelWithDebInfo
-    cmake  -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # RelWithDebInfo
+    cmake  -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-O0 -fdiagnostics-color=always -Werror=return-type" -GNinja $SRC_DIR ; # RelWithDebInfo
 
     CMAKED=true
 
 elif [[ "$PWD" =~ testnet_build$ ]]
 then
     echo building testnet_build
-    cmake  -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_HIVE_TESTNET=ON -DCMAKE_CXX_FLAGS="-O0 -fdiagnostics-color=always" -GNinja $SRC_DIR ; # testnet_build
+    cmake  -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_HIVE_TESTNET=ON -DCMAKE_CXX_FLAGS="-O0 -fdiagnostics-color=always -Werror=return-type" -GNinja $SRC_DIR ; # testnet_build
 
     CMAKED=true
 
@@ -130,18 +130,18 @@ then
 elif [[ "$PWD" =~ build$ ]]
 then
 
-    cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" -GNinja $SRC_DIR ;  # Release
-    
-   
+    cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always -Werror=return-type" -GNinja $SRC_DIR ;  # Release
+
+
     CMAKED=true
 
 elif [[ "$PWD" =~ Asan$ ]]
 then
 
-    
+
     cmake  -DCMAKE_BUILD_TYPE=Asan -DBUILD_HIVE_TESTNET=OFF -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" -GNinja $SRC_DIR ;  # Release
-    
-   
+
+
     CMAKED=true
 
 else
@@ -151,7 +151,7 @@ fi
 if [[ $CMAKED ]]
 then
 #    ninja extension.hive_fork_manager  \
-    ninja tests/unit/all csp_driver query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure && ctest -R curr --output-on-failure 
+    ninja tests/unit/all csp_driver query_supervisor hived extension.hive_fork_manager && sudo ninja install && sudo chown $USER:$USER .ninja_* && ctest -R keyauth --output-on-failure && ctest -R curr --output-on-failure
     EXIT_STATUS=$?
     sudo chown -R $USER:$USER *
 fi
@@ -245,21 +245,21 @@ minimal_hived_cont()
 app_start()
 {
 
-    psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select * FROM hive.irreversible_data;" 
-    psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select * FROM hive.events_queue;" 
-    psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select * FROM hive.fork;" 
-    psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select * FROM hive.table_schema;" 
+    psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select * FROM hive.irreversible_data;"
+    psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select * FROM hive.events_queue;"
+    psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select * FROM hive.fork;"
+    psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select * FROM hive.table_schema;"
 
 
-    rm -f  $DATA_DIR/blockchain/keyauth_appshared_memory.bin 
-    rm -f  $DATA_DIR/blockchain/cabc_shared_memory.bin 
+    rm -f  $DATA_DIR/blockchain/keyauth_appshared_memory.bin
+    rm -f  $DATA_DIR/blockchain/cabc_shared_memory.bin
     sudo -u postgres rm -f /var/lib/postgresql/blockchain/*
     sudo rm  /var/lib/postgresql/blockchain/cabc_shared_memory.bin  || true
 
     psql  -v "ON_ERROR_STOP=1" -d haf_block_log -c "select hive.app_reset_data('cabc');"
-    
-    psql -v "ON_ERROR_STOP=1" -d haf_block_log -f $SRC_DIR/src/hive_fork_manager/state_providers/performance_examination/consensus_state_provider_app.sql 
-    
+
+    psql -v "ON_ERROR_STOP=1" -d haf_block_log -f $SRC_DIR/src/hive_fork_manager/state_providers/performance_examination/consensus_state_provider_app.sql
+
     psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing'  -c "call cab_app.main('cabc', $RUN_APP_MAIN_TILL_BLOCK, $RUN_APP_MAIN_CHUNK_SIZE, '$CONSENSUS_STORAGE')" -c 'select * from hive.cabc_csp LIMIT 30;' -c 'select count(*) from hive.cabc_accounts;' 2>&1 | tee -i app.log # run
 }
 
@@ -276,7 +276,7 @@ app_cont()
     # Compare if returned 15 top accounts are equal to the pattern
     PSQL_RESULT=$(psql -t -d haf_block_log  -c "(SELECT account, balance, ROW_NUMBER() OVER (ORDER BY balance DESC)  FROM hive.cabc_csp LIMIT 15)
     EXCEPT
-    (SELECT p.account, p.balance, p.rownum  FROM  (VALUES    
+    (SELECT p.account, p.balance, p.rownum  FROM  (VALUES
         (1, 'steemit', 4778859891),
         (2, 'poloniex', 1931250425),
         (3, 'bittrex', 499025114),
@@ -361,12 +361,12 @@ save_state()
 
 remove_context_shared_memory_bin()
 {
-    
+
     sudo rm  -rf $DATA_DIR/consensus_storage
     sudo rm  -rf $DATA_DIR/consensus_state_provider
     sudo rm  $DATA_DIR/context/blockchain/shared_memory.bin && echo removed! || echo not removed
     sudo rm  $DATA_DIR/consensus_state_provider/blockchain/shared_memory.bin && echo removed! || echo not removed
-    
+
 }
 
 run_all_from_scratch()
