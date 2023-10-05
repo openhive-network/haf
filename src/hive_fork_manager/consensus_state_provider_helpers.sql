@@ -22,7 +22,7 @@ CREATE OR REPLACE FUNCTION hive.current_account_balances(IN _session_ptr BIGINT,
 RETURNS SETOF hive.current_account_balance_return_type
 AS 'MODULE_PATHNAME', 'current_account_balances' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.consensus_state_provider_replay(IN _session_ptr BIGINT, in _from INT, in _to INT)
+CREATE OR REPLACE FUNCTION hive.consensus_state_provider_replay(IN _session_ptr BIGINT, in _first_block INT, in _last_block INT)
 RETURNS BOOLEAN
 AS 'MODULE_PATHNAME', 'consensus_state_provider_replay' LANGUAGE C;
 

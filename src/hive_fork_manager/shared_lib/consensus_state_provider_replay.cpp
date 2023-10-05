@@ -76,15 +76,15 @@ class postgres_block_log
 {
 public:
   explicit postgres_block_log(csp_session_ref_type csp_session):csp_session(csp_session){}
-  void run(int from, int to);
+  void run(int first_block, int last_block);
   full_block_ptr read_full_block(int block_num);
 private:
-  void prepare_postgres_data(int from, int to);
+  void prepare_postgres_data(int first_block, int last_block);
   void replay_blocks();
   void replay_block(const pqxx::row& block);
   void replay_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags);
 
-  void read_postgres_data(int from, int to);
+  void read_postgres_data(int first_block, int last_block);
   void initialize_iterators();
 
   full_block_ptr block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block);
@@ -266,28 +266,28 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
 }
 
 
-bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session,  int from, int to)
+bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, int first_block, int last_block)
 {
   try
   {
 
     auto csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
 
-    if(from < csp_expected_block)
+    if(first_block < csp_expected_block)
     {
-      undo_blocks(csp_session, csp_expected_block - from);
+      undo_blocks(csp_session, csp_expected_block - first_block);
       csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
     }
     else
     {
-      from = csp_expected_block;
+      first_block = csp_expected_block;
     }
 
-    FC_ASSERT(from == csp_expected_block,
-      "ERROR: Cannot replay consensus state provider: Initial \"from\" block number is ${from}, but current state is expecting ${curr}",
-      ("from", from)("curr", csp_expected_block));
+    FC_ASSERT(first_block == csp_expected_block,
+      "ERROR: Cannot replay consensus state provider: Initial \"first_block\" block number is ${first_block}, but current state is expecting ${curr}",
+      ("first_block", first_block)("curr", csp_expected_block));
 
-    postgres_block_log(csp_session).run(from, to);
+    postgres_block_log(csp_session).run(first_block, last_block);
     return true;
   }
   catch(...)
@@ -309,11 +309,11 @@ void undo_blocks(csp_session_ref_type csp_session, int shift)
   }
 }
 
-void postgres_block_log::run(int from, int to)
+void postgres_block_log::run(int first_block, int last_block)
 {
   measure_before_run();
 
-  prepare_postgres_data(from, to);
+  prepare_postgres_data(first_block, last_block);
   replay_blocks();
 
   measure_after_run();
@@ -330,14 +330,14 @@ full_block_ptr postgres_block_log::read_full_block(int block_num)
 // We get blocks, transactions and operations containers from SQL
 // and set up iterators to transaction and operation
 // so that the iterators always point to the transactions and operations belonging to the currently replayed block
-void postgres_block_log::prepare_postgres_data(int from, int to)
+void postgres_block_log::prepare_postgres_data(int first_block, int last_block)
 {
-  read_postgres_data(from, to);
+  read_postgres_data(first_block, last_block);
   initialize_iterators();
 }
 
 
-void postgres_block_log::read_postgres_data(int from, int to)
+void postgres_block_log::read_postgres_data(int first_block, int last_block)
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
@@ -345,25 +345,25 @@ void postgres_block_log::read_postgres_data(int from, int to)
 
   // clang-format off
     auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
-                                + std::to_string(from)
+                                + std::to_string(first_block)
                                 + " and num <= "
-                                + std::to_string(to)
+                                + std::to_string(last_block)
                                 + " ORDER BY num ASC";
     blocks = conn.execute_query(blocks_query);
     //std::cout << "Blocks:" << blocks.size() << " ";
 
     auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
-                                + std::to_string(from)
+                                + std::to_string(first_block)
                                 + " and block_num <= "
-                                + std::to_string(to)
+                                + std::to_string(last_block)
                                 + " ORDER BY block_num, trx_in_block ASC";
     transactions = conn.execute_query(transactions_query);
     //std::cout << "Transactions:" << transactions.size() << " ";
 
     auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
-                                + std::to_string(from)
+                                + std::to_string(first_block)
                                 + " and block_num <= "
-                                + std::to_string(to)
+                                + std::to_string(last_block)
                                 + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
                                 + " ORDER BY id ASC";
   operations = conn.execute_query(operations_query);
