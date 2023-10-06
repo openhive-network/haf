@@ -519,17 +519,12 @@ void hex_to_binary(const std::string& str, T& binary)
   {
       size_t r = fc::from_hex( str, buffer.data(), buffer.size() );
       FC_ASSERT( r == buffer.size() );
-  }
-
-  if( !buffer.empty() )
-  {
       memcpy(&binary, buffer.data(), fc::min<size_t>(buffer.size(),sizeof(binary)) );
   }
   else
   {
       memset( static_cast<void*>(&binary), static_cast<char>(0), sizeof(binary) );
   }
-
 }
 
 
