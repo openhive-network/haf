@@ -358,7 +358,7 @@ bash_tests:
     - echo psql 2 finish
   script:
     - cd $CI_PROJECT_DIR
-    - $CI_PROJECT_DIR/src/hive_fork_manager/state_providers/consensus_state_provider/scripts/csp_test.sh
+    - $CI_PROJECT_DIR/tests/integration/bash/consensus_state_provider/csp_test.sh
 
   timeout: 60 minutes
   interruptible: true
