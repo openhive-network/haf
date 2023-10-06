@@ -111,8 +111,8 @@ private:
   pqxx::result blocks;
   pqxx::result transactions;
   pqxx::result operations;
-  pqxx::result::const_iterator current_transaction;
-  pqxx::result::const_iterator current_operation;
+  pqxx::result::const_iterator current_transaction_it;
+  pqxx::result::const_iterator current_operation_it;
   time_probe transformations_time_probe;
   time_probe replay_full_block_time_probe;
 
@@ -370,8 +370,8 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
 void postgres_block_log::initialize_iterators()
 {
-  current_transaction = transactions.begin();
-  current_operation = operations.begin();
+  current_transaction_it = transactions.begin();
+  current_operation_it = operations.begin();
 }
 
 void postgres_block_log::replay_blocks()
@@ -609,19 +609,19 @@ block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::
 
 void postgres_block_log::transactions2bin(uint32_t block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins)
 {
-  for(; current_transaction != transactions.end() && current_transaction_belongs_to_block(block_num); ++current_transaction)
+  for(; current_transaction_it != transactions.end() && current_transaction_belongs_to_block(block_num); ++current_transaction_it)
   {
-    auto trx_in_block = current_transaction["trx_in_block"].as<int>();
+    auto trx_in_block = current_transaction_it["trx_in_block"].as<int>();
 
-    std::vector<hive::protocol::signature_type> signatures = build_signatures(current_transaction);
+    std::vector<hive::protocol::signature_type> signatures = build_signatures(current_transaction_it);
 
-    build_transaction_id_bins(current_transaction, transaction_id_bins);
+    build_transaction_id_bins(current_transaction_it, transaction_id_bins);
 
     rewind_current_operation_to_block(block_num);
 
     std::vector<hive::protocol::operation> operation_bins = operations2bins(block_num, trx_in_block);
 
-    hive::protocol::signed_transaction transaction_bin = build_transaction_bin(current_transaction, std::move(signatures), std::move(operation_bins));
+    hive::protocol::signed_transaction transaction_bin = build_transaction_bin(current_transaction_it, std::move(signatures), std::move(operation_bins));
 
     transaction_bins.emplace_back(transaction_bin);
   }
@@ -629,7 +629,7 @@ void postgres_block_log::transactions2bin(uint32_t block_num, std::vector<hive::
 
 bool postgres_block_log::current_transaction_belongs_to_block(const uint32_t block_num)
 {
-  return current_transaction["block_num"].as<uint32_t>() == block_num;
+  return current_transaction_it["block_num"].as<uint32_t>() == block_num;
 }
 
 std::vector<hive::protocol::signature_type> build_signatures(const pqxx::result::const_iterator& transaction)
@@ -662,9 +662,9 @@ void build_transaction_id_bins(const pqxx::result::const_iterator& transaction,
 
 void postgres_block_log::rewind_current_operation_to_block(uint32_t block_num)
 {
-  while(current_operation_block_num() < block_num && current_operation != operations.end())
+  while(current_operation_block_num() < block_num && current_operation_it != operations.end())
   {
-    ++current_operation;
+    ++current_operation_it;
   }
 };
 
@@ -700,10 +700,10 @@ std::vector<hive::protocol::operation> postgres_block_log::operations2bins(uint3
   std::vector<hive::protocol::operation> operation_bins;
   if(is_current_operation(block_num, trx_in_block))
   {
-    for(; current_operation != operations.end() && operation_matches_block_transaction(current_operation, block_num, trx_in_block);
-        ++current_operation)
+    for(; current_operation_it != operations.end() && operation_matches_block_transaction(current_operation_it, block_num, trx_in_block);
+        ++current_operation_it)
     {
-      add_operation_bin(current_operation, operation_bins);
+      add_operation_bin(current_operation_it, operation_bins);
     }
   }
   return operation_bins;
@@ -722,22 +722,22 @@ void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector
 uint32_t postgres_block_log::current_transaction_block_num()
 {
   if(transactions.empty()) return BLOCK_NUM_EMPTY;
-  if(transactions.end() == current_transaction) return BLOCK_NUM_MAX;
-  return current_transaction["block_num"].as<uint32_t>();
+  if(transactions.end() == current_transaction_it) return BLOCK_NUM_MAX;
+  return current_transaction_it["block_num"].as<uint32_t>();
 }
 
 uint32_t postgres_block_log::current_operation_block_num() const
 {
   if(operations.empty()) return BLOCK_NUM_EMPTY;
-  if(operations.end() == current_operation) return BLOCK_NUM_MAX;
-  return current_operation["block_num"].as<uint32_t>();
+  if(operations.end() == current_operation_it) return BLOCK_NUM_MAX;
+  return current_operation_it["block_num"].as<uint32_t>();
 }
 
 int postgres_block_log::current_operation_trx_num() const
 {
   if(operations.empty()) return BLOCK_NUM_EMPTY;
-  if(operations.end() == current_operation) return BLOCK_NUM_MAX;
-  return current_operation["trx_in_block"].as<int>();
+  if(operations.end() == current_operation_it) return BLOCK_NUM_MAX;
+  return current_operation_it["trx_in_block"].as<int>();
 }
 
 
