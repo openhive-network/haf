@@ -274,6 +274,7 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( state_providers/switch_state_provider_to_forkable.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/csp_massive_sync_live_blocks_and_fork.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/consensus_state_provider_update_state_provider.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/csp_driver_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/sessions.sql )
 
 
