@@ -12,15 +12,15 @@
 #include <iomanip>
 #include <limits>
 
-// void my_func()
-// {
-//   PsqlTools::PsqlUtils::pg_call_cxx([]()
-//   {
-//       int a = 0;
-//       a=a;
+void my_func()
+{
+  PsqlTools::PsqlUtils::pg_call_cxx([]()
+  {
+      int a = 0;
+      a=a;
 
-//   }, ERRCODE_DATA_EXCEPTION);
-// }
+  }, ERRCODE_DATA_EXCEPTION);
+}
 
 
 
