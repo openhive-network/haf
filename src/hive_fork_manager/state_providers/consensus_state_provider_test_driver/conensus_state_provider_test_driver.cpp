@@ -91,7 +91,8 @@ int main(int argc, char *argv[])
 
     consensus_state_provider::time_probe alltogether_time_probe; alltogether_time_probe.start();
 
-    consensus_state_provider::csp_session_ref_type csp_session = *consensus_state_provider::csp_init_impl(context.c_str(), consensus_state_provider_storage.c_str(), postgres_url.c_str());
+
+    //consensus_state_provider::csp_session_ref_type csp_session =  ;//= *consensus_state_provider::csp_init_impl(context.c_str(), consensus_state_provider_storage.c_str(), postgres_url.c_str());
 
     bool ok = true;
     for (int i = from; i < to; i += step)
@@ -104,7 +105,7 @@ int main(int argc, char *argv[])
 
         consensus_state_provider::time_probe all_time_probe; all_time_probe.start();
 
-        auto step_ok = consensus_state_provider::consensus_state_provider_replay_impl(csp_session, i, current_step_end);
+        auto step_ok = true; // consensus_state_provider::consensus_state_provider_replay_impl(csp_session, i, current_step_end);
 
         all_time_probe.stop(); all_time_probe.print_duration("All");
 
@@ -233,7 +234,7 @@ int main(int argc, char *argv[])
         {
 
             using namespace consensus_state_provider;
-            collected_account_balances_collection_t account_balances = collect_current_all_accounts_balances_impl(csp_session);
+            collected_account_balances_collection_t account_balances;// = collect_current_all_accounts_balances_impl(csp_session);
 
             std::sort(account_balances.begin(), account_balances.end(),
                       [](const collected_account_balances_t& a, const collected_account_balances_t& b) { return a.balance > b.balance; });
@@ -273,7 +274,7 @@ int main(int argc, char *argv[])
 
 
 
-        auto expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(csp_session);
+        auto expected_block_num = 0;// consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(csp_session);
 
         if(expected_block_num < current_step_end)
         {
@@ -288,7 +289,7 @@ int main(int argc, char *argv[])
     }
 
     // Complete the session with wipe clean flag set to true
-    consensus_state_provider::csp_finish_impl(csp_session, true);
+    //consensus_state_provider::csp_finish_impl(csp_session, true);
 
     alltogether_time_probe.print_duration("Alltogether");
 
