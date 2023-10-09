@@ -44,5 +44,5 @@ install(TARGETS csp_driver_extension
 install(FILES csp_driver_extension.control
         DESTINATION ${POSTGRES_SHAREDIR}/extension/)
 
-install(FILES csp_driver_extension.sql
+install(FILES csp_driver_extension--1.0.sql
         DESTINATION ${POSTGRES_SHAREDIR}/extension/)
