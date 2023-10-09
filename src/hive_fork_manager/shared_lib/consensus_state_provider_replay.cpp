@@ -1,4 +1,5 @@
 #include "consensus_state_provider_replay.hpp"
+#include "psql_utils/pg_cxx.hpp"
 #include "time_probe.hpp"
 
 #include <fc/io/json.hpp>
