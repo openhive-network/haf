@@ -31,11 +31,17 @@ project(csp_driver_extension)
 
 # find_package(PostgreSQL REQUIRED)
 
-add_library(csp_driver_extension MODULE PostgreSQL_wrapper.cpp)
+add_library(csp_driver_extension MODULE PostgreSQL_wrapper.cpp
+conensus_state_provider_test_driver.cpp
+../../shared_lib/consensus_state_provider_replay.cpp
+../../shared_lib/consensus_state_provider_replay.hpp
+)
+
 ADD_POSTGRES_INCLUDES( csp_driver_extension )
 ADD_POSTGRES_LIBRARIES( csp_driver_extension )
 # target_link_libraries(csp_driver_extension ${POSTGRES_LIBDIR})
 TARGET_LINK_LIBRARIES(csp_driver_extension PUBLIC hive_protocol fc_shared_boost database_api_plugin block_api_plugin ${HAF_PQ_LIB} ${HAF_PQXX_LIB})
+# set_target_properties(csp_driver_extension PROPERTIES OUTPUT_NAME "csp_driver_extension")
 set_target_properties(csp_driver_extension PROPERTIES PREFIX "")
 
 install(TARGETS csp_driver_extension
