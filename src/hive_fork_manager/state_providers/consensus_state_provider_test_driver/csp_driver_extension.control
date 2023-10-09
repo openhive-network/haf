@@ -1,0 +1,3 @@
+comment = 'Consensus state provider test driver extension'
+default_version = '1.0'
+module_pathname = '$libdir/csp_driver_extension'

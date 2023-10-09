@@ -5,7 +5,6 @@
 
 #include <chrono>
 
-#include <iomanip>
 
 #include "../../shared_lib/consensus_state_provider_replay.hpp"
 #include "../../shared_lib/time_probe.hpp"
@@ -13,8 +12,6 @@
 
 
 
-#include <iostream>
-#include <boost/program_options.hpp>
 
 
 
@@ -41,53 +38,14 @@ unsigned long get_memory_usage_kb() {
 }
 
 
-namespace po = boost::program_options;
 
-int main(int argc, char *argv[])
+
+bool run_consensus_replay(
+    const std::string& context,
+    const std::string& consensus_state_provider_storage,
+    const std::string& postgres_url,
+    int from, int to, int step)
 {
-    int from, to, step;
-    std::string  context, consensus_state_provider_storage, postgres_url;
-
-    po::options_description desc("Allowed options");
-    desc.add_options()
-        ("help,h", "produce help message")
-        ("from,f", po::value<int>(&from)->default_value(1), "from value (default: 1)")
-        ("to,t", po::value<int>(&to)->default_value(5000000), "to value (default: 5000000)")
-        ("step,e", po::value<int>(&step)->default_value(100000), "step value (default: 100000)")
-        ("context,c", po::value<std::string>(&context)->default_value("driverc"), "context (default: driverc)")
-        ("postgres_url,p", po::value<std::string>(&postgres_url)->default_value("postgresql:///haf_block_log"), "PostgreSQL URL (default: postgresql:///haf_block_log)")
-        ("consensus_state_provider_storage,s", po::value<std::string>(&consensus_state_provider_storage)->default_value("/home/hived/datadir/consensus_state_provider"), "Consensus state provider storage (optional)")
-        ;
-
-
-    po::variables_map vm;
-    try {
-        po::store(po::parse_command_line(argc, argv, desc), vm);
-
-        if (vm.count("help")) {
-            std::cout << desc << "\n";
-            return 1;
-        }
-
-        po::notify(vm);
-    } catch (const po::error &e) {
-        std::cerr << "Error: " << e.what() << "\n";
-        std::cerr << desc << "\n";
-        return 1;
-    }
-
-
-    std::locale::global(std::locale(""));
-    std::cout.imbue(std::locale());
-
-
-
-    std::cout << "from: " << std::fixed << std::setprecision(0) << std::showbase << from << "\n";
-    std::cout << "to: " << std::fixed << std::setprecision(0) << std::showbase << to << "\n";
-    std::cout << "step: " << std::fixed << std::setprecision(0) << std::showbase << step << "\n";
-    std::cout << "context: " << context << "\n";
-    std::cout << "postgres_url: " << postgres_url << "\n";
-    std::cout << "consensus_state_provider_storage: " << consensus_state_provider_storage << "\n";
 
     consensus_state_provider::time_probe alltogether_time_probe; alltogether_time_probe.start();
 
@@ -132,98 +90,6 @@ int main(int argc, char *argv[])
                 {"taker", 15014283},
                 {"steemit1", 10000205},
                 {"ashold882015", 9895158}
-            };
-            // clang-format on
-        }
-        else if(current_step_end == 23645964)
-        {
-            // clang-format off
-            expected_values =
-            {
-                {"bittrex", 22319508517},
-                {"poloniex", 14479958335},
-                {"binance-hot", 8183911450},
-                {"huobi-withdrawal", 2963571300},
-                {"steemit2", 2279627277},
-                {"ben", 2213971486},
-                {"imadev", 788297714},
-                {"openledger-dex", 522742188},
-                {"upbit-exchange", 477889426},
-                {"dan", 471203861},
-                {"muchfun", 415000004},
-                {"cdec84", 335009000},
-                {"dantheman", 300198008},
-                {"amcq", 290000001},
-                {"alpha", 272174106},
-            };
-            // clang-format on
-        }
-        else if(current_step_end == 68676504)
-        {
-            // clang-format off
-            expected_values =
-            {
-                {"upbitsteem", 84255436735},
-                {"hive.fund", 57945295412},
-                {"binance-hot", 22503269770},
-                {"bittrex", 7230079627},
-                {"bt20hivedkdnel", 4895067376},
-                {"hot.dunamu", 4177964215},
-                {"honey-swap", 4076035698},
-                {"bithumbsend2", 2087406186},
-                {"blocktrades", 1836388214},
-                {"freedom", 1687237610},
-                {"huobi-withdrawal", 1510659148},
-                {"alpha", 1477208947},
-                {"user.dunamu", 1239472613},
-                {"mika", 987553199},
-                {"gateiodeposit", 956191238},
-            };
-            // clang-format on
-        }
-        else if(current_step_end == 73964098)
-        {
-            // clang-format off
-            expected_values =
-            {
-                {"upbitsteem", 93077129841},
-                {"hive.fund", 52850986437},
-                {"binance-hot", 28693190263},
-                {"bittrex", 5745379276},
-                {"bithumbsend2", 5249525913},
-                {"honey-swap", 4559244755},
-                {"hot.dunamu", 3801547810},
-                {"freedom", 2172552725},
-                {"bt20hivedkdnel", 1895069766},
-                {"darthknight", 1831354086},
-                {"huobi-withdrawal", 1218250217},
-                {"keestone", 953345779},
-                {"gateiodeposit", 700293730},
-                {"newsflash", 655071805},
-                {"bhuz", 578502979},
-            };
-            // clang-format on
-        }
-        else if(current_step_end == 74106753)
-        {
-            // clang-format off
-            expected_values =
-            {
-                {"upbitsteem", 93077129841},
-                {"hive.fund", 52718991035},
-                {"binance-hot", 22849127680},
-                {"bithumbsend2", 5354620236},
-                {"bittrex", 4944739528},
-                {"honey-swap", 4665903413},
-                {"binance-hot2", 3791124997},
-                {"hot.dunamu", 3392514212},
-                {"freedom", 2185766269},
-                {"bt20hivedkdnel", 1895069766},
-                {"darthknight", 1836658652},
-                {"huobi-withdrawal", 1207818132},
-                {"keestone", 953345779},
-                {"gateiodeposit", 710361370},
-                {"newsflash", 655071851},
             };
             // clang-format on
         }
@@ -292,8 +158,10 @@ int main(int argc, char *argv[])
 
     alltogether_time_probe.print_duration("Alltogether");
 
-    return ok ? 0 : 1;
+    return ok;
 }
+
+
 
 /*
 
