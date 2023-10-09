@@ -30,9 +30,11 @@ class haf_state_database : public hive::chain::database
 public:
   haf_state_database(csp_session_ref_type csp_session):csp_session(csp_session){}
 
-  virtual void state_dependent_open( const open_args& args ) override;
+  void open( const open_args& args ) override;
 
   void push_haf_block(const full_block_ptr& full_block, uint32_t skip);
+
+  virtual void load_state_initial_data_for_snaphot_plugin( const open_args& args ) override;
 
 private:
 
@@ -432,8 +434,9 @@ void haf_state_database::push_haf_block(const full_block_ptr& full_block, uint32
 }
 
 
-void haf_state_database::state_dependent_open( const open_args& args )
+void haf_state_database::open( const open_args& args )
 {
+  database::open(args);
   load_state_initial_data(args,
     [this](uint32_t block_num)
     {
@@ -442,8 +445,15 @@ void haf_state_database::state_dependent_open( const open_args& args )
     });
 }
 
-
-
+void haf_state_database::load_state_initial_data_for_snaphot_plugin( const open_args& args )
+{
+  load_state_initial_data(args,
+    [this](uint32_t block_num)
+    {
+      auto full_block = postgres_block_log(csp_session).read_full_block(head_block_num());
+      return full_block;
+    });
+}
 
 void postgres_block_log::measure_before_run()
 {
