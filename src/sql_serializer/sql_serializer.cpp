@@ -47,7 +47,7 @@ namespace plugins
 {
 namespace sql_serializer
 {
-bool is_database_correct( const std::string& database_url, bool force_open_inconsistant )
+bool is_database_correct( const std::string& database_url, bool force_open_inconsistant, appbase::application& app )
 {
   ilog( "Checking correctness of database..." );
 
@@ -62,6 +62,7 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
       return data_processor::data_processing_status();
       }
       , nullptr
+      , app
       );
 
   db_checker.trigger(data_processor::data_chunk_ptr(), 0);
@@ -88,6 +89,7 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
       return data_processor::data_processing_status();
       }
       , nullptr
+      , app
       );
 
   db_consistency_checker.trigger(data_processor::data_chunk_ptr(), 0);
@@ -198,6 +200,7 @@ public:
       const std::string &url
     , hive::chain::database& _chain_db
     , const sql_serializer_plugin& _main_plugin
+    , appbase::application& app
     , uint32_t _psql_operations_threads_number
     , uint32_t _psql_transactions_threads_number
     , uint32_t _psql_account_operations_threads_number
@@ -205,7 +208,7 @@ public:
     , uint32_t _psql_livesync_threshold
     , bool     _psql_enable_filter
   )
-  : _indexation_state( _main_plugin, _chain_db, url,
+  : _indexation_state( _main_plugin, _chain_db, url, app,
                           _psql_transactions_threads_number,
                           _psql_operations_threads_number,
                           _psql_account_operations_threads_number,
@@ -215,6 +218,7 @@ public:
       db_url{url},
       chain_db{_chain_db},
       main_plugin{_main_plugin},
+      theApp( app ),
       psql_transactions_threads_number( _psql_transactions_threads_number ),
       psql_operations_threads_number( _psql_operations_threads_number ),
       psql_account_operations_threads_number( _psql_account_operations_threads_number ),
@@ -260,6 +264,7 @@ public:
   std::string db_url;
   hive::chain::database& chain_db;
   const sql_serializer_plugin& main_plugin;
+  appbase::application& theApp;
 
   uint32_t _last_block_num = 0;
 
@@ -317,7 +322,7 @@ public:
         tx.exec( types );
         return data_processing_status();
       };
-      queries_commit_data_processor processor( db_url, "Get type definitions", get_type_definitions, nullptr );
+      queries_commit_data_processor processor( db_url, "Get type definitions", get_type_definitions, nullptr, theApp );
       processor.trigger( nullptr, 0 );
       processor.join();
     }
@@ -333,7 +338,7 @@ public:
       tx.exec( CONNECT_QUERY );
       return data_processing_status();
     };
-    queries_commit_data_processor processor( db_url, "Connect to the db", connect_to_the_db, nullptr );
+    queries_commit_data_processor processor( db_url, "Connect to the db", connect_to_the_db, nullptr, theApp );
     processor.trigger( nullptr, 0 );
     processor.join();
   }
@@ -359,6 +364,7 @@ public:
         return data_processing_status();
       }
       , nullptr
+      , theApp
     );
 
     block_loader.trigger(data_processor::data_chunk_ptr(), 0);
@@ -381,7 +387,7 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
     tx.exec( CONNECT_QUERY );
     return data_processing_status();
   };
-  queries_commit_data_processor processor( db_url, "Connect to the db", connect_to_the_db, nullptr );
+  queries_commit_data_processor processor( db_url, "Connect to the db", connect_to_the_db, nullptr, theApp );
   processor.trigger( nullptr, 0 );
   processor.join();
 }
@@ -494,7 +500,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
         FC_ASSERT(operation_id_result.size() == 1, "Wrong number of rows returned");
         op_sequence_id = operation_id_result[0]["next_operation_id"].as<int64_t>();
         return data_processing_status();
-      }, nullptr);
+      }, nullptr, theApp );
 
     sequence_loader.trigger(data_processor::data_chunk_ptr(), 0);
     sequence_loader.join();
@@ -735,9 +741,9 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
   ilog("Initializing sql serializer plugin");
   FC_ASSERT(options.count("psql-url"), "`psql-url` is required argument");
 
-  auto& db = appbase::app().get_plugin<hive::plugins::chain::chain_plugin>().db();
+  auto& db = get_app().get_plugin<hive::plugins::chain::chain_plugin>().db();
 
-  FC_ASSERT( is_database_correct( options["psql-url"].as<fc::string>(), options["psql-force-open-inconsistent"].as<bool>() )
+  FC_ASSERT( is_database_correct( options["psql-url"].as<fc::string>(), options["psql-force-open-inconsistent"].as<bool>(), get_app() )
               , "SQL database is in invalid state"
   );
 
@@ -745,6 +751,7 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     options["psql-url"].as<fc::string>()
     , db
     , *this
+    , get_app()
     , options["psql-operations-threads-number"].as<uint32_t>()
     , options["psql-transactions-threads-number"].as<uint32_t>()
     , options["psql-account-operations-threads-number"].as<uint32_t>()

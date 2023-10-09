@@ -42,6 +42,7 @@ namespace hive::plugins::sql_serializer {
       , std::string psqlUrl
       , std::string description
       , std::shared_ptr< block_num_rendezvous_trigger > _randezvous_trigger
+      , appbase::application& app
     );
 
     virtual ~chunks_for_sql_writers_splitter() override = default;
@@ -59,6 +60,7 @@ namespace hive::plugins::sql_serializer {
           uint32_t number_of_threads
         , std::string description
         , std::shared_ptr< block_num_rendezvous_trigger > _randezvous_trigger
+        , appbase::application& app
       );
 
       virtual ~chunks_for_string_writers_splitter() override = default;
@@ -76,11 +78,12 @@ namespace hive::plugins::sql_serializer {
     , std::string psqlUrl
     , std::string description
     , std::shared_ptr< block_num_rendezvous_trigger > _randezvous_trigger
+    , appbase::application& app
     ) : chunks_for_writers_splitter_base< TableWriter >( description ) {
       FC_ASSERT( number_of_threads > 0 );
       for ( auto writer_num = 0; writer_num < number_of_threads; ++writer_num ) {
         auto writer_description = description + "_" + std::to_string( writer_num );
-        chunks_for_writers_splitter_base< TableWriter >::emplace_writer( psqlUrl, writer_description, _randezvous_trigger );
+        chunks_for_writers_splitter_base< TableWriter >::emplace_writer( psqlUrl, writer_description, _randezvous_trigger, std::ref( app ) );
       }
     }
 
@@ -90,6 +93,7 @@ namespace hive::plugins::sql_serializer {
       uint32_t number_of_threads
     , std::string description
     , std::shared_ptr< block_num_rendezvous_trigger > _randezvous_trigger
+    , appbase::application& app
     ) : chunks_for_writers_splitter_base< TableWriter >( description ) {
       FC_ASSERT( number_of_threads > 0 );
       _strings.resize( number_of_threads );
@@ -100,7 +104,7 @@ namespace hive::plugins::sql_serializer {
     for ( auto writer_num = 0u; writer_num < _callbacks.size(); ++writer_num ) {
       auto writer_description = description + "_" + std::to_string( writer_num );
       chunks_for_writers_splitter_base< TableWriter >::emplace_writer(
-        _callbacks[ writer_num ], writer_description, _randezvous_trigger
+        _callbacks[ writer_num ], writer_description, _randezvous_trigger, std::ref( app )
       );
     }
   }

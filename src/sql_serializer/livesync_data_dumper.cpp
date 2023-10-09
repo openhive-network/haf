@@ -9,6 +9,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       const std::string& db_url
     , const appbase::abstract_plugin& plugin
     , hive::chain::database& chain_db
+    , appbase::application& app
     , uint32_t operations_threads
     , uint32_t transactions_threads
     , uint32_t account_operation_threads
@@ -32,7 +33,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       _applied_hardforks = std::move( _text );
     };
 
-    transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "Livesync dumper" );
+    transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "Livesync dumper", app );
     constexpr auto ONE_THREAD_WRITERS_NUMBER = 4;
     auto NUMBER_OF_PROCESSORS_THREADS = ONE_THREAD_WRITERS_NUMBER + operations_threads + transactions_threads + account_operation_threads;
     auto execute_push_block = [this](block_num_rendezvous_trigger::BLOCK_NUM _block_num ){
@@ -68,13 +69,13 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     };
     auto api_trigger = std::make_shared< block_num_rendezvous_trigger >( NUMBER_OF_PROCESSORS_THREADS, execute_push_block );
 
-    _block_writer = std::make_unique<block_data_container_t_writer>(blocks_callback, "Block data writer", api_trigger);
-    _transaction_writer = std::make_unique<transaction_data_container_t_writer>(transactions_threads, "Transaction data writer", api_trigger);
-    _transaction_multisig_writer = std::make_unique<transaction_multisig_data_container_t_writer>(transactions_multisig_callback, "Transaction multisig data writer", api_trigger);
-    _operation_writer = std::make_unique<operation_data_container_t_writer>(operations_threads, "Operation data writer", api_trigger );
-    _account_writer = std::make_unique<accounts_data_container_t_writer>(accounts_callback, "Accounts data writer", api_trigger);
-    _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >(account_operation_threads, "Account operations data writer", api_trigger);
-    _applied_hardforks_writer = std::make_unique< applied_hardforks_container_t_writer >(applied_hardforks_callback,"Applied hardforks data writer", api_trigger );
+    _block_writer = std::make_unique<block_data_container_t_writer>(blocks_callback, "Block data writer", api_trigger, app);
+    _transaction_writer = std::make_unique<transaction_data_container_t_writer>(transactions_threads, "Transaction data writer", api_trigger, app);
+    _transaction_multisig_writer = std::make_unique<transaction_multisig_data_container_t_writer>(transactions_multisig_callback, "Transaction multisig data writer", api_trigger, app);
+    _operation_writer = std::make_unique<operation_data_container_t_writer>(operations_threads, "Operation data writer", api_trigger, app);
+    _account_writer = std::make_unique<accounts_data_container_t_writer>(accounts_callback, "Accounts data writer", api_trigger, app);
+    _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >(account_operation_threads, "Account operations data writer", api_trigger, app);
+    _applied_hardforks_writer = std::make_unique< applied_hardforks_container_t_writer >(applied_hardforks_callback,"Applied hardforks data writer", api_trigger, app);
 
     auto execute_set_irreversible
       = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx)->data_processor::data_processing_status{
@@ -82,7 +83,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       tx.exec( command );
       return data_processor::data_processing_status();
     };
-    _set_irreversible_block_processor = std::make_unique< queries_commit_data_processor >( db_url, "hive.set_irreversible caller", execute_set_irreversible, nullptr );
+    _set_irreversible_block_processor = std::make_unique< queries_commit_data_processor >( db_url, "hive.set_irreversible caller", execute_set_irreversible, nullptr, app );
 
     auto execute_back_from_fork
     = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx)->data_processor::data_processing_status{
@@ -90,7 +91,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       tx.exec( command );
       return data_processor::data_processing_status();
     };
-    _notify_fork_block_processor = std::make_unique< queries_commit_data_processor >( db_url, "hive.back_from_fork caller", execute_back_from_fork, nullptr );
+    _notify_fork_block_processor = std::make_unique< queries_commit_data_processor >( db_url, "hive.back_from_fork caller", execute_back_from_fork, nullptr, app );
 
     connect_irreversible_event();
     connect_fork_event();
