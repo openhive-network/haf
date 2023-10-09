@@ -9,15 +9,16 @@
 
 namespace hive { namespace plugins { namespace sql_serializer {
 
-indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_threshold )
+indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_threshold, appbase::application& app )
 : _db_url( std::move(db_url) )
-, _psql_index_threshold( psql_index_threshold ) {
+, _psql_index_threshold( psql_index_threshold )
+, theApp( app ) {
 
 }
 
 void
 indexes_controler::disable_indexes_depends_on_blocks( uint32_t number_of_blocks_to_insert ) {
-  if (appbase::app().is_interrupt_request())
+  if (theApp.is_interrupt_request())
     return;
 
   bool can_disable_indexes = number_of_blocks_to_insert > _psql_index_threshold;
@@ -35,7 +36,7 @@ indexes_controler::disable_indexes_depends_on_blocks( uint32_t number_of_blocks_
 
 void
 indexes_controler::enable_indexes() {
-  if (appbase::app().is_interrupt_request())
+  if (theApp.is_interrupt_request())
     return;
   ilog( "Restoring HAF indexes..." );
   fc::time_point restore_indexes_start_time = fc::time_point::now();
@@ -64,7 +65,7 @@ indexes_controler::enable_indexes() {
 
 void
 indexes_controler::disable_constraints() {
-  if (appbase::app().is_interrupt_request())
+  if (theApp.is_interrupt_request())
     return;
 
   auto processor = start_commit_sql(false, "hive.disable_fk_of_irreversible()", "disable fk-s" );
@@ -74,7 +75,7 @@ indexes_controler::disable_constraints() {
 
 void
 indexes_controler::enable_constrains() {
-  if (appbase::app().is_interrupt_request())
+  if (theApp.is_interrupt_request())
     return;
 
   ilog("Restoring HAF constraints...");
@@ -120,7 +121,7 @@ indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_
       );
     ilog("The ${objects_name} have been ${mode}...", ("objects_name", objects_name )("mode", ( mode ? "created" : "dropped" ) ) );
     return data_processor::data_processing_status();
-    } , nullptr);
+    } , nullptr, theApp);
 
   processor->trigger(data_processor::data_chunk_ptr(), 0);
   return processor;
