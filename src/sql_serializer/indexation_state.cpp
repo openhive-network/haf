@@ -129,6 +129,7 @@ indexation_state::indexation_state(
     const sql_serializer_plugin& main_plugin
   , hive::chain::database& chain_db
   , std::string db_url
+  , appbase::application& app
   , uint32_t psql_transactions_threads_number
   , uint32_t psql_operations_threads_number
   , uint32_t psql_account_operations_threads_number
@@ -138,12 +139,13 @@ indexation_state::indexation_state(
   : _main_plugin( main_plugin )
   , _chain_db( chain_db )
   , _db_url( db_url )
+  , theApp( app )
   , _psql_transactions_threads_number( psql_transactions_threads_number )
   , _psql_operations_threads_number( psql_operations_threads_number )
   , _psql_account_operations_threads_number( psql_account_operations_threads_number )
   , _psql_livesync_threshold( psql_livesync_threshold )
   , _irreversible_block_num( NO_IRREVERSIBLE_BLOCK )
-  , _indexes_controler( db_url, psql_index_threshold )
+  , _indexes_controler( db_url, psql_index_threshold, app )
 {
   cached_data_t empty_data{0};
   update_state( INDEXATION::START, empty_data, 0 );
@@ -244,6 +246,7 @@ indexation_state::update_state(
       _indexes_controler.disable_indexes_depends_on_blocks( expected_number_of_blocks_to_sync() );
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
+        , theApp
         , _psql_operations_threads_number
         , _psql_transactions_threads_number
         , _psql_account_operations_threads_number
@@ -272,6 +275,7 @@ indexation_state::update_state(
       );
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
+        , theApp
         , _psql_operations_threads_number
         , _psql_transactions_threads_number
         , _psql_account_operations_threads_number
@@ -299,6 +303,7 @@ indexation_state::update_state(
         _db_url
         , _main_plugin
         , _chain_db
+        , theApp
         , _psql_operations_threads_number
         , _psql_transactions_threads_number
         , _psql_account_operations_threads_number

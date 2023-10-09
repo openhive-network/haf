@@ -30,6 +30,7 @@ namespace hive::plugins::sql_serializer {
         const std::string& db_url
       , const appbase::abstract_plugin& plugin
       , hive::chain::database& chain_db
+      , appbase::application& app
       , uint32_t operations_threads
       , uint32_t transactions_threads
       , uint32_t account_operation_threads

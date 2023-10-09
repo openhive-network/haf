@@ -18,6 +18,7 @@ namespace hive::plugins::sql_serializer {
   public:
     reindex_data_dumper(
         const std::string& db_url
+      , appbase::application& app
       , uint32_t operations_threads
       , uint32_t transactions_threads
       , uint32_t account_operation_threads

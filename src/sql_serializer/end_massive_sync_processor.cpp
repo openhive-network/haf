@@ -11,7 +11,7 @@ namespace hive {
 namespace plugins {
 namespace sql_serializer {
 
-    end_massive_sync_processor::end_massive_sync_processor( std::string psqlUrl )
+    end_massive_sync_processor::end_massive_sync_processor( std::string psqlUrl, appbase::application& app )
     {
       auto commiting_function = [this](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
         tx.exec( "SELECT hive.end_massive_sync("s + std::to_string( _block_number ) + ")"s );
@@ -19,7 +19,7 @@ namespace sql_serializer {
         return data_processor::data_processing_status();
       };
 
-      _data_processor = std::make_unique< queries_commit_data_processor >(psqlUrl, "commiting hive.end_massive_sync", commiting_function, nullptr );
+      _data_processor = std::make_unique< queries_commit_data_processor >(psqlUrl, "commiting hive.end_massive_sync", commiting_function, nullptr, app );
     }
 
     void

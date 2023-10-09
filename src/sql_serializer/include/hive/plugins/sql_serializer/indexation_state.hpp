@@ -28,6 +28,7 @@ namespace hive::plugins::sql_serializer {
           const sql_serializer_plugin& main_plugin
         , hive::chain::database& chain_db
         , std::string db_url
+        , appbase::application& app
         , uint32_t psql_transactions_threads_number
         , uint32_t psql_operations_threads_number
         , uint32_t psql_account_operations_threads_number
@@ -75,6 +76,7 @@ namespace hive::plugins::sql_serializer {
       const sql_serializer_plugin& _main_plugin;
       hive::chain::database& _chain_db;
       const std::string _db_url;
+      appbase::application& theApp;
       const uint32_t _psql_transactions_threads_number;
       const uint32_t _psql_operations_threads_number;
       const uint32_t _psql_account_operations_threads_number;

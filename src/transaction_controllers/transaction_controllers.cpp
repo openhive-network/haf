@@ -21,7 +21,7 @@ namespace {
 class own_tx_controller final : public transaction_controller
 {
 public:
-  own_tx_controller(std::string dbUrl, std::string description) : _dbUrl(std::move(dbUrl)), _description(std::move(description)) {}
+  own_tx_controller(std::string dbUrl, std::string description, appbase::application& app) : _dbUrl(std::move(dbUrl)), _description(std::move(description)), _theApp(app) {}
 
 /// transaction_controller:
   transaction_ptr openTx() override;
@@ -96,7 +96,7 @@ private:
           using namespace std::chrono_literals;
           std::this_thread::sleep_for(500ms);
         }
-      } while(retry < MAX_RETRY_COUNT && !appbase::app().is_interrupt_request() )
+      } while(retry < MAX_RETRY_COUNT && !_owner->get_app().is_interrupt_request() )
       ;
 
       elog("Transaction controller: `${d}' permanently lost connection to database: `${url}'. Exiting.", ("d", _owner->_description)("url", _owner->_dbUrl));
@@ -156,9 +156,17 @@ private:
 private:
   const std::string _dbUrl;
   const std::string _description;
+  appbase::application& _theApp;
 
   std::unique_ptr<pqxx::connection> _opened_connection;
   own_transaction* _opened_tx = nullptr;
+
+public:
+
+  appbase::application& get_app()
+  {
+    return _theApp;
+  }
 };
 
 
@@ -214,9 +222,9 @@ void own_tx_controller::disconnect()
 class single_transaction_controller : public transaction_controller
 {
 public:
-  explicit single_transaction_controller(const std::string& dbUrl) : _clientCount(0)
+  explicit single_transaction_controller(const std::string& dbUrl, appbase::application& app) : _clientCount(0)
   {
-    _own_contoller = build_own_transaction_controller(dbUrl, "single_transaction_controller");
+    _own_contoller = build_own_transaction_controller(dbUrl, "single_transaction_controller", app);
   }
 
 /// transaction_controller:
@@ -344,14 +352,14 @@ void single_transaction_controller::disconnect()
 
 } // namespace
 
-transaction_controller_ptr build_own_transaction_controller(const std::string& dbUrl, const std::string& description)
+transaction_controller_ptr build_own_transaction_controller(const std::string& dbUrl, const std::string& description, appbase::application& app)
 {
-  return std::make_shared<own_tx_controller>(dbUrl, description);
+  return std::make_shared<own_tx_controller>(dbUrl, description, app);
 }
 
-transaction_controller_ptr build_single_transaction_controller(const std::string& dbUrl)
+transaction_controller_ptr build_single_transaction_controller(const std::string& dbUrl, appbase::application& app)
 {
-  return std::make_shared<single_transaction_controller>(dbUrl);
+  return std::make_shared<single_transaction_controller>(dbUrl, app);
 }
 
 } // namespace transaction_controllers
