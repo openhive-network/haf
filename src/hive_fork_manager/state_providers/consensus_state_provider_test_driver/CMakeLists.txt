@@ -38,11 +38,11 @@ ADD_POSTGRES_LIBRARIES( csp_driver_extension )
 TARGET_LINK_LIBRARIES(csp_driver_extension PUBLIC hive_protocol fc_shared_boost database_api_plugin block_api_plugin ${HAF_PQ_LIB} ${HAF_PQXX_LIB})
 set_target_properties(csp_driver_extension PROPERTIES PREFIX "")
 
-# install(TARGETS csp_driver_extension
-#         DESTINATION ${POSTGRES_LIBDIR})
+install(TARGETS csp_driver_extension
+        DESTINATION ${POSTGRES_LIBDIR})
 
-# install(FILES csp_driver_extension.control
-#         DESTINATION ${POSTGRES_SHAREDIR}/extension/)
+install(FILES csp_driver_extension.control
+        DESTINATION ${POSTGRES_SHAREDIR}/extension/)
 
-# install(FILES csp_driver_extension.sql
-#         DESTINATION ${POSTGRES_SHAREDIR}/extension/)
+install(FILES csp_driver_extension.sql
+        DESTINATION ${POSTGRES_SHAREDIR}/extension/)
