@@ -395,7 +395,7 @@ block_api_tests:
   variables:
     FF_NETWORK_PER_BUILD: 1
     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
-    BENCHMARK_DIR: "$CI_PROJECT_DIR/hive/tests/hive-local-tools/tests_api/benchmarks"
+    BENCHMARK_DIR: "$CI_PROJECT_DIR/hive/tests/python/hive-local-tools/tests_api/benchmarks"
   script:
     # setup
     - |
