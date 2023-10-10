@@ -825,7 +825,7 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
 Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 {
   consensus_state_provider::csp_session_ptr_type csp_session_ptr  = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
-  assert(session_ptr != nullptr);
+  assert(csp_session_ptr != nullptr);
   consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
 
   int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(csp_session);
@@ -871,7 +871,7 @@ PG_FUNCTION_INFO_V1(current_all_accounts_balances);
 Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
 {
   consensus_state_provider::csp_session_ptr_type csp_session_ptr = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
-  assert(session_ptr != nullptr);
+  assert(csp_session_ptr != nullptr);
   consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
 
 
