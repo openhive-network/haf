@@ -24,4 +24,4 @@ pandas = "1.4.0"
 psycopg2-binary = "2.9.1"
 sqlalchemy = "1.4.25"
 sqlalchemy-utils = "0.37.9"
-hive_local_tools = { path = "../../../hive/tests/hive-local-tools", develop = true }
+hive_local_tools = { path = "../../../hive/tests/python/hive-local-tools", develop = true }
