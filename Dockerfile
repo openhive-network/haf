@@ -109,8 +109,6 @@ COPY --chown=haf_admin:users ./docker/docker_entrypoint.sh .
 COPY --chown=postgres:postgres ./docker/postgresql.conf /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
 COPY --chown=postgres:postgres ./docker/pg_hba.conf /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
 
-VOLUME [ "/home/hived/datadir", "/home/hived/shm_dir" ]
-
 ENV DATADIR=/home/hived/datadir
 # Use default location (inside datadir) of shm file. If SHM should be placed on some different device, then set it to mapped volume `/home/hived/shm_dir` and map it in docker run
 ENV SHM_DIR=${DATADIR}/blockchain
