@@ -11,11 +11,6 @@ BEGIN
 
     __context_id = hive.get_context_id( _context );
 
-
-    IF __context_id IS NULL THEN
-         RAISE EXCEPTION 'No context with name %', _context;
-    END IF;
-
     EXECUTE format('DROP TABLE IF EXISTS hive.%I', __table_name);
 
     EXECUTE format( 'CREATE TABLE hive.%I(
@@ -46,10 +41,7 @@ DECLARE
 BEGIN
     __context_id = hive.get_context_id( _context );
 
-    IF __context_id IS NULL THEN
-             RAISE EXCEPTION 'No context with name %', _context;
-    END IF;
-  __to_execute =  format('
+    __to_execute =  format('
         INSERT INTO
             hive.%s_metadata(account_id, json_metadata)
         SELECT
@@ -137,10 +129,6 @@ DECLARE
     __table_name TEXT := _context || '_metadata';
 BEGIN
     __context_id = hive.get_context_id( _context );
-
-    IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context;
-    END IF;
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
 END;
