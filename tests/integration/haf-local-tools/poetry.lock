@@ -222,7 +222,7 @@ wax = "0.0.1a4+277cf4f"
 
 [package.source]
 type = "directory"
-url = "../../../hive/tests/hive-local-tools"
+url = "../../../hive/tests/python/hive-local-tools"
 
 [[package]]
 name = "idna"
@@ -1031,7 +1031,7 @@ develop = true
 
 [package.source]
 type = "directory"
-url = "../../../hive/tests/hive-local-tools/shared-tools"
+url = "../../../hive/tests/python/hive-local-tools/shared-tools"
 
 [[package]]
 name = "six"
@@ -1193,7 +1193,7 @@ schemas = "0.0.0.post236.dev0+5f473da"
 
 [package.source]
 type = "directory"
-url = "../../../hive/tests/hive-local-tools/test-tools"
+url = "../../../hive/tests/python/hive-local-tools/test-tools"
 
 [[package]]
 name = "tests-api"
@@ -1212,7 +1212,7 @@ types-requests = "2.31.0.2"
 
 [package.source]
 type = "directory"
-url = "../../../hive/tests/hive-local-tools/tests_api"
+url = "../../../hive/tests/python/hive-local-tools/tests_api"
 
 [[package]]
 name = "tomli"
@@ -1317,4 +1317,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "0ab5ef5ce3a36e791c92785ff047649f9a254b5fab0e699e98381ad65b9e9615"
+content-hash = "4c05fae9f6332f59136fd21ef51c4a8a20c60e797b640a8d05358d93d2c9d81e"
