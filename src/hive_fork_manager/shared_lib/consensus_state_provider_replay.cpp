@@ -66,54 +66,64 @@ using full_block_ptr = std::shared_ptr<full_block_type>;
 
 using block_bin_t = hive::plugins::block_api::api_signed_block_object;
 
+namespace spixx
+{
+  class row;
+  class result{
+    public:
+    class const_iterator{};
+  };
+  
+}
+
 
 class postgres_block_log
 {
 public:
-//   explicit postgres_block_log(csp_session_ref_type csp_session):csp_session(csp_session){}
-//   void run(uint32_t first_block, uint32_t last_block);
-//   full_block_ptr read_full_block(uint32_t block_num);
-// private:
-//   void prepare_postgres_data(uint32_t first_block, uint32_t last_block);
-//   void replay_blocks();
-//   void replay_block(const pqxx::row& block);
-//   void replay_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags);
+  explicit postgres_block_log(csp_session_ref_type csp_session):csp_session(csp_session){}
+  void run(uint32_t first_block, uint32_t last_block);
+  full_block_ptr read_full_block(uint32_t block_num);
+private:
+  void prepare_postgres_data(uint32_t first_block, uint32_t last_block);
+  void replay_blocks();
+  void replay_block(const spixx::row& block);
+  void replay_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags);
 
   void read_postgres_data(uint32_t first_block, uint32_t last_block);
-//   void initialize_iterators();
+  void initialize_iterators();
 
-//   full_block_ptr block_to_fullblock(uint32_t block_num_from_shared_memory_bin, const pqxx::row& block);
+  full_block_ptr block_to_fullblock(uint32_t block_num_from_shared_memory_bin, const spixx::row& block);
 
-//   block_bin_t block_to_bin(const pqxx::row& block);
-//   void transactions2bin(uint32_t block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins);
-//   std::vector<hive::protocol::operation> operations2bins(uint32_t block_num, int32_t trx_in_block);
+  block_bin_t block_to_bin(const spixx::row& block);
+  void transactions2bin(uint32_t block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins);
+  std::vector<hive::protocol::operation> operations2bins(uint32_t block_num, int32_t trx_in_block);
 
-//   void measure_before_run();
-//   void measure_after_run();
-//   void rewind_current_operation_to_block(uint32_t block_num);
+  void measure_before_run();
+  void measure_after_run();
+  void rewind_current_operation_to_block(uint32_t block_num);
 
-//   bool is_current_operation(uint32_t block_num, int trx_in_block) const;
-//   bool current_transaction_belongs_to_block(const uint32_t block_num);
+  bool is_current_operation(uint32_t block_num, int trx_in_block) const;
+  bool current_transaction_belongs_to_block(const uint32_t block_num);
 
-//   uint32_t current_transaction_block_num();
-//   uint32_t current_operation_block_num() const;
-//   int current_operation_trx_num() const;
+  uint32_t current_transaction_block_num();
+  uint32_t current_operation_block_num() const;
+  int current_operation_trx_num() const;
 
-//   csp_session_ref_type csp_session;
+  csp_session_ref_type csp_session;
 
-//   pqxx::result blocks;
-//   pqxx::result transactions;
-//   pqxx::result operations;
-//   pqxx::result::const_iterator current_transaction_it;
-//   pqxx::result::const_iterator current_operation_it;
-//   time_probe transformations_time_probe;
-//   time_probe replay_full_block_time_probe;
+  spixx::result blocks;
+  spixx::result transactions;
+  spixx::result operations;
+  spixx::result::const_iterator current_transaction_it;
+  spixx::result::const_iterator current_operation_it;
+  time_probe transformations_time_probe;
+  time_probe replay_full_block_time_probe;
 
-//   enum : uint32_t
-//   {
-//       BLOCK_NUM_EMPTY = 0,
-//       BLOCK_NUM_MAX = std::numeric_limits<uint32_t>::max()
-//   };
+  enum : uint32_t
+  {
+      BLOCK_NUM_EMPTY = 0,
+      BLOCK_NUM_MAX = std::numeric_limits<uint32_t>::max()
+  };
 };
 
 
@@ -126,21 +136,21 @@ public:
 // //lower level helpers
 // void handle_exception(std::exception_ptr exception_ptr);
 // constexpr uint64_t get_skip_flags();
-// block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
+// block_bin_t build_block_bin(const spixx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
 // full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num);
-// void build_transaction_id_bins(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins);
-// hive::protocol::signed_transaction build_transaction_bin(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins);
-// void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
-// std::vector<hive::protocol::signature_type> build_signatures(const pqxx::result::const_iterator& transaction);
-// bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, uint32_t block_num, int trx_in_block);
+// void build_transaction_id_bins(const spixx::result::const_iterator& transaction, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins);
+// hive::protocol::signed_transaction build_transaction_bin(const spixx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins);
+// void add_operation_bin(const spixx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
+// std::vector<hive::protocol::signature_type> build_signatures(const spixx::result::const_iterator& transaction);
+// bool operation_matches_block_transaction(const spixx::const_result_iterator& operation, uint32_t block_num, int trx_in_block);
 
 
 
 // // value coming from pxx is without 'T' in the middle to be accepted in variant
-// std::string fix_pxx_time(const pqxx::field& t);
+// std::string fix_pxx_time(const spixx::field& t);
 
 // // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
-// const char* fix_pxx_hex(const pqxx::field& h);
+// const char* fix_pxx_hex(const spixx::field& h);
 
 
 // csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
@@ -342,49 +352,51 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
     }
 
     SPITupleTable *tuptable = SPI_tuptable;
-    TupleDesc tupdesc = tuptable->tupdesc;
+    TupleDesc tupdesc = tuptable->tupdesc; (void)tupdesc;
     uint64 proc = SPI_processed;
+
+    
 
     for (uint64 i = 0; i < proc; i++)
     {
-        HeapTuple tuple = tuptable->vals[i];
-        // Extract necessary fields from tuple
-        int32 block_num = DatumGetInt32(SPI_getbinval(tuple, tupdesc, 1, &isNull)); // Assuming num is at column 1
+        // HeapTuple tuple = tuptable->vals[i];
+        // // Extract necessary fields from tuple
+        // int32 block_num = DatumGetInt32(SPI_getbinval(tuple, tupdesc, 1, &isNull)); // Assuming num is at column 1
         
-        // Call your processing functions here...
-        // replay_block() equivalent processing on this tuple
-        block_bin_t result = block_to_bin(tuple); // Make sure to adapt block_to_bin to work with HeapTuple
-        // ... additional processing
+        // // Call your processing functions here...
+        // // replay_block() equivalent processing on this tuple
+        // block_bin_t result = block_to_bin(tuple); // Make sure to adapt block_to_bin to work with HeapTuple
+        // // ... additional processing
     }
 
     SPI_finish();
-  // clang-format off
-    auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
-                                + std::to_string(first_block)
-                                + " and num <= "
-                                + std::to_string(last_block)
-                                + " ORDER BY num ASC";
-    blocks = conn.execute_query(blocks_query);
-    //std::cout << "Blocks:" << blocks.size() << " ";
+  // // clang-format off
+  //   auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
+  //                               + std::to_string(first_block)
+  //                               + " and num <= "
+  //                               + std::to_string(last_block)
+  //                               + " ORDER BY num ASC";
+  //   blocks = conn.execute_query(blocks_query);
+  //   //std::cout << "Blocks:" << blocks.size() << " ";
 
-    auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
-                                + std::to_string(first_block)
-                                + " and block_num <= "
-                                + std::to_string(last_block)
-                                + " ORDER BY block_num, trx_in_block ASC";
-    transactions = conn.execute_query(transactions_query);
-    //std::cout << "Transactions:" << transactions.size() << " ";
+  //   auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
+  //                               + std::to_string(first_block)
+  //                               + " and block_num <= "
+  //                               + std::to_string(last_block)
+  //                               + " ORDER BY block_num, trx_in_block ASC";
+  //   transactions = conn.execute_query(transactions_query);
+  //   //std::cout << "Transactions:" << transactions.size() << " ";
 
-    auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
-                                + std::to_string(first_block)
-                                + " and block_num <= "
-                                + std::to_string(last_block)
-                                + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
-                                + " ORDER BY id ASC";
-  operations = conn.execute_query(operations_query);
-  //std::cout << "Operations:" << operations.size() << " ";
+  //   auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
+  //                               + std::to_string(first_block)
+  //                               + " and block_num <= "
+  //                               + std::to_string(last_block)
+  //                               + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
+  //                               + " ORDER BY id ASC";
+  // operations = conn.execute_query(operations_query);
+  // //std::cout << "Operations:" << operations.size() << " ";
 
-  // clang-format on
+  // // clang-format on
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
 }
 
@@ -404,7 +416,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 // }
 
 
-// void postgres_block_log::replay_block(const pqxx::row& block)
+// void postgres_block_log::replay_block(const spixx::row& block)
 // {
 //   transformations_time_probe.start();
 
@@ -418,7 +430,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
 // }
 
-// full_block_ptr postgres_block_log::block_to_fullblock(uint32_t block_num_from_shared_memory_bin, const pqxx::row& block)
+// full_block_ptr postgres_block_log::block_to_fullblock(uint32_t block_num_from_shared_memory_bin, const spixx::row& block)
 // {
 //   auto block_num_from_postgres = block["num"].as<uint32_t>();
 
@@ -487,15 +499,15 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 //       std::rethrow_exception(exception_ptr);
 //     }
 //   }
-//   catch(const pqxx::broken_connection& ex)
+//   catch(const spixx::broken_connection& ex)
 //   {
 //     elog("postgres_block_log detected connection error: ${e}.", ("e", ex.what()));
 //   }
-//   catch(const pqxx::sql_error& ex)
+//   catch(const spixx::sql_error& ex)
 //   {
 //     elog("postgres_block_log detected SQL statement execution failure. Failing statement: `${q}'.", ("q", ex.query()));
 //   }
-//   catch(const pqxx::pqxx_exception& ex)
+//   catch(const spixx::pqxx_exception& ex)
 //   {
 //     elog("postgres_block_log detected SQL execution failure: ${e}.", ("e", ex.base().what()));
 //   }
@@ -514,7 +526,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 // }
 
 
-// block_bin_t postgres_block_log::block_to_bin(const pqxx::row& block)
+// block_bin_t postgres_block_log::block_to_bin(const spixx::row& block)
 // {
 //   auto block_num = block["num"].as<uint32_t>();
 
@@ -595,7 +607,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
 
 
-// block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins)
+// block_bin_t build_block_bin(const spixx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins)
 // {
 //   using std::string;
 //   using std::vector;
@@ -653,7 +665,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 //   return current_transaction_it["block_num"].as<uint32_t>() == block_num;
 // }
 
-// std::vector<hive::protocol::signature_type> build_signatures(const pqxx::result::const_iterator& transaction)
+// std::vector<hive::protocol::signature_type> build_signatures(const spixx::result::const_iterator& transaction)
 // {
 //   std::vector<hive::protocol::signature_type> signatures;
 //   if(!transaction["signature"].is_null())
@@ -665,7 +677,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 //   return signatures;
 // }
 
-// void build_transaction_id_bins(const pqxx::result::const_iterator& transaction,
+// void build_transaction_id_bins(const spixx::result::const_iterator& transaction,
 //                                             std::vector<hive::protocol::transaction_id_type>& transaction_id_bins)
 // {
 //   //  https://github.com/jtv/libpqxx/blob/3d97c80bcde96fb70a21c1ae1cf92ad934818210/include/pqxx/field.hxx
@@ -691,7 +703,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
 
 
-// hive::protocol::signed_transaction build_transaction_bin(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins)
+// hive::protocol::signed_transaction build_transaction_bin(const spixx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins)
 // {
 //   hive::protocol::signed_transaction  signed_transaction;
 
@@ -711,7 +723,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 //   return block_num == current_operation_block_num() && trx_in_block == current_operation_trx_num();
 // }
 
-// bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, uint32_t block_num, int trx_in_block)
+// bool operation_matches_block_transaction(const spixx::const_result_iterator& operation, uint32_t block_num, int trx_in_block)
 // {
 //   return operation["block_num"].as<uint32_t>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block;
 // }
@@ -731,9 +743,9 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 // }
 
 
-// void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins)
+// void add_operation_bin(const spixx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins)
 // {
-//   pqxx::binarystring bs(operation["bin_body"]);
+//   spixx::binarystring bs(operation["bin_body"]);
 //   const unsigned char* raw_data = bs.data();
 //   auto data_length = bs.size();
 
@@ -837,7 +849,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 // }
 
 // // value coming from pxx is without 'T' in the middle to be accepted in our time consumer
-// std::string fix_pxx_time(const pqxx::field& t)
+// std::string fix_pxx_time(const spixx::field& t)
 // {
 //   const auto T_letter_position_in_ascii_time_string = 10;
 //   std::string r = t.c_str();
@@ -846,7 +858,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 // }
 
 // // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
-// const char* fix_pxx_hex(const pqxx::field& h)
+// const char* fix_pxx_hex(const spixx::field& h)
 // {
 //   const auto backslash_x_prefix_length = 2;
 //   return h.c_str() + backslash_x_prefix_length;
