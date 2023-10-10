@@ -24,8 +24,7 @@ then
 fi
 
 HAF_DB_STORE="$DATADIR/haf_db_store"
-CUSTOM_POSTGRES_CONFIG="$DATADIR/haf_postgresql_conf.d/custom_postgres.conf"
-PGDATA="$DATADIR/haf_db_store/pgdata"
+PGDATA="$HAF_DB_STORE/pgdata"
 
 
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
@@ -150,20 +149,21 @@ EOF
 trap 'exit' INT QUIT TERM
 trap cleanup EXIT
 
-
 # Be sure those directories exists and have right permissions
 sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
 
-# data_directory is hardcoded in postgresql.conf as '/home/hived/datadir/haf_db_store/pgdata' so we create symbolic link to location of HAF_DB_STORE
-# If the link already exists (ie. the container was restarted rather than recreated) we forcinly recreate the link to avoid error:
-# ln: failed to create symbolic link '/home/hived/datadir/haf_db_store/haf_db_store': File exists
-test "$HAF_DB_STORE" = "/home/hived/datadir/haf_db_store" || sudo -n ln -sf "$HAF_DB_STORE" /home/hived/datadir/haf_db_store
-
-CUSTOM_POSTGRES_CONFIG_DEFAULT="/home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf"
-POSTGRES_CONFIG="/etc/postgresql/${POSTGRES_VERSION}/main/postgresql.conf"
-if [[ "$CUSTOM_POSTGRES_CONFIG" != "$CUSTOM_POSTGRES_CONFIG_DEFAULT" ]] && ! grep -q "$CUSTOM_POSTGRES_CONFIG" "$POSTGRES_CONFIG"; then
-	echo "include_if_exists = '$CUSTOM_POSTGRES_CONFIG'" | sudo --user=postgres tee --append "$POSTGRES_CONFIG"
+# PostgresQL configuration (postgresql.conf) has data_directory hardcoded as '/home/hived/datadir/haf_db_store/pgdata' and custom configuration path as
+# /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf. As such we need to make /home/hived/datadir a symbolinc link to actual data directory if 
+# variable $DATADIR is set to a non-default value.
+if [[ "$DATADIR" != "/home/hived/datadir" ]]; then
+  echo "Non-standard datadir requested: $DATADIR. Adding symbolic link and setting permissions..."
+  sudo -n rm -rf /home/hived/datadir # Remove the default data directory
+  sudo -n --user=hived ln -sf "$DATADIR" /home/hived/datadir # Add symbolic link to the new data directory in its place
 fi
+
+# Directory haf_db_store has to be world readable to avoid the following error:
+# Error: /home/hived/datadir/haf_db_store/pgdata is not accessible; please fix the directory permissions (/home/hived/datadir/haf_db_store/ should be world readable)
+sudo -n --user=hived mkdir -p -m 755 "$HAF_DB_STORE"
 
 # Prepare HBA file before starting PostgreSQL
 prepare_pg_hba_file
@@ -182,8 +182,8 @@ then
 
   echo "Postgres instance setup completed."
 else
-  sudo --user=hived -n mkdir -p "$PGDATA"
-  sudo --user=hived -n mkdir -p "$HAF_DB_STORE/tablespace"
+  sudo --user=hived -n mkdir "$PGDATA"
+  sudo --user=hived -n mkdir "$HAF_DB_STORE/tablespace"
   sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE"
   sudo -n chown -Rc postgres:postgres "$PGDATA"
 
