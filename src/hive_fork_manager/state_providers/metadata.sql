@@ -156,6 +156,7 @@ CREATE OR REPLACE FUNCTION hive.update_state_provider_metadata(
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
+    SET jit = OFF
 AS
 $BODY$
 DECLARE
