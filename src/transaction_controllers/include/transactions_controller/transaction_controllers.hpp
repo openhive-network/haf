@@ -1,11 +1,14 @@
 #pragma once
 
-#include <appbase/application.hpp>
-
 // C++ connector library for PostgreSQL (http://pqxx.org/development/libpqxx/)
 #include <pqxx/pqxx>
 
 #include <memory>
+
+namespace appbase
+{
+  class application;
+}
 
 namespace transaction_controllers {
 
