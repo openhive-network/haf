@@ -113,7 +113,18 @@ namespace spixx
 
   class result{
     public:
+    result();
+    result(
+      SPITupleTable *tuptable,
+      TupleDesc tupdesc,
+      uint64 proc
 
+
+    // SPITupleTable *tuptable = SPI_tuptable;
+    // TupleDesc tupdesc = tuptable->tupdesc; (void)tupdesc;
+    // uint64 proc = SPI_processed;
+
+    );
     using const_iterator = const_result_iterator;    
     [[nodiscard]] inline const_iterator end() const noexcept;
     [[nodiscard]] SPIXX_PURE bool empty() const noexcept;
@@ -124,6 +135,25 @@ namespace spixx
 
   };
 
+  spixx::result execute_query(const std::string& query)
+  {
+    int ret = SPI_exec(query.c_str(), 0);
+    if (ret != SPI_OK_SELECT)
+    {
+        //elog(ERROR, "Failed executing query");
+    }
+
+    // SPITupleTable *tuptable = SPI_tuptable;
+    // TupleDesc tupdesc = tuptable->tupdesc; (void)tupdesc;
+    // uint64 proc = SPI_processed;
+
+    return spixx::result(
+      SPI_tuptable,
+      SPI_tuptable->tupdesc,
+      SPI_processed
+    );
+    
+  }
   
 }
 
@@ -357,8 +387,35 @@ void undo_blocks(csp_session_ref_type csp_session, uint32_t shift)
   }
 }
 
+template <typename on_enter_func, typename on_exit_func>
+class scope_guard
+{
+public:
+    scope_guard(on_enter_func on_enter, on_exit_func on_exit)
+        : on_exit_(on_exit)
+    {
+        on_enter();
+    }
+
+    ~scope_guard()
+    {
+        on_exit_();
+    }
+
+private:
+    on_exit_func on_exit_;
+};
+
+
+
+
 void postgres_block_log::run(uint32_t first_block, uint32_t last_block)
 {
+  scope_guard spi_guard(
+    []() { SPI_connect(); },
+    []() { SPI_finish(); }
+  );
+
   measure_before_run();
 
   prepare_postgres_data(first_block, last_block);
@@ -369,10 +426,14 @@ void postgres_block_log::run(uint32_t first_block, uint32_t last_block)
 
 full_block_ptr postgres_block_log::read_full_block(uint32_t block_num)
 {
+  scope_guard spi_guard(
+    []() { SPI_connect(); },
+    []() { SPI_finish(); }
+  );
 
   prepare_postgres_data(block_num, block_num);
-  return block_to_fullblock(block_num, blocks[0]);//mtlk TODO -> use begin
 
+  return block_to_fullblock(block_num, blocks[0]);//mtlk TODO -> use begin
 }
 
 // We get blocks, transactions and operations containers from SQL
@@ -389,27 +450,34 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
-  SPI_connect();
 
-    char query[1024];
-    sprintf(query, 
-            "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON id = producer_account_id WHERE num >= %d and num <= %d ORDER BY num ASC", 
-            first_block, last_block);
+  // clang-format off
+  auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
+                              + std::to_string(first_block)
+                              + " and num <= "
+                              + std::to_string(last_block)
+                              + " ORDER BY num ASC";
+  blocks = spixx::execute_query(blocks_query);
 
-    int ret = SPI_exec(query, 0);
-    if (ret != SPI_OK_SELECT)
-    {
-        //elog(ERROR, "Failed executing query");
-    }
+  auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
+                              + std::to_string(first_block)
+                              + " and block_num <= "
+                              + std::to_string(last_block)
+                              + " ORDER BY block_num, trx_in_block ASC";
+  transactions = spixx::execute_query(transactions_query);
 
-    SPITupleTable *tuptable = SPI_tuptable;
-    TupleDesc tupdesc = tuptable->tupdesc; (void)tupdesc;
-    uint64 proc = SPI_processed;
+  auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
+                              + std::to_string(first_block)
+                              + " and block_num <= "
+                              + std::to_string(last_block)
+                              + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
+                              + " ORDER BY id ASC";
+  operations = spixx::execute_query(operations_query);
+  // clang-format on
 
-    
 
-    for (uint64 i = 0; i < proc; i++)
-    {
+    // for (uint64 i = 0; i < proc; i++)
+    // {
         // HeapTuple tuple = tuptable->vals[i];
         // // Extract necessary fields from tuple
         // int32 block_num = DatumGetInt32(SPI_getbinval(tuple, tupdesc, 1, &isNull)); // Assuming num is at column 1
@@ -418,36 +486,9 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
         // // replay_block() equivalent processing on this tuple
         // block_bin_t result = block_to_bin(tuple); // Make sure to adapt block_to_bin to work with HeapTuple
         // // ... additional processing
-    }
+    // }
 
-    SPI_finish();
-  // // clang-format off
-  //   auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
-  //                               + std::to_string(first_block)
-  //                               + " and num <= "
-  //                               + std::to_string(last_block)
-  //                               + " ORDER BY num ASC";
-  //   blocks = conn.execute_query(blocks_query);
-  //   //std::cout << "Blocks:" << blocks.size() << " ";
-
-  //   auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
-  //                               + std::to_string(first_block)
-  //                               + " and block_num <= "
-  //                               + std::to_string(last_block)
-  //                               + " ORDER BY block_num, trx_in_block ASC";
-  //   transactions = conn.execute_query(transactions_query);
-  //   //std::cout << "Transactions:" << transactions.size() << " ";
-
-  //   auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
-  //                               + std::to_string(first_block)
-  //                               + " and block_num <= "
-  //                               + std::to_string(last_block)
-  //                               + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
-  //                               + " ORDER BY id ASC";
-  // operations = conn.execute_query(operations_query);
-  // //std::cout << "Operations:" << operations.size() << " ";
-
-  // // clang-format on
+  
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
 }
 
