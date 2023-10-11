@@ -2,17 +2,61 @@
 #include "spixx.hpp"
 #include "utils/builtins.h"  // For text_to_cstring
 
+#include "spixx.hpp"
+#include "utils/builtins.h"
+
 // namespace spixx {
 
-// // field implementations
-// field::field(Datum d, bool isN) : datum(d), isNull(isN) {}
+// // field implementation
 
-// std::string field::asString() const {
-//     if (isNull) return "NULL";
-//     return text_to_cstring(DatumGetTextP(datum));
+
+// // field implementation
+
+// // field implementation
+// uint32_t field::as_uint32_t() const {
+//     if (is_null()) {
+//         elog(ERROR, "Attempted conversion of NULL field to uint32_t.");
+//     }
+//     return DatumGetUInt32(datum);
 // }
 
-// // row implementations
+// int field::as_int() const {
+//     if (is_null()) {
+//         elog(ERROR, "Attempted conversion of NULL field to int.");
+//     }
+//     return DatumGetInt32(datum);
+// }
+
+// int64_t field::as_int64_t() const {
+//     if (is_null()) {
+//         elog(ERROR, "Attempted conversion of NULL field to int64_t.");
+//     }
+//     return DatumGetInt64(datum);
+// }
+
+
+// bool field::is_null() const noexcept 
+// {
+//     return isNull;
+// }
+
+// const char *field::c_str() const {
+//     if (isNull) return nullptr;
+//     return 0; // mtlk commented text_to_cstring(DatumGetTextP(datum));
+// }
+
+// // binarystring implementation
+// binarystring::binarystring(const field& f) : fld(f) {}
+
+// binarystring::value_type const *binarystring::data() const noexcept {
+//     return (value_type const *) VARDATA_ANY(fld.datum);
+// }
+
+// binarystring::size_type binarystring::size() const noexcept {
+//     return VARSIZE_ANY_EXHDR(fld.datum);
+// }
+
+// // row implementation
 // row::row(HeapTuple t, TupleDesc td) : tuple(t), tupdesc(td) {}
 
 // field row::operator[](const std::string& key) const {
@@ -20,13 +64,14 @@
 //     if (col <= 0) {
 //         elog(ERROR, "Column not found");
 //     }
-
-//     Datum datum = SPI_getbinval(tuple, tupdesc, col, &isNull);
-//     return field(datum, isNull);
+//     bool isN;
+//     Datum datum;//mtlk COMMENTED  = SPI_getbinval(tuple, tupdesc, col, &isN);
+//     return field{datum, isN};
 // }
 
-// // const_result_iterator implementations
-// const_result_iterator::const_result_iterator(SPITupleTable *tt, int idx) : tuptable(tt), index(idx) {}
+// // const_result_iterator implementation
+// const_result_iterator::const_result_iterator(SPITupleTable *tt, int idx)
+// : row(tt->vals[idx], tt->tupdesc), tuptable(tt), index(idx) {}
 
 // const_result_iterator& const_result_iterator::operator++() {
 //     index++;
@@ -45,10 +90,10 @@
 //     return row(tuptable->vals[index], tuptable->tupdesc);
 // }
 
-// // result implementations
+// // result implementation
 // result::result() : tuptable(nullptr), proc(0) {}
 
-// result::result(SPITupleTable *t, uint64 p) : tuptable(t), proc(p) {}
+// result::result(SPITupleTable *t, TupleDesc td, uint64 p) : tuptable(t), proc(p) {}
 
 // result::const_iterator result::end() const noexcept {
 //     return const_iterator(tuptable, proc);
@@ -69,23 +114,35 @@
 //     return row(tuptable->vals[i], tuptable->tupdesc);
 // }
 
-// // execute_query function
-// result execute_query(const std::string& query) {
-//     if (SPI_connect() != SPI_OK_CONNECT) {
-//         elog(ERROR, "Failed connecting to SPI");
-//     }
+// // result execute_query(const std::string& query) 
+// // {
 
-//     int ret = SPI_exec(query.c_str(), 0);
-//     if (ret != SPI_OK_SELECT) {
-//         SPI_finish();
-//         elog(ERROR, "Failed executing query");
-//     }
+// //     int ret = SPI_exec(query.c_str(), 0);
+// //     if (ret != SPI_OK_SELECT) {
+// //         SPI_finish();
+// //         elog(ERROR, "Failed executing query");
+// //     }
 
-//     result res(SPI_tuptable, SPI_processed);
+// //     for (uint64 i = 0; i < SPI_processed; i++)
+// //     {
+// //         HeapTuple tuple = SPI_tuptable->vals[i];
+// //         // Extract necessary fields from tuple
+// //         bool isNull;
+// //         int32 block_num = DatumGetInt32(SPI_getbinval(tuple, SPI_tuptable->tupdesc, 1, &isNull)); // Assuming num is at column 1
+// //         block_num = block_num;
+        
+// //         // Call your processing functions here...
+// //         // replay_block() equivalent processing on this tuple
+// //         //block_bin_t result = block_to_bin(tuple); // Make sure to adapt block_to_bin to work with HeapTuple
+// //         // ... additional processing
+// //     }
 
-//     SPI_finish();
-//     return res;
-// }
+  
+
+
+// //     result res(SPI_tuptable, SPI_tuptable->tupdesc, SPI_processed);
+// //     SPI_finish();
+// //     return res;
+// // }
 
 // }  // namespace spixx
-
