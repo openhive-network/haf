@@ -818,147 +818,147 @@ int postgres_block_log::current_operation_trx_num() const
 }
 
 
-// constexpr uint64_t get_skip_flags()
-// {
-//   using flags = hive::chain::database::validation_steps;
+constexpr uint64_t get_skip_flags()
+{
+  using flags = hive::chain::database::validation_steps;
 
-//   return flags::skip_block_log |
-//          flags::skip_witness_signature |
-//          flags::skip_transaction_signatures |
-//          flags::skip_transaction_dupe_check |
-//          flags::skip_tapos_check |
-//          flags::skip_merkle_check |
-//          flags::skip_witness_schedule_check |
-//          flags::skip_authority_check |
-//          flags::skip_validate;
-// }
-
-
+  return flags::skip_block_log |
+         flags::skip_witness_signature |
+         flags::skip_transaction_signatures |
+         flags::skip_transaction_dupe_check |
+         flags::skip_tapos_check |
+         flags::skip_merkle_check |
+         flags::skip_witness_schedule_check |
+         flags::skip_authority_check |
+         flags::skip_validate;
+}
 
 
 
-// struct fix_hf_version_visitor
-// {
-//   explicit fix_hf_version_visitor(int a_proper_version) : proper_version(a_proper_version) {}
-
-//   using result_type = void;
-
-//   void operator()(hive::void_t& obj) const
-//   {
-//     // Nothing to do.
-//   }
-
-//   void operator()(hive::protocol::version& reported_version) const
-//   {
-//     // Nothing to do.
-//   }
-
-//   void operator()(hive::protocol::hardfork_version_vote& hfv) const
-//   {
-//     auto& ver = hfv.hf_version;
-//     static_cast<hive::protocol::version&>(ver) = hive::protocol::version(0, 0, proper_version);
-//   }
-
-//   private:
-//     int proper_version;
-// };
-
-// void fix_hf_version(block_bin_t& sb, int proper_hf_version, uint32_t block_num)
-// {
-//   fix_hf_version_visitor visitor(proper_hf_version);
-
-//   for(auto& extension : sb.extensions)
-//   {
-//     extension.visit(visitor);
-//   }
-
-//   ilog("Fixing minor hardfork version in extension in block ${block_num}", ("block_num", block_num));
-// }
 
 
-// full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num)
-// {
-//   switch(block_num)
-//   {
-//     // clang-format off
-//     case 2726331: fix_hf_version(sb, 489, block_num); break;
-//     case 2730591: fix_hf_version(sb, 118, block_num); break;
-//     case 2733423: fix_hf_version(sb, 119, block_num); break;
-//     case 2768535: fix_hf_version(sb, 116, block_num); break;
-//     case 2781318: fix_hf_version(sb, 116, block_num); break;
-//     case 2786287: fix_hf_version(sb, 119, block_num); break;
-//     // clang-format on
-//   }
-//   return full_block_type::create_from_signed_block(sb);
-// }
+struct fix_hf_version_visitor
+{
+  explicit fix_hf_version_visitor(int a_proper_version) : proper_version(a_proper_version) {}
 
-// // value coming from pxx is without 'T' in the middle to be accepted in our time consumer
-// std::string fix_pxx_time(const spixx::field& t)
-// {
-//   const auto T_letter_position_in_ascii_time_string = 10;
-//   std::string r = t.c_str();
-//   r[T_letter_position_in_ascii_time_string] = 'T';
-//   return r;
-// }
+  using result_type = void;
 
-// // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
-// const char* fix_pxx_hex(const spixx::field& h)
-// {
-//   const auto backslash_x_prefix_length = 2;
-//   return h.c_str() + backslash_x_prefix_length;
-// }
+  void operator()(hive::void_t& obj) const
+  {
+    // Nothing to do.
+  }
+
+  void operator()(hive::protocol::version& reported_version) const
+  {
+    // Nothing to do.
+  }
+
+  void operator()(hive::protocol::hardfork_version_vote& hfv) const
+  {
+    auto& ver = hfv.hf_version;
+    static_cast<hive::protocol::version&>(ver) = hive::protocol::version(0, 0, proper_version);
+  }
+
+  private:
+    int proper_version;
+};
+
+void fix_hf_version(block_bin_t& sb, int proper_hf_version, uint32_t block_num)
+{
+  fix_hf_version_visitor visitor(proper_hf_version);
+
+  for(auto& extension : sb.extensions)
+  {
+    extension.visit(visitor);
+  }
+
+  ilog("Fixing minor hardfork version in extension in block ${block_num}", ("block_num", block_num));
+}
 
 
-// collected_account_balances_t extract_account_balances(
-//     const hive::chain::account_object* account)
-// {
-//   collected_account_balances_t account_balances;
-//   account_balances.account_name = account->get_name();
-//   account_balances.balance = account->balance.amount.value;
-//   account_balances.hbd_balance = account->hbd_balance.amount.value;
-//   account_balances.vesting_shares = account->vesting_shares.amount.value;
-//   account_balances.savings_hbd_balance = account->savings_hbd_balance.amount.value;
-//   account_balances.reward_hbd_balance = account->reward_hbd_balance.amount.value;
+full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num)
+{
+  switch(block_num)
+  {
+    // clang-format off
+    case 2726331: fix_hf_version(sb, 489, block_num); break;
+    case 2730591: fix_hf_version(sb, 118, block_num); break;
+    case 2733423: fix_hf_version(sb, 119, block_num); break;
+    case 2768535: fix_hf_version(sb, 116, block_num); break;
+    case 2781318: fix_hf_version(sb, 116, block_num); break;
+    case 2786287: fix_hf_version(sb, 119, block_num); break;
+    // clang-format on
+  }
+  return full_block_type::create_from_signed_block(sb);
+}
 
-//   return account_balances;
-// }
+// value coming from pxx is without 'T' in the middle to be accepted in our time consumer
+std::string fix_pxx_time(const spixx::field& t)
+{
+  const auto T_letter_position_in_ascii_time_string = 10;
+  std::string r = t.c_str();
+  r[T_letter_position_in_ascii_time_string] = 'T';
+  return r;
+}
 
-// collected_account_balances_collection_t collect_current_account_balances(csp_session_ref_type csp_session,
-//                                                                          const std::vector<std::string>& account_names)
-// {
-//   auto& db = *csp_session.db;
+// value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
+const char* fix_pxx_hex(const spixx::field& h)
+{
+  const auto backslash_x_prefix_length = 2;
+  return h.c_str() + backslash_x_prefix_length;
+}
 
-//   collected_account_balances_collection_t collected_balances;
 
-//   for( auto& a : account_names )
-//   {
-//     auto acct = db.find< hive::chain::account_object, hive::chain::by_name >( a );
-//     if( acct != nullptr )
-//     {
-//       collected_balances.emplace_back(extract_account_balances(acct));
-//     }
-//   }
+collected_account_balances_t extract_account_balances(
+    const hive::chain::account_object* account)
+{
+  collected_account_balances_t account_balances;
+  account_balances.account_name = account->get_name();
+  account_balances.balance = account->balance.amount.value;
+  account_balances.hbd_balance = account->hbd_balance.amount.value;
+  account_balances.vesting_shares = account->vesting_shares.amount.value;
+  account_balances.savings_hbd_balance = account->savings_hbd_balance.amount.value;
+  account_balances.reward_hbd_balance = account->reward_hbd_balance.amount.value;
 
-//   return collected_balances;
-// }
+  return account_balances;
+}
 
-// collected_account_balances_collection_t collect_current_all_accounts_balances(csp_session_ref_type csp_session)
-// {
+collected_account_balances_collection_t collect_current_account_balances(csp_session_ref_type csp_session,
+                                                                         const std::vector<std::string>& account_names)
+{
+  auto& db = *csp_session.db;
 
-//   auto& db = *csp_session.db;
+  collected_account_balances_collection_t collected_balances;
 
-//   collected_account_balances_collection_t collected_balances;
+  for( auto& a : account_names )
+  {
+    auto acct = db.find< hive::chain::account_object, hive::chain::by_name >( a );
+    if( acct != nullptr )
+    {
+      collected_balances.emplace_back(extract_account_balances(acct));
+    }
+  }
 
-//   auto& idx = db.get_index< hive::chain::account_index, hive::chain::by_name >();
-//   auto itr = idx.lower_bound( "" );
+  return collected_balances;
+}
 
-//   auto end = idx.end();
+collected_account_balances_collection_t collect_current_all_accounts_balances(csp_session_ref_type csp_session)
+{
 
-//   while( itr != end )
-//   {
-//     collected_balances.emplace_back(extract_account_balances(&(*itr)));
-//     ++itr;
-//   }
-//   return collected_balances;
-// }
+  auto& db = *csp_session.db;
+
+  collected_account_balances_collection_t collected_balances;
+
+  auto& idx = db.get_index< hive::chain::account_index, hive::chain::by_name >();
+  auto itr = idx.lower_bound( "" );
+
+  auto end = idx.end();
+
+  while( itr != end )
+  {
+    collected_balances.emplace_back(extract_account_balances(&(*itr)));
+    ++itr;
+  }
+  return collected_balances;
+}
 }  // namespace consensus_state_provider
