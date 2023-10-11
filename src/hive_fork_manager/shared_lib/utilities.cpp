@@ -828,7 +828,7 @@ Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
   assert(session_ptr != nullptr);
   consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
 
-  int expected_block_num ;//= consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(csp_session);
+  int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(csp_session);
 
   PG_RETURN_INT32(expected_block_num);
 
@@ -876,14 +876,14 @@ Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
 
 
   consensus_state_provider::collected_account_balances_collection_t collected_data;
-  // collect_data_and_fill_recordset(
-  //     fcinfo, csp_session, collected_data,
-  //     [&csp_session]()
-  //     {
-  //       return consensus_state_provider::collect_current_all_accounts_balances_impl(
-  //           csp_session);
-  //     },
-  //     __FUNCTION__);
+  collect_data_and_fill_recordset(
+      fcinfo, csp_session, collected_data,
+      [&csp_session]()
+      {
+        return consensus_state_provider::collect_current_all_accounts_balances_impl(
+            csp_session);
+      },
+      __FUNCTION__);
 
 
   return (Datum)0;
@@ -939,14 +939,14 @@ Datum current_account_balances(PG_FUNCTION_ARGS)
   std::vector<std::string> accounts = extract_string_array_from_datum(accounts_arr);
 
   consensus_state_provider::collected_account_balances_collection_t collected_data;
-  // collect_data_and_fill_recordset(
-  //     fcinfo, csp_session, collected_data,
-  //     [=, &csp_session]()
-  //     {
-  //       return consensus_state_provider::collect_current_account_balances_impl(
-  //           csp_session, accounts);
-  //     },
-  //     __FUNCTION__);
+  collect_data_and_fill_recordset(
+      fcinfo, csp_session, collected_data,
+      [=, &csp_session]()
+      {
+        return consensus_state_provider::collect_current_account_balances_impl(
+            csp_session, accounts);
+      },
+      __FUNCTION__);
 
   return (Datum)0;
 }
@@ -972,7 +972,7 @@ Datum csp_finish(PG_FUNCTION_ARGS)
   bool wipe_clean_shared_memory_bin = PG_GETARG_BOOL(1);
 
 
-  //consensus_state_provider::csp_finish_impl(csp_session, wipe_clean_shared_memory_bin);
+  consensus_state_provider::csp_finish_impl(csp_session, wipe_clean_shared_memory_bin);
 
   return (Datum)0;
 }
@@ -990,7 +990,7 @@ Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
   int from = PG_GETARG_INT32(1);
   int to = PG_GETARG_INT32(2);
 
-  auto ok = true; //consensus_state_provider::consensus_state_provider_replay_impl(csp_session, from, to);
+  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(csp_session, from, to);
 
   PG_RETURN_BOOL(ok);
 
@@ -1008,7 +1008,7 @@ Datum csp_init(PG_FUNCTION_ARGS)
   char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_P(1));
   char* postgres_url = text_to_cstring(PG_GETARG_TEXT_P(2));
 
-  consensus_state_provider::csp_session_ptr_type csp_session_ptr; // = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
   assert(csp_session_ptr != nullptr);
 
 
