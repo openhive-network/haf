@@ -1,9 +1,12 @@
 #pragma once
 
-#include <appbase/application.hpp>
-
 #include <memory>
 #include <string>
+
+namespace appbase
+{
+  class application;
+}
 
 namespace hive::plugins::sql_serializer {
   class queries_commit_data_processor;
