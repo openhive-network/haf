@@ -66,13 +66,33 @@ using full_block_ptr = std::shared_ptr<full_block_type>;
 
 using block_bin_t = hive::plugins::block_api::api_signed_block_object;
 
+#define SPIXX_PURE __attribute__((pure))
+
+
 namespace spixx
 {
-  class row;
+  class field
+  {
+    public:
+    template<typename T> T as() const;
+    [[nodiscard]] SPIXX_PURE bool is_null() const noexcept;    
+    [[nodiscard]] SPIXX_PURE char const *c_str() const &;
+
+  };
+  class row
+  {
+    public:
+      field operator[](const std::string& key) const;
+
+
+  };
+
   class result{
     public:
     class const_iterator{};
   };
+
+  class const_result_iterator;
   
 }
 
@@ -127,30 +147,30 @@ private:
 };
 
 
-// void undo_blocks(csp_session_ref_type, uint32_t shift);
-// void initialize_chain_db(csp_session_ref_type csp_session);
+void undo_blocks(csp_session_ref_type, uint32_t shift);
+void initialize_chain_db(csp_session_ref_type csp_session);
 
-// void set_open_args_data_dir(open_args& db_open_args, const std::string&  shared_memory_bin_path);
-// void set_open_args_other_parameters(open_args& db_open_args);
+void set_open_args_data_dir(open_args& db_open_args, const std::string&  shared_memory_bin_path);
+void set_open_args_other_parameters(open_args& db_open_args);
 
-// //lower level helpers
-// void handle_exception(std::exception_ptr exception_ptr);
-// constexpr uint64_t get_skip_flags();
-// block_bin_t build_block_bin(const spixx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
-// full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num);
-// void build_transaction_id_bins(const spixx::result::const_iterator& transaction, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins);
-// hive::protocol::signed_transaction build_transaction_bin(const spixx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins);
-// void add_operation_bin(const spixx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
-// std::vector<hive::protocol::signature_type> build_signatures(const spixx::result::const_iterator& transaction);
-// bool operation_matches_block_transaction(const spixx::const_result_iterator& operation, uint32_t block_num, int trx_in_block);
+//lower level helpers
+void handle_exception(std::exception_ptr exception_ptr);
+constexpr uint64_t get_skip_flags();
+block_bin_t build_block_bin(const spixx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
+full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num);
+void build_transaction_id_bins(const spixx::result::const_iterator& transaction, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins);
+hive::protocol::signed_transaction build_transaction_bin(const spixx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins);
+void add_operation_bin(const spixx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
+std::vector<hive::protocol::signature_type> build_signatures(const spixx::result::const_iterator& transaction);
+bool operation_matches_block_transaction(const spixx::const_result_iterator& operation, uint32_t block_num, int trx_in_block);
 
 
 
-// // value coming from pxx is without 'T' in the middle to be accepted in variant
-// std::string fix_pxx_time(const spixx::field& t);
+// value coming from pxx is without 'T' in the middle to be accepted in variant
+std::string fix_pxx_time(const spixx::field& t);
 
-// // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
-// const char* fix_pxx_hex(const spixx::field& h);
+// value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
+const char* fix_pxx_hex(const spixx::field& h);
 
 
 // csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
@@ -526,119 +546,119 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 // }
 
 
-// block_bin_t postgres_block_log::block_to_bin(const spixx::row& block)
-// {
-//   auto block_num = block["num"].as<uint32_t>();
+block_bin_t postgres_block_log::block_to_bin(const spixx::row& block)
+{
+  auto block_num = block["num"].as<uint32_t>();
 
-//   std::vector<hive::protocol::transaction_id_type> transaction_id_bins;
-//   std::vector<hive::protocol::signed_transaction> transaction_bins;
+  std::vector<hive::protocol::transaction_id_type> transaction_id_bins;
+  std::vector<hive::protocol::signed_transaction> transaction_bins;
 
-//   if(block_num == current_transaction_block_num())
-//   {
-//     transactions2bin(block_num, transaction_id_bins, transaction_bins);
-//   }
+  if(block_num == current_transaction_block_num())
+  {
+    transactions2bin(block_num, transaction_id_bins, transaction_bins);
+  }
 
-//   return build_block_bin(block, std::move(transaction_id_bins), std::move(transaction_bins));
+  return build_block_bin(block, std::move(transaction_id_bins), std::move(transaction_bins));
 
-// }
-
-
-// template<typename T>
-// void hex_to_binary(const std::string& str, T& binary)
-// {
-//   std::vector<char> buffer;
-//   buffer.resize( str.size() / 2 );
-//   if( !buffer.empty() )
-//   {
-//       size_t r = fc::from_hex( str, buffer.data(), buffer.size() );
-//       FC_ASSERT( r == buffer.size() );
-//       memcpy(&binary, buffer.data(), fc::min<size_t>(buffer.size(),sizeof(binary)) );
-//   }
-//   else
-//   {
-//       memset( static_cast<void*>(&binary), static_cast<char>(0), sizeof(binary) );
-//   }
-// }
+}
 
 
-// template <typename T>
-// void p2b_hex_to_ripemd160(const char* field_name, const T& block_or_transaction, fc::ripemd160& val)
-// {
-//   hex_to_binary(fix_pxx_hex(block_or_transaction[field_name]), val);
-// }
+template<typename T>
+void hex_to_binary(const std::string& str, T& binary)
+{
+  std::vector<char> buffer;
+  buffer.resize( str.size() / 2 );
+  if( !buffer.empty() )
+  {
+      size_t r = fc::from_hex( str, buffer.data(), buffer.size() );
+      FC_ASSERT( r == buffer.size() );
+      memcpy(&binary, buffer.data(), fc::min<size_t>(buffer.size(),sizeof(binary)) );
+  }
+  else
+  {
+      memset( static_cast<void*>(&binary), static_cast<char>(0), sizeof(binary) );
+  }
+}
 
 
-// template <typename T>
-// void p2b_hex_to_signature_type(const char* field_name, const T& block_or_transaction, hive::chain::signature_type& val)
-// {
-//   hex_to_binary(fix_pxx_hex(block_or_transaction[field_name]), val);
-// }
-
-// template <typename T>
-// void p2b_time_to_time_point_sec(const char* field_name, const T& block_or_transaction, fc::time_point_sec& val)
-// {
-//   val = fc::time_point_sec::from_iso_string( fix_pxx_time(block_or_transaction[field_name]) );
-
-// }
-
-// template <typename T>
-// void p2b_cstr_to_public_key(const char* field_name, const T& block_or_transaction, hive::chain::public_key_type& val)
-// {
-//   val = hive::protocol::public_key_type(block_or_transaction[field_name].c_str());
-// }
-
-// template <typename T>
-// void p2b_cstr_to_str(const char* field_name, const T& block_or_transaction, std::string& val)
-// {
-//   val = block_or_transaction[field_name].c_str();
-// }
-
-// template <typename T>
-// void p2b_int_to_uint16(const char* field_name, const T& block_or_transaction, uint16_t& val)
-// {
-//   val = block_or_transaction[field_name]. template as<int>();
-// }
-
-// template <typename T>
-// void p2b_int64_to_uint32(const char* field_name, const T& block_or_transaction, uint32_t& val)
-// {
-//   val = block_or_transaction[field_name]. template as<int64_t>();
-// }
+template <typename T>
+void p2b_hex_to_ripemd160(const char* field_name, const T& block_or_transaction, fc::ripemd160& val)
+{
+  hex_to_binary(fix_pxx_hex(block_or_transaction[field_name]), val);
+}
 
 
+template <typename T>
+void p2b_hex_to_signature_type(const char* field_name, const T& block_or_transaction, hive::chain::signature_type& val)
+{
+  hex_to_binary(fix_pxx_hex(block_or_transaction[field_name]), val);
+}
 
-// block_bin_t build_block_bin(const spixx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins)
-// {
-//   using std::string;
-//   using std::vector;
+template <typename T>
+void p2b_time_to_time_point_sec(const char* field_name, const T& block_or_transaction, fc::time_point_sec& val)
+{
+  val = fc::time_point_sec::from_iso_string( fix_pxx_time(block_or_transaction[field_name]) );
 
-//   block_bin_t sb;
+}
 
-//   p2b_hex_to_ripemd160("prev", block, sb.previous);
-//   p2b_time_to_time_point_sec("created_at", block, sb.timestamp);
-//   p2b_cstr_to_str("name", block, sb.witness);
-//   p2b_hex_to_ripemd160("transaction_merkle_root", block, sb.transaction_merkle_root);
+template <typename T>
+void p2b_cstr_to_public_key(const char* field_name, const T& block_or_transaction, hive::chain::public_key_type& val)
+{
+  val = hive::protocol::public_key_type(block_or_transaction[field_name].c_str());
+}
 
-//   if(const auto& field = block["extensions"]; !field.is_null())
-//   {
-//     //It seems reasonable to use existing conversion to static_variant via variant here, or maybe add a method to json.cpp ? mtlk TODO
-//     std::string json = field.c_str();
-//     fc::variant extensions = fc::json::from_string(json);
-//     from_variant(extensions, sb.extensions);
-//   }
+template <typename T>
+void p2b_cstr_to_str(const char* field_name, const T& block_or_transaction, std::string& val)
+{
+  val = block_or_transaction[field_name].c_str();
+}
 
-//   p2b_hex_to_signature_type("witness_signature", block,  sb.witness_signature);
+template <typename T>
+void p2b_int_to_uint16(const char* field_name, const T& block_or_transaction, uint16_t& val)
+{
+  val = block_or_transaction[field_name]. template as<int>();
+}
+
+template <typename T>
+void p2b_int64_to_uint32(const char* field_name, const T& block_or_transaction, uint32_t& val)
+{
+  val = block_or_transaction[field_name]. template as<int64_t>();
+}
 
 
-//   p2b_hex_to_ripemd160("hash", block, sb.block_id);
-//   p2b_cstr_to_public_key("signing_key", block, sb.signing_key);
 
-//   sb.transaction_ids = std::move(transaction_id_bins);
+block_bin_t build_block_bin(const spixx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins)
+{
+  using std::string;
+  using std::vector;
 
-//   sb.transactions = std::move(transaction_bins);
+  block_bin_t sb;
 
-//   return sb;
-// }
+  p2b_hex_to_ripemd160("prev", block, sb.previous);
+  p2b_time_to_time_point_sec("created_at", block, sb.timestamp);
+  p2b_cstr_to_str("name", block, sb.witness);
+  p2b_hex_to_ripemd160("transaction_merkle_root", block, sb.transaction_merkle_root);
+
+  if(const auto& field = block["extensions"]; !field.is_null())
+  {
+    //It seems reasonable to use existing conversion to static_variant via variant here, or maybe add a method to json.cpp ? mtlk TODO
+    std::string json = field.c_str();
+    fc::variant extensions = fc::json::from_string(json);
+    from_variant(extensions, sb.extensions);
+  }
+
+  p2b_hex_to_signature_type("witness_signature", block,  sb.witness_signature);
+
+
+  p2b_hex_to_ripemd160("hash", block, sb.block_id);
+  p2b_cstr_to_public_key("signing_key", block, sb.signing_key);
+
+  sb.transaction_ids = std::move(transaction_id_bins);
+
+  sb.transactions = std::move(transaction_bins);
+
+  return sb;
+}
 
 // void postgres_block_log::transactions2bin(uint32_t block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins)
 // {
