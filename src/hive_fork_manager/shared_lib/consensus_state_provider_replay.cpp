@@ -71,6 +71,9 @@ using block_bin_t = hive::plugins::block_api::api_signed_block_object;
 
 namespace spixx
 {
+  
+
+
   class field
   {
     public:
@@ -87,12 +90,23 @@ namespace spixx
 
   };
 
-  class result{
+  class const_result_iterator : public row
+  {
     public:
-    class const_iterator{};
+      const_result_iterator &operator++();
+      [[nodiscard]] bool operator!=(const_result_iterator const &i) const;
+  
   };
 
-  class const_result_iterator;
+
+  class result{
+    public:
+    using const_iterator = const_result_iterator;    
+    [[nodiscard]] inline const_iterator end() const noexcept;
+
+    
+  };
+
   
 }
 
@@ -660,42 +674,42 @@ block_bin_t build_block_bin(const spixx::row& block, std::vector<hive::protocol:
   return sb;
 }
 
-// void postgres_block_log::transactions2bin(uint32_t block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins)
-// {
-//   for(; current_transaction_it != transactions.end() && current_transaction_belongs_to_block(block_num); ++current_transaction_it)
-//   {
-//     auto trx_in_block = current_transaction_it["trx_in_block"].as<int>();
+void postgres_block_log::transactions2bin(uint32_t block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins)
+{
+  for(; current_transaction_it != transactions.end() && current_transaction_belongs_to_block(block_num); ++current_transaction_it)
+  {
+    auto trx_in_block = current_transaction_it["trx_in_block"].as<int>();
 
-//     std::vector<hive::protocol::signature_type> signatures = build_signatures(current_transaction_it);
+    std::vector<hive::protocol::signature_type> signatures = build_signatures(current_transaction_it);
 
-//     build_transaction_id_bins(current_transaction_it, transaction_id_bins);
+    build_transaction_id_bins(current_transaction_it, transaction_id_bins);
 
-//     rewind_current_operation_to_block(block_num);
+    rewind_current_operation_to_block(block_num);
 
-//     std::vector<hive::protocol::operation> operation_bins = operations2bins(block_num, trx_in_block);
+    std::vector<hive::protocol::operation> operation_bins = operations2bins(block_num, trx_in_block);
 
-//     hive::protocol::signed_transaction transaction_bin = build_transaction_bin(current_transaction_it, std::move(signatures), std::move(operation_bins));
+    hive::protocol::signed_transaction transaction_bin = build_transaction_bin(current_transaction_it, std::move(signatures), std::move(operation_bins));
 
-//     transaction_bins.emplace_back(transaction_bin);
-//   }
-// }
+    transaction_bins.emplace_back(transaction_bin);
+  }
+}
 
-// bool postgres_block_log::current_transaction_belongs_to_block(const uint32_t block_num)
-// {
-//   return current_transaction_it["block_num"].as<uint32_t>() == block_num;
-// }
+bool postgres_block_log::current_transaction_belongs_to_block(const uint32_t block_num)
+{
+  return current_transaction_it["block_num"].as<uint32_t>() == block_num;
+}
 
-// std::vector<hive::protocol::signature_type> build_signatures(const spixx::result::const_iterator& transaction)
-// {
-//   std::vector<hive::protocol::signature_type> signatures;
-//   if(!transaction["signature"].is_null())
-//   {
-//     hive::protocol::signature_type signature;
-//     p2b_hex_to_signature_type("signature", transaction, signature);
-//     signatures.push_back(signature);
-//   }
-//   return signatures;
-// }
+std::vector<hive::protocol::signature_type> build_signatures(const spixx::result::const_iterator& transaction)
+{
+  std::vector<hive::protocol::signature_type> signatures;
+  if(!transaction["signature"].is_null())
+  {
+    hive::protocol::signature_type signature;
+    p2b_hex_to_signature_type("signature", transaction, signature);
+    signatures.push_back(signature);
+  }
+  return signatures;
+}
 
 // void build_transaction_id_bins(const spixx::result::const_iterator& transaction,
 //                                             std::vector<hive::protocol::transaction_id_type>& transaction_id_bins)
