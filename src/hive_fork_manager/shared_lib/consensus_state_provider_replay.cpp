@@ -71,9 +71,6 @@ using block_bin_t = hive::plugins::block_api::api_signed_block_object;
 
 namespace spixx
 {
-  
-
-
   class field
   {
     public:
@@ -82,6 +79,18 @@ namespace spixx
     [[nodiscard]] SPIXX_PURE char const *c_str() const &;
 
   };
+
+  class binarystring{
+    public:
+    [[deprecated("Use std::byte for binary data.")]] explicit binarystring(field const &);
+
+    using char_type = unsigned char;
+    using value_type = std::char_traits<char_type>::char_type;
+    using size_type = std::size_t;
+    [[nodiscard]] value_type const *data() const noexcept;
+    [[nodiscard]] size_type size() const noexcept;
+  };
+
   class row
   {
     public:
@@ -95,6 +104,7 @@ namespace spixx
     public:
       const_result_iterator &operator++();
       [[nodiscard]] bool operator!=(const_result_iterator const &i) const;
+      [[nodiscard]] bool operator==(const_result_iterator const &i) const;
   
   };
 
@@ -103,7 +113,7 @@ namespace spixx
     public:
     using const_iterator = const_result_iterator;    
     [[nodiscard]] inline const_iterator end() const noexcept;
-
+    [[nodiscard]] SPIXX_PURE bool empty() const noexcept;
     
   };
 
@@ -711,101 +721,101 @@ std::vector<hive::protocol::signature_type> build_signatures(const spixx::result
   return signatures;
 }
 
-// void build_transaction_id_bins(const spixx::result::const_iterator& transaction,
-//                                             std::vector<hive::protocol::transaction_id_type>& transaction_id_bins)
-// {
-//   //  https://github.com/jtv/libpqxx/blob/3d97c80bcde96fb70a21c1ae1cf92ad934818210/include/pqxx/field.hxx
-//   //   Do not use this for BYTEA values, or other binary values.  To read those,
-//   //   convert the value to your desired type using `to()` or `as()`.  For
-//   //   example: `f.as<std::basic_string<std::byte>>()`.
-//   //
-//   // [[nodiscard]] PQXX_PURE char const *c_str() const &;
+void build_transaction_id_bins(const spixx::result::const_iterator& transaction,
+                                            std::vector<hive::protocol::transaction_id_type>& transaction_id_bins)
+{
+  //  https://github.com/jtv/libpqxx/blob/3d97c80bcde96fb70a21c1ae1cf92ad934818210/include/pqxx/field.hxx
+  //   Do not use this for BYTEA values, or other binary values.  To read those,
+  //   convert the value to your desired type using `to()` or `as()`.  For
+  //   example: `f.as<std::basic_string<std::byte>>()`.
+  //
+  // [[nodiscard]] PQXX_PURE char const *c_str() const &;
 
-//   hive::protocol::transaction_id_type transaction_id_bin;
-//   p2b_hex_to_ripemd160("trx_hash", transaction, transaction_id_bin);
+  hive::protocol::transaction_id_type transaction_id_bin;
+  p2b_hex_to_ripemd160("trx_hash", transaction, transaction_id_bin);
 
-//   transaction_id_bins.push_back(transaction_id_bin);
-// }
+  transaction_id_bins.push_back(transaction_id_bin);
+}
 
-// void postgres_block_log::rewind_current_operation_to_block(uint32_t block_num)
-// {
-//   while(current_operation_block_num() < block_num && current_operation_it != operations.end())
-//   {
-//     ++current_operation_it;
-//   }
-// };
-
-
-
-// hive::protocol::signed_transaction build_transaction_bin(const spixx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins)
-// {
-//   hive::protocol::signed_transaction  signed_transaction;
-
-//   p2b_int_to_uint16("ref_block_num", transaction, signed_transaction.ref_block_num);
-//   p2b_int64_to_uint32("ref_block_prefix", transaction, signed_transaction.ref_block_prefix);
-//   p2b_time_to_time_point_sec("expiration", transaction, signed_transaction.expiration);
-
-//   signed_transaction.signatures = std::move(signatures);
-
-//   signed_transaction.operations = std::move(operation_bins);
-
-//   return signed_transaction;
-// }
-
-// bool postgres_block_log::is_current_operation(uint32_t block_num, int trx_in_block) const
-// {
-//   return block_num == current_operation_block_num() && trx_in_block == current_operation_trx_num();
-// }
-
-// bool operation_matches_block_transaction(const spixx::const_result_iterator& operation, uint32_t block_num, int trx_in_block)
-// {
-//   return operation["block_num"].as<uint32_t>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block;
-// }
-
-// std::vector<hive::protocol::operation> postgres_block_log::operations2bins(uint32_t block_num, int trx_in_block)
-// {
-//   std::vector<hive::protocol::operation> operation_bins;
-//   if(is_current_operation(block_num, trx_in_block))
-//   {
-//     for(; current_operation_it != operations.end() && operation_matches_block_transaction(current_operation_it, block_num, trx_in_block);
-//         ++current_operation_it)
-//     {
-//       add_operation_bin(current_operation_it, operation_bins);
-//     }
-//   }
-//   return operation_bins;
-// }
+void postgres_block_log::rewind_current_operation_to_block(uint32_t block_num)
+{
+  while(current_operation_block_num() < block_num && current_operation_it != operations.end())
+  {
+    ++current_operation_it;
+  }
+};
 
 
-// void add_operation_bin(const spixx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins)
-// {
-//   spixx::binarystring bs(operation["bin_body"]);
-//   const unsigned char* raw_data = bs.data();
-//   auto data_length = bs.size();
 
-//   operation_bins.push_back(fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data), data_length));
-// }
+hive::protocol::signed_transaction build_transaction_bin(const spixx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins)
+{
+  hive::protocol::signed_transaction  signed_transaction;
 
-// uint32_t postgres_block_log::current_transaction_block_num()
-// {
-//   if(transactions.empty()) return BLOCK_NUM_EMPTY;
-//   if(transactions.end() == current_transaction_it) return BLOCK_NUM_MAX;
-//   return current_transaction_it["block_num"].as<uint32_t>();
-// }
+  p2b_int_to_uint16("ref_block_num", transaction, signed_transaction.ref_block_num);
+  p2b_int64_to_uint32("ref_block_prefix", transaction, signed_transaction.ref_block_prefix);
+  p2b_time_to_time_point_sec("expiration", transaction, signed_transaction.expiration);
 
-// uint32_t postgres_block_log::current_operation_block_num() const
-// {
-//   if(operations.empty()) return BLOCK_NUM_EMPTY;
-//   if(operations.end() == current_operation_it) return BLOCK_NUM_MAX;
-//   return current_operation_it["block_num"].as<uint32_t>();
-// }
+  signed_transaction.signatures = std::move(signatures);
 
-// int postgres_block_log::current_operation_trx_num() const
-// {
-//   if(operations.empty()) return BLOCK_NUM_EMPTY;
-//   if(operations.end() == current_operation_it) return BLOCK_NUM_MAX;
-//   return current_operation_it["trx_in_block"].as<int>();
-// }
+  signed_transaction.operations = std::move(operation_bins);
+
+  return signed_transaction;
+}
+
+bool postgres_block_log::is_current_operation(uint32_t block_num, int trx_in_block) const
+{
+  return block_num == current_operation_block_num() && trx_in_block == current_operation_trx_num();
+}
+
+bool operation_matches_block_transaction(const spixx::const_result_iterator& operation, uint32_t block_num, int trx_in_block)
+{
+  return operation["block_num"].as<uint32_t>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block;
+}
+
+std::vector<hive::protocol::operation> postgres_block_log::operations2bins(uint32_t block_num, int trx_in_block)
+{
+  std::vector<hive::protocol::operation> operation_bins;
+  if(is_current_operation(block_num, trx_in_block))
+  {
+    for(; current_operation_it != operations.end() && operation_matches_block_transaction(current_operation_it, block_num, trx_in_block);
+        ++current_operation_it)
+    {
+      add_operation_bin(current_operation_it, operation_bins);
+    }
+  }
+  return operation_bins;
+}
+
+
+void add_operation_bin(const spixx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins)
+{
+  spixx::binarystring bs(operation["bin_body"]);
+  const unsigned char* raw_data = bs.data();
+  auto data_length = bs.size();
+
+  operation_bins.push_back(fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data), data_length));
+}
+
+uint32_t postgres_block_log::current_transaction_block_num()
+{
+  if(transactions.empty()) return BLOCK_NUM_EMPTY;
+  if(transactions.end() == current_transaction_it) return BLOCK_NUM_MAX;
+  return current_transaction_it["block_num"].as<uint32_t>();
+}
+
+uint32_t postgres_block_log::current_operation_block_num() const
+{
+  if(operations.empty()) return BLOCK_NUM_EMPTY;
+  if(operations.end() == current_operation_it) return BLOCK_NUM_MAX;
+  return current_operation_it["block_num"].as<uint32_t>();
+}
+
+int postgres_block_log::current_operation_trx_num() const
+{
+  if(operations.empty()) return BLOCK_NUM_EMPTY;
+  if(operations.end() == current_operation_it) return BLOCK_NUM_MAX;
+  return current_operation_it["trx_in_block"].as<int>();
+}
 
 
 // constexpr uint64_t get_skip_flags()
