@@ -1,10 +1,15 @@
+
+// /home/haf_admin/playground/haf/hive/libraries/fc/include/fc/log/logger.hpp
+// /usr/include/postgresql/14/server/utils/elog.h
+
 #include "consensus_state_provider_replay.hpp"
 #include "psql_utils/pg_cxx.hpp"
 #include "time_probe.hpp"
-
+//TODO(mtlk) -- comment these includes
 #include <fc/io/json.hpp>
 #include <fc/io/sstream.hpp>
 #include "fc/time.hpp"
+//ENDTODO(mtlk)
 #include <hive/plugins/block_api/block_api_objects.hpp>
 
 #include <pqxx/pqxx>
@@ -24,6 +29,9 @@ void my_func()
 
 #include "spixx.hpp"
 
+#define spixx_elog(elevel, ...)  \
+	ereport(elevel, errmsg_internal(__VA_ARGS__))
+
 
 namespace spixx 
 {
@@ -36,21 +44,21 @@ namespace spixx
 // field implementation
 uint32_t field::as_uint32_t() const {
     if (is_null()) {
-        //elog(ERROR, "Attempted conversion of NULL field to uint32_t.");
+        spixx_elog(ERROR, "Attempted conversion of NULL field to uint32_t.");
     }
     return DatumGetUInt32(datum);
 }
 
 int field::as_int() const {
     if (is_null()) {
-        //elog(ERROR, "Attempted conversion of NULL field to int.");
+        spixx_elog(ERROR, "Attempted conversion of NULL field to int.");
     }
     return DatumGetInt32(datum);
 }
 
 int64_t field::as_int64_t() const {
     if (is_null()) {
-        //elog(ERROR, "Attempted conversion of NULL field to int64_t.");
+        spixx_elog(ERROR, "Attempted conversion of NULL field to int64_t.");
     }
     return DatumGetInt64(datum);
 }
@@ -83,7 +91,7 @@ row::row(HeapTuple t, TupleDesc td) : tuple(t), tupdesc(td) {}
 field row::operator[](const std::string& key) const {
     int col = SPI_fnumber(tupdesc, key.c_str());
     if (col <= 0) {
-        //elog(ERROR, "Column not found");
+        spixx_elog(ERROR, "Column not found");
     }
     bool isN;
     Datum datum = SPI_getbinval(tuple, tupdesc, col, &isN);
@@ -133,7 +141,7 @@ result::const_iterator result::begin() const noexcept {
 
 row result::operator[](size_t i) const noexcept {
     if (i >= proc) {
-        //elog(ERROR, "Index out of bounds");
+        spixx_elog(ERROR, "Index out of bounds");
     }
     return row(tuptable->vals[i], tuptable->tupdesc);
 }
@@ -144,7 +152,7 @@ result execute_query(const std::string& query)
     int ret = SPI_exec(query.c_str(), 0);
     if (ret != SPI_OK_SELECT) {
         SPI_finish();
-        //elog(ERROR, "Failed executing query");
+        spixx_elog(ERROR, "Failed executing query");
     }
 
     for (uint64 i = 0; i < SPI_processed; i++)
