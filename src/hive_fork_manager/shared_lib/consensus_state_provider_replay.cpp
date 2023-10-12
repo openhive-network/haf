@@ -103,7 +103,11 @@ bool field::is_null() const noexcept
 }
 
 const char *field::c_str() const {
-    if (isNull) return nullptr;
+    if (isNull) 
+    {
+      return "";
+    }
+    
     return text_to_cstring(DatumGetTextP(datum));
 }
 
@@ -655,8 +659,14 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
             std::cout << "block_num: " << block_num_value << ", ";
             std::cout << "id: " << id_value << ", ";
 
+            std::cout.flush();
 
-            std::cout << "created_at (timestamp):" << (*it)["created_at"].as_timestamp_string() << ", ";
+            //name (varchar)
+            std::cout <<  "name: " << ((*it)["name"].c_str() ) << ", ";
+            std::cout.flush();
+
+            std::cout << "created_at (timestamp):" << ((*it)["created_at"].c_str()) << ", ";
+            std::cout.flush();
 
          // Special handling for 'bytea' type columns
             std::string hash_value = (*it)["hash"].as_hex_string();
