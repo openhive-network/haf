@@ -63,6 +63,39 @@ int64_t field::as_int64_t() const {
     return DatumGetInt64(datum);
 }
 
+size_t field::bytea_length() const 
+{
+    if(isNull)
+    {
+      return 0;
+    }
+        
+    bytea *raw_data = DatumGetByteaP(datum);
+    
+    return VARSIZE(raw_data) - VARHDRSZ;
+}
+
+std::string field::as_hex_string() const 
+{
+    const char *bytea_data = c_str();
+    size_t length = bytea_length(); // Assume you have a method to get the size/length of bytea
+
+    // Convert to hexadecimal
+    std::ostringstream oss;
+    for(size_t i = 0; i < length; i++) {
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(bytea_data[i]);
+    }
+
+    return oss.str();
+}
+
+
+    std::string field::as_timestamp_string() const 
+    {
+        return c_str();
+    }
+
+
 
 bool field::is_null() const noexcept 
 {
@@ -73,6 +106,8 @@ const char *field::c_str() const {
     if (isNull) return nullptr;
     return text_to_cstring(DatumGetTextP(datum));
 }
+
+
 
 // binarystring implementation
 binarystring::binarystring(const field& f) : fld(f) {}
@@ -150,32 +185,63 @@ result execute_query(const std::string& query)
 {
 
     int ret = SPI_exec(query.c_str(), 0);
+    FC_ASSERT(ret == SPI_OK_SELECT);
     if (ret != SPI_OK_SELECT) {
         SPI_finish();
         spixx_elog(ERROR, "Failed executing query");
     }
 
-    for (uint64 i = 0; i < SPI_processed; i++)
-    {
-        HeapTuple tuple = SPI_tuptable->vals[i];
-        // Extract necessary fields from tuple
-        bool isNull;
-        int32 block_num = DatumGetInt32(SPI_getbinval(tuple, SPI_tuptable->tupdesc, 1, &isNull)); // Assuming num is at column 1
-        block_num = block_num;
+    // for (uint64 i = 0; i < SPI_processed; i++)
+    // {
+    //     HeapTuple tuple = SPI_tuptable->vals[i];
+
+    //     bool isNull;
+    //     int32 block_num = DatumGetInt32(SPI_getbinval(tuple, SPI_tuptable->tupdesc, 1, &isNull)); // Assuming num is at column 1
+    //     block_num = block_num;
         
-        // Call your processing functions here...
-        // replay_block() equivalent processing on this tuple
-        //block_bin_t result = block_to_bin(tuple); // Make sure to adapt block_to_bin to work with HeapTuple
-        // ... additional processing
-    }
+    // }
 
   
 
 
     result res(SPI_tuptable, SPI_tuptable->tupdesc, SPI_processed);
-    SPI_finish();
     return res;
 }
+
+    void result::display_column_names_and_types() const
+    {
+        if (!tuptable || !tuptable->tupdesc)
+        {
+            std::cout << "No column descriptions available." << std::endl;
+            return;
+        }
+
+        TupleDesc tupdesc = tuptable->tupdesc;
+
+        std::cout << "Column Names:" << std::endl;
+        for (int col = 0; col < tupdesc->natts; ++col)
+        {
+            if (!tupdesc->attrs[col].attisdropped)  // Checking if the attribute is dropped
+            {
+                std::cout << "    " << tupdesc->attrs[col].attname.data;
+
+                char *type_name = SPI_gettype(tupdesc, col+1);  // SPI column indexing starts from 1
+                Oid type_oid = tupdesc->attrs[col].atttypid;
+                
+                if (type_name)
+                {
+                    std::cout << " (" << type_name << ")" << std::endl;
+                    SPI_pfree(type_name);  // Free the allocated string
+                }
+                else
+                {
+                    std::cout << " (Unknown type OID: " << type_oid << ")" << std::endl;
+                }
+            }
+
+            
+        }
+    }
 
 }
 
@@ -298,9 +364,25 @@ std::string fix_pxx_time(const spixx::field& t);
 // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
 const char* fix_pxx_hex(const spixx::field& h);
 
+static auto volatile stop_in_all = true;
+
+void stop_here(bool stop_indeed = false)
+{
+  if(stop_indeed)
+  {
+    wlog("PID= ${pid}", ("pid", getpid()));
+    while(stop_in_all)
+    {
+      int a = 0 ;
+      a=a;
+    }
+  }
+}
 
 csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
+
+  stop_here();
 
   try
   {
@@ -363,6 +445,8 @@ void set_open_args_other_parameters(open_args& db_open_args)
 
 void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_memory_bin)
 {
+  stop_here();
+
   try
   {
 
@@ -393,24 +477,30 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
 
 uint32_t consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session)
 {
+  stop_here();
+  
   return csp_session.db->head_block_num() + 1;
 }
 
 
 collected_account_balances_collection_t collect_current_all_accounts_balances_impl(csp_session_ref_type csp_session)
 {
+  stop_here();
+
   return collect_current_all_accounts_balances(csp_session);
 }
 
 
 collected_account_balances_collection_t collect_current_account_balances_impl(csp_session_ref_type csp_session, const std::vector<std::string>& accounts)
 {
+  stop_here();
   return collect_current_account_balances(csp_session, accounts);
 }
 
 
 bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint32_t first_block, uint32_t last_block)
 {
+  stop_here();
   try
   {
 
@@ -506,6 +596,7 @@ full_block_ptr postgres_block_log::read_full_block(uint32_t block_num)
 // so that the iterators always point to the transactions and operations belonging to the currently replayed block
 void postgres_block_log::prepare_postgres_data(uint32_t first_block, uint32_t last_block)
 {
+  stop_here();
   read_postgres_data(first_block, last_block);
   initialize_iterators();
 }
@@ -523,6 +614,65 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                               + std::to_string(last_block)
                               + " ORDER BY num ASC";
   blocks = spixx::execute_query(blocks_query);
+  stop_here(true);
+  blocks.display_column_names_and_types();
+
+// Column Names:
+//     num (int4)
+//     hash (bytea)
+//     prev (bytea)
+//     created_at (timestamp)
+//     producer_account_id (int4)
+//     transaction_merkle_root (bytea)
+//     extensions (jsonb)
+//     witness_signature (bytea)
+//     signing_key (text)
+//     hbd_interest_rate (interest_rate)
+//     total_vesting_fund_hive (hive_amount)
+//     total_vesting_shares (vest_amount)
+//     total_reward_fund_hive (hive_amount)
+//     virtual_supply (hive_amount)
+//     current_supply (hive_amount)
+//     current_hbd_supply (hbd_amount)
+//     dhf_interval_ledger (hbd_amount)
+//     block_num (int4)
+//     id (int4)
+//     name (varchar)
+
+    if (blocks.empty()) 
+    {
+        std::cout << "No data available." << std::endl;
+    }
+    else 
+    {
+      for (auto it = blocks.begin(); it != blocks.end(); ++it) 
+      {
+            int32_t num_value = (*it)["num"].as_int();
+            int32_t block_num_value = (*it)["block_num"].as_int();
+            int32_t id_value = (*it)["id"].as_int();
+
+            std::cout << "num: " << num_value << ", ";
+            std::cout << "block_num: " << block_num_value << ", ";
+            std::cout << "id: " << id_value << ", ";
+
+
+            std::cout << "created_at (timestamp):" << (*it)["created_at"].as_timestamp_string() << ", ";
+
+         // Special handling for 'bytea' type columns
+            std::string hash_value = (*it)["hash"].as_hex_string();
+            std::cout << "hash: " << hash_value << ", ";
+
+
+            // for (const auto& col_name : column_names)
+            // {
+            //     spixx::field f = (*it)[col_name];
+            //     std::cout << col_name << ": " << f.c_str() << ", ";
+            // }            
+
+            std::cout << std::endl;
+
+      }
+    }
 
   auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
                               + std::to_string(first_block)
@@ -675,7 +825,7 @@ void handle_exception(std::exception_ptr exception_ptr)
 block_bin_t postgres_block_log::block_to_bin(const spixx::row& block)
 {
   auto block_num = block["num"].as_uint32_t();
-
+  stop_here();
   std::vector<hive::protocol::transaction_id_type> transaction_id_bins;
   std::vector<hive::protocol::signed_transaction> transaction_bins;
 

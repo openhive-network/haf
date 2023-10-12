@@ -27,6 +27,12 @@ public:
     uint32_t as_uint32_t() const;
     int as_int() const;
     int64_t as_int64_t() const;
+    std::string as_hex_string() const;
+    std::string as_timestamp_string() const ;
+
+private:
+    size_t bytea_length() const;
+
 };
 
 
@@ -36,7 +42,7 @@ private:
     const field& fld;
 
 public:
-    [[deprecated("Use std::byte for binary data.")]]
+    //[[deprecated("Use std::byte for binary data.")]]
     explicit binarystring(const field&);
 
     using char_type = unsigned char;
@@ -87,6 +93,8 @@ public:
     [[nodiscard]] bool empty() const noexcept;
     [[nodiscard]] const_iterator begin() const noexcept;
     row operator[](size_t i) const noexcept;
+
+    void display_column_names_and_types() const;
 };
 
 result execute_query(const std::string& query);
