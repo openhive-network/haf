@@ -7,6 +7,16 @@ SCRIPTSDIR="$SCRIPTPATH/.."
 LOG_FILE=haf_system_tests.log
 source "$SCRIPTSDIR/maintenance-scripts/ci_common.sh"
 
+ARGS=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        *)
+        echo "Attempting to collect option: ${1}"
+        ARGS+=("$1")
+        ;;
+    esac
+    shift
+done
 
 test_start
 
@@ -26,6 +36,6 @@ python3 -m venv --system-site-packages venv/
 echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
 cd "${REPO_DIR}/tests/integration/system/haf"
-pytest --junitxml report.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "not mirrornet"
+pytest --junitxml report.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "not mirrornet" ${ARGS[@]}
 
 test_end
