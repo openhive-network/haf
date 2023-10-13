@@ -21,6 +21,8 @@ python3 -m venv ".test_examples_$test_name"
 
 python3 -mpip install --upgrade pip
 
+python3 -mpip install wheel==0.41.2
+
 python3 -mpip install \
   pexpect==4.8 \
   psycopg2==2.9.3 \

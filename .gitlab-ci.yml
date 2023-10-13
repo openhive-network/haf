@@ -87,8 +87,7 @@ haf_image_build_mirrornet:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
   artifacts:
     paths:
-    - "functional_tests.log"
-    expire_in: 6 hours
+      - "**/*.log"
   interruptible: true
   tags:
     - public-runner-docker
@@ -172,11 +171,6 @@ dump_snapshot_5m_mirrornet:
     #Store snapshot in cache
     - mv $MIRRORNET_WORKING_DIR/blockchain $SNAPSHOTS_PATH/5m_mirrornet
     - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot $SNAPSHOTS_PATH/5m_mirrornet
-
-  artifacts:
-    paths:
-    - "$CI_JOB_NAME"
-    expire_in: 6 hours
   tags:
     - data-cache-storage
 

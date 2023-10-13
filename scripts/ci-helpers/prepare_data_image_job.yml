@@ -1,6 +1,6 @@
 include:
   - project: 'hive/hive'
-    ref: 35fc85803237e5c0a39b2299fe728e3389b2e2a6 #develop
+    ref: f80071a140ec9eca0bac02a2662ec760cb1813f6 #develop
     file: '/scripts/ci-helpers/prepare_data_image_job.yml' 
 
 .prepare_haf_image:
@@ -26,7 +26,6 @@ include:
     paths:
       - ./$BINARY_CACHE_PATH/*
       - ./docker_image_name.env
-    expire_in: 6 hours
 
 .prepare_haf_data_5m:
   extends: .docker_image_builder_job
@@ -52,4 +51,3 @@ include:
         - hived_uid.env
     paths:
     - docker_entrypoint.log
-    expire_in: 6 hours
