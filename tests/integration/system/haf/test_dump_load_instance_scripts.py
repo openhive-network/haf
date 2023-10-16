@@ -63,6 +63,8 @@ class Test:
         # GIVEN
         self.run_node_with_db(prepared_networks_and_database_1, database, first_run)
         
+        # Generate all logs into exclusive test directory.
+        os.chdir(tt.context.get_current_directory())
 
         # WHEN
         additional_dump_command_line = self.generate_additional_command_line(dump_exit_before_sync, dump_stop_replay_at_block)
