@@ -1,21 +1,3 @@
-/*
-Operations that may include key_auths 
-account_create
-account_create_with_delegation
-account_update
-account_update2_operation
-condenser_api.lookup_account_names ?
-create_claimed_account 
-database_api.find_accounts ?
-database_api.list_accounts ?
-database_api.list_owner_histories ?
-recover_account
-request_account_recovery
-witness_set_properties_operation
-custom_binary_operation ?
-reset_account_operation
-*/
-
 CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hive.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
@@ -24,7 +6,9 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_keyauth';
+    __table_name TEXT := '' || _context || '_keyauth';
+    __table_name_history TEXT := 'history_' || _context || '_keyauth';
+    __format TEXT;
 BEGIN
 
     SELECT hac.id
@@ -37,17 +21,44 @@ BEGIN
          RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
-    
-    EXECUTE format('DROP TABLE IF EXISTS hive.%I', __table_name);
 
-    EXECUTE format( 'CREATE TABLE hive.%I(
-                       key_auth TEXT
+    __format = format('DROP TABLE IF EXISTS hive.%I', __table_name);
+    RAISE NOTICE 'Executing: %', __format;
+    EXECUTE __format;
+    
+    __format = format('DROP TABLE IF EXISTS hive.%I', __table_name_history);
+    RAISE NOTICE 'Executing: %', __format;
+    EXECUTE __format;
+
+    __format = format( 'CREATE TABLE hive.%I(
+                       account_name TEXT
                      , authority_kind hive.authority_type
-                     , account_name TEXT
+                     , key_auth TEXT[]
+                     , account_auth TEXT []
+                     , op_id  BIGINT NOT NULL
+                     , block_num INTEGER NOT NULL
+                     , timestamp TIMESTAMP NOT NULL
                    , PRIMARY KEY ( key_auth, authority_kind )
                    )', __table_name);
+    RAISE NOTICE 'Executing: %', __format;
+    EXECUTE __format;
 
-    RETURN ARRAY[ __table_name ];
+    __format = format( 'CREATE TABLE hive.%I(
+                       account_name TEXT
+                     , authority_kind hive.authority_type
+                     , key_auth TEXT[]
+                     , account_auth TEXT []
+                     , op_id  BIGINT NOT NULL
+                     , block_num INTEGER NOT NULL
+                     , timestamp TIMESTAMP NOT NULL
+                   )', __table_name_history);
+    RAISE NOTICE 'Executing: %', __format;
+    EXECUTE __format;
+
+    --RAISE NOTICE 'START In hive.start_provider_keyauth: hive.context_keyauth TABLE contents: %', (E'\n' || (SELECT jsonb_pretty(json_agg(t)::jsonb) FROM (SELECT * from hive.context_keyauth)t));
+    --RAISE NOTICE 'START In hive.start_provider_keyauth: hive.history_context_keyauth TABLE contents: %', (E'\n' || (SELECT jsonb_pretty(json_agg(t)::jsonb) FROM (SELECT * from hive.history_context_keyauth)t));
+
+    RETURN ARRAY[ __table_name, __table_name_history ];
 END;
 $BODY$
 ;
@@ -63,8 +74,12 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_keyauth';
+    __table_name TEXT := '' || _context || '_keyauth';
+    __table_name_history TEXT := 'history_' || _context || '_keyauth';
 BEGIN
+    --RAISE NOTICE 'UPDATE begin In hive.update_state_provider_keyauth: hive.context_keyauth TABLE contents: %', (E'\n' || (SELECT jsonb_pretty(json_agg(t)::jsonb) FROM (SELECT * from hive.context_keyauth)t));
+    --RAISE NOTICE 'UPDATE begin In hive.update_state_provider_keyauth: hive.history_context_keyauth TABLE contents: %', (E'\n' || (SELECT jsonb_pretty(json_agg(t)::jsonb) FROM (SELECT * from hive.history_context_keyauth)t));
+
     SELECT hac.id
     FROM hive.contexts hac
     WHERE hac.name = _context
@@ -75,20 +90,36 @@ BEGIN
     END IF;
 
     EXECUTE format(
-        'INSERT INTO hive.%s_keyauth 
-        SELECT (hive.get_keyauths( ov.body_binary )).*
+        'INSERT INTO hive.%I
+        SELECT (hive.get_keyauths( ov.body_binary )).* , id, block_num, timestamp
         FROM hive.%s_operations_view ov
         WHERE
                 hive.is_keyauths_operation(ov.body_binary)
             AND 
                 ov.block_num BETWEEN %s AND %s
         ON CONFLICT DO NOTHING'
-        , _context, _context, _first_block, _last_block
+        , __table_name, _context, _first_block, _last_block
     );
+
+    EXECUTE format(
+        'INSERT INTO hive.%I
+        SELECT (hive.get_keyauths( ov.body_binary )).* , id, block_num, timestamp
+        FROM hive.%s_operations_view ov
+        WHERE
+                hive.is_keyauths_operation(ov.body_binary)
+            AND 
+                ov.block_num BETWEEN %s AND %s
+        ON CONFLICT DO NOTHING'
+        , __table_name_history, _context, _first_block, _last_block
+    );
+
+    --RAISE NOTICE 'UPDATE end In hive.update_state_provider_keyauth: hive.context_keyauth TABLE contents: %', (E'\n' || (SELECT jsonb_pretty(json_agg(t)::jsonb) FROM (SELECT * from hive.context_keyauth)t));
+    --RAISE NOTICE 'UPDATE end In hive.update_state_provider_keyauth: hive.history_context_keyauth TABLE contents: %', (E'\n' || (SELECT jsonb_pretty(json_agg(t)::jsonb) FROM (SELECT * from hive.history_context_keyauth)t));
+
 END;
 $BODY$
 ;
-
+        
 CREATE OR REPLACE FUNCTION hive.drop_state_provider_keyauth( _context hive.context_name )
     RETURNS void
     LANGUAGE plpgsql
@@ -97,7 +128,8 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_keyauth';
+    __table_name TEXT := '' || _context || '_keyauth';
+    __table_name_history TEXT := 'history_' || _context || '_keyauth';
 BEGIN
     SELECT hac.id
     FROM hive.contexts hac
@@ -109,6 +141,7 @@ BEGIN
     END IF;
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
+    EXECUTE format( 'DROP TABLE hive.%I', __table_name_history );
 END;
 $BODY$
 ;

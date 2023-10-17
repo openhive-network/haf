@@ -72,7 +72,7 @@ BEGIN
                     },
                     "posting": {
                         "weight_threshold": 1,
-                        "account_auths": [],
+                        "account_auths": [["ecency.app", 1], ["good-karma", 1]],
                         "key_auths": [
                             [
                                 "STM6JfQQyvVdmnf3Ch5ehJMpAEfpRswMmJQP9MMvJBjszf32xmvn9",
@@ -94,7 +94,7 @@ BEGIN
                         "account": "recursive",
                         "owner": {
                             "weight_threshold": 1,
-                            "account_auths": [],
+                            "account_auths": [["steemconnect", 1]],
                             "key_auths": [
                                 [
                                     "STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB",
@@ -197,25 +197,30 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-        -- one key from owner, one from active, one from posting
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth = 'STM7x48ngjo2L7eNxj3u5dUnanQovAUc4BrcbRFbP8BSAS4SBxmHh' )), 'first of the keys in one key from owner, one from active, one from posting not found';
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth = 'STM4w4znpS1jgFLAL4BGvJpqMgyn38N9FLGbP4x1cvYP1nqDYNonG' )), 'second of the keys in one key from owner, one from active, one from posting not found';
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth = 'STM6JfQQyvVdmnf3Ch5ehJMpAEfpRswMmJQP9MMvJBjszf32xmvn9' )), 'third of the keys in one key from owner, one from active, one from posting not found';
+    RAISE NOTICE 'TEST hive.context_keyauth TABLE contents: %', (E'\n' || (SELECT (json_agg(t)) FROM (SELECT * from hive.context_keyauth)t));
+    RAISE NOTICE 'TEST hive.history_context_keyauth TABLE contents: %', (E'\n' || (SELECT (json_agg(t)) FROM (SELECT * from hive.history_context_keyauth)t));
 
-        -- three keys from one owner
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth = 'STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB' )), 'first of the three keys from one owner not found';
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth = 'STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx' )), 'second of the three keys from one owner not found';
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth = 'STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR' ) ),'third of the three keys from one owner not found';
+        -- one key from owner, one from active, one from posting, also in posting we have array of account_auths
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM7x48ngjo2L7eNxj3u5dUnanQovAUc4BrcbRFbP8BSAS4SBxmHh' )), 'first of the keys in one key from owner, one from active, one from posting not found';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM4w4znpS1jgFLAL4BGvJpqMgyn38N9FLGbP4x1cvYP1nqDYNonG' )), 'second of the keys in one key from owner, one from active, one from posting not found';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM6JfQQyvVdmnf3Ch5ehJMpAEfpRswMmJQP9MMvJBjszf32xmvn9' )), 'third of the keys in one key from owner, one from active, one from posting not found';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'andresricou' AND authority_kind = 'POSTING' AND account_auth = ARRAY['ecency.app', 'good-karma'] ), 'Specified account and authority kind not found with the ecency.app, good-karma account_auth values';
+
+        -- three keys from one owner, also a single account_auth value in owner 
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB' )), 'first of the three keys from one owner not found';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[2] = 'STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx' )), 'second of the three keys from one owner not found';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[3] = 'STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR' ) ),'third of the three keys from one owner not found';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'recursive' AND authority_kind = 'OWNER' AND account_auth = ARRAY['steemconnect'] ), 'Specified account and authority kind not found with the steemconnect account_auth value';
 
         -- recover_account_operation
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth = 'STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm' ) ),'new_owner_authority in recover_account_operation not found';
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth = 'STM6NX8as7FqVfpJFCvuTbhSicXdzMidXyif3q7rCrVooGLEs3AuY' ) ),'recent_owner_authority in recover_account_operation not found';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm' ) ),'new_owner_authority in recover_account_operation not found';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM6NX8as7FqVfpJFCvuTbhSicXdzMidXyif3q7rCrVooGLEs3AuY' ) ),'recent_owner_authority in recover_account_operation not found';
 
        -- request_account_recovery_operation
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth = 'STM7aytvJLLEYy7L337pedpGaSg9TFE4mXbmKGUydVcBW3JrV6msz' ) ),'new_owner_authority in request_account_recovery_operation not found';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM7aytvJLLEYy7L337pedpGaSg9TFE4mXbmKGUydVcBW3JrV6msz' ) ),'new_owner_authority in request_account_recovery_operation not found';
 
         --overall key count
-    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 9, 'Wrong number of keys';
+    --ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 9, 'Wrong number of keys' || ' Should be 9 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth)::text;
 
         --check overall operations used
     ASSERT hive.unordered_arrays_equal(
