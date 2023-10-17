@@ -569,6 +569,41 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     return (Datum)0;
   }  
 
+Datum vector_to_string_array_datum(const std::vector<std::string>& key_auth)
+{
+    int nitems = key_auth.size();
+    Datum* text_array = (Datum*) palloc(nitems * sizeof(Datum));
+    
+    for (int i = 0; i < nitems; i++)
+    {
+        text_array[i] = CStringGetTextDatum(key_auth[i].c_str());
+    }
+    
+    ArrayType* array = construct_array(text_array, nitems, TEXTOID, -1, false, 'i');
+    
+    pfree(text_array);
+    
+    return PointerGetDatum(array);
+}
+
+Datum set_to_string_array_datum(const std::set<std::string>& key_auth)
+{
+    int nitems = key_auth.size();
+    Datum* text_array = (Datum*) palloc(nitems * sizeof(Datum));
+    
+    int i = 0;
+    for (const auto& str : key_auth)
+    {
+        text_array[i] = CStringGetTextDatum(str.c_str());
+        ++i;
+    }
+    
+    ArrayType* array = construct_array(text_array, nitems, TEXTOID, -1, false, 'i');
+    
+    pfree(text_array);
+    
+    return PointerGetDatum(array);
+}
 
 
   PG_FUNCTION_INFO_V1(get_keyauths_wrapped);
@@ -605,9 +640,10 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       [=, &collected_keyauths]()
       {
         fill_return_tuples(collected_keyauths, fcinfo,
-          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.key_auth.c_str());},
-          [] (const auto& collected_item) {return Int32GetDatum(collected_item.authority_kind);},
-          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.account_name.c_str());}
+          [] (const auto& collected_item) { return CStringGetTextDatum(collected_item.account_name.c_str());},
+          [] (const auto& collected_item) { return Int32GetDatum(collected_item.authority_kind);},
+          [] (const auto& collected_item) { return set_to_string_array_datum(collected_item.key_auth);},
+          [] (const auto& collected_item) { return set_to_string_array_datum(collected_item.account_auth);}
         );
       },
 
