@@ -1,21 +1,23 @@
 DROP TYPE IF EXISTS hive.authority_type CASCADE;
-CREATE TYPE hive.authority_type AS ENUM( 'OWNER', 'ACTIVE', 'POSTING', 'WITNESS', 'NEW_OWNER_AUTHORITY', 'RECENT_OWNER_AUTHORITY');
+CREATE TYPE hive.authority_type AS ENUM( 'OWNER', 'ACTIVE', 'POSTING', 'MEMO', 'WITNESS', 'NEW_OWNER_AUTHORITY', 'RECENT_OWNER_AUTHORITY');
 
 
 DROP TYPE IF EXISTS hive.keyauth_record_type CASCADE;
 CREATE TYPE hive.keyauth_record_type AS
 (
-      key_auth TEXT
+      account_name TEXT
     , authority_kind hive.authority_type
-    , account_name TEXT
+    , key_auth TEXT []
+    , account_auth TEXT []
 );
 
 DROP TYPE IF EXISTS hive.keyauth_c_record_type CASCADE;
 CREATE TYPE hive.keyauth_c_record_type AS
 (
-      key_auth TEXT
+      account_name TEXT
     , authority_c_kind INTEGER
-    , account_name TEXT
+    , key_auth TEXT []
+    , account_auth TEXT []
 );
 
 DROP FUNCTION IF EXISTS hive.get_keyauths_wrapper;
@@ -46,9 +48,10 @@ AS
 $$
 BEGIN
     RETURN QUERY SELECT 
-        key_auth , 
+        account_name,
         hive.authority_type_c_int_to_enum(authority_c_kind), 
-        account_name 
+        key_auth,
+        account_auth
         FROM hive.get_keyauths_wrapper(_operation_body);
 END
 $$;
