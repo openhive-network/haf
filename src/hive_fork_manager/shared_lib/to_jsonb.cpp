@@ -63,7 +63,7 @@ JsonbValue* push_numeric_to_jsonb(const std::string& num, JsonbIteratorToken tok
 JsonbValue* push_uint64_to_jsonb(const uint64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   // Numeric types are converted either to numeric or string types in json.
-  // If value can be represented in 32bits, it's converted to numeric type.
+  // If value is less than fc::json::max_positive_value, it's converted to numeric type.
   // Otherwise it's converted to string type.
   // This makes the operation::jsonb conversion in sync with the operation::text::jsonb conversion.
   if (value <= fc::json::max_positive_value)
@@ -78,7 +78,7 @@ JsonbValue* push_uint64_to_jsonb(const uint64_t value, JsonbIteratorToken token,
 JsonbValue* push_int64_to_jsonb(const int64_t value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
   // Numeric types are converted either to numeric or string types in json.
-  // If value can be represented in 32bits, it's converted to numeric type.
+  // If value in the range [fc::json::max_negative_value, fc::json::max_positive_value], it's converted to numeric type.
   // Otherwise it's converted to string type.
   // This makes the operation::jsonb conversion in sync with the operation::text::jsonb conversion.
   if (value <= fc::json::max_positive_value && value >= fc::json::max_negative_value)
