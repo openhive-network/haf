@@ -4,19 +4,19 @@ LANGUAGE 'plpgsql'
 $BODY$
 BEGIN
   -- Cast results to jsonb to ignore ordering issues
-  ASSERT (select hive.operation_to_jsontext('\x5200')::jsonb =
+  CALL hive.check_eq( hive.operation_to_jsontext('\x5200')::jsonb,
     '{"type":"system_warning_operation","value":{"message":""}}'::jsonb);
 
-  ASSERT (select hive.operation_to_jsontext('\x5203616263')::jsonb =
+  CALL hive.check_eq( hive.operation_to_jsontext('\x5203616263')::jsonb,
     '{"type":"system_warning_operation","value":{"message":"abc"}}'::jsonb);
 
-  ASSERT (select hive.operation_to_jsontext('\x060b636f6d706c657872696e67ffffffff')::jsonb =
+  CALL hive.check_eq( hive.operation_to_jsontext('\x060b636f6d706c657872696e67ffffffff')::jsonb,
     '{"type":"limit_order_cancel_operation","value":{"owner":"complexring","orderid":4294967295}}'::jsonb);
 
-  ASSERT (select hive.operation_to_jsontext('\x52146e6f20696d706163746564206163636f756e7473')::jsonb =
+  CALL hive.check_eq( hive.operation_to_jsontext('\x52146e6f20696d706163746564206163636f756e7473')::jsonb,
     '{"type":"system_warning_operation","value":{"message":"no impacted accounts"}}'::jsonb);
 
-  ASSERT (select hive.operation_to_jsontext('\x0e08736d696e6572313000015d56d6e721ede5aad1babb0fe818203cbeeb2a000000000000000306b7270831d7e89a5d2b23ba614e6af9f587d2916cbd8f5fd736faa08acdda1ac55811a1a9cf6a281acad3aba38223027158186cfd280c41fffe5e2b0d2d6e0b1fbce97f375ac58c185905ac8e44a9c8b50b7e618bf4a7559816d8316e3b09ff54da096c2f5eddcca1229cf0b9da9597eac2ae676e424bdb432a7855295cd81a00000000049711861bce6185671b672696eca64398586a66319eacd875155b77fca08601000000000003535445454d000000000200e803')::jsonb =
+  CALL hive.check_eq(hive.operation_to_jsontext('\x0e08736d696e6572313000015d56d6e721ede5aad1babb0fe818203cbeeb2a000000000000000306b7270831d7e89a5d2b23ba614e6af9f587d2916cbd8f5fd736faa08acdda1ac55811a1a9cf6a281acad3aba38223027158186cfd280c41fffe5e2b0d2d6e0b1fbce97f375ac58c185905ac8e44a9c8b50b7e618bf4a7559816d8316e3b09ff54da096c2f5eddcca1229cf0b9da9597eac2ae676e424bdb432a7855295cd81a00000000049711861bce6185671b672696eca64398586a66319eacd875155b77fca08601000000000003535445454d000000000200e803')::jsonb,
 '{
     "type": "pow_operation",
     "value": {
