@@ -88,6 +88,8 @@ haf_image_build_mirrornet:
   artifacts:
     paths:
       - "**/*.log"
+    when: always
+    expire_in: 1 week
   interruptible: true
   tags:
     - public-runner-docker
