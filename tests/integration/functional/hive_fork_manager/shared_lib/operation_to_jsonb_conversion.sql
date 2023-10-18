@@ -28,6 +28,15 @@ BEGIN
   -- Make sure that integer = fc::json::max_positive_value is converted to jsonb as numeric type
   CALL hive.check_eq( hive.operation_from_jsontext('{"type": "comment_reward_operation", "value": {"author": "abit", "payout": {"nai": "@@000000013", "amount": "332", "precision": 3}, "permlink": "spam", "author_rewards": 9007199254740991, "total_payout_value": {"nai": "@@000000013", "amount": "165", "precision": 3}, "curator_payout_value": {"nai": "@@000000013", "amount": "166", "precision": 3}, "beneficiary_payout_value": {"nai": "@@000000013", "amount": "0", "precision": 3}}}')::jsonb #> '{"value", "author_rewards"}', '9007199254740991'::jsonb, '9007199254740991 value should be converted to jsonb as numeric type');
 
+  -- Make sure that integer in range [fc::json::max_negative_value, 0] is converted to jsonb as numeric type
+  CALL hive.check_eq( hive.operation_from_jsontext('{"type": "effective_comment_vote_operation", "value": {"voter": "dantheman", "author": "red", "weight": 33132337607, "rshares": -919264341405, "permlink": "red-dailydecrypt-1", "pending_payout": {"nai": "@@000000013", "amount": "0", "precision": 3}, "total_vote_weight": 919264341405}}')::jsonb #> '{"value", "rshares"}', '-919264341405'::jsonb, '-919264341405 value should be converted to jsonb as numeric type');
+
+  -- Make sure that integer < fc::json::max_negative_value is converted to jsonb as string type
+  CALL hive.check_eq( hive.operation_from_jsontext('{"type": "effective_comment_vote_operation", "value": {"voter": "dantheman", "author": "red", "weight": 33132337607, "rshares": -9999999999999999, "permlink": "red-dailydecrypt-1", "pending_payout": {"nai": "@@000000013", "amount": "0", "precision": 3}, "total_vote_weight": 919264341405}}')::jsonb #> '{"value", "rshares"}', '"-9999999999999999"'::jsonb, '-9999999999999999 value should be converted to jsonb as numeric type');
+
+  -- Make sure that integer = fc::json::max_negative_value is converted to jsonb as numeric type
+  CALL hive.check_eq( hive.operation_from_jsontext('{"type": "effective_comment_vote_operation", "value": {"voter": "dantheman", "author": "red", "weight": 33132337607, "rshares": -9007199254740991, "permlink": "red-dailydecrypt-1", "pending_payout": {"nai": "@@000000013", "amount": "0", "precision": 3}, "total_vote_weight": 919264341405}}')::jsonb #> '{"value", "rshares"}', '-9007199254740991'::jsonb, '-9007199254740991 value should be converted to jsonb as numeric type');
+
   -- Make sure that negative integer is converted to jsonb as numeric type
   CALL hive.check_eq( hive.operation_from_jsontext('{"type":"vote_operation","value":{"voter":"dantheman","author":"red","permlink":"888","weight":-100}}')::jsonb #> '{"value", "weight"}', '-100'::jsonb, 'Negative value should be converted to jsonb as numeric type');
 
