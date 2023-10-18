@@ -94,7 +94,21 @@ BEGIN
         SELECT (hive.get_keyauths( ov.body_binary )).* , id, block_num, timestamp
         FROM hive.%s_operations_view ov
         WHERE
-                hive.is_keyauths_operation(ov.body_binary)
+            ov.op_type_id in 
+            (
+                SELECT id FROM hive.operation_types WHERE name IN
+                (
+                    ''hive::protocol::account_create_operation'', 
+                    ''hive::protocol::account_create_with_delegation_operation'',
+                    ''hive::protocol::account_update_operation'',
+                    ''hive::protocol::account_update2_operation'',
+                    ''hive::protocol::create_claimed_account_operation'',
+                    ''hive::protocol::recover_account_operation'',
+                    ''hive::protocol::request_account_recovery_operation'',
+                    ''hive::protocol::reset_account_operation'',
+                    ''hive::protocol::witness_set_properties_operation''
+                )
+            )
             AND 
                 ov.block_num BETWEEN %s AND %s
         ON CONFLICT DO NOTHING'
@@ -106,7 +120,21 @@ BEGIN
         SELECT (hive.get_keyauths( ov.body_binary )).* , id, block_num, timestamp
         FROM hive.%s_operations_view ov
         WHERE
-                hive.is_keyauths_operation(ov.body_binary)
+            ov.op_type_id in 
+            (
+                SELECT id FROM hive.operation_types WHERE name IN
+                (
+                    ''hive::protocol::account_create_operation'', 
+                    ''hive::protocol::account_create_with_delegation_operation'',
+                    ''hive::protocol::account_update_operation'',
+                    ''hive::protocol::account_update2_operation'',
+                    ''hive::protocol::create_claimed_account_operation'',
+                    ''hive::protocol::recover_account_operation'',
+                    ''hive::protocol::request_account_recovery_operation'',
+                    ''hive::protocol::reset_account_operation'',
+                    ''hive::protocol::witness_set_properties_operation''
+                )
+            )
             AND 
                 ov.block_num BETWEEN %s AND %s
         ON CONFLICT DO NOTHING'
