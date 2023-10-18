@@ -6,8 +6,8 @@ AS
 $BODY$
 BEGIN
   -- Make sure that both conversions produce the same value
-  ASSERT (SELECT hive.operation_from_jsontext(op)::TEXT = bytes);
-  ASSERT (SELECT op::JSONB::hive.operation::TEXT = bytes);
+  CALL hive.check_eq(hive.operation_from_jsontext(op)::TEXT, bytes);
+  CALL hive.check_eq(op::JSONB::hive.operation::TEXT, bytes);
 END;
 $BODY$
 ;
