@@ -613,7 +613,7 @@ Datum set_to_string_array_datum(const std::set<std::string>& key_auth)
    ** CREATE TYPE hive.keyauth_record_type AS
    **        (
    **              key_auth TEXT
-   **            , authority_kind hive.authority_type
+   **            , key_kind hive.authority_type
    **            , account_name TEXT
    **        );
    ** FUNCTION get_keyauths_wrapped(_operation_body text) RETURNS SETOF hive.keyauth_record_type
@@ -641,7 +641,7 @@ Datum set_to_string_array_datum(const std::set<std::string>& key_auth)
       {
         fill_return_tuples(collected_keyauths, fcinfo,
           [] (const auto& collected_item) { return CStringGetTextDatum(collected_item.account_name.c_str());},
-          [] (const auto& collected_item) { return Int32GetDatum(collected_item.authority_kind);},
+          [] (const auto& collected_item) { return Int32GetDatum(collected_item.key_kind);},
           [] (const auto& collected_item) { return set_to_string_array_datum(collected_item.key_auth);},
           [] (const auto& collected_item) { return set_to_string_array_datum(collected_item.account_auth);}
         );

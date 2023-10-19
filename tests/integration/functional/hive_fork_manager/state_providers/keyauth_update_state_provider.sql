@@ -204,13 +204,13 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM7x48ngjo2L7eNxj3u5dUnanQovAUc4BrcbRFbP8BSAS4SBxmHh' )), 'first of the keys in one key from owner, one from active, one from posting not found';
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM4w4znpS1jgFLAL4BGvJpqMgyn38N9FLGbP4x1cvYP1nqDYNonG' )), 'second of the keys in one key from owner, one from active, one from posting not found';
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM6JfQQyvVdmnf3Ch5ehJMpAEfpRswMmJQP9MMvJBjszf32xmvn9' )), 'third of the keys in one key from owner, one from active, one from posting not found';
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'andresricou' AND authority_kind = 'POSTING' AND account_auth = ARRAY['ecency.app', 'good-karma'] ), 'Specified account and authority kind not found with the ecency.app, good-karma account_auth values';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'andresricou' AND key_kind = 'POSTING' AND account_auth = ARRAY['ecency.app', 'good-karma'] ), 'Specified account and authority kind not found with the ecency.app, good-karma account_auth values';
 
         -- three keys from one owner, also a single account_auth value in owner 
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB' )), 'first of the three keys from one owner not found';
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[2] = 'STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx' )), 'second of the three keys from one owner not found';
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[3] = 'STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR' ) ),'third of the three keys from one owner not found';
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'recursive' AND authority_kind = 'OWNER' AND account_auth = ARRAY['steemconnect'] ), 'Specified account and authority kind not found with the steemconnect account_auth value';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'recursive' AND key_kind = 'OWNER' AND account_auth = ARRAY['steemconnect'] ), 'Specified account and authority kind not found with the steemconnect account_auth value';
 
         -- recover_account_operation
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm' ) ),'new_owner_authority in recover_account_operation not found';
