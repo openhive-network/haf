@@ -111,6 +111,24 @@ BEGIN
                                 ]
                             ]
                         },
+                        "active": {
+                            "weight_threshold": 1,
+                            "account_auths": [["steemconne02", 1]],
+                            "key_auths": [
+                                [
+                                    "STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB",
+                                    1
+                                ],
+                                [
+                                    "STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx",
+                                    1
+                                ],
+                                [
+                                    "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR",
+                                    1
+                                ]
+                            ]
+                        },
                         "memo_key": "STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB",
                         "json_metadata": ""
                     }
@@ -229,11 +247,12 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'andresricou' AND key_kind = 'POSTING' AND account_auth = ARRAY['ecency.app', 'good-karma'] ), 'Specified account and authority kind not found with the ecency.app, good-karma account_auth values';
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'andresricou' AND key_kind = 'MEMO' AND key_auth = ARRAY ['STM6XUnQxSzLpUM6FMnuTTyG9LNXvzYbzW2J6qGH5sRTsQvCnGePo']), 'memo key not found';
 
-        -- three keys from one owner, also a single account_auth value in owner 
+        -- three keys from one owner, also a single account_auth value in owner (overriden in block 5) , also a single  account_auth value in active
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB' )), 'first of the three keys from one owner not found';
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[2] = 'STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx' )), 'second of the three keys from one owner not found';
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[3] = 'STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR' ) ),'third of the three keys from one owner not found';
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'recursive' AND key_kind = 'OWNER' AND account_auth = ARRAY['steemconnect'] ), 'Specified account and authority kind not found with the steemconnect account_auth value';
+    ASSERT NOT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'recursive' AND key_kind = 'OWNER' AND account_auth = ARRAY['steemconnect'] ), 'Specified account and authority kind should not found with the steemconnect account_auth value';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'recursive' AND key_kind = 'ACTIVE' AND account_auth = ARRAY['steemconne02'] ), 'Specified account and authority kind not found with the steemconne02 account_auth value';
 
         -- recover_account_operation -- gathering only new_owner_authority, not recent_owner_authority
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm' ) ),'new_owner_authority in recover_account_operation not found';
@@ -246,7 +265,7 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_kind = 'WITNESS_SIGNING' AND key_auth[1] = 'STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV' ) ),'witness_set_properties_operation key not correct';
 
        --overall key count
-    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 10, 'Wrong number of current keys' || ' Should be 10 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth)::text;
+    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 11, 'Wrong number of current keys' || ' Should be 11 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth)::text;
 
         --overall key in history table
     ASSERT ( SELECT COUNT(*) FROM hive.history_context_keyauth ) = 14, 'Wrong number of historic keys' || ' Should be 14 actual is ' ||  (SELECT COUNT(*) FROM hive.history_context_keyauth)::text;
@@ -255,7 +274,7 @@ BEGIN
     ASSERT hive.unordered_arrays_equal(
         (SELECT array_agg(t.get_keyauths_operations) FROM hive.get_keyauths_operations()t),
         (SELECT array_agg(t) FROM hive.get_keyauths_operations_pattern()t)
-    ), 'hive.get_keyauths_operations are not equall to the pattern';
+    ), 'hive.get_keyauths_operations are not equal to the pattern';
 
 END;
 $BODY$
