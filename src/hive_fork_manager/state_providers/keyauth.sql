@@ -34,14 +34,14 @@ BEGIN
     EXECUTE __format;
 
     __format = format( 'CREATE TABLE hive.%I(
-                       account_name TEXT
-                     , key_kind hive.key_type
-                     , key_auth TEXT[]
-                     , account_auth TEXT []
-                     , op_id  BIGINT NOT NULL
-                     , block_num INTEGER NOT NULL
-                     , timestamp TIMESTAMP NOT NULL
-                   , PRIMARY KEY ( key_auth, key_kind )
+                          account_name TEXT
+                        , key_kind hive.key_type
+                        , key_auth TEXT[]
+                        , account_auth TEXT []
+                        , op_id BIGINT NOT NULL
+                        , block_num INTEGER NOT NULL
+                        , timestamp TIMESTAMP NOT NULL
+                      , CONSTRAINT pk_%s_keyauth PRIMARY KEY  ( key_auth, key_kind )
                    )', __table_name);
     RAISE NOTICE 'Executing: %', __format;
     EXECUTE __format;
@@ -93,9 +93,12 @@ BEGIN
              RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
+    -- Why 
+    -- ORDER BY key_auth, key_kind, timestamp DESC ?
+    -- because we want the most recent of incoming duplicates
     EXECUTE format(
         'INSERT INTO hive.%I
-        SELECT (hive.get_keyauths( ov.body_binary )).* , id, block_num, timestamp
+        SELECT DISTINCT ON ( key_auth, key_kind ) (hive.get_keyauths( ov.body_binary )).* , id, block_num, timestamp
         FROM hive.%s_operations_view ov
         WHERE
             ov.op_type_id in 
@@ -114,7 +117,15 @@ BEGIN
             )
             AND 
                 ov.block_num BETWEEN %s AND %s
-        ON CONFLICT DO NOTHING'
+        ORDER BY key_auth, key_kind, timestamp DESC
+        ON CONFLICT (key_auth, key_kind)
+        DO UPDATE SET 
+                account_name = EXCLUDED.account_name,
+                key_auth = EXCLUDED.key_auth,
+                account_auth = EXCLUDED.account_auth,
+                op_id = EXCLUDED.op_id,
+                block_num = EXCLUDED.block_num,
+                timestamp = EXCLUDED.timestamp'
         , __table_name, _context, _first_block, _last_block
     );
 
