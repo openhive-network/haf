@@ -210,6 +210,8 @@ haf_system_tests_mirrornet:
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
     - pytest --junitxml report.xml --timeout=3600 --block-log-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --snapshot-path=$SNAPSHOTS_PATH/5m_mirrornet/snapshot -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
+  after_script:
+    - ls -lathR $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
   artifacts:
     paths:
     - "**/generated_during_*"
