@@ -10,6 +10,7 @@ BEGIN
     	, ( 2, 'hive::protocol::account_update_operation', FALSE)
         , ( 3, 'hive::protocol::recover_account_operation', FALSE)
         , ( 4, 'hive::protocol::request_account_recovery_operation', FALSE)
+        , ( 7, 'hive::protocol::witness_set_properties_operation', FALSE)
         , ( 6, 'other', FALSE ) -- non containing keys
     ;
 
@@ -169,6 +170,27 @@ BEGIN
                 }
             '::jsonb::hive.operation )
             , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"account_update_operation","value":{"account":"recursive","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB",1],["STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx",1],["STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR",1]]},"memo_key":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","json_metadata":""}}' :: jsonb :: hive.operation )
+            
+            -- witness_set_properties_operation
+            , ( 7, 5, 0, 1, 7, '2016-06-22 19:10:21-07'::timestamp,  
+            '
+            {
+                "type": "witness_set_properties_operation",
+                "value": {
+                    "owner": "holger80",
+                    "props": [
+                        [
+                            "account_creation_fee",
+                            "b80b00000000000003535445454d0000"
+                        ],
+                        [
+                            "key",
+                            "0295a26f54381a6dba8eb5dc7536e57db267685f9386c714ead9be39a905364a88"
+                        ]
+                    ],
+                    "extensions": []
+                }
+            }'::jsonb::hive.operation)
             , ( 6, 5, 0, 1, 6, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hive.operation )
         ;
 
@@ -220,11 +242,14 @@ BEGIN
        -- request_account_recovery_operation -- we are not gathering it at all
     ASSERT NOT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM7aytvJLLEYy7L337pedpGaSg9TFE4mXbmKGUydVcBW3JrV6msz' ) ),'new_owner_authority in request_account_recovery_operation not found';
 
-        --overall key count
-    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 9, 'Wrong number of current keys' || ' Should be 9 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth)::text;
+       -- witness_set_properties_operation
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV' ) ),'witness_set_properties_operation key not correct';
+
+       --overall key count
+    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 10, 'Wrong number of current keys' || ' Should be 10 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth)::text;
 
         --overall key in history table
-    ASSERT ( SELECT COUNT(*) FROM hive.history_context_keyauth ) = 13, 'Wrong number of historic keys' || ' Should be 16 actual is ' ||  (SELECT COUNT(*) FROM hive.history_context_keyauth)::text;
+    ASSERT ( SELECT COUNT(*) FROM hive.history_context_keyauth ) = 14, 'Wrong number of historic keys' || ' Should be 14 actual is ' ||  (SELECT COUNT(*) FROM hive.history_context_keyauth)::text;
 
         --check overall operations used
     ASSERT hive.unordered_arrays_equal(
