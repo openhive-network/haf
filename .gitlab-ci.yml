@@ -218,6 +218,9 @@ haf_system_tests_mirrornet:
     - "**/generated_by_package_fixtures"
     exclude:
     - "**/generated_during_*/**/block_log"
+    - "**/generated_during_*/**/block_log.artifacts"
+    - "**/generated_during_*/**/shared_memory.bin"
+    - "**/generated_during_*/**/*.sst"
     reports:
       junit: tests/integration/system/haf/mirrornet_tests/report.xml
     when: always
