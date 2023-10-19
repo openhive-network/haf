@@ -213,24 +213,24 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[3] = 'STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR' ) ),'third of the three keys from one owner not found';
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'recursive' AND key_kind = 'OWNER' AND account_auth = ARRAY['steemconnect'] ), 'Specified account and authority kind not found with the steemconnect account_auth value';
 
-        -- recover_account_operation
+        -- recover_account_operation -- gathering only new_owner_authority, not recent_owner_authority
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm' ) ),'new_owner_authority in recover_account_operation not found';
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM6NX8as7FqVfpJFCvuTbhSicXdzMidXyif3q7rCrVooGLEs3AuY' ) ),'recent_owner_authority in recover_account_operation not found';
+    ASSERT NOT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM6NX8as7FqVfpJFCvuTbhSicXdzMidXyif3q7rCrVooGLEs3AuY' ) ),'recent_owner_authority in recover_account_operation not found';
 
-       -- request_account_recovery_operation
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM7aytvJLLEYy7L337pedpGaSg9TFE4mXbmKGUydVcBW3JrV6msz' ) ),'new_owner_authority in request_account_recovery_operation not found';
+       -- request_account_recovery_operation -- we are not gathering it at all
+    ASSERT NOT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM7aytvJLLEYy7L337pedpGaSg9TFE4mXbmKGUydVcBW3JrV6msz' ) ),'new_owner_authority in request_account_recovery_operation not found';
 
         --overall key count
-    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 11, 'Wrong number of keys' || ' Should be 9 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth)::text;
+    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 9, 'Wrong number of current keys' || ' Should be 9 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth)::text;
 
         --overall key in history table
-    ASSERT ( SELECT COUNT(*) FROM hive.history_context_keyauth ) = 16, 'Wrong number of keys' || ' Should be 16 actual is ' ||  (SELECT COUNT(*) FROM hive.history_context_keyauth)::text;
+    ASSERT ( SELECT COUNT(*) FROM hive.history_context_keyauth ) = 13, 'Wrong number of historic keys' || ' Should be 16 actual is ' ||  (SELECT COUNT(*) FROM hive.history_context_keyauth)::text;
 
         --check overall operations used
     ASSERT hive.unordered_arrays_equal(
         (SELECT array_agg(t.get_keyauths_operations) FROM hive.get_keyauths_operations()t),
         (SELECT array_agg(t) FROM hive.get_keyauths_operations_pattern()t)
-    ), 'Broken hive.get_keyauths_operations';
+    ), 'hive.get_keyauths_operations are not equall to the pattern';
 
 END;
 $BODY$
@@ -250,7 +250,6 @@ UNION ALL SELECT 'hive::protocol::account_update_operation'
 UNION ALL SELECT 'hive::protocol::account_update2_operation'
 UNION ALL SELECT 'hive::protocol::create_claimed_account_operation'
 UNION ALL SELECT 'hive::protocol::recover_account_operation'
-UNION ALL SELECT 'hive::protocol::request_account_recovery_operation'
 UNION ALL SELECT 'hive::protocol::reset_account_operation'
 UNION ALL SELECT 'hive::protocol::witness_set_properties_operation'
 ;

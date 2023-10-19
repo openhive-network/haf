@@ -700,7 +700,6 @@ Datum set_to_string_array_datum(const std::set<std::string>& key_auth)
    **               ''hive::protocol::account_update2_operation'',
    **               ''hive::protocol::create_claimed_account_operation'',
    **               ''hive::protocol::recover_account_operation'',
-   **               ''hive::protocol::request_account_recovery_operation'',
    **               ''hive::protocol::reset_account_operation'',
    **               ''hive::protocol::witness_set_properties_operation''
    **           )
@@ -833,7 +832,6 @@ Datum set_to_string_array_datum(const std::set<std::string>& key_auth)
    **               ''hive::protocol::account_update2_operation'',
    **               ''hive::protocol::create_claimed_account_operation'',
    **               ''hive::protocol::recover_account_operation'',
-   **               ''hive::protocol::request_account_recovery_operation'',
    **               ''hive::protocol::reset_account_operation'',
    **               ''hive::protocol::witness_set_properties_operation''
    **           )
