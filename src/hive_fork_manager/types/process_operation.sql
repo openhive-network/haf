@@ -1,6 +1,7 @@
 -- Process an operation given in `op` record.  It should be any record type containing `body` and `op_type_id` columns of types `hive.operation` and `smallint` respectively.
 -- Depending on the operation type in `op_type_id`, `op.body` will be cast to appropriate concrete operation type (e.g. vote_operation, custom_json_operation)
 -- and passed to user provided function given by `namespace` and `proc`.
+-- Provided function overload must exist for given operation type. Otherwise an exception is raised.
 DROP FUNCTION IF EXISTS hive.process_operation;
 CREATE OR REPLACE FUNCTION hive.process_operation(
   op RECORD,
@@ -108,5 +109,29 @@ BEGIN
     WHEN 92 THEN EXECUTE format('SELECT %I.%I($1, $1.body_binary::hive.declined_voting_rights_operation)', namespace, proc) USING op;
     ELSE RAISE 'Invalid operation type %', op.op_type_id;
   END CASE;
+END;
+$BODY$;
+
+-- Same as process_operation, but wrapped in an exception block.
+-- In case provided function overload does not exist for given operation type, no processing is done and functions simply returns without an error.
+-- Any other exception is still reraised.
+-- Prefer process_operation, as it's more performant.
+DROP FUNCTION IF EXISTS hive.process_operation_noexcept;
+CREATE OR REPLACE FUNCTION hive.process_operation_noexcept(
+  op RECORD,
+  namespace TEXT,
+  proc TEXT
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+AS $BODY$
+BEGIN
+  BEGIN
+    SELECT hive.process_operation(op, namespace, proc);
+  EXCEPTION
+    WHEN undefined_function THEN RETURN;
+    WHEN others THEN RAISE;
+  END;
 END;
 $BODY$;
