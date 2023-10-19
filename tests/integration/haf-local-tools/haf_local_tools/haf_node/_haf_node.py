@@ -46,6 +46,7 @@ class HafNode(PreconfiguredNode):
         self.__session: Session | None = None
         self.__keep_database: bool = keep_database
         self.create_unique_database: bool = create_unique_database
+        self.__is_database_created: bool = False
 
         self.config.plugin.append("sql_serializer")
 
@@ -71,11 +72,12 @@ class HafNode(PreconfiguredNode):
     def __make_database(self) -> None:
         self.config.psql_url = self.__database_url
 
-        if self.create_unique_database:
+        if self.create_unique_database and self.__is_database_created is False:
             self._logger.info(f"Preparing database {self.__database_url}")
             if database_exists(self.__database_url):
                 drop_database(self.__database_url)
             create_database(self.__database_url, template="haf_block_log")
+            self.__is_database_created = True
 
         engine = sqlalchemy.create_engine(self.__database_url, echo=False, poolclass=NullPool, isolation_level="AUTOCOMMIT")
         session = sessionmaker(bind=engine)
