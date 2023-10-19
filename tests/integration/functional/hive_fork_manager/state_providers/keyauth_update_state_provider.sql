@@ -205,6 +205,7 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM4w4znpS1jgFLAL4BGvJpqMgyn38N9FLGbP4x1cvYP1nqDYNonG' )), 'second of the keys in one key from owner, one from active, one from posting not found';
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM6JfQQyvVdmnf3Ch5ehJMpAEfpRswMmJQP9MMvJBjszf32xmvn9' )), 'third of the keys in one key from owner, one from active, one from posting not found';
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'andresricou' AND key_kind = 'POSTING' AND account_auth = ARRAY['ecency.app', 'good-karma'] ), 'Specified account and authority kind not found with the ecency.app, good-karma account_auth values';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE account_name = 'andresricou' AND key_kind = 'MEMO' AND key_auth = ARRAY ['STM6XUnQxSzLpUM6FMnuTTyG9LNXvzYbzW2J6qGH5sRTsQvCnGePo']), 'memo key not found';
 
         -- three keys from one owner, also a single account_auth value in owner 
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB' )), 'first of the three keys from one owner not found';
@@ -220,7 +221,10 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM7aytvJLLEYy7L337pedpGaSg9TFE4mXbmKGUydVcBW3JrV6msz' ) ),'new_owner_authority in request_account_recovery_operation not found';
 
         --overall key count
-    --ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 9, 'Wrong number of keys' || ' Should be 9 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth)::text;
+    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 11, 'Wrong number of keys' || ' Should be 9 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth)::text;
+
+        --overall key in history table
+    ASSERT ( SELECT COUNT(*) FROM hive.history_context_keyauth ) = 16, 'Wrong number of keys' || ' Should be 16 actual is ' ||  (SELECT COUNT(*) FROM hive.history_context_keyauth)::text;
 
         --check overall operations used
     ASSERT hive.unordered_arrays_equal(
