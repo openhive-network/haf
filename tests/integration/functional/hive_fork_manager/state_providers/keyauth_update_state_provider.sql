@@ -243,7 +243,7 @@ BEGIN
     ASSERT NOT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM7aytvJLLEYy7L337pedpGaSg9TFE4mXbmKGUydVcBW3JrV6msz' ) ),'new_owner_authority in request_account_recovery_operation not found';
 
        -- witness_set_properties_operation
-    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV' ) ),'witness_set_properties_operation key not correct';
+    ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_kind = 'WITNESS_SIGNING' AND key_auth[1] = 'STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV' ) ),'witness_set_properties_operation key not correct';
 
        --overall key count
     ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 10, 'Wrong number of current keys' || ' Should be 10 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth)::text;
