@@ -32,20 +32,20 @@ BEGIN
 
     __format = format( 'CREATE TABLE hive.%I(
                        account_name TEXT
-                     , authority_kind hive.authority_type
+                     , key_kind hive.key_type
                      , key_auth TEXT[]
                      , account_auth TEXT []
                      , op_id  BIGINT NOT NULL
                      , block_num INTEGER NOT NULL
                      , timestamp TIMESTAMP NOT NULL
-                   , PRIMARY KEY ( key_auth, authority_kind )
+                   , PRIMARY KEY ( key_auth, key_kind )
                    )', __table_name);
     RAISE NOTICE 'Executing: %', __format;
     EXECUTE __format;
 
     __format = format( 'CREATE TABLE hive.%I(
                        account_name TEXT
-                     , authority_kind hive.authority_type
+                     , key_kind hive.key_type
                      , key_auth TEXT[]
                      , account_auth TEXT []
                      , op_id  BIGINT NOT NULL
