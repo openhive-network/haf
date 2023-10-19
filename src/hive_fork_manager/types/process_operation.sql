@@ -11,6 +11,8 @@ CREATE OR REPLACE FUNCTION hive.process_operation(
 RETURNS void
 LANGUAGE plpgsql
 VOLATILE
+SET plan_cache_mode=force_generic_plan
+SET jit=OFF
 AS $BODY$
 BEGIN
   CASE op.op_type_id OF
@@ -125,6 +127,8 @@ CREATE OR REPLACE FUNCTION hive.process_operation_noexcept(
 RETURNS void
 LANGUAGE plpgsql
 VOLATILE
+SET plan_cache_mode=force_generic_plan
+SET jit=OFF
 AS $BODY$
 BEGIN
   BEGIN
