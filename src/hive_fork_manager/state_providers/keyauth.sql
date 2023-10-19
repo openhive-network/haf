@@ -73,6 +73,7 @@ CREATE OR REPLACE FUNCTION hive.update_state_provider_keyauth(
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
+    SET jit = OFF
 AS
 $BODY$
 DECLARE
