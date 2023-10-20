@@ -1,5 +1,7 @@
 #include "operation_base.hpp"
 
+#include <psql_utils/pg_cxx.hpp>
+
 #include "operation_conversion.hpp"
 #include "to_jsonb.hpp"
 
@@ -87,7 +89,7 @@ Datum to_datum(uint32_t value)
 }
 Datum to_datum(uint64_t value)
 {
-  return DirectFunctionCall3(numeric_in, CStringGetDatum(std::to_string(value).c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+  return PsqlTools::PsqlUtils::cxx_direct_call_pg(numeric_in, CStringGetDatum(std::to_string(value).c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
 }
 Datum to_datum(int64_t value)
 {
@@ -150,7 +152,7 @@ Datum to_datum(const fc::sha256& value)
 Datum to_datum(const fc::time_point_sec& value)
 {
   const auto str = static_cast<fc::string>(value);
-  return DirectFunctionCall3(timestamp_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+  return PsqlTools::PsqlUtils::cxx_direct_call_pg(timestamp_in, CStringGetDatum(str.c_str()), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
 }
 template<typename T>
 std::optional<Datum> to_datum(const fc::safe<T>& value)
