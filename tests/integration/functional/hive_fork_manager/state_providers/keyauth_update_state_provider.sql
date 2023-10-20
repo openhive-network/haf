@@ -276,6 +276,9 @@ BEGIN
         (SELECT array_agg(t) FROM hive.get_keyauths_operations_pattern()t)
     ), 'hive.get_keyauths_operations are not equal to the pattern';
 
+
+    PERFORM hive.app_state_provider_drop( 'KEYAUTH', 'context' );
+
 END;
 $BODY$
 ;
