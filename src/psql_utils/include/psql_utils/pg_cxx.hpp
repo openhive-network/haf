@@ -84,8 +84,9 @@ namespace PsqlTools::PsqlUtils {
    * Any exception thrown by called function is transformed into PgError exception.
    */
   template <typename Fp, typename... Args>
-  auto cxx_call_pg(Fp&& f, Args&&... args) -> std::invoke_result_t<Fp, Args...>
+  auto cxx_call_pg(Fp&& f, Args&&... args)
   {
+    static_assert(std::is_invocable_v<Fp, Args...>, "Given function is not invocable with given parameters, did you mean to call cxx_direct_call_pg?");
     using RetType = std::invoke_result_t<Fp, Args...>;
 
     std::optional<RetType> ret;
@@ -164,6 +165,7 @@ namespace PsqlTools::PsqlUtils {
   auto cxx_direct_call_pg(Fp&& f, Args&&... args) -> Datum
   {
     auto DirectFunctionCallN = DirectFunctionCallNColl<sizeof...(Args)>::value;
+    static_assert(std::is_invocable_v<decltype(DirectFunctionCallN), Fp, Oid, Args...>, "Given function is not invocable with given parameters, did you mean to call cxx_call_pg?");
     return cxx_call_pg(DirectFunctionCallN, std::forward<Fp>(f), InvalidOid, std::forward<Args>(args)...);
   }
 
