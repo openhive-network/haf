@@ -47,11 +47,12 @@ namespace consensus_state_provider
   };
 
   using csp_session_ref_type = csp_session_type&;
+  using csp_session_ptr_type = csp_session_type*;
 
 
   bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session,  int from, int to);
 
-  csp_session_ref_type csp_init_impl(const char* context,
+  csp_session_ptr_type csp_init_impl(const char* context,
                                 const char* shared_memory_bin_path,
                                 const char* postgres_url);
 
