@@ -149,7 +149,7 @@ std::string fix_pxx_time(const pqxx::field& t);
 const char* fix_pxx_hex(const pqxx::field& h);
 
 
-csp_session_ref_type csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
+csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
 
   try
@@ -159,7 +159,7 @@ csp_session_ref_type csp_init_impl(const char* context, const char* shared_memor
 
     initialize_chain_db(*csp_session_ptr);
 
-    return *csp_session_ptr;
+    return csp_session_ptr;
   }
   catch(...)
   {
@@ -167,7 +167,7 @@ csp_session_ref_type csp_init_impl(const char* context, const char* shared_memor
     handle_exception(current_exception);
   }
 
-  // TODO(ntlk) - return pointer return 0;
+  return 0;
 
 }
 
