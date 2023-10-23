@@ -334,11 +334,11 @@ bash_tests:
     - df . -h
     - ls -lath $CI_PROJECT_DIR
     - echo psql 1
-    - psql -d postgres -c'\l'
+    - psql -d $DB_URL -c'\l'
     - echo psql 1 finish
     # replay
     - echo psql 1
-    - psql -d postgres -c'\l'
+    - psql -c'\l'
     - echo psql 1 finish
     - |
       echo -e "\e[0Ksection_start:$(date +%s):replay[collapsed=true]\r\e[0KExecuting replay..."
