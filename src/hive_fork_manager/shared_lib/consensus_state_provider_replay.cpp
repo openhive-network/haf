@@ -78,32 +78,32 @@ class postgres_block_log
 {
 public:
   explicit postgres_block_log(csp_session_ref_type csp_session):csp_session(csp_session){}
-  void run(int first_block, int last_block);
-  full_block_ptr read_full_block(int block_num);
+  void run(uint32_t first_block, uint32_t last_block);
+  full_block_ptr read_full_block(uint32_t block_num);
 private:
-  void prepare_postgres_data(int first_block, int last_block);
+  void prepare_postgres_data(uint32_t first_block, uint32_t last_block);
   void replay_blocks();
   void replay_block(const pqxx::row& block);
   void replay_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags);
 
-  void read_postgres_data(int first_block, int last_block);
+  void read_postgres_data(uint32_t first_block, uint32_t last_block);
   void initialize_iterators();
 
-  full_block_ptr block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block);
+  full_block_ptr block_to_fullblock(uint32_t block_num_from_shared_memory_bin, const pqxx::row& block);
 
   block_bin_t block_to_bin(const pqxx::row& block);
-  void transactions2bin(int block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins);
-  std::vector<hive::protocol::operation> operations2bins(int block_num, int trx_in_block);
+  void transactions2bin(uint32_t block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins);
+  std::vector<hive::protocol::operation> operations2bins(uint32_t block_num, int32_t trx_in_block);
 
   void measure_before_run();
   void measure_after_run();
-  void rewind_current_operation_to_block(int block_num);
+  void rewind_current_operation_to_block(uint32_t block_num);
 
-  bool is_current_operation(int block_num, int trx_in_block) const;
-  bool current_transaction_belongs_to_block(const int block_num);
+  bool is_current_operation(uint32_t block_num, int trx_in_block) const;
+  bool current_transaction_belongs_to_block(const uint32_t block_num);
 
-  int current_transaction_block_num();
-  int current_operation_block_num() const;
+  uint32_t current_transaction_block_num();
+  uint32_t current_operation_block_num() const;
   int current_operation_trx_num() const;
 
   csp_session_ref_type csp_session;
@@ -116,15 +116,15 @@ private:
   time_probe transformations_time_probe;
   time_probe replay_full_block_time_probe;
 
-  enum : int
+  enum : uint32_t
   {
-      BLOCK_NUM_EMPTY = -1,
-      BLOCK_NUM_MAX = std::numeric_limits<int>::max()
+      BLOCK_NUM_EMPTY = 0,
+      BLOCK_NUM_MAX = std::numeric_limits<uint32_t>::max()
   };
 };
 
 
-void undo_blocks(csp_session_ref_type, int shift);
+void undo_blocks(csp_session_ref_type, uint32_t shift);
 void initialize_chain_db(csp_session_ref_type csp_session);
 
 void set_open_args_data_dir(open_args& db_open_args, const std::string&  shared_memory_bin_path);
@@ -134,12 +134,12 @@ void set_open_args_other_parameters(open_args& db_open_args);
 void handle_exception(std::exception_ptr exception_ptr);
 uint64_t get_skip_flags();
 block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
-full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, int block_num);
+full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num);
 void build_transaction_id_bins(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins);
 hive::protocol::signed_transaction build_transaction_bin(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::signature_type> signatures, std::vector<hive::protocol::operation> operation_bins);
 void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins);
 std::vector<hive::protocol::signature_type> build_signatures(const pqxx::result::const_iterator& transaction);
-bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block);
+bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, uint32_t block_num, int trx_in_block);
 
 
 
@@ -242,7 +242,7 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
 }
 
 
-int consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session)
+uint32_t consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session)
 {
   return csp_session.db->head_block_num() + 1;
 }
@@ -260,7 +260,7 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
 }
 
 
-bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, int first_block, int last_block)
+bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint32_t first_block, uint32_t last_block)
 {
   try
   {
@@ -293,7 +293,7 @@ bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, int 
   return false;
 }
 
-void undo_blocks(csp_session_ref_type csp_session, int shift)
+void undo_blocks(csp_session_ref_type csp_session, uint32_t shift)
 {
   auto& db = *csp_session.db;
   while(shift > 0)
@@ -303,7 +303,7 @@ void undo_blocks(csp_session_ref_type csp_session, int shift)
   }
 }
 
-void postgres_block_log::run(int first_block, int last_block)
+void postgres_block_log::run(uint32_t first_block, uint32_t last_block)
 {
   measure_before_run();
 
@@ -313,7 +313,7 @@ void postgres_block_log::run(int first_block, int last_block)
   measure_after_run();
 }
 
-full_block_ptr postgres_block_log::read_full_block(int block_num)
+full_block_ptr postgres_block_log::read_full_block(uint32_t block_num)
 {
 
   prepare_postgres_data(block_num, block_num);
@@ -324,14 +324,14 @@ full_block_ptr postgres_block_log::read_full_block(int block_num)
 // We get blocks, transactions and operations containers from SQL
 // and set up iterators to transaction and operation
 // so that the iterators always point to the transactions and operations belonging to the currently replayed block
-void postgres_block_log::prepare_postgres_data(int first_block, int last_block)
+void postgres_block_log::prepare_postgres_data(uint32_t first_block, uint32_t last_block)
 {
   read_postgres_data(first_block, last_block);
   initialize_iterators();
 }
 
 
-void postgres_block_log::read_postgres_data(int first_block, int last_block)
+void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_block)
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
@@ -397,9 +397,9 @@ void postgres_block_log::replay_block(const pqxx::row& block)
 
 }
 
-full_block_ptr postgres_block_log::block_to_fullblock(int block_num_from_shared_memory_bin, const pqxx::row& block)
+full_block_ptr postgres_block_log::block_to_fullblock(uint32_t block_num_from_shared_memory_bin, const pqxx::row& block)
 {
-  auto block_num_from_postgres = block["num"].as<int>();
+  auto block_num_from_postgres = block["num"].as<uint32_t>();
 
   FC_ASSERT(block_num_from_postgres == block_num_from_shared_memory_bin, "Requested block has different number than the block in the state database");
 
@@ -435,7 +435,7 @@ void haf_state_database::push_haf_block(const full_block_ptr& full_block, uint32
 void haf_state_database::state_dependent_open( const open_args& args )
 {
   load_state_initial_data(args,
-    [this](int block_num)
+    [this](uint32_t block_num)
     {
       auto full_block = postgres_block_log(csp_session).read_full_block(head_block_num());
       return full_block;
@@ -495,7 +495,7 @@ void handle_exception(std::exception_ptr exception_ptr)
 
 block_bin_t postgres_block_log::block_to_bin(const pqxx::row& block)
 {
-  auto block_num = block["num"].as<int>();
+  auto block_num = block["num"].as<uint32_t>();
 
   std::vector<hive::protocol::transaction_id_type> transaction_id_bins;
   std::vector<hive::protocol::signed_transaction> transaction_bins;
@@ -612,7 +612,7 @@ block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::
   return sb;
 }
 
-void postgres_block_log::transactions2bin(int block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins)
+void postgres_block_log::transactions2bin(uint32_t block_num, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins, std::vector<hive::protocol::signed_transaction>& transaction_bins)
 {
   for(; current_transaction != transactions.end() && current_transaction_belongs_to_block(block_num); ++current_transaction)
   {
@@ -632,9 +632,9 @@ void postgres_block_log::transactions2bin(int block_num, std::vector<hive::proto
   }
 }
 
-bool postgres_block_log::current_transaction_belongs_to_block(const int block_num)
+bool postgres_block_log::current_transaction_belongs_to_block(const uint32_t block_num)
 {
-  return current_transaction["block_num"].as<int>() == block_num;
+  return current_transaction["block_num"].as<uint32_t>() == block_num;
 }
 
 std::vector<hive::protocol::signature_type> build_signatures(const pqxx::result::const_iterator& transaction)
@@ -665,7 +665,7 @@ void build_transaction_id_bins(const pqxx::result::const_iterator& transaction,
   transaction_id_bins.push_back(transaction_id_bin);
 }
 
-void postgres_block_log::rewind_current_operation_to_block(int block_num)
+void postgres_block_log::rewind_current_operation_to_block(uint32_t block_num)
 {
   while(current_operation_block_num() < block_num && current_operation != operations.end())
   {
@@ -690,17 +690,17 @@ hive::protocol::signed_transaction build_transaction_bin(const pqxx::result::con
   return signed_transaction;
 }
 
-bool postgres_block_log::is_current_operation(int block_num, int trx_in_block) const
+bool postgres_block_log::is_current_operation(uint32_t block_num, int trx_in_block) const
 {
   return block_num == current_operation_block_num() && trx_in_block == current_operation_trx_num();
 }
 
-bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, int block_num, int trx_in_block)
+bool operation_matches_block_transaction(const pqxx::const_result_iterator& operation, uint32_t block_num, int trx_in_block)
 {
-  return operation["block_num"].as<int>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block;
+  return operation["block_num"].as<uint32_t>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block;
 }
 
-std::vector<hive::protocol::operation> postgres_block_log::operations2bins(int block_num, int trx_in_block)
+std::vector<hive::protocol::operation> postgres_block_log::operations2bins(uint32_t block_num, int trx_in_block)
 {
   std::vector<hive::protocol::operation> operation_bins;
   if(is_current_operation(block_num, trx_in_block))
@@ -724,18 +724,18 @@ void add_operation_bin(const pqxx::const_result_iterator& operation, std::vector
   operation_bins.push_back(fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data), data_length));
 }
 
-int postgres_block_log::current_transaction_block_num()
+uint32_t postgres_block_log::current_transaction_block_num()
 {
   if(transactions.empty()) return BLOCK_NUM_EMPTY;
   if(transactions.end() == current_transaction) return BLOCK_NUM_MAX;
-  return current_transaction["block_num"].as<int>();
+  return current_transaction["block_num"].as<uint32_t>();
 }
 
-int postgres_block_log::current_operation_block_num() const
+uint32_t postgres_block_log::current_operation_block_num() const
 {
   if(operations.empty()) return BLOCK_NUM_EMPTY;
   if(operations.end() == current_operation) return BLOCK_NUM_MAX;
-  return current_operation["block_num"].as<int>();
+  return current_operation["block_num"].as<uint32_t>();
 }
 
 int postgres_block_log::current_operation_trx_num() const
@@ -791,7 +791,7 @@ struct fix_hf_version_visitor
     int proper_version;
 };
 
-void fix_hf_version(block_bin_t& sb, int proper_hf_version, int block_num)
+void fix_hf_version(block_bin_t& sb, int proper_hf_version, uint32_t block_num)
 {
   fix_hf_version_visitor visitor(proper_hf_version);
 
@@ -804,7 +804,7 @@ void fix_hf_version(block_bin_t& sb, int proper_hf_version, int block_num)
 }
 
 
-full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, int block_num)
+full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num)
 {
   switch(block_num)
   {
