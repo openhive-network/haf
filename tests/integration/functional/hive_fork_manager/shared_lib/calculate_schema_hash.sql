@@ -6,7 +6,7 @@ DECLARE
   _pattern0 TEXT[] = '{"(blocks,6943f52d-ec57-ed27-b2e3-d8ba4b3288ca,4397b404-c56c-84e1-952e-a73d29745394,4c7b832d-5d52-83fe-fd2b-7e7a69416fae,2b354f61-618a-da7d-3380-3e12c45a3f30)"}';
   _test0 TEXT[];
 
-  _pattern1 TEXT[] = '{"(irreversible_data,dd1812c6-cabd-4382-a4bf-c355276b3839,53114e1c-c6e5-867b-6c67-1d55865180fe,77ed7932-7dab-20e3-b506-4a2d3fccfe75,f40cac4c-2fae-a597-11c8-8cc0f329e18f)"}';
+  _pattern1 TEXT[] = '{"(irreversible_data,abfb5e84-a557-0fb4-cdd9-a88cd773c35d,8a43eb20-fa83-fc9e-a4ae-7b01c72ea51e,77ed7932-7dab-20e3-b506-4a2d3fccfe75,f40cac4c-2fae-a597-11c8-8cc0f329e18f)"}';
   _test1 TEXT[];
 
   _pattern2 TEXT[] = '{"(transactions,a2f346aa-6ef3-1a4b-20fd-8fc5cb11eeb7,d0d1231f-f437-abf1-1f9f-6ae1ed916af4,d1456ff1-2474-ca5b-3b82-be0086c298f0,7766bb78-548b-dc33-4ebe-e5523196b1fb)"}';
