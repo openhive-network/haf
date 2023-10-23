@@ -569,23 +569,6 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     return (Datum)0;
   }  
 
-Datum vector_to_string_array_datum(const std::vector<std::string>& key_auth)
-{
-    int nitems = key_auth.size();
-    Datum* text_array = (Datum*) palloc(nitems * sizeof(Datum));
-    
-    for (int i = 0; i < nitems; i++)
-    {
-        text_array[i] = CStringGetTextDatum(key_auth[i].c_str());
-    }
-    
-    ArrayType* array = construct_array(text_array, nitems, TEXTOID, -1, false, 'i');
-    
-    pfree(text_array);
-    
-    return PointerGetDatum(array);
-}
-
 Datum set_to_string_array_datum(const std::set<std::string>& key_auth)
 {
     int nitems = key_auth.size();
@@ -655,26 +638,6 @@ Datum set_to_string_array_datum(const std::set<std::string>& key_auth)
     return (Datum)0;
   }
 
-  PG_FUNCTION_INFO_V1(is_keyauths_operation);
-
-  Datum is_keyauths_operation(PG_FUNCTION_ARGS)
-  {
-    _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
-
-    bool _result = false;
-
-    colect_operation_data_and_fill_returned_recordset(
-      [=, &_result](const hive::protocol::operation& op)
-      {
-        _result = hive::app::is_keyauths_operation( op );
-      },
-      [](){},
-      __FUNCTION__,
-      VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body )
-    );
-
-    PG_RETURN_BOOL(_result);
-  }
 
   PG_FUNCTION_INFO_V1(get_keyauths_operations);
 
@@ -783,28 +746,6 @@ Datum set_to_string_array_datum(const std::set<std::string>& key_auth)
     );
 
     return (Datum)0;
-  }
-
-
-  PG_FUNCTION_INFO_V1(is_metadata_operation);
-
-  Datum is_metadata_operation(PG_FUNCTION_ARGS)
-  {
-    _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
-
-    bool _result = false;
-
-    colect_operation_data_and_fill_returned_recordset(
-      [=, &_result](const hive::protocol::operation& op)
-      {
-        _result = hive::app::is_metadata_operation( op );
-      },
-      [](){},
-      __FUNCTION__,
-      VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body )
-    );
-
-    PG_RETURN_BOOL(_result);
   }
 
 
