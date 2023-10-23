@@ -126,7 +126,6 @@ void undo_blocks(csp_session_ref_type, int shift);
 void initialize_chain_db(csp_session_ref_type csp_session);
 
 void set_open_args_data_dir(open_args& db_open_args, const char* shared_memory_bin_path);
-void set_open_args_supply(open_args& db_open_args);
 void set_open_args_other_parameters(open_args& db_open_args);
 
 //lower level helpers
@@ -182,7 +181,6 @@ void initialize_chain_db(csp_session_ref_type csp_session)
   open_args db_open_args;
 
   set_open_args_data_dir(db_open_args, csp_session.shared_memory_bin_path.c_str());
-  set_open_args_supply(db_open_args);
   set_open_args_other_parameters(db_open_args);
 
   db.open(db_open_args);
@@ -192,12 +190,6 @@ void set_open_args_data_dir(open_args& db_open_args, const char* shared_memory_b
 {
   db_open_args.data_dir = shared_memory_bin_path;
   db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
-};
-
-void set_open_args_supply(open_args& db_open_args)
-{
-  //db_open_args.initial_supply = HIVE_INIT_SUPPLY;
-  //db_open_args.hbd_initial_supply = HIVE_HBD_INIT_SUPPLY;
 };
 
 void set_open_args_other_parameters(open_args& db_open_args)
