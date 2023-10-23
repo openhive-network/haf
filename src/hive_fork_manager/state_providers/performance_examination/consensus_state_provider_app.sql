@@ -19,14 +19,14 @@ BEGIN
   PERFORM hive.session_reconnect_all();
 
   CALL cab_app.prepare_app_data(_appContext, _consensus_storage, __last_block);
-  
+
   RAISE NOTICE 'Entering application main loop...';
 
   WHILE cab_app.continue_processing() AND(_maxBlockLimit = 0 OR __last_block < _maxBlockLimit)
   LOOP
       __next_block_range := hive.app_next_block(_appContext);
       IF __next_block_range IS NULL THEN
-          RAISE WARNING 'Waiting for next block...';
+          RAISE NOTICE 'Waiting for next block...';
           EXIT;
       ELSE
           __from = __next_block_range.first_block;
@@ -65,12 +65,12 @@ BEGIN
     last_block int,
     time interval
   );
-  
+
   IF NOT hive.app_context_exists(_appContext) THEN
     RAISE NOTICE 'Creating the HAF application context...';
     PERFORM hive.app_create_context(_appContext);
     COMMIT;
-    
+
     RAISE NOTICE 'all tables = %', json_agg(t)
       FROM(
         SELECT
@@ -158,7 +158,7 @@ BEGIN
   RAISE NOTICE 'Detaching HAF application context...';
   PERFORM hive.app_context_detach(_appContext);
   --- You can do here also other things to speedup your app, i.e. disable constrains, remove indexes etc.
-  
+
   CALL cab_app.process_block_range_loop(_appContext, _from, _to, _step, _last_block);
 
   CALL cab_app.process_block_range_rest(_appContext, _from, _to, _last_block);
@@ -247,13 +247,13 @@ CREATE OR REPLACE PROCEDURE cab_app.finalize_app(
 BEGIN
   PERFORM cab_app.store_last_processed_block(_last_block);
   COMMIT;
-  
+
   IF hive.app_is_forking(_appContext) THEN
     RAISE NOTICE 'This is a forking Application';
   ELSE
     RAISE NOTICE 'This is a non-forking application';
   END IF;
-  
+
   RAISE NOTICE 'Collected keys count=%',(
     SELECT
       json_agg(t)
@@ -262,10 +262,10 @@ BEGIN
         count(*)
       FROM
         hive.cabc_keyauth) t);
-  
+
   PERFORM cab_app.display_stats('Massive processing', 'WHERE last_block - first_block > 0');
   PERFORM cab_app.display_stats('One block processing', 'WHERE last_block - first_block = 0');
-  
+
   RAISE NOTICE 'Total time = %', now() - cab_app.get_total_time_start();
 
 END$$;
@@ -276,13 +276,13 @@ DECLARE
   __count INT;
 BEGIN
   EXECUTE format('SELECT SUM(time) FROM cab_app.log_table %s', _condition) INTO __sum_time;
-  
+
   RAISE NOTICE '% sum time = %', _prefix, __sum_time;
-  
+
   EXECUTE format('SELECT count(*) FROM cab_app.log_table %s', _condition) INTO __count;
-  
+
   RAISE NOTICE '%s count = %', _prefix, __count;
-  
+
   IF __count <> 0 THEN
     RAISE NOTICE '%s average time = %', _prefix, __sum_time / __count;
   END IF;
