@@ -132,7 +132,7 @@ void set_open_args_other_parameters(open_args& db_open_args);
 
 //lower level helpers
 void handle_exception(std::exception_ptr exception_ptr);
-uint64_t get_skip_flags();
+constexpr uint64_t get_skip_flags();
 block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
 full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num);
 void build_transaction_id_bins(const pqxx::result::const_iterator& transaction, std::vector<hive::protocol::transaction_id_type>& transaction_id_bins);
@@ -741,7 +741,7 @@ int postgres_block_log::current_operation_trx_num() const
 }
 
 
-uint64_t get_skip_flags()
+constexpr uint64_t get_skip_flags()
 {
   using flags = hive::chain::database::validation_steps;
 
