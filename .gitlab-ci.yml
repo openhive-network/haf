@@ -333,9 +333,12 @@ bash_tests:
     - echo Printing DISK df . -h
     - df . -h
     - ls -lath $CI_PROJECT_DIR
-
-    # - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=$DB_ADMIN --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
-    # - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
+    - echo sudoing setup_postgres.sh
+    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=$DB_ADMIN --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+    - echo sudoing setup_postgres.sh finished
+    - echo setup_db.sh start
+    - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
+    - echo setup_db.sh finish
     - ls -lath $CI_PROJECT_DIR
     # replay
     - test -n "$PATTERNS_PATH"
