@@ -824,9 +824,11 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
 
 Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
 {
-  consensus_state_provider::csp_session_ref_type handle = *reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr  = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  assert(session_ptr != nullptr);
+  consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
 
-  int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(handle);
+  int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(csp_session);
 
   PG_RETURN_INT32(expected_block_num);
 
@@ -868,15 +870,18 @@ PG_FUNCTION_INFO_V1(current_all_accounts_balances);
 
 Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
 {
-  consensus_state_provider::csp_session_ref_type handle = *reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  assert(session_ptr != nullptr);
+  consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
+
 
   consensus_state_provider::collected_account_balances_collection_t collected_data;
   collect_data_and_fill_recordset(
-      fcinfo, handle, collected_data,
-      [&handle]()
+      fcinfo, csp_session, collected_data,
+      [&csp_session]()
       {
         return consensus_state_provider::collect_current_all_accounts_balances_impl(
-            handle);
+            csp_session);
       },
       __FUNCTION__);
 
@@ -925,18 +930,21 @@ PG_FUNCTION_INFO_V1(current_account_balances);
 
 Datum current_account_balances(PG_FUNCTION_ARGS)
 {
-  consensus_state_provider::csp_session_ref_type handle = *reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  assert(csp_session_ptr != nullptr);
+  consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
+
   ArrayType* accounts_arr = PG_GETARG_ARRAYTYPE_P(1);
 
   std::vector<std::string> accounts = extract_string_array_from_datum(accounts_arr);
 
   consensus_state_provider::collected_account_balances_collection_t collected_data;
   collect_data_and_fill_recordset(
-      fcinfo, handle, collected_data,
-      [=, &handle]()
+      fcinfo, csp_session, collected_data,
+      [=, &csp_session]()
       {
         return consensus_state_provider::collect_current_account_balances_impl(
-            handle, accounts);
+            csp_session, accounts);
       },
       __FUNCTION__);
 
@@ -956,12 +964,15 @@ PG_FUNCTION_INFO_V1(csp_finish);
 Datum csp_finish(PG_FUNCTION_ARGS)
 {
 
-  consensus_state_provider::csp_session_ref_type handle = *reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  assert(csp_session_ptr != nullptr);
+  consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
+
 
   bool wipe_clean_shared_memory_bin = PG_GETARG_BOOL(1);
 
 
-  consensus_state_provider::csp_finish_impl(handle, wipe_clean_shared_memory_bin);
+  consensus_state_provider::csp_finish_impl(csp_session, wipe_clean_shared_memory_bin);
 
   return (Datum)0;
 }
@@ -972,11 +983,14 @@ PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
 
 Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
 {
-  consensus_state_provider::csp_session_ref_type handle = *reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  assert(csp_session_ptr != nullptr);
+  consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
+
   int from = PG_GETARG_INT32(1);
   int to = PG_GETARG_INT32(2);
 
-  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(handle, from, to);
+  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(csp_session, from, to);
 
   PG_RETURN_BOOL(ok);
 
@@ -994,9 +1008,11 @@ Datum csp_init(PG_FUNCTION_ARGS)
   char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_P(1));
   char* postgres_url = text_to_cstring(PG_GETARG_TEXT_P(2));
 
-  consensus_state_provider::csp_session_ptr_type handle = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
+  assert(csp_session_ptr != nullptr);
 
-  PG_RETURN_POINTER(handle);
+
+  PG_RETURN_POINTER(csp_session_ptr);
   pfree(context);
   pfree(postgres_url);
   pfree(shared_memory_bin_path);
