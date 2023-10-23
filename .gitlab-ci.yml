@@ -508,44 +508,44 @@ double_haf_replay_tests:
 
 
 
-# bash_tests:
-#   stage: build_and_test_phase_2
-#   needs:
-#     - job: hive_fork_manager
-#       artifacts: true
-#     - job: hived
-#       artifacts: true
-#   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-#   variables:
-#     HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
-#     RO_BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
-#     DB_NAME: haf_block_log
-#     DB_URL: "postgresql:///$DB_NAME"
-#     DB_ADMIN: "haf_admin"
-#     REPLAY: "--force-replay"
-#     PATTERNS_PATH: "$CI_PROJECT_DIR/tests"
-#   before_script:
-#     - echo Printing DISK df -h
-#     - df -h
-#     - echo Printing DISK df . -h
-#     - df . -h
-#     - !reference [.pytest_based, before_script]
-#     - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=$DB_ADMIN --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
-#     - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
-#     # replay
-#     - test -n "$PATTERNS_PATH"
-#     - mkdir -vp "${PATTERNS_PATH}/blockchain"
-#     - cp "${RO_BLOCK_LOG_DIRECTORY}/block_log" "${PATTERNS_PATH}/blockchain/"
-#     - cd $CI_PROJECT_DIR/tests/integration/replay
-#     - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
-#     - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL --plugin=sql_serializer --stop-replay-at-block=5000000  2>&1 | tee -i node_logs.log
-#   script:
-#     - cd $CI_PROJECT_DIR
-#     - $CI_PROJECT_DIR/src/hive_fork_manager/state_providers/consensus_state_provider/scripts/csp_test.sh
+bash_tests:
+  stage: build_and_test_phase_2
+  needs:
+    - job: hive_fork_manager
+      artifacts: true
+    - job: hived
+      artifacts: true
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  variables:
+    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
+    RO_BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
+    DB_NAME: haf_block_log
+    DB_URL: "postgresql:///$DB_NAME"
+    DB_ADMIN: "haf_admin"
+    REPLAY: "--force-replay"
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests"
+  before_script:
+    - echo Printing DISK df -h
+    - df -h
+    - echo Printing DISK df . -h
+    - df . -h
+    - !reference [.pytest_based, before_script]
+    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=$DB_ADMIN --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+    - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
+    # replay
+    - test -n "$PATTERNS_PATH"
+    - mkdir -vp "${PATTERNS_PATH}/blockchain"
+    - cp "${RO_BLOCK_LOG_DIRECTORY}/block_log" "${PATTERNS_PATH}/blockchain/"
+    - cd $CI_PROJECT_DIR/tests/integration/replay
+    - ls $HIVE_BUILD_ROOT_PATH/programs/util/ -lath
+    - $HIVE_BUILD_ROOT_PATH/programs/hived/hived --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL --plugin=sql_serializer --stop-replay-at-block=5000000  2>&1 | tee -i node_logs.log
+  script:
+    - cd $CI_PROJECT_DIR
+    - $CI_PROJECT_DIR/src/hive_fork_manager/state_providers/consensus_state_provider/scripts/csp_test.sh
 
-#   timeout: 60 minutes
-#   interruptible: true
-#   tags:
-#     - public-runner-docker
-#     - hived-for-tests
+  timeout: 60 minutes
+  interruptible: true
+  tags:
+    - public-runner-docker
+    - hived-for-tests
 
