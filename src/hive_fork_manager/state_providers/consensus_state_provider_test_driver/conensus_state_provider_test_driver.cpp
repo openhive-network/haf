@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
     bool ok = true;
     for (int i = from; i < to; i += step)
     {
-        int current_step_end = std::min(i + step - 1, to);
+        uint32_t current_step_end = std::min(i + step - 1, to);
 
         bool print = (i % 10000 == 0);
         if(print)

@@ -50,14 +50,14 @@ namespace consensus_state_provider
   using csp_session_ptr_type = csp_session_type*;
 
 
-  bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session,  int from, int to);
+  bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint32_t from, uint32_t to);
 
   csp_session_ptr_type csp_init_impl(const char* context,
                                 const char* shared_memory_bin_path,
                                 const char* postgres_url);
 
   void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_memory_bin);
-  int consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session);
+  uint32_t consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session);
 
   collected_account_balances_collection_t collect_current_all_accounts_balances(csp_session_ref_type csp_session);
   collected_account_balances_collection_t collect_current_all_accounts_balances_impl(csp_session_ref_type csp_session);
