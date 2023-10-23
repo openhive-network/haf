@@ -327,13 +327,16 @@ bash_tests:
 
 
   before_script:
+    - !reference [.pytest_based, before_script]
     - echo Printing DISK df -h
     - df -h
     - echo Printing DISK df . -h
     - df . -h
-    - !reference [.pytest_based, before_script]
-    - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=$DB_ADMIN --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
-    - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
+    - ls -lath $CI_PROJECT_DIR
+
+    # - sudo $SETUP_SCRIPTS_PATH/setup_postgres.sh --haf-admin-account=$DB_ADMIN --haf-binaries-dir="$CI_PROJECT_DIR/hive_fork_manager/build"
+    # - $SETUP_SCRIPTS_PATH/setup_db.sh --haf-db-name="$DB_NAME" --haf-app-user="haf_app_admin"
+    - ls -lath $CI_PROJECT_DIR
     # replay
     - test -n "$PATTERNS_PATH"
     - mkdir -vp "${PATTERNS_PATH}/blockchain"
