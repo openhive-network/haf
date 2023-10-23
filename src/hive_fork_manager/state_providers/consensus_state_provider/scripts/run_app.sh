@@ -51,8 +51,9 @@ DATA_DIR=/home/hived/datadir
 
 if [ -z ${CI+x} ]
 then
-    echo NOt In CI
+    echo NOT In CI
     CONSENSUS_STORAGE=$DATA_DIR/consensus_state_provider
+    DB_URL=haf_block_log
 else
     echo In CI
     CONSENSUS_STORAGE=$PATTERNS_PATH/consensus_state_provider
@@ -71,7 +72,6 @@ app_start()
 {
 
 
-    psql  -v "ON_ERROR_STOP=1" -d postgres -c "\l"
     echo   Running psql  -v "ON_ERROR_STOP=1" -d $DB_URL -c "\l"
     psql  -v "ON_ERROR_STOP=1" -d $DB_URL -c "\l"
 
