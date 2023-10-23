@@ -15,10 +15,6 @@ BEGIN
 
     __context_id = hive.get_context_id( _context );
 
-    IF __context_id IS NULL THEN
-         RAISE EXCEPTION 'No context with name %', _context;
-    END IF;
-
     EXECUTE format('DROP TABLE IF EXISTS hive.%I', __table_name);
 
     EXECUTE format('CREATE TABLE hive.%I 
@@ -69,10 +65,6 @@ BEGIN
     __current_pid =  pg_backend_pid();
     __context_id = hive.get_context_id( _context );
 
-    IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context;
-    END IF;
-
     EXECUTE format('TRUNCATE TABLE hive.%s', __table_name);
 
     SELECT datname AS database_name FROM pg_stat_activity WHERE pid = __current_pid INTO __database_name;
@@ -115,10 +107,6 @@ DECLARE
     __session_ptr BIGINT;
 BEGIN
     __context_id = hive.get_context_id( _context );
-
-    IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'No context with name %', _context;
-    END IF;
 
     __session_ptr = hive.session_get_managed_object_handle(_context);
 
