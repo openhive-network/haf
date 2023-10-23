@@ -14,6 +14,8 @@
 namespace consensus_state_provider
 {
 
+const uint64_t CSP_SHARED_MEMORY_SIZE = 24*1024*1024*1024ull;
+
 using hive::chain::open_args;
 using hive::chain::full_block_type;
 using hive::chain::block_id_type;
@@ -194,7 +196,7 @@ void set_open_args_data_dir(open_args& db_open_args, const std::string&  shared_
 
 void set_open_args_other_parameters(open_args& db_open_args)
 {
-  db_open_args.shared_file_size = 25769803776;
+  db_open_args.shared_file_size = CSP_SHARED_MEMORY_SIZE;
   db_open_args.shared_file_full_threshold = 0;
   db_open_args.shared_file_scale_rate = 0;
   db_open_args.chainbase_flags = 0;
