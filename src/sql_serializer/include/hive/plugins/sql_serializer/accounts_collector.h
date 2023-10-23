@@ -49,6 +49,8 @@ namespace hive::plugins::sql_serializer {
     template< typename T >
     void operator()(const T& op)
     {
+      if ( !accounts_collector::is_op_accepted() )
+        return;
       for( const auto& account_name : _impacted )
         on_new_operation(account_name, _processed_operation_id, _processed_operation_type_id);
     }

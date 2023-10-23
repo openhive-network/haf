@@ -61,8 +61,16 @@ AS
 $BODY$
 DECLARE
     __irreversible_head_block hive.blocks.num%TYPE;
+    __first_block hive.blocks.num%TYPE;
 BEGIN
     SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hive.blocks;
+
+    SELECT COALESCE( first_block_to_sync, 1 ) INTO __first_block FROM hive.irreversible_data;
+
+    if ( _block_num < __first_block ) THEN
+        RETURN;
+    END IF;
+
     IF ( _block_num < __irreversible_head_block ) THEN
         RETURN;
     END IF;
@@ -298,7 +306,7 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE )
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE, _first_blocknum hive.blocks.num%TYPE )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -309,6 +317,8 @@ BEGIN
     PERFORM hive.back_from_fork( _block_num );
     INSERT INTO hive.hived_connections( block_num, git_sha, time )
     VALUES( _block_num, _git_sha, now() );
+
+    UPDATE hive.irreversible_data SET first_block_to_sync = _first_blocknum;
 END;
 $BODY$
 ;
@@ -364,7 +374,7 @@ $BODY$
 DECLARE
     __events_id BIGINT := 0;
 BEGIN
-    INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
+    INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE, NULL) ON CONFLICT DO NOTHING;
     INSERT INTO hive.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
     INSERT INTO hive.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
     SELECT MAX(eq.id) + 1 FROM hive.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;

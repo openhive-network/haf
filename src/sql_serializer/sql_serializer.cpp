@@ -332,21 +332,6 @@ public:
     }
   }
 
-  void inform_hfm_about_starting(hive::chain::database& _chaindb) {
-    using namespace std::string_literals;
-    ilog( "Inform Hive Fork Manager about starting..." );
-
-    // inform the db about starting hivd
-    auto connect_to_the_db = [&_chaindb](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx){
-      const auto CONNECT_QUERY = "SELECT hive.connect("s + fc::git_revision_sha + ","s + std::to_string( _chaindb.head_block_num() ) + ")"s;
-      tx.exec( CONNECT_QUERY );
-      return data_processing_status();
-    };
-    queries_commit_data_processor processor( db_url, "Connect to the db", connect_to_the_db, nullptr, theApp );
-    processor.trigger( nullptr, 0 );
-    processor.join();
-  }
-
   void load_initial_db_data()
   {
     ilog("Loading operation's last id ...");
@@ -387,8 +372,11 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
   ilog( "Inform Hive Fork Manager about starting..." );
 
   // inform the db about starting hived
-  auto connect_to_the_db = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx){
-    const auto CONNECT_QUERY = "SELECT hive.connect('"s + fc::git_revision_sha + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER);"s;
+  auto connect_to_the_db = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx ){
+    const auto CONNECT_QUERY = "SELECT hive.connect('"s
+      + fc::git_revision_sha
+      + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER"
+      + " ,"s + std::to_string( psql_first_block ) + "::INTEGER"s + ");"s;
     tx.exec( CONNECT_QUERY );
     return data_processing_status();
   };
@@ -558,6 +546,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
   const hive::chain::witness_object* witness_ptr = chain_db.find_witness(block_header.witness);
 
   const hive::chain::dynamic_global_property_object& dgpo = chain_db.get_dynamic_global_properties();
+  constexpr auto NOT_COLLECTED_ACCOUNT_ID_SINK = -1;
 
   currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
   currently_caching_data->blocks.emplace_back(
