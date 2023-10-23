@@ -60,12 +60,26 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE PROCEDURE haf_admin_test_error()
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+BEGIN
+    -- there is already in hfm irreversible block 1
+    -- so it is impossible to use block 22 as the first
+    -- such situation may happen when during restarting hived
+    -- someone will change psql_first_block option
+    PERFORM hive.connect( '123456789', 100, 22 );
+END
+$BODY$
+;
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_when()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM hive.connect( '123456789', 100 );
+    PERFORM hive.connect( '123456789', 100, 1 );
 END
 $BODY$
 ;
@@ -95,6 +109,7 @@ BEGIN
     ASSERT( SELECT COUNT(*) FROM hive.fork WHERE id = 2 AND block_num = 100 ) = 1, 'No fork added after connection';
 
     ASSERT( SELECT is_dirty FROM hive.irreversible_data ) = FALSE, 'Irreversible data are dirty';
+    ASSERT( SELECT first_block_to_sync FROM hive.irreversible_data ) = 1, 'Irreversible data first block to sync !=1';
 END
 $BODY$
 ;
