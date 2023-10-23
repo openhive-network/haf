@@ -333,7 +333,13 @@ bash_tests:
     - echo Printing DISK df . -h
     - df . -h
     - ls -lath $CI_PROJECT_DIR
+    - echo psql 1
+    - psql -d postgres -c'\l'
+    - echo psql 1 finish
     # replay
+    - echo psql 1
+    - psql -d postgres -c'\l'
+    - echo psql 1 finish
     - |
       echo -e "\e[0Ksection_start:$(date +%s):replay[collapsed=true]\r\e[0KExecuting replay..."
       test -n "$PATTERNS_PATH"
@@ -342,6 +348,9 @@ bash_tests:
       cd $CI_PROJECT_DIR/tests/integration/replay
       $HIVED_PATH --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs.log
       echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
+    - echo psql 1
+    - psql -d postgres -c'\l'
+    - echo psql 1 finish
   script:
     - cd $CI_PROJECT_DIR
     - $CI_PROJECT_DIR/src/hive_fork_manager/state_providers/consensus_state_provider/scripts/csp_test.sh
