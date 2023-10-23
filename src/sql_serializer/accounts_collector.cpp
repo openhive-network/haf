@@ -69,6 +69,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void accounts_collector::operator()(const hive::protocol::account_created_operation& op)
   {
+    if ( !accounts_collector::is_op_accepted() )
+      return;
+
     on_new_account(op.new_account_name);
     if( _creation_operation_id.valid() )
       on_new_operation(op.new_account_name, *_creation_operation_id, _creation_operation_type_id, false/*is_current_operation*/ );

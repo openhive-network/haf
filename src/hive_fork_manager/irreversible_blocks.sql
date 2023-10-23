@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS hive.irreversible_data (
       consistent_block integer,
       is_dirty bool NOT NULL,
       first_block_to_sync integer,
-      CONSTRAINT pk_irreversible_data PRIMARY KEY ( id )
+      CONSTRAINT pk_irreversible_data PRIMARY KEY ( id ),
+      CONSTRAINT ch_irreversible_data CHECK ( first_block_to_sync <= consistent_block )
 );
 
 -- We use ADD CONSTRAINT with ALTER TABLE followed by NOT VALID because the NOT VALID option isn't documented

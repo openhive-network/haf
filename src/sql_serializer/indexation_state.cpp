@@ -368,18 +368,20 @@ indexation_state::update_state(
       break;
       }
    case INDEXATION::WAIT:
-      ilog( "Entered WAIT sync state" );
+     ilog("PROFILE: Entering WAIT sync, creating indexes/constraints as needed: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       _trigger.reset();
       _dumper.reset();
       _trigger = std::make_shared< fake_flush_trigger >();
       _dumper = std::make_shared< fake_data_dumper >();
+      ilog("PROFILE: Entered WAIT sync from start state: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       break;
     case INDEXATION::REINDEX_WAIT:
-      ilog( "Entered REINDEX_WAIT sync state" );
+      ilog("PROFILE: Entering REINDEX_WAIT sync, creating indexes/constraints as needed: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       _trigger.reset();
       _dumper.reset();
       _trigger = std::make_shared< fake_flush_trigger >();
       _dumper = std::make_shared< fake_data_dumper >();
+      ilog("PROFILE: Entered REINDEX_WAIT sync, creating indexes/constraints as needed: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       break;
     default:
       FC_ASSERT( false, "Unknown INDEXATION state" );
