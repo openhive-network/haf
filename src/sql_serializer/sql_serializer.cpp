@@ -198,7 +198,7 @@ public:
 
   sql_serializer_plugin_impl(
       const std::string &url
-    , hive::chain::database& _chain_db
+    , hive::chain::full_database& _chain_db
     , const sql_serializer_plugin& _main_plugin
     , appbase::application& app
     , uint32_t _psql_operations_threads_number
@@ -262,7 +262,7 @@ public:
   indexation_state _indexation_state;
 
   std::string db_url;
-  hive::chain::database& chain_db;
+  hive::chain::full_database& chain_db;
   const sql_serializer_plugin& main_plugin;
   appbase::application& theApp;
 
