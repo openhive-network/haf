@@ -19,7 +19,6 @@ const uint64_t CSP_SHARED_MEMORY_SIZE = 24*1024*1024*1024ull;
 using hive::chain::open_args;
 using hive::chain::full_block_type;
 using hive::chain::block_id_type;
-using hive::chain::get_block_by_num_function_type;
 using hive::chain::open_args;
 using full_block_ptr = std::shared_ptr<full_block_type>;
 
@@ -30,7 +29,8 @@ class haf_state_database : public hive::chain::database
 public:
   haf_state_database(csp_session_ref_type csp_session, appbase::application& app): database( app ), csp_session(csp_session){}
 
-  virtual void state_dependent_open( const open_args& args ) override;
+  //virtual voi2d state_dependent_open( const open_args& args ) override;
+  // _block_writer->get_block_reader().read_block_by_num(head_block_num());
 
   void push_haf_block(const full_block_ptr& full_block, uint32_t skip);
 
@@ -424,7 +424,7 @@ void haf_state_database::push_haf_block(const full_block_ptr& full_block, uint32
 {
   try
   {
-    _node_property_object.skip_flags = skip;
+    set_node_skip_flags(skip);
     hive::chain::existing_block_flow_control flow_control(full_block);
     push_block(flow_control, skip);
 
@@ -432,15 +432,15 @@ void haf_state_database::push_haf_block(const full_block_ptr& full_block, uint32
 }
 
 
-void haf_state_database::state_dependent_open( const open_args& args )
-{
-  load_state_initial_data(args,
-    [this](uint32_t block_num)
-    {
-      auto full_block = postgres_block_log(csp_session).read_full_block(head_block_num());
-      return full_block;
-    });
-}
+// void haf_state_database::state_dependent_open( const open_args& args )
+// {
+//   load_state_initial_data(args,
+//     [this](uint32_t block_num)
+//     {
+//       auto full_block = postgres_block_log(csp_session).read_full_block(head_block_num());
+//       return full_block;
+//     });
+// }
 
 
 
