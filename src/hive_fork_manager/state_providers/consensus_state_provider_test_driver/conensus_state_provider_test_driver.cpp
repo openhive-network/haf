@@ -8,7 +8,7 @@
 #include <iomanip>
 
 #include "../../shared_lib/consensus_state_provider_replay.hpp"
-#include "../../shared_lib/time_probe.hpp" 
+#include "../../shared_lib/time_probe.hpp"
 
 
 
@@ -43,7 +43,7 @@ unsigned long get_memory_usage_kb() {
 
 namespace po = boost::program_options;
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
     int from, to, step;
     std::string  context, consensus_state_provider_storage, postgres_url;
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     std::locale::global(std::locale(""));
     std::cout.imbue(std::locale());
 
-    
+
 
     std::cout << "from: " << std::fixed << std::setprecision(0) << std::showbase << from << "\n";
     std::cout << "to: " << std::fixed << std::setprecision(0) << std::showbase << to << "\n";
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 
     consensus_state_provider::time_probe alltogether_time_probe; alltogether_time_probe.start();
 
-    const consensus_state_provider::csp_session_type* const csp_session = consensus_state_provider::csp_init_impl(context.c_str(), consensus_state_provider_storage.c_str(), postgres_url.c_str());
+    consensus_state_provider::csp_session_ref_type csp_session = consensus_state_provider::csp_init_impl(context.c_str(), consensus_state_provider_storage.c_str(), postgres_url.c_str());
 
     bool ok = true;
     for (int i = from; i < to; i += step)
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
         auto step_ok = consensus_state_provider::consensus_state_provider_replay_impl(csp_session, i, current_step_end);
 
         all_time_probe.stop(); all_time_probe.print_duration("All");
-    
+
         if(print)
             std::cout << "Memory (KB): " << get_memory_usage_kb() << std::endl;
 
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
         if(current_step_end == 5000000)
         {
             // clang-format off
-            expected_values = 
+            expected_values =
             {
                 {"steemit", 4778859891},
                 {"poloniex", 1931250425},
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
         else if(current_step_end == 23645964)
         {
             // clang-format off
-            expected_values = 
+            expected_values =
             {
                 {"bittrex", 22319508517},
                 {"poloniex", 14479958335},
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
         else if(current_step_end == 68676504)
         {
             // clang-format off
-            expected_values = 
+            expected_values =
             {
                 {"upbitsteem", 84255436735},
                 {"hive.fund", 57945295412},
@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
         else if(current_step_end == 73964098)
         {
             // clang-format off
-            expected_values = 
+            expected_values =
             {
                 {"upbitsteem", 93077129841},
                 {"hive.fund", 52850986437},
@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
         else if(current_step_end == 74106753)
         {
             // clang-format off
-            expected_values = 
+            expected_values =
             {
                 {"upbitsteem", 93077129841},
                 {"hive.fund", 52718991035},
@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
 
             bool is_equal = std::equal(top_15_results.begin(), top_15_results.end(), expected_values.begin(),
                                        [](const collected_account_balances_t& account, const std::tuple<std::string, long long>& expected) {
-                                         
+
                                          bool ok =  account.account_name == std::get<0>(expected) && account.balance == std::get<1>(expected);
                                          if(!ok)
                                          {
@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
 
 
         auto expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(csp_session);
-        
+
         if(expected_block_num < current_step_end)
         {
             std::cout << "Exiting at the end of input data: " << expected_block_num - 1 << std::endl;
@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
             ok = false;
             break;
         }
-    }    
+    }
 
     // Complete the session with wipe clean flag set to true
     consensus_state_provider::csp_finish_impl(csp_session, true);
@@ -317,7 +317,7 @@ Started on blockchain with 5000000 blocks, LIB: 4999980
         else if(current_step_end == 5000000)
         {
             // clang-format off
-            expected_values = 
+            expected_values =
             {
                 std::make_tuple("steemit", 4778859891),
                 std::make_tuple("poloniex", 1931250425),
@@ -337,7 +337,7 @@ Started on blockchain with 5000000 blocks, LIB: 4999980
             };
             // clang-format on
         }
-        
+
 
 Started on blockchain with 23645964
 ('bittrex', 22319508517, 9982418381, 8546709372209)
@@ -361,7 +361,7 @@ Started on blockchain with 23645964
         if(current_step_end == 23645964)
         {
             // clang-format off
-            expected_values = 
+            expected_values =
             {
                 std::make_tuple("steemit", 4778859891),
                 std::make_tuple("poloniex", 1931250425),
@@ -381,7 +381,7 @@ Started on blockchain with 23645964
             };
             // clang-format on
         }
-        
+
 
 Started on blockchain with 68676504
 ('upbitsteem', 84255436735, 2386398250, 0)
@@ -404,7 +404,7 @@ Started on blockchain with 68676504
         if(current_step_end == 5000000)
         {
             // clang-format off
-            expected_values = 
+            expected_values =
             {
                 std::make_tuple("steemit", 4778859891),
                 std::make_tuple("poloniex", 1931250425),
@@ -424,7 +424,7 @@ Started on blockchain with 68676504
             };
             // clang-format on
         }
-        
+
 
 
 Started on blockchain with 73964098
@@ -447,7 +447,7 @@ Started on blockchain with 73964098
         if(current_step_end == 5000000)
         {
             // clang-format off
-            expected_values = 
+            expected_values =
             {
                 std::make_tuple("steemit", 4778859891),
                 std::make_tuple("poloniex", 1931250425),
@@ -467,7 +467,7 @@ Started on blockchain with 73964098
             };
             // clang-format on
         }
-        
+
 
 
 
@@ -493,7 +493,7 @@ Started on blockchain with 74106753
         if(current_step_end == 5000000)
         {
             // clang-format off
-            expected_values = 
+            expected_values =
             {
                 std::make_tuple("steemit", 4778859891),
                 std::make_tuple("poloniex", 1931250425),
@@ -513,5 +513,5 @@ Started on blockchain with 74106753
             };
             // clang-format on
         }
-        
+
 */
