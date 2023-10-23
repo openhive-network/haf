@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS hive.irreversible_data (
       id integer,
       consistent_block integer,
       is_dirty bool NOT NULL,
+      first_block_to_sync integer,
       CONSTRAINT pk_irreversible_data PRIMARY KEY ( id )
 );
 
