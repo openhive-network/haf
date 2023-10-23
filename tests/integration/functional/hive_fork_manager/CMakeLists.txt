@@ -272,6 +272,10 @@ ENDMACRO()
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_negative_non_context_owner.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_negative_non_context_owner_create_table.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/switch_state_provider_to_forkable.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/csp_massive_sync_live_blocks_and_fork.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/consensus_state_provider_update_state_provider.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/sessions.sql )
+
 
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_to_bob_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_events_infrustructure.sql )
