@@ -33,6 +33,11 @@ BEGIN
 
     __context_id = hive.get_context_id( _context );
 
+
+    IF __context_id IS NULL THEN
+         RAISE EXCEPTION 'No context with name %', _context;
+    END IF;
+
     EXECUTE format('DROP TABLE IF EXISTS hive.%I', __table_name);
 
     EXECUTE format( 'CREATE TABLE hive.%I(
@@ -157,41 +162,17 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_metadata';
-BEGIN
+    BEGIN
     __context_id = hive.get_context_id( _context );
 
-    __to_execute =  format('
-        INSERT INTO
-            hive.%s_metadata(account_id, json_metadata)
-        SELECT
-            accounts_view.id,
-            json_metadata
-        FROM
-            (
-                SELECT
-                    DISTINCT ON (metadata.account_name) metadata.account_name,
-                    metadata.json_metadata
-                FROM
-                    (
-                        SELECT 
-                            (hive.get_metadata(ov.body_binary)).*,
-                            ov.id
-                        FROM 
-                            hive.%s_operations_view ov
-                        WHERE
-                            hive.is_metadata_operation(ov.body_binary)
-                            AND ov.block_num BETWEEN %s AND %s
-                        ) as metadata
-                WHERE metadata.json_metadata != ''''
-                ORDER BY 
-                    metadata.account_name,
-                    metadata.id DESC
-            ) as t
-            JOIN hive.accounts_view accounts_view ON accounts_view.name = account_name 
-        ON CONFLICT (account_id) DO UPDATE
-        SET
-            json_metadata = EXCLUDED.json_metadata;'
-        , _context,  _context, _first_block, _last_block
+    IF __context_id IS NULL THEN
+             RAISE EXCEPTION 'No context with name %', _context;
+    END IF;
+    EXECUTE format(
+          'SELECT %I(%s, %s);'
+        , hive.get_metadata_update_function_name( _context )
+        , _first_block
+        , _last_block
         );
 
     EXECUTE format(
@@ -215,6 +196,10 @@ DECLARE
     __table_name TEXT := _context || '_metadata';
 BEGIN
     __context_id = hive.get_context_id( _context );
+
+    IF __context_id IS NULL THEN
+        RAISE EXCEPTION 'No context with name %', _context;
+    END IF;
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
     EXECUTE format(

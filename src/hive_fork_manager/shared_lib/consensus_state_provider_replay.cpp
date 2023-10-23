@@ -28,7 +28,7 @@ using full_block_ptr = std::shared_ptr<full_block_type>;
 class haf_state_database : public hive::chain::database
 {
 public:
-  haf_state_database(csp_session_ref_type csp_session):csp_session(csp_session){}
+  haf_state_database(csp_session_ref_type csp_session, appbase::application& app): database( app ), csp_session(csp_session){}
 
   virtual void state_dependent_open( const open_args& args ) override;
 
@@ -66,7 +66,7 @@ csp_session_type::csp_session_type(
   :
   shared_memory_bin_path(shared_memory_bin_path),
   conn(std::make_unique<postgres_database_helper>(postgres_url)),
-  db(std::make_unique<haf_state_database>(*this))
+  db(std::make_unique<haf_state_database>(*this, theApp))
   {}
 
 
