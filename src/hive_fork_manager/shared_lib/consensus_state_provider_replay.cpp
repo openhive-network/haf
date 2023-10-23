@@ -217,13 +217,13 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
   try
   {
 
-    hive::chain::database* db = csp_session.db.get();
+    hive::chain::database& db = *csp_session.db.get();
 
-    db->close();
+    db.close();
 
     if(wipe_clean_shared_memory_bin)
     {
-      db->chainbase::database::wipe(fc::path(csp_session.shared_memory_bin_path) / "blockchain");
+      db.chainbase::database::wipe(fc::path(csp_session.shared_memory_bin_path) / "blockchain");
 
       // Use std::cout like in database::wipe
       std::string log("Removing also:\n- " + csp_session.shared_memory_bin_path + "\n");
