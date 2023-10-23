@@ -1,6 +1,6 @@
 -- Testing consensus state provider with blocks being reversed due to a fork
-DROP PROCEDURE IF EXISTS haf_admin_procedure_test_given;
-CREATE PROCEDURE haf_admin_procedure_test_given()
+DROP PROCEDURE IF EXISTS haf_admin_test_given;
+CREATE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -73,8 +73,8 @@ BEGIN
 END
 $BODY$;
 
-DROP PROCEDURE IF EXISTS haf_admin_procedure_test_when;
-CREATE PROCEDURE haf_admin_procedure_test_when()
+DROP PROCEDURE IF EXISTS haf_admin_test_when;
+CREATE PROCEDURE haf_admin_test_when()
     LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -251,8 +251,8 @@ END;
 $BODY$
 ;
 
-DROP PROCEDURE IF EXISTS haf_admin_procedure_test_then;
-CREATE PROCEDURE haf_admin_procedure_test_then()
+DROP PROCEDURE IF EXISTS haf_admin_test_then;
+CREATE PROCEDURE haf_admin_test_then()
     LANGUAGE 'plpgsql'
 AS
 $BODY$
