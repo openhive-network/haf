@@ -2,6 +2,9 @@
 
 #include <hive/chain/full_block.hpp>
 #include <appbase/application.hpp>
+#include <hive/chain/sync_block_writer.hpp>
+#include <hive/chain/irreversible_block_writer.hpp>
+
 
 #include <string>
 #include <vector>
@@ -46,7 +49,12 @@ namespace consensus_state_provider
 
       std::string shared_memory_bin_path;
       std::unique_ptr<postgres_database_helper> conn;
+
+      //hive::chain::irreversible_block_writer reindex_block_writer;
+
       std::unique_ptr<haf_state_database> db;
+      hive::chain::sync_block_writer default_block_writer;
+
       appbase::application theApp;
   };
 

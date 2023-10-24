@@ -22,6 +22,9 @@ evaluate_result() {
   sudo tail -n 10000 $POSTGRESLOG
   echo "mtlk end listing postgres log"
 
+
+  sleep 5 
+
   exit 1;
 }
 

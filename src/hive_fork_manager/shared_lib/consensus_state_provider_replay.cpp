@@ -66,8 +66,16 @@ csp_session_type::csp_session_type(
   :
   shared_memory_bin_path(shared_memory_bin_path),
   conn(std::make_unique<postgres_database_helper>(postgres_url)),
-  db(std::make_unique<haf_state_database>(*this, theApp))
-  {}
+  
+  //reindex_block_writer(default_block_writer.get_block_log()),
+
+  db(std::make_unique<haf_state_database>(*this, theApp)),
+  default_block_writer( *db.get(), theApp )
+
+  
+  {
+    db->set_block_writer( &default_block_writer );
+  }
 
 
 
@@ -150,8 +158,18 @@ std::string fix_pxx_time(const pqxx::field& t);
 const char* fix_pxx_hex(const pqxx::field& h);
 
 
+static auto volatile stop_in_csp_init_impl = false;
+
 csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
+  wlog("mtlk csp_init_impl");
+
+  wlog("pid= ${pid}", ("pid" , getpid() ));
+  while(stop_in_csp_init_impl)
+  {
+      int a= 0;
+      a=a;
+  }
 
   try
   {
@@ -167,6 +185,8 @@ csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memor
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
+
+  wlog("mtlk csp_init_impl return");
 
   return 0;
 
@@ -214,6 +234,9 @@ void set_open_args_other_parameters(open_args& db_open_args)
 
 void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_memory_bin)
 {
+  wlog("mtlk csp_finish_impl");
+  wlog("pid= ${pid}", ("pid" , getpid() ));
+
   try
   {
 
@@ -239,11 +262,16 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
     handle_exception(current_exception);
   }
 
+  wlog("csp_finish_impl return");
+
 }
 
 
 uint32_t consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session)
 {
+  wlog("mtlk consensus_state_provider_get_expected_block_num_impl");
+  wlog("pid= ${pid}", ("pid" , getpid() ));
+
   return csp_session.db->head_block_num() + 1;
 }
 
@@ -260,8 +288,21 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
 }
 
 
+static auto volatile stop_in_consensus_state_provider_replay_impl = false;
+
+
 bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint32_t first_block, uint32_t last_block)
 {
+
+  wlog("mtlk consensus_state_provider_replay_impl");
+  wlog("pid= ${pid}", ("pid" , getpid() ));
+
+  while(stop_in_consensus_state_provider_replay_impl)
+  {
+    int a= 0;
+    a=a;
+  }
+
   try
   {
 
@@ -282,6 +323,9 @@ bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint
       ("first_block", first_block)("curr", csp_expected_block));
 
     postgres_block_log(csp_session).run(first_block, last_block);
+  
+    wlog("mtlk consensus_state_provider_replay_impl return true");
+  
     return true;
   }
   catch(...)
@@ -289,6 +333,8 @@ bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
+
+  wlog("mtlk consensus_state_provider_replay_impl return false");
 
   return false;
 }
@@ -313,8 +359,16 @@ void postgres_block_log::run(uint32_t first_block, uint32_t last_block)
   measure_after_run();
 }
 
+static auto volatile stop_in_postgres_block_log = false;
+
 full_block_ptr postgres_block_log::read_full_block(uint32_t block_num)
 {
+
+  while(stop_in_postgres_block_log)
+  {
+    int a= 0 ;
+    a=a;
+  }
 
   prepare_postgres_data(block_num, block_num);
   return block_to_fullblock(block_num, blocks[0]);
