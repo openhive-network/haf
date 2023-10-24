@@ -56,7 +56,7 @@ AS
 $BODY$
 BEGIN
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.blocks
+        SELECT * FROM hive.blocks WHERE num > 0
         EXCEPT SELECT * FROM ( VALUES
                    ( 1, '\xBADD10'::bytea, '\xCAFE10'::bytea, '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
                  , ( 2, '\xBADD20'::bytea, '\xCAFE20'::bytea, '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )

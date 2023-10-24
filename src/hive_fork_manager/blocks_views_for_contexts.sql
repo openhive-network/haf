@@ -76,7 +76,7 @@ BEGIN
             hb.witness_signature,
             hb.signing_key
            FROM hive.blocks hb
-          WHERE hb.num <= c.min_block
+           WHERE hb.num > hive.block_sink_num() AND hb.num <= c.min_block
         UNION ALL
          SELECT hbr.num,
             hbr.hash,
@@ -122,7 +122,7 @@ EXECUTE format(
             hb.extensions,
             hb.witness_signature,
             hb.signing_key
-        FROM hive.blocks hb
+        FROM hive.blocks hb WHERE hb.num > hive.block_sink_num()
         ;', _context_name
     );
 END;
@@ -435,7 +435,7 @@ EXECUTE format(
                  ha.id,
                  ha.name
                 FROM hive.accounts ha
-                WHERE ha.block_num <= c.min_block
+                WHERE ha.id > hive.account_sink_id() AND ha.block_num <= c.min_block
                 UNION ALL
                 SELECT
                     reversible.block_num,
@@ -475,7 +475,7 @@ EXECUTE format(
            ha.block_num,
            ha.id,
            ha.name
-        FROM hive.accounts ha
+        FROM hive.accounts ha WHERE ha.id > hive.account_sink_id()
     ;', _context_name
     );
 END;
