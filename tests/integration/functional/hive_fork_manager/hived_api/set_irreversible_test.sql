@@ -223,7 +223,7 @@ $BODY$
 BEGIN
     ASSERT EXISTS( SELECT * FROM hive.blocks ), 'No blocks';
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.blocks
+        SELECT * FROM hive.blocks WHERE num > 0
         EXCEPT SELECT * FROM ( VALUES
                    ( 1, '\xBADD10'::bytea, '\xCAFE10'::bytea, '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
                  , ( 2, '\xBADD20'::bytea, '\xCAFE20'::bytea, '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -253,9 +253,9 @@ BEGIN
 
     ASSERT EXISTS( SELECT * FROM hive.accounts_reversible ), 'No accounts reversible';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts ) = 8, 'Wrong number of accounts';
+    ASSERT ( SELECT COUNT(*) FROM hive.accounts WHERE id >= 0 ) = 8, 'Wrong number of accounts';
     ASSERT NOT EXISTS (
-        SELECT block_num, name, id FROM hive.accounts
+        SELECT block_num, name, id FROM hive.accounts WHERE id >= 0
         EXCEPT SELECT * FROM ( VALUES
                    ( 1, 'u1', 1 )
                  , ( 2, 'u2', 2 )

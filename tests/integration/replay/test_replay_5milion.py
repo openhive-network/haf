@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 import test_tools as tt
 
-from haf_local_tools.tables import EventsQueue, Blocks, Operations, Transactions, TransactionsMultisig, Accounts, AccountOperations
+from haf_local_tools.tables import EventsQueue, Blocks, BlocksView, Operations, Transactions, TransactionsMultisig, Accounts, AccountsView, AccountOperations
 
 
 def test_replay_5milion():
@@ -30,8 +30,11 @@ def test_replay_5milion():
     event = session.query(EventsQueue).filter(EventsQueue.event == 'MASSIVE_SYNC').one()
     assert event.block_num == rows_count['BLOCK_LOG_LENGTH']
 
-    blocks_count = session.query(Blocks).count()
+    blocks_count = session.query(BlocksView).count()
     assert blocks_count == rows_count['BLOCKS_COUNT']
+
+    blocks_count = session.query(Blocks).count()
+    assert blocks_count == rows_count['BLOCKS_COUNT'] + 1 # + block sink
 
     operations_count = session.query(Operations).count()
     assert operations_count == rows_count['OPERATIONS_COUNT']
@@ -42,8 +45,11 @@ def test_replay_5milion():
     transactions_multisig_count = session.query(TransactionsMultisig).count()
     assert transactions_multisig_count == rows_count['TRANSACTIONS_MULTISIG_COUNT']
 
-    account_count = session.query(Accounts).count()
+    account_count = session.query(AccountsView).count()
     assert account_count == rows_count['ACCOUNTS_COUNT']
+
+    account_count = session.query(Accounts).count()
+    assert account_count == rows_count['ACCOUNTS_COUNT'] + 1 # + account sink
 
     account_operations_count = session.query(AccountOperations).count()
     assert account_operations_count == rows_count['ACCOUNT_OPERATIONS_COUNT']

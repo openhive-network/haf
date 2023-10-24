@@ -36,6 +36,13 @@ class AccountsReversible(Base):
     fork_id = Column(Integer, primary_key=True)
 
 
+class AccountsView(Base):
+    __tablename__ = "accounts_view"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    block_num = Column(Integer)
+
 class AccountOperations(Base):
     __tablename__ = "account_operations"
 

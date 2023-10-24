@@ -541,11 +541,20 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
   handle_transactions(note.full_block->get_full_transactions(), note.block_num);
 
   const hive::chain::signed_block_header& block_header = note.full_block->get_block_header();
-  const hive::chain::account_object* account_ptr = chain_db.find_account(block_header.witness);
+  const auto* account_ptr = chain_db.find_account(block_header.witness);
+  int32_t account_id = account_ptr->get_id();
   const hive::chain::witness_object* witness_ptr = chain_db.find_witness(block_header.witness);
 
-  const hive::chain::dynamic_global_property_object& dgpo = chain_db.get_dynamic_global_properties();
   constexpr auto NOT_COLLECTED_ACCOUNT_ID_SINK = -1;
+  if ( psql_first_block > 1 ) {
+    account_ops_seq_object::id_type id(account_ptr->get_id());
+    const auto* op_seq_obj = chain_db.find<account_ops_seq_object, hive::chain::by_id>( id );
+
+    if (op_seq_obj == nullptr)
+      account_id = NOT_COLLECTED_ACCOUNT_ID_SINK;
+  }
+
+  const hive::chain::dynamic_global_property_object& dgpo = chain_db.get_dynamic_global_properties();
 
   currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
   currently_caching_data->blocks.emplace_back(
@@ -553,7 +562,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
     note.block_num,
     block_header.timestamp,
     note.prev_block_id,
-    account_ptr->get_id(),
+    account_id,
     block_header.transaction_merkle_root,
     (block_header.extensions.size() == 0) ? fc::optional<std::string>() : fc::optional<std::string>(fc::json::to_string( block_header.extensions )),
     block_header.witness_signature,

@@ -172,6 +172,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.unreachable_event_id()
     , hive.initialize_extension_data()
     , hive.ignore_registered_table_edition( pg_ddl_command )
+    , hive.account_sink_id()
+    , hive.block_sink_num()
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION

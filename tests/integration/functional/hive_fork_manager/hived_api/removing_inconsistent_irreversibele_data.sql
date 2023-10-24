@@ -81,11 +81,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM hive.blocks ) = 1, 'Unexpected number of blocks';
+    ASSERT ( SELECT COUNT(*) FROM hive.blocks ) = 2, 'Unexpected number of blocks';
     ASSERT ( SELECT COUNT(*) FROM hive.transactions ) = 1, 'Unexpected number of transactions';
     ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig ) = 1, 'Unexpected number of signatures';
     ASSERT ( SELECT COUNT(*) FROM hive.operations ) = 1, 'Unexpected number of operations';
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts ) = 4, 'Unexpected number of accounts';
+    ASSERT ( SELECT COUNT(*) FROM hive.accounts ) = 5, 'Unexpected number of accounts';
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations ) = 1, 'Unexpected number of account_operations';
     ASSERT ( SELECT COUNT(*) FROM hive.applied_hardforks ) = 1, 'Unexpected number of applied_hardforks';
 
