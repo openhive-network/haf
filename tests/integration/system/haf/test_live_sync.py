@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 import test_tools as tt
 
 from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress
-from haf_local_tools.tables import Blocks, Transactions, Operations
+from haf_local_tools.tables import Blocks, BlocksView, Transactions, Operations
 
 
 START_TEST_BLOCK =  115
@@ -33,7 +33,7 @@ def test_live_sync(prepared_networks_and_database_12_8):
 
     blks = session.query(Blocks).order_by(Blocks.num).all()
     block_nums = [block.num for block in blks]
-    assert sorted(block_nums) == [i for i in range(1, irreversible_block+1)]
+    assert sorted(block_nums) == [i for i in range(0, irreversible_block+1)]
 
     tt.logger.info(f'head_block: {head_block} irreversible_block: {irreversible_block}')
 

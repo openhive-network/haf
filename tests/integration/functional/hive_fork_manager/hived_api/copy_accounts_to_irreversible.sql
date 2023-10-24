@@ -80,7 +80,7 @@ AS
 $BODY$
 BEGIN
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.accounts
+        SELECT * FROM hive.accounts WHERE id >= 0
         EXCEPT SELECT * FROM ( VALUES
                    (  1, 'alice1' , 1)
                  , (  2, 'alice2' , 2)
@@ -106,7 +106,7 @@ BEGIN
                  , (  8, 'bob72'  , 7)
                  , (  9, 'alice83', 8 )
         ) as pattern
-        EXCEPT SELECT * FROM hive.accounts
+        EXCEPT SELECT * FROM hive.accounts WHERE id >= 0
     ) , 'Unexpected rows in the view2';
 
 END

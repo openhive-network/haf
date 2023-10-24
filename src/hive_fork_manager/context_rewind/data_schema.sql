@@ -18,6 +18,28 @@ BEGIN
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hive.block_sink_num()
+    RETURNS INT
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$$
+BEGIN
+    RETURN 0;
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hive.account_sink_id()
+    RETURNS INT
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$$
+BEGIN
+    RETURN -1;
+END
+$$;
+
 CREATE TABLE IF NOT EXISTS hive.contexts(
     id SERIAL NOT NULL,
     name hive.context_name NOT NULL,

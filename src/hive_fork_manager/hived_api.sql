@@ -375,6 +375,14 @@ $BODY$
 DECLARE
     __events_id BIGINT := 0;
 BEGIN
+    IF EXISTS ( SELECT 1 FROM hive.blocks WHERE num = hive.block_sink_num() LIMIT 1 ) THEN
+        SELECT MAX(eq.id) + 1 FROM hive.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
+        PERFORM SETVAL( 'hive.events_queue_id_seq', __events_id, false );
+        PERFORM hive.create_database_hash('hive');
+        RETURN;
+    END IF;
+    SET CONSTRAINTS ALL DEFERRED;
+
     INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE, NULL) ON CONFLICT DO NOTHING;
     INSERT INTO hive.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
     INSERT INTO hive.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
@@ -382,6 +390,30 @@ BEGIN
     PERFORM SETVAL( 'hive.events_queue_id_seq', __events_id, false );
 
     INSERT INTO hive.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
+
+    INSERT INTO hive.blocks VALUES(
+          hive.block_sink_num() --num
+        , 'x00'::bytea --hash bytea NOT NULL
+        , 'x00'::bytea --prev bytea NOT NULL
+        , '0001-01-01 00:00:00-07'::timestamp -- created_at timestamp without time zone NOT NULL
+        , hive.account_sink_id() -- producer_account_id integer NOT NULL,
+        , 'x00'::bytea -- transaction_merkle_root bytea NOT NULL,
+        , '[]'::jsonb -- extensions jsonb,
+        , 'x00'::bytea -- witness_signature bytea NOT NULL,
+        , ''::TEXT -- signing_key text COLLATE pg_catalog."default" NOT NULL
+        , 0::hive.interest_rate -- hbd_interest_rate
+        , 0::hive.hive_amount -- total_vesting_fund_hive
+        , 0::hive.vest_amount -- total_vesting_shares
+        , 0::hive.hive_amount -- total_reward_fund_hive
+        , 0::hive.hive_amount -- virtual_supply
+        , 0::hive.hive_amount -- current_supply
+        , 0::hive.hbd_amount  -- current_hbd_supply
+        , 0::hive.hbd_amount -- dhf_interval_ledger
+    )
+    ON CONFLICT DO NOTHING;
+
+    INSERT INTO hive.accounts VALUES(hive.account_sink_id(),'', 0) ON CONFLICT DO NOTHING;
+
     PERFORM hive.create_database_hash('hive');
 END;
 $BODY$
