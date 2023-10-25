@@ -18,7 +18,7 @@ BEGIN
 
     __context_id = hive.get_context_id( _context );
 
-    __template = $t$ DROP TABLE IF EXISTS hive.%I 
+    __template = $t$ DROP TABLE IF EXISTS hive.%I
                  $t$;
     EXECUTE format(__template, __current_table_name);
 
@@ -54,11 +54,11 @@ BEGIN
             (hive.get_keyauths(ov.body_binary)).*, id, block_num, timestamp
             FROM hive.%s_operations_view ov                                 -- _context
             WHERE
-            ov.op_type_id in 
+            ov.op_type_id in
                 (
                     SELECT id FROM hive.operation_types WHERE name IN
                     (
-                        'hive::protocol::account_create_operation', 
+                        'hive::protocol::account_create_operation',
                         'hive::protocol::account_create_with_delegation_operation',
                         'hive::protocol::account_update_operation',
                         'hive::protocol::account_update2_operation',
@@ -80,10 +80,10 @@ BEGIN
     __SELECT_placeholder =  $$
                                 DISTINCT ON (key_auth, key_kind)
                             $$;
-    
+
     __ON_CONFLICT_placeholder = $$
-                                    ORDER BY key_auth, key_kind, timestamp DESC 
-                                    ON CONFLICT ON CONSTRAINT pk_%s_keyauth 
+                                    ORDER BY key_auth, key_kind, timestamp DESC
+                                    ON CONFLICT ON CONSTRAINT pk_%s_keyauth
                                     DO UPDATE SET
                                     account_name = EXCLUDED.account_name,
                                     key_auth = EXCLUDED.key_auth,
@@ -120,13 +120,13 @@ BEGIN
 
     __context_id = hive.get_context_id( _context );
 
-    __template = $t$ SELECT hive.insert_into_%s(%L, %L) $t$; 
+    __template = $t$ SELECT hive.insert_into_%s(%L, %L) $t$;
     EXECUTE format(__template, __current_table_name, _first_block, _last_block);
 
 END;
 $BODY$
 ;
-        
+
 CREATE OR REPLACE FUNCTION hive.drop_state_provider_keyauth( _context hive.context_name )
     RETURNS void
     LANGUAGE plpgsql
@@ -149,24 +149,24 @@ BEGIN
                         DROP FUNCTION IF EXISTS %I
                     $$;
     EXECUTE format(__template, 'hive.insert_into_' ||  __current_table_name);
-   
+
 END;
 $BODY$
 ;
 
--- helpers 
-CREATE OR REPLACE FUNCTION hive.get_keyauth_provider_table_name(_context TEXT) 
-RETURNS TEXT 
-LANGUAGE plpgsql 
+-- helpers
+CREATE OR REPLACE FUNCTION hive.get_keyauth_provider_table_name(_context TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
 IMMUTABLE AS $BODY$
 BEGIN
     RETURN '' || _context || '_keyauth';
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.get_keyauth_provider_history_table_name(_context TEXT) 
-RETURNS TEXT 
-LANGUAGE plpgsql 
+CREATE OR REPLACE FUNCTION hive.get_keyauth_provider_history_table_name(_context TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
 IMMUTABLE AS $BODY$
 BEGIN
     RETURN 'history_' || _context || '_keyauth';
