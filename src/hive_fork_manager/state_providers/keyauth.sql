@@ -10,7 +10,6 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __current_table_name TEXT := hive.get_keyauth_provider_table_name(_context);
-    __history_table_name TEXT := hive.get_keyauth_provider_history_table_name(_context);
     __template TEXT;
     __extra_indexes TEXT;
     __SELECT_placeholder TEXT;
@@ -22,7 +21,7 @@ BEGIN
     __template = $t$ DROP TABLE IF EXISTS hive.%I 
                  $t$;
     EXECUTE format(__template, __current_table_name);
-    EXECUTE format(__template, __history_table_name);
+
 
     __template =    $$
                         CREATE TABLE hive.%I(   -- table_name
@@ -42,7 +41,7 @@ BEGIN
 
     EXECUTE format(__template, __current_table_name, __extra_indexes);
 
-    EXECUTE format(__template, __history_table_name, '');
+
 
     __template = $t$
         CREATE OR REPLACE FUNCTION %s(
@@ -98,15 +97,7 @@ BEGIN
     EXECUTE format(__template, 'hive.insert_into_' || __current_table_name, __current_table_name,  __SELECT_placeholder, _context, __ON_CONFLICT_placeholder);
 
 
-    -- For the history table
-    __SELECT_placeholder := '';
-    __ON_CONFLICT_placeholder :=    $$
-                                        ON CONFLICT DO NOTHING
-                                    $$;
-
-    EXECUTE format(__template, 'hive.insert_into_' || __history_table_name, __history_table_name,  __SELECT_placeholder, _context, __ON_CONFLICT_placeholder);
-
-    RETURN ARRAY[ __current_table_name, __history_table_name ];
+    RETURN ARRAY[ __current_table_name ];
 END;
 $BODY$
 ;
@@ -124,7 +115,6 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __current_table_name TEXT := hive.get_keyauth_provider_table_name(_context);
-    __history_table_name TEXT := hive.get_keyauth_provider_history_table_name(_context);
     __template TEXT;
 BEGIN
 
@@ -132,7 +122,6 @@ BEGIN
 
     __template = $t$ SELECT hive.insert_into_%s(%L, %L) $t$; 
     EXECUTE format(__template, __current_table_name, _first_block, _last_block);
-    EXECUTE format(__template, __history_table_name, _first_block, _last_block);
 
 END;
 $BODY$
@@ -147,7 +136,6 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __current_table_name TEXT := hive.get_keyauth_provider_table_name(_context);
-    __history_table_name TEXT := hive.get_keyauth_provider_history_table_name(_context);
     __template TEXT;
 BEGIN
     __context_id = hive.get_context_id( _context );
@@ -156,13 +144,11 @@ BEGIN
                         DROP TABLE hive.%I
                     $$;
     EXECUTE format(__template, __current_table_name );
-    EXECUTE format(__template, __history_table_name );
 
     __template =    $$
                         DROP FUNCTION IF EXISTS %I
                     $$;
     EXECUTE format(__template, 'hive.insert_into_' ||  __current_table_name);
-    EXECUTE format(__template, 'hive.insert_into_' ||  __history_table_name);
    
 END;
 $BODY$

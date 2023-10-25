@@ -238,7 +238,6 @@ AS
 $BODY$
 BEGIN
     RAISE NOTICE 'TEST hive.context_keyauth TABLE contents: %', (E'\n' || (SELECT (json_agg(t)) FROM (SELECT * from hive.context_keyauth)t));
-    RAISE NOTICE 'TEST hive.history_context_keyauth TABLE contents: %', (E'\n' || (SELECT (json_agg(t)) FROM (SELECT * from hive.history_context_keyauth)t));
 
         -- one key from owner, one from active, one from posting, also in posting we have array of account_auths
     ASSERT EXISTS ( SELECT * FROM hive.context_keyauth WHERE (key_auth[1] = 'STM7x48ngjo2L7eNxj3u5dUnanQovAUc4BrcbRFbP8BSAS4SBxmHh' )), 'first of the keys in one key from owner, one from active, one from posting not found';
@@ -266,9 +265,6 @@ BEGIN
 
        --overall key count
     ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth ) = 11, 'Wrong number of current keys' || ' Should be 11 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth)::text;
-
-        --overall key in history table
-    ASSERT ( SELECT COUNT(*) FROM hive.history_context_keyauth ) = 14, 'Wrong number of historic keys' || ' Should be 14 actual is ' ||  (SELECT COUNT(*) FROM hive.history_context_keyauth)::text;
 
         --check overall operations used
     ASSERT hive.unordered_arrays_equal(
