@@ -133,6 +133,11 @@ haf_system_tests:
     - "haf_system_tests.log"
     - "**/generated_during_*"
     - "**/generated_by_package_fixtures"
+    exclude:
+    - "**/generated_during_*/**/block_log"
+    - "**/generated_during_*/**/block_log.artifacts"
+    - "**/generated_during_*/**/shared_memory.bin"
+    - "**/generated_during_*/**/*.sst"
     reports:
       junit: tests/integration/system/haf/report.xml
     when: always
@@ -245,6 +250,11 @@ applications_system_tests:
     - "applications_system_tests.log"
     - "**/generated_during_*"
     - "**/generated_by_package_fixtures"
+    exclude:
+    - "**/generated_during_*/**/block_log"
+    - "**/generated_during_*/**/block_log.artifacts"
+    - "**/generated_during_*/**/shared_memory.bin"
+    - "**/generated_during_*/**/*.sst"
     reports:
       junit: tests/integration/system/applications/report.xml
     when: always
