@@ -331,6 +331,16 @@ replay_with_haf:
   variables:
     PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
 
+replay_with_haf_from_4_9m:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns_4_9m/no_filter"
+
+replay_accounts_filtered_with_haf_from_4_9m:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns_4_9m/accounts_filtered"
+
 replay_accounts_filtered_with_haf:
   extends: .replay_step
   variables:
