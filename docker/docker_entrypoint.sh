@@ -1,5 +1,4 @@
 #! /bin/bash
-
 set -euo pipefail
 
 echo "Starting the container with user $(whoami) with uid $(id -u)"
@@ -96,6 +95,16 @@ run_instance() {
 sudo --user=hived -En /bin/bash << EOF
 echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
 
+if [ ! -f "$DATADIR/config.ini" ]; then
+  echo "No config file exists, creating a default config file"
+
+  /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
+    --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
+    --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
+    ${HIVED_ARGS[@]} --dump-config > /dev/null 2>&1
+  sed -i 's/^plugin = .*$/plugin = account_by_key account_by_key_api block_api condenser_api database_api json_rpc market_history market_history_api network_broadcast_api p2p rc_api reputation reputation_api rewards_api state_snapshot transaction_status transaction_status_api wallet_bridge_api webserver/g' "$DATADIR/config.ini"
+fi
+
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
   --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
   --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
@@ -121,7 +130,7 @@ return ${status}
 # shellcheck disable=SC2317
 cleanup () {
   echo "Performing cleanup...."
-  hived_pid=$(pidof 'hived' || echo '') # pidof returns 1 if hived isn't running, which crashes the script 
+  hived_pid=$(pidof 'hived' || echo '') # pidof returns 1 if hived isn't running, which crashes the script
   echo "Hived pid: $hived_pid"
 
   jobs -l
@@ -155,7 +164,7 @@ trap cleanup EXIT
 sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
 
 # PostgresQL configuration (postgresql.conf) has data_directory hardcoded as '/home/hived/datadir/haf_db_store/pgdata' and custom configuration path as
-# /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf. As such we need to make /home/hived/datadir a symbolinc link to actual data directory if 
+# /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf. As such we need to make /home/hived/datadir a symbolinc link to actual data directory if
 # variable $DATADIR is set to a non-default value.
 if [[ "$DATADIR" != "/home/hived/datadir" ]]; then
   echo "Non-standard datadir requested: $DATADIR. Adding symbolic link and setting permissions..."
@@ -174,25 +183,20 @@ prepare_pg_hba_file
 [[ -n ${PGCTLTIMEOUT:-}  ]] && echo "PGCTLTIMEOUT = ${PGCTLTIMEOUT}" | sudo tee "/etc/postgresql/${POSTGRES_VERSION}/main/environment"
 # cat "/etc/postgresql/${POSTGRES_VERSION}/main/environment"
 
-if [ -d "$PGDATA" ]
-then
-  echo "Attempting to setup postgres instance already containing HAF database..."
-
-  # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
-  sudo -n /home/haf_admin/haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace"
-  sudo -n "/usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh" --haf-admin-account=haf_admin --haf-db-name=haf_block_log
-
-  echo "Postgres instance setup completed."
-else
-  sudo --user=hived -n mkdir "$PGDATA"
-  sudo --user=hived -n mkdir "$HAF_DB_STORE/tablespace"
+if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
+  sudo --user=hived -n mkdir -p "$PGDATA"
+  sudo --user=hived -n mkdir -p "$HAF_DB_STORE/tablespace"
   sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE"
   sudo -n chown -Rc postgres:postgres "$PGDATA"
 
   echo "Attempting to setup postgres instance: running initdb..."
- 
-  # Here is an exception against using /etc/init.d/postgresql script to manage postgres - maybe there is some better way to force initdb using regular script.
-  sudo --user=postgres -n PGDATA="$PGDATA" "/usr/lib/postgresql/${POSTGRES_VERSION}/bin/initdb"
+
+  # initdb will refuse to run in a non-empty directory, so run initdb in an empty temporary directory then copy the files over
+  mkdir -p /tmp/$$/pgdata
+  sudo -n chown -Rc postgres:postgres /tmp/$$/pgdata
+  sudo --user=postgres -n PGDATA="/tmp/$$/pgdata" "/usr/lib/postgresql/${POSTGRES_VERSION}/bin/initdb"
+  sudo --user=postgres -n bash -c "cd /tmp/$$/pgdata && tar cf - ." | sudo --user=postgres -n bash -c "cd \"$PGDATA\" && tar xf -"
+  sudo -n rm -r /tmp/$$/pgdata
 
   echo "Attempting to setup postgres instance: running setup_postgres.sh..."
 
@@ -203,6 +207,14 @@ else
   /home/haf_admin/haf/scripts/setup_db.sh --haf-db-admin=haf_admin --haf-db-name=haf_block_log --haf-app-user=haf_app_admin
 
   sudo -n /home/haf_admin/haf/scripts/setup_pghero.sh --database=haf_block_log
+else
+  echo "Attempting to setup postgres instance already containing HAF database..."
+
+  # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
+  sudo -n /home/haf_admin/haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace"
+  sudo -n "/usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh" --haf-admin-account=haf_admin --haf-db-name=haf_block_log
+
+  echo "Postgres instance setup completed."
 fi
 
 cd "$DATADIR"
