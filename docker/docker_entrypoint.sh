@@ -102,7 +102,7 @@ if [ ! -f "$DATADIR/config.ini" ]; then
     --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
     --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
     ${HIVED_ARGS[@]} --dump-config > /dev/null 2>&1
-  sed -i 's/^plugin = .*$/plugin = account_by_key account_by_key_api block_api condenser_api database_api json_rpc market_history market_history_api network_broadcast_api p2p rc_api reputation reputation_api rewards_api state_snapshot transaction_status transaction_status_api wallet_bridge_api webserver/g' "$DATADIR/config.ini"
+  sed -i 's/^plugin = .*$/plugin = node_status_api account_by_key account_by_key_api block_api condenser_api database_api json_rpc market_history market_history_api network_broadcast_api p2p rc_api reputation reputation_api rewards_api state_snapshot transaction_status transaction_status_api wallet_bridge_api webserver/g' "$DATADIR/config.ini"
 fi
 
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
