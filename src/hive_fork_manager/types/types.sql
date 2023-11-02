@@ -365,7 +365,7 @@ CREATE TYPE hive.pow2 AS (
   pow_summary int8 -- uint32_t: 4 byte, but unsigned (int8)
 );
 
-CREATE TYPE hive.equihash_proof AS (
+CREATE TYPE hive.proof AS (
       n int8,
       k int8,
       seed TEXT,
@@ -374,7 +374,7 @@ CREATE TYPE hive.equihash_proof AS (
 
 CREATE TYPE hive.equihash_pow AS (
   input hive.pow2_input,
-  proof bytea,
+  proof hive.proof,
   prev_block hive.block_id_type,
   pow_summary int8 -- uint32_t: 4 byte, but unsigned (int8)
 );
