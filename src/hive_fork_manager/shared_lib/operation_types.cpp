@@ -397,6 +397,11 @@ std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<hive::
   return {"hive", "account_name_type"};
 }
 template<>
+std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<uint32_t>()
+{
+  return {"pg_catalog", "int8"};
+}
+template<>
 std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<int64_t>()
 {
   return {"pg_catalog", "int8"};
