@@ -310,10 +310,25 @@ BEGIN
     -- It means that SELECT from USING clause will return min event = 10, but in case of a bug an application
     -- context may back to event 9 and then when DELETE is being committed it will violate FK(event_queue(id)<->contexts(events_id))
 
-    DELETE FROM hive.events_queue heq
-    USING ( SELECT MIN( hc.events_id) as id FROM hive.contexts hc ) as min_event
-    WHERE ( heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL )  AND ( heq.id < min_event.id OR min_event.id IS NULL ) AND heq.id != 0 AND heq.id != hive.unreachable_event_id();
+    --DELETE FROM hive.events_queue heq
+    --USING ( SELECT MIN( hc.events_id) as id FROM hive.contexts hc ) as min_event
+    --WHERE ( heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL )  AND ( heq.id < min_event.id OR min_event.id IS NULL ) AND heq.id != 0 AND heq.id != hive.unreachable_event_id();
 
+    WITH events_ids AS
+             (
+                 SELECT heq.id as id
+                 FROM hive.events_queue heq
+                          JOIN (SELECT MIN(hc.events_id) as id FROM hive.contexts hc) as min_event
+                               ON heq.id < min_event.id OR min_event.id IS NULL
+                 WHERE (heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL)
+                   AND heq.id != 0
+                   AND heq.id != hive.unreachable_event_id()
+                 ORDER BY heq.id
+                     FOR UPDATE OF heq SKIP LOCKED
+             )
+    DELETE FROM hive.events_queue heq
+        USING events_ids
+    WHERE heq.id = events_ids.id;
 END;
 $BODY$
 ;
