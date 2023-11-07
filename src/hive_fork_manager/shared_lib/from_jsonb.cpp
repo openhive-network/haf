@@ -434,10 +434,9 @@ void set_member(fc::static_variant<Types...>& member, const JsonbValue& json)
     std::map< std::string, int64_t > name_map;
     for( int i = 0; i < fc::static_variant<Types...>::count(); ++i )
     {
-      fc::static_variant<Types...> tmp;
-      tmp.set_which(i);
       std::string n;
-      tmp.visit(get_static_variant_name(n));
+      get_static_variant_name visitor(n);
+      fc::static_variant<Types...> tmp(i, visitor);
       name_map[n] = i;
     }
     return name_map;
@@ -455,8 +454,8 @@ void set_member(fc::static_variant<Types...>& member, const JsonbValue& json)
   const auto itr = to_tag.find(tag);
   FC_ASSERT( itr != to_tag.end(), "Invalid object name: ${n}", ("n", tag) );
   const int64_t which = itr->second;
-  member.set_which(which);
-  member.visit(static_variant_from_jsonb_visitor(value));
+  static_variant_from_jsonb_visitor visitor(value);
+  member = fc::static_variant<Types...>(which, visitor);
 }
 
 template <typename T>
