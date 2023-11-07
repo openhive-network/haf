@@ -324,7 +324,7 @@ BEGIN
                    AND heq.id != 0
                    AND heq.id != hive.unreachable_event_id()
                  ORDER BY heq.id
-                     FOR UPDATE OF heq SKIP LOCKED
+                 FOR UPDATE OF heq SKIP LOCKED
              )
     DELETE FROM hive.events_queue heq
         USING events_ids

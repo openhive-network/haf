@@ -17,6 +17,7 @@ BEGIN
          , hc.irreversible_block
     INTO __curent_events_id, __current_context_block_num, __current_context_irreversible_block
     FROM hive.contexts hc WHERE hc.name = __lead_context;
+
     SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
     IF __current_context_block_num <= __current_context_irreversible_block  AND  __newest_irreversible_block_num IS NOT NULL THEN
         -- here we are sure that context only processing irreversible blocks, we can continue
@@ -27,8 +28,7 @@ BEGIN
               AND heq.event != 'BACK_FROM_FORK'
               AND heq.id >= __curent_events_id
               AND heq.id != hive.unreachable_event_id()
-        ORDER BY heq.id LIMIT 1
-        FOR UPDATE;
+        ORDER BY heq.id LIMIT 1;
 
         IF __result IS NULL THEN
             -- there is no reversible blocks event
@@ -38,8 +38,7 @@ BEGIN
             WHERE heq.block_num = __newest_irreversible_block_num
               AND ( heq.event = 'MASSIVE_SYNC' OR heq.event = 'NEW_IRREVERSIBLE' )
               AND heq.id != hive.unreachable_event_id()
-            ORDER BY heq.id LIMIT 1
-            FOR UPDATE;
+            ORDER BY heq.id LIMIT 1;
 
             IF __result IS NOT NULL AND __result.id = __curent_events_id THEN
                 -- when there is no event than recently processed
@@ -54,8 +53,7 @@ BEGIN
         SELECT * INTO __result
         FROM hive.events_queue heq
         WHERE heq.id > __curent_events_id AND heq.id != hive.unreachable_event_id()
-        ORDER BY id LIMIT 1
-        FOR UPDATE;
+        ORDER BY id LIMIT 1;
     END IF;
 
     IF __result IS NOT NULL THEN
@@ -91,9 +89,7 @@ BEGIN
     JOIN hive.contexts hc ON hc.events_id < heq.id AND hc.current_block_num >= hf.block_num
     WHERE heq.event = 'BACK_FROM_FORK' AND hc.name = __lead_context
     ORDER BY hf.block_num ASC, heq.id DESC
-    LIMIT 1
-    FOR UPDATE OF hive.events_queue
-    ;
+    LIMIT 1;
 
     -- no newer fork, nothing to do
     IF __next_fork_event_id IS NULL THEN
@@ -106,7 +102,6 @@ BEGIN
         FROM hive.events_queue heq
         JOIN hive.contexts hc ON heq.id < __next_fork_event_id AND heq.id > hc.events_id
         WHERE ( heq.event = 'NEW_IRREVERSIBLE' OR heq.event = 'MASSIVE_SYNC' ) AND hc.name = _contexts[1]
-        FOR UPDATE OF hive.events_queue
     )
     INTO __cannot_jump;
 
@@ -143,7 +138,6 @@ BEGIN
     WHERE heq.event = 'MASSIVE_SYNC' AND hc.name = _contexts[1]
     ORDER BY heq.id DESC
     LIMIT 1
-    FOR UPDATE OF hive.events_queue
     ;
 
     SELECT hc.current_block_num
@@ -162,8 +156,7 @@ BEGIN
     PERFORM hive.context_back_from_fork( ctx.*, __irreversible_block_num ) FROM unnest(_contexts) ctx;
 
     SELECT MAX( heq.id ) INTO __before_next_massive_sync_event_id
-    FROM hive.events_queue heq WHERE heq.id < __next_massive_sync_event_id
-    FOR UPDATE;
+    FROM hive.events_queue heq WHERE heq.id < __next_massive_sync_event_id;
 
     UPDATE hive.contexts
     SET events_id = __before_next_massive_sync_event_id -- it may be null if there is no events before the massive sync
@@ -225,15 +218,21 @@ $BODY$
         __context_state hive.context_state;
         __lead_context hive.context_name := _contexts[ 1 ];
     BEGIN
-        PERFORM hive.squash_events( _contexts );
-
         SELECT
-               hac.current_block_num
+            hac.current_block_num
              , hac.is_attached
              , hac.irreversible_block
+             , hac.events_id
         FROM hive.contexts hac
         WHERE hac.name = __lead_context
         INTO __context_state;
+
+        -- locking all possible next events
+        -- when hived will try to remove the events, then
+        -- it will omit events locked here
+        PERFORM * FROM hive.events_queue heq WHERE heq.id >= __context_state.next_event_id FOR SHARE;
+
+        PERFORM hive.squash_events( _contexts );
 
         IF __context_state.current_block_num IS NULL THEN
             RAISE EXCEPTION 'No context with name %', __lead_context;
