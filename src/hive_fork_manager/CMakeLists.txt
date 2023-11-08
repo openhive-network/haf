@@ -22,6 +22,8 @@ ADD_PSQL_EXTENSION(
              hived_api.sql
 
              types/types.sql
+             types/cast_functions.sql
+             types/casts.sql
 
     DEPLOY_SOURCES trigger_switch/trigger_off.sql
             context_rewind/names.sql
@@ -55,7 +57,7 @@ ADD_PSQL_EXTENSION(
             extract_set_witness_properties.sql
             trigger_switch/trigger_on.sql
 
-            types/casts.sql
+            types/cast_functions.sql
             types/process_operation.sql
 )
 
