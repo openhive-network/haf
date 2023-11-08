@@ -70,11 +70,10 @@ csp_session_type::csp_session_type(
   //reindex_block_writer(default_block_writer.get_block_log()),
 
   db(std::make_unique<haf_state_database>(*this, theApp)),
-  default_block_writer( *db.get(), theApp )
+  e_block_writer( *db.get(), theApp )
 
-  
   {
-    db->set_block_writer( &default_block_writer );
+    db->set_block_writer( &e_block_writer );
   }
 
 
@@ -269,8 +268,8 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
 
 uint32_t consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session)
 {
-  wlog("mtlk consensus_state_provider_get_expected_block_num_impl");
-  wlog("pid= ${pid}", ("pid" , getpid() ));
+  dlog("mtlk consensus_state_provider_get_expected_block_num_impl");
+  dlog("pid= ${pid}", ("pid" , getpid() ));
 
   return csp_session.db->head_block_num() + 1;
 }
@@ -455,6 +454,14 @@ full_block_ptr postgres_block_log::block_to_fullblock(uint32_t block_num_from_sh
 {
   auto block_num_from_postgres = block["num"].as<uint32_t>();
 
+  dlog("mtlk block_to_fullblock block_num_from_postgres=${num} pid= ${pid}", ("num", block_num_from_postgres)("pid" , getpid() ));
+
+  // if(block_num_from_postgres == 22)
+  // {
+  //   int a = 0 ;
+  //   a = a;
+  // }
+
   FC_ASSERT(block_num_from_postgres == block_num_from_shared_memory_bin, "Requested block has different number than the block in the state database");
 
   block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
@@ -497,7 +504,12 @@ void haf_state_database::push_haf_block(const full_block_ptr& full_block, uint32
 // }
 
 
-
+//  mtlk new
+// std::shared_ptr<full_block_type> haf_block_reader::read_block_by_num( uint32_t block_num ) const 
+// {
+//        auto full_block = postgres_block_log(csp_session).read_full_block(head_block_num());
+//       return full_block;
+// }
 
 void postgres_block_log::measure_before_run()
 {

@@ -24,10 +24,8 @@ namespace hive::chain
 
 
 
-
 namespace consensus_state_provider
 {
-
 
   struct collected_account_balances_t
   {
@@ -43,6 +41,24 @@ namespace consensus_state_provider
 
   class haf_state_database;
   class postgres_database_helper;
+  
+  class empty_block_writer : public hive::chain::sync_block_writer
+  {
+      virtual void store_block( uint32_t current_irreversible_block_num, uint32_t state_head_block_number ) override
+      {
+
+      }
+    
+    public:
+      empty_block_writer( hive::chain::database& db, appbase::application& app )
+      :
+        sync_block_writer(db, app)
+      {
+      }
+
+
+  };
+
   struct csp_session_type
   {
       csp_session_type(const char* context, const char* shared_memory_bin_path, const char* postgres_url);
@@ -53,7 +69,7 @@ namespace consensus_state_provider
       //hive::chain::irreversible_block_writer reindex_block_writer;
 
       std::unique_ptr<haf_state_database> db;
-      hive::chain::sync_block_writer default_block_writer;
+      empty_block_writer e_block_writer;
 
       appbase::application theApp;
   };
