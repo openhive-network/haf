@@ -458,7 +458,7 @@ Datum to_sql_array(Iter first, Iter last)
 
   const auto elementCount = std::distance(first, last);
   std::vector<Datum> elements;
-  elements.reserve(elementCount);
+  elements.resize(elementCount);
   std::transform(first, last, std::begin(elements), [](const auto& v){return to_datum(v);});
 
   return make_sql_array(std::begin(elements), std::end(elements), namespace_name, type_name);
