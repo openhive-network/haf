@@ -66,6 +66,7 @@ BEGIN
     IF ( _block_num < __irreversible_head_block ) THEN
         RETURN;
     END IF;
+
     PERFORM hive.remove_unecessary_events( _block_num );
 
     -- application contexts will use the event to clear data in shadow tables

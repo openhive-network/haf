@@ -183,6 +183,11 @@ BEGIN
 
     SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= _last_synced_block;
 
+    -- lock EXCLUSIVE may be taken by hived in function:
+    -- hive.remove_unecessary_events
+    -- so here we can stuck while hived is servicing a new irreversible block notification
+    LOCK TABLE hive.contexts IN SHARE MODE;
+
     UPDATE hive.contexts
     SET   fork_id = __fork_id
       , irreversible_block = COALESCE( __head_of_irreversible_block, 0 )
