@@ -370,6 +370,28 @@ replay_with_update:
     - public-runner-docker
     - hived-for-tests
 
+replay_with_app:
+  extends: .job-defaults
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  variables:
+    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+  script:
+    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_replay_with_app.sh
+  artifacts:
+    paths:
+      - "replay_with_app.log"
+      - "node_logs.log"
+      - "node_logs1.log"
+  tags:
+    - public-runner-docker
+    - hived-for-tests
+
 update_with_wrong_table_schema:
   extends: .job-defaults
   image:
