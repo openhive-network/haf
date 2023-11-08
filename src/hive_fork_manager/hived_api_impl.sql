@@ -289,6 +289,17 @@ DECLARE
     __upper_bound_events_id BIGINT := NULL;
     __max_block_num INTEGER := NULL;
 BEGIN
+    -- if we cannot get exclusive lock for contexts row then we return and will back here
+    -- next time, when hived will try to remove events with next irreversible block
+    -- the contexts are locked by the apps during attach: hive.app_context_attach
+    BEGIN
+        LOCK TABLE hive.contexts IN ACCESS EXCLUSIVE MODE NOWAIT;
+    EXCEPTION WHEN SQLSTATE '55P03' THEN
+        -- 55P03 	lock_not_available https://www.postgresql.org/docs/current/errcodes-appendix.html
+        RETURN;
+    END;
+
+
     SELECT consistent_block INTO __max_block_num FROM hive.irreversible_data;
 
     -- find the upper bound of events possible to remove
