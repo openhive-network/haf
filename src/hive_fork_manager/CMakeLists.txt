@@ -22,8 +22,6 @@ ADD_PSQL_EXTENSION(
              hived_api.sql
 
              types/types.sql
-             types/casts.sql
-             types/process_operation.sql
 
     DEPLOY_SOURCES trigger_switch/trigger_off.sql
             context_rewind/names.sql
@@ -56,6 +54,9 @@ ADD_PSQL_EXTENSION(
             get_legacy_style_operation.sql
             extract_set_witness_properties.sql
             trigger_switch/trigger_on.sql
+
+            types/casts.sql
+            types/process_operation.sql
 )
 
 ADD_SUBDIRECTORY( shared_lib )
