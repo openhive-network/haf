@@ -65,6 +65,9 @@ Datum to_datum(const hive::protocol::pow2_work& work);
 Datum to_datum(const hive::protocol::update_proposal_extensions_type& extensions);
 
 template<typename Iter>
+Datum make_sql_array(Iter first, Iter last, const fc::string& namespace_name, const fc::string& type_name);
+
+template<typename Iter>
 Datum to_sql_array(Iter first, Iter last);
 
 Datum to_datum(bool value)
@@ -422,11 +425,10 @@ std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<std::p
   return {"hive", "key_auth"};
 }
 
-template<typename Iter>
-Datum to_sql_array(Iter first, Iter last)
+template <typename Iter>
+Datum make_sql_array(Iter first, Iter last, const fc::string& namespace_name, const fc::string& type_name)
 {
-  using value_type = typename std::iterator_traits<Iter>::value_type;
-  const auto [namespace_name, type_name] = sql_namespace_and_type_name_from_type<value_type>();
+  static_assert(std::is_same_v<typename std::iterator_traits<Iter>::value_type, Datum>);
   Oid hiveOid = GetSysCacheOid1(NAMESPACENAME, Anum_pg_namespace_oid, CStringGetDatum(namespace_name.c_str()));
   Oid elementOid = GetSysCacheOid2(TYPENAMENSP, Anum_pg_type_oid, CStringGetDatum(type_name.c_str()), ObjectIdGetDatum(hiveOid));
 
@@ -443,12 +445,23 @@ Datum to_sql_array(Iter first, Iter last)
   get_typlenbyvalalign(elementOid, &typlen, &typbyval, &typalign);
 
   const auto elementCount = std::distance(first, last);
+
+  ArrayType* result = construct_array(&*first, elementCount, elementOid, typlen, typbyval, typalign);
+  PG_RETURN_ARRAYTYPE_P(result);
+}
+
+template<typename Iter>
+Datum to_sql_array(Iter first, Iter last)
+{
+  using value_type = typename std::iterator_traits<Iter>::value_type;
+  const auto [namespace_name, type_name] = sql_namespace_and_type_name_from_type<value_type>();
+
+  const auto elementCount = std::distance(first, last);
   std::vector<Datum> elements;
   elements.reserve(elementCount);
   std::transform(first, last, std::begin(elements), [](const auto& v){return to_datum(v);});
 
-  ArrayType* result = construct_array(elements.data(), elementCount, elementOid, typlen, typbyval, typalign);
-  PG_RETURN_ARRAYTYPE_P(result);
+  return make_sql_array(std::begin(elements), std::end(elements), namespace_name, type_name);
 }
 
 Datum to_datum(const hive::protocol::comment_options_extensions_type& extensions)
