@@ -31,12 +31,9 @@ struct wsp_fill_helper
   }
 };
 
-
-void extract_set_witness_properties_impl(extract_set_witness_properties_result_t& output, const fc::string& _input)
+void extract_set_witness_properties_from_flat_map(extract_set_witness_properties_result_t& output, const fc::flat_map<fc::string, std::vector<char>>& _input)
 {
-  witness_set_properties_props_t input_properties{};
-  fc::from_variant(fc::json::from_string(_input), input_properties);
-  wsp_fill_helper helper{ input_properties, output };
+  wsp_fill_helper helper{ _input, output };
 
   helper.try_fill<public_key_type>("key");
   helper.try_fill<asset>("account_creation_fee");
@@ -47,4 +44,11 @@ void extract_set_witness_properties_impl(extract_set_witness_properties_result_t
   helper.try_fill<public_key_type>("new_signing_key");
   helper.try_fill<price>("hbd_exchange_rate", "sbd_exchange_rate");
   helper.try_fill<fc::string>("url");
+}
+
+void extract_set_witness_properties_from_string(extract_set_witness_properties_result_t& output, const fc::string& _input)
+{
+  witness_set_properties_props_t input_properties{};
+  fc::from_variant(fc::json::from_string(_input), input_properties);
+  extract_set_witness_properties_from_flat_map(output, input_properties);
 }

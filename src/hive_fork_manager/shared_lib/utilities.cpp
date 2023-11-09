@@ -317,7 +317,7 @@ Datum extract_set_witness_properties(PG_FUNCTION_ARGS)
   colect_data_and_fill_returned_recordset(
       [=, &_extracted_data]()
       {
-        extract_set_witness_properties_impl( _extracted_data, _props_to_extract );
+        extract_set_witness_properties_from_string( _extracted_data, _props_to_extract );
       },
 
       [=, &_extracted_data]()
