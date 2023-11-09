@@ -120,7 +120,7 @@ CREATE TYPE hive.vote_operation AS (
 
 CREATE TYPE hive.witness_property AS (
   name TEXT,
-  value bytea
+  value text
 );
 
 CREATE TYPE hive.witness_set_properties_operation AS (

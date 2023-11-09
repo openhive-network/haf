@@ -2,6 +2,7 @@
 
 #include <psql_utils/pg_cxx.hpp>
 
+#include "extract_set_witness_properties.hpp"
 #include "operation_conversion.hpp"
 #include "to_jsonb.hpp"
 
@@ -31,7 +32,7 @@ Datum to_datum(const std::string& value);
 Datum to_datum(const std::vector<char>& value);
 template<typename T>
 Datum to_datum(const std::vector<T>& value);
-Datum to_datum(const fc::flat_map<std::string, std::vector<char>>& value);
+Datum to_datum(const fc::flat_map<std::string, std::string>& value);
 Datum to_datum(const hive::protocol::account_name_type& value);
 std::optional<Datum> to_datum(const hive::protocol::json_string& value);
 Datum to_datum(const hive::protocol::authority::account_authority_map& value);
@@ -50,7 +51,8 @@ template<typename T, size_t N>
 Datum to_datum(const fc::array<T, N>& value);
 template<typename T>
 Datum to_datum(const T& value);
-Datum to_datum(const std::pair<std::string, std::vector<char>>& value);
+Datum to_datum(const hive::protocol::witness_set_properties_operation& value);
+Datum to_datum(const std::pair<std::string, std::string>& value);
 Datum to_datum(const std::pair<hive::protocol::account_name_type, hive::protocol::weight_type>& value);
 Datum to_datum(const std::pair<hive::protocol::public_key_type, hive::protocol::weight_type>& value);
 Datum to_datum(const hive::protocol::asset& asset);
@@ -115,7 +117,7 @@ Datum to_datum(const std::vector<T>& value)
 {
   return to_sql_array(std::begin(value), std::end(value));
 }
-Datum to_datum(const fc::flat_map<std::string, std::vector<char>>& value)
+Datum to_datum(const fc::flat_map<std::string, std::string>& value)
 {
   return to_sql_array(std::begin(value), std::end(value));
 }
@@ -234,13 +236,36 @@ Datum to_datum(const T& value)
   PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
 }
 
-Datum to_datum(const std::pair<std::string, std::vector<char>>& value)
+Datum to_datum(const hive::protocol::witness_set_properties_operation& value)
+{
+  // Special processing for witness_set_properties_operation.props
+  const std::string type_name = fc::trim_typename_namespace(fc::get_typename<hive::protocol::witness_set_properties_operation>::name());
+  TupleDesc desc = RelationNameGetTupleDesc("hive.witness_set_properties_operation");
+  BlessTupleDesc(desc);
+  const auto member_count = fc::reflector<hive::protocol::witness_set_properties_operation>::total_member_count;
+  FC_ASSERT(member_count == desc->natts, "Fatal: mismatch between member count and tuple size for ${t} type", ("t", type_name));
+  FC_ASSERT(member_count == 3, "Fatal: member count mismatch in to_datum(witness_set_properties_operation)");
+  fc::flat_map<fc::string, fc::string> output;
+  // TODO: we convert props to flat_map just to convert it to array later.
+  // This is wasteful, consider converting it in one step, but without duplicating logic of extract_set_witness_properties_from_flat_map.
+  extract_set_witness_properties_from_flat_map(output, value.props);
+  Datum values[member_count] = {
+    to_datum(value.owner),
+    to_datum(output),
+    to_datum(value.extensions),
+  };
+  bool nulls[member_count] = {false, false, false};
+  HeapTuple tuple = heap_form_tuple(desc, values, nulls);
+  PG_RETURN_DATUM(HeapTupleGetDatum(tuple));
+}
+
+Datum to_datum(const std::pair<std::string, std::string>& value)
 {
   TupleDesc desc = RelationNameGetTupleDesc("hive.witness_property");
   BlessTupleDesc(desc);
   Datum values[] = {
     CStringGetTextDatum(value.first.c_str()),
-    to_datum(value.second),
+    CStringGetTextDatum(value.second.c_str()),
   };
   bool nulls[] = {
     false,
@@ -410,7 +435,7 @@ std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<int64_
   return {"pg_catalog", "int8"};
 }
 template<>
-std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<std::pair<std::string, std::vector<char>>>()
+std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<std::pair<std::string, std::string>>()
 {
   return {"hive", "witness_property"};
 }
