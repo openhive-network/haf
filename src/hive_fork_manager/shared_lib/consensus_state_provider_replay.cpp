@@ -268,8 +268,8 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
 
 uint32_t consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session)
 {
-  dlog("mtlk consensus_state_provider_get_expected_block_num_impl");
-  dlog("pid= ${pid}", ("pid" , getpid() ));
+  //dlog("mtlk consensus_state_provider_get_expected_block_num_impl");
+  //dlog("pid= ${pid}", ("pid" , getpid() ));
 
   return csp_session.db->head_block_num() + 1;
 }
@@ -454,7 +454,7 @@ full_block_ptr postgres_block_log::block_to_fullblock(uint32_t block_num_from_sh
 {
   auto block_num_from_postgres = block["num"].as<uint32_t>();
 
-  dlog("mtlk block_to_fullblock block_num_from_postgres=${num} pid= ${pid}", ("num", block_num_from_postgres)("pid" , getpid() ));
+  //dlog("mtlk block_to_fullblock block_num_from_postgres=${num} pid= ${pid}", ("num", block_num_from_postgres)("pid" , getpid() ));
 
   // if(block_num_from_postgres == 22)
   // {
