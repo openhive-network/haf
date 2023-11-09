@@ -41,6 +41,12 @@ class IPostgresMock {
 public:
     virtual ~IPostgresMock() = default;
 
+#if PG_VERSION_NUM >= 160000
+    using appendBinaryStringInfoArgType = const void*;
+#else
+    using appendBinaryStringInfoArgType = const char*;
+#endif
+
     virtual Datum OidFunctionCall0Coll(Oid _functionId, Oid _collation) = 0;
     virtual void getTypeBinaryOutputInfo(Oid, Oid*, bool*) = 0;
     virtual void fmgr_info(Oid, FmgrInfo*) = 0;
@@ -48,7 +54,7 @@ public:
     virtual Bitmapset *get_primary_key_attnos(Oid relid, bool deferrableOk, Oid *constraintOid) = 0;
     virtual void getTypeBinaryInputInfo(Oid _type, Oid* _typReceive, Oid* _typIOParam) = 0;
     virtual StringInfo makeStringInfo() = 0;
-    virtual void appendBinaryStringInfo(StringInfo str, const char *data, int datalen) = 0;
+    virtual void appendBinaryStringInfo(StringInfo str, appendBinaryStringInfoArgType data, int datalen) = 0;
     virtual Datum ReceiveFunctionCall(FmgrInfo *flinfo, fmStringInfo buf, Oid typioparam, int32 typmod) = 0;
     virtual void getTypeOutputInfo(Oid type, Oid *typOutput, bool *typIsVarlena) = 0;
     virtual char *OidOutputFunctionCall(Oid functionId, Datum val) = 0;
@@ -136,7 +142,7 @@ public:
     MOCK_METHOD( Bitmapset*, get_primary_key_attnos, (Oid, bool, Oid*) );
     MOCK_METHOD( void, getTypeBinaryInputInfo, (Oid, Oid*, Oid*) );
     MOCK_METHOD( StringInfo, makeStringInfo, () );
-    MOCK_METHOD( void, appendBinaryStringInfo, (StringInfo, const char *, int) );
+    MOCK_METHOD( void, appendBinaryStringInfo, (StringInfo, appendBinaryStringInfoArgType, int) );
     MOCK_METHOD( Datum, ReceiveFunctionCall, (FmgrInfo*, fmStringInfo, Oid, int32 ) );
     MOCK_METHOD( void, getTypeOutputInfo, (Oid, Oid*, bool*) );
     MOCK_METHOD( char*, OidOutputFunctionCall, (Oid, Datum) );
