@@ -84,7 +84,7 @@ BEGIN
   raise notice 'checking conversion to witness_set_properties_operation';
   op := '{"type":"witness_set_properties_operation","value":{"owner":"holger80","props":[["account_creation_fee","b80b00000000000003535445454d0000"],["key","0295a26f54381a6dba8eb5dc7536e57db267685f9386c714ead9be39a905364a88"]],"extensions":[]}}'::JSONB::hive.operation::hive.witness_set_properties_operation;
   ASSERT (select op.owner = 'holger80'), format('Unexpected value of witness_set_properties_operation.owner: %s', op.owner);
-  ASSERT (select op.props = '{"(account_creation_fee,\"\\\\xb80b00000000000003535445454d0000\")","(key,\"\\\\x0295a26f54381a6dba8eb5dc7536e57db267685f9386c714ead9be39a905364a88\")"}'), format('Unexpected value of witness_set_properties_operation.props: %s', op.props);
+  ASSERT (select op.props = '{"(account_creation_fee,\"{\"\"amount\"\":\"\"3000\"\",\"\"precision\"\":3,\"\"nai\"\":\"\"@@000000021\"\"}\")","(key,\"\"\"STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV\"\"\")"}'), format('Unexpected value of witness_set_properties_operation.props: %s', op.props);
   ASSERT (select op.extensions = '{}'::hive.extensions_type), format('Unexpected value of witness_set_properties_operation.extensions: %s', op.extensions);
 END;
 $BODY$
