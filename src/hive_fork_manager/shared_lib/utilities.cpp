@@ -979,10 +979,26 @@ Datum csp_finish(PG_FUNCTION_ARGS)
 
 ////////
 
+static auto volatile stop_in_consensus_state_provider_replay = false;
+
+void stop_here(auto& stop_here)
+{
+    wlog("pid= ${pid}", ("pid" , getpid() ));
+    while(stop_here)
+    {
+      int a = 0;
+      a=a;
+    }
+
+
+}
+
 PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
 
 Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
 {
+  stop_here(stop_in_consensus_state_provider_replay);
+
   consensus_state_provider::csp_session_ptr_type csp_session_ptr = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
   assert(csp_session_ptr != nullptr);
   consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;

@@ -41,6 +41,24 @@ namespace consensus_state_provider
 
   class haf_state_database;
   class postgres_database_helper;
+
+  class csp_session_type;
+  using csp_session_ref_type = csp_session_type&;
+  using csp_session_ptr_type = csp_session_type*;
+
+  class custom_block_reader : public hive::chain::fork_db_block_reader 
+  {
+  public:
+    custom_block_reader(hive::chain::fork_database& fork_db, hive::chain::block_log& block_log, csp_session_ref_type csp_session)
+      : fork_db_block_reader(fork_db, block_log), csp_session(csp_session) 
+    {
+    }
+
+    virtual std::shared_ptr<hive::chain::full_block_type> read_block_by_num( uint32_t block_num ) const override;
+    private:
+      csp_session_ref_type csp_session;
+  
+  };
   
   class empty_block_writer : public hive::chain::sync_block_writer
   {
@@ -48,14 +66,21 @@ namespace consensus_state_provider
       {
 
       }
-    
+
     public:
-      empty_block_writer( hive::chain::database& db, appbase::application& app )
+      empty_block_writer( hive::chain::database& db, appbase::application& app, csp_session_ref_type csp_session )
       :
-        sync_block_writer(db, app)
+        sync_block_writer(db, app), _custom_reader(_fork_db, _block_log, csp_session) 
       {
       }
+    virtual hive::chain::block_read_i& get_block_reader() override {
+      return _custom_reader;
+    }
 
+  
+
+private:
+  custom_block_reader _custom_reader;
 
   };
 
@@ -74,8 +99,6 @@ namespace consensus_state_provider
       appbase::application theApp;
   };
 
-  using csp_session_ref_type = csp_session_type&;
-  using csp_session_ptr_type = csp_session_type*;
 
 
   bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint32_t from, uint32_t to);

@@ -70,7 +70,7 @@ csp_session_type::csp_session_type(
   //reindex_block_writer(default_block_writer.get_block_log()),
 
   db(std::make_unique<haf_state_database>(*this, theApp)),
-  e_block_writer( *db.get(), theApp )
+  e_block_writer( *db.get(), theApp, *this )
 
   {
     db->set_block_writer( &e_block_writer );
@@ -505,11 +505,11 @@ void haf_state_database::push_haf_block(const full_block_ptr& full_block, uint32
 
 
 //  mtlk new
-// std::shared_ptr<full_block_type> haf_block_reader::read_block_by_num( uint32_t block_num ) const 
-// {
-//        auto full_block = postgres_block_log(csp_session).read_full_block(head_block_num());
-//       return full_block;
-// }
+std::shared_ptr<full_block_type> custom_block_reader::read_block_by_num( uint32_t block_num ) const
+{
+  auto full_block = postgres_block_log(csp_session).read_full_block(block_num);
+  return full_block;
+}
 
 void postgres_block_log::measure_before_run()
 {
