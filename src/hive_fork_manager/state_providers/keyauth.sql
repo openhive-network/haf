@@ -157,16 +157,6 @@ BEGIN
             JOIN hive.%1$s_accounts_view av ON av.name = derived.account_auth
         ),
 
-        -- Clears existing records for account_id and key_kind to be replaced in the accountauth_a table.
-        deleted_account_auths AS (
-            DELETE FROM hive.%1$s_accountauth_a
-            WHERE EXISTS (
-                SELECT 1 FROM combined_data_accountauths cda
-                WHERE cda.as_account_id = hive.%1$s_accountauth_a.account_id
-                AND cda.key_kind = hive.%1$s_accountauth_a.key_kind)
-                RETURNING *
-            ),
-
         -- Finally inserts updated account authorization data into the accountauth_a table.
         inserted_accountauths AS (
             INSERT INTO hive.%1$s_accountauth_a
@@ -180,6 +170,16 @@ BEGIN
                 block_num,
                 timestamp
             FROM combined_data_accountauths
+            ON CONFLICT ON CONSTRAINT pk_%1$s_accountauth_a
+            DO UPDATE SET
+                 account_id =           EXCLUDED.account_id
+                , key_kind =            EXCLUDED.key_kind
+                , account_auth_id =     EXCLUDED.account_auth_id
+                , weight_threshold =    EXCLUDED.weight_threshold
+                , w =                   EXCLUDED.w
+                , op_serial_id  =       EXCLUDED.op_serial_id
+                , block_num =           EXCLUDED.block_num
+                , timestamp =           EXCLUDED.timestamp
             RETURNING * -- for dump only
         ),
 
@@ -248,7 +248,7 @@ BEGIN
                     hive.print_json_with_label('mtlk combined keyauths_output_null', (SELECT json_agg(t) FROM (SELECT * FROM                    keyauths_output_null) t)),
                     hive.print_json_with_label('mtlk combined max_op_serial_dictionary_accountauth', (SELECT json_agg(t) FROM (SELECT * FROM    max_op_serial_dictionary_accountauth) t)),
                     hive.print_json_with_label('mtlk combined combined_data_accountauths', (SELECT json_agg(t) FROM (SELECT * FROM              combined_data_accountauths) t)),
-                    hive.print_json_with_label('mtlk combined deleted_account_auths', (SELECT json_agg(t) FROM (SELECT * FROM                   deleted_account_auths) t)),
+                    --hive.print_json_with_label('mtlk combined deleted_account_auths', (SELECT json_agg(t) FROM (SELECT * FROM                   deleted_account_auths) t)),
                     hive.print_json_with_label('mtlk combined inserted_accountauths', (SELECT json_agg(t) FROM (SELECT * FROM                   inserted_accountauths) t)),
                     hive.print_json_with_label('mtlk combined max_op_serial_dictionary', (SELECT json_agg(t) FROM (SELECT * FROM                max_op_serial_dictionary) t)),
                     hive.print_json_with_label('mtlk combined combined_data', (SELECT json_agg(t) FROM (SELECT * FROM                           combined_data) t)),
@@ -272,7 +272,7 @@ BEGIN
             timestamp
         FROM combined_data
         JOIN inserted_data ON combined_data.key_auth = inserted_data.key
-        LEFT JOIN dump_combined ON dump_combined.num = combined_data.block_num
+                LEFT JOIN dump_combined ON dump_combined.num = combined_data.block_num
         ;
 
         /* 
