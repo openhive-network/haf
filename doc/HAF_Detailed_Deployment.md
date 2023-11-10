@@ -359,7 +359,12 @@ The test `test.unit.<module_name>` is added to ctest.
 If there is a need to create a psql extension ( to use CREATE EXTENSION psql command ) a cmake macro invocation should be added to the cmake file:
 `ADD_PSQL_EXTENSION` with parameters:
 - NAME - name of extension. Must match the basename of the <name_of_extension>.control file in the source directory (see https://www.postgreSQL.org/docs/14/extend-extensions.html#id-1.8.3.18.11 ).
-- SOURCES - list of sql scripts. The order of the files is important since they are compiled into one sql script.
+- SCHEMA_SOURCES - list of sql scripts with schema changes (e.g. tables, views, casts, operators).
+- DEPLOY_SOURCES - list of sql scripts with repeatable changes (e.g. functions, procedures).
+The order of the files in sources is important since they are compiled into one sql script.
+When installing HAF for the first time, both SCHEMA_SOURCES and DEPLOY_SOURCES will be applied.
+When upgrading HAF, only DEPLOY_SOURCES will be applied.
+Because casts and operators need existing function definition, scripts defining those functions need to be in both SCHEMA_SOURCES and DEPLOY_SOURCES.
 
 The macro creates a new target extension.<name_of_extension>. The command `ninja extension.<name_of_extension>` will create a psql extension in `${CMAKE_BINARY_DIR}/extensions/<name_of_extension>`.
 
