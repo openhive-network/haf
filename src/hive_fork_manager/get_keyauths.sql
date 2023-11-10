@@ -39,6 +39,10 @@ BEGIN
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hive.public_key_to_string(p_key BYTEA)
+RETURNS TEXT
+AS 'MODULE_PATHNAME', 'public_key_to_string' LANGUAGE C;
+
 DROP FUNCTION IF EXISTS hive.get_keyauths;
 CREATE OR REPLACE FUNCTION hive.get_keyauths(IN _operation_body hive.operation)
 RETURNS SETOF hive.keyauth_record_type
