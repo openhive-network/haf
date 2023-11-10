@@ -569,25 +569,19 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     return (Datum)0;
   }  
 
-Datum set_to_string_array_datum(const std::set<std::string>& key_auth)
-{
-    int nitems = key_auth.size();
-    Datum* text_array = (Datum*) palloc(nitems * sizeof(Datum));
-    
-    int i = 0;
-    for (const auto& str : key_auth)
-    {
-        text_array[i] = CStringGetTextDatum(str.c_str());
-        ++i;
-    }
-    
-    ArrayType* array = construct_array(text_array, nitems, TEXTOID, -1, false, 'i');
-    
-    pfree(text_array);
-    
-    return PointerGetDatum(array);
-}
+  Datum public_key_data_to_bytea_datum(const fc::ecc::public_key_data& data)
+  {
+      int size = sizeof(data) + VARHDRSZ;
 
+      bytea* result = (bytea *) palloc(size);
+
+      SET_VARSIZE(result, size);
+
+      memcpy(VARDATA(result), &data.data, sizeof(data));
+
+
+      return PointerGetDatum(result);
+  }  
 
   PG_FUNCTION_INFO_V1(get_keyauths_wrapped);
 
@@ -809,4 +803,43 @@ Datum set_to_string_array_datum(const std::set<std::string>& key_auth)
 
     return (Datum)0;
   }  
+
+  // Helper function to convert bytea to fc::ecc::public_key_data
+  fc::ecc::public_key_data bytea_to_public_key_data(const bytea* input_data) {
+      // Ensure the bytea data has the expected size
+      if (VARSIZE(input_data) - VARHDRSZ != sizeof(fc::ecc::public_key_data)) {
+          ereport(ERROR,
+              (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                  errmsg("Size mismatch between bytea and fc::ecc::public_key_data")));
+      }
+
+      fc::ecc::public_key_data key_data;
+
+      memcpy(&key_data, VARDATA(input_data), sizeof(key_data));
+
+      return key_data;
+  }
+
+  PG_FUNCTION_INFO_V1(public_key_to_string);
+
+  Datum public_key_to_string(PG_FUNCTION_ARGS) 
+  {
+
+    if (PG_ARGISNULL(0)) 
+    {
+      text* result = cstring_to_text("");
+      PG_RETURN_TEXT_P(result);
+    }
+
+    bytea* input_key = PG_GETARG_BYTEA_P(0);
+
+
+    public_key_type key = bytea_to_public_key_data(input_key);
+
+    std::string result_str = key.operator std::string();
+
+    text* result = cstring_to_text(result_str.c_str());
+
+    PG_RETURN_TEXT_P(result);
+  }
 }
