@@ -118,6 +118,13 @@ collected_metadata_collection_t collect_metadata(const hive::protocol::operation
 
 } // namespace
 
+
+template <typename T>
+std::pair<Datum, bool> make_datum_pair(T value, bool null = false) 
+{
+    return {value, null};
+}
+
 //use this template instead of Postgres' MemoryContextSwitchTo
 template<typename T>
 auto MemoryContextSwitcher(MemoryContext new_ctx, T statements) -> decltype(statements())
@@ -262,16 +269,20 @@ Datum colect_operation_data_and_fill_returned_recordset(Collect collect,
 }
 
 template<typename ElemT, typename F>
-void fill_record_field(Datum* tuple_values, ElemT elem, const F& func, std::size_t counter)
+void fill_record_field(Datum* tuple_values, bool* nulls, ElemT elem, const F& func, std::size_t counter)
 {
-    *(tuple_values + counter) = func(elem);
+
+    auto [result, is_null] = func(elem);
+    
+    *(tuple_values + counter) = result;
+    *(nulls + counter) = is_null;
 }
 
 template<typename ElemT, typename ... Funcs>
-void fill_record(Datum* tuple_values, ElemT elem, Funcs ... funcs)
+void fill_record(Datum* tuple_values, bool* nulls, ElemT elem, Funcs ... funcs)
 {
     std::size_t counter = 0;
-    std::initializer_list<int>{ ( fill_record_field(tuple_values, elem, funcs, counter++), 0) ... };
+    std::initializer_list<int>{ ( fill_record_field(tuple_values, nulls, elem, funcs, counter++), 0) ... };
 }
 
 template<typename Collection,typename ... Funcs>
@@ -287,12 +298,13 @@ void fill_return_tuples(const Collection& collection, PG_FUNCTION_ARGS, Funcs ..
 
     const auto TUPLE_LENGTH = sizeof ... (Funcs);
 
+    static_assert(TUPLE_LENGTH < 16, "Tuple size is too large for stack allocation in Postgres server environment");
     Datum tuple_values[TUPLE_LENGTH] = {0};
     bool nulls[TUPLE_LENGTH] = {false};
 
     for(const auto& collected_item : collection)
     {
-      fill_record(tuple_values, collected_item, funcs...);
+      fill_record(tuple_values, nulls, collected_item, funcs...);
 
       tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
     }
@@ -352,8 +364,8 @@ Datum extract_set_witness_properties(PG_FUNCTION_ARGS)
       [=, &_extracted_data]()
       {
         fill_return_tuples(_extracted_data, fcinfo, 
-          [] (const auto& data) {return CStringGetTextDatum(data.first.c_str());},
-          [] (const auto& data) {return CStringGetTextDatum(data.second.c_str());}
+          [] (const auto& data) {return make_datum_pair(CStringGetTextDatum(data.first.c_str()));},
+          [] (const auto& data) {return make_datum_pair(CStringGetTextDatum(data.second.c_str()));}
         );
       },
 
@@ -519,10 +531,10 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     [=, &collected_data]()
     {
       fill_return_tuples(collected_data, fcinfo, 
-          [] (const auto& impacted_balance) {fc::string account = impacted_balance.first; return CStringGetTextDatum(account.c_str());},
-          [] (const auto& impacted_balance) {const hive::protocol::asset& balance_change = impacted_balance.second; return Int64GetDatum(balance_change.amount.value);},
-          [] (const auto& impacted_balance) {const hive::protocol::asset_symbol_type& token_type = impacted_balance.second.symbol; return Int32GetDatum(int32_t(token_type.decimals()));},
-          [] (const auto& impacted_balance) {const hive::protocol::asset_symbol_type& token_type = impacted_balance.second.symbol; return Int32GetDatum(int32_t(token_type.to_nai()));}
+          [] (const auto& impacted_balance) {fc::string account = impacted_balance.first; return make_datum_pair(CStringGetTextDatum(account.c_str()));},
+          [] (const auto& impacted_balance) {const hive::protocol::asset& balance_change = impacted_balance.second; return make_datum_pair(Int64GetDatum(balance_change.amount.value));},
+          [] (const auto& impacted_balance) {const hive::protocol::asset_symbol_type& token_type = impacted_balance.second.symbol; return make_datum_pair(Int32GetDatum(int32_t(token_type.decimals())));},
+          [] (const auto& impacted_balance) {const hive::protocol::asset_symbol_type& token_type = impacted_balance.second.symbol; return make_datum_pair(Int32GetDatum(int32_t(token_type.to_nai())));}
         );
     },
     
@@ -556,7 +568,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       [=, &operations_used_in_get_balance_impacting_operations]()
       {
         fill_return_tuples(operations_used_in_get_balance_impacting_operations, fcinfo, 
-          [] (const auto& operation_name) {return CStringGetTextDatum(operation_name.c_str());}
+          [] (const auto& operation_name) {return make_datum_pair(CStringGetTextDatum(operation_name.c_str()));}
         );
       },
 
@@ -617,10 +629,12 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       [=, &collected_keyauths]()
       {
         fill_return_tuples(collected_keyauths, fcinfo,
-          [] (const auto& collected_item) { return CStringGetTextDatum(collected_item.account_name.c_str());},
-          [] (const auto& collected_item) { return Int32GetDatum(collected_item.key_kind);},
-          [] (const auto& collected_item) { return set_to_string_array_datum(collected_item.key_auth);},
-          [] (const auto& collected_item) { return set_to_string_array_datum(collected_item.account_auth);}
+          [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_name.c_str()));},
+          [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.key_kind));},
+          [] (const auto& collected_item) { return make_datum_pair(public_key_data_to_bytea_datum(collected_item.key_auth), !collected_item.keyauth_variant);},
+          [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_auth.c_str()), collected_item.keyauth_variant);},
+          [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.weight_threshold));},
+          [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.w));}
         );
       },
 
@@ -681,7 +695,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       [=, &operations_used_in_get_keyauths]()
       {
         fill_return_tuples(operations_used_in_get_keyauths, fcinfo, 
-          [] (const auto& operation_name) {return CStringGetTextDatum(operation_name.c_str());}
+          [] (const auto& operation_name) {return make_datum_pair(CStringGetTextDatum(operation_name.c_str()));}
         );
       },
 
@@ -728,9 +742,9 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       [=, &collected_metadata]()
       {
         fill_return_tuples(collected_metadata, fcinfo,
-          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.account_name.c_str());},
-          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.json_metadata.c_str());},
-          [] (const auto& collected_item) {return CStringGetTextDatum(collected_item.posting_json_metadata.c_str());}
+          [] (const auto& collected_item) {return make_datum_pair(CStringGetTextDatum(collected_item.account_name.c_str()));},
+          [] (const auto& collected_item) {return make_datum_pair(CStringGetTextDatum(collected_item.json_metadata.c_str()));},
+          [] (const auto& collected_item) {return make_datum_pair(CStringGetTextDatum(collected_item.posting_json_metadata.c_str()));}
         );
       },
 
@@ -791,7 +805,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       [=, &operations_used_in_get_metadata]()
       {
         fill_return_tuples(operations_used_in_get_metadata, fcinfo, 
-          [] (const auto& operation_name) {return CStringGetTextDatum(operation_name.c_str());}
+          [] (const auto& operation_name) {return make_datum_pair(CStringGetTextDatum(operation_name.c_str()));}
         );
       },
 

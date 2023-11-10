@@ -7,8 +7,10 @@ CREATE TYPE hive.keyauth_record_type AS
 (
       account_name TEXT
     , key_kind hive.key_type
-    , key_auth TEXT []
-    , account_auth TEXT []
+    , key_auth BYTEA
+    , account_auth TEXT
+    , weight_threshold INTEGER
+    , w INTEGER
 );
 
 DROP TYPE IF EXISTS hive.keyauth_c_record_type CASCADE;
@@ -16,8 +18,10 @@ CREATE TYPE hive.keyauth_c_record_type AS
 (
       account_name TEXT
     , authority_c_kind INTEGER
-    , key_auth TEXT []
-    , account_auth TEXT []
+    , key_auth BYTEA
+    , account_auth TEXT
+    , weight_threshold INTEGER
+    , w INTEGER
 );
 
 DROP FUNCTION IF EXISTS hive.get_keyauths_wrapper;
@@ -51,12 +55,14 @@ IMMUTABLE
 AS
 $$
 BEGIN
-    RETURN QUERY SELECT 
+    RETURN QUERY SELECT
         account_name,
-        hive.key_type_c_int_to_enum(authority_c_kind), 
+        hive.key_type_c_int_to_enum(authority_c_kind),
         key_auth,
-        account_auth
-        FROM hive.get_keyauths_wrapper(_operation_body);
+        account_auth,
+        weight_threshold,
+        w
+    FROM hive.get_keyauths_wrapper(_operation_body);
 END
 $$;
 
@@ -71,3 +77,4 @@ DROP FUNCTION IF EXISTS hive.get_keyauths_operations;
 CREATE OR REPLACE FUNCTION hive.get_keyauths_operations()
 RETURNS SETOF hive.get_operations_type
 AS 'MODULE_PATHNAME', 'get_keyauths_operations' LANGUAGE C;
+
