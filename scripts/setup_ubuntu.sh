@@ -41,12 +41,13 @@ install_all_dev_packages() {
   apt-get update
   DEBIAN_FRONTEND=noniteractive apt-get install -y \
           systemd \
-          postgresql \
-          postgresql-contrib \
           libpqxx-dev \
           tox \
           joe \
-          postgresql-server-dev-all
+          postgresql-common
+
+  /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+  DEBIAN_FRONTEND=noniteractive apt-get install -y postgresql-16 postgresql-server-dev-16
 
   apt-get clean
   rm -rf /var/lib/apt/lists/*

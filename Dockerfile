@@ -2,11 +2,11 @@
 # docker build --target=ci-base-image -t registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-xxx -f Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=:ubuntu22.04-5
+ARG CI_IMAGE_TAG=:ubuntu23.10-2
 
 ARG BUILD_IMAGE_TAG
 
-FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu22.04-7 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu23.10-2 AS ci-base-image
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
@@ -63,7 +63,7 @@ RUN \
 # Here we could use a smaller image without packages specific to build requirements
 FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG as base_instance
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu22.04-5}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu23.10-2}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
@@ -104,7 +104,7 @@ WORKDIR /home/haf_admin
 COPY --from=build --chown=haf_admin:users /home/haf_admin/build /home/haf_admin/build/
 COPY --from=build --chown=haf_admin:users /home/haf_admin/haf /home/haf_admin/haf/
 
-ENV POSTGRES_VERSION=14
+ENV POSTGRES_VERSION=16
 COPY --chown=haf_admin:users ./docker/docker_entrypoint.sh .
 COPY --chown=postgres:postgres ./docker/postgresql.conf /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
 COPY --chown=postgres:postgres ./docker/pg_hba.conf /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default

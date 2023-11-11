@@ -39,7 +39,7 @@ source "$SCRIPTSDIR/common.sh"
 HAF_DB_STORE="$DATADIR/haf_db_store"
 PGDATA=$HAF_DB_STORE/pgdata
 
-export POSTGRES_VERSION=${POSTGRES_VERSION:-14}
+export POSTGRES_VERSION=${POSTGRES_VERSION:-16}
 
 DO_MAINTENANCE=0 #Allows to enter some maintenance mode (when postgres is started but hived not yet. Rather for internal debugging/development purposes)
 PERFORM_DUMP=0

@@ -589,7 +589,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       {
         fill_return_tuples(collected_keyauths, fcinfo,
           [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_name.c_str()));},
-          [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.key_kind));},
+          [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(static_cast<int32_t>(collected_item.key_kind)));},
           [] (const auto& collected_item) { return make_datum_pair(public_key_data_to_bytea_datum(collected_item.key_auth), !collected_item.keyauth_variant);},
           [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_auth.c_str()), collected_item.keyauth_variant);},
           [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.weight_threshold));},
