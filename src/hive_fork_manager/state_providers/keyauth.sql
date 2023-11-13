@@ -96,7 +96,7 @@ BEGIN
                 block_num,
                 timestamp,
                 ov.op_type_id,
-                reputation_tracker_helpers.calculate_operation_stable_id(block_num, trx_in_block, op_pos) as op_stable_id
+                hive.calculate_operation_stable_id(block_num, trx_in_block, op_pos) as op_stable_id
             FROM hive.%1$s_operations_view ov
             JOIN hive.operation_types ot ON ov.op_type_id = ot.id
             WHERE ov.block_num BETWEEN _first_block AND _last_block
@@ -313,23 +313,3 @@ $BODY$
 ;
 
 
-CREATE SCHEMA IF NOT EXISTS reputation_tracker_helpers;
-
-CREATE OR REPLACE FUNCTION reputation_tracker_helpers.calculate_operation_stable_id(
-        _block_num hive.operations.block_num %TYPE,
-        _trx_in_block hive.operations.trx_in_block %TYPE,
-        _op_pos hive.operations.op_pos %TYPE
-    ) RETURNS BIGINT LANGUAGE 'sql' IMMUTABLE AS $BODY$
-SELECT (
-        (_block_num::BIGINT << 36) |(
-            CASE
-                _trx_in_block = -1
-                WHEN TRUE THEN 32768::BIGINT << 20
-                ELSE _trx_in_block::BIGINT << 20
-            END
-        ) | (
-            _op_pos::bigint & '000011111111111111111111'::"bit"::BIGINT
-        )
-    )
-END;
-$BODY$;
