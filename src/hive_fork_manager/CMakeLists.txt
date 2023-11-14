@@ -21,10 +21,6 @@ ADD_PSQL_EXTENSION(
              hived_api_impl_indexes.sql
              hived_api.sql
 
-             types/types.sql
-             types/cast_functions.sql
-             types/casts.sql
-
     DEPLOY_SOURCES trigger_switch/trigger_off.sql
             context_rewind/names.sql
             context_rewind/triggers.sql
@@ -57,7 +53,9 @@ ADD_PSQL_EXTENSION(
             extract_set_witness_properties.sql
             trigger_switch/trigger_on.sql
 
+            types/types.sql # drop and recreate operation types on upgrade
             types/cast_functions.sql
+            types/casts.sql
             types/process_operation.sql
 )
 
