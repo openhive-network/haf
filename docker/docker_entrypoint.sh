@@ -154,6 +154,17 @@ prepare_pg_hba_file() {
 EOF
 }
 
+create_conf_d_directory_if_necessary() {
+  # PostgreSQL looks for additional config files in this directory.  Usually, the user will bind-mount
+  # config files into this location.  If they don't, create an empty directory so PostgreSQL doesn't
+  # error out at startup
+  if sudo --user=postgres -n [ ! -e "/home/hived/datadir/haf_postgresql_conf.d" ]; then
+    sudo -n mkdir -p "/home/hived/datadir/haf_postgresql_conf.d"
+    sudo -n chown -Rc postgres:postgres "/home/hived/datadir/haf_postgresql_conf.d"
+  fi
+}
+
+
 # https://gist.github.com/CMCDragonkai/e2cde09b688170fb84268cafe7a2b509
 # If we do `trap cleanup INT QUIT TERM` directly, then using `exit` command anywhere
 # in the script will exit the script without triggering the cleanup
@@ -178,6 +189,8 @@ sudo -n --user=hived mkdir -p -m 755 "$HAF_DB_STORE"
 
 # Prepare HBA file before starting PostgreSQL
 prepare_pg_hba_file
+
+create_conf_d_directory_if_necessary
 
 # Handle PGCTLTIMEOUT if set
 [[ -n ${PGCTLTIMEOUT:-}  ]] && echo "PGCTLTIMEOUT = ${PGCTLTIMEOUT}" | sudo tee "/etc/postgresql/${POSTGRES_VERSION}/main/environment"
