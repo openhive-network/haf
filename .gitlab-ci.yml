@@ -26,6 +26,19 @@ variables:
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
+  - project: 'hive/common-ci-configuration'
+    ref: 7c58303ffb61d91ef9662ec20e7b498bc6f62b8f
+    file:
+    - '/templates/python_projects.gitlab-ci.yml'
+
+verify_poetry_lock_sanity:
+  extends: .verify_poetry_lock_sanity_template
+  stage: build_and_test_phase_1
+  variables:
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
+
+  tags:
+    - public-runner-docker
 
 .haf_image_build:
   extends: .prepare_haf_image
