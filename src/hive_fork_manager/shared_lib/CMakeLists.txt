@@ -3,6 +3,9 @@ SET( CUSTOM_INSTALLATION ON )
 
 SET( target_name hfm-${HAF_GIT_REVISION_SHA} )
 
+add_definitions(-DCSP)
+
+
 ADD_RUNTIME_LOADED_LIB( TARGET_NAME ${target_name} LINK_WITH hive_protocol fc_shared_boost )
 
 # Preserve the original library suffixes to restore them later.
