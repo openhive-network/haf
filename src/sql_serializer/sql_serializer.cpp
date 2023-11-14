@@ -18,7 +18,6 @@
 #include <hive/protocol/config.hpp>
 #include <hive/protocol/operations.hpp>
 
-#include <hive/utilities/plugin_utilities.hpp>
 #include <hive/plugins/sql_serializer/blockchain_data_filter.hpp>
 
 #include <fc/git_revision.hpp>
