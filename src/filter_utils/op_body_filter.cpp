@@ -1,4 +1,6 @@
 #include <hive/plugins/sql_serializer/blockchain_data_filter.hpp>
+
+#include <fc/io/json.hpp>
 #include <fc/log/logger.hpp>
 
 #include <fstream>
