@@ -50,6 +50,15 @@ CREATE OR REPLACE FUNCTION hive.copy_transactions_to_irreversible(
 AS
 $BODY$
 BEGIN
+    WITH blocks_and_fork AS (
+     SELECT
+          DISTINCT ON ( hbr.num ) hbr.num
+        , hbr.fork_id
+     FROM hive.blocks_reversible hbr
+     WHERE hbr.num <= _new_irreversible_block
+       AND hbr.num > _head_block_of_irreversible_blocks
+     ORDER BY hbr.num ASC, hbr.fork_id DESC
+    )
     INSERT INTO hive.transactions
     SELECT
           htr.block_num
@@ -61,15 +70,7 @@ BEGIN
         , htr.signature
     FROM
         hive.transactions_reversible htr
-    JOIN ( SELECT
-              DISTINCT ON ( hbr.num ) hbr.num
-            , hbr.fork_id
-            FROM hive.blocks_reversible hbr
-            WHERE
-                    hbr.num <= _new_irreversible_block
-                AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-    ) as num_and_forks ON htr.block_num = num_and_forks.num AND htr.fork_id = num_and_forks.fork_id
+    JOIN blocks_and_fork ON htr.block_num = blocks_and_fork.num AND htr.fork_id = blocks_and_fork.fork_id
     ;
 END;
 $BODY$
