@@ -545,15 +545,6 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
   int32_t account_id = account_ptr->get_id();
   const hive::chain::witness_object* witness_ptr = chain_db.find_witness(block_header.witness);
 
-  constexpr auto NOT_COLLECTED_ACCOUNT_ID_SINK = -1;
-  if ( psql_first_block > 1 ) {
-    account_ops_seq_object::id_type id(account_ptr->get_id());
-    const auto* op_seq_obj = chain_db.find<account_ops_seq_object, hive::chain::by_id>( id );
-
-    if (op_seq_obj == nullptr)
-      account_id = NOT_COLLECTED_ACCOUNT_ID_SINK;
-  }
-
   const hive::chain::dynamic_global_property_object& dgpo = chain_db.get_dynamic_global_properties();
 
   currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);

@@ -95,9 +95,11 @@ namespace hive::plugins::sql_serializer {
       };
     };
 
+  template< typename Container >
   struct hive_accounts
     {
-    using container_t = std::vector<PSQL::processing_objects::account_data_t>;
+    using container_t = Container;
+    //using container_t = std::vector<PSQL::processing_objects::account_data_t>;
 
     static const char TABLE[];
     static const char COLS[];
