@@ -32,7 +32,7 @@ public:
 
   virtual void state_dependent_open( const open_args& args ) override;
 
-  void push_haf_block(const full_block_ptr& full_block, uint32_t skip);
+  void apply_haf_block(const full_block_ptr& full_block, uint32_t skip);
 
 private:
 
@@ -414,13 +414,13 @@ void postgres_block_log::replay_full_block(haf_state_database& db, const full_bl
 {
   replay_full_block_time_probe.start();
 
-  db.push_haf_block(fb_ptr, skip_flags);
+  db.apply_haf_block(fb_ptr, skip_flags);
 
   replay_full_block_time_probe.stop();
 }
 
 
-void haf_state_database::push_haf_block(const full_block_ptr& full_block, uint32_t skip)
+void haf_state_database::apply_haf_block(const full_block_ptr& full_block, uint32_t skip)
 {
   try
   {
