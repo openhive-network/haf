@@ -58,7 +58,11 @@ namespace hive::plugins::sql_serializer {
 
     using applied_hardforks_container_t_writer = table_data_writer< hive_applied_hardforks >;
 
-    using accounts_data_container_t_writer = table_data_writer< hive_accounts >;
+    using accounts_data_container_t_writer = table_data_writer<
+      hive_accounts<
+        std::vector<PSQL::processing_objects::account_data_t>
+        >
+    >;
     using account_operations_data_container_t_writer = chunks_for_sql_writers_splitter<
       table_data_writer<
         hive_account_operations<

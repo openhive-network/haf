@@ -1,8 +1,11 @@
 #pragma once
 
+#include <appbase/application.hpp>
+
 #include <cmath>
 #include <memory>
 #include <vector>
+#include <string>
 
 namespace hive::plugins::sql_serializer {
   class block_num_rendezvous_trigger;
