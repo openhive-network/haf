@@ -57,7 +57,13 @@ CREATE TABLE IF NOT EXISTS hive.transactions (
     signature bytea DEFAULT NULL,
     CONSTRAINT pk_hive_transactions PRIMARY KEY ( trx_hash )
 );
-ALTER TABLE hive.transactions ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID;
+
+ALTER TABLE hive.transactions
+  ALTER COLUMN trx_hash SET STORAGE MAIN,
+  ALTER COLUMN signature SET STORAGE MAIN,
+  ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID
+  ;
+
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions', '');
 
 CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
