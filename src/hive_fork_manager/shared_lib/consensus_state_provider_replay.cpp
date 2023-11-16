@@ -430,12 +430,15 @@ void haf_state_database::push_haf_block(const full_block_ptr& full_block, uint32
 
 
 
+    set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
 
     public_reset_fork_db();    // override effect of _fork_db.start_block() call in open()
 
     auto session = start_undo_session();
     _apply_block( full_block, &flow_control );
      session.push();
+
+    clear_tx_status();
 
 
 
