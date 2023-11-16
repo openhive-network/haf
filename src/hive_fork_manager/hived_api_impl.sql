@@ -50,26 +50,37 @@ CREATE OR REPLACE FUNCTION hive.copy_transactions_to_irreversible(
 AS
 $BODY$
 BEGIN
+    WITH blocks_and_fork AS MATERIALIZED (
+     SELECT
+          DISTINCT ON ( hbr.num ) hbr.num
+        , hbr.fork_id
+     FROM hive.blocks_reversible hbr
+     WHERE hbr.num <= _new_irreversible_block
+       AND hbr.num > _head_block_of_irreversible_blocks
+     ORDER BY hbr.num ASC, hbr.fork_id DESC
+    ), source_transactions AS MATERIALIZED (
+        SELECT
+               htr.block_num
+             , htr.trx_in_block
+             , htr.trx_hash
+             , htr.ref_block_num
+             , htr.ref_block_prefix
+             , htr.expiration
+             , htr.signature
+        FROM
+            hive.transactions_reversible htr
+        JOIN blocks_and_fork ON htr.block_num = blocks_and_fork.num AND htr.fork_id = blocks_and_fork.fork_id
+    )
     INSERT INTO hive.transactions
     SELECT
-          htr.block_num
-        , htr.trx_in_block
-        , htr.trx_hash
-        , htr.ref_block_num
-        , htr.ref_block_prefix
-        , htr.expiration
-        , htr.signature
-    FROM
-        hive.transactions_reversible htr
-    JOIN ( SELECT
-              DISTINCT ON ( hbr.num ) hbr.num
-            , hbr.fork_id
-            FROM hive.blocks_reversible hbr
-            WHERE
-                    hbr.num <= _new_irreversible_block
-                AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-    ) as num_and_forks ON htr.block_num = num_and_forks.num AND htr.fork_id = num_and_forks.fork_id
+           str.block_num
+         , str.trx_in_block
+         , str.trx_hash
+         , str.ref_block_num
+         , str.ref_block_prefix
+         , str.expiration
+         , str.signature
+    FROM source_transactions str
     ;
 END;
 $BODY$
