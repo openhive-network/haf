@@ -298,7 +298,7 @@ void undo_blocks(csp_session_ref_type csp_session, uint32_t shift)
   auto& db = *csp_session.db;
   while(shift > 0)
   {
-    db.pop_block();
+    db.undo();
     shift--;
   }
 }
@@ -426,7 +426,33 @@ void haf_state_database::push_haf_block(const full_block_ptr& full_block, uint32
   {
     _node_property_object.skip_flags = skip;
     hive::chain::existing_block_flow_control flow_control(full_block);
-    push_block(flow_control, skip);
+
+    if(full_block->get_block_num() >= 1979)
+    {
+      []()
+      {
+        static volatile bool stop_in = true;
+        wlog("mtlk push_haf_block ");
+        wlog("pid= ${pid}", ("pid" , getpid() ));
+
+        while(stop_in)
+        {
+          int a = 0;
+          a=a;
+        }
+      }();
+
+    }
+
+
+fork_db head jest za póżno o jeden blok - porownaj z pushowanym (komitnij to i cofnij)
+oraz TX jest cos brakuje - moze reset ?
+
+    auto session = start_undo_session();
+    _apply_block( full_block, &flow_control );
+     session.push();
+
+
 
   }FC_CAPTURE_AND_RETHROW()
 }
