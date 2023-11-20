@@ -265,7 +265,7 @@ BEGIN
                             block_num,
                             timestamp
                         FROM combined_data
-                        JOIN inserted_data ON combined_data.key_auth = inserted_data.key
+                        JOIN hive.%1$s_keyauth_k ON combined_data.key_auth = hive.%1$s_keyauth_k.key
                     ) t))
 
                 ] AS dump_results
@@ -284,7 +284,7 @@ BEGIN
             block_num,
             timestamp
         FROM combined_data
-        -- JOIN inserted_data ON combined_data.key_auth = inserted_data.key
+        JOIN hive.%1$s_keyauth_k ON combined_data.key_auth = hive.%1$s_keyauth_k.key
                 LEFT JOIN dump_combined ON dump_combined.num = combined_data.block_num
         ;
 
