@@ -258,7 +258,7 @@ BEGIN
                         SELECT
                             as_account_id,
                             key_kind,
-                            COALESCE(hive_keyauth_k.key_id, inserted_data.key_id) as key_id,
+                            COALESCE(hive.%1$s_keyauth_k.key_id, inserted_data.key_id) as key_id,
                             weight_threshold,
                             w,
                             op_serial_id,
@@ -278,7 +278,7 @@ BEGIN
         SELECT
             as_account_id,
             key_kind,
-            COALESCE(hive_keyauth_k.key_id, inserted_data.key_id) as key_id,
+            COALESCE(hive.%1$s_keyauth_k.key_id, inserted_data.key_id) as key_id,
             weight_threshold,
             w,
             op_serial_id,
