@@ -59,12 +59,45 @@ print_result()
 {
   psql -d haf_block_log -c "select hive.public_key_to_string(key), account_id, key_kind, block_num, op_serial_id  from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 " 
 }
+
+check_result()
+{
+
+  # Define the SQL query
+  SQL_QUERY="select hive.public_key_to_string(key), account_id, key_kind, block_num, op_serial_id from hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007"
+
+  # Execute the query and store the output
+  OUTPUT=$(psql -d haf_block_log -c "$SQL_QUERY")
+
+  # Define the expected output (You need to adjust this to your expected result)
+  EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
+-------------------------------------------------------+------------+----------+-----------+--------------
+ STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh |      14007 | OWNER    |   3399202 |      6688632
+ STM4vuEE8F2xyJhwiNCnHxjUVLNXxdFXtVxgghBq5LVLt49zLKLRX |      14007 | ACTIVE   |   3399203 |      6688640
+ STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC |      14007 | POSTING  |   3399203 |      6688640
+ STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO     |   3399203 |      6688640
+(4 rows)"
+
+
+  # Compare the actual output with the expected output
+  if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
+      echo "Result is OK"
+  else
+      echo "Result is NOT OK"
+      echo "Actual Output:"
+      echo "$OUTPUT"
+      exit 1
+  fi
+
+}
+
 drop_keyauth
 apply_keyauth
 
 
 psql -d haf_block_log -c "SELECT mmm.main_test('mmm',1, 5000000, 100000);" 2> keyauth_run.log
 print_result
+check_result
 
 exit 0
 
