@@ -54,6 +54,7 @@ fetch_and_display_account_names() {
 # {
 #     psql -d haf_block_log -c "SELECT mmm.main_test('mmm',1, 12000000,10000);" > main_test.log 2>&1
 # }
+g_is_first_run=1
 
 # Function to start hived and monitor its stderr
 run_hived_and_monitor() {
@@ -62,8 +63,9 @@ run_hived_and_monitor() {
     FORCE_REPLAY_OPTION=""
 
     # Apply --force-replay only on the first iteration
-    if [ "$LAST_BLOCK" -eq ${NUMBERS[0]} ]; then
+    if [ "$g_is_first_run" -eq 1 ]; then
         FORCE_REPLAY_OPTION="--force-replay"
+        g_is_first_run=0
     fi
 
     # Start hived with the conditional --force-replay option
