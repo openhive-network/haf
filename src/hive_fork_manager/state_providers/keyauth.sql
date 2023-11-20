@@ -1,14 +1,6 @@
 -- In hive::protocol::recover_account_operation the entry recent_owner_authority is not recorded, only new_owner_authority
 -- and the whole hive::protocol::request_account_recovery_operation is not recorded at all
 
-CREATE OR REPLACE FUNCTION hive.print_json_with_label(label text, json_result json) RETURNS INTEGER LANGUAGE plpgsql AS $p$
-BEGIN
-    RAISE NOTICE E'% >>>> \n%', label, json_result;
-    RETURN 1;
-END;
-$p$;
-
-
 CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hive.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
@@ -190,7 +182,6 @@ BEGIN
                 , op_serial_id  =       EXCLUDED.op_serial_id
                 , block_num =           EXCLUDED.block_num
                 , timestamp =           EXCLUDED.timestamp
-            RETURNING * -- for dump only
         ),
 
         /* 
@@ -241,58 +232,12 @@ BEGIN
             RETURNING key, key_id
         ),
 
-        from_combined_select AS (
-
-            SELECT * FROM hive.%1$s_keyauth_a a 
-            WHERE EXISTS (SELECT 1 FROM combined_data b 
-                WHERE a.account_id = b.as_account_id AND a.key_kind = b.key_kind)
-        ),
-
         -- Deletes existing keyauth_a records to be replaced with updated data.
         deleted_keyauths AS (
             DELETE FROM hive.%1$s_keyauth_a a 
             WHERE EXISTS (SELECT 1 FROM combined_data b 
                 WHERE a.account_id = b.as_account_id AND a.key_kind = b.key_kind)
-            RETURNING * -- for dump only
         )
-
-        ,
-        dump_combined AS (
-        SELECT 
-            1 AS num,
-             ARRAY[
-                    hive.print_json_with_label('mtlk temp_keyauths', (SELECT json_agg(t) FROM (SELECT * FROM                           temp_keyauths) t)),
-                    hive.print_json_with_label('mtlk keyauths_output', (SELECT json_agg(t) FROM (SELECT * FROM                         keyauths_output) t)),
-                    hive.print_json_with_label('mtlk keyauths_output_null', (SELECT json_agg(t) FROM (SELECT * FROM                    keyauths_output_null) t)),
-                    hive.print_json_with_label('mtlk max_op_serial_dictionary_accountauth', (SELECT json_agg(t) FROM (SELECT * FROM    max_op_serial_dictionary_accountauth) t)),
-                    hive.print_json_with_label('mtlk combined_data_accountauths', (SELECT json_agg(t) FROM (SELECT * FROM              combined_data_accountauths) t)),
-                    --hive.print_json_with_label('mtlk combined deleted_account_auths', (SELECT json_agg(t) FROM (SELECT * FROM                   deleted_account_auths) t)),
-                    hive.print_json_with_label('mtlk inserted_accountauths', (SELECT json_agg(t) FROM (SELECT * FROM                   inserted_accountauths) t)),
-                    hive.print_json_with_label('mtlk max_op_serial_dictionary', (SELECT json_agg(t) FROM (SELECT * FROM                max_op_serial_dictionary) t)),
-                    hive.print_json_with_label('mtlk combined_data', (SELECT json_agg(t) FROM (SELECT * FROM                           combined_data) t)),
-                    hive.print_json_with_label('mtlk inserted_data', (SELECT json_agg(t) FROM (SELECT * FROM                           inserted_data) t)),
-
-                    hive.print_json_with_label('mtlk from_combined_select', (SELECT json_agg(t) FROM (SELECT * FROM                           from_combined_select) t)),
-
-                    hive.print_json_with_label('mtlk deleted_keyauths', (SELECT json_agg(t) FROM (SELECT * FROM                        deleted_keyauths) t)),
-                    hive.print_json_with_label('mtlk to be finally inserted keys', (SELECT json_agg(t) FROM (
-                        SELECT
-                            as_account_id,
-                            key_kind,
-                            COALESCE(hive.%1$s_keyauth_k.key_id, inserted_data.key_id) as key_id,
-                            weight_threshold,
-                            w,
-                            op_serial_id,
-                            block_num,
-                            timestamp
-                        FROM combined_data
-                        LEFT JOIN hive.%1$s_keyauth_k ON combined_data.key_auth = hive.%1$s_keyauth_k.key
-                        LEFT JOIN inserted_data ON combined_data.key_auth = inserted_data.key
-                    ) t))
-
-                ] AS dump_results
-         )
- 
 
         -- Finally, fills the keyauths table
         INSERT INTO hive.%1$s_keyauth_a
@@ -308,7 +253,6 @@ BEGIN
         FROM combined_data
         LEFT JOIN hive.%1$s_keyauth_k ON combined_data.key_auth = hive.%1$s_keyauth_k.key
         LEFT JOIN inserted_data ON combined_data.key_auth = inserted_data.key
-                LEFT JOIN dump_combined ON dump_combined.num = combined_data.block_num
         ;
 
         /* 
