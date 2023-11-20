@@ -55,9 +55,72 @@ SELECT hive.app_remove_context('mmm');
 
 }
 
+print_result()
+{
+  psql -d haf_block_log -c "select hive.public_key_to_string(key), account_id, key_kind, block_num, op_serial_id  from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 " 
+}
 drop_keyauth
 apply_keyauth
-psql -d haf_block_log -c "SELECT mmm.main_test('mmm',1, 2885317, 100000000);" 2> keyauth_run.log
-psql -d haf_block_log -c "\pset pager off" -c "select hive.public_key_to_string(key), account_id, key_kind, block_num  from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 " 
-psql -d haf_block_log -c "SELECT mmm.main_test('mmm',2885317, 2885318, 100000000);" 2> keyauth_run_last.log
-psql -d haf_block_log -c "\pset pager off" -c "select hive.public_key_to_string(key), account_id, key_kind, block_num  from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 " 
+
+BLOCKS=(2794855 2794856 2885317 2885318 2885325
+
+2885326
+)
+
+# Initial FROM value
+FROM=1
+
+
+
+# Loop through each NUM value
+for NUM in "${BLOCKS[@]}"
+do
+    TO=$NUM
+    echo "Running FROM: $FROM TO: $TO"
+    psql -d haf_block_log -c "SELECT mmm.main_test('mmm',$FROM, $TO, 100000000);" 2> keyauth_run$TO.log
+    print_result
+
+    # Update FROM for the next iteration
+    FROM=$((TO + 1))
+done
+
+# FROM=1
+# TO=2794855
+# echo Running TO: $TO
+# psql -d haf_block_log -c "SELECT mmm.main_test('mmm',$FROM, $TO, 100000000);" 2> keyauth_run.log
+# print_result
+
+# FROM=$((TO+1))
+# TO=2794856
+# echo Running TO: $TO
+# psql -d haf_block_log -c "SELECT mmm.main_test('mmm',$FROM, $TO, 100000000);" 2>> keyauth_run.log
+# print_result
+
+
+# FROM=$((TO+1))
+# TO=2885317
+# echo Running TO: $TO
+# psql -d haf_block_log -c "SELECT mmm.main_test('mmm',$FROM, $TO, 100000000);" 2>> keyauth_run.log
+# print_result
+
+
+# FROM=$((TO+1))
+# TO=2885318
+# echo Running TO: $TO
+# psql -d haf_block_log -c "SELECT mmm.main_test('mmm',$FROM, $TO, 100000000);" 2>> keyauth_run.log
+# print_result
+
+
+# # echo 2885369
+# # psql -d haf_block_log -c "SELECT mmm.main_test('mmm',2885319, 2885369, 100000000);" 2> keyauth_run.log
+# # print_result
+
+
+# # echo 2885370
+# # psql -d haf_block_log -c "SELECT mmm.main_test('mmm',2885370, 2885370, 100000000);" 2> keyauth_run.log
+# # print_result
+
+# # # psql -d haf_block_log -c "SELECT mmm.main_test('mmm',1, 2885317, 100000000);" 2> keyauth_run.log
+# # # psql -d haf_block_log -c "\pset pager off" -c "select hive.public_key_to_string(key), account_id, key_kind, block_num, op_serial_id  from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 " 
+# # # psql -d haf_block_log -c "SELECT mmm.main_test('mmm',2885317, 2885370, 1);" 2> keyauth_run.log
+# # # psql -d haf_block_log -c "\pset pager off" -c "select hive.public_key_to_string(key), account_id, key_kind, block_num, op_serial_id  from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 " 
