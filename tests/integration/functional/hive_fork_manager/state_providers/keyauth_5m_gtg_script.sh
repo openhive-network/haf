@@ -3560,6 +3560,27 @@ NUMBERS=(1
 5000000)
 # NUMBERS=(1 2794855 2794856 5000000)
 
+fetch_and_save_gtg_account() {
+    local last_block=$1
+    local result_file="/tmp/a_gtg_changes.txt"
+    local account_file="/tmp/gtg_$last_block.json"
+
+    # Fetch 'gtg' account data
+    response=$(curl -s --data '{"jsonrpc":"2.0", "method":"condenser_api.get_accounts", "params":[["gtg"]], "id":1}' localhost:8090)
+    account_data=$(echo "$response" | jq -r '.result[0]')
+
+    # Save the account data to a file named "gtg_block_number"
+    echo "$account_data" > "$account_file"
+
+    # Check for changes in the account data and log to result_file
+    if [ "$previous_account_data" != "$account_data" ]; then
+        if [ -n "$previous_account_data" ]; then
+            echo "Change detected at block $last_block" >> "$result_file"
+            echo "Account data saved in $account_file" >> "$result_file"
+        fi
+        previous_account_data="$account_data"
+    fi
+}
 
 previous_data=""
 
