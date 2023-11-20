@@ -118,6 +118,16 @@ BEGIN
                 'hive::protocol::recover_account_operation',
                 'hive::protocol::request_account_recovery_operation',
                 'hive::protocol::witness_set_properties_operation'
+
+                -- pow2_operation
+
+                -- account_witness_proxy_operation
+                -- account_witness_vote_operation
+                -- change_recovery_account_operation
+                -- prove_authority ?
+
+                
+                
             )
         ),
 
@@ -235,7 +245,6 @@ BEGIN
             SELECT *  FROM combined_data
         ),
 
-        SELECT account_id, key_kind FROM combined_data
         -- Deletes existing keyauth_a records to be replaced with updated data.
         deleted_keyauths AS (
             DELETE FROM hive.%1$s_keyauth_a
