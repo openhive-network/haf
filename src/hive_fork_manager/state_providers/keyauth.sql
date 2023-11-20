@@ -202,7 +202,7 @@ BEGIN
             WHERE key_auth IS NOT NULL
         ),
 
-        -- Identifies the latest operation for each account and key type by the maximum op_serial_id.
+        -- Identifies the latest operation for each account and key type by the maximum op_stable_id.
         max_op_serial_dictionary AS (
             SELECT account_name, key_kind, MAX(op_stable_id) as max_op_stable_id
             FROM keyauths_output
