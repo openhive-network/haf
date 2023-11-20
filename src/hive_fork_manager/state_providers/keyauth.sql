@@ -253,7 +253,20 @@ BEGIN
                     hive.print_json_with_label('mtlk combined max_op_serial_dictionary', (SELECT json_agg(t) FROM (SELECT * FROM                max_op_serial_dictionary) t)),
                     hive.print_json_with_label('mtlk combined combined_data', (SELECT json_agg(t) FROM (SELECT * FROM                           combined_data) t)),
                     hive.print_json_with_label('mtlk combined inserted_data', (SELECT json_agg(t) FROM (SELECT * FROM                           inserted_data) t)),
-                    hive.print_json_with_label('mtlk combined deleted_keyauths', (SELECT json_agg(t) FROM (SELECT * FROM                        deleted_keyauths) t))
+                    hive.print_json_with_label('mtlk combined deleted_keyauths', (SELECT json_agg(t) FROM (SELECT * FROM                        deleted_keyauths) t)),
+                    hive.print_json_with_label('mtlk combined to be finally inserted keys', (SELECT json_agg(t) FROM (
+                        SELECT
+                            as_account_id,
+                            key_kind,
+                            key_id,
+                            weight_threshold,
+                            w,
+                            op_serial_id,
+                            block_num,
+                            timestamp
+                        FROM combined_data
+                        JOIN inserted_data ON combined_data.key_auth = inserted_data.key
+                    ) t))
 
                 ] AS dump_results
          )
