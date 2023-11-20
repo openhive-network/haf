@@ -253,6 +253,16 @@ BEGIN
         FROM combined_data
         LEFT JOIN hive.%1$s_keyauth_k ON combined_data.key_auth = hive.%1$s_keyauth_k.key
         LEFT JOIN inserted_data ON combined_data.key_auth = inserted_data.key
+        ON CONFLICT ON CONSTRAINT pk_%1$s_keyauth_a
+        DO UPDATE SET
+            account_id =            EXCLUDED.account_id
+            , key_kind =            EXCLUDED.key_kind
+            , key_serial_id =       EXCLUDED.key_serial_id
+            , weight_threshold =    EXCLUDED.weight_threshold
+            , w =                   EXCLUDED.w
+            , op_serial_id =        EXCLUDED.op_serial_id  
+            , block_num =           EXCLUDED.block_num
+            , timestamp =           EXCLUDED.timestamp
         ;
 
         /* 
