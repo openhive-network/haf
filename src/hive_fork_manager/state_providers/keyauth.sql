@@ -250,8 +250,9 @@ BEGIN
 
         -- Deletes existing keyauth_a records to be replaced with updated data.
         deleted_keyauths AS (
-            DELETE FROM hive.%1$s_keyauth_a
-            WHERE (account_id, key_kind) IN (SELECT account_id, key_kind FROM combined_data)
+            DELETE FROM hive.%1$s_keyauth_a a 
+            WHERE EXISTS (SELECT 1 FROM combined_data b 
+                WHERE a.account_id = b.as_account_id AND a.key_kind = b.key_kind)
             RETURNING * -- for dump only
         )
 
