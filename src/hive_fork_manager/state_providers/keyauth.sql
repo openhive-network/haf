@@ -219,13 +219,15 @@ BEGIN
             SELECT DISTINCT key_auth FROM combined_data
             ON CONFLICT DO NOTHING
             RETURNING key, key_id
-        ),
-
-        -- Deletes existing keyauth_a records to be replaced with updated data.
-        deleted_keyauths AS (
-            DELETE FROM hive.%1$s_keyauth_a
-            WHERE (account_id, key_kind) IN (SELECT account_id, key_kind FROM combined_data)
         )
+        -- ,
+
+        -- -- Deletes existing keyauth_a records to be replaced with updated data.
+        -- deleted_keyauths AS (
+        --     DELETE FROM hive.%1$s_keyauth_a
+        --     WHERE (account_id, key_kind) IN (SELECT account_id, key_kind FROM combined_data)
+        -- )
+
 
         -- Finally, fills the keyauths table
         INSERT INTO hive.%1$s_keyauth_a
@@ -240,6 +242,16 @@ BEGIN
             timestamp
         FROM combined_data
         JOIN inserted_data ON combined_data.key_auth = inserted_data.key
+        ON CONFLICT ON CONSTRAINT pk_%1$s_keyauth_a
+        DO UPDATE SET
+        account_id =            EXCLUDED.account_id
+        , key_kind =            EXCLUDED.key_kind
+        , key_serial_id  =      EXCLUDED.key_serial_id
+        , weight_threshold =    EXCLUDED.weight_threshold
+        , w =                   EXCLUDED.w
+        , op_serial_id  =       EXCLUDED.op_serial_id
+        , block_num =           EXCLUDED.block_num
+        , timestamp =           EXCLUDED.timestamp
         ;
 
         /* 
