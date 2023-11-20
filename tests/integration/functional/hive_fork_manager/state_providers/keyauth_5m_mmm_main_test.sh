@@ -1,3 +1,4 @@
+set -x
 
 apply_keyauth()
 {
