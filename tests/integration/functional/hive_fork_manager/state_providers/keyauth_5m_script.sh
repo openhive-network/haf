@@ -6,20 +6,24 @@ SRC_DIR=../haf
 DATA_DIR=/home/hived/datadir
 
 # Array of noncontiguous numbers
-NUMBERS=(1   450000)
+NUMBERS=(1  5000000)
+# NUMBERS=(1 2794855 2794856 5000000)
 
 
 fetch_and_display_account_names() {
     local start_account=""
     local limit=10
     local result_file="/tmp/account_names.txt"
+    local result_account_contents_file="/tmp/account_contents.txt"
     local total_accounts_fetched=0  # Initialize the cumulative counter
     > "$result_file" # Clear the file at the beginning
+    > "$result_account_contents_file"
 
     while true; do
         # Fetch account names starting from the last fetched account
         response=$(curl -s --data '{"jsonrpc":"2.0", "method":"database_api.list_accounts", "params": {"start":"'"$start_account"'", "limit":'"$limit"', "order":"by_name"}, "id":1}' localhost:8090)
         accounts=$(echo "$response" | jq -r '.result.accounts')
+        echo "$accounts" >>  "$result_account_contents_file"
         accounts_fetched=$(echo "$accounts" | jq -r '.[].name')
         echo "$accounts_fetched" >> "$result_file"
 
@@ -66,6 +70,7 @@ run_hived_and_monitor() {
     if [ "$g_is_first_run" -eq 1 ]; then
         FORCE_REPLAY_OPTION="--force-replay"
         g_is_first_run=0
+
     fi
 
     # Start hived with the conditional --force-replay option
@@ -83,7 +88,8 @@ run_hived_and_monitor() {
         --shared-file-dir=$DATA_DIR/blockchain \
         --plugin=sql_serializer \
         --psql-url=dbname=haf_block_log host=/var/run/postgresql port=5432 \
-    2> >(tee "$LOG_FILE") &
+    2> "$LOG_FILE" &
+    # 2> >(tee "$LOG_FILE") &
 
     PID=$!
     echo "Started hived with PID: $PID"
@@ -103,12 +109,13 @@ run_hived_and_monitor() {
     done
 
 
-    psql -d haf_block_log -c "SELECT mmm.main_test('mmm',1, $LAST_BLOCK,10000);" 
-    psql -d haf_block_log -c "\d"
-    psql -d haf_block_log -c "table hive.contexts"
-    psql -d haf_block_log -c "table hive.mmm_accountauth_a"
-    psql -d haf_block_log -c "table hive.mmm_keyauth_a"
-    psql -d haf_block_log -c "table hive.mmm_keyauth_k"
+    # psql -d haf_block_log -c "SELECT mmm.main_test('mmm',1, $LAST_BLOCK,10000);" 
+
+    # psql -d haf_block_log -c "\pset pager off"
+    # psql -d haf_block_log -c "table hive.contexts"
+    # psql -d haf_block_log -c "table hive.mmm_accountauth_a"
+    # psql -d haf_block_log -c "table hive.mmm_keyauth_a"
+    # psql -d haf_block_log -c "table hive.mmm_keyauth_k"
 
 
     # Optionally, remove the log file after stopping hived
@@ -171,7 +178,7 @@ SELECT hive.app_remove_context('mmm');
 
 }
 
-apply_keyauth
+# apply_keyauth
 
 # Loop over the array of noncontiguous numbers
 for LAST_BLOCK in "${NUMBERS[@]}"
@@ -180,4 +187,4 @@ do
     run_hived_and_monitor $LAST_BLOCK
 done
 
-drop_keyauth
+# drop_keyauth
