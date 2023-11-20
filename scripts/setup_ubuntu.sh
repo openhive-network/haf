@@ -46,12 +46,23 @@ install_all_dev_packages() {
           libpqxx-dev \
           tox \
           joe \
-          postgresql-server-dev-all
+          postgresql-server-dev-all \
+          libkrb5-dev
 
   apt-get clean
   rm -rf /var/lib/apt/lists/*
 
   sudo usermod -a -G users -c "PostgreSQL daemon account" postgres
+
+  git clone https://github.com/timescale/timescaledb
+  cd timescaledb
+  git checkout 2.12.1
+  ./bootstrap
+  cd build
+  make
+  make install
+  cd ../..
+  rm -r timescaledb
 }
 
 install_user_packages() {
