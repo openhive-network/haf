@@ -284,7 +284,7 @@ BEGIN
             block_num,
             timestamp
         FROM combined_data
-        JOIN inserted_data ON combined_data.key_auth = inserted_data.key
+        -- JOIN inserted_data ON combined_data.key_auth = inserted_data.key
                 LEFT JOIN dump_combined ON dump_combined.num = combined_data.block_num
         ;
 
