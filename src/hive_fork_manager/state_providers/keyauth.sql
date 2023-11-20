@@ -231,6 +231,11 @@ BEGIN
             RETURNING key, key_id
         ),
 
+        from_combined_select AS (
+            SELECT account_id, key_kind FROM combined_data
+        ),
+
+        SELECT account_id, key_kind FROM combined_data
         -- Deletes existing keyauth_a records to be replaced with updated data.
         deleted_keyauths AS (
             DELETE FROM hive.%1$s_keyauth_a
@@ -243,18 +248,21 @@ BEGIN
         SELECT 
             1 AS num,
              ARRAY[
-                    hive.print_json_with_label('mtlk combined temp_keyauths', (SELECT json_agg(t) FROM (SELECT * FROM                           temp_keyauths) t)),
-                    hive.print_json_with_label('mtlk combined keyauths_output', (SELECT json_agg(t) FROM (SELECT * FROM                         keyauths_output) t)),
-                    hive.print_json_with_label('mtlk combined keyauths_output_null', (SELECT json_agg(t) FROM (SELECT * FROM                    keyauths_output_null) t)),
-                    hive.print_json_with_label('mtlk combined max_op_serial_dictionary_accountauth', (SELECT json_agg(t) FROM (SELECT * FROM    max_op_serial_dictionary_accountauth) t)),
-                    hive.print_json_with_label('mtlk combined combined_data_accountauths', (SELECT json_agg(t) FROM (SELECT * FROM              combined_data_accountauths) t)),
+                    hive.print_json_with_label('mtlk temp_keyauths', (SELECT json_agg(t) FROM (SELECT * FROM                           temp_keyauths) t)),
+                    hive.print_json_with_label('mtlk keyauths_output', (SELECT json_agg(t) FROM (SELECT * FROM                         keyauths_output) t)),
+                    hive.print_json_with_label('mtlk keyauths_output_null', (SELECT json_agg(t) FROM (SELECT * FROM                    keyauths_output_null) t)),
+                    hive.print_json_with_label('mtlk max_op_serial_dictionary_accountauth', (SELECT json_agg(t) FROM (SELECT * FROM    max_op_serial_dictionary_accountauth) t)),
+                    hive.print_json_with_label('mtlk combined_data_accountauths', (SELECT json_agg(t) FROM (SELECT * FROM              combined_data_accountauths) t)),
                     --hive.print_json_with_label('mtlk combined deleted_account_auths', (SELECT json_agg(t) FROM (SELECT * FROM                   deleted_account_auths) t)),
-                    hive.print_json_with_label('mtlk combined inserted_accountauths', (SELECT json_agg(t) FROM (SELECT * FROM                   inserted_accountauths) t)),
-                    hive.print_json_with_label('mtlk combined max_op_serial_dictionary', (SELECT json_agg(t) FROM (SELECT * FROM                max_op_serial_dictionary) t)),
-                    hive.print_json_with_label('mtlk combined combined_data', (SELECT json_agg(t) FROM (SELECT * FROM                           combined_data) t)),
-                    hive.print_json_with_label('mtlk combined inserted_data', (SELECT json_agg(t) FROM (SELECT * FROM                           inserted_data) t)),
-                    hive.print_json_with_label('mtlk combined deleted_keyauths', (SELECT json_agg(t) FROM (SELECT * FROM                        deleted_keyauths) t)),
-                    hive.print_json_with_label('mtlk combined to be finally inserted keys', (SELECT json_agg(t) FROM (
+                    hive.print_json_with_label('mtlk inserted_accountauths', (SELECT json_agg(t) FROM (SELECT * FROM                   inserted_accountauths) t)),
+                    hive.print_json_with_label('mtlk max_op_serial_dictionary', (SELECT json_agg(t) FROM (SELECT * FROM                max_op_serial_dictionary) t)),
+                    hive.print_json_with_label('mtlk combined_data', (SELECT json_agg(t) FROM (SELECT * FROM                           combined_data) t)),
+                    hive.print_json_with_label('mtlk inserted_data', (SELECT json_agg(t) FROM (SELECT * FROM                           inserted_data) t)),
+
+                    hive.print_json_with_label('mtlk from_combined_select', (SELECT json_agg(t) FROM (SELECT * FROM                           from_combined_select) t)),
+
+                    hive.print_json_with_label('mtlk deleted_keyauths', (SELECT json_agg(t) FROM (SELECT * FROM                        deleted_keyauths) t)),
+                    hive.print_json_with_label('mtlk to be finally inserted keys', (SELECT json_agg(t) FROM (
                         SELECT
                             as_account_id,
                             key_kind,
