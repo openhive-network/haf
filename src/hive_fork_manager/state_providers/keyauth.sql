@@ -101,6 +101,7 @@ BEGIN
             JOIN hive.operation_types ot ON ov.op_type_id = ot.id
             WHERE ov.block_num BETWEEN _first_block AND _last_block
             AND ot.name IN (
+                'hive::protocol::pow_operation',
                 'hive::protocol::account_create_operation',
                 'hive::protocol::account_create_with_delegation_operation',
                 'hive::protocol::account_update_operation',
@@ -148,6 +149,16 @@ BEGIN
             JOIN hive.%1$s_accounts_view av ON av.name = derived.account_auth
         ),
 
+        -- Clears existing records for account_id and key_kind to be replaced in the accountauth_a table.
+        deleted_account_auths AS (
+            DELETE FROM hive.%1$s_accountauth_a
+            WHERE EXISTS (
+                SELECT 1 FROM combined_data_accountauths cda
+                WHERE cda.as_account_id = hive.%1$s_accountauth_a.account_id
+                AND cda.key_kind = hive.%1$s_accountauth_a.key_kind)
+            ),
+
+
         -- Finally inserts updated account authorization data into the accountauth_a table.
         inserted_accountauths AS (
             INSERT INTO hive.%1$s_accountauth_a
@@ -192,7 +203,7 @@ BEGIN
             WHERE key_auth IS NOT NULL
         ),
 
-        -- Identifies the latest operation for each account and key type by the maximum op_serial_id.
+        -- Identifies the latest operation for each account and key type by the maximum op_stable_id.
         max_op_serial_dictionary AS (
             SELECT account_name, key_kind, MAX(op_stable_id) as max_op_stable_id
             FROM keyauths_output
@@ -221,25 +232,44 @@ BEGIN
             RETURNING key, key_id
         ),
 
-        -- Deletes existing keyauth_a records to be replaced with updated data.
-        deleted_keyauths AS (
-            DELETE FROM hive.%1$s_keyauth_a
-            WHERE (account_id, key_kind) IN (SELECT account_id, key_kind FROM combined_data)
+        all_keys_dict AS (
+            SELECT key_id, key AS key_auth
+            FROM inserted_data
+            UNION ALL
+            SELECT key_id, key
+            FROM hive.%1$s_keyauth_k
+        ),
+
+        -- Fills the keyauths table
+        finally_inserted AS (
+            INSERT INTO hive.%1$s_keyauth_a
+            SELECT
+                as_account_id,
+                key_kind,
+                all_keys_dict.key_id,
+                weight_threshold,
+                w,
+                op_serial_id,
+                block_num,
+                timestamp
+            FROM combined_data
+            JOIN all_keys_dict ON all_keys_dict.key_auth = combined_data.key_auth
+            ON CONFLICT ON CONSTRAINT pk_%1$s_keyauth_a
+            DO UPDATE SET
+                account_id =            EXCLUDED.account_id
+                , key_kind =            EXCLUDED.key_kind
+                , key_serial_id =       EXCLUDED.key_serial_id
+                , weight_threshold =    EXCLUDED.weight_threshold
+                , w =                   EXCLUDED.w
+                , op_serial_id =        EXCLUDED.op_serial_id  
+                , block_num =           EXCLUDED.block_num
+                , timestamp =           EXCLUDED.timestamp
         )
 
-        -- Finally, fills the keyauths table
-        INSERT INTO hive.%1$s_keyauth_a
-        SELECT
-            as_account_id,
-            key_kind,
-            key_id,
-            weight_threshold,
-            w,
-            op_serial_id,
-            block_num,
-            timestamp
-        FROM combined_data
-        JOIN inserted_data ON combined_data.key_auth = inserted_data.key
+        -- Deletes existing old keyauth_a records
+        DELETE FROM hive.%1$s_keyauth_a a 
+        WHERE EXISTS (SELECT 1 FROM combined_data b 
+            WHERE a.account_id = b.as_account_id AND a.key_kind = b.key_kind)
         ;
 
         /* 
