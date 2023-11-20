@@ -232,7 +232,7 @@ BEGIN
         ),
 
         from_combined_select AS (
-            SELECT account_id, key_kind FROM combined_data
+            SELECT * account_id, key_kind FROM combined_data
         ),
 
         SELECT account_id, key_kind FROM combined_data
