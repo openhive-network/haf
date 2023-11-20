@@ -103,9 +103,10 @@ run_hived_and_monitor() {
 
     psql -d haf_block_log -c "SELECT mmm.main_test('mmm',1, $LAST_BLOCK,10000);" 
     psql -d haf_block_log -c "\d"
-    psql -d haf_block_log -c "table contexts"
-    psql -d haf_block_log -c "table mmm_accountauth_a"
-    
+    psql -d haf_block_log -c "table hive.contexts"
+    psql -d haf_block_log -c "table hive.mmm_accountauth_a"
+    psql -d haf_block_log -c "table hive.mmm_keyauth_a"
+    psql -d haf_block_log -c "table hive.mmm_keyauth_k"
 
 
     # Optionally, remove the log file after stopping hived
