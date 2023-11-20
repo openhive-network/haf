@@ -62,17 +62,18 @@ print_result()
 drop_keyauth
 apply_keyauth
 
-BLOCKS=(2794855 2794856 2885317 2885318 2885325
 
-2885326
-)
+psql -d haf_block_log -c "SELECT mmm.main_test('mmm',1, 5000000, 100000);" 2> keyauth_run.log
+print_result
 
-# Initial FROM value
+exit 0
+
+
+
+
+
+BLOCKS=(2794855 2794856 2885317 2885318 2885325 2885326 2885369 2885370)
 FROM=1
-
-
-
-# Loop through each NUM value
 for NUM in "${BLOCKS[@]}"
 do
     TO=$NUM
@@ -83,32 +84,6 @@ do
     # Update FROM for the next iteration
     FROM=$((TO + 1))
 done
-
-# FROM=1
-# TO=2794855
-# echo Running TO: $TO
-# psql -d haf_block_log -c "SELECT mmm.main_test('mmm',$FROM, $TO, 100000000);" 2> keyauth_run.log
-# print_result
-
-# FROM=$((TO+1))
-# TO=2794856
-# echo Running TO: $TO
-# psql -d haf_block_log -c "SELECT mmm.main_test('mmm',$FROM, $TO, 100000000);" 2>> keyauth_run.log
-# print_result
-
-
-# FROM=$((TO+1))
-# TO=2885317
-# echo Running TO: $TO
-# psql -d haf_block_log -c "SELECT mmm.main_test('mmm',$FROM, $TO, 100000000);" 2>> keyauth_run.log
-# print_result
-
-
-# FROM=$((TO+1))
-# TO=2885318
-# echo Running TO: $TO
-# psql -d haf_block_log -c "SELECT mmm.main_test('mmm',$FROM, $TO, 100000000);" 2>> keyauth_run.log
-# print_result
 
 
 # # echo 2885369
