@@ -242,7 +242,8 @@ BEGIN
         ),
 
         from_combined_select AS (
-            SELECT *  FROM combined_data
+            SELECT *  FROM hive.%1$s_keyauth_a
+            WHERE (account_id, key_kind) IN (SELECT account_id, key_kind FROM combined_data)
         ),
 
         -- Deletes existing keyauth_a records to be replaced with updated data.
