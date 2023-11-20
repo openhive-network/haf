@@ -258,14 +258,15 @@ BEGIN
                         SELECT
                             as_account_id,
                             key_kind,
-                            key_id,
+                            COALESCE(hive_keyauth_k.key_id, inserted_data.key_id) as key_id,
                             weight_threshold,
                             w,
                             op_serial_id,
                             block_num,
                             timestamp
                         FROM combined_data
-                        JOIN hive.%1$s_keyauth_k ON combined_data.key_auth = hive.%1$s_keyauth_k.key
+                        LEFT JOIN hive.%1$s_keyauth_k ON combined_data.key_auth = hive.%1$s_keyauth_k.key
+                        LEFT JOIN inserted_data ON combined_data.key_auth = inserted_data.key
                     ) t))
 
                 ] AS dump_results
@@ -277,14 +278,15 @@ BEGIN
         SELECT
             as_account_id,
             key_kind,
-            key_id,
+            COALESCE(hive_keyauth_k.key_id, inserted_data.key_id) as key_id,
             weight_threshold,
             w,
             op_serial_id,
             block_num,
             timestamp
         FROM combined_data
-        JOIN hive.%1$s_keyauth_k ON combined_data.key_auth = hive.%1$s_keyauth_k.key
+        LEFT JOIN hive.%1$s_keyauth_k ON combined_data.key_auth = hive.%1$s_keyauth_k.key
+        LEFT JOIN inserted_data ON combined_data.key_auth = inserted_data.key
                 LEFT JOIN dump_combined ON dump_combined.num = combined_data.block_num
         ;
 
