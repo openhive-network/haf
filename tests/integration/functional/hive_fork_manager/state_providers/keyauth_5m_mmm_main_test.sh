@@ -57,5 +57,7 @@ SELECT hive.app_remove_context('mmm');
 
 drop_keyauth
 apply_keyauth
-psql -d haf_block_log -c "SELECT mmm.main_test('mmm',1, 2794856, 100000000);"
-psql -d haf_block_log -c "\pset pager off" -c "select hive.public_key_to_string(key), * from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 "
+psql -d haf_block_log -c "SELECT mmm.main_test('mmm',1, 2885317, 100000000);" 2> keyauth_run.log
+psql -d haf_block_log -c "\pset pager off" -c "select hive.public_key_to_string(key), account_id, key_kind, block_num  from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 " 
+psql -d haf_block_log -c "SELECT mmm.main_test('mmm',2885317, 2885318, 100000000);" 2> keyauth_run_last.log
+psql -d haf_block_log -c "\pset pager off" -c "select hive.public_key_to_string(key), account_id, key_kind, block_num  from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 " 
