@@ -1,4 +1,3 @@
-set -x
 
 if [ -z "$HAF_POSTGRES_URL" ]; then
     export HAF_POSTGRES_URL="haf_block_log"
@@ -68,22 +67,14 @@ print_result()
 
 check_result()
 {
-
+  local EXPECTED_OUTPUT="$1"
   # Define the SQL query
   SQL_QUERY="select hive.public_key_to_string(key), account_id, key_kind, block_num, op_serial_id from hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007"
 
   # Execute the query and store the output
   OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$SQL_QUERY")
 
-  # Define the expected output (You need to adjust this to your expected result)
-  EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
--------------------------------------------------------+------------+----------+-----------+--------------
- STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh |      14007 | OWNER    |   3399202 |      6688632
- STM4vuEE8F2xyJhwiNCnHxjUVLNXxdFXtVxgghBq5LVLt49zLKLRX |      14007 | ACTIVE   |   3399203 |      6688640
- STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC |      14007 | POSTING  |   3399203 |      6688640
- STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO     |   3399203 |      6688640
-(4 rows)"
-
+  
 
   # Compare the actual output with the expected output
   if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
@@ -100,12 +91,34 @@ check_result()
 drop_keyauth
 apply_keyauth
 
-
-psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, 5000000, 100000);" 2> keyauth_run.log
+RUN_FOR=3
+EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
+-------------------------------------------------------+------------+----------+-----------+--------------
+ STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi |      14007 | OWNER    |   2885463 |      3762783
+ STM6AzXNwWRzTWCVTgP4oKQEALTW8HmDuRq1avGWjHH23XBNhux6U |      14007 | ACTIVE   |   2885463 |      3762783
+ STM69ZG1hx2rdU2hxQkkmX5MmYkHPCmdNeXg4r6CR7gvKUzYwWPPZ |      14007 | POSTING  |   2885463 |      3762783
+ STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz |      14007 | MEMO     |   2885463 |      3762783
+(4 rows)"
+psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> keyauth_run_${RUN_FOR}m.log
 print_result
-check_result
+check_result "$EXPECTED_OUTPUT"
+
 
 exit 0
+
+
+RUN_FOR=5
+EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
+-------------------------------------------------------+------------+----------+-----------+--------------
+ STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh |      14007 | OWNER    |   3399202 |      6688632
+ STM4vuEE8F2xyJhwiNCnHxjUVLNXxdFXtVxgghBq5LVLt49zLKLRX |      14007 | ACTIVE   |   3399203 |      6688640
+ STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC |      14007 | POSTING  |   3399203 |      6688640
+ STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO     |   3399203 |      6688640
+(4 rows)"
+psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> keyauth_run_${RUN_FOR}m.log
+print_result
+check_result "$EXPECTED_OUTPUT"
+
 
 
 
