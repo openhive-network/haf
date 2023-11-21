@@ -95,7 +95,8 @@ CREATE TABLE IF NOT EXISTS hive.operations (
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 );
 ALTER TABLE hive.operations ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID;
-ALTER TABLE hive.operations ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID;
+ALTER TABLE hive.operations ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID;
+
 SELECT pg_catalog.pg_extension_config_dump('hive.operations', '');
 
 CREATE TABLE IF NOT EXISTS hive.applied_hardforks (
