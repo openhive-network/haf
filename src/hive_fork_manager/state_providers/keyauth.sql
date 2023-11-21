@@ -232,6 +232,14 @@ BEGIN
             RETURNING key, key_id
         ),
 
+        all_keys_dict AS (
+            SELECT key_id, key AS key_auth
+            FROM inserted_data
+            UNION ALL
+            SELECT key_id, key
+            FROM hive.%1$s_keyauth_k
+        ),
+
         -- Deletes existing keyauth_a records to be replaced with updated data.
         deleted_keyauths AS (
             DELETE FROM hive.%1$s_keyauth_a a 
@@ -244,15 +252,14 @@ BEGIN
         SELECT
             as_account_id,
             key_kind,
-            COALESCE(hive.%1$s_keyauth_k.key_id, inserted_data.key_id) as key_id,
+            all_keys_dict.key_id,
             weight_threshold,
             w,
             op_serial_id,
             block_num,
             timestamp
         FROM combined_data
-        LEFT JOIN hive.%1$s_keyauth_k ON combined_data.key_auth = hive.%1$s_keyauth_k.key
-        LEFT JOIN inserted_data ON combined_data.key_auth = inserted_data.key
+        JOIN all_keys_dict ON all_keys_dict.key_auth = combined_data.key_auth
         ON CONFLICT ON CONSTRAINT pk_%1$s_keyauth_a
         DO UPDATE SET
             account_id =            EXCLUDED.account_id
