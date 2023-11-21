@@ -564,13 +564,13 @@ $$;
 
 
 
-CREATE OR REPLACE FUNCTION compare_keyauth_data(json_text TEXT)
+CREATE OR REPLACE FUNCTION compare_keyauth_data(expected_json_text TEXT)
 RETURNS VOID AS $$
 DECLARE
     result TEXT;
 BEGIN
 
-    CREATE TEMP TABLE sub AS SELECT
+    CREATE TEMP TABLE expected_table AS SELECT
             (elem->>'public_key_to_string')::TEXT AS public_key_to_string,
             (elem->>'account_id')::INTEGER AS account_id,
             (elem->>'key_kind')::hive.key_type AS key_kind,
@@ -584,19 +584,19 @@ BEGIN
             (elem->>'key_id')::INTEGER AS key_id,
             (elem->>'key')::BYTEA AS key 
         FROM (
-            SELECT json_array_elements(json_text
+            SELECT json_array_elements(expected_json_text
                 ::json) AS elem
             ) t;
 
 
-    WITH json_data AS (SELECT * FROM sub)
+    WITH json_data AS (SELECT * FROM expected_table)
     SELECT
         CASE WHEN count(*) = 0 AND (SELECT count(*) FROM keyauth_view) = (SELECT count(*) FROM json_data)
             THEN 'Equal'
             ELSE 'Not Equal'
         END INTO result
     FROM (
-        SELECT 
+        SELECT
             hive.public_key_to_string(key),
             account_id, key_kind, weight_threshold, w, op_serial_id, block_num, timestamp,
             key
@@ -604,7 +604,7 @@ BEGIN
 
         EXCEPT
 
-        SELECT 
+        SELECT
             public_key_to_string,
             account_id, key_kind, weight_threshold, w, op_serial_id, block_num, timestamp,
             key
@@ -618,7 +618,7 @@ BEGIN
             public_key_to_string,
             account_id, key_kind, weight_threshold, w, op_serial_id, block_num, timestamp,
             key
-        FROM sub',
+        FROM expected_table',
 
         'SELECT 
             hive.public_key_to_string(key),
@@ -626,9 +626,9 @@ BEGIN
             key
         FROM keyauth_view');
 
-    DROP TABLE sub;
+    DROP TABLE expected_table;
 
-    
+
     ASSERT result = 'Equal', 'The table and JSON data are not equal.';
 
 
