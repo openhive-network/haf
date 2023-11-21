@@ -637,27 +637,27 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION hive.compare_recordsets(rs1 text, rs2 text) RETURNS void LANGUAGE plpgsql AS $BODY$
+CREATE OR REPLACE FUNCTION hive.compare_recordsets(expected_text text, actual_text text) RETURNS void LANGUAGE plpgsql AS $BODY$
 BEGIN
 
     PERFORM hive.print_recordset_with_label(
         'Common Rows', 
-        'WITH r1 AS (' || rs1 || '), r2 AS (' || rs2 || ') ' ||
-        'SELECT * FROM r1 INTERSECT SELECT * FROM r2'
+        'WITH expected AS (' || expected_text || '), actual AS (' || actual_text || ') ' ||
+        'SELECT * FROM expected INTERSECT SELECT * FROM actual'
     );
 
 
     PERFORM hive.print_recordset_with_label(
-        'First Only Rows',
-        'WITH r1 AS (' || rs1 || '), r2 AS (' || rs2 || ') ' ||
-        'SELECT * FROM r1 EXCEPT SELECT * FROM r2'
+        'Expected Only Rows',
+        'WITH expected AS (' || expected_text || '), actual AS (' || actual_text || ') ' ||
+        'SELECT * FROM expected EXCEPT SELECT * FROM actual'
     );
 
 
     PERFORM hive.print_recordset_with_label(
-        'Second Only Rows',
-        'WITH r1 AS (' || rs1 || '), r2 AS (' || rs2 || ') ' ||
-        'SELECT * FROM r2 EXCEPT SELECT * FROM r1'
+        'Actual Only Rows',
+        'WITH expected AS (' || expected_text || '), actual AS (' || actual_text || ') ' ||
+        'SELECT * FROM actual EXCEPT SELECT * FROM expected'
     );
 END;
 $BODY$;
