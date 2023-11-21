@@ -266,7 +266,7 @@ BEGIN
                 , timestamp =           EXCLUDED.timestamp
         )
 
-        -- Deletes existing keyauth_a records to be replaced with updated data.
+        -- Deletes existing old keyauth_a records
         DELETE FROM hive.%1$s_keyauth_a a 
         WHERE EXISTS (SELECT 1 FROM combined_data b 
             WHERE a.account_id = b.as_account_id AND a.key_kind = b.key_kind)
