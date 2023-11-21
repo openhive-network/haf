@@ -240,36 +240,36 @@ BEGIN
             FROM hive.%1$s_keyauth_k
         ),
 
-        -- Deletes existing keyauth_a records to be replaced with updated data.
-        deleted_keyauths AS (
-            DELETE FROM hive.%1$s_keyauth_a a 
-            WHERE EXISTS (SELECT 1 FROM combined_data b 
-                WHERE a.account_id = b.as_account_id AND a.key_kind = b.key_kind)
+        -- Fills the keyauths table
+        finally_inserted AS (
+            INSERT INTO hive.%1$s_keyauth_a
+            SELECT
+                as_account_id,
+                key_kind,
+                all_keys_dict.key_id,
+                weight_threshold,
+                w,
+                op_serial_id,
+                block_num,
+                timestamp
+            FROM combined_data
+            JOIN all_keys_dict ON all_keys_dict.key_auth = combined_data.key_auth
+            ON CONFLICT ON CONSTRAINT pk_%1$s_keyauth_a
+            DO UPDATE SET
+                account_id =            EXCLUDED.account_id
+                , key_kind =            EXCLUDED.key_kind
+                , key_serial_id =       EXCLUDED.key_serial_id
+                , weight_threshold =    EXCLUDED.weight_threshold
+                , w =                   EXCLUDED.w
+                , op_serial_id =        EXCLUDED.op_serial_id  
+                , block_num =           EXCLUDED.block_num
+                , timestamp =           EXCLUDED.timestamp
         )
 
-        -- Finally, fills the keyauths table
-        INSERT INTO hive.%1$s_keyauth_a
-        SELECT
-            as_account_id,
-            key_kind,
-            all_keys_dict.key_id,
-            weight_threshold,
-            w,
-            op_serial_id,
-            block_num,
-            timestamp
-        FROM combined_data
-        JOIN all_keys_dict ON all_keys_dict.key_auth = combined_data.key_auth
-        ON CONFLICT ON CONSTRAINT pk_%1$s_keyauth_a
-        DO UPDATE SET
-            account_id =            EXCLUDED.account_id
-            , key_kind =            EXCLUDED.key_kind
-            , key_serial_id =       EXCLUDED.key_serial_id
-            , weight_threshold =    EXCLUDED.weight_threshold
-            , w =                   EXCLUDED.w
-            , op_serial_id =        EXCLUDED.op_serial_id  
-            , block_num =           EXCLUDED.block_num
-            , timestamp =           EXCLUDED.timestamp
+        -- Deletes existing keyauth_a records to be replaced with updated data.
+        DELETE FROM hive.%1$s_keyauth_a a 
+        WHERE EXISTS (SELECT 1 FROM combined_data b 
+            WHERE a.account_id = b.as_account_id AND a.key_kind = b.key_kind)
         ;
 
         /* 
