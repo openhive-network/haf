@@ -326,12 +326,16 @@ DECLARE
     result TEXT;
 BEGIN
 
+
     CREATE VIEW keyauth_view AS
     SELECT 
             a.*
         ,   k.key
+        ,  acc.name
     FROM hive.context_keyauth_a a
-    JOIN hive.context_keyauth_k k ON a.key_serial_id = k.key_id;
+    JOIN hive.context_keyauth_k k ON a.key_serial_id = k.key_id
+    JOIN hive.accounts acc ON acc.id = account_id
+    ;
 
     PERFORM hive.print_recordset_with_label('Whole resulting keyauth_view', 'SELECT * FROM keyauth_view');
 
@@ -367,19 +371,19 @@ BEGIN
         -- check the whole key table
 
     PERFORM compare_keyauth_data('[
-                {"public_key_to_string":"STM7x48ngjo2L7eNxj3u5dUnanQovAUc4BrcbRFbP8BSAS4SBxmHh","key_id":1,"account_id":8,"key_kind":"OWNER","key_serial_id":1,"weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":1,"key":"\\x03932efa0867801610654c5d27621347cf5d2aeea8bdbf8bf9762c57d48f5e6f4b"}, 
-                {"public_key_to_string":"STM4w4znpS1jgFLAL4BGvJpqMgyn38N9FLGbP4x1cvYP1nqDYNonG","key_id":2,"account_id":8,"key_kind":"ACTIVE","key_serial_id":2,"weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":2,"key":"\\x0205dbbc7c34d17cc2ded972e4527841d922ade2fdea5edab77272dfb01252abf6"}, 
-                {"public_key_to_string":"STM6JfQQyvVdmnf3Ch5ehJMpAEfpRswMmJQP9MMvJBjszf32xmvn9","key_id":3,"account_id":8,"key_kind":"POSTING","key_serial_id":3,"weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":3,"key":"\\x02ba95a2604262ee0c53ecb2bb44eb5422032f9c5d5f5460dd512fa16672962ac8"}, 
-                {"public_key_to_string":"STM6XUnQxSzLpUM6FMnuTTyG9LNXvzYbzW2J6qGH5sRTsQvCnGePo","key_id":4,"account_id":8,"key_kind":"MEMO","key_serial_id":4,"weight_threshold":0,"w":0,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":4,"key":"\\x02d7afd2fcdaf526b69d1a4489766b96511534b90180f1fd4a19d69ba43054823c"}, 
-                {"public_key_to_string":"STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV","key_id":5,"account_id":15,"key_kind":"WITNESS_SIGNING","key_serial_id":5,"weight_threshold":1,"w":1,"op_serial_id":7,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":5,"key":"\\x0295a26f54381a6dba8eb5dc7536e57db267685f9386c714ead9be39a905364a88"}, 
-                {"public_key_to_string":"STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm","key_id":6,"account_id":13,"key_kind":"OWNER","key_serial_id":6,"weight_threshold":1,"w":1,"op_serial_id":3,"block_num":3,"timestamp":"2016-06-22T19:10:21","hive_rowid":6,"key":"\\x0288f8a188036e2de2b7683f5419c0c597acd1d89df22e23fa196bd6b3ab00e70f"}, 
-                {"public_key_to_string":"STM7TN7SNuvMM6Zha6NKTZP7q6f4BmC1UXnAJxb2vjMfE89gep3HZ","key_id":7,"account_id":10,"key_kind":"OWNER","key_serial_id":7,"weight_threshold":1,"w":1,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":7,"key":"\\x03520a0a4c3e3da618919b7f54b366503b27991e87d997fd80ca9301059f34bf52"}, 
-                {"public_key_to_string":"STM7YSZmysv6xxKApsCqgZ8Xuact1Bsnfuvv299B3cWye8FYakDri","key_id":8,"account_id":10,"key_kind":"OWNER","key_serial_id":8,"weight_threshold":1,"w":1,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":8,"key":"\\x035d91137a851cc4a15e3b3ae2ac35da5653b95fa85bbc2c8af1647fb5a2c9c06a"}, 
-                {"public_key_to_string":"STM87WL3HWWwA1qYy4Qywp9WMWUNL8txGHTAJZdEU8Rs9h6vZH3B5","key_id":9,"account_id":10,"key_kind":"OWNER","key_serial_id":9,"weight_threshold":1,"w":1,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":9,"key":"\\x03a8a5021d86ff107280b51d9cec9adee16d9fce7c57f749f3e3dfd17de8001c76"}, 
-                {"public_key_to_string":"STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx","key_id":10,"account_id":10,"key_kind":"ACTIVE","key_serial_id":10,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":10,"key":"\\x023032d7738563754599177e8c25aa5dc873047d493c677c3dbdf39720d9412bb9"}, 
-                {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","key_id":11,"account_id":10,"key_kind":"MEMO","key_serial_id":11,"weight_threshold":0,"w":0,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":11,"key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"}, 
-                {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","key_id":11,"account_id":10,"key_kind":"ACTIVE","key_serial_id":11,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":12,"key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"}, 
-                {"public_key_to_string":"STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR","key_id":12,"account_id":10,"key_kind":"ACTIVE","key_serial_id":12,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":13,"key":"\\x0389d28937022880a7f0c7deaa6f46b4d87ce08bd5149335cb39b5a8e9b04981c2"}
+                {"public_key_to_string":"STM7x48ngjo2L7eNxj3u5dUnanQovAUc4BrcbRFbP8BSAS4SBxmHh","key_id":1,"account_id":8, "name":"andresricou", "key_kind":"OWNER","key_serial_id":1,"weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":1,"key":"\\x03932efa0867801610654c5d27621347cf5d2aeea8bdbf8bf9762c57d48f5e6f4b"}, 
+                {"public_key_to_string":"STM4w4znpS1jgFLAL4BGvJpqMgyn38N9FLGbP4x1cvYP1nqDYNonG","key_id":2,"account_id":8,"name":"andresricou","key_kind":"ACTIVE","key_serial_id":2,"weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":2,"key":"\\x0205dbbc7c34d17cc2ded972e4527841d922ade2fdea5edab77272dfb01252abf6"}, 
+                {"public_key_to_string":"STM6JfQQyvVdmnf3Ch5ehJMpAEfpRswMmJQP9MMvJBjszf32xmvn9","key_id":3,"account_id":8,"name":"andresricou","key_kind":"POSTING","key_serial_id":3,"weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":3,"key":"\\x02ba95a2604262ee0c53ecb2bb44eb5422032f9c5d5f5460dd512fa16672962ac8"}, 
+                {"public_key_to_string":"STM6XUnQxSzLpUM6FMnuTTyG9LNXvzYbzW2J6qGH5sRTsQvCnGePo","key_id":4,"account_id":8,"name":"andresricou","key_kind":"MEMO","key_serial_id":4,"weight_threshold":0,"w":0,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":4,"key":"\\x02d7afd2fcdaf526b69d1a4489766b96511534b90180f1fd4a19d69ba43054823c"}, 
+                {"public_key_to_string":"STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV","key_id":5,"account_id":15,"name":"holger80","key_kind":"WITNESS_SIGNING","key_serial_id":5,"weight_threshold":1,"w":1,"op_serial_id":7,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":5,"key":"\\x0295a26f54381a6dba8eb5dc7536e57db267685f9386c714ead9be39a905364a88"}, 
+                {"public_key_to_string":"STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm","key_id":6,"account_id":13,"name":"jcalfee","key_kind":"OWNER","key_serial_id":6,"weight_threshold":1,"w":1,"op_serial_id":3,"block_num":3,"timestamp":"2016-06-22T19:10:21","hive_rowid":6,"key":"\\x0288f8a188036e2de2b7683f5419c0c597acd1d89df22e23fa196bd6b3ab00e70f"}, 
+                {"public_key_to_string":"STM7TN7SNuvMM6Zha6NKTZP7q6f4BmC1UXnAJxb2vjMfE89gep3HZ","key_id":7,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":7,"weight_threshold":1,"w":1,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":7,"key":"\\x03520a0a4c3e3da618919b7f54b366503b27991e87d997fd80ca9301059f34bf52"}, 
+                {"public_key_to_string":"STM7YSZmysv6xxKApsCqgZ8Xuact1Bsnfuvv299B3cWye8FYakDri","key_id":8,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":8,"weight_threshold":1,"w":1,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":8,"key":"\\x035d91137a851cc4a15e3b3ae2ac35da5653b95fa85bbc2c8af1647fb5a2c9c06a"}, 
+                {"public_key_to_string":"STM87WL3HWWwA1qYy4Qywp9WMWUNL8txGHTAJZdEU8Rs9h6vZH3B5","key_id":9,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":9,"weight_threshold":1,"w":1,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":9,"key":"\\x03a8a5021d86ff107280b51d9cec9adee16d9fce7c57f749f3e3dfd17de8001c76"}, 
+                {"public_key_to_string":"STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx","key_id":10,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":10,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":10,"key":"\\x023032d7738563754599177e8c25aa5dc873047d493c677c3dbdf39720d9412bb9"}, 
+                {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","key_id":11,"account_id":10,"name":"recursive","key_kind":"MEMO","key_serial_id":11,"weight_threshold":0,"w":0,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":11,"key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"}, 
+                {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","key_id":11,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":11,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":12,"key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"}, 
+                {"public_key_to_string":"STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR","key_id":12,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":12,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":13,"key":"\\x0389d28937022880a7f0c7deaa6f46b4d87ce08bd5149335cb39b5a8e9b04981c2"}
                 ]');
 
 
@@ -573,6 +577,7 @@ BEGIN
     CREATE TEMP TABLE expected_table AS SELECT
             (elem->>'public_key_to_string')::TEXT AS public_key_to_string,
             (elem->>'account_id')::INTEGER AS account_id,
+            (elem->>'name')::TEXT AS name,
             (elem->>'key_kind')::hive.key_type AS key_kind,
             (elem->>'key_id')::INTEGER AS key_auth_key_serial,
             (elem->>'weight_threshold')::INTEGER AS weight_threshold,
@@ -598,7 +603,7 @@ BEGIN
     FROM (
         SELECT
             hive.public_key_to_string(key),
-            account_id, key_kind, weight_threshold, w, op_serial_id, block_num, timestamp,
+            account_id, name, key_kind, weight_threshold, w, op_serial_id, block_num, timestamp,
             key
         FROM keyauth_view
 
@@ -606,7 +611,7 @@ BEGIN
 
         SELECT
             public_key_to_string,
-            account_id, key_kind, weight_threshold, w, op_serial_id, block_num, timestamp,
+            account_id, name, key_kind, weight_threshold, w, op_serial_id, block_num, timestamp,
             key
     FROM json_data
     ) AS differences;
@@ -616,13 +621,13 @@ BEGIN
 
         'SELECT
             public_key_to_string,
-            account_id, key_kind, weight_threshold, w, op_serial_id, block_num, timestamp,
+            account_id, name, key_kind, weight_threshold, w, op_serial_id, block_num, timestamp,
             key
         FROM expected_table',
 
         'SELECT 
             hive.public_key_to_string(key),
-            account_id, key_kind, weight_threshold, w, op_serial_id, block_num, timestamp,
+            account_id, name, key_kind, weight_threshold, w, op_serial_id, block_num, timestamp,
             key
         FROM keyauth_view');
 
