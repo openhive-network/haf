@@ -43,7 +43,7 @@ BEGIN
 
     INSERT INTO hive.blocks_reversible VALUES( _block.*, __fork_id );
     INSERT INTO hive.transactions_reversible VALUES( ( unnest( _transactions ) ).*, __fork_id );
-    INSERT INTO hive.transactions_multisig_reversible VALUES( ( unnest( _signatures ) ).*, __fork_id );
+    INSERT INTO hive.transactions_multisig_reversible VALUES( _block.num, ( unnest( _signatures ) ).*, __fork_id );
     INSERT INTO hive.operations_reversible(id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body_binary, fork_id)
       SELECT id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body_binary, __fork_id FROM unnest( _operations );
     INSERT INTO hive.accounts_reversible VALUES( ( unnest( _accounts ) ).*, __fork_id );
