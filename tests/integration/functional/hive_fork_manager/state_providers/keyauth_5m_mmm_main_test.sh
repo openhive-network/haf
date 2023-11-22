@@ -2,6 +2,9 @@ set -x
 
 echo mtlk
 
+/etc/init.d/postgresql start || true
+/etc/init.d/postgresql status || true
+
 pwd
 ls -ld /var/run/postgresql
 
