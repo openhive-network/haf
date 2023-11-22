@@ -159,6 +159,16 @@ BEGIN
             JOIN hive.%1$s_accounts_view av ON av.name = derived.account_auth
         ),
 
+        -- Clears existing records for account_id and key_kind to be replaced in the accountauth_a table.
+        deleted_account_auths AS (
+            DELETE FROM hive.%1$s_accountauth_a
+            WHERE EXISTS (
+                SELECT 1 FROM combined_data_accountauths cda
+                WHERE cda.as_account_id = hive.%1$s_accountauth_a.account_id
+                AND cda.key_kind = hive.%1$s_accountauth_a.key_kind)
+            ),
+
+
         -- Finally inserts updated account authorization data into the accountauth_a table.
         inserted_accountauths AS (
             INSERT INTO hive.%1$s_accountauth_a
