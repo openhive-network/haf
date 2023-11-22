@@ -53,7 +53,7 @@ BEGIN
 
     INSERT INTO hive.transactions_multisig_reversible
     VALUES
-    ( '\xDEED20', '\xBEEF20',  1 );
+    ( 2, '\xDEED20', '\xBEEF20',  1 );
 
       INSERT INTO hive.applied_hardforks_reversible
     VALUES ( 1, 2, 1, 1 )

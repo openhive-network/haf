@@ -39,7 +39,7 @@ BEGIN
 
     INSERT INTO hive.transactions_multisig
     VALUES
-           ( '\xDEED10', '\xBAAD10' )
+           ( 1, '\xDEED10', '\xBAAD10' )
     ;
 
 
@@ -57,7 +57,7 @@ BEGIN
 
     -- block 2 on fork 3 has no signatures
     INSERT INTO hive.transactions_multisig_reversible
-    VALUES ( '\xDEED20', '\xBAAD20', 2 )
+    VALUES ( 1, '\xDEED20', '\xBAAD20', 2 )
     ;
 
     -- block 2 on fork 3 has no operations

@@ -164,7 +164,8 @@ $BODY$
 BEGIN
     INSERT INTO hive.transactions_multisig
     SELECT
-          tsr.trx_hash
+          tsr.block_num
+        , tsr.trx_hash
         , tsr.signature
     FROM
         hive.transactions_multisig_reversible tsr
