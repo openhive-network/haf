@@ -514,8 +514,7 @@ start_haf_as_service:
   tags:
     - data-cache-storage
 
-keyauth_5m:
-  when: manual
+keyauth_5m_sh_test:
   extends: .job-defaults
   stage: build_and_test_phase_2
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
