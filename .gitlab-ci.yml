@@ -534,6 +534,7 @@ keyauth_5m:
     - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
     - echo /etc/init.d/postgresql status || true
     - /etc/init.d/postgresql status || true
+    - psql postgresql://haf_app_admin@haf-instance:5432/haf_block_log -c "select 1;" || true
     - tests/integration/functional/hive_fork_manager/state_providers/keyauth_5m_mmm_main_test.sh 
   after_script:
     - rm docker_entrypoint.log -f
