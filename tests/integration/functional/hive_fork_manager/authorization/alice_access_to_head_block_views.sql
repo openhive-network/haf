@@ -54,11 +54,11 @@ BEGIN
 
     INSERT INTO hive.transactions_multisig
     VALUES
-    ( '\xDEED10', '\xBAAD10' )
-         , ( '\xDEED20', '\xBAAD20' )
-         , ( '\xDEED30', '\xBAAD30' )
-         , ( '\xDEED40', '\xBAAD40' )
-         , ( '\xDEED50', '\xBAAD50' )
+    ( 1, '\xDEED10', '\xBAAD10' )
+         , ( 2, '\xDEED20', '\xBAAD20' )
+         , ( 3, '\xDEED30', '\xBAAD30' )
+         , ( 4, '\xDEED40', '\xBAAD40' )
+         , ( 5, '\xDEED50', '\xBAAD50' )
     ;
 
     INSERT INTO hive.operations

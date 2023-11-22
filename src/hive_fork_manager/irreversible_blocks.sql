@@ -55,17 +55,41 @@ CREATE TABLE IF NOT EXISTS hive.transactions (
     ref_block_prefix bigint NOT NULL,
     expiration timestamp without time zone NOT NULL,
     signature bytea DEFAULT NULL,
-    CONSTRAINT pk_hive_transactions PRIMARY KEY ( trx_hash )
-);
-ALTER TABLE hive.transactions ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID;
+    CONSTRAINT pk_hive_transactions PRIMARY KEY ( trx_hash, block_num )
+)PARTITION BY RANGE ( block_num );
+ALTER TABLE hive.transactions ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num);
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions', '');
 
+CREATE OR REPLACE FUNCTION hive.create_range_partitions( table_name VARCHAR, partition_cnt INTEGER, start INTEGER, nr_blocks INTEGER ) RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    command text;
+    BEGIN
+        IF EXISTS (SELECT 1 FROM pg_partitioned_table p, pg_class c WHERE p.partrelid = c.oid AND c.relname = table_name)
+        THEN
+            command := '';
+            FOR i IN 1..partition_cnt
+            LOOP
+                command := command || 'CREATE TABLE  hive.'||table_name||'_'||(i-1)||' PARTITION OF hive.'||table_name||' FOR VALUES FROM ('||start + (i-1)*nr_blocks||') TO ('||start + (i)*nr_blocks||');';
+            END LOOP;
+
+            RAISE NOTICE '%', command;
+            EXECUTE command;
+        ELSE
+            RAISE NOTICE 'Partitions can not be created.';
+        END IF;
+END $$;
+
+SELECT hive.create_range_partitions( 'transactions', 100, 0, 1000000 );
+
 CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
+    block_num integer NOT NULL,
     trx_hash bytea NOT NULL,
     signature bytea NOT NULL,
     CONSTRAINT pk_hive_transactions_multisig PRIMARY KEY ( trx_hash, signature )
 );
-ALTER TABLE transactions_multisig ADD CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash) REFERENCES hive.transactions (trx_hash) NOT VALID;
+ALTER TABLE hive.transactions_multisig ADD CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash, block_num) REFERENCES hive.transactions (trx_hash, block_num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions_multisig', '');
 
 CREATE TABLE IF NOT EXISTS hive.operation_types (

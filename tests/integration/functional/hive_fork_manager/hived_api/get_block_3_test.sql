@@ -43,11 +43,11 @@ BEGIN
 
     INSERT INTO hive.transactions_multisig
     VALUES
-          ( '\xDEED10', '\xBEEF01' )
-        , ( '\xDEED20', '\xBEEF01' )
-        , ( '\xDEED30', '\xBEEF01' )
-        , ( '\xDEED31', '\xBEEF000302' )
-        , ( '\xDEED31', '\xBEEF000303' )
+          ( 1, '\xDEED10', '\xBEEF01' )
+        , ( 2, '\xDEED20', '\xBEEF01' )
+        , ( 3, '\xDEED30', '\xBEEF01' )
+        , ( 3, '\xDEED31', '\xBEEF000302' )
+        , ( 3, '\xDEED31', '\xBEEF000303' )
     ;
 
     INSERT INTO hive.operations

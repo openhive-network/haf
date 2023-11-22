@@ -29,8 +29,8 @@ BEGIN
 
     INSERT INTO hive.transactions_multisig
     VALUES
-           ( '\xDEED10', '\xBAAD10' )
-         , ( '\xDEED20', '\xBAAD20' )
+           ( 1, '\xDEED10', '\xBAAD10' )
+         , ( 2, '\xDEED20', '\xBAAD20' )
     ;
 
     INSERT INTO hive.operations
