@@ -147,6 +147,7 @@ check_result_accountauth()
   # Compare the actual output with the expected output
   if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
       echo "Result is OK"
+      echo
   else
       echo "Result is NOT OK"
       echo "Expected Output:"
@@ -170,6 +171,8 @@ EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervis
 ------------+-----------+----------+-----------------+-----------------+-----------+--------------
        9223 | streemian | OWNER    |            1489 | xeroc           |   1606743 |      2033587
 (1 row)"
+echo
+echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
 psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
 check_result_accountauth "$EXPECTED_OUTPUT" "$account_name"
 
@@ -185,6 +188,8 @@ EXPECTED_OUTPUT="                 public_key_to_string                  | accoun
  STM69ZG1hx2rdU2hxQkkmX5MmYkHPCmdNeXg4r6CR7gvKUzYwWPPZ |      14007 | POSTING  |   2885463 |      3762783
  STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz |      14007 | MEMO     |   2885463 |      3762783
 (4 rows)"
+echo
+echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
 psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> keyauth_run_${RUN_FOR}m.log
 check_result "$EXPECTED_OUTPUT" "$account_name"
 
@@ -200,6 +205,8 @@ EXPECTED_OUTPUT="                 public_key_to_string                  | accoun
  STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC |      14007 | POSTING  |   3399203 |      6688640
  STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO     |   3399203 |      6688640
 (4 rows)"
+echo
+echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
 psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> keyauth_run_${RUN_FOR}m.log
 check_result "$EXPECTED_OUTPUT" "$account_name"
 
@@ -214,6 +221,8 @@ EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervis
        9223 | streemian | ACTIVE   |            1489 | xeroc           |   3410418 |      6791007
        9223 | streemian | POSTING  |            1489 | xeroc           |   3410418 |      6791007
 (3 rows)"
+echo
+echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
 psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
 check_result_accountauth "$EXPECTED_OUTPUT" "$account_name"
 
