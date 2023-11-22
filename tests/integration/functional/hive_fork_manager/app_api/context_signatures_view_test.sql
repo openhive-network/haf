@@ -37,11 +37,11 @@ BEGIN
 
     INSERT INTO hive.transactions_multisig
     VALUES
-           ( '\xDEED10', '\xBAAD10' )
-         , ( '\xDEED20', '\xBAAD20' )
-         , ( '\xDEED30', '\xBAAD30' )
-         , ( '\xDEED40', '\xBAAD40' )
-         , ( '\xDEED50', '\xBAAD50' )
+           ( 1, '\xDEED10', '\xBAAD10' )
+         , ( 2, '\xDEED20', '\xBAAD20' )
+         , ( 3, '\xDEED30', '\xBAAD30' )
+         , ( 4, '\xDEED40', '\xBAAD40' )
+         , ( 5, '\xDEED50', '\xBAAD50' )
     ;
 
     INSERT INTO hive.blocks_reversible
@@ -76,20 +76,20 @@ BEGIN
 
     INSERT INTO hive.transactions_multisig_reversible
     VALUES
-       ( '\xDEED40', '\xBEEF40',  1 )
-     , ( '\xDEED55', '\xBEEF55',  1 )
-     , ( '\xDEED60', '\xBEEF61',  1 )
-     , ( '\xDEED70', '\xBEEF7110',  1 ) --must be abandon because of fork 2
-     , ( '\xDEED70', '\xBEEF7120',  1 ) --must be abandon because of fork 2
-     , ( '\xDEED70', '\xBEEF7130',  1 ) --must be abandon because of fork 2
-     , ( '\xDEED11', '\xBEEF7140',  1 ) --must be abandon because of fork 2
-     , ( '\xDEED70', '\xBEEF72',  2 )
-     , ( '\xDEED70', '\xBEEF73',  2 )
-     , ( '\xDEED80', '\xBEEF82',  2 )
-     , ( '\xDEED90', '\xBEEF92',  2 )
-     , ( '\xDEED88', '\xBEEF83',  3 )
-     , ( '\xDEED99', '\xBEEF93',  3 )
-     , ( '\xDEED1102', '\xBEEF13',  3 )
+       ( 4, '\xDEED40', '\xBEEF40',  1 )
+     , ( 5, '\xDEED55', '\xBEEF55',  1 )
+     , ( 6, '\xDEED60', '\xBEEF61',  1 )
+     , ( 7, '\xDEED70', '\xBEEF7110',  1 ) --must be abandon because of fork 2
+     , ( 7, '\xDEED70', '\xBEEF7120',  1 ) --must be abandon because of fork 2
+     , ( 7, '\xDEED70', '\xBEEF7130',  1 ) --must be abandon because of fork 2
+     , ( 1, '\xDEED11', '\xBEEF7140',  1 ) --must be abandon because of fork 2
+     , ( 7, '\xDEED70', '\xBEEF72',  2 )
+     , ( 7, '\xDEED70', '\xBEEF73',  2 )
+     , ( 8, '\xDEED80', '\xBEEF82',  2 )
+     , ( 9, '\xDEED90', '\xBEEF92',  2 )
+     , ( 8, '\xDEED88', '\xBEEF83',  3 )
+     , ( 9, '\xDEED99', '\xBEEF93',  3 )
+     , ( 10, '\xDEED1102', '\xBEEF13',  3 )
     ;
 
     UPDATE hive.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 9;

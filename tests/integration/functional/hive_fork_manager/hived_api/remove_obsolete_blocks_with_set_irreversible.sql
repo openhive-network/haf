@@ -65,20 +65,20 @@ BEGIN
 
     INSERT INTO hive.transactions_multisig_reversible
     VALUES
-           ( '\xDEED40'::bytea, '\xBEEF40'::bytea,  1 )
-         , ( '\xDEED55'::bytea, '\xBEEF55'::bytea,  1 )
-         , ( '\xDEED60'::bytea, '\xBEEF61'::bytea,  1 ) --block 6
-         , ( '\xDEED70'::bytea, '\xBEEF7110'::bytea,  1 ) -- block 7
-         , ( '\xDEED70'::bytea, '\xBEEF7120'::bytea,  1 ) -- block 7
-         , ( '\xDEED70'::bytea, '\xBEEF7130'::bytea,  1 ) -- block 7 --must be abandon because of fork 2
-         , ( '\xDEED11'::bytea, '\xBEEF7140'::bytea,  1 )
-         , ( '\xDEED70'::bytea, '\xBEEF72'::bytea,  2 ) -- block 7
-         , ( '\xDEED70'::bytea, '\xBEEF73'::bytea,  2 ) -- block 7
-         , ( '\xDEED80'::bytea, '\xBEEF82'::bytea,  2 ) -- block 8
-         , ( '\xDEED90'::bytea, '\xBEEF92'::bytea,  2 ) -- block 9
-         , ( '\xDEED88'::bytea, '\xBEEF83'::bytea,  3 ) -- block 8
-         , ( '\xDEED99'::bytea, '\xBEEF93'::bytea,  3 ) -- block 9
-         , ( '\xDEED1102'::bytea, '\xBEEF13'::bytea,  3 ) -- block 10
+           ( 4, '\xDEED40'::bytea, '\xBEEF40'::bytea,  1 )
+         , ( 5, '\xDEED55'::bytea, '\xBEEF55'::bytea,  1 )
+         , ( 6, '\xDEED60'::bytea, '\xBEEF61'::bytea,  1 ) --block 6
+         , ( 7, '\xDEED70'::bytea, '\xBEEF7110'::bytea,  1 ) -- block 7
+         , ( 7, '\xDEED70'::bytea, '\xBEEF7120'::bytea,  1 ) -- block 7
+         , ( 7, '\xDEED70'::bytea, '\xBEEF7130'::bytea,  1 ) -- block 7 --must be abandon because of fork 2
+         , ( 1, '\xDEED11'::bytea, '\xBEEF7140'::bytea,  1 )
+         , ( 7, '\xDEED70'::bytea, '\xBEEF72'::bytea,  2 ) -- block 7
+         , ( 7, '\xDEED70'::bytea, '\xBEEF73'::bytea,  2 ) -- block 7
+         , ( 8, '\xDEED80'::bytea, '\xBEEF82'::bytea,  2 ) -- block 8
+         , ( 9, '\xDEED90'::bytea, '\xBEEF92'::bytea,  2 ) -- block 9
+         , ( 8, '\xDEED88'::bytea, '\xBEEF83'::bytea,  3 ) -- block 8
+         , ( 9, '\xDEED99'::bytea, '\xBEEF93'::bytea,  3 ) -- block 9
+         , ( 10, '\xDEED1102'::bytea, '\xBEEF13'::bytea,  3 ) -- block 10
     ;
 
     INSERT INTO hive.operations_reversible(id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body_binary, fork_id)
