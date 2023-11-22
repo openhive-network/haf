@@ -81,19 +81,30 @@ SELECT hive.app_remove_context('mmm');
 
 print_result()
 {
-  psql -d $HAF_POSTGRES_URL -c "select hive.public_key_to_string(key), account_id, key_kind, block_num, op_serial_id  from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 " 
+  SQL_QUERY="
+  select hive.public_key_to_string(key),
+    account_id,
+    key_kind,
+    a.block_num,
+    op_serial_id
+  from hive.mmm_keyauth_a a
+  join hive.mmm_keyauth_k on key_serial_id = key_id
+  join hive.mmm_accounts_view av on account_id = av.id
+  WHERE av.name = 'gtg'
+  "
+
+  # Execute the query and store the output
+  local OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$SQL_QUERY")
+  echo "$OUTPUT"
+
 }
 
 check_result()
 {
   local EXPECTED_OUTPUT="$1"
   # Define the SQL query
-  SQL_QUERY="select hive.public_key_to_string(key), account_id, key_kind, block_num, op_serial_id from hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007"
-
-  # Execute the query and store the output
-  OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$SQL_QUERY")
-
   
+  local OUTPUT=$(print_result)
 
   # Compare the actual output with the expected output
   if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
