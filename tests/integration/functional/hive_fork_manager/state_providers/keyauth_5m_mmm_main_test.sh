@@ -1,3 +1,19 @@
+set -x 
+
+echo mtlk
+
+pwd
+ls -ld /var/run/postgresql
+
+docker ps | true
+
+
+# sudo /etc/init.d/postgresql status
+
+
+
+
+
 
 if [ -z "$HAF_POSTGRES_URL" ]; then
     export HAF_POSTGRES_URL="haf_block_log"
