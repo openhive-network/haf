@@ -1,13 +1,4 @@
 
-echo mtlk
-
-/etc/init.d/postgresql start || true
-/etc/init.d/postgresql status || true
-
-pwd
-ls -ld /var/run/postgresql
-
-docker ps | true
 
 
 # sudo /etc/init.d/postgresql status
@@ -80,7 +71,7 @@ SELECT hive.app_remove_context('mmm');
 
 print_result()
 {
-  local account_name="$1"  
+  local account_name="$1"
 
   local SQL_QUERY="
   select hive.public_key_to_string(key),
@@ -94,7 +85,31 @@ print_result()
   WHERE av.name = '$account_name'
   "
 
-  # Execute the query and store the output
+  local OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$SQL_QUERY")
+  echo "$OUTPUT"
+
+}
+
+print_result_accountauth()
+{
+  local account_name="$1"
+
+  local SQL_QUERY="
+select 
+    account_id,
+    av.name,
+    key_kind,
+    account_auth_id,
+    av2.name as supervisaccount,
+    a.block_num,
+    op_serial_id
+  from hive.mmm_accountauth_a a
+  
+  join hive.mmm_accounts_view av on account_id = av.id
+  join hive.mmm_accounts_view av2 on account_auth_id = av2.id
+  WHERE av.name = '$account_name'
+ "
+
   local OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$SQL_QUERY")
   echo "$OUTPUT"
 
@@ -122,9 +137,45 @@ check_result()
 
 }
 
+check_result_accountauth()
+{
+  local EXPECTED_OUTPUT="$1"
+  local account_name="$2"  
+
+  local OUTPUT=$(print_result_accountauth $account_name)
+
+  # Compare the actual output with the expected output
+  if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
+      echo "Result is OK"
+  else
+      echo "Result is NOT OK"
+      echo "Expected Output:"
+      echo "$EXPECTED_OUTPUT"
+      echo "$EXPECTED_OUTPUT" > /tmp/EXPECTED_OUTPUT.txt
+      echo 
+      echo "Actual Output:"
+      echo "$OUTPUT"
+      echo "$OUTPUT" > /tmp/OUTPUT.txt
+      exit 1
+  fi
+
+}
+
+
 drop_keyauth
 apply_keyauth
+RUN_FOR=3
+account_name='streemian'
+EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
+------------+-----------+----------+-----------------+-----------------+-----------+--------------
+       9223 | streemian | OWNER    |            1489 | xeroc           |   1606743 |      2033587
+(1 row)"
+psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
+check_result_accountauth "$EXPECTED_OUTPUT" "$account_name"
 
+
+drop_keyauth
+apply_keyauth
 RUN_FOR=3
 account_name='gtg'
 EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
@@ -135,13 +186,11 @@ EXPECTED_OUTPUT="                 public_key_to_string                  | accoun
  STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz |      14007 | MEMO     |   2885463 |      3762783
 (4 rows)"
 psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> keyauth_run_${RUN_FOR}m.log
-
 check_result "$EXPECTED_OUTPUT" "$account_name"
 
 
-exit 0
-
-
+drop_keyauth
+apply_keyauth
 RUN_FOR=5
 account_name='gtg'
 EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
@@ -152,13 +201,23 @@ EXPECTED_OUTPUT="                 public_key_to_string                  | accoun
  STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO     |   3399203 |      6688640
 (4 rows)"
 psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> keyauth_run_${RUN_FOR}m.log
-
 check_result "$EXPECTED_OUTPUT" "$account_name"
 
 
+drop_keyauth
+apply_keyauth
+RUN_FOR=5
+account_name='streemian'
+EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
+------------+-----------+----------+-----------------+-----------------+-----------+--------------
+       9223 | streemian | OWNER    |            1489 | xeroc           |   3410418 |      6791007
+       9223 | streemian | ACTIVE   |            1489 | xeroc           |   3410418 |      6791007
+       9223 | streemian | POSTING  |            1489 | xeroc           |   3410418 |      6791007
+(3 rows)"
+psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
+check_result_accountauth "$EXPECTED_OUTPUT" "$account_name"
 
-
-
+exit 0
 
 BLOCKS=(2794855 2794856 2885317 2885318 2885325 2885326 2885369 2885370)
 FROM=1
@@ -173,17 +232,3 @@ do
     FROM=$((TO + 1))
 done
 
-
-# # echo 2885369
-# # psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',2885319, 2885369, 100000000);" 2> keyauth_run.log
-# # print_result
-
-
-# # echo 2885370
-# # psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',2885370, 2885370, 100000000);" 2> keyauth_run.log
-# # print_result
-
-# # # psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, 2885317, 100000000);" 2> keyauth_run.log
-# # # psql -d $HAF_POSTGRES_URL -c "\pset pager off" -c "select hive.public_key_to_string(key), account_id, key_kind, block_num, op_serial_id  from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 " 
-# # # psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',2885317, 2885370, 1);" 2> keyauth_run.log
-# # # psql -d $HAF_POSTGRES_URL -c "\pset pager off" -c "select hive.public_key_to_string(key), account_id, key_kind, block_num, op_serial_id  from  hive.mmm_keyauth_a join hive.mmm_keyauth_k on key_serial_id = key_id WHERE account_id = 14007 " 
