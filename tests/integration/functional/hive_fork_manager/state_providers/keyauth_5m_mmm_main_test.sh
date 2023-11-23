@@ -90,20 +90,20 @@ compare_actual_vs_expected()
 
 check_keyauthauth_result()
 {
-  local account_name="$1"  
+  local ACCOUNT_NAME="$1"  
   local EXPECTED_OUTPUT="$2"
 
 
   local KEYAUTH_SQL_QUERY="
-  select hive.public_key_to_string(key),
-    account_id,
-    key_kind,
-    a.block_num,
-    op_serial_id
-  from hive.mmm_keyauth_a a
-  join hive.mmm_keyauth_k on key_serial_id = key_id
-  join hive.mmm_accounts_view av on account_id = av.id
-  WHERE av.name = '$account_name'
+    SELECT hive.public_key_to_string(key),
+        account_id,
+        key_kind,
+        a.block_num,
+        op_serial_id
+    FROM hive.mmm_keyauth_a a
+    JOIN hive.mmm_keyauth_k ON key_serial_id = key_id
+    JOIN hive.mmm_accounts_view av ON account_id = av.id
+    WHERE av.name = '$ACCOUNT_NAME'
   "
 
   local ACTUAL_OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$KEYAUTH_SQL_QUERY")
@@ -113,24 +113,23 @@ check_keyauthauth_result()
 
 check_accountauth_result()
 {
-  local account_name="$1"  
+  local ACCOUNT_NAME="$1"  
   local EXPECTED_OUTPUT="$2"
 
   local ACCOUNTAUTH_SQL_QUERY="
-select 
-    account_id,
-    av.name,
-    key_kind,
-    account_auth_id,
-    av2.name as supervisaccount,
-    a.block_num,
-    op_serial_id
-  from hive.mmm_accountauth_a a
-  
-  join hive.mmm_accounts_view av on account_id = av.id
-  join hive.mmm_accounts_view av2 on account_auth_id = av2.id
-  WHERE av.name = '$account_name'
- "
+  SELECT
+      account_id,
+      av_with_mainaccount.name,
+      key_kind,
+      account_auth_id,
+      av_with_supervisaccount.name as supervisaccount,
+      a.block_num,
+      op_serial_id
+  FROM hive.mmm_accountauth_a a
+  JOIN hive.mmm_accounts_view av_with_mainaccount ON account_id = av_with_mainaccount.id
+  JOIN hive.mmm_accounts_view av_with_supervisaccount ON account_auth_id = av_with_supervisaccount.id
+  WHERE av_with_mainaccount.name = '$ACCOUNT_NAME'
+  "
 
   local ACTUAL_OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$ACCOUNTAUTH_SQL_QUERY")
   compare_actual_vs_expected "$ACTUAL_OUTPUT" "$EXPECTED_OUTPUT"
@@ -140,14 +139,14 @@ select
 execute_sql()
 {
   local RUN_FOR="$1"
-  local account_name="$2"
+  local ACCOUNT_NAME="$2"
   local EXPECTED_OUTPUT="$3"
 
   drop_keyauth
   apply_keyauth
 
   echo
-  echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
+  echo Running state provider against account "'$ACCOUNT_NAME'" for ${RUN_FOR}m
   echo
   psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
 }
@@ -156,34 +155,34 @@ execute_sql()
 run_keyauthauth_test()
 {
   local RUN_FOR="$1"
-  local account_name="$2"
+  local ACCOUNT_NAME="$2"
   local EXPECTED_OUTPUT="$3"
-  execute_sql "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
-  check_keyauthauth_result "$account_name" "$EXPECTED_OUTPUT"
+  execute_sql "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
+  check_keyauthauth_result "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 }
 
 run_accountauth_test()
 {
   local RUN_FOR="$1"
-  local account_name="$2"
+  local ACCOUNT_NAME="$2"
   local EXPECTED_OUTPUT="$3"
-  execute_sql "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
-  check_accountauth_result "$account_name" "$EXPECTED_OUTPUT"
+  execute_sql "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
+  check_accountauth_result "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 }
 
 
 RUN_FOR=3
-account_name='streemian'
+ACCOUNT_NAME='streemian'
 EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
 ------------+-----------+----------+-----------------+-----------------+-----------+--------------
        9223 | streemian | OWNER    |            1489 | xeroc           |   1606743 |      2033587
 (1 row)"
-run_accountauth_test "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
+run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
 
 RUN_FOR=3
-account_name='gtg'
+ACCOUNT_NAME='gtg'
 EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
 -------------------------------------------------------+------------+----------+-----------+--------------
  STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi |      14007 | OWNER    |   2885463 |      3762783
@@ -191,11 +190,11 @@ EXPECTED_OUTPUT="                 public_key_to_string                  | accoun
  STM69ZG1hx2rdU2hxQkkmX5MmYkHPCmdNeXg4r6CR7gvKUzYwWPPZ |      14007 | POSTING  |   2885463 |      3762783
  STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz |      14007 | MEMO     |   2885463 |      3762783
 (4 rows)"
-run_keyauthauth_test "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
+run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
 RUN_FOR=5
-account_name='gtg'
+ACCOUNT_NAME='gtg'
 EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
 -------------------------------------------------------+------------+----------+-----------+--------------
  STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh |      14007 | OWNER    |   3399202 |      6688632
@@ -203,18 +202,18 @@ EXPECTED_OUTPUT="                 public_key_to_string                  | accoun
  STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC |      14007 | POSTING  |   3399203 |      6688640
  STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO     |   3399203 |      6688640
 (4 rows)"
-run_keyauthauth_test  "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
+run_keyauthauth_test  "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
 RUN_FOR=5
-account_name='streemian'
+ACCOUNT_NAME='streemian'
 EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
 ------------+-----------+----------+-----------------+-----------------+-----------+--------------
        9223 | streemian | OWNER    |            1489 | xeroc           |   3410418 |      6791007
        9223 | streemian | ACTIVE   |            1489 | xeroc           |   3410418 |      6791007
        9223 | streemian | POSTING  |            1489 | xeroc           |   3410418 |      6791007
 (3 rows)"
-run_accountauth_test "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
+run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
 exit 0
