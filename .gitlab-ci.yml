@@ -514,35 +514,10 @@ start_haf_as_service:
   tags:
     - data-cache-storage
 
-keyauth_5m_sh_test:
-  extends: .job-defaults
-  stage: build_and_test_phase_2
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  needs:
-    - job: prepare_haf_data
-      artifacts: true
-  services:
-    - *haf-service
-  variables:
-    HAF_POSTGRES_URL: postgresql://haf_app_admin@haf-instance:5432/haf_block_log
-    HIVED_UID: $HIVED_UID
-    HAF_COMMIT: $HAF_COMMIT
+shell_5m_test:
+  extends: start_haf_as_service
   script:
-    - set -x
-    - env
-    - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
-    - echo /etc/init.d/postgresql status || true
-    - /etc/init.d/postgresql status || true
-    - psql postgresql://haf_app_admin@haf-instance:5432/haf_block_log -c "select 1;" || true
     - tests/integration/functional/hive_fork_manager/state_providers/keyauth_5m_mmm_main_test.sh 
-  after_script:
-    - rm docker_entrypoint.log -f
-    - cp "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir/$CI_JOB_NAME.log" "$CI_PROJECT_DIR/docker_entrypoint.log"
-  artifacts:
-    paths:
-    - docker_entrypoint.log
-  tags:
-    - data-cache-storage
 
 
 
