@@ -75,19 +75,17 @@ namespace hive::plugins::sql_serializer {
       void force_trigger_flush_with_all_data( cached_data_t& cached_data, int last_block_num );
       bool can_move_to_livesync() const;
       uint32_t expected_number_of_blocks_to_sync() const;
-      bool is_any_block_dumped();
-      void dump_all_accounts();
     private:
       const sql_serializer_plugin& _main_plugin;
       hive::chain::database& _chain_db;
       const std::string _db_url;
       appbase::application& theApp;
+
       const uint32_t _psql_transactions_threads_number;
       const uint32_t _psql_operations_threads_number;
       const uint32_t _psql_account_operations_threads_number;
       const uint32_t _psql_livesync_threshold;
       const uint32_t _psql_first_block;
-      bool _was_blocks_already_dumped_during_start;
 
       boost::signals2::connection _on_irreversible_block_conn;
       INDEXATION _state{ INDEXATION::P2P };

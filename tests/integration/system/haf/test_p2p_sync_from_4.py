@@ -28,12 +28,16 @@ def test_p2p_sync_from_4(haf_node, psql_index_threshold):
 
     connect_nodes(init_node, haf_node)
     haf_node.run(wait_for_live=True)
+    tt.logger.info(f"MICKIEWICZ is in live" )
 
     head_block_num_when_live_start = haf_node.get_last_block_number()
     assert head_block_num_when_live_start > transaction_1["block_num"]
+    tt.logger.info(f"MICKIEWICZ 1" )
 
     haf_node.wait_for_transaction_in_database(transaction_0)
+    tt.logger.info(f"MICKIEWICZ 2" )
     haf_node.wait_for_transaction_in_database(transaction_1)
+    tt.logger.info(f"MICKIEWICZ 3" )
 
     # syncing has started 3 block later than blockchain start block
     block_of_transaction1 = transaction_1["block_num"]

@@ -17,8 +17,6 @@ using hive::chain::account_index;
 using hive::chain::by_id;
 
 
-
-
 namespace hive::plugins::sql_serializer {
 
   using accounts_data_container_t_writer = chunks_for_sql_writers_splitter<
@@ -43,9 +41,9 @@ namespace hive::plugins::sql_serializer {
     // Always truncate account, maybe the table contains not finished
     // dump from previous hived run. If there is no data then truncate won't be costly
     // , but making it always will make the code simpler
-    queries_commit_data_processor disable_fk_and_indexes(
+    queries_commit_data_processor truncate_accounts(
       _dburl
-      , "Disable accounts FK and indexes"
+      , "truncate hive.accounts"
       , [](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
         tx.exec("truncate hive.accounts");
         return data_processor::data_processing_status();
@@ -53,6 +51,7 @@ namespace hive::plugins::sql_serializer {
       , nullptr
       , _app
     );
+    truncate_accounts.join();
 
     auto set_consistent_block = [](block_num_rendezvous_trigger::BLOCK_NUM _block_num){return;};
     auto api_trigger = std::make_shared< block_num_rendezvous_trigger >(
@@ -67,7 +66,7 @@ namespace hive::plugins::sql_serializer {
     );
 
     auto constexpr MAX_NUMBER_OF_ACCOUNTS_IN_ONE_TURN = 10000;
-    auto constexpr BLOCK_NUM_PLACEHOLDER = 1;
+    auto constexpr BLOCK_NUM_PLACEHOLDER = 0;
     auto constexpr BLOCK_NUM_SINK = 0;
 
     std::vector<PSQL::processing_objects::account_data_t> data_to_dump;

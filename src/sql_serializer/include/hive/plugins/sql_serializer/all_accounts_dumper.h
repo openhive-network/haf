@@ -24,10 +24,6 @@ namespace hive::plugins::sql_serializer {
     ~all_accounts_dumper();
 
   private:
-    bool are_accounts_already_dumped();
-    void disable_fk_and_indexes();
-
-  private:
     const std::string _dburl;
     appbase::application& _app;
   };

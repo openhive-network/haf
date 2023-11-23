@@ -4,6 +4,7 @@
 #include <hive/plugins/sql_serializer/indexation_state.hpp>
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
 #include <hive/plugins/sql_serializer/accounts_collector.h>
+#include <hive/plugins/sql_serializer/all_accounts_dumper.h>
 
 #include <hive/plugins/sql_serializer/data_processor.hpp>
 
@@ -182,6 +183,7 @@ inline std::ostream& operator<<(std::ostream& os, const stats_group& obj)
 }
 
 using namespace hive::plugins::sql_serializer::PSQL;
+using hive::plugins::sql_serializer::all_accounts_dumper;
 
 constexpr size_t default_reservation_size{ 16'000u };
 
@@ -208,15 +210,7 @@ public:
     , uint32_t _psql_first_block
     , bool     _psql_enable_filter
   )
-  : _indexation_state( _main_plugin, _chain_db, url, app,
-                          _psql_transactions_threads_number,
-                          _psql_operations_threads_number,
-                          _psql_account_operations_threads_number,
-                          _psql_index_threshold,
-                          _psql_livesync_threshold,
-                          _psql_first_block
-                          ),
-      db_url{url},
+  :   db_url{url},
       chain_db{_chain_db},
       main_plugin{_main_plugin},
       theApp( app ),
@@ -224,9 +218,19 @@ public:
       psql_operations_threads_number( _psql_operations_threads_number ),
       psql_account_operations_threads_number( _psql_account_operations_threads_number ),
       psql_first_block( _psql_first_block ),
-      filter( _psql_enable_filter, op_extractor )
+      filter( _psql_enable_filter, op_extractor ),
+      _indexation_state( _main_plugin, _chain_db, url, app,
+                         _psql_transactions_threads_number,
+                         _psql_operations_threads_number,
+                         _psql_account_operations_threads_number,
+                         _psql_index_threshold,
+                         _psql_livesync_threshold,
+                         _psql_first_block
+      )
   {
     HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
+    _is_database_initialized = is_database_initialized();
+    load_initial_db_data();
   }
 
   ~sql_serializer_plugin_impl()
@@ -250,7 +254,10 @@ public:
 
   void handle_transactions(const vector<std::shared_ptr<hive::chain::full_transaction_type>>& transactions, const int64_t block_num);
   void inform_hfm_about_starting();
+  bool need_initialize_database( uint32_t block_num );
+  void initialize_db();
   void collect_account_operations(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
+  bool is_database_initialized();
 
   boost::signals2::connection _on_pre_apply_operation_con;
   std::unique_ptr< boost::signals2::shared_connection_block > _pre_apply_operation_blocker;
@@ -261,7 +268,6 @@ public:
   boost::signals2::connection _on_finished_reindex;
   boost::signals2::connection _on_end_of_syncing_con;
   boost::signals2::connection _on_switch_fork_conn;
-  indexation_state _indexation_state;
 
   std::string db_url;
   hive::chain::database& chain_db;
@@ -270,7 +276,6 @@ public:
 
   uint32_t _last_block_num = 0;
 
-  uint32_t last_skipped_block = 0;
   uint32_t psql_block_number = 0;
   uint32_t psql_index_threshold = 0;
   uint32_t psql_transactions_threads_number = 2;
@@ -278,7 +283,6 @@ public:
   uint32_t psql_account_operations_threads_number = 2;
   uint32_t psql_first_block = 1u;
   bool     psql_dump_account_operations = true;
-  uint32_t head_block_number = 0;
 
   std::optional<int64_t> op_sequence_id;
 
@@ -287,6 +291,9 @@ public:
   stats_group current_stats;
   type_extractor::operation_extractor op_extractor;
   blockchain_filter filter;
+
+  indexation_state _indexation_state;
+  bool _is_database_initialized;
 
   void log_statistics()
   {
@@ -310,25 +317,35 @@ public:
       return function;
   }
 
-  void init_database(bool freshDb, uint32_t max_block_number )
+  void init_database()
   {
-    head_block_number = max_block_number;
-
-    load_initial_db_data();
-    if(freshDb)
-    {
-      auto get_type_definitions = [ this ](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx){
-        auto types = PSQL::get_all_type_definitions( op_extractor );
-        if ( types.empty() )
-          return data_processing_status();;
-
-        tx.exec( types );
-        return data_processing_status();
-      };
-      queries_commit_data_processor processor( db_url, "Get type definitions", get_type_definitions, nullptr, theApp );
-      processor.trigger( nullptr, 0 );
-      processor.join();
+    if ( psql_first_block > 1 ) {
+      /* There is no much sense to disable and then enable indexes on hive.accounts
+      * After syncing  80M of blocks dumping all accounts ( c.a. 2.5M  ) lasted 100s
+      */
+      const auto number_of_threads =
+        psql_operations_threads_number + psql_transactions_threads_number + psql_account_operations_threads_number;
+      hive::plugins::sql_serializer::all_accounts_dumper(
+        number_of_threads
+        , db_url
+        , chain_db
+        , theApp
+      );
     }
+
+    auto get_type_definitions = [ this ](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx){
+      auto types = PSQL::get_all_type_definitions( op_extractor );
+      if ( types.empty() )
+        return data_processing_status();;
+
+      tx.exec( types );
+      return data_processing_status();
+    };
+    queries_commit_data_processor processor( db_url, "Get type definitions", get_type_definitions, nullptr, theApp );
+    processor.trigger( nullptr, 0 );
+    processor.join();
+
+    _is_database_initialized = true;
   }
 
   void load_initial_db_data()
@@ -362,8 +379,7 @@ public:
     ilog("psql block number: ${pbn}.", ("pbn", psql_block_number));
   }
 
-  bool skip_reversible_block(uint32_t block);
-  bool can_collect_blocks(uint32_t block_num);
+  bool can_collect_blocks();
 };
 
 void sql_serializer_plugin_impl::inform_hfm_about_starting() {
@@ -421,20 +437,57 @@ void sql_serializer_plugin_impl::disconnect_signals()
 
 void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& note)
 {
+  static std::once_flag inform_hfm_flag;
+  std::call_once(inform_hfm_flag, [&]{inform_hfm_about_starting();} );
   _indexation_state.on_block( note.block_num );
-  if ( !can_collect_blocks(note.block_num) )
-    return;
+  if (need_initialize_database(note.block_num) ) {
+    initialize_db();
+  }
 
-  ilog("Entering a resync data init for block: ${b}...", ("b", note.block_num));
+  if ( can_collect_blocks() ) {
+    if(__on_pre_apply_block_con_initialization.connected())
+      chain::util::disconnect_signal(__on_pre_apply_block_con_initialization);
+  }
+}
+
+bool sql_serializer_plugin_impl::need_initialize_database( uint32_t block_num ) {
+  /* The database must be initialized when it is not initialized already
+   * and
+   *  one block before the first synced block psql_first_block
+   * or
+   *  is state which allow to collect blocks
+   */
+  // database is already initialized
+  if ( _is_database_initialized ) {
+    return false;
+  }
+
+  // we have to initialize database one block before the first synced block
+  if ( block_num == ( psql_first_block - 1 ) ) {
+    return true;
+  }
+
+  // unfortunately genesis block (block_num == 0) will not arrive,
+  // so we need additional check for syncing from the first block
+  if ( psql_first_block == 1 && block_num == 1 ) {
+    return true;
+  }
+
+  return can_collect_blocks();
+}
+
+// returns true when it is a first block to sync after start/re-start
+void sql_serializer_plugin_impl::initialize_db()
+{
+  ilog("Initializing database...");
 
   /// Let's init our database before applying first block (resync case)...:
   inform_hfm_about_starting();
-  init_database(note.block_num == psql_first_block, note.block_num);
+  init_database();
 
-  /// And disconnect to avoid subsequent inits
-  if(__on_pre_apply_block_con_initialization.connected())
-    chain::util::disconnect_signal(__on_pre_apply_block_con_initialization);
-  ilog("Leaving a resync data init...");
+  ilog("Leaving a initializing database");
+
+  return;
 }
 
 
@@ -469,7 +522,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   if(!is_effective_operation(note.op))
     return;
 
-  if(!can_collect_blocks(note.block))
+  if(!can_collect_blocks())
     return;
 
   hive::util::supplement_operation(note.op, chain_db);
@@ -535,7 +588,8 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
 
 void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& note)
 {
-  if(!can_collect_blocks(note.block_num))
+  _last_block_num = note.block_num;
+  if(!can_collect_blocks())
     return;
 
   handle_transactions(note.full_block->get_full_transactions(), note.block_num);
@@ -572,8 +626,6 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
     dgpo.current_hbd_supply,
     dgpo.init_hbd_supply
     );
-
-  _last_block_num = note.block_num;
 
   _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
 
@@ -667,35 +719,14 @@ void sql_serializer_plugin_impl::on_post_reindex(const reindex_notification& not
 
 void sql_serializer_plugin_impl::on_end_of_syncing()
 {
-  /** Disconnect pre-apply-block/post-apply block handlers to enable runtime installation of pre/post aplly operation signals.
-  *   This way all operations being processed by "external" transactions (not included in block) will be silently ignored, without any need to special filtering.
-  */
-
   _indexation_state.on_end_of_syncing( *currently_caching_data, _last_block_num );
-}
-
-bool sql_serializer_plugin_impl::skip_reversible_block(uint32_t block_no)
-{
-  if(block_no <= psql_block_number)
-  {
-    FC_ASSERT(block_no > chain_db.get_last_irreversible_block_num(), "Block irreversible");
-
-    if( last_skipped_block == 0 )
-      last_skipped_block = block_no;
-    if(block_no >= last_skipped_block + 1000)
-    {
-      ilog("Skipping data provided by already processed reversible block: ${block_no}", ("block_no", block_no));
-      last_skipped_block = 0;
-    }
-
-    return true;
+  if (need_initialize_database( _last_block_num ) ) {
+    initialize_db();
   }
-
-  return false;
 }
 
-bool sql_serializer_plugin_impl::can_collect_blocks(uint32_t block_num) {
-  return _indexation_state.collect_blocks() && !skip_reversible_block(block_num);
+bool sql_serializer_plugin_impl::can_collect_blocks() {
+  return _indexation_state.collect_blocks();
 }
 
 void sql_serializer_plugin_impl::collect_account_operations(
@@ -705,6 +736,27 @@ void sql_serializer_plugin_impl::collect_account_operations(
 )
 {
   collector->collect(operation_id, op, block_num);
+}
+
+bool
+sql_serializer_plugin_impl::is_database_initialized() {
+  bool is_database_initialized = false;
+  queries_commit_data_processor blocks_checker(
+      db_url
+    , "Check if any block is dumped"
+    , [&is_database_initialized](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+      pqxx::result data = tx.exec("select 1 from hive.operation_types limit 1");
+      is_database_initialized = !data.empty();
+      return data_processor::data_processing_status();
+    }
+    , nullptr
+    , theApp
+  );
+
+  blocks_checker.trigger(data_processor::data_chunk_ptr(), 0);
+  blocks_checker.join();
+
+  return is_database_initialized;
 }
 
 } // namespace detail

@@ -33,7 +33,15 @@ def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
 
     blks = session.query(Blocks).order_by(Blocks.num).all()
     block_nums = [block.num for block in blks]
-    assert sorted(block_nums)[:2] == [i for i in [0, 115]]
+    # when psql-first-block is used and HAF is turning into LIVE sync state
+    # before reach the block limit, then first block which needs to be live synced
+    # is omitted in sync but the all accounts are dumped including those created in
+    # the block, next block will be fully synced. This way we avoid accounts duplication
+    # between first synced block and all accounts in state before the block.
+    # block log contains 109 blocks (are omitted because they are less than first block 115)
+    # block 110 (which is first in live sync) is sacrificed for dump all accounts in hive state
+    # block 111 is first fully synced block
+    assert sorted(block_nums)[:2] == [i for i in [0, 111]]
 
     tt.logger.info(f'head_block: {head_block} irreversible_block: {irreversible_block}')
 
