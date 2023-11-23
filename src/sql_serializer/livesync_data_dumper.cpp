@@ -13,9 +13,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , uint32_t operations_threads
     , uint32_t transactions_threads
     , uint32_t account_operation_threads
+    , uint32_t psql_first_block
     )
   : _plugin( plugin )
   , _chain_db( chain_db )
+  , _psql_first_block( psql_first_block )
   {
     auto blocks_callback = [this]( std::string&& _text ){
       _block = std::move( _text );
@@ -79,6 +81,12 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
     auto execute_set_irreversible
       = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx)->data_processor::data_processing_status{
+      // if sync has started not from first block (option psql-first-block), then
+      // it may happen that we got irreversible block
+      // event for blocks which are not dumped to the database
+      if ( _irreversible_block_num < _psql_first_block ) {
+        return data_processor::data_processing_status();
+      }
       std::string command = "SELECT hive.set_irreversible(" + std::to_string( _irreversible_block_num ) + ")";
       tx.exec( command );
       return data_processor::data_processing_status();

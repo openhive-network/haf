@@ -34,6 +34,7 @@ namespace hive::plugins::sql_serializer {
       , uint32_t operations_threads
       , uint32_t transactions_threads
       , uint32_t account_operation_threads
+      , uint32_t start_block_num
     );
 
     ~livesync_data_dumper();
@@ -112,6 +113,8 @@ namespace hive::plugins::sql_serializer {
 
     uint32_t _irreversible_block_num = 0;
     uint32_t _last_fork_block_num = 0;
+
+    const uint32_t _psql_first_block;
 
   };
 

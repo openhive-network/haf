@@ -61,15 +61,8 @@ AS
 $BODY$
 DECLARE
     __irreversible_head_block hive.blocks.num%TYPE;
-    __first_block hive.blocks.num%TYPE;
 BEGIN
     SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hive.blocks;
-
-    SELECT COALESCE( first_block_to_sync, 1 ) INTO __first_block FROM hive.irreversible_data;
-
-    if ( _block_num < __first_block ) THEN
-        RETURN;
-    END IF;
 
     IF ( _block_num < __irreversible_head_block ) THEN
         RETURN;

@@ -6,6 +6,7 @@
 #include <hive/plugins/sql_serializer/fake_data_dumper.h>
 #include <hive/plugins/sql_serializer/livesync_data_dumper.h>
 #include <hive/plugins/sql_serializer/reindex_data_dumper.h>
+#include <hive/plugins/sql_serializer/all_accounts_dumper.h>
 
 #include <fc/exception/exception.hpp>
 #include <fc/log/logger.hpp>
@@ -164,9 +165,6 @@ indexation_state::indexation_state(
       [this]( uint32_t block_num ){ on_irreversible_block( block_num ); }
     , _main_plugin
   );
-
-  _was_blocks_already_dumped_during_start
-    =  is_any_block_dumped();
 }
 
 void
@@ -294,9 +292,6 @@ indexation_state::update_state(
       break;
     case INDEXATION::P2P:
       ilog("Entering P2P sync...");
-      if ( _state == INDEXATION::WAIT ) {
-        dump_all_accounts();
-      }
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
@@ -322,9 +317,7 @@ indexation_state::update_state(
     case INDEXATION::REINDEX:
       ilog("PROFILE: Entering REINDEX sync from start state, dropping constraints: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       FC_ASSERT( _state == INDEXATION::START || _state == INDEXATION::REINDEX_WAIT , "Reindex always starts after START or REINDEX_WAIT" );
-      if ( _state == INDEXATION::REINDEX_WAIT ) {
-        dump_all_accounts();
-      }
+
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
@@ -356,9 +349,7 @@ indexation_state::update_state(
         auto irreversible_cached_data = move_irreveresible_blocks(cached_data, _irreversible_block_num );
         force_trigger_flush_with_all_data( irreversible_cached_data, _irreversible_block_num );
       }
-      if ( _state == INDEXATION::WAIT || _state == INDEXATION::START ) {
-        dump_all_accounts();
-      }
+
       _trigger.reset();
       _dumper.reset();
       _indexes_controler.enable_indexes();
@@ -371,6 +362,7 @@ indexation_state::update_state(
         , _psql_operations_threads_number
         , _psql_transactions_threads_number
         , _psql_account_operations_threads_number
+        , _psql_first_block
         );
       _trigger = std::make_unique< live_flush_trigger >(
         [this]( cached_data_t& cached_data, int last_block_num ) {
@@ -378,7 +370,7 @@ indexation_state::update_state(
         }
         );
       flush_all_data_to_reversible( cached_data );
-      ilog("PROFILE: Entered LIVE sync from start state: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
+      ilog("PROFILE: Entered LIVE sync from start state: ${t} s ${b}",("t",(fc::time_point::now() - _start_state_time).to_seconds())("b",last_block_num));
       break;
       }
    case INDEXATION::WAIT:
@@ -465,53 +457,7 @@ indexation_state::on_switch_fork( cached_data_t& cached_data, uint32_t block_num
 
 bool
 indexation_state::collect_blocks() const {
-  return _was_blocks_already_dumped_during_start
-    || ( static_cast< uint32_t >( _state ) & COLLECT_BLOCKS_MASK );
-}
-
-bool
-indexation_state::is_any_block_dumped() {
-  bool is_any_block_dumped = false;
-  queries_commit_data_processor blocks_checker(
-      _db_url
-    , "Check if any block is dumped"
-    , [&is_any_block_dumped](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
-      pqxx::result data = tx.exec("select 1 from hive.blocks where num != hive.block_sink_num() limit 1");
-      is_any_block_dumped = !data.empty();
-      return data_processor::data_processing_status();
-    }
-    , nullptr
-    , theApp
-  );
-
-  blocks_checker.trigger(data_processor::data_chunk_ptr(), 0);
-  blocks_checker.join();
-
-  return is_any_block_dumped;
-}
-
-void
-indexation_state::dump_all_accounts() {
-  /* If there is any block already dumped, then it means
-    * that accounts are also already dumped
-    */
-  if ( _was_blocks_already_dumped_during_start )
-    return;
-
-  // disable FK and indexes on hive.accounts. Make it always, entering to
-  // the indexation state will enable/disable them according to the state machine
-  // documentation
-  _indexes_controler.disable_constraints();
-  _indexes_controler.disable_indexes_depends_on_blocks( std::numeric_limits< uint32_t >::max() );
-
-  const auto number_of_threads =
-    _psql_operations_threads_number + _psql_transactions_threads_number +_psql_account_operations_threads_number;
-  all_accounts_dumper(
-      number_of_threads
-    , _db_url
-    , _chain_db
-    , theApp
-  );
+  return static_cast< uint32_t >( _state ) & COLLECT_BLOCKS_MASK;
 }
 
 }}} // namespace hive{ namespace plugins{ namespace sql_serializer
