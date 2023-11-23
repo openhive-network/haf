@@ -125,6 +125,7 @@ check_result()
   # Compare the actual output with the expected output
   if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
       echo "Result is OK"
+      echo 
   else
       echo "Result is NOT OK"
       echo "Expected Output:"
@@ -163,22 +164,31 @@ check_result_accountauth()
 }
 
 
-drop_keyauth
-apply_keyauth
 RUN_FOR=3
 account_name='streemian'
 EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
 ------------+-----------+----------+-----------------+-----------------+-----------+--------------
        9223 | streemian | OWNER    |            1489 | xeroc           |   1606743 |      2033587
 (1 row)"
-echo
-echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
-psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
-check_result_accountauth "$EXPECTED_OUTPUT" "$account_name"
+run_accountauth_test()
+{
+  local RUN_FOR="$1"
+  local account_name="$2"
+  local EXPECTED_OUTPUT="$3"
+
+  drop_keyauth
+  apply_keyauth
+
+  echo
+  echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
+  psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
+  check_result_accountauth "$EXPECTED_OUTPUT" "$account_name"
+}
+
+run_accountauth_test "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
 
 
-drop_keyauth
-apply_keyauth
+
 RUN_FOR=3
 account_name='gtg'
 EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
@@ -188,14 +198,23 @@ EXPECTED_OUTPUT="                 public_key_to_string                  | accoun
  STM69ZG1hx2rdU2hxQkkmX5MmYkHPCmdNeXg4r6CR7gvKUzYwWPPZ |      14007 | POSTING  |   2885463 |      3762783
  STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz |      14007 | MEMO     |   2885463 |      3762783
 (4 rows)"
-echo
-echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
-psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> keyauth_run_${RUN_FOR}m.log
-check_result "$EXPECTED_OUTPUT" "$account_name"
+run_keyauthauth_test()
+{
+  local RUN_FOR="$1"
+  local account_name="$2"
+  local EXPECTED_OUTPUT="$3"
+
+  drop_keyauth
+  apply_keyauth
+
+  echo
+  echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
+  psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
+  check_result "$EXPECTED_OUTPUT" "$account_name"
+}
+run_keyauthauth_test "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
 
 
-drop_keyauth
-apply_keyauth
 RUN_FOR=5
 account_name='gtg'
 EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
@@ -205,14 +224,9 @@ EXPECTED_OUTPUT="                 public_key_to_string                  | accoun
  STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC |      14007 | POSTING  |   3399203 |      6688640
  STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO     |   3399203 |      6688640
 (4 rows)"
-echo
-echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
-psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> keyauth_run_${RUN_FOR}m.log
-check_result "$EXPECTED_OUTPUT" "$account_name"
+run_keyauthauth_test  "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
 
 
-drop_keyauth
-apply_keyauth
 RUN_FOR=5
 account_name='streemian'
 EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
@@ -221,10 +235,8 @@ EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervis
        9223 | streemian | ACTIVE   |            1489 | xeroc           |   3410418 |      6791007
        9223 | streemian | POSTING  |            1489 | xeroc           |   3410418 |      6791007
 (3 rows)"
-echo
-echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
-psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
-check_result_accountauth "$EXPECTED_OUTPUT" "$account_name"
+run_accountauth_test "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
+
 
 exit 0
 
