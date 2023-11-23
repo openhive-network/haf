@@ -71,10 +71,10 @@ SELECT hive.app_remove_context('mmm');
 
 compare_actual_vs_expected()
 {
-  local OUTPUT="$1"
+  local ACTUAL_OUTPUT="$1"
   local EXPECTED_OUTPUT="$2"
 
-  if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
+  if [ "$ACTUAL_OUTPUT" == "$EXPECTED_OUTPUT" ]; then
       echo "Result is OK"
       echo 
   else
@@ -83,12 +83,12 @@ compare_actual_vs_expected()
       echo "$EXPECTED_OUTPUT"
       echo 
       echo "Actual Output:"
-      echo "$OUTPUT"
+      echo "$ACTUAL_OUTPUT"
       exit 1
   fi
 }
 
-check_result()
+check_keyauthauth_result()
 {
   local account_name="$1"  
   local EXPECTED_OUTPUT="$2"
@@ -106,12 +106,12 @@ check_result()
   WHERE av.name = '$account_name'
   "
 
-  local OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$KEYAUTH_SQL_QUERY")
+  local ACTUAL_OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$KEYAUTH_SQL_QUERY")
 
-  compare_actual_vs_expected "$OUTPUT" "$EXPECTED_OUTPUT"
+  compare_actual_vs_expected "$ACTUAL_OUTPUT" "$EXPECTED_OUTPUT"
 }
 
-check_result_accountauth()
+check_accountauth_result()
 {
   local account_name="$1"  
   local EXPECTED_OUTPUT="$2"
@@ -132,8 +132,8 @@ select
   WHERE av.name = '$account_name'
  "
 
-  local OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$ACCOUNTAUTH_SQL_QUERY")
-  compare_actual_vs_expected "$OUTPUT" "$EXPECTED_OUTPUT"
+  local ACTUAL_OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$ACCOUNTAUTH_SQL_QUERY")
+  compare_actual_vs_expected "$ACTUAL_OUTPUT" "$EXPECTED_OUTPUT"
 
 }
 
@@ -159,7 +159,7 @@ run_keyauthauth_test()
   local account_name="$2"
   local EXPECTED_OUTPUT="$3"
   execute_sql "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
-  check_result "$account_name" "$EXPECTED_OUTPUT"
+  check_keyauthauth_result "$account_name" "$EXPECTED_OUTPUT"
 }
 
 run_accountauth_test()
@@ -168,7 +168,7 @@ run_accountauth_test()
   local account_name="$2"
   local EXPECTED_OUTPUT="$3"
   execute_sql "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
-  check_result_accountauth "$account_name" "$EXPECTED_OUTPUT"
+  check_accountauth_result "$account_name" "$EXPECTED_OUTPUT"
 }
 
 
