@@ -117,8 +117,8 @@ select
 
 check_result()
 {
-  local EXPECTED_OUTPUT="$1"
-  local account_name="$2"  
+  local account_name="$1"  
+  local EXPECTED_OUTPUT="$2"
 
   local OUTPUT=$(print_result $account_name)
 
@@ -140,8 +140,8 @@ check_result()
 
 check_result_accountauth()
 {
-  local EXPECTED_OUTPUT="$1"
-  local account_name="$2"  
+  local account_name="$1"  
+  local EXPECTED_OUTPUT="$2"
 
   local OUTPUT=$(print_result_accountauth $account_name)
 
@@ -163,14 +163,7 @@ check_result_accountauth()
 
 }
 
-
-RUN_FOR=3
-account_name='streemian'
-EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
-------------+-----------+----------+-----------------+-----------------+-----------+--------------
-       9223 | streemian | OWNER    |            1489 | xeroc           |   1606743 |      2033587
-(1 row)"
-run_accountauth_test()
+execute_sql()
 {
   local RUN_FOR="$1"
   local account_name="$2"
@@ -182,9 +175,34 @@ run_accountauth_test()
   echo
   echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
   psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
-  check_result_accountauth "$EXPECTED_OUTPUT" "$account_name"
 }
 
+
+run_keyauthauth_test()
+{
+  local RUN_FOR="$1"
+  local account_name="$2"
+  local EXPECTED_OUTPUT="$3"
+  execute_sql "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
+  check_result "$account_name" "$EXPECTED_OUTPUT"
+}
+
+run_accountauth_test()
+{
+  local RUN_FOR="$1"
+  local account_name="$2"
+  local EXPECTED_OUTPUT="$3"
+  execute_sql "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
+  check_result_accountauth "$account_name" "$EXPECTED_OUTPUT"
+}
+
+
+RUN_FOR=3
+account_name='streemian'
+EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
+------------+-----------+----------+-----------------+-----------------+-----------+--------------
+       9223 | streemian | OWNER    |            1489 | xeroc           |   1606743 |      2033587
+(1 row)"
 run_accountauth_test "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
 
 
@@ -198,20 +216,6 @@ EXPECTED_OUTPUT="                 public_key_to_string                  | accoun
  STM69ZG1hx2rdU2hxQkkmX5MmYkHPCmdNeXg4r6CR7gvKUzYwWPPZ |      14007 | POSTING  |   2885463 |      3762783
  STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz |      14007 | MEMO     |   2885463 |      3762783
 (4 rows)"
-run_keyauthauth_test()
-{
-  local RUN_FOR="$1"
-  local account_name="$2"
-  local EXPECTED_OUTPUT="$3"
-
-  drop_keyauth
-  apply_keyauth
-
-  echo
-  echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
-  psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
-  check_result "$EXPECTED_OUTPUT" "$account_name"
-}
 run_keyauthauth_test "$RUN_FOR" "$account_name" "$EXPECTED_OUTPUT"
 
 
