@@ -69,11 +69,13 @@ SELECT hive.app_remove_context('mmm');
 
 }
 
-print_result()
+check_result()
 {
-  local account_name="$1"
+  local account_name="$1"  
+  local EXPECTED_OUTPUT="$2"
 
-  local SQL_QUERY="
+
+  local KEYAUTH_SQL_QUERY="
   select hive.public_key_to_string(key),
     account_id,
     key_kind,
@@ -85,42 +87,8 @@ print_result()
   WHERE av.name = '$account_name'
   "
 
-  local OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$SQL_QUERY")
-  echo "$OUTPUT"
+  local OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$KEYAUTH_SQL_QUERY")
 
-}
-
-print_result_accountauth()
-{
-  local account_name="$1"
-
-  local SQL_QUERY="
-select 
-    account_id,
-    av.name,
-    key_kind,
-    account_auth_id,
-    av2.name as supervisaccount,
-    a.block_num,
-    op_serial_id
-  from hive.mmm_accountauth_a a
-  
-  join hive.mmm_accounts_view av on account_id = av.id
-  join hive.mmm_accounts_view av2 on account_auth_id = av2.id
-  WHERE av.name = '$account_name'
- "
-
-  local OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$SQL_QUERY")
-  echo "$OUTPUT"
-
-}
-
-check_result()
-{
-  local account_name="$1"  
-  local EXPECTED_OUTPUT="$2"
-
-  local OUTPUT=$(print_result $account_name)
 
   # Compare the actual output with the expected output
   if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
@@ -143,7 +111,23 @@ check_result_accountauth()
   local account_name="$1"  
   local EXPECTED_OUTPUT="$2"
 
-  local OUTPUT=$(print_result_accountauth $account_name)
+  local ACCOUNTAUTH_SQL_QUERY="
+select 
+    account_id,
+    av.name,
+    key_kind,
+    account_auth_id,
+    av2.name as supervisaccount,
+    a.block_num,
+    op_serial_id
+  from hive.mmm_accountauth_a a
+  
+  join hive.mmm_accounts_view av on account_id = av.id
+  join hive.mmm_accounts_view av2 on account_auth_id = av2.id
+  WHERE av.name = '$account_name'
+ "
+
+  local OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$ACCOUNTAUTH_SQL_QUERY")
 
   # Compare the actual output with the expected output
   if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
@@ -174,6 +158,7 @@ execute_sql()
 
   echo
   echo Running state provider against account "'$account_name'" for ${RUN_FOR}m
+  echo
   psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',1, ${RUN_FOR}000000, 100000);" 2> accountauth_run_${RUN_FOR}m.log
 }
 
