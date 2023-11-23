@@ -517,7 +517,7 @@ start_haf_as_service:
 shell_5m_test:
   extends: start_haf_as_service
   script:
-    - tests/integration/functional/hive_fork_manager/state_providers/keyauth_5m_mmm_main_test.sh 
+    - tests/integration/functional/hive_fork_manager/state_providers/test_keyauth_5m.sh
 
 
 
