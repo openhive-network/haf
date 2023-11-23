@@ -69,6 +69,25 @@ SELECT hive.app_remove_context('mmm');
 
 }
 
+compare_actual_vs_expected()
+{
+  local OUTPUT="$1"
+  local EXPECTED_OUTPUT="$2"
+
+  if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
+      echo "Result is OK"
+      echo 
+  else
+      echo "Result is NOT OK"
+      echo "Expected Output:"
+      echo "$EXPECTED_OUTPUT"
+      echo 
+      echo "Actual Output:"
+      echo "$OUTPUT"
+      exit 1
+  fi
+}
+
 check_result()
 {
   local account_name="$1"  
@@ -89,21 +108,7 @@ check_result()
 
   local OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$KEYAUTH_SQL_QUERY")
 
-
-  # Compare the actual output with the expected output
-  if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
-      echo "Result is OK"
-      echo 
-  else
-      echo "Result is NOT OK"
-      echo "Expected Output:"
-      echo "$EXPECTED_OUTPUT"
-      echo 
-      echo "Actual Output:"
-      echo "$OUTPUT"
-      exit 1
-  fi
-
+  compare_actual_vs_expected "$OUTPUT" "$EXPECTED_OUTPUT"
 }
 
 check_result_accountauth()
@@ -128,22 +133,7 @@ select
  "
 
   local OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$ACCOUNTAUTH_SQL_QUERY")
-
-  # Compare the actual output with the expected output
-  if [ "$OUTPUT" == "$EXPECTED_OUTPUT" ]; then
-      echo "Result is OK"
-      echo
-  else
-      echo "Result is NOT OK"
-      echo "Expected Output:"
-      echo "$EXPECTED_OUTPUT"
-      echo "$EXPECTED_OUTPUT" > /tmp/EXPECTED_OUTPUT.txt
-      echo 
-      echo "Actual Output:"
-      echo "$OUTPUT"
-      echo "$OUTPUT" > /tmp/OUTPUT.txt
-      exit 1
-  fi
+  compare_actual_vs_expected "$OUTPUT" "$EXPECTED_OUTPUT"
 
 }
 
