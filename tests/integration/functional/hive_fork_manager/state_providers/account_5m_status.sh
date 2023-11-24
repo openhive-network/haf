@@ -1,21 +1,32 @@
 #!/usr/bin/env bash
 
 # Default account name; can be overridden by command line argument
-DEFAULT_ACCOUNT=${1:-"gtg"}
+DEFAULT_ACCOUNT=${1:-"dodl11"}
 
 BUILD_DIR=.
 BUILD_DIR=$(realpath $BUILD_DIR)
 SRC_DIR=../haf
 DATA_DIR=/home/hived/datadir
+OUTPUT_DIR=/tmp/hived
 
-# Array of noncontiguous numbers
-NUMBERS=(1 2794855 2794856 2794857 2885318 2885370 2885375 2885409 2885463 3000000 4000000 5000000)
+NUMBERS=(
+# 4107638
+# 4107639
+
+# 4109470
+# 4109471
+
+# 4111471
+4111472
+
+
+ )
 
 fetch_and_save_account() {
     local last_block=$1
-    local account_name=${2:-$DEFAULT_ACCOUNT}
-    local result_file="/tmp/a_${account_name}_changes.txt"
-    local account_file="/tmp/${account_name}_$last_block.json"
+    local account_name=$DEFAULT_ACCOUNT
+    local result_file="$OUTPUT_DIR/a_${account_name}_changes.txt"
+    local account_file="$OUTPUT_DIR/${account_name}_$last_block.json"
 
     # Fetch account data
     response=$(curl -s --data '{"jsonrpc":"2.0", "method":"condenser_api.get_accounts", "params":[["'$account_name'"]], "id":1}' localhost:8090)
@@ -39,8 +50,8 @@ previous_data=""
 # Function to fetch and monitor changes in the specified account
 fetch_and_monitor_account() {
     local last_block=$1
-    local account_name=${2:-$DEFAULT_ACCOUNT}
-    local result_file="/tmp/${account_name}_changes.txt"
+    local account_name=$DEFAULT_ACCOUNT
+    local result_file="$OUTPUT_DIR/${account_name}_changes.txt"
 
     # Fetch account data
     response=$(curl -s --data '{"jsonrpc":"2.0", "method":"condenser_api.get_accounts", "params":[["'$account_name'"]], "id":1}' localhost:8090)
@@ -78,7 +89,7 @@ g_is_first_run=1
 # Function to start hived and monitor its stderr
 run_hived_and_monitor() {
     LAST_BLOCK=$1
-    LOG_FILE="/tmp/hived_stderr_${LAST_BLOCK}.log"
+    LOG_FILE="$OUTPUT_DIR/hived_stderr_${LAST_BLOCK}.log"
     FORCE_REPLAY_OPTION=""
 
     # Apply --force-replay only on the first iteration
@@ -113,8 +124,8 @@ run_hived_and_monitor() {
 
             echo "Running hived (PID: $PID) (block_num: $LAST_BLOCK)"
             curl -s --data '{"jsonrpc":"2.0", "method":"condenser_api.get_account_count", "params":[], "id":1}' localhost:8090 | jq .
-            fetch_and_monitor_gtg $LAST_BLOCK
-            fetch_and_save_gtg_account $LAST_BLOCK
+            fetch_and_monitor_account $LAST_BLOCK
+            fetch_and_save_account $LAST_BLOCK
             echo "Stopping hived (PID: $PID)"
             kill -SIGINT $PID
             break
