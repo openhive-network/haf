@@ -110,17 +110,9 @@ BEGIN
                 'hive::protocol::create_claimed_account_operation',
                 'hive::protocol::recover_account_operation',
                 'hive::protocol::request_account_recovery_operation',
-                'hive::protocol::witness_set_properties_operation'
+                'hive::protocol::witness_set_properties_operation',
+                'hive::protocol::witness_update_operation'
 
-                -- pow2_operation
-
-                -- account_witness_proxy_operation
-                -- account_witness_vote_operation
-                -- change_recovery_account_operation
-                -- prove_authority ?
-
-                
-                
             )
         ),
 
