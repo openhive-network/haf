@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Default account name; can be overridden by command line argument
-DEFAULT_ACCOUNT=${1:-"dodl11"}
+DEFAULT_ACCOUNT=${1:-"gtg"}
 
 BUILD_DIR=.
 BUILD_DIR=$(realpath $BUILD_DIR)
@@ -10,15 +10,7 @@ DATA_DIR=/home/hived/datadir
 OUTPUT_DIR=/tmp/hived
 
 NUMBERS=(
-# 4107638
-# 4107639
-
-# 4109470
-# 4109471
-
-# 4111471
-4111472
-
+5000000
 
  )
 
@@ -30,10 +22,12 @@ fetch_and_save_account() {
 
     # Fetch account data
     response=$(curl -s --data '{"jsonrpc":"2.0", "method":"condenser_api.get_accounts", "params":[["'$account_name'"]], "id":1}' localhost:8090)
+    witness=$(curl -s --data '{"jsonrpc":"2.0", "method":"condenser_api.get_witness_by_account", "params":["'$account_name'"], "id":1}' localhost:8090)
     account_data=$(echo "$response" | jq -r '.result[0]')
 
     # Save the account data to a file
     echo "$account_data" > "$account_file"
+    echo "$witness" | jq '.result.signing_key' >> "$account_file"
 
     # Check for changes in the account data and log to result_file
     if [ "$previous_account_data" != "$account_data" ]; then
