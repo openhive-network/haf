@@ -183,6 +183,22 @@ EOF
 run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
+# 'wackou' update_witness_operation
+RUN_FOR=1
+ACCOUNT_NAME='wackou'
+EXPECTED_OUTPUT=$(cat <<'EOF'
+                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
+-------------------------------------------------------+------------+-----------------+-----------+--------------
+ STM8Nb7Fn1LkHqGCdUq2kvdJYNMgcLoufPePi6TtfQBn18HE9Qbyp |        696 | OWNER           |    827105 |      1098806
+ STM8TskdYLGtCtWRqGrXtJiePngvrJVpL9ue9nrMnFqwsLeth8978 |        696 | ACTIVE          |    827105 |      1098806
+ STM6HRMhY5XQoX6S8Q26Kb32r3KCbBVWr9rwcYKHv6bzeX3uQFvfZ |        696 | POSTING         |    827105 |      1098806
+ STM8Nb7Fn1LkHqGCdUq2kvdJYNMgcLoufPePi6TtfQBn18HE9Qbyp |        696 | MEMO            |    827105 |      1098806
+ STM6Kq8bD5PKn53MYQkJo35BagfjvfV2yY13j9WUTsNRAsAU8TegZ |        696 | WITNESS_SIGNING |    957259 |      1263434
+(5 rows)
+EOF
+)
+run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
+
 # 'dodl01' uses pow2_operation
 RUN_FOR=5
 ACCOUNT_NAME='dodl01'

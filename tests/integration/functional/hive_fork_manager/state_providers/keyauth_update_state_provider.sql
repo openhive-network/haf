@@ -567,6 +567,7 @@ UNION ALL SELECT 'hive::protocol::create_claimed_account_operation'
 UNION ALL SELECT 'hive::protocol::recover_account_operation'
 UNION ALL SELECT 'hive::protocol::reset_account_operation'
 UNION ALL SELECT 'hive::protocol::witness_set_properties_operation'
+UNION ALL SELECT 'hive::protocol::witness_update_operation'
 ;
 END
 $$;
