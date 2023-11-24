@@ -173,72 +173,90 @@ run_accountauth_test()
 # 'streemian' and 'gtg' use pow_operation to create themselves
 RUN_FOR=3
 ACCOUNT_NAME='streemian'
-EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
+EXPECTED_OUTPUT=$(cat <<'EOF'
+ account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
 ------------+-----------+----------+-----------------+-----------------+-----------+--------------
        9223 | streemian | OWNER    |            1489 | xeroc           |   1606743 |      2033587
-(1 row)"
+(1 row)
+EOF
+)
 run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
 # 'dodl01' uses pow2_operation
 RUN_FOR=5
 ACCOUNT_NAME='dodl01'
-EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
+EXPECTED_OUTPUT=$(cat <<'EOF'
+                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
 -------------------------------------------------------+------------+----------+-----------+--------------
  STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | OWNER    |   4103291 |     12948444
  STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | ACTIVE   |   4103291 |     12948444
  STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | POSTING  |   4103291 |     12948444
  STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | MEMO     |   4103291 |     12948444
-(4 rows)"
+(4 rows)
+EOF
+)
 run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 # 'dodl11' uses pow2_operation as its first operation
 RUN_FOR=5
 ACCOUNT_NAME='dodl11'
-EXPECTED_OUTPUT="                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
+EXPECTED_OUTPUT=$(cat <<'EOF'
+                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
 -------------------------------------------------------+------------+-----------------+-----------+--------------
  STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | OWNER           |   4107639 |     12987166
  STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | ACTIVE          |   4107639 |     12987166
  STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | POSTING         |   4107639 |     12987166
  STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | MEMO            |   4107639 |     12987166
  STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | WITNESS_SIGNING |   4107639 |     12987166
-(5 rows)"
+(5 rows)
+EOF
+)
 
 run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
 RUN_FOR=3
 ACCOUNT_NAME='gtg'
-EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
+EXPECTED_OUTPUT=$(cat <<'EOF'
+                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
 -------------------------------------------------------+------------+----------+-----------+--------------
  STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi |      14007 | OWNER    |   2885463 |      3762783
  STM6AzXNwWRzTWCVTgP4oKQEALTW8HmDuRq1avGWjHH23XBNhux6U |      14007 | ACTIVE   |   2885463 |      3762783
  STM69ZG1hx2rdU2hxQkkmX5MmYkHPCmdNeXg4r6CR7gvKUzYwWPPZ |      14007 | POSTING  |   2885463 |      3762783
  STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz |      14007 | MEMO     |   2885463 |      3762783
-(4 rows)"
+(4 rows)
+EOF
+)
 run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
 RUN_FOR=5
 ACCOUNT_NAME='gtg'
-EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
+EXPECTED_OUTPUT=$(cat <<'EOF'
+                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
 -------------------------------------------------------+------------+----------+-----------+--------------
  STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh |      14007 | OWNER    |   3399202 |      6688632
  STM4vuEE8F2xyJhwiNCnHxjUVLNXxdFXtVxgghBq5LVLt49zLKLRX |      14007 | ACTIVE   |   3399203 |      6688640
  STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC |      14007 | POSTING  |   3399203 |      6688640
  STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO     |   3399203 |      6688640
-(4 rows)"
+(4 rows)
+EOF
+)
 run_keyauthauth_test  "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
 RUN_FOR=5
 ACCOUNT_NAME='streemian'
-EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
+EXPECTED_OUTPUT=$(cat <<'EOF'
+ account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
 ------------+-----------+----------+-----------------+-----------------+-----------+--------------
        9223 | streemian | OWNER    |            1489 | xeroc           |   3410418 |      6791007
        9223 | streemian | ACTIVE   |            1489 | xeroc           |   3410418 |      6791007
        9223 | streemian | POSTING  |            1489 | xeroc           |   3410418 |      6791007
-(3 rows)"
+(3 rows)
+EOF
+)
 run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
