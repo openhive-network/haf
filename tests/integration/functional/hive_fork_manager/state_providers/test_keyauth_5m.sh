@@ -170,7 +170,7 @@ run_accountauth_test()
   check_accountauth_result "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 }
 
-
+# 'streemian' and 'gtg' use pow_operation to create themselves
 RUN_FOR=3
 ACCOUNT_NAME='streemian'
 EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
@@ -179,6 +179,32 @@ EXPECTED_OUTPUT=" account_id |   name    | key_kind | account_auth_id | supervis
 (1 row)"
 run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
+
+# 'dodl01' uses pow2_operation
+RUN_FOR=5
+ACCOUNT_NAME='dodl01'
+EXPECTED_OUTPUT="                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
+-------------------------------------------------------+------------+----------+-----------+--------------
+ STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | OWNER    |   4103291 |     12948444
+ STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | ACTIVE   |   4103291 |     12948444
+ STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | POSTING  |   4103291 |     12948444
+ STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | MEMO     |   4103291 |     12948444
+(4 rows)"
+run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
+
+# 'dodl11' uses pow2_operation as its first operation
+RUN_FOR=5
+ACCOUNT_NAME='dodl11'
+EXPECTED_OUTPUT="                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
+-------------------------------------------------------+------------+-----------------+-----------+--------------
+ STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | OWNER           |   4107639 |     12987166
+ STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | ACTIVE          |   4107639 |     12987166
+ STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | POSTING         |   4107639 |     12987166
+ STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | MEMO            |   4107639 |     12987166
+ STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | WITNESS_SIGNING |   4107639 |     12987166
+(5 rows)"
+
+run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
 RUN_FOR=3

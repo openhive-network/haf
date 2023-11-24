@@ -559,6 +559,7 @@ BEGIN
 RETURN QUERY
           SELECT 'hive::protocol::account_create_operation'
 UNION ALL SELECT 'hive::protocol::pow_operation'
+UNION ALL SELECT 'hive::protocol::pow2_operation'
 UNION ALL SELECT 'hive::protocol::account_create_with_delegation_operation'
 UNION ALL SELECT 'hive::protocol::account_update_operation'
 UNION ALL SELECT 'hive::protocol::account_update2_operation'

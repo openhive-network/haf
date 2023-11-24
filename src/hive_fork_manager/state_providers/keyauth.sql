@@ -102,6 +102,7 @@ BEGIN
             WHERE ov.block_num BETWEEN _first_block AND _last_block
             AND ot.name IN (
                 'hive::protocol::pow_operation',
+                'hive::protocol::pow2_operation',
                 'hive::protocol::account_create_operation',
                 'hive::protocol::account_create_with_delegation_operation',
                 'hive::protocol::account_update_operation',
