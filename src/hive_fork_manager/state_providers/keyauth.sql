@@ -85,6 +85,9 @@ BEGIN
         _first_block hive.blocks.num%%TYPE,
         _last_block hive.blocks.num%%TYPE
     ) RETURNS VOID AS $$
+    SET join_collapse_limit=16
+    SET from_collapse_limit=16
+    SET jit=FALSE
     BEGIN
 
         -- This is the initial CTE which selects key authority-related data from an operations view,
