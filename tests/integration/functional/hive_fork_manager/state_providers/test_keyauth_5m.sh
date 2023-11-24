@@ -1,12 +1,4 @@
-
-
-
-# sudo /etc/init.d/postgresql status
-
-
-
-
-
+#! /usr/bin/env bash
 
 if [ -z "$HAF_POSTGRES_URL" ]; then
     export HAF_POSTGRES_URL="haf_block_log"
@@ -55,7 +47,7 @@ BEGIN
 END
 \$\$;
 "
-    psql -d $HAF_POSTGRES_URL -c "$SQL_COMMANDS"
+  psql -d $HAF_POSTGRES_URL -c "$SQL_COMMANDS"
 
 }
 
@@ -65,8 +57,7 @@ SQL_COMMANDS="
 SELECT hive.app_state_provider_drop('KEYAUTH', 'mmm');
 SELECT hive.app_remove_context('mmm');
 "
-    psql -d $HAF_POSTGRES_URL -c "$SQL_COMMANDS"
-
+  psql -d $HAF_POSTGRES_URL -c "$SQL_COMMANDS"
 }
 
 compare_actual_vs_expected()
@@ -183,6 +174,22 @@ EOF
 run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
+# 'wackou' update_witness_operation
+RUN_FOR=1
+ACCOUNT_NAME='wackou'
+EXPECTED_OUTPUT=$(cat <<'EOF'
+                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
+-------------------------------------------------------+------------+-----------------+-----------+--------------
+ STM8Nb7Fn1LkHqGCdUq2kvdJYNMgcLoufPePi6TtfQBn18HE9Qbyp |        696 | OWNER           |    827105 |      1098806
+ STM8TskdYLGtCtWRqGrXtJiePngvrJVpL9ue9nrMnFqwsLeth8978 |        696 | ACTIVE          |    827105 |      1098806
+ STM6HRMhY5XQoX6S8Q26Kb32r3KCbBVWr9rwcYKHv6bzeX3uQFvfZ |        696 | POSTING         |    827105 |      1098806
+ STM8Nb7Fn1LkHqGCdUq2kvdJYNMgcLoufPePi6TtfQBn18HE9Qbyp |        696 | MEMO            |    827105 |      1098806
+ STM6Kq8bD5PKn53MYQkJo35BagfjvfV2yY13j9WUTsNRAsAU8TegZ |        696 | WITNESS_SIGNING |    957259 |      1263434
+(5 rows)
+EOF
+)
+run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
+
 # 'dodl01' uses pow2_operation
 RUN_FOR=5
 ACCOUNT_NAME='dodl01'
@@ -219,13 +226,14 @@ run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=3
 ACCOUNT_NAME='gtg'
 EXPECTED_OUTPUT=$(cat <<'EOF'
-                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
--------------------------------------------------------+------------+----------+-----------+--------------
- STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi |      14007 | OWNER    |   2885463 |      3762783
- STM6AzXNwWRzTWCVTgP4oKQEALTW8HmDuRq1avGWjHH23XBNhux6U |      14007 | ACTIVE   |   2885463 |      3762783
- STM69ZG1hx2rdU2hxQkkmX5MmYkHPCmdNeXg4r6CR7gvKUzYwWPPZ |      14007 | POSTING  |   2885463 |      3762783
- STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz |      14007 | MEMO     |   2885463 |      3762783
-(4 rows)
+                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
+-------------------------------------------------------+------------+-----------------+-----------+--------------
+ STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi |      14007 | OWNER           |   2885463 |      3762783
+ STM6AzXNwWRzTWCVTgP4oKQEALTW8HmDuRq1avGWjHH23XBNhux6U |      14007 | ACTIVE          |   2885463 |      3762783
+ STM69ZG1hx2rdU2hxQkkmX5MmYkHPCmdNeXg4r6CR7gvKUzYwWPPZ |      14007 | POSTING         |   2885463 |      3762783
+ STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz |      14007 | MEMO            |   2885463 |      3762783
+ STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi |      14007 | WITNESS_SIGNING |   2881920 |      3756818
+(5 rows)
 EOF
 )
 run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
@@ -234,13 +242,14 @@ run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=5
 ACCOUNT_NAME='gtg'
 EXPECTED_OUTPUT=$(cat <<'EOF'
-                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
--------------------------------------------------------+------------+----------+-----------+--------------
- STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh |      14007 | OWNER    |   3399202 |      6688632
- STM4vuEE8F2xyJhwiNCnHxjUVLNXxdFXtVxgghBq5LVLt49zLKLRX |      14007 | ACTIVE   |   3399203 |      6688640
- STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC |      14007 | POSTING  |   3399203 |      6688640
- STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO     |   3399203 |      6688640
-(4 rows)
+                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
+-------------------------------------------------------+------------+-----------------+-----------+--------------
+ STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh |      14007 | OWNER           |   3399202 |      6688632
+ STM4vuEE8F2xyJhwiNCnHxjUVLNXxdFXtVxgghBq5LVLt49zLKLRX |      14007 | ACTIVE          |   3399203 |      6688640
+ STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC |      14007 | POSTING         |   3399203 |      6688640
+ STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO            |   3399203 |      6688640
+ STM6GmnhcBN9DxmFcj1e423Q2RkFYStUgSotviptAMSdy74eHQSYM |      14007 | WITNESS_SIGNING |   4104564 |     12959431
+(5 rows)
 EOF
 )
 run_keyauthauth_test  "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
