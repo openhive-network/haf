@@ -53,9 +53,10 @@ namespace hive::plugins::sql_serializer {
       };
     };
 
+  template< typename Container >
   struct hive_transactions_multisig
     {
-    using container_t = std::vector<PSQL::processing_objects::process_transaction_multisig_t>;
+    using container_t = Container; //container_view< std::vector<PSQL::processing_objects::process_transaction_multisig_t> >;
 
     static const char TABLE[];
     static const char COLS[];
@@ -66,7 +67,7 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        return escape_raw(data.hash) + "," + escape_raw(data.signature);
+        return std::to_string(data.block_number) + "," + escape_raw(data.hash) + "," + escape_raw(data.signature);
       }
       };
     };

@@ -28,7 +28,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
     _transaction_writer = std::make_unique<transaction_data_container_t_writer>( transactions_threads, db_url, "Transaction data writer", api_trigger, app);
 
-    _transaction_multisig_writer = std::make_unique<transaction_multisig_data_container_t_writer>(db_url, "Transaction multisig data writer", api_trigger, app);
+    _transaction_multisig_writer = std::make_unique<transaction_multisig_data_container_t_writer>(1, db_url, "Transaction multisig data writer", api_trigger, app);
 
     _operation_writer = std::make_unique<operation_data_container_t_writer>( operations_threads, db_url, "Operation data writer", api_trigger, app);
     _account_writer = std::make_unique<accounts_data_container_t_writer>( db_url, "Accounts data writer", api_trigger, app);

@@ -11,8 +11,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   template<> const char hive_transactions< container_view< std::vector<PSQL::processing_objects::process_transaction_t> > >::TABLE[] = "hive.transactions";
   template<> const char hive_transactions< container_view< std::vector<PSQL::processing_objects::process_transaction_t> > >::COLS[] = "block_num, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature";
 
-  const char hive_transactions_multisig::TABLE[] = "hive.transactions_multisig";
-  const char hive_transactions_multisig::COLS[] = "trx_hash, signature";
+  template <> const char hive_transactions_multisig<container_view< std::vector<PSQL::processing_objects::process_transaction_multisig_t> > >::TABLE[] = "hive.transactions_multisig";
+  template <> const char hive_transactions_multisig<container_view< std::vector<PSQL::processing_objects::process_transaction_multisig_t> > >::COLS[] = "block_num, trx_hash, signature";
 
   template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::TABLE[] = "hive.operations";
   template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::COLS[] = "id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body_binary";
