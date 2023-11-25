@@ -124,7 +124,9 @@ private:
       dlog("Trying to connect to database: `${url}'...", ("url", _owner->_dbUrl));
       _owner->_opened_connection = std::make_unique<pqxx::connection>(_owner->_dbUrl);
       dlog("Connected to database: `${url}'.", ("url", _owner->_dbUrl));
-
+      //use async commits to speed up writes
+      pqxx::nontransaction work(*_owner->_opened_connection);
+      work.exec("SET synchronous_commit = OFF;");
     }
 
     void finalize_transaction()
