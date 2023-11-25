@@ -38,8 +38,8 @@ BEGIN
     __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED' );
     __operation1_1 = ( 1, 101, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation );
     __operation2_1 = ( 2, 101, 1, 0, 2, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation );
-    __signatures1 = ( '\xDEED', '\xFEED' );
-    __signatures2 = ( '\xBEEF', '\xBABE' );
+    __signatures1 = ( 101, '\xDEED', '\xFEED' );
+    __signatures2 = ( 101, '\xBEEF', '\xBABE' );
     __account1 = ( 1, 'alice', 101 );
     __account2 = ( 2, 'bob', 101 );
     __account_operation1 = ( 101, 1, 1, 1, 1 );
