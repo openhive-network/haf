@@ -21,10 +21,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       _block = std::move( _text );
     };
 
-    auto transactions_multisig_callback = [this]( std::string&& _text ){
-      _transactions_multisig = std::move( _text );
-    };
-
     auto accounts_callback = [this]( std::string&& _text ){
       _accounts = std::move( _text );
     };
@@ -42,7 +38,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
         std::string block_to_dump = _block + "::hive.blocks";
         std::string transactions_to_dump = "ARRAY[" + _transaction_writer->get_merged_strings() + "]::hive.transactions[]";
-        std::string signatures_to_dump = "ARRAY[" + std::move( _transactions_multisig ) + "]::hive.transactions_multisig[]";
+        std::string signatures_to_dump = "ARRAY[" + _transaction_multisig_writer->get_merged_strings() + "]::hive.transactions_multisig[]";
         std::string operations_to_dump = "ARRAY[" + _operation_writer->get_merged_strings() + "]::hive.operations[]";
         std::string accounts_to_dump = "ARRAY[" + std::move( _accounts ) + "]::hive.accounts[]";
         std::string account_operations_to_dump = "ARRAY[" + _account_operations_writer->get_merged_strings() + "]::hive.account_operations[]";
@@ -71,7 +67,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
     _block_writer = std::make_unique<block_data_container_t_writer>(blocks_callback, "Block data writer", api_trigger, app);
     _transaction_writer = std::make_unique<transaction_data_container_t_writer>(transactions_threads, "Transaction data writer", api_trigger, app);
-    _transaction_multisig_writer = std::make_unique<transaction_multisig_data_container_t_writer>(transactions_multisig_callback, "Transaction multisig data writer", api_trigger, app);
+    _transaction_multisig_writer = std::make_unique<transaction_multisig_data_container_t_writer>(1, "Transaction multisig data writer", api_trigger, app);
     _operation_writer = std::make_unique<operation_data_container_t_writer>(operations_threads, "Operation data writer", api_trigger, app);
     _account_writer = std::make_unique<accounts_data_container_t_writer>(accounts_callback, "Accounts data writer", api_trigger, app);
     _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >(account_operation_threads, "Account operations data writer", api_trigger, app);
