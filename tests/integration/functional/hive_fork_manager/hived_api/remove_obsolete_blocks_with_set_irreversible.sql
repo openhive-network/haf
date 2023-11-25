@@ -208,12 +208,12 @@ BEGIN
     ASSERT NOT EXISTS (
     SELECT * FROM hive.transactions_multisig_reversible
     EXCEPT SELECT * FROM ( VALUES
-           ( '\xDEED11'::bytea, '\xBEEF7140'::bytea,  1 )
-         , ( '\xDEED80'::bytea, '\xBEEF82'::bytea,  2 ) -- block 8
-         , ( '\xDEED90'::bytea, '\xBEEF92'::bytea,  2 ) -- block 9
-         , ( '\xDEED88'::bytea, '\xBEEF83'::bytea,  3 ) -- block 8
-         , ( '\xDEED99'::bytea, '\xBEEF93'::bytea,  3 ) -- block 9
-         , ( '\xDEED1102'::bytea, '\xBEEF13'::bytea,  3 ) -- block 10
+           ( 1, '\xDEED11'::bytea, '\xBEEF7140'::bytea,  1 )
+         , ( 8, '\xDEED80'::bytea, '\xBEEF82'::bytea,  2 ) -- block 8
+         , ( 9, '\xDEED90'::bytea, '\xBEEF92'::bytea,  2 ) -- block 9
+         , ( 8, '\xDEED88'::bytea, '\xBEEF83'::bytea,  3 ) -- block 8
+         , ( 9, '\xDEED99'::bytea, '\xBEEF93'::bytea,  3 ) -- block 9
+         , ( 10, '\xDEED1102'::bytea, '\xBEEF13'::bytea,  3 ) -- block 10
     ) as pattern
     ) , 'Unexpected rows in hive.transactions_multisig_reversible';
 
