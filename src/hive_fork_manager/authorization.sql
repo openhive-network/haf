@@ -49,6 +49,7 @@ ALTER TABLE hive.accounts_reversible OWNER TO hived_group;
 ALTER TABLE hive.account_operations_reversible OWNER TO hived_group;
 ALTER TABLE hive.applied_hardforks OWNER TO hived_group;
 ALTER TABLE hive.applied_hardforks_reversible OWNER TO hived_group;
+ALTER TABLE hive.write_ahead_log_state OWNER TO hived_group;
 
 -- generic protection for tables in hive schema
 -- 1. hived_group allow to edit every table in hive schema
@@ -172,6 +173,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.unreachable_event_id()
     , hive.initialize_extension_data()
     , hive.ignore_registered_table_edition( pg_ddl_command )
+    , hive.get_wal_sequence_number()
+    , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION

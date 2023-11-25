@@ -5,6 +5,7 @@
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
 #include <hive/plugins/sql_serializer/accounts_collector.h>
 #include <hive/plugins/sql_serializer/all_accounts_dumper.h>
+#include <hive/plugins/sql_serializer/write_ahead_log.hpp>
 
 #include <hive/plugins/sql_serializer/data_processor.hpp>
 
@@ -35,8 +36,6 @@
 #include <string>
 #include <vector>
 
-
-
 namespace hive
 {
 using chain::block_notification;
@@ -47,6 +46,8 @@ namespace plugins
 {
 namespace sql_serializer
 {
+namespace bfs = boost::filesystem;
+
 bool is_database_correct( const std::string& database_url, bool force_open_inconsistant, appbase::application& app )
 {
   ilog( "Checking correctness of database..." );
@@ -225,8 +226,8 @@ public:
                          _psql_account_operations_threads_number,
                          _psql_index_threshold,
                          _psql_livesync_threshold,
-                         _psql_first_block
-      )
+                         _psql_first_block,
+                         write_ahead_log)
   {
     HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
     _is_database_initialized = is_database_initialized();
@@ -253,6 +254,7 @@ public:
   void block_operation_handlers(const block_notification& note);
 
   void handle_transactions(const vector<std::shared_ptr<hive::chain::full_transaction_type>>& transactions, const int64_t block_num);
+  void replay_wal_if_necessary();
   void inform_hfm_about_starting();
   bool need_initialize_database( uint32_t block_num );
   void initialize_db();
@@ -291,6 +293,7 @@ public:
   stats_group current_stats;
   type_extractor::operation_extractor op_extractor;
   blockchain_filter filter;
+  write_ahead_log_manager write_ahead_log;
 
   indexation_state _indexation_state;
   bool _is_database_initialized;
@@ -382,6 +385,47 @@ public:
   bool can_collect_blocks();
 };
 
+void sql_serializer_plugin_impl::replay_wal_if_necessary() {
+  elog("sql_serializer_plugin_impl::replay_wal_if_necessary");
+  std::optional<int32_t> last_wal_sequence_number_in_db;
+  auto get_wal_sequence = [&](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx){
+    const pqxx::result sql_result = tx.exec("SELECT hive.get_wal_sequence_number();");
+    const pqxx::field value = sql_result[0][0];
+    if (!value.is_null())
+      last_wal_sequence_number_in_db = value.as<int32_t>();
+    return data_processing_status();
+  };
+  queries_commit_data_processor processor(db_url, "Get the last transaction sequence number", get_wal_sequence, nullptr, theApp);
+  processor.trigger(nullptr, 0);
+  processor.join();
+
+  elog("Current transaction sequence number according to the database is ${last_wal_sequence_number_in_db}", (last_wal_sequence_number_in_db));
+  std::optional<write_ahead_log_manager::sequence_number_t> sequence_number_according_to_log = write_ahead_log.get_last_sequence_number();
+  elog("Last transaction sequence number in the write-ahead log is ${sequence_number_according_to_log}", (sequence_number_according_to_log));
+
+  if (last_wal_sequence_number_in_db && sequence_number_according_to_log)
+  {
+    if (write_ahead_log_manager::is_less_than(*last_wal_sequence_number_in_db, *sequence_number_according_to_log))
+    {
+      elog("Replaying transactions from the write-ahead log");
+
+      write_ahead_log.replay_transactions_after(*last_wal_sequence_number_in_db, [&](write_ahead_log_manager::sequence_number_t sequence_number, std::string_view query) {
+        elog("  Replaying transaction ${sequence_number}", (sequence_number));
+
+        auto replay_transaction = [&](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx){
+          tx.exec(std::string(query));
+          tx.exec("SELECT hive.update_wal_sequence_number(" + std::to_string(sequence_number) + ")");
+          return data_processing_status();
+        };
+        queries_commit_data_processor replay_processor(db_url, "Replay transaction", replay_transaction, nullptr, theApp);
+        replay_processor.trigger(nullptr, 0);
+        replay_processor.join();
+      });
+      elog("Done replaying transactions from the write-ahead log");
+    }
+  }
+}
+
 void sql_serializer_plugin_impl::inform_hfm_about_starting() {
   using namespace std::string_literals;
   ilog( "Inform Hive Fork Manager about starting..." );
@@ -438,7 +482,8 @@ void sql_serializer_plugin_impl::disconnect_signals()
 void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& note)
 {
   static std::once_flag inform_hfm_flag;
-  std::call_once(inform_hfm_flag, [&]{inform_hfm_about_starting();} );
+  std::call_once(inform_hfm_flag, [&]{ replay_wal_if_necessary(); inform_hfm_about_starting(); } );
+
   _indexation_state.on_block( note.block_num );
   if (need_initialize_database(note.block_num) ) {
     initialize_db();
@@ -779,6 +824,7 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
                     ("psql-track-body-operations", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "For a type of operation it's defined a regex that filters body of operation and decides if it's excluded. Can be specified multiple times. A complex regex can cause slowdown or processing can be even abandoned due to complexity.")
                     ("psql-enable-filter", appbase::bpo::value<bool>()->default_value( true ), "enable filtering accounts and operations")
                     ("psql-first-block", appbase::bpo::value<uint32_t>()->default_value( 1u ), "first synced block")
+                    ("psql-wal-directory", boost::program_options::value<bfs::path>(), "write-ahead log for data sent from hived to PostgreSQL")
                     ;
 }
 
@@ -825,6 +871,14 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     my->collector = std::make_unique<filtered_accounts_collector>( db, *my->currently_caching_data, my->psql_dump_account_operations, my->filter );
   else
     my->collector = std::make_unique<accounts_collector>( db, *my->currently_caching_data, my->psql_dump_account_operations );
+
+  bfs::path wal_directory = get_app().data_dir() / "blockchain" / "haf_wal";
+  if (options.count("psql-wal-directory"))
+  {
+    const bfs::path wal_dir_option = options.at("psql-wal-directory").as<bfs::path>();
+    wal_directory = wal_dir_option.is_relative() ?  get_app().data_dir() / wal_dir_option : wal_dir_option;
+  }
+  my->write_ahead_log.open(wal_directory);
 
   // signals
   my->connect_signals();

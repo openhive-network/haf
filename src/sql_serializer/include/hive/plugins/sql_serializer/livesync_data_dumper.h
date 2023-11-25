@@ -8,12 +8,18 @@
 #include <hive/plugins/sql_serializer/chunks_for_writers_spillter.h>
 
 #include <hive/plugins/sql_serializer/cached_data.h>
+#include <hive/plugins/sql_serializer/write_ahead_log.hpp>
 
 #include <boost/signals2.hpp>
+#include <boost/scope_exit.hpp>
 
 #include <functional>
 #include <memory>
 #include <string>
+#include <condition_variable>
+#include <mutex>
+#include <future>
+#include <atomic>
 
 namespace appbase { class abstract_plugin; }
 
@@ -35,6 +41,7 @@ namespace hive::plugins::sql_serializer {
       , uint32_t transactions_threads
       , uint32_t account_operation_threads
       , uint32_t start_block_num
+      , write_ahead_log_manager& write_ahead_log
     );
 
     ~livesync_data_dumper();
@@ -99,9 +106,6 @@ namespace hive::plugins::sql_serializer {
     std::unique_ptr< account_operations_data_container_t_writer > _account_operations_writer;
     std::unique_ptr< applied_hardforks_container_t_writer > _applied_hardforks_writer;
 
-    std::unique_ptr< queries_commit_data_processor > _set_irreversible_block_processor;
-    std::unique_ptr< queries_commit_data_processor > _notify_fork_block_processor;
-
     std::string _block;
     std::string _transactions_multisig;
     std::string _accounts;
@@ -111,11 +115,40 @@ namespace hive::plugins::sql_serializer {
     boost::signals2::connection _on_switch_fork_conn;
     std::shared_ptr< transaction_controllers::transaction_controller > transactions_controller;
 
-    uint32_t _irreversible_block_num = 0;
-    uint32_t _last_fork_block_num = 0;
-
     const uint32_t _psql_first_block;
 
+    // worker thread that executes sql commands in the background
+    // when enqueued, commands are written to a write-ahead log from the main thread.
+    // then the worker thread executes the sql command the next time it's idle
+    class processing_thread
+    {
+      using sql_command_with_sequence_t = std::pair<write_ahead_log_manager::sequence_number_t, std::string>;
+
+      std::condition_variable _condition_variable;
+      std::mutex _mutex;
+      std::deque<sql_command_with_sequence_t> _command_queue;
+      std::future<void> _future;
+      bool _shutdown_requested = false;
+      // maximum number of sql commands that can be queued up before we start blocking the main thread.
+      // should be enough to smooth out any temporary periods of slow processing, but not so big that it's
+      // weeks before we notice a problem.  During typical livesync operation, there are two commands
+      // per block (push block & update irreversible), so 200 commands ~ 100 blocks ~ 5 minutes
+      static constexpr size_t _max_queue_depth = 200;
+      std::shared_ptr<transaction_controllers::transaction_controller> _transactions_controller;
+      write_ahead_log_manager& _write_ahead_log;
+      appbase::application& _app;
+    public:
+      processing_thread(std::shared_ptr<transaction_controllers::transaction_controller> transactions_controller,
+                        write_ahead_log_manager& write_ahead_log,
+                        appbase::application& app);
+      ~processing_thread();
+      void run();
+      void enqueue(std::string&& sql_command);
+      void shutdown();
+    };
+
+    write_ahead_log_manager& _write_ahead_log;
+    processing_thread _processing_thread;
   };
 
 } // namespace hive::plugins::sql_serializer
