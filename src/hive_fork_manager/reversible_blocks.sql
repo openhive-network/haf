@@ -22,7 +22,12 @@ SELECT pg_catalog.pg_extension_config_dump('hive.transactions_reversible', '');
 ALTER TABLE hive.transactions_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
     ADD CONSTRAINT fk_1_hive_transactions_reversible FOREIGN KEY (block_num, fork_id) REFERENCES hive.blocks_reversible(num,fork_id),
-    ADD CONSTRAINT uq_hive_transactions_reversible PRIMARY KEY( trx_hash, fork_id )
+    ADD CONSTRAINT uq_hive_transactions_reversible PRIMARY KEY( trx_hash, fork_id ),
+
+    SET (autovacuum_vacuum_scale_factor = 0.0),
+    SET (autovacuum_analyze_scale_factor = 0.0),
+    SET (autovacuum_vacuum_threshold = 5000),
+    SET (autovacuum_analyze_threshold = 5000)
 ;
 
 CREATE TABLE IF NOT EXISTS hive.transactions_multisig_reversible(
