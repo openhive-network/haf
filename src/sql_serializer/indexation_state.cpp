@@ -144,6 +144,7 @@ indexation_state::indexation_state(
   , uint32_t psql_index_threshold
   , uint32_t psql_livesync_threshold
   , uint32_t psql_first_block
+  , write_ahead_log_manager& write_ahead_log
 )
   : _main_plugin( main_plugin )
   , _chain_db( chain_db )
@@ -156,6 +157,7 @@ indexation_state::indexation_state(
   , _psql_first_block( psql_first_block )
   , _irreversible_block_num( NO_IRREVERSIBLE_BLOCK )
   , _indexes_controler( db_url, psql_index_threshold, app )
+  , _write_ahead_log{write_ahead_log} 
 {
   FC_ASSERT( _psql_first_block >= 1, "psql-first-block=${v} < 1", ("v", _psql_first_block) );
   cached_data_t empty_data{0};
@@ -363,6 +365,7 @@ indexation_state::update_state(
         , _psql_transactions_threads_number
         , _psql_account_operations_threads_number
         , _psql_first_block
+        , _write_ahead_log
         );
       _trigger = std::make_unique< live_flush_trigger >(
         [this]( cached_data_t& cached_data, int last_block_num ) {
@@ -413,7 +416,7 @@ indexation_state::force_trigger_flush_with_all_data( cached_data_t& cached_data,
  */
 void
 indexation_state::flush_all_data_to_reversible( cached_data_t& cached_data ) {
-  ilog( "Flushing ${d} reversible blocks..." );
+  ilog("Flushing reversible blocks...");
   while ( !cached_data.blocks.empty() ) {
     const auto current_block = cached_data.blocks.front().block_number;
     cached_data_t reversible_data{0};

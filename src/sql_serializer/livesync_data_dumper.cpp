@@ -14,10 +14,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , uint32_t transactions_threads
     , uint32_t account_operation_threads
     , uint32_t psql_first_block
+    , write_ahead_log_manager& write_ahead_log
     )
   : _plugin( plugin )
   , _chain_db( chain_db )
+  , transactions_controller(transaction_controllers::build_own_transaction_controller(db_url, "Livesync dumper", app))
   , _psql_first_block( psql_first_block )
+  , _write_ahead_log(write_ahead_log)
+  , _processing_thread(transactions_controller, write_ahead_log, app)
   {
     auto blocks_callback = [this]( std::string&& _text ){
       _block = std::move( _text );
@@ -35,13 +39,10 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       _applied_hardforks = std::move( _text );
     };
 
-    transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "Livesync dumper", app );
     constexpr auto ONE_THREAD_WRITERS_NUMBER = 4;
     auto NUMBER_OF_PROCESSORS_THREADS = ONE_THREAD_WRITERS_NUMBER + operations_threads + transactions_threads + account_operation_threads;
     auto execute_push_block = [this](block_num_rendezvous_trigger::BLOCK_NUM _block_num ){
       if ( !_block.empty() ) {
-        auto transaction = transactions_controller->openTx();
-
         std::string block_to_dump = _block + "::hive.blocks";
         std::string transactions_to_dump = "ARRAY[" + _transaction_writer->get_merged_strings() + "]::hive.transactions[]";
         std::string signatures_to_dump = "ARRAY[" + std::move( _transactions_multisig ) + "]::hive.transactions_multisig[]";
@@ -49,7 +50,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
         std::string accounts_to_dump = "ARRAY[" + std::move( _accounts ) + "]::hive.accounts[]";
         std::string account_operations_to_dump = "ARRAY[" + _account_operations_writer->get_merged_strings() + "]::hive.account_operations[]";
         std::string applied_hardforks_to_dump = "ARRAY[" + std::move( _applied_hardforks ) + "]::hive.applied_hardforks[]";
-
 
         std::string sql_command = "SELECT hive.push_block(" +
                 block_to_dump +
@@ -61,8 +61,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
           "," + applied_hardforks_to_dump +
           ")";
 
-        transaction->exec( sql_command );
-        transaction->commit();
+        _processing_thread.enqueue(std::move(sql_command));
       }
       _block.clear();
       _transactions_multisig.clear();
@@ -78,28 +77,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_writer = std::make_unique<accounts_data_container_t_writer>(accounts_callback, "Accounts data writer", api_trigger, app);
     _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >(account_operation_threads, "Account operations data writer", api_trigger, app);
     _applied_hardforks_writer = std::make_unique< applied_hardforks_container_t_writer >(applied_hardforks_callback,"Applied hardforks data writer", api_trigger, app);
-
-    auto execute_set_irreversible
-      = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx)->data_processor::data_processing_status{
-      // if sync has started not from first block (option psql-first-block), then
-      // it may happen that we got irreversible block
-      // event for blocks which are not dumped to the database
-      if ( _irreversible_block_num < _psql_first_block ) {
-        return data_processor::data_processing_status();
-      }
-      std::string command = "SELECT hive.set_irreversible(" + std::to_string( _irreversible_block_num ) + ")";
-      tx.exec( command );
-      return data_processor::data_processing_status();
-    };
-    _set_irreversible_block_processor = std::make_unique< queries_commit_data_processor >( db_url, "hive.set_irreversible caller", execute_set_irreversible, nullptr, app );
-
-    auto execute_back_from_fork
-    = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx)->data_processor::data_processing_status{
-      std::string command = "SELECT hive.back_from_fork(" + std::to_string( _last_fork_block_num ) + ")";
-      tx.exec( command );
-      return data_processor::data_processing_status();
-    };
-    _notify_fork_block_processor = std::make_unique< queries_commit_data_processor >( db_url, "hive.back_from_fork caller", execute_back_from_fork, nullptr, app );
 
     connect_irreversible_event();
     connect_fork_event();
@@ -143,23 +120,19 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       , *_account_writer
       , *_account_operations_writer
       , *_applied_hardforks_writer
-      , *_set_irreversible_block_processor
-      , *_notify_fork_block_processor
     );
   }
 
   void livesync_data_dumper::on_irreversible_block( uint32_t block_num ) {
-    _irreversible_block_num = block_num;
-    constexpr auto NUMBER_WITHOUT_MEANING = 0;
-    _set_irreversible_block_processor->trigger( nullptr, NUMBER_WITHOUT_MEANING );
-    _set_irreversible_block_processor->complete_data_processing();
+    // if sync has started not from first block (option psql-first-block), then
+    // it may happen that we got irreversible block
+    // event for blocks which are not dumped to the database
+    if ( block_num >= _psql_first_block )
+      _processing_thread.enqueue("SELECT hive.set_irreversible(" + std::to_string(block_num) + ")");
   }
 
   void livesync_data_dumper::on_switch_fork( uint32_t block_num ) {
-    _last_fork_block_num = block_num;
-    constexpr auto NUMBER_WITHOUT_MEANING = 0;
-    _notify_fork_block_processor->trigger( nullptr, NUMBER_WITHOUT_MEANING );
-    _notify_fork_block_processor->complete_data_processing();
+    _processing_thread.enqueue("SELECT hive.back_from_fork(" + std::to_string(block_num) + ")");
   }
 
   void livesync_data_dumper::connect_irreversible_event() {
@@ -191,6 +164,118 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   void livesync_data_dumper::disconnect_fork_event() {
     _on_switch_fork_conn.disconnect();
   }
+
+  livesync_data_dumper::processing_thread::processing_thread(std::shared_ptr<transaction_controllers::transaction_controller> transactions_controller,
+                                                             write_ahead_log_manager& write_ahead_log,
+                                                             appbase::application& app) :
+    _transactions_controller(transactions_controller),
+    _write_ahead_log(write_ahead_log),
+    _app(app)
+  {
+    _future = std::async([this]() { run(); });
+  }
+
+  livesync_data_dumper::processing_thread::~processing_thread()
+  {
+    shutdown();
+    _future.wait();
+  }
+
+  void livesync_data_dumper::processing_thread::run()
+  {
+    ilog("Starting hived->postgresql write-ahead log processing thread");
+    BOOST_SCOPE_EXIT(void) { ilog("Exiting hived->postgresql write-ahead log processing thread"); } BOOST_SCOPE_EXIT_END
+    for (;;)
+    {
+      // dequeue the next command into command_to_run, waiting if the queue is empty
+      sql_command_with_sequence_t command_to_run;
+      unsigned commands_remaining;
+      {
+        std::unique_lock<std::mutex> lock(_mutex);
+        _condition_variable.wait(lock, [&](){ return _shutdown_requested || !_command_queue.empty(); });
+        if (_shutdown_requested)
+        {
+          ilog("Terminating hived->postgresql write-ahead log processing because shutdown was requested");
+          break;
+        }
+        command_to_run = std::move(_command_queue.front());
+        _command_queue.pop_front();
+        commands_remaining = _command_queue.size();
+      }
+      _condition_variable.notify_one();
+      dlog("processing thread is working on transaction with sequence number ${seq}, ${commands_remaining} remaining in queue", ("seq", command_to_run.first)(commands_remaining));
+
+      // execute the command
+      try
+      {
+        auto transaction = _transactions_controller->openTx();
+        transaction->exec(command_to_run.second);
+        transaction->exec("SELECT hive.update_wal_sequence_number(" + std::to_string(command_to_run.first) + ")");
+        transaction->commit();
+      }
+      catch (const pqxx::pqxx_exception& ex)
+      {
+        elog("Write-ahead log processor detected SQL error: ${what}", ("what", ex.base().what()));
+        _app.kill();
+        throw;
+      }
+      catch (const fc::exception& ex)
+      {
+        elog("Write-ahead log processor detected error: ${ex}", (ex));
+        _app.kill();
+        throw;
+      }
+      catch (const std::exception& ex)
+      {
+        elog("Write-ahead log processor detected error: ${what}", ("what", ex.what()));
+        _app.kill();
+        throw;
+      }
+      catch (...)
+      {
+        elog("Write-ahead log processor detected unknown error");
+        _app.kill();
+        throw;
+      }
+
+      // notify the WAL that we've completed it
+      _write_ahead_log.transaction_completed(command_to_run.first);
+    }
+  }
+
+  void livesync_data_dumper::processing_thread::enqueue(std::string&& sql_command)
+  {
+    if (_write_ahead_log.is_open())
+    {
+      // first, write it to the write ahead log and flush to disk
+      write_ahead_log_manager::sequence_number_t sequence_number = _write_ahead_log.store_transaction(sql_command);
+
+      // now we can add it to the queue and let it be processed later
+      {
+        std::unique_lock<std::mutex> lock(_mutex);
+        _condition_variable.wait(lock, [&](){ return _command_queue.size() < _max_queue_depth; });
+        _command_queue.emplace_back(sequence_number, sql_command);
+      }
+      _condition_variable.notify_one();
+    }
+    else
+    {
+      // no reason to jump threads, just process the sql command here
+      auto transaction = _transactions_controller->openTx();
+      transaction->exec(sql_command);
+      transaction->commit();
+    }
+  }
+
+  void livesync_data_dumper::processing_thread::shutdown()
+  {
+    {
+      std::unique_lock<std::mutex> lock(_mutex);
+      _shutdown_requested = true;
+    }
+    _condition_variable.notify_one();
+  }
+
 }}} // namespace hive::plugins::sql_serializer
 
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <hive/plugins/sql_serializer/indexes_controler.h>
+#include <hive/plugins/sql_serializer/write_ahead_log.hpp>
 
 #include <boost/signals2.hpp>
 #include <fc/time.hpp>
@@ -35,6 +36,7 @@ namespace hive::plugins::sql_serializer {
         , uint32_t psql_index_threshold
         , uint32_t psql_livesync_threshold
         , uint32_t psql_first_block
+        , write_ahead_log_manager& write_ahead_log
       );
       ~indexation_state() = default;
       indexation_state& operator=( indexation_state& ) = delete;
@@ -93,6 +95,7 @@ namespace hive::plugins::sql_serializer {
       std::shared_ptr< flush_trigger > _trigger;
       int32_t _irreversible_block_num;
       indexes_controler _indexes_controler;
+      write_ahead_log_manager& _write_ahead_log;
 
       fc::time_point _start_state_time;
   };
