@@ -133,7 +133,7 @@ VALUES
          , ( 7, '\xDEED70'::bytea, '\xBEEF7110'::bytea,  1 ) -- block 7
          , ( 7, '\xDEED70'::bytea, '\xBEEF7120'::bytea,  1 ) -- block 7
          , ( 7, '\xDEED70'::bytea, '\xBEEF7130'::bytea,  1 ) -- block 7 --must be abandon because of fork 2
-         , ( 1, '\xDEED11'::bytea, '\xBEEF7140'::bytea,  1 )
+         , ( 10, '\xDEED11'::bytea, '\xBEEF7140'::bytea,  1 )
          , ( 7, '\xDEED70'::bytea, '\xBEEF72'::bytea,  2 ) -- block 7
          , ( 7, '\xDEED70'::bytea, '\xBEEF73'::bytea,  2 ) -- block 7
          , ( 8, '\xDEED80'::bytea, '\xBEEF82'::bytea,  2 ) -- block 8
@@ -302,15 +302,15 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.transactions_multisig
         EXCEPT SELECT * FROM ( VALUES
-              ( '\xDEED10'::bytea, '\xBAAD10'::bytea )
-            , ( '\xDEED20'::bytea, '\xBAAD20'::bytea )
-            , ( '\xDEED30'::bytea, '\xBAAD30'::bytea )
-            , ( '\xDEED40'::bytea, '\xBAAD40'::bytea )
-            , ( '\xDEED50'::bytea, '\xBAAD50'::bytea )
-            , ( '\xDEED60'::bytea, '\xBEEF61'::bytea )
-            , ( '\xDEED70'::bytea, '\xBEEF72'::bytea )
-            , ( '\xDEED70'::bytea, '\xBEEF73'::bytea )
-            , ( '\xDEED88'::bytea, '\xBEEF83'::bytea )
+              ( 1, '\xDEED10'::bytea, '\xBAAD10'::bytea )
+            , ( 2, '\xDEED20'::bytea, '\xBAAD20'::bytea )
+            , ( 3, '\xDEED30'::bytea, '\xBAAD30'::bytea )
+            , ( 4, '\xDEED40'::bytea, '\xBAAD40'::bytea )
+            , ( 5, '\xDEED50'::bytea, '\xBAAD50'::bytea )
+            , ( 6, '\xDEED60'::bytea, '\xBEEF61'::bytea )
+            , ( 7, '\xDEED70'::bytea, '\xBEEF72'::bytea )
+            , ( 7, '\xDEED70'::bytea, '\xBEEF73'::bytea )
+            , ( 8, '\xDEED88'::bytea, '\xBEEF83'::bytea )
          ) as pattern
     ) , 'Unexpected rows in hive.transactions_multisig';
 
@@ -351,12 +351,12 @@ BEGIN
     ASSERT NOT EXISTS (
     SELECT * FROM hive.transactions_multisig_reversible
     EXCEPT SELECT * FROM ( VALUES
-           ( '\xDEED11'::bytea, '\xBEEF7140'::bytea,  1 ) -- block 10
-         , ( '\xDEED80'::bytea, '\xBEEF82'::bytea,  2 ) -- block 8
-         , ( '\xDEED90'::bytea, '\xBEEF92'::bytea,  2 ) -- block 9
-         , ( '\xDEED88'::bytea, '\xBEEF83'::bytea,  3 ) -- block 8
-         , ( '\xDEED99'::bytea, '\xBEEF93'::bytea,  3 ) -- block 9
-         , ( '\xDEED1102'::bytea, '\xBEEF13'::bytea,  3 ) -- block 10
+           ( 10, '\xDEED11'::bytea, '\xBEEF7140'::bytea,  1 ) -- block 10
+         , ( 8, '\xDEED80'::bytea, '\xBEEF82'::bytea,  2 ) -- block 8
+         , ( 9, '\xDEED90'::bytea, '\xBEEF92'::bytea,  2 ) -- block 9
+         , ( 8, '\xDEED88'::bytea, '\xBEEF83'::bytea,  3 ) -- block 8
+         , ( 9, '\xDEED99'::bytea, '\xBEEF93'::bytea,  3 ) -- block 9
+         , ( 10, '\xDEED1102'::bytea, '\xBEEF13'::bytea,  3 ) -- block 10
     ) as pattern
     ) , 'Unexpected rows in hive.transactions_multisig_reversible';
 
