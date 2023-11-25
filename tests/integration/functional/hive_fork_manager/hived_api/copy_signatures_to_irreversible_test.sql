@@ -118,15 +118,15 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.transactions_multisig
         EXCEPT SELECT * FROM ( VALUES
-              ( '\xDEED10'::bytea, '\xBAAD10'::bytea )
-            , ( '\xDEED20'::bytea, '\xBAAD20'::bytea )
-            , ( '\xDEED30'::bytea, '\xBAAD30'::bytea )
-            , ( '\xDEED40'::bytea, '\xBAAD40'::bytea )
-            , ( '\xDEED50'::bytea, '\xBAAD50'::bytea )
-            , ( '\xDEED60'::bytea, '\xBEEF61'::bytea )
-            , ( '\xDEED70'::bytea, '\xBEEF72'::bytea )
-            , ( '\xDEED70'::bytea, '\xBEEF73'::bytea )
-            , ( '\xDEED88'::bytea, '\xBEEF83'::bytea )
+              ( 1, '\xDEED10'::bytea, '\xBAAD10'::bytea )
+            , ( 2, '\xDEED20'::bytea, '\xBAAD20'::bytea )
+            , ( 3, '\xDEED30'::bytea, '\xBAAD30'::bytea )
+            , ( 4, '\xDEED40'::bytea, '\xBAAD40'::bytea )
+            , ( 5, '\xDEED50'::bytea, '\xBAAD50'::bytea )
+            , ( 6, '\xDEED60'::bytea, '\xBEEF61'::bytea )
+            , ( 7, '\xDEED70'::bytea, '\xBEEF72'::bytea )
+            , ( 7, '\xDEED70'::bytea, '\xBEEF73'::bytea )
+            , ( 8, '\xDEED88'::bytea, '\xBEEF83'::bytea )
          ) as pattern
     ) , 'Unexpected rows in hive.transactions_multisig';
 END;
