@@ -66,7 +66,13 @@ namespace hive::plugins::sql_serializer {
       >
     >;
 
-    using transaction_multisig_data_container_t_writer = table_data_writer<hive_transactions_multisig, string_data_processor>;
+    using transaction_multisig_data_container_t_writer = chunks_for_string_writers_splitter<
+      table_data_writer<
+      hive_transactions_multisig<container_view< std::vector<PSQL::processing_objects::process_transaction_multisig_t> > >,
+        string_data_processor
+      >
+    >;
+
     using operation_data_container_t_writer = chunks_for_string_writers_splitter<
         table_data_writer<
               hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >
