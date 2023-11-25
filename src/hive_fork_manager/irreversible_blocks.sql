@@ -62,7 +62,7 @@ PARTITION BY RANGE ( block_num );
 ALTER TABLE hive.transactions
   ALTER COLUMN trx_hash SET STORAGE MAIN,
   ALTER COLUMN signature SET STORAGE MAIN,
-  ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID
+  ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num) -- NOT VALID Not supported on partitioned tables.
   ;
 
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions', '');
@@ -96,7 +96,8 @@ CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
     signature bytea NOT NULL,
     CONSTRAINT pk_hive_transactions_multisig PRIMARY KEY ( trx_hash, signature )
 );
-ALTER TABLE hive.transactions_multisig ADD CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash, block_num) REFERENCES hive.transactions (trx_hash, block_num) NOT VALID;
+-- FIXME temporary commented out since FK management code must be improved due to table partitions at referenced table
+--ALTER TABLE hive.transactions_multisig ADD CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash, block_num) REFERENCES hive.transactions (trx_hash, block_num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions_multisig', '');
 
 CREATE TABLE IF NOT EXISTS hive.operation_types (
@@ -125,8 +126,17 @@ CREATE TABLE IF NOT EXISTS hive.operations (
     body_binary hive.operation  DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 );
-ALTER TABLE hive.operations ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID;
-ALTER TABLE hive.operations ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID;
+
+ALTER TABLE hive.operations
+  ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID,
+  ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID,
+
+  SET (autovacuum_vacuum_scale_factor =0.0),
+  SET (autovacuum_analyze_scale_factor = 0.0),
+  SET (autovacuum_vacuum_insert_scale_factor=0.0),
+  SET (autovacuum_analyze_threshold=75000), -- Avg 63tx per block * 1200 blocks per hour= 75600
+  SET (autovacuum_vacuum_insert_threshold=10000) 
+  ;
 
 SELECT pg_catalog.pg_extension_config_dump('hive.operations', '');
 
