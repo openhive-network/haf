@@ -27,6 +27,7 @@ ADD_LIBRARY(
     blockchain_data_filter.cpp
     filter_collector.cpp
     all_accounts_dumper.cpp
+    write_ahead_log.cpp
     ${HEADERS}
 )
 

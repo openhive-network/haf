@@ -159,3 +159,7 @@ CREATE INDEX IF NOT EXISTS hive_blocks_created_at_idx ON hive.blocks USING btree
 
 ALTER TABLE hive.blocks ADD CONSTRAINT fk_1_hive_blocks FOREIGN KEY (producer_account_id) REFERENCES hive.accounts (id) NOT VALID DEFERRABLE INITIALLY DEFERRED;
 
+CREATE TABLE IF NOT EXISTS hive.write_ahead_log_state (id SMALLINT NOT NULL UNIQUE CHECK (id = 1), last_sequence_number_committed INTEGER);
+COMMENT ON TABLE hive.write_ahead_log_state IS 'Tracks the sequence numbers in hived''s write-ahead log';
+COMMENT ON COLUMN hive.write_ahead_log_state.id IS 'an id column.  this table will never have more than one row, and its id will be 1.  an empty table is semantically equivalent to a table where the last_sequence_number_committed is NULL';
+COMMENT ON COLUMN hive.write_ahead_log_state.last_sequence_number_committed IS 'The sequence number of the last commited transaction, or NULL if we''re operating in a mode that doesn''t track sequence numbers.  Will always be non-negative';

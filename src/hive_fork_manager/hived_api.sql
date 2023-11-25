@@ -411,3 +411,31 @@ BEGIN
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE FUNCTION hive.update_wal_sequence_number(_new_sequence_number INTEGER)
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    INSERT INTO hive.write_ahead_log_state VALUES (1, _new_sequence_number)
+    ON CONFLICT (id) DO UPDATE SET last_sequence_number_committed = _new_sequence_number WHERE hive.write_ahead_log_state.id = 1;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.get_wal_sequence_number()
+    RETURNS INTEGER
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __last_sequence_number_committed INT;
+BEGIN
+    SELECT last_sequence_number_committed FROM hive.write_ahead_log_state WHERE id = 1 INTO __last_sequence_number_committed;
+    return __last_sequence_number_committed;
+END;
+$BODY$
+;
