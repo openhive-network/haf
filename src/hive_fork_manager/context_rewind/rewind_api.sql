@@ -9,7 +9,7 @@ BEGIN
         RAISE EXCEPTION 'Incorrect context name %, only characters a-z A-Z 0-9 _ are allowed', name;
     END IF;
 
-    EXECUTE format( 'CREATE TABLE hive.%I( hive_rowid BIGSERIAL )', _name );
+    EXECUTE format( 'CREATE UNLOGGED TABLE hive.%I( hive_rowid BIGSERIAL )', _name );
     INSERT INTO hive.contexts( name, current_block_num, irreversible_block, is_attached, events_id, fork_id, owner, is_forking )
     VALUES( _name, 0, _irreversible_block, TRUE, 0, _fork_id, current_user, _is_forking );
 END;
