@@ -201,6 +201,8 @@ WHEN TAG IN ( 'DROP TABLE' )
 EXECUTE PROCEDURE hive.on_drop_registered_tables();
 
 DROP EVENT TRIGGER IF EXISTS hive_create_registered_tables_trigger;
+
+-- have no idea if 'CREATE UNLOGGED TABLE' is necessary or not since I changed all of the CREATE TABLEs into that
 CREATE EVENT TRIGGER hive_create_registered_tables_trigger ON ddl_command_end
-WHEN TAG IN ( 'CREATE TABLE' )
+WHEN TAG IN ( 'CREATE TABLE', 'CREATE UNLOGGED TABLE' )
 EXECUTE PROCEDURE hive.on_create_tables();
