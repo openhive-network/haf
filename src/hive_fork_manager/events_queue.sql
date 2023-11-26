@@ -3,7 +3,7 @@
 -- NEW_BLOCK - new block num
 -- NEW_IRREVERSIBLE - new irreversible block
 -- MASSIVE_SYNC - head of irreversible block after massive push by hived
-CREATE TABLE IF NOT EXISTS hive.events_queue(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.events_queue(
       id BIGSERIAL PRIMARY KEY
     , event hive.event_type NOT NULL
     , block_num BIGINT NOT NULL

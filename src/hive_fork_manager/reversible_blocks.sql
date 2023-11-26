@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS hive.blocks_reversible(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.blocks_reversible(
     LIKE hive.blocks INCLUDING ALL
     EXCLUDING STATISTICS
     EXCLUDING INDEXES
@@ -11,7 +11,7 @@ ALTER TABLE hive.blocks_reversible
     ADD CONSTRAINT fk_1_hive_blocks_reversible FOREIGN KEY( fork_id ) REFERENCES hive.fork( id )
 ;
 
-CREATE TABLE IF NOT EXISTS hive.transactions_reversible(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.transactions_reversible(
     LIKE hive.transactions
     INCLUDING ALL
     EXCLUDING STATISTICS
@@ -25,7 +25,7 @@ ALTER TABLE hive.transactions_reversible
     ADD CONSTRAINT uq_hive_transactions_reversible PRIMARY KEY( trx_hash, fork_id )
 ;
 
-CREATE TABLE IF NOT EXISTS hive.transactions_multisig_reversible(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.transactions_multisig_reversible(
     LIKE hive.transactions_multisig
     INCLUDING ALL
     EXCLUDING STATISTICS
@@ -39,7 +39,7 @@ ALTER TABLE hive.transactions_multisig_reversible
     ADD CONSTRAINT fk_1_hive_transactions_multisig_reversible FOREIGN KEY (trx_hash, fork_id) REFERENCES hive.transactions_reversible(trx_hash, fork_id)
 ;
 
-CREATE TABLE IF NOT EXISTS hive.operations_reversible(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.operations_reversible(
     LIKE hive.operations
     INCLUDING ALL
     EXCLUDING STATISTICS
@@ -55,7 +55,7 @@ ALTER TABLE hive.operations_reversible
     ADD CONSTRAINT fk_2_hive_operations_reversible FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id)
 ;
 
-CREATE TABLE IF NOT EXISTS hive.accounts_reversible(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.accounts_reversible(
     LIKE hive.accounts
     INCLUDING ALL
     EXCLUDING CONSTRAINTS -- because of UNIQUE(name)
@@ -71,7 +71,7 @@ ALTER TABLE hive.accounts_reversible
     ADD CONSTRAINT uq_hive_accounts_reversible UNIQUE( name, fork_id )
 ;
 
-CREATE TABLE IF NOT EXISTS hive.account_operations_reversible(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.account_operations_reversible(
     LIKE hive.account_operations
     INCLUDING ALL
     EXCLUDING CONSTRAINTS -- because of unique(account_id, account_op_seq_no) and (account_id, operation_id)
@@ -87,7 +87,7 @@ ALTER TABLE hive.account_operations_reversible
     ADD CONSTRAINT pk_hive_account_operations_reversible PRIMARY KEY( account_id, account_op_seq_no, fork_id )
 ;
 
-CREATE TABLE IF NOT EXISTS hive.applied_hardforks_reversible(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.applied_hardforks_reversible(
     LIKE hive.applied_hardforks
     INCLUDING ALL
     EXCLUDING CONSTRAINTS

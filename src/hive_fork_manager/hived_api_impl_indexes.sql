@@ -1,5 +1,5 @@
 DROP TABLE IF EXISTS hive.indexes_constraints;
-CREATE TABLE IF NOT EXISTS hive.indexes_constraints (
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.indexes_constraints (
     table_name text NOT NULL,
     index_constraint_name text NOT NULL,
     command text NOT NULL,

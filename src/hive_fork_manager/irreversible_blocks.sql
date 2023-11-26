@@ -4,7 +4,7 @@ CREATE DOMAIN hive.hbd_amount AS NUMERIC NOT NULL;
 --- Interest rate (in BPS - basis points)
 CREATE DOMAIN hive.interest_rate AS INT4 NOT NULL;
 
-CREATE TABLE IF NOT EXISTS hive.blocks (
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.blocks (
        num integer NOT NULL,
        hash bytea NOT NULL,
        prev bytea NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS hive.blocks (
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.blocks', '');
 
-CREATE TABLE IF NOT EXISTS hive.irreversible_data (
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.irreversible_data (
       id integer,
       consistent_block integer,
       is_dirty bool NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS hive.irreversible_data (
 ALTER TABLE hive.irreversible_data ADD CONSTRAINT fk_1_hive_irreversible_data FOREIGN KEY (consistent_block) REFERENCES hive.blocks (num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.irreversible_data', '');
 
-CREATE TABLE IF NOT EXISTS hive.transactions (
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.transactions (
     block_num integer NOT NULL,
     trx_in_block smallint NOT NULL,
     trx_hash bytea NOT NULL,
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS hive.transactions (
 ALTER TABLE hive.transactions ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions', '');
 
-CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.transactions_multisig (
     trx_hash bytea NOT NULL,
     signature bytea NOT NULL,
     CONSTRAINT pk_hive_transactions_multisig PRIMARY KEY ( trx_hash, signature )
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
 ALTER TABLE transactions_multisig ADD CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash) REFERENCES hive.transactions (trx_hash) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions_multisig', '');
 
-CREATE TABLE IF NOT EXISTS hive.operation_types (
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.operation_types (
     id smallint NOT NULL,
     name text NOT NULL,
     is_virtual boolean NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS hive.operation_types (
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.operation_types', '');
 
-CREATE TABLE IF NOT EXISTS hive.operations (
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.operations (
     id bigint not null,
     block_num integer NOT NULL,
     trx_in_block smallint NOT NULL,
@@ -99,7 +99,7 @@ ALTER TABLE hive.operations ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_
 
 SELECT pg_catalog.pg_extension_config_dump('hive.operations', '');
 
-CREATE TABLE IF NOT EXISTS hive.applied_hardforks (
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.applied_hardforks (
     hardfork_num smallint NOT NULL,
     block_num integer NOT NULL,
     hardfork_vop_id bigint NOT NULL,
@@ -109,7 +109,7 @@ ALTER TABLE hive.applied_hardforks ADD CONSTRAINT fk_1_hive_applied_hardforks FO
 ALTER TABLE hive.applied_hardforks ADD CONSTRAINT fk_2_hive_applied_hardforks FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.applied_hardforks', '');
 
-CREATE TABLE IF NOT EXISTS hive.accounts (
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.accounts (
       id INTEGER NOT NULL
     , name VARCHAR(16) NOT NULL
     , block_num INTEGER NOT NULL
@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS hive.accounts (
 ALTER TABLE hive.accounts ADD CONSTRAINT fk_1_hive_accounts FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.accounts', '');
 
-CREATE TABLE IF NOT EXISTS hive.account_operations
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.account_operations
 (
       block_num INTEGER NOT NULL
     , account_id INTEGER NOT NULL --- Identifier of account involved in given operation.

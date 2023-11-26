@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS hive.fork(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.fork(
     id BIGSERIAL NOT NULL,
     block_num INT NOT NULL, -- head block number, after reverting all blocks from fork (look for `notify_switch_fork` in database.cpp hive project file )
     time_of_fork TIMESTAMP WITHOUT TIME ZONE NOT NULL, -- time of receiving notification from hived (see: hive.back_from_fork definition)
