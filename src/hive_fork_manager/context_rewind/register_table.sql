@@ -115,7 +115,7 @@ DECLARE
     __hive_rowid_column_name TEXT := 'hive_rowid';
     __operation_id_column_name TEXT :=  'hive_operation_id';
 BEGIN
-    EXECUTE format('CREATE TABLE hive.%I AS TABLE %I.%I', __shadow_table_name, _table_schema, _table_name );
+    EXECUTE format('CREATE UNLOGGED TABLE hive.%I AS TABLE %I.%I', __shadow_table_name, _table_schema, _table_name );
     EXECUTE format('DELETE FROM hive.%I', __shadow_table_name ); --empty shadow table if origin table is not empty
     EXECUTE format('ALTER TABLE hive.%I ADD COLUMN %I INTEGER NOT NULL', __shadow_table_name, __block_num_column_name );
     EXECUTE format('ALTER TABLE hive.%I ADD COLUMN %I hive.TRIGGER_OPERATION NOT NULL', __shadow_table_name, __operation_column_name );

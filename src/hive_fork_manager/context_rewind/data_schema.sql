@@ -18,7 +18,7 @@ BEGIN
 END
 $$;
 
-CREATE TABLE IF NOT EXISTS hive.contexts(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.contexts(
     id SERIAL NOT NULL,
     name hive.context_name NOT NULL,
     current_block_num INTEGER NOT NULL,
@@ -39,7 +39,7 @@ SELECT pg_catalog.pg_extension_config_dump('hive.contexts_id_seq', '');
 
 CREATE INDEX IF NOT EXISTS hive_contexts_owner_idx ON hive.contexts( owner );
 
-CREATE TABLE IF NOT EXISTS hive.registered_tables(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.registered_tables(
    id SERIAL NOT NULL,
    context_id INTEGER NOT NULL,
    origin_table_schema TEXT NOT NULL,
@@ -59,7 +59,7 @@ CREATE INDEX IF NOT EXISTS hive_registered_tables_context_idx ON hive.registered
 CREATE INDEX IF NOT EXISTS hive_registered_tables_owder_idx ON hive.registered_tables( owner );
 
 
-CREATE TABLE IF NOT EXISTS hive.triggers(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.triggers(
    id SERIAL PRIMARY KEY,
    registered_table_id INTEGER NOT NULL,
    trigger_name TEXT NOT NULL,

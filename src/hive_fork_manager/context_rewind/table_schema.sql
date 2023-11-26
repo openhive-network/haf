@@ -1,5 +1,5 @@
 
-CREATE TABLE IF NOT EXISTS hive.verify_table_schema(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.verify_table_schema(
     table_name TEXT NOT NULL,
     table_schema TEXT NOT NULL,
     table_schema_hash UUID,
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS hive.verify_table_schema(
 
 SELECT pg_catalog.pg_extension_config_dump('hive.verify_table_schema', '');
 
-CREATE TABLE IF NOT EXISTS hive.table_schema(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.table_schema(
     schema_name TEXT NOT NULL,
     schema_hash UUID NOT NULL
 );

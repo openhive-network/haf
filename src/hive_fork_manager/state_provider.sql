@@ -1,5 +1,5 @@
 
-CREATE TABLE IF NOT EXISTS hive.state_providers_registered(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.state_providers_registered(
       id SERIAL
     , context_id INTEGER NOT NULL
     , state_provider HIVE.STATE_PROVIDERS NOT NULL

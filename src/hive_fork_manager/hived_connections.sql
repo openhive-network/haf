@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS hive.hived_connections(
+CREATE UNLOGGED TABLE IF NOT EXISTS hive.hived_connections(
     id BIGSERIAL NOT NULL,
     block_num INT NOT NULL,
     git_sha TEXT,
