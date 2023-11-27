@@ -123,11 +123,11 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.irreversible_transactions_multisig_view
         EXCEPT SELECT * FROM ( VALUES
-                                  ( '\xDEED10'::bytea, '\xBAAD10'::bytea )
-                                , ( '\xDEED20'::bytea, '\xBAAD20'::bytea )
-                                , ( '\xDEED30'::bytea, '\xBAAD30'::bytea )
-                                , ( '\xDEED40'::bytea, '\xBAAD40'::bytea )
-                                , ( '\xDEED50'::bytea, '\xBAAD50'::bytea )
+                                  ( 1, '\xDEED10'::bytea, '\xBAAD10'::bytea )
+                                , ( 2, '\xDEED20'::bytea, '\xBAAD20'::bytea )
+                                , ( 3, '\xDEED30'::bytea, '\xBAAD30'::bytea )
+                                , ( 4, '\xDEED40'::bytea, '\xBAAD40'::bytea )
+                                , ( 5, '\xDEED50'::bytea, '\xBAAD50'::bytea )
                              ) as pattern
     ) , 'Unexpected rows in the irreversible view';
 
