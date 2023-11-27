@@ -9,10 +9,10 @@ DECLARE
   _pattern1 TEXT[] = '{"(irreversible_data,dd1812c6-cabd-4382-a4bf-c355276b3839,53114e1c-c6e5-867b-6c67-1d55865180fe,77ed7932-7dab-20e3-b506-4a2d3fccfe75,f40cac4c-2fae-a597-11c8-8cc0f329e18f)"}';
   _test1 TEXT[];
 
-  _pattern2 TEXT[] = '{"(transactions,a2f346aa-6ef3-1a4b-20fd-8fc5cb11eeb7,d0d1231f-f437-abf1-1f9f-6ae1ed916af4,d1456ff1-2474-ca5b-3b82-be0086c298f0,7766bb78-548b-dc33-4ebe-e5523196b1fb)"}';
+  _pattern2 TEXT[] = '{"(transactions,94b6219b-a5ef-4def-6518-0adb5b00140b,d0d1231f-f437-abf1-1f9f-6ae1ed916af4,d1456ff1-2474-ca5b-3b82-be0086c298f0,ba2b45bd-c11e-2a4a-6e86-aab2ac693cbb)"}';
   _test2 TEXT[];
 
-  _pattern3 TEXT[] = '{"(transactions_multisig,a1cc4195-2d73-eb00-3012-8fbf46dac280,2fae1b96-5a99-7b17-5163-ae45a2b02518,70f65c01-a33c-608b-b0e8-bd29f92615c9,cc576d3f-5919-0a1f-f851-1c008877b33a)"}';
+  _pattern3 TEXT[] = '{"(transactions_multisig,8d14a449-37a3-9bf0-0b21-42f94a41b1f2,58d75720-66fa-4ca6-bfd2-e34c9d55bc77,782bd57d-e234-61e7-89a2-27d1364acd99,cc576d3f-5919-0a1f-f851-1c008877b33a)"}';
   _test3 TEXT[];
 
   _pattern4 TEXT[] = '{"(operation_types,dd6c8768-2bc2-2b76-3246-292b108f744f,cf35886f-de4e-e064-b170-fd4186ea9148,0dc429a2-22b0-2d05-44d6-cc66d48082b6,08d2ba03-e127-e0ad-aaee-657b3aa27bae)"}';
@@ -39,7 +39,7 @@ DECLARE
   _pattern11 TEXT[] = '{"(transactions_reversible,bd204916-e13d-7977-7270-efcba296291c,80f88569-de6c-46a0-a116-e1dbf87f2177,1158aa24-91c1-dbc9-3f5b-98b1d83717dc,0b19bfdb-f0e2-8936-aa5c-56a41e213bf3)"}';
   _test11 TEXT[];
 
-  _pattern12 TEXT[] = '{"(transactions_multisig_reversible,7c089df2-c756-8ea2-41dd-004d2452986c,f59fe248-f829-91a0-fcf8-212ba1c34136,784b72cf-98ee-0e78-8dfd-b8d4746fa297,5e64750e-75a8-686e-1153-706d9850b68a)"}';
+  _pattern12 TEXT[] = '{"(transactions_multisig_reversible,cbf0b298-b96d-0dff-e53d-2ca4375efeb1,d784e6f9-20ad-86ae-a0f3-ea8903246581,784b72cf-98ee-0e78-8dfd-b8d4746fa297,5e64750e-75a8-686e-1153-706d9850b68a)"}';
   _test12 TEXT[];
 
   _pattern13 TEXT[] = '{"(operations_reversible,48719e0b-2a9c-94ae-ef96-43e159896956,5334a4f3-062c-1882-33b4-80dfc82b2b69,eab2b539-709f-09cc-33ae-5df59a6f64a2,6c9dc56c-5b3d-13f8-8a68-a961d9290fa3)"}';
