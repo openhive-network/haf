@@ -77,12 +77,21 @@ BEGIN
             EXECUTE format(
             $query$
                 CREATE TABLE  hive.%s_%s PARTITION OF hive.%s FOR VALUES FROM (%L) TO (%L);
+                ALTER TABLE hive.%s_%s
+                  SET (autovacuum_vacuum_scale_factor =0.0),
+                  SET (autovacuum_analyze_scale_factor = 0.0),
+                  SET (autovacuum_vacuum_insert_scale_factor=0.0),
+                  SET (autovacuum_analyze_threshold=50000),
+                  SET (autovacuum_vacuum_insert_threshold=10000) 
+                ;
             $query$,
             table_name,
             (i-1),
             table_name,
             start + (i-1) * nr_blocks,
-            (CASE WHEN i = partition_cnt THEN start + (i) * nr_blocks + excess_blocks ELSE start + (i) * nr_blocks END)
+            (CASE WHEN i = partition_cnt THEN start + (i) * nr_blocks + excess_blocks ELSE start + (i) * nr_blocks END),
+            table_name,
+            (i-1)
             ) res;
         RAISE NOTICE 'Partition % succesfuly created', i;
         END LOOP;
@@ -128,21 +137,18 @@ CREATE TABLE IF NOT EXISTS hive.operations (
     --   (after hived not changed head_block to another one)
     timestamp TIMESTAMP NOT NULL,
     body_binary hive.operation  DEFAULT NULL,
-    CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
-);
+    CONSTRAINT pk_hive_operations PRIMARY KEY ( id, block_num )
+)
+PARTITION BY RANGE ( block_num );
 
 ALTER TABLE hive.operations
-  ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID,
-  ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID,
-
-  SET (autovacuum_vacuum_scale_factor =0.0),
-  SET (autovacuum_analyze_scale_factor = 0.0),
-  SET (autovacuum_vacuum_insert_scale_factor=0.0),
-  SET (autovacuum_analyze_threshold=75000), -- Avg 63tx per block * 1200 blocks per hour= 75600
-  SET (autovacuum_vacuum_insert_threshold=10000) 
+  ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num), -- NOT VALID, -- not supported on partitioned tables
+  ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) --NOT VALID
   ;
 
 SELECT pg_catalog.pg_extension_config_dump('hive.operations', '');
+
+SELECT hive.create_range_partitions( 'operations', 100, 0, 1000000, 10000000);
 
 CREATE TABLE IF NOT EXISTS hive.applied_hardforks (
     hardfork_num smallint NOT NULL,
@@ -150,7 +156,7 @@ CREATE TABLE IF NOT EXISTS hive.applied_hardforks (
     hardfork_vop_id bigint NOT NULL,
     CONSTRAINT pk_hive_applied_hardforks PRIMARY KEY (hardfork_num)
 );
-ALTER TABLE hive.applied_hardforks ADD CONSTRAINT fk_1_hive_applied_hardforks FOREIGN KEY (hardfork_vop_id) REFERENCES hive.operations(id) NOT VALID;
+ALTER TABLE hive.applied_hardforks ADD CONSTRAINT fk_1_hive_applied_hardforks FOREIGN KEY (hardfork_vop_id, block_num) REFERENCES hive.operations(id, block_num) NOT VALID;
 ALTER TABLE hive.applied_hardforks ADD CONSTRAINT fk_2_hive_applied_hardforks FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.applied_hardforks', '');
 
@@ -176,7 +182,7 @@ CREATE TABLE IF NOT EXISTS hive.account_operations
     , CONSTRAINT hive_account_operations_uq2 UNIQUE ( account_id, operation_id )
 );
 ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_fk_1 FOREIGN KEY (account_id) REFERENCES hive.accounts(id) NOT VALID;
-ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hive.operations(id) NOT VALID;
+ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id, block_num) REFERENCES hive.operations(id, block_num) NOT VALID;
 ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_fk_3 FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.account_operations', '');
 
