@@ -86,6 +86,7 @@ save_table_schema() {
 
 verify_table_schema() {
   echo "Attempting to verify if existing table schema is correct..."
+  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "DROP DATABASE IF EXISTS $DB_NAME_AFTER_UPDATE;"
   sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "CREATE DATABASE $DB_NAME_AFTER_UPDATE WITH OWNER $DB_ADMIN;"
   sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME_AFTER_UPDATE" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE EXTENSION hive_fork_manager CASCADE;' 
   BEFORE_UPDATE=$(sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -t -A -c "SELECT schema_hash FROM hive.create_database_hash('hive')")
