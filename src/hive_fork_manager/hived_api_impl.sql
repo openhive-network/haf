@@ -420,7 +420,7 @@ BEGIN
     FROM pg_constraint pgc
     JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
     JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
-    WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name;
+    WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name AND pgc.conislocal;
 
     OPEN __cursor FOR (
         SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')

@@ -96,8 +96,8 @@ CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
     signature bytea NOT NULL,
     CONSTRAINT pk_hive_transactions_multisig PRIMARY KEY ( trx_hash, signature )
 );
--- FIXME temporary commented out since FK management code must be improved due to table partitions at referenced table
---ALTER TABLE hive.transactions_multisig ADD CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash, block_num) REFERENCES hive.transactions (trx_hash, block_num) NOT VALID;
+
+ALTER TABLE hive.transactions_multisig ADD CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash, block_num) REFERENCES hive.transactions (trx_hash, block_num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions_multisig', '');
 
 CREATE TABLE IF NOT EXISTS hive.operation_types (
