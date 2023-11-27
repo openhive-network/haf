@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from datetime import timedelta
 import math
-from typing import cast, Optional, TYPE_CHECKING, Union
+import test_tools as tt
+from typing import TYPE_CHECKING, Union
 
 from haf_local_tools.haf_node._haf_node import HafNode
+from test_tools.__private.network import Network
 from test_tools.__private.user_handles.get_implementation import get_implementation
 from test_tools.__private.user_handles.handles.node_handles.runnable_node_handle import RunnableNodeHandle
 
@@ -14,13 +16,12 @@ if TYPE_CHECKING:
 
     from haf_local_tools.db_adapter.db_adapter import ColumnType, ScalarType
     from haf_local_tools.haf_node._haf_node import Transaction, TransactionId
-    from test_tools.__private.user_handles.handles.network_handle import NetworkHandle as Network
 
 
 class HafNodeHandle(RunnableNodeHandle):
     def __init__(
         self,
-        network: Optional[Network] = None,
+        network: tt.Network | None = None,
         database_url: str = HafNode.DEFAULT_DATABASE_URL,
         keep_database: bool = False,
         create_unique_database: bool = True,
@@ -28,7 +29,7 @@ class HafNodeHandle(RunnableNodeHandle):
     ) -> None:
         super().__init__(
             implementation=HafNode(
-                network=get_implementation(network),
+                network=get_implementation(network, expected_type=Network) if network is not None else None,
                 database_url=database_url,
                 keep_database=keep_database,
                 create_unique_database=create_unique_database,
@@ -38,7 +39,7 @@ class HafNodeHandle(RunnableNodeHandle):
 
     @property
     def __implementation(self) -> HafNode:
-        return cast(HafNode, get_implementation(self))
+        return get_implementation(self, expected_type=HafNode)
 
     @property
     def session(self) -> Session:

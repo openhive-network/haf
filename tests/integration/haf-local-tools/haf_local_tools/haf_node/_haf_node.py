@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 import math
-from typing import Final, TYPE_CHECKING, TypeAlias, TypedDict, Union
+from typing import Final, TYPE_CHECKING, TypedDict, Union
 from uuid import uuid4
 
 import sqlalchemy
@@ -10,15 +10,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 from sqlalchemy_utils import create_database, database_exists, drop_database
 
+import test_tools as tt
 from test_tools.__private.preconfigured_node import PreconfiguredNode
-from test_tools.__private.time import Time
 
 from haf_local_tools.db_adapter import DbAdapter
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
 
-    from test_tools.__private.user_handles.handles.network_handle import NetworkHandle
     from test_tools.__private.user_handles.handles.node_handles.node_handle_base import NodeHandleBase as NodeHandle
 
     from haf_local_tools.db_adapter import ColumnType, ScalarType
@@ -35,7 +34,7 @@ class HafNode(PreconfiguredNode):
         self,
         *,
         name: str = "HafNode",
-        network: NetworkHandle | None = None,
+        network: tt.Network | None = None,
         database_url: str = DEFAULT_DATABASE_URL,
         keep_database: bool = False,
         create_unique_database: bool = True,
@@ -74,7 +73,7 @@ class HafNode(PreconfiguredNode):
         self.config.psql_url = self.__database_url
 
         if self.create_unique_database and self.__is_database_created is False:
-            self._logger.info(f"Preparing database {self.__database_url}")
+            self.logger.info(f"Preparing database {self.__database_url}")
             if database_exists(self.__database_url):
                 drop_database(self.__database_url)
             create_database(self.__database_url, template="haf_block_log")
@@ -109,7 +108,7 @@ class HafNode(PreconfiguredNode):
         if isinstance(transaction, TransactionId):
             transaction_hash = transaction
 
-        Time.wait_for(
+        tt.Time.wait_for(
             lambda: self.__is_transaction_in_database(transaction_hash),
             timeout=timeout,
             timeout_error_message=f"Waited too long for transaction {transaction_hash}",
