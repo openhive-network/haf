@@ -67,28 +67,32 @@ ALTER TABLE hive.transactions
 
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions', '');
 
-CREATE OR REPLACE FUNCTION hive.create_range_partitions( table_name VARCHAR, partition_cnt INTEGER, start INTEGER, nr_blocks INTEGER ) RETURNS void
+CREATE OR REPLACE FUNCTION hive.create_range_partitions( table_name VARCHAR, partition_cnt INTEGER, start INTEGER, nr_blocks INTEGER, excess_blocks INTEGER) RETURNS void
 LANGUAGE plpgsql
 AS $$
-DECLARE
-    command text;
-    BEGIN
-        IF EXISTS (SELECT 1 FROM pg_partitioned_table p, pg_class c WHERE p.partrelid = c.oid AND c.relname = table_name)
-        THEN
-            command := '';
-            FOR i IN 1..partition_cnt
-            LOOP
-                command := command || 'CREATE TABLE  hive.'||table_name||'_'||(i-1)||' PARTITION OF hive.'||table_name||' FOR VALUES FROM ('||start + (i-1)*nr_blocks||') TO ('||start + (i)*nr_blocks||');';
-            END LOOP;
-
-            RAISE NOTICE '%', command;
-            EXECUTE command;
-        ELSE
-            RAISE NOTICE 'Partitions can not be created.';
-        END IF;
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_partitioned_table p, pg_class c WHERE p.partrelid = c.oid AND c.relname = table_name) THEN
+        FOR i IN 1..partition_cnt
+        LOOP
+            EXECUTE format(
+            $query$
+                CREATE TABLE  hive.%s_%s PARTITION OF hive.%s FOR VALUES FROM (%L) TO (%L);
+            $query$,
+            table_name,
+            (i-1),
+            table_name,
+            start + (i-1) * nr_blocks,
+            (CASE WHEN i = partition_cnt THEN start + (i) * nr_blocks + excess_blocks ELSE start + (i) * nr_blocks END)
+            ) res;
+        RAISE NOTICE 'Partition % succesfuly created', i;
+        END LOOP;
+    ELSE
+        RAISE NOTICE 'Partitions can not be created.';
+    END IF;
 END $$;
 
-SELECT hive.create_range_partitions( 'transactions', 100, 0, 1000000 );
+
+SELECT hive.create_range_partitions( 'transactions', 100, 0, 1000000, 10000000);
 
 CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
     block_num integer NOT NULL,
