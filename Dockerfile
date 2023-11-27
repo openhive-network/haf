@@ -131,6 +131,27 @@ EXPOSE ${HTTP_PORT}
 
 ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
 
+ARG BUILD_TIME
+ARG GIT_COMMIT_SHA
+ARG GIT_CURRENT_BRANCH
+ARG GIT_LAST_LOG_MESSAGE
+ARG GIT_LAST_COMMITTER
+ARG GIT_LAST_COMMIT_DATE
+LABEL org.opencontainers.image.created="$BUILD_TIME"
+LABEL org.opencontainers.image.url="https://hive.io/"
+LABEL org.opencontainers.image.documentation="https://gitlab.syncad.com/hive/haf"
+LABEL org.opencontainers.image.source="https://gitlab.syncad.com/hive/haf"
+#LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.revision="$GIT_COMMIT_SHA"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.ref.name="HAF Core"
+LABEL org.opencontainers.image.title="Hive Application Framework (HAF) Core Image"
+LABEL org.opencontainers.image.description="Runs both the PostgreSQL database server and the hived instance that feeds it blockchain data"
+LABEL io.hive.image.branch="$GIT_CURRENT_BRANCH"
+LABEL io.hive.image.commit.log_message="$GIT_LAST_LOG_MESSAGE"
+LABEL io.hive.image.commit.author="$GIT_LAST_COMMITTER"
+LABEL io.hive.image.commit.date="$GIT_LAST_COMMIT_DATE"
+
 FROM ${CI_REGISTRY_IMAGE}base_instance:${BUILD_IMAGE_TAG} as instance
 
 # Embedded postgres service
@@ -141,3 +162,4 @@ EXPOSE ${P2P_PORT}
 EXPOSE ${WS_PORT}
 # JSON rpc service
 EXPOSE ${HTTP_PORT}
+
