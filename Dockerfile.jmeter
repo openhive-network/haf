@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 # docker buildx build --tag registry.gitlab.syncad.com/hive/haf/ci-base-image:$CI_IMAGE_TAG-jmeter --progress=plain --file Dockerfile.jmeter .
-ARG CI_IMAGE_TAG=ubuntu22.04-5
+ARG CI_IMAGE_TAG=ubuntu22.04-6
 
 FROM phusion/baseimage:jammy-1.0.1 AS build
 

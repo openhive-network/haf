@@ -1,12 +1,12 @@
 # Base docker file having defined environment for build and run of HAF instance.
-# docker build --target=ci-base-image -t registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu20.04-xxx -f Dockerfile .
+# docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=:ubuntu22.04-5
+ARG CI_IMAGE_TAG=:ubuntu22.04-6
 
 ARG BUILD_IMAGE_TAG
 
-FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu22.04-7 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu22.04-9 AS ci-base-image
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
@@ -14,6 +14,7 @@ SHELL ["/bin/bash", "-c"]
 
 USER root
 WORKDIR /usr/local/src
+COPY ./hive/scripts/openssl.conf /usr/local/src/hive/scripts/openssl.conf
 COPY ./hive/scripts/setup_ubuntu.sh /usr/local/src/hive/scripts/
 COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 
@@ -63,7 +64,7 @@ RUN \
 # Here we could use a smaller image without packages specific to build requirements
 FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG as base_instance
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu22.04-5}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu22.04-6}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}

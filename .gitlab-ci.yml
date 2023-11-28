@@ -13,8 +13,8 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
   FF_ENABLE_JOB_CLEANUP: 1
   GIT_STRATEGY: clone
-  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu22.04-5
-  BUILDER_IMAGE_TAG: "@sha256:2da00c8f151d9d582c21c99b24b988e58138a6bf682516a5a8bd740af0b24c89"
+  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu22.04-6
+  BUILDER_IMAGE_TAG: "@sha256:4d82084079de06ab3f00ec5d664503f0f3773406c29ba8963308fb02fbd242c5"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
@@ -428,7 +428,7 @@ update_with_wrong_table_schema:
 
 block_api_tests:
   extends: .replay_step
-  image: $CI_REGISTRY_IMAGE/ci-base-image:ubuntu22.04-5-jmeter
+  image: $CI_REGISTRY_IMAGE/ci-base-image:ubuntu22.04-6-jmeter
   needs:
     - job: haf_image_build
       artifacts: true
