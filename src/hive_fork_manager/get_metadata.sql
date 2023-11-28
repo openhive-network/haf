@@ -21,3 +21,5 @@ DROP FUNCTION IF EXISTS hive.get_metadata_operations;
 CREATE OR REPLACE FUNCTION hive.get_metadata_operations()
 RETURNS SETOF hive.get_metadata_operations_type
 AS 'MODULE_PATHNAME', 'get_metadata_operations' LANGUAGE C;
+
+DROP FUNCTION IF EXISTS hive.is_metadata_operation;
