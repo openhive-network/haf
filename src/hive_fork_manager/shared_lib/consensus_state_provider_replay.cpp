@@ -448,13 +448,7 @@ void haf_state_database::apply_haf_block(const full_block_ptr& full_block, uint3
 
 void haf_state_database::state_dependent_open( const open_args& args )
 {
-  load_state_initial_data(args,
-    [this](uint32_t block_num) -> full_block_ptr
-    {
-      // auto full_block = postgres_block_log(csp_session).read_full_block(head_block_num());
-      // return full_block;
-      return {};
-    });
+  load_state_initial_data(args);
 }
 
 
