@@ -91,22 +91,22 @@ verify_table_schema() {
   BEFORE_UPDATE=$(sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -t -A -c "SELECT schema_hash FROM hive.create_database_hash('hive')")
   AFTER_UPDATE=$(sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME_AFTER_UPDATE" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -t -A -c "SELECT schema_hash FROM hive.create_database_hash('hive')")
   if [ "$BEFORE_UPDATE" = "$AFTER_UPDATE" ]; then
-  echo "The table schema is correct, verification completed."
-  echo "Dropping temporary database"
-  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "DROP DATABASE IF EXISTS $DB_NAME_AFTER_UPDATE;"
+    echo "The table schema is correct, verification completed."
+    echo "Dropping temporary database"
+    sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "DROP DATABASE IF EXISTS $DB_NAME_AFTER_UPDATE;"
   else
-  save_table_schema
-  echo "Table schema is inconsistent"
-  echo "COLUMNS"
-  diff --suppress-common-lines before_update_columns.txt after_update_columns.txt || true
-  echo "CONSTRAINTS"
-  diff --suppress-common-lines before_update_constraints.txt after_update_constraings.txt || true
-  echo "INDEXES"
-  diff --suppress-common-lines before_update_indexes.txt after_update_indexes.txt || true
-  echo "Dropping temporary database"
-  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "DROP DATABASE IF EXISTS $DB_NAME_AFTER_UPDATE;"
-  find -type f -name '*.txt' > /dev/null 2>&1
-  exit 1
+    save_table_schema
+    echo "Table schema is inconsistent"
+    echo "COLUMNS"
+    diff --suppress-common-lines before_update_columns.txt after_update_columns.txt || true
+    echo "CONSTRAINTS"
+    diff --suppress-common-lines before_update_constraints.txt after_update_constraings.txt || true
+    echo "INDEXES"
+    diff --suppress-common-lines before_update_indexes.txt after_update_indexes.txt || true
+    echo "Dropping temporary database"
+    sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "DROP DATABASE IF EXISTS $DB_NAME_AFTER_UPDATE;"
+    find -type f -name '*.txt' > /dev/null 2>&1
+    exit 1
   fi
 }
 
