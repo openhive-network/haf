@@ -41,7 +41,7 @@ def test_p2p_sync(
 
     time_offset = tt.Time.serialize(
         time=mirrornet_witness_node.get_head_block_time(),
-        format_=tt.Time.TIME_OFFSET_FORMAT,
+        format_=tt.TimeFormats.TIME_OFFSET_FORMAT,
     )
 
     connect_nodes(mirrornet_witness_node, haf_node)
