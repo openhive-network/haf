@@ -29,7 +29,7 @@ def test_massive_sync(
     )
 
     time_offset = tt.Time.serialize(
-        mirrornet_witness_node.get_head_block_time(), format_=tt.Time.TIME_OFFSET_FORMAT
+        mirrornet_witness_node.get_head_block_time(), format_=tt.TimeFormats.TIME_OFFSET_FORMAT
     )
 
     connect_nodes(mirrornet_witness_node, haf_node)
@@ -43,7 +43,7 @@ def test_massive_sync(
     )
 
     time_offset = tt.Time.serialize(
-        mirrornet_witness_node.get_head_block_time(), format_=tt.Time.TIME_OFFSET_FORMAT
+        mirrornet_witness_node.get_head_block_time(), format_=tt.TimeFormats.TIME_OFFSET_FORMAT
     )
 
     haf_node.run(
