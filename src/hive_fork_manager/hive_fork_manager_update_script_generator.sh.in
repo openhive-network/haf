@@ -137,6 +137,20 @@ make_update() {
   sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER EXTENSION hive_fork_manager UPDATE"
 }
 
+check_functions_were_updated() {
+  echo
+  echo "Checking that all C functions were properly updated..."
+
+  query="
+  SELECT p.proname,p.prosrc,p.probin
+    FROM pg_catalog.pg_proc AS p
+    JOIN pg_catalog.pg_namespace AS n ON p.pronamespace=n.oid
+    JOIN pg_catalog.pg_language AS l ON p.prolang=l.oid
+    WHERE n.nspname='hive' AND l.lanname='c' AND p.probin NOT LIKE '%-$COMMIT_NEW_ID.so'"
+  sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -q -t -A -c "$query" | \
+    awk -v "HASH=$COMMIT_NEW_ID" -F'|' '{print("Function", $1, "references", $2, "in", $3 ", but", HASH, "was expected")} END{exit NR > 0 ? 3 : 0}'
+}
+
 verify_table_schema
 
 get_deployed_version
@@ -145,4 +159,4 @@ generate_final_update_script
 
 make_update
 
-
+check_functions_were_updated
