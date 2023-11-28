@@ -30,7 +30,7 @@ class haf_state_database : public hive::chain::database
 public:
   haf_state_database(csp_session_ref_type csp_session):csp_session(csp_session){}
 
-  virtual void state_dependent_open( const open_args& args ) override;
+
 
   void apply_haf_block(const full_block_ptr& full_block, uint32_t skip);
 
@@ -444,15 +444,6 @@ void haf_state_database::apply_haf_block(const full_block_ptr& full_block, uint3
 
   }FC_CAPTURE_AND_RETHROW()
 }
-
-
-void haf_state_database::state_dependent_open( const open_args& args )
-{
-  load_state_initial_data(args);
-}
-
-
-
 
 void postgres_block_log::measure_before_run()
 {
