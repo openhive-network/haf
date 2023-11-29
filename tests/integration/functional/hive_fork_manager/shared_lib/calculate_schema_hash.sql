@@ -18,16 +18,16 @@ DECLARE
   _pattern4 TEXT[] = '{"(operation_types,dd6c8768-2bc2-2b76-3246-292b108f744f,cf35886f-de4e-e064-b170-fd4186ea9148,0dc429a2-22b0-2d05-44d6-cc66d48082b6,08d2ba03-e127-e0ad-aaee-657b3aa27bae)"}';
   _test4 TEXT[];
 
-  _pattern5 TEXT[] = '{"(operations,a1d1c126-be23-2071-dfc6-7ed4a1fa0436,960e9106-565e-0f1a-f5ce-1f0a5c5c8e14,dc112f75-3d2c-62c9-88cd-cb4247c91fc0,351e13b9-b6b9-96e2-a5cc-4cca83d5d913)"}';
+  _pattern5 TEXT[] = '{"(operations,86019260-c508-1293-336c-5376798f1274,960e9106-565e-0f1a-f5ce-1f0a5c5c8e14,dc112f75-3d2c-62c9-88cd-cb4247c91fc0,ba2b45bd-c11e-2a4a-6e86-aab2ac693cbb)"}';
   _test5 TEXT[];
 
-  _pattern6 TEXT[] = '{"(applied_hardforks,a5f46bc5-1411-9275-ab7c-4ac4f9067e80,cc12f996-6a6b-d8d1-3c37-567f4affedfb,e9c77910-32e5-8f5a-87f3-cc1d5361c067,b574c705-0de0-5e63-a62e-c98c7917893e)"}';
+  _pattern6 TEXT[] = '{"(applied_hardforks,916659d6-4780-3655-39d1-8cff2c86139f,cc12f996-6a6b-d8d1-3c37-567f4affedfb,f356074a-4d49-1417-65a3-8471e7a0da21,b574c705-0de0-5e63-a62e-c98c7917893e)"}';
   _test6 TEXT[];
 
   _pattern7 TEXT[] = '{"(accounts,9c43f538-b5c3-9006-0c76-2a438a32c626,d823f943-fb86-a5be-a277-4029f2ebfd60,d1104ad7-86e7-2870-fcf6-b06c104eba09,13ab4e33-e66a-2b30-cf72-e7ef17888f55)"}';
   _test7 TEXT[];
 
-  _pattern8 TEXT[] = '{"(account_operations,11e4a069-a324-7048-d1c7-a5a9dcbf5119,37611791-4f93-7844-5e74-7b6429aad7a2,5c8c64a2-b577-bea3-17d8-f678775e7454,35365591-23e8-59e5-6153-98a5b2e0bde7)"}';
+  _pattern8 TEXT[] = '{"(account_operations,ed991068-ef79-ca23-a35f-2423abf144c3,37611791-4f93-7844-5e74-7b6429aad7a2,7de46add-a802-49f8-2d85-ed91ac768d16,35365591-23e8-59e5-6153-98a5b2e0bde7)"}';
   _test8 TEXT[];
 
   _pattern9 TEXT[] = '{"(fork,a86a9a09-df69-083b-d60d-e08267dd4055,7a370e3d-dce9-c286-ed72-fc52c5ba6dcd,197844f1-1317-5bc9-731b-6a445868da98,8bc60323-f3d8-b277-4470-7d395f37fef8)"}';
