@@ -300,7 +300,7 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE, _first_blocknum hive.blocks.num%TYPE )
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -311,8 +311,6 @@ BEGIN
     PERFORM hive.back_from_fork( _block_num );
     INSERT INTO hive.hived_connections( block_num, git_sha, time )
     VALUES( _block_num, _git_sha, now() );
-
-    UPDATE hive.irreversible_data SET first_block_to_sync = _first_blocknum;
 END;
 $BODY$
 ;
@@ -378,7 +376,7 @@ BEGIN
     -- to hive.events and hive.blocks tables
     SET CONSTRAINTS ALL DEFERRED;
 
-    INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE, NULL) ON CONFLICT DO NOTHING;
+    INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
     INSERT INTO hive.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
     INSERT INTO hive.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
     SELECT MAX(eq.id) + 1 FROM hive.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;

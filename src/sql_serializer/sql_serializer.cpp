@@ -389,9 +389,9 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
   // inform the db about starting hived
   auto connect_to_the_db = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx ){
     const auto CONNECT_QUERY = "SELECT hive.connect('"s
-      + fc::git_revision_sha
-      + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER"
-      + " ,"s + std::to_string( psql_first_block ) + "::INTEGER"s + ");"s;
+                               + fc::git_revision_sha
+                               + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER"
+                               + ");"s;
     tx.exec( CONNECT_QUERY );
     return data_processing_status();
   };
