@@ -374,6 +374,8 @@ BEGIN
         PERFORM hive.create_database_hash('hive');
         RETURN;
     END IF;
+    -- We need to check constraints at the moment when event_sink and block_sink are both added
+    -- to hive.events and hive.blocks tables
     SET CONSTRAINTS ALL DEFERRED;
 
     INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE, NULL) ON CONFLICT DO NOTHING;

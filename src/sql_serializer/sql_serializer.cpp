@@ -482,7 +482,6 @@ void sql_serializer_plugin_impl::initialize_db()
   ilog("Initializing database...");
 
   /// Let's init our database before applying first block (resync case)...:
-  inform_hfm_about_starting();
   init_database();
 
   ilog("Leaving a initializing database");

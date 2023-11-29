@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 import test_tools as tt
 
 from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress
-from haf_local_tools.tables import Blocks, BlocksView, Transactions, Operations
+from haf_local_tools.tables import AccountsView, Blocks, BlocksView, Transactions, Operations
 
 
 START_TEST_BLOCK =  115
@@ -32,16 +32,25 @@ def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
     irreversible_block = get_irreversible_block(node_under_test)
 
     blks = session.query(Blocks).order_by(Blocks.num).all()
+    account_count = session.query(AccountsView).count()
     block_nums = [block.num for block in blks]
-    # when psql-first-block is used and HAF is turning into LIVE sync state
-    # before reach the block limit, then first block which needs to be live synced
-    # is omitted in sync but the all accounts are dumped including those created in
-    # the block, next block will be fully synced. This way we avoid accounts duplication
-    # between first synced block and all accounts in state before the block.
-    # block log contains 109 blocks (are omitted because they are less than first block 115)
-    # block 110 (which is first in live sync) is sacrificed for dump all accounts in hive state
-    # block 111 is first fully synced block
-    assert sorted(block_nums)[:2] == [i for i in [0, 111]]
+    # We have 109 irreversible blocks already synced, and now we can have two situations:
+    # 1. hived will send end_of_syncing notification->serializer will move from START to LIVE state
+    #   ,database will be initialized and the next block (110) will be the first synced.
+    # 2. hived will process a block and pre_apply/post_apply block notification will be sent.
+    #   Here the first processed block will be discarded because it is less than psql-first-block (110<115),
+    #   serializer will move from START to WAIT state. After processing a block, hived will send
+    #   end_of_syncing notification-> serializer will move from WAIT to LIVE state, database will be initialized
+    #   and the next block (111) will be the first synced.
+    # For the test purpose it doesn't matter which situation will happen, it is
+    # only important that blocks less than 110 are not dumped, and dumping
+    # blocks is started from the block less than 115, during entering the LIVE state
+    # before reaching psql-first-block limit.
+
+    assert sorted(block_nums)[:2] == [i for i in [0, 110]]\
+        or sorted(block_nums)[:2] == [i for i in [0, 111]] # situation 1 or situation 2
+
+    assert account_count == 27
 
     tt.logger.info(f'head_block: {head_block} irreversible_block: {irreversible_block}')
 
