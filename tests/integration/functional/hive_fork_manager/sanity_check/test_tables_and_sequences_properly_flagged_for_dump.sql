@@ -21,12 +21,7 @@ BEGIN
 
     SELECT ARRAY_AGG(table_name) INTO all_tables
     FROM  information_schema.tables
-    WHERE table_schema = 'hive' AND table_type <> 'VIEW' AND CAST ( 'hive.'||table_name as TEXT ) NOT IN
-    (
-        SELECT CAST( inhrelid::regclass as TEXT )
-        FROM   pg_catalog.pg_inherits
-        WHERE  inhparent = 'hive.transactions'::regclass
-    );
+    WHERE table_schema = 'hive' and table_type <> 'VIEW';
 
     SELECT extconfig into oids FROM pg_extension WHERE extname = 'hive_fork_manager';
 
