@@ -55,6 +55,8 @@ extern "C" {
 #include <utils/rel.h>
 #include <utils/tuplestore.h>
 
+#include <tcop/deparse_utility.h>
+
 #include <pgstat.h>
 
 #include <c.h>

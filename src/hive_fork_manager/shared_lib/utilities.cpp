@@ -815,4 +815,43 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
     PG_RETURN_TEXT_P(result);
   }
+
+  PG_FUNCTION_INFO_V1(ignore_registered_table_edition);
+  /*
+   * When ddl trigger is called for a context registered table
+   * then we need to ignore ALTER TABLE when it manipulates only with constraints or indexes
+   * Implementation is based on test code from postgres repository: get_altertable_subcmdtypes(pg_ddl_command)
+   */
+  Datum
+  ignore_registered_table_edition(PG_FUNCTION_ARGS)
+  {
+    CollectedCommand *cmd = (CollectedCommand *) PG_GETARG_POINTER(0);
+    ListCell   *cell;
+
+    if (cmd->type != SCT_AlterTable) {
+      PG_RETURN_BOOL( true );
+    }
+
+    foreach(cell, cmd->d.alterTable.subcmds)
+    {
+      auto* sub = static_cast<CollectedATSubcmd*>( lfirst(cell) );
+      AlterTableCmd *subcmd = castNode(AlterTableCmd, sub->parsetree);
+
+      switch (subcmd->subtype)
+      {
+        case AT_AddColumn:
+        case AT_AddColumnRecurse:
+        case AT_AddColumnToView:
+        case AT_DropColumn:
+        case AT_DropColumnRecurse:
+        case AT_AlterColumnType:
+        case AT_AddInherit:
+          PG_RETURN_BOOL( false );
+        default:
+          break;
+      }
+    }
+
+    PG_RETURN_BOOL( true );
+  }
 }
