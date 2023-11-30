@@ -70,8 +70,7 @@ def trx_creator(wallet: tt.Wallet, identifier: int):
         memo_cnt += 1
     return f'[break {identifier}] Creating transactions finished...'
 
-#When the issue 118 will be fixed, change `break_limit` temporarily to a value that will be related to a few hours in order to evaluate if everything works
-@pytest.mark.skip(reason='https://gitlab.syncad.com/hive/haf/-/issues/118')
+#Some information in: https://gitlab.syncad.com/hive/haf/-/issues/118
 def test_many_forks_many_ops_db(prepared_networks_and_database_17_3):
     global break_cnt
     global break_limit
