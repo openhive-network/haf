@@ -171,6 +171,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.can_impersonate(_role_to_check IN TEXT, _required_role IN TEXT)
     , hive.unreachable_event_id()
     , hive.initialize_extension_data()
+    , hive.ignore_registered_table_edition( pg_ddl_command )
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION

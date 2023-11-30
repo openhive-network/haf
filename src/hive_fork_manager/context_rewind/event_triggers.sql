@@ -1,3 +1,8 @@
+CREATE OR REPLACE FUNCTION hive.ignore_registered_table_edition( pg_ddl_command )
+    RETURNS BOOLEAN LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'ignore_registered_table_edition';
+
 CREATE OR REPLACE FUNCTION hive.chceck_constrains( _table_schema TEXT,  _table_name TEXT )
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -81,12 +86,19 @@ __shadow_table_name TEXT := NULL;
 __origin_table_schema TEXT;
 __origin_table_name TEXT;
 __new_columns TEXT[];
+__ignore_event BOOL;
 BEGIN
-    SELECT hrt.shadow_table_name, hrt.origin_table_schema, hrt.origin_table_name, hive.check_owner( hc.name, hc.owner )  FROM
+    SELECT
+        hive.ignore_registered_table_edition(command),
+        hrt.shadow_table_name,
+        hrt.origin_table_schema,
+        hrt.origin_table_name,
+        hive.check_owner( hc.name, hc.owner )
+    FROM
         ( SELECT * FROM pg_event_trigger_ddl_commands() ) as tr
         JOIN hive.registered_tables hrt ON ( hrt.origin_table_schema || '.' || hrt.origin_table_name ) = tr.object_identity
         JOIN hive.contexts hc ON hrt.context_id = hc.id
-    INTO __shadow_table_name, __origin_table_schema, __origin_table_name;
+    INTO __ignore_event, __shadow_table_name, __origin_table_schema, __origin_table_name;
 
     IF __shadow_table_name IS NULL THEN
         -- maybe ALTER INHERIT ( hive.<context_name> ) to register table into context
@@ -103,6 +115,10 @@ BEGIN
             JOIN hive.contexts hc ON ( 'hive.' || hc.name )::regclass = pgi.inhparent
             WHERE tr.object_type = 'table'
         ) as tables;
+        RETURN;
+    END IF;
+
+    IF __ignore_event = TRUE THEN
         RETURN;
     END IF;
 
