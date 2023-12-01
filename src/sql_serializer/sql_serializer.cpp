@@ -206,13 +206,15 @@ public:
     , uint32_t _psql_index_threshold
     , uint32_t _psql_livesync_threshold
     , bool     _psql_enable_filter
+    , bool     _disable_table_logging_during_massive_sync
   )
   : _indexation_state( _main_plugin, _chain_db, url, app,
                           _psql_transactions_threads_number,
                           _psql_operations_threads_number,
                           _psql_account_operations_threads_number,
                           _psql_index_threshold,
-                          _psql_livesync_threshold
+                          _psql_livesync_threshold,
+                          _disable_table_logging_during_massive_sync
                           ),
       db_url{url},
       chain_db{_chain_db},
@@ -283,6 +285,8 @@ public:
   stats_group current_stats;
   type_extractor::operation_extractor op_extractor;
   blockchain_filter filter;
+
+  bool disable_table_logging_during_massive_sync = false;
 
   void log_statistics()
   {
@@ -732,6 +736,7 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
                     ("psql-track-operations", boost::program_options::value< std::vector<std::string> >()->composing(), "Defines operations' types to track. Can be specified multiple times.")
                     ("psql-track-body-operations", boost::program_options::value< std::vector<std::string> >()->composing()->multitoken(), "For a type of operation it's defined a regex that filters body of operation and decides if it's excluded. Can be specified multiple times. A complex regex can cause slowdown or processing can be even abandoned due to complexity.")
                     ("psql-enable-filter", appbase::bpo::value<bool>()->default_value( true ), "enable filtering accounts and operations")
+                    ("psql-disable-table-logging-during-massive-sync", appbase::bpo::bool_switch()->default_value(false), "sync faster by disabling write-ahead logging on haf tables")
                     ;
 }
 
@@ -757,11 +762,13 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , options["psql-index-threshold"].as<uint32_t>()
     , options["psql-livesync-threshold"].as<uint32_t>()
     , options["psql-enable-filter"].as<bool>()
+    , options["psql-disable-table-logging-during-massive-sync"].as<bool>()
   );
 
   // settings
   my->psql_index_threshold = options["psql-index-threshold"].as<uint32_t>();
   my->psql_dump_account_operations = options["psql-enable-account-operations-dump"].as<bool>();
+  my->disable_table_logging_during_massive_sync = options["psql-disable-table-logging-during-massive-sync"].as<bool>();
 
   my->currently_caching_data = std::make_unique<cached_data_t>( default_reservation_size );
 

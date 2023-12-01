@@ -18,6 +18,8 @@ namespace hive::plugins::sql_serializer {
     void enable_indexes();
     void disable_constraints();
     void enable_constrains();
+    void disable_logging();
+    void enable_logging();
 
   private:
     std::unique_ptr<queries_commit_data_processor>

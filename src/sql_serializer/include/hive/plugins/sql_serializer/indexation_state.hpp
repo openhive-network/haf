@@ -34,6 +34,7 @@ namespace hive::plugins::sql_serializer {
         , uint32_t psql_account_operations_threads_number
         , uint32_t psql_index_threshold
         , uint32_t psql_livesync_threshold
+        , bool disable_table_logging_during_massive_sync
       );
       ~indexation_state() = default;
       indexation_state& operator=( indexation_state& ) = delete;
@@ -88,6 +89,7 @@ namespace hive::plugins::sql_serializer {
       std::shared_ptr< flush_trigger > _trigger;
       int32_t _irreversible_block_num;
       indexes_controler _indexes_controler;
+      bool _disable_table_logging_during_massive_sync;
 
       fc::time_point _start_state_time;
   };
