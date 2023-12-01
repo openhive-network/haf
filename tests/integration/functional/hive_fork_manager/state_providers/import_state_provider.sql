@@ -72,3 +72,16 @@ BEGIN
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE PROCEDURE bob_test_then()
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+BEGIN
+    -- bob as member of hive_applications_group got select permission for state provider tables
+    PERFORM * FROM hive.context_accounts;
+    PERFORM * FROM hive.context_tests1;
+    PERFORM * FROM hive.context_tests2;
+END;
+$BODY$
+;

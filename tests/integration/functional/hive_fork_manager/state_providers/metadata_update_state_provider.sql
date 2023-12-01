@@ -604,6 +604,50 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE PROCEDURE bob_test_then()
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+BEGIN
+    PERFORM ASSERT_METADATA_VALUES(6 /*'test-safari'*/   , '','{"profile":{"name":"Leonardo Da VinciXX","about":"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..","website":"http://www.davincilife.com/","location":"Florence","cover_image":"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg","profile_image":"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg"}}');
+    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '""');
+    PERFORM ASSERT_METADATA_VALUES(8 /*'bassman077'*/    , '{"maleficiaries":[{"name":"oracle-d","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"},{"name":"spk.beneficiary","label":"referrer","weight":300}]}', '');
+    PERFORM ASSERT_METADATA_VALUES(9 /*'spscontest'*/    ,'','""');
+    PERFORM ASSERT_METADATA_VALUES(10 /*'xenomorphosis'*/,'','{}');
+    PERFORM ASSERT_METADATA_VALUES(11 /*'sloth.buzz'*/   ,'{}','');
+    PERFORM ASSERT_METADATA_VALUES(12 /*'simple-app'*/   ,'""','');
+    PERFORM ASSERT_METADATA_VALUES(13 /*'dorrebeca2'*/   ,'{}','');
+    PERFORM ASSERT_METADATA_VALUES(14 /*'margemnlpz08'*/ ,'{"profile":{"about":"This account was instantly created via @hivewallet.app - available for iOS and Android!","website":"https://hivewallet.app"}}','');
+    PERFORM ASSERT_METADATA_VALUES(15 /*'steem.kit'*/    ,'{"owner":"genievot"}','');
+    PERFORM ASSERT_METADATA_VALUES(16 /*'jte1023'*/      ,'{"profile":{"name":"Jeremy","about":"               ","cover_image":"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg","profile_image":"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg","website":" ","location":"NC, USA","pinned":"","version":2,"portfolio":"enabled","trail":true,"collections":"enabled"}}', '{"profile":{"name":"Jeremy","about":"               ","cover_image":"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg","profile_image":"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg","website":" ","location":"NC, USA","pinned":"","version":2,"portfolio":"enabled","trail":true,"collections":"enabled"}}');
+    PERFORM ASSERT_METADATA_VALUES(17 /*'adedayoolumide'*/,'{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
+    PERFORM ASSERT_METADATA_VALUES(18 /*'eos-polska'*/   ,'{"beneficiaries":[{"name":"fractalnode","weight":300,"label":"referrer"},{"name":"ocdb","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
+END;
+$BODY$
+;
+
+CREATE OR REPLACE PROCEDURE alice_test_then()
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+BEGIN
+    PERFORM ASSERT_METADATA_VALUES(6 /*'test-safari'*/   , '','{"profile":{"name":"Leonardo Da VinciXX","about":"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..","website":"http://www.davincilife.com/","location":"Florence","cover_image":"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg","profile_image":"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg"}}');
+    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '""');
+    PERFORM ASSERT_METADATA_VALUES(8 /*'bassman077'*/    , '{"maleficiaries":[{"name":"oracle-d","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"},{"name":"spk.beneficiary","label":"referrer","weight":300}]}', '');
+    PERFORM ASSERT_METADATA_VALUES(9 /*'spscontest'*/    ,'','""');
+    PERFORM ASSERT_METADATA_VALUES(10 /*'xenomorphosis'*/,'','{}');
+    PERFORM ASSERT_METADATA_VALUES(11 /*'sloth.buzz'*/   ,'{}','');
+    PERFORM ASSERT_METADATA_VALUES(12 /*'simple-app'*/   ,'""','');
+    PERFORM ASSERT_METADATA_VALUES(13 /*'dorrebeca2'*/   ,'{}','');
+    PERFORM ASSERT_METADATA_VALUES(14 /*'margemnlpz08'*/ ,'{"profile":{"about":"This account was instantly created via @hivewallet.app - available for iOS and Android!","website":"https://hivewallet.app"}}','');
+    PERFORM ASSERT_METADATA_VALUES(15 /*'steem.kit'*/    ,'{"owner":"genievot"}','');
+    PERFORM ASSERT_METADATA_VALUES(16 /*'jte1023'*/      ,'{"profile":{"name":"Jeremy","about":"               ","cover_image":"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg","profile_image":"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg","website":" ","location":"NC, USA","pinned":"","version":2,"portfolio":"enabled","trail":true,"collections":"enabled"}}', '{"profile":{"name":"Jeremy","about":"               ","cover_image":"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg","profile_image":"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg","website":" ","location":"NC, USA","pinned":"","version":2,"portfolio":"enabled","trail":true,"collections":"enabled"}}');
+    PERFORM ASSERT_METADATA_VALUES(17 /*'adedayoolumide'*/,'{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
+    PERFORM ASSERT_METADATA_VALUES(18 /*'eos-polska'*/   ,'{"beneficiaries":[{"name":"fractalnode","weight":300,"label":"referrer"},{"name":"ocdb","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION ASSERT_METADATA_VALUES(
     _account_id INTEGER,
     _json_metadata TEXT,
