@@ -169,11 +169,30 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'applied_hardforks' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'accounts' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'account_operations' );
-
-
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE FUNCTION hive.enable_logging_for_irreversible_tables()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    ALTER TABLE hive.applied_hardforks SET LOGGED;
+    ALTER TABLE hive.operations SET LOGGED;
+    ALTER TABLE hive.transactions_multisig SET LOGGED;
+    ALTER TABLE hive.transactions SET LOGGED;
+    ALTER TABLE hive.blocks SET LOGGED;
+    ALTER TABLE hive.accounts SET LOGGED;
+    ALTER TABLE hive.account_operations SET LOGGED;
+    ALTER TABLE hive.irreversible_data SET LOGGED;
+END;
+$BODY$
+SECURITY DEFINER
+;
+
 
 CREATE OR REPLACE FUNCTION hive.disable_fk_of_irreversible()
     RETURNS void
@@ -190,7 +209,6 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts' );
     PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations' );
-
 END;
 $BODY$
 ;
@@ -210,12 +228,31 @@ BEGIN
     PERFORM hive.restore_indexes( 'hive.accounts' );
     PERFORM hive.restore_indexes( 'hive.account_operations' );
     PERFORM hive.restore_indexes( 'hive.irreversible_data' );
-
-
 END;
 $BODY$
 SET maintenance_work_mem TO '6GB';
 ;
+
+CREATE OR REPLACE FUNCTION hive.disable_logging_for_irreversible_tables()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    ALTER TABLE hive.irreversible_data SET UNLOGGED;
+    ALTER TABLE hive.account_operations SET UNLOGGED;
+    ALTER TABLE hive.accounts SET UNLOGGED;
+    ALTER TABLE hive.blocks SET UNLOGGED;
+    ALTER TABLE hive.transactions SET UNLOGGED;
+    ALTER TABLE hive.transactions_multisig SET UNLOGGED;
+    ALTER TABLE hive.operations SET UNLOGGED;
+    ALTER TABLE hive.applied_hardforks SET UNLOGGED;
+END;
+$BODY$
+SECURITY DEFINER
+;
+
 
 CREATE OR REPLACE FUNCTION hive.enable_fk_of_irreversible()
     RETURNS void

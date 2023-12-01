@@ -135,6 +135,7 @@ indexation_state::indexation_state(
   , uint32_t psql_account_operations_threads_number
   , uint32_t psql_index_threshold
   , uint32_t psql_livesync_threshold
+  , bool disable_table_logging_during_massive_sync
 )
   : _main_plugin( main_plugin )
   , _chain_db( chain_db )
@@ -146,6 +147,7 @@ indexation_state::indexation_state(
   , _psql_livesync_threshold( psql_livesync_threshold )
   , _irreversible_block_num( NO_IRREVERSIBLE_BLOCK )
   , _indexes_controler( db_url, psql_index_threshold, app )
+  , _disable_table_logging_during_massive_sync(disable_table_logging_during_massive_sync)
 {
   cached_data_t empty_data{0};
   update_state( INDEXATION::START, empty_data, 0 );
@@ -184,6 +186,7 @@ indexation_state::on_post_reindex( cached_data_t& cached_data, uint32_t last_blo
     force_trigger_flush_with_all_data( cached_data, last_block_num );
     _trigger.reset();
     _dumper.reset();
+    _indexes_controler.enable_logging();
     _indexes_controler.enable_indexes();
     _indexes_controler.enable_constrains();
     return;
@@ -273,6 +276,11 @@ indexation_state::update_state(
         ? expected_number_of_blocks_to_sync()
         : number_of_blocks_to_add
       );
+      if (_disable_table_logging_during_massive_sync)
+      {
+        ilog("Disabling write-ahead logging on HAF tables");
+        _indexes_controler.disable_logging();
+      }
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , theApp
@@ -297,6 +305,7 @@ indexation_state::update_state(
         }
       _trigger.reset();
       _dumper.reset();
+      _indexes_controler.enable_logging();
       _indexes_controler.enable_indexes();
       _indexes_controler.enable_constrains();
       _dumper = std::make_unique< livesync_data_dumper >(

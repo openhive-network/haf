@@ -104,6 +104,22 @@ indexes_controler::enable_constrains() {
   ilog( "PROFILE: Restored HAF constraints: ${t}s", ("t",restore_constraints_time.to_seconds()) );
 }
 
+void indexes_controler::disable_logging() {
+  if (theApp.is_interrupt_request())
+    return;
+
+  start_commit_sql(true, "hive.disable_logging_for_irreversible_tables()", "disable logging" )->join();
+  ilog("Setting HAF tables to UNLOGGED");
+}
+
+void indexes_controler::enable_logging() {
+  if (theApp.is_interrupt_request())
+    return;
+
+  start_commit_sql(true, "hive.enable_logging_for_irreversible_tables()", "enable logging" )->join();
+  ilog("Setting HAF tables to LOGGED");
+}
+
 std::unique_ptr<queries_commit_data_processor>
 indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_call, const std::string& objects_name ) {
   ilog("${mode} ${objects_name}...", ("objects_name", objects_name )("mode", ( mode ? "Creating" : "Dropping" ) ) );
