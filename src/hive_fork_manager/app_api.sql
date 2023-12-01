@@ -555,6 +555,21 @@ BEGIN
 END;
 $BODY$;
 
+CREATE OR REPLACE FUNCTION hive.grant_select_for_state_providers_table( _table_name TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    -- TODO(mickiewicz@syncad.com) Here is a problem with schema hive
+    -- not returned by the any of already implemented state_providers
+    -- need to investigate why schema is not a part of table name
+    -- in the template there is a note that hive. must be returned for each state provider table name
+    EXECUTE format( 'GRANT SELECT ON TABLE hive.%s TO hive_applications_group', _table_name );
+END;
+$BODY$
+;
 
 CREATE OR REPLACE FUNCTION hive.app_state_provider_import( _state_provider hive.state_providers, _context hive.context_name )
     RETURNS void
@@ -590,9 +605,12 @@ BEGIN
     END IF;
 
     -- register tables
-    PERFORM hive.app_register_table( 'hive', unnest( hsp.tables ), _context )
+    PERFORM
+          hive.app_register_table( 'hive', unnest( hsp.tables ), _context )
+        , hive.grant_select_for_state_providers_table( unnest( hsp.tables ) )
     FROM hive.state_providers_registered hsp
     WHERE hsp.context_id = __context_id AND hsp.state_provider = _state_provider;
+
 END;
 $BODY$
 ;

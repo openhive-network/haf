@@ -124,3 +124,41 @@ BEGIN
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE PROCEDURE bob_test_then()
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+BEGIN
+    ASSERT ( SELECT COUNT(*) FROM hive.context_accounts ) = 5, 'Wrong number of accounts';
+
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'from_pow' ), 'from_pow not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'from_pow2' ), 'from_pow2 not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'create_account' ), 'create_account not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'claimed_account' ), 'claimed_account not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'claimed_acc_del' ), 'account_create_with_delegation_operation not created';
+
+    ASSERT EXISTS ( SELECT * FROM hive.context_tests1 WHERE id = 7 ), 'No id=7 in tests1';
+    ASSERT EXISTS ( SELECT * FROM hive.context_tests2 WHERE id = 5 ), 'No id=5 in tests2';
+END;
+$BODY$
+;
+
+CREATE OR REPLACE PROCEDURE alice_test_then()
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+BEGIN
+    ASSERT ( SELECT COUNT(*) FROM hive.context_accounts ) = 5, 'Wrong number of accounts';
+
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'from_pow' ), 'from_pow not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'from_pow2' ), 'from_pow2 not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'create_account' ), 'create_account not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'claimed_account' ), 'claimed_account not created';
+    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'claimed_acc_del' ), 'account_create_with_delegation_operation not created';
+
+    ASSERT EXISTS ( SELECT * FROM hive.context_tests1 WHERE id = 7 ), 'No id=7 in tests1';
+    ASSERT EXISTS ( SELECT * FROM hive.context_tests2 WHERE id = 5 ), 'No id=5 in tests2';
+END;
+$BODY$
+;
