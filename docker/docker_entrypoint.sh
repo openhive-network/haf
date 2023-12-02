@@ -229,7 +229,7 @@ if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
   # initdb will refuse to run in a non-empty directory, so run initdb in an empty temporary directory then copy the files over
   mkdir -p /tmp/$$/pgdata
   sudo -n chown -Rc postgres:postgres /tmp/$$/pgdata
-  sudo --user=postgres -n PGDATA="/tmp/$$/pgdata" "/usr/lib/postgresql/${POSTGRES_VERSION}/bin/initdb"
+  sudo --user=postgres -n PGDATA="/tmp/$$/pgdata" "/usr/lib/postgresql/${POSTGRES_VERSION}/bin/initdb --no-locale"
   sudo --user=postgres -n bash -c "cd /tmp/$$/pgdata && tar cf - ." | sudo --user=postgres -n bash -c "cd \"$PGDATA\" && tar xf -"
   sudo -n rm -r /tmp/$$/pgdata
 
