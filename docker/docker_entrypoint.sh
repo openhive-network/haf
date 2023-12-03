@@ -102,7 +102,29 @@ if [ ! -f "$DATADIR/config.ini" ]; then
     --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
     --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
     ${HIVED_ARGS[@]} --dump-config > /dev/null 2>&1
+
+  # add a default set of plugins that API nodes should run
   sed -i 's/^plugin = .*$/plugin = node_status_api account_by_key account_by_key_api block_api condenser_api database_api json_rpc market_history market_history_api network_broadcast_api p2p rc_api reputation reputation_api state_snapshot transaction_status transaction_status_api wallet_bridge_api webserver/g' "$DATADIR/config.ini"
+
+  # The transaction status plugin defaults to keeping transaction status history for 64000 blocks
+  # (configured in "transaction-status-block-depth".  When replaying, it doesn't make sense to
+  # track the status until we get within 64000 blocks of the current head block, because we'll
+  # discard that data before the end of the replay.  There's a parameter,
+  # "transaction-status-track-after-block", that allows us to skip processing until we reach that
+  # block.  Unfortunately, this defaults to 0, so we end up doing a lot of useless work, adding
+  # a few hours to a typical replay
+  #
+  # Here we try to estimate what block number is 64000 blocks behind the current block, based
+  # on the current time and the time we know when block 80M was produced
+  now_epoch=\$(date +%s)
+  eightymil_epoch=\$(date +%s -d '2023-11-09 03:59:51')
+  # if no blocks were skipped, we're currently at block:
+  approximate_head_block=\$((80000000 + (now_epoch - eightymil_epoch) / 3))
+  # go back an extra 10000 blocks to account for any blocks that may have been skipped
+  # since block 80M.  There's little penalty for tracking a few tens of thousands
+  # more than necessary.
+  track_after_block=\$((approximate_head_block - 64000 - 10000))
+  sed -i 's/^transaction-status-track-after-block = .*$/transaction-status-track-after-block = '"\$track_after_block"'/g' "$DATADIR/config.ini"
 fi
 
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
