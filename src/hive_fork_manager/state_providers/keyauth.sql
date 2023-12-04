@@ -74,6 +74,28 @@ BEGIN
     $$
     , _context);
 
+    EXECUTE format($$
+        ALTER TABLE IF EXISTS hive.%1$s_keyauth_a DROP CONSTRAINT IF EXISTS pk_%1$s_keyauth_a;
+    $$
+    , _context);
+
+    EXECUTE format($$
+        ALTER TABLE IF EXISTS hive.%1$s_keyauth_a
+            ADD CONSTRAINT pk_%1$s_keyauth_a PRIMARY KEY (key_serial_id, account_id, key_kind )
+            USING INDEX TABLESPACE haf_tablespace;
+    $$
+    , _context);
+
+
+    EXECUTE format($$
+        CREATE INDEX IF NOT EXISTS idx_hive_%1$s_keyauth_a_account_id_key_kind
+            ON hive.%1$s_keyauth_a USING btree
+            (account_id, key_kind)
+            TABLESPACE haf_tablespace;
+    $$
+    , _context);
+
+
 
     -- Persistent function definition for keyauth insertion
     -- The 'hive.start_provider_keyauth_insert_into_keyauth_a' function is created here as a permanent
@@ -81,212 +103,194 @@ BEGIN
 
     EXECUTE format(
     $t$
-    CREATE OR REPLACE FUNCTION hive.%1$s_insert_into_keyauth_a(
-        _first_block hive.blocks.num%%TYPE,
-        _last_block hive.blocks.num%%TYPE
-    ) RETURNS VOID
-    SET join_collapse_limit=16
-    SET from_collapse_limit=16
-    SET jit=FALSE
-    AS $$
-    BEGIN
+        CREATE OR REPLACE FUNCTION hive.%1$s_insert_into_keyauth_a(
+        _first_block integer,
+        _last_block integer)
+            RETURNS void
+            LANGUAGE 'plpgsql'
+            COST 100
+            VOLATILE PARALLEL UNSAFE
+            SET join_collapse_limit='16'
+            SET from_collapse_limit='16'
+            SET jit=false
+        AS $$
+        DECLARE
+        __account_ae_count INT;
+        __key_ae_count INT;
 
-        -- This is the initial CTE which selects key authority-related data from an operations view,
-        -- filtering by block numbers and specific operation types related to account creation and updating.
-        WITH temp_keyauths AS MATERIALIZED(
-            SELECT
-                (hive.get_keyauths(ov.body_binary)).*,
-                ov.id as op_serial_id,
-                block_num,
-                timestamp,
-                ov.op_type_id,
-                hive.calculate_operation_stable_id(block_num, trx_in_block, op_pos) as op_stable_id
-            FROM hive.%1$s_operations_view ov
-            JOIN hive.operation_types ot ON ov.op_type_id = ot.id
-            WHERE ov.block_num BETWEEN _first_block AND _last_block
-            AND ot.name IN (
-                'hive::protocol::pow_operation',
-                'hive::protocol::pow2_operation',
-                'hive::protocol::account_create_operation',
-                'hive::protocol::account_create_with_delegation_operation',
-                'hive::protocol::account_update_operation',
-                'hive::protocol::account_update2_operation',
-                'hive::protocol::create_claimed_account_operation',
-                'hive::protocol::recover_account_operation',
-                'hive::protocol::request_account_recovery_operation',
-                'hive::protocol::witness_set_properties_operation',
-                'hive::protocol::witness_update_operation'
+            BEGIN
 
+        WITH matching_op_types as materialized 
+            (
+            select ot.id from hive.operation_types ot WHERE ot.name IN
+            (
+            'hive::protocol::pow_operation',
+            'hive::protocol::pow2_operation',
+            'hive::protocol::account_create_operation',
+            'hive::protocol::account_create_with_delegation_operation',
+            'hive::protocol::account_update_operation',
+            'hive::protocol::account_update2_operation',
+            'hive::protocol::create_claimed_account_operation',
+            'hive::protocol::recover_account_operation',
+            'hive::protocol::request_account_recovery_operation',
+            'hive::protocol::witness_set_properties_operation',
+            'hive::protocol::witness_update_operation'
             )
-        ),
-
-        /* 
-            ======================================
-            == BEGIN: ACCOUNT AUTHORIZATIONS ==
-            ======================================
-        */
-
-        -- Filters the results from temp_keyauths where the key_auth is null to handle account authorizations separately.
-        keyauths_output_null AS (
-            SELECT *
-            FROM temp_keyauths
-            WHERE key_auth IS NULL
-        ),
-
-        -- Groups results by account_name and key_kind to select the latest operation for each account and key type.
-        max_op_serial_dictionary_accountauth AS (
-            SELECT account_name, key_kind, MAX(op_stable_id) as max_op_stable_id
-            FROM keyauths_output_null
-            GROUP BY account_name, key_kind
-        ),
-
-        -- Joins the latest operations data with account identifiers, adding account_id.
-        combined_data_accountauths AS (
-            SELECT derived.*
-                , accounts_view.id as_account_id
-                , av.id as account_supervisor_id
-            FROM (
-                SELECT keyauths_output_null.*
-                FROM keyauths_output_null
-                JOIN max_op_serial_dictionary_accountauth dict ON keyauths_output_null.account_name = dict.account_name 
-                                                            AND keyauths_output_null.key_kind = dict.key_kind 
-                                                            AND keyauths_output_null.op_stable_id = dict.max_op_stable_id
-            ) AS derived
-            JOIN hive.%1$s_accounts_view accounts_view ON accounts_view.name = derived.account_name
-            JOIN hive.%1$s_accounts_view av ON av.name = derived.account_auth
-        ),
-
-        -- Clears existing records for account_id and key_kind to be replaced in the accountauth_a table.
-        deleted_account_auths AS (
-            DELETE FROM hive.%1$s_accountauth_a
-            WHERE EXISTS (
-                SELECT 1 FROM combined_data_accountauths cda
-                WHERE cda.as_account_id = hive.%1$s_accountauth_a.account_id
-                AND cda.key_kind = hive.%1$s_accountauth_a.key_kind)
             ),
-
-
-        -- Finally inserts updated account authorization data into the accountauth_a table.
-        inserted_accountauths AS (
-            INSERT INTO hive.%1$s_accountauth_a
+            matching_ops as materialized
+            (
             SELECT
-                as_account_id,
-                key_kind,
-                account_supervisor_id,
-                weight_threshold,
-                w,
-                op_serial_id,
-                block_num,
-                timestamp
-            FROM combined_data_accountauths
-            ON CONFLICT ON CONSTRAINT pk_%1$s_accountauth_a
-            DO UPDATE SET
-                 account_id =           EXCLUDED.account_id
-                , key_kind =            EXCLUDED.key_kind
-                , account_auth_id =     EXCLUDED.account_auth_id
-                , weight_threshold =    EXCLUDED.weight_threshold
-                , w =                   EXCLUDED.w
-                , op_serial_id  =       EXCLUDED.op_serial_id
-                , block_num =           EXCLUDED.block_num
-                , timestamp =           EXCLUDED.timestamp
-        ),
-
-        /* 
-            ======================================
-            == END: ACCOUNT AUTHORIZATIONS ==
-            ======================================
-        */
-
-        /* 
-            ======================================
-            == START: KEY AUTHORIZATIONS ==
-            ======================================
-        */
-
-        -- Filters out non-null key_auth entries for processing key authorizations.
-        keyauths_output AS (
-            SELECT *
-            FROM temp_keyauths
-            WHERE key_auth IS NOT NULL
-        ),
-
-        -- Identifies the latest operation for each account and key type by the maximum op_stable_id.
-        max_op_serial_dictionary AS (
-            SELECT account_name, key_kind, MAX(op_stable_id) as max_op_stable_id
-            FROM keyauths_output
-            GROUP BY account_name, key_kind
-        ),
-
-        -- Prepares joined data of latest operations with account identifiers for key authorization entries.
-        combined_data AS (
-            SELECT derived.*,
-                accounts_view.id as_account_id
-            FROM (
-                SELECT keyauths_output.*
-                FROM keyauths_output
-                JOIN max_op_serial_dictionary dict ON keyauths_output.account_name = dict.account_name 
-                                                AND keyauths_output.key_kind = dict.key_kind 
-                                                AND keyauths_output.op_stable_id = dict.max_op_stable_id
-            ) AS derived
-            JOIN hive.%1$s_accounts_view accounts_view ON accounts_view.name = derived.account_name
-        ),
-
-        -- Inserts new unique public keys into the keyauth_k dictionary table.
-        inserted_data AS (
-            INSERT INTO hive.%1$s_keyauth_k (key)
-            SELECT DISTINCT key_auth FROM combined_data
-            ON CONFLICT DO NOTHING
-            RETURNING key, key_id
-        ),
-
-        all_keys_dict AS (
-            SELECT key_id, key AS key_auth
-            FROM inserted_data
-            UNION ALL
-            SELECT key_id, key
-            FROM hive.%1$s_keyauth_k
-        ),
-
-        -- Fills the keyauths table
-        finally_inserted AS (
-            INSERT INTO hive.%1$s_keyauth_a
+                        ov.body_binary,
+                        ov.id,
+                        ov.block_num,
+                ov.trx_in_block,
+                ov.op_pos,
+                        ov.timestamp,
+                        ov.op_type_id
+                    FROM hive.%1$s_operations_view ov
+                    WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT mot.id FROM matching_op_types mot)
+            ),
+            raw_auth_records AS MATERIALIZED
+            (
             SELECT
-                as_account_id,
-                key_kind,
-                all_keys_dict.key_id,
-                weight_threshold,
-                w,
-                op_serial_id,
-                block_num,
-                timestamp
-            FROM combined_data
-            JOIN all_keys_dict ON all_keys_dict.key_auth = combined_data.key_auth
-            ON CONFLICT ON CONSTRAINT pk_%1$s_keyauth_a
-            DO UPDATE SET
-                account_id =            EXCLUDED.account_id
-                , key_kind =            EXCLUDED.key_kind
-                , key_serial_id =       EXCLUDED.key_serial_id
-                , weight_threshold =    EXCLUDED.weight_threshold
-                , w =                   EXCLUDED.w
-                , op_serial_id =        EXCLUDED.op_serial_id  
-                , block_num =           EXCLUDED.block_num
-                , timestamp =           EXCLUDED.timestamp
+                        (hive.get_keyauths(ov.body_binary)).*,
+                        ov.id as op_serial_id,
+                        ov.block_num,
+                        ov.timestamp,
+                        hive.calculate_operation_stable_id(ov.block_num, ov.trx_in_block, ov.op_pos) as op_stable_id
+                    FROM matching_ops ov
+                ),
+            extended_auth_records as materialized
+            (
+            SELECT (select a.id FROM hive.%1$s_accounts_view a
+                where a.name = r.account_name) as account_id,
+            r.*
+            FROM raw_auth_records r
+            ),
+        effective_key_auth_records as materialized
+        (
+            with effective_tuple_ids as materialized 
+            (
+            select s.account_id, s.key_kind, max(s.op_stable_id) as op_stable_id
+            from extended_auth_records s 
+            where s.key_auth IS NOT NULL
+            group by s.account_id, s.key_kind
+            )
+            select s1.*
+            from extended_auth_records s1
+            join effective_tuple_ids e ON e.account_id = s1.account_id and e.key_kind = s1.key_kind and e.op_stable_id = s1.op_stable_id
+            where s1.key_auth IS NOT NULL
+        ),
+        effective_account_auth_records as materialized
+        (
+            with effective_tuple_ids as materialized 
+            (
+            select s.account_id, s.key_kind, max(s.op_stable_id) as op_stable_id
+            from extended_auth_records s 
+            where s.key_auth IS NULL
+            group by s.account_id, s.key_kind
+            )
+            select s1.*
+            from extended_auth_records s1
+            join effective_tuple_ids e ON e.account_id = s1.account_id and e.key_kind = s1.key_kind and e.op_stable_id = s1.op_stable_id
+            where s1.key_auth IS NULL		
+        ),
+        --- PROCESSING OF KEY BASED AUTHORITIES ---	
+            supplement_key_dictionary as materialized
+            (
+            insert into hive.%1$s_keyauth_k as dict (key)
+            SELECT DISTINCT s.key_auth
+            FROM effective_key_auth_records s
+            on conflict (key) do update set key = EXCLUDED.key -- the only way to always get key-id (even it is already in dict)
+            returning (xmax = 0) as is_new_key, dict.key_id, dict.key
+            ),
+        extended_key_auth_records as materialized
+        (
+            select s.*, kd.key_id
+            from effective_key_auth_records s
+            join supplement_key_dictionary kd on kd.key = s.key_auth
+            where s.key_auth IS NOT NULL
+        ),
+        changed_key_authorities as materialized 
+        (
+            select distinct s.account_id as changed_account_id, s.key_kind as changed_key_kind
+            from extended_key_auth_records s
         )
+            ,delete_obsolete_key_auth_records as materialized (
+            DELETE FROM hive.%1$s_keyauth_a as ea
+            using changed_key_authorities s
+            where account_id = s.changed_account_id and key_kind = s.changed_key_kind
+            RETURNING account_id as cleaned_account_id, key_kind as cleaned_key_kind, key_serial_id as cleaned_key_id
+        )
+        ,
+        store_key_auth_records as materialized
+        (
+            INSERT INTO hive.%1$s_keyauth_a AS auth_entries
+            ( account_id, key_kind, key_serial_id, weight_threshold, w, op_serial_id, block_num, timestamp )
+            SELECT s.account_id, s.key_kind, s.key_id, s.weight_threshold, s.w, s.op_serial_id, s.block_num, s.timestamp
+            FROM extended_key_auth_records s
+        --		LEFT JOIN delete_obsolete_key_auth_records d ON d.cleaned_account_id = s.account_id and d.cleaned_key_kind = s.key_kind
+            ON CONFLICT ON CONSTRAINT pk_%1$s_keyauth_a DO UPDATE SET
+            key_serial_id = EXCLUDED.key_serial_id,
+            weight_threshold =    EXCLUDED.weight_threshold,
+            w =                   EXCLUDED.w,
+            op_serial_id =        EXCLUDED.op_serial_id,
+            block_num =           EXCLUDED.block_num,
+            timestamp =           EXCLUDED.timestamp
+            RETURNING (xmax = 0) as is_new_entry, auth_entries.account_id, auth_entries.key_kind, auth_entries.key_serial_id as cleaned_key_id
+        )
+        ,delete_obsolete_keys_from_dict as
+        (
+            delete from hive.%1$s_keyauth_k as dict
+            where dict.key_id in (select distinct s.cleaned_key_id from store_key_auth_records s)
+        ),
+        --- PROCESSING OF ACCOUNT BASED AUTHORITIES ---
+            extended_account_auth_records as MATERIALIZED
+        (
+            SELECT ds.*
+            FROM (
+            SELECT (select a.id FROM hive.%1$s_accounts_view a
+                where a.name = s.account_auth) as account_auth_id,
+            s.*
+            FROM effective_account_auth_records s
+            ) ds
+            WHERE ds.account_auth_id IS NOT NULL
+        ),
+        changed_account_authorities as materialized 
+        (
+            select distinct s.account_id as changed_account_id, s.key_kind as changed_key_kind
+            from extended_account_auth_records s
+        )	
+            ,delete_obsolete_account_auth_records as materialized (
+            DELETE FROM hive.%1$s_accountauth_a as ae
+            using changed_account_authorities s
+            where account_id = s.changed_account_id and key_kind = s.changed_key_kind
+            RETURNING account_id as cleaned_account_id, key_kind as cleaned_key_kind, account_auth_id as cleaned_account_auth_id
+        )
+        ,
+        store_account_auth_records as
+        (
+            INSERT INTO hive.%1$s_accountauth_a AS ae
+            ( account_id, key_kind, account_auth_id, weight_threshold, w, op_serial_id, block_num, timestamp )
+            SELECT s.account_id, s.key_kind, s.account_auth_id, s.weight_threshold, s.w, s.op_serial_id, s.block_num, s.timestamp
+            FROM extended_account_auth_records s
+            ON CONFLICT ON CONSTRAINT pk_%1$s_accountauth_a DO UPDATE SET
+            account_auth_id = EXCLUDED.account_auth_id,
+            weight_threshold =    EXCLUDED.weight_threshold,
+            w =                   EXCLUDED.w,
+            op_serial_id =        EXCLUDED.op_serial_id,
+            block_num =           EXCLUDED.block_num,
+            timestamp =           EXCLUDED.timestamp
+            RETURNING (xmax = 0) as is_new_entry, ae.account_id, ae.key_kind, ae.account_auth_id as cleaned_account_auth_id
+        )
+  
+        SELECT (select count(*) FROM store_account_auth_records) as account_based_authority_entries,
+            (select count(*) FROM store_key_auth_records) AS key_based_authority_entries
+        into __account_ae_count, __key_ae_count;
 
-        -- Deletes existing old keyauth_a records
-        DELETE FROM hive.%1$s_keyauth_a a 
-        WHERE EXISTS (SELECT 1 FROM combined_data b 
-            WHERE a.account_id = b.as_account_id AND a.key_kind = b.key_kind)
-        ;
-
-        /* 
-            ======================================
-            == END: KEY AUTHORIZATIONS ==
-            ======================================
-        */
 
         END;
-    $$ LANGUAGE plpgsql;
+        $$;
     $t$
     , _context);
 
