@@ -358,7 +358,7 @@ BEGIN
     SELECT
         T.indexname
       , _schema || '.' || _table
-      , T.indexdef
+      , REPLACE( T.indexdef, ' ON ONLY ', ' ON ')
       , FALSE as is_constraint
       , TRUE as is_index
       , FALSE as is_foreign_key
