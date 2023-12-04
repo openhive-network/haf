@@ -262,6 +262,8 @@ HIVED_ARGS=()
 
 echo "Processing passed arguments...: $*"
 
+SKIP_HIVED=0
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --execute-maintenance-script*)
@@ -277,6 +279,12 @@ while [ $# -gt 0 ]; do
     --load-snapshot=*)
       BACKUP_SOURCE_DIR_NAME="${1#*=}"
       PERFORM_LOAD=1
+      ;;
+    --skip-hived)
+      SKIP_HIVED=1
+      # allow launching the container with only the database running, but not hived.  This is useful when you want to
+      # examine the database, but there's some problem that causes hived to exit at startup, since hived exiting will
+      # then shut down the container, taking the database with it.
       ;;
     *)
       echo "Attempting to collect unknown (hived) option: ${1}"
@@ -306,6 +314,18 @@ elif [ ${PERFORM_LOAD} -eq 1 ];
 then
   echo "Attempting to perform instance snapshot load"
   perform_instance_load "${BACKUP_SOURCE_DIR_NAME}"
+elif [ ${SKIP_HIVED} -eq 1 ];
+then
+  echo "Not launching hived due to --skip-hived command-line option"
+  echo "You can now connect to the database.  This this container will continue to exist until you shut it down"
+  # launch a webserver on port 8091 so the docker healthcheck will pass.  We probably want
+  # the healthcheck to pass so docker-compose will continue to launch dependent containers
+  # like pgadmin.
+  # The webserver running in the foreground will also act to keep this container running
+  # until the docker image is stopped.
+  mkdir -p /tmp/dummy-webserver
+  cd /tmp/dummy-webserver
+  /home/haf_admin/.local/share/pypoetry/venv/bin/python -m http.server 8091
 else
   run_instance
   status=$?
