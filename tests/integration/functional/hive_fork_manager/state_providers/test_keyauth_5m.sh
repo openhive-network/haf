@@ -161,6 +161,22 @@ run_accountauth_test()
   check_accountauth_result "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 }
 
+
+check_database_sql_serialized()
+{
+  local count=$(psql -d $HAF_POSTGRES_URL -c "SELECT COUNT(*) FROM hive.blocks;" -t -A)
+
+
+  if [ "$count" -ne 5000000 ]; then
+      echo "Database not SQL-serialized!"
+      exit 1
+  fi
+}
+
+check_database_sql_serialized
+
+# Tests
+
 # 'streemian' and 'gtg' use pow_operation to create themselves
 RUN_FOR=3
 ACCOUNT_NAME='streemian'
