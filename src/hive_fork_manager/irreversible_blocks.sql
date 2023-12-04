@@ -84,12 +84,15 @@ BEGIN
                   SET (autovacuum_analyze_threshold=50000),
                   SET (autovacuum_vacuum_insert_threshold=10000) 
                 ;
+                SELECT pg_catalog.pg_extension_config_dump('hive.%s_%s', '');
             $query$,
             table_name,
             (i-1),
             table_name,
             start + (i-1) * nr_blocks,
             (CASE WHEN i = partition_cnt THEN start + (i) * nr_blocks + excess_blocks ELSE start + (i) * nr_blocks END),
+            table_name,
+            (i-1),
             table_name,
             (i-1)
             ) res;
