@@ -103,6 +103,9 @@ BEGIN
 
     EXECUTE format(
     $t$
+
+
+
         CREATE OR REPLACE FUNCTION hive.%1$s_insert_into_keyauth_a(
         _first_block integer,
         _last_block integer)
@@ -118,13 +121,70 @@ BEGIN
         __account_ae_count INT;
         __key_ae_count INT;
 
-            BEGIN
+        BEGIN
 
-        WITH matching_op_types as materialized 
+
+        WITH pow_op_type as materialized (
+            SELECT ot.id
+            FROM hive.operation_types ot
+            WHERE ot.name = 'hive::protocol::pow_operation'
+        ),
+        pow_matching_ops as materialized
+        (
+            SELECT
+                    ov.body_binary,
+                    ov.id,
+                    ov.block_num,
+                    ov.trx_in_block,
+                    ov.op_pos,
+                    ov.timestamp,
+                    ov.op_type_id
+            FROM hive.%1$s_operations_view ov
+            WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT mot.id FROM pow_op_type mot)
+        ),
+        pow_raw_auth_records AS MATERIALIZED
+        (
+            SELECT  (hive.get_keyauths(ov.body_binary)).*,
+                    ov.id as op_serial_id,
+                    ov.block_num,
+                    ov.timestamp,
+                    hive.calculate_operation_stable_id(ov.block_num, ov.trx_in_block, ov.op_pos) as op_stable_id
+            FROM pow_matching_ops ov
+        ),
+        pow_extended_auth_records AS materialized
+        (
+            SELECT (select a.id FROM hive.%1$s_accounts_view a
+            WHERE a.name = r.account_name) AS account_id,
+
+            (SELECT a.block_num FROM hive.%1$s_accounts_view a
+                            WHERE a.name = r.account_name) AS creation_block_num,
+
+            r.*
+            FROM pow_raw_auth_records r
+        ),
+
+        pow_extended_auth_records_filtered as materialized
+        (
+            SELECT 
+                account_id,
+                account_name,
+                key_kind,
+                key_auth,
+                account_auth,
+                weight_threshold,
+                w,
+                op_serial_id,
+                block_num,
+                timestamp,
+                op_stable_id
+            FROM pow_extended_auth_records
+            WHERE creation_block_num = block_num OR key_kind = 'ACTIVE'
+        ),
+
+        matching_op_types as materialized 
             (
             select ot.id from hive.operation_types ot WHERE ot.name IN
             (
-            'hive::protocol::pow_operation',
             'hive::protocol::pow2_operation',
             'hive::protocol::account_create_operation',
             'hive::protocol::account_create_with_delegation_operation',
@@ -164,8 +224,15 @@ BEGIN
             (
             SELECT (select a.id FROM hive.%1$s_accounts_view a
                 where a.name = r.account_name) as account_id,
+
+
             r.*
             FROM raw_auth_records r
+            UNION ALL
+            SELECT 
+                *
+            FROM 
+                pow_extended_auth_records_filtered            
             ),
         effective_key_auth_records as materialized
         (
@@ -216,7 +283,7 @@ BEGIN
             select distinct s.account_id as changed_account_id, s.key_kind as changed_key_kind
             from extended_key_auth_records s
         )
-            ,delete_obsolete_key_auth_records as materialized (
+        ,delete_obsolete_key_auth_records as materialized (
             DELETE FROM hive.%1$s_keyauth_a as ea
             using changed_key_authorities s
             where account_id = s.changed_account_id and key_kind = s.changed_key_kind
@@ -283,8 +350,10 @@ BEGIN
             timestamp =           EXCLUDED.timestamp
             RETURNING (xmax = 0) as is_new_entry, ae.account_id, ae.key_kind, ae.account_auth_id as cleaned_account_auth_id
         )
-  
-        SELECT (select count(*) FROM store_account_auth_records) as account_based_authority_entries,
+
+        SELECT (select count(*) FROM 
+            store_account_auth_records
+        ) as account_based_authority_entries,
             (select count(*) FROM store_key_auth_records) AS key_based_authority_entries
         into __account_ae_count, __key_ae_count;
 
@@ -352,5 +421,3 @@ BEGIN
 END;
 $BODY$
 ;
-
-
