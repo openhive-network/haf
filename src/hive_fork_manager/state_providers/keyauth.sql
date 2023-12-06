@@ -123,7 +123,10 @@ BEGIN
 
         BEGIN
 
-
+        -- Handle 'pow' operation:
+        -- 1. Distinguish between existing accounts and new account creation.
+        -- 2. Use 'hive.accounts' table that tracks account creation block number.
+        -- 3. 'pow' initializes all keys for new accounts, but only updates 'ACTIVE' key for existing accounts.
         WITH pow_op_type as materialized (
             SELECT ot.id
             FROM hive.operation_types ot
