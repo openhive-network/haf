@@ -39,9 +39,8 @@ The sql_serializer extends hived with these new parameters:
 * **psql-account-operations-threads-number**[default: 2] the number of threads used to dump account operations to the database.
 * **psql-enable-account-operations-dump**[default: true] if true, account operations will be dumped to the database as part of the serialization process. Accounts will be dumped to database regardless of this setting.
 * **psql-force-open-inconsistent**[default: false] if true, the plugin will connect and repair a HAF database when the database is in an inconsistent state. Motivation for this flag: Hived may crash while serializing blocks to the database, potentially leaving the database in an inconsistent state where the data from a block has only been partially written to the database. In this case, the database will contain sufficient information about the inconsistent data to enable the hive fork manager to repair the database so that hived can resume filling it, but the repair may take a very long time. Therefore, by default hived will abort its operation when it opens an inconsistent HAF datagbase instead of repairing it. To explicitly start the database repair action, set this flag to true.
-* **psql-livesync-threshold**[default: 100'000] limit of number of blocks required to sync to reach the network HEAD_BLOCK. After starting the HAF, if the number of blocks to sync is 
-  greater than the limit, then synchronization process will move through massive sync states (reindex and p2p), otherwise it will imeddiatly moves to 'live' state what saves time to
-  disable and enable indexes and foreigh keys. 
+* **psql-livesync-threshold**[default: 0] limit of number of blocks required to sync to reach the network HEAD_BLOCK. After starting the HAF, if the number of blocks to sync is 
+  greater than the limit, then synchronization process will move through massive sync states (reindex and p2p), otherwise it will immediately transition to the 'live' state, facilitating testing in that state
 
 ## Filter parameters
 * **psql-enable-filter**[default: true] enable filtering accounts and operations
