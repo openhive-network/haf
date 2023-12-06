@@ -49,6 +49,6 @@ void extract_set_witness_properties_from_flat_map(extract_set_witness_properties
 void extract_set_witness_properties_from_string(extract_set_witness_properties_result_t& output, const fc::string& _input)
 {
   witness_set_properties_props_t input_properties{};
-  fc::from_variant(fc::json::from_string(_input), input_properties);
+  fc::from_variant(fc::json::from_string(_input, fc::json::format_validation_mode::relaxed), input_properties);
   extract_set_witness_properties_from_flat_map(output, input_properties);
 }
