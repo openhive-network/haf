@@ -29,7 +29,7 @@ std::vector< char > json_to_op( const char* json )
     return {};
 
   auto bufstream = fc::buffered_istream( fc::make_svstream( json ) );
-  fc::variant v = fc::json::from_stream( bufstream );
+  fc::variant v = fc::json::from_stream( bufstream, fc::json::format_validation_mode::relaxed );
 
   hive::protocol::operation op;
   fc::from_variant( v, op );

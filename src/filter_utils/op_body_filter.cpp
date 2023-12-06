@@ -49,7 +49,7 @@ void filter_processor::find_ops( const std::string& file_name )
       return;
     }
 
-    _json = fc::json::from_string( _content ).as< fc::variant >();
+    _json = fc::json::from_string( _content, fc::json::format_validation_mode::relaxed ).as< fc::variant >();
   }
   FC_CAPTURE_LOG_AND_RETHROW(("open file"))
 
