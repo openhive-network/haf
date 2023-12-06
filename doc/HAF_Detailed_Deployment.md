@@ -30,7 +30,7 @@ where:
 `./haf` points to the source directory from which to build the docker image
 `registry.gitlab.syncad.com/hive/haf/` specifies a docker registry where the built image can potentially be pushed (actually pushing the image to the registry requires additional steps).
 
-The above command will result in creation of a local docker image: `registry.gitlab.syncad.com/hive/haf/instance:instance-local`
+The above command will result in creation of a local docker image: `registry.gitlab.syncad.com/hive/haf/instance:local`
 
 ### Building a HAF docker image from a specific git commit hash
 
@@ -40,7 +40,7 @@ A HAF instance image can also be built from a specific git commit hash in the HA
 build_instance4commit.sh fdebe397498f814920e959d5d11863d8fe51be22 registry.gitlab.syncad.com/hive/haf/
 
 ```
-This will create an image called: `registry.gitlab.syncad.com/hive/haf/instance:instance-fdebe397498f814920e959d5d11863d8fe51be22`
+This will create an image called: `registry.gitlab.syncad.com/hive/haf/instance:fdebe39`
 
 The examples below assume the following directory structure:
 
@@ -62,11 +62,11 @@ Next create a `blockchain` subdirectory inside the datadir with a valid block_lo
 With these preliminaries out of the way, you can start your instance container using a command like the one below:
 
 ```
-./haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf/instance:instance-local --data-dir=/storage1/mainnet-5M-haf --name=haf-instance-5M --replay --stop-replay-at-block=5000000
+./haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf/instance:local --data-dir=/storage1/mainnet-5M-haf --name=haf-instance-5M --replay --stop-replay-at-block=5000000
 ```
 
 This example works as follows:
-- `registry.gitlab.syncad.com/hive/haf/instance:instance-local` points to the HAF image you built in previous steps.
+- `registry.gitlab.syncad.com/hive/haf/instance:local` points to the HAF image you built in previous steps.
 - `--data-dir=/storage1/mainnet-5M-haf` option enforces proper volume mapping from your host machine to the docker container you are starting and points to a data directory where the hived node shall put its data.
 - `--name=haf-instance-5M`- names your docker container for docker commands.
 - other options `--replay --stop-replay-at-block=5000000` are passed directly to the hived command line
