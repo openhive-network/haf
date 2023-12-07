@@ -50,6 +50,7 @@ private:
 
     void commit() override;
     pqxx::result exec(const std::string& query) override;
+    void run_in_transaction(std::function<void(pqxx::work&)>) override;
     void rollback() override;
 
   private:
@@ -194,6 +195,14 @@ pqxx::result own_tx_controller::own_transaction::exec(const std::string& query)
   );
 }
 
+void own_tx_controller::own_transaction::run_in_transaction(std::function<void(pqxx::work&)> func)
+{
+  return with_retry([this, &func]() {
+    FC_ASSERT(_opened_tx, "No transaction opened");
+    func(*_opened_tx);
+  });
+}
+
 void own_tx_controller::own_transaction::rollback()
 {
   do_rollback();
@@ -262,6 +271,12 @@ public:
     return pqxx::result();
   }
 
+  void do_run_in_transaction(std::function<void(pqxx::work&)> func)
+  {
+    if (_own_tx)
+      return _own_tx->run_in_transaction(func);
+  }
+
   void do_commit()
   {
     if(_clientCount == 1 && _own_tx)
@@ -296,6 +311,7 @@ private:
 
     void commit() override;
     pqxx::result exec(const std::string& query) override;
+    void run_in_transaction(std::function<void(pqxx::work&)>) override;
     void rollback() override;
 
   private:
@@ -320,6 +336,11 @@ void single_transaction_controller::transaction_wrapper::commit()
 pqxx::result single_transaction_controller::transaction_wrapper::exec(const std::string& query)
 {
   return _owner.do_query(query);
+}
+
+void single_transaction_controller::transaction_wrapper::run_in_transaction(std::function<void(pqxx::work&)> func)
+{
+  _owner.do_run_in_transaction(func);
 }
 
 void single_transaction_controller::transaction_wrapper::rollback()

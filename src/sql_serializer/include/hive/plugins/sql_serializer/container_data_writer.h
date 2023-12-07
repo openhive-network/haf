@@ -2,10 +2,68 @@
 
 #include <hive/plugins/sql_serializer/block_num_rendezvous_trigger.hpp>
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
+#include <hive/plugins/sql_serializer/tables_descriptions.h>
+
 
 #include <fc/exception/exception.hpp>
 
 #include <type_traits>
+
+namespace pqxx {
+  namespace {
+    std::string escape_binary(std::string_view binary_str)
+    { 
+      std::string result;
+      result.resize(binary_str.size() * 2 + 2);
+      unsigned pos = 0;
+      result[pos++] = '\\';
+      result[pos++] = 'x';
+      constexpr const char* to_hex = "0123456789abcdef";
+      for (const char c : binary_str)
+      {
+        result[pos++] = to_hex[(unsigned char)c >> 4];
+        result[pos++] = to_hex[(unsigned char)c & 0x0f];
+      }
+      return result;
+    }
+  }
+  template<> struct string_traits<binarystring>
+  {
+    static constexpr const char *name() noexcept { return "binarystring"; }
+    static constexpr bool has_null() noexcept { return false; }
+    static bool is_null(const binarystring&) { return false; }
+    [[noreturn]] static binarystring null() { internal::throw_null_conversion(name()); }
+    static void from_string(const char Str[], binarystring &Obj) { FC_ASSERT(false, "not implemented"); }
+    static std::string to_string(const binarystring& binary_str) { return escape_binary(std::string_view((const char*)binary_str.data(), binary_str.size())); }
+  };
+  template<> struct string_traits<fc::time_point_sec>
+  {
+    static constexpr const char *name() noexcept { return "fc::time_point_sec"; }
+    static constexpr bool has_null() noexcept { return false; }
+    static bool is_null(const fc::time_point_sec&) { return false; }
+    [[noreturn]] static fc::time_point_sec null() { internal::throw_null_conversion(name()); }
+    static void from_string(const char Str[], fc::time_point_sec &Obj) { FC_ASSERT(false, "not implemented"); }
+    static std::string to_string(const fc::time_point_sec& time_point) { return time_point.to_iso_string(); }
+  };
+  template<> struct string_traits<fc::ripemd160>
+  {
+    static constexpr const char *name() noexcept { return "fc::ripemd160"; }
+    static constexpr bool has_null() noexcept { return false; }
+    static bool is_null(const fc::ripemd160&) { return false; }
+    [[noreturn]] static fc::ripemd160 null() { internal::throw_null_conversion(name()); }
+    static void from_string(const char Str[], fc::ripemd160 &Obj) { FC_ASSERT(false, "not implemented"); }
+    static std::string to_string(const fc::ripemd160& hash) { return escape_binary(std::string_view(hash.data(), hash.data_size())); }
+  };
+  template<> struct string_traits<fc::ecc::compact_signature>
+  {
+    static constexpr const char *name() noexcept { return "fc::ecc::compact_signature"; }
+    static constexpr bool has_null() noexcept { return false; }
+    static bool is_null(const fc::ecc::compact_signature&) { return false; }
+    [[noreturn]] static fc::ecc::compact_signature null() { internal::throw_null_conversion(name()); }
+    static void from_string(const char Str[], fc::ecc::compact_signature &Obj) { FC_ASSERT(false, "not implemented"); }
+    static std::string to_string(const fc::ecc::compact_signature& sig) { return escape_binary(std::string_view((const char*)sig.begin(), sig.size())); }
+  };
+}
 
 namespace hive::plugins::sql_serializer {
   /**
@@ -17,7 +75,7 @@ namespace hive::plugins::sql_serializer {
    *                        std::string(pqxx::work& tx, typename DataContainer::const_reference)
    *
   */
-  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor = queries_commit_data_processor >
+  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, const char* const COLS_ARRAY[], int COLS_ARRAY_LEN, typename Processor = queries_commit_data_processor >
     class container_data_writer
       {
       public:
@@ -68,9 +126,9 @@ namespace hive::plugins::sql_serializer {
         std::unique_ptr< Processor > _processor;
       };
 
-  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor>
+  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, const char* const COLUMN_ARRAY[], int COLUMN_ARRAY_LEN, typename Processor>
   inline void
-  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::trigger(DataContainer&& data, uint32_t last_block_num)
+  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, COLUMN_ARRAY, COLUMN_ARRAY_LEN, Processor >::trigger(DataContainer&& data, uint32_t last_block_num)
   {
     if(data.empty() == false)
     {
@@ -82,61 +140,46 @@ namespace hive::plugins::sql_serializer {
     FC_ASSERT(data.empty(), "DATA empty 1");
   }
 
-  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor>
+  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, const char* const COLUMN_ARRAY[], int COLUMN_ARRAY_LEN, typename Processor>
   inline void
-  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::complete_data_processing()
+  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, COLUMN_ARRAY, COLUMN_ARRAY_LEN, Processor >::complete_data_processing()
   {
     _processor->complete_data_processing();
   }
 
-  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor>
+  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, const char* const COLUMN_ARRAY[], int COLUMN_ARRAY_LEN, typename Processor>
   inline void
-  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::join()
+  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, COLUMN_ARRAY, COLUMN_ARRAY_LEN, Processor >::join()
   {
     _processor->join();
   }
 
-  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor>
-  inline typename container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::data_processing_status
-  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::flush_replayed_data(const data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx)
+  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, const char* const COLUMN_ARRAY[], int COLUMN_ARRAY_LEN, typename Processor>
+  inline typename container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, COLUMN_ARRAY, COLUMN_ARRAY_LEN, Processor >::data_processing_status
+  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, COLUMN_ARRAY, COLUMN_ARRAY_LEN, Processor >::flush_replayed_data(const data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx)
   {
     const chunk* holder = static_cast<const chunk*>(dataPtr.get());
     data_processing_status processingStatus;
 
-    TupleConverter conv;
-
     const DataContainer& data = holder->_data;
+    FC_ASSERT(!data.empty(), "Data empty 2");
 
-    FC_ASSERT(data.empty() == false, "Data empty 2" );
-
-    std::string query = "INSERT INTO ";
-    query += TABLE_NAME;
-    query += '(';
-    query += COLUMN_LIST;
-    query += ") VALUES\n";
-
-    auto dataI = data.cbegin();
-    query += '(' + conv(*dataI) + ")\n";
-
-    for(++dataI; dataI != data.cend(); ++dataI)
-    {
-      query += ",(" + conv(*dataI) + ")\n";
-    }
-
-    query += ';';
-
-    tx.exec(query);
+    tx.run_in_transaction([&](pqxx::work& work) {
+      pqxx::stream_to stream{work, TABLE_NAME, std::vector<std::string>{COLUMN_ARRAY, COLUMN_ARRAY + COLUMN_ARRAY_LEN}};
+      for (auto i = data.cbegin(); i != data.cend(); ++i) 
+        stream << to_tuple(*i);
+      stream.complete();
+    });
 
     processingStatus.first += data.size();
     processingStatus.second = true;
 
     return processingStatus;
-
   }
 
-  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor>
-  inline typename container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::data_processing_status
-  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::flush_scalar_live_data(const data_chunk_ptr& dataPtr, std::function< void(std::string&&) > callback)
+  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, const char* const COLUMN_ARRAY[], int COLUMN_ARRAY_LEN, typename Processor>
+  inline typename container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, COLUMN_ARRAY, COLUMN_ARRAY_LEN, Processor >::data_processing_status
+  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, COLUMN_ARRAY, COLUMN_ARRAY_LEN, Processor >::flush_scalar_live_data(const data_chunk_ptr& dataPtr, std::function< void(std::string&&) > callback)
   {
     const chunk* holder = static_cast<const chunk*>(dataPtr.get());
     data_processing_status processingStatus;
