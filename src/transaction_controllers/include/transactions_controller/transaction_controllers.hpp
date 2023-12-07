@@ -4,6 +4,7 @@
 #include <pqxx/pqxx>
 
 #include <memory>
+#include <functional>
 
 namespace appbase
 {
@@ -21,6 +22,7 @@ class transaction
 public:
   virtual void commit() = 0;
   virtual pqxx::result exec(const std::string& query) = 0;
+  virtual void run_in_transaction(std::function<void(pqxx::work&)>) = 0;
   virtual void rollback() = 0;
 
   virtual ~transaction() {}
