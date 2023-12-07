@@ -14,6 +14,11 @@ MACRO( ADD_EXAMPLES_FUNCTIONAL_TESTS example_test_path)
     MESSAGE( STATUS "Added functional examples tests '${test_target}'" )
 ENDMACRO()
 
+ADD_TEST( NAME test_update_script
+        COMMAND ${PROJECT_SOURCE_DIR}/tests/integration/functional/hive_fork_manager/test_update_script.sh --haf_binaries_dir=${CMAKE_BINARY_DIR}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        )
+
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/schema_test.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_test.sql )
