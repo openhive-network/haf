@@ -66,13 +66,19 @@ ALTER TABLE hive.transactions
 
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions', '');
 
-CREATE OR REPLACE FUNCTION hive.create_range_partitions( table_name VARCHAR, partition_cnt INTEGER, start INTEGER, nr_blocks INTEGER, excess_blocks INTEGER, constraint_command TEXT) RETURNS void
+CREATE OR REPLACE FUNCTION hive.create_range_partitions( table_name VARCHAR, partition_cnt INTEGER, start INTEGER, nr_blocks INTEGER, excess_blocks INTEGER, constraint_command TEXT, index_command TEXT ) RETURNS void
 LANGUAGE plpgsql
 AS $$
+DECLARE
+ __index_command TEXT[];
 BEGIN
+
+    __index_command = string_to_array( index_command, ';');
+
     IF EXISTS (SELECT 1 FROM pg_partitioned_table p, pg_class c WHERE p.partrelid = c.oid AND c.relname = table_name) THEN
         FOR i IN 1..partition_cnt
         LOOP
+            --create partitions + create foreign keys
             EXECUTE format(
             $query$
                 CREATE TABLE  hive.%s_%s PARTITION OF hive.%s FOR VALUES FROM (%L) TO (%L);
@@ -97,6 +103,15 @@ BEGIN
             table_name,
             (i-1)
             ) res;
+
+            -- create indexes
+            FOR j IN 1..array_length(__index_command, 1)
+            LOOP
+                IF POSITION( 'index' IN LOWER( __index_command[j] ) ) > 0 THEN
+                    EXECUTE format( __index_command[j], table_name, (i-1), table_name, (i-1) );
+                END IF;
+            END LOOP;
+
         RAISE NOTICE 'Partition % succesfuly created', i;
         END LOOP;
     ELSE
@@ -105,7 +120,12 @@ BEGIN
 END $$;
 
 SELECT hive.create_range_partitions( 'transactions', 100, 0, 1000000, 10000000,
-	' ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID '
+    '
+        ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID
+    ',
+    '
+        CREATE INDEX IF NOT EXISTS hive_%s_%s_block_num_trx_in_block_idx ON hive.%s_%s ( block_num, trx_in_block );
+    '
 );
 
 CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
@@ -149,8 +169,14 @@ PARTITION BY RANGE ( block_num );
 SELECT pg_catalog.pg_extension_config_dump('hive.operations', '');
 
 SELECT hive.create_range_partitions( 'operations', 100, 0, 1000000, 10000000,
-    ' ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID,
-      ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID
+    '
+        ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID,
+        ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID
+    ',
+    '
+        CREATE INDEX IF NOT EXISTS hive_%s_%s_block_num_id_idx ON hive.%s_%s USING btree(block_num, id);
+        CREATE INDEX IF NOT EXISTS hive_%s_%s_block_num_trx_in_block_idx ON hive.%s_%s USING btree (block_num ASC NULLS LAST, trx_in_block ASC NULLS LAST) INCLUDE (op_type_id);
+        CREATE INDEX IF NOT EXISTS hive_%s_%s_op_type_id_block_num ON hive.%s_%s (op_type_id, block_num);
     '
 );
 
@@ -192,12 +218,6 @@ SELECT pg_catalog.pg_extension_config_dump('hive.account_operations', '');
 
 
 CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hive.applied_hardforks ( block_num );
-
-CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hive.transactions ( block_num, trx_in_block );
-
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hive.operations USING btree(block_num, id);
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hive.operations USING btree (block_num ASC NULLS LAST, trx_in_block ASC NULLS LAST) INCLUDE (op_type_id);
-CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hive.operations (op_type_id, block_num);
 
 CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_type_account_id_op_seq_idx ON hive.account_operations( op_type_id, account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
 --CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_seq_idx ON hive.account_operations( account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
