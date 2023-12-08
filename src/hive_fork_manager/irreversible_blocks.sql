@@ -61,13 +61,12 @@ PARTITION BY RANGE ( block_num );
 
 ALTER TABLE hive.transactions
   ALTER COLUMN trx_hash SET STORAGE MAIN,
-  ALTER COLUMN signature SET STORAGE MAIN,
-  ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num) -- NOT VALID Not supported on partitioned tables.
+  ALTER COLUMN signature SET STORAGE MAIN
   ;
 
 SELECT pg_catalog.pg_extension_config_dump('hive.transactions', '');
 
-CREATE OR REPLACE FUNCTION hive.create_range_partitions( table_name VARCHAR, partition_cnt INTEGER, start INTEGER, nr_blocks INTEGER, excess_blocks INTEGER) RETURNS void
+CREATE OR REPLACE FUNCTION hive.create_range_partitions( table_name VARCHAR, partition_cnt INTEGER, start INTEGER, nr_blocks INTEGER, excess_blocks INTEGER, constraint_command TEXT) RETURNS void
 LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -82,7 +81,8 @@ BEGIN
                   SET (autovacuum_analyze_scale_factor = 0.0),
                   SET (autovacuum_vacuum_insert_scale_factor=0.0),
                   SET (autovacuum_analyze_threshold=50000),
-                  SET (autovacuum_vacuum_insert_threshold=10000) 
+                  SET (autovacuum_vacuum_insert_threshold=10000),
+                  %s
                 ;
                 SELECT pg_catalog.pg_extension_config_dump('hive.%s_%s', '');
             $query$,
@@ -93,6 +93,7 @@ BEGIN
             (CASE WHEN i = partition_cnt THEN start + (i) * nr_blocks + excess_blocks ELSE start + (i) * nr_blocks END),
             table_name,
             (i-1),
+            constraint_command,
             table_name,
             (i-1)
             ) res;
@@ -103,8 +104,9 @@ BEGIN
     END IF;
 END $$;
 
-
-SELECT hive.create_range_partitions( 'transactions', 100, 0, 1000000, 10000000);
+SELECT hive.create_range_partitions( 'transactions', 100, 0, 1000000, 10000000,
+	' ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID '
+);
 
 CREATE TABLE IF NOT EXISTS hive.transactions_multisig (
     block_num integer NOT NULL,
@@ -144,14 +146,13 @@ CREATE TABLE IF NOT EXISTS hive.operations (
 )
 PARTITION BY RANGE ( block_num );
 
-ALTER TABLE hive.operations
-  ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num), -- NOT VALID, -- not supported on partitioned tables
-  ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) --NOT VALID
-  ;
-
 SELECT pg_catalog.pg_extension_config_dump('hive.operations', '');
 
-SELECT hive.create_range_partitions( 'operations', 100, 0, 1000000, 10000000);
+SELECT hive.create_range_partitions( 'operations', 100, 0, 1000000, 10000000,
+    ' ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID,
+      ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID
+    '
+);
 
 CREATE TABLE IF NOT EXISTS hive.applied_hardforks (
     hardfork_num smallint NOT NULL,
