@@ -767,7 +767,7 @@ sql_serializer_plugin::~sql_serializer_plugin() {}
 void sql_serializer_plugin::set_program_options(appbase::options_description &cli, appbase::options_description &cfg)
 {
   cfg.add_options()("psql-url", boost::program_options::value<string>(), "postgres connection string")
-                    ("psql-index-threshold", appbase::bpo::value<uint32_t>()->default_value( 1'000'000 ), "indexes/constraints will be recreated if `psql_block_number + psql_index_threshold >= head_block_number`")
+                    ("psql-index-threshold", appbase::bpo::value<uint32_t>()->default_value( 20'000'000 ), "indexes/constraints will be recreated if `psql_block_number + psql_index_threshold >= head_block_number`")
                     ("psql-operations-threads-number", appbase::bpo::value<uint32_t>()->default_value( 5 ), "number of threads which dump operations to database during reindexing")
                     ("psql-transactions-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump transactions to database during reindexing")
                     ("psql-account-operations-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump account operations to database during reindexing")
