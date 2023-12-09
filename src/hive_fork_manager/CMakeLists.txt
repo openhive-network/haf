@@ -13,9 +13,6 @@ ADD_PSQL_EXTENSION(
              types/operation/operation_casts.sql
              irreversible_blocks.sql
              reversible_blocks.sql
-             block_views_for_head_block.sql
-             block_day_stats_view.sql
-             block_day_stats_all_op_view.sql
              state_provider.sql
              hived_connections.sql
              hived_api_impl_indexes.sql
@@ -33,6 +30,9 @@ ADD_PSQL_EXTENSION(
             # This file must be also specified here, as it contains functions which definitions should be always overwritten.
             types/operation/operation_flow.sql
             tools.sql
+            block_views_for_head_block.sql
+            block_day_stats_view.sql
+            block_day_stats_all_op_view.sql
             blocks_views_for_contexts.sql
             get_keyauths.sql
             get_metadata.sql
