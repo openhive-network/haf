@@ -75,8 +75,8 @@ BEGIN
         LOOP
             EXECUTE format(
             $query$
-                CREATE TABLE  hive.%s_%s PARTITION OF hive.%s FOR VALUES FROM (%L) TO (%L);
-                ALTER TABLE hive.%s_%s
+                CREATE TABLE  hive.%s_partition_%s PARTITION OF hive.%s FOR VALUES FROM (%L) TO (%L);
+                ALTER TABLE hive.%s_partition_%s
                   SET (autovacuum_vacuum_scale_factor =0.0),
                   SET (autovacuum_analyze_scale_factor = 0.0),
                   SET (autovacuum_vacuum_insert_scale_factor=0.0),
@@ -84,7 +84,7 @@ BEGIN
                   SET (autovacuum_vacuum_insert_threshold=10000),
                   %s
                 ;
-                SELECT pg_catalog.pg_extension_config_dump('hive.%s_%s', '');
+                SELECT pg_catalog.pg_extension_config_dump('hive.%s_partition_%s', '');
             $query$,
             table_name,
             (i-1),
