@@ -213,24 +213,23 @@ check_database_sql_serialized
 
 dump_account()
 {
-  local ACCOUNT_NAME=supercomputing96
+
+
+  local ACCOUNT_NAME=gtg
   local BLOCKS=(  1 5000000  )
 
 
-  local LOG_FILE_DIR=/tmp/hive/supercomputing96
+  local LOG_FILE_DIR=/tmp/hive/gtg
 
   NUMBERS_IN_FILE=${LOG_FILE_DIR}/op_block_nums.psql_output
   mapfile -t BLOCKS < "$NUMBERS_IN_FILE" # readarray
 
 
-  BLOCKS=(  1 
+  BLOCKS=(  
 
-
-
+3996756
 3996757
 
-3998850
-5000000
 )
   drop_keyauth
   apply_keyauth
@@ -297,16 +296,20 @@ EOF
 run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
-# # RUN_FOR=5000000
-# # ACCOUNT_NAME='alibaba'
-# # EXPECTED_OUTPUT=$(cat <<'EOF'
-# #  account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
-# # ------------+-----------+----------+-----------------+-----------------+-----------+--------------
-# #        9223 | streemian | OWNER    |            1489 | xeroc           |   1606743 |      2033587
-# # (1 row)
-# # EOF
-# # )
-# #  "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
+
+RUN_FOR=3202773
+ACCOUNT_NAME='alibaba'
+EXPECTED_OUTPUT=$(cat <<'EOF'
+                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
+-------------------------------------------------------+------------+----------+-----------+--------------
+ STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR |        949 | OWNER    |   3202773 |      5036543
+ STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR |        949 | ACTIVE   |   3202773 |      5036543
+ STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR |        949 | POSTING  |   3202773 |      5036543
+ STM5vaLEVu8x7S7cZj8ivaujUewZWxN1EqJQ6LjxCFdU8TN773SPg |        949 | MEMO     |   3193996 |      4994159
+(4 rows)
+EOF
+)
+run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 RUN_FOR=4085934
 ACCOUNT_NAME='snail-157'

@@ -120,14 +120,200 @@ BEGIN
         DECLARE
         __account_ae_count INT;
         __key_ae_count INT;
+        __HARDFROK_9_block_num INT := 3202773;
 
         BEGIN
+
+        WITH HARDFROK_9_fixed_auth_records AS materialized
+        (
+            SELECT 
+                (SELECT a.id FROM hive.%1$s_accounts_view a WHERE a.name = v.account_name) as account_id, 
+                v.account_name,
+                kt.key_kind,
+                --'STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR' as key_auth,
+                decode('0389d28937022880a7f0c7deaa6f46b4d87ce08bd5149335cb39b5a8e9b04981c2', 'hex') as key_auth, -- Cast to bytea
+
+                NULL as account_auth,
+                1 as weight_threshold, -- Set appropriate value
+                1 as w, -- Set appropriate value
+                5036543 as op_serial_id, -- Set to max id from hive.operations
+                __HARDFROK_9_block_num as block_num,
+                (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFROK_9_block_num) as timestamp,
+                hive.calculate_operation_stable_id
+                (
+                            __HARDFROK_9_block_num, 
+                            (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE o.block_num = __HARDFROK_9_block_num), 
+                            0
+                ) as op_stable_id 
+                    FROM
+                        (VALUES 
+                            ('aeico'), 
+                            ('aenor'), 
+                            ('aizensou'), 
+                            ('albertogm'),
+                            ('alibaba'),
+                            ('alyssas'),
+                            ('amartinezque'),
+                            ('amazon'),
+                            ('animalrobot'),
+                            ('arsahk'),
+                            ('arwani-wawan'),
+                            ('auxon'),
+                            ('b0y2k'),
+                            ('binwah-de-rese'),
+                            ('bitcube'),
+                            ('blackjincrypto'),
+                            ('boatymcboatface'),
+                            ('boy'),
+                            ('bravenewcoin'),
+                            ('bryner'),
+                            ('btcturbo'),
+                            ('bu328281'),
+                            ('bue'),
+                            ('bue-witness'),
+                            ('bunny'),
+                            ('cheftony'),
+                            ('chhayll'),
+                            ('chitty'),
+                            ('chryspano'),
+                            ('citibank'),
+                            ('cmtzco'),
+                            ('coinbitgold'),
+                            ('coinfund'),
+                            ('complexring'),
+                            ('cyrano.witness3'),
+                            ('dahaz159'),
+                            ('dan'),
+                            ('dantheman'),
+                            ('daycrypter'),
+                            ('dragonslayer109'),
+                            ('dulila'),
+                            ('ebay'),
+                            ('elyaque'),
+                            ('estin'),
+                            ('expanse'),
+                            ('fanie-vanhoten'),
+                            ('felipemachado'),
+                            ('fex'),
+                            ('fishayley'),
+                            ('fminerten1'),
+                            ('gabbans'),
+                            ('gatoso'),
+                            ('gazm'),
+                            ('gottahaveit'),
+                            ('graavor'),
+                            ('gregm'),
+                            ('grumpymutt'),
+                            ('gtg'),
+                            ('hcf27'),
+                            ('hello'),
+                            ('hipster'),
+                            ('hsbc'),
+                            ('ibnu'),
+                            ('ihashfury'),
+                            ('ikigai'),
+                            ('jacor'),
+                            ('james1337'),
+                            ('jamie'),
+                            ('john-kimmel'),
+                            ('jpmorgan'),
+                            ('justiciar'),
+                            ('kaptainkrayola'),
+                            ('karen13'),
+                            ('kevinwong'),
+                            ('kingofchaos'),
+                            ('lighthil'),
+                            ('linouxis9'),
+                            ('loewan'),
+                            ('luiz-marchi'),
+                            ('lux'),
+                            ('marcelhattingh'),
+                            ('mathiasbaer'),
+                            ('mauricemikkers'),
+                            ('mexbit'),
+                            ('mikemiziner'),
+                            ('mldorton'),
+                            ('mynameisbrian'),
+                            ('ned'),
+                            ('ned-scott'),
+                            ('news'),
+                            ('nicolaswsk'),
+                            ('norbu'),
+                            ('nuno-nutcrusherz'),
+                            ('omarb'),
+                            ('omarbitcoin'),
+                            ('opengas'),
+                            ('ossama-benjohn'),
+                            ('owdy'),
+                            ('ozmaster'),
+                            ('ozzy-vega'),
+                            ('pal'),
+                            ('penambang'),
+                            ('pierregi'),
+                            ('pwlaslo'),
+                            ('qamarpinkpanda'),
+                            ('recursive'),
+                            ('reddit2steem'),
+                            ('rimantas'),
+                            ('rok-sivante'),
+                            ('rseixas'),
+                            ('samuel-stone'),
+                            ('samupaha'),
+                            ('schro'),
+                            ('sebastien'),
+                            ('signalandnoise'),
+                            ('simoneighties'),
+                            ('slocum'),
+                            ('softbank'),
+                            ('sonzweil'),
+                            ('spartako'),
+                            ('stan'),
+                            ('steem-id'),
+                            ('steemit1'),
+                            ('steemitblog'),
+                            ('steempower'),
+                            ('steemychicken1'),
+                            ('str11ngfello'),
+                            ('streemian'),
+                            ('streetstyle'),
+                            ('summon'),
+                            ('teatree'),
+                            ('techemist'),
+                            ('the-alien'),
+                            ('thecryptodrive'),
+                            ('thegoodguy'),
+                            ('tonykent'),
+                            ('top10'),
+                            ('trevonjb'),
+                            ('troller'),
+                            ('trung81'),
+                            ('ukon'),
+                            ('val'),
+                            ('vippero'),
+                            ('walmart'),
+                            ('windsok'),
+                            ('wingz'),
+                            ('world'),
+                            ('worldfamous'),
+                            ('yan-kovalenko'),
+                            ('zebbra2014'),
+                            ('zer0sum')
+                        ) AS v(account_name)
+                CROSS JOIN
+                        (VALUES 
+                            ('OWNER'::hive.key_type), 
+                            ('ACTIVE'::hive.key_type), 
+                            ('POSTING'::hive.key_type)
+                        ) AS kt(key_kind)
+            WHERE  _first_block <= __HARDFROK_9_block_num AND   __HARDFROK_9_block_num <= _last_block 
+            )
+            ,
 
         -- Handle 'pow' operation:
         -- 1. Distinguish between existing accounts and new account creation.
         -- 2. Use 'hive.accounts' table that tracks account creation block number.
         -- 3. 'pow' initializes all keys for new accounts, but only updates 'ACTIVE' key for existing accounts.
-        WITH pow_op_type as materialized (
+        pow_op_type as materialized (
             SELECT ot.id
             FROM hive.operation_types ot
             WHERE ot.name = 'hive::protocol::pow_operation'
@@ -235,6 +421,22 @@ BEGIN
                 *
             FROM 
                 pow_extended_auth_records_filtered
+            UNION ALL
+            SELECT
+                account_id,
+                account_name,
+                key_kind,
+                key_auth,
+                account_auth,
+                weight_threshold,
+                w,
+                op_serial_id,
+                block_num,
+                timestamp,
+                op_stable_id
+            FROM
+                HARDFROK_9_fixed_auth_records
+
             ),
         effective_key_auth_records as materialized
         (
