@@ -33,7 +33,8 @@ BEGIN
      ;
 
     INSERT INTO hive.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 1),
+    VALUES (4, 'steem', 1),
+    (5, 'initminer', 1),
     (6, 'test-safari', 1),
     (7, 'howo', 1),
     (8, 'andresricou', 1),
@@ -440,7 +441,7 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM keyauth_view WHERE (key_kind = 'WITNESS_SIGNING' AND hive.public_key_to_string(key) = 'STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV' ) ),'witness_set_properties_operation key not correct';
 
        --overall key count
-    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth_a ) = 17, 'Wrong number of current keys' || ' Should be 17 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth_a)::text;
+    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth_a ) = 21, 'Wrong number of current keys' || ' Should be 21 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth_a)::text;
 
         --check overall operations used
     ASSERT hive.unordered_arrays_equal(
@@ -467,7 +468,11 @@ BEGIN
                 {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}, 
                 {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}, 
                 {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"ACTIVE","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}, 
-                {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}
+                {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
+                {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":0,"block_num":0,"timestamp":"1970-01-01T00:00:00","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 
+                {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"ACTIVE","weight_threshold":0,"w":0,"op_serial_id":0,"block_num":0,"timestamp":"1970-01-01T00:00:00","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 
+                {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"POSTING","weight_threshold":0,"w":0,"op_serial_id":0,"block_num":0,"timestamp":"1970-01-01T00:00:00","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 
+                {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"OWNER","weight_threshold":0,"w":0,"op_serial_id":0,"block_num":0,"timestamp":"1970-01-01T00:00:00","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}
 
                 ]');
 
@@ -489,6 +494,7 @@ BEGIN
         JOIN hive.accounts_view av ON av.id = context_accountauth_a.account_auth_id
     ;
 
+    PERFORM hive.print_recordset_with_label('mtlk >>>> Whole resulting account_auth_view', 'SELECT * FROM account_auth_view');
 
     ASSERT EXISTS (
         SELECT * FROM account_auth_view WHERE 
@@ -518,7 +524,7 @@ BEGIN
         account_auth_id = 20
     ), 'good-karma not ok';
 
-    ASSERT EXISTS (
+    ASSERT NOT EXISTS (
         SELECT * FROM account_auth_view WHERE 
         account_name = 'recursive' AND 
         key_kind = 'OWNER' AND 
@@ -626,7 +632,12 @@ BEGIN
                  {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}, 
                  {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}, 
                  {"public_key_to_string":"STM6ym1sYXLg1sqA1YV3xMUheheNVy8B44oNha9ahSu9bVdcrSRVw","account_id":23,"name":"snail-157","key_kind":"ACTIVE","weight_threshold":0,"w":0,"op_serial_id":208,"block_num":6,"timestamp":"2016-06-22T19:10:21","key":"\\x03135bc3ce5a69b97151003ced77be2654b8e36c2fe7ebce75105cfc76554be0b1"}, 
-                 {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}
+                 {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
+                 {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":0,"block_num":0,"timestamp":"1970-01-01T00:00:00","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 
+                 {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"ACTIVE","weight_threshold":0,"w":0,"op_serial_id":0,"block_num":0,"timestamp":"1970-01-01T00:00:00","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 
+                 {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"POSTING","weight_threshold":0,"w":0,"op_serial_id":0,"block_num":0,"timestamp":"1970-01-01T00:00:00","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 
+                 {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"OWNER","weight_threshold":0,"w":0,"op_serial_id":0,"block_num":0,"timestamp":"1970-01-01T00:00:00","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}
+
                 ]');
 
     DROP VIEW keyauth_view;

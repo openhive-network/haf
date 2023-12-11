@@ -69,6 +69,10 @@ collected_keyauth_collection_t collect_keyauths(const hive::protocol::operation&
     return hive::app::operation_get_keyauths(op);
 }
 
+collected_keyauth_collection_t collect_genesis_keyauths()
+{
+    return hive::app::operation_get_genesis_keyauths();
+}
 
 collected_metadata_collection_t collect_metadata(const hive::protocol::operation& op)
 {
@@ -569,9 +573,21 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
    **  Postgres then has to wrap it up to let postgresive enum enter postgress realm
    */
 
+// Common  for keyauths returning functions: get_keyauths_wrapped and get_genesis_keyauths_wrapped
+void fill_and_return_keyauths(const collected_keyauth_collection_t& collected_keyauths, FunctionCallInfo fcinfo) 
+{
+  fill_return_tuples(collected_keyauths, fcinfo,
+      [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_name.c_str()));},
+      [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.key_kind));},
+      [] (const auto& collected_item) { return make_datum_pair(public_key_data_to_bytea_datum(collected_item.key_auth), !collected_item.keyauth_variant);},
+      [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_auth.c_str()), collected_item.keyauth_variant);},
+      [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.weight_threshold));},
+      [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.w));}
+  );
+}
 
 
-  Datum get_keyauths_wrapped(PG_FUNCTION_ARGS)
+Datum get_keyauths_wrapped(PG_FUNCTION_ARGS)
   {
     _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
 
@@ -587,20 +603,26 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
       [=, &collected_keyauths]()
       {
-        fill_return_tuples(collected_keyauths, fcinfo,
-          [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_name.c_str()));},
-          [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.key_kind));},
-          [] (const auto& collected_item) { return make_datum_pair(public_key_data_to_bytea_datum(collected_item.key_auth), !collected_item.keyauth_variant);},
-          [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_auth.c_str()), collected_item.keyauth_variant);},
-          [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.weight_threshold));},
-          [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.w));}
-        );
+        fill_and_return_keyauths(collected_keyauths, fcinfo);
       },
 
       __FUNCTION__, 
 
       VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body )
     );
+
+    return (Datum)0;
+  }
+
+  PG_FUNCTION_INFO_V1(get_genesis_keyauths_wrapped);
+
+  Datum get_genesis_keyauths_wrapped(PG_FUNCTION_ARGS)
+  {
+    collected_keyauth_collection_t collected_keyauths;
+
+    collected_keyauths = collect_genesis_keyauths();
+
+    fill_and_return_keyauths(collected_keyauths, fcinfo);
 
     return (Datum)0;
   }
