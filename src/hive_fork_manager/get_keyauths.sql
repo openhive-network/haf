@@ -29,6 +29,11 @@ CREATE OR REPLACE FUNCTION hive.get_keyauths_wrapper(IN _operation_body hive.ope
 RETURNS SETOF hive.keyauth_c_record_type
 AS 'MODULE_PATHNAME', 'get_keyauths_wrapped' LANGUAGE C;
 
+DROP FUNCTION IF EXISTS hive.get_genesis_keyauths_wrapper;
+CREATE OR REPLACE FUNCTION hive.get_genesis_keyauths_wrapper()
+RETURNS SETOF hive.keyauth_c_record_type
+AS 'MODULE_PATHNAME', 'get_genesis_keyauths_wrapped' LANGUAGE C;
+
 DROP FUNCTION IF EXISTS hive.key_type_c_int_to_enum;
 CREATE OR REPLACE FUNCTION hive.key_type_c_int_to_enum(IN _pos integer)
 RETURNS hive.key_type
@@ -63,6 +68,25 @@ BEGIN
         weight_threshold,
         w
     FROM hive.get_keyauths_wrapper(_operation_body);
+END
+$$;
+
+DROP FUNCTION IF EXISTS hive.get_genesis_keyauths;
+CREATE OR REPLACE FUNCTION hive.get_genesis_keyauths()
+RETURNS SETOF hive.keyauth_record_type
+LANGUAGE plpgsql
+IMMUTABLE
+AS
+$$
+BEGIN
+    RETURN QUERY SELECT
+        account_name,
+        hive.key_type_c_int_to_enum(authority_c_kind),
+        key_auth,
+        account_auth,
+        weight_threshold,
+        w
+    FROM hive.get_genesis_keyauths_wrapper();
 END
 $$;
 
