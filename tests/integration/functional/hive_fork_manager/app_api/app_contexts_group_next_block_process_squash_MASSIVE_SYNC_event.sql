@@ -83,23 +83,23 @@ BEGIN
 
     ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks';
     RAISE NOTICE 'Blocks range = %', __blocks;
-    ASSERT __blocks.first_block = 3, 'Incorrect first block';
+    ASSERT __blocks.first_block = 4, 'Incorrect first block';
     ASSERT __blocks.last_block = 6, 'Incorrect last range';
     ASSERT ( SELECT events_id FROM hive.contexts WHERE name='context' LIMIT 1 ) = 7, 'Wrong events id 7'; -- MASSIVE_SYNC_EVENTS squashed
     ASSERT ( SELECT events_id FROM hive.contexts WHERE name='context_b' LIMIT 1 ) = 7, 'Wrong events id 7 b'; -- MASSIVE_SYNC_EVENTS squashed
 
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 3, 'Wrong current block num 3';
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context_b' ) = 3, 'Wrong current block num 3b';
+    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 4, 'Wrong current block num 3';
+    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context_b' ) = 4, 'Wrong current block num 3b';
     ASSERT ( SELECT events_id FROM hive.contexts WHERE name='context' ) = 7, 'Wrong events id 7';
     ASSERT ( SELECT events_id FROM hive.contexts WHERE name='context_b' ) = 7, 'Wrong events id 7 b';
     ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name='context' ) = 6, 'Wrong irreversible';
     ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name='context_b' ) = 6, 'Wrong irreversible b';
 
-    ASSERT ( SELECT COUNT(*)  FROM A.table1 ) = 2, 'Wrong number of rows in app table';
+    ASSERT ( SELECT COUNT(*)  FROM A.table1 ) = 3, 'Wrong number of rows in app table';
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 1 ), 'No id 1';
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 2 ), 'No id 2';
 
-    ASSERT ( SELECT COUNT(*)  FROM B.table1 ) = 2, 'Wrong number of rows in app table b';
+    ASSERT ( SELECT COUNT(*)  FROM B.table1 ) = 3, 'Wrong number of rows in app table b';
     ASSERT EXISTS ( SELECT *  FROM B.table1 WHERE id = 1 ), 'No id 1 b';
     ASSERT EXISTS ( SELECT *  FROM B.table1 WHERE id = 2 ), 'No id 2 b';
 

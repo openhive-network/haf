@@ -115,6 +115,50 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.update_irreversible( _contexts hive.contexts_group )
+    RETURNS VOID
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __next_irreversible_event_id BIGINT;
+    __irreversible_block_num INT;
+    __event_type hive.event_type := NULL;
+    __context_event_id hive.events_queue.id%TYPE := 0;
+    __next_bff_event_id BIGINT;
+    __event_block_num INT;
+BEGIN
+    SELECT heq.id INTO __next_bff_event_id
+    FROM hive.events_queue heq
+    WHERE heq.id > __context_event_id
+        AND heq.event = 'BACK_FROM_FORK'
+    ORDER BY heq.id
+    LIMIT 1
+    ;
+
+    -- first find a newer massive_sync nearest current block
+    SELECT heq.id, hc.events_id, hc.irreversible_block, heq.event, heq.block_num
+    INTO __next_irreversible_event_id, __context_event_id, __irreversible_block_num, __event_type, __event_block_num
+    FROM hive.events_queue heq
+    JOIN hive.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
+    WHERE ( heq.event = 'MASSIVE_SYNC' OR heq.event = 'NEW_IRREVERSIBLE' )
+      AND heq.id < COALESCE( __next_bff_event_id, hive.unreachable_event_id() )
+      AND hc.name = _contexts[1]
+    ORDER BY heq.id DESC
+    LIMIT 1;
+
+    -- no newer irreversible
+    IF __next_irreversible_event_id IS NULL THEN
+        RETURN;
+    END IF;
+
+    PERFORM hive.context_set_irreversible_block( contexts.*, __event_block_num )
+    FROM unnest( _contexts ) as contexts;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.squash_end_massive_sync_events( _contexts hive.contexts_group )
     RETURNS BOOL
     LANGUAGE 'plpgsql'
@@ -128,18 +172,21 @@ DECLARE
     __irreversible_block_num INT;
     __before_next_massive_sync_event_id BIGINT := NULL;
     __lead_context hive.context_name := _contexts[ 1 ];
+    __event_type hive.event_type := NULL;
+    __context_event_id hive.events_queue.id%TYPE := 0;
+    __need_to_remove_reversible_data BOOLEAN := FALSE;
 BEGIN
     -- first find a newer massive_sync nearest current block
-    SELECT heq.id, hc.current_block_num, hc.id, hc.irreversible_block
-    INTO __next_massive_sync_event_id, __context_current_block_num, __context_id, __irreversible_block_num
+    SELECT heq.id, hc.current_block_num, hc.id, hc.irreversible_block, heq.event
+    INTO __next_massive_sync_event_id, __context_current_block_num, __context_id, __irreversible_block_num, __event_type
     FROM hive.events_queue heq
     JOIN hive.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
-    WHERE heq.event = 'MASSIVE_SYNC' AND hc.name = _contexts[1]
+    WHERE ( heq.event = 'MASSIVE_SYNC' ) AND hc.name = _contexts[1]
     ORDER BY heq.id DESC
     LIMIT 1;
 
-    SELECT hc.current_block_num
-    INTO __context_current_block_num
+    SELECT hc.current_block_num, hc.events_id
+    INTO __context_current_block_num, __context_event_id
     FROM hive.contexts hc
     WHERE hc.name = __lead_context
     ;
@@ -149,9 +196,17 @@ BEGIN
             RETURN FALSE;
     END IF;
 
-    -- TODO(@Mickiewicz): hmm big problem, all contexts need to do this
-    -- back form fork is required
-    PERFORM hive.context_back_from_fork( ctx.*, __irreversible_block_num ) FROM unnest(_contexts) ctx;
+    -- if in squashed events, there is a fork event it would be better to immediately drop reversible data
+    SELECT TRUE INTO __need_to_remove_reversible_data
+    FROM hive.events_queue heq
+    WHERE heq.id > __context_event_id
+      AND heq.id < __next_massive_sync_event_id
+      AND heq.event = 'BACK_FROM_FORK'
+    ;
+
+    IF __need_to_remove_reversible_data = TRUE THEN
+        PERFORM hive.context_back_from_fork( ctx.*, __irreversible_block_num ) FROM unnest(_contexts) ctx;
+    END IF;
 
     SELECT MAX( heq.id ) INTO __before_next_massive_sync_event_id
     FROM hive.events_queue heq WHERE heq.id < __next_massive_sync_event_id;
@@ -179,6 +234,8 @@ BEGIN
     IF __current_event_id = 0  THEN
             RETURN;
     END IF;
+
+    PERFORM hive.update_irreversible( _contexts );
 
     IF NOT hive.squash_end_massive_sync_events( _contexts ) THEN
         PERFORM hive.squash_fork_events( _contexts );
