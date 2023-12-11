@@ -182,14 +182,14 @@ CREATE OR REPLACE FUNCTION hive.disable_fk_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'irreversible_data' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'blocks' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_multisig' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'irreversible_data', FALSE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'blocks', FALSE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions', TRUE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_multisig', FALSE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations', TRUE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks', FALSE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts', FALSE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations', FALSE );
 
 END;
 $BODY$
@@ -244,13 +244,13 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'blocks_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_multisig_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations_reversible' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'blocks_reversible', FALSE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_reversible', FALSE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_multisig_reversible', FALSE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations_reversible', FALSE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks_reversible', FALSE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts_reversible', FALSE );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations_reversible', FALSE );
 
 
 

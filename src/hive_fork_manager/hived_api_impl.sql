@@ -401,7 +401,7 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.save_and_drop_indexes_foreign_keys( in _table_schema TEXT, in _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.save_and_drop_indexes_foreign_keys( in _table_schema TEXT, in _table_name TEXT, in _partitions BOOL )
 RETURNS VOID
 AS
 $function$
@@ -409,10 +409,10 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hive.indexes_constraints( table_name, index_constraint_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
-          DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
-        , _table_schema || '.' || _table_name as table_name
+        DISTINCT ON( tc.table_name, pgc.conname ) 'hive' || '.' || table_name
+        , pgc.conname as constraint_name
         , 'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name || ' ADD CONSTRAINT ' || pgc.conname || ' ' || pg_get_constraintdef(pgc.oid) as command
         , FALSE as is_constraint
         , FALSE AS is_index
@@ -420,11 +420,20 @@ BEGIN
     FROM pg_constraint pgc
     JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
     JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
-    WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name AND pgc.conislocal;
+    WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema
+        AND (
+                ( _partitions AND tc.table_name like _table_name || '_partition_%' ) OR
+                ( NOT _partitions AND tc.table_name = _table_name AND pgc.conislocal )
+            );
 
     OPEN __cursor FOR (
-        SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
-        FROM hive.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
+        SELECT ('ALTER TABLE ' || table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
+        FROM hive.indexes_constraints
+        WHERE is_foreign_key = TRUE
+            AND (
+                    ( _partitions AND table_name like _table_schema || '.' || _table_name || '_partition_%' ) OR
+                    ( NOT _partitions AND table_name = _table_schema || '.' || _table_name )
+                )
     );
 
     LOOP
