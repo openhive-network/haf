@@ -58,11 +58,6 @@ BEGIN
             IF __next_block_range.last_block % 50 = 0 THEN
                 RAISE NOTICE 'App is waiting for bunch of blocks...';
                 PERFORM pg_sleep( 1 ); -- wait 1;
-                -- because we know the app is used only for test with reindex
-                -- all the blocks are irreversible
-                -- remove this line when fixing https://gitlab.syncad.com/hive/haf/-/issues/178
-                UPDATE hive.contexts SET irreversible_block = get_irreversibe_block();
-
                 RAISE NOTICE 'App ended waiting for bunch of blocks';
             END IF;
         END LOOP;

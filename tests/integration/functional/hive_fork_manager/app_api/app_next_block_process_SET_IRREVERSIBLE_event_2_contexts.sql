@@ -76,14 +76,10 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 DECLARE
-    __result INT;
+    __result hive.blocks_range;
 BEGIN
-    SELECT hive.app_next_block( 'context' ) INTO __result;
-    ASSERT __result IS NULL, 'Processing  SET_IRREVERSIBLE event did not return NULL';
-
-    SELECT hive.app_next_block( 'context2' ) INTO __result;
-    ASSERT __result IS NULL, 'Processing  SET_IRREVERSIBLE event by contex2 did not return NULL';
-    PERFORM hive.app_next_block( 'context2' ); -- NEW_BLOCK event block 4
+    SELECT * FROM hive.app_next_block( 'context' ) INTO __result; -- process IR(3)
+    SELECT * FROM hive.app_next_block( 'context2' ) INTO __result; -- process IR(3)
     INSERT INTO B.table2(id) VALUES( 4 );
 END
 $BODY$
@@ -94,8 +90,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 3, 'Wrong current block num';
-    ASSERT ( SELECT events_id FROM hive.contexts WHERE name='context' ) = 4, 'Wrong events id';
+    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 4, 'Wrong current block num';
+    ASSERT ( SELECT events_id FROM hive.contexts WHERE name='context' ) = 5, 'Wrong events id';
     ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name='context' ) = 3, 'Wrong irreversible';
 
     ASSERT ( SELECT COUNT(*)  FROM A.table1 ) = 3, 'Wrong number of rows in app table';
