@@ -42,16 +42,21 @@ ENV HIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}
 ARG HIVE_LINT=OFF
 ENV HIVE_LINT=${HIVE_LINT}
 
+ARG HIVE_SUBDIR=.
+ENV HIVE_SUBDIR=${HIVE_SUBDIR}
+
+ENV HAF_SOURCE_DIR="/home/haf_admin/source/${HIVE_SUBDIR}"
+
 USER haf_admin
 WORKDIR /home/haf_admin
 
 SHELL ["/bin/bash", "-c"]
 
 # Get everything from cwd as sources to be built.
-COPY --chown=haf_admin:users . /home/haf_admin/haf
+COPY --chown=haf_admin:users . /home/haf_admin/source
 
 RUN \
-  ./haf/scripts/build.sh --haf-source-dir="./haf" --haf-binaries-dir="./build" \
+  "${HAF_SOURCE_DIR}/scripts/build.sh" --haf-source-dir="${HAF_SOURCE_DIR}" --haf-binaries-dir="./build" \
   --cmake-arg="-DBUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}" \
   --cmake-arg="-DENABLE_SMT_SUPPORT=${ENABLE_SMT_SUPPORT}" \
   --cmake-arg="-DHIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}" \
@@ -74,6 +79,11 @@ ENV WS_PORT=${WS_PORT}
 
 ARG HTTP_PORT=8091
 ENV HTTP_PORT=${HTTP_PORT}
+
+ARG HIVE_SUBDIR=.
+ENV HIVE_SUBDIR=${HIVE_SUBDIR}
+
+ENV HAF_SOURCE_DIR="/home/haf_admin/source/${HIVE_SUBDIR}"
 
 # Environment variable which allows to override default postgres access specification in pg_hba.conf
 ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\nhost    all     pghero    172.0.0.0/8    trust"
@@ -103,12 +113,12 @@ USER haf_admin
 WORKDIR /home/haf_admin
 
 COPY --from=build --chown=haf_admin:users /home/haf_admin/build /home/haf_admin/build/
-COPY --from=build --chown=haf_admin:users /home/haf_admin/haf /home/haf_admin/haf/
+COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}" "${HAF_SOURCE_DIR}"
 
 ENV POSTGRES_VERSION=14
-COPY --chown=haf_admin:users ./docker/docker_entrypoint.sh .
-COPY --chown=postgres:postgres ./docker/postgresql.conf /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
-COPY --chown=postgres:postgres ./docker/pg_hba.conf /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
+COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/docker_entrypoint.sh" .
+COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/postgresql.conf" /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
+COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.conf" /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
 
 ENV DATADIR=/home/hived/datadir
 # Use default location (inside datadir) of shm file. If SHM should be placed on some different device, then set it to mapped volume `/home/hived/shm_dir` and map it in docker run
