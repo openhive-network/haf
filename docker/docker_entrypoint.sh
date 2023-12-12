@@ -11,7 +11,7 @@ fi
 
 
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-SCRIPTSDIR="$SCRIPTDIR/haf/scripts"
+SCRIPTSDIR="/home/haf_admin/source/${HIVE_SUBDIR}/scripts"
 
 "$SCRIPTSDIR/copy_datadir.sh"
 
@@ -235,18 +235,18 @@ if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
 
   echo "Attempting to setup postgres instance: running setup_postgres.sh..."
 
-  sudo -n /home/haf_admin/haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace"
+  sudo -n /home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace"
 
   echo "Postgres instance setup completed."
 
-  /home/haf_admin/haf/scripts/setup_db.sh --haf-db-admin=haf_admin --haf-db-name=haf_block_log --haf-app-user=haf_app_admin
+  "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_db.sh" --haf-db-admin=haf_admin --haf-db-name=haf_block_log --haf-app-user=haf_app_admin
 
-  sudo -n /home/haf_admin/haf/scripts/setup_pghero.sh --database=haf_block_log
+  sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_pghero.sh" --database=haf_block_log
 else
   echo "Attempting to setup postgres instance already containing HAF database..."
 
   # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
-  sudo -n /home/haf_admin/haf/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace"
+  sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh" --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace"
   sudo -n "/usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh" --haf-admin-account=haf_admin --haf-db-name=haf_block_log
 
   echo "Postgres instance setup completed."
