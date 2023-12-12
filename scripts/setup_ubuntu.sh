@@ -43,7 +43,7 @@ install_all_dev_packages() {
           systemd \
           postgresql \
           postgresql-contrib \
-          libpqxx-dev \
+          libpq-dev \
           tox \
           joe \
           postgresql-server-dev-all
@@ -52,6 +52,18 @@ install_all_dev_packages() {
   rm -rf /var/lib/apt/lists/*
 
   sudo usermod -a -G users -c "PostgreSQL daemon account" postgres
+
+  pushd /tmp
+  git clone --depth 1 --branch 7.8.1 https://github.com/jtv/libpqxx.git
+  pushd libpqxx
+  mkdir build
+  pushd build
+  cmake -GNinja -DBUILD_TEST=OFF ..
+  ninja install
+  popd
+  popd
+  rm -r libpqxx
+  popd
 }
 
 install_user_packages() {
