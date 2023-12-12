@@ -79,7 +79,7 @@ private:
           _opened_tx.reset();
           if(_owner->_opened_connection != nullptr)
           {
-            _owner->_opened_connection->disconnect();
+            _owner->_opened_connection->close();
             _owner->_opened_connection.release();
           }
           else
@@ -112,13 +112,13 @@ private:
         _opened_tx.reset();
         if(_owner->_opened_connection != nullptr)
         {
-          _owner->_opened_connection->disconnect();
+          _owner->_opened_connection->close();
           _owner->_opened_connection.release();
         }
       }
-      catch(const pqxx::pqxx_exception& ex)
+      catch(const pqxx::failure& ex)
       {
-        ilog("Ignoring a pqxx exception during an implicit disconnect forced by reconnect request: ${e}", ("e", ex.base().what()));
+        ilog("Ignoring a pqxx exception during an implicit disconnect forced by reconnect request: ${e}", ("e", ex.what()));
       }
 
       dlog("Trying to connect to database: `${url}'...", ("url", _owner->_dbUrl));
@@ -212,7 +212,7 @@ void own_tx_controller::disconnect()
       _opened_tx->rollback();
     }
 
-    _opened_connection->disconnect();
+    _opened_connection->close();
     _opened_connection.release();
   }
 }
