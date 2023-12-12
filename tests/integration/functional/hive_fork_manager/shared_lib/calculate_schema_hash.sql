@@ -9,7 +9,7 @@ DECLARE
   _pattern1 TEXT[] = '{"(irreversible_data,dd1812c6-cabd-4382-a4bf-c355276b3839,53114e1c-c6e5-867b-6c67-1d55865180fe,77ed7932-7dab-20e3-b506-4a2d3fccfe75,f40cac4c-2fae-a597-11c8-8cc0f329e18f)"}';
   _test1 TEXT[];
 
-  _pattern2 TEXT[] = '{"(transactions,94b6219b-a5ef-4def-6518-0adb5b00140b,d0d1231f-f437-abf1-1f9f-6ae1ed916af4,d1456ff1-2474-ca5b-3b82-be0086c298f0,ba2b45bd-c11e-2a4a-6e86-aab2ac693cbb)"}';
+  _pattern2 TEXT[] = '{"(transactions,e0187044-53b8-5723-5611-961a1d5b8c8c,d0d1231f-f437-abf1-1f9f-6ae1ed916af4,aa080da1-a419-ee7e-f9ba-24b2f7304c39,ba2b45bd-c11e-2a4a-6e86-aab2ac693cbb)"}';
   _test2 TEXT[];
 
   _pattern3 TEXT[] = '{"(transactions_multisig,8d14a449-37a3-9bf0-0b21-42f94a41b1f2,58d75720-66fa-4ca6-bfd2-e34c9d55bc77,782bd57d-e234-61e7-89a2-27d1364acd99,cc576d3f-5919-0a1f-f851-1c008877b33a)"}';
@@ -18,7 +18,7 @@ DECLARE
   _pattern4 TEXT[] = '{"(operation_types,dd6c8768-2bc2-2b76-3246-292b108f744f,cf35886f-de4e-e064-b170-fd4186ea9148,0dc429a2-22b0-2d05-44d6-cc66d48082b6,08d2ba03-e127-e0ad-aaee-657b3aa27bae)"}';
   _test4 TEXT[];
 
-  _pattern5 TEXT[] = '{"(operations,86019260-c508-1293-336c-5376798f1274,960e9106-565e-0f1a-f5ce-1f0a5c5c8e14,dc112f75-3d2c-62c9-88cd-cb4247c91fc0,ba2b45bd-c11e-2a4a-6e86-aab2ac693cbb)"}';
+  _pattern5 TEXT[] = '{"(operations,302aa1e3-dba9-200a-4e49-ba64dcfadf22,960e9106-565e-0f1a-f5ce-1f0a5c5c8e14,3f9db4b1-53fd-5fb9-947d-36bdc19afa06,ba2b45bd-c11e-2a4a-6e86-aab2ac693cbb)"}';
   _test5 TEXT[];
 
   _pattern6 TEXT[] = '{"(applied_hardforks,916659d6-4780-3655-39d1-8cff2c86139f,cc12f996-6a6b-d8d1-3c37-567f4affedfb,f356074a-4d49-1417-65a3-8471e7a0da21,b574c705-0de0-5e63-a62e-c98c7917893e)"}';
