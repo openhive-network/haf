@@ -82,8 +82,12 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions') ), 'FK for hive.transactions not exists';
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'operations') ), 'FK for hive.operations not exists';
+    ASSERT ( SELECT NOT is_any_fk_for_hive_table( 'transactions') ), 'FK for hive.transactions not exists';
+    ASSERT ( SELECT NOT is_any_fk_for_hive_table( 'operations') ), 'FK for hive.operations not exists';
+
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_partition_0') ), 'FK for hive.transactions not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'operations_partition_0') ), 'FK for hive.operations not exists';
+
     ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hive.transactions_multisig not exists';
     ASSERT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hive.applied_hardforks not exists';
 
