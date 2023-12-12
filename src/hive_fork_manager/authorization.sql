@@ -50,6 +50,31 @@ ALTER TABLE hive.account_operations_reversible OWNER TO hived_group;
 ALTER TABLE hive.applied_hardforks OWNER TO hived_group;
 ALTER TABLE hive.applied_hardforks_reversible OWNER TO hived_group;
 
+CREATE OR REPLACE FUNCTION hive.change_owner_in_partitions( table_name VARCHAR, partition_cnt INTEGER, new_owner TEXT) RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_partitioned_table p, pg_class c WHERE p.partrelid = c.oid AND c.relname = table_name) THEN
+        FOR i IN 1..partition_cnt
+        LOOP
+            EXECUTE format(
+            $query$
+                ALTER TABLE hive.%s_partition_%s OWNER TO %s;
+            $query$,
+            table_name,
+            (i-1),
+            new_owner
+            ) res;
+        RAISE NOTICE 'Partition % has a new owner', i;
+        END LOOP;
+    ELSE
+        RAISE NOTICE 'Partitions can not be changed.';
+    END IF;
+END $$;
+
+select hive.change_owner_in_partitions( 'transactions', 100, 'hived_group');
+select hive.change_owner_in_partitions( 'operations', 100, 'hived_group');
+
 -- generic protection for tables in hive schema
 -- 1. hived_group allow to edit every table in hive schema
 -- 2. hive_applications_group can ready every table in hive schema
