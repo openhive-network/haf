@@ -74,6 +74,11 @@ collected_keyauth_collection_t collect_genesis_keyauths()
     return hive::app::operation_get_genesis_keyauths();
 }
 
+collected_keyauth_collection_t collect_hf09_keyauths()
+{
+    return hive::app::operation_get_hf09_keyauths();
+}
+
 collected_metadata_collection_t collect_metadata(const hive::protocol::operation& op)
 {
     return hive::app::operation_get_metadata(op);
@@ -627,8 +632,22 @@ Datum get_keyauths_wrapped(PG_FUNCTION_ARGS)
     return (Datum)0;
   }
 
-
   PG_FUNCTION_INFO_V1(get_keyauths_operations);
+
+  Datum get_hf09_keyauths_wrapped(PG_FUNCTION_ARGS)
+  {
+    collected_keyauth_collection_t collected_keyauths;
+
+    collected_keyauths = collect_hf09_keyauths();
+
+    fill_and_return_keyauths(collected_keyauths, fcinfo);
+
+    return (Datum)0;
+  }
+
+  PG_FUNCTION_INFO_V1(get_hf09_keyauths_wrapped);
+
+
 
   /**
    ** 
