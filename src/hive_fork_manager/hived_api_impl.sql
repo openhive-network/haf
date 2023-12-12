@@ -513,7 +513,7 @@ LANGUAGE plpgsql VOLATILE
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.restore_foreign_keys( in _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.restore_foreign_keys( in _table_schema TEXT, in _table_name TEXT, in _partitions BOOL )
     RETURNS VOID
 AS
 $function$
@@ -523,7 +523,15 @@ DECLARE
 BEGIN
 
     --restoring indexes, primary keys, unique contraints
-    OPEN __cursor FOR ( SELECT command FROM hive.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE );
+    OPEN __cursor FOR (
+                        SELECT command
+                        FROM hive.indexes_constraints
+                        WHERE is_foreign_key = TRUE
+                            AND (
+                                    ( _partitions AND table_name like _table_schema || '.' || _table_name || '_partition_%' ) OR
+                                    ( NOT _partitions AND table_name = _table_schema || '.' || _table_name )
+                                )
+                      );
     LOOP
     FETCH __cursor INTO __command;
         EXIT WHEN NOT FOUND;
@@ -532,7 +540,11 @@ BEGIN
     CLOSE __cursor;
 
     DELETE FROM hive.indexes_constraints
-    WHERE table_name = _table_name AND is_foreign_key = TRUE;
+    WHERE is_foreign_key = TRUE
+            AND (
+                    ( _partitions AND table_name like _table_schema || '.' || _table_name || '_partition_%' ) OR
+                    ( NOT _partitions AND table_name = _table_schema || '.' || _table_name )
+                );
 
 END;
 $function$

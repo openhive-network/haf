@@ -109,7 +109,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.save_and_drop_indexes_constraints( in _schema TEXT, in _table TEXT )
     , hive.save_and_drop_indexes_foreign_keys( in _table_schema TEXT, in _table_name TEXT, in _partitions BOOL )
     , hive.restore_indexes( in _table_name TEXT )
-    , hive.restore_foreign_keys( in _table_name TEXT )
+    , hive.restore_foreign_keys( in _table_schema TEXT, in _table_name TEXT, in _partitions BOOL )
     , hive.copy_blocks_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
     , hive.copy_transactions_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
     , hive.copy_operations_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
