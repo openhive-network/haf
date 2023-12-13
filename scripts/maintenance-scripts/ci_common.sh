@@ -2,13 +2,8 @@
 
 set -xeuo pipefail
 
-REPO_DIR=/home/haf_admin/haf
-# check if variable CI_PROJECT_DIR is set
-if test -n "${CI_PROJECT_DIR+x}"
-then
-    REPO_DIR="$CI_PROJECT_DIR"
-fi
-
+SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+REPO_DIR="${SCRIPTDIR}/../../"
 
 test_start() {
 
