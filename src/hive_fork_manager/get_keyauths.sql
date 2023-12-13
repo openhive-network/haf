@@ -114,15 +114,6 @@ BEGIN
 END
 $$;
 
-DROP TYPE IF EXISTS hive.get_operations_type CASCADE;
-CREATE TYPE hive.get_operations_type AS
-(
-      get_keyauths_operations TEXT
-);
 
-DROP FUNCTION IF EXISTS hive.get_keyauths_operations;
-CREATE OR REPLACE FUNCTION hive.get_keyauths_operations()
-RETURNS SETOF hive.get_operations_type
-AS 'MODULE_PATHNAME', 'get_keyauths_operations' LANGUAGE C;
 
 DROP FUNCTION IF EXISTS hive.is_keyauths_operation;

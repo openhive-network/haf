@@ -445,12 +445,6 @@ BEGIN
        --overall key count
     ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth_a ) = 26, 'Wrong number of current keys' || ' Should be 26 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth_a)::text;
 
-        --check overall operations used
-    ASSERT hive.unordered_arrays_equal(
-        (SELECT array_agg(t.get_keyauths_operations) FROM hive.get_keyauths_operations()t),
-        (SELECT array_agg(t) FROM hive.get_keyauths_operations_pattern()t)
-    ), 'hive.get_keyauths_operations are not equal to the pattern';
-
         -- check the whole key table
 
     PERFORM compare_keyauth_data('[
@@ -659,31 +653,6 @@ BEGIN
 END;
 $BODY$
 ;
-
-CREATE OR REPLACE FUNCTION hive.get_keyauths_operations_pattern()
-RETURNS SETOF TEXT
-LANGUAGE plpgsql
-IMMUTABLE
-AS
-$$
-BEGIN
-RETURN QUERY
-          SELECT 'hive::protocol::account_create_operation'
-UNION ALL SELECT 'hive::protocol::pow_operation'
-UNION ALL SELECT 'hive::protocol::pow2_operation'
-UNION ALL SELECT 'hive::protocol::account_create_with_delegation_operation'
-UNION ALL SELECT 'hive::protocol::account_update_operation'
-UNION ALL SELECT 'hive::protocol::account_update2_operation'
-UNION ALL SELECT 'hive::protocol::create_claimed_account_operation'
-UNION ALL SELECT 'hive::protocol::recover_account_operation'
-UNION ALL SELECT 'hive::protocol::reset_account_operation'
-UNION ALL SELECT 'hive::protocol::witness_set_properties_operation'
-UNION ALL SELECT 'hive::protocol::witness_update_operation'
-;
-END
-$$;
-
-
 
 CREATE OR REPLACE FUNCTION compare_keyauth_data(expected_json_text TEXT)
 RETURNS VOID AS $$

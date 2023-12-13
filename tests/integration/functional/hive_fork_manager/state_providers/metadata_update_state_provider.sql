@@ -594,12 +594,6 @@ BEGIN
     PERFORM ASSERT_METADATA_VALUES(17 /*'adedayoolumide'*/,'{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
     PERFORM ASSERT_METADATA_VALUES(18 /*'eos-polska'*/   ,'{"beneficiaries":[{"name":"fractalnode","weight":300,"label":"referrer"},{"name":"ocdb","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
 
-        --check overall operations used
-    ASSERT hive.unordered_arrays_equal(
-        (SELECT array_agg(t.get_metadata_operations) FROM hive.get_metadata_operations()t),
-        (SELECT array_agg(t) FROM hive.get_metadata_operations_pattern()t)
-    ), 'Broken hive.get_metadata_operations';
-
 END;
 $BODY$
 ;
@@ -668,19 +662,3 @@ BEGIN ASSERT 1 = (
 END
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.get_metadata_operations_pattern()
-RETURNS SETOF TEXT
-LANGUAGE plpgsql
-IMMUTABLE
-AS
-$$
-BEGIN
-RETURN QUERY
-            SELECT 'hive::protocol::account_create_operation'
-  UNION ALL SELECT 'hive::protocol::account_create_with_delegation_operation'
-  UNION ALL SELECT 'hive::protocol::account_update2_operation'
-  UNION ALL SELECT 'hive::protocol::account_update_operation'
-  UNION ALL SELECT 'hive::protocol::create_claimed_account_operation'
-;
-END
-$$;
