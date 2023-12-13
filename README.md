@@ -25,8 +25,11 @@ The image above shows the main components of a HAF installation:
 
 # HAF server quickstart
 
-The best way to quickly setup a HAF server is to use a prebuilt docker image (see [hiveio/haf images on dockerhub](https://hub.docker.com/r/hiveio/haf ) ) or build one locally by following the steps below:
 
+**NOTE: The fastest and easiest way to install and maintain a HAF server is to use the docker compose scripts in this repo:
+https://gitlab.syncad.com/hive/haf_api_node**
+
+But if you prefer to build your own HAF docker image, you can follow the steps below:
 ```
   git clone --recurse --branch develop https://gitlab.syncad.com/hive/haf.git
   mkdir -p workdir/haf-datadir/blockchain
