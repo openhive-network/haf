@@ -132,7 +132,21 @@ def create_psql_tool_dumped_schema(db_url: URL, tmp_path: Path) -> str:
     shell(rf"psql -d {db_url} -c '\d hive.*' >> {schema_filename}")
 
     with open(schema_filename, encoding="utf-8") as file:
-        return file.read()
+        lines = file.readlines()
+        full = []
+
+        #Partitions are presented in non-deterministic order, therefore should be sorted before comparison
+        partitions = []
+        for line in lines:
+            if line.find("_partition_") != -1 and line.find("CONSTRAINT") != -1 and line.find("FOREIGN KEY") != -1:
+                partitions.append(line)
+            else:
+                if len(partitions) > 0:
+                    partitions.sort()
+                    full.extend( partitions )
+                    partitions = []
+                full.append( line )
+        return "".join( line for line in full )
 
 
 def shell(command: str) -> None:
