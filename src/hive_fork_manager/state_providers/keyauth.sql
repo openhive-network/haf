@@ -1,8 +1,6 @@
 -- In hive::protocol::recover_account_operation the entry recent_owner_authority is not recorded, only new_owner_authority
 -- and the whole hive::protocol::request_account_recovery_operation is not recorded at all
 
-
-
 CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hive.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
@@ -97,57 +95,12 @@ BEGIN
     $$
     , _context);
 
-
-    PERFORM hive.print_json_with_label
-    (
-        'mtlk hive.hive.get_hf09_keyauths',(SELECT json_agg(t) FROM (SELECT * FROM
-        hive.get_hf09_keyauths()
-        ) t)
-
-    );
-
-
-    -- EXECUTE format($$
-    --     SELECT hive.print_json_with_label
-    -- (
-    --     'mtlk hive.%1$s_accounts_view',
-    --     (            SELECT json_agg(t) FROM (SELECT * FROM                           hive.%1$s_accounts_view) t)
-
-    -- );
-    -- $$
-    -- , _context);
-
-
-    -- EXECUTE format($$
-    --     SELECT hive.print_json_with_label
-    -- (
-    --     'mtlk hive.accounts_view',
-    --     (            SELECT json_agg(t) FROM (SELECT * FROM                           hive.accounts_view) t)
-
-    -- );
-    -- $$
-    -- , _context);
-
-
-
-
-
---     "account_name":"steem"
---     "key_kind":"OWNER"
--- "key_auth":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"
--- "account_auth":null
--- "weight_threshold":0
--- "w":0}, 
-
-
     -- Persistent function definition for keyauth insertion
     -- The 'hive.start_provider_keyauth_insert_into_keyauth_a' function is created here as a permanent
     -- function rather than being dynamically generated during each call to 'hive.update_state_provider_keyauth'.
 
     EXECUTE format(
     $t$
-
-
 
         CREATE OR REPLACE FUNCTION hive.%1$s_insert_into_keyauth_a(
         _first_block integer,
@@ -164,12 +117,14 @@ BEGIN
         __account_ae_count INT;
         __key_ae_count INT;
         __HARDFROK_9_block_num INT := 3202773;
+        __op_serial_id_dummy INT := 5036543;
 
         BEGIN
 
-        WITH
-
-        GENESIS_auth_records AS materialized
+        -- Handles accounts that have specific (or none) keys while genesis
+        -- including: 'miners', 'initminer', 'temp', 'steem', 'null'
+        -- Consider relocating this logic from the current CTE to the actual 'start_provider_keyauth' execution for better efficiency.
+        WITH genesis_auth_records AS MATERIALIZED
         (
             SELECT 
                 (SELECT a.id FROM hive.%1$s_accounts_view a WHERE a.name = g.account_name) as account_id, 
@@ -177,9 +132,9 @@ BEGIN
                 g.key_kind,
                 g.key_auth,
                 NULL as account_auth,
-                1 as weight_threshold, -- Set appropriate value
-                1 as w, -- Set appropriate value
-                5036543 as op_serial_id, -- Set to max id from hive.operations
+                1 as weight_threshold,
+                1 as w,
+                __op_serial_id_dummy as op_serial_id,
                 1 as block_num,
                 (SELECT b.created_at FROM hive.blocks b WHERE b.num = 1) as timestamp,
                 1
@@ -187,12 +142,13 @@ BEGIN
             WHERE  _first_block <= 1 AND 1 <= _last_block 
         )
         ,
-        HARDFROK_9_fixed_auth_records AS materialized
+        -- Hard fork 9 fixes some accounts that were compromised
+        HARDFROK_9_fixed_auth_records AS MATERIALIZED
         (
             SELECT
             (SELECT a.id FROM hive.%1$s_accounts_view a WHERE a.name = h.account_name) as account_id, 
             *,
-            5036543 as op_serial_id, -- Set to max id from hive.operations
+            __op_serial_id_dummy as op_serial_id,
             __HARDFROK_9_block_num as block_num,
             (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFROK_9_block_num) as timestamp,
             hive.calculate_operation_stable_id
@@ -204,201 +160,18 @@ BEGIN
             FROM hive.get_hf09_keyauths() h
             WHERE  _first_block <= __HARDFROK_9_block_num AND __HARDFROK_9_block_num <= _last_block
         )
-
-        -- (
-        --     SELECT 
-        --         (SELECT a.id FROM hive.%1$s_accounts_view a WHERE a.name = v.account_name) as account_id, 
-        --         v.account_name,
-        --         kt.key_kind,
-        --         --'STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR' as key_auth,
-        --         decode('0389d28937022880a7f0c7deaa6f46b4d87ce08bd5149335cb39b5a8e9b04981c2', 'hex') as key_auth, -- Cast to bytea
-
-        --         NULL as account_auth,
-        --         1 as weight_threshold, -- Set appropriate value
-        --         1 as w, -- Set appropriate value
-        --         5036543 as op_serial_id, -- Set to max id from hive.operations
-        --         __HARDFROK_9_block_num as block_num,
-        --         (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFROK_9_block_num) as timestamp,
-        --         hive.calculate_operation_stable_id
-        --         (
-        --                     __HARDFROK_9_block_num, 
-        --                     (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE o.block_num = __HARDFROK_9_block_num), 
-        --                     0
-        --         ) as op_stable_id 
-        --             FROM
-        --                 (VALUES 
-        --                     ('aeico'), 
-        --                     ('aenor'), 
-        --                     ('aizensou'), 
-        --                     ('albertogm'),
-        --                     ('alibaba'),
-        --                     ('alyssas'),
-        --                     ('amartinezque'),
-        --                     ('amazon'),
-        --                     ('animalrobot'),
-        --                     ('arsahk'),
-        --                     ('arwani-wawan'),
-        --                     ('auxon'),
-        --                     ('b0y2k'),
-        --                     ('binwah-de-rese'),
-        --                     ('bitcube'),
-        --                     ('blackjincrypto'),
-        --                     ('boatymcboatface'),
-        --                     ('boy'),
-        --                     ('bravenewcoin'),
-        --                     ('bryner'),
-        --                     ('btcturbo'),
-        --                     ('bu328281'),
-        --                     ('bue'),
-        --                     ('bue-witness'),
-        --                     ('bunny'),
-        --                     ('cheftony'),
-        --                     ('chhayll'),
-        --                     ('chitty'),
-        --                     ('chryspano'),
-        --                     ('citibank'),
-        --                     ('cmtzco'),
-        --                     ('coinbitgold'),
-        --                     ('coinfund'),
-        --                     ('complexring'),
-        --                     ('cyrano.witness3'),
-        --                     ('dahaz159'),
-        --                     ('dan'),
-        --                     ('dantheman'),
-        --                     ('daycrypter'),
-        --                     ('dragonslayer109'),
-        --                     ('dulila'),
-        --                     ('ebay'),
-        --                     ('elyaque'),
-        --                     ('estin'),
-        --                     ('expanse'),
-        --                     ('fanie-vanhoten'),
-        --                     ('felipemachado'),
-        --                     ('fex'),
-        --                     ('fishayley'),
-        --                     ('fminerten1'),
-        --                     ('gabbans'),
-        --                     ('gatoso'),
-        --                     ('gazm'),
-        --                     ('gottahaveit'),
-        --                     ('graavor'),
-        --                     ('gregm'),
-        --                     ('grumpymutt'),
-        --                     ('gtg'),
-        --                     ('hcf27'),
-        --                     ('hello'),
-        --                     ('hipster'),
-        --                     ('hsbc'),
-        --                     ('ibnu'),
-        --                     ('ihashfury'),
-        --                     ('ikigai'),
-        --                     ('jacor'),
-        --                     ('james1337'),
-        --                     ('jamie'),
-        --                     ('john-kimmel'),
-        --                     ('jpmorgan'),
-        --                     ('justiciar'),
-        --                     ('kaptainkrayola'),
-        --                     ('karen13'),
-        --                     ('kevinwong'),
-        --                     ('kingofchaos'),
-        --                     ('lighthil'),
-        --                     ('linouxis9'),
-        --                     ('loewan'),
-        --                     ('luiz-marchi'),
-        --                     ('lux'),
-        --                     ('marcelhattingh'),
-        --                     ('mathiasbaer'),
-        --                     ('mauricemikkers'),
-        --                     ('mexbit'),
-        --                     ('mikemiziner'),
-        --                     ('mldorton'),
-        --                     ('mynameisbrian'),
-        --                     ('ned'),
-        --                     ('ned-scott'),
-        --                     ('news'),
-        --                     ('nicolaswsk'),
-        --                     ('norbu'),
-        --                     ('nuno-nutcrusherz'),
-        --                     ('omarb'),
-        --                     ('omarbitcoin'),
-        --                     ('opengas'),
-        --                     ('ossama-benjohn'),
-        --                     ('owdy'),
-        --                     ('ozmaster'),
-        --                     ('ozzy-vega'),
-        --                     ('pal'),
-        --                     ('penambang'),
-        --                     ('pierregi'),
-        --                     ('pwlaslo'),
-        --                     ('qamarpinkpanda'),
-        --                     ('recursive'),
-        --                     ('reddit2steem'),
-        --                     ('rimantas'),
-        --                     ('rok-sivante'),
-        --                     ('rseixas'),
-        --                     ('samuel-stone'),
-        --                     ('samupaha'),
-        --                     ('schro'),
-        --                     ('sebastien'),
-        --                     ('signalandnoise'),
-        --                     ('simoneighties'),
-        --                     ('slocum'),
-        --                     ('softbank'),
-        --                     ('sonzweil'),
-        --                     ('spartako'),
-        --                     ('stan'),
-        --                     ('steem-id'),
-        --                     ('steemit1'),
-        --                     ('steemitblog'),
-        --                     ('steempower'),
-        --                     ('steemychicken1'),
-        --                     ('str11ngfello'),
-        --                     ('streemian'),
-        --                     ('streetstyle'),
-        --                     ('summon'),
-        --                     ('teatree'),
-        --                     ('techemist'),
-        --                     ('the-alien'),
-        --                     ('thecryptodrive'),
-        --                     ('thegoodguy'),
-        --                     ('tonykent'),
-        --                     ('top10'),
-        --                     ('trevonjb'),
-        --                     ('troller'),
-        --                     ('trung81'),
-        --                     ('ukon'),
-        --                     ('val'),
-        --                     ('vippero'),
-        --                     ('walmart'),
-        --                     ('windsok'),
-        --                     ('wingz'),
-        --                     ('world'),
-        --                     ('worldfamous'),
-        --                     ('yan-kovalenko'),
-        --                     ('zebbra2014'),
-        --                     ('zer0sum')
-        --                 ) AS v(account_name)
-        --         CROSS JOIN
-        --                 (VALUES 
-        --                     ('OWNER'::hive.key_type), 
-        --                     ('ACTIVE'::hive.key_type), 
-        --                     ('POSTING'::hive.key_type)
-        --                 ) AS kt(key_kind)
-        --     WHERE  _first_block <= __HARDFROK_9_block_num AND   __HARDFROK_9_block_num <= _last_block 
-        --     )
-            ,
+        ,
 
         -- Handle 'pow' operation:
         -- 1. Distinguish between existing accounts and new account creation.
         -- 2. Use 'hive.accounts' table that tracks account creation block number.
         -- 3. 'pow' initializes all keys for new accounts, but only updates 'ACTIVE' key for existing accounts.
-        pow_op_type as materialized (
+        pow_op_type as MATERIALIZED (
             SELECT ot.id
             FROM hive.operation_types ot
             WHERE ot.name = 'hive::protocol::pow_operation'
         ),
-        pow_matching_ops as materialized
+        pow_matching_ops as MATERIALIZED
         (
             SELECT
                     ov.body_binary,
@@ -497,11 +270,13 @@ BEGIN
                 where a.name = r.account_name) as account_id,
                 r.*
             FROM raw_auth_records r
+
             UNION ALL
             SELECT 
                 *
             FROM 
                 pow_extended_auth_records_filtered
+
             UNION ALL
             SELECT
                 account_id,
@@ -517,11 +292,11 @@ BEGIN
                 op_stable_id
             FROM
                 HARDFROK_9_fixed_auth_records
+
             UNION ALL
             SELECT *
             FROM
-                GENESIS_auth_records            
-
+                genesis_auth_records
             ),
         effective_key_auth_records as materialized
         (
@@ -599,7 +374,6 @@ BEGIN
         (
             delete from hive.%1$s_keyauth_k as dict
             where dict.key_id in (select distinct s.cleaned_key_id from store_key_auth_records s)
-RETURNING * -- for dump only 
         ),
         --- PROCESSING OF ACCOUNT BASED AUTHORITIES ---
             extended_account_auth_records as MATERIALIZED
@@ -650,55 +424,10 @@ RETURNING * -- for dump only
             timestamp =           EXCLUDED.timestamp
             RETURNING (xmax = 0) as is_new_entry, ae.account_id, ae.key_kind, ae.account_auth_id as cleaned_account_auth_id
         )
-
-        ,
-        dump_combined AS (
-        SELECT 
-            1 AS num,
-             ARRAY[
-                
-        
-                    hive.print_json_with_label('mtlk GENESIS_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           GENESIS_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk pow_matching_ops', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_matching_ops) t)),
-        -- hive.print_json_with_label('mtlk pow_raw_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_raw_auth_records) t)),
-        -- hive.print_json_with_label('mtlk pow_extended_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_extended_auth_records) t)),
-        -- hive.print_json_with_label('mtlk pow_extended_auth_records_filtered', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_extended_auth_records_filtered) t)),
-
-                    -- hive.print_json_with_label('mtlk matching_op_types', (SELECT json_agg(t) FROM (SELECT * FROM                           matching_op_types) t)),
-                    -- hive.print_json_with_label('mtlk matching_ops', (SELECT json_agg(t) FROM (SELECT * FROM                           matching_ops) t)),
-
-                    -- hive.print_json_with_label('mtlk raw_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           raw_auth_records) t)),
-                    hive.print_json_with_label('mtlk extended_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           extended_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk effective_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           effective_key_auth_records) t)),
-                    
-                    -- --- PROCESSING OF KEY BASED AUTHORITIES ---	
-                    
-                    -- hive.print_json_with_label('mtlk supplement_key_dictionary', (SELECT json_agg(t) FROM (SELECT * FROM                           supplement_key_dictionary) t)),
-                    -- hive.print_json_with_label('mtlk extended_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           extended_key_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk changed_key_authorities', (SELECT json_agg(t) FROM (SELECT * FROM                           changed_key_authorities) t)),
-
-                    -- hive.print_json_with_label('mtlk delete_obsolete_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           delete_obsolete_key_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk store_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           store_key_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk delete_obsolete_keys_from_dict', (SELECT json_agg(t) FROM (SELECT * FROM                           delete_obsolete_keys_from_dict) t)),
-
-                    --- PROCESSING OF ACCOUNT BASED AUTHORITIES ---
-
-                    hive.print_json_with_label('mtlk effective_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           effective_account_auth_records) t)),
-                    hive.print_json_with_label('mtlk extended_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           extended_account_auth_records) t)),
-                    hive.print_json_with_label('mtlk delete_obsolete_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           delete_obsolete_account_auth_records) t)),
-                    hive.print_json_with_label('mtlk store_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           store_account_auth_records) t))
-
-
-                ] AS dump_results
-        )
-
-        
-
         SELECT 
         (
             select count(*) FROM 
             store_account_auth_records
-            LEFT JOIN dump_combined ON dump_combined.num = store_account_auth_records.account_id
         ) as account_based_authority_entries,
             (select count(*) FROM store_key_auth_records) AS key_based_authority_entries
         into __account_ae_count, __key_ae_count;
@@ -769,9 +498,3 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.print_json_with_label(label text, json_result json) RETURNS INTEGER LANGUAGE plpgsql AS $p$
-BEGIN
-RAISE NOTICE E'% >>>> \n%', label, json_result;
-RETURN 1;
-END;
-$p$;
