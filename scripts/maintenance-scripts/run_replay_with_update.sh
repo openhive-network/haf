@@ -16,11 +16,6 @@ export PATTERNS_PATH="${REPO_DIR}/tests/integration/replay/patterns/no_filter"
 export DATADIR="${REPO_DIR}/datadir"
 export REPLAY="--replay-blockchain --stop-replay-at-block 1000000"
 export REPLAY_CONTINUATION="--replay-blockchain --stop-replay-at-block 2000000"
-export HIVED_PATH="/home/hived/bin/hived"
-export COMPRESS_BLOCK_LOG_PATH="/home/hived/bin/compress_block_log"
-export DB_NAME=haf_block_log
-export DB_ADMIN="haf_admin"
-export SETUP_SCRIPTS_PATH="/home/haf_admin/haf/scripts"
 
 if ! test -e "${BLOCK_LOG_SOURCE_DIR_5M}/block_log"
 then

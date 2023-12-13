@@ -21,11 +21,6 @@ done
 test_start
 
 export PYTEST_NUMBER_OF_PROCESSES="${PYTEST_NUMBER_OF_PROCESSES:-8}"
-export HIVED_PATH="/home/hived/bin/hived"
-export COMPRESS_BLOCK_LOG_PATH="/home/hived/bin/compress_block_log"
-export GET_DEV_KEY_PATH="/home/hived/bin/get_dev_key"
-export CLI_WALLET_PATH="/home/hived/bin/cli_wallet"
-export DB_NAME=haf_block_log
 export DB_URL="postgresql://haf_admin@127.0.0.1:5432/$DB_NAME"
 
 echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
