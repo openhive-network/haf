@@ -267,8 +267,10 @@ SKIP_HIVED=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --execute-maintenance-script*)
-      echo "Will run maintenance script $MAINTENANCE_SCRIPT_NAME..."
-      MAINTENANCE_SCRIPT_NAME="${1#*=}"
+      MAINTENANCE_SCRIPT_NAME_RAW="${1#*=}"
+      echo "Will run maintenance script $MAINTENANCE_SCRIPT_NAME_RAW..."
+      MAINTENANCE_SCRIPT_NAME=$(bash -c "echo ${MAINTENANCE_SCRIPT_NAME_RAW}")
+      echo "Maintenance sript name resolved to ${MAINTENANCE_SCRIPT_NAME}"
       DO_MAINTENANCE=1
       ;;
     --dump-snapshot=*)
