@@ -150,7 +150,7 @@ void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
 void
 data_processor::only_report_batch_finished( uint32_t block_num ) try {
   if ( _randezvous_trigger ) {
-    ilog( "${i} commited by ${d}",("i", block_num )("d", _description) );
+    dlog( "${i} commited by ${d}",("i", block_num )("d", _description) );
     _randezvous_trigger->report_complete_thread_stage( block_num );
   }
 } catch(...) {
