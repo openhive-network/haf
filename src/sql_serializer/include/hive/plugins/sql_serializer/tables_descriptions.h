@@ -15,8 +15,6 @@ namespace hive::plugins::sql_serializer {
 
     static const char TABLE[];
     static const char COLS[];
-    static const char* const COLS_ARRAY[];
-    static const size_t COLS_ARRAY_LEN = 17;
 
     struct data2sql_tuple : public data2_sql_tuple_base
       {
@@ -43,8 +41,6 @@ namespace hive::plugins::sql_serializer {
 
     static const char TABLE[];
     static const char COLS[];
-    static const char* const COLS_ARRAY[];
-    static const size_t COLS_ARRAY_LEN = 7;
 
     struct data2sql_tuple : public data2_sql_tuple_base
       {
@@ -64,8 +60,6 @@ namespace hive::plugins::sql_serializer {
 
     static const char TABLE[];
     static const char COLS[];
-    static const char* const COLS_ARRAY[];
-    static const size_t COLS_ARRAY_LEN = 2;
 
     struct data2sql_tuple : public data2_sql_tuple_base
       {
@@ -86,8 +80,6 @@ namespace hive::plugins::sql_serializer {
 
     static const char TABLE[];
     static const char COLS[];
-    static const char* const COLS_ARRAY[];
-    static const size_t COLS_ARRAY_LEN = 7;
 
     struct data2sql_tuple : public data2_sql_tuple_base
       {
@@ -112,8 +104,6 @@ namespace hive::plugins::sql_serializer {
 
     static const char TABLE[];
     static const char COLS[];
-    static const char* const COLS_ARRAY[];
-    static const size_t COLS_ARRAY_LEN = 3;
 
     struct data2sql_tuple : public data2_sql_tuple_base
       {
@@ -133,8 +123,6 @@ namespace hive::plugins::sql_serializer {
 
     static const char TABLE[];
     static const char COLS[];
-    static const char* const COLS_ARRAY[];
-    static const size_t COLS_ARRAY_LEN = 5;
 
     struct data2sql_tuple : public data2_sql_tuple_base
       {
@@ -154,8 +142,6 @@ namespace hive::plugins::sql_serializer {
 
     static const char TABLE[];
     static const char COLS[];
-    static const char* const COLS_ARRAY[];
-    static const size_t COLS_ARRAY_LEN = 3;
 
     struct data2sql_tuple : public data2_sql_tuple_base
       {
@@ -168,17 +154,12 @@ namespace hive::plugins::sql_serializer {
       };
     };
 
-  std::tuple<int, fc::ripemd160, fc::ripemd160, fc::time_point_sec,
-             int32_t, fc::ripemd160, fc::optional<std::string>, fc::ecc::compact_signature,
-             std::string, uint16_t, std::string, std::string, 
-             std::string, std::string, std::string, std::string, 
-             std::string>
-    to_tuple(const PSQL::processing_objects::process_block_t&);
-  std::tuple<int, int32_t, fc::ripemd160, uint16_t, uint32_t, fc::time_point_sec, fc::optional<fc::ecc::compact_signature>> to_tuple(const PSQL::processing_objects::process_transaction_t&);
-  std::tuple<fc::ripemd160, fc::ecc::compact_signature> to_tuple(const PSQL::processing_objects::process_transaction_multisig_t&);
-  std::tuple<int64_t, int, int32_t, int32_t, int64_t, fc::time_point_sec, pqxx::binarystring> to_tuple(const PSQL::processing_objects::process_operation_t&);
-  std::tuple<int32_t, std::string, int> to_tuple(const PSQL::processing_objects::account_data_t&);
-  std::tuple<int, int32_t, int32_t, int64_t, int32_t> to_tuple(const PSQL::processing_objects::account_operation_data_t&);
-  std::tuple<int32_t, int, int64_t> to_tuple(const PSQL::processing_objects::applied_hardforks_t&);
+  void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_block_t& block);
+  void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_transaction_t& transaction);
+  void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_transaction_multisig_t& transaction_multisig);
+  void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_operation_t& operation);
+  void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::account_data_t& account);
+  void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::account_operation_data_t& account_operation);
+  void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::applied_hardforks_t& applied_hardfork);
 
 } // namespace hive::plugins::sql_serializer

@@ -8,7 +8,7 @@ namespace hive::plugins::sql_serializer {
   using table_data_writer = container_data_writer<
       typename TableDescriptor::container_t
     , typename TableDescriptor::data2sql_tuple
-    , TableDescriptor::TABLE, TableDescriptor::COLS, TableDescriptor::COLS_ARRAY, TableDescriptor::COLS_ARRAY_LEN
+    , TableDescriptor::TABLE, TableDescriptor::COLS
     , Processor
   >;
 
