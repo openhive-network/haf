@@ -163,3 +163,6 @@ CREATE TABLE IF NOT EXISTS hive.write_ahead_log_state (id SMALLINT NOT NULL UNIQ
 COMMENT ON TABLE hive.write_ahead_log_state IS 'Tracks the sequence numbers in hived''s write-ahead log';
 COMMENT ON COLUMN hive.write_ahead_log_state.id IS 'an id column.  this table will never have more than one row, and its id will be 1.  an empty table is semantically equivalent to a table where the last_sequence_number_committed is NULL';
 COMMENT ON COLUMN hive.write_ahead_log_state.last_sequence_number_committed IS 'The sequence number of the last commited transaction, or NULL if we''re operating in a mode that doesn''t track sequence numbers.  Will always be non-negative';
+
+SELECT pg_catalog.pg_extension_config_dump('hive.write_ahead_log_state', '');
+
