@@ -145,6 +145,8 @@ BEGIN
 
     PERFORM hive.set_irreversible( 8 );
 
+    SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- moves to NEW_IRREVERSIBLE(8)
+    ASSERT __blocks IS NULL, 'NULL was not returned (7,8)';
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
     ASSERT __blocks IS NOT NULL, 'NULL is returned instead of blocks (7,8)';
     ASSERT __blocks = (7,8), 'Incorrect range instead of expected (7,8)';

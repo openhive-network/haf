@@ -18,6 +18,7 @@ def update_app_continuously(session, application_context, cycles):
         blocks_range = session.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( application_context ) ).fetchone()
         (first_block, last_block) = blocks_range
         if last_block is None:
+            tt.logger.info( "next blocks_range was NULL\n" )
             continue
         tt.logger.info( "next blocks_range: {}\n".format( blocks_range ) )
         session.execute( "SELECT public.update_histogram( {}, {} )".format( first_block, last_block ) )
@@ -87,11 +88,22 @@ def test_application_broken(prepared_networks_and_database_12_8_without_block_lo
     # application is not updated (=broken)
     wait_for_irreversible_progress(node_under_test, START_TEST_BLOCK+3)
 
-    ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hive.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()
-    tt.logger.info(f'ctx_stats-after-waiting-2: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
-
+    # now in first move the app will update its irreversible
     irreversible_block = get_irreversible_block(node_under_test)
     tt.logger.info(f'irreversible_block {irreversible_block}')
+
+    # first eats irreversible event and return null
+    nr_cycles = 1
+    ctx_stats = None
+    update_app_continuously(second_session, APPLICATION_CONTEXT, nr_cycles)
+    assert  ctx_stats is None
+
+    # now moves to block=50
+    nr_cycles = 1
+    update_app_continuously(second_session, APPLICATION_CONTEXT, nr_cycles)
+
+    ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hive.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()
+    tt.logger.info(f'ctx_stats-after-waiting-2: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
 
     haf_irreversible = session.query(IrreversibleData).one()
     tt.logger.info(f'consistent_block {haf_irreversible.consistent_block}')
@@ -101,8 +113,6 @@ def test_application_broken(prepared_networks_and_database_12_8_without_block_lo
 
     assert irreversible_block == haf_irreversible.consistent_block
     assert irreversible_block == context_irreversible_block
-
-    assert irreversible_block == haf_irreversible.consistent_block
 
     blks = session.query(BlocksReversible).order_by(BlocksReversible.num).all()
     if len(blks) == 0:
