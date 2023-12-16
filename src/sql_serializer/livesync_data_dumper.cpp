@@ -193,7 +193,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       {
         std::unique_lock<std::mutex> lock(_mutex);
         _condition_variable.wait(lock, [&](){ return _shutdown_requested || !_command_queue.empty(); });
-        if (_shutdown_requested)
+        // if shutdown is requested, continue processing the queue until it's empty, then exit.
+        // an earlier version had this condition: if (_shutdown_requested), which made for a quicker shutdown
+        if (_command_queue.empty())
         {
           ilog("Terminating hived->postgresql write-ahead log processing because shutdown was requested");
           break;
