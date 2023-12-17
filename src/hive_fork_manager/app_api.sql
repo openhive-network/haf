@@ -192,6 +192,7 @@ BEGIN
     SET   fork_id = __fork_id
       , irreversible_block = COALESCE( __head_of_irreversible_block, 0 )
       , events_id = 0 -- during app_next_block correct event will be found
+      , last_active_at = NOW()
     WHERE name =ANY( _contexts )
     ;
 
@@ -316,6 +317,7 @@ BEGIN
 
     UPDATE hive.contexts hc
     SET is_forking = false
+      , last_active_at = NOW()
     WHERE hc.name = ANY( _contexts );
 
     -- we are reattaching the contexts but the triggers won't be recreated
@@ -357,6 +359,7 @@ BEGIN
 
     UPDATE hive.contexts hc
     SET is_forking = true
+      , last_active_at = NOW()
     WHERE hc.name = ANY( _contexts );
 
     -- to recreate triggers
@@ -498,6 +501,7 @@ BEGIN
 
     UPDATE hive.contexts hc
     SET detached_block_num = _block_num
+       ,last_active_at = NOW()
     WHERE hc.id =ANY( __contexts_id );
 END;
 $BODY$;
@@ -670,6 +674,10 @@ BEGIN
     DELETE FROM hive.state_providers_registered hsp
         USING hive.contexts hc
     WHERE hc.name = _context AND hsp.state_provider = _state_provider AND hc.id = hsp.context_id;
+
+    UPDATE hive.contexts
+    SET last_active_at = NOW()
+    WHERE name = _context;
 END;
 $BODY$
 ;

@@ -10,8 +10,8 @@ BEGIN
     END IF;
 
     EXECUTE format( 'CREATE TABLE hive.%I( hive_rowid BIGSERIAL )', _name );
-    INSERT INTO hive.contexts( name, current_block_num, irreversible_block, is_attached, events_id, fork_id, owner, is_forking )
-    VALUES( _name, 0, _irreversible_block, TRUE, 0, _fork_id, current_user, _is_forking );
+    INSERT INTO hive.contexts( name, current_block_num, irreversible_block, is_attached, events_id, fork_id, owner, is_forking, last_active_at )
+    VALUES( _name, 0, _irreversible_block, TRUE, 0, _fork_id, current_user, _is_forking, NOW() );
 END;
 $BODY$
 ;
@@ -202,7 +202,9 @@ BEGIN
             RAISE EXCEPTION 'The proposed block number of irreversible block is lower than the current one for context %', _context;
     END IF;
 
-    UPDATE hive.contexts  SET irreversible_block = _block_num WHERE name = _context;
+    UPDATE hive.contexts  SET irreversible_block = _block_num
+                            , last_active_at = NOW()
+    WHERE name = _context;
 
     PERFORM
     hive.remove_obsolete_operations( hrt.shadow_table_name, _block_num )

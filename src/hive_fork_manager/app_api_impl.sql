@@ -272,6 +272,7 @@ BEGIN
             SET
                 current_block_num = __next_event_block_num
               , fork_id = __fork_id
+              , last_active_at = NOW()
             WHERE name = _context;
             RETURN NULL;
         WHEN 'NEW_IRREVERSIBLE' THEN
@@ -283,7 +284,7 @@ BEGIN
             END IF;
             RETURN NULL;
         WHEN 'MASSIVE_SYNC' THEN
-            --massive events are squashe at the function begin
+            --massive events are squashed at the function begin
             -- we may got on context  creation irreversible block based on hive.irreversible_data
             -- unfortunetly some slow app may prevent to removing this event, so we need to process it
             -- but do not update irreversible
@@ -296,6 +297,7 @@ BEGIN
             IF _context_state.next_event_block_num = ( _context_state.current_block_num + 1 ) THEN
                 UPDATE hive.contexts
                 SET current_block_num = _context_state.next_event_block_num
+                  , last_active_at = NOW()
                 WHERE name = _context;
 
                 __result.first_block = _context_state.next_event_block_num;
@@ -326,6 +328,7 @@ BEGIN
 
     UPDATE hive.contexts
     SET current_block_num = __next_block_to_process
+      , last_active_at = NOW()
     WHERE name = _context;
 
     __result.first_block = __next_block_to_process;
@@ -376,6 +379,7 @@ BEGIN
 
     UPDATE hive.contexts
     SET current_block_num = __next_block_to_process
+      , last_active_at = NOW()
     WHERE name = _context;
 
     __result.first_block = __next_block_to_process;
@@ -448,6 +452,10 @@ BEGIN
           'SELECT hive.update_state_provider_%s( %s, %s, %L )'
         , _state_provider, _first_block, _last_block, _context
     );
+
+    UPDATE hive.contexts
+    SET last_active_at = NOW()
+    WHERE name = _context;
 END;
 $BODY$
 ;
