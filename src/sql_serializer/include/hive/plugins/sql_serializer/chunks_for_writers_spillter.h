@@ -26,7 +26,7 @@ namespace hive::plugins::sql_serializer {
       void complete_data_processing();
 
     protected:
-      chunks_for_writers_splitter_base( std::string description ):_description( std::move(description) ){}
+      chunks_for_writers_splitter_base( std::string description, std::string short_description ):_description( std::move(description) ), _short_description(std::move(short_description)) {}
 
       template< typename... Parameters >
       void emplace_writer( Parameters... params ) { writers.emplace_back( params... ); }
@@ -34,6 +34,7 @@ namespace hive::plugins::sql_serializer {
     private:
       std::vector< TableWriter > writers;
       const std::string _description;
+      const std::string _short_description;
     };
 
   template< typename TableWriter >
@@ -44,6 +45,7 @@ namespace hive::plugins::sql_serializer {
         uint8_t number_of_writers
       , std::string psqlUrl
       , std::string description
+      , std::string short_description
       , std::shared_ptr< block_num_rendezvous_trigger > _randezvous_trigger
       , appbase::application& app
     );
@@ -62,6 +64,7 @@ namespace hive::plugins::sql_serializer {
       chunks_for_string_writers_splitter(
           uint32_t number_of_threads
         , std::string description
+        , std::string short_description
         , std::shared_ptr< block_num_rendezvous_trigger > _randezvous_trigger
         , appbase::application& app
       );
@@ -80,13 +83,14 @@ namespace hive::plugins::sql_serializer {
     uint8_t number_of_threads
     , std::string psqlUrl
     , std::string description
+    , std::string short_description
     , std::shared_ptr< block_num_rendezvous_trigger > _randezvous_trigger
     , appbase::application& app
-    ) : chunks_for_writers_splitter_base< TableWriter >( description ) {
+    ) : chunks_for_writers_splitter_base< TableWriter >( description, short_description ) {
       FC_ASSERT( number_of_threads > 0 );
       for ( auto writer_num = 0; writer_num < number_of_threads; ++writer_num ) {
         auto writer_description = description + "_" + std::to_string( writer_num );
-        chunks_for_writers_splitter_base< TableWriter >::emplace_writer( psqlUrl, writer_description, _randezvous_trigger, std::ref( app ) );
+        chunks_for_writers_splitter_base< TableWriter >::emplace_writer( psqlUrl, writer_description, short_description, _randezvous_trigger, std::ref( app ) );
       }
     }
 
@@ -95,9 +99,10 @@ namespace hive::plugins::sql_serializer {
   chunks_for_string_writers_splitter< TableWriter >::chunks_for_string_writers_splitter(
       uint32_t number_of_threads
     , std::string description
+    , std::string short_description
     , std::shared_ptr< block_num_rendezvous_trigger > _randezvous_trigger
     , appbase::application& app
-    ) : chunks_for_writers_splitter_base< TableWriter >( description ) {
+    ) : chunks_for_writers_splitter_base< TableWriter >( description, short_description ) {
       FC_ASSERT( number_of_threads > 0 );
       _strings.resize( number_of_threads );
       for ( auto& str : _strings ) {
@@ -107,7 +112,7 @@ namespace hive::plugins::sql_serializer {
     for ( auto writer_num = 0u; writer_num < _callbacks.size(); ++writer_num ) {
       auto writer_description = description + "_" + std::to_string( writer_num );
       chunks_for_writers_splitter_base< TableWriter >::emplace_writer(
-        _callbacks[ writer_num ], writer_description, _randezvous_trigger, std::ref( app )
+        _callbacks[ writer_num ], writer_description, short_description, _randezvous_trigger, std::ref( app )
       );
     }
   }

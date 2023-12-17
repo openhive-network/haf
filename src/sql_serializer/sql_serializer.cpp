@@ -57,6 +57,7 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
   queries_commit_data_processor db_checker(
     database_url
     , "Check correctness"
+    , "correctnes"
     , [&is_extension_created](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
       pqxx::result data = tx.exec("select 1 as _result from pg_extension where extname='hive_fork_manager';");
       is_extension_created = !data.empty();
@@ -77,6 +78,7 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
   queries_commit_data_processor db_consistency_checker(
     database_url
     , "Check consistency of irreversible data"
+    , "consist"
     , [&is_irreversible_dirty](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
       
       // these tables need to be empty in haf extension script because of pg_dump/pg/restore
@@ -344,7 +346,7 @@ public:
       tx.exec( types );
       return data_processing_status();
     };
-    queries_commit_data_processor processor( db_url, "Get type definitions", get_type_definitions, nullptr, theApp );
+    queries_commit_data_processor processor( db_url, "Get type definitions", "typedef", get_type_definitions, nullptr, theApp );
     processor.trigger( nullptr, 0 );
     processor.join();
 
@@ -358,7 +360,7 @@ public:
     psql_block_number = 0;
     op_sequence_id = std::nullopt;
 
-    queries_commit_data_processor block_loader(db_url, "Block loader",
+    queries_commit_data_processor block_loader(db_url, "Block loader", "blockload",
                                                 [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
       {
         pqxx::result data = tx.exec("SELECT hb.num AS _max_block FROM hive.blocks hb ORDER BY hb.num DESC LIMIT 1;");
@@ -395,7 +397,7 @@ void sql_serializer_plugin_impl::replay_wal_if_necessary() {
       last_wal_sequence_number_in_db = value.as<int32_t>();
     return data_processing_status();
   };
-  queries_commit_data_processor processor(db_url, "Get the last transaction sequence number", get_wal_sequence, nullptr, theApp);
+  queries_commit_data_processor processor(db_url, "Get the last transaction sequence number", "trx_seq", get_wal_sequence, nullptr, theApp);
   processor.trigger(nullptr, 0);
   processor.join();
 
@@ -417,7 +419,7 @@ void sql_serializer_plugin_impl::replay_wal_if_necessary() {
           tx.exec("SELECT hive.update_wal_sequence_number(" + std::to_string(sequence_number) + ")");
           return data_processing_status();
         };
-        queries_commit_data_processor replay_processor(db_url, "Replay transaction", replay_transaction, nullptr, theApp);
+        queries_commit_data_processor replay_processor(db_url, "Replay transaction", "replaytrx", replay_transaction, nullptr, theApp);
         replay_processor.trigger(nullptr, 0);
         replay_processor.join();
       });
@@ -439,7 +441,7 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
     tx.exec( CONNECT_QUERY );
     return data_processing_status();
   };
-  queries_commit_data_processor processor( db_url, "Connect to the db", connect_to_the_db, nullptr, theApp );
+  queries_commit_data_processor processor( db_url, "Connect to the db", "connectdb", connect_to_the_db, nullptr, theApp );
   processor.trigger( nullptr, 0 );
   processor.join();
 }
@@ -576,7 +578,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
 
   if (!op_sequence_id)
   {
-    queries_commit_data_processor sequence_loader(db_url, "Sequence loader",
+    queries_commit_data_processor sequence_loader(db_url, "Sequence loader", "seq_load",
                                                   [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
       {
         // get the next unused operation id from the database.
@@ -788,6 +790,7 @@ sql_serializer_plugin_impl::is_database_initialized() {
   queries_commit_data_processor blocks_checker(
       db_url
     , "Check if any block is dumped"
+    , "blockcheck"
     , [&is_database_initialized](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
       pqxx::result data = tx.exec("select 1 from hive.operation_types limit 1");
       is_database_initialized = !data.empty();

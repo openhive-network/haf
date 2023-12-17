@@ -44,6 +44,7 @@ namespace hive::plugins::sql_serializer {
     queries_commit_data_processor truncate_accounts(
       _dburl
       , "truncate hive.accounts"
+      , "trunc acc"
       , [](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
         tx.exec("truncate hive.accounts");
         return data_processor::data_processing_status();
@@ -61,6 +62,7 @@ namespace hive::plugins::sql_serializer {
         number_of_threads
       , dburl
       , "All accounts data writer"
+      , "all acc"
       , api_trigger
       , app
     );

@@ -19,7 +19,7 @@ namespace sql_serializer {
         return data_processor::data_processing_status();
       };
 
-      _data_processor = std::make_unique< queries_commit_data_processor >(psqlUrl, "commiting hive.end_massive_sync", commiting_function, nullptr, app );
+      _data_processor = std::make_unique< queries_commit_data_processor >(psqlUrl, "commiting hive.end_massive_sync", "endmassive", commiting_function, nullptr, app );
     }
 
     void

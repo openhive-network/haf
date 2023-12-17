@@ -23,6 +23,7 @@ namespace hive::plugins::sql_serializer {
       string_data_processor(
           const callback& string_callback
         , std::string description
+        , std::string short_description
         , const data_processing_fn& dataProcessor
         , std::shared_ptr< block_num_rendezvous_trigger > api_trigger
         , appbase::application& app

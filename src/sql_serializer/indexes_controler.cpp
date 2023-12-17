@@ -110,7 +110,9 @@ indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_
 
   std::string query = std::string("SELECT ") + sql_function_call + ";";
   std::string description = "Query processor: `" + query + "'";
-  auto processor=std::make_unique< queries_commit_data_processor >(_db_url, description, [query, &objects_name, mode, description](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status
+  std::string short_description = "index_ctrl";
+  auto processor=std::make_unique< queries_commit_data_processor >(_db_url, std::move(description), std::move(short_description), 
+                                                                   [query, &objects_name, mode, description](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status
   {
     ilog("Attempting to execute query: `${query}`...", ("query", query ) );
     const auto start_time = fc::time_point::now();
