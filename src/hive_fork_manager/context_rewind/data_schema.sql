@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS hive.contexts(
     detached_block_num INTEGER, -- place where application can save last processed block num in detached state
     registering_state_provider BOOL NOT NULL DEFAULT FALSE,
     is_forking BOOL NOT NULL DEFAULT TRUE,
+    last_active_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, -- Stores last app activity time (updated by apps APIs like app_next_block)
     CONSTRAINT pk_hive_contexts PRIMARY KEY( id ),
     CONSTRAINT uq_hive_context_name UNIQUE ( name )
 );
