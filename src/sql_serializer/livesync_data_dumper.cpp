@@ -215,9 +215,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
         transaction->exec("SELECT hive.update_wal_sequence_number(" + std::to_string(command_to_run.first) + ")");
         transaction->commit();
       }
-      catch (const pqxx::pqxx_exception& ex)
+      catch (const pqxx::failure& ex)
       {
-        elog("Write-ahead log processor detected SQL error: ${what}", ("what", ex.base().what()));
+        elog("Write-ahead log processor detected SQL error: ${what}", ("what", ex.what()));
         _app.kill();
         throw;
       }
