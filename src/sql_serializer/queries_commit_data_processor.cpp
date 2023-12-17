@@ -1,7 +1,7 @@
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
 
 namespace hive{ namespace plugins{ namespace sql_serializer {
-queries_commit_data_processor::queries_commit_data_processor(const std::string& psqlUrl, std::string description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger, appbase::application& app ) {
+queries_commit_data_processor::queries_commit_data_processor(const std::string& psqlUrl, std::string description, std::string short_description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger, appbase::application& app ) {
   auto tx_controller = transaction_controllers::build_own_transaction_controller( psqlUrl, description, app );
   auto fn_wrapped_with_transaction = [ tx_controller, dataProcessor ]( const data_chunk_ptr& dataPtr ){
     transaction_ptr tx( tx_controller->openTx() );
@@ -11,7 +11,7 @@ queries_commit_data_processor::queries_commit_data_processor(const std::string& 
     return result;
   };
 
-  m_wrapped_processor = std::make_unique< data_processor >( description, fn_wrapped_with_transaction, api_trigger );
+  m_wrapped_processor = std::make_unique< data_processor >( std::move(description), std::move(short_description), fn_wrapped_with_transaction, api_trigger );
 }
 
 queries_commit_data_processor::~queries_commit_data_processor() {

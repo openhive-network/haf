@@ -24,16 +24,16 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
     auto api_trigger = std::make_shared< block_num_rendezvous_trigger >( NUMBER_OF_PROCESSORS_THREADS, execute_end_massive_sync_callback );
 
-    _block_writer = std::make_unique<block_data_container_t_writer>(db_url, "Block data writer", api_trigger, app);
+    _block_writer = std::make_unique<block_data_container_t_writer>(db_url, "Block data writer", "block", api_trigger, app);
 
-    _transaction_writer = std::make_unique<transaction_data_container_t_writer>( transactions_threads, db_url, "Transaction data writer", api_trigger, app);
+    _transaction_writer = std::make_unique<transaction_data_container_t_writer>( transactions_threads, db_url, "Transaction data writer", "trx", api_trigger, app);
 
-    _transaction_multisig_writer = std::make_unique<transaction_multisig_data_container_t_writer>(db_url, "Transaction multisig data writer", api_trigger, app);
+    _transaction_multisig_writer = std::make_unique<transaction_multisig_data_container_t_writer>(db_url, "Transaction multisig data writer", "trx_multi", api_trigger, app);
 
-    _operation_writer = std::make_unique<operation_data_container_t_writer>( operations_threads, db_url, "Operation data writer", api_trigger, app);
-    _account_writer = std::make_unique<accounts_data_container_t_writer>( db_url, "Accounts data writer", api_trigger, app);
-    _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >( account_operation_threads, db_url, "Account operations data writer", api_trigger, app);
-    _applied_hardforks_writer = std::make_unique< applied_hardforks_container_t_writer >( db_url, "Hardfork data writer", api_trigger, app);
+    _operation_writer = std::make_unique<operation_data_container_t_writer>( operations_threads, db_url, "Operation data writer", "op", api_trigger, app);
+    _account_writer = std::make_unique<accounts_data_container_t_writer>( db_url, "Accounts data writer", "account", api_trigger, app);
+    _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >( account_operation_threads, db_url, "Account operations data writer", "account_op", api_trigger, app);
+    _applied_hardforks_writer = std::make_unique< applied_hardforks_container_t_writer >( db_url, "Hardfork data writer", "hardfork", api_trigger, app);
 
     mark_irreversible_data_as_dirty( true );
   }

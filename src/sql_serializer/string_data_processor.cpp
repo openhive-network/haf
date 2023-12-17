@@ -5,6 +5,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   string_data_processor::string_data_processor(
       const callback& string_callback
     , std::string description
+    , std::string short_description
     , const data_processing_fn& dataProcessor
     , std::shared_ptr< block_num_rendezvous_trigger > api_trigger
     , appbase::application& app
@@ -15,7 +16,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       return result;
     };
 
-    m_wrapped_processor = std::make_unique< data_processor >( description, fn_wrapped_with_transaction, api_trigger );
+    m_wrapped_processor = std::make_unique< data_processor >( std::move(description), std::move(short_description), fn_wrapped_with_transaction, api_trigger );
     }
 
     string_data_processor::~string_data_processor() {

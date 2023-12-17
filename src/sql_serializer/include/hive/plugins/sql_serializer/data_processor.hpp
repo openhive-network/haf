@@ -35,7 +35,7 @@ public:
   typedef std::pair<size_t, bool> data_processing_status;
   typedef std::function<data_processing_status(const data_chunk_ptr& dataPtr)> data_processing_fn;
 
-  data_processor( std::string description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger );
+  data_processor( std::string description, std::string short_description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger );
   ~data_processor();
 
   data_processor(data_processor&&) = delete;
@@ -55,6 +55,7 @@ private:
 
 private:
   std::string _description;
+  std::string _short_description;
   std::atomic_bool _cancel;
   std::atomic_bool _continue;
   std::atomic_bool _is_processing_data;

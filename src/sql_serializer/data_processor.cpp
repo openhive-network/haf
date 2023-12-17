@@ -43,8 +43,9 @@ private:
   std::condition_variable* _notifier;
 };
 
-data_processor::data_processor( std::string description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger) :
+data_processor::data_processor( std::string description, std::string short_description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger) :
   _description(std::move(description)),
+  _short_description(std::move(short_description)),
   _cancel(false),
   _continue(true),
   _is_processing_data( false ),
@@ -54,8 +55,9 @@ data_processor::data_processor( std::string description, const data_processing_f
   auto body = [this, dataProcessor]() -> void
   {
     ilog("Entering data processor thread: ${d}", ("d", _description));
-    fc::set_thread_name("sql_serializer");
-    fc::thread::current().set_name("sql_serializer");
+    const std::string thread_name = "sql[" + _short_description + "]";
+    fc::set_thread_name(thread_name.c_str());
+    fc::thread::current().set_name(thread_name);
 
     try
     {
