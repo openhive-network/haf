@@ -58,7 +58,7 @@ install_all_dev_packages() {
   pushd libpqxx
   mkdir build
   pushd build
-  cmake -GNinja -DBUILD_TEST=OFF ..
+  cmake -DCMAKE_BUILD_TYPE=Release -GNinja -DBUILD_TEST=OFF ..
   ninja install
   popd
   popd
