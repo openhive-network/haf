@@ -2,7 +2,7 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=:ubuntu22.04-7
+ARG CI_IMAGE_TAG=ubuntu22.04-7
 
 ARG BUILD_IMAGE_TAG
 
@@ -28,7 +28,7 @@ WORKDIR /home/haf_admin
 # Install additionally packages located in user directory
 RUN /usr/local/src/scripts/setup_ubuntu.sh --user
 
-FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG AS build
+FROM ${CI_REGISTRY_IMAGE}ci-base-image:$CI_IMAGE_TAG AS build
 
 ARG BUILD_HIVE_TESTNET=OFF
 ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
@@ -67,7 +67,7 @@ RUN \
   find . -name *.a  -type f -delete
 
 # Here we could use a smaller image without packages specific to build requirements
-FROM ${CI_REGISTRY_IMAGE}ci-base-image$CI_IMAGE_TAG as base_instance
+FROM ${CI_REGISTRY_IMAGE}ci-base-image:$CI_IMAGE_TAG as base_instance
 
 ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu22.04-7}
 
