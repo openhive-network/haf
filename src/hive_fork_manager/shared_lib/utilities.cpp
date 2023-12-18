@@ -856,7 +856,6 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
     PG_RETURN_BOOL( true );
   }
-  }
 
 
 

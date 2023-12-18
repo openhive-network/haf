@@ -602,7 +602,7 @@ block_bin_t build_block_bin(const pqxx::row& block, std::vector<hive::protocol::
   {
     //It seems reasonable to use existing conversion to static_variant via variant here, or maybe add a method to json.cpp ? mtlk TODO
     std::string json = field.c_str();
-    fc::variant extensions = fc::json::from_string(json);
+    fc::variant extensions = fc::json::from_string(json, fc::json::format_validation_mode::relaxed);
     from_variant(extensions, sb.extensions);
   }
 
