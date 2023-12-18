@@ -37,18 +37,18 @@ SELECT
 FROM
 (
     SELECT
-        ha.block_num,
+        COALESCE( ha.block_num, hive.block_sink_num() ) as block_num,
         ha.id,
         ha.name
-    FROM hive.accounts ha WHERE ha.id > hive.account_sink_id()
+    FROM hive.accounts ha
     UNION ALL
     SELECT
-        reversible.block_num,
+        COALESCE( reversible.block_num, hive.block_sink_num() ) as block_num,
         reversible.id,
         reversible.name
     FROM (
         SELECT
-            har.block_num,
+            COALESCE( har.block_num, hive.block_sink_num() ) as block_num,
             har.id,
             har.name,
             har.fork_id
@@ -100,7 +100,7 @@ FROM (
         hb.current_supply,
         hb.current_hbd_supply,
         hb.dhf_interval_ledger
-    FROM hive.blocks hb WHERE hb.num > hive.block_sink_num()
+    FROM hive.blocks hb
     UNION ALL
     SELECT hbr.num,
         hbr.hash,
@@ -283,8 +283,8 @@ JOIN hive.applied_hardforks_reversible hjr ON forks.max_fork_id = hjr.fork_id AN
 
 -- only irreversible data
 CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS SELECT * FROM hive.account_operations;
-CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS SELECT * FROM  hive.accounts WHERE id > hive.account_sink_id();
-CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS SELECT * FROM hive.blocks WHERE num > hive.block_sink_num();
+CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS SELECT * FROM  hive.accounts;
+CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS SELECT * FROM hive.blocks;
 CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS SELECT * FROM hive.transactions;
 
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS

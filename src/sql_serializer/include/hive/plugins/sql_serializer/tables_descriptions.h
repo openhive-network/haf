@@ -111,7 +111,8 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data)
       {
-        return std::to_string(data.id) + ',' + escape(data.name) + ',' + std::to_string( data.block_number );
+        std::string block_num = ( data.block_number == 0 ) ? "NULL" : std::to_string( data.block_number );
+        return std::to_string(data.id) + ',' + escape(data.name) + ',' + block_num;
       }
       };
     };

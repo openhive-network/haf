@@ -20,13 +20,3 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hive.account_sink_id()
-    RETURNS INT
-    LANGUAGE plpgsql
-    IMMUTABLE
-AS
-$$
-BEGIN
-    RETURN -1;
-END
-$$;
