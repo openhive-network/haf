@@ -427,24 +427,7 @@ void haf_state_database::apply_haf_block(const full_block_ptr& full_block, uint3
 {
   try
   {
-    _node_property_object.skip_flags = skip;
-    hive::chain::existing_block_flow_control flow_control(full_block);
-
-
-
-
-    set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
-
-    //public_reset_fork_db();    // override effect of _fork_db.start_block() call in open()
-
-    auto session = start_undo_session();
-    _apply_block( full_block, &flow_control );
-     session.push();
-
-    clear_tx_status();
-
-
-
+    apply_block_extended(full_block, skip);
   }FC_CAPTURE_AND_RETHROW()
 }
 
