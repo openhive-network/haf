@@ -327,6 +327,65 @@ applications_system_tests:
     - public-runner-docker
     - hived-for-tests
 
+bash_tests:
+  extends: .job-defaults
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  services:
+    - *hfm-only-service
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests"
+    RO_BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
+    BINARY_CACHE_PATH: "haf-testnet-binaries"
+    HIVED_PATH: "$CI_PROJECT_DIR/haf-binaries/hived"
+    DB_NAME: haf_block_log
+    DB_ADMIN: "haf_admin"
+    POSTGRES_HOST: "hfm-only-instance"
+    POSTGRES_PORT: "5432"
+    DB_URL: "postgresql://haf_admin@hfm-only-instance:5432/haf_block_log"
+    REPLAY: "--force-replay"
+
+
+#    HIVE_BUILD_ROOT_PATH: "$CI_PROJECT_DIR/hived/build/hive"
+    # DB_URL: "postgresql:///$DB_NAME"
+
+
+  before_script:
+    - !reference [.pytest_based, before_script]
+    - echo Printing DISK df -h
+    - df -h
+    - echo Printing DISK df . -h
+    - df . -h
+    - ls -lath $CI_PROJECT_DIR
+    - echo psql 1
+    - psql -d $DB_URL -c'\l'
+    - echo psql 1 finish
+    # replay
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):replay[collapsed=true]\r\e[0KExecuting replay..."
+      test -n "$PATTERNS_PATH"
+      mkdir -vp "${PATTERNS_PATH}/blockchain"
+      cp "${RO_BLOCK_LOG_DIRECTORY}/block_log" "${PATTERNS_PATH}/blockchain/"
+      cd $CI_PROJECT_DIR/tests/integration/replay
+      $HIVED_PATH --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL --plugin=sql_serializer --stop-replay-at-block=5000000  2>&1 | tee -i node_logs.log
+      echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
+    - echo psql 2
+    - psql -d $DB_URL -c'\l'
+    - echo psql 2 finish
+  script:
+    - cd $CI_PROJECT_DIR
+    - $CI_PROJECT_DIR/tests/integration/bash/consensus_state_provider/csp_test.sh
+
+  timeout: 60 minutes
+  interruptible: true
+  tags:
+    - public-runner-docker
+    - hived-for-tests
+
+
 replay_with_haf:
   extends: .replay_step
   variables:
@@ -587,7 +646,6 @@ double_haf_replay_tests:
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
   needs:
     - job: haf_image_build
-      artifacts: true
   script:
   - docker container ps -a
   - docker images
@@ -595,3 +653,7 @@ double_haf_replay_tests:
   tags:
     - public-runner-docker
     - hived-for-tests
+
+
+
+

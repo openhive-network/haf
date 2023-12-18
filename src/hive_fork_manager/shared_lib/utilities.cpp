@@ -10,6 +10,8 @@
 
 #include <vector>
 
+#include "consensus_state_provider_replay.hpp"
+
 using hive::protocol::account_name_type;
 using hive::protocol::asset;
 using hive::protocol::serialization_mode_controller;
@@ -485,7 +487,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     [=, &collected_data](const hive::protocol::operation& op)
     {
         collected_data = collect_impacted_balances(op, is_hf01);
-    }, 
+    },
 
     [=, &collected_data]()
     {
@@ -496,7 +498,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
           [] (const auto& impacted_balance) {const hive::protocol::asset_symbol_type& token_type = impacted_balance.second.symbol; return make_datum_pair(Int32GetDatum(int32_t(token_type.to_nai())));}
         );
     },
-    
+
     __FUNCTION__,
 
     VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body ));
@@ -509,16 +511,16 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
   PG_FUNCTION_INFO_V1(get_balance_impacting_operations);
 
   /**
-   ** 
+   **
    **  CREATE OR REPLACE FUNCTION hive.get_balance_impacting_operations()
-   ** 
+   **
    **
    **/
 
   Datum get_balance_impacting_operations(PG_FUNCTION_ARGS)
   {
     hive::app::stringset operations_used_in_get_balance_impacting_operations;
-    
+
     colect_data_and_fill_returned_recordset
     (
 
@@ -535,10 +537,10 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
       []{ return std::string{""}; }
     );
-      
+
 
     return (Datum)0;
-  }  
+  }
 
   Datum public_key_data_to_bytea_datum(const fc::ecc::public_key_data& data)
   {
@@ -565,7 +567,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
    **            , account_name TEXT
    **        );
    ** FUNCTION get_keyauths_wrapped(_operation_body text) RETURNS SETOF hive.keyauth_record_type
-   **  It has to be wrapped, because it returns C enum as int. 
+   **  It has to be wrapped, because it returns C enum as int.
    **  Postgres then has to wrap it up to let postgresive enum enter postgress realm
    */
 
@@ -597,7 +599,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
         );
       },
 
-      __FUNCTION__, 
+      __FUNCTION__,
 
       VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body )
     );
@@ -609,14 +611,14 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
   PG_FUNCTION_INFO_V1(get_keyauths_operations);
 
   /**
-   ** 
+   **
    **  CREATE OR REPLACE FUNCTION hive.get_keyauths_operations()
    **  RETURNS hive.get_operations_type
    **
    **
    ** To be used in a filter like this:
    **
-   ** 'INSERT INTO hive.%s_keyauth 
+   ** 'INSERT INTO hive.%s_keyauth
    **     SELECT (hive.get_keyauths( ov.body )).*
    **     FROM hive.%s_operations_view ov
    **     WHERE
@@ -662,10 +664,10 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
       []{ return std::string{""}; }
     );
-      
+
 
     return (Datum)0;
-  }  
+  }
 
 
 
@@ -707,7 +709,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
         );
       },
 
-      __FUNCTION__, 
+      __FUNCTION__,
 
       VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body )
     );
@@ -719,14 +721,14 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
   PG_FUNCTION_INFO_V1(get_metadata_operations);
 
   /**
-   ** 
+   **
    **  CREATE OR REPLACE FUNCTION hive.get_metadata_operations()
    **  RETURNS hive.get_operations_type
    **
    **
    ** To be used in a filter like this:
    **
-   ** 'INSERT INTO hive.%s_keyauth 
+   ** 'INSERT INTO hive.%s_keyauth
    **     SELECT (hive.get_keyauths( ov.body )).*
    **     FROM hive.%s_operations_view ov
    **     WHERE
@@ -854,4 +856,220 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
     PG_RETURN_BOOL( true );
   }
+  }
+
+
+
+PG_FUNCTION_INFO_V1(consensus_state_provider_get_expected_block_num);
+
+  /**
+   **  CREATE OR REPLACE FUNCTION hive.consensus_state_provider_get_expected_block_num(IN _context TEXT)
+   **  RETURNS INTEGER
+   **
+   **  Returns the block number where we stand in hive state (head + 1).
+   **/
+
+
+
+Datum consensus_state_provider_get_expected_block_num(PG_FUNCTION_ARGS)
+{
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr  = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  assert(csp_session_ptr != nullptr);
+  consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
+
+  int expected_block_num = consensus_state_provider::consensus_state_provider_get_expected_block_num_impl(csp_session);
+
+  PG_RETURN_INT32(expected_block_num);
+
+  return (Datum)0;
 }
+
+void collect_data_and_fill_recordset(
+    PG_FUNCTION_ARGS,
+    consensus_state_provider::csp_session_ref_type csp_session,
+    consensus_state_provider::collected_account_balances_collection_t& collected_data,
+    std::function<consensus_state_provider::collected_account_balances_collection_t()> collect_data_function,
+    const char* C_function_name)
+{
+  colect_data_and_fill_returned_recordset(
+      [=, &collected_data]() { collected_data = collect_data_function(); },
+      [=, &collected_data]()
+      {
+        fill_return_tuples(
+            collected_data, fcinfo,
+            [](const auto& account_data){fc::string account = account_data.account_name; return CStringGetTextDatum(account.c_str());},
+            [](const auto& account_data) { return Int64GetDatum(account_data.balance); },
+            [](const auto& account_data) { return Int64GetDatum(account_data.hbd_balance); },
+            [](const auto& account_data) { return Int64GetDatum(account_data.vesting_shares); },
+            [](const auto& account_data) { return Int64GetDatum(account_data.savings_hbd_balance); },
+            [](const auto& account_data) { return Int64GetDatum(account_data.reward_hbd_balance); });
+      },
+      C_function_name, [] { return std::string{""}; });
+ }
+
+PG_FUNCTION_INFO_V1(current_all_accounts_balances);
+
+  /**
+   ** CREATE OR REPLACE FUNCTION hive.current_all_accounts_balances();
+   ** RETURNS SETOF hive.current_all_account_balance_return_type
+   ** AS 'MODULE_PATHNAME', 'current_all_accounts_balances' LANGUAGE C;
+   **
+   ** Returns all accounts information for the given state.
+   **/
+
+Datum current_all_accounts_balances(PG_FUNCTION_ARGS)
+{
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  assert(csp_session_ptr != nullptr);
+  consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
+
+
+  consensus_state_provider::collected_account_balances_collection_t collected_data;
+  collect_data_and_fill_recordset(
+      fcinfo, csp_session, collected_data,
+      [&csp_session]()
+      {
+        return consensus_state_provider::collect_current_all_accounts_balances_impl(
+            csp_session);
+      },
+      __FUNCTION__);
+
+
+  return (Datum)0;
+}
+
+std::vector<std::string> extract_string_array_from_datum(ArrayType* arr)
+{
+    int nelems;
+    Datum* datums;
+    bool* nulls;
+    int16 typlen;
+    bool typbyval;
+    char typalign;
+
+    get_typlenbyvalalign(ARR_ELEMTYPE(arr), &typlen, &typbyval, &typalign);
+    deconstruct_array(arr, TEXTOID, -1, false, 'i', &datums, &nulls, &nelems);
+
+    std::vector<std::string> result;
+    for(int i = 0; i < nelems; i++)
+    {
+        if(!nulls[i])
+        {
+            text* elem_text = DatumGetTextP(datums[i]);
+            char* elem_cstr = text_to_cstring(elem_text);
+            result.push_back(std::string(elem_cstr));
+
+            pfree(elem_cstr);
+        }
+    }
+
+    return result;
+}
+
+
+PG_FUNCTION_INFO_V1(current_account_balances);
+
+/**
+ **  CREATE OR REPLACE FUNCTION hive.current_account_balances(IN accounts TEXT[], IN _context TEXT,
+ *IN shared_memory_bin_path TEXT)
+ **  RETURNS SETOF hive.current_account_balance_return_type
+ **  AS 'MODULE_PATHNAME', 'current_account_balances' LANGUAGE C;
+ **  Returns queried accounts information for the given state.
+ **/
+
+Datum current_account_balances(PG_FUNCTION_ARGS)
+{
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  assert(csp_session_ptr != nullptr);
+  consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
+
+  ArrayType* accounts_arr = PG_GETARG_ARRAYTYPE_P(1);
+
+  std::vector<std::string> accounts = extract_string_array_from_datum(accounts_arr);
+
+  consensus_state_provider::collected_account_balances_collection_t collected_data;
+  collect_data_and_fill_recordset(
+      fcinfo, csp_session, collected_data,
+      [=, &csp_session]()
+      {
+        return consensus_state_provider::collect_current_account_balances_impl(
+            csp_session, accounts);
+      },
+      __FUNCTION__);
+
+  return (Datum)0;
+}
+
+PG_FUNCTION_INFO_V1(csp_finish);
+
+  /**
+   **
+   **  CREATE OR REPLACE FUNCTION hive.consensus_state_provider_finish(IN _context TEXT)
+   **  RETURNS void
+   **
+   **  Erase the context_sharedmemory.bin file.
+   **/
+
+Datum csp_finish(PG_FUNCTION_ARGS)
+{
+
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  assert(csp_session_ptr != nullptr);
+  consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
+
+
+  bool wipe_clean_shared_memory_bin = PG_GETARG_BOOL(1);
+
+
+  consensus_state_provider::csp_finish_impl(csp_session, wipe_clean_shared_memory_bin);
+
+  return (Datum)0;
+}
+
+////////
+
+PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
+
+Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
+{
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = reinterpret_cast<consensus_state_provider::csp_session_ptr_type>(PG_GETARG_POINTER(0));
+  assert(csp_session_ptr != nullptr);
+  consensus_state_provider::csp_session_ref_type csp_session = *csp_session_ptr;
+
+  int from = PG_GETARG_INT32(1);
+  int to = PG_GETARG_INT32(2);
+
+  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(csp_session, from, to);
+
+  PG_RETURN_BOOL(ok);
+
+  return (Datum)0;
+}
+
+PG_FUNCTION_INFO_V1(csp_init);
+
+// CREATE OR REPLACE FUNCTION hive.csp_init(IN _context TEXT, IN shared_memory_bin_path TEXT, IN _postgres_url TEXT)
+// RETURNS BIGINT
+// AS 'MODULE_PATHNAME', 'csp_init' LANGUAGE C;
+Datum csp_init(PG_FUNCTION_ARGS)
+{
+  char* context = text_to_cstring(PG_GETARG_TEXT_P(0));
+  char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_P(1));
+  char* postgres_url = text_to_cstring(PG_GETARG_TEXT_P(2));
+
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
+  assert(csp_session_ptr != nullptr);
+
+
+  PG_RETURN_POINTER(csp_session_ptr);
+  pfree(context);
+  pfree(postgres_url);
+  pfree(shared_memory_bin_path);
+
+  return (Datum)0;
+}
+
+
+} //extern "C"
+
+
