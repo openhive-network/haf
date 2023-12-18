@@ -1,5 +1,7 @@
 #pragma once
 
+#include <appbase/application.hpp>
+
 #include <string>
 #include <vector>
 
@@ -44,6 +46,9 @@ namespace consensus_state_provider
       std::string shared_memory_bin_path;
       std::unique_ptr<postgres_database_helper> conn;
       std::unique_ptr<haf_state_database> db;
+
+      appbase::application theApp;
+
   };
 
   using csp_session_ref_type = csp_session_type&;
