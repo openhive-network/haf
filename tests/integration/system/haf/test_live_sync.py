@@ -33,7 +33,7 @@ def test_live_sync(prepared_networks_and_database_12_8):
 
     blks = session.query(Blocks).order_by(Blocks.num).all()
     block_nums = [block.num for block in blks]
-    assert sorted(block_nums) == [i for i in range(0, irreversible_block+1)]
+    assert sorted(block_nums) == [i for i in range(1, irreversible_block+1)]
 
     tt.logger.info(f'head_block: {head_block} irreversible_block: {irreversible_block}')
 

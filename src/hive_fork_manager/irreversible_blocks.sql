@@ -112,12 +112,12 @@ SELECT pg_catalog.pg_extension_config_dump('hive.applied_hardforks', '');
 CREATE TABLE IF NOT EXISTS hive.accounts (
       id INTEGER NOT NULL
     , name VARCHAR(16) NOT NULL
-    , block_num INTEGER NOT NULL
+    , block_num INTEGER
     , CONSTRAINT pk_hive_accounts_id PRIMARY KEY( id )
     , CONSTRAINT uq_hive_accounst_name UNIQUE ( name )
     
 );
-ALTER TABLE hive.accounts ADD CONSTRAINT fk_1_hive_accounts FOREIGN KEY (block_num) REFERENCES hive.blocks (num) NOT VALID;
+ALTER TABLE hive.accounts ADD CONSTRAINT fk_1_hive_accounts FOREIGN KEY (block_num) REFERENCES hive.blocks (num) MATCH FULL NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.accounts', '');
 
 CREATE TABLE IF NOT EXISTS hive.account_operations

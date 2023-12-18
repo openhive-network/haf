@@ -34,7 +34,7 @@ def test_replay_5milion():
     assert blocks_count == rows_count['BLOCKS_COUNT']
 
     blocks_count = session.query(Blocks).count()
-    assert blocks_count == rows_count['BLOCKS_COUNT'] + 1 # + block sink
+    assert blocks_count == rows_count['BLOCKS_COUNT']
 
     operations_count = session.query(Operations).count()
     assert operations_count == rows_count['OPERATIONS_COUNT']
@@ -49,7 +49,7 @@ def test_replay_5milion():
     assert account_count == rows_count['ACCOUNTS_COUNT']
 
     account_count = session.query(Accounts).count()
-    assert account_count == rows_count['ACCOUNTS_COUNT'] + 1 # + account sink
+    assert account_count == rows_count['ACCOUNTS_COUNT']
 
     account_operations_count = session.query(AccountOperations).count()
     assert account_operations_count == rows_count['ACCOUNT_OPERATIONS_COUNT']

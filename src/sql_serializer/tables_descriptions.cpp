@@ -66,7 +66,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::account_data_t& account)
   {
-    stream.write_values(account.id, account.name, account.block_number);
+    stream.write_values( account.id, account.name, account.block_number == 0 ? fc::optional<uint32_t>() : account.block_number );
   }
 
   template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::TABLE[] = "hive.account_operations";

@@ -47,8 +47,8 @@ def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
     # blocks is started from the block less than 115, during entering the LIVE state
     # before reaching psql-first-block limit.
 
-    assert sorted(block_nums)[:2] == [i for i in [0, 110]]\
-        or sorted(block_nums)[:2] == [i for i in [0, 111]] # situation 1 or situation 2
+    assert sorted(block_nums)[:2] == [i for i in [110,111]]\
+        or sorted(block_nums)[:2] == [i for i in [111,112]] # situation 1 or situation 2
 
     assert account_count == 27
 
