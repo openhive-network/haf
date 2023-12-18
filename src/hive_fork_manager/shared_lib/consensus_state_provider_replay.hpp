@@ -1,11 +1,16 @@
 #pragma once
 
+#include <hive/chain/full_block.hpp>
 #include <appbase/application.hpp>
+#include <hive/chain/sync_block_writer.hpp>
+#include <hive/chain/irreversible_block_writer.hpp>
+#include <hive/chain/empty_block_writer.hpp>
+
 
 #include <string>
 #include <vector>
 
-#include <hive/chain/full_block.hpp>
+
 
 
 namespace fc
@@ -46,6 +51,7 @@ namespace consensus_state_provider
       std::string shared_memory_bin_path;
       std::unique_ptr<postgres_database_helper> conn;
       std::unique_ptr<haf_state_database> db;
+      empty_block_writer e_block_writer;
 
       appbase::application theApp;
 

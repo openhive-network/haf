@@ -66,9 +66,12 @@ csp_session_type::csp_session_type(
   :
   shared_memory_bin_path(shared_memory_bin_path),
   conn(std::make_unique<postgres_database_helper>(postgres_url)),
-  db(std::make_unique<haf_state_database>(*this, theApp))
-  {}
+  db(std::make_unique<haf_state_database>(*this, theApp)),
+  e_block_writer( *db.get(), theApp, *this )
 
+  {
+    db->set_block_writer( &e_block_writer );
+  }
 
 
 using block_bin_t = hive::plugins::block_api::api_signed_block_object;
@@ -432,7 +435,7 @@ void haf_state_database::apply_haf_block(const full_block_ptr& full_block, uint3
 
     set_tx_status(hive::chain::database::TX_STATUS_BLOCK);
 
-    public_reset_fork_db();    // override effect of _fork_db.start_block() call in open()
+    //public_reset_fork_db();    // override effect of _fork_db.start_block() call in open()
 
     auto session = start_undo_session();
     _apply_block( full_block, &flow_control );
@@ -444,6 +447,15 @@ void haf_state_database::apply_haf_block(const full_block_ptr& full_block, uint3
 
   }FC_CAPTURE_AND_RETHROW()
 }
+
+
+//  mtlk new
+std::shared_ptr<full_block_type> custom_block_reader::read_block_by_num( uint32_t block_num ) const
+{
+  auto full_block = postgres_block_log(csp_session).read_full_block(block_num);
+  return full_block;
+}
+
 
 void postgres_block_log::measure_before_run()
 {
