@@ -293,9 +293,10 @@ public:
   stats_group current_stats;
   type_extractor::operation_extractor op_extractor;
   blockchain_filter filter;
+
+  indexation_state _indexation_state; //testing for possible shutdown order issue
   write_ahead_log_manager write_ahead_log;
 
-  indexation_state _indexation_state;
   bool _is_database_initialized;
 
   void log_statistics()
