@@ -897,12 +897,12 @@ void collect_data_and_fill_recordset(
       {
         fill_return_tuples(
             collected_data, fcinfo,
-            [](const auto& account_data){fc::string account = account_data.account_name; return CStringGetTextDatum(account.c_str());},
-            [](const auto& account_data) { return Int64GetDatum(account_data.balance); },
-            [](const auto& account_data) { return Int64GetDatum(account_data.hbd_balance); },
-            [](const auto& account_data) { return Int64GetDatum(account_data.vesting_shares); },
-            [](const auto& account_data) { return Int64GetDatum(account_data.savings_hbd_balance); },
-            [](const auto& account_data) { return Int64GetDatum(account_data.reward_hbd_balance); });
+            [](const auto& account_data){fc::string account = account_data.account_name; return make_datum_pair(CStringGetTextDatum(account.c_str()));},
+            [](const auto& account_data) { return make_datum_pair(Int64GetDatum(account_data.balance)); },
+            [](const auto& account_data) { return make_datum_pair(Int64GetDatum(account_data.hbd_balance)); },
+            [](const auto& account_data) { return make_datum_pair(Int64GetDatum(account_data.vesting_shares)); },
+            [](const auto& account_data) { return make_datum_pair(Int64GetDatum(account_data.savings_hbd_balance)); },
+            [](const auto& account_data) { return make_datum_pair(Int64GetDatum(account_data.reward_hbd_balance)); });
       },
       C_function_name, [] { return std::string{""}; });
  }

@@ -261,7 +261,7 @@ BEGIN
       SELECT
         count(*)
       FROM
-        hive.cabc_keyauth) t);
+        hive.cabc_keyauth_a) t);
 
   PERFORM cab_app.display_stats('Massive processing', 'WHERE last_block - first_block > 0');
   PERFORM cab_app.display_stats('One block processing', 'WHERE last_block - first_block = 0');
