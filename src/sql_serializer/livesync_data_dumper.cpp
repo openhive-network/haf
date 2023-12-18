@@ -121,6 +121,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       , *_account_operations_writer
       , *_applied_hardforks_writer
     );
+
+    _processing_thread.shutdown();
   }
 
   void livesync_data_dumper::on_irreversible_block( uint32_t block_num ) {
@@ -177,8 +179,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   livesync_data_dumper::processing_thread::~processing_thread()
   {
-    shutdown();
-    _future.wait();
   }
 
   void livesync_data_dumper::processing_thread::run()
@@ -189,17 +189,25 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     {
       // dequeue the next command into command_to_run, waiting if the queue is empty
       sql_command_with_sequence_t command_to_run;
-      unsigned commands_remaining;
+      size_t commands_remaining = 0;
       {
         std::unique_lock<std::mutex> lock(_mutex);
+        ilog("Awaiting command or shutdown request...");
         _condition_variable.wait(lock, [&](){ return _shutdown_requested || !_command_queue.empty(); });
+        ilog("Processing thread resumed...");
         // if shutdown is requested, continue processing the queue until it's empty, then exit.
         // an earlier version had this condition: if (_shutdown_requested), which made for a quicker shutdown
-        if (_command_queue.empty())
+        if(_shutdown_requested)
         {
-          ilog("Terminating hived->postgresql write-ahead log processing because shutdown was requested");
-          break;
+          if (_command_queue.empty())
+          {
+            ilog("Terminating hived->postgresql write-ahead log processing because shutdown was requested");
+            break;
+          }
+
+          ilog("Flushing a hived->postgresql write-ahead log commands after shutdown was requested");
         }
+
         command_to_run = std::move(_command_queue.front());
         _command_queue.pop_front();
         commands_remaining = _command_queue.size();
@@ -255,7 +263,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       // now we can add it to the queue and let it be processed later
       {
         std::unique_lock<std::mutex> lock(_mutex);
+        if (_shutdown_requested)
+        {
+          wlog("Emplacing new work even shutdown has been requested: ${w}", ("w", sql_command));
+        }
+
+        ilog("Awaiting free queue...");
         _condition_variable.wait(lock, [&](){ return _command_queue.size() < _max_queue_depth; });
+        ilog("Command enqueued.");
         _command_queue.emplace_back(sequence_number, sql_command);
       }
       _condition_variable.notify_one();
@@ -272,10 +287,15 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   void livesync_data_dumper::processing_thread::shutdown()
   {
     {
+      ilog("Requesting a shutdown...");
       std::unique_lock<std::mutex> lock(_mutex);
       _shutdown_requested = true;
     }
     _condition_variable.notify_one();
+
+    ilog("Waiting for processing thread finish...");
+    _future.wait();
+    ilog("Processing thread finished.");
   }
 
 }}} // namespace hive::plugins::sql_serializer
