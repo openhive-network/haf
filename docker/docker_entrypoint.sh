@@ -104,7 +104,7 @@ if [ ! -f "$DATADIR/config.ini" ]; then
     ${HIVED_ARGS[@]} --dump-config > /dev/null 2>&1
 
   # add a default set of plugins that API nodes should run
-  sed -i 's/^plugin = .*$/plugin = node_status_api account_by_key account_by_key_api block_api condenser_api database_api json_rpc market_history market_history_api network_broadcast_api p2p rc_api reputation reputation_api state_snapshot transaction_status transaction_status_api wallet_bridge_api webserver/g' "$DATADIR/config.ini"
+  sed -i 's/^plugin = .*$/plugin = node_status_api account_by_key account_by_key_api block_api condenser_api database_api json_rpc market_history market_history_api network_broadcast_api p2p rc_api state_snapshot transaction_status transaction_status_api wallet_bridge_api webserver/g' "$DATADIR/config.ini"
 
   # The transaction status plugin defaults to keeping transaction status history for 64000 blocks
   # (configured in "transaction-status-block-depth".  When replaying, it doesn't make sense to
