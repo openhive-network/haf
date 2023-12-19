@@ -177,6 +177,10 @@ GRANT EXECUTE ON FUNCTION
     , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
 TO hived_group;
 
+GRANT EXECUTE ON PROCEDURE 
+      hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL )
+TO hived_group;
+
 REVOKE EXECUTE ON FUNCTION
       hive.back_from_fork( INT )
     , hive.push_block( hive.blocks, hive.transactions[], hive.transactions_multisig[], hive.operations[], hive.accounts[], hive.account_operations[], hive.applied_hardforks[] )
@@ -193,3 +197,6 @@ REVOKE EXECUTE ON FUNCTION
     , hive.initialize_extension_data()
 FROM hive_applications_group;
 
+REVOKE EXECUTE ON PROCEDURE
+      hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL )
+FROM hive_applications_group;

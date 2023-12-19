@@ -413,3 +413,26 @@ BEGIN
 END;
 $BODY$
 ;
+
+
+CREATE OR REPLACE PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL DEFAULT '4 hours'::INTERVAL )
+    LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+  __contexts hive.context_name[];
+  __now TIMESTAMP WITHOUT TIME ZONE := NOW();
+BEGIN
+  SELECT ARRAY_AGG(c.name) INTO __contexts
+  FROM hive.contexts c
+  WHERE c.is_attached AND c.last_active_at < __now - _app_timeout;
+
+  IF CARDINALITY(__contexts) != 0 THEN
+    RAISE WARNING 'Attempting to automatically detach application contexts: %', __contexts;
+    PERFORM hive.app_context_detach(__contexts);
+    COMMIT;
+  END IF;
+
+END;
+$BODY$
+;
