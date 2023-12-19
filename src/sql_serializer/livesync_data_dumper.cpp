@@ -191,6 +191,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       sql_command_with_sequence_t command_to_run;
       size_t commands_remaining = 0;
       {
+        ilog("Waiting for another command/shutdown request...");
         std::unique_lock<std::mutex> data_ready_lock(_data_ready_mtx);
 
         ilog("Awaiting command or shutdown request...");
@@ -218,7 +219,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       }
       _queue_ready_cv.notify_one();
 
-      dlog("processing thread is working on transaction with sequence number ${seq}, ${commands_remaining} remaining in queue", ("seq", command_to_run.first)(commands_remaining));
+      ilog("processing thread is working on transaction with sequence number ${seq}, ${commands_remaining} remaining in queue", ("seq", command_to_run.first)(commands_remaining));
 
       // execute the command
       try
@@ -255,6 +256,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
       // notify the WAL that we've completed it
       _write_ahead_log.transaction_completed(command_to_run.first);
+
+      ilog("processing thread completed work on transaction with sequence number ${seq}, ${commands_remaining} remaining in queue", ("seq", command_to_run.first)(commands_remaining));
     }
   }
 
@@ -283,9 +286,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
       ilog("Command enqueued.");
       _command_queue.emplace_back(sequence_number, sql_command);
-      _data_ready_cv.notify_one();
       }
-
+    _data_ready_cv.notify_all();
     }
     else
     {
@@ -302,8 +304,10 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       ilog("Requesting a shutdown...");
       std::unique_lock<std::mutex> lock(_data_ready_mtx);
       _shutdown_requested = true;
+
+      ilog("Commands enqueued: ${n}", ("n", _command_queue.size()));
     }
-    _data_ready_cv.notify_one();
+    _data_ready_cv.notify_all();
 
     ilog("Waiting for processing thread finish...");
     _future.wait();
