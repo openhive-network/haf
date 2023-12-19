@@ -191,10 +191,12 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       sql_command_with_sequence_t command_to_run;
       size_t commands_remaining = 0;
       {
-        std::unique_lock<std::mutex> lock(_mutex);
+        std::unique_lock<std::mutex> data_ready_lock(_data_ready_mtx);
+
         ilog("Awaiting command or shutdown request...");
-        _condition_variable.wait(lock, [&](){ return _shutdown_requested || !_command_queue.empty(); });
+        _data_ready_cv.wait(data_ready_lock, [&](){ return _shutdown_requested || !_command_queue.empty(); });
         ilog("Processing thread resumed...");
+
         // if shutdown is requested, continue processing the queue until it's empty, then exit.
         // an earlier version had this condition: if (_shutdown_requested), which made for a quicker shutdown
         if(_shutdown_requested)
@@ -208,11 +210,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
           ilog("Flushing a hived->postgresql write-ahead log commands after shutdown was requested");
         }
 
+        std::unique_lock<std::mutex> queue_ready_lock(_queue_ready_mtx);
+
         command_to_run = std::move(_command_queue.front());
         _command_queue.pop_front();
         commands_remaining = _command_queue.size();
       }
-      _condition_variable.notify_one();
+      _queue_ready_cv.notify_one();
+
       dlog("processing thread is working on transaction with sequence number ${seq}, ${commands_remaining} remaining in queue", ("seq", command_to_run.first)(commands_remaining));
 
       // execute the command
@@ -262,18 +267,25 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
       // now we can add it to the queue and let it be processed later
       {
-        std::unique_lock<std::mutex> lock(_mutex);
-        if (_shutdown_requested)
-        {
-          wlog("Emplacing new work even shutdown has been requested: ${w}", ("w", sql_command));
-        }
-
-        ilog("Awaiting free queue...");
-        _condition_variable.wait(lock, [&](){ return _command_queue.size() < _max_queue_depth; });
-        ilog("Command enqueued.");
-        _command_queue.emplace_back(sequence_number, sql_command);
+      ilog("Awaiting free queue...");
+      std::unique_lock<std::mutex> queue_rdy_lock(_queue_ready_mtx);
+      _queue_ready_cv.wait(queue_rdy_lock, [&](){ return _command_queue.size() < _max_queue_depth; });
+      ilog("Queue is again free.");
       }
-      _condition_variable.notify_one();
+
+      {
+      ilog("Waiting for command enqueue...");
+      std::unique_lock<std::mutex> lock(_data_ready_mtx);
+      if (_shutdown_requested)
+      {
+        wlog("Emplacing new work even shutdown has been requested: ${w}", ("w", sql_command));
+      }
+
+      ilog("Command enqueued.");
+      _command_queue.emplace_back(sequence_number, sql_command);
+      _data_ready_cv.notify_one();
+      }
+
     }
     else
     {
@@ -288,10 +300,10 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     {
       ilog("Requesting a shutdown...");
-      std::unique_lock<std::mutex> lock(_mutex);
+      std::unique_lock<std::mutex> lock(_data_ready_mtx);
       _shutdown_requested = true;
     }
-    _condition_variable.notify_one();
+    _data_ready_cv.notify_one();
 
     ilog("Waiting for processing thread finish...");
     _future.wait();

@@ -124,8 +124,10 @@ namespace hive::plugins::sql_serializer {
     {
       using sql_command_with_sequence_t = std::pair<write_ahead_log_manager::sequence_number_t, std::string>;
 
-      std::condition_variable _condition_variable;
-      std::mutex _mutex;
+      std::condition_variable _data_ready_cv;
+      std::condition_variable _queue_ready_cv;
+      std::mutex _data_ready_mtx;
+      std::mutex _queue_ready_mtx;
       std::deque<sql_command_with_sequence_t> _command_queue;
       std::future<void> _future;
       bool _shutdown_requested = false;
