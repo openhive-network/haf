@@ -85,10 +85,10 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.context_accounts_view
         EXCEPT SELECT * FROM ( VALUES
-                   ( 1, 100, 'alice1' )
-                 , ( 2, 200, 'alice2')
-                 , ( 3, 300, 'alice3' )
-                 , ( 4, 400, 'alice4' )
+                   ( 100, 'alice1' )
+                 , ( 200, 'alice2')
+                 , ( 300, 'alice3' )
+                 , ( 400, 'alice4' )
                  ) as pattern
     ) , 'Unexpected rows in the view';
 

@@ -425,24 +425,20 @@ BEGIN
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_accounts_view AS
         SELECT
-           t.block_num,
            t.id,
            t.name
         FROM hive.%s_context_data_view c,
         LATERAL
         (
-          SELECT COALESCE(ha.block_num, hive.block_sink_num() ) as block_num,
-                 ha.id,
+          SELECT ha.id,
                  ha.name
                 FROM hive.accounts ha
-                WHERE ha.block_num <= c.min_block
+                WHERE COALESCE(ha.block_num,1) <= c.min_block
                 UNION ALL
                 SELECT
-                    reversible.block_num,
                     reversible.id,
                     reversible.name
                 FROM ( SELECT
-                    COALESCE( har.block_num, hive.block_sink_num() ) as block_num,
                     har.id,
                     har.name,
                     har.fork_id
@@ -472,7 +468,6 @@ BEGIN
 EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_accounts_view AS
         SELECT
-           COALESCE( ha.block_num, hive.block_sink_num() ) as block_num,
            ha.id,
            ha.name
         FROM hive.accounts ha
