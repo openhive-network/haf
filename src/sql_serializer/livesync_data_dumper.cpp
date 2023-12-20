@@ -177,8 +177,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   livesync_data_dumper::processing_thread::~processing_thread()
   {
+    ilog("Calling wal thread shutdown");
     shutdown();
+    ilog("Waiting for wal thread future");
     _future.wait();
+    ilog("exiting destructor");
   }
 
   void livesync_data_dumper::processing_thread::run()
@@ -202,6 +205,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
           ilog("Terminating hived->postgresql write-ahead log processing because shutdown was requested");
           break;
         }
+        else if (_shutdown_requested)
+          ilog("Dumping wal as part of shutdown");
+
         command_to_run = std::move(_command_queue.front());
         _command_queue.pop_front();
         commands_remaining = _command_queue.size();
@@ -277,6 +283,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       std::unique_lock<std::mutex> lock(_mutex);
       _shutdown_requested = true;
     }
+    ilog("notify condition_variable for shutdown");
     _condition_variable.notify_one();
   }
 
