@@ -1,13 +1,5 @@
 DO $$
 BEGIN
-    CREATE ROLE hived_group WITH NOLOGIN;
-    EXCEPTION WHEN DUPLICATE_OBJECT THEN
-    RAISE NOTICE 'hived_group role already exists';
-END
-$$;
-
-DO $$
-BEGIN
     CREATE ROLE hive_applications_group WITH NOLOGIN;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE 'hive_applications_group role already exists';
@@ -23,6 +15,14 @@ BEGIN
       NOREPLICATION;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE 'haf_administrators_group role already exists';
+END
+$$;
+
+DO $$
+BEGIN
+    CREATE ROLE hived_group WITH NOLOGIN INHERIT SUPERUSER IN ROLE haf_administrators_group;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+    RAISE NOTICE 'hived_group role already exists';
 END
 $$;
 
