@@ -177,6 +177,25 @@ GRANT EXECUTE ON FUNCTION
     , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
 TO hived_group;
 
+--- Required permissions to execute all callees of app_check_contexts_synchronized
+GRANT EXECUTE ON FUNCTION
+      hive.app_context_detach(_contexts hive.contexts_group)
+    , hive.app_context_detach( _context hive.context_name )
+    , hive.context_detach
+    , hive.create_all_irreversible_blocks_view
+    , hive.create_all_irreversible_transactions_view
+    , hive.create_all_irreversible_operations_view
+    , hive.create_all_irreversible_signatures_view
+    , hive.create_all_irreversible_accounts_view
+    , hive.create_all_irreversible_account_operations_view
+    , hive.create_all_irreversible_applied_hardforks_view
+    , hive.context_back_from_fork
+    , hive.back_from_fork_one_table
+    , hive.remove_obsolete_operations
+    , hive.detach_table
+    , hive.app_check_contexts_synchronized(_contexts hive.contexts_group)
+TO hived_group;
+
 GRANT EXECUTE ON PROCEDURE 
       hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL )
 TO hived_group;
