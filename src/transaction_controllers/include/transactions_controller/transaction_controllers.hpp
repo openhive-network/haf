@@ -42,7 +42,7 @@ public:
 
 typedef std::shared_ptr<transaction_controller> transaction_controller_ptr;
 
-transaction_controller_ptr build_own_transaction_controller(const std::string& dbUrl, const std::string& description, appbase::application& app);
+transaction_controller_ptr build_own_transaction_controller(const std::string& dbUrl, const std::string& description, appbase::application& app, bool sync_commits = false);
 transaction_controller_ptr build_single_transaction_controller(const std::string& dbUrl, appbase::application& app);
 
 } // namespace transaction_controllers
