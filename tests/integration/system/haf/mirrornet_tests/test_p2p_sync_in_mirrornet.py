@@ -13,7 +13,7 @@ from haf_local_tools.system.haf.mirrornet.constants import (
     CHAIN_ID,
     TRANSACTION_IN_1092_BLOCK,
     TRANSACTION_IN_999892_BLOCK,
-    TIMESTAMP_5M,
+    TIMESTAMP_1M,
 )
 
 
@@ -33,7 +33,7 @@ def test_p2p_sync(
 
     mirrornet_witness_node.run(
         replay_from=block_log_1m,
-        time_offset=TIMESTAMP_5M,
+        time_offset=TIMESTAMP_1M,
         wait_for_live=True,
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],
