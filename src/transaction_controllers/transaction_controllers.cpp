@@ -134,6 +134,8 @@ private:
         pqxx::nontransaction work(*_owner->_opened_connection);
         work.exec(sync_commits_off);
       }
+      else
+        ilog("synchronous commits ON");
     }
 
     void finalize_transaction()
