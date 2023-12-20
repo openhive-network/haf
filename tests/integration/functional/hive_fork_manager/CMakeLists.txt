@@ -193,6 +193,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_attach_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_attach_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_detach.sql )
+ ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_detach_by_hived.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_detach.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_next_block_process_MASSIVE_SYNC_event.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_next_block_process_MASSIVE_SYNC_event.sql )

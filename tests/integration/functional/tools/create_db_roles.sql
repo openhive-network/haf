@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION create_roles()
 $$
 BEGIN
     IF NOT EXISTS ( SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'test_hived' ) THEN
-        CREATE ROLE test_hived LOGIN PASSWORD 'test' INHERIT IN ROLE hived_group;
+        CREATE ROLE test_hived LOGIN PASSWORD 'test' SUPERUSER INHERIT IN ROLE hived_group;
     END IF;
 
     IF NOT EXISTS ( SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'alice' ) THEN

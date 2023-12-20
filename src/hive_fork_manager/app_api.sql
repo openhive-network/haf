@@ -250,8 +250,15 @@ CREATE OR REPLACE FUNCTION hive.app_context_detach( _contexts hive.contexts_grou
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __lead_context hive.context_name := _contexts[ 1 ];
+    __owner TEXT;
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
+
+    SELECT hc.owner INTO __owner FROM hive.contexts hc WHERE hc.name = __lead_context;
+    -- to allow an administrator to detach dead contexts
+    EXECUTE format( 'SET ROLE %s', __owner );
 
     PERFORM
           hive.context_detach( context.* )

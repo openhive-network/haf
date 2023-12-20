@@ -172,6 +172,14 @@ GRANT EXECUTE ON FUNCTION
     , hive.unreachable_event_id()
     , hive.initialize_extension_data()
     , hive.ignore_registered_table_edition( pg_ddl_command )
+    , hive.app_context_detach( _contexts hive.context_name )
+    , hive.app_context_detach( _contexts hive.contexts_group )
+    , hive.app_check_contexts_synchronized( _contexts hive.contexts_group )
+TO hived_group;
+
+GRANT EXECUTE ON PROCEDURE
+      hive.appproc_context_detach( _contexts hive.contexts_group )
+    , hive.appproc_context_detach( _context hive.context_name )
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION
