@@ -1,4 +1,5 @@
 import pytest
+import time
 
 import test_tools as tt
 
@@ -55,6 +56,6 @@ def test_p2p_sync(
 
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_1092_BLOCK)
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_999892_BLOCK)
-
+    time.sleep(1)  #wait for hived shutdown to flush wal
     assert_are_blocks_sync_with_haf_db(haf_node, 1000000)
     assert_are_indexes_restored(haf_node)
