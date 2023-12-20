@@ -21,13 +21,14 @@ namespace {
 class own_tx_controller final : public transaction_controller
 {
 public:
-  own_tx_controller(std::string dbUrl, std::string description, appbase::application& app) : _dbUrl(std::move(dbUrl)), _description(std::move(description)), _theApp(app) {}
+  own_tx_controller(std::string dbUrl, std::string description, appbase::application& app, bool sync_commits = false) : _dbUrl(std::move(dbUrl)), _description(std::move(description)), _theApp(app), _sync_commits(sync_commits) {}
 
 /// transaction_controller:
   transaction_ptr openTx() override;
   void disconnect() override;
 
 private:
+
   class own_transaction final : public transaction
   {
   public:
@@ -125,9 +126,14 @@ private:
       dlog("Trying to connect to database: `${url}'...", ("url", _owner->_dbUrl));
       _owner->_opened_connection = std::make_unique<pqxx::connection>(_owner->_dbUrl);
       dlog("Connected to database: `${url}'.", ("url", _owner->_dbUrl));
-      //use async commits to speed up writes
-      pqxx::nontransaction work(*_owner->_opened_connection);
-      work.exec("SET synchronous_commit = OFF;");
+      if (!_owner->_sync_commits)
+      {
+        //use async commits to speed up writes
+        char sync_commits_off[] = "SET synchronous_commit = OFF;";
+        ilog("${sync_commits_off}",(sync_commits_off)); //TODO: make dlog later
+        pqxx::nontransaction work(*_owner->_opened_connection);
+        work.exec(sync_commits_off);
+      }
     }
 
     void finalize_transaction()
@@ -154,12 +160,13 @@ private:
   private:
     own_tx_controller*          _owner;
     std::unique_ptr<pqxx::work> _opened_tx;
-  };
+  }; //own_transaction
 
 private:
   const std::string _dbUrl;
   const std::string _description;
   appbase::application& _theApp;
+  bool                  _sync_commits;
 
   std::unique_ptr<pqxx::connection> _opened_connection;
   own_transaction* _opened_tx = nullptr;
@@ -375,9 +382,9 @@ void single_transaction_controller::disconnect()
 
 } // namespace
 
-transaction_controller_ptr build_own_transaction_controller(const std::string& dbUrl, const std::string& description, appbase::application& app)
+transaction_controller_ptr build_own_transaction_controller(const std::string& dbUrl, const std::string& description, appbase::application& app, bool sync_commits)
 {
-  return std::make_shared<own_tx_controller>(dbUrl, description, app);
+  return std::make_shared<own_tx_controller>(dbUrl, description, app, sync_commits);
 }
 
 transaction_controller_ptr build_single_transaction_controller(const std::string& dbUrl, appbase::application& app)

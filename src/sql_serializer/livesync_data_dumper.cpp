@@ -18,7 +18,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     )
   : _plugin( plugin )
   , _chain_db( chain_db )
-  , transactions_controller(transaction_controllers::build_own_transaction_controller(db_url, "Livesync dumper", app))
+  , transactions_controller(transaction_controllers::build_own_transaction_controller(db_url, "Livesync dumper", app, true /*sync_commits*/))
   , _psql_first_block( psql_first_block )
   , _write_ahead_log(write_ahead_log)
   , _processing_thread(transactions_controller, write_ahead_log, app)
