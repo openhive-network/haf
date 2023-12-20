@@ -46,12 +46,32 @@ END;
 $BODY$
 ;
 
+--- Function required to preserve valid ownership (the role being an owner of app-context) when view has been rebuilt
+--- because of automatic detach process (while performing maintenance actions where different database role is used)
+CREATE OR REPLACE FUNCTION hive.adjust_view_ownership( _context_name TEXT, _view_base_name TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+  __owner_name NAME;
+BEGIN
+  SELECT c.owner INTO __owner_name FROM hive.contexts c WHERE c.name = _context_name;
+
+  EXECUTE format('ALTER VIEW hive.%s%s OWNER TO %s;', _context_name, _view_base_name, __owner_name);
+
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.create_blocks_view( _context_name TEXT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
+
 BEGIN
     EXECUTE format(
         'CREATE OR REPLACE VIEW hive.%s_blocks_view
@@ -99,6 +119,8 @@ BEGIN
         ) t;
         ;', _context_name, _context_name
     );
+
+    PERFORM hive.adjust_view_ownership(_context_name, '_blocks_view');
 END;
 $BODY$
 ;
@@ -125,6 +147,8 @@ EXECUTE format(
         FROM hive.blocks hb
         ;', _context_name
     );
+
+    PERFORM hive.adjust_view_ownership(_context_name, '_blocks_view');
 END;
 $BODY$
 ;
@@ -198,6 +222,7 @@ BEGIN
         ;'
     , _context_name, _context_name, _context_name
     );
+    PERFORM hive.adjust_view_ownership(_context_name, '_transactions_view');
 END;
 $BODY$
 ;
@@ -222,6 +247,7 @@ EXECUTE format(
        ;'
     , _context_name
     );
+    PERFORM hive.adjust_view_ownership(_context_name, '_transactions_view');
 END;
 $BODY$
 ;
@@ -291,6 +317,7 @@ EXECUTE format(
         ) t
         ;', _context_name, _context_name
     );
+    PERFORM hive.adjust_view_ownership(_context_name, '_operations_view');
 END;
 $BODY$
 ;
@@ -317,6 +344,7 @@ EXECUTE format(
         FROM hive.operations ho
         ;', _context_name
     );
+    PERFORM hive.adjust_view_ownership(_context_name, '_operations_view');
 END;
 $BODY$
 ;
@@ -378,6 +406,7 @@ EXECUTE format(
         ) t;'
         , _context_name, _context_name, _context_name, _context_name
     );
+    PERFORM hive.adjust_view_ownership(_context_name, '_TRANSACTIONS_MULTISIG_VIEW');
 END;
 $BODY$
 ;
@@ -399,6 +428,8 @@ EXECUTE format(
     ;'
     , _context_name
     );
+
+    PERFORM hive.adjust_view_ownership(_context_name, '_TRANSACTIONS_MULTISIG_VIEW');
 END;
 $BODY$
 ;
@@ -454,6 +485,7 @@ EXECUTE format(
         ;'
     , _context_name, _context_name, _context_name
     );
+    PERFORM hive.adjust_view_ownership(_context_name, '_accounts_view');
 END;
 $BODY$
 ;
@@ -473,6 +505,7 @@ EXECUTE format(
         FROM hive.accounts ha
     ;', _context_name
     );
+    PERFORM hive.adjust_view_ownership(_context_name, '_accounts_view');
 END;
 $BODY$
 ;
@@ -542,6 +575,7 @@ EXECUTE format(
         ;'
     , _context_name, _context_name, _context_name
     );
+    PERFORM hive.adjust_view_ownership(_context_name, '_account_operations_view');
 END;
 $BODY$
 ;
@@ -565,6 +599,7 @@ EXECUTE format(
         ;'
     , _context_name
     );
+    PERFORM hive.adjust_view_ownership(_context_name, '_account_operations_view');
 END;
 $BODY$
 ;
@@ -625,6 +660,7 @@ EXECUTE format(
         ;'
     , _context_name, _context_name, _context_name
     );
+    PERFORM hive.adjust_view_ownership(_context_name, '_applied_hardforks_view');
 END;
 $BODY$
 ;
@@ -647,6 +683,7 @@ EXECUTE format(
         ;'
     , _context_name
     );
+    PERFORM hive.adjust_view_ownership(_context_name, '_applied_hardforks_view');
 END;
 $BODY$
 ;
