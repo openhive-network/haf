@@ -53,9 +53,8 @@ def test_p2p_sync(
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID],
     )
-
+    haf_node.close() #wait for node to flush wal and close
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_1092_BLOCK)
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_999892_BLOCK)
-    time.sleep(1)  #wait for hived shutdown to flush wal
     assert_are_blocks_sync_with_haf_db(haf_node, 1000000)
     assert_are_indexes_restored(haf_node)
