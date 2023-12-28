@@ -93,7 +93,7 @@ BEGIN
     ), 'No hive.operation index (block_num, id)';
 
     ASSERT EXISTS(
-        SELECT * FROM hive.indexes_constraints WHERE table_name='hive.account_operations' AND command LIKE 'ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_uq_1 UNIQUE (account_id, account_op_seq_no)'
+        SELECT * FROM hive.indexes_constraints WHERE table_name='hive.account_operations' AND command LIKE 'ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE (account_id, account_op_seq_no)'
     ), 'No hive.account_operations unique (account_id, account_op_seq_no)';
 
 END;

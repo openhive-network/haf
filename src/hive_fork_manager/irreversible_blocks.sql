@@ -127,8 +127,9 @@ CREATE TABLE IF NOT EXISTS hive.account_operations
     , account_op_seq_no INTEGER NOT NULL --- Operation sequence number specific to given account.
     , operation_id BIGINT NOT NULL --- Id of operation held in hive_opreations table.
     , op_type_id SMALLINT NOT NULL --- The same as hive.operations.op_type_id. A redundant field is required due to performance.
-    , CONSTRAINT hive_account_operations_uq_1 UNIQUE( account_id, account_op_seq_no )
-    , CONSTRAINT hive_account_operations_uq2 UNIQUE ( account_id, operation_id )
+    , CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no ) --try account,op_type,account_op_seq_no?
+    -- Hopefully not needed anymore, let's find out
+    --, CONSTRAINT hive_account_operations_uq2 UNIQUE ( account,operation_id )
 );
 ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_fk_1 FOREIGN KEY (account_id) REFERENCES hive.accounts(id) NOT VALID;
 ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hive.operations(id) NOT VALID;
@@ -144,7 +145,12 @@ CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hive.operations U
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hive.operations USING btree (block_num ASC NULLS LAST, trx_in_block ASC NULLS LAST) INCLUDE (op_type_id);
 CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hive.operations (op_type_id, block_num);
 
-CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_type_account_id_op_seq_idx ON hive.account_operations( op_type_id, account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
+--Clustering to speedup get_account_history queries (returns ordered set of operations for a specific account)
+--This takes 3 hours on a fast system with 4 maintenance works
+CLUSTER hive.account_operations using hive_account_operations_uq1;
+
+--Commented out this index in favor of clustering hive.account_operations table (see above CLUSTER)
+--CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_type_account_id_op_seq_idx ON hive.account_operations( op_type_id, account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
 --CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_seq_idx ON hive.account_operations( account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
 -- Commented out due to:
 -- ERROR:  index "hive_account_operations_account_id_op_seq_idx" column number 2 does not have default sorting behavior
