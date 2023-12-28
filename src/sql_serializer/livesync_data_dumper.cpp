@@ -77,7 +77,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_writer = std::make_unique<accounts_data_container_t_writer>(accounts_callback, "Accounts data writer", "account", api_trigger, app);
     _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >(account_operation_threads, "Account operations data writer", "account_op", api_trigger, app);
     _applied_hardforks_writer = std::make_unique< applied_hardforks_container_t_writer >(applied_hardforks_callback,"Applied hardforks data writer", "hardfork", api_trigger, app);
-      }
 
     connect_irreversible_event();
     connect_fork_event();
