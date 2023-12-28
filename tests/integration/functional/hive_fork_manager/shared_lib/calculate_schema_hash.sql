@@ -22,7 +22,7 @@ ARRAY[
  '{"(accounts_reversible,4bf88047-1295-43ae-59f6-86124fa7b53f,d092cacd-a1ca-369a-0307-82b31779bb5b,c80ea5a5-3499-c1de-8ae0-a0ba05c4f6e3,d5fdf00a-dcf2-2447-bf72-2fb090af3ed0)"}',
  '{"(account_operations_reversible,98e4ec7f-eb29-f2f2-136a-763f89c02a14,fdcb8d9c-ca91-e57e-fe73-88aa2548f8c0,41c0c887-e689-bae9-c7f9-0b3b445708af,4ab1b388-8d83-cd22-76c8-5f9d9596e11f)"}',
  '{"(applied_hardforks_reversible,f5129d5e-5b98-7f93-b786-d55899b5b8b5,d6cca068-2076-4e87-5c24-85618ff564ac,fee57151-3162-0c46-424a-da912e742160,3eeef00d-0e16-421e-659e-7ee2b12aa7eb)"}',
- '{"(contexts,f6bb4c44-6eaa-34f4-48d9-4d1a39546db5,e890d53e-05bd-76fc-d529-58ca2bc63a22,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)"}'
+ '{"(contexts,98c0d546-4273-7611-b701-a79cc6a2db05,86ada36d-c57d-627b-b961-b1a5c5098b9b,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)"}'
 ];
  _schema_hash TEXT[];
  _pass BOOLEAN;
@@ -103,7 +103,7 @@ FROM hive.calculate_schema_hash('hive') f WHERE table_name='contexts'
 _pass = true;
 for i in 1..18 loop
   if _pattern[i] != _schema_hash[i] THEN
-    RAISE NOTICE 'new schema hash: %1', _schema_hash[i];
+    RAISE NOTICE 'new schema hash: %', _schema_hash[i];
     _pass = false;
   end if;
 end loop;
