@@ -288,6 +288,8 @@ public:
   uint32_t psql_first_block = 1u;
   bool     psql_dump_account_operations = true;
 
+  bool replay_blocklog = false;
+
   std::optional<int64_t> op_sequence_id;
 
   cached_containter_t currently_caching_data;
@@ -388,6 +390,15 @@ public:
 };
 
 void sql_serializer_plugin_impl::replay_wal_if_necessary() {
+
+  //if we are replaying block_log, don't clear wal instead of replaying it
+  if (replay_blocklog)
+  {
+    ilog("clear old wal since replaying");
+    write_ahead_log.clear_log();
+    return;
+  }
+
   elog("sql_serializer_plugin_impl::replay_wal_if_necessary");
   std::optional<int32_t> last_wal_sequence_number_in_db;
   auto get_wal_sequence = [&](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx){
@@ -874,6 +885,9 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     my->collector = std::make_unique<filtered_accounts_collector>( db, *my->currently_caching_data, my->psql_dump_account_operations, my->filter );
   else
     my->collector = std::make_unique<accounts_collector>( db, *my->currently_caching_data, my->psql_dump_account_operations );
+
+  my->replay_blocklog = options.count( "force-replay" ) ? options.at( "force-replay" ).as<bool>() : false;
+  my->replay_blocklog = options.at( "replay-blockchain").as<bool>() || my->replay_blocklog;
 
   bfs::path wal_directory = get_app().data_dir() / "blockchain" / "haf_wal";
   if (options.count("psql-wal-directory"))

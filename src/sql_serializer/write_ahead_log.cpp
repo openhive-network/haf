@@ -287,6 +287,17 @@ namespace hive::plugins::sql_serializer {
     }
   }
 
+  //used to clean up haf wal if replay was requested
+  void write_ahead_log_manager::clear_log()
+  {
+    std::unique_lock<std::mutex> lock(_mutex);
+    while (_log_files.size() > 0)
+    {
+      _log_files.front().delete_file();
+      _log_files.pop_front();
+    }
+  }
+
   /* static */ write_ahead_log_manager::sequence_number_t write_ahead_log_manager::get_sequence_number_after(const sequence_number_t sequence_number)
   {
     return sequence_number == std::numeric_limits<sequence_number_t>::max() ? 0 : sequence_number + 1;

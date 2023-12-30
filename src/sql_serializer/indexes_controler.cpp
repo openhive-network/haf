@@ -21,9 +21,9 @@ indexes_controler::disable_indexes_depends_on_blocks( uint32_t number_of_blocks_
   if (theApp.is_interrupt_request())
     return;
 
-  bool can_disable_indexes = number_of_blocks_to_insert > _psql_index_threshold;
+  _disable_indexes = number_of_blocks_to_insert > _psql_index_threshold;
 
-  if ( !can_disable_indexes ) {
+  if ( !_disable_indexes ) {
     ilog( "Number of blocks to add is less than threshold for disabling indexes. Indexes won't be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
     return;
   }
@@ -59,8 +59,22 @@ indexes_controler::enable_indexes() {
   restore_accounts_idxs->join();
   restore_applied_hardforks_idxs->join();
 
-  fc::microseconds restore_indexes_time = fc::time_point::now() - restore_indexes_start_time;
+
+  fc::time_point cluster_start_time = fc::time_point::now();
+  fc::microseconds restore_indexes_time = cluster_start_time - restore_indexes_start_time;
   ilog( "PROFILE: Restored HAF table indexes: ${t}s", ("t",restore_indexes_time.to_seconds()) );
+
+  if (_disable_indexes)
+  {
+    _disable_indexes = false;
+    //TODO: clean this code up later
+    ilog("Begin clustering hive.account_operations");
+    pqxx::connection connection(_db_url);
+    pqxx::nontransaction work(connection);
+    work.exec("CLUSTER hive.account_operations using hive_account_operations_uq1;");
+    fc::microseconds cluster_time = fc::time_point::now() - cluster_start_time;
+    ilog( "PROFILE: cluster tables time: ${t}s", ("t",cluster_time.to_seconds()) );
+  }
 }
 
 void

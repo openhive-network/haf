@@ -152,6 +152,7 @@ namespace hive::plugins::sql_serializer {
 
     sequence_number_t store_transaction(std::string_view sql);
     void transaction_completed(sequence_number_t sequence_number, bool shutting_down = false);
+    void clear_log();
 
     std::optional<sequence_number_t> get_last_sequence_number();
     static bool is_less_than(sequence_number_t lhs, sequence_number_t rhs); // compare two sequence numbers
