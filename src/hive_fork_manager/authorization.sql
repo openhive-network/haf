@@ -218,4 +218,5 @@ FROM hive_applications_group;
 
 REVOKE EXECUTE ON PROCEDURE
       hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL )
-FROM hive_applications_group;
+FROM hive_applications_group,
+     public;
