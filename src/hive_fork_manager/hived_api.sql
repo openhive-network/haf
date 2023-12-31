@@ -430,7 +430,6 @@ BEGIN
   IF CARDINALITY(__contexts) != 0 THEN
     RAISE WARNING 'Attempting to automatically detach application contexts: %', __contexts;
     PERFORM hive.app_context_detach(__contexts);
-    COMMIT;
   END IF;
 
 END;
