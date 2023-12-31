@@ -21,9 +21,11 @@ indexes_controler::disable_indexes_depends_on_blocks( uint32_t number_of_blocks_
   if (theApp.is_interrupt_request())
     return;
 
-  _disable_indexes = number_of_blocks_to_insert > _psql_index_threshold;
+  bool disable_indexes = number_of_blocks_to_insert > _psql_index_threshold;
+  if (!_cluster_tables)
+    _cluster_tables = disable_indexes;
 
-  if ( !_disable_indexes ) {
+  if ( !disable_indexes ) {
     ilog( "Number of blocks to add is less than threshold for disabling indexes. Indexes won't be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
     return;
   }
@@ -64,9 +66,9 @@ indexes_controler::enable_indexes() {
   fc::microseconds restore_indexes_time = cluster_start_time - restore_indexes_start_time;
   ilog( "PROFILE: Restored HAF table indexes: ${t}s", ("t",restore_indexes_time.to_seconds()) );
 
-  if (_disable_indexes)
+  if (_cluster_tables)
   {
-    _disable_indexes = false;
+    _cluster_tables = false;
     //TODO: clean this code up later
     ilog("Begin clustering hive.account_operations");
     pqxx::connection connection(_db_url);
