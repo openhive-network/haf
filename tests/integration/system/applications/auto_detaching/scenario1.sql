@@ -27,8 +27,6 @@ BEGIN
   UPDATE hive.contexts
     SET last_active_at = last_active_at - _time_shift
     WHERE name = 'dead_app1';
-
-  COMMIT;
 END
 $$
 ;
