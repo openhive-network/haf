@@ -257,8 +257,8 @@ BEGIN
   PERFORM ASSERT_THIS_TEST('{
     "type": "curation_reward_operation",
     "value": {
-      "comment_author": "anca3drandom",
-      "comment_permlink": "steemart-the-art-of-quilling-paper-steemit-logo",
+      "author": "anca3drandom",
+      "permlink": "steemart-the-art-of-quilling-paper-steemit-logo",
       "curator": "camilla",
       "payout_must_be_claimed": false,
       "reward": {
