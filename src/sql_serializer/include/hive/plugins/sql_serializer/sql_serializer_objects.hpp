@@ -135,6 +135,21 @@ namespace hive
             {}
           };
 
+          inline uint64_t get_operation_id( uint32_t _block, const operation& _op, uint32_t _number_in_block ) {
+            // || block | type | seq ||
+            // || 32b   | 8b   | 24b ||
+            constexpr auto  TYPE_ID_LIMIT = 255; // 2^8-1
+            constexpr auto NUMBER_IN_BLOCK_LIMIT = 16777215; // 2^24-1
+            FC_ASSERT(  _op.which() <= TYPE_ID_LIMIT, "Operation type is to large to fit in 8 bits" );
+            FC_ASSERT( _number_in_block <= NUMBER_IN_BLOCK_LIMIT , "Operation in block number is to large to fit in 24 bits" );
+            uint64_t operation_id = _block;
+            operation_id <<= 32;
+            operation_id |= ( _op.which() << 24 );
+            operation_id |= _number_in_block;
+
+            return operation_id;
+          }
+
           struct process_operation_t
             : public block_data_base
           {
@@ -149,11 +164,13 @@ namespace hive
               , int32_t _block_number
               , const int32_t _trx_in_block
               , const int32_t _op_in_trx
-              , const fc::time_point_sec& time, const operation &_op
+              , const fc::time_point_sec& time
+              , const operation &_op
             )
             : block_data_base( _block_number )
             , operation_id{_operation_id }, trx_in_block{_trx_in_block}
-            , op_in_trx{_op_in_trx}, timestamp(time), op{_op} {}
+            , op_in_trx{_op_in_trx}, timestamp(time), op{_op} {
+            }
           };
 
           /// Holds account information to be put into database

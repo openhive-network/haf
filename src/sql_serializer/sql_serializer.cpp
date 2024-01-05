@@ -290,7 +290,7 @@ public:
 
   bool replay_blocklog = false;
 
-  std::optional<int64_t> op_sequence_id;
+  uint32_t op_in_block_number = 0;
 
   cached_containter_t currently_caching_data;
   std::unique_ptr<accounts_collector> collector;
@@ -360,7 +360,6 @@ public:
     ilog("Loading operation's last id ...");
 
     psql_block_number = 0;
-    op_sequence_id = std::nullopt;
 
     queries_commit_data_processor block_loader(db_url, "Block loader", "blockload",
                                                 [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
@@ -587,33 +586,8 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   const bool is_virtual = hive::protocol::is_virtual_operation(note.op);
   FC_ASSERT( is_virtual || note.trx_in_block >= 0,  "Non is_producing real operation with trx_in_block = -1" );
 
-  if (!op_sequence_id)
-  {
-    queries_commit_data_processor sequence_loader(db_url, "Sequence loader", "seq_load",
-                                                  [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
-      {
-        // get the next unused operation id from the database.
-        // first check if there are any reversible operations; if so, their IDs will be higher than the irreversible
-        // ones, and it's always going to be a much smaller table.
-        // if reversible is empty (the usual case), get the max id number from the irreversible table
-        // (which can be slow if there are no indexes)
-        pqxx::result operation_id_result = tx.exec("-- operation sequence loader\n"
-                                                   "SELECT CASE WHEN (SELECT EXISTS (SELECT FROM hive.operations_reversible))\n"
-                                                   "            THEN (SELECT MAX(id) + 1 FROM hive.operations_reversible)\n"
-                                                   "            ELSE (SELECT COALESCE(MAX(id) + 1, 0) FROM hive.operations)\n"
-                                                   "       END as next_operation_id\n");
-        assert(operation_id_result.size() == 1);
-        FC_ASSERT(operation_id_result.size() == 1, "Wrong number of rows returned");
-        op_sequence_id = operation_id_result[0]["next_operation_id"].as<int64_t>();
-        return data_processing_status();
-      }, nullptr, theApp );
-
-    sequence_loader.trigger(data_processor::data_chunk_ptr(), 0);
-    sequence_loader.join();
-    ilog("operation sequence id: ${op_sequence_id}", (op_sequence_id));
-  }
-
-  collect_account_operations( *op_sequence_id, note.op, note.block );
+  const auto operation_id = PSQL::processing_objects::get_operation_id( note.block, note.op, op_in_block_number );
+  collect_account_operations( operation_id, note.op, note.block );
 
   if( collector->is_op_accepted() )
   {
@@ -627,12 +601,12 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
       cdtf->applied_hardforks.emplace_back(
         hardfork_num,
         note.block,
-        *op_sequence_id
+        operation_id
       );
     }
 
     cdtf->operations.emplace_back(
-      *op_sequence_id,
+      operation_id,
       note.block,
       note.trx_in_block,
       note.op_in_trx,
@@ -640,7 +614,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
       note.op
     );
   }
-  ++*op_sequence_id;
+  ++op_in_block_number;
 }
 
 void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& note)
@@ -648,6 +622,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
   _last_block_num = note.block_num;
   if(!can_collect_blocks())
     return;
+  op_in_block_number = 0;
 
   handle_transactions(note.full_block->get_full_transactions(), note.block_num);
 
