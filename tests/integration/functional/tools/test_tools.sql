@@ -24,3 +24,15 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.get_operation_id( block_num INT, op_type_id INT, number_in_block INT )
+    RETURNS BIGINT
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$BODY$
+BEGIN
+    RETURN ( block_num::BIGINT << 32 ) | ( op_type_id << 24 ) | ( number_in_block );
+END;
+$BODY$
+;
+

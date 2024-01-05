@@ -79,7 +79,7 @@ SELECT pg_catalog.pg_extension_config_dump('hive.operation_types', '');
 
 CREATE TABLE IF NOT EXISTS hive.operations (
     id bigint not null,
-    block_num integer NOT NULL,
+    block_num integer GENERATED ALWAYS AS ( id >> 32) STORED,
     trx_in_block smallint NOT NULL,
     op_pos integer NOT NULL,
     op_type_id smallint NOT NULL,
