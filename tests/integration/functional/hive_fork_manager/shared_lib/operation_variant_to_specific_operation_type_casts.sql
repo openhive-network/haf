@@ -1132,11 +1132,11 @@ DECLARE
   op hive.curation_reward_operation;
 BEGIN
   raise notice 'checking conversion to curation_reward_operation';
-  op := '{"type": "curation_reward_operation","value": {"comment_author": "acidyo","comment_permlink": "gemo-dna-introduction-and-prologue-sci-fi-action-rpg-futurism","curator": "camilla","payout_must_be_claimed": false,"reward": {"amount": "291037297","nai": "@@000000037","precision": 6}}}'::JSONB::hive.operation::hive.curation_reward_operation;
+  op := '{"type": "curation_reward_operation","value": {"author": "acidyo","permlink": "gemo-dna-introduction-and-prologue-sci-fi-action-rpg-futurism","curator": "camilla","payout_must_be_claimed": false,"reward": {"amount": "291037297","nai": "@@000000037","precision": 6}}}'::JSONB::hive.operation::hive.curation_reward_operation;
   ASSERT (select op.curator = 'camilla'), format('Unexpected value of curation_reward_operation.curator: %s', op.curator);
   ASSERT (select op.reward = '(291037297,6,@@000000037)'::hive.asset), format('Unexpected value of curation_reward_operation.reward: %s', op.reward);
-  ASSERT (select op.comment_author = 'acidyo'), format('Unexpected value of curation_reward_operation.comment_author: %s', op.comment_author);
-  ASSERT (select op.comment_permlink = 'gemo-dna-introduction-and-prologue-sci-fi-action-rpg-futurism'), format('Unexpected value of curation_reward_operation.comment_permlink: %s', op.comment_permlink);
+  ASSERT (select op.author = 'acidyo'), format('Unexpected value of curation_reward_operation.author: %s', op.author);
+  ASSERT (select op.permlink = 'gemo-dna-introduction-and-prologue-sci-fi-action-rpg-futurism'), format('Unexpected value of curation_reward_operation.comment_permlink: %s', op.permlink);
   ASSERT (select op.payout_must_be_claimed = False), format('Unexpected value of curation_reward_operation.payout_must_be_claimed: %s', op.payout_must_be_claimed);
 END;
 $BODY$
