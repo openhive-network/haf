@@ -84,10 +84,9 @@ CREATE OR REPLACE FUNCTION hive.copy_operations_to_irreversible(
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.operations
+    INSERT INTO hive.operations(id, trx_in_block, op_pos, op_type_id, timestamp, body_binary )
     SELECT
            hor.id
-         , hor.block_num
          , hor.trx_in_block
          , hor.op_pos
          , hor.op_type_id
