@@ -146,17 +146,15 @@ CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hive.op
 CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hive.operations (op_type_id, block_num);
 
 --Clustering to speedup get_account_history queries (returns ordered set of operations for a specific account)
---This takes 3 hours on a fast system with 4 maintenance works
+--Clustering takes 2 hours on a fast system with 4 maintenance works
+--Clustering is actually done by hived, and the line below could technically be removed.
+--Eventually we need functions on haf side to perform the clustering and make it part
+--of adding indexes to the account_operations table to allow for more parallelism.
 CLUSTER hive.account_operations using hive_account_operations_uq1;
 
---Commented out this index in favor of clustering hive.account_operations table (see above CLUSTER)
---CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_type_account_id_op_seq_idx ON hive.account_operations( op_type_id, account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
---CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_seq_idx ON hive.account_operations( account_id, account_op_seq_no DESC ) INCLUDE( operation_id, block_num );
--- Commented out due to:
--- ERROR:  index "hive_account_operations_account_id_op_seq_idx" column number 2 does not have default sorting behavior
--- DETAIL:  Cannot create a primary key or unique constraint using such an index.
---ALTER TABLE hive.account_operations
---  ADD CONSTRAINT hive_account_operations_uq_1 UNIQUE USING INDEX hive_account_operations_account_id_op_seq_idx;
+--This index is probably only needed for block_explorer queries right now, but maybe useful for other apps,
+--so decided to add here rather than as part of hafbe as it isn't huge.
+CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hive.account_operations( account_id, op_type_id );
 
 CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hive.accounts USING btree (block_num);
 
