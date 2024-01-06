@@ -711,7 +711,7 @@ END
 $BODY$
 LANGUAGE plpgsql STABLE; 
 
-DROP FUNCTION IF EXISTS hive.wait_for_ready_instance(IN _timeout INTERVAL,  IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL);
+DROP FUNCTION IF EXISTS hive.wait_for_ready_instance(IN _timeout INTERVAL,  IN _wait_time INTERVAL);
 --- Allows to wait (until specified _timeout) until HAF database will be ready for application data processing.
 --- Raises exception on _timeout.
 CREATE FUNCTION hive.wait_for_ready_instance(IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
