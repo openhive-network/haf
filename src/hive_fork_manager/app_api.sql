@@ -711,29 +711,30 @@ END
 $BODY$
 LANGUAGE plpgsql STABLE; 
 
-DROP FUNCTION IF EXISTS hive.wait_for_ready_instance(IN _timeout INTERVAL);
+DROP FUNCTION IF EXISTS hive.wait_for_ready_instance(IN _timeout INTERVAL,  IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL);
 --- Allows to wait (until specified _timeout) until HAF database will be ready for application data processing.
 --- Raises exception on _timeout.
-CREATE FUNCTION hive.wait_for_ready_instance(IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL)
+CREATE FUNCTION hive.wait_for_ready_instance(IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
 RETURNS VOID
 AS
 $BODY$
 DECLARE
-  __wait_time INTERVAL := '500 ms'::interval;
   __retry INT := 0;
 BEGIN
   WHILE (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP() <= _timeout) LOOP
     __retry := __retry + 1;
     IF hive.is_instance_ready() THEN
-      RAISE NOTICE 'HAF instance is ready. Exiting wait loop...';
+      RAISE NOTICE 'HAF instance is ready. Exiting wait loop.';
       RETURN;
+    ELSIF __retry = 1 THEN
+      RAISE NOTICE 'Waiting for HAF instance to be ready...';
     END IF;
-    RAISE NOTICE '# %, waiting time: % s - waiting for another % s', __retry, extract(epoch from (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP())), extract(epoch from (__wait_time));
+    RAISE NOTICE '# %, waiting time: % s - waiting for another % s', __retry, extract(epoch from (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP())), extract(epoch from (_wait_time));
 
-    PERFORM pg_sleep_for(__wait_time);
+    PERFORM pg_sleep_for(_wait_time);
   END LOOP;
   
-  RAISE EXCEPTION 'HAF instance was not resumed in % s', extract(epoch from (_timeout));
+  RAISE EXCEPTION 'Timeout: HAF instance did not get ready in % s', extract(epoch from (_timeout));
 END
 $BODY$
 LANGUAGE plpgsql VOLATILE;
