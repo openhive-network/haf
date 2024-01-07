@@ -483,6 +483,11 @@ BEGIN
     END LOOP;
     CLOSE __cursor;
 
+    -- Add a similar IF for any other tables that need to be clustered on an index
+    IF _table_name = 'hive.account_operations' THEN
+      CLUSTER hive.account_operations using hive_account_operations_uq1;
+    END IF;
+
     DELETE FROM hive.indexes_constraints
     WHERE table_name = _table_name AND is_foreign_key = FALSE;
 

@@ -21,19 +21,14 @@ indexes_controler::disable_indexes_depends_on_blocks( uint32_t number_of_blocks_
   if (theApp.is_interrupt_request())
     return;
 
-  bool disable_indexes = number_of_blocks_to_insert > _psql_index_threshold;
-  if (disable_indexes)
+  bool dropping_indexes = number_of_blocks_to_insert > _psql_index_threshold;
+  if (!dropping_indexes)
   {
-    ilog("We are dropping indexes, so schedule to recluster table(s)");
-    _cluster_tables = true;
-  }
-  else
-  {
-    ilog( "Number of blocks to add is less than threshold for disabling indexes. Indexes won't be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
+    ilog( "Number of blocks to add is less than threshold for disabling indexes. Indexes won't be dropped. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
     return;
   }
 
-  ilog( "Number of blocks to sync is greater than threshold for disabling indexes. Indexes will be disabled. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
+  ilog( "Number of blocks to sync is greater than threshold for disabling indexes. Indexes will be dropped. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
   auto processor = start_commit_sql(false, "hive.disable_indexes_of_irreversible()", "disable indexes" );
   processor->join();
   ilog( "All irreversible blocks tables indexes are dropped" );
@@ -68,18 +63,6 @@ indexes_controler::enable_indexes() {
   fc::time_point cluster_start_time = fc::time_point::now();
   fc::microseconds restore_indexes_time = cluster_start_time - restore_indexes_start_time;
   ilog( "PROFILE: Restored HAF table indexes: ${t}s", ("t",restore_indexes_time.to_seconds()) );
-
-  if (_cluster_tables)
-  {
-    _cluster_tables = false;
-    //TODO: clean this code up later
-    ilog("Begin clustering hive.account_operations");
-    pqxx::connection connection(_db_url);
-    pqxx::nontransaction work(connection);
-    work.exec("CLUSTER hive.account_operations using hive_account_operations_uq1;");
-    fc::microseconds cluster_time = fc::time_point::now() - cluster_start_time;
-    ilog( "PROFILE: cluster tables time: ${t}s", ("t",cluster_time.to_seconds()) );
-  }
 }
 
 void

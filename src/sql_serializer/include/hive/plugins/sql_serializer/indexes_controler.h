@@ -27,7 +27,6 @@ namespace hive::plugins::sql_serializer {
     const std::string _db_url;
     const uint32_t _psql_index_threshold;
     appbase::application& theApp;
-    bool  _cluster_tables = false;
   };
 
 } //namespace hive::plugins::sql_serializer
