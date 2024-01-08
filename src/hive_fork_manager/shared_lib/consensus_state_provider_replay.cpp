@@ -469,9 +469,9 @@ void handle_exception(std::exception_ptr exception_ptr)
   {
     elog("postgres_block_log detected SQL statement execution failure. Failing statement: `${q}'.", ("q", ex.query()));
   }
-  catch(const pqxx::pqxx_exception& ex)
+  catch(const pqxx::failure& ex)
   {
-    elog("postgres_block_log detected SQL execution failure: ${e}.", ("e", ex.base().what()));
+    elog("postgres_block_log detected SQL execution failure: ${e}.", ("e", ex.what()));
   }
   catch( const fc::exception& e )
   {
