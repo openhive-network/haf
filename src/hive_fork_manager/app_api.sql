@@ -697,8 +697,6 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS hive.is_instance_ready();
-
 --- Returns true if HAF database is immediately ready for app data processing.
 CREATE OR REPLACE FUNCTION hive.is_instance_ready()
 RETURNS BOOLEAN
@@ -711,7 +709,6 @@ END
 $BODY$
 LANGUAGE plpgsql STABLE; 
 
-DROP FUNCTION IF EXISTS hive.wait_for_ready_instance;
 --- Allows to wait (until specified _timeout) until HAF database will be ready for application data processing.
 --- Raises exception on _timeout.
 CREATE OR REPLACE FUNCTION hive.wait_for_ready_instance(IN _context_names hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
