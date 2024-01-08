@@ -75,11 +75,12 @@ _TST_REGISTRY=${REGISTRY:?"Missing arg #2 to specify target container registry."
 do_clone "$BRANCH" "./haf-${COMMIT}" https://gitlab.syncad.com/hive/haf.git "$COMMIT"
 
 if [[ -z "$BUILD_IMAGE_TAG" ]]; then
-  pushd "./hive-${COMMIT}" || exit 1
+  pushd "./haf-${COMMIT}" || exit 1
   BUILD_IMAGE_TAG=$(git rev-parse --short "$COMMIT")
   popd || exit 1  
 fi
 
-"$SCRIPTSDIR/ci-helpers/build_instance.sh" "${BUILD_IMAGE_TAG}" "./haf-${COMMIT}" "${REGISTRY}" "${NETWORK_TYPE_ARG}" "${EXPORT_BINARIES_ARG}"
-
-
+# Use the build_instance.sh script from the new source root to avoid path resolution issues
+pushd "./haf-${COMMIT}" || exit 1
+"scripts/ci-helpers/build_instance.sh" "${BUILD_IMAGE_TAG}" "$(pwd)" "${REGISTRY}" "${NETWORK_TYPE_ARG}" "${EXPORT_BINARIES_ARG}"
+popd || exit 1
