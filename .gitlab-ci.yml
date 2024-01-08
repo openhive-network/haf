@@ -27,7 +27,7 @@ include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
   - project: 'hive/common-ci-configuration'
-    ref: 337fabaa5cd03019e9b82dd7df32121783c9391e
+    ref: 44ad61be5f9d0588512f478e5baf3ec89cb92a3f
     file:
     - '/templates/python_projects.gitlab-ci.yml'
 
@@ -50,19 +50,19 @@ verify_poetry_lock_sanity:
 haf_image_build:
   extends: .haf_image_build
   variables:
-    BINARY_CACHE_PATH: "haf-binaries"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
 
 haf_image_build_testnet:
   extends: .haf_image_build
   variables:
-    BINARY_CACHE_PATH: "haf-testnet-binaries"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
     HIVE_NETWORK_TYPE: testnet
 
 haf_image_build_mirrornet:
   extends: .haf_image_build
   variables:
-    BINARY_CACHE_PATH: "haf-mirrornet-binaries"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVE_NETWORK_TYPE: mirrornet
 
 .haf-service: &haf-service
@@ -169,8 +169,8 @@ dump_snapshot_5m_mirrornet:
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   variables:
     MIRRORNET_WORKING_DIR: "$CI_PROJECT_DIR/mirrornet_witness_node"
-    BINARY_CACHE_PATH: "haf-mirrornet-binaries"
-    HIVED_PATH: "$CI_PROJECT_DIR/$BINARY_CACHE_PATH/hived"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
+    HIVED_PATH: "$BINARY_CACHE_PATH/hived"
   script:
     #Prepare environment for hived run
     - cd $CI_PROJECT_DIR/docker
@@ -206,11 +206,11 @@ haf_system_tests_mirrornet:
   services:
     - *hfm-only-service
   variables:
-    BINARY_CACHE_PATH: "haf-mirrornet-binaries"
-    HIVED_PATH: "$CI_PROJECT_DIR/$BINARY_CACHE_PATH/hived"
-    COMPRESS_BLOCK_LOG_PATH: "$CI_PROJECT_DIR/$BINARY_CACHE_PATH/compress_block_log"
-    GET_DEV_KEY_PATH: "$CI_PROJECT_DIR/$BINARY_CACHE_PATH/get_dev_key"
-    CLI_WALLET_PATH: "$CI_PROJECT_DIR/$BINARY_CACHE_PATH/cli_wallet"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
+    HIVED_PATH: "$$BINARY_CACHE_PATH/hived"
+    COMPRESS_BLOCK_LOG_PATH: "$BINARY_CACHE_PATH/compress_block_log"
+    GET_DEV_KEY_PATH: "$BINARY_CACHE_PATH/get_dev_key"
+    CLI_WALLET_PATH: "$BINARY_CACHE_PATH/cli_wallet"
     DB_NAME: haf_block_log
     DB_URL: "postgresql://haf_admin@hfm-only-instance:5432/$DB_NAME"
   script:
@@ -289,7 +289,7 @@ applications_system_tests:
   variables:
     PATTERNS_PATH: "" #Should be overriden in derived jobs
     RO_BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
-    BINARY_CACHE_PATH: "haf-testnet-binaries"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
     HIVED_PATH: "$CI_PROJECT_DIR/haf-binaries/hived"
     DB_NAME: haf_block_log
     DB_ADMIN: "haf_admin"

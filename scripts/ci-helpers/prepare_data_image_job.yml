@@ -1,6 +1,6 @@
 include:
   - project: 'hive/hive'
-    ref: 0c62e921cb21019cf71cb028085cb2bf445ffd1f #develop
+    ref: 2b93eeb2a7eb326e41c53ca33fe56932e93aa038 #develop
     file: '/scripts/ci-helpers/prepare_data_image_job.yml' 
 
 .prepare_haf_image:
@@ -11,20 +11,20 @@ include:
     SCRIPTS_PATH: "$SUBMODULE_DIR/scripts"
     REGISTRY_USER: "$CI_IMG_BUILDER_USER"
     REGISTRY_PASS: $CI_IMG_BUILDER_PASSWORD
-    BINARY_CACHE_PATH: "hived-binaries"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
   script:
     - $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh
         "$SUBMODULE_DIR" registry.gitlab.syncad.com/hive/haf/ HAF "$REGISTRY_USER" "$REGISTRY_PASS"
         --export-binaries="$BINARY_CACHE_PATH" --network-type="$HIVE_NETWORK_TYPE"
     - chmod -Rc a+rwx "$BINARY_CACHE_PATH"
-    - ls -la ./$BINARY_CACHE_PATH/*
+    - ls -la $BINARY_CACHE_PATH/*
 
   artifacts:
     reports:
       dotenv: docker_image_name.env
     paths:
-      - ./$BINARY_CACHE_PATH/*
+      - $BINARY_CACHE_PATH/*
       - ./docker_image_name.env
 
 .prepare_haf_data_5m:
