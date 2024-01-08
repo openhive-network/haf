@@ -70,8 +70,6 @@ class HafNode(PreconfiguredNode):
         return database_url + "_" + uuid4().hex
 
     def __make_database(self) -> None:
-        self.config.psql_url = self.__database_url
-
         if self.create_unique_database and self.__is_database_created is False:
             self.logger.info(f"Preparing database {self.__database_url}")
             if database_exists(self.__database_url):
@@ -82,6 +80,12 @@ class HafNode(PreconfiguredNode):
         engine = sqlalchemy.create_engine(self.__database_url, echo=False, poolclass=NullPool, isolation_level="AUTOCOMMIT")
         session = sessionmaker(bind=engine)
         self.__session = session()
+        self.__session.bind.url = self.__database_url_with_hived_user()
+
+        self.config.psql_url = str(self.__database_url_with_hived_user())
+
+    def __database_url_with_hived_user(self) -> Session.url:
+        return self.__session.bind.url.set(username="hived")
 
     def close(self) -> None:
         super().close()
