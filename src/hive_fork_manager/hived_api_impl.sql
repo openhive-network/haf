@@ -466,36 +466,42 @@ LANGUAGE plpgsql VOLATILE
 ;
 
 CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT )
-    RETURNS VOID
+RETURNS VOID
 AS
 $function$
 DECLARE
-    __command TEXT;
-    __cursor REFCURSOR;
+__command TEXT;
+__cursor REFCURSOR;
+__indexes_dropped BOOLEAN;
 BEGIN
 
-    --restoring indexes, primary keys, unique contraints
-    OPEN __cursor FOR ( SELECT command FROM hive.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE );
-    LOOP
-        FETCH __cursor INTO __command;
-            EXIT WHEN NOT FOUND;
-        EXECUTE __command;
-    END LOOP;
-    CLOSE __cursor;
+  __indexes_dropped := EXISTS(SELECT NULL FROM hive.indexes_constraints where is_index = TRUE LIMIT 1);
 
+  --restoring indexes, primary keys, unique contraints
+  OPEN __cursor FOR ( SELECT command FROM hive.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE );
+  LOOP
+    FETCH __cursor INTO __command;
+    EXIT WHEN NOT FOUND;
+    EXECUTE __command;
+  END LOOP;
+  CLOSE __cursor;
+
+  IF __indexes_dropped THEN
+    RAISE NOTICE 'Indexes dropped, so checking if table should be clustered';
     -- Add a similar IF for any other tables that need to be clustered on an index
     IF _table_name = 'hive.account_operations' THEN
+      RAISE NOTICE 'Clustering hive.account_operations...';
       CLUSTER hive.account_operations using hive_account_operations_uq1;
     END IF;
+  END IF;
 
-    DELETE FROM hive.indexes_constraints
-    WHERE table_name = _table_name AND is_foreign_key = FALSE;
-
+  DELETE FROM hive.indexes_constraints
+  WHERE table_name = _table_name AND is_foreign_key = FALSE;
+  RAISE NOTICE 'Finished restoring any dropped indexes on %', _table_name;
 END;
 $function$
 LANGUAGE plpgsql VOLATILE
 ;
-
 
 CREATE OR REPLACE FUNCTION hive.restore_foreign_keys( in _table_name TEXT )
     RETURNS VOID
