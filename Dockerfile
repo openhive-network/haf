@@ -64,8 +64,6 @@ COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 
 # Install development packages and create required accounts
 RUN find / -name libpqxx* 2> /dev/null
-RUN ./scripts/setup_ubuntu.sh --dev
-RUN find / -name libpqxx* 2> /dev/null
 RUN ./scripts/setup_ubuntu.sh --pqxx
 RUN find / -name libpqxx* 2> /dev/null
 
