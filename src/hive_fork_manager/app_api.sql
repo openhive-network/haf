@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.app_create_context( _name hive.context_name, _is_forking BOOLEAN = TRUE )
+CREATE OR REPLACE FUNCTION hive.app_create_context( _name hive.context_name, _is_forking BOOLEAN = TRUE, _is_attached BOOLEAN = TRUE)
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -11,7 +11,7 @@ BEGIN
         _name
         , ( SELECT MAX( hf.id ) FROM hive.fork hf ) -- current fork id
         , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
-        , _is_forking
+        , _is_forking, _is_attached
     );
 
     PERFORM hive.create_context_data_view( _name );
@@ -740,7 +740,6 @@ BEGIN
 END
 $BODY$
 LANGUAGE plpgsql VOLATILE;
-
 
 CREATE OR REPLACE FUNCTION hive.app_check_contexts_synchronized( _contexts hive.contexts_group )
     RETURNS VOID

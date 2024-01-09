@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.context_create( _name hive.context_name, _fork_id BIGINT = 1, _irreversible_block INT = 0, _is_forking BOOLEAN = TRUE )
+CREATE OR REPLACE FUNCTION hive.context_create( _name hive.context_name, _fork_id BIGINT = 1, _irreversible_block INT = 0, _is_forking BOOLEAN = TRUE, _is_attached BOOLEAN = TRUE )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -11,7 +11,7 @@ BEGIN
 
     EXECUTE format( 'CREATE TABLE hive.%I( hive_rowid BIGSERIAL )', _name );
     INSERT INTO hive.contexts( name, current_block_num, irreversible_block, is_attached, events_id, fork_id, owner, is_forking, last_active_at )
-    VALUES( _name, 0, _irreversible_block, TRUE, 0, _fork_id, current_user, _is_forking, NOW() );
+    VALUES( _name, 0, _irreversible_block, _is_attached, 0, _fork_id, current_user, _is_forking, NOW() );
 END;
 $BODY$
 ;
