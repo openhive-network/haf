@@ -697,50 +697,6 @@ END;
 $BODY$
 ;
 
---- Returns true if HAF database is immediately ready for app data processing.
-CREATE OR REPLACE FUNCTION hive.is_instance_ready()
-RETURNS BOOLEAN
-AS
-$BODY$
-BEGIN
-  --- Instance is ready when has built all indexes/constraints. We can consider adding here another features if needed
-  RETURN NOT EXISTS(SELECT NULL FROM hive.indexes_constraints); 
-END
-$BODY$
-LANGUAGE plpgsql STABLE; 
-
---- Allows to wait (until specified _timeout) until HAF database will be ready for application data processing.
---- Raises exception on _timeout.
-CREATE OR REPLACE FUNCTION hive.wait_for_ready_instance(IN _context_names hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
-RETURNS VOID
-AS
-$BODY$
-DECLARE
-  __retry INT := 0;
-BEGIN
-  WHILE (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP() <= _timeout) LOOP
-    __retry := __retry + 1;
-    IF hive.is_instance_ready() THEN
-      RAISE NOTICE 'HAF instance is ready. Exiting wait loop.';
-      RETURN;
-    ELSIF __retry = 1 THEN
-      RAISE NOTICE 'Waiting for HAF instance to be ready...';
-    END IF;
-    RAISE NOTICE '# %, waiting time: % s - waiting for another % s', __retry, extract(epoch from (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP())), extract(epoch from (_wait_time));
-
-    --- Update last activity time to prevent auto-detaching of apps stopped by this call, when HAF enters live mode
-    UPDATE hive.contexts
-    SET last_active_at = NOW()
-    WHERE name = ANY(_context_names);
-
-    PERFORM pg_sleep_for(_wait_time);
-  END LOOP;
-  
-  RAISE EXCEPTION 'Timeout: HAF instance did not get ready in % s', extract(epoch from (_timeout));
-END
-$BODY$
-LANGUAGE plpgsql VOLATILE;
-
 CREATE OR REPLACE FUNCTION hive.app_wait_for_ready_instance(IN _context_name hive.context_name, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
   RETURNS VOID
   LANGUAGE plpgsql
