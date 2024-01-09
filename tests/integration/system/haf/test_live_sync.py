@@ -37,7 +37,28 @@ def test_live_sync(prepared_networks_and_database_12_8):
 
     tt.logger.info(f'head_block: {head_block} irreversible_block: {irreversible_block}')
 
-    session.query(Transactions).filter(Transactions.block_num == transaction_block_num).one()
+    trx_found = None
+    nr_blocks = 2
+
+    #Explanation of the below loop.
+        #Sometimes pushing a transaction into a node is delayed, especially when the node is not ready at the moment (see: `Unable to acquire database lock`)
+        #As a result the transaction (here with `transfer` operation) should be found in <transaction_block_num; transaction_block_num + nr_blocks) range of blocks
+    #Solution:
+        #Try to find the transaction in 'nr_blocks' blocks
+
+    for _cnt in range(nr_blocks):
+        tt.logger.info(f'Try to find a transaction in {transaction_block_num} block')
+
+        wait_for_irreversible_progress(node_under_test, transaction_block_num)
+
+        trx_found = session.query(Transactions).filter(Transactions.block_num == transaction_block_num).one_or_none()
+        if trx_found is not None:
+            tt.logger.info(f'A transaction found in {transaction_block_num} block')
+            break
+        tt.logger.info(f'A transaction not found in {transaction_block_num} block')
+        transaction_block_num += 1
+
+    assert trx_found is not None, "A desired transaction hasn't been found"
 
     ops = session.query(Operations).add_columns(cast(Operations.body_binary, JSONB).label('body'), Operations.block_num).filter(Operations.block_num == transaction_block_num).all()
     types = [op.body['type'] for op in ops]
