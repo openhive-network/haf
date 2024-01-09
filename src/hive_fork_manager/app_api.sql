@@ -741,6 +741,28 @@ END
 $BODY$
 LANGUAGE plpgsql VOLATILE;
 
+CREATE OR REPLACE FUNCTION hive.app_wait_for_ready_instance(IN _context_name hive.context_name, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+  RETURNS VOID
+  LANGUAGE plpgsql
+  VOLATILE
+AS
+$BODY$
+BEGIN
+  PERFORM hive.wait_for_ready_instance(ARRAY[_context_name], _timeout, _wait_time);
+END
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.app_wait_for_ready_instance(IN _contexts hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+  RETURNS VOID
+  LANGUAGE plpgsql
+  VOLATILE
+AS
+$BODY$
+BEGIN
+  PERFORM hive.wait_for_ready_instance(_contexts, _timeout, _wait_time);
+END
+$BODY$;
+
 CREATE OR REPLACE FUNCTION hive.app_check_contexts_synchronized( _contexts hive.contexts_group )
     RETURNS VOID
     LANGUAGE plpgsql
