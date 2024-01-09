@@ -6,9 +6,6 @@ set -euo pipefail
 find / -name libpqxx* 2> /dev/null || true
 echo jest
 
-sudo ~/source/scripts/setup_ubuntu.sh --dev
-echo dwa
-find / -name libpqxx* 2> /dev/null || true
 
 sudo ~/source/scripts/setup_ubuntu.sh --pqxx
 find / -name libpqxx* 2> /dev/null || true
