@@ -13,6 +13,7 @@ ENV PATH="/home/haf_admin/.local/bin:$PATH"
 SHELL ["/bin/bash", "-c"]
 
 USER root
+WORKDIR /usr/local
 WORKDIR /usr/local/src
 COPY ./hive/scripts/openssl.conf /usr/local/src/hive/scripts/openssl.conf
 COPY ./hive/scripts/setup_ubuntu.sh /usr/local/src/hive/scripts/
@@ -46,6 +47,28 @@ ARG HIVE_SUBDIR=.
 ENV HIVE_SUBDIR=${HIVE_SUBDIR}
 
 ENV HAF_SOURCE_DIR="/home/haf_admin/source/${HIVE_SUBDIR}"
+WORKDIR /home/haf_admin
+
+
+
+##################################
+################################
+
+# TODO(pqxx) - remove this when pqxx .so is no longer needed or moved to ci base image
+
+USER root
+WORKDIR /usr/local/src
+COPY ./hive/scripts/openssl.conf /usr/local/src/hive/scripts/openssl.conf
+COPY ./hive/scripts/setup_ubuntu.sh /usr/local/src/hive/scripts/
+COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
+
+# Install development packages and create required accounts
+RUN ./scripts/setup_ubuntu.sh --dev
+RUN ./scripts/setup_ubuntu.sh --pqxx
+
+##################################
+################################
+
 
 USER haf_admin
 WORKDIR /home/haf_admin
