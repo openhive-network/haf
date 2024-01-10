@@ -465,17 +465,48 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
+CREATE OR REPLACE FUNCTION hive.recluster_account_operations_if_index_dropped()
+RETURNS VOID
+AS
+$function$
+DECLARE
+  __command TEXT;
+  __cluster_index_dropped BOOLEAN;
+BEGIN
+
+  __cluster_index_dropped := EXISTS(
+                SELECT command FROM hive.indexes_constraints 
+                WHERE table_name = 'hive.account_operations' AND
+                      index_constraint_name = 'hive_account_operations_uq1' LIMIT 1);
+  IF (__cluster_index_dropped) THEN
+    RAISE NOTICE 'Cluster index dropped, restoring it before other indexes for faster clustering';
+    SELECT command INTO __command FROM hive.indexes_constraints
+    WHERE table_name = 'hive.account_operations' AND
+          index_constraint_name = 'hive_account_operations_uq1' LIMIT 1;      
+    EXECUTE __command;
+    RAISE NOTICE 'Clustering hive.account_operations, this takes a while...';
+    CLUSTER hive.account_operations using hive_account_operations_uq1;
+    RAISE NOTICE 'Analyzing hive.account_operations after clustering to update statistics';
+    ANALYZE hive.account_operations;
+    DELETE FROM hive.indexes_constraints WHERE command = __command;
+  END IF;
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
 CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT )
 RETURNS VOID
 AS
 $function$
 DECLARE
-__command TEXT;
-__cursor REFCURSOR;
-__indexes_dropped BOOLEAN;
+  __command TEXT;
+  __cursor REFCURSOR;
 BEGIN
 
-  __indexes_dropped := EXISTS(SELECT NULL FROM hive.indexes_constraints where is_index = TRUE LIMIT 1);
+  IF _table_name = 'hive.account_operations' THEN
+    PERFORM hive.recluster_account_operations_if_index_dropped();
+  END IF;
 
   --restoring indexes, primary keys, unique contraints
   OPEN __cursor FOR ( SELECT command FROM hive.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE );
@@ -485,15 +516,6 @@ BEGIN
     EXECUTE __command;
   END LOOP;
   CLOSE __cursor;
-
-  IF __indexes_dropped THEN
-    RAISE NOTICE 'Indexes dropped, so checking if table should be clustered';
-    -- Add a similar IF for any other tables that need to be clustered on an index
-    IF _table_name = 'hive.account_operations' THEN
-      RAISE NOTICE 'Clustering hive.account_operations...';
-      CLUSTER hive.account_operations using hive_account_operations_uq1;
-    END IF;
-  END IF;
 
   DELETE FROM hive.indexes_constraints
   WHERE table_name = _table_name AND is_foreign_key = FALSE;
