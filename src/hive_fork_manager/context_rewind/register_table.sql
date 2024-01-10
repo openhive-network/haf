@@ -129,8 +129,7 @@ $BODY$
 
 -- creates a shadow table of registered table:
 -- | [ table column1, table column2,.... ] | hive_block_num | hive_operation_type |
-DROP FUNCTION IF EXISTS hive.register_table;
-CREATE FUNCTION hive.register_table( _table_schema TEXT,  _table_name TEXT, _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.register_table( _table_schema TEXT,  _table_name TEXT, _context_name TEXT )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -149,6 +148,7 @@ DECLARE
     __new_sequence_name TEXT := 'seq_' || lower(_table_schema) || '_' || lower(_table_name);
     __context_id INTEGER := NULL;
     __registered_table_id INTEGER := NULL;
+    __attached_context BOOLEAN := FALSE;
     __columns_names TEXT[];
 BEGIN
     PERFORM hive.chceck_constrains(_table_schema, _table_name);
@@ -162,7 +162,7 @@ BEGIN
     SELECT hc.id, tables.table_schema, tables.origin, tables.shadow, columns, current_user
     FROM ( SELECT hc.id, hive.check_owner( hc.name, hc.owner ) FROM hive.contexts hc WHERE hc.name =  _context_name ) as hc
     JOIN ( VALUES( lower(_table_schema), lower(_table_name), __shadow_table_name, __columns_names  )  ) as tables( table_schema, origin, shadow, columns ) ON TRUE
-    RETURNING context_id, id INTO __context_id, __registered_table_id
+    RETURNING context_id, id, (SELECT hc2.is_attached FROM hive.contexts hc2 WHERE hc2.id = context_id) INTO __context_id, __registered_table_id, __attached_context
     ;
 
     -- create and set separated sequence for hive.base part of the registered table
@@ -183,6 +183,8 @@ BEGIN
 
     ASSERT __context_id IS NOT NULL, 'There is no context %', _context_name;
     ASSERT __registered_table_id IS NOT NULL;
+
+    PERFORM hive.create_revert_functions( _table_schema, _table_name, __shadow_table_name, __columns_names );
 
     -- create trigger functions
     EXECUTE format(
@@ -314,18 +316,18 @@ BEGIN
         , _table_name
     );
 
-    PERFORM hive.create_triggers(  _table_schema, _table_name, __context_id );
+    IF __attached_context THEN
+      PERFORM hive.create_triggers(  _table_schema, _table_name, __context_id );
 
-    PERFORM hive.create_revert_functions( _table_schema, _table_name, __shadow_table_name, __columns_names );
-
-    -- save information about the triggers
-    INSERT INTO hive.triggers( registered_table_id, trigger_name, function_name, owner )
-    VALUES
-         ( __registered_table_id, __hive_insert_trigger_name, __hive_triggerfunction_name_insert, current_user )
-       , ( __registered_table_id, __hive_delete_trigger_name, __hive_triggerfunction_name_delete, current_user )
-       , ( __registered_table_id, __hive_update_trigger_name, __hive_triggerfunction_name_update, current_user )
-       , ( __registered_table_id, __hive_truncate_trigger_name, __hive_triggerfunction_name_truncate, current_user )
-    ;
+      -- save information about the triggers
+      INSERT INTO hive.triggers( registered_table_id, trigger_name, function_name, owner )
+      VALUES
+           ( __registered_table_id, __hive_insert_trigger_name, __hive_triggerfunction_name_insert, current_user )
+         , ( __registered_table_id, __hive_delete_trigger_name, __hive_triggerfunction_name_delete, current_user )
+         , ( __registered_table_id, __hive_update_trigger_name, __hive_triggerfunction_name_update, current_user )
+         , ( __registered_table_id, __hive_truncate_trigger_name, __hive_triggerfunction_name_truncate, current_user )
+      ;
+    END IF;
 END;
 $BODY$
 ;
