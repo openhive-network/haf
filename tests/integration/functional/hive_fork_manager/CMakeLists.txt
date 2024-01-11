@@ -269,6 +269,7 @@ ADD_TEST( NAME test_update_script
 
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/drop_state_provider.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/accounts_start_state_provider.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/accounts_update_state_provider.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/keyauth_update_state_provider.sql )

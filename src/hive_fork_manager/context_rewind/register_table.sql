@@ -318,16 +318,18 @@ BEGIN
 
     IF __attached_context THEN
       PERFORM hive.create_triggers(  _table_schema, _table_name, __context_id );
-
-      -- save information about the triggers
-      INSERT INTO hive.triggers( registered_table_id, trigger_name, function_name, owner )
-      VALUES
-           ( __registered_table_id, __hive_insert_trigger_name, __hive_triggerfunction_name_insert, current_user )
-         , ( __registered_table_id, __hive_delete_trigger_name, __hive_triggerfunction_name_delete, current_user )
-         , ( __registered_table_id, __hive_update_trigger_name, __hive_triggerfunction_name_update, current_user )
-         , ( __registered_table_id, __hive_truncate_trigger_name, __hive_triggerfunction_name_truncate, current_user )
-      ;
     END IF;
+
+    -- save information about the trigger function names
+    -- it is required when triggers are removed automatically by postgres when a register table is dropped
+    -- in such situation we made cleanup after the deletion in hive.clean_after_uregister_table
+    INSERT INTO hive.triggers( registered_table_id, trigger_name, function_name, owner )
+    VALUES
+       ( __registered_table_id, __hive_insert_trigger_name, __hive_triggerfunction_name_insert, current_user )
+     , ( __registered_table_id, __hive_delete_trigger_name, __hive_triggerfunction_name_delete, current_user )
+     , ( __registered_table_id, __hive_update_trigger_name, __hive_triggerfunction_name_update, current_user )
+     , ( __registered_table_id, __hive_truncate_trigger_name, __hive_triggerfunction_name_truncate, current_user )
+    ;
 END;
 $BODY$
 ;
