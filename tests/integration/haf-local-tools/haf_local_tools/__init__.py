@@ -177,7 +177,7 @@ def create_app(session, application_context):
     session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION )
     session.commit()
 
-def wait_until_irreversible_without_new_block(session, final_block, limit):
+def wait_until_irreversible_without_new_block(session, irreversible_block, limit, interval):
 
     assert limit > 0
 
@@ -185,14 +185,14 @@ def wait_until_irreversible_without_new_block(session, final_block, limit):
     while cnt < limit:
         #wait many times to be sure that whole network is in stable state
         #Changed from 0.1s to 0.5s, because when a computer is under stress (every CPU is used 100%), better is to wait longer
-        time.sleep(0.5)
+        time.sleep(interval)
 
          #Last event is `NEW_IRREVERSIBLE` instead of `MASSIVE_SYNC`.
         events = session.query(EventsQueue).order_by(EventsQueue.id).all()
 
-        tt.logger.info(f'number of events: {len(events)} block number of last event: {0 if len(events) == 0 else events[len(events) - 1].block_num}')
-
-        if len(events) == 3 and events[1].block_num == final_block:
+        # Here is '>=', because in an ideal situation `events[1].block_num == irreversible_block``,
+        #  but if a machine is under stress `events[1].block_num` can be bigger
+        if len(events) == 3 and events[1].block_num >= irreversible_block:
             return
 
         cnt += 1
