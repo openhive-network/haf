@@ -35,6 +35,10 @@ failswith() {(
     fi
 )}
 
+exec_sql() {
+    sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "$1"
+}
+
 HAF_DIR=""
 
 while [ $# -gt 0 ]; do
@@ -73,27 +77,27 @@ sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_gene
 
 printf "\nTEST: Creating table referencing hive.operation. This is allowed and should succeed.\n"
 "$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME"
-sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "create table good_table(id int, op hive.operation)"
+exec_sql "create table good_table(id int, op hive.operation)"
 sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
 
 printf "\nTEST: Creating table referencing disallowed HAF type. Upgrade should fail.\n"
 "$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME"
-sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "create table bad_table(id int, comment hive.comment_operation)"
+exec_sql "create table bad_table(id int, comment hive.comment_operation)"
 failswith 4 sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
 
 printf "\nTEST: Creating table referencing disallowed HAF domain. Upgrade should fail.\n"
 "$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME"
-sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "create table bad_table(id int, account hive.account_name_type)"
+exec_sql "create table bad_table(id int, account hive.account_name_type)"
 failswith 4 sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
 
 printf "\nTEST: Creating table referencing allowed HAF domain. Upgrade should pass.\n"
 "$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME"
-sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "create table good_table(id int, amount hive.hive_amount)"
+exec_sql "create table good_table(id int, amount hive.hive_amount)"
 sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
 
 printf "\nTEST: Check that function defined in hive namespace that doesn't reference current commit hash fails the upgrade.\n"
 "$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME"
-sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "CREATE FUNCTION hive.bad_function() RETURNS VOID VOLATILE AS '/lib/postgresql/${POSTGRES_VERSION}/lib/tablefunc.so', 'crosstab' language c;"
+exec_sql "CREATE FUNCTION hive.bad_function() RETURNS VOID VOLATILE AS '/lib/postgresql/${POSTGRES_VERSION}/lib/tablefunc.so', 'crosstab' language c;"
 failswith 3 sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
 
 echo "Succeeded"
