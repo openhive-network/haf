@@ -86,6 +86,11 @@ printf "\nTEST: Creating table referencing disallowed HAF domain. Upgrade should
 sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "create table bad_table(id int, account hive.account_name_type)"
 failswith 4 sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
 
+printf "\nTEST: Creating table referencing allowed HAF domain. Upgrade should pass.\n"
+"$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME"
+sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "create table good_table(id int, amount hive.hive_amount)"
+sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
+
 printf "\nTEST: Check that function defined in hive namespace that doesn't reference current commit hash fails the upgrade.\n"
 "$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME"
 sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "CREATE FUNCTION hive.bad_function() RETURNS VOID VOLATILE AS '/lib/postgresql/${POSTGRES_VERSION}/lib/tablefunc.so', 'crosstab' language c;"
