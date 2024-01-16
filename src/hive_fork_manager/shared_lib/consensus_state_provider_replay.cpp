@@ -12,7 +12,6 @@
 //ENDTODO(mtlk)
 #include <hive/plugins/block_api/block_api_objects.hpp>
 
-#include <pqxx/pqxx>
 
 #include <iomanip>
 #include <limits>
@@ -915,18 +914,18 @@ void handle_exception(std::exception_ptr exception_ptr)
       std::rethrow_exception(exception_ptr);
     }
   }
-  catch(const pqxx::broken_connection& ex)
-  {
-    elog("postgres_block_log detected connection error: ${e}.", ("e", ex.what()));
-  }
-  catch(const pqxx::sql_error& ex)
-  {
-    elog("postgres_block_log detected SQL statement execution failure. Failing statement: `${q}'.", ("q", ex.query()));
-  }
-  catch(const pqxx::failure& ex)
-  {
-    elog("postgres_block_log detected SQL execution failure: ${e}.", ("e", ex.what()));
-  }
+  // catch(const pqxx::broken_connection& ex)
+  // {
+  //   elog("postgres_block_log detected connection error: ${e}.", ("e", ex.what()));
+  // }
+  // catch(const pqxx::sql_error& ex)
+  // {
+  //   elog("postgres_block_log detected SQL statement execution failure. Failing statement: `${q}'.", ("q", ex.query()));
+  // }
+  // catch(const pqxx::failure& ex)
+  // {
+  //   elog("postgres_block_log detected SQL execution failure: ${e}.", ("e", ex.what()));
+  // }
   catch( const fc::exception& e )
   {
     elog( "fc::exception ${e}", ("e", e.to_string()) );
