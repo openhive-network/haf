@@ -159,6 +159,7 @@ const_result_iterator::const_result_iterator(SPITupleTable *tt, int idx)
 
 const_result_iterator& const_result_iterator::operator++() {
     index++;
+    tuple = tuptable->vals[index];
     return *this;
 }
 
@@ -225,7 +226,7 @@ result execute_query(const std::string& query)
     return res;
 }
 
-    void result::display_column_names_and_types() const
+    void result::display_column_names_and_types(const std::string& label) const
     {
         if (!tuptable || !tuptable->tupdesc)
         {
@@ -235,7 +236,7 @@ result execute_query(const std::string& query)
 
         TupleDesc tupdesc = tuptable->tupdesc;
 
-        std::cout << "Column Names:" << std::endl;
+        std::cout << label << " " << "column names:" << std::endl;
         for (int col = 0; col < tupdesc->natts; ++col)
         {
             if (!tupdesc->attrs[col].attisdropped)  // Checking if the attribute is dropped
@@ -381,25 +382,11 @@ std::string fix_pxx_time(const std::string& s);
 // value coming from SPI is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
 std::string fix_pxx_hex(const std::string& s);
 
-static auto volatile stop_in_all = true;
-
-void stop_here(bool stop_indeed = false)
-{
-  if(stop_indeed)
-  {
-    wlog("PID= ${pid}", ("pid", getpid()));
-    while(stop_in_all)
-    {
-      int a = 0 ;
-      a=a;
-    }
-  }
-}
 
 csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
 
-  stop_here();
+
 
   try
   {
@@ -462,7 +449,7 @@ void set_open_args_other_parameters(open_args& db_open_args)
 
 void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_memory_bin)
 {
-  stop_here();
+
 
   try
   {
@@ -494,15 +481,14 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
 
 uint32_t consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session)
 {
-  stop_here();
-  
+
   return csp_session.db->head_block_num() + 1;
 }
 
 
 collected_account_balances_collection_t collect_current_all_accounts_balances_impl(csp_session_ref_type csp_session)
 {
-  stop_here();
+
 
   return collect_current_all_accounts_balances(csp_session);
 }
@@ -510,14 +496,14 @@ collected_account_balances_collection_t collect_current_all_accounts_balances_im
 
 collected_account_balances_collection_t collect_current_account_balances_impl(csp_session_ref_type csp_session, const std::vector<std::string>& accounts)
 {
-  stop_here();
+
   return collect_current_account_balances(csp_session, accounts);
 }
 
 
 bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint32_t first_block, uint32_t last_block)
 {
-  stop_here();
+
   try
   {
 
@@ -613,26 +599,133 @@ full_block_ptr postgres_block_log::read_full_block(uint32_t block_num)
 // so that the iterators always point to the transactions and operations belonging to the currently replayed block
 void postgres_block_log::prepare_postgres_data(uint32_t first_block, uint32_t last_block)
 {
-  stop_here();
+
   read_postgres_data(first_block, last_block);
   initialize_iterators();
 }
 
+void display_blocks(const spixx::result& blocks)
+{
+  if (blocks.empty()) 
+  {
+      std::cout << "No blocks data available." << std::endl;
+  }
+  else 
+  {
+    for (auto it = blocks.begin(); it != blocks.end(); ++it) 
+    {
+          int32_t num_value = (*it)["num"].as_int();
+          int32_t block_num_value = (*it)["block_num"].as_int();
+          int32_t id_value = (*it)["id"].as_int();
+
+          std::cout << "num: " << num_value << ", ";
+          std::cout << "block_num: " << block_num_value << ", ";
+          std::cout << "id: " << id_value << ", ";
+
+          std::cout.flush();
+
+          //name (varchar)
+          std::cout <<  "name: " << ((*it)["name"].c_str() ) << ", ";
+          std::cout.flush();
+
+          std::cout << "created_at (timestamp):" << ((*it).get_value("created_at")) << ", ";
+          std::cout.flush();
+
+        // Special handling for 'bytea' type columns
+          std::string hash_value = (*it)["hash"].as_hex_string();
+          std::cout << "hash: " << hash_value << ", ";
+
+
+          // for (const auto& col_name : column_names)
+          // {
+          //     spixx::field f = (*it)[col_name];
+          //     std::cout << col_name << ": " << f.c_str() << ", ";
+          // }            
+
+          std::cout << std::endl;
+
+    }
+  }
+}
+
+void display_transactions(const spixx::result& transactions)
+{
+  if (transactions.empty()) 
+  {
+      std::cout << "No  transactions data available." << std::endl;
+  }
+  else 
+  {
+    for (auto it = transactions.begin(); it != transactions.end(); ++it) 
+    {
+        //block_num (int4)
+        std::cout << "block_num: " << ((*it)["block_num"].as_int()) << ", ";
+
+        //trx_in_block (int2)
+        std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as_int()) << ", ";
+
+        //ref_block_num (int4)
+        std::cout << "ref_block_num: " << ((*it)["ref_block_num"].as_int()) << ", ";
+
+        //ref_block_prefix (int8)
+        std::cout << "ref_block_prefix: " << ((*it)["ref_block_prefix"].as_int()) << ", ";
+
+        //expiration (timestamp)
+        std::cout << "expiration: " << ((*it).get_value("expiration")) << ", ";
+
+        //trx_hash (bytea)
+        std::cout << "trx_hash: " << ((*it)["trx_hash"].as_hex_string()) << ", ";
+
+        //signature (bytea)
+        std::cout << "signature: " << ((*it)["signature"].as_hex_string()) << ", ";
+
+        std::cout << std::endl;
+
+    }
+  }
+}
+
+void display_operations(const spixx::result& operations)
+{
+  if (operations.empty()) 
+  {
+      std::cout << "No operations data available." << std::endl;
+  }
+  else 
+  {
+    for (auto it = operations.begin(); it != operations.end(); ++it) 
+    {
+      //block_num (int4)
+      std::cout << "block_num: " << ((*it)["block_num"].as_int()) << ", ";
+
+      //trx_in_block (int2)
+      std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as_int()) << ", ";
+  
+       //bin_body (operation)
+      std::cout << "bin_body: " << ((*it)["bin_body"].as_hex_string()) << ", ";
+
+      std::cout << std::endl;
+    }
+  }
+}
 
 void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_block)
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
 
-  // clang-format off
+
   auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
                               + std::to_string(first_block)
                               + " and num <= "
                               + std::to_string(last_block)
                               + " ORDER BY num ASC";
+  
+  
+  //spixx::result blocks;
   blocks = spixx::execute_query(blocks_query);
-  stop_here();
-  blocks.display_column_names_and_types();
+
+//  blocks.display_column_names_and_types("SPI blocks");
 
 // Column Names:
 //     num (int4)
@@ -656,46 +749,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 //     id (int4)
 //     name (varchar)
 
-    if (blocks.empty()) 
-    {
-        std::cout << "No data available." << std::endl;
-    }
-    else 
-    {
-      for (auto it = blocks.begin(); it != blocks.end(); ++it) 
-      {
-            int32_t num_value = (*it)["num"].as_int();
-            int32_t block_num_value = (*it)["block_num"].as_int();
-            int32_t id_value = (*it)["id"].as_int();
-
-            std::cout << "num: " << num_value << ", ";
-            std::cout << "block_num: " << block_num_value << ", ";
-            std::cout << "id: " << id_value << ", ";
-
-            std::cout.flush();
-
-            //name (varchar)
-            std::cout <<  "name: " << ((*it)["name"].c_str() ) << ", ";
-            std::cout.flush();
-
-            std::cout << "created_at (timestamp):" << ((*it).get_value("created_at")) << ", ";
-            std::cout.flush();
-
-         // Special handling for 'bytea' type columns
-            std::string hash_value = (*it)["hash"].as_hex_string();
-            std::cout << "hash: " << hash_value << ", ";
-
-
-            // for (const auto& col_name : column_names)
-            // {
-            //     spixx::field f = (*it)[col_name];
-            //     std::cout << col_name << ": " << f.c_str() << ", ";
-            // }            
-
-            std::cout << std::endl;
-
-      }
-    }
+  // display_blocks(blocks);
 
   auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
                               + std::to_string(first_block)
@@ -703,7 +757,19 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                               + std::to_string(last_block)
                               + " ORDER BY block_num, trx_in_block ASC";
   transactions = spixx::execute_query(transactions_query);
-
+//  transactions.display_column_names_and_types("SPI transactions");
+/*
+SPI transactions column names:
+    block_num (int4)
+    trx_in_block (int2)
+    ref_block_num (int4)
+    ref_block_prefix (int8)
+    expiration (timestamp)
+    trx_hash (bytea)
+    signature (bytea)
+*/  
+  // display_transactions(transactions);
+  
   auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
                               + std::to_string(first_block)
                               + " and block_num <= "
@@ -711,7 +777,18 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                               + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
                               + " ORDER BY id ASC";
   operations = spixx::execute_query(operations_query);
-  // clang-format on
+
+
+  // operations.display_column_names_and_types("SPI operations");
+
+/*
+SPI operations column names:
+    block_num (int4)
+    bin_body (operation)
+    trx_in_block (int2)
+*/
+  // display_operations(operations);
+
 
 
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
@@ -759,6 +836,33 @@ full_block_ptr postgres_block_log::block_to_fullblock(uint32_t block_num_from_sh
   return full_block;
 }
 
+void display_full_block(const full_block_ptr& full_block)
+{
+  for( const std::shared_ptr<hive::chain::full_transaction_type>& full_transaction : full_block->get_full_transactions() )
+  {
+
+    const hive::protocol::signed_transaction& trx = full_transaction->get_transaction();
+    {
+
+      auto t = fc::json::to_pretty_string( trx );
+      std::cout << t << std::endl;
+
+      for (const auto& op : trx.operations)
+      {
+        auto s = fc::json::to_pretty_string( op );
+
+        std::cout << s << std::endl;
+
+
+      } 
+
+    }
+    
+  }
+
+
+
+}
 
 void postgres_block_log::replay_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags)
 {
@@ -848,7 +952,6 @@ void handle_exception(std::exception_ptr exception_ptr)
 block_bin_t postgres_block_log::block_to_bin(const spixx::row& block)
 {
   auto block_num = block["num"].as_uint32_t();
-  stop_here();
   std::vector<hive::protocol::transaction_id_type> transaction_id_bins;
   std::vector<hive::protocol::signed_transaction> transaction_bins;
 
@@ -951,7 +1054,6 @@ block_bin_t build_block_bin(const spixx::row& block, std::vector<hive::protocol:
     from_variant(extensions, sb.extensions);
   }
 
-  stop_here();
 
   p2b_hex_to_signature_type("witness_signature", block,  sb.witness_signature);
 

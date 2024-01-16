@@ -53,8 +53,9 @@ public:
 };
 
 class row {
-private:
+protected:
     HeapTuple tuple;
+private:
     TupleDesc tupdesc;
 
 public:
@@ -95,7 +96,7 @@ public:
     [[nodiscard]] const_iterator begin() const noexcept;
     row operator[](size_t i) const noexcept;
 
-    void display_column_names_and_types() const;
+    void display_column_names_and_types(const std::string& label) const;
 };
 
 result execute_query(const std::string& query);
