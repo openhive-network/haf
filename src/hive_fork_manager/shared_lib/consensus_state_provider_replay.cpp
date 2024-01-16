@@ -83,7 +83,7 @@ std::string field::as_hex_string() const
     // Convert to hexadecimal
     std::ostringstream oss;
     for(size_t i = 0; i < length; i++) {
-        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(bytea_data[i]);
+        oss << std::hex << std::setw(2) << std::setfill('0') << (static_cast<int>(bytea_data[i])  & 0xFF);
     }
 
     return oss.str();
@@ -135,6 +135,19 @@ field row::operator[](const std::string& key) const {
     bool isN;
     Datum datum = SPI_getbinval(tuple, tupdesc, col, &isN);
     return field{datum, isN};
+}
+
+std::string row::get_value(const std::string& key) const 
+{
+  int col = SPI_fnumber(tupdesc, key.c_str());
+  if (col <= 0) {
+      spixx_elog(ERROR, "Column not found");
+  }
+  bool isN;
+  char *ch =  SPI_getvalue(tuple, tupdesc, col);
+  std::string value(ch);
+  pfree(ch);
+  return value;
 }
 
 // const_result_iterator implementation
@@ -362,11 +375,11 @@ bool operation_matches_block_transaction(const spixx::const_result_iterator& ope
 
 
 
-// value coming from pxx is without 'T' in the middle to be accepted in variant
-std::string fix_pxx_time(const spixx::field& t);
+// value coming from SPI is without 'T' in the middle to be accepted in variant
+std::string fix_pxx_time(const std::string& s);
 
-// value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
-const char* fix_pxx_hex(const spixx::field& h);
+// value coming from SPI is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
+std::string fix_pxx_hex(const std::string& s);
 
 static auto volatile stop_in_all = true;
 
@@ -618,7 +631,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                               + std::to_string(last_block)
                               + " ORDER BY num ASC";
   blocks = spixx::execute_query(blocks_query);
-  stop_here(true);
+  stop_here();
   blocks.display_column_names_and_types();
 
 // Column Names:
@@ -665,7 +678,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
             std::cout <<  "name: " << ((*it)["name"].c_str() ) << ", ";
             std::cout.flush();
 
-            std::cout << "created_at (timestamp):" << ((*it)["created_at"].c_str()) << ", ";
+            std::cout << "created_at (timestamp):" << ((*it).get_value("created_at")) << ", ";
             std::cout.flush();
 
          // Special handling for 'bytea' type columns
@@ -870,20 +883,25 @@ void hex_to_binary(const std::string& str, T& binary)
 template <typename T>
 void p2b_hex_to_ripemd160(const char* field_name, const T& block_or_transaction, fc::ripemd160& val)
 {
-  hex_to_binary(fix_pxx_hex(block_or_transaction[field_name]), val);
+  std::string key = block_or_transaction.get_value(std::string(field_name));
+  hex_to_binary(fix_pxx_hex(key), val);
 }
 
 
 template <typename T>
 void p2b_hex_to_signature_type(const char* field_name, const T& block_or_transaction, hive::chain::signature_type& val)
 {
-  hex_to_binary(fix_pxx_hex(block_or_transaction[field_name]), val);
+  std::string signature = block_or_transaction.get_value(std::string(field_name));
+
+  hex_to_binary(fix_pxx_hex(signature), val);
 }
 
 template <typename T>
 void p2b_time_to_time_point_sec(const char* field_name, const T& block_or_transaction, fc::time_point_sec& val)
 {
-  val = fc::time_point_sec::from_iso_string( fix_pxx_time(block_or_transaction[field_name]) );
+  std::string time = block_or_transaction.get_value(std::string(field_name));
+
+  val = fc::time_point_sec::from_iso_string( fix_pxx_time( time  )) ;
 
 }
 
@@ -932,6 +950,8 @@ block_bin_t build_block_bin(const spixx::row& block, std::vector<hive::protocol:
     fc::variant extensions = fc::json::from_string(json);
     from_variant(extensions, sb.extensions);
   }
+
+  stop_here();
 
   p2b_hex_to_signature_type("witness_signature", block,  sb.witness_signature);
 
@@ -1154,20 +1174,20 @@ full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num)
   return full_block_type::create_from_signed_block(sb);
 }
 
-// value coming from pxx is without 'T' in the middle to be accepted in our time consumer
-std::string fix_pxx_time(const spixx::field& t)
+// value coming from SPI is without 'T' in the middle to be accepted in our time consumer
+std::string fix_pxx_time(const std::string& s)
 {
   const auto T_letter_position_in_ascii_time_string = 10;
-  std::string r = t.c_str();
+  std::string r = s;
   r[T_letter_position_in_ascii_time_string] = 'T';
   return r;
 }
 
-// value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
-const char* fix_pxx_hex(const spixx::field& h)
+// value coming from SPI is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
+std::string fix_pxx_hex(const std::string& s)
 {
   const auto backslash_x_prefix_length = 2;
-  return h.c_str() + backslash_x_prefix_length;
+  return s.substr(backslash_x_prefix_length);
 }
 
 

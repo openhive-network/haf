@@ -60,6 +60,7 @@ private:
 public:
     row(HeapTuple t, TupleDesc td);
     field operator[](const std::string& key) const;
+    std::string get_value(const std::string& key) const;
 };
 
 class const_result_iterator : public row {
