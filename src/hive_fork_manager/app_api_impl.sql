@@ -172,23 +172,28 @@ DECLARE
     __context_event_id hive.events_queue.id%TYPE := 0;
     __next_bff_event_id BIGINT;
     __event_block_num INT;
+    __lead_context hive.context_name := _contexts[ 1 ];
 BEGIN
+    SELECT hc.events_id INTO __context_event_id
+    FROM hive.contexts as hc
+    WHERE hc.name = __lead_context;
+
     SELECT heq.id INTO __next_bff_event_id
     FROM hive.events_queue heq
     WHERE heq.id > __context_event_id
-        AND heq.event = 'BACK_FROM_FORK'
+      AND heq.event = 'BACK_FROM_FORK'
     ORDER BY heq.id
     LIMIT 1
     ;
 
     -- first find a newer massive_sync nearest current block
-    SELECT heq.id, hc.events_id, hc.irreversible_block, heq.event, heq.block_num
-    INTO __next_irreversible_event_id, __context_event_id, __irreversible_block_num, __event_type, __event_block_num
+    SELECT heq.id, heq.block_num
+    INTO __next_irreversible_event_id, __event_block_num
     FROM hive.events_queue heq
-    JOIN hive.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
+             JOIN hive.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
     WHERE ( heq.event = 'MASSIVE_SYNC' OR heq.event = 'NEW_IRREVERSIBLE' )
       AND heq.id < COALESCE( __next_bff_event_id, hive.unreachable_event_id() )
-      AND hc.name = _contexts[1]
+      AND hc.name = __lead_context
     ORDER BY heq.id DESC
     LIMIT 1;
 
