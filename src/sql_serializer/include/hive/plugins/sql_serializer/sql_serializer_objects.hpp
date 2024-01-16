@@ -136,8 +136,9 @@ namespace hive
           };
 
           inline uint64_t get_operation_id( uint32_t _block, const operation& _op, uint32_t _number_in_block ) {
-            // || block | type | seq ||
-            // || 32b   | 8b   | 24b ||
+            //msb.....................lsb
+            // || block | seq | type ||
+            // ||  32b  | 24b |  8b  ||
             constexpr auto  TYPE_ID_LIMIT = 255; // 2^8-1
             constexpr auto NUMBER_IN_BLOCK_LIMIT = 16777215; // 2^24-1
             FC_ASSERT(  _op.which() <= TYPE_ID_LIMIT, "Operation type is to large to fit in 8 bits" );
