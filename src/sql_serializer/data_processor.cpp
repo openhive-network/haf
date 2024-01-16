@@ -213,9 +213,9 @@ data_processor::handle_exception( std::exception_ptr exception_ptr ) {
     kill_node();
     throw;
   }
-  catch(const pqxx::pqxx_exception& ex)
+  catch(const pqxx::failure& ex)
   {
-    elog("Data processor ${d} detected SQL execution failure: ${e}", ("d", _description)("e", ex.base().what()));
+    elog("Data processor ${d} detected SQL execution failure: ${e}", ("d", _description)("e", ex.what()));
     kill_node();
     throw;
   }
