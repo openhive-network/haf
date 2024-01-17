@@ -1,10 +1,11 @@
 
+
 // /home/haf_admin/playground/haf/hive/libraries/fc/include/fc/log/logger.hpp
 // /usr/include/postgresql/14/server/utils/elog.h
 
 #include "consensus_state_provider_replay.hpp"
-#include <psql_utils/postgres_includes.hpp>
-#include "psql_utils/pg_cxx.hpp"
+#include "spixx.hpp"
+
 #include "time_probe.hpp"
 //TODO(mtlk) -- comment these includes
 #include <fc/io/json.hpp>
@@ -16,17 +17,6 @@
 
 #include <limits>
 
-void my_func()
-{
-  PsqlTools::PsqlUtils::pg_call_cxx([]()
-  {
-      int a = 0;
-      a=a;
-
-  }, ERRCODE_DATA_EXCEPTION);
-}
-
-#include "spixx.hpp"
 
 
 

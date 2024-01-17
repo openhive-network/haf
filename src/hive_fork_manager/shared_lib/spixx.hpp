@@ -1,23 +1,30 @@
 #pragma once
 
+#include <cstdint>
 
-#define SPIXX_PURE __attribute__((pure))
+typedef uintptr_t Datum;
+typedef struct SPITupleTable;
 
-#include <psql_utils/postgres_includes.hpp>
-#include "psql_utils/pg_cxx.hpp"
+extern "C" 
+{
+  struct TupleDescData;
+  typedef TupleDescData* TupleDesc;
+  struct HeapTupleData;
+  typedef HeapTupleData *HeapTuple;
+  int SPI_connect();
+  int SPI_finish();
+} // extern "C"
 
-#include "postgres.h"
-#include "executor/spi.h"
-#include "catalog/pg_type.h"
-#include "access/tupdesc.h"
 #include <string>
 
-namespace spixx {
+namespace spixx
+{
 
-class field {
+class field
+{
 public:
     Datum datum;
-public:    
+public:
     bool isNull;
 
 public:
@@ -34,17 +41,15 @@ public:
 
 private:
     size_t bytea_length() const;
-
 };
 
 
-
-class binarystring {
+class binarystring
+{
 private:
     const field& fld;
 
 public:
-    //[[deprecated("Use std::byte for binary data.")]]
     explicit binarystring(const field&);
 
     using char_type = unsigned char;
@@ -66,7 +71,10 @@ public:
     std::string get_value(const std::string& key) const;
 };
 
-class const_result_iterator : public row {
+// The iterator is also the row - it mimics the pqxx behavior where
+// you don't need to use dereferencing to access row members on the result iterator
+class const_result_iterator : public row
+{
 private:
     SPITupleTable *tuptable;
     int index;
@@ -74,7 +82,6 @@ private:
 public:
     const_result_iterator(SPITupleTable *tt, int idx);
     const_result_iterator();
-
 
     const_result_iterator& operator++();
 
@@ -86,11 +93,11 @@ public:
 class result {
 private:
     SPITupleTable *tuptable;
-    uint64 proc;
+    uint64_t proc;
 
 public:
     result();
-    result(SPITupleTable *t, TupleDesc td, uint64 p);
+    result(SPITupleTable *t, TupleDesc td, uint64_t p);
 
     using const_iterator = const_result_iterator;
     [[nodiscard]] const_iterator end() const noexcept;
