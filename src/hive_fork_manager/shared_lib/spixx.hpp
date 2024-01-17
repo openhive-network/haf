@@ -3,7 +3,7 @@
 #include <cstdint>
 
 typedef uintptr_t Datum;
-typedef struct SPITupleTable;
+struct SPITupleTable;
 
 extern "C" 
 {
