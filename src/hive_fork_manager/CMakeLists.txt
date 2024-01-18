@@ -70,5 +70,4 @@ ADD_DEPENDENCIES( extension.${EXTENSION_NAME} query_supervisor )
 
 MESSAGE(STATUS "Detected root project git revision: ${HAF_GIT_REVISION_SHA}")
 
-ADD_SUBDIRECTORY( state_providers/consensus_state_provider_test_driver )
 
