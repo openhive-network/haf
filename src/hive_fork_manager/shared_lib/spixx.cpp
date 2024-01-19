@@ -106,7 +106,8 @@ field row::operator[](const std::string &key) const
   int col = SPI_fnumber(tupdesc, key.c_str());
   if (col <= 0)
   {
-    spixx_elog(ERROR, "Column not found");
+    std::string msg = std::string("Column ") + key + " not found";
+    spixx_elog(ERROR, msg.c_str());
   }
   bool isN;
   Datum datum = SPI_getbinval(tuple, tupdesc, col, &isN);
@@ -118,7 +119,8 @@ std::string row::get_value(const std::string &key) const
   int col = SPI_fnumber(tupdesc, key.c_str());
   if (col <= 0)
   {
-    spixx_elog(ERROR, "Column not found");
+    std::string msg = std::string("Column ") + key + " not found";
+    spixx_elog(ERROR, msg.c_str());
   }
   char *ch = SPI_getvalue(tuple, tupdesc, col);
   std::string value(ch);

@@ -376,11 +376,9 @@ void display_blocks(const spixx::result& blocks)
     for (auto it = blocks.begin(); it != blocks.end(); ++it) 
     {
           int32_t num_value = (*it)["num"].as_int();
-          int32_t block_num_value = (*it)["block_num"].as_int();
           int32_t id_value = (*it)["id"].as_int();
 
           std::cout << "num: " << num_value << ", ";
-          std::cout << "block_num: " << block_num_value << ", ";
           std::cout << "id: " << id_value << ", ";
 
           std::cout.flush();
@@ -446,6 +444,33 @@ void display_transactions(const spixx::result& transactions)
   }
 }
 
+void display_operation(const spixx::const_result_iterator& it)
+    {
+      //block_num (int4)
+      std::cout << "block_num: " << ((*it)["block_num"].as_int()) << ", ";
+
+      //trx_in_block (int2)
+      std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as_int()) << ", ";
+  
+       //bin_body (operation)
+      std::cout << "bin_body: " << ((*it)["bin_body"].as_hex_string()) << ", ";
+    std::cout << std::endl;
+
+    std::cout << "pretty_bin_body: ";
+    const spixx::const_result_iterator& operation = it;
+
+    spixx::binarystring bs(operation["bin_body"]);
+
+    const unsigned char* raw_data = bs.data();
+    auto data_length = bs.size();
+
+    const auto& op  = (fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data), data_length));
+    auto s = fc::json::to_pretty_string( op );
+    std::cout << s;
+      std::cout << std::endl;
+
+}
+
 void display_operations(const spixx::result& operations)
 {
   if (operations.empty()) 
@@ -456,16 +481,7 @@ void display_operations(const spixx::result& operations)
   {
     for (auto it = operations.begin(); it != operations.end(); ++it) 
     {
-      //block_num (int4)
-      std::cout << "block_num: " << ((*it)["block_num"].as_int()) << ", ";
-
-      //trx_in_block (int2)
-      std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as_int()) << ", ";
-  
-       //bin_body (operation)
-      std::cout << "bin_body: " << ((*it)["bin_body"].as_hex_string()) << ", ";
-
-      std::cout << std::endl;
+      display_operation(it);
     }
   }
 }
