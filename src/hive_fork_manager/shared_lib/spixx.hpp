@@ -34,14 +34,14 @@ struct field
   [[nodiscard]] std::string as_hex_string() const;
   [[nodiscard]] std::string as_timestamp_string() const;
 
-private:
+public: //todo mtlk for binary string - is binary string needed ?
   [[nodiscard]] size_t bytea_length() const;
 };
 
 class binarystring
 {
 private:
-  const field& fld;
+  const field fld;
 
 public:
   explicit binarystring(const field&);

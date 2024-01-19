@@ -367,6 +367,7 @@ void postgres_block_log::prepare_postgres_data(uint32_t first_block, uint32_t la
 
 void display_blocks(const spixx::result& blocks)
 {
+  std::cout << "start of display_blocks" << std::endl; 
   if (blocks.empty()) 
   {
       std::cout << "No blocks data available." << std::endl;
@@ -405,10 +406,12 @@ void display_blocks(const spixx::result& blocks)
 
     }
   }
+  std::cout << "end of display_blocks" << std::endl; 
 }
 
 void display_transactions(const spixx::result& transactions)
 {
+  std::cout << "start of display_transactions" << std::endl; 
   if (transactions.empty()) 
   {
       std::cout << "No  transactions data available." << std::endl;
@@ -442,21 +445,46 @@ void display_transactions(const spixx::result& transactions)
 
     }
   }
+  std::cout << "End of display_transactions" << std::endl; 
 }
 
 void display_operation(const spixx::const_result_iterator& it)
-    {
-      //block_num (int4)
-      std::cout << "block_num: " << ((*it)["block_num"].as_int()) << ", ";
+{
+    std::cout.flush();
 
-      //trx_in_block (int2)
-      std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as_int()) << ", ";
-  
-       //bin_body (operation)
-      std::cout << "bin_body: " << ((*it)["bin_body"].as_hex_string()) << ", ";
+    if( ((*it)["block_num"].as_int()) == 556705)
+    {
+      #ifndef NDEBUG
+       []()
+      {
+        static volatile bool stop_in = true;
+        wlog("read_postgres_dataaa ");
+        wlog("pid= ${pid}", ("pid" , getpid() ));
+
+        while(stop_in)
+        {
+          int a = 0;
+          a=a;
+        }
+      }();
+      #endif      
+    }
+
+
+    //block_num (int4)
+    std::cout << "block_num: " << ((*it)["block_num"].as_int()) << ", ";
+    std::cout.flush();
+
+    //trx_in_block (int2)
+    std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as_int()) << ", ";
+    std::cout.flush();
+
+      //bin_body (operation)
+    std::cout << "bin_body: " << ((*it)["bin_body"].as_hex_string()) << ", ";
     std::cout << std::endl;
 
     std::cout << "pretty_bin_body: ";
+    std::cout.flush();
     const spixx::const_result_iterator& operation = it;
 
     spixx::binarystring bs(operation["bin_body"]);
@@ -466,13 +494,17 @@ void display_operation(const spixx::const_result_iterator& it)
 
     const auto& op  = (fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data), data_length));
     auto s = fc::json::to_pretty_string( op );
+    std::cout.flush();
     std::cout << s;
-      std::cout << std::endl;
+    std::cout.flush();
+    std::cout << std::endl;
 
 }
 
 void display_operations(const spixx::result& operations)
 {
+  std::cout << "start of display_operations" << std::endl; 
+
   if (operations.empty()) 
   {
       std::cout << "No operations data available." << std::endl;
@@ -481,14 +513,20 @@ void display_operations(const spixx::result& operations)
   {
     for (auto it = operations.begin(); it != operations.end(); ++it) 
     {
+      std::cout << "Display single operation:" << std::endl;
       display_operation(it);
     }
   }
+  std::cout << "end of display_operations" << std::endl; 
+
 }
 
 void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_block)
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
+
+  //first_block = 556703;
+  //last_block = 556705;
 
 
 
@@ -502,7 +540,6 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
   //spixx::result blocks;
   blocks = spixx::execute_query(blocks_query);
 
-//  blocks.display_column_names_and_types("SPI blocks");
 
 // Column Names:
 //     num (int4)
@@ -526,7 +563,6 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 //     id (int4)
 //     name (varchar)
 
-  // display_blocks(blocks);
 
   auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
                               + std::to_string(first_block)
@@ -534,7 +570,6 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                               + std::to_string(last_block)
                               + " ORDER BY block_num, trx_in_block ASC";
   transactions = spixx::execute_query(transactions_query);
-//  transactions.display_column_names_and_types("SPI transactions");
 /*
 SPI transactions column names:
     block_num (int4)
@@ -545,7 +580,6 @@ SPI transactions column names:
     trx_hash (bytea)
     signature (bytea)
 */  
-  // display_transactions(transactions);
   
   auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
                               + std::to_string(first_block)
@@ -556,7 +590,6 @@ SPI transactions column names:
   operations = spixx::execute_query(operations_query);
 
 
-  // operations.display_column_names_and_types("SPI operations");
 
 /*
 SPI operations column names:
@@ -564,8 +597,19 @@ SPI operations column names:
     bin_body (operation)
     trx_in_block (int2)
 */
-  // display_operations(operations);
 
+
+  // if(first_block <= 556703 && 556705 <= last_block)
+  // {
+  //   blocks.display_column_names_and_types("SPI blocks");
+  //   display_blocks(blocks);
+
+  //   transactions.display_column_names_and_types("SPI transactions");
+  //   display_transactions(transactions);
+
+  //   operations.display_column_names_and_types("SPI operations");
+  //   display_operations(operations);
+  // }
 
 
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
@@ -644,6 +688,27 @@ void display_full_block(const full_block_ptr& full_block)
 void postgres_block_log::replay_full_block(haf_state_database& db, const full_block_ptr& fb_ptr, uint64_t skip_flags)
 {
   replay_full_block_time_probe.start();
+
+//   if(fb_ptr->get_block_num() >= 556704)
+//   {
+//       wlog("block_num= ${block_num}", ("block_num" , fb_ptr->get_block_num() ));
+//       display_full_block(fb_ptr);
+// #ifndef NDEBUG
+//       []()
+//       {
+//         static volatile bool stop_in = true;
+//         wlog("read_postgres_dataaa ");
+//         wlog("pid= ${pid}", ("pid" , getpid() ));
+
+//         while(stop_in)
+//         {
+//           int a = 0;
+//           a=a;
+//         }
+//       }();
+// #endif      
+//   }
+
 
   db.apply_haf_block(fb_ptr, skip_flags);
 
@@ -928,9 +993,13 @@ std::vector<hive::protocol::operation> postgres_block_log::operations2bins(uint3
   std::vector<hive::protocol::operation> operation_bins;
   if(is_current_operation(block_num, trx_in_block))
   {
-    for(; current_operation_it != operations.end() && operation_matches_block_transaction(current_operation_it, block_num, trx_in_block);
+        for(; current_operation_it != operations.end() && operation_matches_block_transaction(current_operation_it, block_num, trx_in_block);
         ++current_operation_it)
     {
+      
+      // //if(block_num >= 556704)
+      //   display_operation(current_operation_it);
+
       add_operation_bin(current_operation_it, operation_bins);
     }
   }

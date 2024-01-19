@@ -87,16 +87,22 @@ const char *field::c_str() const
   return text_to_cstring(DatumGetTextP(datum));
 }
 
-binarystring::binarystring(const field &f) : fld(f) {}
+binarystring::binarystring(const field &f) 
+  :
+    fld(f) 
+  {}
 
 binarystring::value_type const *binarystring::data() const noexcept
 {
-  return (value_type const *)VARDATA_ANY(fld.datum);
+  return reinterpret_cast<const value_type*>(fld.c_str());
+  //return (value_type const *)VARDATA_ANY(fld.datum);
 }
 
 binarystring::size_type binarystring::size() const noexcept
 {
-  return VARSIZE_ANY_EXHDR(fld.datum);
+  size_t length = fld.bytea_length();
+  return length;
+  //return VARSIZE_ANY_EXHDR(fld.datum);
 }
 
 row::row(HeapTuple t, TupleDesc td) : tuple(t), tupdesc(td) {}
