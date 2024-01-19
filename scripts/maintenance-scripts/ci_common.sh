@@ -8,6 +8,7 @@ export SETUP_SCRIPTS_PATH="${REPO_DIR}/scripts"
 
 export HIVED_PATH="/home/hived/bin/hived"
 export COMPRESS_BLOCK_LOG_PATH="/home/hived/bin/compress_block_log"
+export BLOCK_LOG_UTIL_PATH="/home/hived/bin/block_log_util"
 export GET_DEV_KEY_PATH="/home/hived/bin/get_dev_key"
 export CLI_WALLET_PATH="/home/hived/bin/cli_wallet"
 

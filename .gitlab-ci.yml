@@ -209,6 +209,7 @@ haf_system_tests_mirrornet:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVED_PATH: "$$BINARY_CACHE_PATH/hived"
     COMPRESS_BLOCK_LOG_PATH: "$BINARY_CACHE_PATH/compress_block_log"
+    BLOCK_LOG_UTIL_PATH: "$BINARY_CACHE_PATH/block_log_util"
     GET_DEV_KEY_PATH: "$BINARY_CACHE_PATH/get_dev_key"
     CLI_WALLET_PATH: "$BINARY_CACHE_PATH/cli_wallet"
     DB_NAME: haf_block_log
