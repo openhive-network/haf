@@ -9,7 +9,6 @@ from haf_local_tools.system.haf import (
 from haf_local_tools.system.haf.mirrornet.constants import (
     CHAIN_ID,
     SKELETON_KEY,
-    TIMESTAMP_5M,
 )
 
 
@@ -22,7 +21,9 @@ def test_massive_sync(
 
     mirrornet_witness_node.run(
         load_snapshot_from=snapshot_path,
-        time_offset=TIMESTAMP_5M,
+        time_offset=block_log_5m.get_head_block_time(
+            serialize=True, serialize_format=tt.TimeFormats.TIME_OFFSET_FORMAT
+        ),
         wait_for_live=True,
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],

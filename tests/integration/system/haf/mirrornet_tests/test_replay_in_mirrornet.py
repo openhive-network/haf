@@ -1,5 +1,7 @@
 import pytest
 
+import test_tools as tt
+
 from haf_local_tools.system.haf import (
     assert_are_blocks_sync_with_haf_db,
     assert_are_indexes_restored,
@@ -13,7 +15,6 @@ from haf_local_tools.system.haf.mirrornet.constants import (
     TRANSACTION_IN_4500000_BLOCK,
     TRANSACTION_IN_4500001_BLOCK,
     TRANSACTION_IN_5000000_BLOCK,
-    TIMESTAMP_5M,
 )
 
 
@@ -30,9 +31,13 @@ def test_replay(witness_node_with_haf, block_log_5m_path, psql_index_threshold):
 
     witness_node_with_haf.config.psql_index_threshold = psql_index_threshold
 
+    block_log_5m = tt.BlockLog(block_log_5m_path)
+
     witness_node_with_haf.run(
-        replay_from=block_log_5m_path,
-        time_offset=TIMESTAMP_5M,
+        replay_from=block_log_5m,
+        time_offset=block_log_5m.get_head_block_time(
+            serialize=True, serialize_format=tt.TimeFormats.TIME_OFFSET_FORMAT
+        ),
         wait_for_live=True,
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],

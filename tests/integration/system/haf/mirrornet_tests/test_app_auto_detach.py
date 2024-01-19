@@ -7,7 +7,6 @@ import test_tools as tt
 from haf_local_tools.system.haf.mirrornet.constants import (
     SKELETON_KEY,
     CHAIN_ID,
-    TIMESTAMP_1M,
 )
 
 from sqlalchemy.pool import NullPool
@@ -62,7 +61,9 @@ def test_app_autodetach(witness_node_with_haf, block_log_5m_path, tmp_path):
 
     witness_node_with_haf.run(
         replay_from=block_log_1m,
-        time_offset=TIMESTAMP_1M,
+        time_offset=block_log_1m.get_head_block_time(
+            serialize=True, serialize_format=tt.TimeFormats.TIME_OFFSET_FORMAT
+        ),
         wait_for_live=True,
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],

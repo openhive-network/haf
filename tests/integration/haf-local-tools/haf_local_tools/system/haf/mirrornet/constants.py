@@ -38,6 +38,3 @@ WITNESSES_5M: list[str] = [
     "rabbit-63",
     "pfunk",
 ]
-
-TIMESTAMP_5M: str = "@2016-09-15 19:47:24"
-TIMESTAMP_1M: str = "@2016-04-29 04:12:03"
