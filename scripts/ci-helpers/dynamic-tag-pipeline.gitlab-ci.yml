@@ -1,0 +1,246 @@
+stages:
+  - build_and_test_phase_1
+  - build_and_test_phase_2
+  - cleanup
+
+variables:
+  DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
+  BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
+  SNAPSHOTS_PATH: /cache/snapshots_pipeline_${CI_PIPELINE_ID}
+  BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /cache/block_log_5m_mirrornet
+
+include:
+  - local: /scripts/ci-helpers/templates.gitlab-ci.yml
+
+######## Templates ########
+
+# Moved to scripts/ci-helpers/templates.gitlab-ci.yml
+
+.haf-service:
+  services:
+    - name: $HAF_IMAGE_NAME
+      alias: haf-instance
+      variables:
+        # Allow access from any network to eliminate CI IP addressing problems when hfm runs as service
+        PG_ACCESS: |
+                    "host    all              haf_admin        0.0.0.0/0    trust"
+        DATA_SOURCE: "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
+        LOG_FILE: $CI_JOB_NAME.log
+      command: ["--replay-blockchain", "--stop-replay-at-block=5000000"]
+
+######## End templates ########
+
+######## Build and test phase 1 ########
+
+rewrite-dotenv-and-extract-binaries-mainnet:
+  extends: .rewrite-dotenv-and-extract-binaries
+  stage: build_and_test_phase_1
+  variables:
+    DOT_ENV_FILENAME: "docker_image_name"
+    DOTENV_VAR_PREFIX: "HAF"
+    DOTENV_VAR_NAME: "MAINNET_HAF"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
+
+haf_image_build_mirrornet:
+  extends: .haf_image_build
+  variables:
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
+    HIVE_NETWORK_TYPE: mirrornet
+
+dump_snapshot_5m_mirrornet:
+  extends: 
+    - .job-defaults
+    - .dynamic-runner-job-template
+  stage: build_and_test_phase_1
+  needs:
+    - job: haf_image_build_mirrornet
+      artifacts: true
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  variables:
+    MIRRORNET_WORKING_DIR: "$CI_PROJECT_DIR/mirrornet_witness_node"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
+    HIVED_PATH: "$BINARY_CACHE_PATH/hived"
+  script:
+    #Prepare environment for hived run
+    - cd $CI_PROJECT_DIR/docker
+    - mkdir $MIRRORNET_WORKING_DIR
+    - cd $MIRRORNET_WORKING_DIR
+    - mkdir blockchain
+    - cd blockchain
+    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log .
+    #Prepare snapshot storage
+    - mkdir $SNAPSHOTS_PATH
+    - cd $SNAPSHOTS_PATH
+    - mkdir 5m_mirrornet
+    #Prepare snapshot
+    - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --exit-before-sync --replay
+    - echo "plugin = state_snapshot" >> $MIRRORNET_WORKING_DIR/config.ini
+    - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --dump-snapshot=snapshot --exit-before-sync
+    #Store snapshot in cache
+    - mv $MIRRORNET_WORKING_DIR/blockchain $SNAPSHOTS_PATH/5m_mirrornet
+    - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot $SNAPSHOTS_PATH/5m_mirrornet
+
+prepare_haf_data:
+  extends: 
+    - .prepare_haf_data_5m
+    - .dynamic-runner-job-template
+  needs:
+    - job: rewrite-dotenv-and-extract-binaries-mainnet
+      artifacts: true
+  stage: build_and_test_phase_1
+  variables:
+    HIVE_NETWORK_TYPE: mainnet
+    BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
+    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+
+######## End build and test phase 1 ########
+
+######## Build and test phase 2 ########
+
+haf_system_tests_mirrornet:
+  stage: build_and_test_phase_2
+  extends: 
+    - .pytest_based
+    - .dynamic-runner-job-template
+    - .hfm-only-service
+  timeout: 2h
+  needs:
+    - job: haf_image_build_mirrornet
+      artifacts: true
+    - job: dump_snapshot_5m_mirrornet
+      artifacts: false
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  variables:
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
+    HIVED_PATH: "$$BINARY_CACHE_PATH/hived"
+    COMPRESS_BLOCK_LOG_PATH: "$BINARY_CACHE_PATH/compress_block_log"
+    BLOCK_LOG_UTIL_PATH: "$BINARY_CACHE_PATH/block_log_util"
+    GET_DEV_KEY_PATH: "$BINARY_CACHE_PATH/get_dev_key"
+    CLI_WALLET_PATH: "$BINARY_CACHE_PATH/cli_wallet"
+    DB_NAME: haf_block_log
+    DB_URL: "postgresql://haf_admin@hfm-only-instance:5432/$DB_NAME"
+  script:
+    # check that postgres service is ready
+    - psql "$DB_URL" -c "SELECT 1"
+    - mkdir $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
+    # This cp and call to compress_block_log is to keep backcompatibility with pipelines on master branch (where still 1.27.X line is present until next HF will apply),
+    # where nodes does not support new format of block_log.artifacts file;
+    # Issue: https://gitlab.syncad.com/hive/haf/-/issues/151
+    # copy block_log to tmp location
+    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
+    # copy block_log and generate new artifacts with compress_block_log util
+    - time $COMPRESS_BLOCK_LOG_PATH --input-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log/block_log --output-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --decompress
+    # drop tmp location
+    - rm -r $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
+    # prepare environment and run tests
+    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
+    - pytest --junitxml report.xml --timeout=3600 --block-log-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --snapshot-path=$SNAPSHOTS_PATH/5m_mirrornet/snapshot -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
+  artifacts:
+    paths:
+    - "**/generated_during_*"
+    - "**/generated_by_package_fixtures"
+    - tests/integration/system/haf/mirrornet_tests/report.xml
+    exclude:
+    - "**/generated_during_*/**/block_log"
+    - "**/generated_during_*/**/block_log.artifacts"
+    - "**/generated_during_*/**/shared_memory.bin"
+    - "**/generated_during_*/**/*.sst"
+    reports:
+      junit: tests/integration/system/haf/mirrornet_tests/report.xml
+    when: always
+    expire_in: 1 week
+  interruptible: true
+
+dead_app_auto_detach:
+  extends: 
+    - .job-defaults
+    - .dynamic-runner-job-template
+  stage: build_and_test_phase_2
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  needs:
+    - job: prepare_haf_data
+      artifacts: true
+  services:
+    - name: $HAF_IMAGE_NAME
+      alias: haf-instance
+      variables:
+        # Allow access from any network to eliminate CI IP addressing problems when hfm runs as service
+        PG_ACCESS: |
+                    "host    all              haf_admin        0.0.0.0/0    trust"
+                    "host    all              hived            0.0.0.0/0    trust"
+                    "host    all              test_app_owner   0.0.0.0/0    trust"
+
+        DATA_SOURCE: "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
+        LOG_FILE: $CI_JOB_NAME.log
+      command: ["--replay-blockchain", "--stop-replay-at-block=1000000"]
+  variables:
+    HIVED_UID: $HIVED_UID
+    HAF_COMMIT: $HAF_COMMIT
+  script:
+    - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
+  artifacts:
+    paths:
+    - scenario*.log
+
+start_haf_as_service:
+  extends: 
+    - .job-defaults
+    - .dynamic-runner-job-template
+    - .haf-service
+  stage: build_and_test_phase_2
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  needs:
+    - job: prepare_haf_data
+      artifacts: true
+  variables:
+    HAF_POSTGRES_URL: postgresql://haf_admin@haf-instance:5432/haf_block_log
+    HIVED_UID: $HIVED_UID
+    HAF_COMMIT: $HAF_COMMIT
+  script:
+    - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' haf-instance:8091
+  after_script:
+    - rm docker_entrypoint.log -f
+    - cp "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir/$CI_JOB_NAME.log" "$CI_PROJECT_DIR/docker_entrypoint.log"
+  artifacts:
+    paths:
+    - docker_entrypoint.log
+
+######## End build and test phase 2 ########
+
+######## Cleanup ########
+
+cleanup_haf_cache_manual:
+  extends: 
+    - .cleanup_cache_manual_template
+    - .dynamic-runner-job-template
+  stage: cleanup
+  variables:
+    CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
+
+cleanup_haf_snapshot_from_cache:
+  extends: 
+    - .cleanup_cache_manual_template
+    - .dynamic-runner-job-template
+  stage: cleanup
+  variables:
+    CLEANUP_PATH_PATTERN: "/cache/snapshots_pipeline_*"
+
+cleanup_old_haf_cache:
+  extends: 
+    - .cleanup_old_cache_template
+    - .dynamic-runner-job-template
+  stage: cleanup
+  variables:
+    CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
+  tags:
+    - data-cache-storage
+
+######## End cleanup ########

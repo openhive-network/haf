@@ -1,0 +1,44 @@
+include:
+  - template: Workflows/Branch-Pipelines.gitlab-ci.yml
+  - local: /scripts/ci-helpers/prepare_data_image_job.yml
+  - project: hive/common-ci-configuration
+    ref: a3e97d90268154fae7933ea98e50e3c1c7c72d43
+    file:
+      - /templates/python_projects.gitlab-ci.yml
+      - /templates/dynamic_tag_jobs.gitlab-ci.yml
+      - /templates/cache_cleanup.gitlab-ci.yml
+
+.haf_image_build:
+  extends: .prepare_haf_image
+  stage: build_and_test_phase_1
+  tags:
+    - public-runner-docker
+    - hived-for-tests
+
+.pytest_based:
+  extends: .job-defaults
+  before_script:
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
+      python3 -m venv --system-site-packages venv/
+      . venv/bin/activate
+      (cd $CI_PROJECT_DIR/tests/integration/haf-local-tools && poetry install)
+      echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
+
+.hfm-only-service:
+  services:
+    - name: $HAF_IMAGE_NAME
+      alias: hfm-only-instance
+      variables:
+        # Allow access from any network to eliminate CI IP addressing problems when hfm runs as service
+        PG_ACCESS: |
+                    "host    all              haf_admin        0.0.0.0/0    trust"
+                    "host    all              test_app_owner   0.0.0.0/0    trust"
+                    "host    all              hived            0.0.0.0/0    trust"
+                    "host    all              all              0.0.0.0/0    scram-sha-256"
+      command: [ "--execute-maintenance-script=${HAF_SOURCE_DIR}/scripts/maintenance-scripts/sleep_infinity.sh" ]
+
+.rewrite-dotenv-and-extract-binaries:
+  extends: .rewrite-dotenv-and-extract-binaries-template
+  tags:
+    - public-runner-docker
