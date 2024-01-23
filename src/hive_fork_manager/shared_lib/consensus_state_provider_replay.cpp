@@ -273,14 +273,6 @@ bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint
 
   cout << "Start consensus_state_provider_replay_impl mtlk" << endl;
 
-  if(SPI_connect() == SPI_OK_CONNECT)
-  {
-    cout << "SPI_OK_CONNECT" << endl;
-  }
-  else
-  {
-    cout << "SPI_ERROR_CONNECT" << endl;
-  }
 
   try
   {
@@ -305,7 +297,6 @@ bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint
   
     cout << "End consensus_state_provider_replay_impl mtlk" << endl;
 
-    SPI_finish();
   
     return true;
   }
@@ -318,7 +309,6 @@ bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint
   }
 
   cout << "End consensus_state_provider_replay_impl with error mtlk" << endl;
-  SPI_finish();
   return false;
 }
 
@@ -332,9 +322,20 @@ void undo_blocks(csp_session_ref_type csp_session, uint32_t shift)
   }
 }
 
+}
+
+
+#include "spixx_impl.hpp"
+
+namespace consensus_state_provider
+{
+
 void postgres_block_log::run(uint32_t first_block, uint32_t last_block)
 {
+  consensus_state_provider::postgres_database_helper_spi::spi_connect_guard guard;
+
   measure_before_run();
+
 
   prepare_postgres_data(first_block, last_block);
   replay_blocks();
@@ -344,6 +345,7 @@ void postgres_block_log::run(uint32_t first_block, uint32_t last_block)
 
 full_block_ptr postgres_block_log::read_full_block(uint32_t block_num)
 {
+  consensus_state_provider::postgres_database_helper_spi::spi_connect_guard guard;
 
   prepare_postgres_data(block_num, block_num);
   return block_to_fullblock(block_num, *blocks.begin());

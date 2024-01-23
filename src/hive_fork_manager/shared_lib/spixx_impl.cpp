@@ -68,6 +68,22 @@ namespace consensus_state_provider
     return res;
   }
 
+  postgres_database_helper_spi::spi_connect_guard::spi_connect_guard()
+  {
+    if(SPI_connect() == SPI_OK_CONNECT)
+    {
+      cout << "SPI_OK_CONNECT" << endl;
+    }
+    else
+    {
+      cout << "SPI_ERROR_CONNECT" << endl;
+    }
+  }
+
+  postgres_database_helper_spi::spi_connect_guard::~spi_connect_guard()
+  {
+    SPI_finish();
+  }
 
 }
 
