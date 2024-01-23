@@ -1063,7 +1063,9 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " ORDER BY num ASC";
     blocks = csp_session.conn->execute_query(blocks_query);
     //std::cout << "Blocks:" << blocks.size() << " " << std::endl;
-    display_blocks(blocks);
+    #ifndef NDEBUG
+      display_blocks(blocks);
+    #endif
 
     auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
                                 + std::to_string(first_block)
@@ -1072,7 +1074,9 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " ORDER BY block_num, trx_in_block ASC";
     transactions = csp_session.conn->execute_query(transactions_query);
     //std::cout << "Transactions:" << transactions.size() << " " << std::endl;
-    display_transactions(transactions);
+    #ifndef NDEBUG
+      display_transactions(transactions);
+    #endif
 
     auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
                                 + std::to_string(first_block)
@@ -1082,7 +1086,10 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " ORDER BY id ASC";
   operations = csp_session.conn->execute_query(operations_query);
   //std::cout << "Operations:" << operations.size() << " " << std::endl;
-  display_operations(operations);
+
+  #ifndef NDEBUG
+    display_operations(operations);
+  #endif
 
   // clang-format on
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
