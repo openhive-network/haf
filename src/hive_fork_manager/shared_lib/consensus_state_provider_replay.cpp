@@ -844,10 +844,12 @@ void display_blocks(const pxx::result& blocks)
           std::cout.flush();
 
           // mtlk todo spixx in pxx  std::cout << "created_at (timestamp):" << ((*it)["created_at"].c_str()) << ", ";
+          std::cout << "created_at (timestamp):" << ((*it)["created_at"].as<std::string>()) << ", ";
+
           std::cout.flush();
 
         // Special handling for 'bytea' type columns
-          std::string hash_value = (*it)["hash"].c_str();
+          std::string hash_value = (*it)["hash"].as<std::string>();
           std::cout << "hash: " << hash_value << ", ";
 
 
@@ -1079,8 +1081,10 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + std::to_string(last_block)
                                 + " ORDER BY block_num, trx_in_block ASC";
     transactions = csp_session.conn->execute_query(transactions_query);
+    pxx::result spi_transactions = csp_session.spi_conn->execute_query(transactions_query);
     //std::cout << "Transactions:" << transactions.size() << " " << std::endl;
     #ifndef NDEBUG
+      display_transactions(spi_transactions);
       display_transactions(transactions);
     #endif
 

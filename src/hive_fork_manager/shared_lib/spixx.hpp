@@ -4,6 +4,7 @@
 
 
 #include <cstdint>
+#include <string>
 
 #define spixx_elog(elevel, ...)  \
 	ereport(elevel, errmsg_internal(__VA_ARGS__))
@@ -32,6 +33,10 @@ struct field
   Datum datum;
   bool isNull;
 
+  HeapTuple tuple;
+  TupleDesc tupdesc;
+  int col;
+
   bool is_null() const noexcept
   {
     return isNull;
@@ -45,17 +50,28 @@ struct field
     }
 
     return text_to_cstring(DatumGetTextP(datum));
+
   }
 
     // Templated as<T> method required by field_model
-    template<typename T> T as() const
-    {
-      return -1;
-    }
+    template<typename T> T as() const;
 
 
  
 };
+
+template<>
+inline std::string field::as<std::string>() const
+{
+  if (col <= 0)
+  {
+    spixx_elog(ERROR, "Column not found");
+  }
+  char *ch = SPI_getvalue(tuple, tupdesc, col);
+  std::string value(ch);
+  pfree(ch);
+  return value;
+}
 
 
 template<>
@@ -103,13 +119,13 @@ public:
     }
     bool isN;
     Datum datum = SPI_getbinval(tuple, tupdesc, col, &isN);
-    return field{datum, isN};
+    return field{datum, isN, tuple, tupdesc, col};
   }
 
   
   
   
-  std::string get_value(const std::string& key) const;
+  
 
 };
 

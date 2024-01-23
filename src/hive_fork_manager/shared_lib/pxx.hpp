@@ -77,6 +77,10 @@ struct field_model : field_concept
       {
         return data. template as<int64_t>();
       }
+      else if(type == typeid(std::string))
+      {
+        return data. template as<std::string>();
+      }
       // Add other types as needed
       throw std::bad_cast();
   }
