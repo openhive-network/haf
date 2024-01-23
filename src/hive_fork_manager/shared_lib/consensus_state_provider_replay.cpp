@@ -13,7 +13,6 @@
 
 
 #include <iostream>
-using std::cout, std::endl;
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -143,7 +142,7 @@ std::string fix_pxx_hex(const pxx::field& h);
 
 csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-  cout << "Start csp_init_impl mtlk" << endl;
+
   try
   {
     // Dynamically allocate csp_session_type. Ownership transfers to SQL hive.session
@@ -151,15 +150,10 @@ csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memor
 
     initialize_chain_db(*csp_session_ptr);
 
-
-    cout << "End csp_init_impl mtlk" << endl;
-
-
     return csp_session_ptr;
   }
   catch(...)
   {
-    cout << "End csp_init_impl with error mtlk" << endl;
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
@@ -210,7 +204,6 @@ void set_open_args_other_parameters(open_args& db_open_args)
 
 void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_memory_bin)
 {
-  cout << "Start csp_finish_impl mtlk" << endl;
   try
   {
 
@@ -228,16 +221,10 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
       boost::filesystem::remove_all( fc::path(csp_session.shared_memory_bin_path));
     }
 
-    cout << "End 01 csp_finish_impl mtlk" << endl;
-
     delete &csp_session;
-
-    cout << "End 02 csp_finish_impl mtlk" << endl;
-
   }
   catch(...)
   {
-    cout << "End csp_finish_impl with error mtlk" << endl;
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
@@ -247,8 +234,6 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
 
 uint32_t consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session)
 {
-  cout << "Start and End of consensus_state_provider_get_expected_block_num_impl mtlk" << endl;
-
   return csp_session.db->head_block_num() + 1;
 }
 
@@ -270,10 +255,6 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
 
 bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint32_t first_block, uint32_t last_block)
 {
-
-  cout << "Start consensus_state_provider_replay_impl mtlk" << endl;
-
-
   try
   {
 
@@ -294,21 +275,14 @@ bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint
       ("first_block", first_block)("curr", csp_expected_block));
 
     postgres_block_log(csp_session).run(first_block, last_block);
-  
-    cout << "End consensus_state_provider_replay_impl mtlk" << endl;
-
-  
     return true;
   }
   catch(...)
   {
-    cout << "End consensus_state_provider_replay_impl with error mtlk" << endl;
-
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
 
-  cout << "End consensus_state_provider_replay_impl with error mtlk" << endl;
   return false;
 }
 
@@ -335,7 +309,6 @@ void postgres_block_log::run(uint32_t first_block, uint32_t last_block)
   consensus_state_provider::postgres_database_helper_spi::spi_connect_guard guard;
 
   measure_before_run();
-
 
   prepare_postgres_data(first_block, last_block);
   replay_blocks();
@@ -834,7 +807,6 @@ std::string fix_pxx_hex(const pxx::field& h)
   o << h.as<std::basic_string<std::byte>>();;
   std::string r = o.str();
 
-  std::cout << "fix_pxx_hex: " << r << std::endl;
   return r;
 
   // auto cstr = h.c_str();
@@ -1122,9 +1094,6 @@ csp_session_type::csp_session_type(
   e_block_writer( *db.get(), theApp, *this )
 
   {
-    using std::cout, std::endl;
-    cout << "mtlk 007 csp_session_type::csp_session_type" << endl;
-
     db->set_block_writer( &e_block_writer );
   }
 
@@ -1149,7 +1118,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
   
-  std::cout << "mtlk 002 before execute_query" << std::endl;
+
 
   // clang-format off
     auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
@@ -1168,7 +1137,6 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
       blocks = csp_session.spi_conn->execute_query(blocks_query);
     #endif
 
-  std::cout << "mtlk 003 after execute_query" << std::endl;
 
 
 

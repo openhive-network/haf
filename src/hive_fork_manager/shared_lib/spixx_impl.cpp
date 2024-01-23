@@ -14,7 +14,6 @@ namespace consensus_state_provider
 
   postgres_database_helper_spi::postgres_database_helper_spi(const char* url)  
   {
-    std::cout << "mtlk mtlk postgres_database_helper_spi" << std::endl;
 
     #ifndef NDEBUG
       []()
@@ -38,12 +37,11 @@ namespace consensus_state_provider
 
   postgres_database_helper_spi::~postgres_database_helper_spi()
   {
-    std::cout << "mtlk ~postgres_database_helper_spi" << std::endl;
   } 
 
   pxx::result postgres_database_helper_spi::execute_query(const std::string& query)
   {
-    std::cout << "postgres_database_helper_spi mtlk 001 execute_query" << std::endl;
+ 
     #ifndef NDEBUG
       []()
       {
@@ -60,10 +58,8 @@ namespace consensus_state_provider
       }();
     #endif
 
-
     spixx::result query_result = spixx::execute_query(query);
     pxx::result res(query_result);
-
 
     return res;
   }
@@ -72,7 +68,7 @@ namespace consensus_state_provider
   {
     if(SPI_connect() == SPI_OK_CONNECT)
     {
-      cout << "SPI_OK_CONNECT" << endl;
+      //cout << "SPI_OK_CONNECT" << endl;
     }
     else
     {
