@@ -4,6 +4,10 @@
 
 #include "pqxx_impl.hpp"
 
+#include <iostream>
+#include <unistd.h>
+
+
 namespace consensus_state_provider
 {
 
@@ -14,8 +18,26 @@ namespace consensus_state_provider
     pqxx::work txn(connection);
     pqxx::result query_result = txn.exec(query);
     txn.commit();
-    //return query_result;
-    return {};
+
+    #ifndef NDEBUG
+      []()
+      {
+        static volatile bool stop_in = true;
+        using std::cout, std::endl;
+        cout << "postgres_database_helper::execute_query" << endl;
+        cout << "pid= " << getpid() << endl;
+
+        while(stop_in)
+        {
+          int a = 0;
+          a=a;
+        }
+      }();
+    #endif      
+
+
+    pxx::result res(query_result);
+    return res;
   }
 
 

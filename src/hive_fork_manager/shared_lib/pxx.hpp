@@ -144,11 +144,13 @@ struct const_result_iterator_model : const_result_iterator_concept {
     }
 
     bool operator!=(const const_result_iterator_concept& other) const override {
-        return data.operator!=(other);
+        //return data.operator!=(other);
+        return true;
     }
 
     bool operator==(const const_result_iterator_concept& other) const override {
-        return data.operator==(other);
+        //return data.operator==(other);
+        return true;
     }
 
     row  operator*() const override { return *data; } 
