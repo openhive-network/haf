@@ -290,8 +290,7 @@ full_block_ptr postgres_block_log::read_full_block(uint32_t block_num)
 {
 
   prepare_postgres_data(block_num, block_num);
-  return block_to_fullblock(block_num, blocks[0]);
-
+  return block_to_fullblock(block_num, *blocks.begin());
 }
 
 // We get blocks, transactions and operations containers from SQL
@@ -524,7 +523,7 @@ block_bin_t build_block_bin(const pxx::row& block, std::vector<hive::protocol::t
     from_variant(extensions, sb.extensions);
   }
 
-  p2b_hex_to_signature_type("witness_signature", block,  sb.witness_signature);
+  p2b_hex_to_signature_type("witness_signature", block, sb.witness_signature);
 
 
   p2b_hex_to_ripemd160("hash", block, sb.block_id);
@@ -541,7 +540,7 @@ void postgres_block_log::transactions2bin(uint32_t block_num, std::vector<hive::
 {
   for(; current_transaction_it != transactions.end() && current_transaction_belongs_to_block(block_num); ++current_transaction_it)
   {
-    auto trx_in_block = current_transaction_it["trx_in_block"].as<int>();
+    auto trx_in_block = (*current_transaction_it)["trx_in_block"].as<int>();
 
     std::vector<hive::protocol::signature_type> signatures = build_signatures(current_transaction_it);
 
@@ -559,16 +558,16 @@ void postgres_block_log::transactions2bin(uint32_t block_num, std::vector<hive::
 
 bool postgres_block_log::current_transaction_belongs_to_block(const uint32_t block_num)
 {
-  return current_transaction_it["block_num"].as<uint32_t>() == block_num;
+  return (*current_transaction_it)["block_num"].as<uint32_t>() == block_num;
 }
 
 std::vector<hive::protocol::signature_type> build_signatures(const pxx::const_result_iterator& transaction)
 {
   std::vector<hive::protocol::signature_type> signatures;
-  if(!transaction["signature"].is_null())
+  if(!(*transaction)["signature"].is_null())
   {
     hive::protocol::signature_type signature;
-    p2b_hex_to_signature_type("signature", transaction, signature);
+    p2b_hex_to_signature_type("signature", *transaction, signature);
     signatures.push_back(signature);
   }
   return signatures;
@@ -585,7 +584,7 @@ void build_transaction_id_bins(const pxx::const_result_iterator& transaction,
   // [[nodiscard]] PQXX_PURE char const *c_str() const &;
 
   hive::protocol::transaction_id_type transaction_id_bin;
-  p2b_hex_to_ripemd160("trx_hash", transaction, transaction_id_bin);
+  p2b_hex_to_ripemd160("trx_hash", *transaction, transaction_id_bin);
 
   transaction_id_bins.push_back(transaction_id_bin);
 }
@@ -604,9 +603,9 @@ hive::protocol::signed_transaction build_transaction_bin(const pxx::const_result
 {
   hive::protocol::signed_transaction  signed_transaction;
 
-  p2b_int_to_uint16("ref_block_num", transaction, signed_transaction.ref_block_num);
-  p2b_int64_to_uint32("ref_block_prefix", transaction, signed_transaction.ref_block_prefix);
-  p2b_time_to_time_point_sec("expiration", transaction, signed_transaction.expiration);
+  p2b_int_to_uint16("ref_block_num", *transaction, signed_transaction.ref_block_num);
+  p2b_int64_to_uint32("ref_block_prefix", *transaction, signed_transaction.ref_block_prefix);
+  p2b_time_to_time_point_sec("expiration", *transaction, signed_transaction.expiration);
 
   signed_transaction.signatures = std::move(signatures);
 
@@ -622,7 +621,7 @@ bool postgres_block_log::is_current_operation(uint32_t block_num, int trx_in_blo
 
 bool operation_matches_block_transaction(const pxx::const_result_iterator& operation, uint32_t block_num, int trx_in_block)
 {
-  return operation["block_num"].as<uint32_t>() == block_num && operation["trx_in_block"].as<int>() == trx_in_block;
+  return (*operation)["block_num"].as<uint32_t>() == block_num && (*operation)["trx_in_block"].as<int>() == trx_in_block;
 }
 
 std::vector<hive::protocol::operation> postgres_block_log::operations2bins(uint32_t block_num, int trx_in_block)
@@ -643,7 +642,7 @@ std::vector<hive::protocol::operation> postgres_block_log::operations2bins(uint3
 void add_operation_bin(const pxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins)
 {
   //f.as<std::basic_string<std::byte>>();
-  auto binarka  = operation["bin_body"].as<std::basic_string<std::byte>>();
+  auto binarka  = (*operation)["bin_body"].as<std::basic_string<std::byte>>();
   //pxx::binarystring bs(operation["bin_body"]);
   std::byte* raw_data = binarka.data();
   auto data_length = binarka.size();
@@ -655,21 +654,21 @@ uint32_t postgres_block_log::current_transaction_block_num()
 {
   if(transactions.empty()) return BLOCK_NUM_EMPTY;
   if(transactions.end() == current_transaction_it) return BLOCK_NUM_MAX;
-  return current_transaction_it["block_num"].as<uint32_t>();
+  return (*current_transaction_it)["block_num"].as<uint32_t>();
 }
 
 uint32_t postgres_block_log::current_operation_block_num() const
 {
   if(operations.empty()) return BLOCK_NUM_EMPTY;
   if(operations.end() == current_operation_it) return BLOCK_NUM_MAX;
-  return current_operation_it["block_num"].as<uint32_t>();
+  return (*current_operation_it)["block_num"].as<uint32_t>();
 }
 
 int postgres_block_log::current_operation_trx_num() const
 {
   if(operations.empty()) return BLOCK_NUM_EMPTY;
   if(operations.end() == current_operation_it) return BLOCK_NUM_MAX;
-  return current_operation_it["trx_in_block"].as<int>();
+  return (*current_operation_it)["trx_in_block"].as<int>();
 }
 
 
