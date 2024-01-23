@@ -1,3 +1,6 @@
+
+#ifdef USE_PQXX
+
 #include <pxx.hpp>
 
 #include <pqxx/pqxx>
@@ -11,7 +14,16 @@
 namespace consensus_state_provider
 {
 
-  postgres_database_helper::postgres_database_helper(const char* url) : connection(url) {}
+  postgres_database_helper::postgres_database_helper(const char* url) : connection(url) 
+  {
+    std::cout << "mtlk  014 postgres_database_helper" << std::endl;
+
+  }
+
+  postgres_database_helper::~postgres_database_helper()
+  {
+    std::cout << "mtlk  015 ~postgres_database_helper" << std::endl;
+  }
 
   pxx::result postgres_database_helper::execute_query(const std::string& query)
   {
@@ -27,3 +39,5 @@ namespace consensus_state_provider
 
 
 }
+
+#endif

@@ -13,6 +13,7 @@
 
 
 #include <iostream>
+using std::cout, std::endl;
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -137,12 +138,12 @@ bool operation_matches_block_transaction(const pxx::const_result_iterator& opera
 std::string fix_pxx_time(const pxx::field& t);
 
 // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
-const char* fix_pxx_hex(const pxx::field& h);
+std::string fix_pxx_hex(const pxx::field& h);
 
 
 csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
-
+  cout << "Start csp_init_impl mtlk" << endl;
   try
   {
     // Dynamically allocate csp_session_type. Ownership transfers to SQL hive.session
@@ -150,10 +151,15 @@ csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memor
 
     initialize_chain_db(*csp_session_ptr);
 
+
+    cout << "End csp_init_impl mtlk" << endl;
+
+
     return csp_session_ptr;
   }
   catch(...)
   {
+    cout << "End csp_init_impl with error mtlk" << endl;
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
@@ -204,6 +210,7 @@ void set_open_args_other_parameters(open_args& db_open_args)
 
 void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_memory_bin)
 {
+  cout << "Start csp_finish_impl mtlk" << endl;
   try
   {
 
@@ -221,10 +228,16 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
       boost::filesystem::remove_all( fc::path(csp_session.shared_memory_bin_path));
     }
 
+    cout << "End 01 csp_finish_impl mtlk" << endl;
+
     delete &csp_session;
+
+    cout << "End 02 csp_finish_impl mtlk" << endl;
+
   }
   catch(...)
   {
+    cout << "End csp_finish_impl with error mtlk" << endl;
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
@@ -234,6 +247,8 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
 
 uint32_t consensus_state_provider_get_expected_block_num_impl(csp_session_ref_type csp_session)
 {
+  cout << "Start and End of consensus_state_provider_get_expected_block_num_impl mtlk" << endl;
+
   return csp_session.db->head_block_num() + 1;
 }
 
@@ -249,9 +264,24 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
   return collect_current_account_balances(csp_session, accounts);
 }
 
+#include "psql_utils/pg_cxx.hpp"
+
+
 
 bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint32_t first_block, uint32_t last_block)
 {
+
+  cout << "Start consensus_state_provider_replay_impl mtlk" << endl;
+
+  if(SPI_connect() == SPI_OK_CONNECT)
+  {
+    cout << "SPI_OK_CONNECT" << endl;
+  }
+  else
+  {
+    cout << "SPI_ERROR_CONNECT" << endl;
+  }
+
   try
   {
 
@@ -272,14 +302,23 @@ bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint
       ("first_block", first_block)("curr", csp_expected_block));
 
     postgres_block_log(csp_session).run(first_block, last_block);
+  
+    cout << "End consensus_state_provider_replay_impl mtlk" << endl;
+
+    SPI_finish();
+  
     return true;
   }
   catch(...)
   {
+    cout << "End consensus_state_provider_replay_impl with error mtlk" << endl;
+
     auto current_exception = std::current_exception();
     handle_exception(current_exception);
   }
 
+  cout << "End consensus_state_provider_replay_impl with error mtlk" << endl;
+  SPI_finish();
   return false;
 }
 
@@ -772,16 +811,32 @@ full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num)
 std::string fix_pxx_time(const pxx::field& t)
 {
   const auto T_letter_position_in_ascii_time_string = 10;
-  std::string r = t.c_str();
+  std::ostringstream o;
+  o << t.as<pxx::timestamp_wo_tz_type>();
+  std::string r = o.str();
   r[T_letter_position_in_ascii_time_string] = 'T';
   return r;
 }
 
 // value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
-const char* fix_pxx_hex(const pxx::field& h)
+std::string fix_pxx_hex(const pxx::field& h)
 {
-  const auto backslash_x_prefix_length = 2;
-  return h.c_str() + backslash_x_prefix_length;
+//  const auto backslash_x_prefix_length = 2;
+
+  // auto binarka  =h.as<std::basic_string<std::byte>>();
+  
+  // std::byte* raw_data = binarka.data();
+  // auto data_length = binarka.size();
+
+  std::ostringstream o;
+  o << h.as<std::basic_string<std::byte>>();;
+  std::string r = o.str();
+
+  std::cout << "fix_pxx_hex: " << r << std::endl;
+  return r;
+
+  // auto cstr = h.c_str();
+  // return  cstr + backslash_x_prefix_length;
 }
 
 
@@ -910,15 +965,15 @@ void display_transactions(const pxx::result& transactions)
         std::cout.flush();
 
         //expiration (timestamp)
-        std::cout << "expiration string_view: " << ((*it)["expiration"].as<pxx::timestamp_wo_tz_type>()) << ", ";
+        std::cout << "expiration timestamp_wo_tz_type: " << ((*it)["expiration"].as<pxx::timestamp_wo_tz_type>()) << ", ";
         std::cout.flush();
 
         //trx_hash (bytea)
-        std::cout << "trx_hash string view: " << ((*it)["trx_hash"].as<std::string_view>()) << ", ";
+        std::cout << "trx_hash std::basic_string<std::byte>: " << ((*it)["trx_hash"].as<std::basic_string<std::byte>>()) << ", ";
         std::cout.flush();
 
         //signature (bytea)
-        std::cout << "signature string_view: " << ((*it)["signature"].as<std::string_view>()) << ", ";
+        std::cout << "signature std::basic_string<std::byte>: " << ((*it)["signature"].as<std::basic_string<std::byte>>()) << ", ";
         std::cout.flush();
 
         std::cout << std::endl;
@@ -938,7 +993,7 @@ void display_operation(const pxx::const_result_iterator& it)
     std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
 
       //bin_body (operation)
-    std::cout << "bin_body string_view: " << (*it)["bin_body"].as<std::string_view>() << ", ";
+    std::cout << "bin_body std::basic_string<std::byte>: " << (*it)["bin_body"].as<std::basic_string<std::byte>>() << ", ";
     std::cout << std::endl;
 
     std::cout << "pretty_bin_body: ";
@@ -993,7 +1048,7 @@ void display_operations(const pxx::result& operations)
       std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
   
        //bin_body (operation)
-      std::cout << "bin_body: " << ((*it)["bin_body"].as<std::string_view>()) << ", ";
+      std::cout << "bin_body: " << ((*it)["bin_body"].as<std::basic_string<std::byte>>()) << ", ";
 
       std::cout << std::endl;
 
@@ -1050,18 +1105,37 @@ csp_session_type::csp_session_type(
   const char* postgres_url)
   :
   shared_memory_bin_path(shared_memory_bin_path),
-  conn(std::make_unique<postgres_database_helper>(postgres_url)),
+
+  
+
+
+  #ifdef USE_PQXX
+    conn(std::make_unique<postgres_database_helper>(postgres_url)),
+  #else
+    #ifdef USE_PQXX_UNDEFINED
+    #endif
+    spi_conn(std::make_unique<postgres_database_helper_spi>(postgres_url)),
+  #endif
   db(std::make_unique<haf_state_database>(*this, theApp)),
   e_block_writer( *db.get(), theApp, *this )
 
   {
+    using std::cout, std::endl;
+    cout << "mtlk 007 csp_session_type::csp_session_type" << endl;
+
     db->set_block_writer( &e_block_writer );
   }
 
 }  // namespace consensus_state_provider
 
-#include "pqxx_impl.hpp"
-#include "spixx_impl.hpp"
+#ifdef USE_PQXX
+  #include "pqxx_impl.hpp"
+#else
+  #include "spixx_impl.hpp"
+#endif
+
+
+
 
 namespace consensus_state_provider
 {
@@ -1073,7 +1147,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
   
-
+  std::cout << "mtlk 002 before execute_query" << std::endl;
 
   // clang-format off
     auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
@@ -1081,14 +1155,25 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " and num <= "
                                 + std::to_string(last_block)
                                 + " ORDER BY num ASC";
-    blocks = csp_session.conn->execute_query(blocks_query);
+
+    
+
+    #ifdef USE_PQXX
+      blocks = csp_session.conn->execute_query(blocks_query);
+    #else
+        #ifdef USE_PQXX_UNDEFINED
+        #endif
+      blocks = csp_session.spi_conn->execute_query(blocks_query);
+    #endif
+
+  std::cout << "mtlk 003 after execute_query" << std::endl;
 
 
-    //std::cout << "Blocks:" << blocks.size() << " " << std::endl;
+
     #ifndef NDEBUG
-      pxx::result spi_blocks = csp_session.spi_conn->execute_query(blocks_query);
+      //pxx::result spi_blocks = csp_session.spi_conn->execute_query(blocks_query);
       display_blocks(blocks);
-      display_blocks(spi_blocks);
+      // display_blocks(spi_blocks);
     #endif
 
     auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
@@ -1096,12 +1181,18 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " and block_num <= "
                                 + std::to_string(last_block)
                                 + " ORDER BY block_num, trx_in_block ASC";
-    transactions = csp_session.conn->execute_query(transactions_query);
-    //std::cout << "Transactions:" << transactions.size() << " " << std::endl;
+    #ifdef USE_PQXX                          
+      transactions = csp_session.conn->execute_query(transactions_query);
+    #else
+        #ifdef USE_PQXX_UNDEFINED
+        #endif
+      transactions = csp_session.spi_conn->execute_query(transactions_query);
+    #endif
+
     #ifndef NDEBUG
-      //pxx::result spi_transactions = csp_session.spi_conn->execute_query(transactions_query);
-      //display_transactions(spi_transactions);
+      // pxx::result spi_transactions = csp_session.spi_conn->execute_query(transactions_query);
       display_transactions(transactions);
+      // display_transactions(spi_transactions);
     #endif
 
     auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
@@ -1110,11 +1201,18 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + std::to_string(last_block)
                                 + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
                                 + " ORDER BY id ASC";
-  operations = csp_session.conn->execute_query(operations_query);
-  //std::cout << "Operations:" << operations.size() << " " << std::endl;
-
+  
+    #ifdef USE_PQXX
+      operations = csp_session.conn->execute_query(operations_query);
+    #else
+      operations = csp_session.spi_conn->execute_query(operations_query);
+        #ifdef USE_PQXX_UNDEFINED
+        #endif
+    #endif
   #ifndef NDEBUG
+    //pxx::result spi_operations = csp_session.spi_conn->execute_query(operations_query);
     display_operations(operations);
+    // display_operations(spi_operations);
   #endif
 
   // clang-format on

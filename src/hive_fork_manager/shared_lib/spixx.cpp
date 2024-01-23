@@ -4,7 +4,9 @@
 
 
 #include <iomanip>
+
 #include <iostream>
+using std::cout, std::endl;
 
 
 
@@ -210,6 +212,7 @@ result execute_query(const std::string &query)
   if (ret != SPI_OK_SELECT)
   {
     SPI_finish();
+    cout << "Failed executing query" << endl;
     spixx_elog(ERROR, "Failed executing query");
   }
   return {SPI_tuptable, SPI_tuptable->tupdesc, SPI_processed};
