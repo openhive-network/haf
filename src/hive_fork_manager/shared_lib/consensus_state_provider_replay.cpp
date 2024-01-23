@@ -816,6 +816,210 @@ collected_account_balances_collection_t collect_current_all_accounts_balances(cs
   return collected_balances;
 }
 
+void display_blocks(const pxx::result& blocks)
+{
+  if (blocks.empty()) 
+  {
+      std::cout << "No blocks data available." << std::endl;
+  }
+  else 
+  {
+    for (auto it = blocks.begin(); it != blocks.end(); ++it) 
+    {
+          int32_t num_value = (*it)["num"].as<uint32_t>();
+          int32_t id_value = (*it)["id"].as<uint32_t>();
+
+          std::cout << "num: " << num_value << ", ";
+          std::cout << "id: " << id_value << ", ";
+
+          std::cout.flush();
+
+          //name (varchar)
+          std::cout <<  "name: " << ((*it)["name"].c_str() ) << ", ";
+          std::cout.flush();
+
+          std::cout << "created_at (timestamp):" << ((*it)["created_at"].c_str()) << ", ";
+          std::cout.flush();
+
+        // Special handling for 'bytea' type columns
+          std::string hash_value = (*it)["hash"].c_str();
+          std::cout << "hash: " << hash_value << ", ";
+
+
+          // for (const auto& col_name : column_names)
+          // {
+          //     spixx::field f = (*it)[col_name];
+          //     std::cout << col_name << ": " << f.c_str() << ", ";
+          // }            
+
+          std::cout << std::endl;
+
+    }
+  }
+}
+
+// void display_transactions(const pxx::result& transactions)
+// {
+//   if (transactions.empty()) 
+//   {
+//       std::cout << "No  transactions data available." << std::endl;
+//   }
+//   else 
+//   {
+//     for (auto it = transactions.begin(); it != transactions.end(); ++(*it)) 
+//     {
+//         //block_num (int4)
+//         std::cout.flush();
+//         std::cout << "block_num: " << ((*it)["block_num"]->as_uint32_t()) << ", ";
+//         std::cout.flush();
+
+//         //trx_in_block (int2)
+//         std::cout << "trx_in_block: " << ((*it)["trx_in_block"]->as_int()) << ", ";
+//         std::cout.flush();
+
+//         //ref_block_num (int4)
+//         std::cout << "ref_block_num: " << ((*it)["ref_block_num"]->as_uint32_t()) << ", ";
+//         std::cout.flush();
+
+//         //ref_block_prefix (int8)
+//         std::cout << "ref_block_prefix: " << ((*it)["ref_block_prefix"]->as_int64_t()) << ", ";
+
+//         std::cout.flush();
+
+//         //expiration (timestamp)
+//         std::cout << "expiration: " << ((*it)["expiration"]->c_str()) << ", ";
+//         std::cout.flush();
+
+//         //trx_hash (bytea)
+//         std::cout << "trx_hash: " << ((*it)["trx_hash"]->c_str()) << ", ";
+//         std::cout.flush();
+
+//         //signature (bytea)
+//         std::cout << "signature: " << ((*it)["signature"]->c_str()) << ", ";
+//         std::cout.flush();
+
+//         std::cout << std::endl;
+
+//     }
+//   }
+// }
+
+
+// void display_operation(const pxx::const_result_iterator& it)
+// {
+//     //block_num (int4)
+//     (*(*it))["block_num"];
+//     std::cout << "block_num: " << ((*(*it))["block_num"]->as_uint32_t()) << ", ";
+
+//     //trx_in_block (int2)
+//     std::cout << "trx_in_block: " << ((*(*it))["trx_in_block"]->as_int()) << ", ";
+
+//       //bin_body (operation)
+//     std::cout << "bin_body: " << ((*(*it))["bin_body"]->c_str()) << ", ";
+//     std::cout << std::endl;
+
+//     std::cout << "pretty_bin_body: ";
+//     const pxx::const_result_iterator& operation = it;
+
+//     pxx::binarystring_ptr bs(operation["bin_body"]->as_binarystring());
+
+
+//     if(((*(*it))["block_num"]->as_uint32_t()) == 556705)
+//     {
+//       #ifndef NDEBUG []()
+//       {
+//         static volatile bool stop_in = true;
+//         wlog("read_postgres_dataaa ");
+//         wlog("pid= ${pid}", ("pid" , getpid() ));
+
+//         while(stop_in)
+//         {
+//           int a = 0;
+//           a=a;
+//         }
+//       }();
+//       #endif      
+//     }
+
+//     const unsigned char* raw_data = bs->data();
+//     auto data_length = bs->size();
+
+//     const auto& op  = (fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data), data_length));
+//     auto s = fc::json::to_pretty_string( op );
+//     std::cout << s;
+//     std::cout << std::endl;
+
+// }
+
+
+// void display_operations(const pxx::result& operations)
+// {
+//   if (operations.empty()) 
+//   {
+//       std::cout << "No operations data available." << std::endl;
+//   }
+//   else 
+//   {
+//     for (auto it = operations.begin(); it != operations.end(); ++(*it)) 
+//     {
+//       //block_num (int4)
+//       std::cout << "block_num: " << ((*it)["block_num"]->as_uint32_t()) << ", ";
+
+//       //trx_in_block (int2)
+//       std::cout << "trx_in_block: " << ((*it)["trx_in_block"]->as_int()) << ", ";
+  
+//        //bin_body (operation)
+//       std::cout << "bin_body: " << ((*it)["bin_body"]->c_str()) << ", ";
+
+//       std::cout << std::endl;
+
+//       std::cout << "Display single operation:" << std::endl;
+
+//       display_operation(*it);
+
+//     }
+//   }
+// }
+
+//     void result::display_column_names_and_types() const
+//     {
+//         if (!tuptable || !tuptable->tupdesc)
+//         {
+//             std::cout << "No column descriptions available." << std::endl;
+//             return;
+//         }
+
+//         TupleDesc tupdesc = tuptable->tupdesc;
+
+//         std::cout << "Column Names:" << std::endl;
+//         for (int col = 0; col < tupdesc->natts; ++col)
+//         {
+//             if (!tupdesc->attrs[col].attisdropped)  // Checking if the attribute is dropped
+//             {
+//                 std::cout << "    " << tupdesc->attrs[col].attname.data;
+
+//                 char *type_name = SPI_gettype(tupdesc, col+1);  // SPI column indexing starts from 1
+//                 Oid type_oid = tupdesc->attrs[col].atttypid;
+                
+//                 if (type_name)
+//                 {
+//                     std::cout << " (" << type_name << ")" << std::endl;
+//                     SPI_pfree(type_name);  // Free the allocated string
+//                 }
+//                 else
+//                 {
+//                     std::cout << " (Unknown type OID: " << type_oid << ")" << std::endl;
+//                 }
+//             }
+
+            
+//         }
+//     }
+
+// }
+
+
+
 csp_session_type::csp_session_type(
   const char* context,
   const char* shared_memory_bin_path,
@@ -852,7 +1056,8 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + std::to_string(last_block)
                                 + " ORDER BY num ASC";
     blocks = csp_session.conn->execute_query(blocks_query);
-    //std::cout << "Blocks:" << blocks.size() << " ";
+    //std::cout << "Blocks:" << blocks.size() << " " << std::endl;
+    display_blocks(blocks);
 
     auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
                                 + std::to_string(first_block)
@@ -860,7 +1065,8 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + std::to_string(last_block)
                                 + " ORDER BY block_num, trx_in_block ASC";
     csp_session.conn->execute_query(transactions_query);
-    //std::cout << "Transactions:" << transactions.size() << " ";
+    //std::cout << "Transactions:" << transactions.size() << " " << std::endl;
+    display_transactions(transactions);
 
     auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
                                 + std::to_string(first_block)
@@ -869,7 +1075,8 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
                                 + " ORDER BY id ASC";
   csp_session.conn->execute_query(operations_query);
-  //std::cout << "Operations:" << operations.size() << " ";
+  //std::cout << "Operations:" << operations.size() << " " << std::endl;
+  //display_operations(operations);
 
   // clang-format on
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");

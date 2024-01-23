@@ -128,6 +128,10 @@ struct const_result_iterator_concept {
     virtual bool operator!=(const const_result_iterator_concept& other) const = 0;
     virtual bool operator==(const const_result_iterator_concept& other) const = 0;
     virtual row  operator*() const = 0;
+
+  virtual bool is_equal(const const_result_iterator_concept& other) const = 0;
+  virtual bool is_not_equal(const const_result_iterator_concept& other) const = 0;
+
 };
 
 
@@ -152,6 +156,21 @@ struct const_result_iterator_model : const_result_iterator_concept {
         //return data.operator==(other);
         return true;
     }
+  bool is_equal(const const_result_iterator_concept& other) const override {
+        const auto* other_ptr = dynamic_cast<const const_result_iterator_model<T>*>(&other);
+        if (other_ptr) {
+            return data == other_ptr->data;
+        }
+        return false;
+    }
+
+    bool is_not_equal(const const_result_iterator_concept& other) const override {
+        const auto* other_ptr = dynamic_cast<const const_result_iterator_model<T>*>(&other);
+        if (other_ptr) {
+            return data != other_ptr->data;
+        }
+        return true;
+    }    
 
     row  operator*() const override { return *data; } 
 };
@@ -170,12 +189,12 @@ public:
         return *this;
     }
 
-    bool operator!=(const const_result_iterator& other) const {
-        return *self_ != *other.self_;
+    bool operator==(const const_result_iterator& other) const {
+        return self_->is_equal(*other.self_);
     }
 
-    bool operator==(const const_result_iterator& other) const {
-        return *self_ == *other.self_;
+    bool operator!=(const const_result_iterator& other) const {
+        return self_->is_not_equal(*other.self_);
     }
 
 
