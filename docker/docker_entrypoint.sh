@@ -106,6 +106,10 @@ if [ ! -f "$DATADIR/config.ini" ]; then
   # add a default set of plugins that API nodes should run
   sed -i 's/^plugin = .*$/plugin = node_status_api account_by_key account_by_key_api block_api condenser_api database_api json_rpc market_history market_history_api network_broadcast_api p2p rc_api state_snapshot transaction_status transaction_status_api wallet_bridge_api webserver/g' "$DATADIR/config.ini"
 
+  # set a default logging config.  We will log the usual output both to stderr and to a log file in the
+  # haf-datadir/logs/hived/default directory.  Rotate daily, keep for 30 days.
+  sed -i 's|^log-appender = .*$|log-appender = {"appender":"stderr","stream":"std_error","time_format":"iso_8601_microseconds"} {"appender":"p2p","file":"logs/hived/p2p/p2p.log","time_format":"iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000} {"appender": "default", "file": "logs/hived/default/default.log", "time_format": "iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000}|;s|^log-logger = .*$|log-logger = {"name":"default","level":"info","appenders":["stderr", "default"]} {"name":"user","level":"debug","appenders":["stderr", "default"]} {"name":"p2p","level":"warn","appenders":["p2p"]}|' "$DATADIR/config.ini"
+
   # The transaction status plugin defaults to keeping transaction status history for 64000 blocks
   # (configured in "transaction-status-block-depth".  When replaying, it doesn't make sense to
   # track the status until we get within 64000 blocks of the current head block, because we'll
