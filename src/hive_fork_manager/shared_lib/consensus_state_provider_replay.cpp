@@ -857,18 +857,16 @@ void display_blocks(const pxx::result& blocks)
           std::cout.flush();
 
           //name (varchar)
-          std::cout <<  "name: " << ((*it)["name"].as<std::string_view>() ) << ", ";
-          std::cout <<  "name: " << ((*it)["name"].c_str() ) << ", ";
+          std::cout <<  "name string_view: " << ((*it)["name"].as<std::string_view>() ) << ", ";
           std::cout.flush();
 
-          std::cout << "created_at (timestamp):" << ((*it)["created_at"].c_str()) << ", ";
-          
+
+          std::cout << "created_at (timestamp) timestamp_wo_tz_type:" << ((*it)["created_at"].as<pxx::timestamp_wo_tz_type>()) << ", ";
 
           std::cout.flush();
 
         // Special handling for 'bytea' type columns
-          std::string hash_value = (*it)["hash"].c_str();
-          std::cout << "hash: " << hash_value << ", ";
+          std::cout << "hash string view: " << (*it)["hash"].as<std::basic_string<std::byte>>() << ", ";
 
 
           // for (const auto& col_name : column_names)
@@ -912,16 +910,15 @@ void display_transactions(const pxx::result& transactions)
         std::cout.flush();
 
         //expiration (timestamp)
-        std::cout << "expiration: " << ((*it)["expiration"].c_str()) << ", ";
+        std::cout << "expiration string_view: " << ((*it)["expiration"].as<pxx::timestamp_wo_tz_type>()) << ", ";
         std::cout.flush();
 
         //trx_hash (bytea)
-        //std::cout << "trx_hash: " << ((*it)["trx_hash"].c_str()) << ", ";
-        std::cout << "trx_hash: " << ((*it)["trx_hash"].as<std::basic_string<std::byte>>()) << ", ";
+        std::cout << "trx_hash string view: " << ((*it)["trx_hash"].as<std::string_view>()) << ", ";
         std::cout.flush();
 
         //signature (bytea)
-        std::cout << "signature: " << ((*it)["signature"].c_str()) << ", ";
+        std::cout << "signature string_view: " << ((*it)["signature"].as<std::string_view>()) << ", ";
         std::cout.flush();
 
         std::cout << std::endl;
@@ -941,7 +938,7 @@ void display_operation(const pxx::const_result_iterator& it)
     std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
 
       //bin_body (operation)
-    std::cout << "bin_body: " << (*it)["bin_body"].c_str() << ", ";
+    std::cout << "bin_body string_view: " << (*it)["bin_body"].as<std::string_view>() << ", ";
     std::cout << std::endl;
 
     std::cout << "pretty_bin_body: ";
@@ -996,7 +993,7 @@ void display_operations(const pxx::result& operations)
       std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
   
        //bin_body (operation)
-      std::cout << "bin_body: " << ((*it)["bin_body"].c_str()) << ", ";
+      std::cout << "bin_body: " << ((*it)["bin_body"].as<std::string_view>()) << ", ";
 
       std::cout << std::endl;
 
@@ -1086,12 +1083,12 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " ORDER BY num ASC";
     blocks = csp_session.conn->execute_query(blocks_query);
 
-    //pxx::result spi_blocks = csp_session.spi_conn->execute_query(blocks_query);
 
     //std::cout << "Blocks:" << blocks.size() << " " << std::endl;
     #ifndef NDEBUG
-      //display_blocks(spi_blocks);
+      pxx::result spi_blocks = csp_session.spi_conn->execute_query(blocks_query);
       display_blocks(blocks);
+      display_blocks(spi_blocks);
     #endif
 
     auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "

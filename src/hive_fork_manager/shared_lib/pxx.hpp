@@ -9,6 +9,17 @@
 namespace pxx
 {
 
+struct timestamp_wo_tz_type
+{
+    std::string val;
+};
+
+inline std::ostream& operator<<(std::ostream& os, const timestamp_wo_tz_type& timestamp)
+{
+    return os << timestamp.val;
+}
+
+
 using result_size_type = int;
 using row_size_type = int;
 
@@ -57,7 +68,7 @@ struct field_model : field_concept
   {
       using operation_bin_type = std::basic_string<std::byte>;
 
-      if (type == typeid(uint32_t))
+      if (type == typeid(uint32_t)) //mtlk todo into case switch
       {
           return data.template as<uint32_t>();
       }
@@ -81,7 +92,10 @@ struct field_model : field_concept
       {
         return data. template as<std::string_view>();
       }
-
+      else if(type == typeid(pxx::timestamp_wo_tz_type))
+      {
+        return data. template as<pxx::timestamp_wo_tz_type>();
+      }
     //   else if(type == typeid(std::string))
     //   {
     //     return data. template as<std::string>();

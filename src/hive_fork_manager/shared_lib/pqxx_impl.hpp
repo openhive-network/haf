@@ -1,5 +1,15 @@
 #include <pqxx/pqxx>
 
+namespace pqxx
+{
+    template<>
+    inline pxx::timestamp_wo_tz_type field::as<pxx::timestamp_wo_tz_type>() const
+    {
+        auto a = c_str();
+        return pxx::timestamp_wo_tz_type{std::string(a)};
+    }
+}
+
 namespace consensus_state_provider
 {
 
