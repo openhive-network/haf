@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-//#define USE_PQXX
-#define USE_PQXX_UNDEFINED
+#define USE_PQXX
+//#define USE_PQXX_UNDEFINED
 
 
 namespace fc

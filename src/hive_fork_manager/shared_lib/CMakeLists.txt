@@ -11,11 +11,10 @@ SET (SAVE_ORIGINAL_LIB_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 # Override the library suffixes to specifically look for shared libraries (.so).
 SET (CMAKE_FIND_LIBRARY_SUFFIXES .so)
 
-# #define USE_PQXX
-# # Search for the required shared libraries for pqxx and pq.
-# # Note: We're using HAF_PQXX_LIB instead of PQXX_LIB as the latter is used by sql_serializer for static linking.
-# FIND_LIBRARY(HAF_PQXX_LIB pqxx REQUIRED)
-# FIND_LIBRARY(HAF_PQ_LIB pq REQUIRED)
+# Search for the required shared libraries for pqxx and pq.
+# Note: We're using HAF_PQXX_LIB instead of PQXX_LIB as the latter is used by sql_serializer for static linking.
+FIND_LIBRARY(HAF_PQXX_LIB pqxx REQUIRED)
+FIND_LIBRARY(HAF_PQ_LIB pq REQUIRED)
 
 # Restore the original library suffixes after searching for our required libraries.
 SET (CMAKE_FIND_LIBRARY_SUFFIXES ${SAVE_ORIGINAL_LIB_SUFFIXES})

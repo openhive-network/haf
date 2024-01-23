@@ -1,11 +1,12 @@
 
-#ifdef USE_PQXX
 
 #include <pxx.hpp>
 
 #include <pqxx/pqxx>
 
 #include "pqxx_impl.hpp"
+
+//#ifdef USE_PQXX
 
 #include <iostream>
 #include <unistd.h>
@@ -38,4 +39,4 @@ namespace consensus_state_provider
 
 }
 
-#endif
+//#endif

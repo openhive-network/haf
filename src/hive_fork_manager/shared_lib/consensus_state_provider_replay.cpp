@@ -13,6 +13,7 @@
 
 
 #include <iostream>
+using std::cout, std::endl;
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -368,6 +369,8 @@ void postgres_block_log::replay_block(const pxx::row& block)
 full_block_ptr postgres_block_log::block_to_fullblock(uint32_t block_num_from_shared_memory_bin, const pxx::row& block)
 {
   auto block_num_from_postgres = block["num"].as<uint32_t>();
+
+  cout << "block_to_fullblock mtlk: " << block_num_from_postgres  << endl;
 
   FC_ASSERT(block_num_from_postgres == block_num_from_shared_memory_bin, "Requested block has different number than the block in the state database");
 
