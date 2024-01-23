@@ -134,7 +134,7 @@ fi
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
   --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
   --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
-  ${HIVED_ARGS[@]} 2>&1 | tee -i "$DATADIR/hived.log"
+  ${HIVED_ARGS[@]}
 echo "$? Hived process finished execution."
 EOF
 
