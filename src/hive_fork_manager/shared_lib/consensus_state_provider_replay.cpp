@@ -843,7 +843,7 @@ void display_blocks(const pxx::result& blocks)
           std::cout <<  "name: " << ((*it)["name"].c_str() ) << ", ";
           std::cout.flush();
 
-          std::cout << "created_at (timestamp):" << ((*it)["created_at"].c_str()) << ", ";
+          // mtlk todo spixx in pxx  std::cout << "created_at (timestamp):" << ((*it)["created_at"].c_str()) << ", ";
           std::cout.flush();
 
         // Special handling for 'bytea' type columns
@@ -1043,6 +1043,7 @@ csp_session_type::csp_session_type(
 }  // namespace consensus_state_provider
 
 #include "pqxx_impl.hpp"
+#include "spixx_impl.hpp"
 
 namespace consensus_state_provider
 {
@@ -1053,7 +1054,8 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
-  
+  pxx::result spi_blocks;
+
 
   // clang-format off
     auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
@@ -1062,8 +1064,12 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + std::to_string(last_block)
                                 + " ORDER BY num ASC";
     blocks = csp_session.conn->execute_query(blocks_query);
+
+    spi_blocks = csp_session.spi_conn->execute_query(blocks_query);
+
     //std::cout << "Blocks:" << blocks.size() << " " << std::endl;
     #ifndef NDEBUG
+      display_blocks(spi_blocks);
       display_blocks(blocks);
     #endif
 

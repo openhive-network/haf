@@ -44,12 +44,14 @@ namespace consensus_state_provider
 
   class haf_state_database;
   class postgres_database_helper;
+  class postgres_database_helper_spi;
   struct csp_session_type
   {
       csp_session_type(const char* context, const char* shared_memory_bin_path, const char* postgres_url);
 
       std::string shared_memory_bin_path;
       std::unique_ptr<postgres_database_helper> conn;
+      std::unique_ptr<postgres_database_helper_spi> spi_conn;
       std::unique_ptr<haf_state_database> db;
       empty_block_writer e_block_writer;
 
