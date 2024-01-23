@@ -15,6 +15,8 @@ evaluate_result() {
 
   echo "FAILED with result ${result}";
 
+  sleep 5
+
   POSTGRESLOG=$(find /var/log -name postgresql*.log) || true
   echo $POSTGRESLOG || true
   sudo ls -lah $POSTGRESLOG || true

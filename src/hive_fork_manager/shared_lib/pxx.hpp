@@ -160,7 +160,7 @@ class const_result_iterator {
 public:
     template<typename T>
     const_result_iterator(T x) : self_(std::make_unique<const_result_iterator_model<T>>(std::move(x))) {}
-    const_result_iterator();
+    const_result_iterator(){} //mtlk todo ??
 
 
     const_result_iterator& operator++() {
@@ -220,7 +220,7 @@ class result {
 public:
     template<typename T>
     result(T x) : self_(std::make_unique<result_model<T>>(std::move(x))) {}
-    result(); //mtlk todo ??
+    result(){ } //mtlk todo ??
 
     const_result_iterator begin() const noexcept {
         return self_->begin();

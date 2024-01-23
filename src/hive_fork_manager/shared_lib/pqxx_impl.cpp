@@ -2,15 +2,14 @@
 
 #include <pqxx/pqxx>
 
+#include "pqxx_impl.hpp"
+
 namespace consensus_state_provider
 {
 
-class postgres_database_helper
-{
-public:
-  explicit postgres_database_helper(const char* url) : connection(url) {}
+  postgres_database_helper::postgres_database_helper(const char* url) : connection(url) {}
 
-  pxx::result execute_query(const std::string& query)
+  pxx::result postgres_database_helper::execute_query(const std::string& query)
   {
     pqxx::work txn(connection);
     pqxx::result query_result = txn.exec(query);
@@ -18,11 +17,6 @@ public:
     //return query_result;
     return {};
   }
-
-  
-private:
-  pqxx::connection connection;
-};
 
 
 }
