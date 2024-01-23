@@ -641,7 +641,12 @@ std::vector<hive::protocol::operation> postgres_block_log::operations2bins(uint3
 
 void add_operation_bin(const pxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins)
 {
-  //f.as<std::basic_string<std::byte>>();
+
+  // pxx::binarystring bs(operation["bin_body"]);
+  // const unsigned char* raw_data = bs.data();
+  // auto data_length = bs.size();
+
+  //f.as<std::basic_string<std::eeae>>();
   auto binarka  = (*operation)["bin_body"].as<std::basic_string<std::byte>>();
   //pxx::binarystring bs(operation["bin_body"]);
   std::byte* raw_data = binarka.data();
@@ -921,7 +926,7 @@ void display_operation(const pxx::const_result_iterator& it)
     std::cout << "pretty_bin_body: ";
     const pxx::const_result_iterator& operation = it;
 
-    auto bs = ((*operation)["bin_body"].as<std::vector<std::byte>>());
+    auto bs = ((*operation)["bin_body"].as<std::basic_string<std::byte>>());
 
 
     // if(((*(*it))["block_num"]->as<uint32_t>()) == 556705)

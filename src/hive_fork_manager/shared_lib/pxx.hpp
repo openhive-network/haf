@@ -53,9 +53,27 @@ struct field_model : field_concept
 
   std::any as(const std::type_info& type) const override 
   {
+      using operation_bin_type = std::basic_string<std::byte>;
+
       if (type == typeid(uint32_t))
       {
           return data.template as<uint32_t>();
+      }
+      else if(type == typeid(int))
+      {
+        return data. template as<int>();
+      }
+      else if(type == typeid(int64_t))
+      {
+        return data. template as<int64_t>();
+      }
+      else if(type == typeid(operation_bin_type))
+      {
+        return data. template as<operation_bin_type>();
+      }
+      else if(type == typeid(int64_t))
+      {
+        return data. template as<int64_t>();
       }
       // Add other types as needed
       throw std::bad_cast();
