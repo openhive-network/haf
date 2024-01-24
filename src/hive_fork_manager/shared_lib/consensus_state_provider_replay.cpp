@@ -368,9 +368,9 @@ void postgres_block_log::replay_block(const pxx::row& block)
 
 full_block_ptr postgres_block_log::block_to_fullblock(uint32_t block_num_from_shared_memory_bin, const pxx::row& block)
 {
-  auto block_num_from_postgres = block["num"].as<uint32_t>();
+  uint32_t block_num_from_postgres = block["num"].as<uint32_t>();
 
-  cout << "block_to_fullblock mtlk: " << block_num_from_postgres  << endl;
+  // cout << "block_to_fullblock mtlk: " << block_num_from_postgres  << endl;
 
   FC_ASSERT(block_num_from_postgres == block_num_from_shared_memory_bin, "Requested block has different number than the block in the state database");
 
@@ -870,113 +870,227 @@ collected_account_balances_collection_t collect_current_all_accounts_balances(cs
   return collected_balances;
 }
 
-void display_blocks(const pxx::result& blocks)
+template <typename T>
+void compare(const std::string& label, T a, T b)
+{
+  if(a != b)
+  {
+    std::cout << label << "not equal mtlk !!! error" << std::endl;
+    std::cout << "First is " << a << std::endl;
+    std::cout << "Second is " << b << std::endl;
+  }
+}
+
+void display_blocks(const pxx::result& blocks, const pxx::result& blocks2)
 {
   if (blocks.empty()) 
   {
-      std::cout << "No blocks data available." << std::endl;
+      if(!blocks2.empty())
+      {
+        std::cout << "mtlk !!! error blocks2 not empty." << std::endl;  
+      }
+      else
+      {
+        std::cout << "No blocks data available." << std::endl;
+      }
   }
   else 
   {
-    for (auto it = blocks.begin(); it != blocks.end(); ++it) 
+    auto it2 = blocks2.begin();
+    auto it = blocks.begin();
+    while (true) 
     {
+        if(it == blocks.end())
+        {
+          if(it2 == blocks2.end ())
+          {
+            break;
+          }
+          else
+          {
+            std::cout << "it2 not end mtlk !!! error" << std::endl;
+            break;
+          }
+        }
+        else
+        {
+          if(it2 == blocks2.end ())
+          {
+            std::cout << "it not end mtlk !!! error" << std::endl;
+            break;
+          }
+        }
+
+
           int32_t num_value = (*it)["num"].as<uint32_t>();
           int32_t id_value = (*it)["id"].as<uint32_t>();
 
-          std::cout << "num: " << num_value << ", ";
-          std::cout << "id: " << id_value << ", ";
+          compare("num", (*it)["num"].as<uint32_t>(), (*it2)["num"].as<uint32_t>());
 
-          std::cout.flush();
+          // std::cout << "num: " << num_value << ", ";
+          // std::cout << "id: " << id_value << ", ";
 
-          //name (varchar)
-          std::cout <<  "name string_view: " << ((*it)["name"].as<std::string_view>() ) << ", ";
-          std::cout.flush();
+          // std::cout.flush();
 
+          // //name (varchar)
+          // std::cout <<  "name string_view: " << ((*it)["name"].as<std::string_view>() ) << ", ";
+          // std::cout.flush();
 
-          std::cout << "created_at (timestamp) timestamp_wo_tz_type:" << ((*it)["created_at"].as<pxx::timestamp_wo_tz_type>()) << ", ";
-
-          std::cout.flush();
-
-        // Special handling for 'bytea' type columns
-          std::cout << "hash string view: " << (*it)["hash"].as<std::basic_string<std::byte>>() << ", ";
+          compare("name", (*it)["name"].as<std::string_view>(),(*it2)["name"].as<std::string_view>());
 
 
-          // for (const auto& col_name : column_names)
-          // {
-          //     spixx::field f = (*it)[col_name];
-          //     std::cout << col_name << ": " << f.c_str() << ", ";
-          // }            
 
-          std::cout << std::endl;
+          // std::cout << "created_at (timestamp) timestamp_wo_tz_type:" << ((*it)["created_at"].as<pxx::timestamp_wo_tz_type>()) << ", ";
+
+          // std::cout.flush();
+
+          compare("created_at", (*it)["created_at"].as<pxx::timestamp_wo_tz_type>(), (*it2)["created_at"].as<pxx::timestamp_wo_tz_type>());
+
+        // // Special handling for 'bytea' type columns
+        //   std::cout << "hash string view: " << (*it)["hash"].as<std::basic_string<std::byte>>() << ", ";
+
+
+        //   // for (const auto& col_name : column_names)
+        //   // {
+        //   //     spixx::field f = (*it)[col_name];
+        //   //     std::cout << col_name << ": " << f.c_str() << ", ";
+        //   // }            
+
+        //   std::cout << std::endl;
+
+          compare("hash", (*it)["hash"].as<std::basic_string<std::byte>>(),(*it2)["hash"].as<std::basic_string<std::byte>>());
+
+          ++it;
+          ++it2;
 
     }
   }
 }
 
-void display_transactions(const pxx::result& transactions)
+void display_transactions(const pxx::result& transactions, const pxx::result& transactions2)
 {
   if (transactions.empty()) 
   {
-      std::cout << "No  transactions data available." << std::endl;
+      if(!transactions2.empty())
+      {
+        std::cout << "mtlk !!! error transactions2 not empty." << std::endl;  
+      }
+      else
+      {
+        std::cout << "No  transactions data available." << std::endl;
+      }
   }
   else 
   {
-    for (auto it = transactions.begin(); it != transactions.end(); ++it) 
+    auto it2 = transactions2.begin();
+    auto it = transactions.begin();
+    while (true) 
     {
-        //block_num (int4)
-        std::cout.flush();
-        std::cout << "block_num: " << ((*it)["block_num"].as<uint32_t>()) << ", ";
-        std::cout.flush();
+        if(it == transactions.end())
+        {
+          if(it2 == transactions2.end ())
+          {
+            break;
+          }
+          else
+          {
+            std::cout << "it2 not end mtlk !!! error transaction" << std::endl;
+            break;
+          }
+        }
+        else
+        {
+          if(it2 == transactions2.end ())
+          {
+            std::cout << "it not end mtlk !!! error transaction" << std::endl;
+            break;
+          }
+        }
 
-        //trx_in_block (int2)
-        std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
-        std::cout.flush();
 
-        //ref_block_num (int4)
-        std::cout << "ref_block_num: " << ((*it)["ref_block_num"].as<uint32_t>()) << ", ";
-        std::cout.flush();
+        // //block_num (int4)
+        //std::cout << "block_num: " << ((*it)["block_num"].as<uint32_t>()) << ", " << endl;
 
-        //ref_block_prefix (int8)
-        std::cout << "ref_block_prefix: " << ((*it)["ref_block_prefix"].as<int64_t>()) << ", ";
 
-        std::cout.flush();
 
-        //expiration (timestamp)
-        std::cout << "expiration timestamp_wo_tz_type: " << ((*it)["expiration"].as<pxx::timestamp_wo_tz_type>()) << ", ";
-        std::cout.flush();
+        compare("transaction block_num",(*it)["block_num"].as<uint32_t>(), (*it2)["block_num"].as<uint32_t>());
 
-        //trx_hash (bytea)
-        std::cout << "trx_hash std::basic_string<std::byte>: " << ((*it)["trx_hash"].as<std::basic_string<std::byte>>()) << ", ";
-        std::cout.flush();
+        // //trx_in_block (int2)
+        // std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
+        // std::cout.flush();
+        compare("transaction trx_in_block",(*it)["trx_in_block"].as<int>(), (*it2)["trx_in_block"].as<int>());
+
+        // //ref_block_num (int4)
+        // std::cout << "ref_block_num: " << ((*it)["ref_block_num"].as<uint32_t>()) << ", ";
+        // std::cout.flush();
+        compare("transaction ref_block_num", (*it)["ref_block_num"].as<uint32_t>(), (*it2)["ref_block_num"].as<uint32_t>());
+
+        // //ref_block_prefix (int8)
+        // std::cout << "ref_block_prefix: " << ((*it)["ref_block_prefix"].as<int64_t>()) << ", ";
+        compare("transaction ref_block_prefix", (*it)["ref_block_prefix"].as<int64_t>(), (*it2)["ref_block_prefix"].as<int64_t>());
+
+        // std::cout.flush();
+
+        // //expiration (timestamp)
+        // std::cout << "expiration timestamp_wo_tz_type: " << ((*it)["expiration"].as<pxx::timestamp_wo_tz_type>()) << ", ";
+        // std::cout.flush();
+        compare("transaction expiration timestamp_wo_tz_type", (*it)["expiration"].as<pxx::timestamp_wo_tz_type>(), (*it2)["expiration"].as<pxx::timestamp_wo_tz_type>());
+
+        // //trx_hash (bytea)
+        // std::cout << "trx_hash std::basic_string<std::byte>: " << ((*it)["trx_hash"].as<std::basic_string<std::byte>>()) << ", ";
+        // std::cout.flush();
+        compare("transaction trx_hash ", (*it)["trx_hash"].as<std::basic_string<std::byte>>(), (*it2)["trx_hash"].as<std::basic_string<std::byte>>());
 
         //signature (bytea)
-        std::cout << "signature std::basic_string<std::byte>: " << ((*it)["signature"].as<std::basic_string<std::byte>>()) << ", ";
-        std::cout.flush();
+        if((*it)["signature"].is_null())
+        {
+          // std::cout << "transaction signature std::basic_string<std::byte>: " << " null" << ", ";
+          if(!(*it2)["signature"].is_null())
+          {
+            cout << "transaction signature not null mtlk !!! error" << endl;
+            std::cout.flush();
 
-        std::cout << std::endl;
+          }
+        }
+        else
+        {
+          // std::cout << "transaction signature std::basic_string<std::byte>: " << ((*it)["signature"].as<std::basic_string<std::byte>>()) << ", ";
+          // std::cout.flush();
+          compare("transaction signature", ((*it)["signature"].as<std::basic_string<std::byte>>()), ((*it2)["signature"].as<std::basic_string<std::byte>>()));
+        }
+
+
+
+        // std::cout << std::endl;
+        ++it;
+        ++it2;
 
     }
   }
 }
 
 
-void display_operation(const pxx::const_result_iterator& it)
+void display_operation(const pxx::const_result_iterator& it, const pxx::const_result_iterator& it2)
 {
-    //block_num (int4)
-    (*it)["block_num"];
-    std::cout << "block_num: " << ((*it)["block_num"].as<uint32_t>()) << ", ";
+    // //block_num (int4)
+    // std::cout << "block_num: " << ((*it)["block_num"].as<uint32_t>()) << ", ";
+    compare("operation block_num", (*it)["block_num"].as<uint32_t>(), (*it2)["block_num"].as<uint32_t>());
 
-    //trx_in_block (int2)
-    std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
+    // //trx_in_block (int2)
+    // std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
+    compare("operation trx_in_block", (*it)["trx_in_block"].as<int>(), (*it2)["trx_in_block"].as<int>());
 
-      //bin_body (operation)
-    std::cout << "bin_body std::basic_string<std::byte>: " << (*it)["bin_body"].as<std::basic_string<std::byte>>() << ", ";
-    std::cout << std::endl;
+    //   //bin_body (operation)
+    // std::cout << "bin_body std::basic_string<std::byte>: " << (*it)["bin_body"].as<std::basic_string<std::byte>>() << ", ";
+    // std::cout << std::endl;
+    compare("operation bin_body", (*it)["bin_body"].as<std::basic_string<std::byte>>(), (*it2)["bin_body"].as<std::basic_string<std::byte>>());
 
-    std::cout << "pretty_bin_body: ";
+    //std::cout << "pretty_bin_body: ";
     const pxx::const_result_iterator& operation = it;
+    const pxx::const_result_iterator& operation2 = it2;
 
     auto bs = ((*operation)["bin_body"].as<std::basic_string<std::byte>>());
+    auto bs2 = ((*operation2)["bin_body"].as<std::basic_string<std::byte>>());
 
 
     // if(((*(*it))["block_num"]->as<uint32_t>()) == 556705)
@@ -1002,36 +1116,84 @@ void display_operation(const pxx::const_result_iterator& it)
 
     const auto& op  = (fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data), data_length));
     auto s = fc::json::to_pretty_string( op );
-    std::cout << s;
-    std::cout << std::endl;
+    // std::cout << s;
+    // std::cout << std::endl;
+
+    auto raw_data2 = bs2.data();
+    auto data_length2 = bs2.size();
+
+    const auto& op2  = (fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data2), data_length2));
+    auto s2 = fc::json::to_pretty_string( op2 );
+    // std::cout << s2;
+    // std::cout << std::endl;
+
+    compare("operation opertion pretty json", s,s2);
+
 
 }
 
 
-void display_operations(const pxx::result& operations)
+void display_operations(const pxx::result& operations, const pxx::result& operations2)
 {
   if (operations.empty()) 
   {
-      std::cout << "No operations data available." << std::endl;
+      if(!operations2.empty())
+      {
+        std::cout << "mtlk !!! error operations2 not empty." << std::endl;  
+      }
+      else
+      {
+        std::cout << "No operations data available." << std::endl;
+      }
   }
   else 
   {
-    for (auto it = operations.begin(); it != operations.end(); ++it) 
+
+    auto it2 = operations2.begin();
+    auto it = operations.begin();
+    while (true) 
     {
-      //block_num (int4)
-      std::cout << "block_num: " << ((*it)["block_num"].as<uint32_t>()) << ", ";
+        if(it == operations.end())
+        {
+          if(it2 == operations2.end ())
+          {
+            break;
+          }
+          else
+          {
+            std::cout << "it2 not end mtlk !!! error operation" << std::endl;
+            break;
+          }
+        }
+        else
+        {
+          if(it2 == operations2.end ())
+          {
+            std::cout << "it not end mtlk !!! error operation" << std::endl;
+            break;
+          }
+        }
 
-      //trx_in_block (int2)
-      std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
+
+
+      // //block_num (int4)
+      // std::cout << "block_num: " << ((*it)["block_num"].as<uint32_t>()) << ", ";
+
+      // //trx_in_block (int2)
+      // std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
   
-       //bin_body (operation)
-      std::cout << "bin_body: " << ((*it)["bin_body"].as<std::basic_string<std::byte>>()) << ", ";
+      //  //bin_body (operation)
+      // std::cout << "bin_body: " << ((*it)["bin_body"].as<std::basic_string<std::byte>>()) << ", ";
 
-      std::cout << std::endl;
+      // std::cout << std::endl;
 
-      std::cout << "Display single operation:" << std::endl;
+      // std::cout << "Display single operation:" << std::endl;
 
-      display_operation(it);
+      display_operation(it, it2);
+
+      ++it;
+      ++it2;
+
 
     }
   }
@@ -1086,13 +1248,13 @@ csp_session_type::csp_session_type(
   
 
 
-  #ifdef USE_PQXX
+  //#ifdef USE_PQXX
     conn(std::make_unique<postgres_database_helper>(postgres_url)),
-  #else
+  //#else
     #ifdef USE_PQXX_UNDEFINED
     #endif
     spi_conn(std::make_unique<postgres_database_helper_spi>(postgres_url)),
-  #endif
+  //#endif
   db(std::make_unique<haf_state_database>(*this, theApp)),
   e_block_writer( *db.get(), theApp, *this )
 
@@ -1102,11 +1264,11 @@ csp_session_type::csp_session_type(
 
 }  // namespace consensus_state_provider
 
-#ifdef USE_PQXX
+//#ifdef USE_PQXX
   #include "pqxx_impl.hpp"
-#else
+//#else
   #include "spixx_impl.hpp"
-#endif
+//#endif
 
 
 
@@ -1120,7 +1282,21 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
-  
+  #ifndef NDEBUG
+  []()
+ {
+   static volatile bool stop_in = true;
+   wlog("read_postgres_dataaa ");
+   wlog("pid= ${pid}", ("pid" , getpid() ));
+
+   while(stop_in)
+   {
+     int a = 0;
+     a=a;
+   }
+ }();
+ #endif      
+
 
 
   // clang-format off
@@ -1132,20 +1308,15 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
     
 
-    #ifdef USE_PQXX
-      blocks = csp_session.conn->execute_query(blocks_query);
-    #else
-        #ifdef USE_PQXX_UNDEFINED
-        #endif
-      blocks = csp_session.spi_conn->execute_query(blocks_query);
-    #endif
+    blocks = csp_session.conn->execute_query(blocks_query);
+    
+    display_blocks(blocks, csp_session.spi_conn->execute_query(blocks_query));
 
 
 
 
     #ifndef NDEBUG
       //pxx::result spi_blocks = csp_session.spi_conn->execute_query(blocks_query);
-      display_blocks(blocks);
       // display_blocks(spi_blocks);
     #endif
 
@@ -1154,17 +1325,17 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " and block_num <= "
                                 + std::to_string(last_block)
                                 + " ORDER BY block_num, trx_in_block ASC";
-    #ifdef USE_PQXX                          
+    //#ifdef USE_PQXX                          
       transactions = csp_session.conn->execute_query(transactions_query);
-    #else
+    //#else
         #ifdef USE_PQXX_UNDEFINED
         #endif
-      transactions = csp_session.spi_conn->execute_query(transactions_query);
-    #endif
+      //transactions = csp_session.spi_conn->execute_query(transactions_query);
+    //#endif
 
+    display_transactions(transactions, csp_session.spi_conn->execute_query(transactions_query));
     #ifndef NDEBUG
       // pxx::result spi_transactions = csp_session.spi_conn->execute_query(transactions_query);
-      display_transactions(transactions);
       // display_transactions(spi_transactions);
     #endif
 
@@ -1175,16 +1346,16 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
                                 + " ORDER BY id ASC";
   
-    #ifdef USE_PQXX
-      operations = csp_session.conn->execute_query(operations_query);
-    #else
-      operations = csp_session.spi_conn->execute_query(operations_query);
+    //#ifdef USE_PQXX
+    operations = csp_session.conn->execute_query(operations_query);
+    //#else
+      //operations = csp_session.spi_conn->execute_query(operations_query);
         #ifdef USE_PQXX_UNDEFINED
         #endif
-    #endif
+    //#endif
+  display_operations(operations, csp_session.spi_conn->execute_query(operations_query));
   #ifndef NDEBUG
     //pxx::result spi_operations = csp_session.spi_conn->execute_query(operations_query);
-    display_operations(operations);
     // display_operations(spi_operations);
   #endif
 

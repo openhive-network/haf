@@ -315,7 +315,7 @@ inline pxx::timestamp_wo_tz_type field::as<pxx::timestamp_wo_tz_type>() const
 
     // timestamp_string = DatumGetCString(DirectFunctionCall1(timestamp_out, (Datum)(timestamp)));
 
-    printf("Timestamp: %s", timestamp_string);
+    //printf("Timestamp: %s", timestamp_string);
 
 
 

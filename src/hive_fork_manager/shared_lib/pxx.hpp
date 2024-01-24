@@ -14,6 +14,11 @@ struct timestamp_wo_tz_type
     std::string val;
 };
 
+inline bool operator != (const timestamp_wo_tz_type& a, const timestamp_wo_tz_type& b)
+{
+    return a.val != b.val;
+}
+
 inline std::ostream& operator<<(std::ostream& os, const timestamp_wo_tz_type& timestamp)
 {
     return os << timestamp.val;
