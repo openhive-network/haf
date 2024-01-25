@@ -52,21 +52,6 @@ struct field_concept
 
   virtual std::any as(const std::type_info& type) const = 0;
   
-  // {
-  //   // if (is_null())
-  //   // {
-  //   //   if constexpr (not nullness<T>::has_null)
-  //   //     internal::throw_null_conversion(type_name<T>);
-  //   //   else
-  //   //     return nullness<T>::null();
-  //   // }
-  //   // else
-  //   // {
-  //   //   return from_string<T>(this->view());
-  //   // }
-  //   return T();
-  // }
-
 };
 
 template<typename T>

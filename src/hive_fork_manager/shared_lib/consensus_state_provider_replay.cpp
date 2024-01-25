@@ -770,31 +770,20 @@ full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num)
 std::string fix_pxx_time(const pxx::field& t)
 {
   const auto T_letter_position_in_ascii_time_string = 10;
-  std::ostringstream o;
-  o << t.as<pxx::timestamp_wo_tz_type>();
-  std::string r = o.str();
+  std::string r = t.as<pxx::timestamp_wo_tz_type>().val;
   r[T_letter_position_in_ascii_time_string] = 'T';
   return r;
 }
 
-// value coming from pxx is "\xABCDEFGHIJK", we need to cut 2 charaters from the front to be accepted in variant
+// not fixing anything anymore
 std::string fix_pxx_hex(const pxx::field& h)
 {
-//  const auto backslash_x_prefix_length = 2;
-
-  // auto binarka  =h.as<std::basic_string<std::byte>>();
-  
-  // std::byte* raw_data = binarka.data();
-  // auto data_length = binarka.size();
 
   std::ostringstream o;
   o << h.as<std::basic_string<std::byte>>();;
   std::string r = o.str();
 
   return r;
-
-  // auto cstr = h.c_str();
-  // return  cstr + backslash_x_prefix_length;
 }
 
 
@@ -862,7 +851,16 @@ void compare(const std::string& label, T a, T b)
   }
 }
 
-void display_blocks(const pxx::result& blocks, const pxx::result& blocks2)
+template <>
+void compare(const std::string& label, const char*a, const char *b)
+{
+  std::string as(a);
+  std::string bs(b);
+  compare(label, as ,bs);
+}
+
+
+void compare_blocks(const pxx::result& blocks, const pxx::result& blocks2)
 {
   if (blocks.empty()) 
   {
@@ -906,9 +904,9 @@ void display_blocks(const pxx::result& blocks, const pxx::result& blocks2)
           int32_t num_value = (*it)["num"].as<uint32_t>();
           int32_t id_value = (*it)["id"].as<uint32_t>();
 
-          compare("num", (*it)["num"].as<uint32_t>(), (*it2)["num"].as<uint32_t>());
+          compare("block num", (*it)["num"].as<uint32_t>(), (*it2)["num"].as<uint32_t>());
 
-          compare("extesions", (*it)["extensions"].as<pxx::jsonb_string>(), (*it2)["extensions"].as<pxx::jsonb_string>());
+          compare("block extesions", (*it)["extensions"].as<pxx::jsonb_string>(), (*it2)["extensions"].as<pxx::jsonb_string>());
 
           
 
@@ -921,7 +919,7 @@ void display_blocks(const pxx::result& blocks, const pxx::result& blocks2)
           // std::cout <<  "name string_view: " << ((*it)["name"].as<std::string_view>() ) << ", ";
           // std::cout.flush();
 
-          compare("name", (*it)["name"].as<std::string_view>(),(*it2)["name"].as<std::string_view>());
+          compare("block name", (*it)["name"].c_str(),(*it2)["name"].c_str());
 
 
 
@@ -929,7 +927,7 @@ void display_blocks(const pxx::result& blocks, const pxx::result& blocks2)
 
           // std::cout.flush();
 
-          compare("created_at", (*it)["created_at"].as<pxx::timestamp_wo_tz_type>(), (*it2)["created_at"].as<pxx::timestamp_wo_tz_type>());
+          compare("block created_at", (*it)["created_at"].as<pxx::timestamp_wo_tz_type>(), (*it2)["created_at"].as<pxx::timestamp_wo_tz_type>());
 
         // // Special handling for 'bytea' type columns
         //   std::cout << "hash string view: " << (*it)["hash"].as<std::basic_string<std::byte>>() << ", ";
@@ -942,8 +940,14 @@ void display_blocks(const pxx::result& blocks, const pxx::result& blocks2)
         //   // }            
 
         //   std::cout << std::endl;
+          compare("block signing_key", (*it)["signing_key"].c_str(), (*it2)["signing_key"].c_str());
 
-          compare("hash", (*it)["hash"].as<std::basic_string<std::byte>>(),(*it2)["hash"].as<std::basic_string<std::byte>>());
+          compare("block hash", (*it)["hash"].as<std::basic_string<std::byte>>(),(*it2)["hash"].as<std::basic_string<std::byte>>());
+          compare("block prev", (*it)["prev"].as<std::basic_string<std::byte>>(),(*it2)["prev"].as<std::basic_string<std::byte>>());
+          compare("block transaction_merkle_root", (*it)["transaction_merkle_root"].as<std::basic_string<std::byte>>(),(*it2)["transaction_merkle_root"].as<std::basic_string<std::byte>>());
+          compare("block witness_signature", (*it)["witness_signature"].as<std::basic_string<std::byte>>(),(*it2)["witness_signature"].as<std::basic_string<std::byte>>());
+          
+          
 
           ++it;
           ++it2;
@@ -952,7 +956,7 @@ void display_blocks(const pxx::result& blocks, const pxx::result& blocks2)
   }
 }
 
-void display_transactions(const pxx::result& transactions, const pxx::result& transactions2)
+void compare_transactions(const pxx::result& transactions, const pxx::result& transactions2)
 {
   if (transactions.empty()) 
   {
@@ -1055,7 +1059,7 @@ void display_transactions(const pxx::result& transactions, const pxx::result& tr
 }
 
 
-void display_operation(const pxx::const_result_iterator& it, const pxx::const_result_iterator& it2)
+void compare__operation(const pxx::const_result_iterator& it, const pxx::const_result_iterator& it2)
 {
     // //block_num (int4)
     // std::cout << "block_num: " << ((*it)["block_num"].as<uint32_t>()) << ", ";
@@ -1118,7 +1122,7 @@ void display_operation(const pxx::const_result_iterator& it, const pxx::const_re
 }
 
 
-void display_operations(const pxx::result& operations, const pxx::result& operations2)
+void compare__operations(const pxx::result& operations, const pxx::result& operations2)
 {
   if (operations.empty()) 
   {
@@ -1174,7 +1178,7 @@ void display_operations(const pxx::result& operations, const pxx::result& operat
 
       // std::cout << "Display single operation:" << std::endl;
 
-      display_operation(it, it2);
+      compare__operation(it, it2);
 
       ++it;
       ++it2;
@@ -1284,24 +1288,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
-  #ifndef NDEBUG
-  []()
- {
-   static volatile bool stop_in = true;
-   wlog("read_postgres_dataaa ");
-   wlog("pid= ${pid}", ("pid" , getpid() ));
-
-   while(stop_in)
-   {
-     int a = 0;
-     a=a;
-   }
- }();
- #endif      
-
-
-
-  // clang-format off
+    // clang-format off
     auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
                                 + std::to_string(first_block)
                                 + " and num <= "
@@ -1312,14 +1299,14 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
     blocks = csp_session.spi_conn->execute_query(blocks_query);
     
-    display_blocks(blocks, csp_session.conn->execute_query(blocks_query));
+    compare_blocks(blocks, csp_session.conn->execute_query(blocks_query));
 
 
 
 
     #ifndef NDEBUG
       //pxx::result spi_blocks = csp_session.spi_conn->execute_query(blocks_query);
-      // display_blocks(spi_blocks);
+      // compare_blocks(spi_blocks);
     #endif
 
     auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
@@ -1335,10 +1322,10 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
       //transactions = csp_session.spi_conn->execute_query(transactions_query);
     //#endif
 
-    display_transactions(transactions, csp_session.conn->execute_query(transactions_query));
+    compare_transactions(transactions, csp_session.conn->execute_query(transactions_query));
     #ifndef NDEBUG
       // pxx::result spi_transactions = csp_session.spi_conn->execute_query(transactions_query);
-      // display_transactions(spi_transactions);
+      // compare_transactions(spi_transactions);
     #endif
 
     auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
@@ -1355,10 +1342,10 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
         #ifdef USE_PQXX_UNDEFINED
         #endif
     //#endif
-  display_operations(operations, csp_session.conn->execute_query(operations_query));
+  compare__operations(operations, csp_session.conn->execute_query(operations_query));
   #ifndef NDEBUG
     //pxx::result spi_operations = csp_session.spi_conn->execute_query(operations_query);
-    // display_operations(spi_operations);
+    // compare__operationZs(spi_operations);
   #endif
 
   // clang-format on
