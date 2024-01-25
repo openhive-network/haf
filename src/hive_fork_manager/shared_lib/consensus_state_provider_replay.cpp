@@ -514,12 +514,14 @@ void p2b_time_to_time_point_sec(const char* field_name, const T& block_or_transa
 template <typename T>
 void p2b_cstr_to_public_key(const char* field_name, const T& block_or_transaction, hive::chain::public_key_type& val)
 {
+  cout << "p2b_cstr_to_public_key: c_str() mtlk : " << block_or_transaction[field_name].c_str() << endl;
   val = hive::protocol::public_key_type(block_or_transaction[field_name].c_str());
 }
 
 template <typename T>
 void p2b_cstr_to_str(const char* field_name, const T& block_or_transaction, std::string& val)
 {
+  cout << "p2b_cstr_to_str : c_str() mtlk : " << block_or_transaction[field_name].c_str() << endl;
   val = block_or_transaction[field_name].c_str();
 }
 
@@ -552,7 +554,8 @@ block_bin_t build_block_bin(const pxx::row& block, std::vector<hive::protocol::t
   if(const auto& field = block["extensions"]; !field.is_null())
   {
     //It seems reasonable to use existing conversion to static_variant via variant here, or maybe add a method to json.cpp ? mtlk TODO
-    std::string json = field.c_str();
+    std::string json = field.as<pxx::jsonb_string>().val;
+    cout << "Extension json: mtlk: " << json << endl;
     fc::variant extensions = fc::json::from_string(json, fc::json::format_validation_mode::relaxed);
     from_variant(extensions, sb.extensions);
   }
@@ -926,6 +929,10 @@ void display_blocks(const pxx::result& blocks, const pxx::result& blocks2)
           int32_t id_value = (*it)["id"].as<uint32_t>();
 
           compare("num", (*it)["num"].as<uint32_t>(), (*it2)["num"].as<uint32_t>());
+
+          compare("extesions", (*it)["extensions"].as<pxx::jsonb_string>(), (*it2)["extensions"].as<pxx::jsonb_string>());
+
+          
 
           // std::cout << "num: " << num_value << ", ";
           // std::cout << "id: " << id_value << ", ";
@@ -1308,9 +1315,9 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
     
 
-    blocks = csp_session.conn->execute_query(blocks_query);
+    blocks = csp_session.spi_conn->execute_query(blocks_query);
     
-    display_blocks(blocks, csp_session.spi_conn->execute_query(blocks_query));
+    display_blocks(blocks, csp_session.conn->execute_query(blocks_query));
 
 
 
@@ -1326,14 +1333,14 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + std::to_string(last_block)
                                 + " ORDER BY block_num, trx_in_block ASC";
     //#ifdef USE_PQXX                          
-      transactions = csp_session.conn->execute_query(transactions_query);
+      transactions = csp_session.spi_conn->execute_query(transactions_query);
     //#else
         #ifdef USE_PQXX_UNDEFINED
         #endif
       //transactions = csp_session.spi_conn->execute_query(transactions_query);
     //#endif
 
-    display_transactions(transactions, csp_session.spi_conn->execute_query(transactions_query));
+    display_transactions(transactions, csp_session.conn->execute_query(transactions_query));
     #ifndef NDEBUG
       // pxx::result spi_transactions = csp_session.spi_conn->execute_query(transactions_query);
       // display_transactions(spi_transactions);
@@ -1347,13 +1354,13 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " ORDER BY id ASC";
   
     //#ifdef USE_PQXX
-    operations = csp_session.conn->execute_query(operations_query);
+    operations = csp_session.spi_conn->execute_query(operations_query);
     //#else
       //operations = csp_session.spi_conn->execute_query(operations_query);
         #ifdef USE_PQXX_UNDEFINED
         #endif
     //#endif
-  display_operations(operations, csp_session.spi_conn->execute_query(operations_query));
+  display_operations(operations, csp_session.conn->execute_query(operations_query));
   #ifndef NDEBUG
     //pxx::result spi_operations = csp_session.spi_conn->execute_query(operations_query);
     // display_operations(spi_operations);

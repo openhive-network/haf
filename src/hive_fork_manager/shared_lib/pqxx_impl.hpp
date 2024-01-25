@@ -8,6 +8,14 @@ namespace pqxx
         auto a = c_str();
         return pxx::timestamp_wo_tz_type{std::string(a)};
     }
+
+    template<>
+    inline pxx::jsonb_string field::as<pxx::jsonb_string>() const
+    {
+        auto a = c_str();
+        return pxx::jsonb_string{std::string(a)};
+    }
+
 }
 
 namespace consensus_state_provider

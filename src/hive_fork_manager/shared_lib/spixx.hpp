@@ -321,9 +321,35 @@ inline pxx::timestamp_wo_tz_type field::as<pxx::timestamp_wo_tz_type>() const
 
   auto res =  pxx::timestamp_wo_tz_type{std::string(timestamp_string)};
 
-      /* Clean up and return */
   pfree(timestamp_string);
   return res;
 }
-}  // namespace spixx
+
+template<>
+inline pxx::jsonb_string field::as<pxx::jsonb_string>() const
+{
+  std::string s;
+
+  if (!isNull)
+  {
+      // Process the jsonbDatum
+      // For example, convert it to a C string
+        Jsonb *jb = DatumGetJsonbP(datum);
+
+            // Convert jsonb to text
+        char *j_string = JsonbToCString(NULL, &jb->root, VARSIZE(jb));
+
+      s = (j_string);
+      pfree(j_string);
+  }
+
+   
+  auto res =  pxx::jsonb_string{s};
+
+
+  return res;
+}
+
+}
+  // namespace spixx
 

@@ -24,6 +24,21 @@ inline std::ostream& operator<<(std::ostream& os, const timestamp_wo_tz_type& ti
     return os << timestamp.val;
 }
 
+struct jsonb_string
+{
+    std::string val;
+};
+
+inline bool operator != (const jsonb_string& a, const jsonb_string& b)
+{
+    return a.val != b.val;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const jsonb_string& timestamp)
+{
+    return os << timestamp.val;
+}
+
 
 using result_size_type = int;
 using row_size_type = int;
@@ -76,6 +91,10 @@ struct field_model : field_concept
       if (type == typeid(uint32_t)) //mtlk todo into case switch
       {
           return data.template as<uint32_t>();
+      }
+      else if(type == typeid(jsonb_string))
+      {
+        return data. template as<jsonb_string>();
       }
       else if(type == typeid(int))
       {
