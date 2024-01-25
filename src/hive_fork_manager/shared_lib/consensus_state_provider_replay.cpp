@@ -1315,9 +1315,9 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
     
 
-    blocks = csp_session.conn->execute_query(blocks_query);
+    blocks = csp_session.spi_conn->execute_query(blocks_query);
     
-    display_blocks(blocks, csp_session.spi_conn->execute_query(blocks_query));
+    display_blocks(blocks, csp_session.conn->execute_query(blocks_query));
 
 
 
@@ -1333,14 +1333,14 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + std::to_string(last_block)
                                 + " ORDER BY block_num, trx_in_block ASC";
     //#ifdef USE_PQXX                          
-      transactions = csp_session.conn->execute_query(transactions_query);
+      transactions = csp_session.spi_conn->execute_query(transactions_query);
     //#else
         #ifdef USE_PQXX_UNDEFINED
         #endif
       //transactions = csp_session.spi_conn->execute_query(transactions_query);
     //#endif
 
-    display_transactions(transactions, csp_session.spi_conn->execute_query(transactions_query));
+    display_transactions(transactions, csp_session.conn->execute_query(transactions_query));
     #ifndef NDEBUG
       // pxx::result spi_transactions = csp_session.spi_conn->execute_query(transactions_query);
       // display_transactions(spi_transactions);
@@ -1354,13 +1354,13 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " ORDER BY id ASC";
   
     //#ifdef USE_PQXX
-    operations = csp_session.conn->execute_query(operations_query);
+    operations = csp_session.spi_conn->execute_query(operations_query);
     //#else
       //operations = csp_session.spi_conn->execute_query(operations_query);
         #ifdef USE_PQXX_UNDEFINED
         #endif
     //#endif
-  display_operations(operations, csp_session.spi_conn->execute_query(operations_query));
+  display_operations(operations, csp_session.conn->execute_query(operations_query));
   #ifndef NDEBUG
     //pxx::result spi_operations = csp_session.spi_conn->execute_query(operations_query);
     // display_operations(spi_operations);
