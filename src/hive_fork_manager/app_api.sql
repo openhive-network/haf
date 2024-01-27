@@ -480,7 +480,7 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_context_detached_save_block_num( _contexts hive.contexts_group, _block_num INTEGER )
+CREATE OR REPLACE FUNCTION hive.app_set_current_block_num( _contexts hive.contexts_group, _block_num INTEGER )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -491,34 +491,35 @@ DECLARE
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
-    SELECT ARRAY_AGG(hc.id) INTO __contexts_id
-    FROM hive.contexts hc
-    WHERE hc.name =ANY( _contexts ) AND hc.is_attached = FALSE;
+    SELECT ARRAY_AGG(id) INTO __contexts_id
+    FROM hive.contexts
+    WHERE name =ANY( _contexts ) AND is_attached = FALSE;
 
-    IF __contexts_id IS NULL OR ARRAY_LENGTH( __contexts_id, 1 ) != ARRAY_LENGTH( _contexts, 1 ) THEN
-        RAISE EXCEPTION 'Contexts do not exist or are attached';
+    IF __contexts_id IS NULL THEN
+        RAISE EXCEPTION 'Contexts do not exist';
+    END IF;
+    IF ARRAY_LENGTH( __contexts_id, 1 ) != ARRAY_LENGTH( _contexts, 1 ) THEN
+        RAISE EXCEPTION 'Cannot directly set current_block_num when contexts are attached';
     END IF;
 
-    UPDATE hive.contexts hc
-    SET detached_block_num = _block_num
-       ,last_active_at = NOW()
-    WHERE hc.id =ANY( __contexts_id );
+    UPDATE hive.contexts SET current_block_num = _block_num, last_active_at = NOW()
+    WHERE id =ANY( __contexts_id );
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_context_detached_save_block_num( _context hive.context_name, _block_num INTEGER )
+CREATE OR REPLACE FUNCTION hive.app_set_current_block_num( _context hive.context_name, _block_num INTEGER )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_context_detached_save_block_num( ARRAY[ _context ], _block_num );
+    PERFORM hive.app_set_current_block_num( ARRAY[ _context ], _block_num );
 END;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION hive.app_context_detached_get_block_num( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_get_current_block_num( _contexts hive.contexts_group )
     RETURNS INTEGER
     LANGUAGE plpgsql
     STABLE
@@ -529,12 +530,12 @@ DECLARE
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
-    SELECT ARRAY_AGG( hc.detached_block_num ) detached_block_num INTO __result
-    FROM hive.contexts hc
-    WHERE hc.name =ANY( _contexts ) AND hc.is_attached = FALSE;
+    SELECT ARRAY_AGG( current_block_num ) current_block_num INTO __result
+    FROM hive.contexts
+    WHERE name =ANY( _contexts ) AND is_attached = FALSE;
 
-    IF __result IS NULL OR ARRAY_LENGTH( __result, 1 ) != ARRAY_LENGTH( _contexts, 1 ) THEN
-        RAISE EXCEPTION 'Contexts do not exist or are attached';
+    IF __result IS NULL THEN
+        RAISE EXCEPTION 'Contexts do not exist';
     END IF;
 
     SELECT ARRAY_AGG( DISTINCT( blocks.* ) ) INTO __result
@@ -548,14 +549,14 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_context_detached_get_block_num( _context_name hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_get_current_block_num( _context_name hive.context_name )
     RETURNS INTEGER
     LANGUAGE plpgsql
     STABLE
 AS
 $BODY$
 BEGIN
-    RETURN hive.app_context_detached_get_block_num( ARRAY[ _context_name ] );
+    RETURN hive.app_get_current_block_num( ARRAY[ _context_name ] );
 END;
 $BODY$;
 
@@ -733,7 +734,6 @@ BEGIN
                    ctx.current_block_num
                  , ctx.is_attached
                  , ctx.events_id
-                 , ctx.detached_block_num
                  , ctx.is_forking
         )
     ) INTO __number_of_rows

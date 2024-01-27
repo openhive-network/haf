@@ -140,7 +140,6 @@ BEGIN
 
     UPDATE hive.contexts
     SET is_attached = FALSE,
-        detached_block_num = NULL,
         events_id = hive.unreachable_event_id(),
         current_block_num = CASE WHEN current_block_num = 0 THEN 0 ELSE current_block_num - 1 END
     WHERE id = __context_id;
