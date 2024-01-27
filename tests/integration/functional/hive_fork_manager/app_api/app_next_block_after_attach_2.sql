@@ -144,7 +144,7 @@ BEGIN
     PERFORM hive.app_create_context('context', FALSE);
     PERFORM hive.app_next_block('context'); -- (1,6)
     CALL hive.appproc_context_detach('context');
-    PERFORM hive.app_context_detached_save_block_num('context', 6);
+    PERFORM hive.app_set_current_block_num('context', 6);
 END;
 $BODY$
 ;

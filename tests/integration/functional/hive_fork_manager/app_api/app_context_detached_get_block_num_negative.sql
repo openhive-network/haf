@@ -28,7 +28,7 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-    PERFORM hive.app_context_detached_save_block_num( 'context', 2 );
+    PERFORM hive.app_set_current_block_num( 'context', 2 );
 END;
 $BODY$
 ;
@@ -38,7 +38,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT hive.app_context_detached_get_block_num( 'context' ) ) = 2, 'returned block_num is not 2';
+    ASSERT ( SELECT hive.app_get_current_block_num( 'context' ) ) = 2, 'returned block_num is not 2';
 END;
 $BODY$
 ;
