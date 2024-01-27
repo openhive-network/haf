@@ -53,19 +53,19 @@ A HAF app calls `hive.app_next_block` to get the next block number to process. I
 When a range of block numbers is returned by app_next_block, the app may edit its own tables and use the appropriate snapshot of the blocks
 data by querying the 'hive.{context_name}_{ blocks | transactions | operations | transactions_multisig }' views. These view present a data snapshot for the first block in the returned block range. If the number of blocks in the returned range is large, then it may be more efficient for the app to do a "massive sync" instead of syncing block-by-block.
 
-To perform a massive sync, the app should detach the context, execute its sync algorithm using the block data, then reattach the context. This will eliminate the performance overhead associated with the triggers installed by the fork manager that monitor changes to the app's tables.
+To perform a massive sync, an app should detach the context, execute its sync algorithm using the block data, then reattach the context. This will eliminate the performance overhead associated with the triggers installed by the fork manager that monitor changes to the app's tables.
 
 It is possible that an app's operation will be stopped for some reason during a massive sync (i.e. when its context is detached). To deal with this potential scenario, when an app is restarted it should check if its context is attached using `hive.app_context_is_attached`, and if not then it needs to attach again using `hive.app_context_attach` and then 'COMMIT' a pending transaction.
 
-To attach the context, the app has to know the block number of the last processed block. An app should call `app_set_current_block_num` after processing a batch of blocks (this function shold only be called during massive sync, it will throw an exception if called with an attached context) (just before committing the new app state).
+To attach the context, the app has to know the block number of the last processed block. An app in massive sync (detached context mode) should call `app_set_current_block_num` after processing a batch of blocks (just before commiting the new app state) to periodically update the current block number to allow proper context re-attachment. Note: this function should only be called during massive sync and to prevent it from being called during normal sync it will throw an exception if called with an attached context.
 
 #### Note: an app's commit timing is important to preserve app consistentcy after an interruption
 In order to make sure apps maintain a consistent state when interrupted and restarted, commits should be done
 after changing all state associated with processing a block (or a batch of blocks during massive sync). 
 
-The current_block_number is automatically incremented when calling app_get_next_block when a context is attached,
+The current_block_number is automatically incremented by app_get_next_block when a context is attached,
 so DO NOT call commit after making this call until the app has finished processing the block 
-(otherwise, if the app is interrupted it will think it has finished processing an unfinished block).
+(otherwise, if the app is interrupted during normal sync, it will think it has finished processing an unfinished block).
 
 Similarly, when an app is operating with a detached context (in massive sync), do not make a commit call until
 all blocks in a batch are fully processed AND the current_block_number has been updated using hive.app_set_current_block_num.
