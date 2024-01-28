@@ -72,7 +72,7 @@ haf_image_build_mirrornet:
     # Allow access from any network to eliminate CI IP addressing problems when hfm runs as service
     PG_ACCESS: |
                 "host    all              haf_admin        0.0.0.0/0    trust"
-                "host    all              haf_app_admin    0.0.0.0/0    trust"
+
     DATA_SOURCE: "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
     LOG_FILE: $CI_JOB_NAME.log
   command: ["--replay-blockchain", "--stop-replay-at-block=5000000"]
@@ -84,7 +84,6 @@ haf_image_build_mirrornet:
     # Allow access from any network to eliminate CI IP addressing problems when hfm runs as service
     PG_ACCESS: |
                 "host    all              haf_admin        0.0.0.0/0    trust"
-                "host    all              haf_app_admin    0.0.0.0/0    trust"
                 "host    all              test_app_owner   0.0.0.0/0    trust"
                 "host    all              hived            0.0.0.0/0    trust"
                 "host    all              all              0.0.0.0/0    scram-sha-256"
@@ -535,7 +534,7 @@ start_haf_as_service:
   services:
     - *haf-service
   variables:
-    HAF_POSTGRES_URL: postgresql://haf_app_admin@haf-instance:5432/haf_block_log
+    HAF_POSTGRES_URL: postgresql://haf_admin@haf-instance:5432/haf_block_log
     HIVED_UID: $HIVED_UID
     HAF_COMMIT: $HAF_COMMIT
   script:
