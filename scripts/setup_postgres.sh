@@ -93,7 +93,6 @@ install_extension() {
 }
 
 HAF_ADMIN_ACCOUNT="haf_admin"
-#HAF_APP_ADMIN_ACCOUNT="haf_app_admin"
 
 HAF_TABLESPACE_NAME="haf_tablespace"
 HAF_TABLESPACE_LOCATION="./haf_database_store"

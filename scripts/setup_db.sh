@@ -24,7 +24,6 @@ print_help () {
     echo "  --haf-app-user=NAME             Specify name of a database role to act as an APP user of the HAF database."
     echo "                                  Specify multiple times to add multiple roles."
     echo "                                  The role MUST already exist on the Postgres cluster!!!"
-    echo "                                  If omitted, defaults to haf_app_admin role."
     echo "  --haf-db-admin=NAME             Specify name of a database admin role with permission to create the database and install the HAF exension."
     echo "                                  The role MUST already exist on the Postgres cluster!!!"
     echo "                                  If omitted, defaults to haf_admin role."
@@ -37,7 +36,7 @@ DB_NAME="haf_block_log"
 DB_ADMIN="haf_admin"
 HAF_TABLESPACE_NAME="haf_tablespace"
 
-DEFAULT_DB_USERS=("haf_app_admin")
+DEFAULT_DB_USERS=()
 DB_USERS=()
 POSTGRES_HOST="/var/run/postgresql"
 POSTGRES_PORT=5432

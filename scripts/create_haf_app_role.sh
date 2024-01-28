@@ -48,7 +48,7 @@ EOF
 }
 
 
-HAF_APP_ACCOUNT="haf_app_admin"
+HAF_APP_ACCOUNT=""
 POSTGRES_HOST="/var/run/postgresql"
 POSTGRES_PORT=5432
 POSTGRES_URL=""
@@ -96,6 +96,8 @@ if [ -z "$POSTGRES_URL" ]; then
 else
   POSTGRES_ACCESS=$POSTGRES_URL
 fi
+
+_TST_HAF_APP_ACCOUNT=${HAF_APP_ACCOUNT:? "Missing application account name - it should be specified by using `--haf-app-account=name` option"}
 
 echo $POSTGRES_ACCESS
 
