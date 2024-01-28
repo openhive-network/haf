@@ -532,7 +532,7 @@ BEGIN
 
     SELECT ARRAY_AGG( current_block_num ) current_block_num INTO __result
     FROM hive.contexts
-    WHERE name =ANY( _contexts ) AND is_attached = FALSE;
+    WHERE name =ANY( _contexts );
 
     IF __result IS NULL THEN
         RAISE EXCEPTION 'Contexts do not exist';
