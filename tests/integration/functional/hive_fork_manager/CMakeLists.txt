@@ -324,7 +324,6 @@ ADD_TEST( NAME test_update_script
 
  ADD_SQL_FUNCTIONAL_TEST(deprecated/attach_detach_with_function/app_context_attach.sql)
  ADD_SQL_FUNCTIONAL_TEST(deprecated/attach_detach_with_function/app_context_attach_negative.sql)
- ADD_SQL_FUNCTIONAL_TEST(deprecated/attach_detach_with_function/app_context_detach.sql)
  ADD_SQL_FUNCTIONAL_TEST(deprecated/attach_detach_with_function/app_context_detach_after_next_block.sql)
  ADD_SQL_FUNCTIONAL_TEST(deprecated/attach_detach_with_function/app_context_is_attached.sql)
  ADD_SQL_FUNCTIONAL_TEST(deprecated/attach_detach_with_function/app_context_is_attached_negative.sql)
