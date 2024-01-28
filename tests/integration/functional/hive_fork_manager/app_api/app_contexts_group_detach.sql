@@ -24,7 +24,6 @@ BEGIN
     CREATE SCHEMA C;
     CREATE TABLE C.table1(id  INTEGER ) INHERITS( hive.context_c );
 
-    UPDATE hive.contexts SET detached_block_num = 5;
 END;
 $BODY$
 ;
@@ -50,19 +49,16 @@ $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context_a' AND is_attached = FALSE ), 'Attach flag is still set context_a';
     ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context_a' ) = 0, 'Wrong current_block_num context_a';
-    ASSERT ( SELECT detached_block_num FROM hive.contexts WHERE name='context_a' ) IS NULL, 'detached_block_num was not set to NULL context_a';
 
     ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 0, 'Trigger inserted something into shadow table1 context_a';
 
     ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context_b' AND is_attached = FALSE ), 'Attach flag is still set context_b';
     ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context_b' ) = 0, 'Wrong current_block_num context_b';
-    ASSERT ( SELECT detached_block_num FROM hive.contexts WHERE name='context_b' ) IS NULL, 'detached_block_num was not set to NULL context_b';
 
     ASSERT ( SELECT COUNT(*) FROM hive.shadow_b_table1 ) = 0, 'Trigger inserted something into shadow table1 context_b';
 
     ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context_c' AND is_attached = FALSE ), 'Attach flag is still set context_c';
     ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context_c' ) = 0, 'Wrong current_block_num context_c';
-    ASSERT ( SELECT detached_block_num FROM hive.contexts WHERE name='context_c' ) IS NULL, 'detached_block_num was not set to NULL context_c';
 
     ASSERT ( SELECT COUNT(*) FROM hive.shadow_c_table1 ) = 0, 'Trigger inserted something into shadow table1 context_c';
 END;

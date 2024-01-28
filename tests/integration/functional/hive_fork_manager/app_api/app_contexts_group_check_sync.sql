@@ -37,7 +37,6 @@ BEGIN
       , back_from_fork = FALSE
       , events_id = 0
       , fork_id = 1
-      , detached_block_num = 1
     ;
 
     UPDATE hive.contexts ctx
@@ -62,12 +61,6 @@ BEGIN
     SET
         fork_id = 2
     WHERE ctx.name = 'attached_context_not_insync_fr'
-    ;
-
-    UPDATE hive.contexts ctx
-    SET
-        detached_block_num = 2
-    WHERE ctx.name = 'attached_context_not_insync_db'
     ;
 
 END;
