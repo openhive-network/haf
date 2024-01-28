@@ -243,7 +243,7 @@ if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
 
   echo "Postgres instance setup completed."
 
-  "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_db.sh" --haf-db-admin=haf_admin --haf-db-name=haf_block_log --haf-app-user=haf_app_admin
+  "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_db.sh" --haf-db-admin=haf_admin --haf-db-name=haf_block_log
 
   sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_pghero.sh" --database=haf_block_log
 else
