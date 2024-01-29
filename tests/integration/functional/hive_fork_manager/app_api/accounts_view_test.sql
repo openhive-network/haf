@@ -74,17 +74,17 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.accounts_view
         EXCEPT SELECT * FROM ( VALUES
-              ( 100, 'alice1' )
-            , ( 200, 'alice2' )
-            , ( 300, 'alice3' )
-            , ( 400, 'alice4' )
-            , ( 500, 'alice5' )
-            , ( 600, 'alice61' )
-            , ( 700, 'alice72' )
-            , ( 800, 'bob72' )
-            , ( 900, 'alice83' )
-            , ( 1000, 'alice93' )
-            , (  1100, 'alice103' )
+              ( 1, 100, 'alice1' )
+            , ( 2, 200, 'alice2' )
+            , ( 3, 300, 'alice3' )
+            , ( 4, 400, 'alice4' )
+            , ( 5, 500, 'alice5' )
+            , ( 6, 600, 'alice61' )
+            , ( 7, 700, 'alice72' )
+            , ( 7, 800, 'bob72' )
+            , ( 8, 900, 'alice83' )
+            , ( 9, 1000, 'alice93' )
+            , ( 10, 1100, 'alice103' )
         ) as pattern
     ) , 'Unexpected rows in the view';
 
@@ -95,11 +95,11 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.irreversible_accounts_view
         EXCEPT SELECT * FROM ( VALUES
-                                  ( 100, 'alice1' )
-                                , ( 200, 'alice2' )
-                                , ( 300, 'alice3' )
-                                , ( 400, 'alice4' )
-                                , ( 500, 'alice5' )
+                                  ( 100, 'alice1', 1 )
+                                , ( 200, 'alice2', 2 )
+                                , ( 300, 'alice3', 3 )
+                                , ( 400, 'alice4', 4 )
+                                , ( 500, 'alice5', 5 )
                              ) as pattern
     ) , 'Unexpected rows in the view';
 
