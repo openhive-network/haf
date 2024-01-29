@@ -13,7 +13,8 @@ VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
 
 INSERT INTO hive.blocks
 VALUES
-      ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+      ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+    , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     , ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:23-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     , ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:24-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     , ( 5, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:25-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -37,7 +38,7 @@ VALUES
 
 INSERT INTO hive.accounts
 VALUES
-       ( 100, 'alice1', NULL )
+       ( 100, 'alice1', 1 )
      , ( 200, 'alice2', 2 )
      , ( 300, 'alice3', 3 )
      , ( 400, 'alice4', 4 )
@@ -76,30 +77,30 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.context_accounts_view
         EXCEPT SELECT * FROM ( VALUES
-                   ( 100, 'alice1' )
-                 , ( 200, 'alice2')
-                 , ( 300, 'alice3' )
-                 , ( 400, 'alice4' )
-                 , ( 500, 'alice51' )
-                 , ( 600, 'alice61' )
-                 , ( 700, 'alice72' )
-                 , ( 800, 'bob72' )
-                 , ( 900, 'alice82' )
-                 , ( 5, 'initminer' )
+                   ( 1, 100, 'alice1' )
+                 , ( 2, 200, 'alice2')
+                 , ( 3, 300, 'alice3' )
+                 , ( 4, 400, 'alice4' )
+                 , ( 5, 500, 'alice51' )
+                 , ( 6, 600, 'alice61' )
+                 , ( 7, 700, 'alice72' )
+                 , ( 7, 800, 'bob72' )
+                 , ( 8, 900, 'alice82' )
+                 , ( 1, 5, 'initminer' )
                  ) as pattern
     ) , 'Unexpected rows in the view';
 
     ASSERT NOT EXISTS (
         SELECT * FROM ( VALUES
-                   ( 100, 'alice1' )
-                 , ( 200, 'alice2')
-                 , ( 300, 'alice3' )
-                 , ( 400, 'alice4' )
-                 , ( 500, 'alice51' )
-                 , ( 600, 'alice61' )
-                 , ( 700, 'alice72' )
-                 , ( 800, 'bob72' )
-                 , ( 900, 'alice82' )
+                   ( 1, 100, 'alice1' )
+                 , ( 2, 200, 'alice2')
+                 , ( 3, 300, 'alice3' )
+                 , ( 4, 400, 'alice4' )
+                 , ( 5, 500, 'alice51' )
+                 , ( 6, 600, 'alice61' )
+                 , ( 7, 700, 'alice72' )
+                 , ( 7, 800, 'bob72' )
+                 , ( 8, 900, 'alice82' )
         ) as pattern
         EXCEPT SELECT * FROM hive.context_accounts_view
     ) , 'Unexpected rows in the view2';
