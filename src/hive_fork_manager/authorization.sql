@@ -179,6 +179,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.unreachable_event_id()
     , hive.initialize_extension_data()
     , hive.ignore_registered_table_edition( pg_ddl_command )
+    , hive.block_sink_num()
     , hive.get_wal_sequence_number()
     , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
 TO hived_group;

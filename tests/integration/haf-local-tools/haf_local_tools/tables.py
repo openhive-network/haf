@@ -43,6 +43,7 @@ class AccountsView(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
+    block_num = Column(Integer)
 
 class AccountOperations(Base):
     __tablename__ = "account_operations"
