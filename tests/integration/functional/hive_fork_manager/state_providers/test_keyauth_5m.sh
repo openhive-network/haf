@@ -104,8 +104,7 @@ execute_keyauth_query()
     SELECT hive.public_key_to_string(key),
         account_id,
         key_kind,
-        a.block_num,
-        op_serial_id
+        a.block_num
     FROM hive.mmm_keyauth_a a
     JOIN hive.mmm_keyauth_k ON key_serial_id = key_id
     JOIN hive.mmm_accounts_view av ON account_id = av.id
@@ -138,8 +137,8 @@ execute_accountauth_query()
       key_kind,
       account_auth_id,
       av_with_supervisaccount.name as supervisaccount,
-      a.block_num,
-      op_serial_id
+      a.block_num
+
   FROM hive.mmm_accountauth_a a
   JOIN hive.mmm_accounts_view av_with_mainaccount ON account_id = av_with_mainaccount.id
   JOIN hive.mmm_accounts_view av_with_supervisaccount ON account_auth_id = av_with_supervisaccount.id
@@ -263,9 +262,9 @@ fi
 RUN_FOR=3000000
 ACCOUNT_NAME='streemian'
 EXPECTED_OUTPUT=$(cat <<'EOF'
- account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
-------------+-----------+----------+-----------------+-----------------+-----------+--------------
-       9223 | streemian | OWNER    |            1489 | xeroc           |   1606743 |      2033587
+ account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num 
+------------+-----------+----------+-----------------+-----------------+-----------
+       9223 | streemian | OWNER    |            1489 | xeroc           |   1606743
 (1 row)
 EOF
 )
@@ -274,13 +273,13 @@ run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=5000000
 ACCOUNT_NAME='supercomputing96'
 EXPECTED_OUTPUT=$(cat <<'EOF'
-                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
--------------------------------------------------------+------------+-----------------+-----------+--------------
- STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | OWNER           |   4069004 |     12709969
- STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | ACTIVE          |   4069004 |     12709969
- STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | POSTING         |   4069004 |     12709969
- STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | MEMO            |   4069004 |     12709969
- STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | WITNESS_SIGNING |   4069064 |     12710347
+                 public_key_to_string                  | account_id |    key_kind     | block_num 
+-------------------------------------------------------+------------+-----------------+-----------
+ STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | OWNER           |   4069004
+ STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | ACTIVE          |   4069004
+ STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | POSTING         |   4069004
+ STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | MEMO            |   4069004
+ STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | WITNESS_SIGNING |   4069064
 (5 rows)
 EOF
 )
@@ -289,24 +288,24 @@ run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=5000000
 ACCOUNT_NAME='supercomputing96'
 EXPECTED_OUTPUT=$(cat <<'EOF'
- account_id | name | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
-------------+------+----------+-----------------+-----------------+-----------+--------------
+ account_id | name | key_kind | account_auth_id | supervisaccount | block_num 
+------------+------+----------+-----------------+-----------------+-----------
 (0 rows)
 EOF
 )
 run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
-
-
-RUN_FOR=3202773
-ACCOUNT_NAME='alibaba'
-EXPECTED_OUTPUT=$(cat <<'EOF'
-                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
--------------------------------------------------------+------------+----------+-----------+--------------
- STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR |        949 | OWNER    |   3202773 |      5036543
- STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR |        949 | ACTIVE   |   3202773 |      5036543
- STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR |        949 | POSTING  |   3202773 |      5036543
- STM5vaLEVu8x7S7cZj8ivaujUewZWxN1EqJQ6LjxCFdU8TN773SPg |        949 | MEMO     |   3193996 |      4994159
+ 
+ 
+RUN_FOR=3202773 
+ACCOUNT_NAME='alibaba' 
+EXPECTED_OUTPUT=$(cat <<'EOF' 
+                 public_key_to_string                  | account_id | key_kind | block_num 
+-------------------------------------------------------+------------+----------+-----------
+ STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR |        949 | OWNER    |   3202773
+ STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR |        949 | ACTIVE   |   3202773
+ STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR |        949 | POSTING  |   3202773
+ STM5vaLEVu8x7S7cZj8ivaujUewZWxN1EqJQ6LjxCFdU8TN773SPg |        949 | MEMO     |   3193996
 (4 rows)
 EOF
 )
@@ -315,13 +314,13 @@ run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=4085934
 ACCOUNT_NAME='snail-157'
 EXPECTED_OUTPUT=$(cat <<'EOF'
-                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
--------------------------------------------------------+------------+-----------------+-----------+--------------
- STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | OWNER           |   4085279 |     12829051
- STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | ACTIVE          |   4085934 |     12833844
- STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | POSTING         |   4085279 |     12829051
- STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | MEMO            |   4085279 |     12829051
- STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | WITNESS_SIGNING |   4085304 |     12829285
+                 public_key_to_string                  | account_id |    key_kind     | block_num 
+-------------------------------------------------------+------------+-----------------+-----------
+ STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | OWNER           |   4085279
+ STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | ACTIVE          |   4085934
+ STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | POSTING         |   4085279
+ STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | MEMO            |   4085279
+ STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | WITNESS_SIGNING |   4085304
 (5 rows)
 EOF
 )
@@ -330,13 +329,13 @@ run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=5000000
 ACCOUNT_NAME='snail-157'
 EXPECTED_OUTPUT=$(cat <<'EOF'
-                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
--------------------------------------------------------+------------+-----------------+-----------+--------------
- STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | OWNER           |   4085279 |     12829051
- STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | ACTIVE          |   4104771 |     12961220
- STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | POSTING         |   4085279 |     12829051
- STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | MEMO            |   4085279 |     12829051
- STM6Y3zjt2pLJwua4S2hNgEnmVFigbDJNtgTtwRqFwcWjxxP2rinZ |      63770 | WITNESS_SIGNING |   4105317 |     12965992
+                 public_key_to_string                  | account_id |    key_kind     | block_num 
+-------------------------------------------------------+------------+-----------------+-----------
+ STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | OWNER           |   4085279
+ STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | ACTIVE          |   4104771
+ STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | POSTING         |   4085279
+ STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu |      63770 | MEMO            |   4085279
+ STM6Y3zjt2pLJwua4S2hNgEnmVFigbDJNtgTtwRqFwcWjxxP2rinZ |      63770 | WITNESS_SIGNING |   4105317
 (5 rows)
 EOF
 )
@@ -346,13 +345,13 @@ run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=1000000
 ACCOUNT_NAME='wackou'
 EXPECTED_OUTPUT=$(cat <<'EOF'
-                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
--------------------------------------------------------+------------+-----------------+-----------+--------------
- STM8Nb7Fn1LkHqGCdUq2kvdJYNMgcLoufPePi6TtfQBn18HE9Qbyp |        696 | OWNER           |    827105 |      1098806
- STM8TskdYLGtCtWRqGrXtJiePngvrJVpL9ue9nrMnFqwsLeth8978 |        696 | ACTIVE          |    827105 |      1098806
- STM6HRMhY5XQoX6S8Q26Kb32r3KCbBVWr9rwcYKHv6bzeX3uQFvfZ |        696 | POSTING         |    827105 |      1098806
- STM8Nb7Fn1LkHqGCdUq2kvdJYNMgcLoufPePi6TtfQBn18HE9Qbyp |        696 | MEMO            |    827105 |      1098806
- STM6Kq8bD5PKn53MYQkJo35BagfjvfV2yY13j9WUTsNRAsAU8TegZ |        696 | WITNESS_SIGNING |    957259 |      1263434
+                 public_key_to_string                  | account_id |    key_kind     | block_num 
+-------------------------------------------------------+------------+-----------------+-----------
+ STM8Nb7Fn1LkHqGCdUq2kvdJYNMgcLoufPePi6TtfQBn18HE9Qbyp |        696 | OWNER           |    827105
+ STM8TskdYLGtCtWRqGrXtJiePngvrJVpL9ue9nrMnFqwsLeth8978 |        696 | ACTIVE          |    827105
+ STM6HRMhY5XQoX6S8Q26Kb32r3KCbBVWr9rwcYKHv6bzeX3uQFvfZ |        696 | POSTING         |    827105
+ STM8Nb7Fn1LkHqGCdUq2kvdJYNMgcLoufPePi6TtfQBn18HE9Qbyp |        696 | MEMO            |    827105
+ STM6Kq8bD5PKn53MYQkJo35BagfjvfV2yY13j9WUTsNRAsAU8TegZ |        696 | WITNESS_SIGNING |    957259
 (5 rows)
 EOF
 )
@@ -362,12 +361,12 @@ run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=5000000
 ACCOUNT_NAME='dodl01'
 EXPECTED_OUTPUT=$(cat <<'EOF'
-                 public_key_to_string                  | account_id | key_kind | block_num | op_serial_id 
--------------------------------------------------------+------------+----------+-----------+--------------
- STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | OWNER    |   3298952 |      5694156
- STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | ACTIVE   |   4103291 |     12948444
- STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | POSTING  |   3298952 |      5694156
- STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | MEMO     |   3298952 |      5694156
+                 public_key_to_string                  | account_id | key_kind | block_num 
+-------------------------------------------------------+------------+----------+-----------
+ STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | OWNER    |   3298952
+ STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | ACTIVE   |   4103291
+ STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | POSTING  |   3298952
+ STM5NWg5uMtGBdzn2ikdER7YatgS8ZefpCC47bUemGffnMbR5KH1T |      26844 | MEMO     |   3298952
 (4 rows)
 EOF
 )
@@ -377,13 +376,13 @@ run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=5000000
 ACCOUNT_NAME='dodl11'
 EXPECTED_OUTPUT=$(cat <<'EOF'
-                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
--------------------------------------------------------+------------+-----------------+-----------+--------------
- STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | OWNER           |   4107639 |     12987166
- STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | ACTIVE          |   4107639 |     12987166
- STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | POSTING         |   4107639 |     12987166
- STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | MEMO            |   4107639 |     12987166
- STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | WITNESS_SIGNING |   4107639 |     12987166
+                 public_key_to_string                  | account_id |    key_kind     | block_num 
+-------------------------------------------------------+------------+-----------------+-----------
+ STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | OWNER           |   4107639
+ STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | ACTIVE          |   4107639
+ STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | POSTING         |   4107639
+ STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | MEMO            |   4107639
+ STM7yAJhZTNXvB7sP5g3oxR8SSkvmnwk9kYWCciaetJ9aH2mJHJhF |      65045 | WITNESS_SIGNING |   4107639
 (5 rows)
 EOF
 )
@@ -394,13 +393,13 @@ run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=3000000
 ACCOUNT_NAME='gtg'
 EXPECTED_OUTPUT=$(cat <<'EOF'
-                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
--------------------------------------------------------+------------+-----------------+-----------+--------------
- STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi |      14007 | OWNER           |   2885463 |      3762783
- STM6AzXNwWRzTWCVTgP4oKQEALTW8HmDuRq1avGWjHH23XBNhux6U |      14007 | ACTIVE          |   2885463 |      3762783
- STM69ZG1hx2rdU2hxQkkmX5MmYkHPCmdNeXg4r6CR7gvKUzYwWPPZ |      14007 | POSTING         |   2885463 |      3762783
- STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz |      14007 | MEMO            |   2885463 |      3762783
- STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi |      14007 | WITNESS_SIGNING |   2881920 |      3756818
+                 public_key_to_string                  | account_id |    key_kind     | block_num 
+-------------------------------------------------------+------------+-----------------+-----------
+ STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi |      14007 | OWNER           |   2885463
+ STM6AzXNwWRzTWCVTgP4oKQEALTW8HmDuRq1avGWjHH23XBNhux6U |      14007 | ACTIVE          |   2885463
+ STM69ZG1hx2rdU2hxQkkmX5MmYkHPCmdNeXg4r6CR7gvKUzYwWPPZ |      14007 | POSTING         |   2885463
+ STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz |      14007 | MEMO            |   2885463
+ STM5F9tCbND6zWPwksy1rEN24WjPiQWSU2vwGgegQVjAcYDe1zTWi |      14007 | WITNESS_SIGNING |   2881920
 (5 rows)
 EOF
 )
@@ -410,13 +409,13 @@ run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=5000000
 ACCOUNT_NAME='gtg'
 EXPECTED_OUTPUT=$(cat <<'EOF'
-                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
--------------------------------------------------------+------------+-----------------+-----------+--------------
- STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh |      14007 | OWNER           |   3399202 |      6688632
- STM4vuEE8F2xyJhwiNCnHxjUVLNXxdFXtVxgghBq5LVLt49zLKLRX |      14007 | ACTIVE          |   3399203 |      6688640
- STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC |      14007 | POSTING         |   3399203 |      6688640
- STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO            |   3399203 |      6688640
- STM6GmnhcBN9DxmFcj1e423Q2RkFYStUgSotviptAMSdy74eHQSYM |      14007 | WITNESS_SIGNING |   4104564 |     12959431
+                 public_key_to_string                  | account_id |    key_kind     | block_num 
+-------------------------------------------------------+------------+-----------------+-----------
+ STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh |      14007 | OWNER           |   3399202
+ STM4vuEE8F2xyJhwiNCnHxjUVLNXxdFXtVxgghBq5LVLt49zLKLRX |      14007 | ACTIVE          |   3399203
+ STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC |      14007 | POSTING         |   3399203
+ STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN |      14007 | MEMO            |   3399203
+ STM6GmnhcBN9DxmFcj1e423Q2RkFYStUgSotviptAMSdy74eHQSYM |      14007 | WITNESS_SIGNING |   4104564
 (5 rows)
 EOF
 )
@@ -426,11 +425,11 @@ run_keyauthauth_test  "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 RUN_FOR=5000000
 ACCOUNT_NAME='streemian'
 EXPECTED_OUTPUT=$(cat <<'EOF'
- account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
-------------+-----------+----------+-----------------+-----------------+-----------+--------------
-       9223 | streemian | OWNER    |            1489 | xeroc           |   3410418 |      6791007
-       9223 | streemian | ACTIVE   |            1489 | xeroc           |   3410418 |      6791007
-       9223 | streemian | POSTING  |            1489 | xeroc           |   3410418 |      6791007
+ account_id |   name    | key_kind | account_auth_id | supervisaccount | block_num 
+------------+-----------+----------+-----------------+-----------------+-----------
+       9223 | streemian | OWNER    |            1489 | xeroc           |   3410418
+       9223 | streemian | ACTIVE   |            1489 | xeroc           |   3410418
+       9223 | streemian | POSTING  |            1489 | xeroc           |   3410418
 (3 rows)
 EOF
 )
