@@ -1,7 +1,5 @@
 #! /bin/bash
 
-set -x
-
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 SRC_DIR="$SCRIPT_DIR/.."
 

@@ -1,16 +1,5 @@
 #! /bin/bash
-set -x
 set -euo pipefail
-
-
-find / -name libpqxx* 2> /dev/null || true
-echo jest
-
-
-sudo ~/source/scripts/setup_ubuntu.sh --pqxx
-find / -name libpqxx* 2> /dev/null || true
-echo trzy
-
 
 echo "Starting the container with user $(whoami) with uid $(id -u)"
 
