@@ -182,7 +182,7 @@ BEGIN
                     ov.timestamp,
                     ov.op_type_id
             FROM hive.%1$s_operations_view ov
-            WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT mot.id FROM pow_op_type mot)
+            WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT pmot.id FROM pow_op_type pmot)
         ),
         pow_raw_auth_records AS MATERIALIZED
         (
@@ -193,6 +193,14 @@ BEGIN
                     hive.calculate_operation_stable_id(ov.block_num, ov.trx_in_block, ov.op_pos) as op_stable_id
             FROM pow_matching_ops ov
         ),
+
+        pow_min_block_per_account AS
+        (
+            SELECT account_name, MIN(block_num) AS pow_min_block_num
+            FROM pow_raw_auth_records
+            GROUP BY account_name
+        ),
+
         pow_extended_auth_records AS materialized
         (
             SELECT (select a.id FROM hive.%1$s_accounts_view a
@@ -202,24 +210,7 @@ BEGIN
 
             r.*
             FROM pow_raw_auth_records r
-        ),
-
-        pow_extended_auth_records_filtered as materialized
-        (
-            SELECT 
-                account_id,
-                account_name,
-                key_kind,
-                key_auth,
-                account_auth,
-                weight_threshold,
-                w,
-                op_serial_id,
-                block_num,
-                timestamp,
-                op_stable_id
-            FROM pow_extended_auth_records
-            WHERE creation_block_num = block_num OR key_kind = 'ACTIVE'
+            LEFT JOIN pow_min_block_per_account mb ON r.account_name = mb.account_name
         ),
 
         -- Handle all other operations.
@@ -262,6 +253,70 @@ BEGIN
                         hive.calculate_operation_stable_id(ov.block_num, ov.trx_in_block, ov.op_pos) as op_stable_id
                     FROM matching_ops ov
                 ),
+            min_block_per_pow_account AS 
+            (
+                SELECT 
+                    r.account_name,
+                    MIN(r.block_num) as min_block_num
+                FROM 
+                    raw_auth_records r
+                INNER JOIN 
+                    pow_extended_auth_records per ON r.account_name = per.account_name
+                GROUP BY 
+                    r.account_name
+            ),
+            min_block_num_from_stored_table_per_account_id AS 
+            (
+                SELECT 
+                    account_id, 
+                    MIN(block_num) AS min_block_num_from_stored_table
+                FROM 
+                    hive.%1$s_keyauth_a
+                GROUP BY 
+                    account_id
+            ),
+            pow_extended_auth_records_with_min_block AS
+            (
+                SELECT 
+                    pow.account_id,
+                    pow.account_name,
+                    pow.key_kind,
+                    pow.key_auth,
+                    pow.account_auth,
+                    pow.weight_threshold,
+                    pow.w,
+                    pow.op_serial_id,
+                    pow.block_num,
+                    pow.timestamp,
+                    pow.op_stable_id,
+                    mb.min_block_num,
+                    pow_min_block_num,
+                    mb_table.min_block_num_from_stored_table
+                FROM 
+                    pow_extended_auth_records pow
+                LEFT JOIN 
+                    min_block_per_pow_account mb ON pow.account_name = mb.account_name
+                LEFT JOIN 
+                    min_block_num_from_stored_table_per_account_id mb_table ON pow.account_id = mb_table.account_id
+
+            ),    
+            pow_extended_auth_records_filtered as materialized
+            (
+                SELECT 
+                    account_id,
+                    account_name,
+                    key_kind,
+                    key_auth,
+                    account_auth,
+                    weight_threshold,
+                    w,
+                    op_serial_id,
+                    block_num,
+                    timestamp,
+                    op_stable_id
+                FROM pow_extended_auth_records_with_min_block
+                WHERE LEAST(pow_min_block_num, min_block_num, min_block_num_from_stored_table) = block_num OR key_kind = 'ACTIVE'
+            ),
             --Collect all paths (pow, genesis, hf9, rest)
             extended_auth_records as materialized
             (
@@ -373,6 +428,7 @@ BEGIN
         (
             delete from hive.%1$s_keyauth_k as dict
             where dict.key_id in (select distinct s.cleaned_key_id from store_key_auth_records s)
+RETURNING * -- for dump only 
         ),
         --- PROCESSING OF ACCOUNT BASED AUTHORITIES ---
             extended_account_auth_records as MATERIALIZED
@@ -423,10 +479,62 @@ BEGIN
             timestamp =           EXCLUDED.timestamp
             RETURNING (xmax = 0) as is_new_entry, ae.account_id, ae.key_kind, ae.account_auth_id as cleaned_account_auth_id
         )
+
+
+        -- ,
+        -- dump_combined AS (
+        -- SELECT 
+        --     1 AS num,
+        --      ARRAY[
+                
+        
+                    --hive.print_json_with_label('mtlk GENESIS_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           GENESIS_auth_records) t)),
+                    -- hive.print_json_with_label('mtlk pow_matching_ops', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_matching_ops) t)),
+
+                    
+                    
+        -- hive.print_json_with_label('mtlk pow_min_block_per_account', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_min_block_per_account) t)),
+        -- hive.print_json_with_label('mtlk min_block_per_pow_account', (SELECT json_agg(t) FROM (SELECT * FROM                           min_block_per_pow_account) t)),
+        -- hive.print_json_with_label('mtlk pow_extended_auth_records_with_min_block', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_extended_auth_records_with_min_block) t)),
+
+        -- hive.print_json_with_label('mtlk pow_raw_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_raw_auth_records) t)),
+        -- hive.print_json_with_label('mtlk pow_extended_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_extended_auth_records) t)),
+        
+        -- hive.print_json_with_label('mtlk pow_extended_auth_records_filtered', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_extended_auth_records_filtered) t)),
+
+                    -- hive.print_json_with_label('mtlk matching_op_types', (SELECT json_agg(t) FROM (SELECT * FROM                           matching_op_types) t)),
+                    -- hive.print_json_with_label('mtlk matching_ops', (SELECT json_agg(t) FROM (SELECT * FROM                           matching_ops) t)),
+
+                    -- hive.print_json_with_label('mtlk raw_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           raw_auth_records) t)),
+                    -- hive.print_json_with_label('mtlk extended_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           extended_auth_records) t)),
+                    -- hive.print_json_with_label('mtlk effective_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           effective_key_auth_records) t)),
+                    
+                    -- --- PROCESSING OF KEY BASED AUTHORITIES ---	
+                    
+                    -- hive.print_json_with_label('mtlk supplement_key_dictionary', (SELECT json_agg(t) FROM (SELECT * FROM                           supplement_key_dictionary) t)),
+                    -- hive.print_json_with_label('mtlk extended_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           extended_key_auth_records) t)),
+                    -- hive.print_json_with_label('mtlk changed_key_authorities', (SELECT json_agg(t) FROM (SELECT * FROM                           changed_key_authorities) t)),
+
+                    -- hive.print_json_with_label('mtlk delete_obsolete_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           delete_obsolete_key_auth_records) t)),
+                    -- hive.print_json_with_label('mtlk store_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           store_key_auth_records) t)),
+                    -- hive.print_json_with_label('mtlk delete_obsolete_keys_from_dict', (SELECT json_agg(t) FROM (SELECT * FROM                           delete_obsolete_keys_from_dict) t)),
+
+                    --- PROCESSING OF ACCOUNT BASED AUTHORITIES ---
+
+                    -- hive.print_json_with_label('mtlk effective_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           effective_account_auth_records) t)),
+                    -- hive.print_json_with_label('mtlk extended_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           extended_account_auth_records) t)),
+                    -- hive.print_json_with_label('mtlk delete_obsolete_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           delete_obsolete_account_auth_records) t)),
+                    -- hive.print_json_with_label('mtlk store_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           store_account_auth_records) t))
+
+
+        --         ] AS dump_results
+        -- )
+
         SELECT 
         (
             select count(*) FROM 
             store_account_auth_records
+            -- LEFT JOIN dump_combined ON dump_combined.num = store_account_auth_records.account_id
         ) as account_based_authority_entries,
             (select count(*) FROM store_key_auth_records) AS key_based_authority_entries
         into __account_ae_count, __key_ae_count;
@@ -457,6 +565,9 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __template TEXT;
 BEGIN
+
+
+    RAISE NOTICE 'mtlk 21';
 
     __context_id = hive.get_context_id( _context );
 
@@ -497,3 +608,9 @@ $BODY$
 ;
 
 
+CREATE OR REPLACE FUNCTION hive.print_json_with_label(label text, json_result json) RETURNS INTEGER LANGUAGE plpgsql AS $p$
+BEGIN
+RAISE NOTICE E'% >>>> \n%', label, json_result;
+RETURN 1;
+END;
+$p$;
