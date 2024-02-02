@@ -428,7 +428,6 @@ BEGIN
         (
             delete from hive.%1$s_keyauth_k as dict
             where dict.key_id in (select distinct s.cleaned_key_id from store_key_auth_records s)
-RETURNING * -- for dump only 
         ),
         --- PROCESSING OF ACCOUNT BASED AUTHORITIES ---
             extended_account_auth_records as MATERIALIZED
@@ -481,60 +480,11 @@ RETURNING * -- for dump only
         )
 
 
-        -- ,
-        -- dump_combined AS (
-        -- SELECT 
-        --     1 AS num,
-        --      ARRAY[
-                
-        
-                    --hive.print_json_with_label('mtlk GENESIS_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           GENESIS_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk pow_matching_ops', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_matching_ops) t)),
-
-                    
-                    
-        -- hive.print_json_with_label('mtlk pow_min_block_per_account', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_min_block_per_account) t)),
-        -- hive.print_json_with_label('mtlk min_block_per_pow_account', (SELECT json_agg(t) FROM (SELECT * FROM                           min_block_per_pow_account) t)),
-        -- hive.print_json_with_label('mtlk pow_extended_auth_records_with_min_block', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_extended_auth_records_with_min_block) t)),
-
-        -- hive.print_json_with_label('mtlk pow_raw_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_raw_auth_records) t)),
-        -- hive.print_json_with_label('mtlk pow_extended_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_extended_auth_records) t)),
-        
-        -- hive.print_json_with_label('mtlk pow_extended_auth_records_filtered', (SELECT json_agg(t) FROM (SELECT * FROM                           pow_extended_auth_records_filtered) t)),
-
-                    -- hive.print_json_with_label('mtlk matching_op_types', (SELECT json_agg(t) FROM (SELECT * FROM                           matching_op_types) t)),
-                    -- hive.print_json_with_label('mtlk matching_ops', (SELECT json_agg(t) FROM (SELECT * FROM                           matching_ops) t)),
-
-                    -- hive.print_json_with_label('mtlk raw_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           raw_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk extended_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           extended_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk effective_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           effective_key_auth_records) t)),
-                    
-                    -- --- PROCESSING OF KEY BASED AUTHORITIES ---	
-                    
-                    -- hive.print_json_with_label('mtlk supplement_key_dictionary', (SELECT json_agg(t) FROM (SELECT * FROM                           supplement_key_dictionary) t)),
-                    -- hive.print_json_with_label('mtlk extended_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           extended_key_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk changed_key_authorities', (SELECT json_agg(t) FROM (SELECT * FROM                           changed_key_authorities) t)),
-
-                    -- hive.print_json_with_label('mtlk delete_obsolete_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           delete_obsolete_key_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk store_key_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           store_key_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk delete_obsolete_keys_from_dict', (SELECT json_agg(t) FROM (SELECT * FROM                           delete_obsolete_keys_from_dict) t)),
-
-                    --- PROCESSING OF ACCOUNT BASED AUTHORITIES ---
-
-                    -- hive.print_json_with_label('mtlk effective_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           effective_account_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk extended_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           extended_account_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk delete_obsolete_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           delete_obsolete_account_auth_records) t)),
-                    -- hive.print_json_with_label('mtlk store_account_auth_records', (SELECT json_agg(t) FROM (SELECT * FROM                           store_account_auth_records) t))
-
-
-        --         ] AS dump_results
-        -- )
 
         SELECT 
         (
             select count(*) FROM 
             store_account_auth_records
-            -- LEFT JOIN dump_combined ON dump_combined.num = store_account_auth_records.account_id
         ) as account_based_authority_entries,
             (select count(*) FROM store_key_auth_records) AS key_based_authority_entries
         into __account_ae_count, __key_ae_count;
@@ -565,9 +515,6 @@ DECLARE
     __context_id hive.contexts.id%TYPE;
     __template TEXT;
 BEGIN
-
-
-    RAISE NOTICE 'mtlk 21';
 
     __context_id = hive.get_context_id( _context );
 
@@ -608,9 +555,3 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.print_json_with_label(label text, json_result json) RETURNS INTEGER LANGUAGE plpgsql AS $p$
-BEGIN
-RAISE NOTICE E'% >>>> \n%', label, json_result;
-RETURN 1;
-END;
-$p$;
