@@ -1,5 +1,18 @@
 #! /usr/bin/env bash
 
+
+ARG_DUMP_ACCOUNT=false
+
+for arg in "$@"
+do
+    if [ "$arg" = "--dump-account" ]; then
+            ARG_DUMP_ACCOUNT=true
+    fi
+done
+
+
+
+
 if [ -z "$HAF_POSTGRES_URL" ]; then
     export HAF_POSTGRES_URL="haf_block_log"
 fi
@@ -112,12 +125,12 @@ check_keyauthauth_result()
   compare_actual_vs_expected "$actual_output" "$expected_output"
 }
 
-check_accountauth_result()
+execute_accountauth_query() 
 {
-  local ACCOUNT_NAME="$1"  
-  local EXPECTED_OUTPUT="$2"
+  local account_name="$1"
+  local haf_postgres_url="$2"
 
-  local ACCOUNTAUTH_SQL_QUERY="
+  local accountauth_sql_query="
   SELECT
       account_id,
       av_with_mainaccount.name,
@@ -129,13 +142,23 @@ check_accountauth_result()
   FROM hive.mmm_accountauth_a a
   JOIN hive.mmm_accounts_view av_with_mainaccount ON account_id = av_with_mainaccount.id
   JOIN hive.mmm_accounts_view av_with_supervisaccount ON account_auth_id = av_with_supervisaccount.id
-  WHERE av_with_mainaccount.name = '$ACCOUNT_NAME'
+  WHERE av_with_mainaccount.name = '$account_name'
   "
 
-  local ACTUAL_OUTPUT=$(psql -d $HAF_POSTGRES_URL -c "$ACCOUNTAUTH_SQL_QUERY")
-  compare_actual_vs_expected "$ACTUAL_OUTPUT" "$EXPECTED_OUTPUT"
-
+  local actual_output=$(psql -d $haf_postgres_url -c "$accountauth_sql_query")
+  echo "$actual_output"
 }
+
+check_accountauth_result()
+{
+  local account_name="$1"  
+  local expected_output="$2"
+
+  local actual_output=$(execute_accountauth_query "$account_name" "$HAF_POSTGRES_URL")
+
+  compare_actual_vs_expected "$actual_output" "$expected_output"
+}
+
 
 execute_sql()
 {
@@ -185,7 +208,53 @@ check_database_sql_serialized()
 
 check_database_sql_serialized
 
-# dump_account
+
+
+
+dump_account()
+{
+  local ACCOUNT_NAME=supercomputing96
+  local BLOCKS=(  1 5000000  )
+
+
+  local LOG_FILE_DIR=/tmp/hive/supercomputing96
+
+  NUMBERS_IN_FILE=${LOG_FILE_DIR}/op_block_nums.psql_output
+  mapfile -t BLOCKS < "$NUMBERS_IN_FILE" # readarray
+
+
+  BLOCKS=(  1 
+
+
+
+3996757
+
+3998850
+5000000
+)
+  drop_keyauth
+  apply_keyauth
+  local FROM=1
+  for NUM in "${BLOCKS[@]}"
+  do
+      TO=$NUM
+      echo "Running FROM: $FROM TO: $TO"
+      psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',$FROM, $TO, 100000000);" 2> keyauth_run$TO.log
+      local formatted_TO=$(printf "%08d" $TO)
+      LOG_FILE=${LOG_FILE_DIR}/${ACCOUNT_NAME}_${formatted_TO}.sqlresult
+      echo Writing to file $LOG_FILE
+      execute_keyauth_query "$ACCOUNT_NAME" "$HAF_POSTGRES_URL" 2>&1 | tee -i -a $LOG_FILE
+      execute_accountauth_query "$ACCOUNT_NAME" "$HAF_POSTGRES_URL" 2>&1 | tee -i -a $LOG_FILE
+      FROM=$((TO + 1))
+  done
+}
+
+
+
+if [ "$ARG_DUMP_ACCOUNT" = true ]; then
+    dump_account
+    exit 0
+fi
 
 
 # Tests
@@ -202,7 +271,30 @@ EOF
 )
 run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
+RUN_FOR=5000000
+ACCOUNT_NAME='supercomputing96'
+EXPECTED_OUTPUT=$(cat <<'EOF'
+                 public_key_to_string                  | account_id |    key_kind     | block_num | op_serial_id 
+-------------------------------------------------------+------------+-----------------+-----------+--------------
+ STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | OWNER           |   4069004 |     12709969
+ STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | ACTIVE          |   4069004 |     12709969
+ STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | POSTING         |   4069004 |     12709969
+ STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | MEMO            |   4069004 |     12709969
+ STM76cZsaQkWphMckwmCWg1vwBsr4UseNcUTKYsne7mCnfx6ySU2R |      49569 | WITNESS_SIGNING |   4069064 |     12710347
+(5 rows)
+EOF
+)
+run_keyauthauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
+RUN_FOR=5000000
+ACCOUNT_NAME='supercomputing96'
+EXPECTED_OUTPUT=$(cat <<'EOF'
+ account_id | name | key_kind | account_auth_id | supervisaccount | block_num | op_serial_id 
+------------+------+----------+-----------------+-----------------+-----------+--------------
+(0 rows)
+EOF
+)
+run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
 # # RUN_FOR=5000000
@@ -342,40 +434,3 @@ run_accountauth_test "$RUN_FOR" "$ACCOUNT_NAME" "$EXPECTED_OUTPUT"
 
 
 exit 0
-
-
-
-dump_account()
-{
-  local ACCOUNT_NAME=alibaba
-  local BLOCKS=(
-  302741
-  302741
-  304387
-  304409
-  304418
-  304437
-  304437
-  304443
-  304470
-  304470
-  304482
- 3985646
-    )
-
-
-  local LOG_FILE_DIR=/tmp/hive2
-
-  local FROM=1
-  for NUM in "${BLOCKS[@]}"
-  do
-      TO=$NUM
-      echo "Running FROM: $FROM TO: $TO"
-      psql -d $HAF_POSTGRES_URL -c "SELECT mmm.main_test('mmm',$FROM, $TO, 100000000);" 2> keyauth_run$TO.log
-      LOG_FILE=${LOG_FILE_DIR}/${ACCOUNT_NAME}_${TO}.sqlresult
-      echo Writing to file $LOG_FILE
-      execute_keyauth_query "$ACCOUNT_NAME" "$HAF_POSTGRES_URL" 2>&1 | tee -i -a $LOG_FILE
-
-      FROM=$((TO + 1))
-  done
-}
