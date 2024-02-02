@@ -9,14 +9,3 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hive.block_sink_num()
-    RETURNS INT
-    LANGUAGE plpgsql
-    IMMUTABLE
-AS
-$$
-BEGIN
-    RETURN 0;
-END
-$$;
-

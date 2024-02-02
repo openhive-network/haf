@@ -77,30 +77,30 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.context_accounts_view
         EXCEPT SELECT * FROM ( VALUES
-                   ( 1, 100, 'alice1' )
-                 , ( 2, 200, 'alice2')
-                 , ( 3, 300, 'alice3' )
-                 , ( 4, 400, 'alice4' )
-                 , ( 5, 500, 'alice51' )
-                 , ( 6, 600, 'alice61' )
-                 , ( 7, 700, 'alice72' )
-                 , ( 7, 800, 'bob72' )
-                 , ( 8, 900, 'alice82' )
-                 , ( 1, 5, 'initminer' )
+                   ( 100, 'alice1' )
+                 , ( 200, 'alice2')
+                 , ( 300, 'alice3' )
+                 , ( 400, 'alice4' )
+                 , ( 500, 'alice51' )
+                 , ( 600, 'alice61' )
+                 , ( 700, 'alice72' )
+                 , ( 800, 'bob72' )
+                 , ( 900, 'alice82' )
+                 , ( 5, 'initminer' )
                  ) as pattern
     ) , 'Unexpected rows in the view';
 
     ASSERT NOT EXISTS (
         SELECT * FROM ( VALUES
-                   ( 1, 100, 'alice1' )
-                 , ( 2, 200, 'alice2')
-                 , ( 3, 300, 'alice3' )
-                 , ( 4, 400, 'alice4' )
-                 , ( 5, 500, 'alice51' )
-                 , ( 6, 600, 'alice61' )
-                 , ( 7, 700, 'alice72' )
-                 , ( 7, 800, 'bob72' )
-                 , ( 8, 900, 'alice82' )
+                   ( 100, 'alice1' )
+                 , ( 200, 'alice2')
+                 , ( 300, 'alice3' )
+                 , ( 400, 'alice4' )
+                 , ( 500, 'alice51' )
+                 , ( 600, 'alice61' )
+                 , ( 700, 'alice72' )
+                 , ( 800, 'bob72' )
+                 , ( 900, 'alice82' )
         ) as pattern
         EXCEPT SELECT * FROM hive.context_accounts_view
     ) , 'Unexpected rows in the view2';
