@@ -198,8 +198,7 @@ BEGIN
             SELECT (select a.id FROM hive.%1$s_accounts_view a
             WHERE a.name = r.account_name) AS account_id,
 
-            (SELECT a.block_num FROM hive.%1$s_accounts_view a
-                            WHERE a.name = r.account_name) AS creation_block_num,
+            mb.pow_min_block_num AS pow_min_block_num,
 
             r.*
             FROM pow_raw_auth_records r
