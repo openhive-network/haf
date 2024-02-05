@@ -1,4 +1,5 @@
 #include "operation_base.hpp"
+#include "psql_utils/pg_cxx.hpp"
 
 #include "extract_set_witness_properties.hpp"
 
@@ -1027,6 +1028,12 @@ Datum csp_finish(PG_FUNCTION_ARGS)
 
 ////////
 
+
+
+// These 3 functions call the postgres code:
+// csp_init_impl, consensus_state_provider_replay_impl, csp_finish_impl
+// so they need to use PsqlTools::PsqlUtils::pg_call_cxx
+
 PG_FUNCTION_INFO_V1(consensus_state_provider_replay);
 
 Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
@@ -1038,7 +1045,11 @@ Datum consensus_state_provider_replay(PG_FUNCTION_ARGS)
   int from = PG_GETARG_INT32(1);
   int to = PG_GETARG_INT32(2);
 
-  auto ok = consensus_state_provider::consensus_state_provider_replay_impl(csp_session, from, to);
+  volatile auto ok = false; // Use volatile if 'ok' might be clobbered by longjmp
+  PsqlTools::PsqlUtils::pg_call_cxx([&]() 
+  {
+      ok = consensus_state_provider::consensus_state_provider_replay_impl(csp_session, from, to);
+  }, ERRCODE_DATA_EXCEPTION);
 
   PG_RETURN_BOOL(ok);
 
@@ -1056,18 +1067,29 @@ Datum csp_init(PG_FUNCTION_ARGS)
   char* shared_memory_bin_path = text_to_cstring(PG_GETARG_TEXT_P(1));
   char* postgres_url = text_to_cstring(PG_GETARG_TEXT_P(2));
 
-  consensus_state_provider::csp_session_ptr_type csp_session_ptr = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
-  assert(csp_session_ptr != nullptr);
 
+  consensus_state_provider::csp_session_ptr_type csp_session_ptr = nullptr;
 
-  PG_RETURN_POINTER(csp_session_ptr);
+  PsqlTools::PsqlUtils::pg_call_cxx([&]() 
+  {
+      csp_session_ptr = consensus_state_provider::csp_init_impl(context, shared_memory_bin_path, postgres_url);
+  });
+
   pfree(context);
-  pfree(postgres_url);
   pfree(shared_memory_bin_path);
+  pfree(postgres_url);
+
+  if (csp_session_ptr != nullptr)
+  {
+    PG_RETURN_POINTER(PointerGetDatum(csp_session_ptr));
+  }
+  else
+  {
+    PG_RETURN_NULL();
+  }
 
   return (Datum)0;
 }
-
 
 } //extern "C"
 

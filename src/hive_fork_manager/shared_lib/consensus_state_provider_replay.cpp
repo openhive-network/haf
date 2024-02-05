@@ -143,23 +143,12 @@ std::string fix_pxx_hex(const pxx::field& h);
 
 csp_session_ptr_type csp_init_impl(const char* context, const char* shared_memory_bin_path, const char* postgres_url)
 {
+  // Dynamically allocate csp_session_type. Ownership transfers to SQL hive.session
+  auto csp_session_ptr = new csp_session_type(context, shared_memory_bin_path, postgres_url);
 
-  try
-  {
-    // Dynamically allocate csp_session_type. Ownership transfers to SQL hive.session
-    auto csp_session_ptr = new csp_session_type(context, shared_memory_bin_path, postgres_url);
+  initialize_chain_db(*csp_session_ptr);
 
-    initialize_chain_db(*csp_session_ptr);
-
-    return csp_session_ptr;
-  }
-  catch(...)
-  {
-    auto current_exception = std::current_exception();
-    handle_exception(current_exception);
-  }
-
-  return 0;
+  return csp_session_ptr;
 
 }
 
@@ -205,30 +194,22 @@ void set_open_args_other_parameters(open_args& db_open_args)
 
 void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_memory_bin)
 {
-  try
+
+  hive::chain::database& db = *csp_session.db.get();
+
+  db.close();
+
+  if(wipe_clean_shared_memory_bin)
   {
+    db.chainbase::database::wipe(fc::path(csp_session.shared_memory_bin_path) / "blockchain");
 
-    hive::chain::database& db = *csp_session.db.get();
-
-    db.close();
-
-    if(wipe_clean_shared_memory_bin)
-    {
-      db.chainbase::database::wipe(fc::path(csp_session.shared_memory_bin_path) / "blockchain");
-
-      // Use std::cout like in database::wipe
-      std::string log("Removing also:\n- " + csp_session.shared_memory_bin_path + "\n");
-      std::cout << log;
-      boost::filesystem::remove_all( fc::path(csp_session.shared_memory_bin_path));
-    }
-
-    delete &csp_session;
+    // Use std::cout like in database::wipe
+    std::string log("Removing also:\n- " + csp_session.shared_memory_bin_path + "\n");
+    std::cout << log;
+    boost::filesystem::remove_all( fc::path(csp_session.shared_memory_bin_path));
   }
-  catch(...)
-  {
-    auto current_exception = std::current_exception();
-    handle_exception(current_exception);
-  }
+
+  delete &csp_session;
 
 }
 
@@ -256,35 +237,24 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
 
 bool consensus_state_provider_replay_impl(csp_session_ref_type csp_session, uint32_t first_block, uint32_t last_block)
 {
-  try
+  auto csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
+
+  if(first_block < csp_expected_block)
   {
-
-    auto csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
-
-    if(first_block < csp_expected_block)
-    {
-      undo_blocks(csp_session, csp_expected_block - first_block);
-      csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
-    }
-    else
-    {
-      first_block = csp_expected_block;
-    }
-
-    FC_ASSERT(first_block == csp_expected_block,
-      "ERROR: Cannot replay consensus state provider: Initial \"first_block\" block number is ${first_block}, but current state is expecting ${curr}",
-      ("first_block", first_block)("curr", csp_expected_block));
-
-    postgres_block_log(csp_session).run(first_block, last_block);
-    return true;
+    undo_blocks(csp_session, csp_expected_block - first_block);
+    csp_expected_block = consensus_state_provider_get_expected_block_num_impl(csp_session);
   }
-  catch(...)
+  else
   {
-    auto current_exception = std::current_exception();
-    handle_exception(current_exception);
+    first_block = csp_expected_block;
   }
 
-  return false;
+  FC_ASSERT(first_block == csp_expected_block,
+    "ERROR: Cannot replay consensus state provider: Initial \"first_block\" block number is ${first_block}, but current state is expecting ${curr}",
+    ("first_block", first_block)("curr", csp_expected_block));
+
+  postgres_block_log(csp_session).run(first_block, last_block);
+  return true;
 }
 
 void undo_blocks(csp_session_ref_type csp_session, uint32_t shift)
