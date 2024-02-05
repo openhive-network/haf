@@ -1,6 +1,10 @@
 #! /bin/bash
 set -euo pipefail
 
+sudo ~/source/scripts/setup_ubuntu.sh --pqxx
+
+
+
 echo "Starting the container with user $(whoami) with uid $(id -u)"
 
 if [ "${HIVED_UID}" -ne 0 ];

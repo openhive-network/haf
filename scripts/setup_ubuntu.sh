@@ -16,6 +16,7 @@ print_help () {
     echo "OPTIONS:"
     echo "  --dev                     Install packages required to build and run a HAF server."
     echo "  --user                    Install packages to a subdirectory of the user's home directory."
+    echo "  --pqxx                    Build pqxx library."
     echo "  --haf-admin-account=NAME  Specify the unix account name to be used for HAF administration (will be associated with the PostgreSQL role)."
     echo "  --hived-account=NAME      Specify the unix account name to be used for hived (will be associated with the PostgreSQL role)."
     echo "  --help                    Display this help screen and exit."
@@ -30,6 +31,36 @@ assert_is_root() {
     then echo "Please run as root."
     exit 1
   fi
+}
+
+build_pqxx()
+{
+  pushd /tmp
+  git clone --depth 1 --branch 7.8.1 https://github.com/jtv/libpqxx.git
+  pushd libpqxx
+  mkdir build
+  pushd build
+  cmake -DCMAKE_BUILD_TYPE=Release -GNinja -DBUILD_TEST=OFF -DBUILD_SHARED_LIBS=on -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_INSTALL_PREFIX=/usr ..
+  sudo ninja install
+  popd
+  popd
+  rm -rf libpqxx
+  popd
+}
+
+build_pqxx_old()
+{
+  pushd /tmp
+  git clone --depth 1 --branch 7.8.1 https://github.com/jtv/libpqxx.git
+  pushd libpqxx
+  mkdir build
+  pushd build
+  cmake -DCMAKE_BUILD_TYPE=Release -GNinja -DBUILD_TEST=OFF  ..
+  sudo ninja install
+  popd
+  popd
+  rm -rf libpqxx
+  popd
 }
 
 install_all_dev_packages() {
@@ -52,18 +83,7 @@ install_all_dev_packages() {
   rm -rf /var/lib/apt/lists/*
 
   sudo usermod -a -G users -c "PostgreSQL daemon account" postgres
-
-  pushd /tmp
-  git clone --depth 1 --branch 7.8.1 https://github.com/jtv/libpqxx.git
-  pushd libpqxx
-  mkdir build
-  pushd build
-  cmake -DCMAKE_BUILD_TYPE=Release -GNinja -DBUILD_TEST=OFF ..
-  ninja install
-  popd
-  popd
-  rm -r libpqxx
-  popd
+  build_pqxx_old
 }
 
 install_user_packages() {
@@ -99,6 +119,9 @@ while [ $# -gt 0 ]; do
         ;;
     --user)
         install_user_packages
+        ;;
+    --pqxx)
+      build_pqxx
         ;;
     --haf-admin-account=*)
         haf_admin_unix_account="${1#*=}"
