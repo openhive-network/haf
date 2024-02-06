@@ -4,13 +4,6 @@
 #include "psql_utils/pg_cxx.hpp"
 
 
-#include <iostream>
-using std::cout, std::endl;
-#include <unistd.h>
-#include <iomanip>
-///////////////////////////////////////////////////// wklerjone begin mtlk todo
-
-
 namespace spixx 
 {
 
@@ -110,7 +103,48 @@ result execute_query(const std::string &query)
   return {SPI_tuptable, SPI_tuptable->tupdesc, SPI_processed};
 }
 
+
+postgres_database_helper_spi::postgres_database_helper_spi(const char* url)  
+{
+}
+
+postgres_database_helper_spi::~postgres_database_helper_spi()
+{
+} 
+
+pxx::result postgres_database_helper_spi::execute_query(const std::string& query)
+{
+  spixx::result query_result = spixx::execute_query(query);
+  pxx::result res(query_result);
+  return res;
+}
+
+postgres_database_helper_spi::spi_connect_guard::spi_connect_guard()
+{
+  if(SPI_connect() != SPI_OK_CONNECT)
+  {
+    spixx_elog(ERROR, "Cannot establish SPI connection.");
+  }
+}
+
+postgres_database_helper_spi::spi_connect_guard::~spi_connect_guard()
+{
+  SPI_finish();
+}
+
+} // namespace spixx 
+
 #ifndef NDEBUG
+
+#include <iostream>
+using std::cout, std::endl;
+#include <unistd.h>
+#include <iomanip>
+
+namespace spixx 
+{
+
+
 void display_column_names_and_types(const result& recordset, const std::string &label)
 {
   if (!recordset.tuptable || !recordset.tuptable->tupdesc)
@@ -143,37 +177,6 @@ void display_column_names_and_types(const result& recordset, const std::string &
     }
   }
 }
+
+} // namespace spixx
 #endif
-
-////////////////////////////////////////////////////////////////////////// wklejone mtlk todo end
-
-
-postgres_database_helper_spi::postgres_database_helper_spi(const char* url)  
-{
-}
-
-postgres_database_helper_spi::~postgres_database_helper_spi()
-{
-} 
-
-pxx::result postgres_database_helper_spi::execute_query(const std::string& query)
-{
-  spixx::result query_result = spixx::execute_query(query);
-  pxx::result res(query_result);
-  return res;
-}
-
-postgres_database_helper_spi::spi_connect_guard::spi_connect_guard()
-{
-  if(SPI_connect() != SPI_OK_CONNECT)
-  {
-    spixx_elog(ERROR, "Cannot establish SPI connection.");
-  }
-}
-
-postgres_database_helper_spi::spi_connect_guard::~spi_connect_guard()
-{
-  SPI_finish();
-}
-
-}
