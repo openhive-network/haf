@@ -178,5 +178,83 @@ void display_column_names_and_types(const result& recordset, const std::string &
   }
 }
 
+
+void display_type_info(const row& r, const std::string &key)
+{
+  int col = SPI_fnumber(r.tupdesc, key.c_str());
+  if (col <= 0)
+  {
+    spixx_elog(ERROR, "Column not found");
+  }
+
+  //BELOW printing type internals
+  {
+    Oid type_oid;
+    char* type_name;
+
+    type_oid = SPI_gettypeid(r.tupdesc, col);
+
+    if (type_oid != InvalidOid) 
+    {
+      type_name = format_type_be(type_oid);
+      printf("Column type: %s", type_name);
+
+      pfree(type_name);
+
+      HeapTuple type_tuple;
+      Form_pg_type type_form;
+
+      type_tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(type_oid));
+      if (HeapTupleIsValid(type_tuple)) {
+        type_form = (Form_pg_type)GETSTRUCT(type_tuple);
+
+        std::cout << "Type name: " << NameStr(type_form->typname)
+                  << std::endl;
+
+        char typtype = type_form->typtype;
+        bool typispreferred = type_form->typispreferred;
+        std::cout << "Type category: " << typtype << std::endl;
+        std::cout << "Type preferred: " << (typispreferred ? "yes" : "no")
+                  << std::endl;
+
+        int16 typlen = type_form->typlen;
+        std::cout << "Type length: " << typlen << std::endl;
+
+        char typalign = type_form->typalign;
+        std::cout << "Type alignment: " << typalign << std::endl;
+
+        Oid typinput = type_form->typinput;
+        Oid typoutput = type_form->typoutput;
+        std::cout << "Type input function OID: " << typinput << std::endl;
+        std::cout << "Type output function OID: " << typoutput << std::endl;
+
+        Oid typelem = type_form->typelem;
+        if(typelem != InvalidOid)
+        {
+          std::cout << "Element type OID: " << typelem << std::endl;
+        }
+        else
+        {
+          std::cout << "Not an array type" << std::endl;
+        }
+
+        char typdelim = type_form->typdelim;
+        std::cout << "Type delimiter: " << typdelim << std::endl;
+
+        ReleaseSysCache(type_tuple);
+      } 
+      else 
+      {
+        std::cout << "Type not found" << std::endl;
+      }
+    }
+    else
+    {
+      spixx_elog(ERROR, "Invalid column index or type OID");
+    }
+  }
+}
+
+
 } // namespace spixx
-#endif
+#endif// NDEBUG
