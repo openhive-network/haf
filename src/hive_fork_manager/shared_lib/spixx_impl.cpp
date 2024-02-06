@@ -153,7 +153,7 @@ void result::display_column_names_and_types(const std::string &label) const
 
 ////////////////////////////////////////////////////////////////////////// wklejone mtlk todo end
 
-namespace consensus_state_provider
+namespace spixx
 {
 
   postgres_database_helper_spi::postgres_database_helper_spi(const char* url)  

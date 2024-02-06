@@ -1205,7 +1205,7 @@ csp_session_type::csp_session_type(
   //#else
     #ifdef USE_PQXX_UNDEFINED
     #endif
-    spi_conn(std::make_unique<postgres_database_helper_spi>(postgres_url)),
+    spi_conn(std::make_unique<spixx::postgres_database_helper_spi>(postgres_url)),
   //#endif
   db(std::make_unique<haf_state_database>(*this, theApp)),
   e_block_writer( *db.get(), theApp, *this )
@@ -1227,7 +1227,7 @@ namespace consensus_state_provider
 
 void postgres_block_log::run(uint32_t first_block, uint32_t last_block)
 {
-  consensus_state_provider::postgres_database_helper_spi::spi_connect_guard guard;
+  spixx::postgres_database_helper_spi::spi_connect_guard guard;
 
   measure_before_run();
 
@@ -1239,7 +1239,7 @@ void postgres_block_log::run(uint32_t first_block, uint32_t last_block)
 
 full_block_ptr postgres_block_log::read_full_block(uint32_t block_num)
 {
-  consensus_state_provider::postgres_database_helper_spi::spi_connect_guard guard;
+  spixx::postgres_database_helper_spi::spi_connect_guard guard;
 
   prepare_postgres_data(block_num, block_num);
   return block_to_fullblock(block_num, *blocks.begin());

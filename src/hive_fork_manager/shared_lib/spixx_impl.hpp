@@ -2,7 +2,7 @@
 
 #include "pxx.hpp"
 
-namespace consensus_state_provider
+namespace spixx
 {
 
 class postgres_database_helper_spi
@@ -23,4 +23,4 @@ private:
 };
 
 
-} // namespace consensus_state_provider
+}
