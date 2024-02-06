@@ -149,40 +149,35 @@ void result::display_column_names_and_types(const std::string &label) const
   }
 }
 
-} // namespace spixx
-
 ////////////////////////////////////////////////////////////////////////// wklejone mtlk todo end
 
-namespace spixx
+
+postgres_database_helper_spi::postgres_database_helper_spi(const char* url)  
 {
-
-  postgres_database_helper_spi::postgres_database_helper_spi(const char* url)  
-  {
-  }
-
-  postgres_database_helper_spi::~postgres_database_helper_spi()
-  {
-  } 
-
-  pxx::result postgres_database_helper_spi::execute_query(const std::string& query)
-  {
-    spixx::result query_result = spixx::execute_query(query);
-    pxx::result res(query_result);
-    return res;
-  }
-
-  postgres_database_helper_spi::spi_connect_guard::spi_connect_guard()
-  {
-    if(SPI_connect() != SPI_OK_CONNECT)
-    {
-      spixx_elog(ERROR, "Cannot establish SPI connection.");
-    }
-  }
-
-  postgres_database_helper_spi::spi_connect_guard::~spi_connect_guard()
-  {
-    SPI_finish();
-  }
-
 }
 
+postgres_database_helper_spi::~postgres_database_helper_spi()
+{
+} 
+
+pxx::result postgres_database_helper_spi::execute_query(const std::string& query)
+{
+  spixx::result query_result = spixx::execute_query(query);
+  pxx::result res(query_result);
+  return res;
+}
+
+postgres_database_helper_spi::spi_connect_guard::spi_connect_guard()
+{
+  if(SPI_connect() != SPI_OK_CONNECT)
+  {
+    spixx_elog(ERROR, "Cannot establish SPI connection.");
+  }
+}
+
+postgres_database_helper_spi::spi_connect_guard::~spi_connect_guard()
+{
+  SPI_finish();
+}
+
+}
