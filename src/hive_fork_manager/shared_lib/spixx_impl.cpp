@@ -1,38 +1,163 @@
 #include "spixx_impl.hpp"
 
 #include "spixx.hpp"
-
 #include "psql_utils/pg_cxx.hpp"
 
 
 #include <iostream>
 using std::cout, std::endl;
 #include <unistd.h>
+///////////////////////////////////////////////////// wklerjone begin mtlk todo
+
+#include "spixx.hpp"
+
+#include "psql_utils/pg_cxx.hpp"
+
+
+#include <iomanip>
+#include <iostream>
+
+namespace spixx 
+{
+
+template<> uint32_t field::as<uint32_t>() const
+{
+  if (is_null())
+  {
+    spixx_elog(ERROR, "Attempted conversion of NULL field to uint32_t.");
+  }
+  return DatumGetUInt32(datum);
+}
+
+template<> int field::as<int>() const
+{
+   if (is_null())
+  {
+    spixx_elog(ERROR, "Attempted conversion of NULL field to int.");
+  }
+  return DatumGetInt32(datum);
+}
+
+template<> int64_t field::as<int64_t>() const
+{
+  if (is_null())
+  {
+    spixx_elog(ERROR, "Attempted conversion of NULL field to int64_t.");
+  }
+  return DatumGetInt64(datum);
+}
+
+
+const_result_iterator::const_result_iterator()
+    : tuptable(nullptr), index(0) {}
+
+const_result_iterator::const_result_iterator(SPITupleTable *tt, int idx)
+    : tuptable(tt), index(idx) {}
+
+const_result_iterator &const_result_iterator::operator++()
+{
+  index++;
+  return *this;
+}
+
+bool const_result_iterator::operator!=(const_result_iterator const &i) const
+{
+  return index != i.index;
+}
+
+bool const_result_iterator::operator==(const_result_iterator const &i) const
+{
+  return index == i.index;
+}
+
+row const_result_iterator::operator*() const
+{
+  return row(tuptable->vals[index], tuptable->tupdesc);
+}
+
+result::result() : tuptable(nullptr), proc(0) {}
+
+result::result(SPITupleTable *t, TupleDesc td, uint64 p) : tuptable(t), proc(p) {}
+
+result::const_iterator result::end() const noexcept
+{
+  return const_iterator(tuptable, proc);
+}
+
+bool result::empty() const noexcept
+{
+  return proc == 0;
+}
+
+result::const_iterator result::begin() const noexcept
+{
+  return const_iterator(tuptable, 0);
+}
+
+row result::operator[](size_t i) const noexcept
+{
+  if (i >= proc)
+  {
+    spixx_elog(ERROR, "Index out of bounds");
+  }
+  return row(tuptable->vals[i], tuptable->tupdesc);
+}
+
+result execute_query(const std::string &query)
+{
+
+  int ret = SPI_exec(query.c_str(), 0);
+  FC_ASSERT(ret == SPI_OK_SELECT);
+  if (ret != SPI_OK_SELECT)
+  {
+    SPI_finish();
+    spixx_elog(ERROR, "Failed executing query");
+  }
+  return {SPI_tuptable, SPI_tuptable->tupdesc, SPI_processed};
+}
+
+void result::display_column_names_and_types(const std::string &label) const
+{
+  if (!tuptable || !tuptable->tupdesc)
+  {
+    std::cout << "No column descriptions available." << std::endl;
+    return;
+  }
+
+  TupleDesc tupdesc = tuptable->tupdesc;
+
+  std::cout << label << " column names:" << std::endl;
+  for (int col = 0; col < tupdesc->natts; ++col)
+  {
+    if (!tupdesc->attrs[col].attisdropped)
+    {
+      std::cout << "    " << tupdesc->attrs[col].attname.data;
+
+      char *type_name = SPI_gettype(tupdesc, col + 1); // SPI column indexing starts from 1
+      Oid type_oid = tupdesc->attrs[col].atttypid;
+
+      if (type_name)
+      {
+        std::cout << " (" << type_name << ")" << std::endl;
+        SPI_pfree(type_name);
+      }
+      else
+      {
+        std::cout << " (Unknown type OID: " << type_oid << ")" << std::endl;
+      }
+    }
+  }
+}
+
+} // namespace spixx
+
+////////////////////////////////////////////////////////////////////////// wklejone mtlk todo end
 
 namespace consensus_state_provider
 {
 
   postgres_database_helper_spi::postgres_database_helper_spi(const char* url)  
   {
-
-    // #ifndef NDEBUG
-    //   []()
-    //   {
-    //     static volatile bool stop_in = true;
-    //     using std::cout, std::endl;
-    //     cout << "mtlk 006 csp_session_type::csp_session_type" << endl;
-    //     cout << "pid= " << getpid() << endl;
-
-    //     while(stop_in)
-    //     {
-    //       int a = 0;
-    //       a=a;
-    //     }
-    //     int a = 0;
-    //     a=a;
-    //   }();
-    // #endif
-
   }
 
   postgres_database_helper_spi::~postgres_database_helper_spi()
@@ -41,38 +166,16 @@ namespace consensus_state_provider
 
   pxx::result postgres_database_helper_spi::execute_query(const std::string& query)
   {
- 
-    // #ifndef NDEBUG
-    //   []()
-    //   {
-    //     static volatile bool stop_in = true;
-    //     using std::cout, std::endl;
-    //     cout << "postgres_database_helper_spi::execute_query" << endl;
-    //     cout << "pid= " << getpid() << endl;
-
-    //     while(stop_in)
-    //     {
-    //       int a = 0;
-    //       a=a;
-    //     }
-    //   }();
-    // #endif
-
     spixx::result query_result = spixx::execute_query(query);
     pxx::result res(query_result);
-
     return res;
   }
 
   postgres_database_helper_spi::spi_connect_guard::spi_connect_guard()
   {
-    if(SPI_connect() == SPI_OK_CONNECT)
+    if(SPI_connect() != SPI_OK_CONNECT)
     {
-      //cout << "SPI_OK_CONNECT" << endl;
-    }
-    else
-    {
-      cout << "SPI_ERROR_CONNECT" << endl;
+      spixx_elog(ERROR, "Cannot establish SPI connection.");
     }
   }
 
@@ -82,5 +185,4 @@ namespace consensus_state_provider
   }
 
 }
-
 

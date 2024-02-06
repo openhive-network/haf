@@ -30,8 +30,6 @@ namespace consensus_state_provider
     pqxx::result query_result = txn.exec(query);
     txn.commit();
 
-
-
     pxx::result res(query_result);
     return res;
   }
