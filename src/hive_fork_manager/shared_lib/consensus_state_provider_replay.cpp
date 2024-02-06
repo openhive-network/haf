@@ -231,7 +231,7 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
   return collect_current_account_balances(csp_session, accounts);
 }
 
-#include "psql_utils/pg_cxx.hpp"
+//#include "psql_utils/pg_cxx.hpp"
 
 
 
@@ -1201,7 +1201,7 @@ csp_session_type::csp_session_type(
 
 
   //#ifdef USE_PQXX
-    conn(std::make_unique<postgres_database_helper>(postgres_url)),
+    pqxx_conn(std::make_unique<postgres_database_helper>(postgres_url)),
   //#else
     #ifdef USE_PQXX_UNDEFINED
     #endif
@@ -1260,9 +1260,9 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
     
 
-    blocks = csp_session.spi_conn->execute_query(blocks_query);
+    blocks = csp_session.pqxx_conn->execute_query(blocks_query);
     
-    compare_blocks(blocks, csp_session.conn->execute_query(blocks_query));
+    compare_blocks(blocks, csp_session.spi_conn->execute_query(blocks_query));
 
 
 
@@ -1278,14 +1278,14 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + std::to_string(last_block)
                                 + " ORDER BY block_num, trx_in_block ASC";
     //#ifdef USE_PQXX                          
-      transactions = csp_session.spi_conn->execute_query(transactions_query);
+      transactions = csp_session.pqxx_conn->execute_query(transactions_query);
     //#else
         #ifdef USE_PQXX_UNDEFINED
         #endif
       //transactions = csp_session.spi_conn->execute_query(transactions_query);
     //#endif
 
-    compare_transactions(transactions, csp_session.conn->execute_query(transactions_query));
+    compare_transactions(transactions, csp_session.spi_conn->execute_query(transactions_query));
     #ifndef NDEBUG
       // pxx::result spi_transactions = csp_session.spi_conn->execute_query(transactions_query);
       // compare_transactions(spi_transactions);
@@ -1299,13 +1299,13 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
                                 + " ORDER BY id ASC";
   
     //#ifdef USE_PQXX
-    operations = csp_session.spi_conn->execute_query(operations_query);
+    operations = csp_session.pqxx_conn->execute_query(operations_query);
     //#else
       //operations = csp_session.spi_conn->execute_query(operations_query);
         #ifdef USE_PQXX_UNDEFINED
         #endif
     //#endif
-  compare__operations(operations, csp_session.conn->execute_query(operations_query));
+  compare__operations(operations, csp_session.spi_conn->execute_query(operations_query));
   #ifndef NDEBUG
     //pxx::result spi_operations = csp_session.spi_conn->execute_query(operations_query);
     // compare__operationZs(spi_operations);

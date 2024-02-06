@@ -52,7 +52,7 @@ namespace consensus_state_provider
 
       std::string shared_memory_bin_path;
       //#ifdef USE_PQXX
-        std::unique_ptr<postgres_database_helper> conn;
+        std::unique_ptr<postgres_database_helper> pqxx_conn;
       //#else
         std::unique_ptr<postgres_database_helper_spi> spi_conn;
       //#endif
