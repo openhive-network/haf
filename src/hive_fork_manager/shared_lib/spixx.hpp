@@ -220,9 +220,11 @@ public:
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] const_iterator begin() const noexcept;
   row operator[](size_t i) const noexcept;
+  
+  friend void display_column_names_and_types(const result& recordset, const std::string &label);
 
-  void display_column_names_and_types(const std::string& label) const;
 };
+
 
 result execute_query(const std::string& query);
 

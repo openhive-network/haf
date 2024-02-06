@@ -7,15 +7,9 @@
 #include <iostream>
 using std::cout, std::endl;
 #include <unistd.h>
+#include <iomanip>
 ///////////////////////////////////////////////////// wklerjone begin mtlk todo
 
-#include "spixx.hpp"
-
-#include "psql_utils/pg_cxx.hpp"
-
-
-#include <iomanip>
-#include <iostream>
 
 namespace spixx 
 {
@@ -116,15 +110,16 @@ result execute_query(const std::string &query)
   return {SPI_tuptable, SPI_tuptable->tupdesc, SPI_processed};
 }
 
-void result::display_column_names_and_types(const std::string &label) const
+#ifndef NDEBUG
+void display_column_names_and_types(const result& recordset, const std::string &label)
 {
-  if (!tuptable || !tuptable->tupdesc)
+  if (!recordset.tuptable || !recordset.tuptable->tupdesc)
   {
     std::cout << "No column descriptions available." << std::endl;
     return;
   }
 
-  TupleDesc tupdesc = tuptable->tupdesc;
+  TupleDesc tupdesc = recordset.tuptable->tupdesc;
 
   std::cout << label << " column names:" << std::endl;
   for (int col = 0; col < tupdesc->natts; ++col)
@@ -148,6 +143,7 @@ void result::display_column_names_and_types(const std::string &label) const
     }
   }
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////// wklejone mtlk todo end
 

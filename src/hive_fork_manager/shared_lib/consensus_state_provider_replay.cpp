@@ -1151,44 +1151,6 @@ void compare__operations(const pxx::result& operations, const pxx::result& opera
   }
 }
 
-//     void result::display_column_names_and_types() const
-//     {
-//         if (!tuptable || !tuptable->tupdesc)
-//         {
-//             std::cout << "No column descriptions available." << std::endl;
-//             return;
-//         }
-
-//         TupleDesc tupdesc = tuptable->tupdesc;
-
-//         std::cout << "Column Names:" << std::endl;
-//         for (int col = 0; col < tupdesc->natts; ++col)
-//         {
-//             if (!tupdesc->attrs[col].attisdropped)  // Checking if the attribute is dropped
-//             {
-//                 std::cout << "    " << tupdesc->attrs[col].attname.data;
-
-//                 char *type_name = SPI_gettype(tupdesc, col+1);  // SPI column indexing starts from 1
-//                 Oid type_oid = tupdesc->attrs[col].atttypid;
-                
-//                 if (type_name)
-//                 {
-//                     std::cout << " (" << type_name << ")" << std::endl;
-//                     SPI_pfree(type_name);  // Free the allocated string
-//                 }
-//                 else
-//                 {
-//                     std::cout << " (Unknown type OID: " << type_oid << ")" << std::endl;
-//                 }
-//             }
-
-            
-//         }
-//     }
-
-// }
-
-
 
 csp_session_type::csp_session_type(
   const char* context,
