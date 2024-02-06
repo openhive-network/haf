@@ -1,6 +1,5 @@
 #pragma once
 #include <chrono>
-#include <iostream>
 
 namespace consensus_state_provider 
 {

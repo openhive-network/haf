@@ -8,10 +8,6 @@
 
 //#ifdef USE_PQXX
 
-#include <iostream>
-#include <unistd.h>
-
-
 namespace pqxx
 {
 
