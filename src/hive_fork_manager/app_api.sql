@@ -480,6 +480,41 @@ BEGIN
 END;
 $BODY$;
 
+CREATE OR REPLACE FUNCTION hive.app_update_last_active_at( _contexts hive.contexts_group )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __contexts_id INTEGER[];
+BEGIN
+    PERFORM hive.app_check_contexts_synchronized( _contexts );
+
+    SELECT ARRAY_AGG(id) INTO __contexts_id
+    FROM hive.contexts
+    WHERE name = ANY( _contexts ) AND is_attached = FALSE;
+
+    IF __contexts_id IS NULL THEN
+        RAISE EXCEPTION 'Contexts do not exist';
+    END IF;
+
+    UPDATE hive.contexts SET last_active_at = NOW()
+    WHERE id =ANY( __contexts_id );
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.app_update_last_active_at( _context hive.context_name )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.app_update_last_active_at( ARRAY[ _context ]);
+END;
+$BODY$;
+
 CREATE OR REPLACE FUNCTION hive.app_set_current_block_num( _contexts hive.contexts_group, _block_num INTEGER )
     RETURNS void
     LANGUAGE plpgsql
@@ -493,7 +528,7 @@ BEGIN
 
     SELECT ARRAY_AGG(id) INTO __contexts_id
     FROM hive.contexts
-    WHERE name =ANY( _contexts ) AND is_attached = FALSE;
+    WHERE name = ANY( _contexts ) AND is_attached = FALSE;
 
     IF __contexts_id IS NULL THEN
         RAISE EXCEPTION 'Contexts do not exist';
