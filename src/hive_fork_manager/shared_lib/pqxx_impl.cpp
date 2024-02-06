@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 
-namespace consensus_state_provider
+namespace pqxx
 {
 
   postgres_database_helper::postgres_database_helper(const char* url) : connection(url) 

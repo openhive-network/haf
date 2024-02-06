@@ -18,7 +18,7 @@ namespace pqxx
 
 }
 
-namespace consensus_state_provider
+namespace pqxx
 {
 
 class postgres_database_helper
@@ -33,4 +33,4 @@ private:
 };
 
 
-} // namespace consensus_state_provider
+} // namespace pqxx

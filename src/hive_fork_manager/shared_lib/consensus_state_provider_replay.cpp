@@ -1201,7 +1201,7 @@ csp_session_type::csp_session_type(
 
 
   //#ifdef USE_PQXX
-    pqxx_conn(std::make_unique<postgres_database_helper>(postgres_url)),
+    pqxx_conn(std::make_unique<pqxx::postgres_database_helper>(postgres_url)),
   //#else
     #ifdef USE_PQXX_UNDEFINED
     #endif

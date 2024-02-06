@@ -29,6 +29,10 @@ namespace spixx
   class postgres_database_helper_spi;
 }
 
+namespace pqxx
+{
+  class postgres_database_helper;
+}
 namespace consensus_state_provider
 {
 
@@ -46,7 +50,7 @@ namespace consensus_state_provider
   using collected_account_balances_collection_t = std::vector<collected_account_balances_t>;
 
   class haf_state_database;
-  class postgres_database_helper;
+  
   
   struct csp_session_type
   {
@@ -54,7 +58,7 @@ namespace consensus_state_provider
 
       std::string shared_memory_bin_path;
       //#ifdef USE_PQXX
-        std::unique_ptr<postgres_database_helper> pqxx_conn;
+        std::unique_ptr<pqxx::postgres_database_helper> pqxx_conn;
       //#else
         std::unique_ptr<spixx::postgres_database_helper_spi> spi_conn;
       //#endif
