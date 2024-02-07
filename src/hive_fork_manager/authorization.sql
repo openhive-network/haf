@@ -69,13 +69,19 @@ REVOKE UPDATE( is_forking, owner ) ON hive.contexts FROM GROUP hive_applications
 ALTER TABLE hive.contexts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS dp_hive_context ON hive.contexts CASCADE;
-CREATE POLICY dp_hive_context ON hive.contexts FOR ALL USING ( hive.can_impersonate(current_user, owner) );
+CREATE POLICY dp_hive_context ON hive.contexts FOR INSERT WITH CHECK ( current_user = owner );
 
 DROP POLICY IF EXISTS sp_hived_hive_context ON hive.contexts CASCADE;
 CREATE POLICY sp_hived_hive_context ON hive.contexts FOR SELECT TO hived_group USING( TRUE );
 
 DROP POLICY IF EXISTS sp_applications_hive_context ON hive.contexts CASCADE;
-CREATE POLICY sp_applications_hive_context ON hive.contexts FOR SELECT TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
+CREATE POLICY sp_applications_hive_context ON hive.contexts FOR SELECT TO hive_applications_group USING( TRUE );
+
+DROP POLICY IF EXISTS sp_applications_update_hive_context ON hive.contexts CASCADE;
+CREATE POLICY sp_applications_update_hive_context ON hive.contexts FOR UPDATE TO hive_applications_group USING( TRUE ) WITH CHECK( hive.can_impersonate(current_user, owner) ) ;
+
+DROP POLICY IF EXISTS sp_applications_delete_hive_context ON hive.contexts CASCADE;
+CREATE POLICY sp_applications_delete_hive_context ON hive.contexts FOR DELETE TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
 
 DROP POLICY IF EXISTS sp_applications_hive_state_providers ON hive.state_providers_registered CASCADE;
 CREATE POLICY sp_applications_hive_state_providers ON hive.state_providers_registered FOR SELECT TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
