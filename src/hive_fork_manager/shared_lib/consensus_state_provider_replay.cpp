@@ -121,7 +121,6 @@ void set_open_args_data_dir(open_args& db_open_args, const std::string&  shared_
 void set_open_args_other_parameters(open_args& db_open_args);
 
 //lower level helpers
-void handle_exception(std::exception_ptr exception_ptr);
 constexpr uint64_t get_skip_flags();
 block_bin_t build_block_bin(const pxx::row& block, std::vector<hive::protocol::transaction_id_type> transaction_id_bins, std::vector<hive::protocol::signed_transaction> transaction_bins);
 full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num);
@@ -365,40 +364,6 @@ void postgres_block_log::measure_after_run()
   replay_full_block_time_probe.print_duration("Transactional_apply_block");
 }
 
-void handle_exception(std::exception_ptr exception_ptr)
-{
-  try
-  {
-    if(exception_ptr)
-    {
-      std::rethrow_exception(exception_ptr);
-    }
-  }
-  // catch(const pxx::broken_connection& ex)
-  // {
-  //   elog("postgres_block_log detected connection error: ${e}.", ("e", ex.what()));
-  // }
-  // catch(const pxx::sql_error& ex)
-  // {
-  //   elog("postgres_block_log detected SQL statement execution failure. Failing statement: `${q}'.", ("q", ex.query()));
-  // }
-  // catch(const pxx::failure& ex)
-  // {
-  //   elog("postgres_block_log detected SQL execution failure: ${e}.", ("e", ex.what()));
-  // }
-  catch( const fc::exception& e )
-  {
-    elog( "fc::exception ${e}", ("e", e.to_string()) );
-  }
-  catch( const std::exception& e )
-  {
-    elog("std::exception e.what=${var1}", ("var1", e.what()));
-  }
-  catch(...)
-  {
-    elog("postgres_block_log execution failed: unknown exception.");
-  }
-}
 
 
 block_bin_t postgres_block_log::block_to_bin(const pxx::row& block)
@@ -883,74 +848,34 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 {
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
-    // clang-format off
-    auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
-                                + std::to_string(first_block)
-                                + " and num <= "
-                                + std::to_string(last_block)
-                                + " ORDER BY num ASC";
-
-    
-
-    blocks = csp_session.pqxx_conn->execute_query(blocks_query);
-    
-
-    compare_blocks<compare_enabled>(blocks, csp_session.spi_conn->execute_query(blocks_query));
+  auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
+                              + std::to_string(first_block)
+                              + " and num <= "
+                              + std::to_string(last_block)
+                              + " ORDER BY num ASC";
 
 
+  blocks = csp_session.pqxx_conn->execute_query(blocks_query);
+  compare_blocks<compare_enabled>(blocks, csp_session.spi_conn->execute_query(blocks_query));
 
+  auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
+                              + std::to_string(first_block)
+                              + " and block_num <= "
+                              + std::to_string(last_block)
+                              + " ORDER BY block_num, trx_in_block ASC";
+  transactions = csp_session.pqxx_conn->execute_query(transactions_query);
+  compare_transactions<compare_enabled>(transactions, csp_session.spi_conn->execute_query(transactions_query));
 
-    #ifndef NDEBUG
-      //pxx::result spi_blocks = csp_session.spi_conn->execute_query(blocks_query);
-      // compare_blocks(spi_blocks);
-    #endif
-
-    auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
-                                + std::to_string(first_block)
-                                + " and block_num <= "
-                                + std::to_string(last_block)
-                                + " ORDER BY block_num, trx_in_block ASC";
-    //#ifdef USE_PQXX                          
-      transactions = csp_session.pqxx_conn->execute_query(transactions_query);
-    //#else
-        #ifdef USE_PQXX_UNDEFINED
-        #endif
-      //transactions = csp_session.spi_conn->execute_query(transactions_query);
-    //#endif
-
-
-    compare_transactions<compare_enabled>(transactions, csp_session.spi_conn->execute_query(transactions_query));
-
-
-    #ifndef NDEBUG
-      // pxx::result spi_transactions = csp_session.spi_conn->execute_query(transactions_query);
-      // compare_transactions(spi_transactions);
-    #endif
-
-    auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
-                                + std::to_string(first_block)
-                                + " and block_num <= "
-                                + std::to_string(last_block)
-                                + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
-                                + " ORDER BY id ASC";
-  
-    //#ifdef USE_PQXX
-    operations = csp_session.pqxx_conn->execute_query(operations_query);
-    //#else
-      //operations = csp_session.spi_conn->execute_query(operations_query);
-        #ifdef USE_PQXX_UNDEFINED
-        #endif
-    //#endif
-
+  auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
+                              + std::to_string(first_block)
+                              + " and block_num <= "
+                              + std::to_string(last_block)
+                              + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
+                              + " ORDER BY id ASC";
+  operations = csp_session.pqxx_conn->execute_query(operations_query);
 
   compare_operations<compare_enabled>(operations, csp_session.spi_conn->execute_query(operations_query));
 
-  #ifndef NDEBUG
-    //pxx::result spi_operations = csp_session.spi_conn->execute_query(operations_query);
-    // compare__operationZs(spi_operations);
-  #endif
-
-  // clang-format on
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
 }
 
