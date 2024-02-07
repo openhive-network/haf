@@ -1,6 +1,7 @@
 #pragma once 
 
-#include "pxx.hpp"
+//#include "pxx.hpp"
+#include "spixx.hpp"
 
 namespace spixx
 {
@@ -18,7 +19,7 @@ public:
   };
 
 
-  pxx::result execute_query(const std::string& query);
+  spixx::result execute_query(const std::string& query);
 private:
 };
 

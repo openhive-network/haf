@@ -112,11 +112,12 @@ postgres_database_helper_spi::~postgres_database_helper_spi()
 {
 } 
 
-pxx::result postgres_database_helper_spi::execute_query(const std::string& query)
+spixx::result postgres_database_helper_spi::execute_query(const std::string& query)
 {
   spixx::result query_result = spixx::execute_query(query);
-  pxx::result res(query_result);
-  return res;
+  return query_result;
+  // pxx::result res(query_result);
+  // return res;
 }
 
 postgres_database_helper_spi::spi_connect_guard::spi_connect_guard()

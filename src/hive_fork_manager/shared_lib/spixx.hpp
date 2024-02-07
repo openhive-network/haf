@@ -1,6 +1,8 @@
 #pragma once
 
 #include "pxx.hpp"
+#include "pxx_new_types.hpp"
+
 #include "psql_utils/pg_cxx.hpp"
 
 #include "postgres.h"
@@ -162,21 +164,21 @@ public:
 result execute_query(const std::string& query);
 
 template<>
-inline pxx::timestamp_wo_tz_type field::as<pxx::timestamp_wo_tz_type>() const
+inline pxx_new_types::timestamp_wo_tz_type field::as<pxx_new_types::timestamp_wo_tz_type>() const
 {
 
   Timestamp timestamp = DatumGetTimestamp(datum);
 
   char* timestamp_string = DatumGetCString(DirectFunctionCall1(timestamp_out, TimestampGetDatum(timestamp)));
 
-  auto res = pxx::timestamp_wo_tz_type{ std::string(timestamp_string) };
+  auto res = pxx_new_types::timestamp_wo_tz_type{ std::string(timestamp_string) };
 
   pfree(timestamp_string);
   return res;
 }
 
 template<>
-inline pxx::jsonb_string field::as<pxx::jsonb_string>() const
+inline pxx_new_types::jsonb_string field::as<pxx_new_types::jsonb_string>() const
 {
   std::string s;
 
@@ -190,7 +192,7 @@ inline pxx::jsonb_string field::as<pxx::jsonb_string>() const
     pfree(j_string);
   }
 
-  auto res = pxx::jsonb_string{ s };
+  auto res = pxx_new_types::jsonb_string{ s };
 
   return res;
 }

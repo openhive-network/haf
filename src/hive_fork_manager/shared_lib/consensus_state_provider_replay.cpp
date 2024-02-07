@@ -7,7 +7,8 @@
 #include "fc/time.hpp"
 #include <hive/plugins/block_api/block_api_objects.hpp>
 
-#include "pxx.hpp"
+#include "spixx.hpp"
+
 
 #include <limits>
 #include <sstream>
@@ -15,7 +16,16 @@
 #include <cstddef>
 
 
-constexpr bool compare_enabled = true;
+constexpr bool compare_enabled = false;
+
+
+namespace pxx
+{ 
+  using row = spixx::row;
+  using result = spixx::result;
+  using const_result_iterator = spixx::const_result_iterator;
+  using field = spixx::field;
+} // namespace pxx
 
 std::ostream& operator<<(std::ostream& os, const std::basic_string<std::byte>& data)
 {
@@ -462,7 +472,7 @@ block_bin_t build_block_bin(const pxx::row& block, std::vector<hive::protocol::t
   if(const auto& field = block["extensions"]; !field.is_null())
   {
     //It seems reasonable to use existing conversion to static_variant via variant here, or maybe add a method to json.cpp ? mtlk TODO
-    std::string json = field.as<pxx::jsonb_string>().val;
+    std::string json = field.as<pxx_new_types::jsonb_string>().val;
     fc::variant extensions = fc::json::from_string(json, fc::json::format_validation_mode::relaxed);
     from_variant(extensions, sb.extensions);
   }
@@ -692,7 +702,7 @@ full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num)
 std::string fix_pxx_time(const pxx::field& t)
 {
   const auto T_letter_position_in_ascii_time_string = 10;
-  std::string r = t.as<pxx::timestamp_wo_tz_type>().val;
+  std::string r = t.as<pxx_new_types::timestamp_wo_tz_type>().val;
   r[T_letter_position_in_ascii_time_string] = 'T';
   return r;
 }
@@ -800,7 +810,7 @@ csp_session_type::csp_session_type(
 
 
 
-  pqxx_conn(std::make_unique<pqxx::postgres_database_helper>(postgres_url)),
+  //pqxx_conn(std::make_unique<pqxx::postgres_database_helper>(postgres_url)),
   spi_conn(std::make_unique<spixx::postgres_database_helper_spi>(postgres_url)),
   db(std::make_unique<haf_state_database>(*this, theApp)),
   e_block_writer(*db.get(), theApp, *this)
@@ -811,7 +821,7 @@ csp_session_type::csp_session_type(
 
 }  // namespace consensus_state_provider
 
-#include "pqxx_impl.hpp"
+//#include "pqxx_impl.hpp"
 #include "spixx_impl.hpp"
 
 namespace consensus_state_provider
@@ -851,10 +861,10 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
 
   auto& primary_conn = csp_session.spi_conn;
-  auto& secondary_conn =  csp_session.pqxx_conn;
+  //auto& secondary_conn =  csp_session.pqxx_conn;
 
   blocks = primary_conn->execute_query(blocks_query);
-  compare_blocks<compare_enabled>(blocks, secondary_conn->execute_query(blocks_query));
+  //compare_blocks<compare_enabled>(blocks, secondary_conn->execute_query(blocks_query));
 
   auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
     + std::to_string(first_block)
@@ -862,7 +872,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
     + std::to_string(last_block)
     + " ORDER BY block_num, trx_in_block ASC";
   transactions = primary_conn->execute_query(transactions_query);
-  compare_transactions<compare_enabled>(transactions, secondary_conn->execute_query(transactions_query));
+  //compare_transactions<compare_enabled>(transactions, secondary_conn->execute_query(transactions_query));
 
   auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
     + std::to_string(first_block)
@@ -872,7 +882,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
     + " ORDER BY id ASC";
   operations = primary_conn->execute_query(operations_query);
 
-  compare_operations<compare_enabled>(operations, secondary_conn->execute_query(operations_query));
+  //compare_operations<compare_enabled>(operations, secondary_conn->execute_query(operations_query));
 
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
 }
@@ -949,11 +959,11 @@ void compare_blocks_impl(const pxx::result& blocks, const pxx::result& blocks2)
 
       compare("block num", (*it)["num"].as<uint32_t>(), (*it2)["num"].as<uint32_t>());
 
-      compare("block extesions", (*it)["extensions"].as<pxx::jsonb_string>(), (*it2)["extensions"].as<pxx::jsonb_string>());
+      compare("block extesions", (*it)["extensions"].as<pxx_new_types::jsonb_string>(), (*it2)["extensions"].as<pxx_new_types::jsonb_string>());
 
       compare("block name", (*it)["name"].c_str(), (*it2)["name"].c_str());
 
-      compare("block created_at", (*it)["created_at"].as<pxx::timestamp_wo_tz_type>(), (*it2)["created_at"].as<pxx::timestamp_wo_tz_type>());
+      compare("block created_at", (*it)["created_at"].as<pxx_new_types::timestamp_wo_tz_type>(), (*it2)["created_at"].as<pxx_new_types::timestamp_wo_tz_type>());
 
       compare("block signing_key", (*it)["signing_key"].c_str(), (*it2)["signing_key"].c_str());
 
@@ -1017,7 +1027,7 @@ void compare_transactions_impl(const pxx::result& transactions, const pxx::resul
 
       compare("transaction ref_block_prefix", (*it)["ref_block_prefix"].as<int64_t>(), (*it2)["ref_block_prefix"].as<int64_t>());
 
-      compare("transaction expiration timestamp_wo_tz_type", (*it)["expiration"].as<pxx::timestamp_wo_tz_type>(), (*it2)["expiration"].as<pxx::timestamp_wo_tz_type>());
+      compare("transaction expiration timestamp_wo_tz_type", (*it)["expiration"].as<pxx_new_types::timestamp_wo_tz_type>(), (*it2)["expiration"].as<pxx_new_types::timestamp_wo_tz_type>());
 
       compare("transaction trx_hash ", (*it)["trx_hash"].as<std::basic_string<std::byte>>(), (*it2)["trx_hash"].as<std::basic_string<std::byte>>());
 

@@ -55,7 +55,7 @@ namespace consensus_state_provider
       csp_session_type(const char* context, const char* shared_memory_bin_path, const char* postgres_url);
 
       std::string shared_memory_bin_path;
-      std::unique_ptr<pqxx::postgres_database_helper> pqxx_conn;
+      //std::unique_ptr<pqxx::postgres_database_helper> pqxx_conn;
       std::unique_ptr<spixx::postgres_database_helper_spi> spi_conn;
       std::unique_ptr<haf_state_database> db;
       empty_block_writer e_block_writer;
