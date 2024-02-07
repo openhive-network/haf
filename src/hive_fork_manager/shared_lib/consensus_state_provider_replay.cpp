@@ -953,38 +953,10 @@ void compare_blocks_impl(const pxx::result& blocks, const pxx::result& blocks2)
 
           compare("block extesions", (*it)["extensions"].as<pxx::jsonb_string>(), (*it2)["extensions"].as<pxx::jsonb_string>());
 
-          
-
-          // std::cout << "num: " << num_value << ", ";
-          // std::cout << "id: " << id_value << ", ";
-
-          // std::cout.flush();
-
-          // //name (varchar)
-          // std::cout <<  "name string_view: " << ((*it)["name"].as<std::string_view>() ) << ", ";
-          // std::cout.flush();
-
           compare("block name", (*it)["name"].c_str(),(*it2)["name"].c_str());
-
-
-
-          // std::cout << "created_at (timestamp) timestamp_wo_tz_type:" << ((*it)["created_at"].as<pxx::timestamp_wo_tz_type>()) << ", ";
-
-          // std::cout.flush();
 
           compare("block created_at", (*it)["created_at"].as<pxx::timestamp_wo_tz_type>(), (*it2)["created_at"].as<pxx::timestamp_wo_tz_type>());
 
-        // // Special handling for 'bytea' type columns
-        //   std::cout << "hash string view: " << (*it)["hash"].as<std::basic_string<std::byte>>() << ", ";
-
-
-        //   // for (const auto& col_name : column_names)
-        //   // {
-        //   //     spixx::field f = (*it)[col_name];
-        //   //     std::cout << col_name << ": " << f.c_str() << ", ";
-        //   // }            
-
-        //   std::cout << std::endl;
           compare("block signing_key", (*it)["signing_key"].c_str(), (*it2)["signing_key"].c_str());
 
           compare("block hash", (*it)["hash"].as<std::basic_string<std::byte>>(),(*it2)["hash"].as<std::basic_string<std::byte>>());
@@ -1041,38 +1013,14 @@ void compare_transactions_impl(const pxx::result& transactions, const pxx::resul
           }
         }
 
-
-        // //block_num (int4)
-        //std::cout << "block_num: " << ((*it)["block_num"].as<uint32_t>()) << ", " << endl;
-
-
-
         compare("transaction block_num",(*it)["block_num"].as<uint32_t>(), (*it2)["block_num"].as<uint32_t>());
-
-        // //trx_in_block (int2)
-        // std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
-        // std::cout.flush();
         compare("transaction trx_in_block",(*it)["trx_in_block"].as<int>(), (*it2)["trx_in_block"].as<int>());
-
-        // //ref_block_num (int4)
-        // std::cout << "ref_block_num: " << ((*it)["ref_block_num"].as<uint32_t>()) << ", ";
-        // std::cout.flush();
         compare("transaction ref_block_num", (*it)["ref_block_num"].as<uint32_t>(), (*it2)["ref_block_num"].as<uint32_t>());
 
-        // //ref_block_prefix (int8)
-        // std::cout << "ref_block_prefix: " << ((*it)["ref_block_prefix"].as<int64_t>()) << ", ";
         compare("transaction ref_block_prefix", (*it)["ref_block_prefix"].as<int64_t>(), (*it2)["ref_block_prefix"].as<int64_t>());
 
-        // std::cout.flush();
-
-        // //expiration (timestamp)
-        // std::cout << "expiration timestamp_wo_tz_type: " << ((*it)["expiration"].as<pxx::timestamp_wo_tz_type>()) << ", ";
-        // std::cout.flush();
         compare("transaction expiration timestamp_wo_tz_type", (*it)["expiration"].as<pxx::timestamp_wo_tz_type>(), (*it2)["expiration"].as<pxx::timestamp_wo_tz_type>());
 
-        // //trx_hash (bytea)
-        // std::cout << "trx_hash std::basic_string<std::byte>: " << ((*it)["trx_hash"].as<std::basic_string<std::byte>>()) << ", ";
-        // std::cout.flush();
         compare("transaction trx_hash ", (*it)["trx_hash"].as<std::basic_string<std::byte>>(), (*it2)["trx_hash"].as<std::basic_string<std::byte>>());
 
         //signature (bytea)
@@ -1088,14 +1036,11 @@ void compare_transactions_impl(const pxx::result& transactions, const pxx::resul
         }
         else
         {
-          // std::cout << "transaction signature std::basic_string<std::byte>: " << ((*it)["signature"].as<std::basic_string<std::byte>>()) << ", ";
-          // std::cout.flush();
           compare("transaction signature", ((*it)["signature"].as<std::basic_string<std::byte>>()), ((*it2)["signature"].as<std::basic_string<std::byte>>()));
         }
 
 
 
-        // std::cout << std::endl;
         ++it;
         ++it2;
 
@@ -1106,64 +1051,31 @@ void compare_transactions_impl(const pxx::result& transactions, const pxx::resul
 
 void compare__operation(const pxx::const_result_iterator& it, const pxx::const_result_iterator& it2)
 {
-    // //block_num (int4)
-    // std::cout << "block_num: " << ((*it)["block_num"].as<uint32_t>()) << ", ";
     compare("operation block_num", (*it)["block_num"].as<uint32_t>(), (*it2)["block_num"].as<uint32_t>());
 
-    // //trx_in_block (int2)
-    // std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
     compare("operation trx_in_block", (*it)["trx_in_block"].as<int>(), (*it2)["trx_in_block"].as<int>());
 
-    //   //bin_body (operation)
-    // std::cout << "bin_body std::basic_string<std::byte>: " << (*it)["bin_body"].as<std::basic_string<std::byte>>() << ", ";
-    // std::cout << std::endl;
     compare("operation bin_body", (*it)["bin_body"].as<std::basic_string<std::byte>>(), (*it2)["bin_body"].as<std::basic_string<std::byte>>());
 
-    //std::cout << "pretty_bin_body: ";
     const pxx::const_result_iterator& operation = it;
     const pxx::const_result_iterator& operation2 = it2;
 
     auto bs = ((*operation)["bin_body"].as<std::basic_string<std::byte>>());
     auto bs2 = ((*operation2)["bin_body"].as<std::basic_string<std::byte>>());
 
-
-    // if(((*(*it))["block_num"]->as<uint32_t>()) == 556705)
-    // {
-    //   #ifndef NDEBUG 
-    //   []()
-    //   {
-    //     static volatile bool stop_in = true;
-    //     wlog("read_postgres_dataaa ");
-    //     wlog("pid= ${pid}", ("pid" , getpid() ));
-
-    //     while(stop_in)
-    //     {
-    //       int a = 0;
-    //       a=a;
-    //     }
-    //   }();
-    //   #endif      
-    // }
-
     auto raw_data = bs.data();
     auto data_length = bs.size();
 
     const auto& op  = (fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data), data_length));
     auto s = fc::json::to_pretty_string( op );
-    // std::cout << s;
-    // std::cout << std::endl;
 
     auto raw_data2 = bs2.data();
     auto data_length2 = bs2.size();
 
     const auto& op2  = (fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data2), data_length2));
     auto s2 = fc::json::to_pretty_string( op2 );
-    // std::cout << s2;
-    // std::cout << std::endl;
 
     compare("operation opertion pretty json", s,s2);
-
-
 }
 
 
@@ -1207,21 +1119,6 @@ void compare_operations_impl(const pxx::result& operations, const pxx::result& o
             break;
           }
         }
-
-
-
-      // //block_num (int4)
-      // std::cout << "block_num: " << ((*it)["block_num"].as<uint32_t>()) << ", ";
-
-      // //trx_in_block (int2)
-      // std::cout << "trx_in_block: " << ((*it)["trx_in_block"].as<int>()) << ", ";
-  
-      //  //bin_body (operation)
-      // std::cout << "bin_body: " << ((*it)["bin_body"].as<std::basic_string<std::byte>>()) << ", ";
-
-      // std::cout << std::endl;
-
-      // std::cout << "Display single operation:" << std::endl;
 
       compare__operation(it, it2);
 
