@@ -19,19 +19,19 @@ constexpr bool compare_enabled = false;
 
 std::ostream& operator<<(std::ostream& os, const std::basic_string<std::byte>& data)
 {
-    os << std::hex << std::setfill('0');
-    for (const auto& byte : data)
-    {
-        os << std::setw(2) << static_cast<unsigned>(byte);
-    }
-    return os;
+  os << std::hex << std::setfill('0');
+  for(const auto& byte : data)
+  {
+    os << std::setw(2) << static_cast<unsigned>(byte);
+  }
+  return os;
 }
 
 
 namespace consensus_state_provider
 {
 
-const uint64_t CSP_SHARED_MEMORY_SIZE = 24*1024*1024*1024ull;
+const uint64_t CSP_SHARED_MEMORY_SIZE = 24 * 1024 * 1024 * 1024ull;
 
 using hive::chain::open_args;
 using hive::chain::full_block_type;
@@ -45,7 +45,7 @@ using full_block_ptr = std::shared_ptr<full_block_type>;
 class haf_state_database : public hive::chain::database
 {
 public:
-  haf_state_database(csp_session_ref_type csp_session, appbase::application& app): database( app ), csp_session(csp_session){}
+  haf_state_database(csp_session_ref_type csp_session, appbase::application& app): database(app), csp_session(csp_session) {}
 
 
 
@@ -53,7 +53,7 @@ public:
 
 private:
 
-   csp_session_ref_type csp_session;
+  csp_session_ref_type csp_session;
 
 };
 
@@ -67,7 +67,7 @@ using block_bin_t = hive::plugins::block_api::api_signed_block_object;
 class postgres_block_log
 {
 public:
-  explicit postgres_block_log(csp_session_ref_type csp_session):csp_session(csp_session){}
+  explicit postgres_block_log(csp_session_ref_type csp_session):csp_session(csp_session) {}
   void run(uint32_t first_block, uint32_t last_block);
   full_block_ptr read_full_block(uint32_t block_num);
 private:
@@ -108,8 +108,8 @@ private:
 
   enum : uint32_t
   {
-      BLOCK_NUM_EMPTY = 0,
-      BLOCK_NUM_MAX = std::numeric_limits<uint32_t>::max()
+    BLOCK_NUM_EMPTY = 0,
+    BLOCK_NUM_MAX = std::numeric_limits<uint32_t>::max()
   };
 };
 
@@ -117,7 +117,7 @@ private:
 void undo_blocks(csp_session_ref_type, uint32_t shift);
 void initialize_chain_db(csp_session_ref_type csp_session);
 
-void set_open_args_data_dir(open_args& db_open_args, const std::string&  shared_memory_bin_path);
+void set_open_args_data_dir(open_args& db_open_args, const std::string& shared_memory_bin_path);
 void set_open_args_other_parameters(open_args& db_open_args);
 
 //lower level helpers
@@ -166,7 +166,7 @@ void initialize_chain_db(csp_session_ref_type csp_session)
   db.open(db_open_args);
 };
 
-void set_open_args_data_dir(open_args& db_open_args, const std::string&  shared_memory_bin_path)
+void set_open_args_data_dir(open_args& db_open_args, const std::string& shared_memory_bin_path)
 {
   db_open_args.data_dir = shared_memory_bin_path;
   db_open_args.shared_mem_dir = db_open_args.data_dir / "blockchain";
@@ -204,10 +204,10 @@ void csp_finish_impl(csp_session_ref_type csp_session, bool wipe_clean_shared_me
     // Use std::cout like in database::wipe
     std::string log("Removing also:\n- " + csp_session.shared_memory_bin_path + "\n");
     std::cout << log;
-    boost::filesystem::remove_all( fc::path(csp_session.shared_memory_bin_path));
+    boost::filesystem::remove_all(fc::path(csp_session.shared_memory_bin_path));
   }
 
-  delete &csp_session;
+  delete& csp_session;
 
 }
 
@@ -302,7 +302,7 @@ void postgres_block_log::replay_block(const pxx::row& block)
 {
   transformations_time_probe.start();
 
-  auto full_block = block_to_fullblock(consensus_state_provider_get_expected_block_num_impl(csp_session) , block);
+  auto full_block = block_to_fullblock(consensus_state_provider_get_expected_block_num_impl(csp_session), block);
 
   FC_ASSERT(full_block, "No full block to process");
 
@@ -345,7 +345,7 @@ void haf_state_database::apply_haf_block(const full_block_ptr& full_block, uint3
 
 
 //  mtlk new
-std::shared_ptr<full_block_type> custom_block_reader::read_block_by_num( uint32_t block_num ) const
+std::shared_ptr<full_block_type> custom_block_reader::read_block_by_num(uint32_t block_num) const
 {
   auto full_block = postgres_block_log(csp_session).read_full_block(block_num);
   return full_block;
@@ -387,16 +387,16 @@ template<typename T>
 void hex_to_binary(const std::string& str, T& binary)
 {
   std::vector<char> buffer;
-  buffer.resize( str.size() / 2 );
-  if( !buffer.empty() )
+  buffer.resize(str.size() / 2);
+  if(!buffer.empty())
   {
-      size_t r = fc::from_hex( str, buffer.data(), buffer.size() );
-      FC_ASSERT( r == buffer.size() );
-      memcpy(&binary, buffer.data(), fc::min<size_t>(buffer.size(),sizeof(binary)) );
+    size_t r = fc::from_hex(str, buffer.data(), buffer.size());
+    FC_ASSERT(r == buffer.size());
+    memcpy(&binary, buffer.data(), fc::min<size_t>(buffer.size(), sizeof(binary)));
   }
   else
   {
-      memset( static_cast<void*>(&binary), static_cast<char>(0), sizeof(binary) );
+    memset(static_cast<void*>(&binary), static_cast<char>(0), sizeof(binary));
   }
 }
 
@@ -417,7 +417,7 @@ void p2b_hex_to_signature_type(const char* field_name, const T& block_or_transac
 template <typename T>
 void p2b_time_to_time_point_sec(const char* field_name, const T& block_or_transaction, fc::time_point_sec& val)
 {
-  val = fc::time_point_sec::from_iso_string( fix_pxx_time(block_or_transaction[field_name]) );
+  val = fc::time_point_sec::from_iso_string(fix_pxx_time(block_or_transaction[field_name]));
 
 }
 
@@ -518,7 +518,7 @@ std::vector<hive::protocol::signature_type> build_signatures(const pxx::const_re
 }
 
 void build_transaction_id_bins(const pxx::const_result_iterator& transaction,
-                                            std::vector<hive::protocol::transaction_id_type>& transaction_id_bins)
+  std::vector<hive::protocol::transaction_id_type>& transaction_id_bins)
 {
   //  https://github.com/jtv/libpqxx/blob/3d97c80bcde96fb70a21c1ae1cf92ad934818210/include/pqxx/field.hxx
   //   Do not use this for BYTEA values, or other binary values.  To read those,
@@ -574,7 +574,7 @@ std::vector<hive::protocol::operation> postgres_block_log::operations2bins(uint3
   if(is_current_operation(block_num, trx_in_block))
   {
     for(; current_operation_it != operations.end() && operation_matches_block_transaction(current_operation_it, block_num, trx_in_block);
-        ++current_operation_it)
+      ++current_operation_it)
     {
       add_operation_bin(current_operation_it, operation_bins);
     }
@@ -585,7 +585,7 @@ std::vector<hive::protocol::operation> postgres_block_log::operations2bins(uint3
 
 void add_operation_bin(const pxx::const_result_iterator& operation, std::vector<hive::protocol::operation>& operation_bins)
 {
-  auto binary  = (*operation)["bin_body"].as<std::basic_string<std::byte>>();
+  auto binary = (*operation)["bin_body"].as<std::basic_string<std::byte>>();
   std::byte* raw_data = binary.data();
   auto data_length = binary.size();
 
@@ -619,14 +619,14 @@ constexpr uint64_t get_skip_flags()
   using flags = hive::chain::database::validation_steps;
 
   return flags::skip_block_log |
-         flags::skip_witness_signature |
-         flags::skip_transaction_signatures |
-         flags::skip_transaction_dupe_check |
-         flags::skip_tapos_check |
-         flags::skip_merkle_check |
-         flags::skip_witness_schedule_check |
-         flags::skip_authority_check |
-         flags::skip_validate;
+    flags::skip_witness_signature |
+    flags::skip_transaction_signatures |
+    flags::skip_transaction_dupe_check |
+    flags::skip_tapos_check |
+    flags::skip_merkle_check |
+    flags::skip_witness_schedule_check |
+    flags::skip_authority_check |
+    flags::skip_validate;
 }
 
 
@@ -635,7 +635,7 @@ constexpr uint64_t get_skip_flags()
 
 struct fix_hf_version_visitor
 {
-  explicit fix_hf_version_visitor(int a_proper_version) : proper_version(a_proper_version) {}
+  explicit fix_hf_version_visitor(int a_proper_version): proper_version(a_proper_version) {}
 
   using result_type = void;
 
@@ -655,8 +655,8 @@ struct fix_hf_version_visitor
     static_cast<hive::protocol::version&>(ver) = hive::protocol::version(0, 0, proper_version);
   }
 
-  private:
-    int proper_version;
+private:
+  int proper_version;
 };
 
 void fix_hf_version(block_bin_t& sb, int proper_hf_version, uint32_t block_num)
@@ -677,12 +677,12 @@ full_block_ptr from_bin_to_full_block_ptr(block_bin_t& sb, uint32_t block_num)
   switch(block_num)
   {
     // clang-format off
-    case 2726331: fix_hf_version(sb, 489, block_num); break;
-    case 2730591: fix_hf_version(sb, 118, block_num); break;
-    case 2733423: fix_hf_version(sb, 119, block_num); break;
-    case 2768535: fix_hf_version(sb, 116, block_num); break;
-    case 2781318: fix_hf_version(sb, 116, block_num); break;
-    case 2786287: fix_hf_version(sb, 119, block_num); break;
+  case 2726331: fix_hf_version(sb, 489, block_num); break;
+  case 2730591: fix_hf_version(sb, 118, block_num); break;
+  case 2733423: fix_hf_version(sb, 119, block_num); break;
+  case 2768535: fix_hf_version(sb, 116, block_num); break;
+  case 2781318: fix_hf_version(sb, 116, block_num); break;
+  case 2786287: fix_hf_version(sb, 119, block_num); break;
     // clang-format on
   }
   return full_block_type::create_from_signed_block(sb);
@@ -710,7 +710,7 @@ std::string fix_pxx_hex(const pxx::field& h)
 
 
 collected_account_balances_t extract_account_balances(
-    const hive::chain::account_object* account)
+  const hive::chain::account_object* account)
 {
   collected_account_balances_t account_balances;
   account_balances.account_name = account->get_name();
@@ -724,16 +724,16 @@ collected_account_balances_t extract_account_balances(
 }
 
 collected_account_balances_collection_t collect_current_account_balances(csp_session_ref_type csp_session,
-                                                                         const std::vector<std::string>& account_names)
+  const std::vector<std::string>& account_names)
 {
   auto& db = *csp_session.db;
 
   collected_account_balances_collection_t collected_balances;
 
-  for( auto& a : account_names )
+  for(auto& a : account_names)
   {
-    auto acct = db.find< hive::chain::account_object, hive::chain::by_name >( a );
-    if( acct != nullptr )
+    auto acct = db.find< hive::chain::account_object, hive::chain::by_name >(a);
+    if(acct != nullptr)
     {
       collected_balances.emplace_back(extract_account_balances(acct));
     }
@@ -750,11 +750,11 @@ collected_account_balances_collection_t collect_current_all_accounts_balances(cs
   collected_account_balances_collection_t collected_balances;
 
   auto& idx = db.get_index< hive::chain::account_index, hive::chain::by_name >();
-  auto itr = idx.lower_bound( "" );
+  auto itr = idx.lower_bound("");
 
   auto end = idx.end();
 
-  while( itr != end )
+  while(itr != end)
   {
     collected_balances.emplace_back(extract_account_balances(&(*itr)));
     ++itr;
@@ -769,21 +769,24 @@ void compare_operations_impl(const pxx::result& operations, const pxx::result& o
 
 // Template functions that switch behavior based on the template parameter
 template<bool Enable>
-void compare_blocks(const pxx::result& blocks, const pxx::result& blocks2) {
-    if constexpr (Enable)
-        compare_blocks_impl(blocks, blocks2);
+void compare_blocks(const pxx::result& blocks, const pxx::result& blocks2)
+{
+  if constexpr(Enable)
+    compare_blocks_impl(blocks, blocks2);
 }
 
 template<bool Enable>
-void compare_transactions(const pxx::result& transactions, const pxx::result& transactions2) {
-    if constexpr (Enable)
-        compare_transactions_impl(transactions, transactions2);
+void compare_transactions(const pxx::result& transactions, const pxx::result& transactions2)
+{
+  if constexpr(Enable)
+    compare_transactions_impl(transactions, transactions2);
 }
 
 template<bool Enable>
-void compare_operations(const pxx::result& operations, const pxx::result& operations2) {
-    if constexpr (Enable)
-        compare_operations_impl(operations, operations2);
+void compare_operations(const pxx::result& operations, const pxx::result& operations2)
+{
+  if constexpr(Enable)
+    compare_operations_impl(operations, operations2);
 }
 
 
@@ -794,29 +797,29 @@ csp_session_type::csp_session_type(
   :
   shared_memory_bin_path(shared_memory_bin_path),
 
-  
+
 
 
   //#ifdef USE_PQXX
-    pqxx_conn(std::make_unique<pqxx::postgres_database_helper>(postgres_url)),
+  pqxx_conn(std::make_unique<pqxx::postgres_database_helper>(postgres_url)),
   //#else
-    #ifdef USE_PQXX_UNDEFINED
-    #endif
-    spi_conn(std::make_unique<spixx::postgres_database_helper_spi>(postgres_url)),
+#ifdef USE_PQXX_UNDEFINED
+#endif
+  spi_conn(std::make_unique<spixx::postgres_database_helper_spi>(postgres_url)),
   //#endif
   db(std::make_unique<haf_state_database>(*this, theApp)),
-  e_block_writer( *db.get(), theApp, *this )
+  e_block_writer(*db.get(), theApp, *this)
 
-  {
-    db->set_block_writer( &e_block_writer );
-  }
+{
+  db->set_block_writer(&e_block_writer);
+}
 
 }  // namespace consensus_state_provider
 
 //#ifdef USE_PQXX
-  #include "pqxx_impl.hpp"
+#include "pqxx_impl.hpp"
 //#else
-  #include "spixx_impl.hpp"
+#include "spixx_impl.hpp"
 //#endif
 
 namespace consensus_state_provider
@@ -849,29 +852,29 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
   time_probe get_data_from_postgres_time_probe; get_data_from_postgres_time_probe.start();
 
   auto blocks_query = "SELECT * FROM hive.blocks_view JOIN hive.accounts_view ON  id = producer_account_id WHERE num >= "
-                              + std::to_string(first_block)
-                              + " and num <= "
-                              + std::to_string(last_block)
-                              + " ORDER BY num ASC";
+    + std::to_string(first_block)
+    + " and num <= "
+    + std::to_string(last_block)
+    + " ORDER BY num ASC";
 
 
   blocks = csp_session.pqxx_conn->execute_query(blocks_query);
   compare_blocks<compare_enabled>(blocks, csp_session.spi_conn->execute_query(blocks_query));
 
   auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
-                              + std::to_string(first_block)
-                              + " and block_num <= "
-                              + std::to_string(last_block)
-                              + " ORDER BY block_num, trx_in_block ASC";
+    + std::to_string(first_block)
+    + " and block_num <= "
+    + std::to_string(last_block)
+    + " ORDER BY block_num, trx_in_block ASC";
   transactions = csp_session.pqxx_conn->execute_query(transactions_query);
   compare_transactions<compare_enabled>(transactions, csp_session.spi_conn->execute_query(transactions_query));
 
   auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
-                              + std::to_string(first_block)
-                              + " and block_num <= "
-                              + std::to_string(last_block)
-                              + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
-                              + " ORDER BY id ASC";
+    + std::to_string(first_block)
+    + " and block_num <= "
+    + std::to_string(last_block)
+    + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
+    + " ORDER BY id ASC";
   operations = csp_session.pqxx_conn->execute_query(operations_query);
 
   compare_operations<compare_enabled>(operations, csp_session.spi_conn->execute_query(operations_query));
@@ -897,77 +900,77 @@ void compare(const std::string& label, T a, T b)
 }
 
 template <>
-void compare(const std::string& label, const char*a, const char *b)
+void compare(const std::string& label, const char* a, const char* b)
 {
   std::string as(a);
   std::string bs(b);
-  compare(label, as ,bs);
+  compare(label, as, bs);
 }
 
 
 void compare_blocks_impl(const pxx::result& blocks, const pxx::result& blocks2)
 {
-  if (blocks.empty()) 
+  if(blocks.empty())
   {
-      if(!blocks2.empty())
-      {
-        std::cout << "mtlk !!! error blocks2 not empty." << std::endl;  
-      }
-      else
-      {
-        std::cout << "No blocks data available." << std::endl;
-      }
+    if(!blocks2.empty())
+    {
+      std::cout << "mtlk !!! error blocks2 not empty." << std::endl;
+    }
+    else
+    {
+      std::cout << "No blocks data available." << std::endl;
+    }
   }
-  else 
+  else
   {
     auto it2 = blocks2.begin();
     auto it = blocks.begin();
-    while (true) 
+    while(true)
     {
-        if(it == blocks.end())
+      if(it == blocks.end())
+      {
+        if(it2 == blocks2.end())
         {
-          if(it2 == blocks2.end ())
-          {
-            break;
-          }
-          else
-          {
-            std::cout << "it2 not end mtlk !!! error" << std::endl;
-            break;
-          }
+          break;
         }
         else
         {
-          if(it2 == blocks2.end ())
-          {
-            std::cout << "it not end mtlk !!! error" << std::endl;
-            break;
-          }
+          std::cout << "it2 not end mtlk !!! error" << std::endl;
+          break;
         }
+      }
+      else
+      {
+        if(it2 == blocks2.end())
+        {
+          std::cout << "it not end mtlk !!! error" << std::endl;
+          break;
+        }
+      }
 
 
-          int32_t num_value = (*it)["num"].as<uint32_t>();
-          int32_t id_value = (*it)["id"].as<uint32_t>();
+      int32_t num_value = (*it)["num"].as<uint32_t>();
+      int32_t id_value = (*it)["id"].as<uint32_t>();
 
-          compare("block num", (*it)["num"].as<uint32_t>(), (*it2)["num"].as<uint32_t>());
+      compare("block num", (*it)["num"].as<uint32_t>(), (*it2)["num"].as<uint32_t>());
 
-          compare("block extesions", (*it)["extensions"].as<pxx::jsonb_string>(), (*it2)["extensions"].as<pxx::jsonb_string>());
+      compare("block extesions", (*it)["extensions"].as<pxx::jsonb_string>(), (*it2)["extensions"].as<pxx::jsonb_string>());
 
-          compare("block name", (*it)["name"].c_str(),(*it2)["name"].c_str());
+      compare("block name", (*it)["name"].c_str(), (*it2)["name"].c_str());
 
-          compare("block created_at", (*it)["created_at"].as<pxx::timestamp_wo_tz_type>(), (*it2)["created_at"].as<pxx::timestamp_wo_tz_type>());
+      compare("block created_at", (*it)["created_at"].as<pxx::timestamp_wo_tz_type>(), (*it2)["created_at"].as<pxx::timestamp_wo_tz_type>());
 
-          compare("block signing_key", (*it)["signing_key"].c_str(), (*it2)["signing_key"].c_str());
+      compare("block signing_key", (*it)["signing_key"].c_str(), (*it2)["signing_key"].c_str());
 
-          compare("block hash", (*it)["hash"].as<std::basic_string<std::byte>>(),(*it2)["hash"].as<std::basic_string<std::byte>>());
-          compare("block prev", (*it)["prev"].as<std::basic_string<std::byte>>(),(*it2)["prev"].as<std::basic_string<std::byte>>());
-          compare("block transaction_merkle_root", (*it)["transaction_merkle_root"].as<std::basic_string<std::byte>>(),(*it2)["transaction_merkle_root"].as<std::basic_string<std::byte>>());
-          compare("block witness_signature", (*it)["witness_signature"].as<std::basic_string<std::byte>>(),(*it2)["witness_signature"].as<std::basic_string<std::byte>>());
-          
-          
+      compare("block hash", (*it)["hash"].as<std::basic_string<std::byte>>(), (*it2)["hash"].as<std::basic_string<std::byte>>());
+      compare("block prev", (*it)["prev"].as<std::basic_string<std::byte>>(), (*it2)["prev"].as<std::basic_string<std::byte>>());
+      compare("block transaction_merkle_root", (*it)["transaction_merkle_root"].as<std::basic_string<std::byte>>(), (*it2)["transaction_merkle_root"].as<std::basic_string<std::byte>>());
+      compare("block witness_signature", (*it)["witness_signature"].as<std::basic_string<std::byte>>(), (*it2)["witness_signature"].as<std::basic_string<std::byte>>());
 
-          ++it;
-          ++it2;
+
+
+      ++it;
+      ++it2;
 
     }
   }
@@ -975,74 +978,74 @@ void compare_blocks_impl(const pxx::result& blocks, const pxx::result& blocks2)
 
 void compare_transactions_impl(const pxx::result& transactions, const pxx::result& transactions2)
 {
-  if (transactions.empty()) 
+  if(transactions.empty())
   {
-      if(!transactions2.empty())
-      {
-        std::cout << "mtlk !!! error transactions2 not empty." << std::endl;  
-      }
-      else
-      {
-        std::cout << "No  transactions data available." << std::endl;
-      }
+    if(!transactions2.empty())
+    {
+      std::cout << "mtlk !!! error transactions2 not empty." << std::endl;
+    }
+    else
+    {
+      std::cout << "No  transactions data available." << std::endl;
+    }
   }
-  else 
+  else
   {
     auto it2 = transactions2.begin();
     auto it = transactions.begin();
-    while (true) 
+    while(true)
     {
-        if(it == transactions.end())
+      if(it == transactions.end())
+      {
+        if(it2 == transactions2.end())
         {
-          if(it2 == transactions2.end ())
-          {
-            break;
-          }
-          else
-          {
-            std::cout << "it2 not end mtlk !!! error transaction" << std::endl;
-            break;
-          }
+          break;
         }
         else
         {
-          if(it2 == transactions2.end ())
-          {
-            std::cout << "it not end mtlk !!! error transaction" << std::endl;
-            break;
-          }
+          std::cout << "it2 not end mtlk !!! error transaction" << std::endl;
+          break;
         }
-
-        compare("transaction block_num",(*it)["block_num"].as<uint32_t>(), (*it2)["block_num"].as<uint32_t>());
-        compare("transaction trx_in_block",(*it)["trx_in_block"].as<int>(), (*it2)["trx_in_block"].as<int>());
-        compare("transaction ref_block_num", (*it)["ref_block_num"].as<uint32_t>(), (*it2)["ref_block_num"].as<uint32_t>());
-
-        compare("transaction ref_block_prefix", (*it)["ref_block_prefix"].as<int64_t>(), (*it2)["ref_block_prefix"].as<int64_t>());
-
-        compare("transaction expiration timestamp_wo_tz_type", (*it)["expiration"].as<pxx::timestamp_wo_tz_type>(), (*it2)["expiration"].as<pxx::timestamp_wo_tz_type>());
-
-        compare("transaction trx_hash ", (*it)["trx_hash"].as<std::basic_string<std::byte>>(), (*it2)["trx_hash"].as<std::basic_string<std::byte>>());
-
-        //signature (bytea)
-        if((*it)["signature"].is_null())
+      }
+      else
+      {
+        if(it2 == transactions2.end())
         {
-          // std::cout << "transaction signature std::basic_string<std::byte>: " << " null" << ", ";
-          if(!(*it2)["signature"].is_null())
-          {
-            cout << "transaction signature not null mtlk !!! error" << endl;
-            std::cout.flush();
-
-          }
+          std::cout << "it not end mtlk !!! error transaction" << std::endl;
+          break;
         }
-        else
+      }
+
+      compare("transaction block_num", (*it)["block_num"].as<uint32_t>(), (*it2)["block_num"].as<uint32_t>());
+      compare("transaction trx_in_block", (*it)["trx_in_block"].as<int>(), (*it2)["trx_in_block"].as<int>());
+      compare("transaction ref_block_num", (*it)["ref_block_num"].as<uint32_t>(), (*it2)["ref_block_num"].as<uint32_t>());
+
+      compare("transaction ref_block_prefix", (*it)["ref_block_prefix"].as<int64_t>(), (*it2)["ref_block_prefix"].as<int64_t>());
+
+      compare("transaction expiration timestamp_wo_tz_type", (*it)["expiration"].as<pxx::timestamp_wo_tz_type>(), (*it2)["expiration"].as<pxx::timestamp_wo_tz_type>());
+
+      compare("transaction trx_hash ", (*it)["trx_hash"].as<std::basic_string<std::byte>>(), (*it2)["trx_hash"].as<std::basic_string<std::byte>>());
+
+      //signature (bytea)
+      if((*it)["signature"].is_null())
+      {
+        // std::cout << "transaction signature std::basic_string<std::byte>: " << " null" << ", ";
+        if(!(*it2)["signature"].is_null())
         {
-          compare("transaction signature", ((*it)["signature"].as<std::basic_string<std::byte>>()), ((*it2)["signature"].as<std::basic_string<std::byte>>()));
+          cout << "transaction signature not null mtlk !!! error" << endl;
+          std::cout.flush();
+
         }
+      }
+      else
+      {
+        compare("transaction signature", ((*it)["signature"].as<std::basic_string<std::byte>>()), ((*it2)["signature"].as<std::basic_string<std::byte>>()));
+      }
 
 
 
-        ++it;
-        ++it2;
+      ++it;
+      ++it2;
 
     }
   }
@@ -1051,74 +1054,74 @@ void compare_transactions_impl(const pxx::result& transactions, const pxx::resul
 
 void compare__operation(const pxx::const_result_iterator& it, const pxx::const_result_iterator& it2)
 {
-    compare("operation block_num", (*it)["block_num"].as<uint32_t>(), (*it2)["block_num"].as<uint32_t>());
+  compare("operation block_num", (*it)["block_num"].as<uint32_t>(), (*it2)["block_num"].as<uint32_t>());
 
-    compare("operation trx_in_block", (*it)["trx_in_block"].as<int>(), (*it2)["trx_in_block"].as<int>());
+  compare("operation trx_in_block", (*it)["trx_in_block"].as<int>(), (*it2)["trx_in_block"].as<int>());
 
-    compare("operation bin_body", (*it)["bin_body"].as<std::basic_string<std::byte>>(), (*it2)["bin_body"].as<std::basic_string<std::byte>>());
+  compare("operation bin_body", (*it)["bin_body"].as<std::basic_string<std::byte>>(), (*it2)["bin_body"].as<std::basic_string<std::byte>>());
 
-    const pxx::const_result_iterator& operation = it;
-    const pxx::const_result_iterator& operation2 = it2;
+  const pxx::const_result_iterator& operation = it;
+  const pxx::const_result_iterator& operation2 = it2;
 
-    auto bs = ((*operation)["bin_body"].as<std::basic_string<std::byte>>());
-    auto bs2 = ((*operation2)["bin_body"].as<std::basic_string<std::byte>>());
+  auto bs = ((*operation)["bin_body"].as<std::basic_string<std::byte>>());
+  auto bs2 = ((*operation2)["bin_body"].as<std::basic_string<std::byte>>());
 
-    auto raw_data = bs.data();
-    auto data_length = bs.size();
+  auto raw_data = bs.data();
+  auto data_length = bs.size();
 
-    const auto& op  = (fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data), data_length));
-    auto s = fc::json::to_pretty_string( op );
+  const auto& op = (fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data), data_length));
+  auto s = fc::json::to_pretty_string(op);
 
-    auto raw_data2 = bs2.data();
-    auto data_length2 = bs2.size();
+  auto raw_data2 = bs2.data();
+  auto data_length2 = bs2.size();
 
-    const auto& op2  = (fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data2), data_length2));
-    auto s2 = fc::json::to_pretty_string( op2 );
+  const auto& op2 = (fc::raw::unpack_from_char_array<hive::protocol::operation>(reinterpret_cast<const char*>(raw_data2), data_length2));
+  auto s2 = fc::json::to_pretty_string(op2);
 
-    compare("operation opertion pretty json", s,s2);
+  compare("operation opertion pretty json", s, s2);
 }
 
 
 void compare_operations_impl(const pxx::result& operations, const pxx::result& operations2)
 {
-  if (operations.empty()) 
+  if(operations.empty())
   {
-      if(!operations2.empty())
-      {
-        std::cout << "mtlk !!! error operations2 not empty." << std::endl;  
-      }
-      else
-      {
-        std::cout << "No operations data available." << std::endl;
-      }
+    if(!operations2.empty())
+    {
+      std::cout << "mtlk !!! error operations2 not empty." << std::endl;
+    }
+    else
+    {
+      std::cout << "No operations data available." << std::endl;
+    }
   }
-  else 
+  else
   {
 
     auto it2 = operations2.begin();
     auto it = operations.begin();
-    while (true) 
+    while(true)
     {
-        if(it == operations.end())
+      if(it == operations.end())
+      {
+        if(it2 == operations2.end())
         {
-          if(it2 == operations2.end ())
-          {
-            break;
-          }
-          else
-          {
-            std::cout << "it2 not end mtlk !!! error operation" << std::endl;
-            break;
-          }
+          break;
         }
         else
         {
-          if(it2 == operations2.end ())
-          {
-            std::cout << "it not end mtlk !!! error operation" << std::endl;
-            break;
-          }
+          std::cout << "it2 not end mtlk !!! error operation" << std::endl;
+          break;
         }
+      }
+      else
+      {
+        if(it2 == operations2.end())
+        {
+          std::cout << "it not end mtlk !!! error operation" << std::endl;
+          break;
+        }
+      }
 
       compare__operation(it, it2);
 
