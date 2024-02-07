@@ -800,13 +800,8 @@ csp_session_type::csp_session_type(
 
 
 
-  //#ifdef USE_PQXX
   pqxx_conn(std::make_unique<pqxx::postgres_database_helper>(postgres_url)),
-  //#else
-#ifdef USE_PQXX_UNDEFINED
-#endif
   spi_conn(std::make_unique<spixx::postgres_database_helper_spi>(postgres_url)),
-  //#endif
   db(std::make_unique<haf_state_database>(*this, theApp)),
   e_block_writer(*db.get(), theApp, *this)
 
@@ -816,11 +811,8 @@ csp_session_type::csp_session_type(
 
 }  // namespace consensus_state_provider
 
-//#ifdef USE_PQXX
 #include "pqxx_impl.hpp"
-//#else
 #include "spixx_impl.hpp"
-//#endif
 
 namespace consensus_state_provider
 {

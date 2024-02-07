@@ -6,8 +6,6 @@
 
 #include "pqxx_impl.hpp"
 
-//#ifdef USE_PQXX
-
 namespace pqxx
 {
 
