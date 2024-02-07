@@ -15,7 +15,7 @@
 #include <cstddef>
 
 
-constexpr bool compare_enabled = false;
+constexpr bool compare_enabled = true;
 
 std::ostream& operator<<(std::ostream& os, const std::basic_string<std::byte>& data)
 {
@@ -850,16 +850,19 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
     + " ORDER BY num ASC";
 
 
-  blocks = csp_session.pqxx_conn->execute_query(blocks_query);
-  compare_blocks<compare_enabled>(blocks, csp_session.spi_conn->execute_query(blocks_query));
+  auto& primary_conn = csp_session.spi_conn;
+  auto& secondary_conn =  csp_session.pqxx_conn;
+
+  blocks = primary_conn->execute_query(blocks_query);
+  compare_blocks<compare_enabled>(blocks, secondary_conn->execute_query(blocks_query));
 
   auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
     + std::to_string(first_block)
     + " and block_num <= "
     + std::to_string(last_block)
     + " ORDER BY block_num, trx_in_block ASC";
-  transactions = csp_session.pqxx_conn->execute_query(transactions_query);
-  compare_transactions<compare_enabled>(transactions, csp_session.spi_conn->execute_query(transactions_query));
+  transactions = primary_conn->execute_query(transactions_query);
+  compare_transactions<compare_enabled>(transactions, secondary_conn->execute_query(transactions_query));
 
   auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
     + std::to_string(first_block)
@@ -867,9 +870,9 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
     + std::to_string(last_block)
     + " AND op_type_id <= 49 " //trx_in_block < 0 -> virtual operation
     + " ORDER BY id ASC";
-  operations = csp_session.pqxx_conn->execute_query(operations_query);
+  operations = primary_conn->execute_query(operations_query);
 
-  compare_operations<compare_enabled>(operations, csp_session.spi_conn->execute_query(operations_query));
+  compare_operations<compare_enabled>(operations, secondary_conn->execute_query(operations_query));
 
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
 }
