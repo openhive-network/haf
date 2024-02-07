@@ -329,15 +329,18 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
     END;
 
+    DELETE FROM hive.contexts WHERE name='alice_context';
+    ASSERT EXISTS( SELECT * FROM hive.contexts WHERE name='alice_context' ), 'Bob can delete alice context';
+
     BEGIN
-        PERFORM hive.app_get_current_block_num( 'alice_context_detached' );
-        ASSERT FALSE, 'Bob can get Alice''s contexts block_num array';
+        UPDATE hive.contexts SET name='false_alice' WHERE name='alice_context';
+        ASSERT FALSE, 'Bob can update Alice context';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM hive.app_get_current_block_num( ARRAY[ 'alice_context_detached' ] );
-        ASSERT FALSE, 'Bob can get Alice''s contexts block_num array';
+        PERFORM hive.app_remove_context( 'alice_context' );
+        ASSERT FALSE, 'Bob can remove Alice context';
     EXCEPTION WHEN OTHERS THEN
     END;
 END;
