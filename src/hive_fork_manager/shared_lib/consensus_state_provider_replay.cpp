@@ -1,6 +1,7 @@
 #include "consensus_state_provider_replay.hpp"
 #include "time_probe.hpp"
 
+
 #include <fc/io/json.hpp>
 #include <fc/io/sstream.hpp>
 #include "fc/time.hpp"
@@ -8,16 +9,14 @@
 
 #include "pxx.hpp"
 
-#include <iomanip>
 #include <limits>
-
-
-#include <iostream>
-using std::cout, std::endl;
-#include <iomanip>
 #include <sstream>
 #include <string>
 #include <cstddef>
+
+
+constexpr bool compare_enabled = false;
+
 std::ostream& operator<<(std::ostream& os, const std::basic_string<std::byte>& data)
 {
     os << std::hex << std::setfill('0');
@@ -231,7 +230,7 @@ collected_account_balances_collection_t collect_current_account_balances_impl(cs
   return collect_current_account_balances(csp_session, accounts);
 }
 
-//#include "psql_utils/pg_cxx.hpp"
+
 
 
 
@@ -798,14 +797,29 @@ collected_account_balances_collection_t collect_current_all_accounts_balances(cs
   return collected_balances;
 }
 
-// mtlk mark 1
 
-void compare_blocks(const pxx::result& blocks, const pxx::result& blocks2);
-void compare_transactions(const pxx::result& transactions, const pxx::result& transactions2);
-void compare__operations(const pxx::result& operations, const pxx::result& operations2);
+void compare_blocks_impl(const pxx::result& blocks, const pxx::result& blocks2);
+void compare_transactions_impl(const pxx::result& transactions, const pxx::result& transactions2);
+void compare_operations_impl(const pxx::result& operations, const pxx::result& operations2);
 
-// mtlk mark 2
+// Template functions that switch behavior based on the template parameter
+template<bool Enable>
+void compare_blocks(const pxx::result& blocks, const pxx::result& blocks2) {
+    if constexpr (Enable)
+        compare_blocks_impl(blocks, blocks2);
+}
 
+template<bool Enable>
+void compare_transactions(const pxx::result& transactions, const pxx::result& transactions2) {
+    if constexpr (Enable)
+        compare_transactions_impl(transactions, transactions2);
+}
+
+template<bool Enable>
+void compare_operations(const pxx::result& operations, const pxx::result& operations2) {
+    if constexpr (Enable)
+        compare_operations_impl(operations, operations2);
+}
 
 
 csp_session_type::csp_session_type(
@@ -880,7 +894,8 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
     blocks = csp_session.pqxx_conn->execute_query(blocks_query);
     
-    compare_blocks(blocks, csp_session.spi_conn->execute_query(blocks_query));
+
+    compare_blocks<compare_enabled>(blocks, csp_session.spi_conn->execute_query(blocks_query));
 
 
 
@@ -903,7 +918,10 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
       //transactions = csp_session.spi_conn->execute_query(transactions_query);
     //#endif
 
-    compare_transactions(transactions, csp_session.spi_conn->execute_query(transactions_query));
+
+    compare_transactions<compare_enabled>(transactions, csp_session.spi_conn->execute_query(transactions_query));
+
+
     #ifndef NDEBUG
       // pxx::result spi_transactions = csp_session.spi_conn->execute_query(transactions_query);
       // compare_transactions(spi_transactions);
@@ -923,7 +941,10 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
         #ifdef USE_PQXX_UNDEFINED
         #endif
     //#endif
-  compare__operations(operations, csp_session.spi_conn->execute_query(operations_query));
+
+
+  compare_operations<compare_enabled>(operations, csp_session.spi_conn->execute_query(operations_query));
+
   #ifndef NDEBUG
     //pxx::result spi_operations = csp_session.spi_conn->execute_query(operations_query);
     // compare__operationZs(spi_operations);
@@ -933,8 +954,11 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
 }
 
+//#ifdef COMPARE_PQXX_AND_SPIXX_DURING_RUN
 
-
+#include <iostream>
+using std::cout, std::endl;
+#include <iomanip>
 
 template <typename T>
 void compare(const std::string& label, T a, T b)
@@ -956,7 +980,7 @@ void compare(const std::string& label, const char*a, const char *b)
 }
 
 
-void compare_blocks(const pxx::result& blocks, const pxx::result& blocks2)
+void compare_blocks_impl(const pxx::result& blocks, const pxx::result& blocks2)
 {
   if (blocks.empty()) 
   {
@@ -1052,7 +1076,7 @@ void compare_blocks(const pxx::result& blocks, const pxx::result& blocks2)
   }
 }
 
-void compare_transactions(const pxx::result& transactions, const pxx::result& transactions2)
+void compare_transactions_impl(const pxx::result& transactions, const pxx::result& transactions2)
 {
   if (transactions.empty()) 
   {
@@ -1218,7 +1242,7 @@ void compare__operation(const pxx::const_result_iterator& it, const pxx::const_r
 }
 
 
-void compare__operations(const pxx::result& operations, const pxx::result& operations2)
+void compare_operations_impl(const pxx::result& operations, const pxx::result& operations2)
 {
   if (operations.empty()) 
   {
@@ -1284,5 +1308,6 @@ void compare__operations(const pxx::result& operations, const pxx::result& opera
   }
 }
 
+//#endif // COMPARE_PQXX_AND_SPIXX_DURING_RUN
 
 }  // namespace consensus_state_provider
