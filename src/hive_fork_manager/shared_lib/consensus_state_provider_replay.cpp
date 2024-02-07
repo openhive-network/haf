@@ -318,8 +318,6 @@ full_block_ptr postgres_block_log::block_to_fullblock(uint32_t block_num_from_sh
 {
   uint32_t block_num_from_postgres = block["num"].as<uint32_t>();
 
-  // cout << "block_to_fullblock mtlk: " << block_num_from_postgres  << endl;
-
   FC_ASSERT(block_num_from_postgres == block_num_from_shared_memory_bin, "Requested block has different number than the block in the state database");
 
   block_bin_t signed_block_object = postgres_block_log::block_to_bin(block);
@@ -462,14 +460,12 @@ void p2b_time_to_time_point_sec(const char* field_name, const T& block_or_transa
 template <typename T>
 void p2b_cstr_to_public_key(const char* field_name, const T& block_or_transaction, hive::chain::public_key_type& val)
 {
-  cout << "p2b_cstr_to_public_key: c_str() mtlk : " << block_or_transaction[field_name].c_str() << endl;
   val = hive::protocol::public_key_type(block_or_transaction[field_name].c_str());
 }
 
 template <typename T>
 void p2b_cstr_to_str(const char* field_name, const T& block_or_transaction, std::string& val)
 {
-  cout << "p2b_cstr_to_str : c_str() mtlk : " << block_or_transaction[field_name].c_str() << endl;
   val = block_or_transaction[field_name].c_str();
 }
 
@@ -503,7 +499,6 @@ block_bin_t build_block_bin(const pxx::row& block, std::vector<hive::protocol::t
   {
     //It seems reasonable to use existing conversion to static_variant via variant here, or maybe add a method to json.cpp ? mtlk TODO
     std::string json = field.as<pxx::jsonb_string>().val;
-    cout << "Extension json: mtlk: " << json << endl;
     fc::variant extensions = fc::json::from_string(json, fc::json::format_validation_mode::relaxed);
     from_variant(extensions, sb.extensions);
   }
