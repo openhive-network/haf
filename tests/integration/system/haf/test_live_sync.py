@@ -11,6 +11,11 @@ from haf_local_tools.tables import Blocks, BlocksView, Transactions, Operations
 
 START_TEST_BLOCK =  115
 
+def display_blocks_information(node):
+    h_b = get_head_block(node)
+    i_b = get_irreversible_block(node)
+    tt.logger.info(f'head_block: {h_b} irreversible_block: {i_b}')
+    return h_b, i_b
 
 def test_live_sync(prepared_networks_and_database_12_8):
     tt.logger.info(f'Start test_live_sync')
@@ -23,19 +28,21 @@ def test_live_sync(prepared_networks_and_database_12_8):
     # WHEN
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     wallet = tt.Wallet(attach_to=witness_node)
+
+    #Find a current block, shortly after a wallet attaching
+    #Attaching a wallet can last even a few seconds, so searching a transaction should be done from `transaction_block_num` block after attaching.
+    transaction_block_num, _ = display_blocks_information(node_under_test)
+
     wallet.api.transfer('initminer', 'initminer', tt.Asset.Test(1000), 'dummy transfer operation')
-    transaction_block_num = START_TEST_BLOCK + 1
 
     # THEN
     wait_for_irreversible_progress(node_under_test, transaction_block_num)
-    head_block = get_head_block(node_under_test)
-    irreversible_block = get_irreversible_block(node_under_test)
+
+    _, irreversible_block = display_blocks_information(node_under_test)
 
     blks = session.query(Blocks).order_by(Blocks.num).all()
     block_nums = [block.num for block in blks]
     assert sorted(block_nums) == [i for i in range(1, irreversible_block+1)]
-
-    tt.logger.info(f'head_block: {head_block} irreversible_block: {irreversible_block}')
 
     trx_found = None
     nr_blocks = 2
