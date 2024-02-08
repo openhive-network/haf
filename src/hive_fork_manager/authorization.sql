@@ -203,7 +203,8 @@ GRANT EXECUTE ON FUNCTION
 TO hived_group;
 
 GRANT EXECUTE ON PROCEDURE 
-      hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL )
+        hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL )
+      , hive.proc_update_contexts_last_active_at()
 TO hived_group;
 
 REVOKE EXECUTE ON FUNCTION
@@ -223,5 +224,6 @@ FROM hive_applications_group;
 
 REVOKE EXECUTE ON PROCEDURE
       hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL )
+    , hive.proc_update_contexts_last_active_at()
 FROM hive_applications_group,
      public;

@@ -81,6 +81,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     connect_irreversible_event();
     connect_fork_event();
 
+    _processing_thread.enqueue("SET ROLE hived_group; CALL hive.proc_update_contexts_last_active_at();");
+
     ilog( "livesync dumper created" );
   }
 

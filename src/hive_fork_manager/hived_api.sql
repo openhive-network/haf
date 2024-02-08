@@ -439,3 +439,26 @@ BEGIN
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE PROCEDURE hive.proc_update_contexts_last_active_at()
+    LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    __now TIMESTAMP WITHOUT TIME ZONE := NOW();
+    __contexts hive.context_name[];
+BEGIN
+    SELECT ARRAY_AGG(c.name) INTO __contexts
+    FROM hive.contexts c
+    WHERE c.is_attached;
+
+    UPDATE hive.contexts
+    SET last_active_at = __now
+    WHERE name =ANY( __contexts );
+
+    RAISE WARNING 'Updated last active time of contexts % to %', __contexts, __now;
+END;
+$BODY$
+;
+
+
