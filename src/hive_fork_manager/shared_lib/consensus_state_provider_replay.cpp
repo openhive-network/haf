@@ -18,7 +18,7 @@
 #include <cstddef>
 
 
-constexpr bool compare_enabled = false;
+constexpr bool compare_enabled = true;
 
 #define PQXX_IMPLEMENTATION
 #ifdef PQXX_IMPLEMENTATION
@@ -784,28 +784,32 @@ collected_account_balances_collection_t collect_current_all_accounts_balances(cs
   return collected_balances;
 }
 
+template<typename T1, typename T2>
+void compare_blocks_impl(const T1& blocks, const T2& blocks2);
 
-void compare_blocks_impl(const pxx::result& blocks, const pxx::result& blocks2);
-void compare_transactions_impl(const pxx::result& transactions, const pxx::result& transactions2);
-void compare_operations_impl(const pxx::result& operations, const pxx::result& operations2);
+template<typename T1, typename T2>
+void compare_transactions_impl(const T1& transactions, const T2& transactions2);
+
+template<typename T1, typename T2>
+void compare_operations_impl(const T1& operations, const T2& operations2);
 
 // Template functions that switch behavior based on the template parameter
-template<bool Enable>
-void compare_blocks(const pxx::result& blocks, const pxx::result& blocks2)
+template<bool Enable, typename T1, typename T2>
+void compare_blocks(const T1& blocks, const T2& blocks2)
 {
   if constexpr(Enable)
     compare_blocks_impl(blocks, blocks2);
 }
 
-template<bool Enable>
-void compare_transactions(const pxx::result& transactions, const pxx::result& transactions2)
+template<bool Enable, typename T1, typename T2>
+void compare_transactions(const T1& transactions, const T2& transactions2)
 {
   if constexpr(Enable)
     compare_transactions_impl(transactions, transactions2);
 }
 
-template<bool Enable>
-void compare_operations(const pxx::result& operations, const pxx::result& operations2)
+template<bool Enable, typename T1, typename T2>
+void compare_operations(const T1& operations, const T2& operations2)
 {
   if constexpr(Enable)
     compare_operations_impl(operations, operations2);
@@ -873,14 +877,16 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
 
   #ifdef PQXX_IMPLEMENTATION
     auto& primary_conn = csp_session.pqxx_conn;
+    auto& secondary_conn =  csp_session.spi_conn;
   #else
     auto& primary_conn = csp_session.spi_conn;
+    auto& secondary_conn =  csp_session.pqxx_conn;
   #endif
   
-  //auto& secondary_conn =  csp_session.pqxx_conn;
 
   blocks = primary_conn->execute_query(blocks_query);
-  //compare_blocks<compare_enabled>(blocks, secondary_conn->execute_query(blocks_query));
+  secondary_conn->execute_query(blocks_query);
+  compare_blocks<compare_enabled>(blocks, secondary_conn->execute_query(blocks_query));
 
   auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
     + std::to_string(first_block)
@@ -888,7 +894,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
     + std::to_string(last_block)
     + " ORDER BY block_num, trx_in_block ASC";
   transactions = primary_conn->execute_query(transactions_query);
-  //compare_transactions<compare_enabled>(transactions, secondary_conn->execute_query(transactions_query));
+  compare_transactions<compare_enabled>(transactions, secondary_conn->execute_query(transactions_query));
 
   auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
     + std::to_string(first_block)
@@ -898,7 +904,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
     + " ORDER BY id ASC";
   operations = primary_conn->execute_query(operations_query);
 
-  //compare_operations<compare_enabled>(operations, secondary_conn->execute_query(operations_query));
+  compare_operations<compare_enabled>(operations, secondary_conn->execute_query(operations_query));
 
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
 }
@@ -928,8 +934,8 @@ void compare(const std::string& label, const char* a, const char* b)
   compare(label, as, bs);
 }
 
-
-void compare_blocks_impl(const pxx::result& blocks, const pxx::result& blocks2)
+template<typename T1, typename T2>
+void compare_blocks_impl(const T1& blocks, const T2& blocks2)
 {
   if(blocks.empty())
   {
@@ -970,23 +976,23 @@ void compare_blocks_impl(const pxx::result& blocks, const pxx::result& blocks2)
       }
 
 
-      int32_t num_value = (*it)["num"].as<uint32_t>();
-      int32_t id_value = (*it)["id"].as<uint32_t>();
+      int32_t num_value = (*it)["num"].template as<uint32_t>();
+      int32_t id_value = (*it)["id"].template as<uint32_t>();
 
-      compare("block num", (*it)["num"].as<uint32_t>(), (*it2)["num"].as<uint32_t>());
+      compare("block num", (*it)["num"].template as<uint32_t>(), (*it2)["num"].template as<uint32_t>());
 
-      compare("block extesions", (*it)["extensions"].as<pxx_new_types::jsonb_string>(), (*it2)["extensions"].as<pxx_new_types::jsonb_string>());
+      compare("block extesions", (*it)["extensions"].template as<pxx_new_types::jsonb_string>(), (*it2)["extensions"].template as<pxx_new_types::jsonb_string>());
 
       compare("block name", (*it)["name"].c_str(), (*it2)["name"].c_str());
 
-      compare("block created_at", (*it)["created_at"].as<pxx_new_types::timestamp_wo_tz_type>(), (*it2)["created_at"].as<pxx_new_types::timestamp_wo_tz_type>());
+      compare("block created_at", (*it)["created_at"].template as<pxx_new_types::timestamp_wo_tz_type>(), (*it2)["created_at"].template as<pxx_new_types::timestamp_wo_tz_type>());
 
       compare("block signing_key", (*it)["signing_key"].c_str(), (*it2)["signing_key"].c_str());
 
-      compare("block hash", (*it)["hash"].as<std::basic_string<std::byte>>(), (*it2)["hash"].as<std::basic_string<std::byte>>());
-      compare("block prev", (*it)["prev"].as<std::basic_string<std::byte>>(), (*it2)["prev"].as<std::basic_string<std::byte>>());
-      compare("block transaction_merkle_root", (*it)["transaction_merkle_root"].as<std::basic_string<std::byte>>(), (*it2)["transaction_merkle_root"].as<std::basic_string<std::byte>>());
-      compare("block witness_signature", (*it)["witness_signature"].as<std::basic_string<std::byte>>(), (*it2)["witness_signature"].as<std::basic_string<std::byte>>());
+      compare("block hash", (*it)["hash"].template as<std::basic_string<std::byte>>(), (*it2)["hash"].template as<std::basic_string<std::byte>>());
+      compare("block prev", (*it)["prev"].template as<std::basic_string<std::byte>>(), (*it2)["prev"].template as<std::basic_string<std::byte>>());
+      compare("block transaction_merkle_root", (*it)["transaction_merkle_root"].template as<std::basic_string<std::byte>>(), (*it2)["transaction_merkle_root"].template as<std::basic_string<std::byte>>());
+      compare("block witness_signature", (*it)["witness_signature"].template as<std::basic_string<std::byte>>(), (*it2)["witness_signature"].template as<std::basic_string<std::byte>>());
 
 
 
@@ -997,7 +1003,8 @@ void compare_blocks_impl(const pxx::result& blocks, const pxx::result& blocks2)
   }
 }
 
-void compare_transactions_impl(const pxx::result& transactions, const pxx::result& transactions2)
+template<typename T1, typename T2>
+void compare_transactions_impl(const T1& transactions, const T2& transactions2)
 {
   if(transactions.empty())
   {
@@ -1037,15 +1044,15 @@ void compare_transactions_impl(const pxx::result& transactions, const pxx::resul
         }
       }
 
-      compare("transaction block_num", (*it)["block_num"].as<uint32_t>(), (*it2)["block_num"].as<uint32_t>());
-      compare("transaction trx_in_block", (*it)["trx_in_block"].as<int>(), (*it2)["trx_in_block"].as<int>());
-      compare("transaction ref_block_num", (*it)["ref_block_num"].as<uint32_t>(), (*it2)["ref_block_num"].as<uint32_t>());
+      compare("transaction block_num", (*it)["block_num"].template as<uint32_t>(), (*it2)["block_num"].template as<uint32_t>());
+      compare("transaction trx_in_block", (*it)["trx_in_block"].template as<int>(), (*it2)["trx_in_block"].template as<int>());
+      compare("transaction ref_block_num", (*it)["ref_block_num"].template as<uint32_t>(), (*it2)["ref_block_num"].template as<uint32_t>());
 
-      compare("transaction ref_block_prefix", (*it)["ref_block_prefix"].as<int64_t>(), (*it2)["ref_block_prefix"].as<int64_t>());
+      compare("transaction ref_block_prefix", (*it)["ref_block_prefix"].template as<int64_t>(), (*it2)["ref_block_prefix"].template as<int64_t>());
 
-      compare("transaction expiration timestamp_wo_tz_type", (*it)["expiration"].as<pxx_new_types::timestamp_wo_tz_type>(), (*it2)["expiration"].as<pxx_new_types::timestamp_wo_tz_type>());
+      compare("transaction expiration timestamp_wo_tz_type", (*it)["expiration"].template as<pxx_new_types::timestamp_wo_tz_type>(), (*it2)["expiration"].template as<pxx_new_types::timestamp_wo_tz_type>());
 
-      compare("transaction trx_hash ", (*it)["trx_hash"].as<std::basic_string<std::byte>>(), (*it2)["trx_hash"].as<std::basic_string<std::byte>>());
+      compare("transaction trx_hash ", (*it)["trx_hash"].template as<std::basic_string<std::byte>>(), (*it2)["trx_hash"].template as<std::basic_string<std::byte>>());
 
       //signature (bytea)
       if((*it)["signature"].is_null())
@@ -1060,7 +1067,7 @@ void compare_transactions_impl(const pxx::result& transactions, const pxx::resul
       }
       else
       {
-        compare("transaction signature", ((*it)["signature"].as<std::basic_string<std::byte>>()), ((*it2)["signature"].as<std::basic_string<std::byte>>()));
+        compare("transaction signature", ((*it)["signature"].template as<std::basic_string<std::byte>>()), ((*it2)["signature"].template as<std::basic_string<std::byte>>()));
       }
 
 
@@ -1073,19 +1080,20 @@ void compare_transactions_impl(const pxx::result& transactions, const pxx::resul
 }
 
 
-void compare__operation(const pxx::const_result_iterator& it, const pxx::const_result_iterator& it2)
+template<typename const_result_iterator_T1, typename const_result_iterator_T2>
+void compare_operation(const const_result_iterator_T1& it, const const_result_iterator_T2& it2)
 {
-  compare("operation block_num", (*it)["block_num"].as<uint32_t>(), (*it2)["block_num"].as<uint32_t>());
+  compare("operation block_num", (*it)["block_num"].template as<uint32_t>(), (*it2)["block_num"].template as<uint32_t>());
 
-  compare("operation trx_in_block", (*it)["trx_in_block"].as<int>(), (*it2)["trx_in_block"].as<int>());
+  compare("operation trx_in_block", (*it)["trx_in_block"].template as<int>(), (*it2)["trx_in_block"].template as<int>());
 
-  compare("operation bin_body", (*it)["bin_body"].as<std::basic_string<std::byte>>(), (*it2)["bin_body"].as<std::basic_string<std::byte>>());
+  compare("operation bin_body", (*it)["bin_body"].template as<std::basic_string<std::byte>>(), (*it2)["bin_body"].template as<std::basic_string<std::byte>>());
 
-  const pxx::const_result_iterator& operation = it;
-  const pxx::const_result_iterator& operation2 = it2;
+  const const_result_iterator_T1& operation = it;
+  const const_result_iterator_T2& operation2 = it2;
 
-  auto bs = ((*operation)["bin_body"].as<std::basic_string<std::byte>>());
-  auto bs2 = ((*operation2)["bin_body"].as<std::basic_string<std::byte>>());
+  auto bs = ((*operation)["bin_body"].template as<std::basic_string<std::byte>>());
+  auto bs2 = ((*operation2)["bin_body"].template as<std::basic_string<std::byte>>());
 
   auto raw_data = bs.data();
   auto data_length = bs.size();
@@ -1102,8 +1110,8 @@ void compare__operation(const pxx::const_result_iterator& it, const pxx::const_r
   compare("operation opertion pretty json", s, s2);
 }
 
-
-void compare_operations_impl(const pxx::result& operations, const pxx::result& operations2)
+template<typename T1, typename T2>
+void compare_operations_impl(const T1& operations, const T2& operations2)
 {
   if(operations.empty())
   {
@@ -1144,7 +1152,7 @@ void compare_operations_impl(const pxx::result& operations, const pxx::result& o
         }
       }
 
-      compare__operation(it, it2);
+      compare_operation(it, it2);
 
       ++it;
       ++it2;
