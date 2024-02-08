@@ -8,6 +8,8 @@
 #include <hive/plugins/block_api/block_api_objects.hpp>
 
 #include "spixx.hpp"
+#include <pqxx/pqxx>
+#include "pqxx_impl.hpp"
 
 
 #include <limits>
@@ -18,7 +20,16 @@
 
 constexpr bool compare_enabled = false;
 
-
+#define PQXX_IMPLEMENTATION
+#ifdef PQXX_IMPLEMENTATION
+namespace pxx
+{ 
+  using row = pqxx::row;
+  using result = pqxx::result;
+  using const_result_iterator = pqxx::const_result_iterator;
+  using field = pqxx::field;
+} // namespace pxx
+#else
 namespace pxx
 { 
   using row = spixx::row;
@@ -26,6 +37,7 @@ namespace pxx
   using const_result_iterator = spixx::const_result_iterator;
   using field = spixx::field;
 } // namespace pxx
+#endif
 
 std::ostream& operator<<(std::ostream& os, const std::basic_string<std::byte>& data)
 {
@@ -810,7 +822,7 @@ csp_session_type::csp_session_type(
 
 
 
-  //pqxx_conn(std::make_unique<pqxx::postgres_database_helper>(postgres_url)),
+  pqxx_conn(std::make_unique<pqxx::postgres_database_helper>(postgres_url)),
   spi_conn(std::make_unique<spixx::postgres_database_helper_spi>(postgres_url)),
   db(std::make_unique<haf_state_database>(*this, theApp)),
   e_block_writer(*db.get(), theApp, *this)
@@ -821,7 +833,6 @@ csp_session_type::csp_session_type(
 
 }  // namespace consensus_state_provider
 
-//#include "pqxx_impl.hpp"
 #include "spixx_impl.hpp"
 
 namespace consensus_state_provider
@@ -860,7 +871,12 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
     + " ORDER BY num ASC";
 
 
-  auto& primary_conn = csp_session.spi_conn;
+  #ifdef PQXX_IMPLEMENTATION
+    auto& primary_conn = csp_session.pqxx_conn;
+  #else
+    auto& primary_conn = csp_session.spi_conn;
+  #endif
+  
   //auto& secondary_conn =  csp_session.pqxx_conn;
 
   blocks = primary_conn->execute_query(blocks_query);
