@@ -493,7 +493,7 @@ BEGIN
 
     SELECT ARRAY_AGG(id) INTO __contexts_id
     FROM hive.contexts
-    WHERE name = ANY( _contexts ) AND is_attached = FALSE;
+    WHERE name = ANY( _contexts );
 
     IF __contexts_id IS NULL THEN
         RAISE EXCEPTION 'Contexts do not exist';
