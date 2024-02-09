@@ -416,18 +416,10 @@ DECLARE
   __contexts hive.context_name[];
   __ctx TEXT;
   __now TIMESTAMP WITHOUT TIME ZONE := NOW();
-  __time_haf_start TIMESTAMP WITHOUT TIME ZONE;
 BEGIN
-  SELECT time INTO __time_haf_start
-  FROM hive.hived_connections hdc
-  ORDER BY hdc.id DESC
-  LIMIT 1;
-
-  ASSERT __time_haf_start IS NOT NULL, 'hived not started before auto-detach';
-
   SELECT ARRAY_AGG(c.name) INTO __contexts
   FROM hive.contexts c
-  WHERE c.is_attached AND GREATEST( c.last_active_at, __time_haf_start ) <  __now - _app_timeout;
+  WHERE c.is_attached AND c.last_active_at < __now - _app_timeout;
 
   IF CARDINALITY(__contexts) != 0 THEN
     RAISE WARNING 'Attempting to automatically detach application contexts: %', __contexts;
