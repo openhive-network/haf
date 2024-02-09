@@ -19,7 +19,7 @@ namespace spixx
 {
 }
 
-#define PQXX_IMPLEMENTATION
+//#define PQXX_IMPLEMENTATION
 #ifdef PQXX_IMPLEMENTATION
 namespace pxx = pqxx;
 namespace audit_pxx = spixx;
