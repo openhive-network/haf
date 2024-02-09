@@ -26,6 +26,7 @@ psql ${POSTRGRES_APP_URL} ${POSTGRES_ARGS} -f "${SCRIPTPATH}/scenario1.sql"
 TIMESHIFT="'3 hrs'::interval"
 
 psql ${POSTRGRES_APP_URL} ${POSTGRES_ARGS} -c "CALL test.scenario1_prepare(${TIMESHIFT});"
+psql ${POSTRGRES_HIVED_URL} ${POSTGRES_ARGS} -c 'SET ROLE hived_group;' -c "INSERT INTO hive.hived_connections( block_num, git_sha, time ) VALUES( 100000, '1234567890'::TEXT, now() - '50 hrs'::interval );"
 
 psql ${POSTRGRES_HIVED_URL} ${POSTGRES_ARGS} -c 'SET ROLE hived_group;' -c "CALL hive.proc_perform_dead_app_contexts_auto_detach(${TIMESHIFT} - '1 min'::interval);"
 
