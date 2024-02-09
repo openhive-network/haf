@@ -25,6 +25,12 @@ public:
   explicit postgres_database_helper(const char* url);
   ~postgres_database_helper();
 
+  struct connect_guard
+  {
+    connect_guard(){}
+    ~connect_guard(){}
+  };
+
   pqxx::result execute_query(const std::string& query);
 private:
   pqxx::connection connection;

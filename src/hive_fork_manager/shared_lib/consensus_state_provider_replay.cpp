@@ -20,24 +20,6 @@
 
 constexpr bool compare_enabled = true;
 
-#define PQXX_IMPLEMENTATION
-#ifdef PQXX_IMPLEMENTATION
-namespace pxx
-{ 
-  using row = pqxx::row;
-  using result = pqxx::result;
-  using const_result_iterator = pqxx::const_result_iterator;
-  using field = pqxx::field;
-} // namespace pxx
-#else
-namespace pxx
-{ 
-  using row = spixx::row;
-  using result = spixx::result;
-  using const_result_iterator = spixx::const_result_iterator;
-  using field = spixx::field;
-} // namespace pxx
-#endif
 
 std::ostream& operator<<(std::ostream& os, const std::basic_string<std::byte>& data)
 {
@@ -826,8 +808,8 @@ csp_session_type::csp_session_type(
 
 
 
-  pqxx_conn(std::make_unique<pqxx::postgres_database_helper>(postgres_url)),
-  spi_conn(std::make_unique<spixx::postgres_database_helper_spi>(postgres_url)),
+  primary_conn(std::make_unique<pxx::postgres_database_helper>(postgres_url)),
+  audit_conn(std::make_unique<audit_pxx::postgres_database_helper>(postgres_url)),
   db(std::make_unique<haf_state_database>(*this, theApp)),
   e_block_writer(*db.get(), theApp, *this)
 
@@ -844,7 +826,8 @@ namespace consensus_state_provider
 
 void postgres_block_log::run(uint32_t first_block, uint32_t last_block)
 {
-  spixx::postgres_database_helper_spi::spi_connect_guard guard;
+  pxx::postgres_database_helper::connect_guard p_guard;
+  audit_pxx::postgres_database_helper::connect_guard s_guard;
 
   measure_before_run();
 
@@ -856,7 +839,8 @@ void postgres_block_log::run(uint32_t first_block, uint32_t last_block)
 
 full_block_ptr postgres_block_log::read_full_block(uint32_t block_num)
 {
-  spixx::postgres_database_helper_spi::spi_connect_guard guard;
+  pxx::postgres_database_helper::connect_guard p_guard;
+  audit_pxx::postgres_database_helper::connect_guard s_guard;
 
   prepare_postgres_data(block_num, block_num);
   return block_to_fullblock(block_num, *blocks.begin());
@@ -875,18 +859,12 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
     + " ORDER BY num ASC";
 
 
-  #ifdef PQXX_IMPLEMENTATION
-    auto& primary_conn = csp_session.pqxx_conn;
-    auto& secondary_conn =  csp_session.spi_conn;
-  #else
-    auto& primary_conn = csp_session.spi_conn;
-    auto& secondary_conn =  csp_session.pqxx_conn;
-  #endif
-  
+  auto& primary_conn = csp_session.primary_conn;
+  auto& audit_conn =  csp_session.audit_conn;
+
 
   blocks = primary_conn->execute_query(blocks_query);
-  secondary_conn->execute_query(blocks_query);
-  compare_blocks<compare_enabled>(blocks, secondary_conn->execute_query(blocks_query));
+  compare_blocks<compare_enabled>(blocks, audit_conn->execute_query(blocks_query));
 
   auto transactions_query = "SELECT block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, trx_hash, signature FROM hive.transactions_view WHERE block_num >= "
     + std::to_string(first_block)
@@ -894,7 +872,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
     + std::to_string(last_block)
     + " ORDER BY block_num, trx_in_block ASC";
   transactions = primary_conn->execute_query(transactions_query);
-  compare_transactions<compare_enabled>(transactions, secondary_conn->execute_query(transactions_query));
+  compare_transactions<compare_enabled>(transactions, audit_conn->execute_query(transactions_query));
 
   auto operations_query = "SELECT block_num, body_binary as bin_body, trx_in_block FROM hive.operations_view WHERE block_num >= "
     + std::to_string(first_block)
@@ -904,7 +882,7 @@ void postgres_block_log::read_postgres_data(uint32_t first_block, uint32_t last_
     + " ORDER BY id ASC";
   operations = primary_conn->execute_query(operations_query);
 
-  compare_operations<compare_enabled>(operations, secondary_conn->execute_query(operations_query));
+  compare_operations<compare_enabled>(operations, audit_conn->execute_query(operations_query));
 
   get_data_from_postgres_time_probe.stop(); get_data_from_postgres_time_probe.print_duration("Postgres");
 }

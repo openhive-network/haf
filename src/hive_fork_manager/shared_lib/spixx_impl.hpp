@@ -6,16 +6,16 @@
 namespace spixx
 {
 
-class postgres_database_helper_spi
+class postgres_database_helper
 {
 public:
-  explicit postgres_database_helper_spi(const char* url);
-  ~postgres_database_helper_spi();
+  explicit postgres_database_helper(const char* url);
+  ~postgres_database_helper();
 
-  struct spi_connect_guard
+  struct connect_guard
   {
-    spi_connect_guard();
-    ~spi_connect_guard();
+    connect_guard();
+    ~connect_guard();
   };
 
 

@@ -11,6 +11,23 @@
 #include <vector>
 
 
+namespace pqxx
+{
+}
+
+namespace spixx
+{
+}
+
+#define PQXX_IMPLEMENTATION
+#ifdef PQXX_IMPLEMENTATION
+namespace pxx = pqxx;
+namespace audit_pxx = spixx;
+#else
+namespace pxx = spixx;
+namespace audit_pxx = pqxx;
+#endif
+
 
 namespace fc
 {
@@ -24,7 +41,7 @@ namespace hive::chain
 
 namespace spixx
 {
-  class postgres_database_helper_spi;
+  class postgres_database_helper;
 }
 
 namespace pqxx
@@ -55,8 +72,8 @@ namespace consensus_state_provider
       csp_session_type(const char* context, const char* shared_memory_bin_path, const char* postgres_url);
 
       std::string shared_memory_bin_path;
-      std::unique_ptr<pqxx::postgres_database_helper> pqxx_conn;
-      std::unique_ptr<spixx::postgres_database_helper_spi> spi_conn;
+      std::unique_ptr<pxx::postgres_database_helper> primary_conn;
+      std::unique_ptr<audit_pxx::postgres_database_helper> audit_conn;
       std::unique_ptr<haf_state_database> db;
       empty_block_writer e_block_writer;
 

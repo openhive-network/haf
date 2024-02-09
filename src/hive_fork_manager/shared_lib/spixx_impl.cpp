@@ -104,15 +104,15 @@ result execute_query(const std::string &query)
 }
 
 
-postgres_database_helper_spi::postgres_database_helper_spi(const char* url)  
+postgres_database_helper::postgres_database_helper(const char* url)  
 {
 }
 
-postgres_database_helper_spi::~postgres_database_helper_spi()
+postgres_database_helper::~postgres_database_helper()
 {
 } 
 
-spixx::result postgres_database_helper_spi::execute_query(const std::string& query)
+spixx::result postgres_database_helper::execute_query(const std::string& query)
 {
   spixx::result query_result = spixx::execute_query(query);
   return query_result;
@@ -120,7 +120,7 @@ spixx::result postgres_database_helper_spi::execute_query(const std::string& que
   // return res;
 }
 
-postgres_database_helper_spi::spi_connect_guard::spi_connect_guard()
+postgres_database_helper::connect_guard::connect_guard()
 {
   if(SPI_connect() != SPI_OK_CONNECT)
   {
@@ -128,7 +128,7 @@ postgres_database_helper_spi::spi_connect_guard::spi_connect_guard()
   }
 }
 
-postgres_database_helper_spi::spi_connect_guard::~spi_connect_guard()
+postgres_database_helper::connect_guard::~connect_guard()
 {
   SPI_finish();
 }
