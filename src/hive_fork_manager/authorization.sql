@@ -80,6 +80,9 @@ CREATE POLICY sp_applications_hive_context ON hive.contexts FOR SELECT TO hive_a
 DROP POLICY IF EXISTS sp_applications_update_hive_context ON hive.contexts CASCADE;
 CREATE POLICY sp_applications_update_hive_context ON hive.contexts FOR UPDATE TO hive_applications_group USING( TRUE ) WITH CHECK( hive.can_impersonate(current_user, owner) ) ;
 
+DROP POLICY IF EXISTS sp_hived_update_hive_context ON hive.contexts CASCADE;
+CREATE POLICY sp_hived_update_hive_context ON hive.contexts FOR UPDATE TO hived_group USING( TRUE );
+
 DROP POLICY IF EXISTS sp_applications_delete_hive_context ON hive.contexts CASCADE;
 CREATE POLICY sp_applications_delete_hive_context ON hive.contexts FOR DELETE TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
 
