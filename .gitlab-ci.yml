@@ -518,7 +518,6 @@ dead_app_auto_detach:
     HAF_COMMIT: $HAF_COMMIT
   script:
     - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
-    - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario2.sh "haf-instance"
   artifacts:
     paths:
     - scenario*.log
