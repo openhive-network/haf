@@ -85,7 +85,6 @@ def test_app_autodetach(witness_node_with_haf, block_log_5m_path, tmp_path):
     haf_node.wait_for_irreversible_block(last_block_num)
 
     execute_sql_query(appUrl, "CALL test.scenario1_prepare('03:59:00'::interval);")
-    execute_sql_query(adminUrl, "SET ROLE hived_group; INSERT INTO hive.hived_connections( block_num, git_sha, time ) VALUES( 100000, '1234567890'::TEXT, now() - '50 hrs'::interval );" )
 
     awaited_block_count = 20+10 # 1 min is a threshold when auto detach should happen, next 10 blocks for potential shifts
 
