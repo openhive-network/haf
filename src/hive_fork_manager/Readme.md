@@ -44,7 +44,7 @@ are enough to automatically create views which combine irreversible and reversib
 ### Requirements for an HAF app algorithm using the fork manager API
 ![alt text](./doc/evq_app_process_block.png)
 
-Only roles ( users ) which inherits from 'hive_apps_group' have access to 'The App API', and only these roles allow apps to work with 'hive_fork_manager'
+Only roles ( users ) which inherits from 'hive_applications_group' have access to 'The App API', and only these roles allow apps to work with 'hive_fork_manager'
 
 Any HAF app must first create a context, then create its tables which inherit from `hive.<context_name>`. The context is owned and can be accessed only by the role which created it.
 
@@ -80,6 +80,21 @@ When using synchronized contexts, it is of utmost importance to ensure that all 
 are consistently in the same state. This means that the contexts shall always traverse blocks together within 
 the same group of contexts passed to the functions.
 
+#### Using HAF built-in roles
+Based on extensive experience with a diverse range of applications, it is recommended to configure Postgres roles
+in accordance with the guidelines depicted in the image below. This illustration provides a comprehensive overview
+of how to effectively leverage HAF built-in roles for both application-specific and administrative purposes.
+![alt text](./doc/roles.png)
+
+##### Impersonate roles
+Usually the applications should have two roles, one which owns the context-creates it and modify application data,
+and second which is used  only to read application outcome tables. Such setup separates private role which executes
+an application algorithm from a role which is used by the public interface to have access to the application results.
+
+Certain applications utilize a group of contexts which combines contexts from different applications. The owners roles
+of grouped applications must be explicitly granted membership in the primary application owner role.
+This guarantees that the main application owner role can edit group of contexts with hfm api (see 'hive.can_impersonate' ).
+
 ### Non-forking apps
 It is expected that some apps will only want to process blocks after they become irreversible. 
 
@@ -99,7 +114,7 @@ It is possible to change an already created context from non-forking to forking 
 In summary, a non-forking HAF appl is coded in much the same way as a forking app (making it relatively easy to change the app's code to operate in either of these two modes), but a non-forking app only served up information about irreversible blocks.
 
 ### Sharing tables with other HAF apps
-If an app wants to expose some of its tables for reading by other apps, then it  only needs to grant the SELECT privilege on such tables to hive_apps_group.
+If an app wants to expose some of its tables for reading by other apps, then it  only needs to grant the SELECT privilege on such tables to hive_applications_group.
 ```
 GRANT SELECT ON my_table TO hive_applications_group;
 ```
