@@ -15,6 +15,11 @@ BEGIN
         CREATE ROLE alice LOGIN PASSWORD 'test' INHERIT IN ROLE hive_applications_group;
     END IF;
 
+    IF NOT EXISTS ( SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'alice_impersonal' ) THEN
+        CREATE ROLE alice_impersonal LOGIN PASSWORD 'test' INHERIT IN ROLE hive_applications_group;
+        GRANT alice TO alice_impersonal;
+    END IF;
+
     IF NOT EXISTS ( SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'bob' ) THEN
         CREATE ROLE bob LOGIN PASSWORD 'test' INHERIT IN ROLE hive_applications_group;
     END IF;
