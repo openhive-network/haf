@@ -116,8 +116,6 @@ spixx::result postgres_database_helper::execute_query(const std::string& query)
 {
   spixx::result query_result = spixx::execute_query(query);
   return query_result;
-  // pxx::result res(query_result);
-  // return res;
 }
 
 postgres_database_helper::connect_guard::connect_guard()

@@ -20,12 +20,8 @@ namespace pqxx
     pqxx::result query_result = txn.exec(query);
     txn.commit();
     return query_result;
-
-    //pxx::result res(query_result);
-    //return res;
   }
 
 
 }
 
-//#endif

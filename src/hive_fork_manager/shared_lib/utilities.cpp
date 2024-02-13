@@ -1091,6 +1091,7 @@ Datum csp_init(PG_FUNCTION_ARGS)
   return (Datum)0;
 }
 
+
 } //extern "C"
 
 

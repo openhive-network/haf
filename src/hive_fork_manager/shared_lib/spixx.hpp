@@ -60,9 +60,8 @@ struct field
 
   }
 
-    // Templated as<T> method required by field_model
-    template<typename T> T as() const;
- 
+  template<typename T> T as() const;
+
 };
 
 

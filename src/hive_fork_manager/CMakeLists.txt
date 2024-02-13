@@ -70,6 +70,8 @@ ADD_DEPENDENCIES( extension.${EXTENSION_NAME} query_supervisor )
 
 MESSAGE(STATUS "Detected root project git revision: ${HAF_GIT_REVISION_SHA}")
 
-# #define USE_PQXX
+
+# test driver is only possible with pqxx
+# because with SPI there cannot be another process for the driver
 # ADD_SUBDIRECTORY( state_providers/consensus_state_provider_test_driver )
 
