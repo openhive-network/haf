@@ -1,6 +1,5 @@
 #pragma once
 
-#include "pxx.hpp"
 #include "pxx_new_types.hpp"
 
 #include "psql_utils/pg_cxx.hpp"

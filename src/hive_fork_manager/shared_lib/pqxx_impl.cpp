@@ -1,7 +1,3 @@
-
-
-#include <pxx.hpp>
-
 #include <pqxx/pqxx>
 
 #include "pqxx_impl.hpp"
