@@ -11,6 +11,12 @@ from haf_local_tools.tables import AccountsView, Blocks, BlocksView, Transaction
 
 START_TEST_BLOCK =  115
 
+def display_blocks_information(node):
+    h_b = get_head_block(node)
+    i_b = get_irreversible_block(node)
+    tt.logger.info(f'head_block: {h_b} irreversible_block: {i_b}')
+    return h_b, i_b
+
 
 def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
     tt.logger.info(f'Start test_live_sync_from_115')
@@ -24,12 +30,12 @@ def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
     node_under_test.wait_for_block_with_number(START_TEST_BLOCK)
     wallet = tt.Wallet(attach_to=witness_node)
     wallet.api.transfer('initminer', 'initminer', tt.Asset.Test(1000), 'dummy transfer operation')
-    transaction_block_num = START_TEST_BLOCK + 1
+    transaction_block_num, _ = display_blocks_information(node_under_test)
 
     # THEN
     wait_for_irreversible_progress(node_under_test, transaction_block_num)
     head_block = get_head_block(node_under_test)
-    irreversible_block = get_irreversible_block(node_under_test)
+    _, irreversible_block = display_blocks_information(node_under_test)
 
     blks = session.query(Blocks).order_by(Blocks.num).all()
     account_count = session.query(AccountsView).count()
@@ -51,8 +57,6 @@ def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
         or sorted(block_nums)[:2] == [i for i in [111,112]] # situation 1 or situation 2
 
     assert account_count == 27
-
-    tt.logger.info(f'head_block: {head_block} irreversible_block: {irreversible_block}')
 
     session.query(Transactions).filter(Transactions.block_num == transaction_block_num).one()
 
