@@ -187,10 +187,10 @@ BEGIN
     ;
 
     -- first find a newer massive_sync nearest current block
-    SELECT heq.id, heq.block_num
+    SELECT heq.id, GREATEST( hc.irreversible_block, heq.block_num )
     INTO __next_irreversible_event_id, __event_block_num
     FROM hive.events_queue heq
-             JOIN hive.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
+    JOIN hive.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
     WHERE ( heq.event = 'MASSIVE_SYNC' OR heq.event = 'NEW_IRREVERSIBLE' )
       AND heq.id < COALESCE( __next_bff_event_id, hive.unreachable_event_id() )
       AND hc.name = __lead_context
