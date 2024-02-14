@@ -168,15 +168,26 @@ $BODY$
 DECLARE
     __next_irreversible_event_id BIGINT;
     __irreversible_block_num INT;
-    __event_type hive.event_type := NULL;
+    __current_block_num INT;
+    __newest_irreversible_block_num INT;
     __context_event_id hive.events_queue.id%TYPE := 0;
     __next_bff_event_id BIGINT;
     __event_block_num INT;
     __lead_context hive.context_name := _contexts[ 1 ];
 BEGIN
-    SELECT hc.events_id INTO __context_event_id
+    SELECT hc.events_id, hc.irreversible_block, hc.current_block_num
+    INTO __context_event_id, __irreversible_block_num, __current_block_num
     FROM hive.contexts as hc
     WHERE hc.name = __lead_context;
+
+    SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
+
+    IF __current_block_num <= __irreversible_block_num
+       AND  __newest_irreversible_block_num IS NOT NULL THEN
+        PERFORM hive.context_set_irreversible_block( contexts.*, __newest_irreversible_block_num )
+        FROM unnest( _contexts ) as contexts;
+        RETURN;
+    END IF;
 
     SELECT heq.id INTO __next_bff_event_id
     FROM hive.events_queue heq
@@ -190,9 +201,10 @@ BEGIN
     SELECT heq.id, heq.block_num
     INTO __next_irreversible_event_id, __event_block_num
     FROM hive.events_queue heq
-             JOIN hive.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
+    JOIN hive.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
     WHERE ( heq.event = 'MASSIVE_SYNC' OR heq.event = 'NEW_IRREVERSIBLE' )
       AND heq.id < COALESCE( __next_bff_event_id, hive.unreachable_event_id() )
+      AND heq.block_num > __irreversible_block_num
       AND hc.name = __lead_context
     ORDER BY heq.id DESC
     LIMIT 1;
