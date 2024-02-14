@@ -7,10 +7,11 @@
 # test scenario:
 # 1. HAF is replayed to 1m of blocks and stops
 # 2. HAF is started in the background to continue replay with limit 1.02m but now with huge psql-live-sync-threshold
+#   ad is restarted in a loop after each 3s
 # 3. a SQL HAF app is started to sync blocks in the background
 #  it means hived is still replaying from blocklog file, but sql-serializer is syncing block in LIVE state
 #  it gives us dense calling context detaching, moving block one by one, and updating irreversible block
-# 4. HAF app is stopped after syncing 1.02m of blocks
+# 4. HAF app is stopped after syncing 1.02m of blocks, test is finished
 #
 # Expected results: hived and psql which runs the app returns with 0
 
@@ -69,7 +70,7 @@ do
   echo "HAF's hived continue"
   $HIVED_PATH --data-dir "$DATADIR" $REPLAY_CONTINUATION --psql-url "postgresql:///$DB_NAME" 2>&1 &
   hived_pid=$!
-  sleep 5
+  sleep 3
   echo "KILLING HAF's hived ${hived_pid}"
   kill -SIGINT $hived_pid
   wait $hived_pid
