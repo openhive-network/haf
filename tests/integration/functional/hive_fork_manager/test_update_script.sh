@@ -26,6 +26,10 @@ prepare_database() {
     "$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME"
 }
 
+update_database() {
+    sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
+}
+
 failswith() {(
     # body runs inside subshell to disable set -e locally
     set +e
@@ -77,31 +81,31 @@ fi
 
 printf "\nTEST: Trying to upgrade from current database. It should pass, as nothing needs to be done.\n"
 prepare_database
-sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
+update_database
 
 printf "\nTEST: Creating table referencing hive.operation. This is allowed and should succeed.\n"
 prepare_database
 exec_sql "create table good_table(id int, op hive.operation)"
-sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
+update_database
 
 printf "\nTEST: Creating table referencing disallowed HAF type. Upgrade should fail.\n"
 prepare_database
 exec_sql "create table bad_table(id int, comment hive.comment_operation)"
-failswith 4 sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
+failswith 4 update_database
 
 printf "\nTEST: Creating table referencing disallowed HAF domain. Upgrade should fail.\n"
 prepare_database
 exec_sql "create table bad_table(id int, account hive.account_name_type)"
-failswith 4 sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
+failswith 4 update_database
 
 printf "\nTEST: Creating table referencing allowed HAF domain. Upgrade should pass.\n"
 prepare_database
 exec_sql "create table good_table(id int, amount hive.hive_amount)"
-sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
+update_database
 
 printf "\nTEST: Check that function defined in hive namespace that doesn't reference current commit hash fails the upgrade.\n"
 prepare_database
 exec_sql "CREATE FUNCTION hive.bad_function() RETURNS VOID VOLATILE AS '/lib/postgresql/${POSTGRES_VERSION}/lib/tablefunc.so', 'crosstab' language c;"
-failswith 3 sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
+failswith 3 update_database
 
 echo "Succeeded"
