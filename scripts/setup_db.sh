@@ -28,6 +28,7 @@ print_help () {
     echo "                                  The role MUST already exist on the Postgres cluster!!!"
     echo "                                  If omitted, defaults to haf_admin role."
     echo "  --no-create-schema              Skips the final steps of creating the schema, extension and database roles."
+    echo "  --version                       Specify the hive fork manager version to use."
     echo "  --help                          Display this help screen and exit."
     echo
 }
@@ -41,6 +42,7 @@ DB_USERS=()
 POSTGRES_HOST="/var/run/postgresql"
 POSTGRES_PORT=5432
 NO_CREATE_SCHEMA=false
+VERSION=
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -67,6 +69,14 @@ while [ $# -gt 0 ]; do
         ;;
     --no-create-schema)
         NO_CREATE_SCHEMA=true
+        ;;
+    --version=*)
+        VERSION="${1#*=}"
+        if [ "$VERSION" != "${VERSION//[^a-zA-Z0-9]/}" ]; then
+            echo "Invalid version $VERSION"
+            exit 3
+        fi
+        VERSION="VERSION '${VERSION}'"
         ;;
     -*)
         echo "ERROR: '$1' is not a valid option."
@@ -102,7 +112,7 @@ fi
 
 
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE SCHEMA hive;'
-sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE EXTENSION hive_fork_manager CASCADE;'
+sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "CREATE EXTENSION hive_fork_manager $VERSION CASCADE;"
 
 sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
   GRANT CREATE ON DATABASE "$DB_NAME" to hive_applications_owner_group;
