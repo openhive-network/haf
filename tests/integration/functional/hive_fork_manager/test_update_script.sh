@@ -22,8 +22,17 @@ print_help () {
     echo
 }
 
+prepare_sql_script() {
+    version="$1"
+    # remove any existing sql script with given version
+    sudo rm -f "/usr/share/postgresql/$POSTGRES_VERSION/extension/hive_fork_manager--$version.sql"
+    # copy the newest hive_fork_manager--\*.sql script as hive_fork_manager--${version}.sql
+    (cd "/usr/share/postgresql/$POSTGRES_VERSION/extension/" && \
+        sudo cp "$(find ./ -maxdepth 1 -iname hive_fork_manager--\*.sql -type f -printf '%T@ %p\n' | sort -nr | head -1 | awk '{print $2}')" "hive_fork_manager--$version.sql")
+}
+
 prepare_database() {
-    "$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME"
+    "$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME" "$@"
 }
 
 update_database() {
@@ -45,6 +54,25 @@ failswith() {(
 
 exec_sql() {
     sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "$1"
+}
+
+check_view_exists() {(
+    # body runs inside subshell to disable set -e locally
+    set +e
+    exec_sql "\d $1" | grep -iv 'Did not find any relation named' >/dev/null
+    actual_exit_code="$?"
+    if [ "$actual_exit_code" -ne "0" ]; then
+        echo "TEST FAILED: view $1 expected to exist after upgrade, but doesn't"
+        return 3
+    fi
+)}
+
+check_table_is_empty() {
+    row_count=$(exec_sql "table $1" | wc -l)
+    if [ "$row_count" -ne "0" ]; then
+        echo "TEST FAILED: table $1 expected to be empty, but isn't"
+        return 4
+    fi
 }
 
 HAF_DIR=""
@@ -102,6 +130,34 @@ printf "\nTEST: Creating table referencing allowed HAF domain. Upgrade should pa
 prepare_database
 exec_sql "create table good_table(id int, amount hive.hive_amount)"
 update_database
+
+printf "\nTEST: Creating view referencing allowed types. This should pass\n"
+prepare_database
+exec_sql "create view good_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
+update_database
+check_view_exists good_view
+
+printf "\nTEST: Creating view referencing disallowed type. This should still pass and the view should be recreated.\n"
+prepare_sql_script 0000000000000000000000000000000000000000
+prepare_database --version="0000000000000000000000000000000000000000"
+exec_sql "create view public.bad_view as select id,body_binary::hive.comment_operation from hive.operations where op_type_id=1"
+update_database
+check_view_exists bad_view
+check_table_is_empty hive.deps_saved_ddl
+
+printf "\nTEST: Creating materialized view referencing allowed types. This should pass\n"
+prepare_database
+exec_sql "create materialized view good_materialized_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
+update_database
+check_view_exists good_materialized_view
+
+printf "\nTEST: Creating materialized view referencing disallowed type. This should still pass and the view should be recreated.\n"
+prepare_sql_script 0000000000000000000000000000000000000000
+prepare_database --version="0000000000000000000000000000000000000000"
+exec_sql "create materialized view public.bad_materialized_view as select id,body_binary::hive.comment_operation from hive.operations where op_type_id=1"
+update_database
+check_view_exists bad_materialized_view
+check_table_is_empty hive.deps_saved_ddl
 
 printf "\nTEST: Check that function defined in hive namespace that doesn't reference current commit hash fails the upgrade.\n"
 prepare_database
