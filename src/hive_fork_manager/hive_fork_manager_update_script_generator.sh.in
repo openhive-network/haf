@@ -141,6 +141,46 @@ make_update() {
   psql_do -d "$DB_NAME" -c "ALTER EXTENSION hive_fork_manager UPDATE"
 }
 
+save_views() {
+  echo
+  echo "Saving views referencing haf types..."
+
+  query="
+    CREATE TEMP TABLE allowed_types(name TEXT);
+    INSERT INTO allowed_types(name) VALUES
+      ('operation');
+    CREATE TEMP TABLE allowed_domains(name TEXT);
+    INSERT INTO allowed_domains(name) VALUES
+      ('vest_amount'),
+      ('hive_amount'),
+      ('hbd_amount'),
+      ('interest_rate');
+    CREATE TEMP VIEW views AS
+    SELECT DISTINCT col.table_schema::TEXT AS schema, col.table_name::TEXT AS name
+      FROM information_schema.columns AS col
+      JOIN pg_class as cls ON cls.relname = col.table_name
+      WHERE
+        cls.relkind = 'v' AND
+        col.udt_schema='hive' AND
+        col.table_schema<>'hive' AND
+        (col.udt_name NOT IN (SELECT name FROM allowed_types) OR
+          col.udt_name NOT IN (SELECT name FROM allowed_domains));
+    SELECT format('Saving %s.%s', v.schema, v.name), hive.deps_save_dependencies(v.schema, v.name) FROM views AS v"
+  psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query"
+}
+
+restore_views() {
+  echo
+  echo "Restoring saved views..."
+
+  query="
+    SELECT
+      format('Restoring %s.%s', deps_view_schema, deps_view_name),
+      hive.deps_restore_dependencies(deps_view_schema, deps_view_name)
+    FROM hive.deps_saved_ddl"
+  psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query" | uniq # do not print duplicates
+}
+
 check_tables_dont_reference_haf_types() {
   echo
   echo "Checking that none table references HAF type..."
@@ -209,6 +249,10 @@ check_tables_dont_reference_haf_types
 
 check_tables_dont_reference_haf_domains
 
+save_views
+
 make_update
+
+restore_views
 
 check_functions_were_updated
