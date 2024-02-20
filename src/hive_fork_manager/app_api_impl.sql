@@ -88,9 +88,6 @@ BEGIN
                 RETURN NULL;
             END IF;
         END IF;
-
-        UPDATE hive.contexts
-        SET irreversible_block = __newest_irreversible_block_num WHERE name =ANY( _contexts );
     ELSE
         ---- find next event
         SELECT * INTO __result
@@ -394,21 +391,8 @@ BEGIN
             WHERE name = _context;
             RETURN NULL;
         WHEN 'NEW_IRREVERSIBLE' THEN
-            -- we may got on context  creation irreversible block based on hive.irreversible_data
-            -- unfortunetly some slow app may prevent to removing this event, so wee need to process it
-            -- but do not update irreversible
-            IF ( _context_state.irreversible_block_num < _context_state.next_event_block_num ) THEN
-                PERFORM hive.context_set_irreversible_block( _context, _context_state.next_event_block_num );
-            END IF;
             RETURN NULL;
         WHEN 'MASSIVE_SYNC' THEN
-            --massive events are squashed at the function begin
-            -- we may got on context  creation irreversible block based on hive.irreversible_data
-            -- unfortunetly some slow app may prevent to removing this event, so we need to process it
-            -- but do not update irreversible
-            IF ( _context_state.irreversible_block_num < _context_state.next_event_block_num ) THEN
-                PERFORM hive.context_set_irreversible_block( _context, _context_state.next_event_block_num );
-            END IF;
         -- no RETURN here because code after the case will continue processing irreversible blocks only
         WHEN 'NEW_BLOCK' THEN
             ASSERT  _context_state.next_event_block_num > _context_state.current_block_num, 'We could not process block without consume event';
@@ -471,18 +455,6 @@ DECLARE
     __last_block_to_process INT;
     __result hive.blocks_range;
 BEGIN
-    CASE _context_state.next_event_type
-        WHEN 'NEW_IRREVERSIBLE' THEN
-            IF _context_state.next_event_block_num > _context_state.irreversible_block_num THEN
-                PERFORM hive.context_set_irreversible_block( _context, _context_state.next_event_block_num );
-            END IF;
-        WHEN 'MASSIVE_SYNC' THEN
-            IF _context_state.next_event_block_num > _context_state.irreversible_block_num THEN
-                PERFORM hive.context_set_irreversible_block( _context, _context_state.next_event_block_num );
-            END IF;
-        ELSE
-        END CASE;
-
     SELECT MIN( hb.num ), MAX( hb.num )
     FROM hive.blocks hb
     WHERE hb.num > _context_state.current_block_num AND hb.num <= _context_state.irreversible_block_num

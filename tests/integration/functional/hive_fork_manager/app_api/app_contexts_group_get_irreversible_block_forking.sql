@@ -53,6 +53,7 @@ BEGIN
         ASSERT ( SELECT hive.app_get_irreversible_block( 'context_b' ) ) = 0, 'hive.app_get_irreversible_block !=1 (3b)';
         ASSERT ( SELECT hive.app_get_irreversible_block() ) = 1, 'global irreversible block is not 1';
 
+        SELECT * FROM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ) INTO __blocks; -- NULL
         SELECT * FROM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ) INTO __blocks; -- massive sync event
         RAISE NOTICE 'Blocks range after MASSIVE_SYNC = %', __blocks;
 
