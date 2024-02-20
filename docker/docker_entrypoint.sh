@@ -1,11 +1,17 @@
 #! /bin/bash
+
 set -euo pipefail
 
-echo "Starting the container with user $(whoami) with uid $(id -u)"
+echo "Starting the container with user $(whoami) with UID $(id -u)"
 
-if [ "${HIVED_UID}" -ne 0 ];
+if [[ -z "${HIVED_UID:-}" ]]; then
+  echo "Warning: variable HIVED_UID is not set or set to an empty value." >&2
+elif ! [[ "${HIVED_UID}" =~ ^[0-9]+$ ]] ; then
+  echo "Error: variable HIVED_UID is set to '${HIVED_UID}' and not an integer. Exiting..." >&2
+  exit 1
+elif [[ "${HIVED_UID}" -ne 0 ]];
 then
-  echo "setting user hived uid to value ${HIVED_UID}"
+  echo "Setting user hived's UID to value '${HIVED_UID}'"
   sudo -n usermod -o -u "${HIVED_UID}" hived
 fi
 
