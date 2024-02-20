@@ -123,31 +123,31 @@ update_database
 
 printf "\nTEST: Creating table referencing hive.operation. This is allowed and should succeed.\n"
 prepare_database
-exec_sql "create table good_table(id int, op hive.operation)"
+exec_sql "create table public.good_table(id int, op hive.operation)"
 update_database
 
 printf "\nTEST: Creating table referencing disallowed HAF type. Upgrade should fail.\n"
 prepare_database
-exec_sql "create table bad_table(id int, comment hive.comment_operation)"
+exec_sql "create table public.bad_table(id int, comment hive.comment_operation)"
 failswith 4 update_database
 
 printf "\nTEST: Creating table referencing disallowed HAF domain. Upgrade should fail.\n"
 prepare_database
-exec_sql "create table bad_table(id int, account hive.account_name_type)"
+exec_sql "create table public.bad_table(id int, account hive.account_name_type)"
 failswith 4 update_database
 
 printf "\nTEST: Creating table referencing allowed HAF domain. Upgrade should pass.\n"
 prepare_database
-exec_sql "create table good_table(id int, amount hive.hive_amount)"
+exec_sql "create table public.good_table(id int, amount hive.hive_amount)"
 update_database
 
 printf "\nTEST: Creating view referencing allowed types. This should pass\n"
 prepare_database
-exec_sql "create view good_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
-exec_sql "comment on view good_view is 'foo'"
+exec_sql "create view public.good_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
+exec_sql "comment on view public.good_view is 'foo'"
 update_database
-check_view_exists good_view
-check_view_has_comment good_view
+check_view_exists public.good_view
+check_view_has_comment public.good_view
 
 printf "\nTEST: Creating view referencing disallowed type. This should still pass and the view should be recreated.\n"
 prepare_sql_script 0000000000000000000000000000000000000000
@@ -155,26 +155,26 @@ prepare_database --version="0000000000000000000000000000000000000000"
 exec_sql "create view public.bad_view as select id,body_binary::hive.comment_operation from hive.operations where op_type_id=1"
 exec_sql "comment on view public.bad_view is 'foo'"
 update_database
-check_view_exists bad_view
+check_view_exists public.bad_view
 check_table_is_empty hive.deps_saved_ddl
-check_view_has_comment bad_view
+check_view_has_comment public.bad_view
 
 printf "\nTEST: Creating view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
-prepare_database 
+prepare_database
 exec_sql "create view public.bad_view_2 as select id,body_binary::hive.comment_operation from hive.operations where op_type_id=1"
 exec_sql "comment on view public.bad_view_2 is 'foo'"
 update_database
-check_view_exists bad_view_2
+check_view_exists public.bad_view_2
 check_table_is_empty hive.deps_saved_ddl
-check_view_has_comment bad_view_2
+check_view_has_comment public.bad_view_2
 
 printf "\nTEST: Creating materialized view referencing allowed types. This should pass\n"
 prepare_database
-exec_sql "create materialized view good_materialized_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
-exec_sql "comment on materialized view good_materialized_view is 'foo'"
+exec_sql "create materialized view public.good_materialized_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
+exec_sql "comment on materialized view public.good_materialized_view is 'foo'"
 update_database
-check_view_exists good_materialized_view
-check_view_has_comment good_materialized_view
+check_view_exists public.good_materialized_view
+check_view_has_comment public.good_materialized_view
 
 printf "\nTEST: Creating materialized view referencing disallowed type. This should still pass and the view should be recreated.\n"
 prepare_sql_script 0000000000000000000000000000000000000000
@@ -182,18 +182,18 @@ prepare_database --version="0000000000000000000000000000000000000000"
 exec_sql "create materialized view public.bad_materialized_view as select id,body_binary::hive.comment_operation from hive.operations where op_type_id=1"
 exec_sql "comment on materialized view public.bad_materialized_view is 'foo'"
 update_database
-check_view_exists bad_materialized_view
+check_view_exists public.bad_materialized_view
 check_table_is_empty hive.deps_saved_ddl
-check_view_has_comment bad_materialized_view
+check_view_has_comment public.bad_materialized_view
 
 printf "\nTEST: Creating materialized view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
 prepare_database
 exec_sql "create materialized view public.bad_materialized_view_2 as select id,body_binary::hive.comment_operation from hive.operations where op_type_id=1"
 exec_sql "comment on materialized view public.bad_materialized_view_2 is 'foo'"
 update_database
-check_view_exists bad_materialized_view_2
+check_view_exists public.bad_materialized_view_2
 check_table_is_empty hive.deps_saved_ddl
-check_view_has_comment bad_materialized_view_2
+check_view_has_comment public.bad_materialized_view_2
 
 printf "\nTEST: Check that function defined in hive namespace that doesn't reference current commit hash fails the upgrade.\n"
 prepare_database
