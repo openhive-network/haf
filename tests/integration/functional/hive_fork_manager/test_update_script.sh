@@ -159,6 +159,15 @@ check_view_exists bad_view
 check_table_is_empty hive.deps_saved_ddl
 check_view_has_comment bad_view
 
+printf "\nTEST: Creating view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
+prepare_database 
+exec_sql "create view public.bad_view_2 as select id,body_binary::hive.comment_operation from hive.operations where op_type_id=1"
+exec_sql "comment on view public.bad_view_2 is 'foo'"
+update_database
+check_view_exists bad_view_2
+check_table_is_empty hive.deps_saved_ddl
+check_view_has_comment bad_view_2
+
 printf "\nTEST: Creating materialized view referencing allowed types. This should pass\n"
 prepare_database
 exec_sql "create materialized view good_materialized_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
@@ -176,6 +185,15 @@ update_database
 check_view_exists bad_materialized_view
 check_table_is_empty hive.deps_saved_ddl
 check_view_has_comment bad_materialized_view
+
+printf "\nTEST: Creating materialized view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
+prepare_database
+exec_sql "create materialized view public.bad_materialized_view_2 as select id,body_binary::hive.comment_operation from hive.operations where op_type_id=1"
+exec_sql "comment on materialized view public.bad_materialized_view_2 is 'foo'"
+update_database
+check_view_exists bad_materialized_view_2
+check_table_is_empty hive.deps_saved_ddl
+check_view_has_comment bad_materialized_view_2
 
 printf "\nTEST: Check that function defined in hive namespace that doesn't reference current commit hash fails the upgrade.\n"
 prepare_database
