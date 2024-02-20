@@ -165,7 +165,7 @@ save_views() {
         col.table_schema<>'hive' AND
         (col.udt_name NOT IN (SELECT name FROM allowed_types) OR
           col.udt_name NOT IN (SELECT name FROM allowed_domains));
-    SELECT format('Saving %s.%s', v.schema, v.name), hive.deps_save_dependencies(v.schema, v.name) FROM views AS v"
+    SELECT format('Saving %s.%s', v.schema, v.name), hive.deps_save_and_drop_dependencies(v.schema, v.name) FROM views AS v"
   psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query"
 }
 
@@ -197,7 +197,7 @@ save_materialized_views() {
       view_ns.nspname<>'hive' AND
       col_ns.nspname='hive' AND
       col_type.typname NOT IN (SELECT name FROM allowed_typenames);
-    SELECT format('Saving %s.%s', v.schema, v.name), hive.deps_save_dependencies(v.schema, v.name) FROM views AS v"
+    SELECT format('Saving %s.%s', v.schema, v.name), hive.deps_save_and_drop_dependencies(v.schema, v.name) FROM views AS v"
   psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query"
 }
 
