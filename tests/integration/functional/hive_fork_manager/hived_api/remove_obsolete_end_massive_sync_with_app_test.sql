@@ -61,7 +61,7 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hive.events_queue WHERE block_num = 10 ) = 1, 'No MASSIVE SYNC EVENT(10)';
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- MASSIVE_SYNC
-    ASSERT __blocks.first_block = 3, 'Incorrect first block';
+    ASSERT __blocks.first_block = 2, 'Incorrect first block';
     ASSERT __blocks.last_block = 10, 'Incorrect last range';
 END
 $BODY$

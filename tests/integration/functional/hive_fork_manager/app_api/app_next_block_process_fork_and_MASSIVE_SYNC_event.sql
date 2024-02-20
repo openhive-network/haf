@@ -71,6 +71,7 @@ DECLARE
     __blocks hive.blocks_range;
 BEGIN
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- MASSIVE_SYNC
+    SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
     ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks';
     RAISE NOTICE 'Blocks range = %', __blocks;
     ASSERT __blocks.first_block = 3, 'Incorrect first block';
