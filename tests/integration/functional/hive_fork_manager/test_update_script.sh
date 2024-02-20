@@ -67,6 +67,16 @@ check_view_exists() {(
     fi
 )}
 
+check_view_has_comment() {(
+    # body runs inside subshell to disable set -e locally
+    set +e
+    has_comment=$(exec_sql "SELECT obj_description('$1'::regclass, 'pg_class') IS NOT NULL")
+    if [ "$has_comment" != "t" ]; then
+        echo "TEST FAILED: view $1 expected to have a comment, but doesn't"
+        return 3
+    fi
+)}
+
 check_table_is_empty() {
     row_count=$(exec_sql "table $1" | wc -l)
     if [ "$row_count" -ne "0" ]; then
@@ -134,30 +144,38 @@ update_database
 printf "\nTEST: Creating view referencing allowed types. This should pass\n"
 prepare_database
 exec_sql "create view good_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
+exec_sql "comment on view good_view is 'foo'"
 update_database
 check_view_exists good_view
+check_view_has_comment good_view
 
 printf "\nTEST: Creating view referencing disallowed type. This should still pass and the view should be recreated.\n"
 prepare_sql_script 0000000000000000000000000000000000000000
 prepare_database --version="0000000000000000000000000000000000000000"
 exec_sql "create view public.bad_view as select id,body_binary::hive.comment_operation from hive.operations where op_type_id=1"
+exec_sql "comment on view public.bad_view is 'foo'"
 update_database
 check_view_exists bad_view
 check_table_is_empty hive.deps_saved_ddl
+check_view_has_comment bad_view
 
 printf "\nTEST: Creating materialized view referencing allowed types. This should pass\n"
 prepare_database
 exec_sql "create materialized view good_materialized_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
+exec_sql "comment on materialized view good_materialized_view is 'foo'"
 update_database
 check_view_exists good_materialized_view
+check_view_has_comment good_materialized_view
 
 printf "\nTEST: Creating materialized view referencing disallowed type. This should still pass and the view should be recreated.\n"
 prepare_sql_script 0000000000000000000000000000000000000000
 prepare_database --version="0000000000000000000000000000000000000000"
 exec_sql "create materialized view public.bad_materialized_view as select id,body_binary::hive.comment_operation from hive.operations where op_type_id=1"
+exec_sql "comment on materialized view public.bad_materialized_view is 'foo'"
 update_database
 check_view_exists bad_materialized_view
 check_table_is_empty hive.deps_saved_ddl
+check_view_has_comment bad_materialized_view
 
 printf "\nTEST: Check that function defined in hive namespace that doesn't reference current commit hash fails the upgrade.\n"
 prepare_database
