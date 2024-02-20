@@ -24,9 +24,10 @@ CREATE TABLE if not exists hive.deps_saved_ddl
 )
 ;
 
-CREATE OR REPLACE FUNCTION hive.deps_save_dependencies(
+CREATE OR REPLACE FUNCTION hive.deps_save_and_drop_dependencies(
     p_view_schema character varying,
-    p_view_name character varying
+    p_view_name character varying,
+    drop_relation BOOLEAN DEFAULT true
   )
   RETURNS void
   LANGUAGE 'plpgsql'
@@ -134,6 +135,15 @@ for v_curr in
     where schemaname = v_curr.obj_schema and matviewname = v_curr.obj_name;
   end if;
 
+  if drop_relation = true then
+    execute 'DROP ' ||
+    case
+      when v_curr.obj_type = 'v' then 'VIEW'
+      when v_curr.obj_type = 'm' then 'MATERIALIZED VIEW'
+    end
+    || ' ' || v_curr.obj_schema || '.' || v_curr.obj_name;
+  end if;
+
 end loop;
 end;
 $BODY$;
@@ -151,7 +161,7 @@ AS $BODY$
 /**
 From http://pretius.com/postgresql-stop-worrying-about-table-and-view-dependencies/
 
-Restores dependencies dropped by function `deps_save_dependencies`.
+Restores dependencies dropped by function `deps_save_and_drop_dependencies`.
 */
 declare
   v_curr record;
