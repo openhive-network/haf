@@ -169,6 +169,38 @@ save_views() {
   psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query"
 }
 
+save_materialized_views() {
+  echo
+  echo "Saving materialized views referencing haf types..."
+
+  query="
+    CREATE TEMP TABLE allowed_typenames(name TEXT);
+    INSERT INTO allowed_typenames(name) VALUES
+      ('operation'),
+      ('vest_amount'),
+      ('hive_amount'),
+      ('hbd_amount'),
+      ('interest_rate');
+    CREATE TEMP VIEW views AS
+    SELECT DISTINCT
+      view_ns.nspname::TEXT AS schema,
+      pg_class.relname::TEXT AS name
+    FROM pg_catalog.pg_attribute
+    JOIN pg_catalog.pg_class ON pg_class.oid = pg_attribute.attrelid
+    JOIN pg_catalog.pg_namespace AS view_ns ON view_ns.oid = pg_class.relnamespace
+    JOIN pg_catalog.pg_type AS col_type ON col_type.oid = pg_attribute.atttypid
+    JOIN pg_catalog.pg_namespace AS col_ns ON col_ns.oid = col_type.typnamespace
+    WHERE
+      pg_class.relkind = 'm' AND
+      NOT pg_attribute.attisdropped AND
+      pg_attribute.attnum > 0 AND
+      view_ns.nspname<>'hive' AND
+      col_ns.nspname='hive' AND
+      col_type.typname NOT IN (SELECT name FROM allowed_typenames);
+    SELECT format('Saving %s.%s', v.schema, v.name), hive.deps_save_dependencies(v.schema, v.name) FROM views AS v"
+  psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query"
+}
+
 restore_views() {
   echo
   echo "Restoring saved views..."
@@ -250,6 +282,7 @@ check_tables_dont_reference_haf_types
 check_tables_dont_reference_haf_domains
 
 save_views
+save_materialized_views
 
 make_update
 
