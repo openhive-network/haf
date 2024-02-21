@@ -161,10 +161,10 @@ save_views() {
       JOIN pg_class as cls ON cls.relname = col.table_name
       WHERE
         cls.relkind = 'v' AND
-        col.udt_schema='hive' AND
-        col.table_schema<>'hive' AND
-        (col.udt_name NOT IN (SELECT name FROM allowed_types) OR
-          col.udt_name NOT IN (SELECT name FROM allowed_domains));
+        col.table_schema<>'hive' AND (
+          (col.udt_schema='hive' AND col.udt_name NOT IN (SELECT name FROM allowed_types)) OR
+          (col.domain_schema='hive' AND col.domain_name NOT IN (SELECT name FROM allowed_domains))
+        );
     SELECT format('Saving %s.%s', v.schema, v.name), hive.deps_save_and_drop_dependencies(v.schema, v.name) FROM views AS v"
   psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query"
 }
