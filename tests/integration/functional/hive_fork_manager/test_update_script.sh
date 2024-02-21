@@ -56,13 +56,13 @@ exec_sql() {
     sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "$1"
 }
 
-check_view_exists() {(
+check_relation_exists() {(
     # body runs inside subshell to disable set -e locally
     set +e
     exec_sql "\d $1" | grep -iv 'Did not find any relation named' >/dev/null
     actual_exit_code="$?"
     if [ "$actual_exit_code" -ne "0" ]; then
-        echo "TEST FAILED: view $1 expected to exist after upgrade, but doesn't"
+        echo "TEST FAILED: '$1' expected to exist after upgrade, but doesn't"
         return 3
     fi
 )}
@@ -125,28 +125,32 @@ printf "\nTEST: Creating table referencing hive.operation. This is allowed and s
 prepare_database
 exec_sql "create table public.good_table(id int, op hive.operation)"
 update_database
+check_relation_exists public.good_table
 
 printf "\nTEST: Creating table referencing disallowed HAF type. Upgrade should fail.\n"
 prepare_database
 exec_sql "create table public.bad_table(id int, comment hive.comment_operation)"
 failswith 4 update_database
+check_relation_exists public.bad_table
 
 printf "\nTEST: Creating table referencing disallowed HAF domain. Upgrade should fail.\n"
 prepare_database
 exec_sql "create table public.bad_table(id int, account hive.account_name_type)"
 failswith 4 update_database
+check_relation_exists public.bad_table
 
 printf "\nTEST: Creating table referencing allowed HAF domain. Upgrade should pass.\n"
 prepare_database
 exec_sql "create table public.good_table(id int, amount hive.hive_amount)"
 update_database
+check_relation_exists public.good_table
 
 printf "\nTEST: Creating view referencing allowed types. This should pass\n"
 prepare_database
 exec_sql "create view public.good_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
 exec_sql "comment on view public.good_view is 'foo'"
 update_database
-check_view_exists public.good_view
+check_relation_exists public.good_view
 check_view_has_comment public.good_view
 
 printf "\nTEST: Creating view referencing disallowed type. This should still pass and the view should be recreated.\n"
@@ -160,11 +164,11 @@ exec_sql "create view public.bad_mixed_view as select id,(body_binary::hive.tran
 exec_sql "comment on view public.bad_mixed_view is 'baz'"
 update_database
 check_table_is_empty hive.deps_saved_ddl
-check_view_exists public.bad_type_view
+check_relation_exists public.bad_type_view
 check_view_has_comment public.bad_type_view
-check_view_exists public.bad_domain_view
+check_relation_exists public.bad_domain_view
 check_view_has_comment public.bad_domain_view
-check_view_exists public.bad_mixed_view
+check_relation_exists public.bad_mixed_view
 check_view_has_comment public.bad_mixed_view
 
 printf "\nTEST: Creating view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
@@ -177,11 +181,11 @@ exec_sql "create view public.bad_mixed_view_2 as select id,(body_binary::hive.tr
 exec_sql "comment on view public.bad_mixed_view_2 is 'baz'"
 update_database
 check_table_is_empty hive.deps_saved_ddl
-check_view_exists public.bad_type_view_2
+check_relation_exists public.bad_type_view_2
 check_view_has_comment public.bad_type_view_2
-check_view_exists public.bad_domain_view_2
+check_relation_exists public.bad_domain_view_2
 check_view_has_comment public.bad_domain_view_2
-check_view_exists public.bad_mixed_view_2
+check_relation_exists public.bad_mixed_view_2
 check_view_has_comment public.bad_mixed_view_2
 
 printf "\nTEST: Creating materialized view referencing allowed types. This should pass\n"
@@ -189,7 +193,7 @@ prepare_database
 exec_sql "create materialized view public.good_materialized_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
 exec_sql "comment on materialized view public.good_materialized_view is 'foo'"
 update_database
-check_view_exists public.good_materialized_view
+check_relation_exists public.good_materialized_view
 check_view_has_comment public.good_materialized_view
 
 printf "\nTEST: Creating materialized view referencing disallowed type. This should still pass and the view should be recreated.\n"
@@ -203,11 +207,11 @@ exec_sql "create materialized view public.bad_mixed_materialized_view as select 
 exec_sql "comment on materialized view public.bad_mixed_materialized_view is 'baz'"
 update_database
 check_table_is_empty hive.deps_saved_ddl
-check_view_exists public.bad_type_materialized_view
+check_relation_exists public.bad_type_materialized_view
 check_view_has_comment public.bad_type_materialized_view
-check_view_exists public.bad_domain_materialized_view
+check_relation_exists public.bad_domain_materialized_view
 check_view_has_comment public.bad_domain_materialized_view
-check_view_exists public.bad_mixed_materialized_view
+check_relation_exists public.bad_mixed_materialized_view
 check_view_has_comment public.bad_mixed_materialized_view
 
 printf "\nTEST: Creating materialized view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
@@ -220,11 +224,11 @@ exec_sql "create materialized view public.bad_mixed_materialized_view_2 as selec
 exec_sql "comment on materialized view public.bad_mixed_materialized_view_2 is 'baz'"
 update_database
 check_table_is_empty hive.deps_saved_ddl
-check_view_exists public.bad_type_materialized_view_2
+check_relation_exists public.bad_type_materialized_view_2
 check_view_has_comment public.bad_type_materialized_view_2
-check_view_exists public.bad_domain_materialized_view_2
+check_relation_exists public.bad_domain_materialized_view_2
 check_view_has_comment public.bad_domain_materialized_view_2
-check_view_exists public.bad_mixed_materialized_view_2
+check_relation_exists public.bad_mixed_materialized_view_2
 check_view_has_comment public.bad_mixed_materialized_view_2
 
 printf "\nTEST: Check that function defined in hive namespace that doesn't reference current commit hash fails the upgrade.\n"
