@@ -64,6 +64,10 @@ MESSAGE( STATUS "CONFIGURING the update script generator script: ${CMAKE_BINARY_
 CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/hive_fork_manager_update_script_generator.sh.in"
   "${extension_path}/hive_fork_manager_update_script_generator.sh" @ONLY)
 
+# Only needed to be able to run update script from ${CMAKE_CURRENT_SOURCE_DIR} dir
+CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/hive_fork_manager_save_restore_views.sql"
+  "${extension_path}/hive_fork_manager_save_restore_views.sql" @ONLY)
+
 MESSAGE( STATUS "CONFIGURING the control file: ${CMAKE_BINARY_DIR}/extensions/${EXTENSION_NAME}/hive_fork_manager.control" )
 
 CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/${extension_control_file}"
@@ -88,6 +92,12 @@ ADD_CUSTOM_TARGET( extension.${EXTENSION_NAME} ALL DEPENDS ${extension_path}/${e
 INSTALL ( FILES "${extension_path}/hive_fork_manager_update_script_generator.sh"
           DESTINATION ${POSTGRES_SHAREDIR}/extension
           PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+          GROUP_EXECUTE GROUP_READ
+          WORLD_EXECUTE WORLD_READ
+        )
+INSTALL ( FILES "${CMAKE_CURRENT_SOURCE_DIR}/hive_fork_manager_save_restore_views.sql"
+          DESTINATION ${POSTGRES_SHAREDIR}/extension
+          PERMISSIONS OWNER_WRITE OWNER_READ
           GROUP_EXECUTE GROUP_READ
           WORLD_EXECUTE WORLD_READ
         )
