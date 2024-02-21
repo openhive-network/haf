@@ -391,7 +391,7 @@ BEGIN
             WHERE name = _context;
             RETURN NULL;
         WHEN 'NEW_IRREVERSIBLE' THEN
-            RETURN NULL;
+        --    RETURN NULL;
         WHEN 'MASSIVE_SYNC' THEN
         -- no RETURN here because code after the case will continue processing irreversible blocks only
         WHEN 'NEW_BLOCK' THEN
