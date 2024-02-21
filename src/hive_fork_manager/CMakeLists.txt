@@ -53,7 +53,6 @@ ADD_PSQL_EXTENSION(
             get_legacy_style_operation.sql
             extract_set_witness_properties.sql
             trigger_switch/trigger_on.sql
-            postgres_save_restore_views.sql
 
             types/types.sql # drop and recreate operation types on upgrade
             types/cast_functions.sql
