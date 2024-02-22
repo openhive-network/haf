@@ -33,7 +33,7 @@ BEGIN
         EXCEPTION WHEN OTHERS THEN
     END;
 
-    CALL hive.appproc_context_detach( 'context' );
+    PERFORM hive.app_context_detach( 'context' );
 
     BEGIN
         PERFORM hive.app_set_current_block_num( 'nonexistent_context', 2 );

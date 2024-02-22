@@ -25,7 +25,7 @@ $BODY$
 BEGIN
     PERFORM hive.app_create_context( 'alice_context' );
     PERFORM hive.app_create_context( 'alice_context_detached' );
-    CALL hive.appproc_context_detach( 'alice_context_detached' );
+    PERFORM hive.app_context_detach( 'alice_context_detached' );
     CREATE TABLE alice_table( id INT ) INHERITS( hive.alice_context );
 END;
 $BODY$

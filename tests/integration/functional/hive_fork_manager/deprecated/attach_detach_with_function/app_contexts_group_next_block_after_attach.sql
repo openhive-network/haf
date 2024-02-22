@@ -70,7 +70,8 @@ $BODY$
 BEGIN
     -- reproduce issue #13: problem with switching to live synchronization
     PERFORM hive.set_irreversible( 4 );
-    PERFORM hive.app_context_attach( ARRAY[ 'context_b', 'context' ], 2 );
+    PERFORM hive.app_set_current_block_num( ARRAY[ 'context_b', 'context' ], 2 );
+    PERFORM hive.app_context_attach( ARRAY[ 'context_b', 'context' ] );
 END
 $BODY$
 ;

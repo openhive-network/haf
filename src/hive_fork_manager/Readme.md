@@ -424,15 +424,9 @@ fork control (detach of context is required first) or it can still process them 
 
 hive.app_next_block cannot be used when a context is detached - in such case an exception is thrown.
 
-##### hive.appproc_context_detach( context_name )
-##### hive.appproc_context_detach( array_of_contexts )
-Stored procedures.
-Detaches triggers attached to tables registered in a given context or contexts. It allows to do a massive sync of irreversible blocks without overhead from triggers. The context's views are recreated to return only all irreversible data.
-
 ##### hive.app_context_detach( context_name )
 ##### hive.app_context_detach( array_of_contexts )
-:warning: These functions have been deprecated and will be removed in future releases. They perform the same tasks as their procedural equivalents presented above, which should be used instead.
-
+Detaches triggers attached to tables registered in a given context or contexts. It allows to do a massive sync of irreversible blocks without overhead from triggers. The context's views are recreated to return only all irreversible data.
 
 ##### hive.appproc_context_attach( context_name )
 ##### hive.appproc_context_attach( array_of_contexts )
