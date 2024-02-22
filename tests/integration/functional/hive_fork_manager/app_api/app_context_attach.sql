@@ -31,7 +31,8 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-    CALL hive.appproc_context_attach( 'context', 2 );
+    PERFORM hive.app_set_current_block_num( 'context', 2 );
+    CALL hive.appproc_context_attach( 'context' );
     INSERT INTO A.table1( id ) VALUES (10);
 END;
 $BODY$

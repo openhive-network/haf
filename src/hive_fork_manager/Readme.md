@@ -434,14 +434,14 @@ Detaches triggers attached to tables registered in a given context or contexts. 
 :warning: These functions have been deprecated and will be removed in future releases. They perform the same tasks as their procedural equivalents presented above, which should be used instead.
 
 
-##### hive.appproc_context_attach( context_name, block_num )
-##### hive.appproc_context_attach( array_of_contexts, block_num )
-Stored procedures. Enables triggers attached to registered tables in a given context or contexts and sets current contexts block number. The `block_num` cannot
+##### hive.appproc_context_attach( context_name )
+##### hive.appproc_context_attach( array_of_contexts )
+Stored procedures. Enables triggers attached to registered tables in a given context. The context `cuurent_block_num` cannot
 be greater than the latest irreversible block. The context's views are recreated to return both reversible and irreversible data limited to the context's current block.
 
 
-##### hive.app_context_attach( context_name, block_num )
-##### hive.app_context_attach( array_of_contexts, block_num )
+##### hive.app_context_attach( context_name )
+##### hive.app_context_attach( array_of_contexts )
 :warning: These functions have been deprecated and will be removed in future releases. They perform the same tasks as their procedural equivalents presented above, which should be used instead.
 Committing pending transaction with 'COMMIT' after attaching context is mandatory, otherwise intermittent problems with finding a first event to process will occur - race conditions
 between hived process and an application being moving to the next event after attach.

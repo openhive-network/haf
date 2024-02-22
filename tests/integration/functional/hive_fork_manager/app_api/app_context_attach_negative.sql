@@ -29,8 +29,9 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
+    PERFORM hive.app_set_current_block_num( 'context', 5 );
     BEGIN
-        CALL hive.appproc_context_attach( 'context', 5 );
+        CALL hive.appproc_context_attach( 'context' );
         ASSERT FALSE, 'Cannot raise expected exception when block is greater than top of irreversible';
     EXCEPTION WHEN OTHERS THEN
     END;

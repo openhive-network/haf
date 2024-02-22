@@ -9,7 +9,8 @@ class haf_query:
 
     self.create_context                   = "SELECT hive.app_create_context('{}');".format( self.application_context )
     self.detach_context                   = "SELECT hive.app_context_detach('{}');".format( self.application_context )
-    self.attach_context                   = "SELECT hive.app_context_attach('{}', {});"
+    self.set_current_block                = "SELECT hive.app_set_current_block_num('{}', {});"
+    self.attach_context                   = "SELECT hive.app_context_attach('{}');"
     self.exists_context                   = "SELECT * FROM hive.app_context_exists('{}');".format( self.application_context )
 
     self.context_is_attached              = "SELECT * FROM hive.app_context_is_attached('{}')".format( self.application_context )
@@ -56,7 +57,9 @@ class haf_sql:
     self.exec_query(self.text_query.detach_context)
 
   def exec_attach_context_impl(self, block_num):
-    _query = self.text_query.attach_context.format(self.text_query.application_context, block_num)
+    _query = self.text_query.set_current_block.format(self.text_query.application_context, block_num)
+    self.exec_query(_query)
+    _query = self.text_query.attach_context.format(self.text_query.application_context)
     self.exec_query(_query)
 
   def exec_exists_context(self):

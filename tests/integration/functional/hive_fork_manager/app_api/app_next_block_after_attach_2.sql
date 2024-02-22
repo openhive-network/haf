@@ -154,7 +154,8 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-    CALL hive.appproc_context_attach('context', 6);
+    PERFORM hive.app_set_current_block_num( 'context', 6 );
+    CALL hive.appproc_context_attach('context');
 END
 $BODY$
 ;

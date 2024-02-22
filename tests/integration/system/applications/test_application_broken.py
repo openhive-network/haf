@@ -71,7 +71,8 @@ def test_application_broken(prepared_networks_and_database_12_8_without_block_lo
 
     session.execute( "SELECT hive.app_context_detach( '{}' )".format( APPLICATION_CONTEXT ) )
     session.execute( "SELECT public.update_histogram( {}, {} )".format( first_block, CONTEXT_ATTACH_BLOCK ) )
-    session.execute( "SELECT hive.app_context_attach( '{}', {} )".format( APPLICATION_CONTEXT, CONTEXT_ATTACH_BLOCK ) )
+    session.execute( "SELECT hive.app_set_current_block_num( '{}', {} )".format( APPLICATION_CONTEXT, CONTEXT_ATTACH_BLOCK ) )
+    session.execute( "SELECT hive.app_context_attach( '{}' )".format( APPLICATION_CONTEXT ) )
     session.commit()
 
     ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hive.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()

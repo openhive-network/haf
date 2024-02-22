@@ -39,7 +39,8 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-    CALL hive.appproc_context_attach( ARRAY[ 'context_a', 'context_b', 'context_c' ] , 2 );
+    PERFORM hive.app_set_current_block_num( ARRAY[ 'context_a', 'context_b', 'context_c' ], 2 );
+    CALL hive.appproc_context_attach( ARRAY[ 'context_a', 'context_b', 'context_c' ] );
     INSERT INTO A.table1( id ) VALUES (10);
     INSERT INTO B.table1( id ) VALUES (10);
     INSERT INTO C.table1( id ) VALUES (10);
