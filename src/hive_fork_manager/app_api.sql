@@ -161,7 +161,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_attach( _contexts hive.contexts_group, _last_synced_block INT )
+CREATE OR REPLACE FUNCTION hive.app_context_attach( _contexts hive.contexts_group )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -169,19 +169,25 @@ AS
 $BODY$
 DECLARE
     __head_of_irreversible_block hive.blocks.num%TYPE:=0;
+    __current_block_num INT;
     __fork_id hive.fork.id%TYPE := 1;
+    __lead_context hive.context_name := _contexts[1];
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
+
+    SELECT hc.current_block_num INTO __current_block_num
+    FROM hive.contexts hc
+    WHERE hc.name = __lead_context;
 
     SELECT hir.consistent_block INTO __head_of_irreversible_block
     FROM hive.irreversible_data hir;
 
-    IF _last_synced_block > __head_of_irreversible_block THEN
+    IF __current_block_num > __head_of_irreversible_block THEN
         RAISE EXCEPTION 'Cannot attach context % because the block num % is grater than top of irreversible block %'
-            , _context, _last_synced_block,  __head_of_irreversible_block;
+            , _context, __current_block_num,  __head_of_irreversible_block;
     END IF;
 
-    SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= _last_synced_block;
+    SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= __current_block_num;
 
     -- lock EXCLUSIVE may be taken by hived in function:
     -- hive.remove_unecessary_events
@@ -198,7 +204,7 @@ BEGIN
 
     -- re-create view which mixes irreversible and reversible data
     PERFORM
-          hive.context_attach( context.*, _last_synced_block )
+          hive.context_attach( context.*, __current_block_num )
         , hive.create_blocks_view(  context.* )
         , hive.create_transactions_view(  context.* )
         , hive.create_operations_view(  context.* )
@@ -211,36 +217,36 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_attach( _context hive.context_name, _last_synced_block INT )
+CREATE OR REPLACE FUNCTION hive.app_context_attach( _context hive.context_name )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_context_attach( ARRAY[ _context ], _last_synced_block );
+    PERFORM hive.app_context_attach( ARRAY[ _context ] );
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hive.appproc_context_attach( _contexts hive.contexts_group, _last_synced_block INT )
+CREATE OR REPLACE PROCEDURE hive.appproc_context_attach( _contexts hive.contexts_group )
     LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_context_attach( _contexts, _last_synced_block );
+    PERFORM hive.app_context_attach( _contexts );
     COMMIT;
 END;
 $BODY$
 ;
 
 
-CREATE OR REPLACE PROCEDURE hive.appproc_context_attach( IN _context hive.context_name, _last_synced_block INT  )
+CREATE OR REPLACE PROCEDURE hive.appproc_context_attach( IN _context hive.context_name )
     LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    CALL hive.appproc_context_attach( ARRAY[ _context ], _last_synced_block );
+    CALL hive.appproc_context_attach( ARRAY[ _context ] );
 END;
 $BODY$
 ;

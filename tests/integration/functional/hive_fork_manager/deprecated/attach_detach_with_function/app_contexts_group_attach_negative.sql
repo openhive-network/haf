@@ -35,8 +35,9 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
+    PERFORM hive.app_set_current_block_num( ARRAY [ 'context_a', 'context_b', 'context_c' ], 5 );
     BEGIN
-        PERFORM hive.app_context_attach( ARRAY [ 'context_a', 'context_b', 'context_c' ], 5 );
+        PERFORM hive.app_context_attach( ARRAY [ 'context_a', 'context_b', 'context_c' ] );
         ASSERT FALSE, 'Cannot raise expected exception when block is greater than top of irreversible';
     EXCEPTION WHEN OTHERS THEN
     END;

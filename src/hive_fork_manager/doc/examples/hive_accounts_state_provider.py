@@ -60,7 +60,8 @@ def main_loop( db_connection ):
                 db_connection.execute( "SELECT hive.app_state_providers_update( {}, {}, '{}' )".format( first_block, last_block, APPLICATION_CONTEXT ) )
 
                 # attach context and moves it to last synced block
-                db_connection.execute( "SELECT hive.app_context_attach( '{}', {} )".format( APPLICATION_CONTEXT, last_block ) )
+                db_connection.execute( "SELECT hive.app_set_current_block_num( '{}', {} )".format( APPLICATION_CONTEXT, last_block ) )
+                db_connection.execute( "SELECT hive.app_context_attach( '{}' )".format( APPLICATION_CONTEXT ) )
                 continue
 
             # process the first block in range - one commit after each block

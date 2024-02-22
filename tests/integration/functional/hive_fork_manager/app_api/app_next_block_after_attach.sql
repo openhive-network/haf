@@ -66,7 +66,8 @@ $BODY$
 BEGIN
     -- reproduce issue #13: problem with switching to live synchronization
     PERFORM hive.set_irreversible( 4 );
-    CALL hive.appproc_context_attach( 'context', 2 );
+    PERFORM hive.app_set_current_block_num( 'context', 2 );
+    CALL hive.appproc_context_attach( 'context' );
 END
 $BODY$
 ;
