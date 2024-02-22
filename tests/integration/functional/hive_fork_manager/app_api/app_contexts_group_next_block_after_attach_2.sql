@@ -144,7 +144,7 @@ BEGIN
     PERFORM hive.app_create_context('context', FALSE);
     PERFORM hive.app_create_context('context_b', FALSE);
     PERFORM hive.app_next_block( ARRAY[ 'context_b', 'context' ] ); -- (1,6)
-    CALL hive.appproc_context_detach( ARRAY[ 'context_b', 'context' ] );
+    PERFORM hive.app_context_detach( ARRAY[ 'context_b', 'context' ] );
     PERFORM hive.app_set_current_block_num( ARRAY[ 'context_b', 'context' ], 6 );
 END;
 $BODY$

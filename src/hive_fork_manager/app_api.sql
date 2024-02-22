@@ -286,27 +286,6 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hive.appproc_context_detach( _contexts hive.contexts_group )
-    LANGUAGE 'plpgsql'
-AS
-$BODY$
-BEGIN
-    PERFORM hive.app_context_detach( _contexts );
-    COMMIT;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE PROCEDURE hive.appproc_context_detach( _context hive.context_name )
-    LANGUAGE 'plpgsql'
-AS
-$BODY$
-BEGIN
-    CALL hive.appproc_context_detach( ARRAY[ _context ] );
-END;
-$BODY$
-;
-
 CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _contexts hive.contexts_group  )
     RETURNS void
     LANGUAGE 'plpgsql'

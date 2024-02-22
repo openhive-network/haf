@@ -155,7 +155,8 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-    PERFORM hive.app_context_attach( ARRAY[ 'context_b', 'context' ], 6 );
+    PERFORM hive.app_set_current_block_num( ARRAY[ 'context_b', 'context' ], 6 );
+    PERFORM hive.app_context_attach( ARRAY[ 'context_b', 'context' ] );
 END
 $BODY$
 ;

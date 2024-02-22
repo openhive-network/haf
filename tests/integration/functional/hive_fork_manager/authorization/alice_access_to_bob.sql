@@ -26,7 +26,7 @@ $BODY$
 BEGIN
     PERFORM hive.app_create_context( 'alice_context' );
     PERFORM hive.app_create_context( 'alice_context_detached' );
-    CALL hive.appproc_context_detach( 'alice_context_detached' );
+    PERFORM hive.app_context_detach( 'alice_context_detached' );
     PERFORM hive.app_set_current_block_num( 'alice_context_detached', 1 );
     PERFORM hive.app_set_current_block_num( ARRAY[ 'alice_context_detached' ], 1 );
     PERFORM hive.app_get_current_block_num( 'alice_context_detached' );
@@ -46,7 +46,7 @@ $BODY$
 BEGIN
     PERFORM hive.app_create_context( 'bob_context' );
     PERFORM hive.app_create_context( 'bob_context_detached' );
-    CALL hive.appproc_context_detach( 'bob_context_detached' );
+    PERFORM hive.app_context_detach( 'bob_context_detached' );
     PERFORM hive.app_set_current_block_num( 'bob_context_detached', 1 );
     PERFORM hive.app_set_current_block_num( ARRAY[ 'bob_context_detached' ], 1 );
     CREATE TABLE bob_table( id INT ) INHERITS( hive.bob_context );

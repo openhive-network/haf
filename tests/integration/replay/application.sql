@@ -50,7 +50,7 @@ BEGIN
 
             IF __next_block_range.last_block - __next_block_range.first_block > __detach_limit THEN
                 RAISE NOTICE 'App is detaching and attaching its context';
-                CALL hive.appproc_context_detach( ARRAY[ 'test' ] );
+                PERFORM hive.app_context_detach( ARRAY[ 'test' ] );
                 PERFORM hive.app_set_current_block_num( ARRAY[ 'test' ], __next_block_range.last_block );
                 CALL hive.appproc_context_attach( ARRAY[ 'test' ] );
                 CONTINUE;

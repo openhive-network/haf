@@ -54,7 +54,7 @@ BEGIN
 
     PERFORM hive.set_irreversible( 2 );
     PERFORM hive.app_next_block( 'context' ); --block 1,2
-    CALL hive.appproc_context_detach( 'context' );
+    PERFORM hive.app_context_detach( 'context' );
 END;
 $BODY$
 ;
