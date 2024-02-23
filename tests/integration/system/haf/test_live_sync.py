@@ -3,6 +3,8 @@ import json
 from sqlalchemy import cast
 from sqlalchemy.dialects.postgresql import JSONB
 
+import time
+
 import test_tools as tt
 
 from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress
@@ -40,8 +42,17 @@ def test_live_sync(prepared_networks_and_database_12_8):
 
     _, irreversible_block = display_blocks_information(node_under_test)
 
-    blks = session.query(Blocks).order_by(Blocks.num).all()
-    block_nums = [block.num for block in blks]
+    # haf thread works asynchronously and we don't know when it will dump blocks and events
+    # we wait max 5s for WAL to dump irreversible block
+    block_nums = []
+    for attempt in range(1, 6):
+        blks = session.query(Blocks).order_by(Blocks.num).all()
+        block_nums = [block.num for block in blks]
+        if sorted(block_nums) == [i for i in range(1, irreversible_block+1)]:
+            break
+        else:
+            time.sleep(1)
+
     assert sorted(block_nums) == [i for i in range(1, irreversible_block+1)]
 
     trx_found = None
