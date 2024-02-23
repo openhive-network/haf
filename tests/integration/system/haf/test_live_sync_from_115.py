@@ -3,6 +3,8 @@ import json
 from sqlalchemy import cast
 from sqlalchemy.dialects.postgresql import JSONB
 
+import time
+
 import test_tools as tt
 
 from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress
@@ -37,25 +39,35 @@ def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
     head_block = get_head_block(node_under_test)
     _, irreversible_block = display_blocks_information(node_under_test)
 
-    blks = session.query(Blocks).order_by(Blocks.num).all()
+    block_nums = []
+    # haf thread works asynchronously and we don't know when it will dump blocks and events
+    # we wait max 5s for WAL to dump irreversible block
+    for attempt in range(1, 6):
+        blks = session.query(Blocks).order_by(Blocks.num).all()
+        block_nums = [block.num for block in blks]
+        # We have 109 irreversible blocks already synced, and now we can have two situations:
+        # 1. hived will send end_of_syncing notification->serializer will move from START to LIVE state
+        #   ,database will be initialized and the next block (110) will be the first synced.
+        # 2. hived will process a block and pre_apply/post_apply block notification will be sent.
+        #   Here the first processed block will be discarded because it is less than psql-first-block (110<115),
+        #   serializer will move from START to WAIT state. After processing a block, hived will send
+        #   end_of_syncing notification-> serializer will move from WAIT to LIVE state, database will be initialized
+        #   and the next block (111) will be the first synced.
+        # For the test purpose it doesn't matter which situation will happen, it is
+        # only important that blocks less than 110 are not dumped, and dumping
+        # blocks is started from the block less than 115, during entering the LIVE state
+        # before reaching psql-first-block limit.
+
+        if sorted(block_nums)[:2] == [i for i in [110,111]] or sorted(block_nums)[:2] == [i for i in [111,112]]:
+            break
+        else:
+            # give time to HAF WAL to dump all events and blocks
+            time.sleep(1)
+
+    assert sorted(block_nums)[:2] == [i for i in [110,111]] \
+           or sorted(block_nums)[:2] == [i for i in [111,112]] # situation 1 or situation 2
+
     account_count = session.query(AccountsView).count()
-    block_nums = [block.num for block in blks]
-    # We have 109 irreversible blocks already synced, and now we can have two situations:
-    # 1. hived will send end_of_syncing notification->serializer will move from START to LIVE state
-    #   ,database will be initialized and the next block (110) will be the first synced.
-    # 2. hived will process a block and pre_apply/post_apply block notification will be sent.
-    #   Here the first processed block will be discarded because it is less than psql-first-block (110<115),
-    #   serializer will move from START to WAIT state. After processing a block, hived will send
-    #   end_of_syncing notification-> serializer will move from WAIT to LIVE state, database will be initialized
-    #   and the next block (111) will be the first synced.
-    # For the test purpose it doesn't matter which situation will happen, it is
-    # only important that blocks less than 110 are not dumped, and dumping
-    # blocks is started from the block less than 115, during entering the LIVE state
-    # before reaching psql-first-block limit.
-
-    assert sorted(block_nums)[:2] == [i for i in [110,111]]\
-        or sorted(block_nums)[:2] == [i for i in [111,112]] # situation 1 or situation 2
-
     assert account_count == 27
 
     session.query(Transactions).filter(Transactions.block_num == transaction_block_num).one()
