@@ -100,6 +100,15 @@ perform_instance_load() {
 }
 
 run_instance() {
+# https://gist.github.com/CMCDragonkai/e2cde09b688170fb84268cafe7a2b509
+# If we do `trap cleanup INT QUIT TERM` directly, then using `exit` command anywhere
+# in the script will exit the script without triggering the cleanup
+trap 'exit' INT QUIT TERM
+trap cleanup EXIT
+
+# if script breaks before hived completes, return nonzero status
+HIVED_EXIT_CODE=123
+
 {
 sudo --user=hived -En /bin/bash << EOF
 echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
@@ -208,13 +217,6 @@ create_conf_d_directory_if_necessary() {
     sudo -n chown -Rc postgres:postgres "/home/hived/datadir/haf_postgresql_conf.d"
   fi
 }
-
-
-# https://gist.github.com/CMCDragonkai/e2cde09b688170fb84268cafe7a2b509
-# If we do `trap cleanup INT QUIT TERM` directly, then using `exit` command anywhere
-# in the script will exit the script without triggering the cleanup
-trap 'exit' INT QUIT TERM
-trap cleanup EXIT
 
 # Be sure those directories exists and have right permissions
 sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
