@@ -53,6 +53,9 @@ PERFORM_LOAD=0
 BACKUP_SOURCE_DIR_NAME=""
 MAINTENANCE_SCRIPT_NAME=""
 
+HIVED_EXIT_CODE=0
+HIVED_JOB_PID=0
+
 stop_postresql() {
 echo "Attempting to stop Postgresql..."
 
@@ -141,22 +144,27 @@ fi
   --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
   --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
   ${HIVED_ARGS[@]}
-echo "$? Hived process finished execution."
 EOF
+HIVED_EXIT_CODE=$?
+if [ $HIVED_EXIT_CODE -eq 130 ];
+then
+  echo "Ignoring SIGINT exit code: $HIVED_EXIT_CODE."
+  HIVED_EXIT_CODE=0 #ignore exitcode caught by handling SIGINT
+fi
+echo "Hived process finished execution: return status: ${HIVED_EXIT_CODE}."
 
 stop_postresql
 
 } &
 
-job_pid=$!
+HIVED_JOB_PID=$!
 
 jobs -l
 
-echo "waiting for job finish: $job_pid."
-local status=0
-wait $job_pid || status=$?
+echo "waiting for job finish: $HIVED_JOB_PID."
+wait $HIVED_JOB_PID || true
 
-return ${status}
+return ${HIVED_EXIT_CODE}
 }
 
 # shellcheck disable=SC2317
@@ -173,9 +181,14 @@ cleanup () {
   [[ -z "$hived_pid" ]] || tail --pid="$hived_pid" -f /dev/null || true
   echo "Hived finish done."
 
+  echo "Waiting for Hived processing job finish..."
+  [ "$HIVED_JOB_PID" -eq 0 ] || wait $HIVED_JOB_PID || true
+
   stop_postresql
 
   echo "Cleanup actions done."
+
+  exit ${HIVED_EXIT_CODE}
 }
 
 prepare_pg_hba_file() {
