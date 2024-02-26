@@ -28,6 +28,8 @@ print_help () {
     echo "                       Specified role is created on the server if needed."
     echo "  --haf-database-store=DIRECTORY_PATH"
     echo "                       Specify a directory where the HAF database will be stored."
+    echo "  --install-extension={yes|no}"
+    echo "                       Installs the PostgreSQL extension, default is yes"
     echo "  --help               Display this help screen and exit."
     echo
 }
@@ -100,6 +102,7 @@ HAF_TABLESPACE_LOCATION="./haf_database_store"
 HAF_BINARY_DIR="../build"
 POSTGRES_HOST="/var/run/postgresql"
 POSTGRES_PORT=5432
+INSTALL_EXTENSION=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -117,6 +120,9 @@ while [ $# -gt 0 ]; do
         ;;
     --haf-database-store=*)
         HAF_TABLESPACE_LOCATION="${1#*=}"
+        ;;
+    --install-extension=*)
+        INSTALL_EXTENSION="${1#*=}"
         ;;
     --help)
         print_help
@@ -145,7 +151,9 @@ if [ "$EUID" -ne 0 ]
   exit 1
 fi
 
-install_extension "$HAF_BINARY_DIR"
+if [ "$INSTALL_EXTENSION" != "no" ]; then
+  install_extension "$HAF_BINARY_DIR"
+fi
 
 # Be sure PostgreSQL is started.
 /etc/init.d/postgresql start
