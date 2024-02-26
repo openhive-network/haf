@@ -13,6 +13,8 @@ class HiveOperation(TypeDecorator):
     impl = LargeBinary
     __visit_name__ = "operation"
 
+    cache_ok = True
+
     def result_processor(self, dialect, coltype):
         def process(value):
             return fr'{value}'

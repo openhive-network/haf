@@ -4,12 +4,14 @@ import os
 import subprocess
 import random
 import time
+import math
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
 from typing import Iterable
 import test_tools as tt
-from haf_local_tools.tables import EventsQueue
+from haf_local_tools.tables import EventsQueue, Blocks
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
@@ -225,3 +227,22 @@ def query_col(session: Session, sql: str, **kwargs) -> list[Any]:
 def query_all(session: Session, sql: str, **kwargs) -> list[Row]:
     """Perform a `SELECT n*m`"""
     return session.execute(sql, params=kwargs).fetchall()
+
+
+def wait_for_irreversible_in_database(
+        session,
+        block_num:  int,
+        *,
+        timeout: float | timedelta = math.inf,
+        poll_time: float = 1.0,
+):
+    def is_irreversible_in_database(sql_session, irr_block_num: int) -> bool:
+        blocks_query = sql_session.query(Blocks).filter(Blocks.num == irr_block_num)
+        return sql_session.query(blocks_query.exists()).scalar()
+
+    tt.Time.wait_for(
+        lambda: is_irreversible_in_database(session, block_num),
+        timeout=timeout,
+        timeout_error_message=f"Waited too long for irreversible block {block_num}",
+        poll_time=poll_time,
+    )
