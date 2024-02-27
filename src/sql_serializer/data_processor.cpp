@@ -128,7 +128,10 @@ void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
     return;
   }
   /// Set immediately data processing flag
-  _is_processing_data = true;
+  {
+    std::unique_lock<std::mutex> lk(_data_processing_mtx);
+    _is_processing_data = true;
+  }
 
   {
   dlog("Trying to trigger data processor: ${d}...", ("d", _description));
@@ -175,17 +178,21 @@ void data_processor::cancel()
 {
   ilog("Attempting to cancel execution of data processor: ${d}...", ("d", _description));
 
-  _cancel.store(true);
+  {
+    std::lock_guard<std::mutex> lk(_mtx);
+    _cancel.store(true);
+  }
+
   join();
 }
 
 void data_processor::join()
 {
-  _continue.store(false);
-
   {
     ilog("Trying to resume data processor: ${d}...", ("d", _description));
     std::lock_guard<std::mutex> lk(_mtx);
+     _continue.store(false);
+
     ilog("Data processor: ${d} resumed...", ("d", _description));
   }
   _cv.notify_one();
