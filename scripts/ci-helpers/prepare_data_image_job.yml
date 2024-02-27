@@ -45,6 +45,8 @@ include:
     - cp "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir/hived_uid.env" "$CI_PROJECT_DIR/hived_uid.env"
     - cp "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir/docker_entrypoint.log" "${CI_PROJECT_DIR}/docker_entrypoint.log"
     - ls -la "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir/"
+  after_script:
+    - rm "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/replay_running" -f  
 
   artifacts:
     reports:
