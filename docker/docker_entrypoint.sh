@@ -97,9 +97,14 @@ perform_instance_load() {
 }
 
 run_instance() {
+
+trap cleanup INT TERM
+trap cleanup EXIT
+
 {
 sudo --user=hived -En /bin/bash << EOF
 echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
+set -euo pipefail
 
 if [ ! -f "$DATADIR/config.ini" ]; then
   echo "No config file exists, creating a default config file"
@@ -156,6 +161,13 @@ echo "waiting for job finish: $job_pid."
 local status=0
 wait $job_pid || status=$?
 
+if [ $status -eq 130 ];
+then
+  echo "Ignoring SIGINT exit code: $status."
+  status=0 #ignore exitcode caught by handling SIGINT
+fi
+echo "Hived process finished execution: return status: ${status}."
+
 return ${status}
 }
 
@@ -195,13 +207,6 @@ create_conf_d_directory_if_necessary() {
     sudo -n chown -Rc postgres:postgres "/home/hived/datadir/haf_postgresql_conf.d"
   fi
 }
-
-
-# https://gist.github.com/CMCDragonkai/e2cde09b688170fb84268cafe7a2b509
-# If we do `trap cleanup INT QUIT TERM` directly, then using `exit` command anywhere
-# in the script will exit the script without triggering the cleanup
-trap 'exit' INT QUIT TERM
-trap cleanup EXIT
 
 # Be sure those directories exists and have right permissions
 sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
