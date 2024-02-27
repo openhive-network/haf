@@ -46,7 +46,6 @@ private:
 data_processor::data_processor( std::string description, std::string short_description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger) :
   _description(std::move(description)),
   _short_description(std::move(short_description)),
-  _cancel(false),
   _continue(true),
   _is_processing_data( false ),
   _total_processed_records(0),
@@ -88,9 +87,6 @@ data_processor::data_processor( std::string description, std::string short_descr
         dlog("${d} data processor consumed data - notifying trigger process...", ("d", _description));
         _cv.notify_one();
 
-        if(_cancel.load())
-          break;
-
         dlog("${d} data processor starts a data processing...", ("d", _description));
 
         {
@@ -123,10 +119,6 @@ data_processor::~data_processor()
 
 void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
 {
-  if ( _cancel.load() ) {
-    wlog( "Trying to trigger data processor: ${d} but its execution is already canceled. The data are ignored.", ("d", _description) );
-    return;
-  }
   /// Set immediately data processing flag
   {
     std::unique_lock<std::mutex> lk(_data_processing_mtx);
@@ -174,18 +166,6 @@ void data_processor::complete_data_processing()
   dlog("Data processor: ${d} finished processing data...", ("d", _description));
 }
 
-void data_processor::cancel()
-{
-  ilog("Attempting to cancel execution of data processor: ${d}...", ("d", _description));
-
-  {
-    std::lock_guard<std::mutex> lk(_mtx);
-    _cancel.store(true);
-  }
-
-  join();
-}
-
 void data_processor::join()
 {
   {
@@ -211,7 +191,6 @@ void
 data_processor::handle_exception( std::exception_ptr exception_ptr ) {
   try {
     if ( exception_ptr ) {
-      _cancel.store(true);
       _continue.store(false);
       std::rethrow_exception( exception_ptr );
     }

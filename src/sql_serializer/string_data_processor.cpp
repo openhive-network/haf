@@ -33,10 +33,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void
-  string_data_processor::cancel() {
-    m_wrapped_processor->cancel();
-  }
-  void
   string_data_processor::join() {
     m_wrapped_processor->join();
   }

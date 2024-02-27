@@ -28,10 +28,6 @@ queries_commit_data_processor::complete_data_processing() {
 }
 
 void
-queries_commit_data_processor::cancel() {
-  m_wrapped_processor->cancel();
-}
-void
 queries_commit_data_processor::join() {
   m_wrapped_processor->join();
 }

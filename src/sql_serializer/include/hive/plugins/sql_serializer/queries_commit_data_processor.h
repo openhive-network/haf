@@ -26,7 +26,6 @@ namespace hive::plugins::sql_serializer {
       void trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum);
       /// Allows to hold execution of calling thread, until data processing thread will consume data and starts awaiting for another trigger call.
       void complete_data_processing();
-      void cancel();
       void join();
       void only_report_batch_finished( uint32_t _block_num );
     private:
