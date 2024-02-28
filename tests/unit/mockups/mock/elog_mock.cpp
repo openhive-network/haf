@@ -64,4 +64,9 @@ int geterrcode(void)
   return last_errcode;
 }
 
+void FlushErrorState(void)
+{
+  // do nothing
+}
+
 } // extern "C"
