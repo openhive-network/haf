@@ -11,7 +11,7 @@ from typing import Any, TYPE_CHECKING
 
 from typing import Iterable
 import test_tools as tt
-from haf_local_tools.tables import EventsQueue, Blocks
+from haf_local_tools.tables import EventsQueue, Blocks, Transactions
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
@@ -246,3 +246,15 @@ def wait_for_irreversible_in_database(
         timeout_error_message=f"Waited too long for irreversible block {block_num}",
         poll_time=poll_time,
     )
+
+
+def get_first_block_with_transaction(session, range_of_blocks: Iterable[int]) -> int:
+    for _cnt in range_of_blocks:
+        tt.logger.info(f'Try to find a transaction in {_cnt} block')
+
+        trx_found = session.query(Transactions).filter(Transactions.block_num == _cnt).one_or_none()
+        if trx_found is not None:
+            tt.logger.info(f'A transaction found in {_cnt} block')
+            return _cnt
+        tt.logger.info(f'A transaction not found in {_cnt} block')
+    raise Exception(f'Transaction not found in blocks {range_of_blocks}')
