@@ -3,7 +3,12 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 import test_tools as tt
 
-from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress, wait_for_irreversible_in_database
+from haf_local_tools import (
+    get_head_block,
+    get_irreversible_block,
+    wait_for_irreversible_progress,
+    wait_for_irreversible_in_database,
+    get_first_block_with_transaction)
 from haf_local_tools.tables import Blocks, BlocksView, Transactions, Operations
 
 
@@ -37,28 +42,20 @@ def test_live_sync(prepared_networks_and_database_12_8):
 
     # THEN
     # nr_blocks - number of blocks in which potentially transaction was inserted
+    # value was determined through observation during CI testing
     nr_blocks = 2
     expected_dumped_irreversible_block_num = transaction_block_num + nr_blocks
     wait_for_irreversible_in_database(session, expected_dumped_irreversible_block_num)
     trx_found = None
 
-    #Explanation of the below loop.
     #Sometimes pushing a transaction into a node is delayed, especially when the node is not ready at the moment (see: `Unable to acquire database lock`)
     #As a result the transaction (here with `transfer` operation) should be found in <transaction_block_num; transaction_block_num + nr_blocks) range of blocks
     #Solution:
     #Try to find the transaction in 'nr_blocks' blocks
 
-    for _cnt in range(nr_blocks):
-        tt.logger.info(f'Try to find a transaction in {transaction_block_num} block')
-
-        trx_found = session.query(Transactions).filter(Transactions.block_num == transaction_block_num).one_or_none()
-        if trx_found is not None:
-            tt.logger.info(f'A transaction found in {transaction_block_num} block')
-            break
-        tt.logger.info(f'A transaction not found in {transaction_block_num} block')
-        transaction_block_num += 1
-
-    assert trx_found is not None, "A desired transaction hasn't been found"
+    transaction_block_num = get_first_block_with_transaction(
+        session
+        , range(transaction_block_num, transaction_block_num + nr_blocks))
 
     blks = session.query(Blocks).filter(Blocks.num <= expected_dumped_irreversible_block_num).order_by(Blocks.num).all()
     block_nums = [block.num for block in blks]

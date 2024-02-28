@@ -3,7 +3,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 import test_tools as tt
 
-from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress, wait_for_irreversible_in_database
+from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress, wait_for_irreversible_in_database, get_first_block_with_transaction
 from haf_local_tools.tables import AccountsView, Blocks, BlocksView, Transactions, Operations
 
 
@@ -35,16 +35,19 @@ def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
     wallet = tt.Wallet(attach_to=witness_node)
     wallet.api.transfer('initminer', 'initminer', tt.Asset.Test(1000), 'dummy transfer operation')
     transaction_block_num, _ = display_blocks_information(node_under_test)
+    # nr_blocks - number of blocks in which potentially transaction was inserted
+    # value was determined through observation during CI testing
+    nr_blocks = 2
+    expected_dumped_irreversible_block_num = transaction_block_num + nr_blocks
 
     # THEN
     # an irreversible block with transaction shall be dumped
-    wait_for_irreversible_in_database(session, transaction_block_num)
+    wait_for_irreversible_in_database(session, expected_dumped_irreversible_block_num)
     blks_in_database = session.query(Blocks).order_by(Blocks.num).all()
     block_nums_in_database = [block.num for block in blks_in_database]
     head_block = get_head_block(node_under_test)
 
-    assert head_block >= transaction_block_num, "Head block lower than irreversible block"
-
+    assert head_block >= expected_dumped_irreversible_block_num, "Head block lower than irreversible block"
 
     # We have 109 irreversible blocks already synced, and now we can have two situations:
     # 1. hived will send end_of_syncing notification->serializer will move from START to LIVE state
@@ -67,7 +70,14 @@ def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
     account_count = session.query(AccountsView).count()
     assert account_count == 27
 
-    session.query(Transactions).filter(Transactions.block_num == transaction_block_num).one()
+    #Sometimes pushing a transaction into a node is delayed, especially when the node is not ready at the moment (see: `Unable to acquire database lock`)
+    #As a result the transaction (here with `transfer` operation) should be found in <transaction_block_num; transaction_block_num + nr_blocks) range of blocks
+    #Solution:
+    #Try to find the transaction in 'nr_blocks' blocks
+
+    transaction_block_num = get_first_block_with_transaction(
+      session
+      , range(transaction_block_num, transaction_block_num + nr_blocks))
 
     ops = session.query(Operations).add_columns(cast(Operations.body_binary, JSONB).label('body'), Operations.block_num).filter(Operations.block_num == transaction_block_num).all()
     types = [op.body['type'] for op in ops]
