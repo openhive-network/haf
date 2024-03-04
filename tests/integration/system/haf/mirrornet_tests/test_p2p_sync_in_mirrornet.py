@@ -15,6 +15,9 @@ from haf_local_tools.system.haf.mirrornet.constants import (
     TRANSACTION_IN_1092_BLOCK,
     TRANSACTION_IN_999892_BLOCK,
 )
+from haf_local_tools import (
+    wait_for_block_in_database,
+)
 
 
 @pytest.mark.mirrornet
@@ -54,8 +57,10 @@ def test_p2p_sync(
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID],
     )
-    haf_node.close() #wait for node to flush wal and close
+
+    wait_for_block_in_database(haf_node.session, 1000000)
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_1092_BLOCK)
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_999892_BLOCK)
-    assert_are_blocks_sync_with_haf_db(haf_node, 1000000)
     assert_are_indexes_restored(haf_node)
+
+    haf_node.close() #wait for node to flush wal and close

@@ -11,7 +11,7 @@ from typing import Any, TYPE_CHECKING
 
 from typing import Iterable
 import test_tools as tt
-from haf_local_tools.tables import EventsQueue, Blocks, Transactions
+from haf_local_tools.tables import EventsQueue, Blocks, Transactions, BlocksView
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
@@ -244,6 +244,25 @@ def wait_for_irreversible_in_database(
         lambda: is_irreversible_in_database(session, block_num),
         timeout=timeout,
         timeout_error_message=f"Waited too long for irreversible block {block_num}",
+        poll_time=poll_time,
+    )
+
+
+def wait_for_block_in_database(
+            session,
+            block_num:  int,
+            *,
+            timeout: float | timedelta = math.inf,
+            poll_time: float = 1.0,
+):
+    def is_block_in_database(sql_session, num: int) -> bool:
+        blocks_query = sql_session.query(BlocksView).filter(BlocksView.num == num)
+        return sql_session.query(blocks_query.exists()).scalar()
+
+    tt.Time.wait_for(
+        lambda: is_block_in_database(session, block_num),
+        timeout=timeout,
+        timeout_error_message=f"Waited too long for block {block_num}",
         poll_time=poll_time,
     )
 
