@@ -21,34 +21,28 @@ def test_massive_sync(
 
     mirrornet_witness_node.run(
         load_snapshot_from=snapshot_path,
-        time_offset=block_log_5m.get_head_block_time(
-            serialize=True, serialize_format=tt.TimeFormats.TIME_OFFSET_FORMAT
-        ),
+        time_control=tt.StartTimeControl(start_time="head_block_time"),
         wait_for_live=True,
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],
     )
 
-    time_offset = tt.Time.serialize(
-        mirrornet_witness_node.get_head_block_time(), format_=tt.TimeFormats.TIME_OFFSET_FORMAT
-    )
+    head_block_time = mirrornet_witness_node.get_head_block_time()
 
     connect_nodes(mirrornet_witness_node, haf_node)
 
     haf_node.run(
         replay_from=block_log_5m,
-        time_offset=time_offset,
+        time_control=tt.StartTimeControl(start_time=head_block_time),
         exit_before_synchronization=True,
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID],
     )
 
-    time_offset = tt.Time.serialize(
-        mirrornet_witness_node.get_head_block_time(), format_=tt.TimeFormats.TIME_OFFSET_FORMAT
-    )
+    head_block_time = mirrornet_witness_node.get_head_block_time()
 
     haf_node.run(
-        time_offset=time_offset,
+        time_control=tt.StartTimeControl(start_time=head_block_time),
         wait_for_live=True,
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID],
