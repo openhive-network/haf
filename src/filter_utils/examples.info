@@ -18,7 +18,7 @@ Results:
 
 *******************************************
 Problem:
-    Find all transfers <1.000 HIVE; 1.0000 HIVE) for every user with a name starting from 'd'.
+    Find all transfers <1.000 HIVE; 10.000 HIVE) for every user with a name starting from 'd'.
 
 Command line:
     ./bin/op_body_filter --op-type "transfer_operation" --op-body-regex '(\"to\":\"d)(.*)(\"amount\":\")([0-9]{4}\")' --ops-file "../src/filter_utils/3286849.json"
@@ -45,7 +45,7 @@ Results:
 Block: 5771683
 
 Problem:
-    Find operations where accounts {xiaokongcom, jfelton5} appear in  a "followings" field during a custom JSON operation (follow_operation).
+    Find operations where accounts {xiaokongcom, jfelton5} appear in a "followings" field during a custom JSON operation (follow_operation).
 
 Command line:
     ./bin/op_body_filter --op-type "custom_json_operation" --op-body-regex '(\"id\")(\s*:\s*)(\"follow\")(\s*,\s*)(\"json\")(.*)(\\\"following)(.{1}\")(\s*:\s*)(.{1}\")((xiaokongcom)|(jfelton5))(.{1}\")' --ops-file "../src/filter_utils/5771683.json"

@@ -11,6 +11,7 @@ export COMPRESS_BLOCK_LOG_PATH="/home/hived/bin/compress_block_log"
 export BLOCK_LOG_UTIL_PATH="/home/hived/bin/block_log_util"
 export GET_DEV_KEY_PATH="/home/hived/bin/get_dev_key"
 export CLI_WALLET_PATH="/home/hived/bin/cli_wallet"
+export OP_BODY_FILTER_PATH="${HAF_SOURCE_DIR}/../build/bin/op_body_filter"
 
 export DB_NAME=haf_block_log
 export DB_ADMIN="haf_admin"
