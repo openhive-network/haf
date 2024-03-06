@@ -387,7 +387,6 @@ BEGIN
             SET
                 current_block_num = __next_event_block_num
               , fork_id = __fork_id
-              , last_active_at = NOW()
             WHERE name = _context;
             RETURN NULL;
         WHEN 'NEW_IRREVERSIBLE' THEN
@@ -399,7 +398,6 @@ BEGIN
             IF _context_state.next_event_block_num = ( _context_state.current_block_num + 1 ) THEN
                 UPDATE hive.contexts
                 SET current_block_num = _context_state.next_event_block_num
-                  , last_active_at = NOW()
                 WHERE name = _context;
 
                 __result.first_block = _context_state.next_event_block_num;
@@ -425,18 +423,11 @@ BEGIN
         -- There is no new and expected block, needs to wait for a new block
         __result.first_block = -1;
         __result.last_block = -2;
-
-        -- to prevent detach applications when for some reason HAF stuck for a long time ( i.e. indexes are rebuild )
-        UPDATE hive.contexts
-        SET last_active_at = NOW()
-        WHERE name = _context;
-
         RETURN __result;
     END IF;
 
     UPDATE hive.contexts
     SET current_block_num = __next_block_to_process
-      , last_active_at = NOW()
     WHERE name = _context;
 
     __result.first_block = __next_block_to_process;
@@ -475,7 +466,6 @@ BEGIN
 
     UPDATE hive.contexts
     SET current_block_num = __next_block_to_process
-      , last_active_at = NOW()
     WHERE name = _context;
 
     __result.first_block = __next_block_to_process;
