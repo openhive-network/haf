@@ -213,6 +213,8 @@ BEGIN
         , hive.create_account_operations_view(  context.* )
         , hive.create_applied_hardforks_view(  context.* )
     FROM unnest( _contexts ) as context;
+
+    RAISE WARNING 'Contexts were % attached on %', _contexts, NOW();
 END;
 $BODY$
 ;
@@ -270,6 +272,8 @@ BEGIN
         , hive.create_all_irreversible_account_operations_view( context.* )
         , hive.create_all_irreversible_applied_hardforks_view( context.* )
     FROM unnest( _contexts ) as context;
+
+    RAISE WARNING 'Contexts were % detached on %', _contexts, NOW();
 END;
 $BODY$
 ;
