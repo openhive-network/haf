@@ -56,6 +56,9 @@ BEGIN
                 CONTINUE;
             END IF;
 
+            RAISE NOTICE 'Live processing block %', __next_block_range.first_block;
+            ASSERT EXISTS( SELECT 1 FROM hive.test_blocks_view WHERE num = __next_block_range.first_block ), 'No data for expected block';
+
             IF __next_block_range.last_block % 50 = 0 THEN
                 RAISE NOTICE 'App is waiting for bunch of blocks...';
                 PERFORM pg_sleep( 1 ); -- wait 1;
