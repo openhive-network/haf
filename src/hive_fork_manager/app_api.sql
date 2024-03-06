@@ -138,6 +138,11 @@ BEGIN
         RAISE EXCEPTION 'Detached context cannot be moved';
     END IF;
 
+    -- prevent auto-detaching the context when app is actively asking for new blocks
+    UPDATE hive.contexts
+    SET last_active_at = NOW()
+    WHERE name =ANY(_context_names);
+
     -- if there there is  registered table for given context
     IF hive.app_are_forking( _context_names )
     THEN
