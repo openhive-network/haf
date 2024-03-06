@@ -416,6 +416,7 @@ DECLARE
   __contexts hive.context_name[];
   __ctx TEXT;
   __now TIMESTAMP WITHOUT TIME ZONE := NOW();
+  __current_block_before_detach INT;
 BEGIN
   SELECT ARRAY_AGG(c.name) INTO __contexts
   FROM hive.contexts c
@@ -428,7 +429,20 @@ BEGIN
     LOOP
       BEGIN
       RAISE WARNING 'Attempting to automatically detach application context: %', __ctx;
+      SELECT hc.current_block_num INTO __current_block_before_detach
+      FROM hive.contexts hc WHERE hc.name = __ctx;
       PERFORM hive.app_context_detach(__ctx);
+      -- Detach functionality is specifically designed for use within the application's main loop.
+      -- It automatically steps back by one block, which is previously incremented by 'app_next_block.'
+      -- This design removes from applications obligation managing the 'current_block' explicitly.
+      -- However, it's crucial to note that auto-detach is initiated outside the main application loop,
+      -- and as such, it must refrain from modifying the 'current_block.', otherwise
+      -- it can lead to scenarios where re-attached applications will process
+      -- the same block twice after being auto-detached and subsequently restarted.
+
+      UPDATE hive.contexts
+      SET current_block_num = __current_block_before_detach
+      WHERE name = __ctx;
       RAISE WARNING 'Done automatic detaching of application context: %', __ctx;
       EXCEPTION
         WHEN OTHERS THEN
