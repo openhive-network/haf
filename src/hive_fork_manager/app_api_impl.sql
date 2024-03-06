@@ -425,6 +425,12 @@ BEGIN
         -- There is no new and expected block, needs to wait for a new block
         __result.first_block = -1;
         __result.last_block = -2;
+
+        -- to prevent detach applications when for some reason HAF stuck for a long time ( i.e. indexes are rebuild )
+        UPDATE hive.contexts
+        SET last_active_at = NOW()
+        WHERE name = _context;
+
         RETURN __result;
     END IF;
 
