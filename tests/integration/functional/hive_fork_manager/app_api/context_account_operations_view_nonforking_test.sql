@@ -4,7 +4,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context' );
+    PERFORM hive.app_create_context( 'context', FALSE );
 
     INSERT INTO hive.operation_types
     VALUES ( 0, 'OP 0', FALSE )
