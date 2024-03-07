@@ -31,6 +31,7 @@ DECLARE
     __detach_limit INT := 30;
     __next_block_range hive.blocks_range;
     __wait_for_block hive.blocks_range;
+    __irreversible_block INT;
 BEGIN
     PERFORM hive.app_create_context( 'test' );
 
@@ -56,7 +57,9 @@ BEGIN
                 CONTINUE;
             END IF;
 
+            SELECT irreversible_block INTO __irreversible_block FROM hive.contexts WHERE name = 'test';
             RAISE NOTICE 'App current_block_num %', hive.app_get_current_block_num( 'test' );
+            RAISE NOTICE 'App irreversible_block_num %', __irreversible_block;
             RAISE NOTICE 'Live processing block %', __next_block_range.first_block;
             ASSERT EXISTS( SELECT 1 FROM hive.test_blocks_view WHERE num = __next_block_range.first_block ), 'No data for expected block';
 
