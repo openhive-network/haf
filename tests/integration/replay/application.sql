@@ -32,6 +32,9 @@ DECLARE
     __next_block_range hive.blocks_range;
     __wait_for_block hive.blocks_range;
     __irreversible_block INT;
+    __head_fork_id INT;
+    __app_fork_id INT;
+    __current_event_id INT;
 BEGIN
     PERFORM hive.app_create_context( 'test' );
 
@@ -50,14 +53,22 @@ BEGIN
             END IF;
 
             IF __next_block_range.last_block - __next_block_range.first_block > __detach_limit THEN
+                SELECT events_id INTO __current_event_id FROM hive.contexts WHERE name = 'test';
                 RAISE NOTICE 'App is detaching and attaching its context';
+                RAISE NOTICE 'App event id %', __current_event_id;
+                RAISE NOTICE 'App before detach current_block_num %', hive.app_get_current_block_num( 'test' );
                 PERFORM hive.app_context_detach( ARRAY[ 'test' ] );
                 PERFORM hive.app_set_current_block_num( ARRAY[ 'test' ], __next_block_range.last_block );
                 CALL hive.appproc_context_attach( ARRAY[ 'test' ] );
+                RAISE NOTICE 'App after attach current_block_num %', hive.app_get_current_block_num( 'test' );
                 CONTINUE;
             END IF;
 
             SELECT irreversible_block INTO __irreversible_block FROM hive.contexts WHERE name = 'test';
+            SELECT id INTO __head_fork_id FROM hive.fork ORDER BY id DESC LIMIT 1;
+            SELECT fork_id INTO __app_fork_id FROM hive.contexts WHERE name = 'test';
+            RAISE NOTICE 'Max fork id %', __head_fork_id;
+            RAISE NOTICE 'App fork id %', __app_fork_id;
             RAISE NOTICE 'App current_block_num %', hive.app_get_current_block_num( 'test' );
             RAISE NOTICE 'App irreversible_block_num %', __irreversible_block;
             RAISE NOTICE 'Live processing block %', __next_block_range.first_block;
