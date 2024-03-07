@@ -53,22 +53,35 @@ DECLARE
     __newest_irreversible_block_num hive.blocks.num%TYPE;
     __current_context_block_num hive.blocks.num%TYPE;
     __current_context_irreversible_block hive.blocks.num%TYPE;
+    __current_fork_id hive.fork.id%TYPE;
     __lead_context hive.context_name := _contexts[ 1 ];
+    __first_fork_ahead hive.events_queue.id%TYPE;
     __result hive.events_queue%ROWTYPE;
 BEGIN
     SELECT hc.events_id
          , hc.current_block_num
          , hc.irreversible_block
-    INTO __curent_events_id, __current_context_block_num, __current_context_irreversible_block
+         , hc.fork_id
+    INTO __curent_events_id, __current_context_block_num, __current_context_irreversible_block, __current_fork_id
     FROM hive.contexts hc WHERE hc.name = __lead_context;
     SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
+
+    SELECT heq.id INTO __first_fork_ahead
+    FROM hive.events_queue heq
+    WHERE heq.event = 'BACK_FROM_FORK'
+    AND heq.id >  __curent_events_id
+    AND heq.block_num > __current_fork_id
+    ORDER BY heq.id LIMIT 1;
+
     IF __current_context_block_num <= __current_context_irreversible_block  AND  __newest_irreversible_block_num IS NOT NULL THEN
         -- here we are sure that context only processing irreversible blocks, we can continue
         -- processing irreversible blocks or find next event after irreversible
         SELECT * INTO  __result
         FROM hive.events_queue heq
-        WHERE heq.block_num > __newest_irreversible_block_num
-              AND heq.event != 'BACK_FROM_FORK'
+        WHERE (
+                heq.block_num > __newest_irreversible_block_num
+                OR ( __first_fork_ahead IS NOT NULL and heq.id = __first_fork_ahead )
+              )
               AND heq.id >= __curent_events_id
               AND heq.id != hive.unreachable_event_id()
         ORDER BY heq.id LIMIT 1;

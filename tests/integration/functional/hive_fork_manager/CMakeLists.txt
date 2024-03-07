@@ -185,6 +185,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_next_block_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_next_block_process_new_block_event_2_contexts.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_next_block_process_BFF_event.sql )
+ ADD_SQL_FUNCTIONAL_TEST( app_api/app_next_block_process_BFF_wrong_id.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_next_block_process_BFF_event_and_other.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_next_block_process_BFF_event.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_next_block_process_BFF_event_2_contexts.sql )
