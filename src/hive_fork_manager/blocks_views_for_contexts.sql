@@ -22,9 +22,7 @@ EXECUTE format(
             (SELECT num FROM hive.blocks_reversible ORDER BY num ASC LIMIT 1), -- thanks to this, there will be no duplicates
             hc.current_block_num
         ) AS min_block,
-        hc.current_block_num > hc.irreversible_block and exists (SELECT NULL::text FROM hive.registered_tables hrt
-                                              WHERE hrt.context_id = hc.id)
-        AS reversible_range
+        hc.current_block_num > hc.irreversible_block AND hc.is_forking AS reversible_range
         FROM hive.contexts hc
         WHERE hc.name::text = ''%s''::text
         limit 1
