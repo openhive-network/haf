@@ -56,6 +56,7 @@ BEGIN
                 CONTINUE;
             END IF;
 
+            RAISE NOTICE 'App current_block_num %', hive.app_get_current_block_num( 'test' );
             RAISE NOTICE 'Live processing block %', __next_block_range.first_block;
             ASSERT EXISTS( SELECT 1 FROM hive.test_blocks_view WHERE num = __next_block_range.first_block ), 'No data for expected block';
 
