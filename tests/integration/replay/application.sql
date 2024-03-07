@@ -61,6 +61,7 @@ BEGIN
             RAISE NOTICE 'App current_block_num %', hive.app_get_current_block_num( 'test' );
             RAISE NOTICE 'App irreversible_block_num %', __irreversible_block;
             RAISE NOTICE 'Live processing block %', __next_block_range.first_block;
+            ASSERT EXISTS( SELECT 1 FROM hive.blocks_view WHERE num = __next_block_range.first_block ), 'No data for expected block in HAF HEAD BLOCK view';
             ASSERT EXISTS( SELECT 1 FROM hive.test_blocks_view WHERE num = __next_block_range.first_block ), 'No data for expected block';
 
             IF __next_block_range.last_block % 50 = 0 THEN
