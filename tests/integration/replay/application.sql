@@ -34,6 +34,7 @@ DECLARE
     __irreversible_block INT;
     __head_fork_id INT;
     __app_fork_id INT;
+    __head_block_fork_id INT;
 BEGIN
     PERFORM hive.app_create_context( 'test' );
 
@@ -62,6 +63,8 @@ BEGIN
             SELECT irreversible_block INTO __irreversible_block FROM hive.contexts WHERE name = 'test';
             SELECT id INTO __head_fork_id FROM hive.fork ORDER BY id DESC LIMIT 1;
             SELECT fork_id INTO __app_fork_id FROM hive.contexts WHERE name = 'test';
+            SELECT fork_id INTO __head_block_fork_id FROM hive.blocks_reversible WHERE num = hive.app_get_current_block_num( 'test' );
+            RAISE NOTICE 'Fork id % for current block', __head_block_fork_id;
             RAISE NOTICE 'Max fork id %', __head_fork_id;
             RAISE NOTICE 'App fork id %', __app_fork_id;
             RAISE NOTICE 'App current_block_num %', hive.app_get_current_block_num( 'test' );
