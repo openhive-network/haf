@@ -57,6 +57,7 @@ DECLARE
     __lead_context hive.context_name := _contexts[ 1 ];
     __first_fork_ahead hive.events_queue.id%TYPE;
     __result hive.events_queue%ROWTYPE;
+    __max_event_id_to_search hive.events_queue.id%TYPE;
 BEGIN
     SELECT hc.events_id
          , hc.current_block_num
@@ -66,11 +67,23 @@ BEGIN
     FROM hive.contexts hc WHERE hc.name = __lead_context;
     SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
 
+    -- hived can at any moment commit new events
+    -- because of read committed, we need to be ready such situations
+    -- and limit possible events id to max. from the moment of starting the function
+    -- newly committed events will be process in the next  iteration of an application loop
+    SELECT heq.id INTO __max_event_id_to_search
+    FROM hive.events_queue heq
+    WHERE heq.id != hive.unreachable_event_id()
+    ORDER BY heq.id DESC LIMIT 1;
+
+    ASSERT __max_event_id_to_search IS NOT NULL, 'Lack of the event 0, it has to be in the queue';
+
     SELECT heq.id INTO __first_fork_ahead
     FROM hive.events_queue heq
     WHERE heq.event = 'BACK_FROM_FORK'
     AND heq.id >  __curent_events_id
     AND heq.block_num > __current_fork_id
+    AND heq.id <= __max_event_id_to_search
     ORDER BY heq.id LIMIT 1;
 
     IF __current_context_block_num <= __current_context_irreversible_block  AND  __newest_irreversible_block_num IS NOT NULL THEN
@@ -83,7 +96,7 @@ BEGIN
                 OR ( __first_fork_ahead IS NOT NULL and heq.id = __first_fork_ahead )
               )
               AND heq.id >= __curent_events_id
-              AND heq.id != hive.unreachable_event_id()
+              AND heq.id <= __max_event_id_to_search
         ORDER BY heq.id LIMIT 1;
 
         IF __result IS NULL THEN
@@ -93,7 +106,7 @@ BEGIN
             FROM hive.events_queue heq
             WHERE heq.block_num = __newest_irreversible_block_num
               AND ( heq.event = 'MASSIVE_SYNC' OR heq.event = 'NEW_IRREVERSIBLE' )
-              AND heq.id != hive.unreachable_event_id()
+              AND heq.id <= __max_event_id_to_search
             ORDER BY heq.id LIMIT 1;
 
             IF __result IS NOT NULL AND __result.id = __curent_events_id THEN
@@ -105,7 +118,7 @@ BEGIN
         ---- find next event
         SELECT * INTO __result
         FROM hive.events_queue heq
-        WHERE heq.id > __curent_events_id AND heq.id != hive.unreachable_event_id()
+        WHERE heq.id > __curent_events_id AND heq.id <= __max_event_id_to_search
         ORDER BY id LIMIT 1;
     END IF;
 
