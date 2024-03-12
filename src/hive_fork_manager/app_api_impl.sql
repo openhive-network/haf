@@ -55,9 +55,9 @@ DECLARE
     __current_context_irreversible_block hive.blocks.num%TYPE;
     __current_fork_id hive.fork.id%TYPE;
     __lead_context hive.context_name := _contexts[ 1 ];
-    __first_fork_ahead hive.events_queue.id%TYPE;
     __result hive.events_queue%ROWTYPE;
     __max_event_id_to_search hive.events_queue.id%TYPE;
+    __max_fork_id_in_range hive.fork.id%TYPE;
 BEGIN
     SELECT hc.events_id
          , hc.current_block_num
@@ -78,23 +78,23 @@ BEGIN
 
     ASSERT __max_event_id_to_search IS NOT NULL, 'Lack of the event 0, it has to be in the queue';
 
-    SELECT heq.id INTO __first_fork_ahead
-    FROM hive.events_queue heq
-    WHERE heq.event = 'BACK_FROM_FORK'
-    AND heq.id >  __curent_events_id
-    AND heq.block_num > __current_fork_id
-    AND heq.id <= __max_event_id_to_search
-    ORDER BY heq.id LIMIT 1;
-
     IF __current_context_block_num <= __current_context_irreversible_block  AND  __newest_irreversible_block_num IS NOT NULL THEN
         -- here we are sure that context only processing irreversible blocks, we can continue
         -- processing irreversible blocks or find next event after irreversible
+        -- first of all update fork id, for forks in already irreversible block range
+        SELECT MAX(hf.id) INTO __max_fork_id_in_range
+        FROM hive.fork hf
+        WHERE hf.block_num <= __newest_irreversible_block_num
+        AND hf.id > __current_fork_id;
+
+        UPDATE hive.contexts hc
+        SET fork_id = COALESCE( __max_fork_id_in_range, fork_id )
+        WHERE hc.name = ANY( _contexts );
+
         SELECT * INTO  __result
         FROM hive.events_queue heq
-        WHERE (
-                heq.block_num > __newest_irreversible_block_num
-                OR ( __first_fork_ahead IS NOT NULL and heq.id = __first_fork_ahead )
-              )
+        WHERE heq.block_num > __newest_irreversible_block_num
+              AND heq.event != 'BACK_FROM_FORK'
               AND heq.id >= __curent_events_id
               AND heq.id <= __max_event_id_to_search
         ORDER BY heq.id LIMIT 1;
