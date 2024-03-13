@@ -177,6 +177,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.check_owner( _context hive.context_name, _context_owner TEXT )
     , hive.can_impersonate(_role_to_check IN TEXT, _required_role IN TEXT)
     , hive.unreachable_event_id()
+    , hive.max_block_num()
+    , hive.max_fork_id()
     , hive.initialize_extension_data()
     , hive.ignore_registered_table_edition( pg_ddl_command )
     , hive.get_wal_sequence_number()
