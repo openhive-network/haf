@@ -4,6 +4,8 @@ import test_tools as tt
 
 from haf_local_tools import wait_for_irreversible_progress, get_irreversible_block, create_app
 from haf_local_tools.tables import BlocksReversible, IrreversibleData
+from haf_local_tools import wait_for_irreversible_in_database
+
 
 
 #replay_all_nodes==false and TIMEOUT==300s therefore START_TEST_BLOCK has to be less than 100 blocks 
@@ -86,8 +88,10 @@ def test_application_broken(prepared_networks_and_database_12_8_without_block_lo
     ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hive.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()
     tt.logger.info(f'ctx_stats-after-waiting: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
 
+    wait_for_irreversible_in_database(session, START_TEST_BLOCK+3)
+
     # application is not updated (=broken)
-    wait_for_irreversible_progress(node_under_test, START_TEST_BLOCK+3)
+    #wait_for_irreversible_progress(node_under_test, START_TEST_BLOCK+3)
 
     # now in first move the app will update its irreversible
     irreversible_block = get_irreversible_block(node_under_test)
@@ -115,11 +119,15 @@ def test_application_broken(prepared_networks_and_database_12_8_without_block_lo
     assert irreversible_block == haf_irreversible.consistent_block
     assert irreversible_block == context_irreversible_block
 
+    # now when the app was moved forward, hived will be able to remove reversible data with next new irreversible event
+    wait_for_irreversible_in_database(session, START_TEST_BLOCK+4)
+
     blks = session.query(BlocksReversible).order_by(BlocksReversible.num).all()
     if len(blks) == 0:
         tt.logger.info(f'OBI can make an immediate irreversible block, so all reversible data can be cleared out')
     else:
         block_min = min([block.num for block in blks])
         tt.logger.info(f'min of blocks_reversible is {block_min}')
-        assert irreversible_block == block_min
+        # all reversible blocks not needed by the app shall be already moved to irreversible
+        assert context_irreversible_block < block_min
 
