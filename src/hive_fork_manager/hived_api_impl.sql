@@ -243,20 +243,49 @@ CREATE OR REPLACE FUNCTION hive.remove_obsolete_reversible_data( _new_irreversib
     VOLATILE
 AS
 $BODY$
+DECLARE
+    -- up limit
+    __max_fork_id hive.fork.id%TYPE;
+    -- down limit
+    __min_ctx_fork_id hive.fork.id%TYPE := hive.max_fork_id();
+    __lowest_irreversible_block hive.blocks.num%TYPE := hive.max_block_num();
+    __max_block_num hive.blocks.num%TYPE;
 BEGIN
+    SELECT max(hf.id) INTO __max_fork_id
+    FROM hive.fork hf;
+
+    SELECT COALESCE( min(hc.fork_id), __min_ctx_fork_id )
+         , COALESCE( min(irreversible_block), __lowest_irreversible_block )
+    INTO __min_ctx_fork_id, __lowest_irreversible_block
+    FROM hive.contexts hc
+    WHERE hc.is_attached = TRUE
+    AND hc.is_forking = TRUE;
+
+    __max_block_num := LEAST(__lowest_irreversible_block, _new_irreversible_block);
+
+    -- wsrod w kontekstów ktore chodza bo reversible (cb > irr)
+    -- znajdz najmniejszy fork i cb (order by fork_id, current_block_num), to jest
+    -- dolne ograniczenie usówania danych reversible
+    -- gorne ograniczenie to biezacy fork i irrevresible block
+
+    RAISE INFO 'MICKIEWICZ __max_fork_id % __min_ctx_fork_id % __lowest_irreversible_block % __max_block_num %',
+        __max_fork_id, __min_ctx_fork_id, __lowest_irreversible_block, __max_block_num;
+
     DELETE FROM hive.account_operations_reversible har
     USING hive.operations_reversible hor
     WHERE
             har.operation_id = hor.id
         AND har.fork_id = hor.fork_id
-        AND hor.block_num <= _new_irreversible_block
+        AND ( hor.block_num <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
     ;
 
     DELETE FROM hive.applied_hardforks_reversible hjr
-    WHERE hjr.block_num <= _new_irreversible_block;
+    WHERE hjr.block_num <= __max_block_num OR hjr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    ;
 
     DELETE FROM hive.operations_reversible hor
-    WHERE hor.block_num <= _new_irreversible_block;
+    WHERE hor.block_num <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    ;
 
 
     DELETE FROM hive.transactions_multisig_reversible htmr
@@ -264,17 +293,20 @@ BEGIN
     WHERE
             htr.fork_id = htmr.fork_id
         AND htr.trx_hash = htmr.trx_hash
-        AND htr.block_num <= _new_irreversible_block
+        AND ( htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
     ;
 
     DELETE FROM hive.transactions_reversible htr
-    WHERE htr.block_num <= _new_irreversible_block;
+    WHERE  htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    ;
 
     DELETE FROM hive.accounts_reversible har
-    WHERE har.block_num <= _new_irreversible_block;
+    WHERE har.block_num <= __max_block_num OR har.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    ;
 
     DELETE FROM hive.blocks_reversible hbr
-    WHERE hbr.num <= _new_irreversible_block;
+    WHERE hbr.num <= __max_block_num OR hbr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    ;
 END;
 $BODY$
 ;

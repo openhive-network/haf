@@ -165,7 +165,7 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.blocks_reversible
         EXCEPT SELECT * FROM ( VALUES
-              ( 10, '\xBADD11', '\xCAFE11', '2016-06-22 19:10:41-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
+              ( 7, '\xBADD70'::bytea, '\xCAFE70'::bytea, '2016-06-22 19:10:27-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
             , ( 8, '\xBADD80'::bytea, '\xCAFE80'::bytea, '2016-06-22 19:10:28-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
             , ( 9, '\xBADD90'::bytea, '\xCAFE90'::bytea, '2016-06-22 19:10:29-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
             , ( 8, '\xBADD80'::bytea, '\xCAFE80'::bytea, '2016-06-22 19:10:30-07'::timestamp, 7, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
@@ -179,7 +179,7 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT block_num, name, id, fork_id FROM hive.accounts_reversible
         EXCEPT SELECT * FROM ( VALUES
-            ( 10, 'u10_1',5 , 1 )
+            ( 7, 'u7_2', 6 , 2 )
           , ( 8, 'u8_2', 7 , 2 )
           , ( 9, 'u9_2', 8 , 2 )
           , ( 8, 'u8_2',9 , 3 )
@@ -193,7 +193,7 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.transactions_reversible
         EXCEPT SELECT * FROM ( VALUES
-               ( 10, 0::SMALLINT, '\xDEED11'::bytea, 101, 100, '2016-06-22 19:10:41-07'::timestamp, '\xBEEF'::bytea,  1 )
+               ( 7, 0::SMALLINT, '\xDEED70'::bytea, 101, 100, '2016-06-22 19:10:27-07'::timestamp, '\xBEEF'::bytea,  2 )
              , ( 8, 0::SMALLINT, '\xDEED80'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea,  2 )
              , ( 9, 0::SMALLINT, '\xDEED90'::bytea, 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF'::bytea,  2 )
              , ( 8, 0::SMALLINT, '\xDEED88'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea,  3 )
@@ -207,7 +207,8 @@ BEGIN
     ASSERT NOT EXISTS (
     SELECT * FROM hive.transactions_multisig_reversible
     EXCEPT SELECT * FROM ( VALUES
-           ( '\xDEED11'::bytea, '\xBEEF7140'::bytea,  1 )
+           ( '\xDEED70'::bytea, '\xBEEF72'::bytea,  2 ) -- block 7
+         , ( '\xDEED70'::bytea, '\xBEEF73'::bytea,  2 ) -- block 7
          , ( '\xDEED80'::bytea, '\xBEEF82'::bytea,  2 ) -- block 8
          , ( '\xDEED90'::bytea, '\xBEEF92'::bytea,  2 ) -- block 9
          , ( '\xDEED88'::bytea, '\xBEEF83'::bytea,  3 ) -- block 8
@@ -222,7 +223,9 @@ BEGIN
     ASSERT NOT EXISTS (
     SELECT id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body_binary, fork_id FROM hive.operations_reversible
     EXCEPT SELECT * FROM ( VALUES
-           ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
+           ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
+         , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive.operation, 2 )
+         , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
          , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
          , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hive.operation, 3 )
          , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hive.operation, 3 )
@@ -235,9 +238,7 @@ BEGIN
     ASSERT NOT EXISTS (
     SELECT * FROM hive.account_operations_reversible
     EXCEPT SELECT * FROM ( VALUES
-          ( 8, 9, 2, 9, 1, 2 )
-        , ( 9, 10, 2, 10, 1, 2 )
-        , ( 8, 9, 3, 9, 1, 3 )
+          ( 9, 10, 2, 10, 1, 2 )
         , ( 9, 10, 3, 10, 1, 3 )
         , ( 10, 11, 3, 10, 1, 3 )
     ) as pattern
@@ -248,7 +249,9 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.applied_hardforks_reversible
         EXCEPT SELECT * FROM ( VALUES
-        ( 9, 8, 9, 2 )
+        ( 7, 7, 7, 2 )
+      , ( 8, 7, 8, 2 )
+      , ( 9, 8, 9, 2 )
       , ( 10, 9, 10, 2 )
       , ( 9, 8, 9, 3 )
       , ( 10, 9, 10, 3 )
