@@ -228,14 +228,11 @@ BEGIN
     ), 'Unexpected rows in hive.operations_reversible'
     ;
 
-    ASSERT ( SELECT COUNT(*) FROM hive.account_operations_reversible ) = 3, 'Wrong number of account_operations';
+    ASSERT ( SELECT COUNT(*) FROM hive.account_operations_reversible ) = 2, 'Wrong number of account_operations';
     ASSERT NOT EXISTS (
     SELECT * FROM hive.account_operations_reversible
     EXCEPT SELECT * FROM ( VALUES
-               ( 8, 9, 2, 9, 1, 2 )
-             , ( 9, 10, 2, 10, 1, 2 )
-             , ( 8, 9, 3, 9, 1, 3 )
-             , ( 9, 10, 3, 10, 1, 3 )
+               ( 9, 10, 3, 10, 1, 3 )
              , ( 10, 11, 3, 10, 1, 3 )
         ) as pattern
     ), 'Unexpected rows in hive.account_operations_reversible'
@@ -245,10 +242,7 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.applied_hardforks_reversible
         EXCEPT SELECT * FROM ( VALUES
-       ( 9, 8, 9, 2 )
-     , ( 10, 9, 10, 2 )
-     , ( 9, 8, 9, 3 )
-     , ( 10, 9, 10, 3 )
+       ( 10, 9, 10, 3 )
      , ( 11, 10, 11, 3 )
         ) as pattern
     ) , 'Unexpected rows in hive.applied_hardforks_reversible';
