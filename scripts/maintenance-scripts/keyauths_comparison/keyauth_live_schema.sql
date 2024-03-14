@@ -12,7 +12,7 @@ DECLARE
 BEGIN
   RAISE NOTICE 'Entering massive processing of block range: <%, %>...', _from, _to;
   RAISE NOTICE 'Detaching HAF application context...';
-  CALL hive.appproc_context_detach(_appContext);
+  CALL hive.app_context_detach(_appContext);
 
 
   FOR b IN _from .. _to BY _step LOOP
