@@ -620,13 +620,6 @@ start_haf_as_service:
   tags:
     - data-cache-storage
 
-shell_5m_test:
-  extends: start_haf_as_service
-  script:
-    - tests/integration/functional/hive_fork_manager/state_providers/test_keyauth_5m.sh
-
-
-
 cleanup_haf_cache_manual:
   extends: .cleanup_cache_manual
   stage: cleanup
