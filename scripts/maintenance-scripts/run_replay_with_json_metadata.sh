@@ -38,13 +38,13 @@ echo "Replay of json/posting metadata..."
 bash "${SCRIPTPATH}/json_metadata_comparison/process_klive.sh"
 
 echo "Clearing tables..."
-psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "TRUNCATE json_metadata.jsons;"
-psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "TRUNCATE keyauth_live.differing_accounts;"
+psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "TRUNCATE metadata_live.jsons;"
+psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "TRUNCATE metadata_live.differing_accounts;"
 
 echo "Installing dependencies..."
 pip install psycopg2-binary
 
-rm -f "${SCRIPTPATH}/keyauths_comparison/accounts_dump.json"
+rm -f "${SCRIPTPATH}/json_metadata_comparison/accounts_dump.json"
 # The line below is somewhat problematic. Gunzip by default deletes gz file after decompression,
 # but the '-k' parameter, which prevents that from happening is not supported on some of its versions.
 # 
@@ -52,21 +52,21 @@ rm -f "${SCRIPTPATH}/keyauths_comparison/accounts_dump.json"
 # gunzip -c "${SCRIPTDIR}/accounts_dump.json.gz" > "${SCRIPTDIR}/accounts_dump.json"
 # gzcat "${SCRIPTDIR}/accounts_dump.json.gz" > "${SCRIPTDIR}/accounts_dump.json"
 # zcat "${SCRIPTDIR}/accounts_dump.json.gz" > "${SCRIPTDIR}/accounts_dump.json"
-gunzip -k "${SCRIPTPATH}/keyauths_comparison/accounts_dump.json.gz"
+gunzip -k "${SCRIPTPATH}/json_metadata_comparison/accounts_dump.json.gz"
 
 echo "Starting data_insertion_script.py..."
-python3 $SCRIPTPATH/keyauths_comparison/data_insertion_script.py "$SCRIPTPATH"/keyauths_comparison --host="/var/run/postgresql" #--debug
+python3 $SCRIPTPATH/json_metadata_comparison/data_insertion_script.py --script_dir="$SCRIPTPATH"/json_metadata_comparison --host="/var/run/postgresql" #--debug
 
-echo "Looking for diffrences between hived node and keyauths..."
+echo "Looking for diffrences between hived node and metadata..."
 psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "SELECT metadata_live.compare_accounts();"
 
 DIFFERING_ACCOUNTS=$(psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -t -A -c "SELECT * FROM metadata_live.differing_accounts;")
 
 if [ -z "$DIFFERING_ACCOUNTS" ]; then
-    echo "keyauths are correct!"
+    echo "metadata is correct!"
     exit 0
 else
-    echo "keyauths are incorrect..."
+    echo "metadata is incorrect..."
     psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "SELECT * FROM metadata_live.differing_accounts;"
     exit 3
 fi
