@@ -57,7 +57,7 @@ BEGIN
     BEGIN
         WITH select_metadata AS MATERIALIZED (
         SELECT
-            (hive.get_metadata(ov.body_binary)).*,
+            ( hive.get_metadata( ov.body_binary, COALESCE( ( SELECT block_num < ov.block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) ) ).*,
             ov.id
         FROM
             hive.%s_operations_view ov
@@ -106,7 +106,7 @@ BEGIN
     BEGIN
         WITH select_metadata AS MATERIALIZED (
         SELECT
-            (hive.get_metadata(ov.body_binary)).*,
+            ( hive.get_metadata( ov.body_binary, COALESCE( ( SELECT block_num < ov.block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) ) ).*,
             ov.id
         FROM
             hive.%s_operations_view ov

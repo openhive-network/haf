@@ -80,9 +80,9 @@ collected_keyauth_collection_t collect_hf09_keyauths()
     return hive::app::operation_get_hf09_keyauths();
 }
 
-collected_metadata_collection_t collect_metadata(const hive::protocol::operation& op)
+collected_metadata_collection_t collect_metadata(const hive::protocol::operation& op, const bool is_hf21)
 {
-    return hive::app::operation_get_metadata(op);
+    return hive::app::operation_get_metadata(op, is_hf21);
 }
 
 } // namespace
@@ -670,14 +670,15 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
   Datum get_metadata(PG_FUNCTION_ARGS)
   {
     _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
+    const bool is_hf21 = PG_GETARG_BOOL( 1 );
 
     collected_metadata_collection_t collected_metadata;
 
     colect_operation_data_and_fill_returned_recordset(
 
-      [=, &collected_metadata](const hive::protocol::operation& op)
+      [=, &collected_metadata, &is_hf21](const hive::protocol::operation& op)
       {
-        collected_metadata = collect_metadata(op);
+        collected_metadata = collect_metadata(op, is_hf21);
       },
 
 
