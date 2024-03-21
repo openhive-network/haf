@@ -54,11 +54,21 @@ BEGIN
     VOLATILE
     AS
     $$
+    DECLARE
+        __state INT := 0;
     BEGIN
+
+        IF COALESCE( ( SELECT _blockFrom > block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
+            __state := 1;
+        ELSIF COALESCE( ( SELECT _blockTo <= block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
+            __state := -1;
+        END IF;
+
         WITH select_metadata AS MATERIALIZED (
         SELECT
-            ( hive.get_metadata( ov.body_binary, COALESCE( ( SELECT block_num < ov.block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) ) ).*,
-            ov.id
+            ov.body_binary,
+            ov.id,
+            ov.block_num
         FROM
             hive.%s_operations_view ov
         WHERE
@@ -70,6 +80,20 @@ BEGIN
                  ''hive::protocol::account_create_with_delegation_operation'',
                  ''hive::protocol::account_update2_operation''))
             AND ov.block_num BETWEEN _blockFrom AND _blockTo
+        ), calculated_metadata AS
+        (
+            SELECT
+                (hive.get_metadata
+                (
+                    sm.body_binary,
+                    CASE __state
+                        WHEN  1 THEN TRUE
+                        WHEN  0 THEN COALESCE( ( SELECT block_num < sm.block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE )
+                        WHEN -1 THEN FALSE
+                    END
+                )).*,
+                id
+            FROM select_metadata sm
         )
         INSERT INTO
             hive.%s_metadata(account_id, json_metadata)
@@ -81,7 +105,7 @@ BEGIN
                 SELECT
                     DISTINCT ON (metadata.account_name) metadata.account_name,
                     metadata.json_metadata
-                FROM select_metadata as metadata
+                FROM calculated_metadata as metadata
                 WHERE metadata.json_metadata != ''''
                 ORDER BY
                     metadata.account_name,
@@ -103,11 +127,21 @@ BEGIN
     VOLATILE
     AS
     $$
+    DECLARE
+        __state INT := 0;
     BEGIN
+
+        IF COALESCE( ( SELECT _blockFrom > block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
+            __state := 1;
+        ELSIF COALESCE( ( SELECT _blockTo <= block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
+            __state := -1;
+        END IF;
+
         WITH select_metadata AS MATERIALIZED (
         SELECT
-            ( hive.get_metadata( ov.body_binary, COALESCE( ( SELECT block_num < ov.block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) ) ).*,
-            ov.id
+            ov.body_binary,
+            ov.id,
+            ov.block_num
         FROM
             hive.%s_operations_view ov
         WHERE
@@ -119,6 +153,20 @@ BEGIN
                  ''hive::protocol::account_create_with_delegation_operation'',
                  ''hive::protocol::account_update2_operation''))
             AND ov.block_num BETWEEN _blockFrom AND _blockTo
+        ), calculated_metadata AS
+        (
+            SELECT
+                (hive.get_metadata
+                (
+                    sm.body_binary,
+                    CASE __state
+                        WHEN  1 THEN TRUE
+                        WHEN  0 THEN COALESCE( ( SELECT block_num < sm.block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE )
+                        WHEN -1 THEN FALSE
+                    END
+                )).*,
+                id
+            FROM select_metadata sm
         )
         INSERT INTO
             hive.%s_metadata(account_id, posting_json_metadata)
@@ -130,7 +178,7 @@ BEGIN
                 SELECT
                     DISTINCT ON (metadata.account_name) metadata.account_name,
                     metadata.posting_json_metadata
-                FROM select_metadata as metadata
+                FROM calculated_metadata as metadata
                 WHERE metadata.posting_json_metadata != ''''
                 ORDER BY
                     metadata.account_name,
