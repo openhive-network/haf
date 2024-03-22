@@ -9,17 +9,6 @@ BEGIN
 END
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.get_metadata_posting_function_name( _context hive.context_name )
-    RETURNS TEXT
-    LANGUAGE plpgsql
-    IMMUTABLE
-AS
-$BODY$
-BEGIN
-    RETURN format( 'hive.%I_metadata_update_posting', _context );
-END
-$BODY$;
-
 CREATE OR REPLACE FUNCTION hive.start_provider_metadata( _context hive.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
@@ -92,21 +81,23 @@ BEGIN
                         WHEN -1 THEN FALSE
                     END
                 )).*,
-                id
+                sm.id
             FROM select_metadata sm
         )
         INSERT INTO
-            hive.%s_metadata(account_id, json_metadata)
+            hive.%s_metadata(account_id, json_metadata, posting_json_metadata)
         SELECT
             accounts_view.id,
-            json_metadata
+            json_metadata,
+            posting_json_metadata
         FROM
             (
                 SELECT
                     DISTINCT ON (metadata.account_name) metadata.account_name,
-                    metadata.json_metadata
+                    metadata.json_metadata,
+                    metadata.posting_json_metadata
                 FROM calculated_metadata as metadata
-                WHERE metadata.json_metadata != ''''
+                WHERE metadata.json_metadata != '''' OR metadata.posting_json_metadata != ''''
                 ORDER BY
                     metadata.account_name,
                     metadata.id DESC
@@ -114,82 +105,23 @@ BEGIN
             JOIN hive.accounts_view accounts_view ON accounts_view.name = account_name
         ON CONFLICT (account_id) DO UPDATE
         SET
-            json_metadata = EXCLUDED.json_metadata;
-    END
-    $$;'
-    , hive.get_metadata_update_function_name( _context ), _context, _context
-    );
-
-    EXECUTE format('
-    CREATE OR REPLACE FUNCTION %I(_blockFrom INT, _blockTo INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-    AS
-    $$
-    DECLARE
-        __state INT := 0;
-    BEGIN
-
-        IF COALESCE( ( SELECT _blockFrom > block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
-            __state := 1;
-        ELSIF COALESCE( ( SELECT _blockTo <= block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
-            __state := -1;
-        END IF;
-
-        WITH select_metadata AS MATERIALIZED (
-        SELECT
-            ov.body_binary,
-            ov.id,
-            ov.block_num
-        FROM
-            hive.%s_operations_view ov
-        WHERE
-            ov.op_type_id in (
-            SELECT id FROM hive.operation_types WHERE name IN
-                (''hive::protocol::account_create_operation'',
-                 ''hive::protocol::account_update_operation'',
-                 ''hive::protocol::create_claimed_account_operation'',
-                 ''hive::protocol::account_create_with_delegation_operation'',
-                 ''hive::protocol::account_update2_operation''))
-            AND ov.block_num BETWEEN _blockFrom AND _blockTo
-        ), calculated_metadata AS
-        (
-            SELECT
-                (hive.get_metadata
-                (
-                    sm.body_binary,
-                    CASE __state
-                        WHEN  1 THEN TRUE
-                        WHEN  0 THEN COALESCE( ( SELECT block_num < sm.block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE )
-                        WHEN -1 THEN FALSE
-                    END
-                )).*,
-                id
-            FROM select_metadata sm
-        )
-        INSERT INTO
-            hive.%s_metadata(account_id, posting_json_metadata)
-        SELECT
-            accounts_view.id,
-            posting_json_metadata
-        FROM
+            json_metadata =
             (
-                SELECT
-                    DISTINCT ON (metadata.account_name) metadata.account_name,
-                    metadata.posting_json_metadata
-                FROM calculated_metadata as metadata
-                WHERE metadata.posting_json_metadata != ''''
-                ORDER BY
-                    metadata.account_name,
-                    metadata.id DESC
-            ) as t
-            JOIN hive.accounts_view accounts_view ON accounts_view.name = account_name
-        ON CONFLICT (account_id) DO UPDATE
-        SET posting_json_metadata = EXCLUDED.posting_json_metadata;
+                CASE EXCLUDED.json_metadata
+                    WHEN '''' THEN hive.%s_metadata.json_metadata
+                    ELSE EXCLUDED.json_metadata
+                END
+            ),
+            posting_json_metadata =
+            (
+                CASE EXCLUDED.posting_json_metadata
+                    WHEN '''' THEN hive.%s_metadata.posting_json_metadata
+                    ELSE EXCLUDED.posting_json_metadata
+                END
+            );
     END
     $$;'
-    , hive.get_metadata_posting_function_name( _context ), _context, _context
+    , hive.get_metadata_update_function_name( _context ), _context, _context, _context, _context
     );
 
     RETURN ARRAY[ __table_name ];
@@ -222,13 +154,6 @@ BEGIN
         , _first_block
         , _last_block
     );
-
-    EXECUTE format(
-          'SELECT %I(%s, %s);'
-        , hive.get_metadata_posting_function_name( _context )
-        , _first_block
-        , _last_block
-    );
 END
 $BODY$
 ;
@@ -253,11 +178,6 @@ BEGIN
     EXECUTE format(
           'DROP FUNCTION IF EXISTS %I'
         , hive.get_metadata_update_function_name( _context )
-    );
-
-    EXECUTE format(
-          'DROP FUNCTION IF EXISTS %I'
-        , hive.get_metadata_posting_function_name( _context )
     );
 END;
 $BODY$
