@@ -148,6 +148,7 @@ COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.con
 ENV DATADIR=/home/hived/datadir
 # Use default location (inside datadir) of shm file. If SHM should be placed on some different device, then set it to mapped volume `/home/hived/shm_dir` and map it in docker run
 ENV SHM_DIR=${DATADIR}/blockchain
+ENV WAL_DIR=${DATADIR}/blockchain/haf_wal
 
 STOPSIGNAL SIGINT
 
@@ -221,6 +222,7 @@ WORKDIR /home/hived
 
 RUN mkdir -p /home/hived/bin && \
     mkdir /home/hived/shm_dir && \
+    mkdir /home/hived/wal_dir && \
     mkdir /home/hived/datadir && \
     chown -Rc hived:users /home/hived/
 
@@ -256,6 +258,7 @@ COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.con
 ENV DATADIR=/home/hived/datadir
 # Use default location (inside datadir) of shm file. If SHM should be placed on some different device, then set it to mapped volume `/home/hived/shm_dir` and map it in docker run
 ENV SHM_DIR=${DATADIR}/blockchain
+ENV WAL_DIR=${DATADIR}/blockchain/haf_wal
 
 STOPSIGNAL SIGINT
 
