@@ -81,7 +81,7 @@ perform_instance_dump() {
 
   "${SCRIPTSDIR}/dump_instance.sh" --backup-dir="${DATADIR}/${backup_dir_name}" --hived-executable-path=/home/hived/bin/hived \
     --override-existing-backup-dir --hived-db-role=hived \
-    --hived-data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --exit-before-sync \
+    --hived-data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --psql-wal-directory="$WAL_DIR" --exit-before-sync \
     --haf-db-name=haf_block_log --haf-db-admin=haf_admin \
     --haf-db-port=5432 --haf-db-host=/var/run/postgresql
 }
@@ -90,7 +90,7 @@ perform_instance_load() {
   backup_dir_name="${1}"
   "${SCRIPTSDIR}/load_instance.sh" --backup-dir="${DATADIR}/${backup_dir_name}" --hived-executable-path=/home/hived/bin/hived \
     --hived-db-role=hived \
-    --hived-data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --exit-before-sync \
+    --hived-data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --psql-wal-directory="$WAL_DIR" --exit-before-sync \
     --haf-db-name=haf_block_log --haf-db-admin=haf_admin \
     --haf-db-port=5432 --haf-db-host=/var/run/postgresql
 
@@ -110,7 +110,7 @@ if [ ! -f "$DATADIR/config.ini" ]; then
   echo "No config file exists, creating a default config file"
 
   /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
-    --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
+    --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --psql-wal-directory="$WAL_DIR" \
     --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
     ${HIVED_ARGS[@]} --dump-config > /dev/null 2>&1
 
@@ -143,7 +143,7 @@ if [ ! -f "$DATADIR/config.ini" ]; then
 fi
 
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
-  --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" \
+  --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --psql-wal-directory="$WAL_DIR" \
   --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
   ${HIVED_ARGS[@]}
 echo "$? Hived process finished execution."
