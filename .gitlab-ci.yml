@@ -407,7 +407,7 @@ replay_with_keyauths:
   variables:
     PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/keyauth.sh
+    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_keyauth.sh
   artifacts:
     paths:
       - "replay_with_keyauths.log"
@@ -429,7 +429,7 @@ replay_with_json_metadata:
   variables:
     PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_json_metadata.sh
+    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_json_metadata.sh
   artifacts:
     paths:
       - "replay_with_json_metadata.log"
