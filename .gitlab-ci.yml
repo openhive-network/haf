@@ -660,10 +660,13 @@ cleanup_haf_snapshot_from_cache:
 build_and_publish_image:
   stage: publish
   extends: .publish_docker_image_template
+  before_script:
+    - !reference [.publish_docker_image_template, before_script]
   script:
     - scripts/ci-helpers/build_and_publish_instance.sh
   tags:
     - public-runner-docker
+    - hived-for-tests
 
 double_haf_replay_tests:
   extends: .docker_image_builder_job
