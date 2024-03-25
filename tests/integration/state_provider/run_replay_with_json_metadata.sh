@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-SCRIPTSDIR="$SCRIPTPATH/.."
+SCRIPTPATH="$CI_PROJECT_DIR/tests/integration/state_provider"
+SCRIPTSDIR="$CI_PROJECT_DIR/scripts"
 LOG_FILE=replay_with_json_metadata.log
 
 source "$SCRIPTSDIR/maintenance-scripts/ci_common.sh"
@@ -12,8 +12,8 @@ source "$SCRIPTSDIR/maintenance-scripts/ci_common.sh"
 test_start
 
 # container must have /blockchain directory mounted containing block_log with at 5000000 first blocks
+export REPO_DIR="${SCRIPTDIR}/../"
 export BLOCK_LOG_SOURCE_DIR_5M="/blockchain/block_log_5m"
-export PATTERNS_PATH="${REPO_DIR}/tests/integration/replay/patterns/no_filter"
 export DATADIR="${REPO_DIR}/datadir"
 export REPLAY="--replay-blockchain --stop-replay-at-block 5000000"
 export HIVED_PATH="/home/hived/bin/hived"
@@ -23,9 +23,7 @@ export DB_ADMIN="haf_admin"
 export SETUP_SCRIPTS_PATH="/home/haf_admin/haf/scripts"
 
 echo -e "\e[0Ksection_start:$(date +%s):replay[collapsed=true]\r\e[0KExecuting replay..."
-test -n "$PATTERNS_PATH"
 mkdir $DATADIR/blockchain -p
-cp "$PATTERNS_PATH"/* "$DATADIR" -r
 cp ${BLOCK_LOG_SOURCE_DIR_5M}/block_log $DATADIR/blockchain
 $HIVED_PATH --data-dir "$DATADIR" $REPLAY --exit-before-sync --psql-url "postgresql:///$DB_NAME" 2>&1 | tee -i node_logs.log
 echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
