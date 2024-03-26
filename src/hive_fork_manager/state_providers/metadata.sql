@@ -69,7 +69,7 @@ BEGIN
                  ''hive::protocol::account_create_with_delegation_operation'',
                  ''hive::protocol::account_update2_operation''))
             AND ov.block_num BETWEEN _blockFrom AND _blockTo
-        ), calculated_metadata AS
+        ), calculated_metadata AS MATERIALIZED
         (
             SELECT
                 (hive.get_metadata
@@ -83,26 +83,48 @@ BEGIN
                 )).*,
                 sm.id
             FROM select_metadata sm
+        ),
+        prepare_accounts AS MATERIALIZED
+        (
+        SELECT
+            metadata.account_name
+        FROM calculated_metadata as metadata
+        GROUP BY metadata.account_name
+        ),
+        select_json_metadata AS MATERIALIZED 
+        (
+        SELECT
+            DISTINCT ON (metadata.account_name) metadata.account_name,
+            metadata.json_metadata,
+            metadata.posting_json_metadata
+        FROM calculated_metadata as metadata
+        WHERE metadata.json_metadata != '''' 
+        ORDER BY
+            metadata.account_name,
+            metadata.id DESC
+        ),
+        select_posting_json_metadata AS MATERIALIZED 
+        (
+        SELECT
+            DISTINCT ON (metadata.account_name) metadata.account_name,
+            metadata.json_metadata,
+            metadata.posting_json_metadata
+        FROM calculated_metadata as metadata
+        WHERE metadata.posting_json_metadata != ''''
+        ORDER BY
+            metadata.account_name,
+            metadata.id DESC
         )
         INSERT INTO
             hive.%s_metadata(account_id, json_metadata, posting_json_metadata)
         SELECT
-            accounts_view.id,
-            json_metadata,
-            posting_json_metadata
-        FROM
-            (
-                SELECT
-                    DISTINCT ON (metadata.account_name) metadata.account_name,
-                    metadata.json_metadata,
-                    metadata.posting_json_metadata
-                FROM calculated_metadata as metadata
-                WHERE metadata.json_metadata != '''' OR metadata.posting_json_metadata != ''''
-                ORDER BY
-                    metadata.account_name,
-                    metadata.id DESC
-            ) as t
-            JOIN hive.accounts_view accounts_view ON accounts_view.name = account_name
+            av.id,
+            COALESCE(sjm.json_metadata, ''''),
+            COALESCE(pjm.posting_json_metadata, '''')
+        FROM prepare_accounts pa
+        LEFT JOIN select_json_metadata sjm ON sjm.account_name = pa.account_name
+        LEFT JOIN select_posting_json_metadata pjm ON pjm.account_name = pa.account_name
+        JOIN hive.accounts_view av ON av.name = pa.account_name
         ON CONFLICT (account_id) DO UPDATE
         SET
             json_metadata =
