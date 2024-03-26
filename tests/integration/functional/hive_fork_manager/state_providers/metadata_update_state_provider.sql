@@ -96,7 +96,7 @@ BEGIN
                 "value": {
                     "account": "howo",
                     "json_metadata": "",
-                    "posting_json_metadata": "",
+                    "posting_json_metadata": "{}",
                     "extensions": []
                 }
             }'::jsonb::hive.operation
@@ -581,7 +581,7 @@ AS
 $BODY$
 BEGIN
     PERFORM ASSERT_METADATA_VALUES(6 /*'test-safari'*/   , '','{"profile":{"name":"Leonardo Da VinciXX","about":"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..","website":"http://www.davincilife.com/","location":"Florence","cover_image":"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg","profile_image":"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg"}}');
-    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '""');
+    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '{}');
     PERFORM ASSERT_METADATA_VALUES(8 /*'bassman077'*/    , '{"maleficiaries":[{"name":"oracle-d","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"},{"name":"spk.beneficiary","label":"referrer","weight":300}]}', '');
     PERFORM ASSERT_METADATA_VALUES(9 /*'spscontest'*/    ,'','""');
     PERFORM ASSERT_METADATA_VALUES(10 /*'xenomorphosis'*/,'','{}');
@@ -604,7 +604,7 @@ AS
 $BODY$
 BEGIN
     PERFORM ASSERT_METADATA_VALUES(6 /*'test-safari'*/   , '','{"profile":{"name":"Leonardo Da VinciXX","about":"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..","website":"http://www.davincilife.com/","location":"Florence","cover_image":"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg","profile_image":"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg"}}');
-    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '""');
+    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '{}');
     PERFORM ASSERT_METADATA_VALUES(8 /*'bassman077'*/    , '{"maleficiaries":[{"name":"oracle-d","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"},{"name":"spk.beneficiary","label":"referrer","weight":300}]}', '');
     PERFORM ASSERT_METADATA_VALUES(9 /*'spscontest'*/    ,'','""');
     PERFORM ASSERT_METADATA_VALUES(10 /*'xenomorphosis'*/,'','{}');
@@ -626,7 +626,7 @@ AS
 $BODY$
 BEGIN
     PERFORM ASSERT_METADATA_VALUES(6 /*'test-safari'*/   , '','{"profile":{"name":"Leonardo Da VinciXX","about":"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..","website":"http://www.davincilife.com/","location":"Florence","cover_image":"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg","profile_image":"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg"}}');
-    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '""');
+    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '{}');
     PERFORM ASSERT_METADATA_VALUES(8 /*'bassman077'*/    , '{"maleficiaries":[{"name":"oracle-d","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"},{"name":"spk.beneficiary","label":"referrer","weight":300}]}', '');
     PERFORM ASSERT_METADATA_VALUES(9 /*'spscontest'*/    ,'','""');
     PERFORM ASSERT_METADATA_VALUES(10 /*'xenomorphosis'*/,'','{}');
