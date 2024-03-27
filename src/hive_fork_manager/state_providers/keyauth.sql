@@ -352,7 +352,7 @@ BEGIN
             FROM
                 genesis_auth_records
             ),
-        effective_key_auth_records as materialized
+        effective_key_or_account_auth_records as materialized
         (
             with effective_tuple_ids as materialized 
             (
@@ -364,24 +364,12 @@ BEGIN
             from extended_auth_records s1
             join effective_tuple_ids e ON e.account_id = s1.account_id and e.key_kind = s1.key_kind and e.op_stable_id = s1.op_stable_id
         ),
-        effective_account_auth_records as materialized
-        (
-            with effective_tuple_ids as materialized 
-            (
-            select s.account_id, s.key_kind, max(s.op_stable_id) as op_stable_id
-            from extended_auth_records s 
-            group by s.account_id, s.key_kind
-            )
-            select s1.*
-            from extended_auth_records s1
-            join effective_tuple_ids e ON e.account_id = s1.account_id and e.key_kind = s1.key_kind and e.op_stable_id = s1.op_stable_id
-        ),
         --- PROCESSING OF KEY BASED AUTHORITIES ---	
             supplement_key_dictionary as materialized
             (
             insert into hive.%1$s_keyauth_k as dict (key)
             SELECT DISTINCT s.key_auth
-            FROM effective_key_auth_records s
+            FROM effective_key_or_account_auth_records s
             where s.key_auth IS NOT NULL
             on conflict (key) do update set key = EXCLUDED.key -- the only way to always get key-id (even it is already in dict)
             returning (xmax = 0) as is_new_key, dict.key_id, dict.key
@@ -389,13 +377,13 @@ BEGIN
         extended_key_auth_records as materialized
         (
             select s.*, kd.key_id
-            from effective_key_auth_records s
+            from effective_key_or_account_auth_records s
             join supplement_key_dictionary kd on kd.key = s.key_auth
         ),
         changed_key_authorities as materialized 
         (
             select distinct s.account_id as changed_account_id, s.key_kind as changed_key_kind
-            from effective_key_auth_records s
+            from effective_key_or_account_auth_records s
         )
         ,delete_obsolete_key_auth_records as materialized (
             DELETE FROM hive.%1$s_keyauth_a as ea
@@ -433,14 +421,14 @@ BEGIN
             SELECT (select a.id FROM hive.%1$s_accounts_view a
                 where a.name = s.account_auth) as account_auth_id,
             s.*
-            FROM effective_account_auth_records s
+            FROM effective_key_or_account_auth_records s
             ) ds
             WHERE ds.account_auth_id IS NOT NULL
         ),
         changed_account_authorities as materialized 
         (
             select distinct s.account_id as changed_account_id, s.key_kind as changed_key_kind
-            from effective_account_auth_records s
+            from effective_key_or_account_auth_records s
         ),
         delete_obsolete_account_auth_records as materialized 
         (
