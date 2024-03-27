@@ -370,13 +370,11 @@ BEGIN
             (
             select s.account_id, s.key_kind, max(s.op_stable_id) as op_stable_id
             from extended_auth_records s 
-            where s.key_auth IS NULL
             group by s.account_id, s.key_kind
             )
             select s1.*
             from extended_auth_records s1
             join effective_tuple_ids e ON e.account_id = s1.account_id and e.key_kind = s1.key_kind and e.op_stable_id = s1.op_stable_id
-            where s1.key_auth IS NULL		
         ),
         --- PROCESSING OF KEY BASED AUTHORITIES ---	
             supplement_key_dictionary as materialized
@@ -442,7 +440,7 @@ BEGIN
         changed_account_authorities as materialized 
         (
             select distinct s.account_id as changed_account_id, s.key_kind as changed_key_kind
-            from extended_account_auth_records s
+            from effective_account_auth_records s
         ),
         delete_obsolete_account_auth_records as materialized 
         (
