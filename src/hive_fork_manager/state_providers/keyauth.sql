@@ -116,8 +116,10 @@ BEGIN
         DECLARE
         __account_ae_count INT;
         __key_ae_count INT;
-        __HARDFROK_9_block_num INT := 3202773;
-        __op_serial_id_dummy INT := 5036543;
+        __HARDFORK_9_block_num INT  := 3202773;
+        __HARDFORK_21_block_num INT := 35921786;
+        __HARDFORK_24_block_num INT := 47797680;
+        __op_serial_id_dummy INT    := 5036543;
 
         BEGIN
 
@@ -140,27 +142,62 @@ BEGIN
                 1
                 FROM hive.get_genesis_keyauths() as g
             WHERE  _first_block <= 1 AND 1 <= _last_block 
-        )
-        ,
+        ),
+
         -- Hard fork 9 fixes some accounts that were compromised
-        HARDFROK_9_fixed_auth_records AS MATERIALIZED
+        HARDFORK_9_fixed_auth_records AS MATERIALIZED
         (
             SELECT
             (SELECT a.id FROM hive.%1$s_accounts_view a WHERE a.name = h.account_name) as account_id, 
             *,
             __op_serial_id_dummy as op_serial_id,
-            __HARDFROK_9_block_num as block_num,
-            (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFROK_9_block_num) as timestamp,
+            __HARDFORK_9_block_num as block_num,
+            (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFORK_9_block_num) as timestamp,
             hive.calculate_operation_stable_id
             (
-                        __HARDFROK_9_block_num, 
-                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE o.block_num = __HARDFROK_9_block_num),
+                        __HARDFORK_9_block_num, 
+                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE o.block_num = __HARDFORK_9_block_num),
                         0
             ) as op_stable_id 
             FROM hive.get_hf09_keyauths() h
-            WHERE  _first_block <= __HARDFROK_9_block_num AND __HARDFROK_9_block_num <= _last_block
-        )
-        ,
+            WHERE  _first_block <= __HARDFORK_9_block_num AND __HARDFORK_9_block_num <= _last_block
+        ),
+
+        HARDFORK_21_fixed_auth_records AS MATERIALIZED
+        (
+            SELECT
+            (SELECT a.id FROM hive.%1$s_accounts_view a WHERE a.name = h.account_name) as account_id, 
+            *,
+            __op_serial_id_dummy as op_serial_id,
+            __HARDFORK_21_block_num as block_num,
+            (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFORK_21_block_num) as timestamp,
+            hive.calculate_operation_stable_id
+            (
+                        __HARDFORK_21_block_num, 
+                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE o.block_num = __HARDFORK_21_block_num),
+                        0
+            ) as op_stable_id 
+            FROM hive.get_hf21_keyauths() h
+            WHERE  _first_block <= __HARDFORK_21_block_num AND __HARDFORK_21_block_num <= _last_block
+        ),
+
+        HARDFORK_24_fixed_auth_records AS MATERIALIZED
+        (
+            SELECT
+            (SELECT a.id FROM hive.%1$s_accounts_view a WHERE a.name = h.account_name) as account_id, 
+            *,
+            __op_serial_id_dummy as op_serial_id,
+            __HARDFORK_24_block_num as block_num,
+            (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFORK_24_block_num) as timestamp,
+            hive.calculate_operation_stable_id
+            (
+                        __HARDFORK_24_block_num, 
+                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE o.block_num = __HARDFORK_24_block_num),
+                        0
+            ) as op_stable_id 
+            FROM hive.get_hf24_keyauths() h
+            WHERE  _first_block <= __HARDFORK_24_block_num AND __HARDFORK_24_block_num <= _last_block
+        ),
 
         -- Handle 'pow' operation:
         -- 1. Distinguish between existing accounts and new account creation.
@@ -345,7 +382,39 @@ BEGIN
                 timestamp,
                 op_stable_id
             FROM
-                HARDFROK_9_fixed_auth_records
+                HARDFORK_9_fixed_auth_records
+
+            UNION ALL
+            SELECT
+                account_id,
+                account_name,
+                key_kind,
+                key_auth,
+                account_auth,
+                weight_threshold,
+                w,
+                op_serial_id,
+                block_num,
+                timestamp,
+                op_stable_id
+            FROM
+                HARDFORK_21_fixed_auth_records
+
+            UNION ALL
+            SELECT
+                account_id,
+                account_name,
+                key_kind,
+                key_auth,
+                account_auth,
+                weight_threshold,
+                w,
+                op_serial_id,
+                block_num,
+                timestamp,
+                op_stable_id
+            FROM
+                HARDFORK_24_fixed_auth_records
 
             UNION ALL
             SELECT *
