@@ -80,6 +80,16 @@ collected_keyauth_collection_t collect_hf09_keyauths()
     return hive::app::operation_get_hf09_keyauths();
 }
 
+collected_keyauth_collection_t collect_hf21_keyauths()
+{
+    return hive::app::operation_get_hf21_keyauths();
+}
+
+collected_keyauth_collection_t collect_hf24_keyauths()
+{
+    return hive::app::operation_get_hf24_keyauths();
+}
+
 collected_metadata_collection_t collect_metadata(const hive::protocol::operation& op, const bool is_hf21)
 {
     return hive::app::operation_get_metadata(op, is_hf21);
@@ -571,8 +581,8 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     fill_return_tuples(collected_keyauths, fcinfo,
         [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_name.c_str()));},
         [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.key_kind));},
-        [] (const auto& collected_item) { return make_datum_pair(public_key_data_to_bytea_datum(collected_item.key_auth), !collected_item.keyauth_variant);},
-        [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_auth.c_str()), collected_item.keyauth_variant);},
+        [] (const auto& collected_item) { return make_datum_pair(public_key_data_to_bytea_datum(collected_item.key_auth), collected_item.allow_null_in_key_auth());},
+        [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_auth.c_str()), collected_item.allow_null_in_account_auth());},
         [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.weight_threshold));},
         [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.w));}
     );
@@ -650,7 +660,31 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     return (Datum)0;
   }
 
+  PG_FUNCTION_INFO_V1(get_hf21_keyauths_wrapped);
 
+  Datum get_hf21_keyauths_wrapped(PG_FUNCTION_ARGS)
+  {
+    collected_keyauth_collection_t collected_keyauths;
+
+    collected_keyauths = collect_hf21_keyauths();
+
+    fill_and_return_keyauths(collected_keyauths, fcinfo);
+
+    return (Datum)0;
+  }
+
+  PG_FUNCTION_INFO_V1(get_hf24_keyauths_wrapped);
+
+  Datum get_hf24_keyauths_wrapped(PG_FUNCTION_ARGS)
+  {
+    collected_keyauth_collection_t collected_keyauths;
+
+    collected_keyauths = collect_hf24_keyauths();
+
+    fill_and_return_keyauths(collected_keyauths, fcinfo);
+
+    return (Datum)0;
+  }
 
   PG_FUNCTION_INFO_V1(get_metadata);
 
