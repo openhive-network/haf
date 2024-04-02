@@ -5,13 +5,14 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser(description="Script to process JSON data and interact with PostgreSQL")
-    parser.add_argument("script_dir", help="Path to the directory containing 'accounts_dump.json'")
+    parser.add_argument("--script_dir", help="Path to the directory containing 'accounts_dump.json'")
     parser.add_argument("--host", default="docker", help="PostgreSQL host (default: docker)")
     parser.add_argument("--port", type=int, default=5432, help="PostgreSQL port (default: 5432)")
     parser.add_argument("--database", default="haf_block_log", help="PostgreSQL database name (default: haf_block_log)")
     parser.add_argument("--user", default="haf_admin", help="PostgreSQL user (default: haf_admin)")
     parser.add_argument("--password", default="", help="PostgreSQL password (default: empty)")
     parser.add_argument("--debug", action="store_true", help="Run in debug mode (default: false)")
+    parser.add_argument("--data_type", default="", help="Possible values: `keyauth` or `metadata`")
 
     args = parser.parse_args()
     
@@ -48,7 +49,12 @@ def main():
 
         cursor = connection.cursor()
 
-        query = "SELECT keyauth_live.dump_current_account_stats(%s)"
+        if args.data_type == 'keyauth':
+            query = "SELECT keyauth_live.dump_current_account_stats(%s)"
+        elif args.data_type == 'metadata':
+            query = "SELECT metadata_live.dump_current_account_stats(%s)"
+        else:
+            raise Exception("Incorrect type of data. Possible values: `keyauth` or `metadata`")
 
         # Iterate over objects inside 'accounts[]'
         for account in accounts:
