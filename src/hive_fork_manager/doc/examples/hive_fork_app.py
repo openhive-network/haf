@@ -3,14 +3,14 @@
 import sys
 import sqlalchemy
 
-APPLICATION_CONTEXT = "trx_histogram"
+APPLICATION_CONTEXT = "trx_histogram_ctx"
 
 SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE = """
     CREATE TABLE IF NOT EXISTS applications.trx_histogram(
           day DATE
         , trx INT
         , CONSTRAINT pk_trx_histogram PRIMARY KEY( day ) )
-    INHERITS( hive.{} )
+    INHERITS( applications.{} )
     """.format( APPLICATION_CONTEXT )
 
 SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION = """
@@ -25,8 +25,8 @@ SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION = """
         SELECT
               DATE(hb.created_at) as date
             , COUNT(1) as trx
-        FROM hive.trx_histogram_blocks_view hb
-        JOIN hive.trx_histogram_transactions_view ht ON ht.block_num = hb.num
+        FROM hive.trx_histogram_ctx_blocks_view hb
+        JOIN hive.trx_histogram_ctx_transactions_view ht ON ht.block_num = hb.num
         WHERE hb.num >= _first_block AND hb.num <= _last_block
         GROUP BY DATE(hb.created_at)
         ON CONFLICT ON CONSTRAINT pk_trx_histogram DO UPDATE
@@ -46,12 +46,13 @@ def create_db_engine(db_name, pg_port):
                 echo=False)
 
 def prepare_application_data( db_connection ):
+        db_connection.execute( "CREATE SCHEMA IF NOT EXISTS applications" )
+
         # create a new context only if it not already exists
         exist = db_connection.execute( "SELECT hive.app_context_exists( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone();
         if exist[ 0 ] == False:
-            db_connection.execute( "SELECT hive.app_create_context( '{}', TRUE )".format( APPLICATION_CONTEXT ) )
+            db_connection.execute( "SELECT hive.app_create_context( '{}', _schema => 'applications', _is_forking => TRUE )".format( APPLICATION_CONTEXT ) )
 
-        db_connection.execute( "CREATE SCHEMA IF NOT EXISTS applications" )
         # create and register a table
         db_connection.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE )
 

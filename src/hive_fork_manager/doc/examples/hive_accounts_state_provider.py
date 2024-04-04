@@ -9,7 +9,7 @@ SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE = """
           day DATE
         , trx INT
         , CONSTRAINT pk_trx_histogram PRIMARY KEY( day ) )
-    INHERITS( hive.{} )
+    INHERITS( applications.{} )
     """.format( APPLICATION_CONTEXT )
 
 def create_db_engine(db_name, pg_port):
@@ -21,12 +21,12 @@ def create_db_engine(db_name, pg_port):
                 echo=False)
 
 def prepare_application_data( db_connection ):
+        db_connection.execute( "CREATE SCHEMA IF NOT EXISTS applications" )
         # create a new context only if it not already exists
         exist = db_connection.execute( "SELECT hive.app_context_exists( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone();
         if exist[ 0 ] == False:
-            db_connection.execute( "SELECT hive.app_create_context( '{}', TRUE )".format( APPLICATION_CONTEXT ) )
+            db_connection.execute( "SELECT hive.app_create_context( '{}', _schema=>'applications', _is_forking => TRUE )".format( APPLICATION_CONTEXT ) )
 
-        db_connection.execute( "CREATE SCHEMA IF NOT EXISTS applications" )
         # create and register a table
         db_connection.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE )
 

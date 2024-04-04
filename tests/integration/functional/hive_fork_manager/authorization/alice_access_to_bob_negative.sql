@@ -24,15 +24,16 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice_context' );
-    PERFORM hive.app_create_context( 'alice_context_detached' );
+    CREATE SCHEMA ALICE;
+    PERFORM hive.app_create_context( 'alice_context', 'alice' );
+    PERFORM hive.app_create_context( 'alice_context_detached', 'alice' );
     PERFORM hive.app_context_detach( 'alice_context_detached' );
     PERFORM hive.app_set_current_block_num( 'alice_context_detached', 1 );
     PERFORM hive.app_set_current_block_num( ARRAY[ 'alice_context_detached' ], 1 );
     PERFORM hive.app_get_current_block_num( 'alice_context_detached' );
     PERFORM hive.app_get_current_block_num( ARRAY[ 'alice_context_detached' ] );
-    CREATE SCHEMA alice;
-    CREATE TABLE alice.alice_table( id INT ) INHERITS( hive.alice_context );
+
+    CREATE TABLE alice.alice_table( id INT ) INHERITS( alice.alice_context );
     PERFORM hive.app_next_block( 'alice_context' );
     PERFORM hive.app_next_block( ARRAY[ 'alice_context' ] );
     INSERT INTO alice.alice_table VALUES( 10 );
@@ -192,13 +193,14 @@ CREATE OR REPLACE PROCEDURE bob_test_given()
     AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'bob_context' );
-    PERFORM hive.app_create_context( 'bob_context_detached' );
+    CREATE SCHEMA BOB;
+    PERFORM hive.app_create_context( 'bob_context', 'bob' );
+    PERFORM hive.app_create_context( 'bob_context_detached', 'bob' );
     PERFORM hive.app_context_detach( 'bob_context_detached' );
     PERFORM hive.app_set_current_block_num( 'bob_context_detached', 1 );
     PERFORM hive.app_set_current_block_num( ARRAY[ 'bob_context_detached' ], 1 );
-    CREATE SCHEMA bob;
-    CREATE TABLE bob.bob_table( id INT ) INHERITS( hive.bob_context );
+
+    CREATE TABLE bob.bob_table( id INT ) INHERITS( bob.bob_context );
     PERFORM hive.app_next_block( 'bob_context' );
     PERFORM hive.app_next_block( ARRAY[ 'bob_context' ] );
     INSERT INTO bob.bob_table VALUES( 100 );
@@ -213,7 +215,7 @@ CREATE OR REPLACE PROCEDURE bob_test_then()
 $BODY$
 BEGIN
     BEGIN
-        CREATE TABLE bob_in_alice_context(id INT ) INHERITS( hive.alice_context );
+        CREATE TABLE bob_in_alice_context(id INT ) INHERITS( alice.alice_context );
         ASSERT FALSE, 'Bob can create table in Alice''s context';
     EXCEPTION WHEN OTHERS THEN
     END;

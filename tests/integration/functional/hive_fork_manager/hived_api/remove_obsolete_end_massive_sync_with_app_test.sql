@@ -4,6 +4,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
+    CREATE SCHEMA A;
     -- simualte massive push by hived
     INSERT INTO hive.blocks
     VALUES
@@ -25,7 +26,7 @@ BEGIN
          , (7, 'bob', 1)
     ;
 
-    PERFORM hive.app_create_context( 'context' );
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
 END;
 $BODY$
 ;

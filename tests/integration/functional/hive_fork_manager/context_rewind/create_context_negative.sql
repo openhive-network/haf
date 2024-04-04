@@ -3,14 +3,15 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
+    CREATE SCHEMA A;
     BEGIN
-        PERFORM hive.context_create( '*my_context' );
+        PERFORM hive.context_create( '*my_context', 'a' );
         ASSERT FALSE, 'Cannot catch expected exception: *my_context';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM hive.context_create( 'my context' );
+        PERFORM hive.context_create( 'my context', 'a' );
         ASSERT FALSE, 'Cannot catch expected exception: my context';
     EXCEPTION WHEN OTHERS THEN
     END;

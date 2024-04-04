@@ -1,4 +1,11 @@
-CREATE OR REPLACE FUNCTION hive.context_create( _name hive.context_name, _fork_id BIGINT = 1, _irreversible_block INT = 0, _is_forking BOOLEAN = TRUE, _is_attached BOOLEAN = TRUE )
+CREATE OR REPLACE FUNCTION hive.context_create(
+      _name hive.context_name
+    , _schema TEXT
+    , _fork_id BIGINT = 1
+    , _irreversible_block INT = 0
+    , _is_forking BOOLEAN = TRUE
+    , _is_attached BOOLEAN = TRUE
+)
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -6,12 +13,36 @@ AS
 $BODY$
 BEGIN
     IF NOT _name SIMILAR TO '[a-zA-Z0-9_]+' THEN
-        RAISE EXCEPTION 'Incorrect context name %, only characters a-z A-Z 0-9 _ are allowed', name;
+        RAISE EXCEPTION 'Incorrect context name %, only characters a-z A-Z 0-9 _ are allowed', _name;
     END IF;
 
-    EXECUTE format( 'CREATE TABLE hive.%I( hive_rowid BIGSERIAL )', _name );
-    INSERT INTO hive.contexts( name, current_block_num, irreversible_block, is_attached, events_id, fork_id, owner, is_forking, last_active_at )
-    VALUES( _name, 0, _irreversible_block, _is_attached, 0, _fork_id, current_user, _is_forking, NOW() );
+    EXECUTE format( 'CREATE TABLE %I.%I( hive_rowid BIGSERIAL )', _schema, _name );
+    INSERT INTO hive.contexts(
+          name
+        , current_block_num
+        , irreversible_block
+        , is_attached
+        , events_id
+        , fork_id
+        , owner
+        , is_forking
+        , last_active_at
+        , schema
+        , baseclass_id
+    )
+    VALUES(
+           _name
+          , 0
+          , _irreversible_block
+          , _is_attached
+          , 0
+          , _fork_id
+          , current_user
+          , _is_forking
+          , NOW()
+          , _schema
+          , ( _schema || '.' || _name )::regclass
+    );
 END;
 $BODY$
 ;
@@ -24,8 +55,9 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE := NULL;
+    __context_schema TEXT;
 BEGIN
-    SELECT hc.id INTO __context_id FROM hive.contexts hc WHERE hc.name = _name;
+    SELECT hc.id, hc.schema INTO __context_id, __context_schema FROM hive.contexts hc WHERE hc.name = _name;
 
     IF __context_id IS NULL THEN
         RAISE EXCEPTION 'Context % does not exist', _name;
@@ -37,7 +69,7 @@ BEGIN
 
     DELETE FROM hive.contexts WHERE id = __context_id;
 
-    EXECUTE format( 'DROP TABLE IF EXISTS hive.%I', _name );
+    EXECUTE format( 'DROP TABLE IF EXISTS %I.%I', __context_schema, _name );
 END;
 $BODY$
 ;

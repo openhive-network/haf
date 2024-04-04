@@ -18,7 +18,8 @@ BEGIN
 
     PERFORM hive.end_massive_sync(4);
 
-    PERFORM hive.app_create_context( 'context' );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
 END;
 $BODY$
 ;

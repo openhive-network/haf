@@ -4,7 +4,8 @@ LANGUAGE 'plpgsql'
 $BODY$
 
 BEGIN
-    PERFORM hive.context_create( 'context_' || gen.* ) FROM generate_series(1, 999) as gen;
+    CREATE SCHEMA A;
+    PERFORM hive.context_create( 'context_' || gen.*, 'a' ) FROM generate_series(1, 999) as gen;
 END
 $BODY$
 ;

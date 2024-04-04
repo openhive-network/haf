@@ -14,10 +14,11 @@ def create_db_engine(db_name, pg_port):
         echo=False)
 
 def prepare_application_data( db_connection ):
+        db_connection.execute( "CREATE SCHEMA IF NOT EXISTS applications" )
         # create a new context only if it not already exists
         exist = db_connection.execute( "SELECT hive.app_context_exists( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone();
         if exist[ 0 ] == False:
-            db_connection.execute( "SELECT hive.app_create_context( '{}', FALSE )".format( APPLICATION_CONTEXT ) )
+            db_connection.execute( "SELECT hive.app_create_context( '{}', _schema => 'applications', _is_forking => FALSE )".format( APPLICATION_CONTEXT ) )
 
         # import accounts state provider
         db_connection.execute( "SELECT hive.app_state_provider_import( 'ACCOUNTS', '{}' )".format( APPLICATION_CONTEXT ) );

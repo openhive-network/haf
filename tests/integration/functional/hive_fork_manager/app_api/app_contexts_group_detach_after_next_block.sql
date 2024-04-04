@@ -4,17 +4,17 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context_a' );
     CREATE SCHEMA A;
-    CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context_a );
+    PERFORM hive.app_create_context( 'context_a', 'a' );
+    CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context_a );
 
-    PERFORM hive.app_create_context( 'context_b' );
     CREATE SCHEMA B;
-    CREATE TABLE B.table1(id  INTEGER ) INHERITS( hive.context_b );
+    PERFORM hive.app_create_context( 'context_b', 'b' );
+    CREATE TABLE B.table1(id  INTEGER ) INHERITS( b.context_b );
 
-    PERFORM hive.app_create_context( 'context_c' );
     CREATE SCHEMA C;
-    CREATE TABLE C.table1(id  INTEGER ) INHERITS( hive.context_c );
+    PERFORM hive.app_create_context( 'context_c','c' );
+    CREATE TABLE C.table1(id  INTEGER ) INHERITS( c.context_c );
 
     INSERT INTO hive.blocks
     VALUES

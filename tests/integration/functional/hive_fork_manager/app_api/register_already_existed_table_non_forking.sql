@@ -4,8 +4,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_create( _name =>'context', _is_forking => FALSE );
     CREATE SCHEMA a;
+    PERFORM hive.context_create( _name =>'context', _is_forking => FALSE, _schema => 'a' );
     CREATE TABLE a.table1( id INT );
 END;
 $BODY$

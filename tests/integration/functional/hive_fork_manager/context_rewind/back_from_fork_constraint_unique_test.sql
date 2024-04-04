@@ -4,12 +4,13 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_create( 'context' );
+    CREATE SCHEMA A;
+    PERFORM hive.context_create( 'context', 'a' );
     CREATE TABLE table1(
           id INTEGER NOT NULL
         , smth TEXT NOT NULL
         , CONSTRAINT uq_table1 UNIQUE ( smth )
-    ) INHERITS( hive.context );
+    ) INHERITS( a.context );
 
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO table1( id, smth ) VALUES( 123, 'blabla1' );

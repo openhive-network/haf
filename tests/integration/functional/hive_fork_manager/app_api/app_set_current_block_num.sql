@@ -14,9 +14,9 @@ BEGIN
          , (6, 'alice', 1)
     ;
 
-    PERFORM hive.app_create_context( 'context' );
     CREATE SCHEMA A;
-    CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
+    CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
     PERFORM hive.app_context_detach( 'context' );
 END;
 $BODY$

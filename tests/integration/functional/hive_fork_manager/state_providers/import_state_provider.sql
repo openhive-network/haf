@@ -40,9 +40,10 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context' );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
     CREATE SCHEMA alice;
-    CREATE TABLE alice.tab( id INT ) INHERITS( hive.context );
+    CREATE TABLE alice.tab( id INT ) INHERITS( a.context );
 END;
 $BODY$
 ;

@@ -4,8 +4,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_create( 'context' );
     CREATE SCHEMA a;
+    PERFORM hive.context_create( 'context', 'a' );
     CREATE TABLE a.table1( id INT );
 END;
 $BODY$

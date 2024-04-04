@@ -45,7 +45,8 @@ CREATE OR REPLACE PROCEDURE alice_test_when()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice_context' );
+    CREATE SCHEMA ALICE;
+    PERFORM hive.app_create_context( 'alice_context', 'alice' );
 END;
 $BODY$
 ;
@@ -55,7 +56,8 @@ CREATE OR REPLACE PROCEDURE alice_impersonal_test_when()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice_impersonal_context' );
+    CREATE SCHEMA ALICE_IMPERSONAL;
+    PERFORM hive.app_create_context( 'alice_impersonal_context', 'alice_impersonal' );
 END;
 $BODY$
 ;

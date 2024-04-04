@@ -4,8 +4,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context', FALSE );
-    PERFORM hive.app_create_context( 'context_b', FALSE );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( 'context', _schema => 'a', _is_forking =>FALSE );
+    PERFORM hive.app_create_context( 'context_b', _schema => 'a', _is_forking =>FALSE );
 
     -- hived inserts once irreversible block
     INSERT INTO hive.blocks

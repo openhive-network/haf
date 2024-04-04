@@ -12,10 +12,11 @@ BEGIN
     VALUES (5, 'initminer', 1)
     ;
 
-    PERFORM hive.app_create_context( 'context' );
-    PERFORM hive.app_create_context( 'context_non_forking' );
     CREATE SCHEMA A;
-    CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
+    PERFORM hive.app_create_context( 'context_non_forking', 'a' );
+
+    CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
 END;
 $BODY$
 ;

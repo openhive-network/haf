@@ -13,7 +13,8 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context', TRUE, FALSE );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( 'context', _schema => 'a', _is_forking =>TRUE, _is_attached => FALSE );
 
     PERFORM hive.app_state_provider_import( 'METADATA', 'context' );
 END;

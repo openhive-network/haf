@@ -38,8 +38,9 @@ BEGIN
         , NULL
     );
 
-    PERFORM hive.app_create_context( 'context1' );
-    PERFORM hive.app_create_context( 'context2' );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( 'context1', 'a' );
+    PERFORM hive.app_create_context( 'context2', 'a' );
 
     SELECT * FROM hive.app_next_block( ARRAY[ 'context1', 'context2' ] ) INTO __result; --(1,2)
     RAISE INFO 'app_next_block %', __result;
