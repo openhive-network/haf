@@ -555,7 +555,8 @@ BEGIN
 
         ;
 
-    PERFORM hive.app_create_context( 'context' );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
     PERFORM hive.app_state_provider_import( 'METADATA', 'context' );
     PERFORM hive.app_context_detach( 'context' );
 

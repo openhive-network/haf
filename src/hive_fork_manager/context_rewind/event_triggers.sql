@@ -87,18 +87,20 @@ __origin_table_schema TEXT;
 __origin_table_name TEXT;
 __new_columns TEXT[];
 __ignore_event BOOL;
+__context_schema TEXT;
 BEGIN
     SELECT
         hive.ignore_registered_table_edition(command),
         hrt.shadow_table_name,
         hrt.origin_table_schema,
         hrt.origin_table_name,
+        hc.schema,
         hive.check_owner( hc.name, hc.owner )
     FROM
         ( SELECT * FROM pg_event_trigger_ddl_commands() ) as tr
         JOIN hive.registered_tables hrt ON ( hrt.origin_table_schema || '.' || hrt.origin_table_name ) = tr.object_identity
         JOIN hive.contexts hc ON hrt.context_id = hc.id
-    INTO __ignore_event, __shadow_table_name, __origin_table_schema, __origin_table_name;
+    INTO __ignore_event, __shadow_table_name, __origin_table_schema, __origin_table_name, __context_schema;
 
     IF __shadow_table_name IS NULL THEN
         -- maybe ALTER INHERIT ( hive.<context_name> ) to register table into context
@@ -112,7 +114,7 @@ BEGIN
             FROM pg_event_trigger_ddl_commands() as tr
             JOIN pg_catalog.pg_inherits pgi ON tr.objid = pgi.inhrelid
             JOIN pg_class pgc ON pgc.oid = tr.objid
-            JOIN hive.contexts hc ON ( 'hive.' || hc.name )::regclass = pgi.inhparent
+            JOIN hive.contexts hc ON hc.baseclass_id = pgi.inhparent
             WHERE tr.object_type = 'table'
         ) as tables;
         RETURN;
@@ -199,7 +201,7 @@ BEGIN
         FROM pg_event_trigger_ddl_commands() as tr
         JOIN pg_catalog.pg_inherits pgi ON tr.objid = pgi.inhrelid
         JOIN pg_class pgc ON pgc.oid = tr.objid
-        JOIN hive.contexts hc ON ( 'hive.' || hc.name )::regclass = pgi.inhparent
+        JOIN hive.contexts hc ON hc.baseclass_id = pgi.inhparent
         WHERE tr.object_type = 'table'
     ) as tables;
 END;

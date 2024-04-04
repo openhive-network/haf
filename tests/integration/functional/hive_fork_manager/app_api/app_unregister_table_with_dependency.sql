@@ -4,9 +4,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_create( 'context' );
     CREATE SCHEMA a;
-    CREATE TABLE a.table1( id INT, smth TEXT ) INHERITS( hive.context );
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE a.table1( id INT, smth TEXT ) INHERITS( a.context );
     CREATE VIEW a.table1_view AS SELECT * FROM a.table1;
 END;
 $BODY$

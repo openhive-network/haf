@@ -3,7 +3,8 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
     AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice_context' );
+    CREATE SCHEMA ALICE;
+    PERFORM hive.app_create_context( 'alice_context', 'alice' );
 END;
 $BODY$
 ;

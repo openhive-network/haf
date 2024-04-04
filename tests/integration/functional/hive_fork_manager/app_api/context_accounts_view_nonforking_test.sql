@@ -4,7 +4,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context', FALSE );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( 'context', _schema => 'a', _is_forking => FALSE );
 
     INSERT INTO hive.fork( id, block_num, time_of_fork)
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),

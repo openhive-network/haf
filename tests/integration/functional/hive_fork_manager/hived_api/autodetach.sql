@@ -23,7 +23,8 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice' );
+    CREATE SCHEMA ALICE;
+    PERFORM hive.app_create_context( _name => 'alice', _schema => 'alice' );
 
     UPDATE hive.contexts
     SET
@@ -31,7 +32,7 @@ BEGIN
         , current_block_num = 2
     WHERE name = 'alice';
 
-    PERFORM hive.app_create_context( 'alice_not_detached' );
+    PERFORM hive.app_create_context( _name => 'alice_not_detached', _schema => 'alice' );
 END
 $BODY$
 ;
@@ -41,7 +42,8 @@ CREATE OR REPLACE PROCEDURE bob_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'bob' );
+    CREATE SCHEMA BOB;
+    PERFORM hive.app_create_context( _name => 'bob', _schema => 'bob' );
 
     UPDATE hive.contexts
     SET

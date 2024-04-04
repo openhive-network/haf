@@ -18,9 +18,9 @@ BEGIN
     INSERT INTO hive.fork VALUES( 2, 2, '2016-06-22 19:10:24-07'::timestamp );
     INSERT INTO hive.fork VALUES( 3, 3, '2016-06-22 19:10:25-07'::timestamp );
 
-    PERFORM hive.app_create_context( 'context' );
     CREATE SCHEMA A;
-    CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
+    CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
     PERFORM hive.app_context_detach( 'context' );
 END;
 $BODY$

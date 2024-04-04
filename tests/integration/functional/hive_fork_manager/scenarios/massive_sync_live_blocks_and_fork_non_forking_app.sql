@@ -93,8 +93,8 @@ $BODY$
 DECLARE
 __blocks hive.blocks_range;
 BEGIN
-    PERFORM hive.app_create_context( 'context', FALSE );
     CREATE SCHEMA A;
+    PERFORM hive.app_create_context( 'context', _schema => 'a', _is_forking =>FALSE );
     CREATE TABLE A.table1(id  INTEGER ); -- the table is not registered
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 1

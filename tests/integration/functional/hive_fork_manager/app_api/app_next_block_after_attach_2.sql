@@ -141,7 +141,8 @@ BEGIN
                , NULL
                );
 
-    PERFORM hive.app_create_context('context', FALSE);
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context('context', _schema => 'a', _is_forking => FALSE);
     PERFORM hive.app_next_block('context'); -- (1,6)
     PERFORM hive.app_context_detach('context');
     PERFORM hive.app_set_current_block_num('context', 6);

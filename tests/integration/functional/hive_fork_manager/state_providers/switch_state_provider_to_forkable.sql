@@ -4,7 +4,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context' );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'context' );
 END;
 $BODY$
@@ -15,7 +16,7 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-    CREATE TABLE tab( id INT ) INHERITS( hive.context );
+    CREATE TABLE tab( id INT ) INHERITS( a.context );
 END;
 $BODY$
 ;

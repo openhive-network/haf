@@ -4,7 +4,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'detached_context' );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( 'detached_context', 'a' );
     PERFORM hive.app_context_detach( 'detached_context' );
 END;
 $BODY$

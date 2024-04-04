@@ -5,8 +5,8 @@ AS
 $BODY$
 BEGIN
     CREATE SCHEMA A;
-    PERFORM hive.context_create( 'context' );
-    CREATE TABLE A.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE A.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
     PERFORM hive.context_next_block( 'context' );
 
     -- one row inserted then deleted

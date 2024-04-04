@@ -31,13 +31,15 @@ BEGIN
         , NULL
     );
 
-    PERFORM hive.app_create_context( 'context' );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
     -- create a table to test forking app
-    CREATE TABLE table1( id INT) INHERITS( hive.context );
+    CREATE TABLE table1( id INT) INHERITS( a.context );
 
-    PERFORM hive.app_create_context( 'context2' );
+    CREATE SCHEMA B;
+    PERFORM hive.app_create_context( 'context2', 'b' );
     -- create a table to test forking app
-    CREATE TABLE table2( id INT) INHERITS( hive.context2 );
+    CREATE TABLE table2( id INT) INHERITS( b.context2 );
 END;
 $BODY$
 ;

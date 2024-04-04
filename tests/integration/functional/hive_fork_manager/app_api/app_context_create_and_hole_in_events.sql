@@ -49,8 +49,8 @@ BEGIN
         , NULL
     );
 
-
-    PERFORM hive.app_create_context( 'context' ); -- new context on events id 0
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  ); -- new context on events id 0
 END;
 $BODY$
 ;

@@ -33,9 +33,9 @@ BEGIN
         );
 
     -- create non-forking context and its table
-    PERFORM hive.app_create_context( 'context' );
     CREATE SCHEMA A;
-    CREATE TABLE A.table1( id INT) INHERITS( hive.context );
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
+    CREATE TABLE A.table1( id INT) INHERITS( a.context );
 
     -- move to irreversible block (1,1)
     PERFORM hive.app_next_block( 'context' );

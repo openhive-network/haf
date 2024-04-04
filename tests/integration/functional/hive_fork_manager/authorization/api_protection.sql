@@ -4,7 +4,8 @@ AS
 $BODY$
 BEGIN
     BEGIN
-        PERFORM hive.app_create_context( 'hived_context' );
+        CREATE SCHEMA A;
+        PERFORM hive.app_create_context( 'hived_context', 'a' );
         ASSERT FALSE, 'Hived can create a context';
     EXCEPTION WHEN OTHERS THEN
     END;
@@ -40,8 +41,9 @@ BEGIN
     END;
 
     BEGIN
-        CREATE TABLE hived_table(id INT);
-        PERFORM hive.app_register_table( 'hived_table' );
+        CREATE SCHEMA B;
+        CREATE TABLE b.hived_table(id INT);
+        PERFORM hive.app_register_table( 'b','hived_table', 'alice' );
         ASSERT FALSE, 'Hived can call app_register_table';
     EXCEPTION WHEN OTHERS THEN
     END;
@@ -79,11 +81,13 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice_context' );
-    PERFORM hive.app_create_context( 'alice_context_detached' );
+    CREATE SCHEMA ALICE;
+
+    PERFORM hive.app_create_context( 'alice_context', 'alice' );
+    PERFORM hive.app_create_context( 'alice_context_detached', 'alice' );
     PERFORM hive.app_context_detach( 'alice_context_detached' );
-    CREATE SCHEMA alice;
-    CREATE TABLE alice.alice_table( id INT ) INHERITS( hive.alice_context );
+
+    CREATE TABLE alice.alice_table( id INT ) INHERITS( alice.alice_context );
 END;
 $BODY$
 ;

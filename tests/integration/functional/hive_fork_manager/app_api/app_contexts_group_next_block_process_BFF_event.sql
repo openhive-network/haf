@@ -46,13 +46,13 @@ BEGIN
         , NULL
     );
 
-    PERFORM hive.app_create_context( 'context' );
-    PERFORM hive.app_create_context( 'context_b' );
     CREATE SCHEMA A;
-    CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
-
     CREATE SCHEMA B;
-    CREATE TABLE B.table1(id  INTEGER ) INHERITS( hive.context_b );
+    PERFORM hive.app_create_context( _name => 'context', _schema => 'a'  );
+    PERFORM hive.app_create_context( _name => 'context_b', _schema => 'b' );
+
+    CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
+    CREATE TABLE B.table1(id  INTEGER ) INHERITS( b.context_b );
 
     PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ); -- (1,1) END_MASSIVE_SYNC e1
     INSERT INTO A.table1(id) VALUES( 1 );

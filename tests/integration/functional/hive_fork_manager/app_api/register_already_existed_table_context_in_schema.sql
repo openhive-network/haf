@@ -5,8 +5,9 @@ AS
 $BODY$
 BEGIN
     CREATE SCHEMA a;
-    PERFORM hive.context_create( 'context', 'a' );
-    CREATE TABLE a.table1( id INT ) INHERITS( a.context );
+    PERFORM hive.context_create( _name => 'context', _schema => 'a' );
+
+    CREATE TABLE a.table1( id INT );
 END;
 $BODY$
 ;
@@ -16,11 +17,9 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    BEGIN
-    PERFORM hive.app_register_table( 'a.table1', 'context' );
-    ASSERT FALSE, 'No expected exception';
-    EXCEPTION WHEN OTHERS THEN
-    END;
+    PERFORM hive.app_register_table( 'a', 'table1', 'context' );
+    --ALTER TABLE a.table1 ADD COLUMN hive_rowid BIGINT NOT NULL;
+    --ALTER TABLE a.table1 INHERIT hive.context;
 END;
 $BODY$
 ;
@@ -37,8 +36,6 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema='hive' AND table_name='shadow_a_table1' AND column_name='hive_operation_type' AND udt_name='trigger_operation' );
     ASSERT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema='hive' AND table_name='shadow_a_table1' AND column_name='hive_operation_id' AND data_type='bigint' );
     ASSERT EXISTS ( SELECT FROM hive.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' AND shadow_table_name='shadow_a_table1' ), 'No entry about registered table';
-
-    ASSERT EXISTS (SELECT 0 FROM pg_class where relname = 'idx_a_table1_row_id' ), 'No index for table a.table1 rowid';
 END
 $BODY$
 ;

@@ -18,16 +18,18 @@ BEGIN
     INSERT INTO hive.fork VALUES( 2, 2, '2016-06-22 19:10:24-07'::timestamp );
     INSERT INTO hive.fork VALUES( 3, 3, '2016-06-22 19:10:25-07'::timestamp );
 
-    PERFORM hive.app_create_context( 'context_a' );
-    PERFORM hive.app_create_context( 'context_b' );
-    PERFORM hive.app_create_context( 'context_c' );
-
     CREATE SCHEMA A;
-    CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context_a );
     CREATE SCHEMA B;
-    CREATE TABLE B.table1(id  INTEGER ) INHERITS( hive.context_b );
     CREATE SCHEMA C;
-    CREATE TABLE C.table1(id  INTEGER ) INHERITS( hive.context_c );
+
+    PERFORM hive.app_create_context( 'context_a', 'a' );
+    PERFORM hive.app_create_context( 'context_b', 'b' );
+    PERFORM hive.app_create_context( 'context_c', 'c' );
+
+
+    CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context_a );
+    CREATE TABLE B.table1(id  INTEGER ) INHERITS( b.context_b );
+    CREATE TABLE C.table1(id  INTEGER ) INHERITS( c.context_c );
 
     PERFORM hive.app_context_detach( ARRAY[ 'context_a', 'context_b', 'context_c' ] );
 END;

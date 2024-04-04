@@ -4,7 +4,7 @@ AS
 $BODY$
 BEGIN
     CREATE SCHEMA A;
-    PERFORM hive.context_create( _name => 'context', _is_forking => FALSE );
+    PERFORM hive.context_create( _name => 'context', _is_forking => FALSE, _schema => 'a' );
 END;
 $BODY$
 ;
@@ -14,7 +14,7 @@ CREATE OR REPLACE PROCEDURE alice_test_when()
 AS
 $BODY$
 BEGIN
-    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT) INHERITS( hive.context );
+    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT) INHERITS( a.context );
 
     -- tables which shall not be registered
     CREATE TABLE A.table_base( id INT );

@@ -3,9 +3,9 @@
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_create( 'context' );
     CREATE SCHEMA A;
-    CREATE TABLE A.table1( id SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT ) INHERITS( hive.context );
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE A.table1( id SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT ) INHERITS( a.context );
 END;
 $BODY$
 ;

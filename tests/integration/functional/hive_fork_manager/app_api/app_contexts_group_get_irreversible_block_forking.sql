@@ -4,13 +4,13 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context' );
     CREATE SCHEMA A;
-    CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
+    CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
 
-    PERFORM hive.app_create_context( 'context_b' );
     CREATE SCHEMA B;
-    CREATE TABLE B.table1(id  INTEGER ) INHERITS( hive.context_b );
+    PERFORM hive.app_create_context( _name => 'context_b', _schema => 'b' );
+    CREATE TABLE B.table1(id  INTEGER ) INHERITS( b.context_b );
 
     -- hived inserts once irreversible block
     INSERT INTO hive.blocks

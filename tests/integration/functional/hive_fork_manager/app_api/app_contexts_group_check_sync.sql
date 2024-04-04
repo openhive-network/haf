@@ -21,13 +21,14 @@ BEGIN
     INSERT INTO hive.fork( id, block_num, time_of_fork)
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp );
 
-    PERFORM hive.app_create_context( 'attached_context' );
-    PERFORM hive.app_create_context( 'attached_context2' );
-    PERFORM hive.app_create_context( 'attached_context_not_insync_bn' );
-    PERFORM hive.app_create_context( 'attached_context_not_insync_ir' );
-    PERFORM hive.app_create_context( 'attached_context_not_insync_ev' );
-    PERFORM hive.app_create_context( 'attached_context_not_insync_fr' );
-    PERFORM hive.app_create_context( 'attached_context_not_insync_is_forking', FALSE );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( 'attached_context', 'a' );
+    PERFORM hive.app_create_context( 'attached_context2', 'a' );
+    PERFORM hive.app_create_context( 'attached_context_not_insync_bn', 'a' );
+    PERFORM hive.app_create_context( 'attached_context_not_insync_ir', 'a' );
+    PERFORM hive.app_create_context( 'attached_context_not_insync_ev', 'a' );
+    PERFORM hive.app_create_context( 'attached_context_not_insync_fr', 'a' );
+    PERFORM hive.app_create_context( 'attached_context_not_insync_is_forking', _schema => 'a', _is_forking => FALSE );
 
     UPDATE hive.contexts ctx
     SET

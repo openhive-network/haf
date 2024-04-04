@@ -39,7 +39,7 @@ BEGIN
     ASSERT EXISTS( SELECT * FROM hive.contexts WHERE name='alice_context' ), 'Hived does not see Alice''s context';
 
     BEGIN
-        CREATE TABLE hived_table(id INT ) INHERITS( hive.alice_context );
+        CREATE TABLE hived_table(id INT ) INHERITS( alice.alice_context );
         ASSERT FALSE, 'Hived can register tabkle in Alice''s context';
     EXCEPTION WHEN OTHERS THEN
     END;
@@ -84,14 +84,16 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice_context' );
-    PERFORM hive.app_create_context( 'alice_context_detached' );
+    CREATE SCHEMA ALICE;
+
+    PERFORM hive.app_create_context( 'alice_context', 'alice' );
+    PERFORM hive.app_create_context( 'alice_context_detached', 'alice' );
     PERFORM hive.app_context_detach( 'alice_context_detached' );
     PERFORM hive.app_set_current_block_num( ARRAY[ 'alice_context_detached' ], 1 );
     CALL hive.appproc_context_attach( ARRAY[ 'alice_context_detached' ] );
     PERFORM hive.app_context_detach( ARRAY[ 'alice_context_detached' ] );
-    CREATE SCHEMA alice;
-    CREATE TABLE alice.alice_table( id INT ) INHERITS( hive.alice_context );
+
+    CREATE TABLE alice.alice_table( id INT ) INHERITS( alice.alice_context );
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'alice_context' );
     PERFORM hive.app_next_block( 'alice_context' );
     PERFORM hive.app_next_block( ARRAY[ 'alice_context' ] );

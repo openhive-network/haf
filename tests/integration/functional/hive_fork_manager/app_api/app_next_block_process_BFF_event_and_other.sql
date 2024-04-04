@@ -17,11 +17,12 @@ BEGIN
     -- End of  Initialization
 
     -- Preparing contexts
-    PERFORM hive.app_create_context( 'context' );
-    PERFORM hive.app_create_context( 'slow_context' ); -- it holds events queue
-
     CREATE SCHEMA A;
-    CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
+    PERFORM hive.app_create_context( 'slow_context', 'a' ); -- it holds events queue
+
+
+    CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
     -- End of preparing contexts
 
     PERFORM hive.push_block(
