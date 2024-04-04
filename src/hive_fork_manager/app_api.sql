@@ -1,4 +1,8 @@
-CREATE OR REPLACE FUNCTION hive.app_create_context( _name hive.context_name, _is_forking BOOLEAN = TRUE, _is_attached BOOLEAN = TRUE)
+CREATE OR REPLACE FUNCTION hive.app_create_context(
+      _name hive.context_name
+    , _is_forking BOOLEAN = TRUE
+    , _is_attached BOOLEAN = TRUE
+    , _schema TEXT = 'hive')
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -8,10 +12,12 @@ BEGIN
     -- Any context always starts with block before genesis, the app may detach the context and execute 'massive sync'
     -- after massive sync the application must attach its context to last already synced block
     PERFORM hive.context_create(
-        _name
+          _name
         , ( SELECT MAX( hf.id ) FROM hive.fork hf ) -- current fork id
         , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
-        , _is_forking, _is_attached
+        , _is_forking
+        , _is_attached
+        , _schema
     );
 
     PERFORM hive.create_context_data_view( _name );

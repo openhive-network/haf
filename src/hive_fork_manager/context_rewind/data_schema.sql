@@ -10,6 +10,7 @@ CREATE TYPE hive.event_type AS ENUM( 'BACK_FROM_FORK', 'NEW_BLOCK', 'NEW_IRREVER
 CREATE TABLE IF NOT EXISTS hive.contexts(
     id SERIAL NOT NULL,
     name hive.context_name NOT NULL,
+    schema TEXT NOT NULL,
     current_block_num INTEGER NOT NULL,
     irreversible_block INTEGER NOT NULL,
     is_attached BOOL NOT NULL,

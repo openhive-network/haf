@@ -199,7 +199,7 @@ BEGIN
         FROM pg_event_trigger_ddl_commands() as tr
         JOIN pg_catalog.pg_inherits pgi ON tr.objid = pgi.inhrelid
         JOIN pg_class pgc ON pgc.oid = tr.objid
-        JOIN hive.contexts hc ON ( 'hive.' || hc.name )::regclass = pgi.inhparent
+        JOIN hive.contexts hc ON ( hc.schema || '.' || hc.name )::regclass = pgi.inhparent
         WHERE tr.object_type = 'table'
     ) as tables;
 END;
