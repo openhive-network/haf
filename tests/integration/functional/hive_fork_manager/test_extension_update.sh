@@ -1,6 +1,6 @@
 #! /bin/bash
 
-set -euo pipefail 
+set -euo pipefail
 
 log_exec_params() {
   echo
@@ -61,10 +61,10 @@ done
 
 test_extension_update() {
 
-    POSTGRES_VERSION=14
+    POSTGRES_VERSION=16
     # old libhfm has to be removed so in case of an corrupted setup of haf the old libhfm won't be used
     sudo rm -rf /usr/lib/postgresql/${POSTGRES_VERSION}/lib/libhfm-*
-    # modify the hived_api.sql file 
+    # modify the hived_api.sql file
     echo -e "CREATE OR REPLACE FUNCTION hive.test() \n    RETURNS void \n    LANGUAGE plpgsql \n    VOLATILE AS \n\$BODY\$ \nBEGIN \nRAISE NOTICE 'test'; \nEND; \n\$BODY\$;" >> $DIR/src/hive_fork_manager/hived_api.sql
     # commit changes to make a new hash
     git -C $DIR config --global user.name "abc"
