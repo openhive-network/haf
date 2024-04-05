@@ -150,7 +150,7 @@ extern "C"
   {
     _operation* op = PG_GETARG_HIVE_OPERATION_PP( 0 );
     Datum bytes = DirectFunctionCall1(byteaout, PointerGetDatum(op));
-    PG_RETURN_CSTRING( bytes );
+    PG_RETURN_DATUM( bytes );
   }
 
   PG_FUNCTION_INFO_V1( operation_bin_in_internal );

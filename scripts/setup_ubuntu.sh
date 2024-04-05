@@ -41,12 +41,13 @@ install_all_dev_packages() {
   apt-get update
   DEBIAN_FRONTEND=noniteractive apt-get install -y \
           systemd \
-          postgresql \
-          postgresql-contrib \
           libpq-dev \
           tox \
           joe \
-          postgresql-server-dev-all
+          postgresql-common
+
+  /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+  DEBIAN_FRONTEND=noniteractive apt-get install -y postgresql-16 postgresql-server-dev-16
 
   apt-get clean
   rm -rf /var/lib/apt/lists/*
@@ -76,7 +77,7 @@ create_haf_admin_account() {
   echo "Attempting to create $haf_admin_unix_account account..."
   assert_is_root
 
-  # Unfortunately haf_admin must be able to su as root, because it must be able to write into /usr/share/postgresql/14/extension directory, being owned by root (it could be owned by postgres)
+  # Unfortunately haf_admin must be able to su as root, because it must be able to write into /usr/share/postgresql/16/extension directory, being owned by root (it could be owned by postgres)
   if id "$haf_admin_unix_account" &>/dev/null; then
       echo "Account $haf_admin_unix_account already exists. Creation skipped."
   else

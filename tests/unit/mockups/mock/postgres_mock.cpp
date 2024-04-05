@@ -133,7 +133,7 @@ StringInfo makeStringInfo() {
   EXECUTE_MOCK(makeStringInfo());
 }
 
-void appendBinaryStringInfo(StringInfo _str, const char* _data, int _datalen) {
+void appendBinaryStringInfo(StringInfo _str, IPostgresMock::appendBinaryStringInfoArgType _data, int _datalen) {
   EXECUTE_MOCK(appendBinaryStringInfo(_str, _data, _datalen));
 }
 
