@@ -214,6 +214,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_next_block_non_forking_app.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_exists.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/register_already_existed_table.sql )
+ ADD_SQL_FUNCTIONAL_TEST( app_api/register_already_existed_table_context_in_schema.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/register_already_registered_table_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_get_irreversible_block_forking.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_get_irreversible_block_forking.sql )
