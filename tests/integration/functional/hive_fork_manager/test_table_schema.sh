@@ -1,6 +1,6 @@
 #! /bin/bash
 
-set -euo pipefail 
+set -euo pipefail
 
 log_exec_params() {
   echo
@@ -96,7 +96,7 @@ test_extension_update() {
 
     sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER TABLE hive.accounts ADD COLUMN phone_number VARCHAR;"
     # run generator script
-    POSTGRES_VERSION=14
+    POSTGRES_VERSION=16
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh 2>&1 | tee -i update.txt || true
     if grep -q "Table schema is inconsistent" update.txt; then
         echo "Update test succeed"

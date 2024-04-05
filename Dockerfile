@@ -2,7 +2,7 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=ubuntu22.04-8
+ARG CI_IMAGE_TAG=ubuntu22.04-11
 
 ARG BUILD_IMAGE_TAG
 
@@ -19,11 +19,15 @@ COPY ./hive/scripts/setup_ubuntu.sh /usr/local/src/hive/scripts/
 COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 
 # create required accounts
-RUN ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived" && rm -rf /var/lib/apt/lists/*
+RUN bash -x ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived" && rm -rf /var/lib/apt/lists/*
 # install postgres.  Installation automatically does an initdb, so remove the 29+MB database that we don't need afterwards
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y curl postgresql libpq5 libboost-chrono1.74.0 libboost-context1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 && \
-    rm -rf /var/lib/postgresql/14/main /var/lib/apt/lists/*
+    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
+    /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y curl postgresql-16 libpq5 libboost-chrono1.74.0 libboost-context1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 && \
+    apt-get remove -y gnupg && \
+    apt-get autoremove  -y
 # change the UID and GID to match the ones postgres is assigned in our non-minimal runtime
 RUN (chown -Rf --from=postgres 105 / || true) && (chown -Rf --from=:postgres :109 / || true) && usermod -u 105 postgres && groupmod -g 109 postgres
 RUN usermod -a -G users -c "PostgreSQL daemon account" postgres
@@ -140,7 +144,7 @@ WORKDIR /home/haf_admin
 COPY --from=build --chown=haf_admin:users /home/haf_admin/build /home/haf_admin/build/
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}" "${HAF_SOURCE_DIR}"
 
-ENV POSTGRES_VERSION=14
+ENV POSTGRES_VERSION=16
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/docker_entrypoint.sh" .
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/postgresql.conf" /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.conf" /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
@@ -189,7 +193,7 @@ EXPOSE ${WS_PORT}
 # JSON rpc service
 EXPOSE ${HTTP_PORT}
 
-FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu22.04-10 AS minimal-instance
+FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu22.04-11 AS minimal-instance
 
 ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu22.04-8}
 
@@ -213,7 +217,7 @@ ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\n
 # Always define default value of HIVED_UID variable to make possible direct spawn of docker image (without run_hived_img.sh wrapper)
 ENV HIVED_UID=1000
 
-ENV POSTGRES_VERSION=14
+ENV POSTGRES_VERSION=16
 
 SHELL ["/bin/bash", "-c"]
 

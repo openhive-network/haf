@@ -580,7 +580,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
   {
     fill_return_tuples(collected_keyauths, fcinfo,
         [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_name.c_str()));},
-        [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.key_kind));},
+        [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(static_cast<int32_t>(collected_item.key_kind)));},
         [] (const auto& collected_item) { return make_datum_pair(public_key_data_to_bytea_datum(collected_item.key_auth), collected_item.allow_null_in_key_auth());},
         [] (const auto& collected_item) { return make_datum_pair(CStringGetTextDatum(collected_item.account_auth.c_str()), collected_item.allow_null_in_account_auth());},
         [] (const auto& collected_item) { return make_datum_pair(Int32GetDatum(collected_item.weight_threshold));},
@@ -796,12 +796,15 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       switch (subcmd->subtype)
       {
         case AT_AddColumn:
-        case AT_AddColumnRecurse:
         case AT_AddColumnToView:
         case AT_DropColumn:
-        case AT_DropColumnRecurse:
         case AT_AlterColumnType:
         case AT_AddInherit:
+#if PG_VERSION_NUM < 160002
+        // the *Recurse subtypes were removed in 16.2: https://github.com/postgres/postgres/commit/840ff5f451cd9a391d237fc60894fea7ad82a189
+        case AT_AddColumnRecurse:
+        case AT_DropColumnRecurse:
+#endif
           PG_RETURN_BOOL( false );
         default:
           break;
