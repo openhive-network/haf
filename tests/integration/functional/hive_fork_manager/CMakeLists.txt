@@ -266,7 +266,9 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST(app_api/app_contexts_set_non-forking.sql)
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_set_forking.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_set_forking.sql )
- ADD_SQL_FUNCTIONAL_TEST(app_api/app_contexts_set_non_forking_and_back_and_again.sql)
+ ADD_SQL_FUNCTIONAL_TEST(app_api/app_context_set_forking_and_back.sql)
+ADD_SQL_FUNCTIONAL_TEST(app_api/app_context_set_non_forking_and_back.sql)
+ ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_set_non_forking_and_back_and_again.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_set_forking_back_and_again.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_create_and_hole_in_events.sql )

@@ -314,6 +314,11 @@ BEGIN
       , last_active_at = NOW()
     WHERE hc.name = ANY( _contexts );
 
+    PERFORM hive.remove_rowid_if_exists( hrt.origin_table_schema, hrt.origin_table_name, hc.name )
+    FROM hive.registered_tables hrt
+    JOIN hive.contexts hc ON hrt.context_id = hc.id
+    JOIN unnest( _contexts ) as context ON context.text = hc.name;
+
     -- we are reattaching the contexts but the triggers won't be recreated
     -- because now the contexts are non-forking
     PERFORM
@@ -355,6 +360,11 @@ BEGIN
     SET is_forking = true
       , last_active_at = NOW()
     WHERE hc.name = ANY( _contexts );
+
+    PERFORM hive.add_rowid_if_not_exists( hrt.origin_table_schema, hrt.origin_table_name, hc.name )
+    FROM hive.registered_tables hrt
+    JOIN hive.contexts hc ON hrt.context_id = hc.id
+    JOIN unnest( _contexts ) as context ON context.text = hc.name;
 
     -- to recreate triggers
     PERFORM

@@ -1,7 +1,7 @@
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
-    AS
+AS
 $BODY$
 BEGIN
     INSERT INTO hive.operation_types
@@ -33,12 +33,17 @@ BEGIN
         );
 
     -- create non-forking context and its table
-    PERFORM hive.app_create_context( 'context', FALSE );
+    PERFORM hive.app_create_context( _name => 'context', _is_forking := FALSE );
     CREATE SCHEMA A;
     CREATE TABLE A.table1( id INT) INHERITS( hive.context );
 
     -- move to irreversible block (1,1)
     PERFORM hive.app_next_block( 'context' );
+    -- try to move to reversible block (2,2)m it is not forking so NULL will be returned
+    PERFORM hive.app_next_block( 'context' );
+    INSERT INTO A.table1( id ) VALUES (1);
+
+    PERFORM hive.app_context_set_forking( 'context' ); -- back to block 1
 END;
 $BODY$
 ;
@@ -48,37 +53,33 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-    -- now it is time to switch to forking context
-    PERFORM hive.app_context_set_forking( 'context' );
-END
+    PERFORM hive.app_context_set_non_forking( 'context' ); -- back to block 1
+    INSERT INTO A.table1( id ) VALUES (10);
+END;
 $BODY$
 ;
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_then()
         LANGUAGE 'plpgsql'
-    AS
+AS
 $BODY$
 DECLARE
-    __second_blocks hive.blocks_range;
+        __result hive.blocks_range;
 BEGIN
-    ASSERT EXISTS ( SELECT 1 FROM information_schema.columns WHERE table_name='table1' AND column_name='hive_rowid' ), 'Column row_id not exists for forking context table';
-
-    -- move to reversible block
-    SELECT * FROM hive.app_next_block( 'context' ) INTO __second_blocks;
-    RAISE NOTICE 'Second block=%', __second_blocks;
-    ASSERT __second_blocks.first_block = 2 AND __second_blocks.last_block = 2, 'Wrong second block';
+    ASSERT NOT EXISTS ( SELECT 1 FROM information_schema.columns WHERE table_name='table1' AND column_name='hive_rowid' ), 'Column row_id still exists for forking context table';
 
     ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context' AND is_attached = TRUE ), 'Attach flag is still set';
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 2, 'Wrong current_block_num';
-    ASSERT ( SELECT is_forking FROM hive.contexts WHERE name='context' ) = TRUE, 'context is is still marked as non-forking';
+    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 1, 'Wrong current_block_num';
+    ASSERT ( SELECT is_forking FROM hive.contexts WHERE name='context' ) = FALSE, 'context is is still marked as forking';
 
+    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 0, 'Trigger inserted something into shadow table1';
 
-    INSERT INTO A.table1( id ) VALUES (10);
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 WHERE id = 10 AND hive_rowid=1 ) = 1, 'Nothing (should be 10) was inserted into shadow table1';
+    SELECT * INTO __result FROM hive.app_next_block( 'context' );
+    ASSERT __result IS NULL, 'Non forking context reach reversible block';
 
-    INSERT INTO A.table1( id ) VALUES (11);
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 WHERE id=11 AND hive_rowid=2 ) = 1, 'Nothing (should be 11) was inserted into shadow table1';
-END
+    -- 1 and 10 shall stay in a context's table
+    ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 2, 'Wrong number of rows in A.table1';
+END;
 $BODY$
 ;
 

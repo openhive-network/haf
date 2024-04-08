@@ -5,6 +5,7 @@ $BODY$
 BEGIN
     CREATE SCHEMA A;
     PERFORM hive.context_create( 'context' );
+    PERFORM hive.context_create( _name =>'context_non_forking', _is_forking => false );
 END;
 $BODY$
 ;
@@ -15,6 +16,7 @@ AS
 $BODY$
 BEGIN
     CREATE TABLE A.table1(id  SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT) INHERITS( hive.context );
+    CREATE TABLE A.table2(id  SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT) INHERITS( hive.context_non_forking );
 
     -- tables which shall not be registered
     CREATE TABLE A.table_base( id INT );
@@ -29,6 +31,7 @@ AS
 $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.columns WHERE table_name='table1' AND column_name='hive_rowid' );
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.columns WHERE table_name='table2' AND column_name='hive_rowid' ), 'Column row_id exists for non-forking context table';
 
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'shadow_a_table1' );
     ASSERT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema='hive' AND table_name='shadow_a_table1' AND column_name='hive_block_num' AND data_type='integer' );

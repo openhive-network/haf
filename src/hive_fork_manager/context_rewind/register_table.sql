@@ -126,6 +126,101 @@ END;
 $BODY$
 ;
 
+DROP FUNCTION IF EXISTS hive.has_column_rowid;
+CREATE FUNCTION hive.has_column_rowid( _table_schema TEXT,  _table_name TEXT )
+    RETURNS BOOLEAN
+    LANGUAGE 'plpgsql'
+    STABLE
+AS
+$BODY$
+DECLARE
+    __is_rowid BOOLEAN := FALSE;
+BEGIN
+    EXECUTE format(
+            'SELECT EXISTS( SELECT 1 FROM information_schema.columns
+            WHERE table_schema=%L
+            AND table_name=%L
+            AND column_name=%L
+            )'
+        , _table_schema, _table_name, 'hive_rowid'
+    ) INTO __is_rowid;
+
+    RETURN __is_rowid;
+END;
+$BODY$;
+
+DROP FUNCTION IF EXISTS hive.setup_rowid;
+CREATE FUNCTION hive.setup_rowid( _table_schema TEXT,  _table_name TEXT )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __new_sequence_name TEXT := 'seq_' || lower(_table_schema) || '_' || lower(_table_name);
+BEGIN
+    IF EXISTS( SELECT 0 FROM pg_class where relname = __new_sequence_name ) THEN
+       RETURN;
+    END IF;
+
+    -- create and set separated sequence for hive.base part of the registered table
+    EXECUTE format( 'CREATE SEQUENCE %I.%s', lower(_table_schema), __new_sequence_name );
+    EXECUTE format( 'ALTER TABLE %I.%I ALTER COLUMN hive_rowid SET DEFAULT nextval( ''%s.%s'' )'
+        , lower( _table_schema ), lower( _table_name )
+        , lower(_table_schema)
+        , __new_sequence_name
+            );
+    EXECUTE format( 'ALTER SEQUENCE %I.%I OWNED BY %I.%I.hive_rowid'
+        , lower(_table_schema)
+        , __new_sequence_name
+        , lower(_table_schema)
+        , lower( _table_name )
+            );
+
+    EXECUTE format('CREATE INDEX idx_%I_%I_row_id ON %I.%I(hive_rowid)', lower(_table_schema), lower(_table_name), lower(_table_schema), lower(_table_name) );
+END;
+$BODY$;
+
+
+DROP FUNCTION IF EXISTS hive.add_rowid_if_not_exists;
+CREATE FUNCTION hive.add_rowid_if_not_exists( _table_schema TEXT,  _table_name TEXT, _context TEXT )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    IF hive.has_column_rowid( _table_schema, _table_name ) THEN
+        PERFORM hive.setup_rowid( _table_schema, _table_name );
+        RETURN;
+    END IF;
+
+    EXECUTE format( 'ALTER TABLE %I.%s ADD COLUMN hive_rowid BIGINT NOT NULL DEFAULT 0', _table_schema, _table_name );
+    EXECUTE format( 'ALTER TABLE %I.%s INHERIT hive.%s', _table_schema, _table_name, _context );
+
+    PERFORM hive.setup_rowid( _table_schema, _table_name );
+END;
+$BODY$
+;
+
+DROP FUNCTION IF EXISTS hive.remove_rowid_if_exists;
+CREATE FUNCTION hive.remove_rowid_if_exists( _table_schema TEXT,  _table_name TEXT, _context TEXT )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    IF NOT hive.has_column_rowid( _table_schema, _table_name ) THEN
+        RETURN;
+    END IF;
+
+    EXECUTE format( 'ALTER TABLE IF EXISTS %I.%s NO INHERIT hive.%s', lower(_table_schema), lower(_table_name), _context );
+    EXECUTE format( 'ALTER TABLE IF EXISTS %I.%s DROP COLUMN hive_rowid CASCADE', lower(_table_schema), lower(_table_name)  );
+END;
+$BODY$
+;
+
 
 -- creates a shadow table of registered table:
 -- | [ table column1, table column2,.... ] | hive_block_num | hive_operation_type |
@@ -145,11 +240,11 @@ DECLARE
     __hive_triggerfunction_name_delete TEXT := hive.get_trigger_delete_function_name( _table_schema,  _table_name );
     __hive_triggerfunction_name_update TEXT := hive.get_trigger_update_function_name( _table_schema,  _table_name );
     __hive_triggerfunction_name_truncate TEXT := hive.get_trigger_truncate_function_name( _table_schema,  _table_name );
-    __new_sequence_name TEXT := 'seq_' || lower(_table_schema) || '_' || lower(_table_name);
     __context_id INTEGER := NULL;
     __registered_table_id INTEGER := NULL;
     __attached_context BOOLEAN := FALSE;
     __columns_names TEXT[];
+    __is_forking BOOLEAN := TRUE;
 BEGIN
     PERFORM hive.chceck_constrains(_table_schema, _table_name);
 
@@ -162,27 +257,17 @@ BEGIN
     SELECT hc.id, tables.table_schema, tables.origin, tables.shadow, columns, current_user
     FROM ( SELECT hc.id, hive.check_owner( hc.name, hc.owner ) FROM hive.contexts hc WHERE hc.name =  _context_name ) as hc
     JOIN ( VALUES( lower(_table_schema), lower(_table_name), __shadow_table_name, __columns_names  )  ) as tables( table_schema, origin, shadow, columns ) ON TRUE
-    RETURNING context_id, id, (SELECT hc2.is_attached FROM hive.contexts hc2 WHERE hc2.id = context_id) INTO __context_id, __registered_table_id, __attached_context
+    RETURNING context_id, id, (SELECT hc2.is_attached FROM hive.contexts hc2 WHERE hc2.id = context_id), (SELECT hc2.is_forking FROM hive.contexts hc2 WHERE hc2.id = context_id) INTO __context_id, __registered_table_id, __attached_context, __is_forking
     ;
-
-    -- create and set separated sequence for hive.base part of the registered table
-    EXECUTE format( 'CREATE SEQUENCE %I.%s', lower(_table_schema), __new_sequence_name );
-    EXECUTE format( 'ALTER TABLE %I.%I ALTER COLUMN hive_rowid SET DEFAULT nextval( ''%s.%s'' )'
-        , lower( _table_schema ), lower( _table_name )
-        , lower(_table_schema)
-        , __new_sequence_name
-        );
-    EXECUTE format( 'ALTER SEQUENCE %I.%I OWNED BY %I.%I.hive_rowid'
-        , lower(_table_schema)
-        , __new_sequence_name
-            , lower(_table_schema)
-        , lower( _table_name )
-        );
-
-    EXECUTE format('CREATE INDEX idx_%I_%I_row_id ON %I.%I(hive_rowid)', lower(_table_schema), lower(_table_name), lower(_table_schema), lower(_table_name) );
 
     ASSERT __context_id IS NOT NULL, 'There is no context %', _context_name;
     ASSERT __registered_table_id IS NOT NULL;
+
+    IF __is_forking THEN
+        PERFORM hive.add_rowid_if_not_exists( _table_schema,  _table_name, _context_name );
+    ELSE
+        PERFORM hive.remove_rowid_if_exists( _table_schema,  _table_name, _context_name );
+    END IF;
 
     PERFORM hive.create_revert_functions( _table_schema, _table_name, __shadow_table_name, __columns_names );
 
@@ -384,8 +469,7 @@ BEGIN
     PERFORM hive.drop_revert_functions( _table_schema, _table_name );
 
     -- remove inheritance and sequence
-    EXECUTE format( 'ALTER TABLE IF EXISTS %I.%s NO INHERIT hive.%s', lower(_table_schema), lower(_table_name), __context_name );
-    EXECUTE format( 'ALTER TABLE IF EXISTS %I.%s DROP COLUMN hive_rowid CASCADE', lower(_table_schema), lower(_table_name)  );
+    PERFORM hive.remove_rowid_if_exists( _table_schema, _table_name, __context_name );
 END;
 $BODY$
 ;

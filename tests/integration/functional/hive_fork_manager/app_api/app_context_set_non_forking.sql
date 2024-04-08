@@ -64,6 +64,8 @@ $BODY$
 DECLARE
         __result hive.blocks_range;
 BEGIN
+    ASSERT NOT EXISTS ( SELECT 1 FROM information_schema.columns WHERE table_name='table1' AND column_name='hive_rowid' ), 'Column row_id still exists for forking context table';
+
     ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context' AND is_attached = TRUE ), 'Attach flag is still set';
     ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 1, 'Wrong current_block_num';
     ASSERT ( SELECT is_forking FROM hive.contexts WHERE name='context' ) = FALSE, 'context is is still marked as forking';
