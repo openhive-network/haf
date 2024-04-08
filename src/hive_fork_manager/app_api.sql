@@ -390,9 +390,14 @@ CREATE OR REPLACE FUNCTION hive.app_register_table( _table_schema TEXT,  _table_
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema VARCHAR;
 BEGIN
+    SELECT schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context;
     EXECUTE format( 'ALTER TABLE %I.%s ADD COLUMN hive_rowid BIGINT NOT NULL DEFAULT 0', _table_schema, _table_name );
-    EXECUTE format( 'ALTER TABLE %I.%s INHERIT hive.%s', _table_schema, _table_name, _context );
+    EXECUTE format( 'ALTER TABLE %I.%s INHERIT %I.%s', _table_schema, _table_name, __schema, _context );
 END;
 $BODY$
 ;
