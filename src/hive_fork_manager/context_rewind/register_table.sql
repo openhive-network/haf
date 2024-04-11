@@ -126,6 +126,52 @@ END;
 $BODY$
 ;
 
+DROP FUNCTION IF EXISTS hive.get_rowid_index_name;
+CREATE FUNCTION hive.get_rowid_index_name( _table_schema TEXT,  _table_name TEXT )
+    RETURNS TEXT
+    LANGUAGE 'plpgsql'
+    IMMUTABLE
+AS
+$BODY$
+DECLARE
+    __index_name TEXT :=  'idx_' || lower(_table_schema) || '_' || lower(_table_name) || '_row_id';
+BEGIN
+    RETURN __index_name;
+END;
+$BODY$;
+
+DROP FUNCTION IF EXISTS hive.create_rowid_index;
+CREATE FUNCTION hive.create_rowid_index( _table_schema TEXT,  _table_name TEXT )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    EXECUTE format(
+          'CREATE INDEX %I ON %I.%I(hive_rowid)'
+        , hive.get_rowid_index_name( _table_schema, _table_name )
+        , lower(_table_schema), lower(_table_name)
+    );
+END;
+$BODY$;
+
+DROP FUNCTION IF EXISTS hive.drop_rowid_index;
+CREATE FUNCTION hive.drop_rowid_index( _table_schema TEXT,  _table_name TEXT )
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    EXECUTE format(
+          'DROP INDEX %I.%I'
+        , lower(_table_schema)
+        , hive.get_rowid_index_name( _table_schema, _table_name )
+    );
+END;
+$BODY$;
+
 
 -- creates a shadow table of registered table:
 -- | [ table column1, table column2,.... ] | hive_block_num | hive_operation_type |
@@ -150,6 +196,7 @@ DECLARE
     __registered_table_id INTEGER := NULL;
     __attached_context BOOLEAN := FALSE;
     __columns_names TEXT[];
+    __is_forking BOOLEAN := TRUE;
 BEGIN
     PERFORM hive.chceck_constrains(_table_schema, _table_name);
 
@@ -162,7 +209,12 @@ BEGIN
     SELECT hc.id, tables.table_schema, tables.origin, tables.shadow, columns, current_user
     FROM ( SELECT hc.id, hive.check_owner( hc.name, hc.owner ) FROM hive.contexts hc WHERE hc.name =  _context_name ) as hc
     JOIN ( VALUES( lower(_table_schema), lower(_table_name), __shadow_table_name, __columns_names  )  ) as tables( table_schema, origin, shadow, columns ) ON TRUE
-    RETURNING context_id, id, (SELECT hc2.is_attached FROM hive.contexts hc2 WHERE hc2.id = context_id) INTO __context_id, __registered_table_id, __attached_context
+    RETURNING
+          context_id
+        , id
+        , (SELECT hc2.is_attached FROM hive.contexts hc2 WHERE hc2.id = context_id)
+        , (SELECT hc2.is_forking FROM hive.contexts hc2 WHERE hc2.id = context_id)
+        INTO __context_id, __registered_table_id, __attached_context, __is_forking
     ;
 
     -- create and set separated sequence for hive.base part of the registered table
@@ -179,7 +231,9 @@ BEGIN
         , lower( _table_name )
         );
 
-    EXECUTE format('CREATE INDEX idx_%I_%I_row_id ON %I.%I(hive_rowid)', lower(_table_schema), lower(_table_name), lower(_table_schema), lower(_table_name) );
+    IF __is_forking THEN
+        PERFORM hive.create_rowid_index(_table_schema, _table_name );
+    END IF;
 
     ASSERT __context_id IS NOT NULL, 'There is no context %', _context_name;
     ASSERT __registered_table_id IS NOT NULL;

@@ -42,6 +42,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_public_schema_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_to_two_contexts_negative_test.sql )
  ADD_SQL_FUNCTIONAL_TEST(context_rewind/register_table_one_role_creates_context_and_second_add_tables.sql)
+ ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_non_forking_test.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/contexts_limit_eq.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/contexts_limit_gt.sql )
@@ -215,6 +216,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_next_block_non_forking_app.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_exists.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/register_already_existed_table.sql )
+ ADD_SQL_FUNCTIONAL_TEST( app_api/register_already_existed_table_non_forking.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/register_already_registered_table_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_get_irreversible_block_forking.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_get_irreversible_block_forking.sql )
