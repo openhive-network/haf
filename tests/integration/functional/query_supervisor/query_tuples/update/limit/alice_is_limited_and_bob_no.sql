@@ -4,8 +4,9 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 $BODY$
 BEGIN
     -- query shall not be broken
-    CREATE TABLE alice_numbers( num INT );
-    INSERT INTO alice_numbers SELECT generate_series(1,1001);
+    CREATE SCHEMA alice;
+    CREATE TABLE alice.alice_numbers( num INT );
+    INSERT INTO alice.alice_numbers SELECT generate_series(1,1001);
 END
 $BODY$
 ;
@@ -16,8 +17,9 @@ CREATE OR REPLACE PROCEDURE bob_test_given()
 $BODY$
 BEGIN
     -- query shall not be broken
-    CREATE TABLE bob_numbers( num INT );
-    INSERT INTO bob_numbers SELECT generate_series(1,1001);
+    CREATE SCHEMA bob;
+    CREATE TABLE bob.bob_numbers( num INT );
+    INSERT INTO bob.bob_numbers SELECT generate_series(1,1001);
 END
 $BODY$
 ;
@@ -28,7 +30,7 @@ CREATE OR REPLACE PROCEDURE alice_test_error()
 $BODY$
 BEGIN
     -- we will update 1001 rows, default limit is 1000
-    UPDATE alice_numbers SET num = 1;
+    UPDATE alice.alice_numbers SET num = 1;
 END;
 $BODY$
 ;
@@ -40,7 +42,7 @@ CREATE OR REPLACE PROCEDURE bob_test_when()
 $BODY$
 BEGIN
     -- we will update 1001 rows, default limit is 1000
-    UPDATE bob_numbers SET num = 1;
+    UPDATE bob.bob_numbers SET num = 1;
 END;
 $BODY$
 ;

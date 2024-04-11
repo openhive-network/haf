@@ -31,10 +31,11 @@ BEGIN
     PERFORM hive.app_set_current_block_num( ARRAY[ 'alice_context_detached' ], 1 );
     PERFORM hive.app_get_current_block_num( 'alice_context_detached' );
     PERFORM hive.app_get_current_block_num( ARRAY[ 'alice_context_detached' ] );
-    CREATE TABLE alice_table( id INT ) INHERITS( hive.alice_context );
+    CREATE SCHEMA alice;
+    CREATE TABLE alice.alice_table( id INT ) INHERITS( hive.alice_context );
     PERFORM hive.app_next_block( 'alice_context' );
     PERFORM hive.app_next_block( ARRAY[ 'alice_context' ] );
-    INSERT INTO alice_table VALUES( 10 );
+    INSERT INTO alice.alice_table VALUES( 10 );
 END;
 $BODY$
 ;
@@ -106,42 +107,42 @@ BEGIN
     END;
 
     BEGIN
-        PERFORM * FROM alice_table;
+        PERFORM * FROM alice.alice_table;
     EXCEPTION WHEN OTHERS THEN
         ASSERT FALSE, 'Alice cannot read her own table';
     END;
 
     BEGIN
-        PERFORM * FROM bob_table;
+        PERFORM * FROM bob.bob_table;
         ASSERT FALSE, 'Alice can read Bob''s tables';
         EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-            PERFORM * FROM hive.shadow_public_alice_table;
+            PERFORM * FROM hive.shadow_alice_alice_table;
     EXCEPTION WHEN OTHERS THEN
             ASSERT FALSE, 'Alice cannot read her own shadow table';
     END;
 
     BEGIN
-            PERFORM * FROM hive.shadow_public_bob_table;
+            PERFORM * FROM hive.shadow_bob_bob_table;
             ASSERT FALSE, 'Alice can read Bobs''s shadow table';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        UPDATE hive.shadow_public_bob_table SET hive_rowid = 0;
+        UPDATE hive.shadow_bob_bob_table SET hive_rowid = 0;
         ASSERT FALSE, 'Alice can update Bob''s shadow table';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DELETE FROM hive.shadow_public_bob_table;
+        DELETE FROM hive.shadow_bob_bob_table;
         ASSERT FALSE, 'Alice can delete from Bob''s shadow table';
         EXCEPTION WHEN OTHERS THEN
     END;
 
-    ASSERT NOT EXISTS( SELECT * FROM hive.triggers WHERE trigger_name='hive_insert_trigger_public_bob_table' ), 'Alice can see Bobs''s trigers from hive.triggers';
+    ASSERT NOT EXISTS( SELECT * FROM hive.triggers WHERE trigger_name='hive_insert_trigger_bob_bob_table' ), 'Alice can see Bobs''s trigers from hive.triggers';
     ASSERT NOT EXISTS( SELECT * FROM hive.registered_tables WHERE origin_table_name='bob_table' ), 'Alice can see Bobs''s tables from hive.registered_tables';
 
     BEGIN
@@ -196,10 +197,11 @@ BEGIN
     PERFORM hive.app_context_detach( 'bob_context_detached' );
     PERFORM hive.app_set_current_block_num( 'bob_context_detached', 1 );
     PERFORM hive.app_set_current_block_num( ARRAY[ 'bob_context_detached' ], 1 );
-    CREATE TABLE bob_table( id INT ) INHERITS( hive.bob_context );
+    CREATE SCHEMA bob;
+    CREATE TABLE bob.bob_table( id INT ) INHERITS( hive.bob_context );
     PERFORM hive.app_next_block( 'bob_context' );
     PERFORM hive.app_next_block( ARRAY[ 'bob_context' ] );
-    INSERT INTO bob_table VALUES( 100 );
+    INSERT INTO bob.bob_table VALUES( 100 );
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'bob_context' );
 END;
 $BODY$
@@ -259,42 +261,42 @@ BEGIN
     END;
 
     BEGIN
-        PERFORM * FROM alice_table;
+        PERFORM * FROM alice.alice_table;
         ASSERT FALSE, 'Bob can read Alice''s tables';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        PERFORM * FROM bob_table;
+        PERFORM * FROM bob.bob_table;
     EXCEPTION WHEN OTHERS THEN
         ASSERT FALSE, 'Bob cannot read his own table';
     END;
 
     BEGIN
-        PERFORM * FROM hive.shadow_public_bob_table;
+        PERFORM * FROM hive.shadow_bob_bob_table;
     EXCEPTION WHEN OTHERS THEN
         ASSERT FALSE, 'Bob cannot read his own shadow table';
     END;
 
     BEGIN
-        PERFORM * FROM hive.shadow_public_alice_table;
+        PERFORM * FROM hive.shadow_alice_alice_table;
         ASSERT FALSE, 'Bob can read Alice''s shadow table';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        UPDATE hive.shadow_public_alice_table SET hive_rowid = 0;
+        UPDATE hive.shadow_alice_alice_table SET hive_rowid = 0;
         ASSERT FALSE, 'Bob can update Alice''s shadow table';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DELETE FROM hive.shadow_public_alice_table;
+        DELETE FROM hive.shadow_alice_alice_table;
         ASSERT FALSE, 'Bob can delete from Alice''s shadow table';
         EXCEPTION WHEN OTHERS THEN
     END;
 
-    ASSERT NOT EXISTS( SELECT * FROM hive.triggers WHERE trigger_name='hive_insert_trigger_public_alice_table' ), 'Bob can see Alice''s trigers from hive.triggers';
+    ASSERT NOT EXISTS( SELECT * FROM hive.triggers WHERE trigger_name='hive_insert_trigger_alice_alice_table' ), 'Bob can see Alice''s trigers from hive.triggers';
     ASSERT NOT EXISTS( SELECT * FROM hive.registered_tables WHERE origin_table_name='alice_table' ), 'Bob can see Alice''s tables from hive.registered_tables';
 
     BEGIN

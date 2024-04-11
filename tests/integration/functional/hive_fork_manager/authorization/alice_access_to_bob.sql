@@ -24,6 +24,8 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 BEGIN
+    CREATE SCHEMA alice;
+
     PERFORM hive.app_create_context( 'alice_context' );
     PERFORM hive.app_create_context( 'alice_context_detached' );
     PERFORM hive.app_context_detach( 'alice_context_detached' );
@@ -31,10 +33,10 @@ BEGIN
     PERFORM hive.app_set_current_block_num( ARRAY[ 'alice_context_detached' ], 1 );
     PERFORM hive.app_get_current_block_num( 'alice_context_detached' );
     PERFORM hive.app_get_current_block_num( ARRAY[ 'alice_context_detached' ] );
-    CREATE TABLE alice_table( id INT ) INHERITS( hive.alice_context );
+    CREATE TABLE alice.alice_table( id INT ) INHERITS( hive.alice_context );
     PERFORM hive.app_next_block( 'alice_context' );
     PERFORM hive.app_next_block( ARRAY[ 'alice_context' ] );
-    INSERT INTO alice_table VALUES( 10 );
+    INSERT INTO alice.alice_table VALUES( 10 );
 END;
 $BODY$
 ;
@@ -49,10 +51,11 @@ BEGIN
     PERFORM hive.app_context_detach( 'bob_context_detached' );
     PERFORM hive.app_set_current_block_num( 'bob_context_detached', 1 );
     PERFORM hive.app_set_current_block_num( ARRAY[ 'bob_context_detached' ], 1 );
-    CREATE TABLE bob_table( id INT ) INHERITS( hive.bob_context );
+    CREATE SCHEMA bob;
+    CREATE TABLE bob.bob_table( id INT ) INHERITS( hive.bob_context );
     PERFORM hive.app_next_block( 'bob_context' );
     PERFORM hive.app_next_block( ARRAY[ 'bob_context' ] );
-    INSERT INTO bob_table VALUES( 100 );
+    INSERT INTO bob.bob_table VALUES( 100 );
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'bob_context' );
 END;
 $BODY$

@@ -5,7 +5,7 @@ import sqlalchemy
 
 APPLICATION_CONTEXT = "accounts_ctx"
 SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE = """
-    CREATE TABLE IF NOT EXISTS public.trx_histogram(
+    CREATE TABLE IF NOT EXISTS applications.trx_histogram(
           day DATE
         , trx INT
         , CONSTRAINT pk_trx_histogram PRIMARY KEY( day ) )
@@ -26,6 +26,7 @@ def prepare_application_data( db_connection ):
         if exist[ 0 ] == False:
             db_connection.execute( "SELECT hive.app_create_context( '{}', TRUE )".format( APPLICATION_CONTEXT ) )
 
+        db_connection.execute( "CREATE SCHEMA IF NOT EXISTS applications" )
         # create and register a table
         db_connection.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE )
 

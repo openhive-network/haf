@@ -58,6 +58,15 @@ setup_test_database() {
     exit 1
   fi
 
+  # TODO(mickiewicz@syncad.com): remove when releasing on pg16 where 'public' schema is not accessible by default
+  if ! psql -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -c "REVOKE CREATE ON SCHEMA public FROM PUBLIC;";
+  then
+    echo "FAILED. Cannot revoke CREATE from public schema"
+    exit 1;
+  fi
+
+
+
   if [ -e "${sql_setup_fixture}" ]; then
     echo "psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f"
     if ! psql -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -f "${sql_setup_fixture}";
