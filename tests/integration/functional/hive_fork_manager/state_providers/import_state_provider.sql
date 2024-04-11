@@ -41,7 +41,8 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.app_create_context( 'context' );
-    CREATE TABLE tab( id INT ) INHERITS( hive.context );
+    CREATE SCHEMA alice;
+    CREATE TABLE alice.tab( id INT ) INHERITS( hive.context );
 END;
 $BODY$
 ;

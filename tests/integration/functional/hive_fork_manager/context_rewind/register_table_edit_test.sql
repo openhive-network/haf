@@ -4,7 +4,8 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.context_create( 'context' );
-    CREATE TABLE table1( id SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT ) INHERITS( hive.context );
+    CREATE SCHEMA A;
+    CREATE TABLE A.table1( id SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT ) INHERITS( hive.context );
 END;
 $BODY$
 ;
@@ -14,13 +15,13 @@ CREATE OR REPLACE PROCEDURE alice_test_when()
 AS
 $BODY$
 BEGIN
-    ALTER TABLE table1 ADD COLUMN test_column INTEGER;
+    ALTER TABLE a.table1 ADD COLUMN test_column INTEGER;
     PERFORM hive.context_next_block( 'context' );
-    INSERT INTO table1( test_column ) VALUES( 10 );
+    INSERT INTO a.table1( test_column ) VALUES( 10 );
 
-    TRUNCATE hive.shadow_public_table1; --to do not revert already inserted rows
-    INSERT INTO table1( smth, name ) VALUES( 1, 'abc' );
-    UPDATE table1 SET test_column = 1 WHERE test_column= 10;
+    TRUNCATE hive.shadow_a_table1; --to do not revert already inserted rows
+    INSERT INTO a.table1( smth, name ) VALUES( 1, 'abc' );
+    UPDATE a.table1 SET test_column = 1 WHERE test_column= 10;
 
     PERFORM hive.context_back_from_fork( 'context' , -1 );
 END;
@@ -38,8 +39,8 @@ BEGIN
         , 'Column was inserted'
     ;
 
-    ASSERT ( SELECT COUNT(*) FROM table1 WHERE name ='abc' ) = 0, 'Back from fork did not revert insert operation';
-    ASSERT ( SELECT COUNT(*) FROM table1 WHERE test_column = 10 ) = 1, 'Updated new column was not reverted';
+    ASSERT ( SELECT COUNT(*) FROM a.table1 WHERE name ='abc' ) = 0, 'Back from fork did not revert insert operation';
+    ASSERT ( SELECT COUNT(*) FROM a.table1 WHERE test_column = 10 ) = 1, 'Updated new column was not reverted';
 END;
 $BODY$
 ;

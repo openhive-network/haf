@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION hive.get_metadata_update_function_name( _context hive
 AS
 $BODY$
 BEGIN
-    RETURN format( 'hive.%I_metadata_update', _context );
+    RETURN format( '%I_metadata_update', _context );
 END
 $BODY$;
 
@@ -37,7 +37,7 @@ BEGIN
                    )', __table_name);
 
     EXECUTE format(
-    'CREATE OR REPLACE FUNCTION %I( _blockFrom INT, _blockTo INT )
+    'CREATE OR REPLACE FUNCTION hive.%I( _blockFrom INT, _blockTo INT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -169,7 +169,7 @@ BEGIN
              RAISE EXCEPTION 'No context with name %', _context;
     END IF;
     EXECUTE format(
-          'SELECT %I(%s, %s);'
+          'SELECT hive.%I(%s, %s);'
         , hive.get_metadata_update_function_name( _context )
         , _first_block
         , _last_block
@@ -196,7 +196,7 @@ BEGIN
 
     EXECUTE format( 'DROP TABLE hive.%I', __table_name );
     EXECUTE format(
-          'DROP FUNCTION IF EXISTS %I'
+          'DROP FUNCTION IF EXISTS hive.%I'
         , hive.get_metadata_update_function_name( _context )
     );
 END;

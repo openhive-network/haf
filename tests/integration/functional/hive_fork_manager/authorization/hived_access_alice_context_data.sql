@@ -45,7 +45,7 @@ BEGIN
     END;
 
     BEGIN
-        DELETE FROM hive.shadow_public_alice_table;
+        DELETE FROM hive.shadow_alice_alice_table;
         ASSERT FALSE, 'Hived can edit Alice''s shadow table';
     EXCEPTION WHEN OTHERS THEN
     END;
@@ -90,11 +90,12 @@ BEGIN
     PERFORM hive.app_set_current_block_num( ARRAY[ 'alice_context_detached' ], 1 );
     CALL hive.appproc_context_attach( ARRAY[ 'alice_context_detached' ] );
     PERFORM hive.app_context_detach( ARRAY[ 'alice_context_detached' ] );
-    CREATE TABLE alice_table( id INT ) INHERITS( hive.alice_context );
+    CREATE SCHEMA alice;
+    CREATE TABLE alice.alice_table( id INT ) INHERITS( hive.alice_context );
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'alice_context' );
     PERFORM hive.app_next_block( 'alice_context' );
     PERFORM hive.app_next_block( ARRAY[ 'alice_context' ] );
-    INSERT INTO alice_table VALUES( 10 );
+    INSERT INTO alice.alice_table VALUES( 10 );
 END;
 $BODY$
 ;

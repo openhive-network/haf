@@ -43,6 +43,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_to_two_contexts_negative_test.sql )
  ADD_SQL_FUNCTIONAL_TEST(context_rewind/register_table_one_role_creates_context_and_second_add_tables.sql)
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_non_forking_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_search_path.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/contexts_limit_eq.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/contexts_limit_gt.sql )
