@@ -59,6 +59,9 @@ BEGIN
 
     SELECT * INTO __result FROM hive.app_next_block( ARRAY[ 'context', 'context_b' ] );
 
+    ASSERT NOT EXISTS (SELECT 0 FROM pg_class where relname = 'idx_a_table1_row_id' ), 'Index for table a.table1 rowid still exists';
+    ASSERT NOT EXISTS (SELECT 0 FROM pg_class where relname = 'idx_b_table1_row_id' ), 'Index for table b.table1 rowid still exists';
+
     ASSERT __result IS NULL, 'Non forking context reach reversible block';
 END;
 $BODY$

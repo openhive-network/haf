@@ -4,7 +4,7 @@ AS
 $BODY$
 BEGIN
     CREATE SCHEMA A;
-    PERFORM hive.context_create( 'context' );
+    PERFORM hive.context_create( _name => 'context', _is_forking => FALSE );
 END;
 $BODY$
 ;
@@ -56,7 +56,7 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hive.truncate_trigger_a_table1' );
     ASSERT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_truncate_a_table1');
 
-    ASSERT EXISTS (SELECT 0 FROM pg_class where relname = 'idx_a_table1_row_id' ), 'No index for table a.table1 rowid';
+    ASSERT NOT EXISTS (SELECT 0 FROM pg_class where relname = 'idx_a_table1_row_id' ), 'Index exists for table a.table1 rowid';
 END
 $BODY$
 ;

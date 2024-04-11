@@ -37,6 +37,8 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema='hive' AND table_name='shadow_a_table1' AND column_name='hive_operation_type' AND udt_name='trigger_operation' );
     ASSERT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema='hive' AND table_name='shadow_a_table1' AND column_name='hive_operation_id' AND data_type='bigint' );
     ASSERT EXISTS ( SELECT FROM hive.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' AND shadow_table_name='shadow_a_table1' ), 'No entry about registered table';
+
+    ASSERT EXISTS (SELECT 0 FROM pg_class where relname = 'idx_a_table1_row_id' ), 'No index for table a.table1 rowid';
 END
 $BODY$
 ;

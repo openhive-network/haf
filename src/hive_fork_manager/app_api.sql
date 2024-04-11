@@ -320,6 +320,11 @@ BEGIN
         hive.context_attach( context.text, hc.irreversible_block )
     FROM hive.contexts hc
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
+
+    PERFORM hive.drop_rowid_index( hrt.origin_table_schema, hrt.origin_table_name )
+    FROM hive.registered_tables hrt
+    JOIN hive.contexts hc ON hrt.context_id = hc.id
+    JOIN unnest( _contexts ) as context ON context.text = hc.name;
 END;
 $BODY$
 ;
@@ -355,12 +360,18 @@ BEGIN
     SET is_forking = true
       , last_active_at = NOW()
     WHERE hc.name = ANY( _contexts );
-
+    --recursive
     -- to recreate triggers
     PERFORM
         hive.context_attach( context.text, hc.irreversible_block )
     FROM hive.contexts hc
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
+
+    PERFORM hive.create_rowid_index( hrt.origin_table_schema, hrt.origin_table_name )
+    FROM hive.registered_tables hrt
+    JOIN hive.contexts hc ON hrt.context_id = hc.id
+    JOIN unnest( _contexts ) as context ON context.text = hc.name;
+
 END;
 $BODY$
 ;
