@@ -108,6 +108,11 @@ ENV HTTP_PORT=${HTTP_PORT}
 ARG HIVE_SUBDIR=.
 ENV HIVE_SUBDIR=${HIVE_SUBDIR}
 
+# Environment variable which allows to override system time using a libfaketime
+# https://github.com/wolfcw/libfaketime
+ENV OVERRIDE_LD_PRELOAD=""
+RUN echo 'Defaults env_keep += "LD_PRELOAD"' | sudo tee -a /etc/sudoers > /dev/null
+
 ENV HAF_SOURCE_DIR="/home/haf_admin/source/${HIVE_SUBDIR}"
 
 # Environment variable which allows to override default postgres access specification in pg_hba.conf
