@@ -108,10 +108,10 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_applied_hardforks_view' ), 'No context applied_hardfroks view';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='applied_hardforks_view' ), 'No context applied_hardfroks view';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.context_applied_hardforks_view
+        SELECT * FROM a.applied_hardforks_view
         EXCEPT SELECT * FROM ( VALUES
               ( 1, 1, 1 )
             , ( 2, 2, 2 )
@@ -121,7 +121,7 @@ BEGIN
     ) , 'Unexpected rows in the view';
 
 
-    ASSERT ( SELECT COUNT(*) FROM hive.context_applied_hardforks_view ) = 4, 'Not all rows are visible';
+    ASSERT ( SELECT COUNT(*) FROM a.applied_hardforks_view ) = 4, 'Not all rows are visible';
     
 END;
 $BODY$

@@ -18,9 +18,13 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_metadata';
+    __schema TEXT;
 BEGIN
 
     __context_id = hive.get_context_id( _context );
+    SELECT hc.schema INTo __schema
+    FROM hive.contexts hc
+    WHERE hc.id = __context_id;
 
 
     IF __context_id IS NULL THEN
@@ -59,7 +63,7 @@ BEGIN
             ov.id,
             ov.block_num
         FROM
-            hive.%s_operations_view ov
+            %s.operations_view ov
         WHERE
             ov.op_type_id in (
             SELECT id FROM hive.operation_types WHERE name IN
@@ -141,7 +145,7 @@ BEGIN
             );
     END
     $$;'
-    , hive.get_metadata_update_function_name( _context ), _context, _context, _context, _context
+    , hive.get_metadata_update_function_name( _context ), __schema, _context, _context, _context
     );
 
     RETURN ARRAY[ __table_name ];

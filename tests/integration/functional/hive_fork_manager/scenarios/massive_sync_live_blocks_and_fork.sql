@@ -146,13 +146,13 @@ SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 8
 ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 7, 'Wrong number of rows after fork(7)';
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (8,8)';
 ASSERT __blocks = (8,8), 'Incorrect range (8,8)';
-ASSERT '\xBADD81'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 8 ), 'Unexpect hash of block 8';
+ASSERT '\xBADD81'::bytea = ( SELECT hash FROM a.blocks_view WHERE num = 8 ), 'Unexpect hash of block 8';
 INSERT INTO A.table1(id) VALUES( 8 );
 
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 9
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (9,9)';
 ASSERT __blocks = (9,9), 'Incorrect range (9,9)';
-ASSERT '\xBADD91'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 9 ), 'Unexpect hash of block 9';
+ASSERT '\xBADD91'::bytea = ( SELECT hash FROM a.blocks_view WHERE num = 9 ), 'Unexpect hash of block 9';
 INSERT INTO A.table1(id) VALUES( 9 );
 
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- no blocks

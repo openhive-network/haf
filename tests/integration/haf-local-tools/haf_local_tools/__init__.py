@@ -142,11 +142,11 @@ def get_irreversible_block(node):
 
 
 SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE = """
-    CREATE TABLE IF NOT EXISTS public.trx_histogram(
+    CREATE TABLE IF NOT EXISTS {0}.trx_histogram(
           day DATE
         , trx INT
         , CONSTRAINT pk_trx_histogram PRIMARY KEY( day ) )
-    INHERITS( hive.{} )
+    INHERITS( {0}.{0} )
     """
 SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION = """
     CREATE OR REPLACE FUNCTION public.update_histogram( _first_block INT, _last_block INT )
@@ -156,12 +156,12 @@ SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION = """
     AS
      $function$
      BEGIN
-        INSERT INTO public.trx_histogram as th( day, trx )
+        INSERT INTO {0}.trx_histogram as th( day, trx )
         SELECT
               DATE(hb.created_at) as date
             , COUNT(1) as trx
-        FROM hive.trx_histogram_blocks_view hb
-        JOIN hive.trx_histogram_transactions_view ht ON ht.block_num = hb.num
+        FROM {0}.blocks_view hb
+        JOIN {0}.transactions_view ht ON ht.block_num = hb.num
         WHERE hb.num >= _first_block AND hb.num <= _last_block
         GROUP BY DATE(hb.created_at)
         ON CONFLICT ON CONSTRAINT pk_trx_histogram DO UPDATE
@@ -174,9 +174,10 @@ SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION = """
 
 
 def create_app(session, application_context):
-    session.execute( "SELECT hive.app_create_context( '{}' )".format( application_context ) )
+    session.execute( "CREATE SCHEMA IF NOT EXISTS {}".format( application_context ) )
+    session.execute( "SELECT hive.app_create_context( '{0}', '{0}' )".format( application_context ) )
     session.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE.format( application_context ) )
-    session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION )
+    session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION.format( application_context ) )
     session.commit()
 
 def wait_until_irreversible_without_new_block(session, irreversible_block, limit, interval):

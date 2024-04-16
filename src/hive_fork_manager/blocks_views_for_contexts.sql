@@ -4,9 +4,14 @@ CREATE OR REPLACE FUNCTION hive.create_context_data_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
 EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_context_data_view AS
+        'CREATE OR REPLACE VIEW %s.context_data_view AS
         SELECT
         hc.current_block_num,
         hc.irreversible_block,
@@ -26,7 +31,7 @@ EXECUTE format(
         FROM hive.contexts hc
         WHERE hc.name::text = ''%s''::text
         limit 1
-        ;', _context_name, _context_name
+        ;', __schema, _context_name
     );
 END;
 $BODY$
@@ -38,8 +43,13 @@ CREATE OR REPLACE FUNCTION hive.drop_context_data_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
-EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_context_data_view CASCADE;', _context_name );
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
+EXECUTE format( 'DROP VIEW IF EXISTS %s.context_data_view CASCADE;', __schema );
 END;
 $BODY$
 ;
@@ -54,10 +64,11 @@ AS
 $BODY$
 DECLARE
   __owner_name NAME;
+  __schema TEXT;
 BEGIN
-  SELECT c.owner INTO __owner_name FROM hive.contexts c WHERE c.name = _context_name;
+  SELECT c.owner, c.schema INTO __owner_name, __schema FROM hive.contexts c WHERE c.name = _context_name;
 
-  EXECUTE format('ALTER VIEW hive.%s%s OWNER TO %s;', _context_name, _view_base_name, __owner_name);
+  EXECUTE format('ALTER VIEW %s.%s OWNER TO %s;', __schema, _view_base_name, __owner_name);
 
 END;
 $BODY$
@@ -69,10 +80,15 @@ CREATE OR REPLACE FUNCTION hive.create_blocks_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
-
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
+
     EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_blocks_view
+        'CREATE OR REPLACE VIEW %s.blocks_view
         AS
         SELECT t.num,
             t.hash,
@@ -83,7 +99,7 @@ BEGIN
             t.extensions,
             t.witness_signature,
             t.signing_key
-        FROM hive.%s_context_data_view c,
+        FROM %s.context_data_view c,
         LATERAL ( SELECT hb.num,
             hb.hash,
             hb.prev,
@@ -115,10 +131,10 @@ BEGIN
            ) visible_blks ON visible_blks.num = hbr.num AND visible_blks.max_fork_id = hbr.fork_id
 
         ) t;
-        ;', _context_name, _context_name
+        ;', __schema, __schema
     );
 
-    PERFORM hive.adjust_view_ownership(_context_name, '_blocks_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'blocks_view');
 END;
 $BODY$
 ;
@@ -129,9 +145,15 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_blocks_view( _context_na
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+SELECT hc.schema INTO __schema
+FROM hive.contexts hc
+WHERE hc.name = _context_name;
+
 EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_blocks_view
+        'CREATE OR REPLACE VIEW %s.blocks_view
         AS
         SELECT hb.num,
             hb.hash,
@@ -143,10 +165,10 @@ EXECUTE format(
             hb.witness_signature,
             hb.signing_key
         FROM hive.blocks hb
-        ;', _context_name
+        ;', __schema
     );
 
-    PERFORM hive.adjust_view_ownership(_context_name, '_blocks_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'blocks_view');
 END;
 $BODY$
 ;
@@ -157,8 +179,13 @@ CREATE OR REPLACE FUNCTION hive.drop_blocks_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
-EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_blocks_view CASCADE;', _context_name );
+SELECT hc.schema INTO __schema
+FROM hive.contexts hc
+WHERE hc.name = _context_name;
+EXECUTE format( 'DROP VIEW IF EXISTS %s.blocks_view CASCADE;', __schema );
 END;
 $BODY$
 ;
@@ -169,9 +196,14 @@ CREATE OR REPLACE FUNCTION hive.create_transactions_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+SELECT hc.schema INTO __schema
+FROM hive.contexts hc
+WHERE hc.name = _context_name;
     EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_transactions_view AS
+        'CREATE OR REPLACE VIEW %s.transactions_view AS
         SELECT t.block_num,
            t.trx_in_block,
            t.trx_hash,
@@ -179,7 +211,7 @@ BEGIN
            t.ref_block_prefix,
            t.expiration,
            t.signature
-        FROM hive.%s_context_data_view c,
+        FROM %s.context_data_view c,
         LATERAL
         (
           SELECT ht.block_num,
@@ -218,9 +250,9 @@ BEGIN
              ) reversible
         ) t
         ;'
-    , _context_name, _context_name, _context_name
+    , __schema, __schema, _context_name
     );
-    PERFORM hive.adjust_view_ownership(_context_name, '_transactions_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'transactions_view');
 END;
 $BODY$
 ;
@@ -231,9 +263,14 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_transactions_view( _cont
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+SELECT hc.schema INTO __schema
+FROM hive.contexts hc
+WHERE hc.name = _context_name;
 EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_transactions_view AS
+        'CREATE OR REPLACE VIEW %s.transactions_view AS
         SELECT ht.block_num,
            ht.trx_in_block,
            ht.trx_hash,
@@ -243,9 +280,9 @@ EXECUTE format(
            ht.signature
         FROM hive.transactions ht
        ;'
-    , _context_name
+    , __schema
     );
-    PERFORM hive.adjust_view_ownership(_context_name, '_transactions_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'transactions_view');
 END;
 $BODY$
 ;
@@ -256,8 +293,13 @@ CREATE OR REPLACE FUNCTION hive.drop_transactions_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
-    EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_transactions_view CASCADE;', _context_name );
+SELECT hc.schema INTO __schema
+FROM hive.contexts hc
+WHERE hc.name = _context_name;
+    EXECUTE format( 'DROP VIEW IF EXISTS %s.transactions_view CASCADE;', __schema );
 END;
 $BODY$
 ;
@@ -268,9 +310,14 @@ CREATE OR REPLACE FUNCTION hive.create_operations_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
 EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_operations_view
+        'CREATE OR REPLACE VIEW %s.operations_view
          AS
          SELECT t.id,
             t.block_num,
@@ -280,7 +327,7 @@ EXECUTE format(
             t.timestamp,
             t.body_binary,
             t.body_binary::jsonb AS body
-          FROM hive.%s_context_data_view c,
+          FROM %s.context_data_view c,
           LATERAL
           (
             SELECT
@@ -313,9 +360,9 @@ EXECUTE format(
                 GROUP by hbr.num
               ) visible_ops on visible_ops.num = o.block_num and visible_ops.max_fork_id = o.fork_id
         ) t
-        ;', _context_name, _context_name
+        ;', __schema, __schema
     );
-    PERFORM hive.adjust_view_ownership(_context_name, '_operations_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
 END;
 $BODY$
 ;
@@ -326,9 +373,14 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_operations_view( _contex
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
 EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_operations_view
+        'CREATE OR REPLACE VIEW %s.operations_view
          AS
          SELECT
             ho.id,
@@ -340,9 +392,9 @@ EXECUTE format(
             ho.body_binary,
             ho.body_binary::jsonb AS body
         FROM hive.operations ho
-        ;', _context_name
+        ;', __schema
     );
-    PERFORM hive.adjust_view_ownership(_context_name, '_operations_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
 END;
 $BODY$
 ;
@@ -354,8 +406,13 @@ CREATE OR REPLACE FUNCTION hive.drop_operations_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
-    EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_operations_view CASCADE;', _context_name );
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
+    EXECUTE format( 'DROP VIEW IF EXISTS %s.operations_view CASCADE;', __schema );
 END;
 $BODY$
 ;
@@ -366,14 +423,19 @@ CREATE OR REPLACE FUNCTION hive.create_signatures_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
 EXECUTE format(
-    'CREATE OR REPLACE VIEW hive.%s_TRANSACTIONS_MULTISIG_VIEW
+    'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW
     AS
     SELECT
           t.trx_hash
         , t.signature
-    FROM hive.%s_context_data_view c,
+    FROM %s.context_data_view c,
     LATERAL(
         SELECT
                   htm.trx_hash
@@ -402,9 +464,9 @@ EXECUTE format(
             ) as trr ON trr.trx_hash = htmr.trx_hash AND trr.max_fork_id = htmr.fork_id
         ) reversible
         ) t;'
-        , _context_name, _context_name, _context_name, _context_name
+        , __schema, __schema, _context_name, _context_name
     );
-    PERFORM hive.adjust_view_ownership(_context_name, '_TRANSACTIONS_MULTISIG_VIEW');
+    PERFORM hive.adjust_view_ownership(_context_name, 'TRANSACTIONS_MULTISIG_VIEW');
 END;
 $BODY$
 ;
@@ -415,19 +477,24 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_signatures_view( _contex
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
 EXECUTE format(
-    'CREATE OR REPLACE VIEW hive.%s_TRANSACTIONS_MULTISIG_VIEW
+    'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW
     AS
     SELECT
           htm.trx_hash
         , htm.signature
     FROM hive.transactions_multisig htm
     ;'
-    , _context_name
+    , __schema
     );
 
-    PERFORM hive.adjust_view_ownership(_context_name, '_TRANSACTIONS_MULTISIG_VIEW');
+    PERFORM hive.adjust_view_ownership(_context_name, 'TRANSACTIONS_MULTISIG_VIEW');
 END;
 $BODY$
 ;
@@ -438,8 +505,13 @@ CREATE OR REPLACE FUNCTION hive.drop_signatures_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
-    EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_TRANSACTIONS_MULTISIG_VIEW CASCADE;', _context_name );
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
+    EXECUTE format( 'DROP VIEW IF EXISTS %s.TRANSACTIONS_MULTISIG_VIEW CASCADE;', __schema );
 END;
 $BODY$
 ;
@@ -450,13 +522,18 @@ CREATE OR REPLACE FUNCTION hive.create_accounts_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
 EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_accounts_view AS
+        'CREATE OR REPLACE VIEW %s.accounts_view AS
         SELECT
            t.id,
            t.name
-        FROM hive.%s_context_data_view c,
+        FROM %s.context_data_view c,
         LATERAL
         (
           SELECT ha.id,
@@ -481,9 +558,9 @@ EXECUTE format(
              ) reversible
         ) t
         ;'
-    , _context_name, _context_name, _context_name
+    , __schema, __schema, _context_name
     );
-    PERFORM hive.adjust_view_ownership(_context_name, '_accounts_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'accounts_view');
 END;
 $BODY$
 ;
@@ -494,16 +571,21 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_accounts_view( _context_
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
 EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_accounts_view AS
+        'CREATE OR REPLACE VIEW %s.accounts_view AS
         SELECT
            ha.id,
            ha.name
         FROM hive.accounts ha
-    ;', _context_name
+    ;', __schema
     );
-    PERFORM hive.adjust_view_ownership(_context_name, '_accounts_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'accounts_view');
 END;
 $BODY$
 ;
@@ -515,8 +597,13 @@ CREATE OR REPLACE FUNCTION hive.drop_accounts_view( _context_name TEXT )
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
-EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_accounts_view CASCADE;', _context_name );
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
+EXECUTE format( 'DROP VIEW IF EXISTS %s.accounts_view CASCADE;', __schema );
 END;
 $BODY$
 ;
@@ -527,16 +614,21 @@ CREATE OR REPLACE FUNCTION hive.create_account_operations_view( _context_name TE
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
 EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_account_operations_view AS
+        'CREATE OR REPLACE VIEW %s.account_operations_view AS
         SELECT
            t.block_num,
            t.account_id,
            t.account_op_seq_no,
            t.operation_id,
            t.op_type_id
-        FROM hive.%s_context_data_view c,
+        FROM %s.context_data_view c,
         LATERAL
         (
           SELECT
@@ -571,9 +663,9 @@ EXECUTE format(
              ) reversible
         ) t
         ;'
-    , _context_name, _context_name, _context_name
+    , __schema, __schema, _context_name
     );
-    PERFORM hive.adjust_view_ownership(_context_name, '_account_operations_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'account_operations_view');
 END;
 $BODY$
 ;
@@ -584,9 +676,14 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_account_operations_view(
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
 EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_account_operations_view AS
+        'CREATE OR REPLACE VIEW %s.account_operations_view AS
         SELECT
            ha.block_num,
            ha.account_id,
@@ -595,9 +692,9 @@ EXECUTE format(
            ha.op_type_id
         FROM hive.account_operations ha
         ;'
-    , _context_name
+    , __schema
     );
-    PERFORM hive.adjust_view_ownership(_context_name, '_account_operations_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'account_operations_view');
 END;
 $BODY$
 ;
@@ -608,8 +705,13 @@ CREATE OR REPLACE FUNCTION hive.drop_account_operations_view( _context_name TEXT
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
-    EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_account_operations_view CASCADE;', _context_name );
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
+    EXECUTE format( 'DROP VIEW IF EXISTS %s.account_operations_view CASCADE;', __schema );
 END;
 $BODY$
 ;
@@ -621,14 +723,19 @@ CREATE OR REPLACE FUNCTION hive.create_applied_hardforks_view( _context_name TEX
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
 EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_applied_hardforks_view AS
+        'CREATE OR REPLACE VIEW %s.applied_hardforks_view AS
         SELECT
            t.hardfork_num,
            t.block_num,
            t.hardfork_vop_id
-        FROM hive.%s_context_data_view c,
+        FROM %s.context_data_view c,
         LATERAL
         (
           SELECT hr.hardfork_num,
@@ -656,9 +763,9 @@ EXECUTE format(
              ) reversible
         ) t
         ;'
-    , _context_name, _context_name, _context_name
+    , __schema, __schema, _context_name
     );
-    PERFORM hive.adjust_view_ownership(_context_name, '_applied_hardforks_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'applied_hardforks_view');
 END;
 $BODY$
 ;
@@ -670,18 +777,23 @@ CREATE OR REPLACE FUNCTION hive.create_all_irreversible_applied_hardforks_view( 
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
 EXECUTE format(
-        'CREATE OR REPLACE VIEW hive.%s_applied_hardforks_view AS
+        'CREATE OR REPLACE VIEW %s.applied_hardforks_view AS
         SELECT
                  hr.hardfork_num,
                  hr.block_num,
                  hr.hardfork_vop_id
         FROM hive.applied_hardforks hr
         ;'
-    , _context_name
+    , __schema
     );
-    PERFORM hive.adjust_view_ownership(_context_name, '_applied_hardforks_view');
+    PERFORM hive.adjust_view_ownership(_context_name, 'applied_hardforks_view');
 END;
 $BODY$
 ;
@@ -692,8 +804,13 @@ CREATE OR REPLACE FUNCTION hive.drop_applied_hardforks_view( _context_name TEXT 
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __schema TEXT;
 BEGIN
-    EXECUTE format( 'DROP VIEW IF EXISTS hive.%s_applied_hardforks_view;', _context_name );
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
+    EXECUTE format( 'DROP VIEW IF EXISTS %s.applied_hardforks_view;', __schema );
 END;
 $BODY$
 ;

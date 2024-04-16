@@ -9,9 +9,12 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
+    __schema TEXT;
 BEGIN
-
     __context_id = hive.get_context_id( _context );
+    SELECT hc.schema INTo __schema
+    FROM hive.contexts hc
+    WHERE hc.id = __context_id;
 
     -- all %1$s substitute _context below
 
@@ -129,7 +132,7 @@ BEGIN
         WITH genesis_auth_records AS MATERIALIZED
         (
             SELECT 
-                (SELECT a.id FROM hive.%1$s_accounts_view a WHERE a.name = g.account_name) as account_id, 
+                (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = g.account_name) as account_id, 
                 g.account_name,
                 g.key_kind,
                 g.key_auth,
@@ -148,7 +151,7 @@ BEGIN
         HARDFORK_9_fixed_auth_records AS MATERIALIZED
         (
             SELECT
-            (SELECT a.id FROM hive.%1$s_accounts_view a WHERE a.name = h.account_name) as account_id, 
+            (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id, 
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_9_block_num as block_num,
@@ -166,7 +169,7 @@ BEGIN
         HARDFORK_21_fixed_auth_records AS MATERIALIZED
         (
             SELECT
-            (SELECT a.id FROM hive.%1$s_accounts_view a WHERE a.name = h.account_name) as account_id, 
+            (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id, 
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_21_block_num as block_num,
@@ -184,7 +187,7 @@ BEGIN
         HARDFORK_24_fixed_auth_records AS MATERIALIZED
         (
             SELECT
-            (SELECT a.id FROM hive.%1$s_accounts_view a WHERE a.name = h.account_name) as account_id, 
+            (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id, 
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_24_block_num as block_num,
@@ -218,7 +221,7 @@ BEGIN
                     ov.op_pos,
                     ov.timestamp,
                     ov.op_type_id
-            FROM hive.%1$s_operations_view ov
+            FROM %2$s.operations_view ov
             WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT pmot.id FROM pow_op_type pmot)
         ),
         pow_raw_auth_records AS MATERIALIZED
@@ -240,7 +243,7 @@ BEGIN
 
         pow_extended_auth_records AS materialized
         (
-            SELECT (select a.id FROM hive.%1$s_accounts_view a
+            SELECT (select a.id FROM %2$s.accounts_view a
             WHERE a.name = r.account_name) AS account_id,
 
             mb.pow_min_block_num AS pow_min_block_num,
@@ -277,7 +280,7 @@ BEGIN
                         ov.op_pos,
                         ov.timestamp,
                         ov.op_type_id
-                    FROM hive.%1$s_operations_view ov
+                    FROM %2$s.operations_view ov
                     WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT mot.id FROM matching_op_types mot)
             ),
             raw_auth_records AS MATERIALIZED
@@ -357,7 +360,7 @@ BEGIN
             --Collect all paths (pow, genesis, hf9, rest)
             extended_auth_records as materialized
             (
-            SELECT (select a.id FROM hive.%1$s_accounts_view a
+            SELECT (select a.id FROM %2$s.accounts_view a
                 where a.name = r.account_name) as account_id,
                 r.*
             FROM raw_auth_records r
@@ -487,7 +490,7 @@ BEGIN
         (
             SELECT ds.*
             FROM (
-            SELECT (select a.id FROM hive.%1$s_accounts_view a
+            SELECT (select a.id FROM %2$s.accounts_view a
                 where a.name = s.account_auth) as account_auth_id,
             s.*
             FROM effective_key_or_account_auth_records s
@@ -537,7 +540,7 @@ BEGIN
         END;
         $$;
     $t$
-    , _context);
+    , _context, __schema);
 
 
     RETURN ARRAY[format('%1$s_keyauth_a', _context), format('%1$s_keyauth_k', _context), format('%1$s_accountauth_a', _context)];

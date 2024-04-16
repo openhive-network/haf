@@ -46,11 +46,12 @@ $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
     __table_name TEXT := _context || '_accounts';
+    __context_schema TEXT;
 BEGIN
-    SELECT hac.id
+    SELECT hac.id, hac.schema
     FROM hive.contexts hac
     WHERE hac.name = _context
-        INTO __context_id;
+    INTO __context_id, __context_schema;
 
     IF __context_id IS NULL THEN
              RAISE EXCEPTION 'No context with name %', _context;
@@ -59,13 +60,13 @@ BEGIN
     EXECUTE format(
         'INSERT INTO hive.%s_accounts( name )
         SELECT hive.get_created_from_account_create_operations( ov.body_binary ) as name
-        FROM hive.%s_operations_view ov
+        FROM %s.operations_view ov
         JOIN hive.operation_types ot ON ov.op_type_id = ot.id
         WHERE
             ARRAY[ lower( ot.name ) ] <@ ARRAY[ ''hive::protocol::account_created_operation'' ]
             AND ov.block_num BETWEEN %s AND %s
         ON CONFLICT DO NOTHING'
-        , _context, _context, _first_block, _last_block
+        , _context, __context_schema, _first_block, _last_block
     );
 END;
 $BODY$

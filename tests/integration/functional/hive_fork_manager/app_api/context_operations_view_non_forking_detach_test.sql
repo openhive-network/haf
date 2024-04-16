@@ -112,10 +112,10 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_operations_view' ), 'No context operations view';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='operations_view' ), 'No context operations view';
 
     ASSERT NOT EXISTS (
-        SELECT o.id, o.block_num, o.trx_in_block, o.op_pos, o.op_type_id, o.timestamp, o.body_binary, o.body FROM hive.context_operations_view o
+        SELECT o.id, o.block_num, o.trx_in_block, o.op_pos, o.op_type_id, o.timestamp, o.body_binary, o.body FROM a.operations_view o
         EXCEPT SELECT * FROM ( VALUES
               ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
             , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb )
@@ -131,7 +131,7 @@ BEGIN
             , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hive.operation )
             , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation )
         ) as pattern
-        EXCEPT SELECT o.id, o.block_num, o.trx_in_block, o.op_pos, o.op_type_id, o.timestamp, o.body_binary FROM hive.context_operations_view o
+        EXCEPT SELECT o.id, o.block_num, o.trx_in_block, o.op_pos, o.op_type_id, o.timestamp, o.body_binary FROM a.operations_view o
     ) , 'Unexpected rows in the view2';
 END;
 $BODY$

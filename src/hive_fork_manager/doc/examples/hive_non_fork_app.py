@@ -22,8 +22,8 @@ SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION = """
         SELECT
               DATE(hb.created_at) as date
             , COUNT(1) as trx
-        FROM hive.trx_histogram_ctx_blocks_view hb
-        JOIN hive.trx_histogram_ctx_transactions_view ht ON ht.block_num = hb.num
+        FROM applications.blocks_view hb
+        JOIN applications.transactions_view ht ON ht.block_num = hb.num
         WHERE hb.num >= _first_block AND hb.num <= _last_block
         GROUP BY DATE(hb.created_at)
         ON CONFLICT ON CONSTRAINT pk_trx_histogram DO UPDATE
