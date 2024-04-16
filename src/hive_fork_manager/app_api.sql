@@ -41,7 +41,6 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.app_state_provider_drop_all( _name );
-    PERFORM hive.context_remove( _name );
 
     PERFORM hive.drop_applied_hardforks_view( _name );
     PERFORM hive.drop_signatures_view( _name );
@@ -51,6 +50,8 @@ BEGIN
     PERFORM hive.drop_accounts_view( _name );
     PERFORM hive.drop_account_operations_view( _name );
     PERFORM hive.drop_context_data_view( _name );
+
+    PERFORM hive.context_remove( _name );
 END;
 $BODY$
 ;

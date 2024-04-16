@@ -27,11 +27,11 @@ cp ${CURRENT_PROJECT_DIR}/config.ini $DATADIR
 $HIVED_PATH --data-dir "$DATADIR" $REPLAY --exit-before-sync --psql-url "postgresql:///$DB_NAME" 2>&1 | tee -i node_logs.log
 echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
 
-psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "SELECT hive.app_create_context('${NAME}_live');"
+psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -f "${CURRENT_PROJECT_DIR}/${NAME}/${NAME}_live_schema.sql"
+psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "SELECT hive.app_create_context('${NAME}_live', '${NAME}_live');"
 psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "SELECT hive.app_state_provider_import('${TYPE}', '${NAME}_live');"
 
 echo "Replay of ${NAME}..."
-psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -f "${CURRENT_PROJECT_DIR}/${NAME}/${NAME}_live_schema.sql"
 psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "CALL ${NAME}_live.main('${NAME}_live', 0, 5000000, 500000);" 
 
 echo "Clearing tables..."

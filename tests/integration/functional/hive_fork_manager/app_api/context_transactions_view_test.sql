@@ -77,10 +77,10 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_transactions_view' ), 'No context transactions view';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='transactions_view' ), 'No context transactions view';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.context_transactions_view
+        SELECT * FROM a.transactions_view
         EXCEPT SELECT * FROM ( VALUES
                    ( 1, 0::SMALLINT, '\xDEED10'::bytea, 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF'::bytea )
                  , ( 2, 0::SMALLINT, '\xDEED20'::bytea, 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF'::bytea )
@@ -107,7 +107,7 @@ BEGIN
                  , ( 7, 1::SMALLINT, '\xDEED70B1'::bytea, 101, 100, '2016-06-22 19:10:27-07'::timestamp, '\xBEEF'::bytea )
                  , ( 8, 0::SMALLINT, '\xDEED80'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea )
                  ) as pattern
-        EXCEPT SELECT * FROM hive.context_transactions_view
+        EXCEPT SELECT * FROM a.transactions_view
     ) , 'Unexpected rows in the view 2';
 END
 $BODY$

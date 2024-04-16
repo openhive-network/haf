@@ -12,7 +12,7 @@ from haf_local_tools import wait_for_irreversible_in_database
 START_TEST_BLOCK = 50
 
 CONTEXT_ATTACH_BLOCK = 40
-APPLICATION_CONTEXT = "trx_histogram"
+APPLICATION_CONTEXT = "application"
 
 
 def update_app_continuously(session, application_context, cycles):

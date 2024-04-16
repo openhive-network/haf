@@ -39,8 +39,9 @@ BEGIN
     );
 
     CREATE SCHEMA A;
+    CREATE SCHEMA B;
     PERFORM hive.app_create_context( 'context1', 'a' );
-    PERFORM hive.app_create_context( 'context2', 'a' );
+    PERFORM hive.app_create_context( 'context2', 'b' );
 
     SELECT * FROM hive.app_next_block( ARRAY[ 'context1', 'context2' ] ) INTO __result; --(1,2)
     RAISE INFO 'app_next_block %', __result;
@@ -93,8 +94,8 @@ $BODY$
 DECLARE
     __result INT;
 BEGIN
-    ASSERT ( SELECT hash FROM hive.context2_blocks_view WHERE num = 3 ) = '\xBADD31', 'Wrong block 3 visible from context2 before set irreversible';
-    ASSERT ( SELECT hash FROM hive.context1_blocks_view WHERE num = 3 ) = '\xBADD30', 'Wrong block 3 visible from context1 before set irreversible';
+    ASSERT ( SELECT hash FROM b.blocks_view WHERE num = 3 ) = '\xBADD31', 'Wrong block 3 visible from context2 before set irreversible';
+    ASSERT ( SELECT hash FROM a.blocks_view WHERE num = 3 ) = '\xBADD30', 'Wrong block 3 visible from context1 before set irreversible';
 
     PERFORM hive.set_irreversible( 3 );
 END
@@ -107,10 +108,10 @@ AS
 $BODY$
 BEGIN
     -- context2 must see block 3 from 2 fork
-    ASSERT ( SELECT hash FROM hive.context2_blocks_view WHERE num = 3 ) = '\xBADD31', 'Wrong block 3 visible from context2';
+    ASSERT ( SELECT hash FROM b.blocks_view WHERE num = 3 ) = '\xBADD31', 'Wrong block 3 visible from context2';
 
     -- context1 must see block 3 from 1 fork
-    ASSERT ( SELECT hash FROM hive.context1_blocks_view WHERE num = 3 ) = '\xBADD30', 'Wrong block 3 visible from context1';
+    ASSERT ( SELECT hash FROM a.blocks_view WHERE num = 3 ) = '\xBADD30', 'Wrong block 3 visible from context1';
 END;
 $BODY$
 ;

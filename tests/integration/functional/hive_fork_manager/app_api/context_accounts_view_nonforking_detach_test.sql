@@ -81,10 +81,10 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_accounts_view' ), 'No context accounts view';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='accounts_view' ), 'No context accounts view';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.context_accounts_view
+        SELECT * FROM a.accounts_view
         EXCEPT SELECT * FROM ( VALUES
                    ( 100, 'alice1' )
                  , ( 200, 'alice2')
@@ -93,7 +93,7 @@ BEGIN
                  ) as pattern
     ) , 'Unexpected rows in the view';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.context_accounts_view ) = 4, 'Not all rows are visible';
+    ASSERT ( SELECT COUNT(*) FROM a.accounts_view ) = 4, 'Not all rows are visible';
 
 END
 $BODY$

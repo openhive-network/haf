@@ -109,10 +109,10 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_transactions_multisig_view' ), 'No context transactions multisig view';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='transactions_multisig_view' ), 'No context transactions multisig view';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.context_transactions_multisig_view
+        SELECT * FROM a.transactions_multisig_view
         EXCEPT SELECT * FROM ( VALUES
                ( '\xDEED10'::bytea, '\xBAAD10'::bytea )
              , ( '\xDEED20'::bytea, '\xBAAD20'::bytea )
@@ -128,7 +128,7 @@ BEGIN
              , ( '\xDEED30'::bytea, '\xBAAD30'::bytea )
              , ( '\xDEED40'::bytea, '\xBAAD40'::bytea )
          ) as pattern
-        EXCEPT SELECT * FROM hive.context_transactions_multisig_view
+        EXCEPT SELECT * FROM a.transactions_multisig_view
     ) , 'Unexpected rows in the view 2';
 END;
 $BODY$
