@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import random
+import time
 from concurrent.futures import Future, ProcessPoolExecutor, as_completed
 from functools import partial
 from collections import OrderedDict
@@ -165,6 +166,7 @@ def create_comment_options(
 
 def generate_blocks(
         stop_at_block: int,
+        log_interval: int,
         ops_in_one_element: int,
         elements_number_for_iteration,
         tokens: list[str],
@@ -175,6 +177,7 @@ def generate_blocks(
 ) -> list:
     """
     :param stop_at_block: The block where the program stops. If `None`, full blocks will be generated indefinitely,
+    :param log_interval: The time interval between logging the parameters of sent transactions,
     :param ops_in_one_element: determines: how many operations will be inserted in every element of output list,
     :param elements_number_for_iteration: will add chosen amount of records to output list,
     :param tokens: beekeeper open session tokens,
@@ -189,6 +192,8 @@ def generate_blocks(
 
     with ProcessPoolExecutor(max_workers=len(tokens)) as executor:
         main_iteration = 0
+        start_time = time.time()
+        operation_counter: dict = {"comment": 0, "custom_json": 0, "transfer": 0, "vote": 0}
         comment_data = {key: OrderedDict({f"permlink-{index}": f"account-{index}" for index in range(100_000)}) for key
                         in range(16)}
 
@@ -220,6 +225,14 @@ def generate_blocks(
                 block.extend(results[worker_number][0])  # add to block futures transactions
                 comments_created_during_current_iteration.update({worker_number: results[worker_number][1]})
             operations_futures.clear()
+
+            for transactions in block:
+                for operation in transactions:
+                    operation_name = operation.get_name()
+                    if operation_name in operation_counter:
+                        operation_counter[operation_name] += 1
+                    else:
+                        operation_counter[operation_name] = 1
 
             # sign and create transaction section
             gdpo = node.api.database.get_dynamic_global_properties()
@@ -271,8 +284,14 @@ def generate_blocks(
 
             if main_iteration == stop_at_block:
                 executor.shutdown(cancel_futures=False, wait=True)
-                tt.logger.info(f"Finishing generata full block at block {node.get_last_block_number()}.")
+                tt.logger.info(f"Finishing generate full block at block {node.get_last_block_number()}.")
                 return
+            if node.get_last_block_number() % 10 == 0 or time.time() - start_time > log_interval:
+                tt.logger.info(
+                    f"Operations generated from last 10 blocks: {sum(operation_counter.values())},"
+                    f" {dict(sorted(operation_counter.items(), key=lambda x: x[0]))}")
+                start_time = time.time()
+                operation_counter.clear()
 
             main_iteration += 1
 
