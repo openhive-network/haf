@@ -342,7 +342,8 @@ then
   # until the docker image is stopped.
   mkdir -p /tmp/dummy-webserver
   cd /tmp/dummy-webserver
-  /home/haf_admin/.local/share/pypoetry/venv/bin/python -m http.server 8091
+  touch index.html
+  httpd -f -p 8091
 else
   run_instance
   status=$?

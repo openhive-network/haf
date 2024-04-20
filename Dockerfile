@@ -2,7 +2,7 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=ubuntu22.04-11
+ARG CI_IMAGE_TAG=ubuntu22.04-12
 
 ARG BUILD_IMAGE_TAG
 
@@ -21,13 +21,19 @@ COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 # create required accounts
 RUN bash -x ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived" && rm -rf /var/lib/apt/lists/*
 # install postgres.  Installation automatically does an initdb, so remove the 29+MB database that we don't need afterwards
+# Note: We started out having curl in the image, and used that for the docker healthcheck.  On 2024-04-20 we added busybox
+#       to the image which provides wget, and we could just as easily use that for healthchecks.  Right now, we're keeping
+#       curl only because the healthchecks are defined in the haf_api_node repo, and if we dropped curl we'd need to force
+#       everyone to upgrade their haf_api_node in sync with this commit.  We should switch haf_api_node's healthcheck to
+#       use wget once images based on this Dockerfile are made official, and we can drop curl soon thereafter
 RUN apt-get update && \
     DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get update && \
-    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y curl postgresql-16 libpq5 libboost-chrono1.74.0 libboost-context1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 && \
+    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y curl postgresql-16 libpq5 libboost-chrono1.74.0 libboost-context1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 busybox && \
     apt-get remove -y gnupg && \
-    apt-get autoremove  -y
+    apt-get autoremove -y && \
+    busybox --install -s
 # change the UID and GID to match the ones postgres is assigned in our non-minimal runtime
 RUN (chown -Rf --from=postgres 105 / || true) && (chown -Rf --from=:postgres :109 / || true) && usermod -u 105 postgres && groupmod -g 109 postgres
 RUN usermod -a -G users -c "PostgreSQL daemon account" postgres
@@ -193,7 +199,7 @@ EXPOSE ${WS_PORT}
 # JSON rpc service
 EXPOSE ${HTTP_PORT}
 
-FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu22.04-11 AS minimal-instance
+FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu22.04-12 AS minimal-instance
 
 ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu22.04-8}
 
