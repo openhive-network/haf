@@ -32,7 +32,7 @@ The fork manager enables multiple Hive apps to use a single block database and p
 Hive block data is stored in two separated, but similar tables: irreversible and reversible blocks. Whenever a block becomes irreversible, hived uses the hive_fork_manager api to signal that the associated data should be moved from the reversible tables to the irreversible tables.
 
 A HAF app groups its tables into a named "context". A context name can only be composed of alphanumerical characters and underscores. An app's context holds information about its processed events, blocks, and the fork which is now being processed by the app. These pieces of information
-are enough to automatically create views which combine irreversible and reversible block data seamlessly for queries by the app. The auto-constructed view names use the following template: 'hive.{context_name}_{blocks|transactions|multi_signatures|operations}_view'.
+are enough to automatically create views which combine irreversible and reversible block data seamlessly for queries by the app. The auto-constructed view names use the following template: '{context_schema}.{blocks|transactions|multi_signatures|operations}_view'.
 
 ### Overview of the fork manager and its interactions with hived and HAF apps
 ![alt text](./doc/evq_c3.png )
@@ -51,7 +51,7 @@ Any HAF app must first create a context, then create its tables which inherit fr
 A HAF app calls `hive.app_next_block` to get the next block number to process. If NULL was returned, the app must immediatly call `hive.app_next_block` again. Note: the app will automatically be blocked when it calls `hive.app_next_block` if there are no blocks to process. 
 
 When a range of block numbers is returned by app_next_block, the app may edit its own tables and use the appropriate snapshot of the blocks
-data by querying the 'hive.{context_name}_{ blocks | transactions | operations | transactions_multisig }' views. These view present a data snapshot for the first block in the returned block range. If the number of blocks in the returned range is large, then it may be more efficient for the app to do a "massive sync" instead of syncing block-by-block.
+data by querying the '{context_schema}.{ blocks | transactions | operations | transactions_multisig }' views. These view present a data snapshot for the first block in the returned block range. If the number of blocks in the returned range is large, then it may be more efficient for the app to do a "massive sync" instead of syncing block-by-block.
 
 To perform a massive sync, an app should detach the context, execute its sync algorithm using the block data, then reattach the context. This will eliminate the performance overhead associated with the triggers installed by the fork manager that monitor changes to the app's tables.
 
@@ -403,9 +403,11 @@ Reads the 'dirty' flag.
 #### APP API
 The functions which should be used by a HAF app
 
-##### hive.app_create_context( _name, _is_forking )
+##### hive.app_create_context( _name, _schema, _is_forking = TRUE, _is_attached = TRUE )
 Creates a new context. Context name can contain only characters from the set: `a-zA-Z0-9_`.
-Parameter '_is_forking' sets contexts as forking or non-forking.
+- '_schema' name of postgreSQL schema used by context to hold there its views
+- '_is_forking' sets contexts as forking or non-forking.
+- '_is_attached' if create attached or not attched context 
 
 ##### hive.app_remove_context( _name hive.context_name )
 Remove the context and unregister all its tables.
@@ -430,7 +432,7 @@ Detaches triggers attached to tables registered in a given context or contexts. 
 
 ##### hive.appproc_context_attach( context_name )
 ##### hive.appproc_context_attach( array_of_contexts )
-Stored procedures. Enables triggers attached to registered tables in a given context. The context `cuurent_block_num` cannot
+Stored procedures. Enables triggers attached to registered tables in a given context. The context `current_block_num` cannot
 be greater than the latest irreversible block. The context's views are recreated to return both reversible and irreversible data limited to the context's current block.
 
 
