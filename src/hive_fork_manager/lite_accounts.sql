@@ -92,6 +92,3 @@ INSERT INTO la_app.properties( name ) VALUES( 'property 2' );
 INSERT INTO la_app.key_tags( name ) VALUES( 'active' );
 INSERT INTO la_app.key_tags( name ) VALUES( 'memo' );
 INSERT INTO la_app.key_tags( name ) VALUES( 'battle' );
-
---temporary: for tests
---select la_app.create_account( 'game', 'avocado', 'key', 'key2', decode('abcd', 'hex') )

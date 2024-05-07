@@ -58,6 +58,9 @@ ADD_PSQL_EXTENSION(
             types/cast_functions.sql
             types/casts.sql
             types/process_operation.sql
+
+            lite_accounts.sql
+            lite_accounts_helpers.sql
 )
 
 ADD_SUBDIRECTORY( shared_lib )

@@ -5,6 +5,7 @@
 #include <hive/protocol/forward_impacted.hpp>
 #include <hive/protocol/forward_keyauths.hpp>
 #include <hive/protocol/misc_utilities.hpp>
+#include <hive/protocol/transaction_util.hpp>
 
 #include <fc/io/json.hpp>
 #include <fc/string.hpp>
@@ -15,6 +16,9 @@ using hive::protocol::account_name_type;
 using hive::protocol::asset;
 using hive::protocol::serialization_mode_controller;
 using hive::protocol::transaction_serialization_type;
+using hive::protocol::signed_transaction;
+using hive::protocol::authority;
+using hive::protocol::required_authorities_type;
 
 using hive::app::collected_keyauth_collection_t;
 using hive::app::impacted_balance_data;
@@ -813,4 +817,45 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
     PG_RETURN_BOOL( true );
   }
+
+  PG_FUNCTION_INFO_V1(verify_authority);
+
+  Datum verify_authority(PG_FUNCTION_ARGS)
+  {
+    const char* __trx = text_to_cstring(PG_GETARG_TEXT_PP(0));
+    const char* __auths = text_to_cstring(PG_GETARG_TEXT_PP(1));
+    const char* __chain_id = text_to_cstring(PG_GETARG_TEXT_PP(2));
+
+    const signed_transaction& _trx = fc::json::from_string( __trx, fc::json::format_validation_mode::full ).as< signed_transaction >();
+    const authority& _auth = fc::json::from_string( __auths, fc::json::format_validation_mode::full ).as< authority >();
+    const chain_id_type _chain_id( fc::sha256::hash( __chain_id ) );
+
+    auto _public_keys = _trx.get_signature_keys( _chain_id, fc::ecc::canonical_signature_type::bip_0062, serialization_type::hf26 );
+
+    required_authorities_type _required_authorities;
+    _required_authorities.other.emplace_back( _auth );
+
+    try
+    {
+      hive::protocol::verify_authority( _required_authorities,
+                        _public_keys,
+                        [&]( std::string account_name ){ return authority(); },
+                        [&]( std::string account_name ){ return authority(); },
+                        [&]( std::string account_name ){ return authority(); },
+                        [&]( std::string witness_name ){ return public_key_type(); },
+                        HIVE_MAX_SIG_CHECK_DEPTH,
+                        HIVE_MAX_AUTHORITY_MEMBERSHIP,
+                        HIVE_MAX_SIG_CHECK_ACCOUNTS,
+                        false,
+                        flat_set<account_name_type>(),
+                        flat_set<account_name_type>(),
+                        flat_set<account_name_type>());
+    }
+    catch(...)
+    {
+      PG_RETURN_BOOL( false );
+    }
+    PG_RETURN_BOOL( true );
+  }
+
 }
