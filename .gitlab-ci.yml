@@ -27,7 +27,7 @@ include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
   - project: 'hive/common-ci-configuration'
-    ref: 7ea99b10bbf0f9b1fbb88f52a78ead4c82f15d75
+    ref: b2ff9f5a48bc8fb379c66ec4e7907ea1e796ff1b
     file:
     - '/templates/python_projects.gitlab-ci.yml'
 
@@ -224,7 +224,7 @@ haf_system_tests_mirrornet:
     # copy block_log to tmp location
     - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
     # copy block_log and generate new artifacts with compress_block_log util
-    - time $COMPRESS_BLOCK_LOG_PATH --input-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log -o $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests --decompress
+    - time $COMPRESS_BLOCK_LOG_PATH --input-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log/block_log --output-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --decompress
     # drop tmp location
     - rm -r $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
     # prepare environment and run tests
