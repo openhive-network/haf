@@ -183,6 +183,11 @@ GRANT EXECUTE ON FUNCTION
     , hive.ignore_registered_table_edition( pg_ddl_command )
     , hive.get_wal_sequence_number()
     , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
+    , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
+    , hive.operation_id( _block_num INTEGER, _type INTEGER, _pos INTEGER )
+    , hive.operation_id_to_pos( _id hive.operations.id%TYPE )
+    , hive.operation_id_to_type_id( _id hive.operations.id%TYPE )
+    , hive.operation_id_to_block_num( _id hive.operations.id%TYPE )
 TO hived_group;
 
 --- Required permissions to execute all callees of app_check_contexts_synchronized

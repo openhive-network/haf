@@ -30,6 +30,7 @@ ADD_PSQL_EXTENSION(
             context_rewind/rewind_api.sql
             # This file must be also specified here, as it contains functions which definitions should be always overwritten.
             types/operation/operation_flow.sql
+            types/operation/operation_id.sql
             tools.sql
             block_views_for_head_block.sql
             block_day_stats_view.sql

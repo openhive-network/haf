@@ -69,7 +69,7 @@ BEGIN
    INSERT INTO hive.operations
     VALUES
         -- one key from owner, one from active, one from posting
-          ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
+          ( hive.operation_id(1, 1, 0), 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -117,7 +117,7 @@ BEGIN
             '::jsonb::hive.operation )
 
         -- three keys from one owner
-            , ( 2, 2, 0, 0, 2, '2016-06-22 19:10:21-07'::timestamp, '
+            , ( hive.operation_id(2, 2, 0), 2, 0, 0, 2, '2016-06-22 19:10:21-07'::timestamp, '
                 {
                     "type": "account_update_operation",
                     "value": {
@@ -165,7 +165,7 @@ BEGIN
             '::jsonb::hive.operation)
 
         -- recover_account_operation
-            , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
+            , ( hive.operation_id(3, 1, 0), 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
                 {
                     "type": "recover_account_operation",
                     "value": {
@@ -196,7 +196,7 @@ BEGIN
             '::jsonb::hive.operation )
 
             -- request_account_recovery_operation
-            , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
+            , ( hive.operation_id(4, 1, 0), 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
                 {
                     "type": "request_account_recovery_operation",
                     "value": {
@@ -216,7 +216,7 @@ BEGIN
                     }
                 }
             '::jsonb::hive.operation )
-            , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp,
+            , ( hive.operation_id(5, 1, 0), 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp,
             '
                 {
                     "type": "account_update_operation",
@@ -246,7 +246,7 @@ BEGIN
                 }            ' :: jsonb :: hive.operation )
 
             -- witness_set_properties_operation
-            , ( 7, 5, 0, 1, 7, '2016-06-22 19:10:21-07'::timestamp,
+            , ( hive.operation_id(5, 7, 0), 5, 0, 1, 7, '2016-06-22 19:10:21-07'::timestamp,
             '
             {
                 "type": "witness_set_properties_operation",
@@ -265,8 +265,8 @@ BEGIN
                     "extensions": []
                 }
             }'::jsonb::hive.operation)
-            , ( 6, 5, 0, 1, 6, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hive.operation )
-            , ( 206, 5, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp,
+            , ( hive.operation_id(5, 6, 1), 5, 0, 1, 6, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hive.operation )
+            , ( hive.operation_id(5, 1, 2), 5, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp,
             '
             {
                 "type": "account_create_operation",
@@ -316,7 +316,7 @@ BEGIN
 
 
                         
-            , ( 8, 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp,
+            , ( hive.operation_id(6, 1, 0), 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp,
             '
                 {
                     "type": "account_update_operation",
@@ -352,7 +352,7 @@ BEGIN
                 
                 -- for snail-157 account: create_account operation(above) establishes 4 keys
                 -- the pow operation(below) changes only ACTIVE key
-                , ( 208, 6, 0, 1, 8, '2016-06-22 19:10:21-07'::timestamp,
+                , ( hive.operation_id(6, 8, 1), 6, 0, 1, 8, '2016-06-22 19:10:21-07'::timestamp,
                 '
                 {
                     "type": "pow_operation",
@@ -449,23 +449,23 @@ BEGIN
         -- check the whole key table
 
     PERFORM compare_keyauth_data('[
-                {"public_key_to_string":"STM7x48ngjo2L7eNxj3u5dUnanQovAUc4BrcbRFbP8BSAS4SBxmHh","key_id":1,"account_id":8, "name":"andresricou", "key_kind":"OWNER","key_serial_id":1,"weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":1,"key":"\\x03932efa0867801610654c5d27621347cf5d2aeea8bdbf8bf9762c57d48f5e6f4b"}, 
-                {"public_key_to_string":"STM4w4znpS1jgFLAL4BGvJpqMgyn38N9FLGbP4x1cvYP1nqDYNonG","key_id":2,"account_id":8,"name":"andresricou","key_kind":"ACTIVE","key_serial_id":2,"weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":2,"key":"\\x0205dbbc7c34d17cc2ded972e4527841d922ade2fdea5edab77272dfb01252abf6"}, 
-                {"public_key_to_string":"STM6JfQQyvVdmnf3Ch5ehJMpAEfpRswMmJQP9MMvJBjszf32xmvn9","key_id":3,"account_id":8,"name":"andresricou","key_kind":"POSTING","key_serial_id":3,"weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":3,"key":"\\x02ba95a2604262ee0c53ecb2bb44eb5422032f9c5d5f5460dd512fa16672962ac8"}, 
-                {"public_key_to_string":"STM6XUnQxSzLpUM6FMnuTTyG9LNXvzYbzW2J6qGH5sRTsQvCnGePo","key_id":4,"account_id":8,"name":"andresricou","key_kind":"MEMO","key_serial_id":4,"weight_threshold":0,"w":0,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":4,"key":"\\x02d7afd2fcdaf526b69d1a4489766b96511534b90180f1fd4a19d69ba43054823c"}, 
-                {"public_key_to_string":"STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV","key_id":5,"account_id":15,"name":"holger80","key_kind":"WITNESS_SIGNING","key_serial_id":5,"weight_threshold":1,"w":1,"op_serial_id":7,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":5,"key":"\\x0295a26f54381a6dba8eb5dc7536e57db267685f9386c714ead9be39a905364a88"}, 
-                {"public_key_to_string":"STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm","key_id":6,"account_id":13,"name":"jcalfee","key_kind":"OWNER","key_serial_id":6,"weight_threshold":1,"w":1,"op_serial_id":3,"block_num":3,"timestamp":"2016-06-22T19:10:21","hive_rowid":6,"key":"\\x0288f8a188036e2de2b7683f5419c0c597acd1d89df22e23fa196bd6b3ab00e70f"}, 
-                {"public_key_to_string":"STM7TN7SNuvMM6Zha6NKTZP7q6f4BmC1UXnAJxb2vjMfE89gep3HZ","key_id":7,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":7,"weight_threshold":1,"w":1,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":7,"key":"\\x03520a0a4c3e3da618919b7f54b366503b27991e87d997fd80ca9301059f34bf52"}, 
-                {"public_key_to_string":"STM7YSZmysv6xxKApsCqgZ8Xuact1Bsnfuvv299B3cWye8FYakDri","key_id":8,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":8,"weight_threshold":1,"w":1,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":8,"key":"\\x035d91137a851cc4a15e3b3ae2ac35da5653b95fa85bbc2c8af1647fb5a2c9c06a"}, 
-                {"public_key_to_string":"STM87WL3HWWwA1qYy4Qywp9WMWUNL8txGHTAJZdEU8Rs9h6vZH3B5","key_id":9,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":9,"weight_threshold":1,"w":1,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":9,"key":"\\x03a8a5021d86ff107280b51d9cec9adee16d9fce7c57f749f3e3dfd17de8001c76"}, 
-                {"public_key_to_string":"STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx","key_id":10,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":10,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":10,"key":"\\x023032d7738563754599177e8c25aa5dc873047d493c677c3dbdf39720d9412bb9"}, 
-                {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","key_id":11,"account_id":10,"name":"recursive","key_kind":"MEMO","key_serial_id":11,"weight_threshold":0,"w":0,"op_serial_id":5,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":11,"key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"}, 
-                {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","key_id":11,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":11,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":12,"key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"}, 
-                {"public_key_to_string":"STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR","key_id":12,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":12,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":13,"key":"\\x0389d28937022880a7f0c7deaa6f46b4d87ce08bd5149335cb39b5a8e9b04981c2"},
-                {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}, 
-                {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}, 
-                {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"ACTIVE","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}, 
-                {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
+                {"public_key_to_string":"STM7x48ngjo2L7eNxj3u5dUnanQovAUc4BrcbRFbP8BSAS4SBxmHh","key_id":1,"account_id":8, "name":"andresricou", "key_kind":"OWNER","key_serial_id":1,"weight_threshold":1,"w":1,"op_serial_id":4294967297,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":1,"key":"\\x03932efa0867801610654c5d27621347cf5d2aeea8bdbf8bf9762c57d48f5e6f4b"},
+                {"public_key_to_string":"STM4w4znpS1jgFLAL4BGvJpqMgyn38N9FLGbP4x1cvYP1nqDYNonG","key_id":2,"account_id":8,"name":"andresricou","key_kind":"ACTIVE","key_serial_id":2,"weight_threshold":1,"w":1,"op_serial_id":4294967297,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":2,"key":"\\x0205dbbc7c34d17cc2ded972e4527841d922ade2fdea5edab77272dfb01252abf6"},
+                {"public_key_to_string":"STM6JfQQyvVdmnf3Ch5ehJMpAEfpRswMmJQP9MMvJBjszf32xmvn9","key_id":3,"account_id":8,"name":"andresricou","key_kind":"POSTING","key_serial_id":3,"weight_threshold":1,"w":1,"op_serial_id":4294967297,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":3,"key":"\\x02ba95a2604262ee0c53ecb2bb44eb5422032f9c5d5f5460dd512fa16672962ac8"},
+                {"public_key_to_string":"STM6XUnQxSzLpUM6FMnuTTyG9LNXvzYbzW2J6qGH5sRTsQvCnGePo","key_id":4,"account_id":8,"name":"andresricou","key_kind":"MEMO","key_serial_id":4,"weight_threshold":0,"w":0,"op_serial_id":4294967297,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":4,"key":"\\x02d7afd2fcdaf526b69d1a4489766b96511534b90180f1fd4a19d69ba43054823c"},
+                {"public_key_to_string":"STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV","key_id":5,"account_id":15,"name":"holger80","key_kind":"WITNESS_SIGNING","key_serial_id":5,"weight_threshold":1,"w":1,"op_serial_id":21474836487,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":5,"key":"\\x0295a26f54381a6dba8eb5dc7536e57db267685f9386c714ead9be39a905364a88"},
+                {"public_key_to_string":"STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm","key_id":6,"account_id":13,"name":"jcalfee","key_kind":"OWNER","key_serial_id":6,"weight_threshold":1,"w":1,"op_serial_id":12884901889,"block_num":3,"timestamp":"2016-06-22T19:10:21","hive_rowid":6,"key":"\\x0288f8a188036e2de2b7683f5419c0c597acd1d89df22e23fa196bd6b3ab00e70f"},
+                {"public_key_to_string":"STM7TN7SNuvMM6Zha6NKTZP7q6f4BmC1UXnAJxb2vjMfE89gep3HZ","key_id":7,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":7,"weight_threshold":1,"w":1,"op_serial_id":21474836481,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":7,"key":"\\x03520a0a4c3e3da618919b7f54b366503b27991e87d997fd80ca9301059f34bf52"},
+                {"public_key_to_string":"STM7YSZmysv6xxKApsCqgZ8Xuact1Bsnfuvv299B3cWye8FYakDri","key_id":8,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":8,"weight_threshold":1,"w":1,"op_serial_id":21474836481,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":8,"key":"\\x035d91137a851cc4a15e3b3ae2ac35da5653b95fa85bbc2c8af1647fb5a2c9c06a"},
+                {"public_key_to_string":"STM87WL3HWWwA1qYy4Qywp9WMWUNL8txGHTAJZdEU8Rs9h6vZH3B5","key_id":9,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":9,"weight_threshold":1,"w":1,"op_serial_id":21474836481,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":9,"key":"\\x03a8a5021d86ff107280b51d9cec9adee16d9fce7c57f749f3e3dfd17de8001c76"},
+                {"public_key_to_string":"STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx","key_id":10,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":10,"weight_threshold":1,"w":1,"op_serial_id":8589934594,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":10,"key":"\\x023032d7738563754599177e8c25aa5dc873047d493c677c3dbdf39720d9412bb9"},
+                {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","key_id":11,"account_id":10,"name":"recursive","key_kind":"MEMO","key_serial_id":11,"weight_threshold":0,"w":0,"op_serial_id":21474836481,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":11,"key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"},
+                {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","key_id":11,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":11,"weight_threshold":1,"w":1,"op_serial_id":8589934594,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":12,"key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"},
+                {"public_key_to_string":"STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR","key_id":12,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":12,"weight_threshold":1,"w":1,"op_serial_id":8589934594,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":13,"key":"\\x0389d28937022880a7f0c7deaa6f46b4d87ce08bd5149335cb39b5a8e9b04981c2"},
+                {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":21474836993,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
+                {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":21474836993,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
+                {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"ACTIVE","weight_threshold":1,"w":1,"op_serial_id":21474836993,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
+                {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":21474836993,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
                 {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"ACTIVE","weight_threshold":1,"w":1,"op_serial_id":5036543,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 
                 {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":5036543,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 
                 {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":5036543,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 
@@ -504,7 +504,7 @@ BEGIN
         account_supervisor_name = 'ecency.app' AND 
         weight_threshold = 1 AND 
         w = 1 AND 
-        op_serial_id = 1 AND 
+        op_serial_id = 4294967297 AND
         block_num = 1 AND 
         timestamp = '2016-06-22T19:10:21' AND 
         account_id = 8 AND 
@@ -518,7 +518,7 @@ BEGIN
         account_supervisor_name = 'good-karma' AND 
         weight_threshold = 1 AND 
         w = 1 AND 
-        op_serial_id = 1 AND 
+        op_serial_id = 4294967297 AND
         block_num = 1 AND 
         timestamp = '2016-06-22T19:10:21' AND 
         account_id = 8 AND 
@@ -532,7 +532,7 @@ BEGIN
         account_supervisor_name = 'steemconnect' AND 
         weight_threshold = 1 AND 
         w = 1 AND 
-        op_serial_id = 2 AND 
+        op_serial_id = 8589934594 AND
         block_num = 2 AND 
         timestamp = '2016-06-22T19:10:21' AND 
         account_id = 10 AND 
@@ -546,7 +546,7 @@ BEGIN
         account_supervisor_name = 'steemconne02' AND 
         weight_threshold = 1 AND 
         w = 1 AND 
-        op_serial_id = 2 AND 
+        op_serial_id = 8589934594 AND
         block_num = 2 AND 
         timestamp = '2016-06-22T19:10:21' AND 
         account_id = 10 AND 
@@ -565,7 +565,7 @@ BEGIN
         account_supervisor_name = 'ecency.app' AND 
         weight_threshold = 1 AND 
         w = 1 AND 
-        op_serial_id = 1 AND 
+        op_serial_id = 4294967297 AND
         block_num = 1 AND 
         timestamp = '2016-06-22T19:10:21' AND 
         account_id = 8 AND 
@@ -579,7 +579,7 @@ BEGIN
         account_supervisor_name = 'good-karma' AND 
         weight_threshold = 1 AND 
         w = 1 AND 
-        op_serial_id = 1 AND 
+        op_serial_id = 4294967297 AND
         block_num = 1 AND 
         timestamp = '2016-06-22T19:10:21' AND 
         account_id = 8 AND 
@@ -593,7 +593,7 @@ BEGIN
         account_supervisor_name = 'steemconne02' AND 
         weight_threshold = 1 AND 
         w = 1 AND 
-        op_serial_id = 8 AND 
+        op_serial_id = 25769803777 AND
         block_num = 6 AND 
         timestamp = '2016-06-22T19:10:21' AND 
         account_id = 10 AND 
@@ -607,7 +607,7 @@ BEGIN
         account_supervisor_name = 'steemconne02' AND 
         weight_threshold = 1 AND 
         w = 1 AND 
-        op_serial_id = 2 AND 
+        op_serial_id = 8589934594 AND
         block_num = 2 AND 
         timestamp = '2016-06-22T19:10:21' AND 
         account_id = 10 AND 
@@ -616,24 +616,24 @@ BEGIN
 
     PERFORM compare_keyauth_data(
             '[
-                {"public_key_to_string":"STM4w4znpS1jgFLAL4BGvJpqMgyn38N9FLGbP4x1cvYP1nqDYNonG","key_id":2,"account_id":8,"name":"andresricou","key_kind":"ACTIVE","key_serial_id":2,"weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":2,"key":"\\x0205dbbc7c34d17cc2ded972e4527841d922ade2fdea5edab77272dfb01252abf6"}, 
-                 {"public_key_to_string":"STM6JfQQyvVdmnf3Ch5ehJMpAEfpRswMmJQP9MMvJBjszf32xmvn9","key_id":3,"account_id":8,"name":"andresricou","key_kind":"POSTING","key_serial_id":3,"weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":3,"key":"\\x02ba95a2604262ee0c53ecb2bb44eb5422032f9c5d5f5460dd512fa16672962ac8"}, 
-                 {"public_key_to_string":"STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV","key_id":5,"account_id":15,"name":"holger80","key_kind":"WITNESS_SIGNING","key_serial_id":5,"weight_threshold":1,"w":1,"op_serial_id":7,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":5,"key":"\\x0295a26f54381a6dba8eb5dc7536e57db267685f9386c714ead9be39a905364a88"}, 
-                 {"public_key_to_string":"STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx","key_id":10,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":10,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":10,"key":"\\x023032d7738563754599177e8c25aa5dc873047d493c677c3dbdf39720d9412bb9"}, 
-                 {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","key_id":11,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":11,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":12,"key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"}, 
-                 {"public_key_to_string":"STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR","key_id":12,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":12,"weight_threshold":1,"w":1,"op_serial_id":2,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":13,"key":"\\x0389d28937022880a7f0c7deaa6f46b4d87ce08bd5149335cb39b5a8e9b04981c2"}, 
-                 {"public_key_to_string":"STM4zCuP6xBTdCBZjyg9eMSku3wDnBaAX6o9uNCXwFafzqTC5tm5j","key_id":14,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":14,"weight_threshold":1,"w":1,"op_serial_id":8,"block_num":6,"timestamp":"2016-06-22T19:10:21","hive_rowid":14,"key":"\\x020cfad0e91739b640c8d2b6b69373978e1e27efe67f60a234f37c3a4bed6d1646"}, 
-                 {"public_key_to_string":"STM6ZVzWQvbYSzVpY2PRJHu7QSASVy8aB8xSVcJgx5seYGHPFvJkZ","key_id":15,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":15,"weight_threshold":1,"w":1,"op_serial_id":8,"block_num":6,"timestamp":"2016-06-22T19:10:21","hive_rowid":15,"key":"\\x02dc467ea138c65fbbe51e19062bd5e350b6b16a3fc68b46df2775360050728770"}, 
-                 {"public_key_to_string":"STM78LtxupZ8YcTXthdY13SSymguhGyPrnSPLdJTkUFGogJ9JqTRa","key_id":16,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":16,"weight_threshold":1,"w":1,"op_serial_id":8,"block_num":6,"timestamp":"2016-06-22T19:10:21","hive_rowid":16,"key":"\\x0326d98e47b17df753ec4ba949224a1c8e5e755ebd3916b56cb929719507cb42f0"}, 
-                 {"public_key_to_string":"STM82hFUKjN2j8KGqQ8rz9YgFAbMrWFuCPkabtrAnUfV2JQshNPLz","key_id":17,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":17,"weight_threshold":1,"w":1,"op_serial_id":8,"block_num":6,"timestamp":"2016-06-22T19:10:21","hive_rowid":17,"key":"\\x039db8109f3cbd64f9aef68bd08406346d6116d98f757fa9e4953efb884d0b6252"}, 
-                 {"public_key_to_string":"STM7x48ngjo2L7eNxj3u5dUnanQovAUc4BrcbRFbP8BSAS4SBxmHh","account_id":8,"name":"andresricou","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x03932efa0867801610654c5d27621347cf5d2aeea8bdbf8bf9762c57d48f5e6f4b"}, 
-                 {"public_key_to_string":"STM6XUnQxSzLpUM6FMnuTTyG9LNXvzYbzW2J6qGH5sRTsQvCnGePo","account_id":8,"name":"andresricou","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":1,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x02d7afd2fcdaf526b69d1a4489766b96511534b90180f1fd4a19d69ba43054823c"}, 
-                 {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","account_id":10,"name":"recursive","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":8,"block_num":6,"timestamp":"2016-06-22T19:10:21","key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"}, 
-                 {"public_key_to_string":"STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm","account_id":13,"name":"jcalfee","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":3,"block_num":3,"timestamp":"2016-06-22T19:10:21","key":"\\x0288f8a188036e2de2b7683f5419c0c597acd1d89df22e23fa196bd6b3ab00e70f"},
-                 {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}, 
-                 {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"}, 
-                 {"public_key_to_string":"STM6ym1sYXLg1sqA1YV3xMUheheNVy8B44oNha9ahSu9bVdcrSRVw","account_id":23,"name":"snail-157","key_kind":"ACTIVE","weight_threshold":0,"w":0,"op_serial_id":208,"block_num":6,"timestamp":"2016-06-22T19:10:21","key":"\\x03135bc3ce5a69b97151003ced77be2654b8e36c2fe7ebce75105cfc76554be0b1"}, 
-                 {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":206,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
+                {"public_key_to_string":"STM4w4znpS1jgFLAL4BGvJpqMgyn38N9FLGbP4x1cvYP1nqDYNonG","key_id":2,"account_id":8,"name":"andresricou","key_kind":"ACTIVE","key_serial_id":2,"weight_threshold":1,"w":1,"op_serial_id":4294967297,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":2,"key":"\\x0205dbbc7c34d17cc2ded972e4527841d922ade2fdea5edab77272dfb01252abf6"},
+                 {"public_key_to_string":"STM6JfQQyvVdmnf3Ch5ehJMpAEfpRswMmJQP9MMvJBjszf32xmvn9","key_id":3,"account_id":8,"name":"andresricou","key_kind":"POSTING","key_serial_id":3,"weight_threshold":1,"w":1,"op_serial_id":4294967297,"block_num":1,"timestamp":"2016-06-22T19:10:21","hive_rowid":3,"key":"\\x02ba95a2604262ee0c53ecb2bb44eb5422032f9c5d5f5460dd512fa16672962ac8"},
+                 {"public_key_to_string":"STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV","key_id":5,"account_id":15,"name":"holger80","key_kind":"WITNESS_SIGNING","key_serial_id":5,"weight_threshold":1,"w":1,"op_serial_id":21474836487,"block_num":5,"timestamp":"2016-06-22T19:10:21","hive_rowid":5,"key":"\\x0295a26f54381a6dba8eb5dc7536e57db267685f9386c714ead9be39a905364a88"},
+                 {"public_key_to_string":"STM5FiXEtrfGsgv2jFoQqVCBkbeVRxrGxhHmjRJX4wEH3n36FkrBx","key_id":10,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":10,"weight_threshold":1,"w":1,"op_serial_id":8589934594,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":10,"key":"\\x023032d7738563754599177e8c25aa5dc873047d493c677c3dbdf39720d9412bb9"},
+                 {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","key_id":11,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":11,"weight_threshold":1,"w":1,"op_serial_id":8589934594,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":12,"key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"},
+                 {"public_key_to_string":"STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR","key_id":12,"account_id":10,"name":"recursive","key_kind":"ACTIVE","key_serial_id":12,"weight_threshold":1,"w":1,"op_serial_id":8589934594,"block_num":2,"timestamp":"2016-06-22T19:10:21","hive_rowid":13,"key":"\\x0389d28937022880a7f0c7deaa6f46b4d87ce08bd5149335cb39b5a8e9b04981c2"},
+                 {"public_key_to_string":"STM4zCuP6xBTdCBZjyg9eMSku3wDnBaAX6o9uNCXwFafzqTC5tm5j","key_id":14,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":14,"weight_threshold":1,"w":1,"op_serial_id":25769803777,"block_num":6,"timestamp":"2016-06-22T19:10:21","hive_rowid":14,"key":"\\x020cfad0e91739b640c8d2b6b69373978e1e27efe67f60a234f37c3a4bed6d1646"},
+                 {"public_key_to_string":"STM6ZVzWQvbYSzVpY2PRJHu7QSASVy8aB8xSVcJgx5seYGHPFvJkZ","key_id":15,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":15,"weight_threshold":1,"w":1,"op_serial_id":25769803777,"block_num":6,"timestamp":"2016-06-22T19:10:21","hive_rowid":15,"key":"\\x02dc467ea138c65fbbe51e19062bd5e350b6b16a3fc68b46df2775360050728770"},
+                 {"public_key_to_string":"STM78LtxupZ8YcTXthdY13SSymguhGyPrnSPLdJTkUFGogJ9JqTRa","key_id":16,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":16,"weight_threshold":1,"w":1,"op_serial_id":25769803777,"block_num":6,"timestamp":"2016-06-22T19:10:21","hive_rowid":16,"key":"\\x0326d98e47b17df753ec4ba949224a1c8e5e755ebd3916b56cb929719507cb42f0"},
+                 {"public_key_to_string":"STM82hFUKjN2j8KGqQ8rz9YgFAbMrWFuCPkabtrAnUfV2JQshNPLz","key_id":17,"account_id":10,"name":"recursive","key_kind":"OWNER","key_serial_id":17,"weight_threshold":1,"w":1,"op_serial_id":25769803777,"block_num":6,"timestamp":"2016-06-22T19:10:21","hive_rowid":17,"key":"\\x039db8109f3cbd64f9aef68bd08406346d6116d98f757fa9e4953efb884d0b6252"},
+                 {"public_key_to_string":"STM7x48ngjo2L7eNxj3u5dUnanQovAUc4BrcbRFbP8BSAS4SBxmHh","account_id":8,"name":"andresricou","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":4294967297,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x03932efa0867801610654c5d27621347cf5d2aeea8bdbf8bf9762c57d48f5e6f4b"},
+                 {"public_key_to_string":"STM6XUnQxSzLpUM6FMnuTTyG9LNXvzYbzW2J6qGH5sRTsQvCnGePo","account_id":8,"name":"andresricou","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":4294967297,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x02d7afd2fcdaf526b69d1a4489766b96511534b90180f1fd4a19d69ba43054823c"},
+                 {"public_key_to_string":"STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB","account_id":10,"name":"recursive","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":25769803777,"block_num":6,"timestamp":"2016-06-22T19:10:21","key":"\\x0209b6ff66b3f04d5b38a93171f180eba1f38bb807adb5ffe144181aa301d6190d"},
+                 {"public_key_to_string":"STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm","account_id":13,"name":"jcalfee","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":12884901889,"block_num":3,"timestamp":"2016-06-22T19:10:21","key":"\\x0288f8a188036e2de2b7683f5419c0c597acd1d89df22e23fa196bd6b3ab00e70f"},
+                 {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":21474836993,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
+                 {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":21474836993,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
+                 {"public_key_to_string":"STM6ym1sYXLg1sqA1YV3xMUheheNVy8B44oNha9ahSu9bVdcrSRVw","account_id":23,"name":"snail-157","key_kind":"ACTIVE","weight_threshold":0,"w":0,"op_serial_id":25769804040,"block_num":6,"timestamp":"2016-06-22T19:10:21","key":"\\x03135bc3ce5a69b97151003ced77be2654b8e36c2fe7ebce75105cfc76554be0b1"},
+                 {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":21474836993,"block_num":5,"timestamp":"2016-06-22T19:10:21","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
                  {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"ACTIVE","weight_threshold":1,"w":1,"op_serial_id":5036543,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 
                  {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":5036543,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 
                  {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":5036543,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"}, 

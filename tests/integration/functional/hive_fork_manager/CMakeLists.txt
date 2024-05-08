@@ -275,6 +275,8 @@ ADD_TEST( NAME test_update_script
 
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_create_and_hole_in_events.sql )
 
+ ADD_SQL_FUNCTIONAL_TEST( app_api/operation_id.sql )
+
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork.sql )
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork_non_forking_app.sql )
 

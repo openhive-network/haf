@@ -39,11 +39,11 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-          ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
-        , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
-        , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hive.operation )
-        , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation )
-        , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive.operation )
+          ( hive.operation_id(1, 1, 0), 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(2, 1, 0), 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(3, 1, 0), 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(4, 1, 0), 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(5, 1, 0), 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive.operation )
     ;
 
     INSERT INTO hive.blocks_reversible
@@ -73,19 +73,19 @@ BEGIN
 
     INSERT INTO hive.operations_reversible(id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body_binary, fork_id)
     VALUES
-           ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation, 1 )
-         , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive.operation, 1 )
-         , ( 6, 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hive.operation, 1 )
-         , ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
-         , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
-         , ( 9, 7, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
-         , ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
-         , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive.operation, 2 )
-         , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
-         , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
-         , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hive.operation, 3 )
-         , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hive.operation, 3 )
-         , ( 11, 10, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive.operation, 3 )
+           ( hive.operation_id(4, 1, 0), 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation, 1 )
+         , ( hive.operation_id(5, 1, 0), 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive.operation, 1 )
+         , ( hive.operation_id(6, 1, 0), 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hive.operation, 1 )
+         , ( hive.operation_id(7, 1, 0), 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7, 1, 1), 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7, 1, 2), 7, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7, 1, 0), 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
+         , ( hive.operation_id(7, 1, 1), 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive.operation, 2 )
+         , ( hive.operation_id(8, 1, 0), 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
+         , ( hive.operation_id(9, 1, 0), 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
+         , ( hive.operation_id(8, 1, 0), 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hive.operation, 3 )
+         , ( hive.operation_id(9, 1, 0), 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hive.operation, 3 )
+         , ( hive.operation_id(10, 1, 0), 10, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive.operation, 3 )
     ;
 
     UPDATE hive.irreversible_data SET consistent_block = 5;
@@ -103,17 +103,17 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.operations_view
         EXCEPT SELECT * FROM ( VALUES
-              ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520e5a45524f204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
-            , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d4f4e45204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb )
-            , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d54574f204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb )
-            , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520f5448524545204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb )
-            , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520e46495645204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb )
-            , ( 6, 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d534958204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb )
-            , ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x5210534556454e32204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb )
-            , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '\x5211534556454e3231204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb )
-            , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x5210454947485433204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb )
-            , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520f4e494e4533204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb )
-            , ( 11, 10, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d54454e204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb )
+              ( hive.operation_id(1, 1, 0), 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520e5a45524f204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
+            , ( hive.operation_id(2, 1, 0), 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d4f4e45204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb )
+            , ( hive.operation_id(3, 1, 0), 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d54574f204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb )
+            , ( hive.operation_id(4, 1, 0), 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520f5448524545204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb )
+            , ( hive.operation_id(5, 1, 0), 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520e46495645204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb )
+            , ( hive.operation_id(6, 1, 0), 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d534958204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb )
+            , ( hive.operation_id(7, 1, 0), 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x5210534556454e32204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb )
+            , ( hive.operation_id(7, 1, 1), 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '\x5211534556454e3231204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb )
+            , ( hive.operation_id(8, 1, 0), 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x5210454947485433204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb )
+            , ( hive.operation_id(9, 1, 0), 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520f4e494e4533204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb )
+            , ( hive.operation_id(10, 1, 0), 10, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d54454e204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb )
         ) as pattern
     ) , 'Unexpected rows in the view';
 
@@ -124,11 +124,11 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.irreversible_operations_view
         EXCEPT SELECT * FROM ( VALUES
-                                  ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520e5a45524f204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
-                                , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d4f4e45204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb )
-                                , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d54574f204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb )
-                                , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520f5448524545204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb )
-                                , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520e46495645204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb )
+                                  ( hive.operation_id(1, 1, 0), 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520e5a45524f204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
+                                , ( hive.operation_id(2, 1, 0), 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d4f4e45204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb )
+                                , ( hive.operation_id(3, 1, 0), 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520d54574f204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb )
+                                , ( hive.operation_id(4, 1, 0), 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520f5448524545204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb )
+                                , ( hive.operation_id(5, 1, 0), 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '\x520e46495645204f5045524154494f4e' :: hive.operation, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb )
 
                              ) as pattern
     ) , 'Unexpected rows in the irreversible view';
