@@ -68,7 +68,7 @@ BEGIN
     IF NOT __exists THEN
       WITH account_inserter AS
       (
-        INSERT INTO la_app.accounts( namespace, name, owner_key ) VALUES( 'game', 'avocado9', 'key' ) RETURNING id
+        INSERT INTO la_app.accounts( namespace, name, owner_key ) VALUES( _namespace, _name, _owner_key ) RETURNING id
       ),
       tag_id AS
       (
@@ -92,3 +92,6 @@ INSERT INTO la_app.properties( name ) VALUES( 'property 2' );
 INSERT INTO la_app.key_tags( name ) VALUES( 'active' );
 INSERT INTO la_app.key_tags( name ) VALUES( 'memo' );
 INSERT INTO la_app.key_tags( name ) VALUES( 'battle' );
+
+select la_app.create_account( 'game', 'alice', '5RqVBAVNp5ufMCetQtvLGLJo7unX9nyCBMMrTXRWQ9i1Zzzizh', '6LLegbAgLAy28EHrffBVuANFWcFgmqRMW13wBmTExqFE9SCkg4', decode('1f7dd25ddc0f78dffc4b17b919e24166852434c0dee9312621cb4aac2898512dfd5e134dc1713ca9f3425933cf64deb8bc7a137f06e7da54d9993c1630e2ac6602', 'hex') );
+select la_app.create_account( 'game', 'bob', '6oR6ckA4TejTWTjatUdbcS98AKETc3rcnQ9dWxmeNiKDzfhBZa', '7j1orEPpWp4bU2SuH46eYXuXkFKEMeJkuXkZVJSaru2zFDGaEH', decode('abababababababab', 'hex') );

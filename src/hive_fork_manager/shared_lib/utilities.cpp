@@ -1,6 +1,9 @@
 #include "operation_base.hpp"
 
 #include "extract_set_witness_properties.hpp"
+#include "from_jsonb.hpp"
+
+#include <psql_utils/pg_cxx.hpp>
 
 #include <hive/protocol/forward_impacted.hpp>
 #include <hive/protocol/forward_keyauths.hpp>
@@ -19,6 +22,7 @@ using hive::protocol::transaction_serialization_type;
 using hive::protocol::signed_transaction;
 using hive::protocol::authority;
 using hive::protocol::required_authorities_type;
+using hive::protocol::chain_id_type;
 
 using hive::app::collected_keyauth_collection_t;
 using hive::app::impacted_balance_data;
@@ -818,27 +822,86 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     PG_RETURN_BOOL( true );
   }
 
+  PG_FUNCTION_INFO_V1(get_transaction_digest);
+
+  Datum get_transaction_digest(PG_FUNCTION_ARGS)
+  {
+    const char* C_function_name = "get_transaction_digest";
+
+    try
+    {
+      Jsonb*__jb_trx = PG_GETARG_JSONB_P(0);
+      const char* __chain_id = PG_GETARG_CSTRING(1);
+
+      l2::transaction _trx;
+
+      PsqlTools::PsqlUtils::pg_call_cxx([&]()
+        {
+          JsonbValue _json {};
+          JsonbToJsonbValue( __jb_trx, &_json );
+          _trx = transaction_from_jsonb_value( _json );
+        }, ERRCODE_INVALID_TEXT_REPRESENTATION
+      );
+
+      const chain_id_type _chain_id( fc::sha256::hash( __chain_id ) );
+
+      auto _digest = _trx.sig_digest( _chain_id );
+
+      text* _result = cstring_to_text( _digest.str().c_str() );
+
+      PG_RETURN_TEXT_P( _result );
+
+    } HFM_NOEXCEPT_CAPTURE_AND_ISSUE_ERROR( "get_transaction_digest error" )
+
+    PG_RETURN_TEXT_P( cstring_to_text("") );
+  }
+
   PG_FUNCTION_INFO_V1(verify_authority);
 
   Datum verify_authority(PG_FUNCTION_ARGS)
   {
-    const char* __trx = text_to_cstring(PG_GETARG_TEXT_PP(0));
-    const char* __auths = text_to_cstring(PG_GETARG_TEXT_PP(1));
-    const char* __chain_id = text_to_cstring(PG_GETARG_TEXT_PP(2));
-
-    const signed_transaction& _trx = fc::json::from_string( __trx, fc::json::format_validation_mode::full ).as< signed_transaction >();
-    const authority& _auth = fc::json::from_string( __auths, fc::json::format_validation_mode::full ).as< authority >();
-    const chain_id_type _chain_id( fc::sha256::hash( __chain_id ) );
-
-    auto _public_keys = _trx.get_signature_keys( _chain_id, fc::ecc::canonical_signature_type::bip_0062, serialization_type::hf26 );
-
-    required_authorities_type _required_authorities;
-    _required_authorities.other.emplace_back( _auth );
+    const char* C_function_name = "verify_authority";
 
     try
     {
+      Jsonb* __jb_trx = PG_GETARG_JSONB_P(0);
+      Jsonb* __jb_public_keys = PG_GETARG_JSONB_P(1);
+      const char* __chain_id = PG_GETARG_CSTRING(2);
+
+      l2::transaction _trx;
+      l2::public_keys _public_keys;
+
+      PsqlTools::PsqlUtils::pg_call_cxx([&]()
+        {
+          JsonbValue _json {};
+          JsonbToJsonbValue( __jb_trx, &_json );
+          _trx = transaction_from_jsonb_value( _json );
+        }, ERRCODE_INVALID_TEXT_REPRESENTATION
+      );
+
+      PsqlTools::PsqlUtils::pg_call_cxx([&]()
+        {
+          JsonbValue _json {};
+          JsonbToJsonbValue( __jb_public_keys, &_json );
+          _public_keys = auths_from_jsonb_value( _json );
+        }, ERRCODE_INVALID_TEXT_REPRESENTATION
+      );
+
+      const chain_id_type _chain_id( fc::sha256::hash( __chain_id ) );
+
+      hive::protocol::authority _auth;
+      for( auto& public_key : _public_keys.keys )
+      {
+        _auth.add_authorities( public_key, 1 );
+      }
+
+      required_authorities_type _required_authorities;
+      _required_authorities.other.emplace_back( _auth );
+
+      auto _signature_keys = _trx.get_signature_keys( _chain_id );
+
       hive::protocol::verify_authority( _required_authorities,
-                        _public_keys,
+                        _signature_keys,
                         [&]( std::string account_name ){ return authority(); },
                         [&]( std::string account_name ){ return authority(); },
                         [&]( std::string account_name ){ return authority(); },
@@ -850,12 +913,12 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
                         flat_set<account_name_type>(),
                         flat_set<account_name_type>(),
                         flat_set<account_name_type>());
-    }
-    catch(...)
-    {
-      PG_RETURN_BOOL( false );
-    }
-    PG_RETURN_BOOL( true );
+
+      PG_RETURN_BOOL( true );
+
+    } HFM_NOEXCEPT_CAPTURE_AND_ISSUE_ERROR( "verify_authority error" )
+
+    PG_RETURN_BOOL( false );
   }
 
 }

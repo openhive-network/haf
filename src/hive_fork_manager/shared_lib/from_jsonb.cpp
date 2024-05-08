@@ -472,3 +472,18 @@ hive::protocol::operation operation_from_jsonb_value(const JsonbValue& json)
   set_member(op, json);
   return op;
 }
+
+l2::transaction transaction_from_jsonb_value(const JsonbValue& json)
+{
+  l2::transaction _trx;
+  set_member(_trx, json);
+  return _trx;
+}
+
+l2::public_keys auths_from_jsonb_value(const JsonbValue& json)
+{
+  l2::public_keys _keys;
+  set_member(_keys, json);
+  return _keys;
+
+}
