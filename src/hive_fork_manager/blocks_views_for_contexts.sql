@@ -352,10 +352,10 @@ EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view
          AS
          SELECT t.id,
-            t.block_num,
+            hive.operation_id_to_block_num( t.id ) as block_num,
             t.trx_in_block,
             t.op_pos,
-            t.op_type_id,
+            hive.operation_id_to_type_id( t.id ) as op_type_id,
             t.timestamp,
             t.body_binary,
             t.body_binary::jsonb AS body
@@ -364,10 +364,8 @@ EXECUTE format(
           (
             SELECT
               ho.id,
-              ho.block_num,
               ho.trx_in_block,
               ho.op_pos,
-              ho.op_type_id,
               ho.timestamp,
               ho.body_binary
               FROM hive.operations ho
@@ -375,10 +373,8 @@ EXECUTE format(
             UNION ALL
               SELECT
                 o.id,
-                o.block_num,
                 o.trx_in_block,
                 o.op_pos,
-                o.op_type_id,
                 o.timestamp,
                 o.body_binary
               FROM hive.operations_reversible o
@@ -416,10 +412,10 @@ EXECUTE format(
          AS
          SELECT
             ho.id,
-            ho.block_num,
+            hive.operation_id_to_block_num( ho.id ) as block_num,
             ho.trx_in_block,
             ho.op_pos,
-            ho.op_type_id,
+            hive.operation_id_to_type_id( ho.id ) as op_type_id,
             ho.timestamp,
             ho.body_binary,
             ho.body_binary::jsonb AS body

@@ -176,10 +176,10 @@ FROM
 CREATE OR REPLACE VIEW hive.operations_view
 AS
 SELECT t.id,
-       t.block_num,
+       hive.operation_id_to_block_num( t.id ) as block_num,
        t.trx_in_block,
        t.op_pos,
-       t.op_type_id,
+       hive.operation_id_to_type_id( t.id ) as op_type_id,
        t.timestamp,
        t.body_binary,
        t.body
@@ -187,10 +187,8 @@ FROM
 (
     SELECT
           ho.id,
-          ho.block_num,
           ho.trx_in_block,
           ho.op_pos,
-          ho.op_type_id,
           ho.timestamp,
           ho.body_binary,
           ho.body_binary::jsonb AS body
@@ -198,10 +196,8 @@ FROM
     UNION ALL
       SELECT
         o.id,
-        o.block_num,
         o.trx_in_block,
         o.op_pos,
-        o.op_type_id,
         o.timestamp,
         o.body_binary,
         o.body_binary::jsonb AS body
@@ -286,10 +282,10 @@ CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS SELECT * FROM hive
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
     SELECT
         op.id,
-        op.block_num,
+        hive.operation_id_to_block_num( op.id ) as block_num,
         op.trx_in_block,
         op.op_pos,
-        op.op_type_id,
+        hive.operation_id_to_type_id( op.id ) as op_type_id,
         op.timestamp,
         op.body_binary,
         op.body_binary::jsonb AS body
