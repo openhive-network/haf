@@ -27,9 +27,10 @@ include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
   - project: 'hive/common-ci-configuration'
-    ref: b2ff9f5a48bc8fb379c66ec4e7907ea1e796ff1b
+    ref: c2df6552d020bfabfb22df342575a93bb106d24f
     file:
     - '/templates/python_projects.gitlab-ci.yml'
+    - '/templates/cache_cleanup.gitlab-ci.yml'
 
 verify_poetry_lock_sanity:
   extends: .verify_poetry_lock_sanity_template
@@ -642,7 +643,7 @@ start_haf_as_service:
     - data-cache-storage
 
 cleanup_haf_cache_manual:
-  extends: .cleanup_cache_manual
+  extends: .cleanup_cache_manual_template
   stage: cleanup
   variables:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
@@ -650,10 +651,18 @@ cleanup_haf_cache_manual:
     - data-cache-storage
 
 cleanup_haf_snapshot_from_cache:
-  extends: .cleanup_cache_manual
+  extends: .cleanup_cache_manual_template
   stage: cleanup
   variables:
     CLEANUP_PATH_PATTERN: "/cache/snapshots_pipeline_*"
+  tags:
+    - data-cache-storage
+
+cleanup_old_haf_cache:
+  extends: .cleanup_old_cache_template
+  stage: cleanup
+  variables:
+    CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
   tags:
     - data-cache-storage
 
