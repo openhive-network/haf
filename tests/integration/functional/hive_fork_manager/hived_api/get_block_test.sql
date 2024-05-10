@@ -54,13 +54,13 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-        -- id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body
-          ( hive.operation_id(1, 1, 0), 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK ONE OP"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(2, 1, 0), 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK TWO OP"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(3, 1, 0), 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(3, 2, 1), 3, 0, 1, 2, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(4, 1, 1), 4, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK FOUR OP"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(5, 1, 2), 5, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE OP"}}' :: jsonb :: hive.operation )
+        -- id, trx_in_block, op_pos, timestamp, body
+          ( hive.operation_id(1, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK ONE OP"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(2, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK TWO OP"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(3, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(3, 2, 1), 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(4, 1, 1), 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK FOUR OP"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(5, 1, 2), 0, 2, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE OP"}}' :: jsonb :: hive.operation )
     ;
 
     UPDATE hive.irreversible_data SET consistent_block = 5;

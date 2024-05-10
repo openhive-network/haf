@@ -69,7 +69,7 @@ BEGIN
    INSERT INTO hive.operations
     VALUES
         -- one key from owner, one from active, one from posting
-          ( hive.operation_id(1, 1, 0), 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
+          ( hive.operation_id(1, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -117,7 +117,7 @@ BEGIN
             '::jsonb::hive.operation )
 
         -- three keys from one owner
-            , ( hive.operation_id(2, 2, 0), 2, 0, 0, 2, '2016-06-22 19:10:21-07'::timestamp, '
+            , ( hive.operation_id(2, 2, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
                 {
                     "type": "account_update_operation",
                     "value": {
@@ -165,7 +165,7 @@ BEGIN
             '::jsonb::hive.operation)
 
         -- recover_account_operation
-            , ( hive.operation_id(3, 1, 0), 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
+            , ( hive.operation_id(3, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
                 {
                     "type": "recover_account_operation",
                     "value": {
@@ -196,7 +196,7 @@ BEGIN
             '::jsonb::hive.operation )
 
             -- request_account_recovery_operation
-            , ( hive.operation_id(4, 1, 0), 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '
+            , ( hive.operation_id(4, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
                 {
                     "type": "request_account_recovery_operation",
                     "value": {
@@ -216,7 +216,7 @@ BEGIN
                     }
                 }
             '::jsonb::hive.operation )
-            , ( hive.operation_id(5, 1, 0), 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp,
+            , ( hive.operation_id(5, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp,
             '
                 {
                     "type": "account_update_operation",
@@ -246,7 +246,7 @@ BEGIN
                 }            ' :: jsonb :: hive.operation )
 
             -- witness_set_properties_operation
-            , ( hive.operation_id(5, 7, 0), 5, 0, 1, 7, '2016-06-22 19:10:21-07'::timestamp,
+            , ( hive.operation_id(5, 7, 0), 0, 1, '2016-06-22 19:10:21-07'::timestamp,
             '
             {
                 "type": "witness_set_properties_operation",
@@ -265,8 +265,8 @@ BEGIN
                     "extensions": []
                 }
             }'::jsonb::hive.operation)
-            , ( hive.operation_id(5, 6, 1), 5, 0, 1, 6, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hive.operation )
-            , ( hive.operation_id(5, 1, 2), 5, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp,
+            , ( hive.operation_id(5, 6, 1), 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hive.operation )
+            , ( hive.operation_id(5, 1, 2), 0, 2, '2016-06-22 19:10:21-07'::timestamp,
             '
             {
                 "type": "account_create_operation",
@@ -316,7 +316,7 @@ BEGIN
 
 
                         
-            , ( hive.operation_id(6, 1, 0), 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp,
+            , ( hive.operation_id(6, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp,
             '
                 {
                     "type": "account_update_operation",
@@ -352,7 +352,7 @@ BEGIN
                 
                 -- for snail-157 account: create_account operation(above) establishes 4 keys
                 -- the pow operation(below) changes only ACTIVE key
-                , ( hive.operation_id(6, 8, 1), 6, 0, 1, 8, '2016-06-22 19:10:21-07'::timestamp,
+                , ( hive.operation_id(6, 8, 1), 0, 1, '2016-06-22 19:10:21-07'::timestamp,
                 '
                 {
                     "type": "pow_operation",

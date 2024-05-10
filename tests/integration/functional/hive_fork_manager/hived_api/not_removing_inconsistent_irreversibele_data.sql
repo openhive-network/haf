@@ -35,8 +35,8 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-           ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
-         , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
+           ( hive.operation_id(1,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
+         , ( hive.operation_id(2,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
     ;
 
     INSERT INTO hive.accounts
@@ -47,14 +47,14 @@ BEGIN
 
     INSERT INTO hive.account_operations
     VALUES
-        ( 1, 1, 1, 1, 1)
-      , ( 2, 2, 1, 2, 1)
+        ( 1, 1, 1, hive.operation_id(1,1,0), 1)
+      , ( 2, 2, 1, hive.operation_id(2,1,0), 1)
     ;
 
     INSERT INTO hive.applied_hardforks
     VALUES
-        ( 1, 1, 1 )
-       ,( 2, 2, 2 )
+        ( 1, 1, hive.operation_id(1,1,0) )
+       ,( 2, 2, hive.operation_id(2,1,0) )
     ;
 
     -- here we simulate situation when hived claims recently only block 1

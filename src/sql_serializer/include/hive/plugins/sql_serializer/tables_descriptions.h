@@ -89,9 +89,8 @@ namespace hive::plugins::sql_serializer {
       {
         std::vector<char> opDeserialized = fc::raw::pack_to_vector( data.op );
 
-        return std::to_string(data.operation_id) + ',' + std::to_string(data.block_number) + ',' +
-        std::to_string(data.trx_in_block) + ',' + std::to_string(data.op_in_trx) + ',' +
-        std::to_string(data.op.which()) + ",'" + data.timestamp.to_iso_string() + "'," + escape_raw(opDeserialized) + "::bytea";
+        return std::to_string(data.operation_id) + ',' + std::to_string(data.trx_in_block) + ',' +
+        std::to_string(data.op_in_trx) + ",'" + data.timestamp.to_iso_string() + "'," + escape_raw(opDeserialized) + "::bytea";
       }
       };
     };

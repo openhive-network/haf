@@ -108,10 +108,8 @@ class Operations(Base):
     __tablename__ = "operations"
 
     id = Column(BigInteger, primary_key=True)
-    block_num = Column(Integer)
     trx_in_block = Column(SmallInteger)
     op_pos = Column(Integer)
-    op_type_id = Column(SmallInteger)
     timestamp = Column(DateTime)
     body_binary = Column(HiveOperation)
 
@@ -120,14 +118,33 @@ class OperationsReversible(Base):
     __tablename__ = "operations_reversible"
 
     id = Column(BigInteger, primary_key=True)
+    trx_in_block = Column(SmallInteger)
+    op_pos = Column(Integer)
+    timestamp = Column(DateTime)
+    body_binary = Column(HiveOperation)
+    fork_id = Column(BigInteger, primary_key=True)
+
+class OperationsView(Base):
+    __tablename__ = "operations_view"
+
+    id = Column(BigInteger, primary_key=True)
     block_num = Column(Integer)
     trx_in_block = Column(SmallInteger)
     op_pos = Column(Integer)
     op_type_id = Column(SmallInteger)
     timestamp = Column(DateTime)
     body_binary = Column(HiveOperation)
-    fork_id = Column(BigInteger, primary_key=True)
 
+class OperationsIrreversibleView(Base):
+    __tablename__ = "irreversible_operations_view"
+
+    id = Column(BigInteger, primary_key=True)
+    block_num = Column(Integer)
+    trx_in_block = Column(SmallInteger)
+    op_pos = Column(Integer)
+    op_type_id = Column(SmallInteger)
+    timestamp = Column(DateTime)
+    body_binary = Column(HiveOperation)
 
 class Transactions(Base):
     __tablename__ = "transactions"

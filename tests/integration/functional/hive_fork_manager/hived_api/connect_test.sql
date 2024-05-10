@@ -35,8 +35,8 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-           ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
-         , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
+           ( hive.operation_id(1,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
+         , ( hive.operation_id(2,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
     ;
 
     INSERT INTO hive.accounts
@@ -47,8 +47,8 @@ BEGIN
 
     INSERT INTO hive.account_operations
     VALUES
-          ( 1, 1, 1, 1, 1)
-        , ( 2, 2, 1, 2, 1)
+          ( 1, 1, 1, hive.operation_id(1,1,0), 1)
+        , ( 2, 2, 1, hive.operation_id(2,1,0), 1)
     ;
 
     -- here we simulate situation when hived claims recently only block 1
@@ -84,7 +84,7 @@ BEGIN
 
     ASSERT ( SELECT COUNT(*) FROM hive.blocks WHERE num = 1 ) = 1, 'No blocks with num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive.transactions WHERE block_num = 1 ) = 1, 'No transaction with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.operations WHERE block_num = 1 ) = 1, 'No operations with block_num = 1';
+    ASSERT ( SELECT COUNT(*) FROM hive.operations WHERE hive.operation_id_to_block_num(id) = 1 ) = 1, 'No operations with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig WHERE trx_hash = '\xDEED10'::bytea ) = 1, 'No signatures with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive.accounts WHERE block_num = 1 ) = 4, 'No account with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations WHERE account_id = 1 ) = 1, 'No account_operations with block_num = 1';

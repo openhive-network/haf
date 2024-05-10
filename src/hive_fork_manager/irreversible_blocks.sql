@@ -78,11 +78,10 @@ CREATE TABLE IF NOT EXISTS hive.operation_types (
 SELECT pg_catalog.pg_extension_config_dump('hive.operation_types', '');
 
 CREATE TABLE IF NOT EXISTS hive.operations (
+    -- id is encoded || 32b blocknum | 24b seq | 8b operation type ||
     id bigint not null,
-    block_num integer NOT NULL,
     trx_in_block smallint NOT NULL,
     op_pos integer NOT NULL,
-    op_type_id smallint NOT NULL,
     -- timestamp: Specific to operation kind.  It may be set for block time -3s (current hived head_block_time)
     -- or for **next**  block time (when hived node finished evaluation of current block).
     -- This behavior depends on hived implementation, and **this logic should not be** repeated HAF-client app side. Specifically:
@@ -94,8 +93,52 @@ CREATE TABLE IF NOT EXISTS hive.operations (
     body_binary hive.operation  DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 );
-ALTER TABLE hive.operations ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID;
-ALTER TABLE hive.operations ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID;
+--ALTER TABLE hive.operations ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID;
+--ALTER TABLE hive.operations ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID;
+
+CREATE OR REPLACE FUNCTION hive.operation_id_to_block_num( _id hive.operations.id%TYPE )
+    RETURNS INTEGER
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$BEGIN$
+BEGIN
+    RETURN _id >> 32;
+END;
+$BEGIN$;
+
+CREATE OR REPLACE FUNCTION hive.operation_id_to_type_id( _id hive.operations.id%TYPE )
+    RETURNS INTEGER
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$BEGIN$
+BEGIN
+    RETURN _id & 0xFF;
+END;
+$BEGIN$;
+
+CREATE OR REPLACE FUNCTION hive.operation_id_to_pos( _id hive.operations.id%TYPE )
+    RETURNS INTEGER
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$BEGIN$
+BEGIN
+    RETURN ( _id >> 8 ) & 0xFFFFFF;
+END;
+$BEGIN$;
+
+CREATE OR REPLACE FUNCTION hive.operation_id( _block_num INTEGER, _type INTEGER, _pos_in_block INTEGER )
+    RETURNS BIGINT
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$BEGIN$
+BEGIN
+    RETURN ( _block_num::BIGINT << 32 ) | ( _pos_in_block::BIGINT << 8 ) | _type;
+END;
+$BEGIN$;
 
 SELECT pg_catalog.pg_extension_config_dump('hive.operations', '');
 
@@ -141,9 +184,9 @@ CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hive.applied_
 
 CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hive.transactions ( block_num, trx_in_block );
 
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hive.operations USING btree(block_num, id);
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hive.operations USING btree (block_num ASC NULLS LAST, trx_in_block ASC NULLS LAST) INCLUDE (op_type_id);
-CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hive.operations (op_type_id, block_num);
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hive.operations USING btree( hive.operation_id_to_block_num(id), id);
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hive.operations USING btree (hive.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST,hive.operation_id_to_type_id(id));
+CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hive.operations (hive.operation_id_to_type_id(id), hive.operation_id_to_block_num(id));
 
 --Clustering to speedup get_account_history queries (returns ordered set of operations for a specific account)
 --Clustering takes 2 hours on a fast system with 4 maintenance works

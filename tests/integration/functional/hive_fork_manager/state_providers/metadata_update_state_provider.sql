@@ -65,7 +65,7 @@ BEGIN
     VALUES
     -- account_update2_operation
         -- posting json metadata exists, json metadata empty
-        ( hive.operation_id(1, 43, 0), 1, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(1, 43, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
         {
             "type": "account_update2_operation",
             "value": {
@@ -78,7 +78,7 @@ BEGIN
         '::jsonb::hive.operation),
 
         --empty json and posting metadata
-        ( hive.operation_id(2, 43, 0), 2, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(2, 43, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -90,7 +90,7 @@ BEGIN
             }'::jsonb::hive.operation
         ),
 
-        ( hive.operation_id(15, 43, 0), 15, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(15, 43, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -104,7 +104,7 @@ BEGIN
 
 
         -- empty posting_metadata, json_metadata exists
-        ( hive.operation_id(3, 43, 0), 3, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(3, 43, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -117,7 +117,7 @@ BEGIN
         ),
 
         --posting metadata equal to ""
-                ( hive.operation_id(4, 43, 0), 4, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+                ( hive.operation_id(4, 43, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
         {
             "type": "account_update2_operation",
             "value": {
@@ -129,7 +129,7 @@ BEGIN
         }'::jsonb::hive.operation),
 
         --posting_metadata equal to {}
-        ( hive.operation_id(5, 43, 0), 5, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(5, 43, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
 
             {
                 "type": "account_update2_operation",
@@ -144,7 +144,7 @@ BEGIN
 
     -- account_create operation 
         -- empty json metadata
-        ( hive.operation_id(6, 9, 0), 6, 0, 0, 9, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(6, 9, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -190,7 +190,7 @@ BEGIN
                 }
             }'::jsonb::hive.operation),
 
-        ( hive.operation_id(16, 43, 0), 16, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(16, 43, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -203,7 +203,7 @@ BEGIN
         ),
 
         -- json metadata equal to  ""
-        ( hive.operation_id(7, 9, 0), 7, 0, 0, 9, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(7, 9, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -250,7 +250,7 @@ BEGIN
             }'::jsonb::hive.operation),
 
         --json metadata equal to {}
-        ( hive.operation_id(8, 9, 0), 8, 0, 0, 9, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(8, 9, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -297,7 +297,7 @@ BEGIN
             }'::jsonb::hive.operation),
 
         -- json metadata with a non empty value
-        ( hive.operation_id(9, 9, 0), 9, 0, 0, 9, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(9, 9, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -345,7 +345,7 @@ BEGIN
         ),
 
     -- account_create_with_delegation_operation 
-        ( hive.operation_id(10, 41, 0), 10, 0, 0, 41, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(10, 41, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_create_with_delegation_operation",
                 "value": {
@@ -414,7 +414,7 @@ BEGIN
         ),
 
     -- account_update2_operation
-        ( hive.operation_id(11, 43, 0), 11, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(11, 43, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
             "type": "account_update2_operation",
                 "value": {
@@ -426,7 +426,7 @@ BEGIN
             }'::jsonb::hive.operation),
 
     -- account_update_operation 
-        ( hive.operation_id(12, 10, 0), 12, 0, 0, 10, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(12, 10, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_update_operation",
                 "value": {
@@ -496,7 +496,7 @@ BEGIN
             }'::jsonb::hive.operation),
 
     -- create_claimed_account_operation
-        ( hive.operation_id(13, 23, 0), 13, 0, 0, 23, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(13, 23, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "create_claimed_account_operation",
                 "value": {
@@ -540,7 +540,7 @@ BEGIN
         ),
 
         -- second update for the same account in the blocks range
-        ( hive.operation_id(14, 43, 0), 14, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hive.operation_id(14, 43, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '
             {
                 "type": "account_update2_operation",
                 "value": {

@@ -159,7 +159,7 @@ BEGIN
             hive.calculate_operation_stable_id
             (
                         __HARDFORK_9_block_num, 
-                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE o.block_num = __HARDFORK_9_block_num),
+                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE hive.operation_id_to_block_num(o.id) = __HARDFORK_9_block_num),
                         0
             ) as op_stable_id 
             FROM hive.get_hf09_keyauths() h
@@ -177,7 +177,7 @@ BEGIN
             hive.calculate_operation_stable_id
             (
                         __HARDFORK_21_block_num, 
-                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE o.block_num = __HARDFORK_21_block_num),
+                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE hive.operation_id_to_block_num(o.id) = __HARDFORK_21_block_num),
                         0
             ) as op_stable_id 
             FROM hive.get_hf21_keyauths() h
@@ -195,7 +195,7 @@ BEGIN
             hive.calculate_operation_stable_id
             (
                         __HARDFORK_24_block_num, 
-                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE o.block_num = __HARDFORK_24_block_num),
+                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE hive.operation_id_to_block_num(o.id) = __HARDFORK_24_block_num),
                         0
             ) as op_stable_id 
             FROM hive.get_hf24_keyauths() h

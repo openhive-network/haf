@@ -36,14 +36,14 @@ BEGIN
     __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G' , 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
     __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
     __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED' );
-    __operation1_1 = ( 1, 101, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation );
-    __operation2_1 = ( 2, 101, 1, 0, 2, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation );
+    __operation1_1 = ( hive.operation_id(101,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation );
+    __operation2_1 = ( hive.operation_id(101,2,0), 1, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation );
     __signatures1 = ( '\xDEED', '\xFEED' );
     __signatures2 = ( '\xBEEF', '\xBABE' );
     __account1 = ( 1, 'alice', 101 );
     __account2 = ( 2, 'bob', 101 );
-    __account_operation1 = ( 101, 1, 1, 1, 1 );
-    __account_operation2 = ( 102, 2, 1, 2, 2 );
+    __account_operation1 = ( 101, 1, 1, hive.operation_id(101,1,0), 1 );
+    __account_operation2 = ( 102, 2, 1, hive.operation_id(101,2,0), 2 );
     __applied_hardforks1 = (1, 101, 1);
     __applied_hardforks2 = (2, 101, 2);
     PERFORM hive.push_block(
@@ -121,11 +121,9 @@ BEGIN
 
     ASSERT ( SELECT COUNT(*) FROM hive.operations_reversible
         WHERE
-                  id = 1
-              AND block_num = 101
+                  id = hive.operation_id(101,1,0)
               AND trx_in_block = 0
               AND op_pos = 0
-              AND op_type_id = 1
               AND timestamp = '2016-06-22 19:10:21-07'::timestamp
               AND body_binary = '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation
               AND fork_id = 1
@@ -133,11 +131,9 @@ BEGIN
 
     ASSERT ( SELECT COUNT(*) FROM hive.operations_reversible
          WHERE
-               id = 2
-           AND block_num = 101
+               id = hive.operation_id(101,2,0)
            AND trx_in_block = 1
            AND op_pos = 0
-           AND op_type_id = 2
            AND timestamp = '2016-06-22 19:10:21-07'::timestamp
            AND body_binary = '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation
            AND fork_id = 1
@@ -160,14 +156,14 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations_reversible
         WHERE account_id = 1
         AND account_op_seq_no = 1
-        AND operation_id = 1
+        AND operation_id = hive.operation_id(101,1,0)
         AND fork_id = 1
     ) = 1 ,'No alice operation';
 
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations_reversible
         WHERE account_id = 2
         AND account_op_seq_no = 1
-        AND operation_id = 2
+        AND operation_id = hive.operation_id(101,2,0)
         AND fork_id = 1
     ) = 1 ,'No bob operation';
 

@@ -53,14 +53,14 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-          ( hive.operation_id(1, 1, 0), 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(2, 1, 0), 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(3, 1, 0), 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 00"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(3, 1, 1), 3, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 01"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(3, 1, 2), 3, 1, 2, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 10"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(3, 1, 3), 3, 1, 3, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 11"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(4, 1, 0), 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(5, 1, 0), 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive.operation )
+          ( hive.operation_id(1, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(2, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(3, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 00"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(3, 1, 1), 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 01"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(3, 1, 2), 1, 2, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 10"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(3, 1, 3), 1, 3, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 11"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(4, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation )
+        , ( hive.operation_id(5, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive.operation )
     ;
 
     INSERT INTO hive.blocks_reversible
