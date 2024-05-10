@@ -79,7 +79,6 @@ BEGIN
 
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'blocks') ), 'FK for hive.blocks exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions') ), 'FK for hive.transactions exists';
-    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'operations') ), 'FK for hive.operations exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hive.transactions_multisig exists';
     -- we need to disable hive.irreversible_data fk because its dependency with hive.blocks
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'irreversible_data') ), 'FK for hive.irreversible_data exists';
@@ -89,7 +88,7 @@ BEGIN
 
 
     ASSERT EXISTS(
-        SELECT * FROM hive.indexes_constraints WHERE table_name='hive.operations' AND command LIKE 'CREATE INDEX hive_operations_block_num_id_idx ON hive.operations USING btree (block_num, id)'
+        SELECT * FROM hive.indexes_constraints WHERE table_name='hive.operations' AND command LIKE 'CREATE INDEX hive_operations_block_num_id_idx ON hive.operations USING btree (hive.operation_id_to_block_num(id), id)'
     ), 'No hive.operation index (block_num, id)';
 
     ASSERT EXISTS(

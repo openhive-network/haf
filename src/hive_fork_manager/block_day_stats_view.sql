@@ -4,9 +4,9 @@ SELECT * FROM crosstab(
 $$
 WITH op_day_stats AS
 (
-SELECT (o.block_num / 28800) AS block_day, o.op_type_id, COUNT(1)
+SELECT (hive.operation_id_to_block_num(o.id) / 28800) AS block_day, hive.operation_id_to_type_id(o.id) as op_type_id, COUNT(1)
 FROM hive.operations o
-WHERE o.op_type_id < (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = TRUE ORDER BY ot.id LIMIT 1)
+WHERE hive.operation_id_to_type_id(o.id) < (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = TRUE ORDER BY ot.id LIMIT 1)
 GROUP BY 1, 2
 ),
 supplemented_stats AS

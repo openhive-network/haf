@@ -369,7 +369,7 @@ EXECUTE format(
               ho.timestamp,
               ho.body_binary
               FROM hive.operations ho
-              WHERE ho.block_num <= c.min_block
+              WHERE hive.operation_id_to_block_num(ho.id) <= c.min_block
             UNION ALL
               SELECT
                 o.id,
@@ -386,7 +386,7 @@ EXECUTE format(
                 FROM hive.blocks_reversible hbr
                 WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
                 GROUP by hbr.num
-              ) visible_ops on visible_ops.num = o.block_num and visible_ops.max_fork_id = o.fork_id
+              ) visible_ops on visible_ops.num = hive.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
         ) t
         ;', __schema, __schema
     );

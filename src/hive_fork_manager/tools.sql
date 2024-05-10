@@ -22,7 +22,7 @@ $BODY$
 
 
 CREATE OR REPLACE FUNCTION hive.calculate_operation_stable_id(
-        _block_num hive.operations.block_num %TYPE,
+        _block_num INTEGER,
         _trx_in_block hive.operations.trx_in_block %TYPE,
         _op_pos hive.operations.op_pos %TYPE
     ) RETURNS BIGINT LANGUAGE 'sql' IMMUTABLE AS $BODY$

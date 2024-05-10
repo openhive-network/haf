@@ -63,28 +63,28 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-    ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
-         , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
-         , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hive.operation )
-         , ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation )
-         , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive.operation )
+           ( hive.operation_id(1, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
+         , ( hive.operation_id(2, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
+         , ( hive.operation_id(3, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hive.operation )
+         , ( hive.operation_id(4, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation )
+         , ( hive.operation_id(5, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive.operation )
     ;
 
-    INSERT INTO hive.operations_reversible(id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body_binary, fork_id)
+    INSERT INTO hive.operations_reversible(id, trx_in_block, op_pos, timestamp, body_binary, fork_id)
     VALUES
-    ( 4, 4, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation, 1 )
-         , ( 5, 5, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hive.operation, 1 )
-         , ( 6, 6, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hive.operation, 1 )
-         , ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
-         , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
-         , ( 9, 7, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
-         , ( 7, 7, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
-         , ( 8, 7, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive.operation, 2 )
-         , ( 9, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
-         , ( 10, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
-         , ( 8, 8, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hive.operation, 3 )
-         , ( 9, 9, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hive.operation, 3 )
-         , ( 10, 10, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive.operation, 3 )
+           ( hive.operation_id(4,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation, 1 )
+         , ( hive.operation_id(5,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hive.operation, 1 )
+         , ( hive.operation_id(6,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hive.operation, 1 )
+         , ( hive.operation_id(7,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7,1,1), 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7,1,2), 0, 2, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hive.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
+         , ( hive.operation_id(7,1,1), 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive.operation, 2 )
+         , ( hive.operation_id(8,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
+         , ( hive.operation_id(9,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
+         , ( hive.operation_id(8,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hive.operation, 3 )
+         , ( hive.operation_id(9,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hive.operation, 3 )
+         , ( hive.operation_id(10,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive.operation, 3 )
     ;
 
     INSERT INTO hive.accounts
@@ -114,29 +114,29 @@ BEGIN
 
     INSERT INTO hive.account_operations(block_num, account_id, account_op_seq_no, operation_id, op_type_id)
     VALUES
-           ( 1, 1, 1, 1, 1 )
-         , ( 2, 1, 2, 2, 1 )
-         , ( 2, 2, 1, 2, 1 )
-         , ( 3, 3, 1, 3, 1 )
-         , ( 4, 4, 1, 4, 1 )
+           ( 1, 1, 1, hive.operation_id(1, 1, 0), 1 )
+         , ( 2, 1, 2, hive.operation_id(2, 1, 0), 1 )
+         , ( 2, 2, 1, hive.operation_id(2, 1, 0), 1 )
+         , ( 3, 3, 1, hive.operation_id(3, 1, 0), 1 )
+         , ( 4, 4, 1, hive.operation_id(4, 1, 0), 1 )
     ;
 
     INSERT INTO hive.account_operations_reversible
     VALUES
-           ( 4, 4, 1, 4, 1, 1 ) -- it pretends that some slow app prevent to remove this
-         , ( 5, 5, 1, 5, 1, 1 )
-         , ( 6, 6, 1, 6, 1, 1 )
-         , ( 7, 7, 1, 7, 1, 1 ) -- must be overriden by fork 2
-         , ( 7, 8, 1, 7, 1, 1 ) -- must be overriden by fork 2
-         , ( 7, 9, 1, 9, 1, 1 ) -- must be overriden by fork 2
-         , ( 7, 7, 2, 7, 1, 2 )
-         , ( 7, 8, 2, 8, 1, 2 )
-         , ( 8, 9, 2, 9, 1, 2 )
-         , ( 7, 9, 3, 8, 1, 2 )
-         , ( 9, 10, 2, 10, 1, 2 )
-         , ( 9, 9, 3, 9, 1, 3 )
-         , ( 10, 10, 3, 10, 1, 3 )
-         , ( 10, 11, 3, 10, 1, 3 )
+           ( 4, 4, 1, hive.operation_id(4,1,0), 1, 1 )
+         , ( 5, 5, 1, hive.operation_id(5,1,0), 1, 1 )
+         , ( 6, 6, 1, hive.operation_id(6,1,0), 1, 1 )
+         , ( 7, 7, 1, hive.operation_id(7,1,0), 1, 1 ) -- must be overriden by fork 2
+         , ( 7, 8, 1, hive.operation_id(7,1,1), 1, 1 ) -- must be overriden by fork 2
+         , ( 7, 9, 1, hive.operation_id(7,1,2), 1, 1 ) -- must be overriden by fork 2
+         , ( 7, 7, 2, hive.operation_id(7,1,0), 1, 2 )
+         , ( 7, 8, 2, hive.operation_id(7,1,1), 1, 2 ) -- will be abandoned since fork 3 doesn not have this account operation
+         , ( 8, 9, 2, hive.operation_id(8,1,0), 1, 2 )
+         , ( 7, 9, 3, hive.operation_id(7,1,0), 1, 2 )
+         , ( 9, 10, 2, hive.operation_id(9,1,0), 1, 2 )
+         , ( 8, 9, 3, hive.operation_id(8,1,0), 1, 3 )
+         , ( 9, 10, 3, hive.operation_id(9,1,0), 1, 3 )
+         , ( 10, 11, 3, hive.operation_id(10,1,0), 1, 3 )
     ;
 
     UPDATE hive.irreversible_data SET consistent_block = 4;

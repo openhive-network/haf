@@ -9,7 +9,7 @@ from haf_local_tools import (
     wait_for_irreversible_progress,
     wait_for_irreversible_in_database,
     get_first_block_with_transaction)
-from haf_local_tools.tables import Blocks, BlocksView, Transactions, Operations
+from haf_local_tools.tables import Blocks, BlocksView, Transactions, OperationsIrreversibleView
 
 
 START_TEST_BLOCK =  115
@@ -62,7 +62,9 @@ def test_live_sync(prepared_networks_and_database_12_8):
 
     assert sorted(block_nums) == [i for i in range(1, expected_dumped_irreversible_block_num+1)]
 
-    ops = session.query(Operations).add_columns(cast(Operations.body_binary, JSONB).label('body'), Operations.block_num).filter(Operations.block_num == transaction_block_num).all()
+    ops = (session.query(OperationsIrreversibleView)
+           .add_columns(cast(OperationsIrreversibleView.body_binary, JSONB).label('body'), OperationsIrreversibleView.block_num)
+           .filter(OperationsIrreversibleView.block_num == transaction_block_num).all())
     types = [op.body['type'] for op in ops]
 
     assert 'transfer_operation' in types

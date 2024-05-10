@@ -25,7 +25,7 @@ SELECT har.account_id,
        har.op_type_id,
        har.block_num
 FROM forks 
-JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hor.block_num
+JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hive.operation_id_to_block_num(hor.id)
 JOIN hive.account_operations_reversible har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
 );
 
@@ -210,7 +210,7 @@ FROM
         FROM hive.blocks_reversible hbr
         WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hive.irreversible_data hid )
         GROUP by hbr.num
-      ) visible_ops on visible_ops.num = o.block_num and visible_ops.max_fork_id = o.fork_id
+      ) visible_ops on visible_ops.num = hive.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
 ) t
 ;
 
@@ -269,7 +269,7 @@ SELECT hjr.hardfork_num,
        hjr.block_num,
        hjr.hardfork_vop_id
 FROM forks 
-JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hor.block_num
+JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hive.operation_id_to_block_num(hor.id)
 JOIN hive.applied_hardforks_reversible hjr ON forks.max_fork_id = hjr.fork_id AND hjr.hardfork_vop_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
 );
 

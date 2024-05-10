@@ -92,7 +92,6 @@ BEGIN
 
     ASSERT ( SELECT is_any_fk_for_hive_table( 'blocks_reversible') ), 'FK for hive.blocks_reversible not exists';
     ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_reversible') ), 'FK for hive.transactions not exists';
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'operations_reversible') ), 'FK for hive.operations not exists';
     ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig_reversible') ), 'FK for hive.transactions_multisig not exists';
     ASSERT ( SELECT is_any_fk_for_hive_table( 'account_operations_reversible') ), 'FK for hive.account_operations not exists';
     ASSERT ( SELECT is_any_fk_for_hive_table( 'accounts_reversible') ), 'FK for hive.accounts not exists';
