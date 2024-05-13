@@ -73,3 +73,65 @@ RETURNS TEXT AS 'MODULE_PATHNAME', 'get_transaction_digest' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.verify_authority(IN trx JSONB, IN public_keys JSONB, IN chain_id TEXT)
 RETURNS INTEGER AS 'MODULE_PATHNAME', 'verify_authority' LANGUAGE C;
+
+
+--examples:
+-- select * from hive.get_required_auths
+-- (
+--   (
+--     ARRAY[
+--       ('transfer', '{}'::jsonb)::hive.l2_op,
+--       ('battle', '{}'::jsonb)::hive.l2_op
+--        ],
+--     ARRAY[
+--        ROW('\x1f7dd25ddc0f78dffc4b17b919e24166852434c0dee9312621cb4aac2898512dfd5e134dc1713ca9f3425933cf64deb8bc7a137f06e7da54d9993c1630e2ac6602'::bytea)::hive.l2_signature,
+--        ROW('\xabababababababab'::bytea)::hive.l2_signature
+--        ]
+--   )::hive.l2_trx,
+--   (
+--     ARRAY[
+--       ('transfer', ARRAY[('active', 'alice', NULL)::hive.l2_authority]),
+--       ('battle', ARRAY[('active', 'bob', NULL)::hive.l2_authority])
+--        ]
+--   )::hive.l2_operation_auth_spec[]
+-- )
+
+-- select * from hive.get_transaction_digest
+-- (
+-- to_jsonb(
+--   (
+--     ARRAY[
+--       ('transfer', '{}')::hive.l2_op,
+--       ('battle', '{}')::hive.l2_op
+--        ],
+--     ARRAY[
+--        ROW('\x1f7dd25ddc0f78dffc4b17b919e24166852434c0dee9312621cb4aac2898512dfd5e134dc1713ca9f3425933cf64deb8bc7a137f06e7da54d9993c1630e2ac6602')::hive.l2_signature,
+--        ROW('\xabababababababab')::hive.l2_signature
+--        ]
+--   )::hive.l2_trx ),
+--   '18dcf0a285365fc58b71f18b3d3fec954aa0c141c44e4e5cb4cf777b9eab274e'
+-- )
+
+-- select * from hive.verify_authority
+-- (
+-- to_jsonb(
+--   (
+--     ARRAY[
+--       ('transfer', '{}')::hive.l2_op,
+--       ('battle', '{}')::hive.l2_op
+--        ],
+--     ARRAY[
+--        ROW('\x1f7dd25ddc0f78dffc4b17b919e24166852434c0dee9312621cb4aac2898512dfd5e134dc1713ca9f3425933cf64deb8bc7a137f06e7da54d9993c1630e2ac6602')::hive.l2_signature,
+--        ROW('\xabababababababab')::hive.l2_signature
+--        ]
+--   )::hive.l2_trx ),
+-- to_jsonb(
+--   (
+--     ROW(ARRAY[
+--       ROW('STM6LLegbAgLAy28EHrffBVuANFWcFgmqRMW13wBmTExqFE9SCkg4')::hive.l2_public_key,
+--       ROW('7j1orEPpWp4bU2SuH46eYXuXkFKEMeJkuXkZVJSaru2zFDGaEH')::hive.l2_public_key
+--     ])
+--     )::hive.l2_public_key
+--   ),
+--   '18dcf0a285365fc58b71f18b3d3fec954aa0c141c44e4e5cb4cf777b9eab274e'
+-- )
