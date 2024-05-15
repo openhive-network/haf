@@ -1,5 +1,7 @@
 #pragma once
 
+#include "operation_id.hpp"
+
 // STL
 #include <sstream>
 #include <string>
@@ -136,19 +138,7 @@ namespace hive
           };
 
           inline uint64_t get_operation_id( uint32_t _block, const operation& _op, uint32_t _number_in_block ) {
-            //msb.....................lsb
-            // || block | seq | type ||
-            // ||  32b  | 24b |  8b  ||
-            constexpr auto  TYPE_ID_LIMIT = 255; // 2^8-1
-            constexpr auto NUMBER_IN_BLOCK_LIMIT = 16777215; // 2^24-1
-            FC_ASSERT(  _op.which() <= TYPE_ID_LIMIT, "Operation type is to large to fit in 8 bits" );
-            FC_ASSERT( _number_in_block <= NUMBER_IN_BLOCK_LIMIT , "Operation in block number is to large to fit in 24 bits" );
-            uint64_t operation_id = _block;
-            operation_id <<= 32;
-            operation_id |= ( _number_in_block << 8 );
-            operation_id |= _op.which();
-
-            return operation_id;
+            return to_operation_id( _block, _op.which(), _number_in_block );
           }
 
           struct process_operation_t
