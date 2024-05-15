@@ -1,0 +1,29 @@
+account_name: denserautotest0, private_owner: 5JKvKFeTaz7eNnnjYjU1iypYzsWv7da1yQFAjnXERVR4x8aoh5x
+account_name: denserautotest0, private_active: 5KXDdnVr53W4AqYFVogRts5tpDQdn1syp9Bcg55yHYat3Vp7tM9
+account_name: denserautotest0, private_posting: 5KD9BSghuegzSwJ3NT3JgaZvHHZkfVZ3XXRn3MiZatSW7wdtu4A
+account_name: denserautotest0, private_memo: 5J9gRytLNUVgWUBzBeScjPPUCJC5Ab3NE2bUGnkb4CVgngJBEgu
+-----------------------------------------------------------------------------------------------
+
+account_name: denserautotest1, private_owner: 5KZjojyGQXVS9y67dw8z4Sd9szckbsRZyvZ6sC1ckDei47uZgsF
+account_name: denserautotest1, private_active: 5Jtzf3FxWXhCQuAuT83jZATSoR4jCRm2qK4WWVtgixdGZQ88ahg
+account_name: denserautotest1, private_posting: 5JTDpnZbsL3iySWPnEVVaaRirQtADB7LbFCyeBATJaAGJfxS4yE
+account_name: denserautotest1, private_memo: 5J5iL3mtanzK8TzyzrqT68PkhmAnoB9i9GqWWv1NzBdA62qzmRs
+-----------------------------------------------------------------------------------------------
+
+account_name: denserautotest2, private_owner: 5JbEsenkkamonP2xPPrzwpTvFUsPf8SLA4iQYvzLVDMvevPp4AW
+account_name: denserautotest2, private_active: 5KLuGTgpJ6jbK7h9eREfDRnrdN8h28no5rWQdG8CLKjXn9oWqT8
+account_name: denserautotest2, private_posting: 5KQthLKJ6ajUEoACA1MdFFHogZ2t991q8ewRQiaTxSB86p8drf1
+account_name: denserautotest2, private_memo: 5KXE8MjatrjXKAmuoboDfgxruVqTy4vz5sr1JKfcKzxJqxQAMEu
+-----------------------------------------------------------------------------------------------
+
+account_name: denserautotest3, private_owner: 5KP1cfCtSqALNDVJGYQtMNZnp5Yfi6wXCsPcoKoZojctSqpRwCR
+account_name: denserautotest3, private_active: 5JSH95M3MwGGR8CiuPbycRYYgh4KmbvVcPmrddZzyqrgraTA27U
+account_name: denserautotest3, private_posting: 5KJcTYKezUUot3RZDZeVCh4aZZUnnHmmBPyuozUyd2DcvGfFvUQ
+account_name: denserautotest3, private_memo: 5K5Mo4Ufh31LF3Snw1BXLAKKAe5BbS3V6BXgMYANXVQE8aJopJk
+-----------------------------------------------------------------------------------------------
+
+account_name: denserautotest4, private_owner: 5JyuU4Vw7mcWQNCpKybmaoq4k7tWmPD1j1iVZDFcTv7S44dKEwk
+account_name: denserautotest4, private_active: 5J1ngD3XV3iLc55jCwZ5zQpp6gFXEAsNuiXVgtcAyougTAGUYxK
+account_name: denserautotest4, private_posting: 5KRRqoPw3maEJ9uCAHF3XBSXkCETkBATmqCjR3vMtAEwPEw73Eh
+account_name: denserautotest4, private_memo: 5HvHFbt12xsNMShkpTfkrXMMSTSNubAXCHDkuf1NnQ1dmDUEZB6
+-----------------------------------------------------------------------------------------------

@@ -33,6 +33,7 @@ def mirrornet_witness_node():
     witness_node.config.enable_stale_production = True
     witness_node.config.required_participation = 0
     witness_node.config.plugin.append("database_api")
+    witness_node.config.plugin.append("wallet_bridge_api")
     return witness_node
 
 
