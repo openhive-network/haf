@@ -93,52 +93,40 @@ CREATE TABLE IF NOT EXISTS hive.operations (
     body_binary hive.operation  DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 );
---ALTER TABLE hive.operations ADD CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_num) REFERENCES hive.blocks(num) NOT VALID;
---ALTER TABLE hive.operations ADD CONSTRAINT fk_2_hive_operations FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID;
 
-CREATE OR REPLACE FUNCTION hive.operation_id_to_block_num( _id hive.operations.id%TYPE )
+CREATE OR REPLACE FUNCTION hive.operation_id_to_block_num_wrapper( _id BIGINT )
     RETURNS INTEGER
-    LANGUAGE plpgsql
     IMMUTABLE
+    LANGUAGE plpgsql
 AS
-$BEGIN$
+$BODY$
 BEGIN
-    RETURN _id >> 32;
+    RETURN hive.operation_id_to_block_num(_id);
 END;
-$BEGIN$;
+$BODY$;
 
-CREATE OR REPLACE FUNCTION hive.operation_id_to_type_id( _id hive.operations.id%TYPE )
+CREATE OR REPLACE FUNCTION hive.operation_id_to_type_id_wrapper( _id BIGINT )
     RETURNS INTEGER
-    LANGUAGE plpgsql
     IMMUTABLE
+    LANGUAGE plpgsql
 AS
-$BEGIN$
+$BODY$
 BEGIN
-    RETURN _id & 0xFF;
+    RETURN hive.operation_id_to_type_id(_id);
 END;
-$BEGIN$;
+$BODY$;
 
-CREATE OR REPLACE FUNCTION hive.operation_id_to_pos( _id hive.operations.id%TYPE )
+
+CREATE OR REPLACE FUNCTION hive.operation_id_to_pos_wrapper( _id BIGINT )
     RETURNS INTEGER
-    LANGUAGE plpgsql
     IMMUTABLE
-AS
-$BEGIN$
-BEGIN
-    RETURN ( _id >> 8 ) & 0xFFFFFF;
-END;
-$BEGIN$;
-
-CREATE OR REPLACE FUNCTION hive.operation_id( _block_num INTEGER, _type INTEGER, _pos_in_block INTEGER )
-    RETURNS BIGINT
     LANGUAGE plpgsql
-    IMMUTABLE
 AS
-$BEGIN$
+$BODY$
 BEGIN
-    RETURN ( _block_num::BIGINT << 32 ) | ( _pos_in_block::BIGINT << 8 ) | _type;
+    RETURN hive.operation_id_to_pos(_id);
 END;
-$BEGIN$;
+$BODY$;
 
 SELECT pg_catalog.pg_extension_config_dump('hive.operations', '');
 
@@ -184,9 +172,9 @@ CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hive.applied_
 
 CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hive.transactions ( block_num, trx_in_block );
 
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hive.operations USING btree( hive.operation_id_to_block_num(id), id);
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hive.operations USING btree (hive.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST,hive.operation_id_to_type_id(id));
-CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hive.operations (hive.operation_id_to_type_id(id), hive.operation_id_to_block_num(id));
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hive.operations USING btree( hive.operation_id_to_block_num_wrapper(id), id);
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hive.operations USING btree (hive.operation_id_to_block_num_wrapper(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hive.operation_id_to_type_id_wrapper(id));
+CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hive.operations (hive.operation_id_to_type_id_wrapper(id), hive.operation_id_to_block_num_wrapper(id));
 
 --Clustering to speedup get_account_history queries (returns ordered set of operations for a specific account)
 --Clustering takes 2 hours on a fast system with 4 maintenance works
