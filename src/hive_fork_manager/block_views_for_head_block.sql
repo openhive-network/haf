@@ -3,8 +3,8 @@ CREATE OR REPLACE VIEW hive.account_operations_view AS
   SELECT ha.account_id,
          ha.account_op_seq_no,
          ha.operation_id,
-         ha.op_type_id,
-         ha.block_num
+         hive.operation_id_to_type_id( ha.operation_id ) as op_type_id,
+         hive.operation_id_to_block_num( ha.operation_id ) as block_num
   FROM hive.account_operations ha
  )
 UNION ALL
@@ -22,8 +22,8 @@ consistent_block AS
 SELECT har.account_id,
        har.account_op_seq_no,
        har.operation_id,
-       har.op_type_id,
-       har.block_num
+       hive.operation_id_to_type_id( har.operation_id ) as op_type_id,
+       hive.operation_id_to_block_num( har.operation_id ) as block_num
 FROM forks 
 JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hive.operation_id_to_block_num(hor.id)
 JOIN hive.account_operations_reversible har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
@@ -274,7 +274,15 @@ JOIN hive.applied_hardforks_reversible hjr ON forks.max_fork_id = hjr.fork_id AN
 );
 
 -- only irreversible data
-CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS SELECT * FROM hive.account_operations;
+CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS
+    SELECT
+       ha.account_id,
+       ha.account_op_seq_no,
+       ha.operation_id,
+       hive.operation_id_to_type_id( ha.operation_id ) as op_type_id,
+       hive.operation_id_to_block_num( ha.operation_id ) as block_num
+    FROM hive.account_operations ha;
+
 CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS SELECT ha.id, ha.name FROM  hive.accounts ha;
 CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS SELECT * FROM hive.blocks;
 CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS SELECT * FROM hive.transactions;

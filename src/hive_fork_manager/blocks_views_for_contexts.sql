@@ -651,35 +651,29 @@ BEGIN
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.account_operations_view AS
         SELECT
-           t.block_num,
+           hive.operation_id_to_block_num( t.operation_id ) as block_num,
            t.account_id,
            t.account_op_seq_no,
            t.operation_id,
-           t.op_type_id
+           hive.operation_id_to_type_id( t.operation_id ) as op_type_id
         FROM %s.context_data_view c,
         LATERAL
         (
           SELECT
-                 ha.block_num,
                  ha.account_id,
                  ha.account_op_seq_no,
-                 ha.operation_id,
-                 ha.op_type_id
+                 ha.operation_id
                 FROM hive.account_operations ha
                 WHERE ha.block_num <= c.min_block
                 UNION ALL
                 SELECT
-                    reversible.block_num,
                     reversible.account_id,
                     reversible.account_op_seq_no,
-                    reversible.operation_id,
-                    reversible.op_type_id
+                    reversible.operation_id
                 FROM ( SELECT
-                    har.block_num,
                     har.account_id,
                     har.account_op_seq_no,
                     har.operation_id,
-                    har.op_type_id,
                     har.fork_id
                 FROM hive.account_operations_reversible har
                 JOIN (
@@ -687,7 +681,7 @@ EXECUTE format(
                         FROM hive.blocks_reversible hbr
                         WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
                         GROUP by hbr.num
-                ) as arr ON arr.max_fork_id = har.fork_id AND arr.num = har.block_num
+                ) as arr ON arr.max_fork_id = har.fork_id AND arr.num = hive.operation_id_to_block_num( har.operation_id )
              ) reversible
         ) t
         ;'
@@ -713,11 +707,11 @@ BEGIN
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.account_operations_view AS
         SELECT
-           ha.block_num,
+           hive.operation_id_to_block_num( ha.operation_id ) as block_num,
            ha.account_id,
            ha.account_op_seq_no,
            ha.operation_id,
-           ha.op_type_id
+           hive.operation_id_to_type_id( ha.operation_id ) as op_type_id
         FROM hive.account_operations ha
         ;'
     , __schema
