@@ -63,13 +63,13 @@ BEGIN
          , ( hive.operation_id(5,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive.operation )
     ;
 
-    INSERT INTO hive.account_operations(block_num, account_id, account_op_seq_no, operation_id, op_type_id)
+    INSERT INTO hive.account_operations(account_id, account_op_seq_no, operation_id)
     VALUES
-       ( 1, 1, 1, hive.operation_id(1,1,0), 1 )
-     , ( 2, 1, 2, hive.operation_id(2,1,0), 1 )
-     , ( 2, 2, 1, hive.operation_id(2,1,0), 1 )
-     , ( 3, 3, 1, hive.operation_id(3,1,0), 1 )
-     , ( 4, 4, 1, hive.operation_id(4,1,0), 1 )
+       ( 1, 1, hive.operation_id(1,1,0) )
+     , ( 1, 2, hive.operation_id(2,1,0) )
+     , ( 2, 1, hive.operation_id(2,1,0) )
+     , ( 3, 1, hive.operation_id(3,1,0) )
+     , ( 4, 1, hive.operation_id(4,1,0) )
     ;
 
 INSERT INTO hive.applied_hardforks
@@ -163,19 +163,19 @@ VALUES
 
     INSERT INTO hive.account_operations_reversible
     VALUES
-           ( 4, 4, 1, hive.operation_id(4,1,0), 1, 1 ) -- block 4 (1)
-         , ( 5, 5, 1, hive.operation_id(5,1,0), 1, 1 ) -- block 5 (1)
-         , ( 6, 6, 1, hive.operation_id(6,1,0), 1, 1 ) -- block 6 (1)
-         , ( 7, 7, 1, hive.operation_id(7,1,0), 1, 1 ) -- block 7(1), must be overriden by fork 2
-         , ( 7, 8, 1, hive.operation_id(7,1,0), 1, 1 ) -- block 7(1), must be overriden by fork 2
-         , ( 8, 9, 1, hive.operation_id(7,1,2), 1, 1 ) -- block 7(1), must be overriden by fork 2
-         , ( 9, 7, 2, hive.operation_id(9,1,0), 1, 2 ) -- block 9 (2)
-         , ( 7, 9, 2, hive.operation_id(7,1,0), 1, 2 ) -- block 7(2)
-         , ( 8, 9, 3, hive.operation_id(8,1,0), 1, 2 ) -- block 8(2) -- block 8(3) has not operation
-         , ( 7, 4, 2, hive.operation_id(7,1,0), 1, 2 ) -- block 7(2)
-         , ( 9, 10, 2, hive.operation_id(9,1,0), 1, 2 ) -- block 9(2)
-         , ( 9, 10, 3, hive.operation_id(9,1,0), 1, 3 ) -- block 9(3)
-         , ( 9, 11, 3, hive.operation_id(9,1,0), 1, 3 ) -- block 9(3)
+           ( 4, 1, hive.operation_id(4,1,0),  1 ) -- block 4 (1)
+         , ( 5, 1, hive.operation_id(5,1,0),  1 ) -- block 5 (1)
+         , ( 6, 1, hive.operation_id(6,1,0),  1 ) -- block 6 (1)
+         , ( 7, 1, hive.operation_id(7,1,0),  1 ) -- block 7(1), must be overriden by fork 2
+         , ( 8, 1, hive.operation_id(7,1,0),  1 ) -- block 7(1), must be overriden by fork 2
+         , ( 9, 1, hive.operation_id(7,1,2),  1 ) -- block 7(1), must be overriden by fork 2
+         , ( 7, 2, hive.operation_id(9,1,0),  2 ) -- block 9 (2)
+         , ( 9, 2, hive.operation_id(7,1,0),  2 ) -- block 7(2)
+         , ( 9, 3, hive.operation_id(8,1,0),  2 ) -- block 8(2) -- block 8(3) has not operation
+         , ( 4, 2, hive.operation_id(7,1,0),  2 ) -- block 7(2)
+         , ( 10, 2, hive.operation_id(9,1,0), 2 ) -- block 9(2)
+         , ( 10, 3, hive.operation_id(9,1,0), 3 ) -- block 9(3)
+         , ( 11, 3, hive.operation_id(9,1,0), 3 ) -- block 9(3)
     ;
 
 INSERT INTO hive.applied_hardforks_reversible
@@ -381,14 +381,14 @@ BEGIN
     ASSERT NOT EXISTS (
     SELECT * FROM hive.account_operations
     EXCEPT SELECT * FROM ( VALUES
-                  ( 1, 1, 1, hive.operation_id(1,1,0), 1)
-                , ( 2, 1, 2, hive.operation_id(2,1,0), 1)
-                , ( 2, 2, 1, hive.operation_id(2,1,0), 1)
-                , ( 3, 3, 1, hive.operation_id(3,1,0), 1)
-                , ( 4, 4, 1, hive.operation_id(4,1,0), 1)
-                , ( 6, 6, 1, hive.operation_id(6,1,0), 1) -- block 6 (1)
-                , ( 7, 4, 2, hive.operation_id(7,1,0), 1) -- block 7(2)
-                , ( 7, 9, 2, hive.operation_id(7,1,0), 1) -- block 7(2)
+                  ( 1, 1, hive.operation_id(1,1,0))
+                , ( 1, 2, hive.operation_id(2,1,0))
+                , ( 2, 1, hive.operation_id(2,1,0))
+                , ( 3, 1, hive.operation_id(3,1,0))
+                , ( 4, 1, hive.operation_id(4,1,0))
+                , ( 6, 1, hive.operation_id(6,1,0)) -- block 6 (1)
+                , ( 4, 2, hive.operation_id(7,1,0)) -- block 7(2)
+                , ( 9, 2, hive.operation_id(7,1,0)) -- block 7(2)
              ) as pattern
     ) , 'Unexpected rows in the account_operations';
     ASSERT ( SELECT COUNT(*) FROM hive.account_operations ) = 8, 'Wrong number of hive account_operations';

@@ -118,20 +118,20 @@ BEGIN
 
     INSERT INTO hive.account_operations_reversible
     VALUES
-       ( 4, 4, 1, hive.operation_id(4,1,0), 1, 1 )
-     , ( 5, 5, 1, hive.operation_id(5,1,0), 1, 1 )
-     , ( 6, 6, 1, hive.operation_id(6,1,0), 1, 1 )
-     , ( 7, 7, 1, hive.operation_id(7,1,0), 1, 1 ) -- must be overriden by fork 2
-     , ( 7, 8, 1, hive.operation_id(7,1,1), 1, 1 ) -- must be overriden by fork 2
-     , ( 7, 9, 1, hive.operation_id(7,1,2), 1, 1 ) -- must be overriden by fork 2
-     , ( 7, 7, 2, hive.operation_id(7,1,0), 1, 2 )
-     , ( 7, 8, 2, hive.operation_id(7,1,1), 1, 2 ) -- will be abandoned since fork 3 doesn not have this account operation
-     , ( 8, 9, 2, hive.operation_id(8,1,0), 1, 2 )
-     , ( 7, 9, 3, hive.operation_id(7,1,0), 1, 2 )
-     , ( 9, 10, 2, hive.operation_id(9,1,0), 1, 2 )
-     , ( 8, 9, 3, hive.operation_id(8,1,0), 1, 3 )
-     , ( 9, 10, 3, hive.operation_id(9,1,0), 1, 3 )
-     , ( 10, 11, 3, hive.operation_id(10,1,0), 1, 3 )
+       ( 4, 1, hive.operation_id(4,1,0), 1 )
+     , ( 5, 1, hive.operation_id(5,1,0), 1 )
+     , ( 6, 1, hive.operation_id(6,1,0), 1 )
+     , ( 7, 1, hive.operation_id(7,1,0), 1 ) -- must be overriden by fork 2
+     , ( 8, 1, hive.operation_id(7,1,1), 1 ) -- must be overriden by fork 2
+     , ( 9, 1, hive.operation_id(7,1,2), 1 ) -- must be overriden by fork 2
+     , ( 7, 2, hive.operation_id(7,1,0), 2 )
+     , ( 8, 2, hive.operation_id(7,1,1), 2 ) -- will be abandoned since fork 3 doesn not have this account operation
+     , ( 9, 2, hive.operation_id(8,1,0), 2 )
+     , ( 9, 3, hive.operation_id(7,1,0), 2 )
+     , ( 10, 2, hive.operation_id(9,1,0),2 )
+     , ( 9, 3, hive.operation_id(8,1,0), 3 )
+     , ( 10, 3, hive.operation_id(9,1,0), 3 )
+     , ( 11, 3, hive.operation_id(10,1,0), 3 )
 ;
 
 
@@ -239,9 +239,9 @@ BEGIN
     ASSERT NOT EXISTS (
     SELECT * FROM hive.account_operations_reversible
     EXCEPT SELECT * FROM ( VALUES
-          ( 9, 10, 2, hive.operation_id(9,1,0), 1, 2 )
-        , ( 9, 10, 3, hive.operation_id(9,1,0), 1, 3 )
-        , ( 10, 11, 3, hive.operation_id(10,1,0), 1, 3 )
+          ( 10, 2, hive.operation_id(9,1,0), 2 )
+        , ( 10, 3, hive.operation_id(9,1,0), 3 )
+        , ( 11, 3, hive.operation_id(10,1,0), 3 )
     ) as pattern
     ), 'Unexpected rows in hive.account_operations_reversible'
     ;

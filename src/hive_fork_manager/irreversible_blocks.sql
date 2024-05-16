@@ -153,18 +153,15 @@ SELECT pg_catalog.pg_extension_config_dump('hive.accounts', '');
 
 CREATE TABLE IF NOT EXISTS hive.account_operations
 (
-      block_num INTEGER NOT NULL
-    , account_id INTEGER NOT NULL --- Identifier of account involved in given operation.
+      account_id INTEGER NOT NULL --- Identifier of account involved in given operation.
     , account_op_seq_no INTEGER NOT NULL --- Operation sequence number specific to given account.
     , operation_id BIGINT NOT NULL --- Id of operation held in hive_opreations table.
-    , op_type_id SMALLINT NOT NULL --- The same as hive.operations.op_type_id. A redundant field is required due to performance.
     , CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no ) --try account,op_type,account_op_seq_no?
     -- Hopefully not needed anymore, let's find out
     --, CONSTRAINT hive_account_operations_uq2 UNIQUE ( account,operation_id )
 );
 ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_fk_1 FOREIGN KEY (account_id) REFERENCES hive.accounts(id) NOT VALID;
 ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hive.operations(id) NOT VALID;
-ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_fk_3 FOREIGN KEY (op_type_id) REFERENCES hive.operation_types (id) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hive.account_operations', '');
 
 
@@ -185,7 +182,7 @@ CLUSTER hive.account_operations using hive_account_operations_uq1;
 
 --This index is probably only needed for block_explorer queries right now, but maybe useful for other apps,
 --so decided to add here rather than as part of hafbe as it isn't huge.
-CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hive.account_operations( account_id, op_type_id );
+CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hive.account_operations( account_id, hive.operation_id_to_type_id_wrapper(operation_id ) );
 
 CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hive.accounts USING btree (block_num);
 
