@@ -213,11 +213,9 @@ $BODY$
 BEGIN
     INSERT INTO hive.account_operations
     SELECT
-           haor.block_num
-         , haor.account_id
+           haor.account_id
          , haor.account_op_seq_no
          , haor.operation_id
-         , haor.op_type_id
     FROM
         hive.account_operations_reversible haor
         JOIN (
@@ -229,7 +227,7 @@ BEGIN
                 hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
             ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON haor.fork_id = num_and_forks.fork_id AND haor.block_num = num_and_forks.num
+        ) as num_and_forks ON haor.fork_id = num_and_forks.fork_id AND hive.operation_id_to_block_num( haor.operation_id ) = num_and_forks.num
     ;
 END;
 $BODY$
@@ -594,7 +592,7 @@ BEGIN
     END IF;
 
     DELETE FROM hive.account_operations hao
-    WHERE hao.block_num > __consistent_block;
+    WHERE hive.operation_id_to_block_num(hao.operation_id) > __consistent_block;
 
     DELETE FROM hive.applied_hardforks WHERE block_num > __consistent_block;
 

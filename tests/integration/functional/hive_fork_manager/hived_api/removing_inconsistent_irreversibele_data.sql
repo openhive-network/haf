@@ -47,8 +47,8 @@ BEGIN
 
     INSERT INTO hive.account_operations
     VALUES
-        ( 1, 1, 1, hive.operation_id(1,1,0), 1)
-      , ( 2, 2, 1, hive.operation_id(2,1,0), 1)
+        ( 1, 1, hive.operation_id(1,1,0) )
+      , ( 2, 1, hive.operation_id(2,1,0) )
     ;
 
     INSERT INTO hive.applied_hardforks

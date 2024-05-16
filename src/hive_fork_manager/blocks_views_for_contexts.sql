@@ -664,7 +664,7 @@ EXECUTE format(
                  ha.account_op_seq_no,
                  ha.operation_id
                 FROM hive.account_operations ha
-                WHERE ha.block_num <= c.min_block
+                WHERE hive.operation_id_to_block_num(ha.operation_id) <= c.min_block
                 UNION ALL
                 SELECT
                     reversible.account_id,

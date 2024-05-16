@@ -51,7 +51,7 @@ BEGIN
     ;
 
     INSERT INTO hive.account_operations_reversible
-    VALUES ( 2, 1, 1, hive.operation_id(2,1,0), 1, 2 )
+    VALUES ( 1, 1, hive.operation_id(2,1,0), 2 )
     ;
 
 
