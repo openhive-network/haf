@@ -192,6 +192,11 @@ Datum to_datum(const fc::array<T, N>& value)
   SET_VARSIZE(bytes, VARHDRSZ + N);
   PG_RETURN_BYTEA_P(bytes);
 }
+template<uint32_t _SYMBOL>
+Datum to_datum(const hive::protocol::tiny_asset<_SYMBOL>& value)
+{
+  return to_datum(value.to_asset());
+}
 
 template<typename T>
 struct members_to_datum_visitor {
