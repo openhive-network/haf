@@ -130,6 +130,8 @@ template<typename T>
 void to_jsonb(const flat_set_ex<T>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 template<typename K, typename... T>
 void to_jsonb(const boost::container::flat_map<K, T...>& value, JsonbIteratorToken token, JsonbParseState** parseState);
+template<uint32_t _SYMBOL>
+void to_jsonb(const hive::protocol::tiny_asset<_SYMBOL>& value, JsonbIteratorToken token, JsonbParseState** parseState);
 
 template<typename T>
 class member_to_jsonb_visitor
@@ -347,6 +349,14 @@ void to_jsonb(const boost::container::flat_map<K, T...>& value, JsonbIteratorTok
     to_jsonb(kv, WJB_ELEM, parseState);
   }
   PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_END_ARRAY, nullptr);
+}
+template<uint32_t _SYMBOL>
+void to_jsonb(const hive::protocol::tiny_asset<_SYMBOL>& value, JsonbIteratorToken token, JsonbParseState** parseState)
+{
+  if(hive::protocol::serialization_mode_controller::legacy_enabled())
+    to_jsonb(hive::protocol::legacy_asset(value.to_asset()), token, parseState);
+  else
+    to_jsonb(value.to_asset(), token, parseState);
 }
 
 }
