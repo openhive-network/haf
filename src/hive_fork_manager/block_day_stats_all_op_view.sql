@@ -4,8 +4,8 @@ SELECT * FROM crosstab(
 $$
 WITH op_day_stats AS
 (
-SELECT (hive.operation_id_to_block_num(o.id) / 28800) AS block_day, hive.operation_id_to_type_id(o.id) as op_type_id, COUNT(1)
-FROM hive.operations o
+SELECT (o.block_num / 28800) AS block_day, o.op_type_id, COUNT(1)
+FROM hive.irreversible_operations_view o
 GROUP BY 1, 2
 ),
 supplemented_stats AS
