@@ -122,7 +122,7 @@ BEGIN
         __HARDFORK_9_block_num INT  := 3202773;
         __HARDFORK_21_block_num INT := 35921786;
         __HARDFORK_24_block_num INT := 47797680;
-        __op_serial_id_dummy INT    := 5036543;
+        __op_serial_id_dummy BIGINT    := 13755805291514172; -- operation with typeid=hive::protocol::hardfork_operation, old id=5036543)
 
         BEGIN
 
@@ -156,12 +156,7 @@ BEGIN
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_9_block_num as block_num,
             (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFORK_9_block_num) as timestamp,
-            hive.calculate_operation_stable_id
-            (
-                        __HARDFORK_9_block_num, 
-                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE hive.operation_id_to_block_num(o.id) = __HARDFORK_9_block_num),
-                        0
-            ) as op_stable_id 
+            hive.operation_id( __HARDFORK_9_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf09_keyauths() h
             WHERE  _first_block <= __HARDFORK_9_block_num AND __HARDFORK_9_block_num <= _last_block
         ),
@@ -174,12 +169,7 @@ BEGIN
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_21_block_num as block_num,
             (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFORK_21_block_num) as timestamp,
-            hive.calculate_operation_stable_id
-            (
-                        __HARDFORK_21_block_num, 
-                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE hive.operation_id_to_block_num(o.id) = __HARDFORK_21_block_num),
-                        0
-            ) as op_stable_id 
+            hive.operation_id( __HARDFORK_21_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf21_keyauths() h
             WHERE  _first_block <= __HARDFORK_21_block_num AND __HARDFORK_21_block_num <= _last_block
         ),
@@ -192,12 +182,7 @@ BEGIN
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_24_block_num as block_num,
             (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFORK_24_block_num) as timestamp,
-            hive.calculate_operation_stable_id
-            (
-                        __HARDFORK_24_block_num, 
-                        (SELECT MAX(o.trx_in_block) FROM hive.operations o WHERE hive.operation_id_to_block_num(o.id) = __HARDFORK_24_block_num),
-                        0
-            ) as op_stable_id 
+            hive.operation_id( __HARDFORK_24_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf24_keyauths() h
             WHERE  _first_block <= __HARDFORK_24_block_num AND __HARDFORK_24_block_num <= _last_block
         ),
@@ -230,7 +215,7 @@ BEGIN
                     ov.id as op_serial_id,
                     ov.block_num,
                     ov.timestamp,
-                    hive.calculate_operation_stable_id(ov.block_num, ov.trx_in_block, ov.op_pos) as op_stable_id
+                    ov.id as op_stable_id
             FROM pow_matching_ops ov
         ),
 
@@ -290,7 +275,7 @@ BEGIN
                         ov.id as op_serial_id,
                         ov.block_num,
                         ov.timestamp,
-                        hive.calculate_operation_stable_id(ov.block_num, ov.trx_in_block, ov.op_pos) as op_stable_id
+                        ov.id as op_stable_id
                     FROM matching_ops ov
                 ),
             min_block_per_pow_account AS 
