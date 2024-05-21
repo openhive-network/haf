@@ -3,8 +3,8 @@ CREATE OR REPLACE VIEW hive.account_operations_view AS
   SELECT ha.account_id,
          ha.account_op_seq_no,
          ha.operation_id,
-         hive.operation_id_to_type_id( ha.operation_id ) as op_type_id,
-         hive.operation_id_to_block_num( ha.operation_id ) as block_num
+         hive.operation_id_to_type_id_wrapper( ha.operation_id ) as op_type_id,
+         hive.operation_id_to_block_num_wrapper( ha.operation_id ) as block_num
   FROM hive.account_operations ha
  )
 UNION ALL
@@ -22,10 +22,10 @@ consistent_block AS
 SELECT har.account_id,
        har.account_op_seq_no,
        har.operation_id,
-       hive.operation_id_to_type_id( har.operation_id ) as op_type_id,
-       hive.operation_id_to_block_num( har.operation_id ) as block_num
+       hive.operation_id_to_type_id_wrapper( har.operation_id ) as op_type_id,
+       hive.operation_id_to_block_num_wrapper( har.operation_id ) as block_num
 FROM forks 
-JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hive.operation_id_to_block_num(hor.id)
+JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hive.operation_id_to_block_num_wrapper(hor.id)
 JOIN hive.account_operations_reversible har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
 );
 
@@ -176,10 +176,10 @@ FROM
 CREATE OR REPLACE VIEW hive.operations_view
 AS
 SELECT t.id,
-       hive.operation_id_to_block_num( t.id ) as block_num,
+       hive.operation_id_to_block_num_wrapper( t.id ) as block_num,
        t.trx_in_block,
        t.op_pos,
-       hive.operation_id_to_type_id( t.id ) as op_type_id,
+       hive.operation_id_to_type_id_wrapper( t.id ) as op_type_id,
        t.timestamp,
        t.body_binary,
        t.body
@@ -210,7 +210,7 @@ FROM
         FROM hive.blocks_reversible hbr
         WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hive.irreversible_data hid )
         GROUP by hbr.num
-      ) visible_ops on visible_ops.num = hive.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
+      ) visible_ops on visible_ops.num = hive.operation_id_to_block_num_wrapper(o.id) and visible_ops.max_fork_id = o.fork_id
 ) t
 ;
 
@@ -269,7 +269,7 @@ SELECT hjr.hardfork_num,
        hjr.block_num,
        hjr.hardfork_vop_id
 FROM forks 
-JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hive.operation_id_to_block_num(hor.id)
+JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hive.operation_id_to_block_num_wrapper(hor.id)
 JOIN hive.applied_hardforks_reversible hjr ON forks.max_fork_id = hjr.fork_id AND hjr.hardfork_vop_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
 );
 
@@ -279,8 +279,8 @@ CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS
        ha.account_id,
        ha.account_op_seq_no,
        ha.operation_id,
-       hive.operation_id_to_type_id( ha.operation_id ) as op_type_id,
-       hive.operation_id_to_block_num( ha.operation_id ) as block_num
+       hive.operation_id_to_type_id_wrapper( ha.operation_id ) as op_type_id,
+       hive.operation_id_to_block_num_wrapper( ha.operation_id ) as block_num
     FROM hive.account_operations ha;
 
 CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS SELECT ha.id, ha.name FROM  hive.accounts ha;
@@ -290,10 +290,10 @@ CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS SELECT * FROM hive
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
     SELECT
         op.id,
-        hive.operation_id_to_block_num( op.id ) as block_num,
+        hive.operation_id_to_block_num_wrapper( op.id ) as block_num,
         op.trx_in_block,
         op.op_pos,
-        hive.operation_id_to_type_id( op.id ) as op_type_id,
+        hive.operation_id_to_type_id_wrapper( op.id ) as op_type_id,
         op.timestamp,
         op.body_binary,
         op.body_binary::jsonb AS body
