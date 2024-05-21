@@ -102,7 +102,7 @@ BEGIN
                   hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
             ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON hive.operation_id_to_block_num(hor.id) = num_and_forks.num AND hor.fork_id = num_and_forks.fork_id
+        ) as num_and_forks ON hive.operation_id_to_block_num_wrapper(hor.id) = num_and_forks.num AND hor.fork_id = num_and_forks.fork_id
     ;
 END;
 $BODY$
@@ -227,7 +227,7 @@ BEGIN
                 hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
             ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON haor.fork_id = num_and_forks.fork_id AND hive.operation_id_to_block_num( haor.operation_id ) = num_and_forks.num
+        ) as num_and_forks ON haor.fork_id = num_and_forks.fork_id AND hive.operation_id_to_block_num_wrapper( haor.operation_id ) = num_and_forks.num
     ;
 END;
 $BODY$
@@ -268,7 +268,7 @@ BEGIN
     WHERE
             har.operation_id = hor.id
         AND har.fork_id = hor.fork_id
-        AND ( hive.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
+        AND ( hive.operation_id_to_block_num_wrapper(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
     ;
 
     DELETE FROM hive.applied_hardforks_reversible hjr
@@ -276,7 +276,7 @@ BEGIN
     ;
 
     DELETE FROM hive.operations_reversible hor
-    WHERE hive.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    WHERE hive.operation_id_to_block_num_wrapper(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
 
@@ -592,11 +592,11 @@ BEGIN
     END IF;
 
     DELETE FROM hive.account_operations hao
-    WHERE hive.operation_id_to_block_num(hao.operation_id) > __consistent_block;
+    WHERE hive.operation_id_to_block_num_wrapper(hao.operation_id) > __consistent_block;
 
     DELETE FROM hive.applied_hardforks WHERE block_num > __consistent_block;
 
-    DELETE FROM hive.operations WHERE hive.operation_id_to_block_num(id) > __consistent_block;
+    DELETE FROM hive.operations WHERE hive.operation_id_to_block_num_wrapper(id) > __consistent_block;
 
     DELETE FROM hive.transactions_multisig htm
     USING hive.transactions ht
