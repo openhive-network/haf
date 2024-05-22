@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS hive.operations (
 CREATE OR REPLACE FUNCTION hive.operation_id_to_block_num_wrapper( _id BIGINT )
     RETURNS INTEGER
     IMMUTABLE PARALLEL SAFE LEAKPROOF
+    COST 1
     LANGUAGE plpgsql
 AS
 $BODY$
@@ -108,6 +109,7 @@ $BODY$;
 CREATE OR REPLACE FUNCTION hive.operation_id_to_type_id_wrapper( _id BIGINT )
     RETURNS INTEGER
     IMMUTABLE PARALLEL SAFE LEAKPROOF
+    COST 1
     LANGUAGE plpgsql
 AS
 $BODY$
@@ -120,6 +122,7 @@ $BODY$;
 CREATE OR REPLACE FUNCTION hive.operation_id_to_pos_wrapper( _id BIGINT )
     RETURNS INTEGER
     IMMUTABLE PARALLEL SAFE LEAKPROOF
+    COST 1
     LANGUAGE plpgsql
 AS
 $BODY$
