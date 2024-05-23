@@ -185,6 +185,7 @@ Instead such apps can just read the data for the current HEAD BLOCK using the vi
 * hive.accounts_view
 * hive.blocks_view
 * hive.transactions_view
+* hive.operations_view_extended
 * hive.operations_view
 * hive.transactions_multisig_view
 * hive.applied_hardforks_view
@@ -197,6 +198,7 @@ Here are views which return only irreversible data:
 * hive.irreversible_blocks_view
 * hive.irreversible_transactions_view
 * hive.irreversible_operations_view
+* hive.irreversible_operations_view_extended
 * hive.irreversible_transactions_multisig_view
 * hive.irreversible_applied_hardforks_view
 

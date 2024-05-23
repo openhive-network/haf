@@ -160,6 +160,12 @@ BEGIN
     END;
 
     BEGIN
+        DROP VIEW hive.operations_view_extended;
+        ASSERT FALSE, 'Alice can drop hive.operations_view_extended';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
         DROP VIEW hive.operations_view;
         ASSERT FALSE, 'Alice can drop hive.operations_view';
     EXCEPTION WHEN OTHERS THEN

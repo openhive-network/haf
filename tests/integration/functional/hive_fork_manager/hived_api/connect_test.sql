@@ -35,8 +35,8 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-           ( hive.operation_id(1,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
-         , ( hive.operation_id(2,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
+           ( hive.operation_id(1,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
+         , ( hive.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
     ;
 
     INSERT INTO hive.accounts
