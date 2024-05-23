@@ -142,9 +142,10 @@ $BODY$
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
-    IF EXISTS( SELECT 1 FROM hive.contexts hc WHERE hc.name =ANY( _context_names ) AND hc.is_attached = FALSE ) THEN
-        RAISE EXCEPTION 'Detached context cannot be moved';
-    END IF;
+    --TODO(mickiewicz@syncad.com) remove comment when finish new iteration
+    --IF EXISTS( SELECT 1 FROM hive.contexts hc WHERE hc.name =ANY( _context_names ) AND hc.is_attached = FALSE ) THEN
+    --    RAISE EXCEPTION 'Detached context cannot be moved';
+    --END IF;
 
     -- prevent auto-detaching the context when app is actively asking for new blocks
     UPDATE hive.contexts
@@ -788,6 +789,9 @@ BEGIN
                  , ctx.is_attached
                  , ctx.events_id
                  , ctx.is_forking
+                 , (ctx.loop).size_of_blocks_batch
+                 , (ctx.loop).current_batch_end
+                 , (ctx.loop).end_block_range
         )
     ) INTO __number_of_rows
     FROM hive.contexts ctx

@@ -22,7 +22,7 @@ ARRAY[
  '{"(accounts_reversible,4bf88047-1295-43ae-59f6-86124fa7b53f,d092cacd-a1ca-369a-0307-82b31779bb5b,c80ea5a5-3499-c1de-8ae0-a0ba05c4f6e3,d5fdf00a-dcf2-2447-bf72-2fb090af3ed0)"}',
  '{"(account_operations_reversible,1e6127e3-0ee0-cfea-fc51-0454061315c3,465f67a5-4c10-f8ed-39be-4365e4553fd7,41c0c887-e689-bae9-c7f9-0b3b445708af,1528735c-e90f-8b11-d30a-86dddedb3676)"}',
  '{"(applied_hardforks_reversible,f5129d5e-5b98-7f93-b786-d55899b5b8b5,d6cca068-2076-4e87-5c24-85618ff564ac,fee57151-3162-0c46-424a-da912e742160,3eeef00d-0e16-421e-659e-7ee2b12aa7eb)"}',
- '{"(contexts,17bf3cac-bcae-5014-2313-dbbc835de1e6,c09d0e4e-819a-4fc7-fec7-7d3f77ff4090,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)"}'
+ '{"(contexts,d58fe4a0-fb88-4003-ea89-0ed8ab605112,2bc035cd-acca-9456-e8b3-7e2561b2ce48,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)"}'
 ];
  _schema_hash TEXT[];
  _pass BOOLEAN;

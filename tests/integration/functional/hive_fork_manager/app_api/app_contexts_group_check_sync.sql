@@ -29,6 +29,7 @@ BEGIN
     PERFORM hive.app_create_context( 'attached_context_not_insync_ev', 'a' );
     PERFORM hive.app_create_context( 'attached_context_not_insync_fr', 'a' );
     PERFORM hive.app_create_context( 'attached_context_not_insync_is_forking', _schema => 'a', _is_forking => FALSE );
+    PERFORM hive.app_create_context( 'attached_context_not_insync_loop', _schema => 'a' );
 
     UPDATE hive.contexts ctx
     SET
@@ -61,6 +62,12 @@ BEGIN
     SET
         fork_id = 2
     WHERE ctx.name = 'attached_context_not_insync_fr'
+    ;
+
+    UPDATE hive.contexts ctx
+    SET
+        loop = (10, hive.live_stage(), 10, 10, 10)::hive.application_loop_state
+    WHERE ctx.name = 'attached_context_not_insync_loop'
     ;
 
 END;
@@ -102,6 +109,12 @@ BEGIN
     BEGIN
         PERFORM hive.app_check_contexts_synchronized( ARRAY[ 'attached_context', 'attached_context_not_insync_is_forking' ] );
         ASSERT FALSE, 'No expected exception for is_forking difference';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_check_contexts_synchronized( ARRAY[ 'attached_context', 'attached_context_not_insync_loop' ] );
+        ASSERT FALSE, 'No expected exception for loop difference';
     EXCEPTION WHEN OTHERS THEN
     END;
 
