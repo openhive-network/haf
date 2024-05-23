@@ -11,6 +11,7 @@ ADD_PSQL_EXTENSION(
              types/operation/operation_impl.sql
              types/operation/operation_cmp.sql
              types/operation/operation_casts.sql
+             types/operation/operation_id.sql
              irreversible_blocks.sql
              reversible_blocks.sql
              state_provider.sql
