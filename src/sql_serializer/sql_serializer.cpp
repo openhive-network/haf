@@ -610,7 +610,6 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
       note.block,
       note.trx_in_block,
       note.op_in_trx,
-      chain_db.head_block_time(),
       note.op
     );
   }

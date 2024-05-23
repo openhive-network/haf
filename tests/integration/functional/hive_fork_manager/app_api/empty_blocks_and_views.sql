@@ -35,7 +35,7 @@ BEGIN
 
     INSERT INTO hive.operations
     VALUES
-    ( hive.operation_id(1, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
+    ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
     ;
 
     INSERT INTO hive.transactions_multisig
@@ -62,9 +62,9 @@ BEGIN
     ;
 
     -- block 2 on fork 3 has no operations
-    INSERT INTO hive.operations_reversible(id, trx_in_block, op_pos, timestamp, body_binary, fork_id)
+    INSERT INTO hive.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
     VALUES
-        ( hive.operation_id(2, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation, 2 )
+        ( hive.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation, 2 )
     ;
 
     UPDATE hive.contexts SET fork_id = 3, irreversible_block = 1, current_block_num = 2;
@@ -80,18 +80,18 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='operations_view' ), 'No context operations view';
 
     ASSERT NOT EXISTS (
-        SELECT o.id, o.trx_in_block, o.op_pos, o.timestamp, o.body_binary, o.body FROM a.operations_view o
+        SELECT o.id, o.trx_in_block, o.op_pos, o.body_binary, o.body FROM a.operations_view o
         EXCEPT SELECT * FROM ( VALUES
-              ( hive.operation_id(1, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
+              ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
         ) as pattern
     ) , 'Unexpected rows in the operations view';
 
 
     ASSERT NOT EXISTS (
         SELECT * FROM ( VALUES
-              ( hive.operation_id(1, 1, 0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
+              ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
         ) as pattern
-        EXCEPT SELECT o.id, o.trx_in_block, o.op_pos, o.timestamp, o.body_binary, o.body FROM a.operations_view o
+        EXCEPT SELECT o.id, o.trx_in_block, o.op_pos, o.body_binary, o.body FROM a.operations_view o
     ) , 'Unexpected rows in the operations view2';
 
     ASSERT NOT EXISTS (

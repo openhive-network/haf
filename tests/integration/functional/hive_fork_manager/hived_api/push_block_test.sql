@@ -36,8 +36,8 @@ BEGIN
     __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G' , 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
     __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
     __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED' );
-    __operation1_1 = ( hive.operation_id(101,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation );
-    __operation2_1 = ( hive.operation_id(101,2,0), 1, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation );
+    __operation1_1 = ( hive.operation_id(101,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation );
+    __operation2_1 = ( hive.operation_id(101,2,0), 1, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation );
     __signatures1 = ( '\xDEED', '\xFEED' );
     __signatures2 = ( '\xBEEF', '\xBABE' );
     __account1 = ( 1, 'alice', 101 );
@@ -124,7 +124,6 @@ BEGIN
                   id = hive.operation_id(101,1,0)
               AND trx_in_block = 0
               AND op_pos = 0
-              AND timestamp = '2016-06-22 19:10:21-07'::timestamp
               AND body_binary = '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation
               AND fork_id = 1
     ) = 1, 'Wrong data of operation 1';
@@ -134,7 +133,6 @@ BEGIN
                id = hive.operation_id(101,2,0)
            AND trx_in_block = 1
            AND op_pos = 0
-           AND timestamp = '2016-06-22 19:10:21-07'::timestamp
            AND body_binary = '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation
            AND fork_id = 1
      ) = 1, 'Wrong data of operation 2';

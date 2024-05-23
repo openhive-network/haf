@@ -42,9 +42,9 @@ BEGIN
     ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF',  1 )
     ;
 
-    INSERT INTO hive.operations_reversible(id, trx_in_block, op_pos, timestamp, body_binary, fork_id)
+    INSERT INTO hive.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
     VALUES
-    ( hive.operation_id(2,1,0), 0, 0, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation, 1 )
+    ( hive.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation, 1 )
     ;
 
     INSERT INTO hive.account_operations_reversible

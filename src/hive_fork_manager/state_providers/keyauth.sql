@@ -206,7 +206,7 @@ BEGIN
                     ov.op_pos,
                     ov.timestamp,
                     ov.op_type_id
-            FROM %2$s.operations_view ov
+            FROM %2$s.operations_view_extended ov
             WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT pmot.id FROM pow_op_type pmot)
         ),
         pow_raw_auth_records AS MATERIALIZED
@@ -265,7 +265,7 @@ BEGIN
                         ov.op_pos,
                         ov.timestamp,
                         ov.op_type_id
-                    FROM %2$s.operations_view ov
+                    FROM %2$s.operations_view_extended ov
                     WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT mot.id FROM matching_op_types mot)
             ),
             raw_auth_records AS MATERIALIZED

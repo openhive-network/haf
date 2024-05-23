@@ -173,7 +173,7 @@ FROM
 ) t
 ;
 
-CREATE OR REPLACE VIEW hive.operations_view
+CREATE OR REPLACE VIEW hive.operations_view_extended
 AS
 SELECT t.id,
        hive.operation_id_to_block_num( t.id ) as block_num,
@@ -189,7 +189,52 @@ FROM
           ho.id,
           ho.trx_in_block,
           ho.op_pos,
-          ho.timestamp,
+          b.created_at timestamp,
+          ho.body_binary,
+          ho.body_binary::jsonb AS body
+    FROM hive.operations ho
+    JOIN hive.blocks b ON b.num = hive.operation_id_to_block_num(ho.id)
+    UNION ALL
+      SELECT
+        o.id,
+        o.trx_in_block,
+        o.op_pos,
+        visible_ops_timestamp.created_at timestamp,
+        o.body_binary,
+        o.body_binary::jsonb AS body
+        FROM hive.operations_reversible o
+      -- Reversible operations view must show ops comming from newest fork (specific to app-context)
+      -- and also hide ops present at earlier forks for given block
+      JOIN
+      (
+        SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
+        FROM hive.blocks_reversible hbr
+        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hive.irreversible_data hid )
+        GROUP by hbr.num
+      ) visible_ops on visible_ops.num = hive.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
+      JOIN
+      (
+        SELECT hbr.num, created_at
+        FROM hive.blocks_reversible hbr
+      ) visible_ops_timestamp ON visible_ops_timestamp.num = visible_ops.num
+) t
+;
+
+CREATE OR REPLACE VIEW hive.operations_view
+AS
+SELECT t.id,
+       hive.operation_id_to_block_num( t.id ) as block_num,
+       t.trx_in_block,
+       t.op_pos,
+       hive.operation_id_to_type_id( t.id ) as op_type_id,
+       t.body_binary,
+       t.body
+FROM
+(
+    SELECT
+          ho.id,
+          ho.trx_in_block,
+          ho.op_pos,
           ho.body_binary,
           ho.body_binary::jsonb AS body
     FROM hive.operations ho
@@ -198,7 +243,6 @@ FROM
         o.id,
         o.trx_in_block,
         o.op_pos,
-        o.timestamp,
         o.body_binary,
         o.body_binary::jsonb AS body
       FROM hive.operations_reversible o
@@ -287,6 +331,19 @@ CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS SELECT ha.id, ha.name 
 CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS SELECT * FROM hive.blocks;
 CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS SELECT * FROM hive.transactions;
 
+CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
+    SELECT
+        op.id,
+        hive.operation_id_to_block_num( op.id ) as block_num,
+        op.trx_in_block,
+        op.op_pos,
+        hive.operation_id_to_type_id( op.id ) as op_type_id,
+        b.created_at timestamp,
+        op.body_binary,
+        op.body_binary::jsonb AS body
+    FROM hive.operations op
+    JOIN hive.blocks b ON b.num = hive.operation_id_to_block_num(op.id);
+
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
     SELECT
         op.id,
@@ -294,7 +351,6 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
         op.trx_in_block,
         op.op_pos,
         hive.operation_id_to_type_id( op.id ) as op_type_id,
-        op.timestamp,
         op.body_binary,
         op.body_binary::jsonb AS body
     FROM hive.operations op;

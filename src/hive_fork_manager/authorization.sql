@@ -221,6 +221,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.create_all_irreversible_blocks_view
     , hive.create_all_irreversible_transactions_view
     , hive.create_all_irreversible_operations_view
+    , hive.create_all_irreversible_operations_view_extended
     , hive.create_all_irreversible_signatures_view
     , hive.create_all_irreversible_accounts_view
     , hive.create_all_irreversible_account_operations_view

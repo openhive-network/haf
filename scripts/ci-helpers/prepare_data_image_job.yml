@@ -1,6 +1,6 @@
 include:
   - project: 'hive/hive'
-    ref: b09d1eb5f6858b6e2ba0f4b77d4d7ce47e76e31f #develop
+    ref: 7525fd472691a1d830118dac92e7ed4c177d4178 #develop
     file: '/scripts/ci-helpers/prepare_data_image_job.yml'
 
 .prepare_haf_image:
@@ -46,7 +46,7 @@ include:
     - cp "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir/docker_entrypoint.log" "${CI_PROJECT_DIR}/docker_entrypoint.log"
     - ls -la "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir/"
   after_script:
-    - rm "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/replay_running" -f  
+    - rm "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/replay_running" -f
 
   artifacts:
     reports:

@@ -27,6 +27,7 @@ BEGIN
     PERFORM hive.create_blocks_view( _name );
     PERFORM hive.create_transactions_view( _name );
     PERFORM hive.create_operations_view( _name );
+    PERFORM hive.create_operations_view_extended( _name );
     PERFORM hive.create_signatures_view( _name );
     PERFORM hive.create_accounts_view( _name );
     PERFORM hive.create_account_operations_view( _name );
@@ -47,6 +48,7 @@ BEGIN
     PERFORM hive.drop_applied_hardforks_view( _name );
     PERFORM hive.drop_signatures_view( _name );
     PERFORM hive.drop_operations_view( _name );
+    PERFORM hive.drop_operations_view_extended( _name );
     PERFORM hive.drop_transactions_view( _name );
     PERFORM hive.drop_blocks_view( _name );
     PERFORM hive.drop_accounts_view( _name );
@@ -219,6 +221,7 @@ BEGIN
         , hive.create_blocks_view(  context.* )
         , hive.create_transactions_view(  context.* )
         , hive.create_operations_view(  context.* )
+        , hive.create_operations_view_extended(  context.* )
         , hive.create_signatures_view(  context.* )
         , hive.create_accounts_view(  context.* )
         , hive.create_account_operations_view(  context.* )
@@ -278,6 +281,7 @@ BEGIN
         , hive.create_all_irreversible_blocks_view( context.* )
         , hive.create_all_irreversible_transactions_view( context.* )
         , hive.create_all_irreversible_operations_view( context.* )
+        , hive.create_all_irreversible_operations_view_extended( context.* )
         , hive.create_all_irreversible_signatures_view( context.* )
         , hive.create_all_irreversible_accounts_view( context.* )
         , hive.create_all_irreversible_account_operations_view( context.* )

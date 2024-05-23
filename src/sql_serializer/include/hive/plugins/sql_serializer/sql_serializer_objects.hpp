@@ -147,7 +147,6 @@ namespace hive
             int64_t operation_id = 0;
             int32_t trx_in_block = 0;
             int32_t op_in_trx = 0;
-            fc::time_point_sec timestamp;
             operation op;
 
             process_operation_t(
@@ -155,12 +154,11 @@ namespace hive
               , int32_t _block_number
               , const int32_t _trx_in_block
               , const int32_t _op_in_trx
-              , const fc::time_point_sec& time
               , const operation &_op
             )
             : block_data_base( _block_number )
             , operation_id{_operation_id }, trx_in_block{_trx_in_block}
-            , op_in_trx{_op_in_trx}, timestamp(time), op{_op} {
+            , op_in_trx{_op_in_trx}, op{_op} {
             }
           };
 

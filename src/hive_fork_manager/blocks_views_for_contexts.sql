@@ -335,6 +335,71 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.create_operations_view_extended( _context_name TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __schema TEXT;
+BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
+EXECUTE format(
+        'CREATE OR REPLACE VIEW %s.operations_view_extended
+         AS
+         SELECT t.id,
+            hive.operation_id_to_block_num( t.id ) as block_num,
+            t.trx_in_block,
+            t.op_pos,
+            hive.operation_id_to_type_id( t.id ) as op_type_id,
+            t.timestamp,
+            t.body_binary,
+            t.body_binary::jsonb AS body
+          FROM %s.context_data_view c,
+          LATERAL
+          (
+            SELECT
+              ho.id,
+              ho.trx_in_block,
+              ho.op_pos,
+              b.created_at timestamp,
+              ho.body_binary
+              FROM hive.operations ho
+              JOIN hive.blocks b ON b.num = hive.operation_id_to_block_num(ho.id)
+              WHERE hive.operation_id_to_block_num(ho.id) <= c.min_block
+            UNION ALL
+              SELECT
+                o.id,
+                o.trx_in_block,
+                o.op_pos,
+                visible_ops_timestamp.created_at timestamp,
+                o.body_binary
+              FROM hive.operations_reversible o
+              -- Reversible operations view must show ops comming from newest fork (specific to app-context)
+              -- and also hide ops present at earlier forks for given block
+              JOIN
+              (
+                SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
+                FROM hive.blocks_reversible hbr
+                WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
+                GROUP by hbr.num
+              ) visible_ops on visible_ops.num = hive.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
+              JOIN
+              (
+                SELECT hbr.num, created_at
+                FROM hive.blocks_reversible hbr
+              ) visible_ops_timestamp ON visible_ops_timestamp.num = visible_ops.num
+        ) t
+        ;', __schema, __schema
+    );
+    PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.create_operations_view( _context_name TEXT )
     RETURNS void
     LANGUAGE plpgsql
@@ -355,7 +420,6 @@ EXECUTE format(
             t.trx_in_block,
             t.op_pos,
             hive.operation_id_to_type_id( t.id ) as op_type_id,
-            t.timestamp,
             t.body_binary,
             t.body_binary::jsonb AS body
           FROM %s.context_data_view c,
@@ -365,7 +429,6 @@ EXECUTE format(
               ho.id,
               ho.trx_in_block,
               ho.op_pos,
-              ho.timestamp,
               ho.body_binary
               FROM hive.operations ho
               WHERE hive.operation_id_to_block_num(ho.id) <= c.min_block
@@ -374,7 +437,6 @@ EXECUTE format(
                 o.id,
                 o.trx_in_block,
                 o.op_pos,
-                o.timestamp,
                 o.body_binary
               FROM hive.operations_reversible o
               -- Reversible operations view must show ops comming from newest fork (specific to app-context)
@@ -390,6 +452,39 @@ EXECUTE format(
         ;', __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.create_all_irreversible_operations_view_extended( _context_name TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __schema TEXT;
+BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
+EXECUTE format(
+        'CREATE OR REPLACE VIEW %s.operations_view_extended
+         AS
+         SELECT
+            ho.id,
+            hive.operation_id_to_block_num( ho.id ) as block_num,
+            ho.trx_in_block,
+            ho.op_pos,
+            hive.operation_id_to_type_id( ho.id ) as op_type_id,
+            b.created_at timestamp,
+            ho.body_binary,
+            ho.body_binary::jsonb AS body
+        FROM hive.operations ho
+        JOIN hive.blocks b ON b.num = hive.operation_id_to_block_num(ho.id)
+        ;', __schema
+    );
+    PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
 END;
 $BODY$
 ;
@@ -415,7 +510,6 @@ EXECUTE format(
             ho.trx_in_block,
             ho.op_pos,
             hive.operation_id_to_type_id( ho.id ) as op_type_id,
-            ho.timestamp,
             ho.body_binary,
             ho.body_binary::jsonb AS body
         FROM hive.operations ho
@@ -425,7 +519,6 @@ EXECUTE format(
 END;
 $BODY$
 ;
-
 
 CREATE OR REPLACE FUNCTION hive.drop_operations_view( _context_name TEXT )
     RETURNS void
@@ -440,6 +533,23 @@ BEGIN
     FROM hive.contexts hc
     WHERE hc.name = _context_name;
     EXECUTE format( 'DROP VIEW IF EXISTS %s.operations_view CASCADE;', __schema );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.drop_operations_view_extended( _context_name TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __schema TEXT;
+BEGIN
+    SELECT hc.schema INTO __schema
+    FROM hive.contexts hc
+    WHERE hc.name = _context_name;
+    EXECUTE format( 'DROP VIEW IF EXISTS %s.operations_view_extended CASCADE;', __schema );
 END;
 $BODY$
 ;
