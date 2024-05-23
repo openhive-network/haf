@@ -371,9 +371,11 @@ $BODY$
             RAISE EXCEPTION 'No context with name %', __lead_context;
         END IF;
 
-        IF __context_state.is_attached = FALSE THEN
-            RAISE EXCEPTION 'Context % is detached', __lead_context;
-        END IF;
+        --TODO(mickiewicz@syncad.com) after attaching was hidden before apps we know we kan find next event
+        --remove the comment
+        --IF __context_state.is_attached = FALSE THEN
+        --    RAISE EXCEPTION 'Context % is detached', __lead_context;
+        --END IF;
 
         SELECT * INTO __context_state.next_event_id, __context_state.next_event_type,  __context_state.next_event_block_num
         FROM hive.find_next_event( _contexts );

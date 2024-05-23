@@ -277,6 +277,30 @@ ADD_TEST( NAME test_update_script
 
  ADD_SQL_FUNCTIONAL_TEST( app_api/operation_id.sql )
 
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/validate_stages.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/current_stage.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/current_live_stage.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/loop_commits.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/loop_update_current_stage.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/find_batch.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/end_block_range.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/current_batch.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/two_iterations.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/distance_to_hb_grew.sql)
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/two_iterations_no_reanalyzes.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/is_livesync.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/iteration_move_to_massive.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/iteration_move_to_massive2.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/negative.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/non_forking_app.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/process_BFF_event.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/process_BFF_in_irreversible_range.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/process_BFF_wrong_id.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/process_fork_and_MASSIVE_SYNC_event.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/process_SET_IRREVERSIBLE_event.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/process_squash_MASSIVE_SYNC_event.sql )
+
+
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork.sql )
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork_non_forking_app.sql )
 

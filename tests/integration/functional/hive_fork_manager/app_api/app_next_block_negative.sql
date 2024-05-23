@@ -22,12 +22,6 @@ BEGIN
         ASSERT FALSE, 'No expected exception for unexisted context';
     EXCEPTION WHEN OTHERS THEN
     END;
-
-    BEGIN
-        PERFORM hive.app_next_block( 'detached_context' );
-        ASSERT FALSE, 'No expected exception for a detached context';
-    EXCEPTION WHEN OTHERS THEN
-    END;
 END;
 $BODY$
 ;
