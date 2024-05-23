@@ -19,3 +19,6 @@ CREATE TYPE hive.application_stage AS (
 
 CREATE OR REPLACE VIEW hive.live_stage AS SELECT ( 'live', 0, 1 )::hive.application_stage AS value;
 
+DROP DOMAIN IF EXISTS hive.application_stages;
+CREATE DOMAIN hive.application_stages AS hive.application_stage[];
+
