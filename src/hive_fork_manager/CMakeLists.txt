@@ -3,6 +3,7 @@ ADD_PSQL_EXTENSION(
     SCHEMA_SOURCES context_rewind/data_schema_types.sql
              context_rewind/data_schema.sql
              context_rewind/table_schema.sql
+             application_loop/stages.sql
              events_queue.sql
              forks.sql
              app_context.sql
