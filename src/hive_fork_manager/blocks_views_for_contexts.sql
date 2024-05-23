@@ -356,7 +356,6 @@ EXECUTE format(
             t.trx_in_block,
             t.op_pos,
             hive.operation_id_to_type_id( t.id ) as op_type_id,
-            t.timestamp,
             t.body_binary,
             t.body_binary::jsonb AS body
           FROM %s.context_data_view c,
@@ -366,7 +365,6 @@ EXECUTE format(
               ho.id,
               ho.trx_in_block,
               ho.op_pos,
-              ho.timestamp,
               ho.body_binary
               FROM hive.operations ho
               WHERE hive.operation_id_to_block_num(ho.id) <= c.min_block
@@ -375,7 +373,6 @@ EXECUTE format(
                 o.id,
                 o.trx_in_block,
                 o.op_pos,
-                o.timestamp,
                 o.body_binary
               FROM hive.operations_reversible o
               -- Reversible operations view must show ops comming from newest fork (specific to app-context)
@@ -416,7 +413,6 @@ EXECUTE format(
             ho.trx_in_block,
             ho.op_pos,
             hive.operation_id_to_type_id( ho.id ) as op_type_id,
-            ho.timestamp,
             ho.body_binary,
             ho.body_binary::jsonb AS body
         FROM hive.operations ho

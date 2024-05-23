@@ -180,7 +180,7 @@ SELECT t.id,
        t.trx_in_block,
        t.op_pos,
        hive.operation_id_to_type_id_wrapper( t.id ) as op_type_id,
-       t.timestamp,
+       t._timestamp,
        t.body_binary,
        t.body
 FROM
@@ -189,7 +189,7 @@ FROM
           ho.id,
           ho.trx_in_block,
           ho.op_pos,
-          ho.timestamp,
+          '2016-06-22 19:10:23-07'::timestamp _timestamp,
           ho.body_binary,
           ho.body_binary::jsonb AS body
     FROM hive.operations ho
@@ -198,7 +198,7 @@ FROM
         o.id,
         o.trx_in_block,
         o.op_pos,
-        o.timestamp,
+        '2016-06-22 19:10:23-07'::timestamp _timestamp,
         o.body_binary,
         o.body_binary::jsonb AS body
       FROM hive.operations_reversible o
@@ -294,7 +294,7 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
         op.trx_in_block,
         op.op_pos,
         hive.operation_id_to_type_id_wrapper( op.id ) as op_type_id,
-        op.timestamp,
+        '2016-06-22 19:10:23-07'::timestamp timestamp,
         op.body_binary,
         op.body_binary::jsonb AS body
     FROM hive.operations op;

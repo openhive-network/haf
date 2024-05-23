@@ -204,7 +204,6 @@ BEGIN
                     ov.block_num,
                     ov.trx_in_block,
                     ov.op_pos,
-                    ov.timestamp,
                     ov.op_type_id
             FROM %2$s.operations_view ov
             WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT pmot.id FROM pow_op_type pmot)
@@ -214,7 +213,6 @@ BEGIN
             SELECT  (hive.get_keyauths(ov.body_binary)).*,
                     ov.id as op_serial_id,
                     ov.block_num,
-                    ov.timestamp,
                     ov.id as op_stable_id
             FROM pow_matching_ops ov
         ),
@@ -263,7 +261,6 @@ BEGIN
                         ov.block_num,
                         ov.trx_in_block,
                         ov.op_pos,
-                        ov.timestamp,
                         ov.op_type_id
                     FROM %2$s.operations_view ov
                     WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT mot.id FROM matching_op_types mot)
@@ -274,7 +271,6 @@ BEGIN
                         (hive.get_keyauths(ov.body_binary)).*,
                         ov.id as op_serial_id,
                         ov.block_num,
-                        ov.timestamp,
                         ov.id as op_stable_id
                     FROM matching_ops ov
                 ),
@@ -312,7 +308,6 @@ BEGIN
                     pow.w,
                     pow.op_serial_id,
                     pow.block_num,
-                    pow.timestamp,
                     pow.op_stable_id,
                     mb.min_block_num,
                     pow_min_block_num,
@@ -453,7 +448,7 @@ BEGIN
         (
             INSERT INTO hive.%1$s_keyauth_a AS auth_entries
             ( account_id, key_kind, key_serial_id, weight_threshold, w, op_serial_id, block_num, timestamp )
-            SELECT s.account_id, s.key_kind, s.key_id, s.weight_threshold, s.w, s.op_serial_id, s.block_num, s.timestamp
+            SELECT s.account_id, s.key_kind, s.key_id, s.weight_threshold, s.w, s.op_serial_id, s.block_num
             FROM extended_key_auth_records s
         --		LEFT JOIN delete_obsolete_key_auth_records d ON d.cleaned_account_id = s.account_id and d.cleaned_key_kind = s.key_kind
             ON CONFLICT ON CONSTRAINT pk_%1$s_keyauth_a DO UPDATE SET
@@ -462,7 +457,6 @@ BEGIN
             w =                   EXCLUDED.w,
             op_serial_id =        EXCLUDED.op_serial_id,
             block_num =           EXCLUDED.block_num,
-            timestamp =           EXCLUDED.timestamp
             RETURNING (xmax = 0) as is_new_entry, auth_entries.account_id, auth_entries.key_kind, auth_entries.key_serial_id as cleaned_key_id
         )
         ,delete_obsolete_keys_from_dict as
@@ -499,7 +493,7 @@ BEGIN
         (
             INSERT INTO hive.%1$s_accountauth_a AS ae
             ( account_id, key_kind, account_auth_id, weight_threshold, w, op_serial_id, block_num, timestamp )
-            SELECT s.account_id, s.key_kind, s.account_auth_id, s.weight_threshold, s.w, s.op_serial_id, s.block_num, s.timestamp
+            SELECT s.account_id, s.key_kind, s.account_auth_id, s.weight_threshold, s.w, s.op_serial_id, s.block_num
             FROM extended_account_auth_records s
             ON CONFLICT ON CONSTRAINT pk_%1$s_accountauth_a DO UPDATE SET
             account_auth_id = EXCLUDED.account_auth_id,
@@ -507,7 +501,6 @@ BEGIN
             w =                   EXCLUDED.w,
             op_serial_id =        EXCLUDED.op_serial_id,
             block_num =           EXCLUDED.block_num,
-            timestamp =           EXCLUDED.timestamp
             RETURNING (xmax = 0) as is_new_entry, ae.account_id, ae.key_kind, ae.account_auth_id as cleaned_account_auth_id
         )
 
