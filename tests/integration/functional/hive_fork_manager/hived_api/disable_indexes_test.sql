@@ -88,7 +88,7 @@ BEGIN
 
 
     ASSERT EXISTS(
-        SELECT * FROM hive.indexes_constraints WHERE table_name='hive.operations' AND command LIKE 'CREATE INDEX hive_operations_block_num_id_idx ON hive.operations USING btree (hive.operation_id_to_block_num_wrapper(id), id)'
+        SELECT * FROM hive.indexes_constraints WHERE table_name='hive.operations' AND command LIKE 'CREATE INDEX hive_operations_block_num_id_idx ON hive.operations USING btree (hive.operation_id_to_block_num(id), id)'
     ), 'No hive.operation index (block_num, id)';
 
     ASSERT EXISTS(
