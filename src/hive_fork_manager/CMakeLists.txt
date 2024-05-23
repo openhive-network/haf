@@ -61,6 +61,8 @@ ADD_PSQL_EXTENSION(
             types/cast_functions.sql
             types/casts.sql
             types/process_operation.sql
+
+            application_loop/stages_functions.sql
 )
 
 ADD_SUBDIRECTORY( shared_lib )
