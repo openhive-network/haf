@@ -32,3 +32,25 @@ BEGIN
     END IF;
 END;
 $BODY$;
+
+
+CREATE OR REPLACE FUNCTION hive.get_current_stage( _distance INTEGER, _stages hive.application_stages )
+    RETURNS hive.application_stage
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$BODY$
+DECLARE
+    __result hive.application_stage;
+BEGIN
+    --hmm lepiej to posortować w trakcie wsadzania do kontekstu, wtedy
+    SELECT s.stage INTO __result
+    FROM ( SELECT ROW(stages.*)::hive.application_stage as stage FROM UNNEST( _stages ) stages ) as s
+    WHERE s.stage.min_head_block_distance <= _distance
+    LIMIT 1;
+
+    ASSERT __result IS NOT NULL, 'No stage chosen for context';
+
+    RETURN __result;
+END;
+$BODY$;
