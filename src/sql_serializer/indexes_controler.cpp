@@ -50,6 +50,7 @@ indexes_controler::enable_indexes() {
   auto restore_account_operations_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.account_operations' )", "enable indexes" );
   auto restore_applied_hardforks_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.applied_hardforks' )", "enable indexes" );
 
+
   restore_blocks_idxs->join();
   restore_irreversible_idxs->join();
   restore_transactions_idxs->join();
@@ -58,6 +59,9 @@ indexes_controler::enable_indexes() {
   restore_account_operations_idxs->join();
   restore_accounts_idxs->join();
   restore_applied_hardforks_idxs->join();
+
+  auto analyze_expression_idxs = start_commit_sql( true, "hive.reanalyze_indexes_with_expressions()", "enable indexes" );
+  analyze_expression_idxs->join();
 
 
   fc::time_point cluster_start_time = fc::time_point::now();

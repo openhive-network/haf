@@ -1,3 +1,23 @@
+CREATE OR REPLACE FUNCTION hive.reanalyze_indexes_with_expressions()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    -- put here analyze for tables which indexes are using expressions
+    -- the function is called after hfm creates/drops indexes
+    -- without this statistics for expressions won't exists and planner
+    -- will choose wrongly execution plans
+
+    ANALYZE hive.operations;
+    ANALYZE hive.operations_reversible;
+    ANALYZE hive.account_operations;
+    ANALYZE hive.account_operations_reversible;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.back_from_fork( _block_num_before_fork INT )
     RETURNS void
     LANGUAGE plpgsql
@@ -165,7 +185,7 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'accounts' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'account_operations' );
 
-
+    PERFORM hive.reanalyze_indexes_with_expressions();
 END;
 $BODY$
 ;
@@ -206,7 +226,7 @@ BEGIN
     PERFORM hive.restore_indexes( 'hive.account_operations' );
     PERFORM hive.restore_indexes( 'hive.irreversible_data' );
 
-
+    PERFORM hive.reanalyze_indexes_with_expressions();
 END;
 $BODY$
 SET maintenance_work_mem TO '6GB';
@@ -257,7 +277,7 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'accounts_reversible' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'account_operations_reversible' );
 
-
+    PERFORM hive.reanalyze_indexes_with_expressions();
 
 END;
 $BODY$
@@ -288,6 +308,7 @@ BEGIN
     PERFORM hive.restore_foreign_keys( 'hive.account_operations_reversible' );
     PERFORM hive.restore_foreign_keys( 'hive.applied_hardforks_reversible' );
 
+    PERFORM hive.reanalyze_indexes_with_expressions();
 END;
 $BODY$
 ;
@@ -453,3 +474,4 @@ BEGIN
 END;
 $BODY$
 ;
+
