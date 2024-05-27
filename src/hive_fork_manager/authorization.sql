@@ -191,6 +191,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.operation_id_to_pos( _id hive.operations.id%TYPE )
     , hive.operation_id_to_type_id( _id hive.operations.id%TYPE )
     , hive.operation_id_to_block_num( _id hive.operations.id%TYPE )
+    , hive.reanalyze_indexes_with_expressions()
 TO hived_group;
 
 --- Required permissions to execute all callees of app_check_contexts_synchronized

@@ -110,3 +110,4 @@ CREATE INDEX IF NOT EXISTS hive_operations_reversible_block_num_type_id_trx_in_b
 CREATE INDEX IF NOT EXISTS hive_operations_reversible_block_num_id_idx ON hive.operations_reversible USING btree(hive.operation_id_to_block_num(id), id, fork_id);
 CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_operation_id_idx ON hive.account_operations_reversible(operation_id, fork_id);
 CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_type_account_id_op_seq_idx ON hive.account_operations_reversible( hive.operation_id_to_type_id( operation_id ), account_id, account_op_seq_no DESC, operation_id, hive.operation_id_to_block_num(operation_id) );
+
