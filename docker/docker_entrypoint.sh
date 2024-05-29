@@ -102,8 +102,8 @@ trap cleanup INT TERM
 trap cleanup EXIT
 
 {
-sudo --user=hived -En LD_PRELOAD=$OVERRIDE_LD_PRELOAD /bin/bash <<EOF
-echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
+sudo --user=hived -En LD_PRELOAD="$OVERRIDE_LD_PRELOAD" /bin/bash <<EOF
+echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[*]}"
 set -euo pipefail
 
 if [ ! -f "$DATADIR/config.ini" ]; then
@@ -146,7 +146,8 @@ fi
   --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --psql-wal-directory="$WAL_DIR" \
   --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
   ${HIVED_ARGS[@]}
-echo "$? Hived process finished execution."
+hived_return_code="\$?"
+echo "\$hived_return_code Hived process finished execution."
 EOF
 
 stop_postresql
@@ -250,7 +251,7 @@ if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
 
   echo "Attempting to setup postgres instance: running setup_postgres.sh..."
 
-  sudo -n /home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace" --install-extension=${HAF_INSTALL_EXTENSION:-yes}
+  sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh" --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace" --install-extension=${HAF_INSTALL_EXTENSION:-yes}
 
   echo "Postgres instance setup completed."
 
@@ -313,7 +314,7 @@ done
 
 export HIVED_ARGS
 
-echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
+echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[*]}"
 
 echo "${BASH_SOURCE[@]}"
 
@@ -321,8 +322,8 @@ status=0
 
 if [ ${DO_MAINTENANCE} -eq 1 ];
 then
-  echo "Running maintance script located at ${MAINTENANCE_SCRIPT_NAME} using additional command line arguments:" "${HIVED_ARGS[@]}"
-  $MAINTENANCE_SCRIPT_NAME ${HIVED_ARGS[@]}
+  echo "Running maintance script located at ${MAINTENANCE_SCRIPT_NAME} using additional command line arguments:" "${HIVED_ARGS[*]}"
+  $MAINTENANCE_SCRIPT_NAME "${HIVED_ARGS[@]}"
 elif [ ${PERFORM_DUMP} -eq 1 ];
 then
   echo "Attempting to perform instance snapshot dump"
