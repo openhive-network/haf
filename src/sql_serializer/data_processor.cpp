@@ -119,6 +119,11 @@ data_processor::data_processor( std::string description, std::string short_descr
 data_processor::~data_processor()
 {
   ilog("~data_processor: ${d}", ("d", _description));
+  try {
+    cancel();
+  }
+  catch (...) {
+  }
 }
 
 void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
@@ -181,6 +186,8 @@ void data_processor::cancel()
 
 void data_processor::join()
 {
+  if (!_future.valid()) return;
+
   _continue.store(false);
 
   {
