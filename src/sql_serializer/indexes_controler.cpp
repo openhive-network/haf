@@ -1,3 +1,4 @@
+#include <hive/plugins/sql_serializer/container_data_writer.h>
 #include <hive/plugins/sql_serializer/indexes_controler.h>
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
 
@@ -50,15 +51,16 @@ indexes_controler::enable_indexes() {
   auto restore_account_operations_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.account_operations' )", "enable indexes" );
   auto restore_applied_hardforks_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.applied_hardforks' )", "enable indexes" );
 
-
-  restore_blocks_idxs->join();
-  restore_irreversible_idxs->join();
-  restore_transactions_idxs->join();
-  restore_transactions_sigs_idxs->join();
-  restore_operations_idxs->join();
-  restore_account_operations_idxs->join();
-  restore_accounts_idxs->join();
-  restore_applied_hardforks_idxs->join();
+  join_writers(
+    *restore_blocks_idxs,
+    *restore_irreversible_idxs,
+    *restore_transactions_idxs,
+    *restore_transactions_sigs_idxs,
+    *restore_operations_idxs,
+    *restore_account_operations_idxs,
+    *restore_accounts_idxs,
+    *restore_applied_hardforks_idxs
+  );
 
   auto analyze_expression_idxs = start_commit_sql( true, "hive.reanalyze_indexes_with_expressions()", "enable indexes" );
   analyze_expression_idxs->join();
@@ -95,13 +97,15 @@ indexes_controler::enable_constrains() {
   auto restore_accounts_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.accounts' )", "enable indexes" );
   auto restore_applied_hardforks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.applied_hardforks' )", "enable indexes" );
 
-  restore_irreversible_fks->join();
-  restore_transactions_fks->join();
-  restore_transactions_sigs_fks->join();
-  restore_operations_fks->join();
-  restore_account_operations_fks->join();
-  restore_accounts_fks->join();
-  restore_applied_hardforks_fks->join();
+  join_writers(
+    *restore_irreversible_fks,
+    *restore_transactions_fks,
+    *restore_transactions_sigs_fks,
+    *restore_operations_fks,
+    *restore_account_operations_fks,
+    *restore_accounts_fks,
+    *restore_applied_hardforks_fks
+  );
 
   auto restore_blocks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.blocks' )", "enable indexes" );
   restore_blocks_fks->join();
