@@ -20,7 +20,7 @@ P2P_ENDPOINT = "0.0.0.0:2000"
 BLOCK_LOG_DIRECTORY: Final[Path] = Path(__file__).parent / f"block_log_{SIGNATURE_TYPE}"
 
 # Node parameters
-SHARED_MEMORY_FILE_DIRECTORY: Final[str] = "/home/haf_admin/ramdisk"
+SHARED_MEMORY_FILE_DIRECTORY: Final[str] = Path(__file__).parent/"generated"
 SHARED_MEMORY_FILE_SIZE: Final[int] = 24
 WEBSERVER_THREAD_POOL_SIZE: Final[int] = 16
 
@@ -73,7 +73,7 @@ def full_block_generator(signature_type: Literal["open_sign", "multi_sign", "sin
         wait_for_live=True,
         alternate_chain_specs=tt.AlternateChainSpecs.parse_file(alternate_chain_spec_path),
         # Code needed if the script is running with real system time
-        # time_control=tt.StartTimeControl(start_time=block_log.get_head_block_time()),
+        time_control=tt.StartTimeControl(start_time=block_log.get_head_block_time()),
         arguments=[f"--shared-file-dir={SHARED_MEMORY_FILE_DIRECTORY}", f"--chain-id={CHAIN_ID}"],
     )
 
