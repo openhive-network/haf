@@ -56,7 +56,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void reindex_data_dumper::join() {
     // _end_massive_sync_processor should be joined last
-    join_writers(
+    join_processors(
         *_block_writer
       , *_transaction_writer
       , *_transaction_multisig_writer

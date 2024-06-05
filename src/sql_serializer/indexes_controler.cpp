@@ -51,7 +51,7 @@ indexes_controler::enable_indexes() {
   auto restore_account_operations_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.account_operations' )", "enable indexes" );
   auto restore_applied_hardforks_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive.applied_hardforks' )", "enable indexes" );
 
-  join_writers(
+  join_processors(
     *restore_blocks_idxs,
     *restore_irreversible_idxs,
     *restore_transactions_idxs,
@@ -97,7 +97,7 @@ indexes_controler::enable_constrains() {
   auto restore_accounts_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.accounts' )", "enable indexes" );
   auto restore_applied_hardforks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive.applied_hardforks' )", "enable indexes" );
 
-  join_writers(
+  join_processors(
     *restore_irreversible_fks,
     *restore_transactions_fks,
     *restore_transactions_sigs_fks,
