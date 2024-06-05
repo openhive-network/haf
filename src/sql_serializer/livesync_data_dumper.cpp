@@ -112,7 +112,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void livesync_data_dumper::join() {
-    join_writers(
+    join_processors(
         *_block_writer
       , *_transaction_writer
       , *_transaction_multisig_writer

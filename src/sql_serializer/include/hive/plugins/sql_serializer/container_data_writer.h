@@ -153,7 +153,7 @@ namespace hive::plugins::sql_serializer {
 
   template< typename Writer >
   inline std::exception_ptr
-  join_writers_impl( Writer& writer ) try {
+  join_processors_impl( Writer& writer ) try {
     try{
       writer.join();
     }
@@ -165,9 +165,9 @@ namespace hive::plugins::sql_serializer {
 
   template< typename Writer, typename... Writers >
   inline std::exception_ptr
-  join_writers_impl( Writer& writer, Writers& ...writers ) {
-    std::exception_ptr current_exception = join_writers_impl( writer );;
-    auto next_exception = join_writers_impl( writers... );
+  join_processors_impl( Writer& writer, Writers& ...writers ) {
+    std::exception_ptr current_exception = join_processors_impl( writer );;
+    auto next_exception = join_processors_impl( writers... );
     if ( current_exception != nullptr ) {
       return current_exception;
     }
@@ -176,8 +176,8 @@ namespace hive::plugins::sql_serializer {
 
   template< typename... Writers >
   inline void
-  join_writers( Writers& ...writers ) {
-    auto exception = join_writers_impl( writers... );
+  join_processors( Writers& ...writers ) {
+    auto exception = join_processors_impl( writers... );
     if ( exception != nullptr ) {
       std::rethrow_exception( exception );
     }
