@@ -303,3 +303,16 @@ LABEL io.hive.image.branch="$GIT_CURRENT_BRANCH"
 LABEL io.hive.image.commit.log_message="$GIT_LAST_LOG_MESSAGE"
 LABEL io.hive.image.commit.author="$GIT_LAST_COMMITTER"
 LABEL io.hive.image.commit.date="$GIT_LAST_COMMIT_DATE"
+
+FROM ${CI_REGISTRY_IMAGE}${IMAGE_TAG_PREFIX}base_instance:${BUILD_IMAGE_TAG} AS faketime-instance
+
+ARG FAKETIME="@2016-09-16 01:21:33"
+
+ENV LD_PRELOAD="/home/hived_admin/hive_base_config/faketime/src/libfaketime.so.1"
+ENV OVERRIDE_LD_PRELOAD=${LD_PRELOAD}}
+ENV FAKETIME_DONT_FAKE_MONOTONIC=1
+ENV FAKETIME_DONT_RESET=1
+ENV TZ="UTC"
+ENV FAKETIME=$FAKETIME
+
+ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
