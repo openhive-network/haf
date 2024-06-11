@@ -190,4 +190,37 @@ namespace hive::plugins::sql_serializer {
       std::rethrow_exception( exception );
     }
   }
+
+  template< typename Processor >
+  inline std::exception_ptr
+  cancel_processors_impl( Processor& processor ) try {
+    try{
+      processor.join();
+    }
+    FC_CAPTURE_AND_RETHROW()
+    return nullptr;
+  } catch( ... ) {
+    return std::current_exception();
+  }
+
+  template< typename Processor, typename... Processors >
+  inline std::exception_ptr
+  cancel_processors_impl( Processor& processor, Processors& ...processors ) {
+    std::exception_ptr current_exception = cancel_processors_impl( processor );;
+    auto next_exception = cancel_processors_impl( processors... );
+    if ( current_exception != nullptr ) {
+      return current_exception;
+    }
+    return next_exception;
+  }
+
+  template< typename... Processors >
+  inline void
+  cancel_processors( Processors& ...processors ) {
+    auto exception = cancel_processors_impl( processors... );
+    if ( exception != nullptr ) {
+      std::rethrow_exception( exception );
+    }
+  }
+
 } // namespace hive::plugins::sql_serializer
