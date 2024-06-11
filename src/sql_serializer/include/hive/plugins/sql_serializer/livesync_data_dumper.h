@@ -60,6 +60,7 @@ namespace hive::plugins::sql_serializer {
 
     transaction_controllers::transaction_controller& get_transaction_controller() { return *transactions_controller; };
 
+    void cancel();
     void join();
     void on_irreversible_block( uint32_t block_num );
     void on_switch_fork( uint32_t block_num );
@@ -97,6 +98,7 @@ namespace hive::plugins::sql_serializer {
 
     const appbase::abstract_plugin& _plugin;
     hive::chain::database& _chain_db;
+    appbase::application& app;
 
     std::unique_ptr< block_data_container_t_writer > _block_writer;
     std::unique_ptr< transaction_data_container_t_writer > _transaction_writer;

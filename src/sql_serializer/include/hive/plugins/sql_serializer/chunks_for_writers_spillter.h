@@ -23,6 +23,7 @@ namespace hive::plugins::sql_serializer {
 
       void trigger( typename TableWriter::DataContainerType::container&& data, uint32_t last_block_num );
       void join();
+      void cancel();
       void complete_data_processing();
 
     protected:
@@ -165,6 +166,14 @@ namespace hive::plugins::sql_serializer {
   chunks_for_writers_splitter_base< TableWriter >::join() {
     for ( auto& writer : writers ) {
       writer.join();
+    }
+  }
+
+  template< typename TableWriter >
+  inline void
+  chunks_for_writers_splitter_base< TableWriter >::cancel() {
+    for ( auto& writer : writers ) {
+      writer.cancel();
     }
   }
 

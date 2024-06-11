@@ -9,7 +9,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , appbase::application& app
     , uint32_t operations_threads
     , uint32_t transactions_threads
-    , uint32_t account_operation_threads ) {
+    , uint32_t account_operation_threads ) : app(app) {
     ilog( "Starting reindexing dump to database with ${o} operations and ${t} transactions threads", ("o", operations_threads )("t", transactions_threads) );
     _transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "reindex dumper", app );
     _end_massive_sync_processor = std::make_unique< end_massive_sync_processor >( db_url, app );
@@ -45,6 +45,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void reindex_data_dumper::trigger_data_flush( cached_data_t& cached_data, int last_block_num ) {
+    if (app.is_interrupt_request())
+    {
+      cancel();
+      return;
+    }
     _block_writer->trigger( std::move( cached_data.blocks ), last_block_num );
     _transaction_writer->trigger( std::move( cached_data.transactions ), last_block_num);
     _operation_writer->trigger( std::move( cached_data.operations ), last_block_num );
@@ -52,6 +57,21 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_writer->trigger( std::move( cached_data.accounts ), last_block_num );
     _account_operations_writer->trigger( std::move( cached_data.account_operations ), last_block_num );
     _applied_hardforks_writer->trigger( std::move( cached_data.applied_hardforks ), last_block_num );
+  }
+
+  void reindex_data_dumper::cancel() {
+    std::exception_ptr e;
+    try {_block_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_transaction_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_operation_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_transaction_multisig_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_account_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_account_operations_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_applied_hardforks_writer->cancel();} catch (...) {e = std::current_exception();}
+    if (e)
+    {
+      std::rethrow_exception(e);
+    }
   }
 
   void reindex_data_dumper::join() {

@@ -46,6 +46,7 @@ namespace hive::plugins::sql_serializer {
         void trigger(DataContainer&& data, uint32_t last_block_num);
         void complete_data_processing();
         void join();
+        void cancel();
 
       private:
         using data_processing_status = data_processor::data_processing_status;
@@ -95,6 +96,13 @@ namespace hive::plugins::sql_serializer {
   container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::join()
   {
     _processor->join();
+  }
+
+  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor>
+  inline void
+  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::cancel()
+  {
+    _processor->cancel();
   }
 
   template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor>
