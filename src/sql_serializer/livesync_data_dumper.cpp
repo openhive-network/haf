@@ -18,6 +18,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     )
   : _plugin( plugin )
   , _chain_db( chain_db )
+  , app(app)
   , transactions_controller(transaction_controllers::build_own_transaction_controller(db_url, "Livesync dumper", app, true /*sync_commits*/))
   , _psql_first_block( psql_first_block )
   , _write_ahead_log(write_ahead_log)
@@ -94,6 +95,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void livesync_data_dumper::trigger_data_flush( cached_data_t& cached_data, int last_block_num ) {
     FC_ASSERT( cached_data.blocks.size() == 1, "LIVE sync can only process one block" );
+    if (app.is_interrupt_request())
+    {
+      cancel();
+      return;
+    }
     _block_writer->trigger( std::move( cached_data.blocks ), last_block_num );
     _operation_writer->trigger( std::move( cached_data.operations ), last_block_num );
     _transaction_writer->trigger( std::move( cached_data.transactions ), last_block_num);
@@ -109,6 +115,21 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_writer->complete_data_processing();
     _account_operations_writer->complete_data_processing();
     _applied_hardforks_writer->complete_data_processing();
+  }
+
+  void livesync_data_dumper::cancel() {
+    std::exception_ptr e;
+    try {_block_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_transaction_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_operation_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_transaction_multisig_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_account_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_account_operations_writer->cancel();} catch (...) {e = std::current_exception();}
+    try {_applied_hardforks_writer->cancel();} catch (...) {e = std::current_exception();}
+    if (e)
+    {
+      std::rethrow_exception(e);
+    }
   }
 
   void livesync_data_dumper::join() {

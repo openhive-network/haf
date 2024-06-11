@@ -143,7 +143,7 @@ void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
   {
     dlog("Waiting until data_processor ${d} will consume a data...", ("d", _description));
     std::unique_lock<std::mutex> lk(_mtx);
-    _cv.wait(lk, [this] {return _dataPtr.valid() == false; });
+    _cv.wait(lk, [this] {return _dataPtr.valid() == false || _cancel; });
   }
 
   dlog("Leaving trigger of data data processor: ${d}...", ("d", _description));
@@ -191,7 +191,10 @@ void data_processor::join()
   _cv.notify_one();
 
   try {
+    if (_future.valid())
+    {
       _future.get();
+    }
   } catch (...) {
     elog( "Caught unhandled exception ${diagnostic}", ("diagnostic", boost::current_exception_diagnostic_information()) );
     throw;
@@ -204,8 +207,10 @@ void
 data_processor::handle_exception( std::exception_ptr exception_ptr ) {
   try {
     if ( exception_ptr ) {
+      std::unique_lock<std::mutex> lk(_mtx);
       _cancel.store(true);
       _continue.store(false);
+      _cv.notify_one();
       std::rethrow_exception( exception_ptr );
     }
   }

@@ -38,4 +38,10 @@ namespace sql_serializer {
       assert( _data_processor );
       _data_processor->join();
     }
+
+    void
+    end_massive_sync_processor::cancel() {
+      assert( _data_processor );
+      _data_processor->cancel();
+    }
 }}} // namespace hive { namespace plugins { namespace sql_serializer {
