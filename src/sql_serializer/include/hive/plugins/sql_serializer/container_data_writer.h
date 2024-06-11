@@ -159,6 +159,16 @@ namespace hive::plugins::sql_serializer {
     return processingStatus;
   }
 
+  /**
+   * Returns first non-falsy value. If all values are falsy, return default constructed value.
+   */
+  template<typename T, size_t N>
+  inline T coalesce(std::array<T, N> a) {
+    auto it = std::find_if(std::begin(a), std::end(a), [](const T& t){return (bool)t;});
+    if (it != std::end(a)) return *it;
+    return {};
+  }
+
   template< typename Processor >
   inline std::exception_ptr
   join_processors_impl( Processor& processor ) try {
@@ -171,21 +181,10 @@ namespace hive::plugins::sql_serializer {
     return std::current_exception();
   }
 
-  template< typename Processor, typename... Processors >
-  inline std::exception_ptr
-  join_processors_impl( Processor& processor, Processors& ...processors ) {
-    std::exception_ptr current_exception = join_processors_impl( processor );;
-    auto next_exception = join_processors_impl( processors... );
-    if ( current_exception != nullptr ) {
-      return current_exception;
-    }
-    return next_exception;
-  }
-
   template< typename... Processors >
   inline void
   join_processors( Processors& ...processors ) {
-    auto exception = join_processors_impl( processors... );
+    auto exception = coalesce(std::array{join_processors_impl(processors)...});
     if ( exception != nullptr ) {
       std::rethrow_exception( exception );
     }
@@ -203,21 +202,10 @@ namespace hive::plugins::sql_serializer {
     return std::current_exception();
   }
 
-  template< typename Processor, typename... Processors >
-  inline std::exception_ptr
-  cancel_processors_impl( Processor& processor, Processors& ...processors ) {
-    std::exception_ptr current_exception = cancel_processors_impl( processor );;
-    auto next_exception = cancel_processors_impl( processors... );
-    if ( current_exception != nullptr ) {
-      return current_exception;
-    }
-    return next_exception;
-  }
-
   template< typename... Processors >
   inline void
   cancel_processors( Processors& ...processors ) {
-    auto exception = cancel_processors_impl( processors... );
+    auto exception = coalesce(std::array{cancel_processors_impl(processors)...});
     if ( exception != nullptr ) {
       std::rethrow_exception( exception );
     }
