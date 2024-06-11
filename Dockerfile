@@ -5,6 +5,7 @@ ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
 ARG CI_IMAGE_TAG=ubuntu22.04-12
 
 ARG BUILD_IMAGE_TAG
+ARG IMAGE_TAG_PREFIX
 
 FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu22.04-10 AS minimal-runtime
 
@@ -193,7 +194,7 @@ LABEL io.hive.image.commit.log_message="$GIT_LAST_LOG_MESSAGE"
 LABEL io.hive.image.commit.author="$GIT_LAST_COMMITTER"
 LABEL io.hive.image.commit.date="$GIT_LAST_COMMIT_DATE"
 
-FROM ${CI_REGISTRY_IMAGE}base_instance:${BUILD_IMAGE_TAG} as instance
+FROM ${CI_REGISTRY_IMAGE}${IMAGE_TAG_PREFIX}base_instance:${BUILD_IMAGE_TAG} as instance
 
 # Embedded postgres service
 EXPOSE 5432
