@@ -60,18 +60,15 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void reindex_data_dumper::cancel() {
-    std::exception_ptr e;
-    try {_block_writer->cancel();} catch (...) {e = std::current_exception();}
-    try {_transaction_writer->cancel();} catch (...) {e = std::current_exception();}
-    try {_operation_writer->cancel();} catch (...) {e = std::current_exception();}
-    try {_transaction_multisig_writer->cancel();} catch (...) {e = std::current_exception();}
-    try {_account_writer->cancel();} catch (...) {e = std::current_exception();}
-    try {_account_operations_writer->cancel();} catch (...) {e = std::current_exception();}
-    try {_applied_hardforks_writer->cancel();} catch (...) {e = std::current_exception();}
-    if (e)
-    {
-      std::rethrow_exception(e);
-    }
+    cancel_processors(
+      *_block_writer,
+      *_transaction_writer,
+      *_operation_writer,
+      *_transaction_multisig_writer,
+      *_account_writer,
+      *_account_operations_writer,
+      *_applied_hardforks_writer
+    );
   }
 
   void reindex_data_dumper::join() {
