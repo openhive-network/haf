@@ -159,11 +159,11 @@ namespace hive::plugins::sql_serializer {
     return processingStatus;
   }
 
-  template< typename Writer >
+  template< typename Processor >
   inline std::exception_ptr
-  join_processors_impl( Writer& writer ) try {
+  join_processors_impl( Processor& processor ) try {
     try{
-      writer.join();
+      processor.join();
     }
     FC_CAPTURE_AND_RETHROW()
     return nullptr;
@@ -171,21 +171,21 @@ namespace hive::plugins::sql_serializer {
     return std::current_exception();
   }
 
-  template< typename Writer, typename... Writers >
+  template< typename Processor, typename... Processors >
   inline std::exception_ptr
-  join_processors_impl( Writer& writer, Writers& ...writers ) {
-    std::exception_ptr current_exception = join_processors_impl( writer );;
-    auto next_exception = join_processors_impl( writers... );
+  join_processors_impl( Processor& processor, Processors& ...processors ) {
+    std::exception_ptr current_exception = join_processors_impl( processor );;
+    auto next_exception = join_processors_impl( processors... );
     if ( current_exception != nullptr ) {
       return current_exception;
     }
     return next_exception;
   }
 
-  template< typename... Writers >
+  template< typename... Processors >
   inline void
-  join_processors( Writers& ...writers ) {
-    auto exception = join_processors_impl( writers... );
+  join_processors( Processors& ...processors ) {
+    auto exception = join_processors_impl( processors... );
     if ( exception != nullptr ) {
       std::rethrow_exception( exception );
     }
