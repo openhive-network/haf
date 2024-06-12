@@ -146,6 +146,11 @@ BEGIN
         COMMIT;
     END IF;
 
+    IF EXISTS( SELECT 1 FROM hive.contexts hc WHERE hc.name = ANY(_contexts) AND hc.stages = NULL )
+    THEN
+        RAISE EXCEPTION 'Some contexts from group % have no stages defined and cannot be used with hive.app_next_iteration', _contexts;
+    END IF;
+
     SELECT (hc.loop).* INTO __lead_context_state
     FROM hive.contexts hc WHERE hc.name = __lead_context_name;
 

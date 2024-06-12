@@ -18,9 +18,8 @@ BEGIN
     PERFORM hive.end_massive_sync(1);
 
     CREATE SCHEMA A;
-    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
-    UPDATE hive.contexts
-    SEt stages = __context_stages;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a', _stages => __context_stages  );
+
     CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
 
     PERFORM hive.push_block(

@@ -40,22 +40,9 @@ DECLARE
             ];
 BEGIN
     CREATE SCHEMA alice;
-    PERFORM hive.app_create_context( 'alice', 'alice' );
-    PERFORM hive.app_create_context( 'alice1', 'alice' );
-    PERFORM hive.app_create_context( 'alice2', 'alice' );
-
-    UPDATE hive.contexts hc
-    SET stages = __alice_stages
-    WHERE hc.name ='alice';
-
-    UPDATE hive.contexts hc
-    SET stages = __alice1_stages
-    WHERE hc.name ='alice1';
-
-    UPDATE hive.contexts hc
-    SET stages = __alice2_stages
-    WHERE hc.name ='alice2';
-
+    PERFORM hive.app_create_context( 'alice', 'alice', _stages => __alice_stages );
+    PERFORM hive.app_create_context( 'alice1', 'alice', _stages => __alice1_stages );
+    PERFORM hive.app_create_context( 'alice2', 'alice', _stages => __alice2_stages );
 END;
 $BODY$;
 

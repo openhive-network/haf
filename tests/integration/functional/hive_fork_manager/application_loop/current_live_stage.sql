@@ -38,25 +38,13 @@ DECLARE
             ];
 BEGIN
     CREATE SCHEMA alice;
-    PERFORM hive.app_create_context( 'alice', 'alice' );
-    PERFORM hive.app_create_context( 'alice1', 'alice' );
-    PERFORM hive.app_create_context( 'alice2', 'alice' );
+    PERFORM hive.app_create_context( 'alice', 'alice', _stages => __alice_stages );
+    PERFORM hive.app_create_context( 'alice1', 'alice', _stages => __alice1_stages );
+    PERFORM hive.app_create_context( 'alice2', 'alice', _stages => __alice2_stages );
 
     -- temporary insert stage by force
-    UPDATE hive.contexts hc
-    SET   stages = __alice_stages
-        , current_block_num = 80
-    WHERE hc.name ='alice';
-
-    UPDATE hive.contexts hc
-    SET stages = __alice1_stages
-      , current_block_num = 80
-    WHERE hc.name ='alice1';
-
-    UPDATE hive.contexts hc
-    SET stages = __alice2_stages
-      , current_block_num = 80
-    WHERE hc.name ='alice2';
+    UPDATE hive.contexts
+    SET current_block_num = 80;
 END;
 $BODY$;
 

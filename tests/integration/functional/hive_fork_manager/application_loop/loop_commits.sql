@@ -2,9 +2,15 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
     LANGUAGE 'plpgsql'
 AS
 $BODY$
+DECLARE
+    __context_stages hive.application_stages :=
+        ARRAY[
+            ('massive',2 ,100 )::hive.application_stage
+            , hive.live_stage()
+            ];
 BEGIN
     CREATE SCHEMA alice;
-    PERFORM hive.app_create_context( 'alice', 'alice' );
+    PERFORM hive.app_create_context( 'alice', 'alice', _stages => __context_stages );
 END;
 $BODY$;
 

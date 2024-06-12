@@ -33,11 +33,9 @@ BEGIN
     UPDATE hive.irreversible_data SET consistent_block = 3;
 
     CREATE SCHEMA A;
-    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a', _stages => __context_stages  );
     CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
 
-    UPDATE hive.contexts
-    SET stages = __context_stages;
 END;
 $BODY$
 ;

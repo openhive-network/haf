@@ -3,6 +3,7 @@ CREATE OR REPLACE FUNCTION hive.app_create_context(
     , _schema TEXT
     , _is_forking BOOLEAN = TRUE
     , _is_attached BOOLEAN = TRUE
+    , _stages hive.application_stages = NULL
 )
     RETURNS void
     LANGUAGE plpgsql
@@ -19,6 +20,7 @@ BEGIN
         , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
         , _is_forking
         , _is_attached
+        , _stages
     );
 
     PERFORM hive.create_context_data_view( _name );

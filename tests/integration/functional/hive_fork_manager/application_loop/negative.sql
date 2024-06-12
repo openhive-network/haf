@@ -3,13 +3,21 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
 AS
 $BODY$
+DECLARE
+    __context_stages hive.application_stages :=
+        ARRAY[
+            ('massive',2 ,100 )::hive.application_stage
+            , hive.live_stage()
+            ];
 BEGIN
     CREATE SCHEMA A;
-    PERFORM hive.app_create_context( 'attached_context', _schema => 'a', _is_forking => FALSE );
-    PERFORM hive.app_create_context( 'attached_context_not_insync', _schema => 'a', _is_forking => FALSE );
-    PERFORM hive.app_create_context( 'detached_context', _schema => 'a', _is_forking => FALSE );
-    PERFORM hive.app_create_context( 'forking_context', 'a' );
+    PERFORM hive.app_create_context( 'attached_context', _schema => 'a', _is_forking => FALSE, _stages => __context_stages );
+    PERFORM hive.app_create_context( 'attached_context_not_insync', _schema => 'a', _is_forking => FALSE, _stages => __context_stages );
+    PERFORM hive.app_create_context( 'detached_context', _schema => 'a', _is_forking => FALSE, _stages => __context_stages );
+    PERFORM hive.app_create_context( 'forking_context', 'a', _stages => __context_stages );
+    PERFORM hive.app_create_context( 'nostaged_context', 'a' );
     PERFORM hive.app_context_detach( 'detached_context' );
+
 
     UPDATE hive.contexts ctx
     SET current_block_num = 100
@@ -54,6 +62,12 @@ BEGIN
     BEGIN
         PERFORM hive.app_next_iteration( ARRAY[ 'attached_context', 'attached_context_not_insync' ], __blocks );
         ASSERT FALSE, 'No expected exception for non in sync cntexts';
+    EXCEPTION WHEN OTHERS THEN
+    END;
+
+    BEGIN
+        PERFORM hive.app_next_iteration( ARRAY[ 'nostaged_context' ], __blocks );
+        ASSERT FALSE, 'No expected exception for using context without stages';
     EXCEPTION WHEN OTHERS THEN
     END;
 END;

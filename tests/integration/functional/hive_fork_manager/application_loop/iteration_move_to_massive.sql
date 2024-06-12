@@ -14,8 +14,7 @@ DECLARE
     __blocks hive.blocks_range;
 BEGIN
     CREATE SCHEMA A;
-    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
-    UPDATE hive.contexts hc SET stages = _context_stages;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a', _stages => _context_stages );
 
     CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
 
