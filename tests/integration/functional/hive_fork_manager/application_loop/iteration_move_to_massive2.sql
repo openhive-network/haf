@@ -148,12 +148,7 @@ BEGIN
                );
 
     CREATE SCHEMA A;
-    PERFORM hive.app_create_context('context', _schema => 'a', _is_forking => FALSE);
-    UPDATE hive.contexts hc SET stages = __context_stages;
-
-    -- PERFORM hive.app_next_block('context'); -- (1,6)
-    --PERFORM hive.app_context_detach('context');
-    --PERFORM hive.app_set_current_block_num('context', 6);
+    PERFORM hive.app_create_context('context', _schema => 'a', _is_forking => FALSE, _stages => __context_stages );
 END;
 $BODY$
 ;

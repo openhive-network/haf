@@ -24,16 +24,8 @@ BEGIN
 
     CREATE SCHEMA A;
 
-    PERFORM hive.app_create_context( 'context', _schema => 'a', _is_forking => FALSE );
-    PERFORM hive.app_create_context( 'context_b', _schema => 'a', _is_forking => FALSE );
-
-    UPDATE hive.contexts hc
-    SET stages = __context_stages
-    WHERE hc.name ='context';
-
-    UPDATE hive.contexts hc
-    SET stages = __context_b_stages
-    WHERE hc.name ='context_b';
+    PERFORM hive.app_create_context( 'context', _schema => 'a', _is_forking => FALSE, _stages => __context_stages );
+    PERFORM hive.app_create_context( 'context_b', _schema => 'a', _is_forking => FALSE, _stages => __context_b_stages );
 END;
 $BODY$
 ;

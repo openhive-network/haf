@@ -5,6 +5,7 @@ CREATE OR REPLACE FUNCTION hive.context_create(
     , _irreversible_block INT = 0
     , _is_forking BOOLEAN = TRUE
     , _is_attached BOOLEAN = TRUE
+    , _stages hive.application_stages = NULL
 )
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -29,6 +30,7 @@ BEGIN
         , last_active_at
         , schema
         , baseclass_id
+        , stages
     )
     VALUES(
            _name
@@ -42,6 +44,7 @@ BEGIN
           , NOW()
           , _schema
           , ( _schema || '.' || _name )::regclass
+          , _stages
     );
 END;
 $BODY$
