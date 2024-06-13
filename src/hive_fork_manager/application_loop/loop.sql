@@ -159,8 +159,8 @@ BEGIN
     -- 2. find current stage if:
     IF hive.is_stages_analyze_required( __lead_context_state, hive.get_irreversible_head_block() )
     THEN
-        IF hive.is_abs_livesync( _contexts )
-           AND NOT hive.app_context_are_attached( _contexts )
+        -- hive.is_abs_livesync( _contexts )
+        IF NOT hive.app_context_are_attached( _contexts )
         THEN
             PERFORM hive.app_context_attach( _contexts );
         END IF;
