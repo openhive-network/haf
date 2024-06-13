@@ -202,3 +202,12 @@ BEGIN
     -- 4. returns range of blocks to process together with context stages
 END;
 $body$;
+
+CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _context hive.context_name, _blocks_range OUT hive.blocks_range )
+    LANGUAGE 'plpgsql'
+AS
+$body$
+BEGIN
+    CALL hive.app_next_iteration( ARRAY[ _context ], _blocks_range );
+END;
+$body$;
