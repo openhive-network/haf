@@ -35,33 +35,27 @@ DECLARE
     __head_fork_id INT;
     __app_fork_id INT;
     __current_event_id INT;
+    __max_reversible_block INT;
+    __min_reversible_block INT;
+    __context_stages hive.application_stages :=
+        ARRAY[
+            ('massive',30 ,20000 )::hive.application_stage
+            , hive.live_stage()
+            ];
 BEGIN
     CREATE SCHEMA test;
-    PERFORM hive.app_create_context( 'test', 'test' );
+    PERFORM hive.app_create_context( 'test', 'test', _stages => __context_stages );
 
     WHILE true LOOP
-            COMMIT;
-            __next_block_range := hive.app_next_block(ARRAY['test']);
+            CALL hive.app_next_iteration(ARRAY['test'], __next_block_range);
             RAISE NOTICE 'App is processing blocks %', __next_block_range;
 
-            IF __next_block_range IS NOT NULL AND __next_block_range.last_block = __last_block THEN
+            IF __next_block_range IS NOT NULL AND __next_block_range.last_block >= __last_block THEN
                 RAISE NOTICE 'App has already processed all event';
                 RETURN;
             END IF;
 
             IF __next_block_range IS NULL THEN
-                CONTINUE;
-            END IF;
-
-            IF __next_block_range.last_block - __next_block_range.first_block > __detach_limit THEN
-                SELECT events_id INTO __current_event_id FROM hive.contexts WHERE name = 'test';
-                RAISE NOTICE 'App is detaching and attaching its context';
-                RAISE NOTICE 'App event id %', __current_event_id;
-                RAISE NOTICE 'App before detach current_block_num %', hive.app_get_current_block_num( 'test' );
-                PERFORM hive.app_context_detach( ARRAY[ 'test' ] );
-                PERFORM hive.app_set_current_block_num( ARRAY[ 'test' ], __next_block_range.last_block );
-                CALL hive.appproc_context_attach( ARRAY[ 'test' ] );
-                RAISE NOTICE 'App after attach current_block_num %', hive.app_get_current_block_num( 'test' );
                 CONTINUE;
             END IF;
 
@@ -72,7 +66,12 @@ BEGIN
             RAISE NOTICE 'App fork id %', __app_fork_id;
             RAISE NOTICE 'App current_block_num %', hive.app_get_current_block_num( 'test' );
             RAISE NOTICE 'App irreversible_block_num %', __irreversible_block;
-            RAISE NOTICE 'Live processing block %', __next_block_range.first_block;
+            RAISE NOTICE 'Processing stage %', hive.get_current_stage_name( 'test' );
+            RAISE NOTICE 'Processing block %', __next_block_range;
+            RAISE NOTICE 'Context is attached %', hive.app_context_is_attached( 'test' );
+            SELECT MAX(num), MIN(num) INTO __max_reversible_block, __min_reversible_block FROM hive.blocks_reversible WHERE fork_id = __app_fork_id;
+            RAISE NOTICE 'Max reversible block: %', __max_reversible_block;
+            RAISE NOTICE 'Min reversible block: %', __min_reversible_block;
             ASSERT EXISTS( SELECT 1 FROM hive.blocks_view WHERE num = __next_block_range.first_block ), 'No data for expected block in HAF HEAD BLOCK view';
             ASSERT EXISTS( SELECT 1 FROM test.blocks_view WHERE num = __next_block_range.first_block ), 'No data for expected block';
 
