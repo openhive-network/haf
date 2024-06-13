@@ -2,6 +2,7 @@
 
 import sys
 import sqlalchemy
+from sqlalchemy import text
 
 APPLICATION_CONTEXT = "trx_histogram_ctx"
 
@@ -55,7 +56,7 @@ def prepare_application_data( db_connection ):
                   "SELECT hive.app_create_context("
                   " '{}', _schema => 'applications'"
                   ", _is_forking => TRUE"
-                  ", _stages => ARRAY[ ('MASSIVE',101 ,100 )::hive.application_stage, hive.live_stage()]"
+                  ", _stages => ARRAY[ ('MASSIVE',2 ,100 )::hive.application_stage, hive.live_stage()]"
                   ")".format(APPLICATION_CONTEXT)
             )
 
@@ -70,34 +71,26 @@ def main_loop( db_connection ):
     # forever loop
     while True:
         # start a new transaction
+        blocks_range = (0,0)
         with db_connection.begin():
             # get blocks range
-            blocks_range = db_connection.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone()
+            iteration_statement = text("CALL hive.app_next_iteration( '{}', :blocks_range )".format(APPLICATION_CONTEXT))
+            result = db_connection.execute( iteration_statement, {'blocks_range': blocks_range})
 
-            print( "Blocks range {}".format( blocks_range ) )
-            (first_block, last_block) = blocks_range;
-            # if no blocks are fetched then ask for new blocks again
-            if not first_block:
-                continue;
-
-            (first_block, last_block) = blocks_range;
-
-            # check if massive sync is required
-            if ( last_block - first_block ) > 100:
-                # Yes, massive sync is required
-                # detach context
-                db_connection.execute( "SELECT hive.app_context_detach( '{}' )".format( APPLICATION_CONTEXT ) )
-
-                # update massivly the application's table - one commit transaction for whole massive edition
-                db_connection.execute( "SELECT applications.update_histogram( {}, {} )".format( first_block, last_block ) )
-
-                # attach context and moves it to last synced block
-                db_connection.execute( "SELECT hive.app_set_current_block_num( '{}', {} )".format( APPLICATION_CONTEXT, last_block ) )
-                db_connection.execute( "SELECT hive.app_context_attach( '{}' )".format( APPLICATION_CONTEXT ) )
+            try:
+                import ast
+                blocks_range = ast.literal_eval(result.scalar_one())
+            except SyntaxError:
+                # NULL,NULL was returned
+                # if no blocks are fetched then ask for new blocks again
+                print("Blocks range (None, None)")
                 continue
 
+            print("Blocks range {}".format(blocks_range))
+            (first_block, last_block) = blocks_range
+
             # process the first block in range - one commit after each block
-            db_connection.execute( "SELECT applications.update_histogram( {}, {} )".format( first_block, last_block ) )
+            db_connection.execute( "SELECT applications.update_histogram( {}, {} )".format(first_block, last_block))
 
 def start_application(db_name, pg_port):
     engine = create_db_engine(db_name, pg_port)

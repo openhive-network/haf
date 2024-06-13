@@ -7,11 +7,6 @@ def test_example( example_path, db_name, pg_port ):
     application = pexpect.spawn(example_path, [db_name, pg_port])
     application.logfile = sys.stdout.buffer
     application.expect( "Blocks range \(1, 6\)" )
-    application.expect( "Blocks range \(2, 6\)" )
-    application.expect( "Blocks range \(3, 6\)" )
-    application.expect( "Blocks range \(4, 6\)" )
-    application.expect( "Blocks range \(5, 6\)" )
-    application.expect( "Blocks range \(6, 6\)" )
     application.expect( "Blocks range \(7, 7\)" )
     application.expect( "Blocks range \(None, None\)" )
     application.expect( "Blocks range \(None, None\)" )
