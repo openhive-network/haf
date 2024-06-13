@@ -191,6 +191,11 @@ DECLARE
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
+    -- lock EXCLUSIVE may be taken by hived in function:
+    -- hive.remove_unecessary_events
+    -- so here we can stuck while hived is servicing a new irreversible block notification
+    LOCK TABLE hive.contexts IN SHARE MODE;
+
     SELECT hc.current_block_num INTO __current_block_num
     FROM hive.contexts hc
     WHERE hc.name = __lead_context;
@@ -204,11 +209,6 @@ BEGIN
     END IF;
 
     SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= __current_block_num;
-
-    -- lock EXCLUSIVE may be taken by hived in function:
-    -- hive.remove_unecessary_events
-    -- so here we can stuck while hived is servicing a new irreversible block notification
-    LOCK TABLE hive.contexts IN SHARE MODE;
 
     UPDATE hive.contexts
     SET   fork_id = __fork_id
