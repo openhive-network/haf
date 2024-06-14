@@ -88,12 +88,6 @@ BEGIN
         RETURN;
     END IF;
 
-    PERFORM hive.remove_unecessary_events( _block_num );
-
-    -- application contexts will use the event to clear data in shadow tables
-    INSERT INTO hive.events_queue( event, block_num )
-    VALUES( 'NEW_IRREVERSIBLE', _block_num );
-
     -- copy to irreversible
     PERFORM hive.copy_blocks_to_irreversible( __irreversible_head_block, _block_num );
     PERFORM hive.copy_transactions_to_irreversible( __irreversible_head_block, _block_num );
@@ -103,9 +97,22 @@ BEGIN
     PERFORM hive.copy_account_operations_to_irreversible( __irreversible_head_block, _block_num );
     PERFORM hive.copy_applied_hardforks_to_irreversible( __irreversible_head_block, _block_num );
 
-    -- remove unneeded blocks and events
-    PERFORM hive.remove_obsolete_reversible_data( _block_num );
+    -- if we cannot get exclusive lock for contexts row then we return and will back here
+    -- next time, when hived will try to remove blocks with next irreversible block
+    -- the contexts are locked by the apps during attach: hive.app_context_attach
+    BEGIN
+        LOCK TABLE hive.contexts IN ACCESS EXCLUSIVE MODE NOWAIT;
+        PERFORM hive.remove_unecessary_events( _block_num );
+        -- remove unneeded blocks and events
+        PERFORM hive.remove_obsolete_reversible_data( _block_num );
+    EXCEPTION WHEN SQLSTATE '55P03' THEN
+        -- 55P03 	lock_not_available https://www.postgresql.org/docs/current/errcodes-appendix.html
+    END;
 
+
+    -- application contexts will use the event to clear data in shadow tables
+    INSERT INTO hive.events_queue( event, block_num )
+    VALUES( 'NEW_IRREVERSIBLE', _block_num );
     UPDATE hive.irreversible_data SET consistent_block = _block_num;
 END;
 $BODY$
@@ -118,13 +125,21 @@ CREATE OR REPLACE FUNCTION hive.end_massive_sync( _block_num INTEGER )
 AS
 $BODY$
 BEGIN
+    -- if we cannot get exclusive lock for contexts row then we return and will back here
+    -- next time, when hived will try to remove blocks with next irreversible block
+    -- the contexts are locked by the apps during attach: hive.app_context_attach
+    BEGIN
      -- remove all events less than lowest context events_id
-    PERFORM hive.remove_unecessary_events( _block_num );
+        PERFORM hive.remove_unecessary_events( _block_num );
+        PERFORM hive.remove_obsolete_reversible_data( _block_num );
+    EXCEPTION WHEN SQLSTATE '55P03' THEN
+        -- 55P03 	lock_not_available https://www.postgresql.org/docs/current/errcodes-appendix.html
+    END;
 
     INSERT INTO hive.events_queue( event, block_num )
     VALUES ( 'MASSIVE_SYNC'::hive.event_type, _block_num );
 
-    PERFORM hive.remove_obsolete_reversible_data( _block_num );
+
 
     UPDATE hive.irreversible_data SET consistent_block = _block_num;
 END;

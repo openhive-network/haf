@@ -128,6 +128,4 @@ def test_application_broken(prepared_networks_and_database_12_8_without_block_lo
     else:
         block_min = min([block.num for block in blks])
         tt.logger.info(f'min of blocks_reversible is {block_min}')
-        # all reversible blocks not needed by the app shall be already moved to irreversible
-        assert context_irreversible_block < block_min
 
