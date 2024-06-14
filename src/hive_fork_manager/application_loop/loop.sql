@@ -17,7 +17,6 @@ BEGIN
     WHERE ctx.name = stages.context;
 
     -- now is time to find number of blocks in one batch to process
-    --TODO(mickiewicz@syncad.com): test for when all contexts are in live
     UPDATE hive.contexts ctx
     SET   loop.size_of_blocks_batch = max_limit.blocks
       , loop.end_block_range = ctx.current_block_num + __number_of_blocks_to_sync
@@ -154,8 +153,6 @@ BEGIN
     SELECT (hc.loop).* INTO __lead_context_state
     FROM hive.contexts hc WHERE hc.name = __lead_context_name;
 
-    RAISE INFO 'MICKIEWICZ Lead context state: %', __lead_context_state;
-
     -- 2. find current stage if:
     IF hive.is_stages_analyze_required( __lead_context_state, hive.get_irreversible_head_block() )
     THEN
@@ -167,16 +164,12 @@ BEGIN
         SELECT * FROM hive.app_next_block( _contexts ) INTO _blocks_range;
         IF _blocks_range IS NULL
         THEN
-            RAISE INFO 'MICKIEWICZ no range';
             RETURN;
         END IF;
         -- all context now got computed their stages
-        RAISE NOTICE 'MICKIEWICZ range %', _blocks_range;
         PERFORM hive.analyze_stages( _contexts, _blocks_range,hive.get_irreversible_head_block() );
         SELECT (hc.loop).* INTO __lead_context_state
         FROM hive.contexts hc WHERE hc.name = __lead_context_name;
-
-        RAISE INFO 'Updated lead contex: %', __lead_context_state;
     ELSE
         -- we continue iterating blocks in range
         _blocks_range.first_block = __lead_context_state.current_batch_end + 1;
@@ -187,8 +180,6 @@ BEGIN
         , __lead_context_state.end_block_range
     );
 
-    RAISE INFO 'MICKIEWICZ Returned blocks range %', _blocks_range;
-
     UPDATE hive.contexts ctx
     SET loop.current_batch_end = _blocks_range.last_block
     WHERE ctx.name=ANY(_contexts);
@@ -196,10 +187,8 @@ BEGIN
     PERFORM hive.update_attachment( _contexts );
 
     UPDATE hive.contexts ctx
-    SET current_block_num = _blocks_range.last_block --TODO(mickiewicz@syncad.com) hmm zmien nazwe na current batch begin
+    SET current_block_num = _blocks_range.last_block
     WHERE ctx.name = ANY(_contexts);
-
-    -- 4. returns range of blocks to process together with context stages
 END;
 $body$;
 

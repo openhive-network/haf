@@ -58,7 +58,6 @@ BEGIN
     -- stages are analyzes and max batch is set to 100
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
     -- we are at <1-101> block
-    RAISE INFO 'MICKIEWICZ %', __range_placeholder;
 END;
 $BODY$;
 
@@ -72,7 +71,6 @@ DECLARE
 BEGIN
     -- Alice start new iteration <102-202>
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
-    RAISE INFO 'MICKIEWICZ %', __range_placeholder;
 END;
 $BODY$;
 
