@@ -192,7 +192,7 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     -- lock EXCLUSIVE may be taken by hived in function:
-    -- hive.remove_unecessary_events
+    -- hive.set_irreversible
     -- so here we can stuck while hived is servicing a new irreversible block notification
     LOCK TABLE hive.contexts IN SHARE MODE;
 
