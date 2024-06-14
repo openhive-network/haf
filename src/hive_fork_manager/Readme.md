@@ -42,11 +42,38 @@ are enough to automatically create views which combine irreversible and reversib
 
 
 ### Requirements for an HAF app algorithm using the fork manager API
-![alt text](./doc/evq_app_process_block.png)
-
 Only roles ( users ) which inherits from 'hive_applications_group' have access to 'The App API', and only these roles allow apps to work with 'hive_fork_manager'
 
 Any HAF app must first create a context, then create its tables which inherit from `hive.<context_name>`. The context is owned and can be accessed only by the role which created it.
+
+#### Recommended synchronization loop algorithm for applications
+It turned out that most applications (if not all) have synchronization divided into stages relative
+to the distance between the Hive head block and the application's last synchronized blocks.
+Usually, at different stages, some indexes are dropped or created, which impacts synchronization performance.
+Based on this observation, a simple algorithm for block synchronization is proposed.
+In this algorithm, the context defines stages with a name, distance to the head block when they 
+will be enabled, and the number of blocks to process in one turn.
+There is no need to have knowledge about the fork manager's implementation details to correctly 
+determine the range of blocks to synchronize, commit, and stop the application.
+
+![alt text](./doc/evq_new_app_process_block.png)
+
+1. The author of the application needs to divide synchronization into stages. Stages are defined here: [src/application_loop/stages.sql]
+   There is a special stage LIVE, which is always chosen when application is working near to head block or on reversible blocks.
+2. During the creation of a context, an array of stages needs to be passed to 'hive.app_create_context'. The array must contain LIVE stage, which is returned by 'hive.live_stage' function.
+3. The procedure 'hive.app_next_iteration' will return the range of blocks to synchronize (as the out parameter _blocks_range) or NULL if there are no new blocks.
+4. The name of the current stage of a context can be obtained with 'hive.get_current_stage_name'.
+5. At the beginning of 'hive.app_next_iteration', a transaction commit is issued.
+6. If the application needs to be stopped, then stop processing immediately after calling 'hive.app_next_iteration'.
+
+#### Old still supported, most flexible but complicated algorithm
+For the sake of compliance with applications that used the old fork manager version, the old method of
+block synchronization is still supported. It is a complicated algorithm in which the application 
+author needs to understand concepts such as massive sync, details of context attachments, the current
+block state, and when to issue a commit. While this method has proven to be prone to bugs,
+it offers more flexibility to applications without requiring predefined stages.
+
+![alt text](./doc/evq_app_process_block.png)
 
 A HAF app calls `hive.app_next_block` to get the next block number to process. If NULL was returned, the app must immediatly call `hive.app_next_block` again. Note: the app will automatically be blocked when it calls `hive.app_next_block` if there are no blocks to process. 
 
@@ -403,11 +430,12 @@ Reads the 'dirty' flag.
 #### APP API
 The functions which should be used by a HAF app
 
-##### hive.app_create_context( _name, _schema, _is_forking = TRUE, _is_attached = TRUE )
+##### hive.app_create_context( _name, _schema, _is_forking = TRUE, _is_attached = TRUE, _stages = NULL )
 Creates a new context. Context name can contain only characters from the set: `a-zA-Z0-9_`.
 - '_schema' name of postgreSQL schema used by context to hold there its views
 - '_is_forking' sets contexts as forking or non-forking.
-- '_is_attached' if create attached or not attched context 
+- '_is_attached' if create attached or not attched context
+- '_stages' optional array of stages, required for `hive.app_next_iteration`
 
 ##### hive.app_remove_context( _name hive.context_name )
 Remove the context and unregister all its tables.
@@ -501,6 +529,16 @@ State provider become unregistered from contexts, and its tables are dropped.
 
 #### hive.app_state_provider_drop_all( context )
 All state providers become unregistered from contexts,and their tables are dropped.
+
+#### hive.get_current_stage_name( context )
+Function. Returns name  of a current context stage computed by `hive.app_next_iteration`
+
+#### hive.app_next_iteration( _array_of_contexts, [OUT] _blocks_range )
+The procedure finds a possible range of blocks to process, decides in which stage the application will work,
+and attaches or detaches the context. It issues the pending transaction commit. It requires contexts 
+to have defined stages. When the returned _blocks_range is NULL, it means that there were 
+no blocks to process during the last call.
+
 
 #### CONTEXT REWIND
 Context rewind functions shall not be used by hived and apps.
