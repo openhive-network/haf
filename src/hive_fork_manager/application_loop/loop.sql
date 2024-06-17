@@ -128,7 +128,7 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _contexts hive.contexts_group, _blocks_range OUT hive.blocks_range )
+CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _contexts hive.contexts_group, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL )
 LANGUAGE 'plpgsql'
 AS
 $body$
@@ -138,6 +138,8 @@ DECLARE
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
     _blocks_range := NULL;
+
+    ASSERT _override_max_batch IS NULL OR _override_max_batch > 0, 'Custom size of  blocks range is less than 1';
 
     -- here is the only place when main synchronization connection  makes commit
     -- 1. commit if there is a pending commit
@@ -166,6 +168,7 @@ BEGIN
         THEN
             RETURN;
         END IF;
+
         -- all context now got computed their stages
         PERFORM hive.analyze_stages( _contexts, _blocks_range,hive.get_irreversible_head_block() );
         SELECT (hc.loop).* INTO __lead_context_state
@@ -175,10 +178,18 @@ BEGIN
         _blocks_range.first_block = __lead_context_state.current_batch_end + 1;
     END IF;
 
-    _blocks_range.last_block = LEAST(
-          _blocks_range.first_block + __lead_context_state.size_of_blocks_batch - 1
-        , __lead_context_state.end_block_range
-    );
+    IF _override_max_batch IS NOT NULL
+    THEN
+        _blocks_range.last_block := LEAST(
+              _blocks_range.first_block + _override_max_batch - 1
+            , __lead_context_state.end_block_range
+        );
+    ELSE
+        _blocks_range.last_block = LEAST(
+              _blocks_range.first_block + __lead_context_state.size_of_blocks_batch - 1
+            , __lead_context_state.end_block_range
+        );
+    END IF;
 
     UPDATE hive.contexts ctx
     SET loop.current_batch_end = _blocks_range.last_block
@@ -192,11 +203,11 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _context hive.context_name, _blocks_range OUT hive.blocks_range )
+CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _context hive.context_name, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL )
     LANGUAGE 'plpgsql'
 AS
 $body$
 BEGIN
-    CALL hive.app_next_iteration( ARRAY[ _context ], _blocks_range );
+    CALL hive.app_next_iteration( ARRAY[ _context ], _blocks_range, _override_max_batch );
 END;
 $body$;

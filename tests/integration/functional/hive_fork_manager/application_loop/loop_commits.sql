@@ -28,7 +28,7 @@ BEGIN
     ASSERT pg_current_xact_id_if_assigned() IS NOT NULL, 'no tx at start';
 
     __tx_id_before_next_id :=  txid_current();
-    CALL hive.app_next_iteration( ARRAY[ 'alice' ], __range_placeholder );
+    CALL hive.app_next_iteration( 'alice', __range_placeholder );
     ASSERT txid_current() != __tx_id_before_next_id, 'previous tx not closed';
 END;
 $BODY$;
