@@ -18,13 +18,13 @@ BEGIN
 
     -- now is time to find number of blocks in one batch to process
     UPDATE hive.contexts ctx
-    SET   loop.size_of_blocks_batch = max_limit.blocks
+    SET   loop.size_of_blocks_batch = COALESCE(max_limit.blocks,1)
       , loop.end_block_range = ctx.current_block_num + __number_of_blocks_to_sync
       , loop.last_analyze_distance_to_head_block = COALESCE( _head_block, 0 ) - COALESCE( (ctx.loop).current_batch_end, 0 )
     FROM (
-             SELECT MAX( (hc.loop).current_stage.blocks_limit_in_group )  as blocks
+             SELECT MIN( (hc.loop).current_stage.blocks_limit_in_group )  as blocks
              FROM hive.contexts hc
-             WHERE hc.name = ANY( _contexts )
+             WHERE hc.name = ANY( _contexts ) AND (hc.loop).current_stage != hive.live_stage()
          ) as max_limit
     WHERE ctx.name = ANY( _contexts );
 END;
@@ -46,7 +46,7 @@ BEGIN
           -- end of range processing
        OR _lead_context_state.end_block_range <= _lead_context_state.current_batch_end
           -- distance to head block grew instead become smaller
-       OR _lead_context_state.last_analyze_distance_to_head_block > ( _current_head_block - _lead_context_state.current_batch_end );
+       OR _lead_context_state.last_analyze_distance_to_head_block < ( _current_head_block - _lead_context_state.current_batch_end );
 END;
 $body$;
 
