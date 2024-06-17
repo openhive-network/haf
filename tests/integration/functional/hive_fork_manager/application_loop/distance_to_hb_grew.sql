@@ -7,6 +7,7 @@ BEGIN
     INSERT INTO hive.blocks
     VALUES
            ( 1, '\xBADD11', '\xCAFE11', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( 10, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 50, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
@@ -60,7 +61,8 @@ BEGIN
     -- or application was stopped for a while
     INSERT INTO hive.blocks
     VALUES
-          ( 51, '\xBADD11', '\xCAFE11', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+          ( 11, '\xBADD11', '\xCAFE11', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+        , ( 51, '\xBADD51', '\xCAFE51', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
         , ( 400, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
     PERFORM hive.set_irreversible( 400 );
@@ -95,21 +97,21 @@ BEGIN
     FROM hive.contexts hc WHERE hc.name = 'alice'
     INTO __current_batch_end, __current_block_num, __current_stage_name;
     ASSERT __current_stage_name = 'stage2', 'Alice got wrong stage != stage2';
-    ASSERT __current_block_num = 150, 'Wrong Alice current block !=150';
-    ASSERT __current_batch_end = 150, 'Wrong Alice end of range !=150';
+    ASSERT __current_block_num = 110, 'Wrong Alice current block !=110';
+    ASSERT __current_batch_end = 110, 'Wrong Alice end of range !=110';
 
     SELECT (hc.loop).current_batch_end, hc.current_block_num, (hc.loop).current_stage.name
     FROM hive.contexts hc WHERE hc.name = 'alice1'
     INTO __current_batch_end, __current_block_num, __current_stage_name;
     ASSERT __current_stage_name = 'stage2', 'Alice1 got wrong stage != stage2';
-    ASSERT __current_block_num = 150, 'Wrong Alice1 current block !=150';
-    ASSERT __current_batch_end = 150, 'Wrong Alice1 end of range !=150';
+    ASSERT __current_block_num = 110, 'Wrong Alice1 current block !=110';
+    ASSERT __current_batch_end = 110, 'Wrong Alice1 end of range !=110';
 
     SELECT (hc.loop).current_batch_end, hc.current_block_num, (hc.loop).current_stage.name
     FROM hive.contexts hc WHERE hc.name = 'alice2'
     INTO __current_batch_end, __current_block_num, __current_stage_name;
     ASSERT __current_stage_name = 'stage2', 'Alice2 got wrong stage != stage2';
-    ASSERT __current_block_num = 150, 'Wrong Alice2 current block !=150';
-    ASSERT __current_batch_end = 150, 'Wrong Alice2 end of range !=150';
+    ASSERT __current_block_num = 110, 'Wrong Alice2 current block !=110';
+    ASSERT __current_batch_end = 110, 'Wrong Alice2 end of range !=110';
 END;
 $BODY$;

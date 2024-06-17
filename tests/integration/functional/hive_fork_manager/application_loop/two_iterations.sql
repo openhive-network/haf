@@ -54,16 +54,16 @@ $BODY$
 DECLARE
     __range_placeholder hive.blocks_range;
 BEGIN
-    -- alices context are moved to range (1,50)
+    -- alices context are moved to range (1,10)
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
     RAISE INFO 'blocks range: %', __range_placeholder;
     -- now hb is moved to 100
     INSERT INTO hive.blocks
     VALUES
-          ( 51, '\xBADD51', '\xCAFE51', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-        , ( 100, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+          ( 21, '\xBADD51', '\xCAFE51', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+        , ( 60, '\xBADD51', '\xCAFE51', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
-    PERFORM hive.set_irreversible( 100 );
+    PERFORM hive.set_irreversible( 60 );
 END;
 $BODY$;
 
@@ -74,7 +74,7 @@ $BODY$
 DECLARE
     __range_placeholder hive.blocks_range;
 BEGIN
-    -- Alice start new iteration 50-100
+    -- Alice start new iteration 10-20
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
     RAISE INFO 'blocks range: %', __range_placeholder;
 END;
@@ -93,22 +93,22 @@ BEGIN
     SELECT (hc.loop).current_batch_end, hc.current_block_num
     FROM hive.contexts hc WHERE hc.name = 'alice'
     INTO __current_batch_end, __current_block_num;
-    ASSERT __current_block_num = 100, 'Wrong Alice current block !=51';
-    ASSERT __current_batch_end = 100, 'Wrong Alice end of range !=100'; --not 51 because head block=50 limits range
+    ASSERT __current_block_num = 20, 'Wrong Alice current block !=20';
+    ASSERT __current_batch_end = 20, 'Wrong Alice end of range !=20'; --not 51 because head block=50 limits range
     ASSERT hive.app_context_is_attached( 'alice' ) = FALSE, 'Context alice is attached';
 
     SELECT (hc.loop).current_batch_end, hc.current_block_num
     FROM hive.contexts hc WHERE hc.name = 'alice1'
     INTO __current_batch_end, __current_block_num;
-    ASSERT __current_block_num = 100, 'Wrong Alice1 current block !=51';
-    ASSERT __current_batch_end = 100, 'Wrong Alice1 end of range !=100'; --not 51 because head block=50 limits range
+    ASSERT __current_block_num = 20, 'Wrong Alice1 current block !=20';
+    ASSERT __current_batch_end = 20, 'Wrong Alice1 end of range !=20'; --not 51 because head block=50 limits range
     ASSERT hive.app_context_is_attached( 'alice1' ) = FALSE, 'Context alice1 is attached';
 
     SELECT (hc.loop).current_batch_end, hc.current_block_num
     FROM hive.contexts hc WHERE hc.name = 'alice2'
     INTO __current_batch_end, __current_block_num;
-    ASSERT __current_block_num = 100, 'Wrong Alice2 current block !=51';
-    ASSERT __current_batch_end = 100, 'Wrong Alice2 end of range !=100'; --not 51 because head block=50 limits range
+    ASSERT __current_block_num = 20, 'Wrong Alice2 current block !=20';
+    ASSERT __current_batch_end = 20, 'Wrong Alice2 end of range !=20'; --not 51 because head block=50 limits range
     ASSERT hive.app_context_is_attached( 'alice2' ) = FALSE, 'Context alice2 is attached';
 END;
 $BODY$;
