@@ -533,11 +533,14 @@ All state providers become unregistered from contexts,and their tables are dropp
 #### hive.get_current_stage_name( context )
 Function. Returns name  of a current context stage computed by `hive.app_next_iteration`
 
-#### hive.app_next_iteration( _array_of_contexts, [OUT] _blocks_range )
+#### hive.app_next_iteration( _array_of_contexts, [OUT] _blocks_range, _override_max_batch INTEGER = NULL )
 The procedure finds a possible range of blocks to process, decides in which stage the application will work,
 and attaches or detaches the context. It issues the pending transaction commit. It requires contexts 
 to have defined stages. When the returned _blocks_range is NULL, it means that there were 
 no blocks to process during the last call.
+
+It is possible to override the batch size of blocks to process by using the parameter '_override_max_batch'.
+With this parameter, the number of blocks to process in one turn will be less than or equal to the specified value.
 
 
 #### CONTEXT REWIND
