@@ -101,7 +101,7 @@ BEGIN
     -- next time, when hived will try to remove blocks with next irreversible block
     -- the contexts are locked by the apps during attach: hive.app_context_attach
     BEGIN
-        LOCK TABLE hive.contexts IN ACCESS EXCLUSIVE MODE NOWAIT;
+        LOCK TABLE hive.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
         PERFORM hive.remove_unecessary_events( _block_num );
         -- remove unneeded blocks and events
         PERFORM hive.remove_obsolete_reversible_data( _block_num );
@@ -456,7 +456,8 @@ DECLARE
 BEGIN
   SELECT ARRAY_AGG(c.name) INTO __contexts
   FROM hive.contexts c
-  WHERE c.is_attached AND c.last_active_at < __now - _app_timeout;
+  JOIN hive.contexts_attachment hca ON hca.context_id = c.id
+  WHERE hca.is_attached AND c.last_active_at < __now - _app_timeout;
 
   IF CARDINALITY(__contexts) != 0 THEN
     RAISE WARNING 'Attempting to automatically detach application contexts: %', __contexts;

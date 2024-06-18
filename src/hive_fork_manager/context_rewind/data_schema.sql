@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS hive.contexts(
     schema TEXT NOT NULL,
     current_block_num INTEGER NOT NULL,
     irreversible_block INTEGER NOT NULL,
-    is_attached BOOL NOT NULL,
     back_from_fork BOOL NOT NULL DEFAULT FALSE,
     events_id BIGINT NOT NULL DEFAULT 0, -- 0 - is a special fake event, means no events are processed, it is required to satisfy FK constraint
     fork_id BIGINT NOT NULL DEFAULT 1,
@@ -31,6 +30,16 @@ SELECT pg_catalog.pg_extension_config_dump('hive.contexts', '');
 SELECT pg_catalog.pg_extension_config_dump('hive.contexts_id_seq', '');
 
 CREATE INDEX IF NOT EXISTS hive_contexts_owner_idx ON hive.contexts( owner );
+
+CREATE TABLE IF NOT EXISTS hive.contexts_attachment(
+      context_id INTEGER NOT NULL UNIQUE
+    , is_attached BOOL NOT NULL
+    , owner NAME NOT NULL
+    , CONSTRAINT fk_contexts_attachment_context FOREIGN KEY(context_id) REFERENCES hive.contexts( id )
+);
+SELECT pg_catalog.pg_extension_config_dump('hive.contexts_attachment', '');
+
+CREATE INDEX IF NOT EXISTS hive_contexts_attachment_owner_idx ON hive.contexts_attachment( owner );
 
 CREATE TABLE IF NOT EXISTS hive.registered_tables(
    id SERIAL NOT NULL,

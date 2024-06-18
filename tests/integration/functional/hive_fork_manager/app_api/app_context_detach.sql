@@ -39,7 +39,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context' AND is_attached = FALSE ), 'Attach flag is still set';
+    ASSERT EXISTS ( SELECT * FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context' AND hca.is_attached = FALSE ), 'Attach flag is still set';
     ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 0, 'Wrong current_block_num';
 
     ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 0, 'Trigger inserted something into shadow table1';

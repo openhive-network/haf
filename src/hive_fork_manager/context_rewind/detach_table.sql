@@ -84,10 +84,11 @@ BEGIN
     SELECT hrt.id, hrt.shadow_table_name, hc.is_forking
     FROM hive.registered_tables hrt
     JOIN hive.contexts hc ON hc.id = hrt.context_id
+    JOIN hive.contexts_attachment hca ON hc.id = hca.context_id
     WHERE
           hrt.origin_table_schema = lower( _table_schema )
       AND hrt.origin_table_name = _table_name
-      AND hc.is_attached = FALSE
+      AND hca.is_attached = FALSE
     INTO __table_id, __shadow_table_name, __context_is_forking;
 
     IF __table_id IS NULL THEN

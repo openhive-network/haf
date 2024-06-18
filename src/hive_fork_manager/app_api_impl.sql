@@ -361,9 +361,10 @@ $BODY$
 
         SELECT
                hac.current_block_num
-             , hac.is_attached
+             , hca.is_attached
              , hac.irreversible_block
         FROM hive.contexts hac
+        JOIN hive.contexts_attachment hca ON hca.context_id = hac.id
         WHERE hac.name = __lead_context
         INTO __context_state;
 

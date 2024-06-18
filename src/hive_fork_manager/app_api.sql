@@ -189,7 +189,7 @@ BEGIN
     -- lock EXCLUSIVE may be taken by hived in function:
     -- hive.set_irreversible
     -- so here we can stuck while hived is servicing a new irreversible block notification
-    LOCK TABLE hive.contexts IN SHARE MODE;
+    LOCK TABLE hive.contexts_attachment IN SHARE MODE;
 
     SELECT hc.current_block_num INTO __current_block_num
     FROM hive.contexts hc
@@ -472,8 +472,9 @@ DECLARE
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
-    SELECT ARRAY_AGG( DISTINCT(hc.is_attached) )  is_attached INTO __result
-    FROM hive.contexts hc
+    SELECT ARRAY_AGG( DISTINCT(hca.is_attached) )  is_attached INTO __result
+    FROM hive.contexts_attachment hca
+    JOIN hive.contexts hc ON hc.id = hca.context_id
     WHERE hc.name =ANY( _contexts );
 
     IF __result IS NULL OR ARRAY_LENGTH( __result, 1 ) != 1 THEN
@@ -543,8 +544,9 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     SELECT ARRAY_AGG(id) INTO __contexts_id
-    FROM hive.contexts
-    WHERE name = ANY( _contexts ) AND is_attached = FALSE;
+    FROM hive.contexts hc
+    JOIN hive.contexts_attachment hca ON hca.context_id = hc.id
+    WHERE name = ANY( _contexts ) AND hca.is_attached = FALSE;
 
     IF __contexts_id IS NULL THEN
         RAISE EXCEPTION 'Contexts do not exist';
@@ -683,8 +685,9 @@ DECLARE
     __is_attached BOOL;
     __current_block_num hive.blocks.num%TYPE;
 BEGIN
-    SELECT hac.id, hac.is_attached, hac.current_block_num
+    SELECT hac.id, hca.is_attached, hac.current_block_num
     FROM hive.contexts hac
+    JOIN hive.contexts_attachment hca ON hac.id = hca.context_id
     WHERE hac.name = _context
         INTO __context_id, __is_attached, __current_block_num;
 
@@ -783,7 +786,7 @@ BEGIN
     SELECT COUNT(
         DISTINCT(
                    ctx.current_block_num
-                 , ctx.is_attached
+                 , hca.is_attached
                  , ctx.events_id
                  , ctx.is_forking
                  , (ctx.loop).size_of_blocks_batch
@@ -792,6 +795,7 @@ BEGIN
         )
     ) INTO __number_of_rows
     FROM hive.contexts ctx
+    JOIN hive.contexts_attachment hca ON hca.context_id = ctx.id
     WHERE ctx.name =ANY(_contexts);
 
     IF __number_of_rows != 1 THEN
@@ -807,9 +811,10 @@ CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _contexts hive.contexts_group  )
 AS
 $BODY$
 BEGIN
-    RETURN COALESCE((SELECT BOOL_AND(hive.contexts.id IS NOT NULL AND is_attached AND consistent_block - current_block_num <= 1)
+    RETURN COALESCE((SELECT BOOL_AND(hc.id IS NOT NULL AND hca.is_attached AND consistent_block - hc.current_block_num <= 1)
                      FROM UNNEST(_contexts) AS context_names(name)
-                     LEFT JOIN hive.contexts USING(name)
+                     LEFT JOIN hive.contexts hc USING(name)
+                     JOIN hive.contexts_attachment hca ON hca.context_id = hc.id
                      CROSS JOIN hive.irreversible_data), FALSE);
 END;
 $BODY$

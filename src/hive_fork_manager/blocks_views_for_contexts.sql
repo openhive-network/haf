@@ -15,7 +15,7 @@ EXECUTE format(
         SELECT
         hc.current_block_num,
         hc.irreversible_block,
-        hc.is_attached,
+        hca.is_attached,
         hc.fork_id,
         /*
             Definition of `min_block` (from least(current_block_num, irrecersible_block)) has been changed because of creation of gap,
@@ -29,6 +29,7 @@ EXECUTE format(
         ) AS min_block,
         hc.current_block_num > hc.irreversible_block AND hc.is_forking AS reversible_range
         FROM hive.contexts hc
+        JOIN hive.contexts_attachment hca ON hc.id = hca.context_id
         WHERE hc.name::text = ''%s''::text
         limit 1
         ;', __schema, _context_name
