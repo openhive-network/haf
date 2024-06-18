@@ -136,16 +136,16 @@ DECLARE
     __lead_context_name hive.context_name := _contexts[ 1 ];
     __lead_context_state hive.application_loop_state;
 BEGIN
-    PERFORM hive.app_check_contexts_synchronized( _contexts );
-    _blocks_range := NULL;
-
-    ASSERT _override_max_batch IS NULL OR _override_max_batch > 0, 'Custom size of  blocks range is less than 1';
-
     -- here is the only place when main synchronization connection  makes commit
     -- 1. commit if there is a pending commit
     IF pg_current_xact_id_if_assigned() IS NOT NULL THEN
         COMMIT;
     END IF;
+
+    PERFORM hive.app_check_contexts_synchronized( _contexts );
+    _blocks_range := NULL;
+
+    ASSERT _override_max_batch IS NULL OR _override_max_batch > 0, 'Custom size of  blocks range is less than 1';
 
     IF EXISTS( SELECT 1 FROM hive.contexts hc WHERE hc.name = ANY(_contexts) AND hc.stages = NULL )
     THEN
