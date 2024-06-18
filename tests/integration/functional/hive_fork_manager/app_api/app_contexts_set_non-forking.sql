@@ -46,11 +46,11 @@ $BODY$
 DECLARE
         __result hive.blocks_range;
 BEGIN
-    ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context' AND is_attached = TRUE ), 'Attach flag is still set';
+    ASSERT EXISTS ( SELECT * FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context' AND hca.is_attached = TRUE ), 'Attach flag is still set';
     ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 0, 'Wrong current_block_num';
     ASSERT ( SELECT is_forking FROM hive.contexts WHERE name='context' ) = FALSE, 'context is is still marked as forking';
 
-    ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context_b' AND is_attached = TRUE ), 'b) Attach flag is still set';
+    ASSERT EXISTS ( SELECT * FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context_b' AND hca.is_attached = TRUE ), 'b) Attach flag is still set';
     ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context_b' ) = 0, 'b) Wrong current_block_num';
     ASSERT ( SELECT is_forking FROM hive.contexts WHERE name='context_b' ) = FALSE, 'b) context is is still marked as forking';
 

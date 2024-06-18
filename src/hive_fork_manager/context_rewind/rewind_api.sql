@@ -12,6 +12,8 @@ CREATE OR REPLACE FUNCTION hive.context_create(
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __new_context_id INTEGER;
 BEGIN
     IF NOT _name SIMILAR TO '[a-zA-Z0-9_]+' THEN
         RAISE EXCEPTION 'Incorrect context name %, only characters a-z A-Z 0-9 _ are allowed', _name;
@@ -22,7 +24,6 @@ BEGIN
           name
         , current_block_num
         , irreversible_block
-        , is_attached
         , events_id
         , fork_id
         , owner
@@ -36,7 +37,6 @@ BEGIN
            _name
           , 0
           , _irreversible_block
-          , _is_attached
           , 0
           , _fork_id
           , current_user
@@ -45,7 +45,12 @@ BEGIN
           , _schema
           , ( _schema || '.' || _name )::regclass
           , _stages
-    );
+    )
+    RETURNING id INTO __new_context_id
+    ;
+
+    INSERT INTO hive.contexts_attachment( context_id, is_attached, owner )
+    VALUES( __new_context_id, _is_attached, current_user );
 END;
 $BODY$
 ;
@@ -70,6 +75,7 @@ BEGIN
     FROM hive.registered_tables hrt
     WHERE hrt.context_id = __context_id;
 
+    DELETE FROM hive.contexts_attachment WHERE context_id = __context_id;
     DELETE FROM hive.contexts WHERE id = __context_id;
 
     EXECUTE format( 'DROP TABLE IF EXISTS %I.%I', __context_schema, _name );
@@ -174,10 +180,12 @@ BEGIN
     WHERE hrt.context_id = __context_id;
 
     UPDATE hive.contexts
-    SET is_attached = FALSE,
-        events_id = hive.unreachable_event_id()
-        --current_block_num = CASE WHEN current_block_num = 0 THEN 0 ELSE current_block_num - 1 END
+    SET events_id = hive.unreachable_event_id()
     WHERE id = __context_id;
+
+    UPDATE hive.contexts_attachment
+    SET is_attached = FALSE
+    WHERE context_id = __context_id;
 END;
 $BODY$
 ;
@@ -194,7 +202,8 @@ DECLARE
 BEGIN
     SELECT ct.id, ct.current_block_num
     FROM hive.contexts ct
-    WHERE ct.name=_context AND ct.is_attached = FALSE
+    JOIN hive.contexts_attachment hca ON hca.context_id = ct.id
+    WHERE ct.name=_context AND hca.is_attached = FALSE
     INTO __context_id, __current_block_num;
 
     IF __context_id IS NULL THEN
@@ -213,9 +222,12 @@ BEGIN
     UPDATE hive.contexts
     SET
         current_block_num = _last_synced_block
-      , is_attached = TRUE
       , events_id = 0
     WHERE id = __context_id;
+
+    UPDATE hive.contexts_attachment
+    SET is_attached = TRUE
+    WHERE context_id = __context_id;
 END;
 $BODY$
 ;

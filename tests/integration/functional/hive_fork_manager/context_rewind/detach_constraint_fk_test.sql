@@ -41,7 +41,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name = 'context' AND is_attached = TRUE ), 'Context is not marked as attached';
+    ASSERT EXISTS ( SELECT * FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hca.context_id = hc.id WHERE hc.name = 'context' AND hca.is_attached = TRUE ), 'Context is not marked as attached';
 END
 $BODY$
 ;

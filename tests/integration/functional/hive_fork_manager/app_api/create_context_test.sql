@@ -26,9 +26,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM hive.contexts WHERE name = 'context' AND current_block_num = 0 AND irreversible_block = 0 AND events_id = 0 AND is_attached = TRUE ), 'No context context';
-    ASSERT EXISTS ( SELECT FROM hive.contexts WHERE name = 'context2' AND current_block_num = 0 AND irreversible_block = 101  AND events_id = 0 AND is_attached = TRUE AND schema='b' ), 'No context context2';
-    ASSERT EXISTS ( SELECT FROM hive.contexts WHERE name = 'context_test' AND current_block_num = 0 AND irreversible_block = 101  AND events_id = 0 AND is_attached = TRUE AND schema='test' ), 'No context test';
+    ASSERT EXISTS ( SELECT FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hc.id = hca.context_id WHERE name = 'context' AND current_block_num = 0 AND irreversible_block = 0 AND events_id = 0 AND hca.is_attached = TRUE ), 'No context context';
+    ASSERT EXISTS ( SELECT FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hc.id = hca.context_id WHERE name = 'context2' AND current_block_num = 0 AND irreversible_block = 101  AND events_id = 0 AND hca.is_attached = TRUE AND schema='b' ), 'No context context2';
+    ASSERT EXISTS ( SELECT FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hc.id = hca.context_id WHERE name = 'context_test' AND current_block_num = 0 AND irreversible_block = 101  AND events_id = 0 AND hca.is_attached = TRUE AND schema='test' ), 'No context test';
 
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='blocks_view' ), 'No context blocks view';
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='b' AND table_name='blocks_view' ), 'No context2 blocks view';

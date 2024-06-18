@@ -54,11 +54,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context_a' AND is_attached = TRUE ), 'Attach flag is still not set A';
+    ASSERT EXISTS ( SELECT * FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context_a' AND hca.is_attached = TRUE ), 'Attach flag is still not set A';
     ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context_a' AND fork_id = 2 ), 'Wrong fork_id A';
-    ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context_b' AND is_attached = TRUE ), 'Attach flag is still not set B';
+    ASSERT EXISTS ( SELECT * FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context_b' AND hca.is_attached = TRUE ), 'Attach flag is still not set B';
     ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context_b' AND fork_id = 2 ), 'Wrong fork_id B';
-    ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context_c' AND is_attached = TRUE ), 'Attach flag is still not set C';
+    ASSERT EXISTS ( SELECT * FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context_c' AND hca.is_attached = TRUE ), 'Attach flag is still not set C';
     ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context_c' AND fork_id = 2 ), 'Wrong fork_id C';
 
     ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 1, 'Trigger inserted something into shadow A.table1';

@@ -32,6 +32,7 @@ verified_tables_list = ARRAY[
 'accounts_reversible',
 'account_operations_reversible',
 'applied_hardforks_reversible',
+'contexts_attachment',
 'contexts'
 ];
 

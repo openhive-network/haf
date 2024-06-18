@@ -66,7 +66,7 @@ BEGIN
     RAISE NOTICE 'Second block=%', __second_blocks;
     ASSERT __second_blocks.first_block = 2 AND __second_blocks.last_block = 2, 'Wrong second block';
 
-    ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context' AND is_attached = TRUE ), 'Attach flag is still set';
+    ASSERT EXISTS ( SELECT * FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context' AND hca.is_attached = TRUE ), 'Attach flag is still set';
     ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 2, 'Wrong current_block_num';
     ASSERT ( SELECT is_forking FROM hive.contexts WHERE name='context' ) = TRUE, 'context is is still marked as non-forking';
 
