@@ -156,6 +156,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( hived_api/are_fk_dropped_2_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/are_fk_dropped_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/autodetach.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/connect_test_not_remove_reversible.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( app_api/create_context_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_remove_test.sql )
