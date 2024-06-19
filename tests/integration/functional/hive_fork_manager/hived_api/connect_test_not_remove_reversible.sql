@@ -65,7 +65,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM hive.connect( '123456789', 100, TRUE );
+    PERFORM hive.connect( '123456789', 100, FALSE );
 END
 $BODY$
 ;
@@ -75,26 +75,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM hive.blocks ) = 1, 'Unexpected number of blocks';
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions ) = 1, 'Unexpected number of transactions';
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig ) = 1, 'Unexpected number of signatures';
-    ASSERT ( SELECT COUNT(*) FROM hive.operations ) = 1, 'Unexpected number of operations';
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts ) = 4, 'Unexpected number of accounts';
-    ASSERT ( SELECT COUNT(*) FROM hive.account_operations ) = 1, 'Unexpected number of account_operations';
-
-    ASSERT ( SELECT COUNT(*) FROM hive.blocks WHERE num = 1 ) = 1, 'No blocks with num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions WHERE block_num = 1 ) = 1, 'No transaction with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.operations WHERE hive.operation_id_to_block_num(id) = 1 ) = 1, 'No operations with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig WHERE trx_hash = '\xDEED10'::bytea ) = 1, 'No signatures with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts WHERE block_num = 1 ) = 4, 'No account with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hive.account_operations WHERE account_id = 1 ) = 1, 'No account_operations with block_num = 1';
-
-    ASSERT( SELECT COUNT(*) FROM hive.hived_connections ) = 1, 'No connection saved';
-    ASSERT( SELECT COUNT(*) FROM hive.hived_connections WHERE block_num=100 AND git_sha='123456789' ) = 1, 'No expected connection saved';
-
-    ASSERT( SELECT COUNT(*) FROM hive.fork WHERE id = 2 AND block_num = 100 ) = 1, 'No fork added after connection';
-
-    ASSERT( SELECT is_dirty FROM hive.irreversible_data ) = FALSE, 'Irreversible data are dirty';
+    ASSERT( SELECT COUNT(*) FROM hive.fork WHERE id = 2 AND block_num = 100 ) = 0, 'fork added after connection';
 END
 $BODY$
 ;

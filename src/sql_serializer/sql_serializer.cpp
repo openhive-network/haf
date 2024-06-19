@@ -447,7 +447,7 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
     const auto CONNECT_QUERY = "SELECT hive.connect('"s
                                + fc::git_revision_sha
                                + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER"
-                               + ");"s;
+                               + ","s + (replay_blocklog?"false"s:"true"s) + "::BOOL);"s;
     tx.exec( CONNECT_QUERY );
     return data_processing_status();
   };
