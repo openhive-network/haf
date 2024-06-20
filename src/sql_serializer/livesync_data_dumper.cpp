@@ -89,7 +89,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     ilog( "livesync dumper is closing..." );
     disconnect_irreversible_event();
     disconnect_fork_event();
-    livesync_data_dumper::join();
+    try {
+      join();
+    } FC_CAPTURE_AND_LOG(())
     ilog( "livesync dumper closed" );
   }
 
