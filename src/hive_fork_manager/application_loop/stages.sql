@@ -8,7 +8,7 @@ DROP DOMAIN IF EXISTS hive.blocks_distance;
 CREATE DOMAIN hive.blocks_distance AS INTEGER CHECK( VALUE >= 0 );
 
 DROP DOMAIN IF EXISTS hive.stage_name;
-CREATE DOMAIN hive.stage_name AS TEXT CHECK( VALUE ~ '^[A-Za-z0-9]+$' );
+CREATE DOMAIN hive.stage_name AS TEXT CHECK( VALUE ~ '^[A-Za-z0-9_]+$' );
 
 DROP TYPE IF EXISTS hive.application_stage CASCADE;
 CREATE TYPE hive.application_stage AS (
