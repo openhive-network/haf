@@ -58,7 +58,7 @@ class Test:
 
         ]
     )
-    def test_dump_load_instance_scripts(self, prepared_networks_and_database_1, database, first_run : int, dump_exit_before_sync : int, dump_stop_replay_at_block : int, load_exit_before_sync : int, load_stop_replay_at_block : int, after_dump : int, after_load : int):
+    def test_dump_load_instance_scripts(self, prepared_networks_and_database_1, database, first_run : int, dump_exit_before_sync : bool, dump_stop_replay_at_block : int, load_exit_before_sync : bool, load_stop_replay_at_block : int, after_dump : int, after_load : int):
         # GIVEN
         self.run_node_with_db(prepared_networks_and_database_1, database, first_run)
         
@@ -140,7 +140,7 @@ class Test:
         session.close()
 
     @staticmethod
-    def generate_additional_command_line(dump_exit_before_sync : bool, dump_stop_replay_at_block : bool) -> str:
+    def generate_additional_command_line(dump_exit_before_sync : bool, dump_stop_replay_at_block : int) -> str:
         additional_command_line = ''
         if dump_exit_before_sync:
             additional_command_line+=' --exit-before-sync'
