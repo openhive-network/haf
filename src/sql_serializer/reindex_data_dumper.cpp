@@ -40,7 +40,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   reindex_data_dumper::~reindex_data_dumper() {
     ilog( "Reindex dumper is closing...." );
-    reindex_data_dumper::join();
+    try {
+      join();
+    } FC_CAPTURE_AND_LOG(())
     ilog( "Reindex dumper closed" );
   }
 
