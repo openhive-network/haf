@@ -6,6 +6,8 @@
 
 #include <fc/exception/exception.hpp>
 
+#include "span.hpp"
+
 namespace hive::plugins::sql_serializer {
   /**
    * @brief Common implementation of data writer to be used for all SQL entities.
@@ -162,8 +164,8 @@ namespace hive::plugins::sql_serializer {
   /**
    * Returns first non-falsy value. If all values are falsy, return default constructed value.
    */
-  template<typename T, size_t N>
-  inline T coalesce(std::array<T, N> a) {
+  template<typename T>
+  inline T coalesce(span<T> a) {
     auto it = std::find_if(std::begin(a), std::end(a), [](const T& t){return (bool)t;});
     if (it != std::end(a)) return *it;
     return {};
@@ -184,7 +186,19 @@ namespace hive::plugins::sql_serializer {
   template< typename... Processors >
   inline void
   join_processors( Processors& ...processors ) {
-    auto exception = coalesce(std::array{join_processors_impl(processors)...});
+    auto exception = coalesce(span(std::array{join_processors_impl(processors)...}));
+    if ( exception != nullptr ) {
+      std::rethrow_exception( exception );
+    }
+  }
+
+  template< typename Processor >
+  inline void
+  join_processors( std::vector<Processor>& processors ) {
+    std::vector<std::exception_ptr> results;
+    results.reserve(processors.size());
+    std::transform(std::begin(processors), std::end(processors), std::back_inserter(results), join_processors_impl<Processor>);
+    auto exception = coalesce(span(results));
     if ( exception != nullptr ) {
       std::rethrow_exception( exception );
     }
@@ -205,7 +219,19 @@ namespace hive::plugins::sql_serializer {
   template< typename... Processors >
   inline void
   cancel_processors( Processors& ...processors ) {
-    auto exception = coalesce(std::array{cancel_processors_impl(processors)...});
+    auto exception = coalesce(span(std::array{cancel_processors_impl(processors)...}));
+    if ( exception != nullptr ) {
+      std::rethrow_exception( exception );
+    }
+  }
+
+  template< typename Processor >
+  inline void
+  cancel_processors( std::vector<Processor>& processors ) {
+    std::vector<std::exception_ptr> results;
+    results.reserve(processors.size());
+    std::transform(std::begin(processors), std::end(processors), std::back_inserter(results), cancel_processors_impl<Processor>);
+    auto exception = coalesce(span(results));
     if ( exception != nullptr ) {
       std::rethrow_exception( exception );
     }
