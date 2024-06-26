@@ -9,12 +9,13 @@
 
 #include <exception>
 
+#include <unistd.h>
 #include <signal.h>
 
 namespace {
   void kill_node() {
     elog( "An error occured and HAF is stopping synchronization..." );
-    kill( 0, SIGINT );
+    kill( getpid(), SIGINT );
   }
 }
 
