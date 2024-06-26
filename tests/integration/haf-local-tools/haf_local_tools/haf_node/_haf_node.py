@@ -52,6 +52,7 @@ class HafNode(PreconfiguredNode):
 
         self.config.log_appender = '{"appender":"stderr","stream":"std_error"}'
         self.config.log_logger = '{"name":"default","level":"info","appender":"stderr"}'
+        self.__make_database()
 
     @property
     def session(self) -> Session:
