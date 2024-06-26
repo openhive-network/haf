@@ -43,3 +43,12 @@ def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Tra
     except TimeoutError:
         assert False, "Transaction NOT exist in database"
     return True
+
+
+def get_truncated_block_log(node, block_count: int):
+    output_block_log_path = tt.context.get_current_directory() / "block_log"
+    output_block_log_path.unlink(missing_ok=True)
+    output_block_log_artifacts_path = (tt.context.get_current_directory() / "block_log.artifacts")
+    output_block_log_artifacts_path.unlink(missing_ok=True)
+    block_log = node.block_log.truncate(tt.context.get_current_directory(), block_count)
+    return block_log
