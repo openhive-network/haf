@@ -164,17 +164,13 @@ namespace hive::plugins::sql_serializer {
   template< typename TableWriter >
   inline void
   chunks_for_writers_splitter_base< TableWriter >::join() {
-    for ( auto& writer : writers ) {
-      writer.join();
-    }
+    join_processors(writers);
   }
 
   template< typename TableWriter >
   inline void
   chunks_for_writers_splitter_base< TableWriter >::cancel() {
-    for ( auto& writer : writers ) {
-      writer.cancel();
-    }
+    cancel_processors(writers);
   }
 
   template< typename TableWriter >
