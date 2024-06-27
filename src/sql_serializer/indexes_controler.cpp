@@ -115,14 +115,14 @@ indexes_controler::enable_constrains() {
 }
 
 std::unique_ptr<queries_commit_data_processor>
-indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_call, const std::string& objects_name ) {
+indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_call, std::string objects_name ) {
   ilog("${mode} ${objects_name}...", ("objects_name", objects_name )("mode", ( mode ? "Creating" : "Dropping" ) ) );
 
   std::string query = std::string("SELECT ") + sql_function_call + ";";
   std::string description = "Query processor: `" + query + "'";
   std::string short_description = "index_ctrl";
-  auto processor=std::make_unique< queries_commit_data_processor >(_db_url, std::move(description), std::move(short_description), 
-                                                                   [query, &objects_name, mode, description](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status
+  auto processor=std::make_unique< queries_commit_data_processor >(_db_url, description, std::move(short_description), 
+                                                                   [query, objects_name=std::move(objects_name), mode, description](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status
   {
     ilog("Attempting to execute query: `${query}`...", ("query", query ) );
     const auto start_time = fc::time_point::now();

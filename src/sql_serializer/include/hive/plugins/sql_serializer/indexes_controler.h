@@ -21,7 +21,7 @@ namespace hive::plugins::sql_serializer {
 
   private:
     std::unique_ptr<queries_commit_data_processor>
-    start_commit_sql( bool mode, const std::string& sql_function_call, const std::string& objects_name );
+    start_commit_sql( bool mode, const std::string& sql_function_call, std::string objects_name );
 
   private:
     const std::string _db_url;
