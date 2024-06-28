@@ -302,6 +302,8 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( application_loop/process_squash_MASSIVE_SYNC_event.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/override_for_greater_batch.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/override_for_lesser_batch.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/limit.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/iteration_after_limit.sql )
 
 
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork.sql )

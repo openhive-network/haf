@@ -128,7 +128,7 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _contexts hive.contexts_group, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL )
+CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _contexts hive.contexts_group, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL )
 LANGUAGE 'plpgsql'
 AS
 $body$
@@ -140,6 +140,13 @@ BEGIN
     -- 1. commit if there is a pending commit
     IF pg_current_xact_id_if_assigned() IS NOT NULL THEN
         COMMIT;
+    END IF;
+
+    IF _limit IS NOT NULL
+    THEN
+        IF hive.app_get_current_block_num( __lead_context_name ) >= _limit THEN
+            RETURN;
+        END IF;
     END IF;
 
     PERFORM hive.app_check_contexts_synchronized( _contexts );
@@ -191,6 +198,14 @@ BEGIN
         );
     END IF;
 
+    IF _limit IS NOT NULL
+    THEN
+        _blocks_range.last_block = LEAST(
+              _blocks_range.last_block
+            , _limit
+        );
+    END IF;
+
     UPDATE hive.contexts ctx
     SET loop.current_batch_end = _blocks_range.last_block
     WHERE ctx.name=ANY(_contexts);
@@ -203,11 +218,11 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _context hive.context_name, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL )
+CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _context hive.context_name, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL )
     LANGUAGE 'plpgsql'
 AS
 $body$
 BEGIN
-    CALL hive.app_next_iteration( ARRAY[ _context ], _blocks_range, _override_max_batch );
+    CALL hive.app_next_iteration( ARRAY[ _context ], _blocks_range, _override_max_batch, _limit );
 END;
 $body$;
