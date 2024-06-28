@@ -5,7 +5,7 @@ import test_tools as tt
 from haf_local_tools.system.haf import prepare_and_send_transactions, get_truncated_block_log
 
 
-def test_replay_error(haf_node):
+def test_exception_in_reindex_state(haf_node):
     """
     Check that an exception raised during replay in worker thread is handled correctly.
     The node should catch the exception, kill all the workers and exit cleanly.
