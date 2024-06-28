@@ -7,11 +7,11 @@ from haf_local_tools.haf_node._haf_node import HafNode, Transaction, Transaction
 from haf_local_tools.tables import BlocksView
 
 
-def connect_nodes(first_node: tt.RawNode, second_node: tt.RawNode) -> None:
+def connect_nodes(seed_node: tt.RawNode, peer_node: tt.RawNode) -> None:
     """
     This place have to be removed after solving issue https://gitlab.syncad.com/hive/test-tools/-/issues/10
     """
-    second_node.config.p2p_seed_node = first_node.p2p_endpoint.as_string()
+    peer_node.config.p2p_seed_node = seed_node.p2p_endpoint.as_string()
 
 
 def prepare_and_send_transactions(node: tt.InitNode) -> [dict, dict]:
