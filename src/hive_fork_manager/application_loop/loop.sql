@@ -142,6 +142,8 @@ BEGIN
         COMMIT;
     END IF;
 
+    PERFORM hive.wait_for_ready_instance(_contexts, '178000000 years'::interval);
+
     IF _limit IS NOT NULL
     THEN
         IF hive.app_get_current_block_num( __lead_context_name ) >= _limit THEN
@@ -165,11 +167,11 @@ BEGIN
     -- 2. find current stage if:
     IF hive.is_stages_analyze_required( __lead_context_state, hive.get_irreversible_head_block() )
     THEN
-        -- hive.is_abs_livesync( _contexts )
         IF NOT hive.app_context_are_attached( _contexts )
         THEN
             PERFORM hive.app_context_attach( _contexts );
         END IF;
+
         SELECT * FROM hive.app_next_block( _contexts ) INTO _blocks_range;
         IF _blocks_range IS NULL
         THEN
