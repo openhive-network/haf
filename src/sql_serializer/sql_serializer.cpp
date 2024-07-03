@@ -619,53 +619,61 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
 
 void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& note)
 {
-  _last_block_num = note.block_num;
-  if(!can_collect_blocks())
-    return;
-  op_in_block_number = 0;
-
-  handle_transactions(note.full_block->get_full_transactions(), note.block_num);
-
-  const hive::chain::signed_block_header& block_header = note.full_block->get_block_header();
-  const auto* account_ptr = chain_db.find_account(block_header.witness);
-  int32_t account_id = account_ptr->get_id();
-  const hive::chain::witness_object* witness_ptr = chain_db.find_witness(block_header.witness);
-
-  const hive::chain::dynamic_global_property_object& dgpo = chain_db.get_dynamic_global_properties();
-
-  currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
-  currently_caching_data->blocks.emplace_back(
-    note.block_id,
-    note.block_num,
-    block_header.timestamp,
-    note.prev_block_id,
-    account_id,
-    block_header.transaction_merkle_root,
-    (block_header.extensions.size() == 0) ? fc::optional<std::string>() : fc::optional<std::string>(fc::json::to_string( block_header.extensions )),
-    block_header.witness_signature,
-    witness_ptr->signing_key,
-    
-    dgpo.hbd_interest_rate,
-
-    dgpo.total_vesting_shares,
-    dgpo.total_vesting_fund_hive,
-
-    dgpo.total_reward_fund_hive,
-
-    dgpo.virtual_supply,
-    dgpo.current_supply,
-
-    dgpo.current_hbd_supply,
-    dgpo.init_hbd_supply
-    );
-
-  _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
-
-  filter.clear();
-
-  if(note.block_num % 100'000 == 0)
+  try
   {
-    log_statistics();
+    _last_block_num = note.block_num;
+    if(!can_collect_blocks())
+      return;
+    op_in_block_number = 0;
+
+    handle_transactions(note.full_block->get_full_transactions(), note.block_num);
+
+    const hive::chain::signed_block_header& block_header = note.full_block->get_block_header();
+    const auto* account_ptr = chain_db.find_account(block_header.witness);
+    int32_t account_id = account_ptr->get_id();
+    const hive::chain::witness_object* witness_ptr = chain_db.find_witness(block_header.witness);
+
+    const hive::chain::dynamic_global_property_object& dgpo = chain_db.get_dynamic_global_properties();
+
+    currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
+    currently_caching_data->blocks.emplace_back(
+      note.block_id,
+      note.block_num,
+      block_header.timestamp,
+      note.prev_block_id,
+      account_id,
+      block_header.transaction_merkle_root,
+      (block_header.extensions.size() == 0) ? fc::optional<std::string>() : fc::optional<std::string>(fc::json::to_string( block_header.extensions )),
+      block_header.witness_signature,
+      witness_ptr->signing_key,
+
+      dgpo.hbd_interest_rate,
+
+      dgpo.total_vesting_shares,
+      dgpo.total_vesting_fund_hive,
+
+      dgpo.total_reward_fund_hive,
+
+      dgpo.virtual_supply,
+      dgpo.current_supply,
+
+      dgpo.current_hbd_supply,
+      dgpo.init_hbd_supply
+      );
+
+    _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
+
+    filter.clear();
+
+    if(note.block_num % 100'000 == 0)
+    {
+      log_statistics();
+    }
+  }
+  catch (...)
+  {
+    theApp.kill();
+    throw;
   }
 }
 
