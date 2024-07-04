@@ -703,10 +703,6 @@ BEGIN
         RAISE EXCEPTION 'First block % is greater than %', _first_block, _last_block;
     END IF;
 
-    IF  _first_block < __current_block_num THEN
-        RAISE EXCEPTION 'First block % is lower than context % current block %', _first_block, _context, __current_block_num;
-    END IF;
-
     PERFORM hive.update_one_state_providers( _first_block, _last_block, hsp.state_provider, _context )
     FROM hive.state_providers_registered hsp
     WHERE hsp.context_id = __context_id;
