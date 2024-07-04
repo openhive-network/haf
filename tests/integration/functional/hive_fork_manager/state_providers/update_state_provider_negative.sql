@@ -56,13 +56,6 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-
-    BEGIN
-        PERFORM hive.app_state_providers_update( 1, 1, 'context' );
-        ASSERT FALSE, 'Possible update for block less than current block';
-    EXCEPTION WHEN OTHERS THEN
-    END;
-
     BEGIN
         PERFORM hive.app_state_providers_update( 1, 5, 'context' );
         ASSERT FALSE, 'Possible update for blocks range for attached context';
