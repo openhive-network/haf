@@ -155,7 +155,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void livesync_data_dumper::on_switch_fork( uint32_t block_num ) {
-    _processing_thread.enqueue("SELECT hive.back_from_fork(" + std::to_string(block_num) + ")");
+      _processing_thread.enqueue("SELECT hive.back_from_fork(" + std::to_string(block_num) + ")");
   }
 
   void livesync_data_dumper::connect_irreversible_event() {

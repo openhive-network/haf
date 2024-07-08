@@ -65,7 +65,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM hive.connect( '123456789', 100, TRUE );
+    PERFORM hive.connect( '123456789', 100 );
 END
 $BODY$
 ;
@@ -91,8 +91,6 @@ BEGIN
 
     ASSERT( SELECT COUNT(*) FROM hive.hived_connections ) = 1, 'No connection saved';
     ASSERT( SELECT COUNT(*) FROM hive.hived_connections WHERE block_num=100 AND git_sha='123456789' ) = 1, 'No expected connection saved';
-
-    ASSERT( SELECT COUNT(*) FROM hive.fork WHERE id = 2 AND block_num = 100 ) = 1, 'No fork added after connection';
 
     ASSERT( SELECT is_dirty FROM hive.irreversible_data ) = FALSE, 'Irreversible data are dirty';
 END

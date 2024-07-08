@@ -65,7 +65,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM hive.connect( '123456789', 100, FALSE );
+    PERFORM hive.connect( '123456789', 100 );
 END
 $BODY$
 ;

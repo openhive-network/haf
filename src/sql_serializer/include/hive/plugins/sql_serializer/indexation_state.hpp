@@ -51,7 +51,7 @@ namespace hive::plugins::sql_serializer {
       void on_block( int last_block_num );
 
       // call when fork occurs, block_num -> first abanoned block
-      void on_switch_fork( cached_data_t& cached_data, uint32_t block_num );
+      void on_switch_fork( uint32_t last_synced_block_num, cached_data_t& cached_data, uint32_t block_num );
 
       // trying triggers flushing data to databes, cahed data ma by modified (shrinked) or not
       void trigger_data_flush( cached_data_t& cached_data, int last_block_num );

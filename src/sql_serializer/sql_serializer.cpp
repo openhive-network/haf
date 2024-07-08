@@ -257,6 +257,7 @@ public:
 
   void handle_transactions(const vector<std::shared_ptr<hive::chain::full_transaction_type>>& transactions, const int64_t block_num);
   void replay_wal_if_necessary();
+  void inform_hfm_about_starting_once();
   void inform_hfm_about_starting();
   bool need_initialize_database( uint32_t block_num );
   void initialize_db();
@@ -364,7 +365,7 @@ public:
     queries_commit_data_processor block_loader(db_url, "Block loader", "blockload",
                                                 [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
       {
-        pqxx::result data = tx.exec("SELECT hb.num AS _max_block FROM hive.blocks hb ORDER BY hb.num DESC LIMIT 1;");
+        pqxx::result data = tx.exec("SELECT hb.num AS _max_block FROM hive.blocks_view hb ORDER BY hb.num DESC LIMIT 1;");
         if( !data.empty() )
         {
           FC_ASSERT( data.size() == 1, "Data size" );
@@ -438,6 +439,11 @@ void sql_serializer_plugin_impl::replay_wal_if_necessary() {
   }
 }
 
+void sql_serializer_plugin_impl::inform_hfm_about_starting_once() {
+    static std::once_flag inform_hfm_once_flag;
+    std::call_once(inform_hfm_once_flag, [&]{ inform_hfm_about_starting(); } );
+}
+
 void sql_serializer_plugin_impl::inform_hfm_about_starting() {
   using namespace std::string_literals;
   ilog( "Inform Hive Fork Manager about starting..." );
@@ -446,8 +452,7 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
   auto connect_to_the_db = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx ){
     const auto CONNECT_QUERY = "SELECT hive.connect('"s
                                + fc::git_revision_sha
-                               + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER"
-                               + ","s + (replay_blocklog?"false"s:"true"s) + "::BOOL);"s;
+                               + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER);"s;
     tx.exec( CONNECT_QUERY );
     return data_processing_status();
   };
@@ -467,7 +472,7 @@ void sql_serializer_plugin_impl::connect_signals()
   _on_starting_reindex = chain_db.add_pre_reindex_handler([&](const reindex_notification& note) { on_pre_reindex(note); }, main_plugin);
   _on_end_of_syncing_con = chain_db.add_end_of_syncing_handler([&]() { on_end_of_syncing(); }, main_plugin);
   _on_switch_fork_conn = chain_db.add_switch_fork_handler(
-    [&]( uint32_t block_num ){ _indexation_state.on_switch_fork( *currently_caching_data, block_num ); }, main_plugin );
+    [&]( uint32_t block_num ){ _indexation_state.on_switch_fork( _last_block_num, *currently_caching_data, block_num ); }, main_plugin );
 
   _on_pre_apply_block_con_unblock_operations = chain_db.add_pre_apply_block_handler([&](const block_notification& note) { unblock_operation_handlers(note); }, main_plugin);
   _on_post_apply_block_con_block_operations = chain_db.add_post_apply_block_handler([&](const block_notification& note) { block_operation_handlers(note); }, main_plugin);
@@ -494,7 +499,7 @@ void sql_serializer_plugin_impl::disconnect_signals()
 void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& note)
 {
   static std::once_flag inform_hfm_flag;
-  std::call_once(inform_hfm_flag, [&]{ replay_wal_if_necessary(); inform_hfm_about_starting(); } );
+  std::call_once(inform_hfm_flag, [&]{ replay_wal_if_necessary(); inform_hfm_about_starting_once(); } );
 
   _indexation_state.on_block( note.block_num );
   if (need_initialize_database(note.block_num) ) {
@@ -741,6 +746,7 @@ void sql_serializer_plugin_impl::handle_transactions(const vector<std::shared_pt
 void sql_serializer_plugin_impl::on_pre_reindex(const reindex_notification& note)
 {
   ilog("Entering a reindex init...");
+  inform_hfm_about_starting_once();
 
   if ( note.args.stop_replay_at ) {
     _indexation_state.on_pre_reindex( *currently_caching_data, _last_block_num, ( note.args.stop_replay_at - _last_block_num ) );

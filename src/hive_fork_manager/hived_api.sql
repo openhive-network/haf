@@ -330,7 +330,7 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE, _remove_reversible BOOL )
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -338,9 +338,6 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.remove_inconsistent_irreversible_data();
-    IF _remove_reversible OR _block_num = 0 THEN --_block_num = 0 to ensure that at least 1 fork exists
-        PERFORM hive.back_from_fork( _block_num );
-    END IF;
     INSERT INTO hive.hived_connections( block_num, git_sha, time )
     VALUES( _block_num, _git_sha, now() );
 END;
