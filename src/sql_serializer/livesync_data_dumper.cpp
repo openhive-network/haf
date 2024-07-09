@@ -232,6 +232,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
           ilog("Dumping wal as part of shutdown");
 
         command_to_run = std::move(_command_queue.front());
+        if (_shutdown_requested)
+            ilog("Dumping wal as part of shutdown ${c}", ("c", command_to_run));
         _command_queue.pop_front();
         commands_remaining = _command_queue.size();
       }
