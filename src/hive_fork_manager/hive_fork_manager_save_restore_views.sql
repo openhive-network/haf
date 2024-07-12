@@ -19,7 +19,7 @@ CREATE TABLE if not exists hive.deps_saved_ddl
     deps_id integer NOT NULL DEFAULT nextval('hive.deps_saved_ddl_deps_id_seq'::regclass),
     deps_view_schema character varying(255),
     deps_view_name character varying(255),
-    deps_ddl_to_run text,
+    deps_ddl_to_run hive.ctext,
     CONSTRAINT deps_saved_ddl_pkey PRIMARY KEY (deps_id)
 )
 ;

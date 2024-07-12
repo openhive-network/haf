@@ -5,7 +5,7 @@ $BODY$
 BEGIN
     CREATE SCHEMA A;
     PERFORM hive.context_create( 'context', 'a' );
-    CREATE TABLE A.table1( id SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT ) INHERITS( a.context );
+    CREATE TABLE A.table1( id SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name hive.ctext ) INHERITS( a.context );
 END;
 $BODY$
 ;

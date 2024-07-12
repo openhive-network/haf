@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION hive.context_create(
       _name hive.context_name
-    , _schema TEXT
+    , _schema hive.ctext
     , _fork_id BIGINT = 1
     , _irreversible_block INT = 0
     , _is_forking BOOLEAN = TRUE
@@ -63,7 +63,7 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE := NULL;
-    __context_schema TEXT;
+    __context_schema hive.ctext;
 BEGIN
     SELECT hc.id, hc.schema INTO __context_id, __context_schema FROM hive.contexts hc WHERE hc.name = _name;
 
@@ -84,7 +84,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.context_exists( _name TEXT )
+CREATE OR REPLACE FUNCTION hive.context_exists( _name hive.ctext )
     RETURNS BOOL
     LANGUAGE 'plpgsql'
     STABLE
@@ -96,7 +96,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.context_next_block( _name TEXT )
+CREATE OR REPLACE FUNCTION hive.context_next_block( _name hive.ctext )
     RETURNS INTEGER
     LANGUAGE 'sql'
     VOLATILE
@@ -109,16 +109,16 @@ WHERE name = _name
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.context_back_from_fork( _context TEXT, _block_num_before_fork INT )
+CREATE OR REPLACE FUNCTION hive.context_back_from_fork( _context hive.ctext, _block_num_before_fork INT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __trigger_name TEXT;
-    __registerd_table_schema TEXT;
-    __registerd_table_name TEXT;
+    __trigger_name hive.ctext;
+    __registerd_table_schema hive.ctext;
+    __registerd_table_name hive.ctext;
 BEGIN
     -- we need a flag for back_from_fork to returns from triggers immediatly
     -- we cannot use ALTER TABLE DISABLE TRIGGERS because DDL event trigger cause an error:
@@ -147,7 +147,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.context_detach( _context TEXT )
+CREATE OR REPLACE FUNCTION hive.context_detach( _context hive.ctext )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -190,7 +190,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.context_attach( _context TEXT, _last_synced_block INT )
+CREATE OR REPLACE FUNCTION hive.context_attach( _context hive.ctext, _last_synced_block INT )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -232,7 +232,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.context_set_irreversible_block( _context TEXT, _block_num INTEGER )
+CREATE OR REPLACE FUNCTION hive.context_set_irreversible_block( _context hive.ctext, _block_num INTEGER )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE

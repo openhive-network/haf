@@ -8,11 +8,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 DECLARE
-    all_sequences TEXT[];
-    all_tables TEXT[];
+    all_sequences hive.ctext[];
+    all_tables hive.ctext[];
     oids INTEGER[];
-    flagged_tables TEXT[];
-    flagged_sequences TEXT[];
+    flagged_tables hive.ctext[];
+    flagged_sequences hive.ctext[];
 BEGIN
 
     SELECT ARRAY_AGG(sequence_name) INTO all_sequences
@@ -48,8 +48,8 @@ $BODY$
 
 
 DROP FUNCTION IF EXISTS format_assert_message;
-CREATE FUNCTION format_assert_message(IN intext TEXT, IN alla TEXT[], IN flagged TEXT[])
-    RETURNS TEXT
+CREATE FUNCTION format_assert_message(IN intext hive.ctext, IN alla hive.ctext[], IN flagged hive.ctext[])
+    RETURNS hive.ctext
     LANGUAGE 'plpgsql'
 AS
 $BODY$

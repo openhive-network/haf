@@ -330,7 +330,7 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE, _remove_reversible BOOL )
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha hive.ctext, _block_num hive.blocks.num%TYPE, _remove_reversible BOOL )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -452,7 +452,7 @@ AS
 $BODY$
 DECLARE
   __contexts hive.context_name[];
-  __ctx TEXT;
+  __ctx hive.ctext;
   __now TIMESTAMP WITHOUT TIME ZONE := NOW();
   __current_block_before_detach INT;
 BEGIN

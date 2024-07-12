@@ -6,7 +6,7 @@ $BODY$
 BEGIN
     CREATE SCHEMA A;
     PERFORM hive.context_create( 'context', 'a' );
-    CREATE TABLE table1( id SERIAL PRIMARY KEY, smth INTEGER, name TEXT ) INHERITS( a.context );
+    CREATE TABLE table1( id SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext ) INHERITS( a.context );
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO table1( smth, name ) VALUES( 1, 'abc' );
 END;

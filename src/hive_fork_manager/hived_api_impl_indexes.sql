@@ -1,8 +1,8 @@
 DROP TABLE IF EXISTS hive.indexes_constraints;
 CREATE TABLE IF NOT EXISTS hive.indexes_constraints (
-    table_name text NOT NULL,
-    index_constraint_name text NOT NULL,
-    command text NOT NULL,
+    table_name hive.ctext NOT NULL,
+    index_constraint_name hive.ctext NOT NULL,
+    command hive.ctext NOT NULL,
     is_constraint boolean NOT NULL,
     is_index boolean NOT NULL,
     is_foreign_key boolean NOT NULL,

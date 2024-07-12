@@ -46,12 +46,12 @@ AS 'MODULE_PATHNAME',
 
 CREATE OR REPLACE FUNCTION hive.operation_to_jsontext(
   hive.operation
-) RETURNS text LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+) RETURNS hive.ctext LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
 AS 'MODULE_PATHNAME',
 'operation_to_jsontext';
 
 CREATE OR REPLACE FUNCTION hive.operation_from_jsontext(
-  text
+  hive.ctext
 ) RETURNS hive.operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
 AS 'MODULE_PATHNAME',
 'operation_from_jsontext';
@@ -100,6 +100,6 @@ AS 'MODULE_PATHNAME',
 
 CREATE OR REPLACE FUNCTION hive.operation_type_name(
   hive.operation
-) RETURNS TEXT LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE
+) RETURNS hive.ctext LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE
 AS 'MODULE_PATHNAME',
 'operation_type_name';

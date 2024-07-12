@@ -1,5 +1,5 @@
 DROP FUNCTION IF EXISTS ASSERT_THIS_TEST;
-CREATE FUNCTION ASSERT_THIS_TEST(pname TEXT, pvalue TEXT, expected hive.extract_set_witness_properties_return)
+CREATE FUNCTION ASSERT_THIS_TEST(pname hive.ctext, pvalue hive.ctext, expected hive.extract_set_witness_properties_return)
         RETURNS void
         LANGUAGE 'plpgsql'
 AS
@@ -14,12 +14,12 @@ BEGIN
                             pname,
                             pvalue
                         )
-            )::TEXT 
+            )::hive.ctext 
     )t;
 
     ASSERT array_length(actual, 1) = 1, 'Improper amount of data returned by extract_set_witness_properties';
     ASSERT actual[1].prop_name = expected.prop_name, 'Wrong property name returned by extract_set_witness_properties';
-    ASSERT actual[1].prop_value::TEXT = expected.prop_value::TEXT, 'Wrong property value returned by extract_set_witness_properties';
+    ASSERT actual[1].prop_value::hive.ctext = expected.prop_value::hive.ctext, 'Wrong property value returned by extract_set_witness_properties';
 
 END;
 $BODY$

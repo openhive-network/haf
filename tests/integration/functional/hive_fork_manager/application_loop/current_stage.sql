@@ -51,7 +51,7 @@ AS
 $BODY$
 DECLARE
     __current_stage hive.application_stage;
-    __context TEXT;
+    __context hive.ctext;
 BEGIN
     -- alice stage1
     SELECT (stg).context FROM hive.get_current_stage( ARRAY[ 'alice'] ) stg INTO __context;

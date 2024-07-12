@@ -645,8 +645,8 @@ $BODY$
 
 CREATE OR REPLACE FUNCTION ASSERT_METADATA_VALUES(
     _account_id INTEGER,
-    _json_metadata TEXT,
-    _posting_json_metadata TEXT
+    _json_metadata hive.ctext,
+    _posting_json_metadata hive.ctext
     )
 RETURNS void 
 LANGUAGE 'plpgsql' 

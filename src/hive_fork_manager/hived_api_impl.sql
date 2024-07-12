@@ -342,12 +342,12 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.save_and_drop_indexes_constraints( in _schema TEXT, in _table TEXT )
+CREATE OR REPLACE FUNCTION hive.save_and_drop_indexes_constraints( in _schema hive.ctext, in _table hive.ctext )
     RETURNS VOID
     AS
 $function$
 DECLARE
-    __command TEXT;
+    __command hive.ctext;
     __cursor REFCURSOR;
 BEGIN
     PERFORM hive.save_and_drop_constraints( _schema, _table );
@@ -374,7 +374,7 @@ BEGIN
 
     --dropping indexes
     OPEN __cursor FOR (
-        SELECT ('DROP INDEX IF EXISTS '::TEXT || _schema || '.' || index_constraint_name || ';')
+        SELECT ('DROP INDEX IF EXISTS '::hive.ctext || _schema || '.' || index_constraint_name || ';')
         FROM hive.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_index = TRUE
     );
 
@@ -387,7 +387,7 @@ BEGIN
 
     --dropping primary keys/unique contraints
     OPEN __cursor FOR (
-        SELECT ('ALTER TABLE '::TEXT || _schema || '.' || _table || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
+        SELECT ('ALTER TABLE '::hive.ctext || _schema || '.' || _table || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
         FROM hive.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_constraint = TRUE
     );
 
@@ -402,12 +402,12 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.save_and_drop_indexes_foreign_keys( in _table_schema TEXT, in _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.save_and_drop_indexes_foreign_keys( in _table_schema hive.ctext, in _table_name hive.ctext )
 RETURNS VOID
 AS
 $function$
 DECLARE
-    __command TEXT;
+    __command hive.ctext;
     __cursor REFCURSOR;
 BEGIN
     INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
@@ -424,7 +424,7 @@ BEGIN
     WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name;
 
     OPEN __cursor FOR (
-        SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
+        SELECT ('ALTER TABLE '::hive.ctext || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
         FROM hive.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
     );
 
@@ -440,12 +440,12 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.save_and_drop_constraints( in _table_schema TEXT, in _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.save_and_drop_constraints( in _table_schema hive.ctext, in _table_name hive.ctext )
 RETURNS VOID
 AS
 $function$
 DECLARE
-__command TEXT;
+__command hive.ctext;
 __cursor REFCURSOR;
 BEGIN
     INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
@@ -462,7 +462,7 @@ BEGIN
     WHERE tc.constraint_type != 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name;
 
     OPEN __cursor FOR (
-            SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
+            SELECT ('ALTER TABLE '::hive.ctext || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
             FROM hive.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
         );
 
@@ -483,7 +483,7 @@ RETURNS VOID
 AS
 $function$
 DECLARE
-  __command TEXT;
+  __command hive.ctext;
   __cluster_index_dropped BOOLEAN;
 BEGIN
 
@@ -508,12 +508,12 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name hive.ctext )
 RETURNS VOID
 AS
 $function$
 DECLARE
-  __command TEXT;
+  __command hive.ctext;
   __cursor REFCURSOR;
 BEGIN
 
@@ -538,12 +538,12 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.restore_foreign_keys( in _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.restore_foreign_keys( in _table_name hive.ctext )
     RETURNS VOID
 AS
 $function$
 DECLARE
-    __command TEXT;
+    __command hive.ctext;
     __cursor REFCURSOR;
 BEGIN
 

@@ -5,6 +5,6 @@ CREATE TYPE hive.extract_set_witness_properties_return AS
   prop_value JSON -- Deserialized property
 );
 
-CREATE OR REPLACE FUNCTION hive.extract_set_witness_properties(IN prop_array TEXT)
+CREATE OR REPLACE FUNCTION hive.extract_set_witness_properties(IN prop_array hive.ctext)
 RETURNS SETOF hive.extract_set_witness_properties_return
 AS 'MODULE_PATHNAME', 'extract_set_witness_properties' LANGUAGE C;

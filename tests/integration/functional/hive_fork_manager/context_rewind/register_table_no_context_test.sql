@@ -4,7 +4,7 @@ AS
 $BODY$
 BEGIN
     BEGIN
-        CREATE TABLE hive.table1(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( a.context );
+        CREATE TABLE hive.table1(id  SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext) INHERITS( a.context );
     EXCEPTION WHEN OTHERS THEN
         RETURN;
     END;

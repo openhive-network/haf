@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS hive.blocks (
        transaction_merkle_root bytea NOT NULL,
        extensions jsonb DEFAULT NULL,
        witness_signature bytea NOT NULL,
-       signing_key text NOT NULL,
+       signing_key hive.ctext NOT NULL,
 
        --- Data specific to parts of blockchain DGPO 
 
@@ -70,7 +70,7 @@ SELECT pg_catalog.pg_extension_config_dump('hive.transactions_multisig', '');
 
 CREATE TABLE IF NOT EXISTS hive.operation_types (
     id smallint NOT NULL,
-    name text NOT NULL,
+    name hive.ctext NOT NULL,
     is_virtual boolean NOT NULL,
     CONSTRAINT pk_hive_operation_types PRIMARY KEY (id),
     CONSTRAINT uq_hive_operation_types UNIQUE (name)

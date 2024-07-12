@@ -16,7 +16,7 @@ LANGUAGE 'plpgsql'
 $BODY$
 BEGIN
     BEGIN
-        CREATE TABLE table1( id SERIAL PRIMARY KEY, smth INTEGER, name TEXT ) INHERITS( hive.context );
+        CREATE TABLE table1( id SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext ) INHERITS( hive.context );
         ASSERT FALSE, 'No exception when haf_admin register a table into Alice''s context';
     EXCEPTION WHEN OTHERS THEN
     END;

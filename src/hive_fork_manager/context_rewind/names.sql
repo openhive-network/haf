@@ -1,5 +1,5 @@
-CREATE OR REPLACE FUNCTION hive.validate_name( _name TEXT, _table_name TEXT )
-    RETURNS TEXT
+CREATE OR REPLACE FUNCTION hive.validate_name( _name hive.ctext, _table_name hive.ctext )
+    RETURNS hive.ctext
     LANGUAGE 'plpgsql'
     IMMUTABLE
 AS
@@ -17,8 +17,8 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_shadow_table_name( _table_schema TEXT,  _table_name TEXT )
-    RETURNS TEXT
+CREATE OR REPLACE FUNCTION hive.get_shadow_table_name( _table_schema hive.ctext,  _table_name hive.ctext )
+    RETURNS hive.ctext
     LANGUAGE 'plpgsql'
     IMMUTABLE
 AS
@@ -31,8 +31,8 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_trigger_insert_name( _table_schema TEXT,  _table_name TEXT )
-    RETURNS TEXT
+CREATE OR REPLACE FUNCTION hive.get_trigger_insert_name( _table_schema hive.ctext,  _table_name hive.ctext )
+    RETURNS hive.ctext
     LANGUAGE 'plpgsql'
     IMMUTABLE
 AS
@@ -45,8 +45,8 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_trigger_delete_name( _table_schema TEXT,  _table_name TEXT )
-    RETURNS TEXT
+CREATE OR REPLACE FUNCTION hive.get_trigger_delete_name( _table_schema hive.ctext,  _table_name hive.ctext )
+    RETURNS hive.ctext
     LANGUAGE 'plpgsql'
     IMMUTABLE
 AS
@@ -60,8 +60,8 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_trigger_update_name( _table_schema TEXT,  _table_name TEXT )
-    RETURNS TEXT
+CREATE OR REPLACE FUNCTION hive.get_trigger_update_name( _table_schema hive.ctext,  _table_name hive.ctext )
+    RETURNS hive.ctext
     LANGUAGE 'plpgsql'
     IMMUTABLE
 AS
@@ -75,8 +75,8 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_trigger_truncate_name( _table_schema TEXT,  _table_name TEXT )
-    RETURNS TEXT
+CREATE OR REPLACE FUNCTION hive.get_trigger_truncate_name( _table_schema hive.ctext,  _table_name hive.ctext )
+    RETURNS hive.ctext
     LANGUAGE 'plpgsql'
     IMMUTABLE
 AS
@@ -89,8 +89,8 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_trigger_insert_function_name( _table_schema TEXT,  _table_name TEXT )
-    RETURNS TEXT
+CREATE OR REPLACE FUNCTION hive.get_trigger_insert_function_name( _table_schema hive.ctext,  _table_name hive.ctext )
+    RETURNS hive.ctext
     LANGUAGE 'plpgsql'
     IMMUTABLE
 AS
@@ -101,8 +101,8 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_trigger_delete_function_name( _table_schema TEXT,  _table_name TEXT )
-    RETURNS TEXT
+CREATE OR REPLACE FUNCTION hive.get_trigger_delete_function_name( _table_schema hive.ctext,  _table_name hive.ctext )
+    RETURNS hive.ctext
     LANGUAGE 'plpgsql'
     IMMUTABLE
 AS
@@ -115,8 +115,8 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_trigger_update_function_name( _table_schema TEXT,  _table_name TEXT )
-    RETURNS TEXT
+CREATE OR REPLACE FUNCTION hive.get_trigger_update_function_name( _table_schema hive.ctext,  _table_name hive.ctext )
+    RETURNS hive.ctext
     LANGUAGE 'plpgsql'
     IMMUTABLE
 AS
@@ -129,8 +129,8 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_trigger_truncate_function_name( _table_schema TEXT,  _table_name TEXT )
-    RETURNS TEXT
+CREATE OR REPLACE FUNCTION hive.get_trigger_truncate_function_name( _table_schema hive.ctext,  _table_name hive.ctext )
+    RETURNS hive.ctext
     LANGUAGE 'plpgsql'
     IMMUTABLE
 AS

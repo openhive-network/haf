@@ -4,7 +4,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 DECLARE
-    __value TEXT;
+    __value hive.ctext;
 BEGIN
     SELECT setting FROM pg_settings WHERE name='query_supervisor.limit_tuples' INTO __value;
 
@@ -19,7 +19,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 DECLARE
-    __value TEXT;
+    __value hive.ctext;
 BEGIN
     SET query_supervisor.limit_tuples TO 5000;
     SELECT setting FROM pg_settings WHERE name='query_supervisor.limit_tuples' INTO __value;

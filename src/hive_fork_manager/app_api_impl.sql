@@ -389,7 +389,7 @@ $BODY$
 -- Null -> ask again without waiting
 -- negative range -> no block to process, need to wait for next live block
 -- positive range (including 0 size) -> range of blocks to process
-CREATE OR REPLACE FUNCTION hive.app_process_event( _context TEXT, _context_state hive.context_state )
+CREATE OR REPLACE FUNCTION hive.app_process_event( _context hive.ctext, _context_state hive.context_state )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE

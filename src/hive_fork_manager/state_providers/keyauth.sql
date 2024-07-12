@@ -2,14 +2,14 @@
 -- and the whole hive::protocol::request_account_recovery_operation is not recorded at all
 
 CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hive.context_name )
-    RETURNS TEXT[]
+    RETURNS hive.ctext[]
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     __context_id = hive.get_context_id( _context );
     SELECT hc.schema INTo __schema
@@ -545,7 +545,7 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __template TEXT;
+    __template hive.ctext;
 BEGIN
 
     __context_id = hive.get_context_id( _context );

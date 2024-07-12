@@ -3,7 +3,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 DECLARE
-    __value TEXT;
+    __value hive.ctext;
 BEGIN
     BEGIN
         SET query_supervisor.limit_tuples TO -1000;

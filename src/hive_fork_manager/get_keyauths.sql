@@ -5,10 +5,10 @@ CREATE TYPE hive.key_type AS ENUM( 'OWNER', 'ACTIVE', 'POSTING', 'MEMO', 'WITNES
 DROP TYPE IF EXISTS hive.keyauth_record_type CASCADE;
 CREATE TYPE hive.keyauth_record_type AS
 (
-      account_name TEXT
+      account_name hive.ctext
     , key_kind hive.key_type
     , key_auth BYTEA
-    , account_auth TEXT
+    , account_auth hive.ctext
     , weight_threshold INTEGER
     , w INTEGER
 );
@@ -16,10 +16,10 @@ CREATE TYPE hive.keyauth_record_type AS
 DROP TYPE IF EXISTS hive.keyauth_c_record_type CASCADE;
 CREATE TYPE hive.keyauth_c_record_type AS
 (
-      account_name TEXT
+      account_name hive.ctext
     , authority_c_kind INTEGER
     , key_auth BYTEA
-    , account_auth TEXT
+    , account_auth hive.ctext
     , weight_threshold INTEGER
     , w INTEGER
 );
@@ -64,7 +64,7 @@ END
 $$;
 
 CREATE OR REPLACE FUNCTION hive.public_key_to_string(p_key BYTEA)
-RETURNS TEXT
+RETURNS hive.ctext
 AS 'MODULE_PATHNAME', 'public_key_to_string' LANGUAGE C;
 
 DROP FUNCTION IF EXISTS hive.get_keyauths;

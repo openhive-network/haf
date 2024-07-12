@@ -1,6 +1,6 @@
 -- New versions of PostgreSQL disallow to create schema if not exists statement for any object not belonging to extension, and given schema does not initially.
 
-CREATE DOMAIN hive.context_name AS TEXT NOT NULL CONSTRAINT non_empty_context CHECK( LENGTH( VALUE ) != 0);
+CREATE DOMAIN hive.context_name AS hive.ctext NOT NULL CONSTRAINT non_empty_context CHECK( LENGTH( VALUE ) != 0);
 CREATE DOMAIN hive.contexts_group AS hive.context_name[] NOT NULL CONSTRAINT non_empty_contexts_group CHECK( CARDINALITY( VALUE ) > 0 );
 
 CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' , 'METADATA' );
@@ -10,7 +10,7 @@ CREATE TYPE hive.event_type AS ENUM( 'BACK_FROM_FORK', 'NEW_BLOCK', 'NEW_IRREVER
 CREATE TABLE IF NOT EXISTS hive.contexts(
     id SERIAL NOT NULL,
     name hive.context_name NOT NULL,
-    schema TEXT NOT NULL,
+    schema hive.ctext NOT NULL,
     current_block_num INTEGER NOT NULL,
     irreversible_block INTEGER NOT NULL,
     back_from_fork BOOL NOT NULL DEFAULT FALSE,
@@ -44,10 +44,10 @@ CREATE INDEX IF NOT EXISTS hive_contexts_attachment_owner_idx ON hive.contexts_a
 CREATE TABLE IF NOT EXISTS hive.registered_tables(
    id SERIAL NOT NULL,
    context_id INTEGER NOT NULL,
-   origin_table_schema TEXT NOT NULL,
-   origin_table_name TEXT NOT NULL,
-   shadow_table_name TEXT NOT NULL,
-   origin_table_columns TEXT[] NOT NULL,
+   origin_table_schema hive.ctext NOT NULL,
+   origin_table_name hive.ctext NOT NULL,
+   shadow_table_name hive.ctext NOT NULL,
+   origin_table_columns hive.ctext[] NOT NULL,
    owner NAME NOT NULL,
    CONSTRAINT pk_hive_registered_tables PRIMARY KEY( id ),
    CONSTRAINT fk_hive_registered_tables_context FOREIGN KEY(context_id) REFERENCES hive.contexts( id ),
@@ -64,8 +64,8 @@ CREATE INDEX IF NOT EXISTS hive_registered_tables_owder_idx ON hive.registered_t
 CREATE TABLE IF NOT EXISTS hive.triggers(
    id SERIAL PRIMARY KEY,
    registered_table_id INTEGER NOT NULL,
-   trigger_name TEXT NOT NULL,
-   function_name TEXT NOT NULL,
+   trigger_name hive.ctext NOT NULL,
+   function_name hive.ctext NOT NULL,
    owner NAME NOT NULL,
    CONSTRAINT fk_hive_triggers_registered_table FOREIGN KEY( registered_table_id ) REFERENCES hive.registered_tables( id ),
    CONSTRAINT uq_hive_triggers_registered_table UNIQUE( trigger_name )

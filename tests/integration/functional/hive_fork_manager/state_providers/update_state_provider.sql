@@ -1,12 +1,12 @@
 ---------------------------- TEST PROVIDER ----------------------------------------------
 CREATE OR REPLACE FUNCTION hive.start_provider_tests( _context hive.context_name )
-    RETURNS TEXT[]
+    RETURNS hive.ctext[]
     LANGUAGE plpgsql
     AS
 $BODY$
 DECLARE
-__table_1_name TEXT := _context || '_tests1';
-__table_2_name TEXT := _context || '_tests2';
+__table_1_name hive.ctext := _context || '_tests1';
+__table_2_name hive.ctext := _context || '_tests2';
 BEGIN
     EXECUTE format( 'CREATE TABLE hive.%I(
                           id SERIAL
@@ -29,8 +29,8 @@ CREATE OR REPLACE FUNCTION hive.update_state_provider_tests( _first_block hive.b
     AS
 $BODY$
 DECLARE
-    __table_1_name TEXT := _context || '_tests1';
-    __table_2_name TEXT := _context || '_tests2';
+    __table_1_name hive.ctext := _context || '_tests1';
+    __table_2_name hive.ctext := _context || '_tests2';
 BEGIN
     EXECUTE format( 'INSERT INTO hive.%I( id ) VALUES( %L )', __table_1_name,  _first_block + _last_block );
     EXECUTE format( 'INSERT INTO hive.%I( id ) VALUES( %L )', __table_2_name,  _last_block - _first_block );

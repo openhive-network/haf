@@ -35,18 +35,18 @@ END
 $BODY$;
 
 CREATE TABLE IF NOT EXISTS metadata_live.jsons (
-  account text,
-  json_metadata text DEFAULT '',
-  posting_json_metadata text DEFAULT '',
+  account hive.ctext,
+  json_metadata hive.ctext DEFAULT '',
+  posting_json_metadata hive.ctext DEFAULT '',
 
 CONSTRAINT pk_json_metadata_comparison PRIMARY KEY (account)
 );
 
 CREATE TABLE IF NOT EXISTS metadata_live.differing_accounts (
-  account TEXT
+  account hive.ctext
 );
 
-CREATE OR REPLACE FUNCTION metadata_live.current_state(_account text)
+CREATE OR REPLACE FUNCTION metadata_live.current_state(_account hive.ctext)
 RETURNS SETOF metadata_live.jsons
 LANGUAGE 'plpgsql' STABLE
 AS

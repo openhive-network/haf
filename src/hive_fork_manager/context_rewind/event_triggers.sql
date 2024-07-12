@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION hive.ignore_registered_table_edition( pg_ddl_command 
 AS 'MODULE_PATHNAME',
 'ignore_registered_table_edition';
 
-CREATE OR REPLACE FUNCTION hive.chceck_constrains( _table_schema TEXT,  _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.chceck_constrains( _table_schema hive.ctext,  _table_name hive.ctext )
     RETURNS void
     LANGUAGE 'plpgsql'
     STABLE
@@ -11,7 +11,7 @@ AS
 $BODY$
 DECLARE
     __exists_non_defferable BOOL := FALSE;
-    __constraint_name TEXT;
+    __constraint_name hive.ctext;
 BEGIN
     EXECUTE format( 'SELECT EXISTS(
         SELECT 1 FROM information_schema.table_constraints
@@ -33,7 +33,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.check_owner( _context hive.context_name, _context_owner TEXT )
+CREATE OR REPLACE FUNCTION hive.check_owner( _context hive.context_name, _context_owner hive.ctext )
     RETURNS void
     LANGUAGE 'plpgsql'
     STABLE
@@ -82,12 +82,12 @@ $$
 DECLARE
 __result BOOL := NULL;
 __r RECORD;
-__shadow_table_name TEXT := NULL;
-__origin_table_schema TEXT;
-__origin_table_name TEXT;
-__new_columns TEXT[];
+__shadow_table_name hive.ctext := NULL;
+__origin_table_schema hive.ctext;
+__origin_table_name hive.ctext;
+__new_columns hive.ctext[];
 __ignore_event BOOL;
-__context_schema TEXT;
+__context_schema hive.ctext;
 BEGIN
     SELECT
         hive.ignore_registered_table_edition(command),
@@ -147,7 +147,7 @@ BEGIN
     PERFORM hive.create_shadow_table( __origin_table_schema, __origin_table_name );
 
     --update information about columns
-    SELECT array_agg( iss.column_name::TEXT ) INTO __new_columns
+    SELECT array_agg( iss.column_name::hive.ctext ) INTO __new_columns
     FROM information_schema.columns iss
     WHERE iss.table_schema = __origin_table_schema AND iss.table_name = __origin_table_name;
 
@@ -168,8 +168,8 @@ AS
 $$
 DECLARE
 __r RECORD;
-__table TEXT := NULL;
-__schema TEXT := NULL;
+__table hive.ctext := NULL;
+__schema hive.ctext := NULL;
 BEGIN
     SELECT tr.object_name, tr.schema_name  FROM
     ( SELECT * FROM pg_event_trigger_dropped_objects() ) as tr

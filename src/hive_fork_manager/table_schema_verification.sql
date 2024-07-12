@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.calculate_schema_hash(schema_name TEXT)
+CREATE OR REPLACE FUNCTION hive.calculate_schema_hash(schema_name hive.ctext)
     RETURNS SETOF hive.verify_table_schema
     LANGUAGE plpgsql
     VOLATILE
@@ -6,12 +6,12 @@ AS
 $BODY$
 DECLARE
     schemarow    hive.verify_table_schema%ROWTYPE;
-    _table_name     TEXT;
-    _before_hash    TEXT;
-    _columns   TEXT;
-    _constraints   TEXT;
-    _indexes    TEXT;
-    verified_tables_list TEXT[];
+    _table_name     hive.ctext;
+    _before_hash    hive.ctext;
+    _columns   hive.ctext;
+    _constraints   hive.ctext;
+    _indexes    hive.ctext;
+    verified_tables_list hive.ctext[];
 BEGIN
 
 verified_tables_list = ARRAY[
@@ -141,7 +141,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_database_hash(schema_name TEXT)
+CREATE OR REPLACE FUNCTION hive.create_database_hash(schema_name hive.ctext)
     RETURNS SETOF hive.table_schema
     LANGUAGE plpgsql
     VOLATILE
@@ -149,7 +149,7 @@ AS
 $BODY$
 DECLARE
     ts hive.table_schema%ROWTYPE;
-    _tmp TEXT;
+    _tmp hive.ctext;
 BEGIN
     TRUNCATE hive.table_schema;
 

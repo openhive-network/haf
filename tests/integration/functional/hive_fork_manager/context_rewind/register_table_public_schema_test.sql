@@ -15,7 +15,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    CREATE TABLE table1(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( a.context );
+    CREATE TABLE table1(id  SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext) INHERITS( a.context );
 END
 $BODY$
 ;

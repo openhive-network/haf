@@ -1,5 +1,5 @@
 --- Helper function able to verify roles authority relationship and returns true when _role_to_check has granted rights to impersonate as _required_role.
-CREATE OR REPLACE FUNCTION hive.can_impersonate(_role_to_check IN TEXT, _required_role IN TEXT)
+CREATE OR REPLACE FUNCTION hive.can_impersonate(_role_to_check IN hive.ctext, _required_role IN hive.ctext)
 RETURNS BOOLEAN
 LANGUAGE 'plpgsql'
 STABLE
@@ -22,7 +22,7 @@ BEGIN
      JOIN pg_auth_members m ON m.member = rm.oid
   ),membership AS
   (
-    SELECT oid::regrole::text AS rolename FROM role_membership
+    SELECT oid::regrole::hive.ctext AS rolename FROM role_membership
   )
   SELECT into __retval EXISTS(SELECT NULL FROM membership m WHERE m.rolename = _required_role);
 
@@ -132,11 +132,11 @@ GRANT EXECUTE ON FUNCTION
     , hive.end_massive_sync( INTEGER )
     , hive.disable_indexes_of_irreversible()
     , hive.enable_indexes_of_irreversible()
-    , hive.save_and_drop_indexes_constraints( in _schema TEXT, in _table TEXT )
-    , hive.save_and_drop_indexes_foreign_keys( in _table_schema TEXT, in _table_name TEXT )
+    , hive.save_and_drop_indexes_constraints( in _schema hive.ctext, in _table hive.ctext )
+    , hive.save_and_drop_indexes_foreign_keys( in _table_schema hive.ctext, in _table_name hive.ctext )
     , hive.recluster_account_operations_if_index_dropped()
-    , hive.restore_indexes( in _table_name TEXT )
-    , hive.restore_foreign_keys( in _table_name TEXT )
+    , hive.restore_indexes( in _table_name hive.ctext )
+    , hive.restore_foreign_keys( in _table_name hive.ctext )
     , hive.copy_blocks_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
     , hive.copy_transactions_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
     , hive.copy_operations_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
@@ -146,12 +146,12 @@ GRANT EXECUTE ON FUNCTION
     , hive.copy_applied_hardforks_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
     , hive.remove_obsolete_reversible_data( _new_irreversible_block INT )
     , hive.remove_unecessary_events( _new_irreversible_block INT )
-    , hive.register_table( _table_schema TEXT,  _table_name TEXT, _context_name TEXT ) -- needs to alter tables when indexes are disabled
-    , hive.chceck_constrains( _table_schema TEXT,  _table_name TEXT )
+    , hive.register_table( _table_schema hive.ctext,  _table_name hive.ctext, _context_name hive.ctext ) -- needs to alter tables when indexes are disabled
+    , hive.chceck_constrains( _table_schema hive.ctext,  _table_name hive.ctext )
     , hive.register_state_provider_tables( _context hive.context_name )
     , hive.app_state_providers_update( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
     , hive.app_state_provider_import( _state_provider hive.state_providers, _context hive.context_name )
-    , hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE, BOOL )
+    , hive.connect( _git_sha hive.ctext, _block_num hive.blocks.num%TYPE, BOOL )
     , hive.remove_inconsistent_irreversible_data()
     , hive.disable_indexes_of_reversible()
     , hive.enable_indexes_of_reversible()
@@ -160,7 +160,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.is_irreversible_dirty()
     , hive.disable_fk_of_irreversible()
     , hive.enable_fk_of_irreversible()
-    , hive.save_and_drop_constraints( in _table_schema TEXT, in _table_name TEXT )
+    , hive.save_and_drop_constraints( in _table_schema hive.ctext, in _table_name hive.ctext )
     , hive.get_block_header( _block_num INT )
     , hive.get_block( _block_num INT )
     , hive.get_block_range( _starting_block_num INT, _count INT )
@@ -168,7 +168,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.get_block_json( _block_num INT )
     , hive.get_block_range_json( _starting_block_num INT, _count INT )
     , hive.get_block_from_views( _block_num_start INT, _block_count INT )
-    , hive.build_block_json(previous BYTEA, "timestamp" TIMESTAMP, witness VARCHAR, transaction_merkle_root BYTEA, extensions jsonb, witness_signature BYTEA, transactions hive.transaction_type[], block_id BYTEA, signing_key TEXT, transaction_ids BYTEA[])
+    , hive.build_block_json(previous BYTEA, "timestamp" TIMESTAMP, witness VARCHAR, transaction_merkle_root BYTEA, extensions jsonb, witness_signature BYTEA, transactions hive.transaction_type[], block_id BYTEA, signing_key hive.ctext, transaction_ids BYTEA[])
     , hive.transactions_to_json(transactions hive.transaction_type[])
 
     , hive._operation_bin_in(bytea)
@@ -188,13 +188,13 @@ GRANT EXECUTE ON FUNCTION
     , hive._operation_to_jsonb(hive.operation)
     , hive._operation_from_jsonb(jsonb)
     , hive.operation_to_jsontext(hive.operation)
-    , hive.operation_from_jsontext(TEXT)
-    , hive.create_database_hash(schema_name TEXT)
-    , hive.calculate_schema_hash(schema_name TEXT)
+    , hive.operation_from_jsontext(hive.ctext)
+    , hive.create_database_hash(schema_name hive.ctext)
+    , hive.calculate_schema_hash(schema_name hive.ctext)
     , hive.are_indexes_dropped()
     , hive.are_fk_dropped()
-    , hive.check_owner( _context hive.context_name, _context_owner TEXT )
-    , hive.can_impersonate(_role_to_check IN TEXT, _required_role IN TEXT)
+    , hive.check_owner( _context hive.context_name, _context_owner hive.ctext )
+    , hive.can_impersonate(_role_to_check IN hive.ctext, _required_role IN hive.ctext)
     , hive.unreachable_event_id()
     , hive.max_block_num()
     , hive.max_fork_id()

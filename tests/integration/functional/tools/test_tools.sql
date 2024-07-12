@@ -1,6 +1,6 @@
 SELECT hive.initialize_extension_data();
 
-CREATE OR REPLACE FUNCTION hive.unordered_arrays_equal(arr1 TEXT[], arr2 TEXT[])
+CREATE OR REPLACE FUNCTION hive.unordered_arrays_equal(arr1 hive.ctext[], arr2 hive.ctext[])
 RETURNS bool
 LANGUAGE plpgsql
 IMMUTABLE
@@ -12,7 +12,7 @@ END
 $$
 ;
 
-CREATE PROCEDURE hive.check_eq(a anyelement, b anyelement, msg text DEFAULT 'Expected to be equal, but failed')
+CREATE PROCEDURE hive.check_eq(a anyelement, b anyelement, msg hive.ctext DEFAULT 'Expected to be equal, but failed')
 LANGUAGE plpgsql
 AS
 $BODY$

@@ -14,7 +14,7 @@ CREATE OR REPLACE PROCEDURE alice_test_when()
 AS
 $BODY$
 BEGIN
-    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT) INHERITS( a.context );
+    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name hive.ctext) INHERITS( a.context );
 
     -- tables which shall not be registered
     CREATE TABLE A.table_base( id INT );

@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION hive.app_create_context(
       _name hive.context_name
-    , _schema TEXT
+    , _schema hive.ctext
     , _is_forking BOOLEAN = TRUE
     , _is_attached BOOLEAN = TRUE
     , _stages hive.application_stages = NULL
@@ -77,7 +77,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.app_context_exists( _name TEXT )
+CREATE OR REPLACE FUNCTION hive.app_context_exists( _name hive.ctext )
     RETURNS BOOL
     LANGUAGE plpgsql
     STABLE
@@ -96,13 +96,13 @@ CREATE OR REPLACE FUNCTION hive.app_are_forking( _context_names hive.contexts_gr
 AS
 $BODY$
 DECLARE
-    __result TEXT[];
+    __result hive.ctext[];
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
     SELECT ARRAY_AGG( hc.name ) INTO __result
     FROM hive.contexts hc
-    WHERE hc.name::TEXT = ANY( _context_names ) AND hc.is_forking = TRUE;
+    WHERE hc.name::hive.ctext = ANY( _context_names ) AND hc.is_forking = TRUE;
 
     IF array_length( __result, 1 ) IS NULL THEN
         RETURN FALSE;
@@ -399,7 +399,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_register_table( _table_schema TEXT,  _table_name TEXT,  _context TEXT )
+CREATE OR REPLACE FUNCTION hive.app_register_table( _table_schema hive.ctext,  _table_name hive.ctext,  _context hive.ctext )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -417,7 +417,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_unregister_table( _table_schema TEXT,  _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.app_unregister_table( _table_schema hive.ctext,  _table_name hive.ctext )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -617,7 +617,7 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.grant_select_for_state_providers_table( _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.grant_select_for_state_providers_table( _table_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE

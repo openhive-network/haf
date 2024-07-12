@@ -9,9 +9,9 @@ BEGIN
 
     PERFORM hive.context_create( 'context', 'a' );
 
-    CREATE TABLE A.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
-    CREATE TABLE B.table2( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
-    CREATE TABLE table3( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
+    CREATE TABLE A.table1( id INTEGER NOT NULL, smth hive.ctext NOT NULL ) INHERITS( a.context );
+    CREATE TABLE B.table2( id INTEGER NOT NULL, smth hive.ctext NOT NULL ) INHERITS( a.context );
+    CREATE TABLE table3( id INTEGER NOT NULL, smth hive.ctext NOT NULL ) INHERITS( a.context );
 
     PERFORM hive.context_next_block( 'context' );
 

@@ -1,12 +1,12 @@
 DROP FUNCTION IF EXISTS ASSERT_THIS_TEST;
-CREATE FUNCTION ASSERT_THIS_TEST(op TEXT)
+CREATE FUNCTION ASSERT_THIS_TEST(op hive.ctext)
         RETURNS void
         LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-  -- Make sure direct conversion (operation::jsonb) results in the same jsonb as indirect one (operation::text::jsonb).
-  CALL hive.check_eq(hive.operation_to_jsontext(hive.operation_from_jsontext(op))::jsonb, hive.operation_from_jsontext(op)::jsonb, 'operation::text::jsonb conversion doesn''t match operation::jsonb conversion');
+  -- Make sure direct conversion (operation::jsonb) results in the same jsonb as indirect one (operation::hive.ctext::jsonb).
+  CALL hive.check_eq(hive.operation_to_jsontext(hive.operation_from_jsontext(op))::jsonb, hive.operation_from_jsontext(op)::jsonb, 'operation::hive.ctext::jsonb conversion doesn''t match operation::jsonb conversion');
 
   -- Make sure operation converted to jsonb can be converted back to operation of equal value.
   CALL hive.check_eq(hive.operation_from_jsontext(op)::jsonb::hive.operation, hive.operation_from_jsontext(op), 'Converting operation to jsonb and back doesn''t match original operation');

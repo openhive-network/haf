@@ -1,15 +1,15 @@
 -- Collects all created accounts into table hive.<context_name>_accounts
--- Table has two columns: id INT, name TEXT
+-- Table has two columns: id INT, name hive.ctext
 
 CREATE OR REPLACE FUNCTION hive.start_provider_accounts( _context hive.context_name )
-    RETURNS TEXT[]
+    RETURNS hive.ctext[]
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_accounts';
+    __table_name hive.ctext := _context || '_accounts';
 BEGIN
     SELECT hac.id
     FROM hive.contexts hac
@@ -22,7 +22,7 @@ BEGIN
 
     EXECUTE format( 'CREATE TABLE hive.%I(
                       id SERIAL
-                    , name TEXT
+                    , name hive.ctext
                     , CONSTRAINT pk_%s PRIMARY KEY( id )
                     , CONSTRAINT uq_%s UNIQUE( name )
                     )', __table_name, __table_name,  __table_name
@@ -34,7 +34,7 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.get_created_from_account_create_operations(IN _account_operation hive.operation)
-RETURNS TEXT
+RETURNS hive.ctext
 AS 'MODULE_PATHNAME', 'get_created_from_account_create_operations' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
@@ -45,8 +45,8 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_accounts';
-    __context_schema TEXT;
+    __table_name hive.ctext := _context || '_accounts';
+    __context_schema hive.ctext;
 BEGIN
     SELECT hac.id, hac.schema
     FROM hive.contexts hac
@@ -81,7 +81,7 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_accounts';
+    __table_name hive.ctext := _context || '_accounts';
 BEGIN
     SELECT hac.id
     FROM hive.contexts hac

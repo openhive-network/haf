@@ -34,23 +34,23 @@ BEGIN
 END
 $BODY$;
 CREATE TABLE IF NOT EXISTS keyauth_live.keys (
-  account text,
-  owner_key text[] DEFAULT '{}',
-  active_key text[] DEFAULT '{}',
-  posting_key text[] DEFAULT '{}',
-  memo text[] DEFAULT '{}',
-  owner_acc text[] DEFAULT '{}',
-  active_acc text[] DEFAULT '{}',
-  posting_acc text[] DEFAULT '{}',
+  account hive.ctext,
+  owner_key hive.ctext[] DEFAULT '{}',
+  active_key hive.ctext[] DEFAULT '{}',
+  posting_key hive.ctext[] DEFAULT '{}',
+  memo hive.ctext[] DEFAULT '{}',
+  owner_acc hive.ctext[] DEFAULT '{}',
+  active_acc hive.ctext[] DEFAULT '{}',
+  posting_acc hive.ctext[] DEFAULT '{}',
 
 CONSTRAINT pk_keyauth_comparison PRIMARY KEY (account)
 );
     
 CREATE TABLE IF NOT EXISTS keyauth_live.differing_accounts (
-  account TEXT
+  account hive.ctext
 );
 
-CREATE OR REPLACE FUNCTION keyauth_live.current_state(_account text)
+CREATE OR REPLACE FUNCTION keyauth_live.current_state(_account hive.ctext)
 RETURNS SETOF keyauth_live.keys -- noqa: LT01
 LANGUAGE 'plpgsql' STABLE
 AS
@@ -88,9 +88,9 @@ FROM
   ) AS key_subquery,
   (
     SELECT
-      MAX(CASE WHEN key_kind = 'OWNER' THEN acc_agg::TEXT[] END) AS owner_acc,
-      MAX(CASE WHEN key_kind = 'POSTING' THEN acc_agg::TEXT[] END) AS posting_acc,
-      MAX(CASE WHEN key_kind = 'ACTIVE' THEN acc_agg::TEXT[] END) AS active_acc
+      MAX(CASE WHEN key_kind = 'OWNER' THEN acc_agg::hive.ctext[] END) AS owner_acc,
+      MAX(CASE WHEN key_kind = 'POSTING' THEN acc_agg::hive.ctext[] END) AS posting_acc,
+      MAX(CASE WHEN key_kind = 'ACTIVE' THEN acc_agg::hive.ctext[] END) AS active_acc
     FROM (
 	  WITH selected AS (
       SELECT
@@ -108,7 +108,7 @@ FROM
 END
 $$;
 
-CREATE OR REPLACE FUNCTION keyauth_live.compare(_account text)
+CREATE OR REPLACE FUNCTION keyauth_live.compare(_account hive.ctext)
 RETURNS SETOF keyauth_live.keys -- noqa: LT01
 LANGUAGE 'plpgsql' STABLE
 AS
@@ -125,7 +125,7 @@ $$;
 
 
 CREATE OR REPLACE FUNCTION keyauth_live.filter_key(_key_array JSONB)
-RETURNS TEXT[] -- noqa: LT01, CP05
+RETURNS hive.ctext[] -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 AS

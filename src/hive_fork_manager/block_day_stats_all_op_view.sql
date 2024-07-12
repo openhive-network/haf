@@ -15,7 +15,7 @@ FROM (SELECT DISTINCT block_day FROM op_day_stats) d
 CROSS JOIN (SELECT ot.id AS op_type_id FROM hive.operation_types ot) t
 LEFT JOIN op_day_stats ods ON ods.block_day = d.block_day AND ods.op_type_id = t.op_type_id
 )
-SELECT s.block_day::int, ot.name::text, s.count::int FROM supplemented_stats s
+SELECT s.block_day::int, ot.name::hive.ctext, s.count::int FROM supplemented_stats s
 JOIN hive.operation_types ot on s.op_type_id = ot.id
 ORDER BY s.block_day, ot.name
 $$

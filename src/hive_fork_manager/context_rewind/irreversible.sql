@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.remove_obsolete_operations( _shadow_table_name TEXT, _irreversible_block INT )
+CREATE OR REPLACE FUNCTION hive.remove_obsolete_operations( _shadow_table_name hive.ctext, _irreversible_block INT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE

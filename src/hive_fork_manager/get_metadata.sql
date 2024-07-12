@@ -1,9 +1,9 @@
 DROP TYPE IF EXISTS hive.metadata_record_type CASCADE;
 CREATE TYPE hive.metadata_record_type AS
 (
-    account_name TEXT
-    , json_metadata TEXT
-    , posting_json_metadata TEXT
+    account_name hive.ctext
+    , json_metadata hive.ctext
+    , posting_json_metadata hive.ctext
 );
 
 DROP FUNCTION IF EXISTS hive.get_metadata;

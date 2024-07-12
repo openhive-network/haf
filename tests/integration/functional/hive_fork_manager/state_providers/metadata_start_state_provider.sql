@@ -15,11 +15,11 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 DECLARE
-    __tables TEXT[];
+    __tables hive.ctext[];
 BEGIN
     SELECT hive.start_provider_metadata( 'context' ) INTO __tables;
 
-    ASSERT ( __tables = ARRAY[ 'context_metadata' ]::TEXT[] ), 'Wrong table name';
+    ASSERT ( __tables = ARRAY[ 'context_metadata' ]::hive.ctext[] ), 'Wrong table name';
 END;
 $BODY$
 ;

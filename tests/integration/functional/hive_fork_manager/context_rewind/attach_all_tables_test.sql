@@ -7,10 +7,10 @@ BEGIN
     CREATE SCHEMA A;
     CREATE SCHEMA B;
     PERFORM hive.context_create( 'context', 'a' );
-    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( a.context );
-    CREATE TABLE B.table2(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( a.context );
+    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext) INHERITS( a.context );
+    CREATE TABLE B.table2(id  SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext) INHERITS( a.context );
     PERFORM hive.context_create( 'context2', 'a' );
-    CREATE TABLE A.table3(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( a.context2 );
+    CREATE TABLE A.table3(id  SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext) INHERITS( a.context2 );
 
     PERFORM hive.context_next_block( 'context' );
     PERFORM hive.context_next_block( 'context2' );

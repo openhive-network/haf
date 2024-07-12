@@ -22,9 +22,9 @@ BEGIN
     ALTER TABLE table_with_constraints ADD CONSTRAINT table_with_constraints_7 UNIQUE (e);
 
     CREATE TABLE IF NOT EXISTS indexes_constraints2 (
-        table_name text,
-        index_constraint_name text,
-        command text,
+        table_name hive.ctext,
+        index_constraint_name hive.ctext,
+        command hive.ctext,
         is_constraint boolean,
         is_index boolean,
         is_foreign_key boolean
@@ -57,7 +57,7 @@ $BODY$
 ;
 
 DROP FUNCTION IF EXISTS is_constraint_exists;
-CREATE FUNCTION is_constraint_exists( _schema TEXT, _table_name TEXT, _constraint_name TEXT )
+CREATE FUNCTION is_constraint_exists( _schema hive.ctext, _table_name hive.ctext, _constraint_name hive.ctext )
     RETURNS bool
     LANGUAGE 'plpgsql'
     AS
@@ -78,7 +78,7 @@ $BODY$
 ;
 
 DROP FUNCTION IF EXISTS is_index_exists;
-CREATE FUNCTION is_index_exists( _schema TEXT, _table_name TEXT, _index_name TEXT )
+CREATE FUNCTION is_index_exists( _schema hive.ctext, _table_name hive.ctext, _index_name hive.ctext )
     RETURNS bool
     LANGUAGE 'plpgsql'
     AS

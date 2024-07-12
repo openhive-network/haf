@@ -51,7 +51,7 @@ DROP TYPE IF EXISTS hive.asset CASCADE;
 CREATE TYPE hive.asset AS (
   amount hive.share_type,
   precision int2,
-  nai text
+  nai hive.ctext
 );
 
 DROP TYPE IF EXISTS hive.price CASCADE;
@@ -69,7 +69,7 @@ DROP TYPE IF EXISTS hive.legacy_hive_asset CASCADE;
 CREATE TYPE hive.legacy_hive_asset AS (
   amount hive.share_type,
   precision int2,
-  nai text
+  nai hive.ctext
 );
 
 -- basic types
@@ -87,8 +87,8 @@ CREATE TYPE hive.comment_operation AS (
   author hive.account_name_type,
   permlink hive.permlink,
   title hive.comment_title,
-  body text,
-  json_metadata TEXT
+  body hive.ctext,
+  json_metadata hive.ctext
 );
 
 DROP TYPE IF EXISTS hive.beneficiary_route_type CASCADE;
@@ -152,8 +152,8 @@ CREATE TYPE hive.vote_operation AS (
 
 DROP TYPE IF EXISTS hive.witness_property CASCADE;
 CREATE TYPE hive.witness_property AS (
-  name TEXT,
-  value text
+  name hive.ctext,
+  value hive.ctext
 );
 
 DROP TYPE IF EXISTS hive.witness_set_properties_operation CASCADE;
@@ -191,7 +191,7 @@ CREATE TYPE hive.account_create_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata TEXT
+  json_metadata hive.ctext
 );
 
 DROP TYPE IF EXISTS hive.account_create_with_delegation_operation CASCADE;
@@ -204,7 +204,7 @@ CREATE TYPE hive.account_create_with_delegation_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata TEXT,
+  json_metadata hive.ctext,
   extensions hive.extensions_type
 );
 
@@ -215,8 +215,8 @@ CREATE TYPE hive.account_update2_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata TEXT,
-  posting_json_metadata TEXT,
+  json_metadata hive.ctext,
+  posting_json_metadata hive.ctext,
   extensions hive.extensions_type
 );
 
@@ -227,7 +227,7 @@ CREATE TYPE hive.account_update_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata TEXT
+  json_metadata hive.ctext
 );
 
 DROP TYPE IF EXISTS hive.account_witness_proxy_operation CASCADE;
@@ -293,7 +293,7 @@ CREATE TYPE hive.create_claimed_account_operation AS (
   active hive.authority,
   posting hive.authority,
   memo_key hive.public_key_type,
-  json_metadata TEXT,
+  json_metadata hive.ctext,
   extensions hive.extensions_type
 );
 
@@ -312,7 +312,7 @@ CREATE TYPE hive.custom_json_operation AS (
   required_auths hive.account_name_type[],
   required_posting_auths hive.account_name_type[],
   id hive.custom_id_type,
-  json TEXT
+  json hive.ctext
 );
 
 DROP TYPE IF EXISTS hive.custom_operation CASCADE;
@@ -381,7 +381,7 @@ CREATE TYPE hive.escrow_transfer_operation AS (
   escrow_id int8, -- uint32_t: 4 byte, but unsigned (int8)
   agent hive.account_name_type,
   fee hive.asset,
-  json_meta TEXT,
+  json_meta hive.ctext,
   ratification_deadline timestamp,
   escrow_expiration timestamp
 );
@@ -435,7 +435,7 @@ DROP TYPE IF EXISTS hive.proof CASCADE;
 CREATE TYPE hive.proof AS (
       n int8,
       k int8,
-      seed TEXT,
+      seed hive.ctext,
       inputs int8[]
 );
 
@@ -597,8 +597,8 @@ CREATE TYPE hive.create_proposal_operation AS (
   start_date timestamp,
   end_date timestamp,
   daily_pay hive.asset,
-  subject TEXT,
-  permlink TEXT,
+  subject hive.ctext,
+  permlink hive.ctext,
   extensions hive.extensions_type
 );
 
@@ -879,7 +879,7 @@ CREATE TYPE hive.shutdown_witness_operation AS (
 
 DROP TYPE IF EXISTS hive.system_warning_operation CASCADE;
 CREATE TYPE hive.system_warning_operation AS (
-  message text
+  message hive.ctext
 );
 
 DROP TYPE IF EXISTS hive.transfer_to_vesting_completed_operation CASCADE;

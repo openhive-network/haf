@@ -32,7 +32,7 @@ CREATE TYPE hive.block_type AS (
     , witness_signature bytea
     , transactions hive.transaction_type[]
     , block_id bytea
-    , signing_key text
+    , signing_key hive.ctext
     , transaction_ids bytea[]
     );
 
@@ -174,7 +174,7 @@ BEGIN
         'signatures', (
             CASE
                 WHEN array_length(x.signatures, 1) > 0 AND x.signatures != ARRAY[ NULL ]::BYTEA[] THEN (SELECT ARRAY( SELECT encode(unnest(x.signatures), 'hex')))
-                ELSE ARRAY[] :: TEXT[]
+                ELSE ARRAY[] :: hive.ctext[]
             END
         )
     )
@@ -193,7 +193,7 @@ CREATE OR REPLACE FUNCTION hive.build_block_json(
     witness_signature BYTEA,
     transactions hive.transaction_type[],
     block_id BYTEA,
-    signing_key TEXT,
+    signing_key hive.ctext,
     transaction_ids BYTEA[]
 )
     RETURNS JSONB
@@ -206,7 +206,7 @@ DECLARE
 BEGIN
     SELECT jsonb_build_object(
         'previous', encode( previous, 'hex'),
-        'timestamp', TRIM(both '"' from to_json(timestamp)::text),
+        'timestamp', TRIM(both '"' from to_json(timestamp)::hive.ctext),
         'witness', witness,
         'transaction_merkle_root', encode( transaction_merkle_root, 'hex'),
         'extensions', COALESCE(extensions, jsonb_build_array()),
@@ -366,8 +366,8 @@ BEGIN
 
     SELECT jsonb_build_object(
         'header', jsonb_build_object(
-            'previous', encode( __block.previous, 'hex') :: TEXT,
-            'timestamp', TRIM(both '"' from to_json(__block.timestamp)::text),
+            'previous', encode( __block.previous, 'hex') :: hive.ctext,
+            'timestamp', TRIM(both '"' from to_json(__block.timestamp)::hive.ctext),
             'witness', __block.witness,
             'transaction_merkle_root', encode( __block.transaction_merkle_root, 'hex'),
             'extensions', COALESCE(__block.extensions, jsonb_build_array())

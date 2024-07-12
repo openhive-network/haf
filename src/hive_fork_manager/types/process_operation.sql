@@ -5,8 +5,8 @@
 DROP FUNCTION IF EXISTS hive.process_operation;
 CREATE OR REPLACE FUNCTION hive.process_operation(
   op RECORD,
-  namespace TEXT,
-  proc TEXT
+  namespace hive.ctext,
+  proc hive.ctext
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -121,8 +121,8 @@ $BODY$;
 DROP FUNCTION IF EXISTS hive.process_operation_noexcept;
 CREATE OR REPLACE FUNCTION hive.process_operation_noexcept(
   op RECORD,
-  namespace TEXT,
-  proc TEXT
+  namespace hive.ctext,
+  proc hive.ctext
 )
 RETURNS void
 LANGUAGE plpgsql

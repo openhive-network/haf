@@ -7,12 +7,12 @@ BEGIN
     CREATE TYPE custom_type AS (
         id INTEGER,
         val FLOAT,
-        name TEXT
+        name hive.ctext
         );
 
     CREATE SCHEMA A;
     PERFORM hive.context_create( 'context', 'a' );
-    CREATE TABLE hive.src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT, values FLOAT[], data custom_type, name2 VARCHAR, num NUMERIC(3,2) ) INHERITS( a.context );
+    CREATE TABLE hive.src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext, values FLOAT[], data custom_type, name2 VARCHAR, num NUMERIC(3,2) ) INHERITS( a.context );
 
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO hive.src_table ( smth, name, values, data, name2, num )

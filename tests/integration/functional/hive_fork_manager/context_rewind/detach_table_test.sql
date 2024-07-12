@@ -6,7 +6,7 @@ $BODY$
 BEGIN
     CREATE SCHEMA A;
     PERFORM hive.context_create( 'context', 'a' );
-    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( a.context );
+    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext) INHERITS( a.context );
 END;
 $BODY$
 ;
@@ -16,7 +16,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM hive.detach_table( 'A'::TEXT, 'table1'::TEXT );
+    PERFORM hive.detach_table( 'A'::hive.ctext, 'table1'::hive.ctext );
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO A.table1( smth, name ) VALUES (1, 'abc' );
 END

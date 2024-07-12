@@ -3,7 +3,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
     AS
 $BODY$
 DECLARE
-    __value TEXT;
+    __value hive.ctext;
 BEGIN
     ASSERT ( SELECT COALESCE( short_desc, '' ) FROM pg_settings WHERE name = 'query_supervisor.limit_deletes' ) = 'Limited number of deleted rows', 'Limited number of deleted rows';
     ASSERT ( SELECT COALESCE( short_desc, '' ) FROM pg_settings WHERE name = 'query_supervisor.limit_inserts' ) = 'Limited number of inserted rows', 'Limit of rows that can be inserted with one query';

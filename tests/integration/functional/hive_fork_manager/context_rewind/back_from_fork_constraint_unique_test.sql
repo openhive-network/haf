@@ -8,7 +8,7 @@ BEGIN
     PERFORM hive.context_create( 'context', 'a' );
     CREATE TABLE table1(
           id INTEGER NOT NULL
-        , smth TEXT NOT NULL
+        , smth hive.ctext NOT NULL
         , CONSTRAINT uq_table1 UNIQUE ( smth )
     ) INHERITS( a.context );
 

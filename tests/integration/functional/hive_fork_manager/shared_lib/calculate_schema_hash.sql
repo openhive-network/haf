@@ -3,7 +3,7 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 DECLARE
-  _pattern TEXT[] := 
+  _pattern hive.ctext[] := 
 ARRAY[
  '{"(blocks,6943f52d-ec57-ed27-b2e3-d8ba4b3288ca,4397b404-c56c-84e1-952e-a73d29745394,4c7b832d-5d52-83fe-fd2b-7e7a69416fae,2b354f61-618a-da7d-3380-3e12c45a3f30)"}',
  '{"(irreversible_data,dd1812c6-cabd-4382-a4bf-c355276b3839,53114e1c-c6e5-867b-6c67-1d55865180fe,77ed7932-7dab-20e3-b506-4a2d3fccfe75,f40cac4c-2fae-a597-11c8-8cc0f329e18f)"}',
@@ -25,83 +25,83 @@ ARRAY[
  '{"(contexts_attachment,c99e00c4-bc99-eb5d-1071-310575d2655a,0007a55e-0b74-b8b1-fb0d-a2e2b82a05bd,3e2b74cd-8a9a-2768-c01b-c8a307e8267d,90df8e77-2984-5c96-2a9f-908b8e7604dc)"}',
  '{"(contexts,a1841d23-3612-d633-60d9-5ab41612d85c,5dc37b1c-1cb2-f279-92d4-cf025c786f4e,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)"}'
 ];
- _schema_hash TEXT[];
+ _schema_hash hive.ctext[];
  _pass BOOLEAN;
 BEGIN
 
-_schema_hash[1] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[1] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='blocks'
 ;
 
-_schema_hash[2] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[2] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='irreversible_data'
 ;
 
-_schema_hash[3] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[3] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='transactions'
 ;
 
-_schema_hash[4] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[4] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='transactions_multisig'
 ;
 
-_schema_hash[5] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[5] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='operation_types'
 ;
 
-_schema_hash[6] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[6] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='operations'
 ;
 
-_schema_hash[7] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[7] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='applied_hardforks'
 ;
 
-_schema_hash[8] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[8] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='accounts'
 ;
 
-_schema_hash[9] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[9] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='account_operations'
 ;
 
-_schema_hash[10] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[10] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='fork'
 ;
 
-_schema_hash[11] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[11] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='blocks_reversible'
 ;
 
-_schema_hash[12] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[12] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='transactions_reversible'
 ;
 
-_schema_hash[13] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[13] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='transactions_multisig_reversible'
 ;
 
-_schema_hash[14] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[14] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='operations_reversible'
 ;
 
-_schema_hash[15] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[15] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='accounts_reversible'
 ;
 
-_schema_hash[16] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[16] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='account_operations_reversible'
 ;
 
-_schema_hash[17] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[17] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='applied_hardforks_reversible'
 ;
 
-_schema_hash[18] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[18] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='contexts_attachment'
 ;
 
-_schema_hash[19] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::TEXT)
+_schema_hash[19] := ARRAY_AGG(ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::hive.ctext)
 FROM hive.calculate_schema_hash('hive') f WHERE table_name='contexts'
 ;
 

@@ -1,6 +1,6 @@
 -- Whe a table is deteted their triggers are removed automatically
 -- and there is no need to remove hive_rowid column
-CREATE OR REPLACE FUNCTION hive.clean_after_uregister_table( _schema_name TEXT, _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.clean_after_uregister_table( _schema_name hive.ctext, _table_name hive.ctext )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -8,8 +8,8 @@ AS
 $BODY$
 DECLARE
     __table_id INTEGER := NULL;
-    __shadow_table_name TEXT;
-    __trigger_funtion_name TEXT;
+    __shadow_table_name hive.ctext;
+    __trigger_funtion_name hive.ctext;
 BEGIN
     SELECT hrt.id, hrt.shadow_table_name
     FROM hive.registered_tables hrt
@@ -37,7 +37,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.detach_table( _table_schema TEXT, _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.detach_table( _table_schema hive.ctext, _table_name hive.ctext )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -45,8 +45,8 @@ AS
 $BODY$
 DECLARE
     __table_id INTEGER := NULL;
-    __shadow_table_name TEXT;
-    __trigger_name TEXT;
+    __shadow_table_name hive.ctext;
+    __trigger_name hive.ctext;
     __shadow_table_is_not_empty BOOL := FALSE;
 BEGIN
     SELECT hrt.id, hrt.shadow_table_name
@@ -70,7 +70,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.attach_table( _table_schema TEXT, _table_name TEXT, _context_id hive.contexts.id%TYPE )
+CREATE OR REPLACE FUNCTION hive.attach_table( _table_schema hive.ctext, _table_name hive.ctext, _context_id hive.contexts.id%TYPE )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -78,7 +78,7 @@ AS
 $BODY$
 DECLARE
     __table_id INTEGER := NULL;
-    __shadow_table_name TEXT;
+    __shadow_table_name hive.ctext;
     __context_is_forking BOOLEAN := NULL;
 BEGIN
     SELECT hrt.id, hrt.shadow_table_name, hc.is_forking

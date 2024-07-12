@@ -407,7 +407,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 DECLARE
-    result TEXT;
+    result hive.ctext;
 BEGIN
 
 
@@ -444,7 +444,7 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM keyauth_view WHERE (key_kind = 'WITNESS_SIGNING' AND hive.public_key_to_string(key) = 'STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV' ) ),'witness_set_properties_operation key not correct';
 
        --overall key count
-    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth_a ) = 26, 'Wrong number of current keys' || ' Should be 26 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth_a)::text;
+    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth_a ) = 26, 'Wrong number of current keys' || ' Should be 26 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth_a)::hive.ctext;
 
         -- check the whole key table
 
@@ -655,16 +655,16 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION compare_keyauth_data(expected_json_text TEXT)
+CREATE OR REPLACE FUNCTION compare_keyauth_data(expected_json_text hive.ctext)
 RETURNS VOID AS $$
 DECLARE
-    result TEXT;
+    result hive.ctext;
 BEGIN
 
     CREATE TEMP TABLE expected_table AS SELECT
-            (elem->>'public_key_to_string')::TEXT AS public_key_to_string,
+            (elem->>'public_key_to_string')::hive.ctext AS public_key_to_string,
             (elem->>'account_id')::INTEGER AS account_id,
-            (elem->>'name')::TEXT AS name,
+            (elem->>'name')::hive.ctext AS name,
             (elem->>'key_kind')::hive.key_type AS key_kind,
             (elem->>'key_id')::INTEGER AS key_auth_key_serial,
             (elem->>'weight_threshold')::INTEGER AS weight_threshold,
@@ -729,7 +729,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION hive.compare_recordsets(expected_text text, actual_text text) RETURNS void LANGUAGE plpgsql AS $BODY$
+CREATE OR REPLACE FUNCTION hive.compare_recordsets(expected_text hive.ctext, actual_text hive.ctext) RETURNS void LANGUAGE plpgsql AS $BODY$
 BEGIN
 
     PERFORM hive.print_recordset_with_label(
@@ -755,7 +755,7 @@ END;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION hive.print_recordset_with_label(label text, query_string text) RETURNS void LANGUAGE plpgsql AS $p$
+CREATE OR REPLACE FUNCTION hive.print_recordset_with_label(label hive.ctext, query_string hive.ctext) RETURNS void LANGUAGE plpgsql AS $p$
 DECLARE 
      json_result json;
 BEGIN

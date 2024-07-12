@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.revert_insert( _table_schema TEXT, _table_name TEXT, _row_id BIGINT )
+CREATE OR REPLACE FUNCTION hive.revert_insert( _table_schema hive.ctext, _table_name hive.ctext, _row_id BIGINT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -15,7 +15,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.revert_delete( _table_schema TEXT, _table_name TEXT, _shadow_table_name TEXT, _operation_id BIGINT , _columns TEXT )
+CREATE OR REPLACE FUNCTION hive.revert_delete( _table_schema hive.ctext, _table_name hive.ctext, _shadow_table_name hive.ctext, _operation_id BIGINT , _columns hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -40,7 +40,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.revert_update( _table_schema TEXT, _table_name TEXT, _shadow_table_name TEXT, _operation_id BIGINT, _columns TEXT, _row_id BIGINT )
+CREATE OR REPLACE FUNCTION hive.revert_update( _table_schema hive.ctext, _table_name hive.ctext, _shadow_table_name hive.ctext, _operation_id BIGINT, _columns hive.ctext, _row_id BIGINT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -66,7 +66,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.back_from_fork_one_table( _table_schema TEXT, _table_name TEXT, _shadow_table_name TEXT, _block_num_before_fork INT )
+CREATE OR REPLACE FUNCTION hive.back_from_fork_one_table( _table_schema hive.ctext, _table_name hive.ctext, _shadow_table_name hive.ctext, _block_num_before_fork INT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE

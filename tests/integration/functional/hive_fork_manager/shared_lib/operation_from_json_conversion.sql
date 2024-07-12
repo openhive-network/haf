@@ -1,13 +1,13 @@
 DROP FUNCTION IF EXISTS ASSERT_THIS_TEST;
-CREATE FUNCTION ASSERT_THIS_TEST(op TEXT, bytes TEXT)
+CREATE FUNCTION ASSERT_THIS_TEST(op hive.ctext, bytes hive.ctext)
     RETURNS void
     LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
   -- Make sure that both conversions produce the same value
-  CALL hive.check_eq(hive.operation_from_jsontext(op)::TEXT, bytes);
-  CALL hive.check_eq(op::JSONB::hive.operation::TEXT, bytes);
+  CALL hive.check_eq(hive.operation_from_jsontext(op)::hive.ctext, bytes);
+  CALL hive.check_eq(op::JSONB::hive.operation::hive.ctext, bytes);
 END;
 $BODY$
 ;

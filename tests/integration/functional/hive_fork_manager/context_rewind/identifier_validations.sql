@@ -17,7 +17,7 @@ $BODY$
 BEGIN
     BEGIN
         CREATE TABLE A.very_very_long_named_table_to_register_into_context_context(
-            id  SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT)
+            id  SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name hive.ctext)
         INHERITS( a.context );
         ASSERT FALSE, 'No expected exception';
     EXCEPTION WHEN OTHERS THEN

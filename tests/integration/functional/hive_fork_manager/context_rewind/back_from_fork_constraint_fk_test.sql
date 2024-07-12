@@ -6,10 +6,10 @@ $BODY$
 BEGIN
     CREATE SCHEMA A;
     PERFORM hive.context_create( 'context', 'a' );
-    CREATE TABLE table1( id INTEGER PRIMARY KEY, smth TEXT NOT NULL ) INHERITS( a.context );
+    CREATE TABLE table1( id INTEGER PRIMARY KEY, smth hive.ctext NOT NULL ) INHERITS( a.context );
     CREATE TABLE table2(
           id INTEGER NOT NULL
-        , smth TEXT NOT NULL
+        , smth hive.ctext NOT NULL
         , table1_id INTEGER NOT NULL
         , CONSTRAINT fk_table2_table1_id FOREIGN KEY( table1_id ) REFERENCES table1(id) DEFERRABLE
     ) INHERITS( a.context );

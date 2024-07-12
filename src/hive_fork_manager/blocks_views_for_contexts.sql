@@ -1,11 +1,11 @@
-CREATE OR REPLACE FUNCTION hive.create_context_data_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_context_data_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -28,7 +28,7 @@ EXECUTE format(
         ) AS min_block,
         hc.current_block_num > hc.irreversible_block AND hc.is_forking AS reversible_range
         FROM hive.contexts hc
-        WHERE hc.name::text = ''%s''::text
+        WHERE hc.name::hive.ctext = ''%s''::hive.ctext
         limit 1
         ;', __schema, _context_name
     );
@@ -36,14 +36,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.drop_context_data_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.drop_context_data_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -55,7 +55,7 @@ $BODY$
 
 --- Function required to preserve valid ownership (the role being an owner of app-context) when view has been rebuilt
 --- because of automatic detach process (while performing maintenance actions where different database role is used)
-CREATE OR REPLACE FUNCTION hive.adjust_view_ownership( _context_name TEXT, _view_base_name TEXT )
+CREATE OR REPLACE FUNCTION hive.adjust_view_ownership( _context_name hive.ctext, _view_base_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -63,7 +63,7 @@ AS
 $BODY$
 DECLARE
   __owner_name NAME;
-  __schema TEXT;
+  __schema hive.ctext;
 BEGIN
   SELECT c.owner, c.schema INTO __owner_name, __schema FROM hive.contexts c WHERE c.name = _context_name;
 
@@ -73,14 +73,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_blocks_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_blocks_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -162,14 +162,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_all_irreversible_blocks_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_all_irreversible_blocks_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
 SELECT hc.schema INTO __schema
 FROM hive.contexts hc
@@ -204,14 +204,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.drop_blocks_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.drop_blocks_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
 SELECT hc.schema INTO __schema
 FROM hive.contexts hc
@@ -221,14 +221,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_transactions_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_transactions_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
 SELECT hc.schema INTO __schema
 FROM hive.contexts hc
@@ -288,14 +288,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_all_irreversible_transactions_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_all_irreversible_transactions_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
 SELECT hc.schema INTO __schema
 FROM hive.contexts hc
@@ -318,14 +318,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.drop_transactions_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.drop_transactions_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
 SELECT hc.schema INTO __schema
 FROM hive.contexts hc
@@ -335,14 +335,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_operations_view_extended( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_operations_view_extended( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -400,14 +400,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_operations_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_operations_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -456,14 +456,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_all_irreversible_operations_view_extended( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_all_irreversible_operations_view_extended( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -489,14 +489,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_all_irreversible_operations_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_all_irreversible_operations_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -520,14 +520,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.drop_operations_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.drop_operations_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -537,14 +537,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.drop_operations_view_extended( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.drop_operations_view_extended( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -554,14 +554,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_signatures_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_signatures_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -608,14 +608,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_all_irreversible_signatures_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_all_irreversible_signatures_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -636,14 +636,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.drop_signatures_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.drop_signatures_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -653,14 +653,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_accounts_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_accounts_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -702,14 +702,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_all_irreversible_accounts_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_all_irreversible_accounts_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -728,14 +728,14 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.drop_accounts_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.drop_accounts_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -745,14 +745,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_account_operations_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_account_operations_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -801,14 +801,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_all_irreversible_account_operations_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_all_irreversible_account_operations_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -830,14 +830,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.drop_account_operations_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.drop_account_operations_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -848,14 +848,14 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.create_applied_hardforks_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_applied_hardforks_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -902,14 +902,14 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.create_all_irreversible_applied_hardforks_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.create_all_irreversible_applied_hardforks_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc
@@ -929,14 +929,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.drop_applied_hardforks_view( _context_name TEXT )
+CREATE OR REPLACE FUNCTION hive.drop_applied_hardforks_view( _context_name hive.ctext )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __schema TEXT;
+    __schema hive.ctext;
 BEGIN
     SELECT hc.schema INTO __schema
     FROM hive.contexts hc

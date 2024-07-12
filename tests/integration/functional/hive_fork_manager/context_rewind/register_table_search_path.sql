@@ -15,7 +15,7 @@ AS
 $BODY$
 BEGIN
     SET SEARCH_PATH TO A;
-    CREATE TABLE table1(id  SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT) INHERITS( a.context );
+    CREATE TABLE table1(id  SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name hive.ctext) INHERITS( a.context );
 
     -- tables which shall not be registered
     CREATE TABLE table_base( id INT );

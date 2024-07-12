@@ -6,7 +6,7 @@ $BODY$
 BEGIN
     CREATE SCHEMA a;
     PERFORM hive.context_create( 'context', 'a' );
-    CREATE TABLE a.table1( id INT, smth TEXT ) INHERITS( a.context );
+    CREATE TABLE a.table1( id INT, smth hive.ctext ) INHERITS( a.context );
     CREATE VIEW a.table1_view AS SELECT * FROM a.table1;
 END;
 $BODY$

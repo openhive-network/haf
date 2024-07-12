@@ -6,13 +6,13 @@ $BODY$
 BEGIN
     CREATE SCHEMA A;
     PERFORM hive.context_create( 'context', 'a' );
-    CREATE TABLE a.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
+    CREATE TABLE a.table1( id INTEGER NOT NULL, smth hive.ctext NOT NULL ) INHERITS( a.context );
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO a.table1( id, smth ) VALUES( 123, 'blabla' );
     PERFORM hive.context_next_block( 'context' );
 
     PERFORM hive.context_create( 'context2', 'a' );
-    CREATE TABLE a.table2( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context2 );
+    CREATE TABLE a.table2( id INTEGER NOT NULL, smth hive.ctext NOT NULL ) INHERITS( a.context2 );
     PERFORM hive.context_next_block( 'context2' );
     INSERT INTO a.table2( id, smth ) VALUES( 123, 'blabla' );
     PERFORM hive.context_next_block( 'context2' );

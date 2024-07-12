@@ -31,7 +31,7 @@ $BODY$
 
 
 DROP FUNCTION IF EXISTS is_any_fk_for_hive_table;
-CREATE FUNCTION is_any_fk_for_hive_table( _table_name TEXT )
+CREATE FUNCTION is_any_fk_for_hive_table( _table_name hive.ctext )
     RETURNS bool
     LANGUAGE 'plpgsql'
     AS

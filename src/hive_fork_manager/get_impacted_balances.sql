@@ -11,7 +11,7 @@ CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body hive.op
 RETURNS SETOF impacted_balances_return
 AS 'MODULE_PATHNAME', 'get_impacted_balances' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body text, IN _is_hf01 bool)
+CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body hive.ctext, IN _is_hf01 bool)
   RETURNS SETOF impacted_balances_return
   LANGUAGE plpgsql
   VOLATILE
@@ -45,7 +45,7 @@ $BODY$
 DROP TYPE IF EXISTS hive.get_balance_impacting_operations_return_type CASCADE;
 CREATE TYPE hive.get_balance_impacting_operations_return_type AS
 (
-  get_balance_impacting_operations TEXT
+  get_balance_impacting_operations hive.ctext
 );
 
 DROP FUNCTION IF EXISTS hive.get_balance_impacting_operations;

@@ -17,7 +17,7 @@ AS
 $BODY$
 BEGIN
     BEGIN
-        CREATE TABLE table1( id SERIAL PRIMARY KEY, smth INTEGER, name TEXT ) INHERITS( hive.context, hive.context2 );
+        CREATE TABLE table1( id SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext ) INHERITS( hive.context, hive.context2 );
         ASSERT FALSE, 'Did not throw exception';
     EXCEPTION WHEN OTHERS THEN
         RETURN;

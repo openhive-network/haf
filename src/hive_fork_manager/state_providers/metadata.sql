@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION hive.get_metadata_update_function_name( _context hive.context_name )
-    RETURNS TEXT
+    RETURNS hive.ctext
     LANGUAGE plpgsql
     IMMUTABLE
 AS
@@ -10,15 +10,15 @@ END
 $BODY$;
 
 CREATE OR REPLACE FUNCTION hive.start_provider_metadata( _context hive.context_name )
-    RETURNS TEXT[]
+    RETURNS hive.ctext[]
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_metadata';
-    __schema TEXT;
+    __table_name hive.ctext := _context || '_metadata';
+    __schema hive.ctext;
 BEGIN
 
     __context_id = hive.get_context_id( _context );
@@ -35,8 +35,8 @@ BEGIN
 
     EXECUTE format( 'CREATE TABLE hive.%I(
                        account_id INTEGER
-                     , json_metadata TEXT DEFAULT ''''
-                     , posting_json_metadata TEXT DEFAULT ''''
+                     , json_metadata hive.ctext DEFAULT ''''
+                     , posting_json_metadata hive.ctext DEFAULT ''''
                    , PRIMARY KEY ( account_id )
                    )', __table_name);
 
@@ -165,7 +165,7 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_metadata';
+    __table_name hive.ctext := _context || '_metadata';
 BEGIN
     __context_id = hive.get_context_id( _context );
 
@@ -190,7 +190,7 @@ AS
 $BODY$
 DECLARE
     __context_id hive.contexts.id%TYPE;
-    __table_name TEXT := _context || '_metadata';
+    __table_name hive.ctext := _context || '_metadata';
 BEGIN
     __context_id = hive.get_context_id( _context );
 

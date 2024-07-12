@@ -64,7 +64,7 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.get_balance_impacting_operations_pattern()
-RETURNS SETOF TEXT
+RETURNS SETOF hive.ctext
 LANGUAGE plpgsql
 IMMUTABLE
 AS

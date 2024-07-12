@@ -1,12 +1,12 @@
 ---------------------------- TEST PROVIDER ----------------------------------------------
 CREATE OR REPLACE FUNCTION hive.start_provider_tests( _context hive.context_name )
-    RETURNS TEXT[]
+    RETURNS hive.ctext[]
     LANGUAGE plpgsql
     AS
 $BODY$
 DECLARE
-    __table_1_name TEXT := _context || '_tests1';
-    __table_2_name TEXT := _context || '_tests2';
+    __table_1_name hive.ctext := _context || '_tests1';
+    __table_2_name hive.ctext := _context || '_tests2';
 BEGIN
     EXECUTE format( 'CREATE TABLE hive.%I(
                       id SERIAL
@@ -64,7 +64,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM hive.state_providers_registered WHERE context_id = 1 AND state_provider = 'ACCOUNTS' AND tables = ARRAY[ 'context_accounts' ]::TEXT[] ) = 1, 'State provider not registered';
+    ASSERT ( SELECT COUNT(*) FROM hive.state_providers_registered WHERE context_id = 1 AND state_provider = 'ACCOUNTS' AND tables = ARRAY[ 'context_accounts' ]::hive.ctext[] ) = 1, 'State provider not registered';
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'context_accounts' ), 'Accounts table was not created';
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'context_tests1' ), 'Tests1 table was not created';
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'context_tests2' ), 'Tests2 table was not created';
