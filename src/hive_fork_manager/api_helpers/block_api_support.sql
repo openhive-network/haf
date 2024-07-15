@@ -6,7 +6,7 @@ DROP TYPE IF EXISTS hive.block_header_type CASCADE;
 CREATE TYPE hive.block_header_type AS (
       previous bytea
     , timestamp TIMESTAMP WITHOUT TIME ZONE
-    , witness VARCHAR(16)
+    , witness VARCHAR(16) COLLATE "C"
     , transaction_merkle_root bytea
     , extensions jsonb
     , witness_signature bytea
@@ -26,7 +26,7 @@ DROP TYPE IF EXISTS hive.block_type CASCADE;
 CREATE TYPE hive.block_type AS (
       previous bytea
     , timestamp TIMESTAMP WITHOUT TIME ZONE
-    , witness VARCHAR(16)
+    , witness VARCHAR(16) COLLATE "C"
     , transaction_merkle_root bytea
     , extensions jsonb
     , witness_signature bytea

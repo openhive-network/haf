@@ -1,7 +1,7 @@
 DROP TYPE IF EXISTS hive.extract_set_witness_properties_return CASCADE;
 CREATE TYPE hive.extract_set_witness_properties_return AS
 (
-  prop_name VARCHAR, -- Name of deserialized property
+  prop_name VARCHAR COLLATE "C", -- Name of deserialized property
   prop_value JSON -- Deserialized property
 );
 

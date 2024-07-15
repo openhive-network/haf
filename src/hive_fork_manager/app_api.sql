@@ -406,7 +406,7 @@ CREATE OR REPLACE FUNCTION hive.app_register_table( _table_schema hive.ctext,  _
 AS
 $BODY$
 DECLARE
-    __schema VARCHAR;
+    __schema VARCHAR COLLATE "C";
 BEGIN
     SELECT schema INTO __schema
     FROM hive.contexts hc

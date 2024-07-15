@@ -12,10 +12,10 @@ BEGIN
         );
 
     PERFORM hive.context_create( 'context', 'a' );
-    CREATE TABLE src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext, values FLOAT[], data custom_type, name2 VARCHAR, num NUMERIC(3,2) ) INHERITS( a.context );
+    CREATE TABLE src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext, values FLOAT[], data custom_type, name2 VARCHAR COLLATE "C", num NUMERIC(3,2) ) INHERITS( a.context );
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO src_table ( smth, name, values, data, name2, num )
-    VALUES( 1, 'temp1', '{{0.25, 3.4, 6}}'::FLOAT[], ROW(1, 5.8, '123abc')::custom_type, 'padu'::VARCHAR, 2.123::NUMERIC(3,2) );
+    VALUES( 1, 'temp1', '{{0.25, 3.4, 6}}'::FLOAT[], ROW(1, 5.8, '123abc')::custom_type, 'padu'::VARCHAR COLLATE "C", 2.123::NUMERIC(3,2) );
 
     TRUNCATE hive.shadow_public_src_table; --to do not revert inserts
     PERFORM hive.context_next_block( 'context' );

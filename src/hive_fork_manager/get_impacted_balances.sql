@@ -1,7 +1,7 @@
 DROP TYPE IF EXISTS hive.impacted_balances_return CASCADE;
 CREATE TYPE hive.impacted_balances_return AS
 (
-  account_name VARCHAR, -- Name of the account impacted by given operation  
+  account_name VARCHAR COLLATE "C", -- Name of the account impacted by given operation  
   amount BIGINT, -- Amount of tokens changed by operation. Positive if account balance (specific to given asset_symbol_nai) should be incremented, negative if decremented
   asset_precision INT, -- Precision of assets (probably only for future cases when custom tokens will be available)
   asset_symbol_nai INT -- Type of asset symbol used in the operation

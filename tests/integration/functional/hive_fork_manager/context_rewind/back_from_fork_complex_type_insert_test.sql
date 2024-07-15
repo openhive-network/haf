@@ -13,16 +13,16 @@ BEGIN
         );
 
     PERFORM hive.context_create( 'context', 'a' );
-    CREATE TABLE A.src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext, values FLOAT[], data custom_type, name2 VARCHAR, num NUMERIC(3,2)  ) INHERITS( a.context );
+    CREATE TABLE A.src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name hive.ctext, values FLOAT[], data custom_type, name2 VARCHAR COLLATE "C", num NUMERIC(3,2)  ) INHERITS( a.context );
 
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO A.src_table ( smth, name, values, data, name2, num )
-    VALUES( 1, 'temp1', '{{0.25, 3.4, 6}}'::FLOAT[], ROW(1, 5.8, '123abc')::custom_type, 'padu'::VARCHAR, 2.123::NUMERIC(3,2) );
+    VALUES( 1, 'temp1', '{{0.25, 3.4, 6}}'::FLOAT[], ROW(1, 5.8, '123abc')::custom_type, 'padu'::VARCHAR COLLATE "C", 2.123::NUMERIC(3,2) );
 
     PERFORM hive.context_next_block( 'context' );
     TRUNCATE hive.shadow_a_src_table; --to do not revert inserts
     INSERT INTO A.src_table ( smth, name, values, data, name2, num )
-    VALUES( 2, 'temp2', '{{0.25, 3.14, 16}}'::FLOAT[], ROW(1, 5.8, '123abc')::custom_type, 'abcd'::VARCHAR, 2.123::NUMERIC(3,2) );
+    VALUES( 2, 'temp2', '{{0.25, 3.14, 16}}'::FLOAT[], ROW(1, 5.8, '123abc')::custom_type, 'abcd'::VARCHAR COLLATE "C", 2.123::NUMERIC(3,2) );
 END;
 $BODY$
 ;

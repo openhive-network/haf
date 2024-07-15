@@ -50,12 +50,12 @@ for v_curr in
   (
   with recursive recursive_deps(obj_schema, obj_name, obj_type, depth) as
   (
-    SELECT p_view_schema COLLATE "C", p_view_name COLLATE "C", relkind::VARCHAR, 0
+    SELECT p_view_schema COLLATE "C", p_view_name COLLATE "C", relkind::VARCHAR COLLATE "C", 0
       FROM pg_class
       JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
       WHERE pg_namespace.nspname = p_view_schema AND pg_class.relname = p_view_name
     union
-    select dep_schema::varchar, dep_name::varchar, dep_type::varchar,
+    select dep_schema::varchar COLLATE "C", dep_name::varchar COLLATE "C", dep_type::varchar COLLATE "C",
         recursive_deps.depth + 1 from
     (
       select ref_nsp.nspname ref_schema, ref_cl.relname ref_name,

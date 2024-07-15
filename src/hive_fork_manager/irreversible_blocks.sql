@@ -113,7 +113,7 @@ SELECT pg_catalog.pg_extension_config_dump('hive.applied_hardforks', '');
 
 CREATE TABLE IF NOT EXISTS hive.accounts (
       id INTEGER NOT NULL
-    , name VARCHAR(16) NOT NULL
+    , name VARCHAR(16) COLLATE "C" NOT NULL
     , block_num INTEGER
     , CONSTRAINT pk_hive_accounts_id PRIMARY KEY( id )
     , CONSTRAINT uq_hive_accounst_name UNIQUE ( name )

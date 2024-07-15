@@ -1,19 +1,19 @@
 -- domains
 
 DROP DOMAIN IF EXISTS hive.account_name_type CASCADE;
-CREATE DOMAIN hive.account_name_type AS VARCHAR(16);
+CREATE DOMAIN hive.account_name_type AS VARCHAR(16) COLLATE "C";
 
 DROP DOMAIN IF EXISTS hive.permlink CASCADE;
-CREATE DOMAIN hive.permlink AS VARCHAR(255);
+CREATE DOMAIN hive.permlink AS VARCHAR(255) COLLATE "C";
 
 DROP DOMAIN IF EXISTS hive.comment_title CASCADE;
-CREATE DOMAIN hive.comment_title AS VARCHAR(255);
+CREATE DOMAIN hive.comment_title AS VARCHAR(255) COLLATE "C";
 
 DROP DOMAIN IF EXISTS hive.memo CASCADE;
-CREATE DOMAIN hive.memo AS VARCHAR(2048);
+CREATE DOMAIN hive.memo AS VARCHAR(2048) COLLATE "C";
 
 DROP DOMAIN IF EXISTS hive.public_key_type CASCADE;
-CREATE DOMAIN hive.public_key_type AS VARCHAR;
+CREATE DOMAIN hive.public_key_type AS VARCHAR COLLATE "C";
 
 DROP DOMAIN IF EXISTS hive.weight_type CASCADE;
 CREATE DOMAIN hive.weight_type AS int4; -- uint16_t: 2 byte, but unsigned (int4)
@@ -37,13 +37,13 @@ DROP DOMAIN IF EXISTS hive.digest_type CASCADE;
 CREATE DOMAIN hive.digest_type AS bytea;
 
 DROP DOMAIN IF EXISTS hive.custom_id_type CASCADE;
-CREATE DOMAIN hive.custom_id_type AS VARCHAR(32);
+CREATE DOMAIN hive.custom_id_type AS VARCHAR(32) COLLATE "C";
 
 DROP DOMAIN IF EXISTS hive.asset_symbol CASCADE;
 CREATE DOMAIN hive.asset_symbol AS int8; -- uint32_t: 4 byte, but unsigned (int8)
 
 DROP DOMAIN IF EXISTS hive.proposal_subject CASCADE;
-CREATE DOMAIN hive.proposal_subject AS VARCHAR(80);
+CREATE DOMAIN hive.proposal_subject AS VARCHAR(80) COLLATE "C";
 
 -- assets
 
