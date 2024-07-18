@@ -47,11 +47,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void reindex_data_dumper::trigger_data_flush( cached_data_t& cached_data, int last_block_num ) {
-    if (app.is_interrupt_request())
-    {
-      cancel();
-      return;
-    }
     _block_writer->trigger( std::move( cached_data.blocks ), last_block_num );
     _transaction_writer->trigger( std::move( cached_data.transactions ), last_block_num);
     _operation_writer->trigger( std::move( cached_data.operations ), last_block_num );
@@ -59,6 +54,10 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_writer->trigger( std::move( cached_data.accounts ), last_block_num );
     _account_operations_writer->trigger( std::move( cached_data.account_operations ), last_block_num );
     _applied_hardforks_writer->trigger( std::move( cached_data.applied_hardforks ), last_block_num );
+    if (app.is_interrupt_request())
+    {
+      cancel();
+    }
   }
 
   void reindex_data_dumper::cancel() {
