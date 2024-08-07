@@ -14,7 +14,7 @@ test_start
 export BLOCK_LOG_SOURCE_DIR_5M="/blockchain/block_log_5m"
 export PATTERNS_PATH="${REPO_DIR}/tests/integration/replay/patterns/no_filter"
 export DATADIR="${REPO_DIR}/datadir"
-export REPLAY="--replay-blockchain --stop-replay-at-block 1000000"
+export REPLAY="--replay-blockchain --stop-at-block 1000000"
 
 if ! test -e "${BLOCK_LOG_SOURCE_DIR_5M}/block_log"
 then

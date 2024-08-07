@@ -145,7 +145,7 @@ class Test:
         if dump_exit_before_sync:
             additional_command_line+=' --exit-before-sync'
         if dump_stop_replay_at_block:
-            additional_command_line+=f' --stop-replay-at-block={dump_stop_replay_at_block}'
+            additional_command_line+=f' --stop-at-block={dump_stop_replay_at_block}'
         return additional_command_line
 
 def shell(command: str) -> None:

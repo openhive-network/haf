@@ -62,14 +62,14 @@ Next create a `blockchain` subdirectory inside the datadir with a valid block_lo
 With these preliminaries out of the way, you can start your instance container using a command like the one below:
 
 ```
-./haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf/instance:local --data-dir=/storage1/mainnet-5M-haf --name=haf-instance-5M --replay --stop-replay-at-block=5000000
+./haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf/instance:local --data-dir=/storage1/mainnet-5M-haf --name=haf-instance-5M --replay --stop-at-block=5000000
 ```
 
 This example works as follows:
 - `registry.gitlab.syncad.com/hive/haf/instance:local` points to the HAF image you built in previous steps.
 - `--data-dir=/storage1/mainnet-5M-haf` option enforces proper volume mapping from your host machine to the docker container you are starting and points to a data directory where the hived node shall put its data.
 - `--name=haf-instance-5M`- names your docker container for docker commands.
-- other options `--replay --stop-replay-at-block=5000000` are passed directly to the hived command line
+- other options `--replay --stop-at-block=5000000` are passed directly to the hived command line
 
 Note: since no directory was specified for storing the HAF database on the host, it will be stored in a subdirectory of the hived datadir called haf_db_store (i.e. /storage1/mainnet-5M-haf/haf_db_store).
 
@@ -195,7 +195,7 @@ scripts/load_instance.sh --backup-dir=path_to_backup_directory
 --hived-executable-path=path_to_hived \
 --hived-data-dir=path_to_hived_datadir \
 --haf-db-name=haf_block_log \
---exit-before-sync --stop-replay-at-block=5000000
+--exit-before-sync --stop-at-block=5000000
 ```
 
 # HAF Versioning
