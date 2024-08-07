@@ -55,7 +55,7 @@ The sql_serializer extends hived with these new parameters:
 
 ### Example hived command
 
-	./hived --replay-blockchain --stop-at-block 5000000 --exit-after-replay -d ../../../datadir --force-replay --psql-index-threshold 65432
+	./hived --replay-blockchain --stop-at-block 5000000 --exit-before-sync -d ../../../datadir --force-replay --psql-index-threshold 65432
 
 ## How the sql_serializer serializes blockchain data
 The sql_serializer is connected to the internal database of the hived node (aka chainbase) by event notifications (boost signals). These signals notify the sql_serializer about the starting/ending of the reindex process (i.e. replay of a block_log file) and when new block data has been added to the state of chainbase from the peer-to-peer network.
