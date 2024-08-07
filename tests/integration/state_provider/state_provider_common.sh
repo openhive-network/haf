@@ -8,7 +8,7 @@ export REPO_DIR="$CI_PROJECT_DIR"
 export BLOCK_LOG_SOURCE_DIR_5M="/blockchain/block_log_5m"
 
 export DATADIR="$CI_PROJECT_DIR/datadir"
-export REPLAY="--replay-blockchain --stop-replay-at-block 5000000"
+export REPLAY="--replay-blockchain --stop-at-block 5000000"
 export HIVED_PATH="/home/hived/bin/hived"
 export COMPRESS_BLOCK_LOG_PATH="/home/hived/bin/compress_block_log"
 export DB_NAME=haf_block_log
