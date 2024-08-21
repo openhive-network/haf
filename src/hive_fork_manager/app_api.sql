@@ -191,7 +191,7 @@ BEGIN
     -- lock EXCLUSIVE may be taken by hived in function:
     -- hive.set_irreversible
     -- so here we can stuck while hived is servicing a new irreversible block notification
-    LOCK TABLE hive.contexts_attachment IN SHARE MODE;
+    LOCK TABLE hive.contexts_attachment IN ROW SHARE MODE;
 
     SELECT hc.current_block_num INTO __current_block_num
     FROM hive.contexts hc
