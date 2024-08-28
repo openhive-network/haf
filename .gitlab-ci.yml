@@ -19,6 +19,7 @@ variables:
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
+  PIPELINE_DATA_CACHE_HAF_DIRECTORY: "${DATA_CACHE_HAF_PREFIX}_pipeline_${CI_PIPELINE_ID}"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   SNAPSHOTS_PATH: /cache/snapshots_pipeline_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /cache/block_log_5m_mirrornet
@@ -74,7 +75,7 @@ haf_image_build_mirrornet:
     PG_ACCESS: |
                 "host    all              haf_admin        0.0.0.0/0    trust"
 
-    DATA_SOURCE: "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
+    DATA_SOURCE: "${PIPELINE_DATA_CACHE_HAF_DIRECTORY}"
     LOG_FILE: $CI_JOB_NAME.log
   command: ["--replay-blockchain", "--stop-at-block=5000000"]
 
@@ -579,6 +580,23 @@ prepare_haf_data:
   tags:
     - data-cache-storage
 
+# Creates a temporary copy of replay data for the exclusive use of current pipeline
+replay_data_copy:
+  extends: .job-defaults
+  image: "${CI_REGISTRY_IMAGE}/ci-base-image${BUILDER_IMAGE_TAG}"
+  stage: build_and_test_phase_1
+  needs:
+    - prepare_haf_data
+    - haf_image_build
+  script:
+    - |
+      set -e
+
+      echo "Copying replay data to ${PIPELINE_DATA_CACHE_HAF_DIRECTORY:?}"
+      sudo cp -a "${DATA_CACHE_HAF_PREFIX:?}_${HAF_COMMIT:?}" "${PIPELINE_DATA_CACHE_HAF_DIRECTORY:?}"
+  tags:
+    - data-cache-storage
+
 dead_app_auto_detach:
   extends: .job-defaults
   stage: build_and_test_phase_2
@@ -586,6 +604,7 @@ dead_app_auto_detach:
   needs:
     - job: prepare_haf_data
       artifacts: true
+    - job: replay_data_copy
   services:
     - name: $HAF_IMAGE_NAME
       alias: haf-instance
@@ -596,7 +615,7 @@ dead_app_auto_detach:
                     "host    all              hived            0.0.0.0/0    trust"
                     "host    all              test_app_owner   0.0.0.0/0    trust"
 
-        DATA_SOURCE: "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
+        DATA_SOURCE: "${PIPELINE_DATA_CACHE_HAF_DIRECTORY}"
         LOG_FILE: $CI_JOB_NAME.log
       command: ["--replay-blockchain", "--stop-at-block=1000000"]
   variables:
@@ -617,6 +636,7 @@ start_haf_as_service:
   needs:
     - job: prepare_haf_data
       artifacts: true
+    - job: replay_data_copy
   services:
     - *haf-service
   variables:
@@ -663,6 +683,21 @@ cleanup_old_haf_cache:
   stage: cleanup
   variables:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
+  tags:
+    - data-cache-storage
+
+# Deletes replay data used by the tests and created by replay_data_copy
+cleanup_pipeline_cache:
+  needs:
+    - replay_data_copy
+    - start_haf_as_service
+    - dead_app_auto_detach
+  extends: 
+    - .cleanup_cache_manual_template
+  stage: cleanup
+  variables:
+    CLEANUP_PATH_PATTERN: "${DATA_CACHE_HAF_PREFIX}_pipeline_*"
+  when: always
   tags:
     - data-cache-storage
 
