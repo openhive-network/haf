@@ -52,3 +52,11 @@ BEGIN
     END;
 END
 $$;
+
+DO $$
+BEGIN
+    CREATE ROLE haf_maintainer WITH LOGIN;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+    RAISE NOTICE 'haf_maintainer role already exists';
+END
+$$;
