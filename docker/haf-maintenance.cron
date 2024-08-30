@@ -1,0 +1,4 @@
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+SHELL=/bin/sh
+
+0 0 */4 * * * * sudo -u haf_maintainer psql -c "CALL hive.proc_perform_dead_app_contexts_auto_detach()" haf_block_log
