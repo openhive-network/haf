@@ -106,6 +106,9 @@ sudo --user=hived -En LD_PRELOAD="$OVERRIDE_LD_PRELOAD" /bin/bash <<EOF
 echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[*]}"
 set -euo pipefail
 
+echo "Laaunching supercronic"
+supercronic crontab "/etc/haf-maintenance.cron" 2> supercronic.log &
+
 if [ ! -f "$DATADIR/config.ini" ]; then
   echo "No config file exists, creating a default config file"
 
@@ -150,6 +153,7 @@ hived_return_code="\$?"
 echo "\$hived_return_code Hived process finished execution."
 EOF
 
+pkill supercronic
 stop_postresql
 
 } &
