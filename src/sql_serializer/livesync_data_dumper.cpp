@@ -149,7 +149,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     if ( block_num >= _psql_first_block )
     {
       _processing_thread.enqueue("SELECT hive.set_irreversible(" + std::to_string(block_num) + ")");
-      _processing_thread.enqueue("SET ROLE hived_group; CALL hive.proc_perform_dead_app_contexts_auto_detach();");
     }
   }
 
