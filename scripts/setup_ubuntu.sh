@@ -87,6 +87,11 @@ create_haf_admin_account() {
   fi
 }
 
+create_maintenance_account() {
+  echo "Attempting to create haf_maintainer account..."
+  useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service account" -U haf_maintainer
+}
+
 create_hived_account() {
   echo "Attempting to create $hived_unix_account account..."
   "$SRC_DIR/hive/scripts/setup_ubuntu.sh" --hived-account="$hived_unix_account"
@@ -97,6 +102,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --dev)
         install_all_dev_packages
+        create_maintenance_account
         ;;
     --user)
         install_user_packages
