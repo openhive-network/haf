@@ -47,7 +47,7 @@ install_all_dev_packages() {
           postgresql-common
 
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-  DEBIAN_FRONTEND=noniteractive apt-get install -y postgresql-16 postgresql-server-dev-16
+  DEBIAN_FRONTEND=noniteractive apt-get install -y postgresql-16 postgresql-server-dev-16 postgresql-16-cron
 
   apt-get clean
   rm -rf /var/lib/apt/lists/*
