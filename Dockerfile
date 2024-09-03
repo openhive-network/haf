@@ -160,6 +160,7 @@ ENV POSTGRES_VERSION=16
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/docker_entrypoint.sh" .
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/postgresql.conf" /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.conf" /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
+COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/cron_jobs.sql" .
 
 ENV DATADIR=/home/hived/datadir
 # Use default location (inside datadir) of shm file. If SHM should be placed on some different device, then set it to mapped volume `/home/hived/shm_dir` and map it in docker run
