@@ -73,6 +73,15 @@ fi
 echo "Postgres process: $postgres_pid finished."
 }
 
+enable_pg_cron() {
+    echo 'enabling pg_cron'
+    sudo sed -i'' -E -e "s/^shared_preload_libraries = '([^']+)'/shared_preload_libraries = '\1,pg_cron'/" "/etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf"
+    sudo service postgresql restart
+    psql -c 'CREATE EXTENSION IF NOT EXISTS pg_cron' haf_block_log
+    psql -c 'GRANT USAGE ON SCHEMA cron to haf_maintainer' haf_block_log
+    psql -f ~/cron_jobs.sql haf_block_log
+}
+
 perform_instance_dump() {
   backup_dir_name="${1}"
   sudo -n mkdir -p "${DATADIR}/${backup_dir_name}"
@@ -101,14 +110,7 @@ run_instance() {
 trap cleanup INT TERM
 trap cleanup EXIT
 
-echo 'enabling pg_cron'
-dpkg -l \*cron\*
-cat ~/cron_jobs.sql
-sudo sed -i'' -E -e "s/^shared_preload_libraries = '([^']+)'/shared_preload_libraries = '\1,pg_cron'/" "/etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf"
-sudo service postgresql restart
-psql -c 'CREATE EXTENSION IF NOT EXISTS pg_cron' haf_block_log
-psql -c 'GRANT USAGE ON SCHEMA cron to haf_maintainer' haf_block_log
-psql -f ~/cron_jobs.sql haf_block_log
+enable_pg_cron
 
 {
 sudo --user=hived -En LD_PRELOAD="$OVERRIDE_LD_PRELOAD" /bin/bash <<EOF
