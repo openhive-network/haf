@@ -28,7 +28,7 @@ $$;
 
 DO $$
 BEGIN
-    CREATE ROLE hived_group WITH NOLOGIN INHERIT SUPERUSER IN ROLE haf_administrators_group;
+    CREATE ROLE hived_group WITH NOLOGIN;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE 'hived_group role already exists';
 END
