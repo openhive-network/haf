@@ -55,7 +55,7 @@ $$;
 
 DO $$
 BEGIN
-    CREATE ROLE haf_maintainer WITH LOGIN;
+    CREATE ROLE haf_maintainer WITH LOGIN INHERIT SUPERUSER;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE 'haf_maintainer role already exists';
 END
