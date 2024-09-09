@@ -63,7 +63,7 @@ BEGIN
     -- hived user is a member of hived_group, but do not inherits its SUPERUSER privilege
     -- when contexts are detached, then its views are switched, and only owner or SUPER user is able to do this
     -- hived is switching ROLE to its group, which has SUPERUSER privilege
-    SET ROLE hived_group;
+    SET ROLE haf_maintainer;
     CALL hive.proc_perform_dead_app_contexts_auto_detach();
 END
 $BODY$
