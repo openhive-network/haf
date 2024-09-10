@@ -213,11 +213,8 @@ indexation_state::on_post_reindex( cached_data_t& cached_data, uint32_t last_blo
       if ( end_of_syncing() )
         return;
 
-      if ( can_move_to_livesync() ) {
-          update_state( INDEXATION::LIVE, cached_data, last_block_num, UNKNOWN );
-      } else {
-          update_state( INDEXATION::P2P, cached_data, last_block_num, UNKNOWN );
-      }
+      update_state( INDEXATION::LIVE, cached_data, last_block_num, UNKNOWN );
+
 
       return;
     case INDEXATION::REINDEX_WAIT:
