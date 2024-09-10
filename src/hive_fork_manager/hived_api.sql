@@ -446,7 +446,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL DEFAULT '4 hours'::INTERVAL )
+CREATE OR REPLACE PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL DEFAULT '1 second'::INTERVAL )
     LANGUAGE plpgsql
 AS
 $BODY$
