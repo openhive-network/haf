@@ -4,12 +4,8 @@ DO
 $$
 BEGIN
   CREATE ROLE test_owner WITH LOGIN INHERIT IN ROLE haf_admin;
-
 EXCEPTION WHEN duplicate_object THEN
-  DROP OWNED BY test_owner  CASCADE;
-  DROP ROLE test_owner;
-
-  CREATE ROLE test_owner WITH LOGIN INHERIT IN ROLE haf_admin;
+  -- do nothing
 END
 $$;
 
