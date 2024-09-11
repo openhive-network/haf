@@ -456,10 +456,23 @@ DECLARE
   __now TIMESTAMP WITHOUT TIME ZONE := NOW();
   __current_block_before_detach INT;
 BEGIN
-  SELECT ARRAY_AGG(c.name) INTO __contexts
-  FROM hive.contexts c
-  JOIN hive.contexts_attachment hca ON hca.context_id = c.id
-  WHERE hca.is_attached AND c.last_active_at < __now - _app_timeout;
+    -- first we take lock to attachment rows for only outdated contexts
+    -- because we have idle_in_transaction_session_timeout = 1h, we are sure that
+    -- 1) broken app transaction are closed (no locks are made by the context)
+    -- 2) application is still pending and may hold locks for attachments rows
+    -- ad1) detach the context, it is broken, un working application
+    -- ad2) it did not commit during last 4 hours, but still executing some query
+        -- stay it attached, it is possible that the app was waiting for HAF to start
+        -- problem: such apps may be mixed with 1st kind apps
+    -- we cannot stop here because someone holds locks, so SKIP LOCKED is used
+
+  SELECT ARRAY_AGG(ctxs.name) INTO __contexts FROM (
+    SELECT c.name
+    FROM hive.contexts c
+    JOIN hive.contexts_attachment hca ON hca.context_id = c.id
+    WHERE hca.is_attached
+      AND c.last_active_at < __now - _app_timeout FOR UPDATE SKIP LOCKED
+  ) as ctxs;
 
   IF CARDINALITY(__contexts) != 0 THEN
     RAISE WARNING 'Attempting to automatically detach application contexts: %', __contexts;
@@ -478,10 +491,14 @@ BEGIN
       -- and as such, it must refrain from modifying the 'current_block.', otherwise
       -- it can lead to scenarios where re-attached applications will process
       -- the same block twice after being auto-detached and subsequently restarted.
+      -- there is no need to update block num of applications which are using stages and new loop
+      -- they have stored all information in their state and they will update attachment in the next_loop_iteration procedure
+      -- the only problem is with app_next_block which is executed by the iteration, but the lock taken here
+      -- on the function beginning ensures the iteration loop work consistent
 
       UPDATE hive.contexts
       SET current_block_num = __current_block_before_detach
-      WHERE name = __ctx;
+      WHERE name = __ctx AND stages IS NULL;
       RAISE WARNING 'Done automatic detaching of application context: %', __ctx;
       EXCEPTION
         WHEN OTHERS THEN
