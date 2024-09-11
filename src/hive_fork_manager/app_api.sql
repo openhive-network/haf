@@ -205,7 +205,7 @@ BEGIN
             , _context, __current_block_num,  __head_of_irreversible_block;
     END IF;
 
-    SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= __current_block_num;
+    SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= GREATEST(__current_block_num,1);
 
     UPDATE hive.contexts
     SET   fork_id = __fork_id
