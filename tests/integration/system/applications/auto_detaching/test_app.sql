@@ -4,12 +4,8 @@ DO
 $$
 BEGIN
   CREATE ROLE test_app_owner WITH LOGIN INHERIT IN ROLE hive_applications_group;
-
 EXCEPTION WHEN duplicate_object THEN
-  DROP OWNED BY test_app_owner  CASCADE;
-  DROP ROLE test_app_owner;
-  
-  CREATE ROLE test_app_owner WITH LOGIN INHERIT IN ROLE hive_applications_group;
+  -- do nothing
 END
 $$;
 
