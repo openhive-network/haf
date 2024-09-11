@@ -21,6 +21,10 @@ BEGIN
     PERFORM hive.app_create_context( _name =>  'context', _schema => 'a', _stages => __context_stages  );
     CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
 
+    CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks ); -- 1,
+    INSERT INTO A.table1(id) VALUES ( 1 );
+    CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks ); -- attach the context
+
     PERFORM hive.push_block(
          ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
         , NULL
@@ -51,9 +55,8 @@ BEGIN
            , ( 6, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks ); -- 1
-    INSERT INTO A.table1(id) VALUES ( 1 );
     CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks ); --block 2 - irreversible
+
     INSERT INTO A.table1(id) VALUES ( 2 );
     CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks ); --set irreversible block 2
     CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks ); --block 3 --reversible
