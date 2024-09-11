@@ -50,7 +50,7 @@ BEGIN
     ;
 
     INSERT INTO hive.contexts_attachment( context_id, is_attached, owner )
-    VALUES( __new_context_id, _is_attached, current_user );
+    VALUES( __new_context_id, _is_attached and _stages IS NOT NULL, current_user );
 END;
 $BODY$
 ;
