@@ -478,10 +478,12 @@ BEGIN
       -- and as such, it must refrain from modifying the 'current_block.', otherwise
       -- it can lead to scenarios where re-attached applications will process
       -- the same block twice after being auto-detached and subsequently restarted.
+      -- there is no need to update block num of applications which are using stages and new loop
+      -- they have stored all information in their state and they will update attachment in the next_loop_iteration procedure
 
       UPDATE hive.contexts
       SET current_block_num = __current_block_before_detach
-      WHERE name = __ctx;
+      WHERE name = __ctx AND stages IS NULL;
       RAISE WARNING 'Done automatic detaching of application context: %', __ctx;
       EXCEPTION
         WHEN OTHERS THEN
