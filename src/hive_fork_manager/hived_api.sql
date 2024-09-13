@@ -452,13 +452,18 @@ AS
 $BODY$
 DECLARE
   __contexts hive.context_name[];
-  __contexts_id hive.contexts.id%TYPE
   __ctx TEXT;
   __now TIMESTAMP WITHOUT TIME ZONE := NOW();
   __current_block_before_detach INT;
 BEGIN
-  SELECT FOR UPDATE ARRAY_AGG(c.name) INTO __contexts_id
-  FROM hive.contexts_attachment hca ON hca.context_id = c.id
+    PERFORM  1
+    FROM hive.contexts c
+    JOIN hive.contexts_attachment hca ON hca.context_id = c.id
+    WHERE hca.is_attached AND c.last_active_at < __now - _app_timeout FOR UPDATE;
+
+  SELECT ARRAY_AGG(c.name) INTO __contexts
+  FROM hive.contexts c
+  JOIN hive.contexts_attachment hca ON hca.context_id = c.id
   WHERE hca.is_attached AND c.last_active_at < __now - _app_timeout;
 
   IF CARDINALITY(__contexts) != 0 THEN
