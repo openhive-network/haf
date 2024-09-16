@@ -456,10 +456,19 @@ DECLARE
   __now TIMESTAMP WITHOUT TIME ZONE := NOW();
   __current_block_before_detach INT;
 BEGIN
+    -- first we take lock to attachment rows for only outdated contexts
+    -- because we have idle_in_transaction_session_timeout = 1h, we are sure that
+    -- 1) broken app transaction are closed (no locks are made by the context)
+    -- 2) application is still pending and may hold locks for attachments rows
+    -- ad1) detach the context, it is broken, un working application
+    -- ad2) it did not commit during last 4 hours, but still executing some query
+        -- stay it attached, it is possible that the app was waiting for HAF to start
+        -- problem: such apps may be mixed with 1st kind apps
+    -- we cannot stop here because someone holds locks, so SKIP LOCKED is used
     PERFORM  1
     FROM hive.contexts c
     JOIN hive.contexts_attachment hca ON hca.context_id = c.id
-    WHERE hca.is_attached AND c.last_active_at < __now - _app_timeout FOR UPDATE;
+    WHERE hca.is_attached AND c.last_active_at < __now - _app_timeout FOR UPDATE SKIP LOCKED;
 
   SELECT ARRAY_AGG(c.name) INTO __contexts
   FROM hive.contexts c
