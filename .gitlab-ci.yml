@@ -176,22 +176,22 @@ dump_snapshot_5m_mirrornet:
   script:
     #Prepare environment for hived run
     - cd $CI_PROJECT_DIR/docker
-    - mkdir $MIRRORNET_WORKING_DIR
+    - mkdir -vp $MIRRORNET_WORKING_DIR
     - cd $MIRRORNET_WORKING_DIR
     - mkdir blockchain
     - cd blockchain
     - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log .
     #Prepare snapshot storage
-    - mkdir $SNAPSHOTS_PATH
-    - cd $SNAPSHOTS_PATH
-    - mkdir 5m_mirrornet
+    - mkdir -vp "$SNAPSHOTS_PATH"
+    - cd "$SNAPSHOTS_PATH"
+    - mkdir -vp 5m_mirrornet/snapshot
     #Prepare snapshot
     - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --exit-before-sync --replay
     - echo "plugin = state_snapshot" >> $MIRRORNET_WORKING_DIR/config.ini
     - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --dump-snapshot=snapshot --exit-before-sync
     #Store snapshot in cache
-    - mv $MIRRORNET_WORKING_DIR/blockchain $SNAPSHOTS_PATH/5m_mirrornet
-    - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot $SNAPSHOTS_PATH/5m_mirrornet
+    - mv $MIRRORNET_WORKING_DIR/blockchain "$SNAPSHOTS_PATH/5m_mirrornet"
+    - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot "$SNAPSHOTS_PATH/5m_mirrornet/snapshot"
   tags:
     - data-cache-storage
 
@@ -231,7 +231,7 @@ haf_system_tests_mirrornet:
     - rm -r $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
-    - pytest --junitxml report.xml --timeout=3600 --block-log-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --snapshot-path=$SNAPSHOTS_PATH/5m_mirrornet/snapshot -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
+    - pytest --junitxml report.xml --timeout=3600 --block-log-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --snapshot-path="$SNAPSHOTS_PATH/5m_mirrornet/snapshot/snapshot" -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
   artifacts:
     paths:
     - "**/generated_during_*"
