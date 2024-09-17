@@ -465,15 +465,14 @@ BEGIN
         -- stay it attached, it is possible that the app was waiting for HAF to start
         -- problem: such apps may be mixed with 1st kind apps
     -- we cannot stop here because someone holds locks, so SKIP LOCKED is used
-    PERFORM  1
-    FROM hive.contexts c
-    JOIN hive.contexts_attachment hca ON hca.context_id = c.id
-    WHERE hca.is_attached AND c.last_active_at < __now - _app_timeout FOR UPDATE SKIP LOCKED;
 
-  SELECT ARRAY_AGG(c.name) INTO __contexts
-  FROM hive.contexts c
-  JOIN hive.contexts_attachment hca ON hca.context_id = c.id
-  WHERE hca.is_attached AND c.last_active_at < __now - _app_timeout;
+  SELECT ARRAY_AGG(ctxs.name) INTO __contexts FROM (
+    SELECT c.name
+    FROM hive.contexts c
+             JOIN hive.contexts_attachment hca ON hca.context_id = c.id
+    WHERE hca.is_attached
+      AND c.last_active_at < __now - _app_timeout FOR UPDATE SKIP LOCKED
+  ) as ctxs;
 
   IF CARDINALITY(__contexts) != 0 THEN
     RAISE WARNING 'Attempting to automatically detach application contexts: %', __contexts;
