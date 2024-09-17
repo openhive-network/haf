@@ -102,7 +102,7 @@ trap cleanup INT TERM
 trap cleanup EXIT
 
 {
-sudo --user=hived -En LD_PRELOAD="$OVERRIDE_LD_PRELOAD" /bin/bash <<EOF
+sudo --user=hived -En LD_PRELOAD="${OVERRIDE_LD_PRELOAD:-}" /bin/bash <<EOF
 echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[*]}"
 set -euo pipefail
 
