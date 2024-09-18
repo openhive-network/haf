@@ -167,6 +167,11 @@ BEGIN
     -- 2. find current stage if:
     IF hive.is_stages_analyze_required( __lead_context_state, hive.get_irreversible_head_block() )
     THEN
+        PERFORM  1
+        FROM hive.contexts c
+        JOIN hive.contexts_attachment hca ON hca.context_id = c.id
+        WHERE c.name = ANY(_contexts) FOR UPDATE;
+
         IF NOT hive.app_context_are_attached( _contexts )
         THEN
             PERFORM hive.app_context_attach( _contexts );
