@@ -493,6 +493,8 @@ BEGIN
       -- the same block twice after being auto-detached and subsequently restarted.
       -- there is no need to update block num of applications which are using stages and new loop
       -- they have stored all information in their state and they will update attachment in the next_loop_iteration procedure
+      -- the only problem is with app_next_block which is executed by the iteration, but the lock taken here
+      -- on the function beginning ensures the iteration loop work consistent
 
       UPDATE hive.contexts
       SET current_block_num = __current_block_before_detach
