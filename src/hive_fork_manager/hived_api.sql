@@ -469,7 +469,7 @@ BEGIN
   SELECT ARRAY_AGG(ctxs.name) INTO __contexts FROM (
     SELECT c.name
     FROM hive.contexts c
-             JOIN hive.contexts_attachment hca ON hca.context_id = c.id
+    JOIN hive.contexts_attachment hca ON hca.context_id = c.id
     WHERE hca.is_attached
       AND c.last_active_at < __now - _app_timeout FOR UPDATE SKIP LOCKED
   ) as ctxs;
