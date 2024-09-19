@@ -456,6 +456,11 @@ DECLARE
   __now TIMESTAMP WITHOUT TIME ZONE := NOW();
   __current_block_before_detach INT;
 BEGIN
+  IF NOT hive.is_instance_ready() THEN
+    RAISE WARNING 'Skipping auto detach, because HAF is not in live mode';
+    RETURN;
+  END IF;
+
     -- first we take lock to attachment rows for only outdated contexts
     -- because we have idle_in_transaction_session_timeout = 1h, we are sure that
     -- 1) broken app transaction are closed (no locks are made by the context)
