@@ -1,9 +1,29 @@
+CREATE OR REPLACE FUNCTION hive.app_create_views_for_contexts( _name hive.context_name )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.create_context_data_view( _name );
+    PERFORM hive.create_blocks_view( _name );
+    PERFORM hive.create_transactions_view( _name );
+    PERFORM hive.create_operations_view( _name );
+    PERFORM hive.create_operations_view_extended( _name );
+    PERFORM hive.create_signatures_view( _name );
+    PERFORM hive.create_accounts_view( _name );
+    PERFORM hive.create_account_operations_view( _name );
+    PERFORM hive.create_applied_hardforks_view( _name );
+END;
+$BODY$
+;
+
+
 CREATE OR REPLACE FUNCTION hive.app_create_context(
       _name hive.context_name
     , _schema TEXT
     , _is_forking BOOLEAN = TRUE
     , _is_attached BOOLEAN = TRUE
-    , _stages hive.application_stages = NULL
 )
     RETURNS void
     LANGUAGE plpgsql
@@ -20,18 +40,39 @@ BEGIN
         , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
         , _is_forking
         , _is_attached
+        , NULL
+    );
+
+    PERFORM hive.app_create_views_for_contexts( _name );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_create_context(
+      _name hive.context_name
+    , _schema TEXT
+    , _stages hive.application_stages
+    , _is_forking BOOLEAN = TRUE
+)
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    -- Any context always starts with block before genesis, the app may detach the context and execute 'massive sync'
+    -- after massive sync the application must attach its context to last already synced block
+    PERFORM hive.context_create(
+            _name
+        , _schema
+        , ( SELECT MAX( hf.id ) FROM hive.fork hf ) -- current fork id
+        , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
+        , _is_forking
+        , False
         , _stages
     );
 
-    PERFORM hive.create_context_data_view( _name );
-    PERFORM hive.create_blocks_view( _name );
-    PERFORM hive.create_transactions_view( _name );
-    PERFORM hive.create_operations_view( _name );
-    PERFORM hive.create_operations_view_extended( _name );
-    PERFORM hive.create_signatures_view( _name );
-    PERFORM hive.create_accounts_view( _name );
-    PERFORM hive.create_account_operations_view( _name );
-    PERFORM hive.create_applied_hardforks_view( _name );
+    PERFORM hive.app_create_views_for_contexts( _name );
 END;
 $BODY$
 ;
@@ -205,7 +246,7 @@ BEGIN
             , _context, __current_block_num,  __head_of_irreversible_block;
     END IF;
 
-    SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= GREATEST(__current_block_num,1);
+    SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= GREATEST(__current_block_num, 1);
 
     UPDATE hive.contexts
     SET   fork_id = __fork_id
