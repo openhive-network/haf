@@ -59,10 +59,7 @@ CREATE OR REPLACE PROCEDURE test_hived_test_when()
 AS
 $BODY$
 BEGIN
-    -- it pretends situation as sql-serializer works
-    -- hived user is a member of hived_group, but do not inherits its SUPERUSER privilege
-    -- when contexts are detached, then its views are switched, and only owner or SUPER user is able to do this
-    -- hived is switching ROLE to its group, which has SUPERUSER privilege
+    -- pretend we are calling from a cron job
     SET ROLE haf_maintainer;
     CALL hive.proc_perform_dead_app_contexts_auto_detach();
 END
