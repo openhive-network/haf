@@ -361,6 +361,8 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/operation_variant_to_specific_operation_type_casts.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/calculate_schema_hash.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_vesting_balance/get_vesting_balance.sql )
+ ADD_SQL_FUNCTIONAL_TEST( shared_lib/convert_to_blocks_range/convert_to_blocks_range.sql )
+ ADD_SQL_FUNCTIONAL_TEST( shared_lib/convert_to_blocks_range/convert_to_block.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/test_stack_bug.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( sanity_check/test_tables_and_sequences_properly_flagged_for_dump.sql )
