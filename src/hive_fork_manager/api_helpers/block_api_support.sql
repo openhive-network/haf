@@ -46,7 +46,7 @@ CREATE TYPE hive.block_type_ext AS (
 -- ############ HELPER FUNCTIONS ############
 -- ##########################################
 
-CREATE OR REPLACE FUNCTION hive.get_block_from_views( _block_num_start INT, _block_count INT )
+CREATE OR REPLACE FUNCTION hive.get_block_from_views( _block_num_start INT, _block_count INT, _include_virtual BOOLEAN = FALSE)
     RETURNS SETOF hive.block_type_ext
     LANGUAGE plpgsql
     VOLATILE
@@ -95,7 +95,7 @@ BEGIN
                      , ARRAY_AGG(ho.body_binary ORDER BY op_pos ASC) bodies
                 FROM hive.operations_view ho
                 WHERE
-                    hive.operation_id_to_type_id(ho.id) <= (SELECT ot.id FROM hive.operation_types ot WHERE ot.is_virtual = FALSE ORDER BY ot.id DESC LIMIT 1)
+                    hive.operation_id_to_type_id(ho.id) <= (SELECT ot.id FROM hive.operation_types ot WHERE (_include_virtual OR ot.is_virtual = FALSE) ORDER BY ot.id DESC LIMIT 1)
                     AND hive.operation_id_to_block_num(ho.id) BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
                 GROUP BY hive.operation_id_to_block_num(ho.id), ho.trx_in_block
                 ORDER BY hive.operation_id_to_block_num(ho.id) ASC, trx_in_block ASC
@@ -262,14 +262,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_block( _block_num INT )
+CREATE OR REPLACE FUNCTION hive.get_block( _block_num INT, _include_virtual BOOLEAN = FALSE )
     RETURNS hive.block_type
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 BEGIN
-    RETURN (hive.get_block_from_views( _block_num, 1 )).block;
+    RETURN (hive.get_block_from_views( _block_num, 1, _include_virtual)).block;
 END;
 $BODY$
 ;
@@ -311,7 +311,7 @@ $BODY$
 -- ###### JSON SERIALIZATION FUNCTIONS ######
 -- ##########################################
 
-CREATE OR REPLACE FUNCTION hive.get_block_json( _block_num INT )
+CREATE OR REPLACE FUNCTION hive.get_block_json( _block_num INT, _include_virtual BOOLEAN = FALSE)
     RETURNS JSONB
     LANGUAGE plpgsql
     VOLATILE
@@ -321,7 +321,7 @@ DECLARE
     __block hive.block_type;
     __result JSON;
 BEGIN
-    SELECT * FROM hive.get_block( _block_num ) INTO __block;
+    SELECT * FROM hive.get_block( _block_num, _include_virtual) INTO __block;
 
     IF __block.timestamp IS NULL THEN
         RETURN jsonb_build_object();
