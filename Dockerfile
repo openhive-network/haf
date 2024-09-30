@@ -31,13 +31,15 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get update && \
-    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y curl postgresql-16 libpq5 libboost-chrono1.74.0 libboost-context1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 busybox && \
+    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y curl postgresql-16 postgresql-16-cron libpq5 libboost-chrono1.74.0 libboost-context1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 busybox && \
     apt-get remove -y gnupg && \
     apt-get autoremove -y && \
     busybox --install -s
 # change the UID and GID to match the ones postgres is assigned in our non-minimal runtime
 RUN (chown -Rf --from=postgres 105 / || true) && (chown -Rf --from=:postgres :109 / || true) && usermod -u 105 postgres && groupmod -g 109 postgres
 RUN usermod -a -G users -c "PostgreSQL daemon account" postgres
+
+RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service account" -U haf_maintainer
 
 USER haf_admin
 WORKDIR /home/haf_admin
@@ -259,6 +261,7 @@ COPY --from=build \
 COPY --from=build \
   /home/haf_admin/build/lib/libhfm-* \
   /usr/lib/postgresql/${POSTGRES_VERSION}/lib
+
 # set a variable telling the entrypoint not to try to install the extension from source, we just did it above
 ENV HAF_INSTALL_EXTENSION=no
 
@@ -271,6 +274,8 @@ COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/scripts/" /home/haf
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/hive/scripts/" /home/haf_admin/source/hive/scripts
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/postgresql.conf" /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.conf" /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
+
+COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/cron_jobs.sql" .
 
 ENV DATADIR=/home/hived/datadir
 # Use default location (inside datadir) of shm file. If SHM should be placed on some different device, then set it to mapped volume `/home/hived/shm_dir` and map it in docker run
