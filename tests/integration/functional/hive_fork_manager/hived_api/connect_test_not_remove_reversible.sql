@@ -65,7 +65,17 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM hive.connect( '123456789', 100, FALSE );
+    PERFORM hive.connect( '123456789', 1, 1 );
+END
+$BODY$
+;
+
+CREATE OR REPLACE PROCEDURE haf_admin_test_error()
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+BEGIN
+    PERFORM hive.connect( '123456789', 2, 1 );
 END
 $BODY$
 ;
@@ -75,7 +85,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT( SELECT COUNT(*) FROM hive.fork WHERE id = 2 AND block_num = 100 ) = 0, 'fork added after connection';
+    -- there is no need to add fork when head block is the same i n hived state and HAF
+    ASSERT( SELECT COUNT(*) FROM hive.fork WHERE id = 2 ) = 0, 'fork added after connection';
 END
 $BODY$
 ;
