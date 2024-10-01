@@ -336,9 +336,12 @@ CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.n
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __max_ireversible_block hive.blocks.num%TYPE;
 BEGIN
     PERFORM hive.remove_inconsistent_irreversible_data();
-    IF _remove_reversible OR _block_num = 0 THEN --_block_num = 0 to ensure that at least 1 fork exists
+    SELECT consistent_block INTO __max_ireversible_block FROM hive.irreversible_data;
+    IF _remove_reversible OR _block_num = 0 OR _block_num = __max_ireversible_block THEN --_block_num = 0 to ensure that at least 1 fork exists
         PERFORM hive.back_from_fork( _block_num );
     END IF;
     INSERT INTO hive.hived_connections( block_num, git_sha, time )
