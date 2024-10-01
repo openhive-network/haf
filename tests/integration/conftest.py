@@ -107,6 +107,27 @@ def prepared_networks_and_database_12_8(database) -> Tuple[networks.NetworksBuil
     architecture.load(config)
     yield prepare_network_with_1_session(database, architecture, create_block_log_directory_name('block_log_12_8'), None)
 
+
+@pytest.fixture()
+def prepared_networks_and_database_6_4(database) -> Tuple[networks.NetworksBuilder, Any]:
+    config = {
+        "networks": [
+            {
+                "InitNode"     : True,
+                "WitnessNodes" :[6]
+            },
+            {
+                "ApiNode"      : { "Active": True, "Prepare": True },
+                "WitnessNodes" :[4]
+            }
+        ]
+    }
+    architecture = networks.NetworksArchitecture()
+    architecture.load(config)
+    yield prepare_network_with_1_session(database, architecture, create_block_log_directory_name('block_log_12_8'), None)
+
+
+
 @pytest.fixture()
 def prepared_networks_and_database_12_8_from_115(database) -> Tuple[networks.NetworksBuilder, Any]:
     config = {
