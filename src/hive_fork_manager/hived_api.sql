@@ -330,20 +330,31 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE, _remove_reversible BOOL )
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __max_ireversible_block hive.blocks.num%TYPE;
+    __max_block hive.blocks.num%TYPE;
 BEGIN
+    -- assumptions:
+    -- sql-serializer WAL was replayed after (re)start
+    -- at the moment of call hived finished restarting and did removing reversible data from state if it was desire
     PERFORM hive.remove_inconsistent_irreversible_data();
-    SELECT consistent_block INTO __max_ireversible_block FROM hive.irreversible_data;
-    IF _remove_reversible OR _block_num = 0 OR _block_num = __max_ireversible_block THEN --_block_num = 0 to ensure that at least 1 fork exists
+    SELECT MAX(num) INTO __max_block FROM hive.blocks_view;
+    -- we need remove with fork event blocks which are greater than head block in hived state(param _block_num)
+    -- because WAL was replayed, we are sure that we have situation before hived close
+    -- when hived did remove reversible data than we have two possibilities:
+    --  1. max(block_num) in HAF is greater than HB in state, lacking blocks are going to replay and HAF must prepare a new fork for them
+    --  2. max(block_num) in HAF is equal HB in state, newly replayed blocks will be new for HAF, no fork required
+    ASSERT COALESCE(__max_block,0) >= _block_num, 'Hived state cannot have more blocks on top micro fork than HAF';
+    -- when hived did not remove reversible data (i.e. is during reply) the situation is the same as for point 2 above -> no fork is required
+    IF __max_block > _block_num OR _block_num = 0 THEN --_block_num = 0 to ensure that at least 1 fork exists
         PERFORM hive.back_from_fork( _block_num );
     END IF;
+
     INSERT INTO hive.hived_connections( block_num, git_sha, time )
     VALUES( _block_num, _git_sha, now() );
 END;

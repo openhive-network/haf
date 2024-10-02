@@ -389,14 +389,9 @@ public:
 };
 
 void sql_serializer_plugin_impl::replay_wal_if_necessary() {
-
-  //if we are replaying block_log, don't clear wal instead of replaying it
-  if (replay_blocklog)
-  {
-    ilog("clear old wal since replaying");
-    write_ahead_log.clear_log();
-    return;
-  }
+  // WAL needs to be replayed always to directly move with path which previously hived has walked
+  // all blocks, forks and irreversible events needs to be aligned to hived, otherwise there may be situation
+  // when micro forks which happens in previously closed hived do not rewind applications data correctly
 
   elog("sql_serializer_plugin_impl::replay_wal_if_necessary");
   std::optional<int32_t> last_wal_sequence_number_in_db;
@@ -440,14 +435,14 @@ void sql_serializer_plugin_impl::replay_wal_if_necessary() {
 
 void sql_serializer_plugin_impl::inform_hfm_about_starting() {
   using namespace std::string_literals;
-  ilog( "Inform Hive Fork Manager about starting..." );
+  auto hived_hb=chain_db.head_block_num();
+  ilog( "Inform Hive Fork Manager about starting... ${hived_hb}", (hived_hb) );
 
   // inform the db about starting hived
   auto connect_to_the_db = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx ){
     const auto CONNECT_QUERY = "SELECT hive.connect('"s
                                + fc::git_revision_sha
-                               + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER"
-                               + ","s + (replay_blocklog?"false"s:"true"s) + "::BOOL);"s;
+                               + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER);"s;
     tx.exec( CONNECT_QUERY );
     return data_processing_status();
   };
