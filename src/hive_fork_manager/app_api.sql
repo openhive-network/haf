@@ -19,6 +19,13 @@ $BODY$
 ;
 
 
+DROP FUNCTION IF EXISTS hive.app_create_context(
+    _name hive.context_name
+  , _schema TEXT
+  , _is_forking BOOLEAN
+  , _is_attached BOOLEAN
+  , _stages hive.application_stages
+);
 CREATE OR REPLACE FUNCTION hive.app_create_context(
       _name hive.context_name
     , _schema TEXT
