@@ -5,26 +5,10 @@ See http://pretius.com/postgresql-stop-worrying-about-table-and-view-dependencie
 Enhanced by Wojciech Barcik wbarcik@syncad.com (handling of rules).
 Modified to also store and restore object definition itself.
 */
+DROP SCHEMA IF EXISTS hive_update CASCADE;
+CREATE SCHEMA hive_update;
 
-CREATE SEQUENCE if not exists hive.deps_saved_ddl_deps_id_seq
-    INCREMENT 1
-    START 1
-    MINVALUE 1
-    MAXVALUE 9223372036854775807
-    CACHE 1;
-
-
-CREATE TABLE if not exists hive.deps_saved_ddl
-(
-    deps_id integer NOT NULL DEFAULT nextval('hive.deps_saved_ddl_deps_id_seq'::regclass),
-    deps_view_schema character varying(255),
-    deps_view_name character varying(255),
-    deps_ddl_to_run text,
-    CONSTRAINT deps_saved_ddl_pkey PRIMARY KEY (deps_id)
-)
-;
-
-CREATE OR REPLACE FUNCTION hive.deps_save_and_drop_dependencies(
+CREATE OR REPLACE FUNCTION hive_update.deps_save_and_drop_dependencies(
     p_view_schema character varying,
     p_view_name character varying,
     drop_relation BOOLEAN DEFAULT true
@@ -82,7 +66,7 @@ for v_curr in
   order by max(depth) desc
 ) loop
 
-  insert into hive.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+  insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
   select p_view_schema, p_view_name, 'COMMENT ON ' ||
   case
     when c.relkind = 'v' then 'VIEW'
@@ -97,7 +81,7 @@ for v_curr in
   where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name
       and d.description is not null;
 
-  insert into hive.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+  insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
   select p_view_schema, p_view_name, 'COMMENT ON COLUMN ' || n.nspname || '.'
       || c.relname || '.' || a.attname || ' IS '''
       || replace(d.description, '''', '''''') || ''';'
@@ -108,7 +92,7 @@ for v_curr in
   where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name
       and d.description is not null;
 
-  insert into hive.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+  insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
   select p_view_schema, p_view_name, 'GRANT ' || privilege_type || ' ON '
       || table_schema || '.' || table_name || ' TO ' || grantee
   from information_schema.role_table_grants
@@ -116,19 +100,19 @@ for v_curr in
 
   if v_curr.obj_type = 'v' then
 
-    insert into hive.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+    insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
     select p_view_schema, p_view_name, definition
     from pg_catalog.pg_rules
     where schemaname = v_curr.obj_schema and tablename = v_curr.obj_name;
 
-    insert into hive.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+    insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
     select p_view_schema, p_view_name, 'CREATE VIEW '
         || v_curr.obj_schema || '.' || v_curr.obj_name || ' AS ' || view_definition
     from information_schema.views
     where table_schema = v_curr.obj_schema and table_name = v_curr.obj_name;
 
   elsif v_curr.obj_type = 'm' then
-    insert into hive.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+    insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
     select p_view_schema, p_view_name, 'CREATE MATERIALIZED VIEW '
         || v_curr.obj_schema || '.' || v_curr.obj_name || ' AS ' || definition
     from pg_matviews
@@ -149,7 +133,7 @@ end;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION hive.deps_restore_dependencies(
+CREATE OR REPLACE FUNCTION hive_update.deps_restore_dependencies(
     p_view_schema character varying,
     p_view_name character varying
   )
@@ -169,13 +153,13 @@ begin
 for v_curr in
 (
   select deps_ddl_to_run
-  from hive.deps_saved_ddl
+  from hive_data.deps_saved_ddl
   where deps_view_schema = p_view_schema and deps_view_name = p_view_name
   order by deps_id desc
 ) loop
   execute v_curr.deps_ddl_to_run;
 end loop;
-delete from hive.deps_saved_ddl
+delete from hive_data.deps_saved_ddl
 where deps_view_schema = p_view_schema and deps_view_name = p_view_name;
 end;
 $BODY$;

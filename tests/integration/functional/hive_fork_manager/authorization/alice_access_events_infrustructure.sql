@@ -3,7 +3,7 @@ CREATE OR REPLACE PROCEDURE test_hived_test_given()
     AS
 $BODY$
 BEGIN
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     VALUES
            ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -11,12 +11,12 @@ BEGIN
          , ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:24-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 5, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hive_data.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
     ;
     PERFORM hive.end_massive_sync(5);
 
-    INSERT INTO hive.hived_connections
+    INSERT INTO hive_data.hived_connections
     VALUES( 1, 1 , 'SHA', now() );
 END;
 $BODY$
@@ -28,115 +28,115 @@ CREATE OR REPLACE PROCEDURE alice_test_then()
 $BODY$
 BEGIN
     BEGIN
-        DELETE FROM hive.blocks;
+        DELETE FROM hive_data.blocks;
         ASSERT FALSE, 'Alice can delete irreversible blocks';
     EXCEPTION WHEN OTHERS THEN
     END;
 
 BEGIN
-    DELETE FROM hive.transactions_multisig;
+    DELETE FROM hive_data.transactions_multisig;
         ASSERT FALSE, 'Alice can delete irreversible transactions_multisig';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DELETE FROM hive.transactions;
+        DELETE FROM hive_data.transactions;
         ASSERT FALSE, 'Alice can delete irreversible transactions';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DELETE FROM hive.operation_types;
+        DELETE FROM hive_data.operation_types;
         ASSERT FALSE, 'Alice can delete irreversible operation_types';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DELETE FROM hive.operations;
+        DELETE FROM hive_data.operations;
         ASSERT FALSE, 'Alice can delete irreversible operations';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DELETE FROM hive.fork;
-        ASSERT FALSE, 'Alice can delete hive.fork';
+        DELETE FROM hive_data.fork;
+        ASSERT FALSE, 'Alice can delete hive_data.fork';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        INSERT INTO hive.fork VALUES( 1, 15, now() );
-        ASSERT FALSE, 'Alice can insert to hive.fork';
+        INSERT INTO hive_data.fork VALUES( 1, 15, now() );
+        ASSERT FALSE, 'Alice can insert to hive_data.fork';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        UPDATE hive.fork SET num = 10;
-        ASSERT FALSE, 'Alice can update to hive.fork';
+        UPDATE hive_data.fork SET num = 10;
+        ASSERT FALSE, 'Alice can update to hive_data.fork';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DROP TABLE hive.fork;
-        ASSERT FALSE, 'Alice can drop hive.fork';
+        DROP TABLE hive_data.fork;
+        ASSERT FALSE, 'Alice can drop hive_data.fork';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DELETE FROM hive.events_queue;
-        ASSERT FALSE, 'Alice can delete hive.events_queue';
+        DELETE FROM hive_data.events_queue;
+        ASSERT FALSE, 'Alice can delete hive_data.events_queue';
         EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        INSERT INTO hive.events_queue VALUES( 1, 'MASSIVE_SYNC', 10 );
-        ASSERT FALSE, 'Alice can insert to hive.events_queue';
+        INSERT INTO hive_data.events_queue VALUES( 1, 'MASSIVE_SYNC', 10 );
+        ASSERT FALSE, 'Alice can insert to hive_data.events_queue';
         EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        UPDATE hive.events_queue SET event = 'MASSIVE_SYNC';
-        ASSERT FALSE, 'Alice can update to hive.events_queue';
+        UPDATE hive_data.events_queue SET event = 'MASSIVE_SYNC';
+        ASSERT FALSE, 'Alice can update to hive_data.events_queue';
         EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DROP TABLE hive.events_queue;
-        ASSERT FALSE, 'Alice can drop hive.events_queue';
+        DROP TABLE hive_data.events_queue;
+        ASSERT FALSE, 'Alice can drop hive_data.events_queue';
         EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-       DELETE FROM hive.hived_connections;
-       ASSERT FALSE, 'Alice can delete from hive.hived_connections';
+       DELETE FROM hive_data.hived_connections;
+       ASSERT FALSE, 'Alice can delete from hive_data.hived_connections';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        INSERT INTO hive.hived_connections VALUES( 2,2, 'SHA', now() );
-        ASSERT FALSE, 'Alice can insert to hive.hived_connections';
+        INSERT INTO hive_data.hived_connections VALUES( 2,2, 'SHA', now() );
+        ASSERT FALSE, 'Alice can insert to hive_data.hived_connections';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        UPDATE hive.hived_connections SET git_sha = 'SHA2';
-        ASSERT FALSE, 'Alice can update hive.hived_connections';
+        UPDATE hive_data.hived_connections SET git_sha = 'SHA2';
+        ASSERT FALSE, 'Alice can update hive_data.hived_connections';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DROP TABLE hive.hived_connections;
-        ASSERT FALSE, 'Alice can drop hive.hived_connections';
+        DROP TABLE hive_data.hived_connections;
+        ASSERT FALSE, 'Alice can drop hive_data.hived_connections';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DELETE FROM hive.accounts;
+        DELETE FROM hive_data.accounts;
         ASSERT FALSE, 'Alice can delete irreversible accounts';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DELETE FROM hive.account_operations;
+        DELETE FROM hive_data.account_operations;
         ASSERT FALSE, 'Alice can delete irreversible account_operations';
     EXCEPTION WHEN OTHERS THEN
     END;

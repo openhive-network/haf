@@ -17,7 +17,7 @@ CREATE TYPE hive.transaction_type AS (
       ref_block_num integer
     , ref_block_prefix bigint
     , expiration TIMESTAMP WITHOUT TIME ZONE
-    , operations hive.operation[]
+    , operations hive_data.operation[]
     , extensions jsonb
     , signatures bytea[]
     );
@@ -95,7 +95,7 @@ BEGIN
                      , ARRAY_AGG(ho.body_binary ORDER BY op_pos ASC) bodies
                 FROM hive.operations_view ho
                 WHERE
-                    hive.operation_id_to_type_id(ho.id) <= (SELECT ot.id FROM hive.operation_types ot WHERE (_include_virtual OR ot.is_virtual = FALSE) ORDER BY ot.id DESC LIMIT 1)
+                    hive.operation_id_to_type_id(ho.id) <= (SELECT ot.id FROM hive_data.operation_types ot WHERE (_include_virtual OR ot.is_virtual = FALSE) ORDER BY ot.id DESC LIMIT 1)
                     AND hive.operation_id_to_block_num(ho.id) BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
                 GROUP BY hive.operation_id_to_block_num(ho.id), ho.trx_in_block
                 ORDER BY hive.operation_id_to_block_num(ho.id) ASC, trx_in_block ASC

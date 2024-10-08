@@ -4,18 +4,18 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.operation_types
+    INSERT INTO hive_data.operation_types
     VALUES (0, 'OP 0', FALSE )
      , ( 1, 'OP 1', FALSE )
      , ( 2, 'OP 2', FALSE )
      , ( 3, 'OP 3', TRUE )
     ;
 
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hive_data.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
          , (6, 'alice', 1)
          , (7, 'bob', 1)
@@ -36,30 +36,30 @@ BEGIN
     );
 
 
-    INSERT INTO hive.accounts_reversible
+    INSERT INTO hive_data.accounts_reversible
     VALUES ( 1, 'user', 2, 2 )
     ;
 
-    INSERT INTO hive.transactions_reversible
+    INSERT INTO hive_data.transactions_reversible
     VALUES
     ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF',  2 )
     ;
 
-    INSERT INTO hive.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hive_data.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
     VALUES
-    ( hive.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation, 2 )
+    ( hive.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
     ;
 
-    INSERT INTO hive.account_operations_reversible
+    INSERT INTO hive_data.account_operations_reversible
     VALUES ( 1, 1, hive.operation_id(2,1,0), 2 )
     ;
 
 
-    INSERT INTO hive.transactions_multisig_reversible
+    INSERT INTO hive_data.transactions_multisig_reversible
     VALUES
     ( '\xDEED20', '\xBEEF20',  2 );
 
-    INSERT INTO hive.applied_hardforks_reversible
+    INSERT INTO hive_data.applied_hardforks_reversible
     VALUES ( 1, 2, hive.operation_id(2,1,0), 2 )
     ;
 
@@ -82,13 +82,13 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT * FROM hive.transactions ), 'Transaction not landed in irreversible table';
-    ASSERT EXISTS ( SELECT * FROM hive.operations ), 'Operations not landed in irreversible table';
-    ASSERT EXISTS ( SELECT * FROM hive.transactions_multisig ), 'Signatures not landed in irreversible table';
-    ASSERT EXISTS ( SELECT * FROM hive.accounts ), 'Accounts not landed in irreversible table';
-    ASSERT EXISTS ( SELECT * FROM hive.account_operations ), 'Account operation not landed in irreversible table';
-    ASSERT EXISTS ( SELECT * FROM hive.applied_hardforks ), 'Hardforks not landed in irreversible table';
-    ASSERT EXISTS ( SELECT * FROM hive.blocks WHERE hash = '\xBADD20'::bytea ), 'block not landed in irreversible table';
+    ASSERT EXISTS ( SELECT * FROM hive_data.transactions ), 'Transaction not landed in irreversible table';
+    ASSERT EXISTS ( SELECT * FROM hive_data.operations ), 'Operations not landed in irreversible table';
+    ASSERT EXISTS ( SELECT * FROM hive_data.transactions_multisig ), 'Signatures not landed in irreversible table';
+    ASSERT EXISTS ( SELECT * FROM hive_data.accounts ), 'Accounts not landed in irreversible table';
+    ASSERT EXISTS ( SELECT * FROM hive_data.account_operations ), 'Account operation not landed in irreversible table';
+    ASSERT EXISTS ( SELECT * FROM hive_data.applied_hardforks ), 'Hardforks not landed in irreversible table';
+    ASSERT EXISTS ( SELECT * FROM hive_data.blocks WHERE hash = '\xBADD20'::bytea ), 'block not landed in irreversible table';
 END;
 $BODY$
 ;
