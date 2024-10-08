@@ -97,13 +97,13 @@ CREATE OR REPLACE PROCEDURE alice_test_then()
 AS
 $BODY$
 DECLARE
-    __block hive.blocks%ROWTYPE;
-    __transaction1 hive.transactions%ROWTYPE;
-    __transaction2 hive.transactions%ROWTYPE;
-    __operation1_1 hive.operations%ROWTYPE;
-    __operation2_1 hive.operations%ROWTYPE;
-    __signatures1 hive.transactions_multisig%ROWTYPE;
-    __signatures2 hive.transactions_multisig%ROWTYPE;
+    __block hive_data.blocks%ROWTYPE;
+    __transaction1 hive_data.transactions%ROWTYPE;
+    __transaction2 hive_data.transactions%ROWTYPE;
+    __operation1_1 hive_data.operations%ROWTYPE;
+    __operation2_1 hive_data.operations%ROWTYPE;
+    __signatures1 hive_data.transactions_multisig%ROWTYPE;
+    __signatures2 hive_data.transactions_multisig%ROWTYPE;
 BEGIN
     BEGIN
         PERFORM hive.initialize_extension_data();
@@ -121,8 +121,8 @@ BEGIN
         __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp );
         __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
         __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED' );
-        __operation1_1 = ( 1, 101, 0, 0, 1, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation );
-        __operation2_1 = ( 2, 101, 1, 0, 2, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation );
+        __operation1_1 = ( 1, 101, 0, 0, 1, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive_data.operation );
+        __operation2_1 = ( 2, 101, 1, 0, 2, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive_data.operation );
         __signatures1 = ( '\xDEED', '\xFEED' );
         __signatures2 = ( '\xBEEF', '\xBABE' );
         PERFORM hive.push_block(

@@ -14,7 +14,7 @@ BEGIN
     INSERT INTO table1( id, smth ) VALUES( 323, 'blabla3' );
     PERFORM hive.context_next_block( 'context' );
 
-    TRUNCATE hive.shadow_public_table1; --to do not revert inserts
+    TRUNCATE hive_data.shadow_public_table1; --to do not revert inserts
     UPDATE table1 SET smth='a1' WHERE id=123;
     UPDATE table1 SET smth='a2' WHERE id=223;
     UPDATE table1 SET smth='a3' WHERE id=323;
@@ -41,7 +41,7 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM table1 WHERE id=223 AND smth='blabla2' ) = 1, 'Updated row was not reverted';
     ASSERT ( SELECT COUNT(*) FROM table1 WHERE id=323 AND smth='blabla3' ) = 1, 'Updated row was not reverted';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table1 ) = 0, 'Shadow table is not empty';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_table1 ) = 0, 'Shadow table is not empty';
 END
 $BODY$
 ;

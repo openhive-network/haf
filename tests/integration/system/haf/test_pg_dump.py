@@ -23,18 +23,18 @@ DUMP_FILENAME: Final[str] = "adump.Fcsql"
 SQL_ALL_TABLES_AND_VIEWS: Final[str] = """
 SELECT table_name
 FROM information_schema.tables
-WHERE table_schema = 'hive' ORDER BY table_name;
+WHERE table_schema = 'hive_data' ORDER BY table_name;
 """
 
 SQL_TABLE_COLUMNS: Final[str] = """
 SELECT column_name
 FROM information_schema.columns
-WHERE table_schema = 'hive' AND table_name = :table;
+WHERE table_schema = 'hive_data' AND table_name = :table;
 """
 
 SQL_TABLE_CONTENT: Final[str] = """
 SELECT *
-FROM hive.{table}
+FROM hive_data.{table}
 ORDER BY {columns};
 """
 

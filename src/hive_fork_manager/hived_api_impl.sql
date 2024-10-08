@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION hive.copy_blocks_to_irreversible(
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     SELECT
           DISTINCT ON ( hbr.num ) hbr.num
         , hbr.hash
@@ -32,7 +32,7 @@ BEGIN
         , hbr.dhf_interval_ledger
 
     FROM
-        hive.blocks_reversible hbr
+        hive_data.blocks_reversible hbr
     WHERE
         hbr.num <= _new_irreversible_block
     AND hbr.num > _head_block_of_irreversible_blocks
@@ -50,7 +50,7 @@ CREATE OR REPLACE FUNCTION hive.copy_transactions_to_irreversible(
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.transactions
+    INSERT INTO hive_data.transactions
     SELECT
           htr.block_num
         , htr.trx_in_block
@@ -60,11 +60,11 @@ BEGIN
         , htr.expiration
         , htr.signature
     FROM
-        hive.transactions_reversible htr
+        hive_data.transactions_reversible htr
     JOIN ( SELECT
               DISTINCT ON ( hbr.num ) hbr.num
             , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                     hbr.num <= _new_irreversible_block
                 AND hbr.num > _head_block_of_irreversible_blocks
@@ -84,19 +84,19 @@ CREATE OR REPLACE FUNCTION hive.copy_operations_to_irreversible(
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.operations
+    INSERT INTO hive_data.operations
     SELECT
            hor.id
          , hor.trx_in_block
          , hor.op_pos
          , hor.body_binary
     FROM
-        hive.operations_reversible hor
+        hive_data.operations_reversible hor
         JOIN (
             SELECT
                   DISTINCT ON ( hbr.num ) hbr.num
                 , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                   hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
@@ -117,18 +117,18 @@ CREATE OR REPLACE FUNCTION hive.copy_applied_hardforks_to_irreversible(
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.applied_hardforks
+    INSERT INTO hive_data.applied_hardforks
     SELECT
            hjr.hardfork_num
          , hjr.block_num
          , hjr.hardfork_vop_id
     FROM
-        hive.applied_hardforks_reversible hjr
+        hive_data.applied_hardforks_reversible hjr
         JOIN (
             SELECT
                   DISTINCT ON ( hbr.num ) hbr.num
                 , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                   hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
@@ -148,18 +148,18 @@ CREATE OR REPLACE FUNCTION hive.copy_signatures_to_irreversible(
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.transactions_multisig
+    INSERT INTO hive_data.transactions_multisig
     SELECT
           tsr.trx_hash
         , tsr.signature
     FROM
-        hive.transactions_multisig_reversible tsr
-        JOIN hive.transactions_reversible htr ON htr.trx_hash = tsr.trx_hash AND htr.fork_id = tsr.fork_id
+        hive_data.transactions_multisig_reversible tsr
+        JOIN hive_data.transactions_reversible htr ON htr.trx_hash = tsr.trx_hash AND htr.fork_id = tsr.fork_id
         JOIN (
             SELECT
                   DISTINCT ON ( hbr.num ) hbr.num
                 , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                     hbr.num <= _new_irreversible_block
                 AND hbr.num > _head_block_of_irreversible_blocks
@@ -179,18 +179,18 @@ CREATE OR REPLACE FUNCTION hive.copy_accounts_to_irreversible(
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.accounts
+    INSERT INTO hive_data.accounts
     SELECT
            har.id
          , har.name
          , har.block_num
     FROM
-        hive.accounts_reversible har
+        hive_data.accounts_reversible har
         JOIN (
             SELECT
                   DISTINCT ON ( hbr.num ) hbr.num
                 , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                   hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
@@ -210,18 +210,18 @@ CREATE OR REPLACE FUNCTION hive.copy_account_operations_to_irreversible(
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.account_operations
+    INSERT INTO hive_data.account_operations
     SELECT
            haor.account_id
          , haor.account_op_seq_no
          , haor.operation_id
     FROM
-        hive.account_operations_reversible haor
+        hive_data.account_operations_reversible haor
         JOIN (
             SELECT
                   DISTINCT ON ( hbr.num ) hbr.num
                 , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                 hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
@@ -240,14 +240,14 @@ AS
 $BODY$
 DECLARE
     -- up limit
-    __max_fork_id hive.fork.id%TYPE;
+    __max_fork_id hive_data.fork.id%TYPE;
     -- down limit
-    __min_ctx_fork_id hive.fork.id%TYPE := hive.max_fork_id();
-    __lowest_irreversible_block hive.blocks.num%TYPE := hive.max_block_num();
-    __max_block_num hive.blocks.num%TYPE;
+    __min_ctx_fork_id hive_data.fork.id%TYPE := hive.max_fork_id();
+    __lowest_irreversible_block hive_data.blocks.num%TYPE := hive.max_block_num();
+    __max_block_num hive_data.blocks.num%TYPE;
 BEGIN
     SELECT max(hf.id) INTO __max_fork_id
-    FROM hive.fork hf;
+    FROM hive_data.fork hf;
 
     -- can only delete data from  blocks and forks already
     -- consumed by all the context, pair of lowest fork id and
@@ -256,47 +256,47 @@ BEGIN
     SELECT COALESCE( min(hc.fork_id), __min_ctx_fork_id )
          , COALESCE( min(irreversible_block), __lowest_irreversible_block )
     INTO __min_ctx_fork_id, __lowest_irreversible_block
-    FROM hive.contexts hc
-    JOIN hive.contexts_attachment hca ON hca.context_id = hc.id
+    FROM hive_data.contexts hc
+    JOIN hive_data.contexts_attachment hca ON hca.context_id = hc.id
     WHERE hca.is_attached = TRUE
     AND hc.is_forking = TRUE;
 
     __max_block_num := LEAST(__lowest_irreversible_block, _new_irreversible_block);
 
-    DELETE FROM hive.account_operations_reversible har
-    USING hive.operations_reversible hor
+    DELETE FROM hive_data.account_operations_reversible har
+    USING hive_data.operations_reversible hor
     WHERE
             har.operation_id = hor.id
         AND har.fork_id = hor.fork_id
         AND ( hive.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
     ;
 
-    DELETE FROM hive.applied_hardforks_reversible hjr
+    DELETE FROM hive_data.applied_hardforks_reversible hjr
     WHERE hjr.block_num <= __max_block_num OR hjr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
-    DELETE FROM hive.operations_reversible hor
+    DELETE FROM hive_data.operations_reversible hor
     WHERE hive.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
 
-    DELETE FROM hive.transactions_multisig_reversible htmr
-    USING hive.transactions_reversible htr
+    DELETE FROM hive_data.transactions_multisig_reversible htmr
+    USING hive_data.transactions_reversible htr
     WHERE
             htr.fork_id = htmr.fork_id
         AND htr.trx_hash = htmr.trx_hash
         AND ( htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
     ;
 
-    DELETE FROM hive.transactions_reversible htr
+    DELETE FROM hive_data.transactions_reversible htr
     WHERE  htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
-    DELETE FROM hive.accounts_reversible har
+    DELETE FROM hive_data.accounts_reversible har
     WHERE har.block_num <= __max_block_num OR har.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
-    DELETE FROM hive.blocks_reversible hbr
+    DELETE FROM hive_data.blocks_reversible hbr
     WHERE hbr.num <= __max_block_num OR hbr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 END;
@@ -313,15 +313,15 @@ DECLARE
     __upper_bound_events_id BIGINT := NULL;
     __max_block_num INTEGER := NULL;
 BEGIN
-    SELECT consistent_block INTO __max_block_num FROM hive.irreversible_data;
+    SELECT consistent_block INTO __max_block_num FROM hive_data.irreversible_data;
 
     -- find the upper bound of events possible to remove
     SELECT MIN(heq.id) INTO __upper_bound_events_id
-    FROM hive.events_queue heq
+    FROM hive_data.events_queue heq
     WHERE heq.event != 'BACK_FROM_FORK' AND heq.block_num = ( _new_irreversible_block + 1 ); --next block after irreversible
 
     -- You may think that SELECT FOR UPDATE needs to be used here in USING clause
-    -- but SELECT FOR UPDATE will lock hive.contexts, so it want to acquire lock
+    -- but SELECT FOR UPDATE will lock hive_data.contexts, so it want to acquire lock
     -- between hived and application, and if application will modify contexts and never commit (by mistake or maliciously)
     -- then hived will be locked forever
     --
@@ -334,8 +334,8 @@ BEGIN
     -- It means that SELECT from USING clause will return min event = 10, but in case of a bug an application
     -- context may back to event 9 and then when DELETE is being committed it will violate FK(event_queue(id)<->contexts(events_id))
 
-    DELETE FROM hive.events_queue heq
-    USING ( SELECT MIN( hc.events_id) as id FROM hive.contexts hc ) as min_event
+    DELETE FROM hive_data.events_queue heq
+    USING ( SELECT MIN( hc.events_id) as id FROM hive_data.contexts hc ) as min_event
     WHERE ( heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL )  AND ( heq.id < min_event.id OR min_event.id IS NULL ) AND heq.id != 0 AND heq.id != hive.unreachable_event_id();
 
 END;
@@ -355,7 +355,7 @@ BEGIN
     --LEFT JOIN is needed in situation when PRIMARY KEY exists in a `_table`.
     --A method `hive.save_and_drop_constraints` finds it, but following code finds an index related to given PK as well.
     --Since dropping/restoring PK automatically drops/restores an index, then it's better to avoid storing a record with index related to PK.
-    INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hive_data.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
         T.indexname
       , _schema || '.' || _table
@@ -368,14 +368,14 @@ BEGIN
       SELECT indexname, indexdef
       FROM pg_indexes
       WHERE schemaname = _schema AND tablename = _table
-    ) T LEFT JOIN hive.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
+    ) T LEFT JOIN hive_data.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
     WHERE ic.table_name is NULL
     ON CONFLICT DO NOTHING;
 
     --dropping indexes
     OPEN __cursor FOR (
         SELECT ('DROP INDEX IF EXISTS '::TEXT || _schema || '.' || index_constraint_name || ';')
-        FROM hive.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_index = TRUE
+        FROM hive_data.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_index = TRUE
     );
 
     LOOP
@@ -388,7 +388,7 @@ BEGIN
     --dropping primary keys/unique contraints
     OPEN __cursor FOR (
         SELECT ('ALTER TABLE '::TEXT || _schema || '.' || _table || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
-        FROM hive.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_constraint = TRUE
+        FROM hive_data.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_constraint = TRUE
     );
 
     LOOP
@@ -410,7 +410,7 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hive_data.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
           DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
@@ -425,7 +425,7 @@ BEGIN
 
     OPEN __cursor FOR (
         SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
-        FROM hive.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
+        FROM hive_data.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
     );
 
     LOOP
@@ -448,7 +448,7 @@ DECLARE
 __command TEXT;
 __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hive_data.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
         DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
@@ -463,7 +463,7 @@ BEGIN
 
     OPEN __cursor FOR (
             SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
-            FROM hive.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
+            FROM hive_data.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
         );
 
         LOOP
@@ -488,20 +488,20 @@ DECLARE
 BEGIN
 
   __cluster_index_dropped := EXISTS(
-                SELECT command FROM hive.indexes_constraints 
-                WHERE table_name = 'hive.account_operations' AND
+                SELECT command FROM hive_data.indexes_constraints
+                WHERE table_name = 'hive_data.account_operations' AND
                       index_constraint_name = 'hive_account_operations_uq1' LIMIT 1);
   IF (__cluster_index_dropped) THEN
     RAISE NOTICE 'Cluster index dropped, restoring it before other indexes for faster clustering';
-    SELECT command INTO __command FROM hive.indexes_constraints
-    WHERE table_name = 'hive.account_operations' AND
+    SELECT command INTO __command FROM hive_data.indexes_constraints
+    WHERE table_name = 'hive_data.account_operations' AND
           index_constraint_name = 'hive_account_operations_uq1' LIMIT 1;      
     EXECUTE __command;
-    RAISE NOTICE 'Clustering hive.account_operations, this takes a while...';
-    CLUSTER hive.account_operations using hive_account_operations_uq1;
-    RAISE NOTICE 'Analyzing hive.account_operations after clustering to update statistics';
-    ANALYZE hive.account_operations;
-    DELETE FROM hive.indexes_constraints WHERE command = __command;
+    RAISE NOTICE 'Clustering hive_data.account_operations, this takes a while...';
+    CLUSTER hive_data.account_operations using hive_account_operations_uq1;
+    RAISE NOTICE 'Analyzing hive_data.account_operations after clustering to update statistics';
+    ANALYZE hive_data.account_operations;
+    DELETE FROM hive_data.indexes_constraints WHERE command = __command;
   END IF;
 END;
 $function$
@@ -517,12 +517,12 @@ DECLARE
   __cursor REFCURSOR;
 BEGIN
 
-  IF _table_name = 'hive.account_operations' THEN
+  IF _table_name = 'hive_data.account_operations' THEN
     PERFORM hive.recluster_account_operations_if_index_dropped();
   END IF;
 
   --restoring indexes, primary keys, unique contraints
-  OPEN __cursor FOR ( SELECT command FROM hive.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE );
+  OPEN __cursor FOR ( SELECT command FROM hive_data.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE );
   LOOP
     FETCH __cursor INTO __command;
     EXIT WHEN NOT FOUND;
@@ -532,7 +532,7 @@ BEGIN
 
   EXECUTE format( 'ANALYZE %s',  _table_name );
 
-  DELETE FROM hive.indexes_constraints
+  DELETE FROM hive_data.indexes_constraints
   WHERE table_name = _table_name AND is_foreign_key = FALSE;
   RAISE NOTICE 'Finished restoring any dropped indexes on %', _table_name;
 END;
@@ -550,7 +550,7 @@ DECLARE
 BEGIN
 
     --restoring indexes, primary keys, unique contraints
-    OPEN __cursor FOR ( SELECT command FROM hive.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE );
+    OPEN __cursor FOR ( SELECT command FROM hive_data.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE );
     LOOP
     FETCH __cursor INTO __command;
         EXIT WHEN NOT FOUND;
@@ -558,7 +558,7 @@ BEGIN
     END LOOP;
     CLOSE __cursor;
 
-    DELETE FROM hive.indexes_constraints
+    DELETE FROM hive_data.indexes_constraints
     WHERE table_name = _table_name AND is_foreign_key = TRUE;
 
 END;
@@ -576,30 +576,30 @@ DECLARE
     __consistent_block INTEGER := NULL;
     __is_dirty BOOL := TRUE;
 BEGIN
-    SELECT consistent_block, is_dirty INTO __consistent_block, __is_dirty FROM hive.irreversible_data;
+    SELECT consistent_block, is_dirty INTO __consistent_block, __is_dirty FROM hive_data.irreversible_data;
 
     IF ( __is_dirty = FALSE ) THEN
         RETURN;
     END IF;
 
-    DELETE FROM hive.account_operations hao
+    DELETE FROM hive_data.account_operations hao
     WHERE hive.operation_id_to_block_num(hao.operation_id) > __consistent_block;
 
-    DELETE FROM hive.applied_hardforks WHERE block_num > __consistent_block;
+    DELETE FROM hive_data.applied_hardforks WHERE block_num > __consistent_block;
 
-    DELETE FROM hive.operations WHERE hive.operation_id_to_block_num(id) > __consistent_block;
+    DELETE FROM hive_data.operations WHERE hive.operation_id_to_block_num(id) > __consistent_block;
 
-    DELETE FROM hive.transactions_multisig htm
-    USING hive.transactions ht
+    DELETE FROM hive_data.transactions_multisig htm
+    USING hive_data.transactions ht
     WHERE ht.block_num > __consistent_block AND ht.trx_hash = htm.trx_hash;
 
-    DELETE FROM hive.transactions WHERE block_num > __consistent_block;
+    DELETE FROM hive_data.transactions WHERE block_num > __consistent_block;
 
-    DELETE FROM hive.accounts WHERE block_num > __consistent_block;
+    DELETE FROM hive_data.accounts WHERE block_num > __consistent_block;
 
-    DELETE FROM hive.blocks WHERE num > __consistent_block;
+    DELETE FROM hive_data.blocks WHERE num > __consistent_block;
 
-    UPDATE hive.irreversible_data SET is_dirty = FALSE;
+    UPDATE hive_data.irreversible_data SET is_dirty = FALSE;
 END;
 $BODY$
 ;

@@ -94,7 +94,7 @@ test_extension_update() {
     echo
     echo "Making a change in table schema by adding column in accounts table"
 
-    sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER TABLE hive.accounts ADD COLUMN phone_number VARCHAR;"
+    sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER TABLE hive_data.accounts ADD COLUMN phone_number VARCHAR;"
     # run generator script
     POSTGRES_VERSION=17
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh 2>&1 | tee -i update.txt || true
