@@ -34,10 +34,10 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema='hive' AND table_name='shadow_a_table1' AND column_name='hive_block_num' AND data_type='integer' );
     ASSERT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema='hive' AND table_name='shadow_a_table1' AND column_name='hive_operation_type' AND udt_name='trigger_operation' );
     ASSERT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema='hive' AND table_name='shadow_a_table1' AND column_name='hive_operation_id' AND data_type='bigint' );
-    ASSERT EXISTS ( SELECT FROM hive.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' AND shadow_table_name='shadow_a_table1' );
+    ASSERT EXISTS ( SELECT FROM hive_data.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' AND shadow_table_name='shadow_a_table1' );
 
-    ASSERT NOT EXISTS ( SELECT FROM hive.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table_child' ), 'Table shall not be registerd';
-    ASSERT NOT EXISTS ( SELECT FROM hive.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table_base' ), 'Table shall not be registerd';
+    ASSERT NOT EXISTS ( SELECT FROM hive_data.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table_child' ), 'Table shall not be registerd';
+    ASSERT NOT EXISTS ( SELECT FROM hive_data.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table_base' ), 'Table shall not be registerd';
 
     ---- triggers
     ASSERT EXISTS ( SELECT FROM hive.triggers WHERE trigger_name='hive.insert_trigger_a_table1' AND function_name='hive.on_insert_a_table1' );

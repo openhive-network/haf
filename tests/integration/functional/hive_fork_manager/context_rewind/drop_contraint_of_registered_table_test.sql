@@ -48,7 +48,7 @@ BEGIN
 
     ASSERT EXISTS ( SELECT * FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'shadow_a_table1' ), 'Shadow table was dropped';
 
-    ASSERT EXISTS ( SELECT * FROM hive.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' ), 'Entry in registered_tables was deleted';
+    ASSERT EXISTS ( SELECT * FROM hive_data.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' ), 'Entry in registered_tables was deleted';
 END
 $BODY$
 ;

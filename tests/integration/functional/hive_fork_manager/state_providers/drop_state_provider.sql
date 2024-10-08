@@ -38,7 +38,7 @@ $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM hive.state_providers_registered WHERE context_id = 1 AND state_provider = 'ACCOUNTS' AND tables = ARRAY[ 'context_accounts' ]::TEXT[] ) = 0, 'State provider is still registered';
     ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'context_metadata' ), 'Accounts table still exists';
-    ASSERT ( SELECT COUNT(*) FROM hive.registered_tables WHERE origin_table_schema = 'hive' AND origin_table_name = 'context_metadata' AND context_id = 1 ) = 0, 'State provider table is still registered';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.registered_tables WHERE origin_table_schema = 'hive' AND origin_table_name = 'context_metadata' AND context_id = 1 ) = 0, 'State provider table is still registered';
 
     ASSERT NOT EXISTS ( SELECT FROM hive.triggers WHERE trigger_name='hive.insert_trigger_hive_context_metadata' ), 'Insert trigger not cleaned';
     ASSERT NOT EXISTS ( SELECT FROM hive.triggers WHERE trigger_name='hive.update_trigger_hive_context_metadata' ), 'Update trigger not cleaned';

@@ -72,7 +72,7 @@ BEGIN
     END IF;
 
     PERFORM hive.unregister_table( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hive.registered_tables hrt
+    FROM hive_data.registered_tables hrt
     WHERE hrt.context_id = __context_id;
 
     DELETE FROM hive_data.contexts_attachment WHERE context_id = __context_id;
@@ -134,7 +134,7 @@ BEGIN
                 , hrt.shadow_table_name
                 , _block_num_before_fork
             )
-    FROM hive.registered_tables hrt
+    FROM hive_data.registered_tables hrt
     JOIN hive_data.contexts hc ON hrt.context_id = hc.id
     WHERE hc.name = _context AND hc.current_block_num > _block_num_before_fork
     ORDER BY hrt.id;
@@ -170,13 +170,13 @@ BEGIN
 
     PERFORM
     hive.remove_obsolete_operations( hrt.shadow_table_name, __current_block_num )
-            FROM hive.registered_tables hrt
+            FROM hive_data.registered_tables hrt
             JOIN hive_data.contexts hc ON hc.id = hrt.context_id
             WHERE hc.name = _context
             ORDER BY hrt.id;
 
     PERFORM hive.detach_table( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hive.registered_tables hrt
+    FROM hive_data.registered_tables hrt
     WHERE hrt.context_id = __context_id;
 
     UPDATE hive_data.contexts
@@ -216,7 +216,7 @@ BEGIN
 
 
     PERFORM hive.attach_table( hrt.origin_table_schema, hrt.origin_table_name, __context_id )
-    FROM hive.registered_tables hrt
+    FROM hive_data.registered_tables hrt
     WHERE hrt.context_id = __context_id;
 
     UPDATE hive_data.contexts
@@ -254,7 +254,7 @@ BEGIN
 
     PERFORM
     hive.remove_obsolete_operations( hrt.shadow_table_name, _block_num )
-            FROM hive.registered_tables hrt
+            FROM hive_data.registered_tables hrt
             JOIN hive_data.contexts hc ON hc.id = hrt.context_id
             WHERE hc.name = _context
             ORDER BY hrt.id;

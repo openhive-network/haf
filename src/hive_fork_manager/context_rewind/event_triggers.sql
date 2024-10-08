@@ -98,7 +98,7 @@ BEGIN
         hive.check_owner( hc.name, hc.owner )
     FROM
         ( SELECT * FROM pg_event_trigger_ddl_commands() ) as tr
-        JOIN hive.registered_tables hrt ON ( hrt.origin_table_schema || '.' || hrt.origin_table_name ) = tr.object_identity
+        JOIN hive_data.registered_tables hrt ON ( hrt.origin_table_schema || '.' || hrt.origin_table_name ) = tr.object_identity
         JOIN hive_data.contexts hc ON hrt.context_id = hc.id
     INTO __ignore_event, __shadow_table_name, __origin_table_schema, __origin_table_name, __context_schema;
 
@@ -151,7 +151,7 @@ BEGIN
     FROM information_schema.columns iss
     WHERE iss.table_schema = __origin_table_schema AND iss.table_name = __origin_table_name;
 
-    UPDATE hive.registered_tables hrt
+    UPDATE hive_data.registered_tables hrt
     SET origin_table_columns = __new_columns
     WHERE hrt.origin_table_name = lower( __origin_table_name ) AND hrt.origin_table_schema = lower( __origin_table_schema );
 
@@ -173,7 +173,7 @@ __schema TEXT := NULL;
 BEGIN
     SELECT tr.object_name, tr.schema_name  FROM
     ( SELECT * FROM pg_event_trigger_dropped_objects() ) as tr
-        JOIN hive.registered_tables hrt ON hrt.origin_table_name  = tr.object_name AND hrt.origin_table_schema = tr.schema_name
+        JOIN hive_data.registered_tables hrt ON hrt.origin_table_name  = tr.object_name AND hrt.origin_table_schema = tr.schema_name
     WHERE tr.object_type ='table'
     INTO __table, __schema;
 

@@ -68,9 +68,9 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'context_accounts' ), 'Accounts table was not created';
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'context_tests1' ), 'Tests1 table was not created';
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'context_tests2' ), 'Tests2 table was not created';
-    ASSERT ( SELECT COUNT(*) FROM hive.registered_tables WHERE origin_table_schema = 'hive' AND origin_table_name = 'context_accounts' AND context_id = 1 ) = 1, 'State provider table is not registered';
-    ASSERT ( SELECT COUNT(*) FROM hive.registered_tables WHERE origin_table_schema = 'hive' AND origin_table_name = 'context_tests1' AND context_id = 1 ) = 1, 'State provider tests1 is not registered';
-    ASSERT ( SELECT COUNT(*) FROM hive.registered_tables WHERE origin_table_schema = 'hive' AND origin_table_name = 'context_tests2' AND context_id = 1 ) = 1, 'State provider tests2 is not registered';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.registered_tables WHERE origin_table_schema = 'hive' AND origin_table_name = 'context_accounts' AND context_id = 1 ) = 1, 'State provider table is not registered';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.registered_tables WHERE origin_table_schema = 'hive' AND origin_table_name = 'context_tests1' AND context_id = 1 ) = 1, 'State provider tests1 is not registered';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.registered_tables WHERE origin_table_schema = 'hive' AND origin_table_name = 'context_tests2' AND context_id = 1 ) = 1, 'State provider tests2 is not registered';
 END;
 $BODY$
 ;

@@ -373,7 +373,7 @@ BEGIN
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 
     PERFORM hive.drop_rowid_index( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hive.registered_tables hrt
+    FROM hive_data.registered_tables hrt
     JOIN hive_data.contexts hc ON hrt.context_id = hc.id
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 END;
@@ -419,7 +419,7 @@ BEGIN
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 
     PERFORM hive.create_rowid_index( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hive.registered_tables hrt
+    FROM hive_data.registered_tables hrt
     JOIN hive_data.contexts hc ON hrt.context_id = hc.id
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 

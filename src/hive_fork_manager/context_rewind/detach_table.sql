@@ -12,7 +12,7 @@ DECLARE
     __trigger_funtion_name TEXT;
 BEGIN
     SELECT hrt.id, hrt.shadow_table_name
-    FROM hive.registered_tables hrt
+    FROM hive_data.registered_tables hrt
     WHERE hrt.origin_table_schema = _schema_name AND  hrt.origin_table_name = _table_name INTO __table_id, __shadow_table_name;
 
     IF __table_id IS NULL THEN
@@ -32,7 +32,7 @@ BEGIN
     --drop shadow table
     EXECUTE format( 'DROP TABLE hive.%I', __shadow_table_name );
 
-    DELETE FROM hive.registered_tables hrt WHERE  hrt.origin_table_schema = _schema_name AND hrt.origin_table_name = _table_name;
+    DELETE FROM hive_data.registered_tables hrt WHERE  hrt.origin_table_schema = _schema_name AND hrt.origin_table_name = _table_name;
 END;
 $BODY$
 ;
@@ -50,7 +50,7 @@ DECLARE
     __shadow_table_is_not_empty BOOL := FALSE;
 BEGIN
     SELECT hrt.id, hrt.shadow_table_name
-    FROM hive.registered_tables hrt
+    FROM hive_data.registered_tables hrt
     WHERE  hrt.origin_table_schema = lower( _table_schema ) AND hrt.origin_table_name = _table_name INTO __table_id, __shadow_table_name;
 
     IF __table_id IS NULL THEN
@@ -82,7 +82,7 @@ DECLARE
     __context_is_forking BOOLEAN := NULL;
 BEGIN
     SELECT hrt.id, hrt.shadow_table_name, hc.is_forking
-    FROM hive.registered_tables hrt
+    FROM hive_data.registered_tables hrt
     JOIN hive_data.contexts hc ON hc.id = hrt.context_id
     JOIN hive_data.contexts_attachment hca ON hc.id = hca.context_id
     WHERE

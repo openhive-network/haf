@@ -46,7 +46,7 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_truncate_a_table1'), 'Truncate trigger dropped';
 
     ASSERT EXISTS ( SELECT * FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'shadow_a_table1' ), 'Shadow table was not dropped';
-    ASSERT EXISTS ( SELECT * FROM hive.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' ), 'Entry in registered_tables was not deleted';
+    ASSERT EXISTS ( SELECT * FROM hive_data.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' ), 'Entry in registered_tables was not deleted';
 
     ASSERT EXISTS ( SELECT * FROM hive.shadow_a_table1 ), 'Trigger did not isert something into shadow table';
 END
