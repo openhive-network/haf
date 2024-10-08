@@ -212,7 +212,7 @@ BEGIN
     RETURNING
           context_id
         , id
-        , (SELECT hca.is_attached FROM hive_data.contexts hc2 JOIN hive.contexts_attachment hca ON hca.context_id=hc2.id WHERE hc2.id = hrt.context_id)
+        , (SELECT hca.is_attached FROM hive_data.contexts hc2 JOIN hive_data.contexts_attachment hca ON hca.context_id=hc2.id WHERE hc2.id = hrt.context_id)
         , (SELECT hc2.is_forking FROM hive_data.contexts hc2 WHERE hc2.id = hrt.context_id)
         INTO __context_id, __registered_table_id, __attached_context, __is_forking
     ;

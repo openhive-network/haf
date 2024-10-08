@@ -31,15 +31,15 @@ SELECT pg_catalog.pg_extension_config_dump('hive_data.contexts_id_seq', '');
 
 CREATE INDEX IF NOT EXISTS hive_contexts_owner_idx ON hive_data.contexts( owner );
 
-CREATE TABLE IF NOT EXISTS hive.contexts_attachment(
+CREATE TABLE IF NOT EXISTS hive_data.contexts_attachment(
       context_id INTEGER NOT NULL UNIQUE
     , is_attached BOOL NOT NULL
     , owner NAME NOT NULL
     , CONSTRAINT fk_contexts_attachment_context FOREIGN KEY(context_id) REFERENCES hive_data.contexts( id )
 );
-SELECT pg_catalog.pg_extension_config_dump('hive.contexts_attachment', '');
+SELECT pg_catalog.pg_extension_config_dump('hive_data.contexts_attachment', '');
 
-CREATE INDEX IF NOT EXISTS hive_contexts_attachment_owner_idx ON hive.contexts_attachment( owner );
+CREATE INDEX IF NOT EXISTS hive_contexts_attachment_owner_idx ON hive_data.contexts_attachment( owner );
 
 CREATE TABLE IF NOT EXISTS hive.registered_tables(
    id SERIAL NOT NULL,

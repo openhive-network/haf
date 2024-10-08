@@ -64,7 +64,7 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA hive_data TO hived_group, hive_applications
 GRANT ALL ON  ALL TABLES IN SCHEMA hive_data TO hived_group;
 GRANT SELECT ON ALL TABLES IN SCHEMA hive_data TO hive_applications_group;
 GRANT ALL ON hive_data.contexts TO hive_applications_group;
-GRANT ALL ON hive.contexts_attachment TO hive_applications_group;
+GRANT ALL ON hive_data.contexts_attachment TO hive_applications_group;
 GRANT ALL ON hive.registered_tables TO hive_applications_group;
 GRANT ALL ON hive.triggers TO hive_applications_group;
 GRANT ALL ON hive.state_providers_registered TO hive_applications_group;
@@ -73,38 +73,38 @@ GRANT ALL ON hive.state_providers_registered TO hive_applications_group;
 REVOKE UPDATE( is_forking, owner ) ON hive_data.contexts FROM GROUP hive_applications_group;
 ALTER TABLE hive_data.contexts ENABLE ROW LEVEL SECURITY;
 
-REVOKE UPDATE( owner ) ON hive.contexts_attachment FROM GROUP hive_applications_group;
-ALTER TABLE hive.contexts_attachment ENABLE ROW LEVEL SECURITY;
+REVOKE UPDATE( owner ) ON hive_data.contexts_attachment FROM GROUP hive_applications_group;
+ALTER TABLE hive_data.contexts_attachment ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS dp_hive_context ON hive_data.contexts CASCADE;
 CREATE POLICY dp_hive_context ON hive_data.contexts FOR INSERT WITH CHECK ( current_user = owner );
 
-DROP POLICY IF EXISTS dp_hive_contexts_attachment ON hive.contexts_attachment CASCADE;
-CREATE POLICY dp_hive_contexts_attachment ON hive.contexts_attachment FOR INSERT WITH CHECK ( current_user = owner );
+DROP POLICY IF EXISTS dp_hive_contexts_attachment ON hive_data.contexts_attachment CASCADE;
+CREATE POLICY dp_hive_contexts_attachment ON hive_data.contexts_attachment FOR INSERT WITH CHECK ( current_user = owner );
 
 DROP POLICY IF EXISTS sp_hived_hive_context ON hive_data.contexts CASCADE;
 CREATE POLICY sp_hived_hive_context ON hive_data.contexts FOR SELECT TO hived_group USING( TRUE );
 
-DROP POLICY IF EXISTS sp_hived_hive_contexts_attachment ON hive.contexts_attachment CASCADE;
-CREATE POLICY sp_hived_hive_contexts_attachment ON hive.contexts_attachment FOR SELECT TO hived_group USING( TRUE );
+DROP POLICY IF EXISTS sp_hived_hive_contexts_attachment ON hive_data.contexts_attachment CASCADE;
+CREATE POLICY sp_hived_hive_contexts_attachment ON hive_data.contexts_attachment FOR SELECT TO hived_group USING( TRUE );
 
 DROP POLICY IF EXISTS sp_applications_hive_context ON hive_data.contexts CASCADE;
 CREATE POLICY sp_applications_hive_context ON hive_data.contexts FOR SELECT TO hive_applications_group USING( TRUE );
 
-DROP POLICY IF EXISTS sp_applications_hive_contexts_attachment ON hive.contexts_attachment CASCADE;
-CREATE POLICY sp_applications_hive_contexts_attachment ON hive.contexts_attachment FOR SELECT TO hive_applications_group USING( TRUE );
+DROP POLICY IF EXISTS sp_applications_hive_contexts_attachment ON hive_data.contexts_attachment CASCADE;
+CREATE POLICY sp_applications_hive_contexts_attachment ON hive_data.contexts_attachment FOR SELECT TO hive_applications_group USING( TRUE );
 
 DROP POLICY IF EXISTS sp_applications_update_hive_context ON hive_data.contexts CASCADE;
 CREATE POLICY sp_applications_update_hive_context ON hive_data.contexts FOR UPDATE TO hive_applications_group USING( TRUE ) WITH CHECK( hive.can_impersonate(current_user, owner) ) ;
 
-DROP POLICY IF EXISTS sp_applications_update_hive_contexts_attachment ON hive.contexts_attachment CASCADE;
-CREATE POLICY sp_applications_update_hive_contexts_attachment ON hive.contexts_attachment FOR UPDATE TO hive_applications_group USING( TRUE ) WITH CHECK( hive.can_impersonate(current_user, owner) ) ;
+DROP POLICY IF EXISTS sp_applications_update_hive_contexts_attachment ON hive_data.contexts_attachment CASCADE;
+CREATE POLICY sp_applications_update_hive_contexts_attachment ON hive_data.contexts_attachment FOR UPDATE TO hive_applications_group USING( TRUE ) WITH CHECK( hive.can_impersonate(current_user, owner) ) ;
 
 DROP POLICY IF EXISTS sp_applications_delete_hive_context ON hive_data.contexts CASCADE;
 CREATE POLICY sp_applications_delete_hive_context ON hive_data.contexts FOR DELETE TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
 
-DROP POLICY IF EXISTS sp_applications_delete_hive_contexts_attachment ON hive.contexts_attachment CASCADE;
-CREATE POLICY sp_applications_delete_hive_contexts_attachment ON hive.contexts_attachment FOR DELETE TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
+DROP POLICY IF EXISTS sp_applications_delete_hive_contexts_attachment ON hive_data.contexts_attachment CASCADE;
+CREATE POLICY sp_applications_delete_hive_contexts_attachment ON hive_data.contexts_attachment FOR DELETE TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
 
 DROP POLICY IF EXISTS sp_applications_hive_state_providers ON hive.state_providers_registered CASCADE;
 CREATE POLICY sp_applications_hive_state_providers ON hive.state_providers_registered FOR SELECT TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
@@ -241,7 +241,7 @@ GRANT USAGE ON SCHEMA hive to haf_maintainer;
 GRANT EXECUTE ON PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL ) TO haf_maintainer;
 GRANT EXECUTE ON FUNCTION hive.is_instance_ready() TO haf_maintainer;
 GRANT ALL ON hive_data.contexts TO haf_maintainer;
-GRANT SELECT ON hive.contexts_attachment TO haf_maintainer;
+GRANT SELECT ON hive_data.contexts_attachment TO haf_maintainer;
 GRANT SELECT ON hive.indexes_constraints TO haf_maintainer;
 
 REVOKE EXECUTE ON FUNCTION

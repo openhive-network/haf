@@ -232,7 +232,7 @@ BEGIN
     -- lock EXCLUSIVE may be taken by hived in function:
     -- hive.set_irreversible
     -- so here we can stuck while hived is servicing a new irreversible block notification
-    LOCK TABLE hive.contexts_attachment IN ROW SHARE MODE;
+    LOCK TABLE hive_data.contexts_attachment IN ROW SHARE MODE;
 
     SELECT hc.current_block_num INTO __current_block_num
     FROM hive_data.contexts hc
@@ -518,7 +518,7 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     SELECT ARRAY_AGG( DISTINCT(hca.is_attached) )  is_attached INTO __result
-    FROM hive.contexts_attachment hca
+    FROM hive_data.contexts_attachment hca
     JOIN hive_data.contexts hc ON hc.id = hca.context_id
     WHERE hc.name =ANY( _contexts );
 
@@ -590,7 +590,7 @@ BEGIN
 
     SELECT ARRAY_AGG(id) INTO __contexts_id
     FROM hive_data.contexts hc
-    JOIN hive.contexts_attachment hca ON hca.context_id = hc.id
+    JOIN hive_data.contexts_attachment hca ON hca.context_id = hc.id
     WHERE name = ANY( _contexts ) AND hca.is_attached = FALSE;
 
     IF __contexts_id IS NULL THEN
@@ -732,7 +732,7 @@ DECLARE
 BEGIN
     SELECT hac.id, hca.is_attached, hac.current_block_num
     FROM hive_data.contexts hac
-    JOIN hive.contexts_attachment hca ON hac.id = hca.context_id
+    JOIN hive_data.contexts_attachment hca ON hac.id = hca.context_id
     WHERE hac.name = _context
         INTO __context_id, __is_attached, __current_block_num;
 
@@ -836,7 +836,7 @@ BEGIN
         )
     ) INTO __number_of_rows
     FROM hive_data.contexts ctx
-    JOIN hive.contexts_attachment hca ON hca.context_id = ctx.id
+    JOIN hive_data.contexts_attachment hca ON hca.context_id = ctx.id
     WHERE ctx.name =ANY(_contexts);
 
     IF __number_of_rows != 1 THEN
@@ -855,7 +855,7 @@ BEGIN
     RETURN COALESCE((SELECT BOOL_AND(hc.id IS NOT NULL AND hca.is_attached AND consistent_block - hc.current_block_num <= 1)
                      FROM UNNEST(_contexts) AS context_names(name)
                      LEFT JOIN hive_data.contexts hc USING(name)
-                     JOIN hive.contexts_attachment hca ON hca.context_id = hc.id
+                     JOIN hive_data.contexts_attachment hca ON hca.context_id = hc.id
                      CROSS JOIN hive.irreversible_data), FALSE);
 END;
 $BODY$

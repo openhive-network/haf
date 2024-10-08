@@ -49,7 +49,7 @@ BEGIN
     RETURNING id INTO __new_context_id
     ;
 
-    INSERT INTO hive.contexts_attachment( context_id, is_attached, owner )
+    INSERT INTO hive_data.contexts_attachment( context_id, is_attached, owner )
     VALUES( __new_context_id, _is_attached, current_user );
 END;
 $BODY$
@@ -75,7 +75,7 @@ BEGIN
     FROM hive.registered_tables hrt
     WHERE hrt.context_id = __context_id;
 
-    DELETE FROM hive.contexts_attachment WHERE context_id = __context_id;
+    DELETE FROM hive_data.contexts_attachment WHERE context_id = __context_id;
     DELETE FROM hive_data.contexts WHERE id = __context_id;
 
     EXECUTE format( 'DROP TABLE IF EXISTS %I.%I', __context_schema, _name );
@@ -183,7 +183,7 @@ BEGIN
     SET events_id = hive.unreachable_event_id()
     WHERE id = __context_id;
 
-    UPDATE hive.contexts_attachment
+    UPDATE hive_data.contexts_attachment
     SET is_attached = FALSE
     WHERE context_id = __context_id;
 END;
@@ -202,7 +202,7 @@ DECLARE
 BEGIN
     SELECT ct.id, ct.current_block_num
     FROM hive_data.contexts ct
-    JOIN hive.contexts_attachment hca ON hca.context_id = ct.id
+    JOIN hive_data.contexts_attachment hca ON hca.context_id = ct.id
     WHERE ct.name=_context AND hca.is_attached = FALSE
     INTO __context_id, __current_block_num;
 
@@ -225,7 +225,7 @@ BEGIN
       , events_id = 0
     WHERE id = __context_id;
 
-    UPDATE hive.contexts_attachment
+    UPDATE hive_data.contexts_attachment
     SET is_attached = TRUE
     WHERE context_id = __context_id;
 END;

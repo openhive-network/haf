@@ -257,7 +257,7 @@ BEGIN
          , COALESCE( min(irreversible_block), __lowest_irreversible_block )
     INTO __min_ctx_fork_id, __lowest_irreversible_block
     FROM hive_data.contexts hc
-    JOIN hive.contexts_attachment hca ON hca.context_id = hc.id
+    JOIN hive_data.contexts_attachment hca ON hca.context_id = hc.id
     WHERE hca.is_attached = TRUE
     AND hc.is_forking = TRUE;
 
