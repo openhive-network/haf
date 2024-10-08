@@ -17,26 +17,29 @@ BEGIN
 
     SELECT ARRAY_AGG(sequence_name) INTO all_sequences
     FROM information_schema.sequences 
-    WHERE sequence_schema = 'hive';
+    WHERE sequence_name <> 'deps_saved_ddl_deps_id_seq'
+    AND ( sequence_schema = 'hive' OR sequence_schema = 'hive_data' );
 
-    SELECT ARRAY_AGG(table_name) INTO all_tables
+    SELECT ARRAY_AGG(table_name ORDER BY table_name) INTO all_tables
     FROM  information_schema.tables
-    WHERE table_schema = 'hive' and table_type <> 'VIEW';
+    WHERE ( table_schema = 'hive' OR table_schema = 'hive_data'  )and table_type <> 'VIEW' and table_name <> 'deps_saved_ddl'
+    ;
 
     SELECT extconfig into oids FROM pg_extension WHERE extname = 'hive_fork_manager';
 
-    SELECT ARRAY_AGG(t.relname) INTO flagged_tables
+    SELECT ARRAY_AGG(t.relname ORDER BY relname) INTO flagged_tables
     FROM (
             SELECT oid, relname FROM (SELECT unnest(extconfig) as extconfig  FROM
                 (SELECT extconfig FROM pg_extension WHERE extname = 'hive_fork_manager' ) u
-                ) as t JOIN pg_class ON oid = extconfig WHERE relkind <> 'S'
+                ) as t JOIN pg_class ON oid = extconfig
+                WHERE relkind <> 'S'
         ) t;
 
     SELECT ARRAY_AGG(t.relname) INTO flagged_sequences
     FROM (
             SELECT oid, relname FROM (SELECT unnest(extconfig) as extconfig  FROM
                 (SELECT extconfig FROM pg_extension WHERE extname = 'hive_fork_manager' ) u
-                ) as t JOIN pg_class ON oid = extconfig WHERE relkind = 'S'
+            ) as t JOIN pg_class ON oid = extconfig WHERE relkind = 'S'
         ) t;
 
     assert hive.unordered_arrays_equal(all_tables, flagged_tables), format_assert_message('tables', all_tables, flagged_tables);
@@ -54,7 +57,7 @@ CREATE FUNCTION format_assert_message(IN intext TEXT, IN alla TEXT[], IN flagged
 AS
 $BODY$
 BEGIN
-    return format('Existing ' || intext || ' in hive schema:' ||E'\n'|| '%s, ' ||E'\n'|| 'but flagged with pg_extension_config_dump are:'||E'\n'||'%s', alla, flagged);
+    return format('Existing ' || intext || ' in hive/hive_data schema:' ||E'\n'|| '%s, ' ||E'\n'|| 'but flagged with pg_extension_config_dump are:'||E'\n'||'%s', alla, flagged);
 END
 $BODY$
 ;

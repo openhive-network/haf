@@ -41,14 +41,14 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 hs WHERE hs.id = 123 AND hs.smth = 'blabla1' AND hs.hive_rowid=1 AND hs.hive_operation_type='UPDATE' AND hive_operation_id = 2 ) = 1, 'No expected id value in shadow table1';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 2, 'Too many rows in shadow table1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 hs WHERE hs.id = 123 AND hs.smth = 'blabla1' AND hs.hive_rowid=1 AND hs.hive_operation_type='UPDATE' AND hive_operation_id = 2 ) = 1, 'No expected id value in shadow table1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 ) = 2, 'Too many rows in shadow table1';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_b_table2 hs WHERE hs.id = 223 AND hs.smth = 'blabla2' AND hs.hive_rowid=1 AND hs.hive_operation_type='UPDATE' AND hive_operation_id = 2 ) = 1, 'No expected id value in shadow table2';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_b_table2 ) = 2, 'Too many rows in shadow table2';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_b_table2 hs WHERE hs.id = 223 AND hs.smth = 'blabla2' AND hs.hive_rowid=1 AND hs.hive_operation_type='UPDATE' AND hive_operation_id = 2 ) = 1, 'No expected id value in shadow table2';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_b_table2 ) = 2, 'Too many rows in shadow table2';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table3 hs WHERE hs.id = 323 AND hs.smth = 'blabla3' AND hs.hive_rowid=1 AND hs.hive_operation_type='UPDATE' AND hive_operation_id = 2 ) = 1, 'No expected id value in shadow table2';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table3 ) = 2, 'Too many rows in shadow table3';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_table3 hs WHERE hs.id = 323 AND hs.smth = 'blabla3' AND hs.hive_rowid=1 AND hs.hive_operation_type='UPDATE' AND hive_operation_id = 2 ) = 1, 'No expected id value in shadow table2';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_table3 ) = 2, 'Too many rows in shadow table3';
 END
 $BODY$
 ;

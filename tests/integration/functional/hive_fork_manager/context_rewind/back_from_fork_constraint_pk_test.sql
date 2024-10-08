@@ -16,7 +16,7 @@ BEGIN
     INSERT INTO table1( id, smth ) VALUES( 1, 'A' );
     INSERT INTO table1( id, smth ) VALUES( 2, 'B' );
 
-    TRUNCATE hive.shadow_public_table1; --to do not revert inserts
+    TRUNCATE hive_data.shadow_public_table1; --to do not revert inserts
 
     DELETE FROM table1 WHERE id=1;
     UPDATE table1 SET id=1 WHERE id=2;
@@ -43,7 +43,7 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM table1 ) = 2, 'Deleted row was not reinserted';
     ASSERT EXISTS ( SELECT FROM table1 WHERE id=1 AND smth='A' ), 'First row was not restored';
     ASSERT EXISTS ( SELECT FROM table1 WHERE id=2 AND smth='B' ), 'Second row was not restored';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table1 ) = 0, 'Shadow table is not empty';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_table1 ) = 0, 'Shadow table is not empty';
 END
 $BODY$
 ;

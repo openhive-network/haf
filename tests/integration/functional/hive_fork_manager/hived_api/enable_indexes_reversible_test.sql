@@ -52,7 +52,7 @@ __result bool;
 BEGIN
     SELECT EXISTS (
         SELECT 1 FROM information_schema.table_constraints tc
-        WHERE tc.table_schema='hive' AND tc.table_name=_table_name AND tc.constraint_type = 'FOREIGN KEY'
+        WHERE tc.table_schema='hive_data' AND tc.table_name=_table_name AND tc.constraint_type = 'FOREIGN KEY'
         ) INTO __result;
     RETURN __result;
 END;
@@ -82,19 +82,19 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT is_any_index_for_table( 'hive.blocks_reversible'::regclass::oid ) ) , 'Index hive.blocks not exists';
-    ASSERT ( SELECT is_any_index_for_table( 'hive.transactions_reversible'::regclass::oid ) ) , 'Index hive.transactions not exists';
-    ASSERT ( SELECT is_any_index_for_table( 'hive.operations_reversible'::regclass::oid ) ) , 'Index hive.operations not exists';
-    ASSERT ( SELECT is_any_index_for_table( 'hive.transactions_multisig_reversible'::regclass::oid ) ) , 'Index hive.transactions_multisig not exists';
-    ASSERT ( SELECT is_any_index_for_table( 'hive.accounts_reversible'::regclass::oid ) ) , 'Index hive.accounts_reversible not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hive_data.blocks_reversible'::regclass::oid ) ) , 'Index hive_data.blocks not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hive_data.transactions_reversible'::regclass::oid ) ) , 'Index hive_data.transactions not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hive_data.operations_reversible'::regclass::oid ) ) , 'Index hive_data.operations not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hive_data.transactions_multisig_reversible'::regclass::oid ) ) , 'Index hive_data.transactions_multisig not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hive_data.accounts_reversible'::regclass::oid ) ) , 'Index hive_data.accounts_reversible not exists';
 
 
 
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'blocks_reversible') ), 'FK for hive.blocks_reversible not exists';
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_reversible') ), 'FK for hive.transactions not exists';
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig_reversible') ), 'FK for hive.transactions_multisig not exists';
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'account_operations_reversible') ), 'FK for hive.account_operations not exists';
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'accounts_reversible') ), 'FK for hive.accounts not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'blocks_reversible') ), 'FK for hive_data.blocks_reversible not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_reversible') ), 'FK for hive_data.transactions not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig_reversible') ), 'FK for hive_data.transactions_multisig not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'account_operations_reversible') ), 'FK for hive_data.account_operations not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'accounts_reversible') ), 'FK for hive_data.accounts not exists';
 
 
 

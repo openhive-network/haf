@@ -32,7 +32,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-     ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context' ) = 100;
+     ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context' ) = 100;
 END
 $BODY$
 ;

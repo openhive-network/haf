@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.app_create_views_for_contexts( _name hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_create_views_for_contexts( _name hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -20,7 +20,7 @@ $BODY$
 
 
 CREATE OR REPLACE FUNCTION hive.app_create_context(
-      _name hive.context_name
+      _name hive_data.context_name
     , _schema TEXT
     , _is_forking BOOLEAN = TRUE
     , _is_attached BOOLEAN = TRUE
@@ -36,8 +36,8 @@ BEGIN
     PERFORM hive.context_create(
           _name
         , _schema
-        , ( SELECT MAX( hf.id ) FROM hive.fork hf ) -- current fork id
-        , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
+        , ( SELECT MAX( hf.id ) FROM hive_data.fork hf ) -- current fork id
+        , COALESCE( ( SELECT hid.consistent_block FROM hive_data.irreversible_data hid ), 0 ) -- head of irreversible block
         , _is_forking
         , _is_attached
         , NULL
@@ -49,9 +49,9 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.app_create_context(
-      _name hive.context_name
+      _name hive_data.context_name
     , _schema TEXT
-    , _stages hive.application_stages
+    , _stages hive_data.application_stages
     , _is_forking BOOLEAN = TRUE
 )
     RETURNS void
@@ -65,8 +65,8 @@ BEGIN
     PERFORM hive.context_create(
             _name
         , _schema
-        , ( SELECT MAX( hf.id ) FROM hive.fork hf ) -- current fork id
-        , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
+        , ( SELECT MAX( hf.id ) FROM hive_data.fork hf ) -- current fork id
+        , COALESCE( ( SELECT hid.consistent_block FROM hive_data.irreversible_data hid ), 0 ) -- head of irreversible block
         , _is_forking
         , False
         , _stages
@@ -77,7 +77,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_remove_context( _name hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_remove_context( _name hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -101,7 +101,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_reset_data( _name hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_reset_data( _name hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -130,7 +130,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_are_forking( _context_names hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_are_forking( _context_names hive_data.contexts_group )
     RETURNS BOOL
     LANGUAGE plpgsql
     STABLE
@@ -142,7 +142,7 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
     SELECT ARRAY_AGG( hc.name ) INTO __result
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name::TEXT = ANY( _context_names ) AND hc.is_forking = TRUE;
 
     IF array_length( __result, 1 ) IS NULL THEN
@@ -162,7 +162,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_is_forking( _context_name hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_is_forking( _context_name hive_data.context_name )
     RETURNS BOOL
     LANGUAGE plpgsql
     STABLE
@@ -178,7 +178,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive_data.contexts_group )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
@@ -188,7 +188,7 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
     -- prevent auto-detaching the context when app is actively asking for new blocks
-    UPDATE hive.contexts
+    UPDATE hive_data.contexts
     SET last_active_at = NOW()
     WHERE name =ANY(_context_names);
 
@@ -203,7 +203,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_next_block( _context_name hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_next_block( _context_name hive_data.context_name )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
@@ -215,40 +215,40 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_attach( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_context_attach( _contexts hive_data.contexts_group )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __head_of_irreversible_block hive.blocks.num%TYPE:=0;
+    __head_of_irreversible_block hive_data.blocks.num%TYPE:=0;
     __current_block_num INT;
-    __fork_id hive.fork.id%TYPE := 1;
-    __lead_context hive.context_name := _contexts[1];
+    __fork_id hive_data.fork.id%TYPE := 1;
+    __lead_context hive_data.context_name := _contexts[1];
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     -- lock EXCLUSIVE may be taken by hived in function:
     -- hive.set_irreversible
     -- so here we can stuck while hived is servicing a new irreversible block notification
-    LOCK TABLE hive.contexts_attachment IN ROW SHARE MODE;
+    LOCK TABLE hive_data.contexts_attachment IN ROW SHARE MODE;
 
     SELECT hc.current_block_num INTO __current_block_num
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = __lead_context;
 
     SELECT hir.consistent_block INTO __head_of_irreversible_block
-    FROM hive.irreversible_data hir;
+    FROM hive_data.irreversible_data hir;
 
     IF __current_block_num > __head_of_irreversible_block THEN
         RAISE EXCEPTION 'Cannot attach context % because the block num % is grater than top of irreversible block %'
             , _context, __current_block_num,  __head_of_irreversible_block;
     END IF;
 
-    SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= GREATEST(__current_block_num, 1);
+    SELECT MAX(hf.id) INTO __fork_id FROM hive_data.fork hf WHERE hf.block_num <= GREATEST(__current_block_num, 1);
 
-    UPDATE hive.contexts
+    UPDATE hive_data.contexts
     SET   fork_id = __fork_id
       , irreversible_block = COALESCE( __head_of_irreversible_block, 0 )
       , events_id = 0 -- during app_next_block correct event will be found
@@ -274,7 +274,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_attach( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_context_attach( _context hive_data.context_name )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -286,7 +286,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hive.appproc_context_attach( _contexts hive.contexts_group )
+CREATE OR REPLACE PROCEDURE hive.appproc_context_attach( _contexts hive_data.contexts_group )
     LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -298,7 +298,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE PROCEDURE hive.appproc_context_attach( IN _context hive.context_name )
+CREATE OR REPLACE PROCEDURE hive.appproc_context_attach( IN _context hive_data.context_name )
     LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -308,7 +308,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_detach( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_context_detach( _contexts hive_data.contexts_group )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -334,7 +334,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_detach(  _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_context_detach(  _context hive_data.context_name )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -346,7 +346,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _contexts hive.contexts_group  )
+CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _contexts hive_data.contexts_group  )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -360,7 +360,7 @@ BEGIN
           hive.context_detach( context.* )
     FROM unnest( _contexts ) as context;
 
-    UPDATE hive.contexts hc
+    UPDATE hive_data.contexts hc
     SET is_forking = false
       , last_active_at = NOW()
     WHERE hc.name = ANY( _contexts );
@@ -369,19 +369,19 @@ BEGIN
     -- because now the contexts are non-forking
     PERFORM
         hive.context_attach( context.text, hc.irreversible_block )
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 
     PERFORM hive.drop_rowid_index( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hive.registered_tables hrt
-    JOIN hive.contexts hc ON hrt.context_id = hc.id
+    FROM hive_data.registered_tables hrt
+    JOIN hive_data.contexts hc ON hrt.context_id = hc.id
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 END;
 $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _context hive_data.context_name )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -393,7 +393,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_set_forking( _contexts hive.contexts_group  )
+CREATE OR REPLACE FUNCTION hive.app_context_set_forking( _contexts hive_data.contexts_group  )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -407,7 +407,7 @@ BEGIN
         hive.context_detach( context.* )
     FROM unnest( _contexts ) as context;
 
-    UPDATE hive.contexts hc
+    UPDATE hive_data.contexts hc
     SET is_forking = true
       , last_active_at = NOW()
     WHERE hc.name = ANY( _contexts );
@@ -415,12 +415,12 @@ BEGIN
     -- to recreate triggers
     PERFORM
         hive.context_attach( context.text, hc.irreversible_block )
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 
     PERFORM hive.create_rowid_index( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hive.registered_tables hrt
-    JOIN hive.contexts hc ON hrt.context_id = hc.id
+    FROM hive_data.registered_tables hrt
+    JOIN hive_data.contexts hc ON hrt.context_id = hc.id
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 
 END;
@@ -428,7 +428,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.app_context_set_forking( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_context_set_forking( _context hive_data.context_name )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -450,7 +450,7 @@ DECLARE
     __schema VARCHAR;
 BEGIN
     SELECT schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context;
     EXECUTE format( 'ALTER TABLE %I.%s ADD COLUMN hive_rowid BIGINT NOT NULL DEFAULT 0', _table_schema, _table_name );
     EXECUTE format( 'ALTER TABLE %I.%s INHERIT %I.%s', _table_schema, _table_name, __schema, _context );
@@ -471,42 +471,42 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.app_get_irreversible_block()
-    RETURNS hive.contexts.irreversible_block%TYPE
+    RETURNS hive_data.contexts.irreversible_block%TYPE
     LANGUAGE plpgsql
     STABLE
 AS
 $BODY$
 DECLARE
-    __result hive.contexts.irreversible_block%TYPE;
+    __result hive_data.contexts.irreversible_block%TYPE;
 BEGIN
-    SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hive.irreversible_data;
+    SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hive_data.irreversible_data;
     RETURN __result;
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_get_irreversible_block( _context_name hive.context_name )
-    RETURNS hive.contexts.irreversible_block%TYPE
+CREATE OR REPLACE FUNCTION hive.app_get_irreversible_block( _context_name hive_data.context_name )
+    RETURNS hive_data.contexts.irreversible_block%TYPE
     LANGUAGE plpgsql
     STABLE
 AS
 $BODY$
 DECLARE
-    __result hive.contexts.irreversible_block%TYPE;
+    __result hive_data.contexts.irreversible_block%TYPE;
 BEGIN
     IF hive.app_is_forking( _context_name )
     THEN
         SELECT hc.irreversible_block INTO __result
-        FROM hive.contexts hc
+        FROM hive_data.contexts hc
         WHERE hc.name = _context_name;
     ELSE
-        __result := COALESCE((SELECT hb.num from hive.blocks hb ORDER BY num DESC LIMIT 1), 0);
+        __result := COALESCE((SELECT hb.num from hive_data.blocks hb ORDER BY num DESC LIMIT 1), 0);
     END IF;
 
     RETURN __result;
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_context_are_attached( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_context_are_attached( _contexts hive_data.contexts_group )
     RETURNS bool
     LANGUAGE plpgsql
     STABLE
@@ -518,8 +518,8 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     SELECT ARRAY_AGG( DISTINCT(hca.is_attached) )  is_attached INTO __result
-    FROM hive.contexts_attachment hca
-    JOIN hive.contexts hc ON hc.id = hca.context_id
+    FROM hive_data.contexts_attachment hca
+    JOIN hive_data.contexts hc ON hc.id = hca.context_id
     WHERE hc.name =ANY( _contexts );
 
     IF __result IS NULL OR ARRAY_LENGTH( __result, 1 ) != 1 THEN
@@ -531,7 +531,7 @@ END;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION hive.app_context_is_attached( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_context_is_attached( _context hive_data.context_name )
     RETURNS bool
     LANGUAGE plpgsql
     STABLE
@@ -542,7 +542,7 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_update_last_active_at( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_update_last_active_at( _contexts hive_data.contexts_group )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -554,19 +554,19 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     SELECT ARRAY_AGG(id) INTO __contexts_id
-    FROM hive.contexts
+    FROM hive_data.contexts
     WHERE name = ANY( _contexts );
 
     IF __contexts_id IS NULL THEN
         RAISE EXCEPTION 'Contexts do not exist';
     END IF;
 
-    UPDATE hive.contexts SET last_active_at = NOW()
+    UPDATE hive_data.contexts SET last_active_at = NOW()
     WHERE id =ANY( __contexts_id );
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_update_last_active_at( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_update_last_active_at( _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -577,7 +577,7 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_set_current_block_num( _contexts hive.contexts_group, _block_num INTEGER )
+CREATE OR REPLACE FUNCTION hive.app_set_current_block_num( _contexts hive_data.contexts_group, _block_num INTEGER )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -589,8 +589,8 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     SELECT ARRAY_AGG(id) INTO __contexts_id
-    FROM hive.contexts hc
-    JOIN hive.contexts_attachment hca ON hca.context_id = hc.id
+    FROM hive_data.contexts hc
+    JOIN hive_data.contexts_attachment hca ON hca.context_id = hc.id
     WHERE name = ANY( _contexts ) AND hca.is_attached = FALSE;
 
     IF __contexts_id IS NULL THEN
@@ -600,12 +600,12 @@ BEGIN
         RAISE EXCEPTION 'Cannot directly set current_block_num when contexts are attached';
     END IF;
 
-    UPDATE hive.contexts SET current_block_num = _block_num, last_active_at = NOW()
+    UPDATE hive_data.contexts SET current_block_num = _block_num, last_active_at = NOW()
     WHERE id =ANY( __contexts_id );
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_set_current_block_num( _context hive.context_name, _block_num INTEGER )
+CREATE OR REPLACE FUNCTION hive.app_set_current_block_num( _context hive_data.context_name, _block_num INTEGER )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -617,7 +617,7 @@ END;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION hive.app_get_current_block_num( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_get_current_block_num( _contexts hive_data.contexts_group )
     RETURNS INTEGER
     LANGUAGE plpgsql
     STABLE
@@ -629,7 +629,7 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     SELECT ARRAY_AGG( current_block_num ) current_block_num INTO __result
-    FROM hive.contexts
+    FROM hive_data.contexts
     WHERE name =ANY( _contexts );
 
     IF __result IS NULL THEN
@@ -647,7 +647,7 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_get_current_block_num( _context_name hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_get_current_block_num( _context_name hive_data.context_name )
     RETURNS INTEGER
     LANGUAGE plpgsql
     STABLE
@@ -665,40 +665,40 @@ CREATE OR REPLACE FUNCTION hive.grant_select_for_state_providers_table( _table_n
 AS
 $BODY$
 BEGIN
-    -- TODO(mickiewicz@syncad.com) Here is a problem with schema hive
+    -- TODO(mickiewicz@syncad.com) Here is a problem with schema hive_data
     -- not returned by the any of already implemented state_providers
     -- need to investigate why schema is not a part of table name
     -- in the template there is a note that hive. must be returned for each state provider table name
-    EXECUTE format( 'GRANT SELECT ON TABLE hive.%s TO hive_applications_group', _table_name );
+    EXECUTE format( 'GRANT SELECT ON TABLE hive_data.%s TO hive_applications_group', _table_name );
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_state_provider_import( _state_provider hive.state_providers, _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_state_provider_import( _state_provider hive_data.state_providers, _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
 BEGIN
 
     SELECT hac.id, hive.check_owner( hac.name, hac.owner )
-    FROM hive.contexts hac
+    FROM hive_data.contexts hac
     WHERE hac.name = _context
     INTO __context_id;
 
     __context_id = hive.get_context_id( _context );
 
-    IF EXISTS( SELECT 1 FROM hive.state_providers_registered WHERE context_id = __context_id AND state_provider = _state_provider ) THEN
+    IF EXISTS( SELECT 1 FROM hive_data.state_providers_registered WHERE context_id = __context_id AND state_provider = _state_provider ) THEN
         RAISE LOG 'The state % provider is already imported for context %.', _state_provider, _context;
         RETURN;
     END IF;
 
 
     EXECUTE format(
-        'INSERT INTO hive.state_providers_registered( context_id, state_provider, tables, owner )
+        'INSERT INTO hive_data.state_providers_registered( context_id, state_provider, tables, owner )
         SELECT %s , %L, hive.start_provider_%s( %L ), current_user
         ON CONFLICT DO NOTHING', __context_id, _state_provider, _state_provider, _context
     );
@@ -709,9 +709,9 @@ BEGIN
 
     -- register tables
     PERFORM
-          hive.app_register_table( 'hive', unnest( hsp.tables ), _context )
+          hive.app_register_table( 'hive_data', unnest( hsp.tables ), _context )
         , hive.grant_select_for_state_providers_table( unnest( hsp.tables ) )
-    FROM hive.state_providers_registered hsp
+    FROM hive_data.state_providers_registered hsp
     WHERE hsp.context_id = __context_id AND hsp.state_provider = _state_provider;
 
 END;
@@ -719,20 +719,20 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.app_state_providers_update( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_state_providers_update( _first_block hive_data.blocks.num%TYPE, _last_block hive_data.blocks.num%TYPE, _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
     __is_attached BOOL;
-    __current_block_num hive.blocks.num%TYPE;
+    __current_block_num hive_data.blocks.num%TYPE;
 BEGIN
     SELECT hac.id, hca.is_attached, hac.current_block_num
-    FROM hive.contexts hac
-    JOIN hive.contexts_attachment hca ON hac.id = hca.context_id
+    FROM hive_data.contexts hac
+    JOIN hive_data.contexts_attachment hca ON hac.id = hca.context_id
     WHERE hac.name = _context
         INTO __context_id, __is_attached, __current_block_num;
 
@@ -749,13 +749,13 @@ BEGIN
     END IF;
 
     PERFORM hive.update_one_state_providers( _first_block, _last_block, hsp.state_provider, _context )
-    FROM hive.state_providers_registered hsp
+    FROM hive_data.state_providers_registered hsp
     WHERE hsp.context_id = __context_id;
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_state_provider_drop( _state_provider HIVE.STATE_PROVIDERS, _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_state_provider_drop( _state_provider hive_data.state_providers, _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -767,18 +767,18 @@ BEGIN
         , _state_provider, _context
         );
 
-    DELETE FROM hive.state_providers_registered hsp
-        USING hive.contexts hc
+    DELETE FROM hive_data.state_providers_registered hsp
+        USING hive_data.contexts hc
     WHERE hc.name = _context AND hsp.state_provider = _state_provider AND hc.id = hsp.context_id;
 
-    UPDATE hive.contexts
+    UPDATE hive_data.contexts
     SET last_active_at = NOW()
     WHERE name = _context;
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_state_provider_drop_all( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.app_state_provider_drop_all( _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -786,14 +786,14 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.app_state_provider_drop( hsp.state_provider, _context )
-    FROM hive.state_providers_registered hsp
-    JOIN hive.contexts hc ON hc.id = hsp.context_id
+    FROM hive_data.state_providers_registered hsp
+    JOIN hive_data.contexts hc ON hc.id = hsp.context_id
     WHERE hc.name = _context;
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_wait_for_ready_instance(IN _context_name hive.context_name, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+CREATE OR REPLACE FUNCTION hive.app_wait_for_ready_instance(IN _context_name hive_data.context_name, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
   RETURNS VOID
   LANGUAGE plpgsql
   VOLATILE
@@ -804,7 +804,7 @@ BEGIN
 END
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_wait_for_ready_instance(IN _contexts hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+CREATE OR REPLACE FUNCTION hive.app_wait_for_ready_instance(IN _contexts hive_data.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
   RETURNS VOID
   LANGUAGE plpgsql
   VOLATILE
@@ -815,7 +815,7 @@ BEGIN
 END
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_check_contexts_synchronized( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_check_contexts_synchronized( _contexts hive_data.contexts_group )
     RETURNS VOID
     LANGUAGE plpgsql
     STABLE
@@ -835,8 +835,8 @@ BEGIN
                  , (ctx.loop).end_block_range
         )
     ) INTO __number_of_rows
-    FROM hive.contexts ctx
-    JOIN hive.contexts_attachment hca ON hca.context_id = ctx.id
+    FROM hive_data.contexts ctx
+    JOIN hive_data.contexts_attachment hca ON hca.context_id = ctx.id
     WHERE ctx.name =ANY(_contexts);
 
     IF __number_of_rows != 1 THEN
@@ -845,7 +845,7 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _contexts hive.contexts_group  )
+CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _contexts hive_data.contexts_group  )
     RETURNS BOOLEAN
     LANGUAGE 'plpgsql'
     STABLE
@@ -854,14 +854,14 @@ $BODY$
 BEGIN
     RETURN COALESCE((SELECT BOOL_AND(hc.id IS NOT NULL AND hca.is_attached AND consistent_block - hc.current_block_num <= 1)
                      FROM UNNEST(_contexts) AS context_names(name)
-                     LEFT JOIN hive.contexts hc USING(name)
-                     JOIN hive.contexts_attachment hca ON hca.context_id = hc.id
-                     CROSS JOIN hive.irreversible_data), FALSE);
+                     LEFT JOIN hive_data.contexts hc USING(name)
+                     JOIN hive_data.contexts_attachment hca ON hca.context_id = hc.id
+                     CROSS JOIN hive_data.irreversible_data), FALSE);
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _context hive_data.context_name )
     RETURNS BOOLEAN
     LANGUAGE 'plpgsql'
     STABLE

@@ -33,7 +33,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.check_owner( _context hive.context_name, _context_owner TEXT )
+CREATE OR REPLACE FUNCTION hive.check_owner( _context hive_data.context_name, _context_owner TEXT )
     RETURNS void
     LANGUAGE 'plpgsql'
     STABLE
@@ -47,27 +47,27 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.register_state_provider_tables( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.register_state_provider_tables( _context hive_data.context_name )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
 AS
 $BODY$
 BEGIN
-    IF EXISTS ( SELECT 1 FROM hive.contexts WHERE name=_context AND registering_state_provider = TRUE )
+    IF EXISTS ( SELECT 1 FROM hive_data.contexts WHERE name=_context AND registering_state_provider = TRUE )
        OR hive.app_is_forking( _context ) THEN
             RETURN;
     END IF;
 
     -- register tables
-    UPDATE hive.contexts SET registering_state_provider = TRUE WHERE name =  _context;
+    UPDATE hive_data.contexts SET registering_state_provider = TRUE WHERE name =  _context;
 
     PERFORM hive.app_register_table( 'hive', unnest( hsp.tables ), _context )
-    FROM hive.state_providers_registered hsp
-    JOIN hive.contexts hc ON hc.id = hsp.context_id
+    FROM hive_data.state_providers_registered hsp
+    JOIN hive_data.contexts hc ON hc.id = hsp.context_id
     WHERE hc.name = _context;
 
-    UPDATE hive.contexts SET registering_state_provider = FALSE WHERE name =  _context;
+    UPDATE hive_data.contexts SET registering_state_provider = FALSE WHERE name =  _context;
 END;
 $BODY$
 ;
@@ -98,8 +98,8 @@ BEGIN
         hive.check_owner( hc.name, hc.owner )
     FROM
         ( SELECT * FROM pg_event_trigger_ddl_commands() ) as tr
-        JOIN hive.registered_tables hrt ON ( hrt.origin_table_schema || '.' || hrt.origin_table_name ) = tr.object_identity
-        JOIN hive.contexts hc ON hrt.context_id = hc.id
+        JOIN hive_data.registered_tables hrt ON ( hrt.origin_table_schema || '.' || hrt.origin_table_name ) = tr.object_identity
+        JOIN hive_data.contexts hc ON hrt.context_id = hc.id
     INTO __ignore_event, __shadow_table_name, __origin_table_schema, __origin_table_name, __context_schema;
 
     IF __shadow_table_name IS NULL THEN
@@ -114,7 +114,7 @@ BEGIN
             FROM pg_event_trigger_ddl_commands() as tr
             JOIN pg_catalog.pg_inherits pgi ON tr.objid = pgi.inhrelid
             JOIN pg_class pgc ON pgc.oid = tr.objid
-            JOIN hive.contexts hc ON hc.baseclass_id = pgi.inhparent
+            JOIN hive_data.contexts hc ON hc.baseclass_id = pgi.inhparent
             WHERE tr.object_type = 'table'
         ) as tables;
         RETURN;
@@ -124,7 +124,7 @@ BEGIN
         RETURN;
     END IF;
 
-    EXECUTE format( 'SELECT EXISTS( SELECT * FROM hive.%I LIMIT 1 )', __shadow_table_name ) INTO __result;
+    EXECUTE format( 'SELECT EXISTS( SELECT * FROM hive_data.%I LIMIT 1 )', __shadow_table_name ) INTO __result;
 
     IF __result = TRUE THEN
         RAISE EXCEPTION 'Cannot edit structure of registered tables when some rows are not rewinded';
@@ -143,7 +143,7 @@ BEGIN
     END IF;
 
     -- drop shadow table with old format
-    EXECUTE format( 'DROP TABLE hive.%I', __shadow_table_name );
+    EXECUTE format( 'DROP TABLE hive_data.%I', __shadow_table_name );
     PERFORM hive.create_shadow_table( __origin_table_schema, __origin_table_name );
 
     --update information about columns
@@ -151,7 +151,7 @@ BEGIN
     FROM information_schema.columns iss
     WHERE iss.table_schema = __origin_table_schema AND iss.table_name = __origin_table_name;
 
-    UPDATE hive.registered_tables hrt
+    UPDATE hive_data.registered_tables hrt
     SET origin_table_columns = __new_columns
     WHERE hrt.origin_table_name = lower( __origin_table_name ) AND hrt.origin_table_schema = lower( __origin_table_schema );
 
@@ -173,7 +173,7 @@ __schema TEXT := NULL;
 BEGIN
     SELECT tr.object_name, tr.schema_name  FROM
     ( SELECT * FROM pg_event_trigger_dropped_objects() ) as tr
-        JOIN hive.registered_tables hrt ON hrt.origin_table_name  = tr.object_name AND hrt.origin_table_schema = tr.schema_name
+        JOIN hive_data.registered_tables hrt ON hrt.origin_table_name  = tr.object_name AND hrt.origin_table_schema = tr.schema_name
     WHERE tr.object_type ='table'
     INTO __table, __schema;
 
@@ -201,7 +201,7 @@ BEGIN
         FROM pg_event_trigger_ddl_commands() as tr
         JOIN pg_catalog.pg_inherits pgi ON tr.objid = pgi.inhrelid
         JOIN pg_class pgc ON pgc.oid = tr.objid
-        JOIN hive.contexts hc ON hc.baseclass_id = pgi.inhparent
+        JOIN hive_data.contexts hc ON hc.baseclass_id = pgi.inhparent
         WHERE tr.object_type = 'table'
     ) as tables;
 END;

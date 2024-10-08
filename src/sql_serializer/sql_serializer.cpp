@@ -327,7 +327,7 @@ public:
   void init_database()
   {
     if ( psql_first_block > 1 ) {
-      /* There is no much sense to disable and then enable indexes on hive.accounts
+      /* There is no much sense to disable and then enable indexes on hive_data.accounts
       * After syncing  80M of blocks dumping all accounts ( c.a. 2.5M  ) lasted 100s
       */
       const auto number_of_threads =
@@ -364,7 +364,7 @@ public:
     queries_commit_data_processor block_loader(db_url, "Block loader", "blockload",
                                                 [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
       {
-        pqxx::result data = tx.exec("SELECT hb.num AS _max_block FROM hive.blocks hb ORDER BY hb.num DESC LIMIT 1;");
+        pqxx::result data = tx.exec("SELECT hb.num AS _max_block FROM hive_data.blocks hb ORDER BY hb.num DESC LIMIT 1;");
         if( !data.empty() )
         {
           FC_ASSERT( data.size() == 1, "Data size" );
@@ -780,7 +780,7 @@ sql_serializer_plugin_impl::is_database_initialized() {
     , "Check if any block is dumped"
     , "blockcheck"
     , [&is_database_initialized](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
-      pqxx::result data = tx.exec("select 1 from hive.operation_types limit 1");
+      pqxx::result data = tx.exec("select 1 from hive_data.operation_types limit 1");
       is_database_initialized = !data.empty();
       return data_processor::data_processing_status();
     }

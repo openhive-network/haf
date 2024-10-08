@@ -4,10 +4,10 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 DECLARE
-    __context_stages hive.application_stages :=
+    __context_stages hive_data.application_stages :=
         ARRAY[
-            ('massive',2 ,100 )::hive.application_stage
-            , hive.live_stage()
+            ('massive',2 ,100 )::hive_data.application_stage
+            , hive_data.live_stage()
             ];
 BEGIN
     CREATE SCHEMA A;
@@ -19,7 +19,7 @@ BEGIN
     PERFORM hive.app_context_detach( 'detached_context' );
 
 
-    UPDATE hive.contexts ctx
+    UPDATE hive_data.contexts ctx
     SET current_block_num = 100
     WHERE ctx.name = 'attached_context_not_insync';
 
