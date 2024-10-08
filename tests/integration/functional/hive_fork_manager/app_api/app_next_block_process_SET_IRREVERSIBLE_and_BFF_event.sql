@@ -102,7 +102,7 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.update_irreversible( ARRAY[ 'context' ] );
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name='context' ) = 5, 'Wrong irreversible !=5';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name='context' ) = 5, 'Wrong irreversible !=5';
 END
 $BODY$
 ;

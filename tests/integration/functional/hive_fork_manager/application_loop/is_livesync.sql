@@ -27,20 +27,20 @@ BEGIN
     PERFORM hive.app_create_context( 'alice_no_live1', 'alice' );
     PERFORM hive.app_create_context( 'alice_no_live2', 'alice' );
 
-    UPDATE hive.contexts hc
+    UPDATE hive_data.contexts hc
     SET loop.current_stage = hive.live_stage()
     WHERE hc.name ='alice_live1';
 
 
-    UPDATE hive.contexts hc
+    UPDATE hive_data.contexts hc
     SET loop.current_stage = hive.live_stage()
     WHERE hc.name ='alice_live2';
 
-    UPDATE hive.contexts hc
+    UPDATE hive_data.contexts hc
     SET loop.current_stage = ('stage1',30 ,10 )::hive.application_stage
     WHERE hc.name ='alice_no_live1';
 
-    UPDATE hive.contexts hc
+    UPDATE hive_data.contexts hc
     SET loop.current_stage = ('stage2',40 ,10 )::hive.application_stage
     WHERE hc.name ='alice_no_live1';
 END;

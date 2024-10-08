@@ -26,7 +26,7 @@ BEGIN
     CREATE SCHEMA ALICE;
     PERFORM hive.app_create_context( _name => 'alice', _schema => 'alice' );
 
-    UPDATE hive.contexts
+    UPDATE hive_data.contexts
     SET
           last_active_at = last_active_at - '5 hrs'::interval
         , current_block_num = 2
@@ -45,7 +45,7 @@ BEGIN
     CREATE SCHEMA BOB;
     PERFORM hive.app_create_context( _name => 'bob', _schema => 'bob' );
 
-    UPDATE hive.contexts
+    UPDATE hive_data.contexts
     SET
         last_active_at = last_active_at - '15 hrs'::interval
       , current_block_num = 3

@@ -67,7 +67,7 @@ BEGIN
          , ( 10, 0::SMALLINT, '\xDEED11', 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF', 3 )
     ;
 
-    UPDATE hive.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8;
+    UPDATE hive_data.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8;
 END;
 $BODY$
 ;

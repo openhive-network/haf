@@ -51,29 +51,29 @@ DECLARE
 BEGIN
     CALL hive.app_next_iteration( ARRAY[ 'context_b', 'context' ], __result, 1 );
     ASSERT __result = (1,1), 'Wrong blocks range instead of (1,1)';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context' ) = 5, 'Internally irreversible_block has changed';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context_b' ) = 5, 'Internally irreversible_block has changed -b';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context' ) = 5, 'Internally irreversible_block has changed';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context_b' ) = 5, 'Internally irreversible_block has changed -b';
     ASSERT hive.app_context_is_attached( 'context' ) = FALSE, 'Context context is attached (1)';
     ASSERT hive.app_context_is_attached( 'context_b' ) = FALSE, 'Context_b context is attached (1)';
 
     CALL hive.app_next_iteration( ARRAY[ 'context_b', 'context' ], __result, 1 );
     ASSERT __result = (2,2), 'Wrong blocks range instead of (2,2)';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context' ) = 5, 'Internally irreversible_block has changed';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context_b' ) = 5, 'Internally irreversible_block has changed -b';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context' ) = 5, 'Internally irreversible_block has changed';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context_b' ) = 5, 'Internally irreversible_block has changed -b';
     ASSERT hive.app_context_is_attached( 'context' ) = FALSE, 'Context context is attached (1)';
     ASSERT hive.app_context_is_attached( 'context_b' ) = FALSE, 'Context_b context is attached (1)';
 
     CALL hive.app_next_iteration( ARRAY[ 'context_b', 'context' ], __result, 2 );
     ASSERT __result = (3,4), 'Wrong blocks range instead of (3,4)';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context' ) = 5, 'Internally irreversible_block has changed';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context_b' ) = 5, 'Internally irreversible_block has changed -b';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context' ) = 5, 'Internally irreversible_block has changed';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context_b' ) = 5, 'Internally irreversible_block has changed -b';
     ASSERT hive.app_context_is_attached( 'context' ) = FALSE, 'Context context is attached (1)';
     ASSERT hive.app_context_is_attached( 'context_b' ) = FALSE, 'Context_b context is attached (1)';
 
     CALL hive.app_next_iteration( ARRAY[ 'context_b', 'context' ], __result, 2 );
     ASSERT __result = (5,5), 'Wrong blocks range instead of (5,5)';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context' ) = 5, 'Internally irreversible_block has changed';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context_b' ) = 5, 'Internally irreversible_block has changed b';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context' ) = 5, 'Internally irreversible_block has changed';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context_b' ) = 5, 'Internally irreversible_block has changed b';
 
     CALL hive.app_next_iteration( ARRAY[ 'context_b', 'context' ], __result, 2 );
     ASSERT __result IS NULL, 'Not NULL returned when there are no blocks to process';

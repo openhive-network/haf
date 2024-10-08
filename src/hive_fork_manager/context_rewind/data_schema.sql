@@ -7,7 +7,7 @@ CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' , 'METADATA' );
 
 CREATE TYPE hive.event_type AS ENUM( 'BACK_FROM_FORK', 'NEW_BLOCK', 'NEW_IRREVERSIBLE', 'MASSIVE_SYNC' );
 
-CREATE TABLE IF NOT EXISTS hive.contexts(
+CREATE TABLE IF NOT EXISTS hive_data.contexts(
     id SERIAL NOT NULL,
     name hive.context_name NOT NULL,
     schema TEXT NOT NULL,
@@ -26,16 +26,16 @@ CREATE TABLE IF NOT EXISTS hive.contexts(
     CONSTRAINT pk_hive_contexts PRIMARY KEY( id ),
     CONSTRAINT uq_hive_context_name UNIQUE ( name )
 );
-SELECT pg_catalog.pg_extension_config_dump('hive.contexts', '');
-SELECT pg_catalog.pg_extension_config_dump('hive.contexts_id_seq', '');
+SELECT pg_catalog.pg_extension_config_dump('hive_data.contexts', '');
+SELECT pg_catalog.pg_extension_config_dump('hive_data.contexts_id_seq', '');
 
-CREATE INDEX IF NOT EXISTS hive_contexts_owner_idx ON hive.contexts( owner );
+CREATE INDEX IF NOT EXISTS hive_contexts_owner_idx ON hive_data.contexts( owner );
 
 CREATE TABLE IF NOT EXISTS hive.contexts_attachment(
       context_id INTEGER NOT NULL UNIQUE
     , is_attached BOOL NOT NULL
     , owner NAME NOT NULL
-    , CONSTRAINT fk_contexts_attachment_context FOREIGN KEY(context_id) REFERENCES hive.contexts( id )
+    , CONSTRAINT fk_contexts_attachment_context FOREIGN KEY(context_id) REFERENCES hive_data.contexts( id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.contexts_attachment', '');
 
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS hive.registered_tables(
    origin_table_columns TEXT[] NOT NULL,
    owner NAME NOT NULL,
    CONSTRAINT pk_hive_registered_tables PRIMARY KEY( id ),
-   CONSTRAINT fk_hive_registered_tables_context FOREIGN KEY(context_id) REFERENCES hive.contexts( id ),
+   CONSTRAINT fk_hive_registered_tables_context FOREIGN KEY(context_id) REFERENCES hive_data.contexts( id ),
    CONSTRAINT uq_hive_registered_tables_register_table UNIQUE( origin_table_schema, origin_table_name )
 );
 SELECT pg_catalog.pg_extension_config_dump('hive.registered_tables', '');

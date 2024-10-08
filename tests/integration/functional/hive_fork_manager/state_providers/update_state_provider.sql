@@ -91,7 +91,7 @@ BEGIN
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'context' );
     PERFORM hive.app_context_detach( 'context' );
 
-    UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 6;
+    UPDATE hive_data.contexts SET current_block_num = 1, irreversible_block = 6;
 END;
 $BODY$
 ;

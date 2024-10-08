@@ -47,7 +47,7 @@ $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table1 ) = 1, 'Wrong number of rows in the shadow table1';
     ASSERT EXISTS ( SELECT FROM hive.shadow_public_table1 hs WHERE hs.id = 3 AND hive_block_num = 4 ), 'No expected row';
-    ASSERT EXISTS ( SELECT FROM hive.contexts hc WHERE hc.name = 'context' AND hc.irreversible_block = 3 ), 'Wrong irreversible block';
+    ASSERT EXISTS ( SELECT FROM hive_data.contexts hc WHERE hc.name = 'context' AND hc.irreversible_block = 3 ), 'Wrong irreversible block';
 
     ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table2 ) = 4, 'Wrong number of rows in the shadow table2';
 END

@@ -52,14 +52,14 @@ BEGIN
     -- theoretically next_block should process NEW_BLOCK 3, but optimizations for fork
     -- will ommit unnecessary events which will be rewinded, and we get BFF EVENT 2
     CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks );
-    SELECT irreversible_block INTO  __irreversible_block FROM hive.contexts WHERE name = 'context';
+    SELECT irreversible_block INTO  __irreversible_block FROM hive_data.contexts WHERE name = 'context';
     RAISE NOTICE 'Blocks: % ir %', __blocks, __irreversible_block;
     CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks );
-    SELECT irreversible_block INTO  __irreversible_block FROM hive.contexts WHERE name = 'context';
+    SELECT irreversible_block INTO  __irreversible_block FROM hive_data.contexts WHERE name = 'context';
     RAISE NOTICE 'Blocks: % ir %', __blocks, __irreversible_block;
     CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks );
-    SELECT fork_id INTO __fork_id FROM hive.contexts WHERE name = 'context';
-    SELECT irreversible_block INTO  __irreversible_block FROM hive.contexts WHERE name = 'context';
+    SELECT fork_id INTO __fork_id FROM hive_data.contexts WHERE name = 'context';
+    SELECT irreversible_block INTO  __irreversible_block FROM hive_data.contexts WHERE name = 'context';
     RAISE NOTICE 'Blocks: % ir % fork %', __blocks, __irreversible_block, __fork_id;
 
     INSERT INTO hive.fork(block_num, time_of_fork)
@@ -71,14 +71,14 @@ BEGIN
         ( 'BACK_FROM_FORK', __fork_id ),
         ( 'NEW_BLOCK', 4)
     ;
-    SELECT fork_id INTO __fork_id FROM hive.contexts WHERE name = 'context';
+    SELECT fork_id INTO __fork_id FROM hive_data.contexts WHERE name = 'context';
     CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks );
-    SELECT irreversible_block INTO  __irreversible_block FROM hive.contexts WHERE name = 'context';
+    SELECT irreversible_block INTO  __irreversible_block FROM hive_data.contexts WHERE name = 'context';
     RAISE NOTICE 'Blocks: % ir % fork %', __blocks, __irreversible_block, __fork_id;
 
-    SELECT fork_id INTO __fork_id FROM hive.contexts WHERE name = 'context';
+    SELECT fork_id INTO __fork_id FROM hive_data.contexts WHERE name = 'context';
     CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks );
-    SELECT irreversible_block INTO  __irreversible_block FROM hive.contexts WHERE name = 'context';
+    SELECT irreversible_block INTO  __irreversible_block FROM hive_data.contexts WHERE name = 'context';
     RAISE NOTICE 'Blocks: % ir % fork %', __blocks, __irreversible_block, __fork_id;
 
 END
@@ -93,7 +93,7 @@ DECLARE
     __context_fork_id INT;
     __recent_fork_id INT;
 BEGIN
-    SELECT fork_id INTO __context_fork_id FROM hive.contexts WHERE name = 'context';
+    SELECT fork_id INTO __context_fork_id FROM hive_data.contexts WHERE name = 'context';
     SELECT MAX(hf.id) INTO __recent_fork_id FROM hive.fork hf;
 
     ASSERT __context_fork_id = __recent_fork_id, 'Context has invalid fork id';

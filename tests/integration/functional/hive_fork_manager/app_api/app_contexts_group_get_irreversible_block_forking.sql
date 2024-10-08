@@ -38,13 +38,13 @@ BEGIN
         ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 0, 'hive.app_get_irreversible_block !=0 (1)';
         ASSERT ( SELECT hive.app_get_irreversible_block( 'context_b' ) ) = 0, 'hive.app_get_irreversible_block !=0 (1b)';
 
-        ASSERT ( SELECT hc.current_block_num FROM hive.contexts hc WHERE name = 'context' ) = 0, 'Wrng current block != 0(1)';
-        ASSERT ( SELECT hc.current_block_num FROM hive.contexts hc WHERE name = 'context_b' ) = 0, 'Wrng current block != 0(1b)';
+        ASSERT ( SELECT hc.current_block_num FROM hive_data.contexts hc WHERE name = 'context' ) = 0, 'Wrng current block != 0(1)';
+        ASSERT ( SELECT hc.current_block_num FROM hive_data.contexts hc WHERE name = 'context_b' ) = 0, 'Wrng current block != 0(1b)';
 
         SELECT * FROM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ) INTO __blocks; -- no events
-        ASSERT ( SELECT hc.current_block_num FROM hive.contexts hc  WHERE name = 'context' ) = 0, 'Wrong current block != 0(2)';
+        ASSERT ( SELECT hc.current_block_num FROM hive_data.contexts hc  WHERE name = 'context' ) = 0, 'Wrong current block != 0(2)';
         ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 0, 'hive.app_get_irreversible_block !=0 (2)';
-        ASSERT ( SELECT hc.current_block_num FROM hive.contexts hc  WHERE name = 'context_b' ) = 0, 'Wrong current block != 0(2b)';
+        ASSERT ( SELECT hc.current_block_num FROM hive_data.contexts hc  WHERE name = 'context_b' ) = 0, 'Wrong current block != 0(2b)';
         ASSERT ( SELECT hive.app_get_irreversible_block( 'context_b' ) ) = 0, 'hive.app_get_irreversible_block !=0 (2b)';
 
         --hived ends massive sync - irreversible = 1

@@ -87,7 +87,7 @@ $BODY$
 DECLARE
     __blocks hive.blocks_range;
 BEGIN
-    ASSERT ( SELECT events_id FROM hive.contexts WHERE name='context' LIMIT 1 ) = 4, 'Wrong events id 4';
+    ASSERT ( SELECT events_id FROM hive_data.contexts WHERE name='context' LIMIT 1 ) = 4, 'Wrong events id 4';
     CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks ); -- MASSIVE_SYNC
 
     ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks';
@@ -96,8 +96,8 @@ BEGIN
     ASSERT __blocks.last_block = 6, 'Incorrect last range';
     ASSERT hive.app_context_is_attached( 'context' ) = FALSE, 'Context context is attached';
 
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 6, 'Wrong current block num 4';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name='context' ) = 6, 'Wrong irreversible';
+    ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name='context' ) = 6, 'Wrong current block num 4';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name='context' ) = 6, 'Wrong irreversible';
 
     ASSERT ( SELECT COUNT(*)  FROM A.table1 ) = 3, 'Wrong number of rows in app table';
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 1 ), 'No id 1';

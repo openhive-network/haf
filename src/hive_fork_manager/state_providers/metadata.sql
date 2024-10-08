@@ -16,14 +16,14 @@ CREATE OR REPLACE FUNCTION hive.start_provider_metadata( _context hive.context_n
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
     __table_name TEXT := _context || '_metadata';
     __schema TEXT;
 BEGIN
 
     __context_id = hive.get_context_id( _context );
     SELECT hc.schema INTo __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.id = __context_id;
 
 
@@ -164,7 +164,7 @@ CREATE OR REPLACE FUNCTION hive.update_state_provider_metadata(
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
     __table_name TEXT := _context || '_metadata';
 BEGIN
     __context_id = hive.get_context_id( _context );
@@ -189,7 +189,7 @@ CREATE OR REPLACE FUNCTION hive.drop_state_provider_metadata( _context hive.cont
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
     __table_name TEXT := _context || '_metadata';
 BEGIN
     __context_id = hive.get_context_id( _context );

@@ -69,19 +69,19 @@ BEGIN
     -- check if contexts are correctly updated
     -- alice stage1
     SELECT (hc.loop).current_batch_end, hc.current_block_num
-    FROM hive.contexts hc WHERE hc.name = 'alice'
+    FROM hive_data.contexts hc WHERE hc.name = 'alice'
     INTO __current_batch_end, __current_block_num;
     ASSERT __current_block_num = 10, 'Wrong Alice current block !=10';
     ASSERT __current_batch_end = 10, 'Wrong Alice end of range !=10';
 
     SELECT (hc.loop).current_batch_end, hc.current_block_num
-    FROM hive.contexts hc WHERE hc.name = 'alice1'
+    FROM hive_data.contexts hc WHERE hc.name = 'alice1'
     INTO __current_batch_end, __current_block_num;
     ASSERT __current_block_num = 10, 'Wrong Alice1 current block !=10';
     ASSERT __current_batch_end = 10, 'Wrong Alice1 end of range !=10';
 
     SELECT (hc.loop).current_batch_end, hc.current_block_num
-    FROM hive.contexts hc WHERE hc.name = 'alice2'
+    FROM hive_data.contexts hc WHERE hc.name = 'alice2'
     INTO __current_batch_end, __current_block_num;
     ASSERT __current_block_num = 10, 'Wrong Alice2 current block !=10';
     ASSERT __current_batch_end = 10, 'Wrong Alice2 end of range !=10'; --not 51 because head block=50 limits range

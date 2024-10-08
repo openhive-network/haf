@@ -46,7 +46,7 @@ DECLARE
 BEGIN
     SELECT
         ( ( SELECT COALESCE( hid.consistent_block, 0 ) - ctx.current_block_num FROM hive.irreversible_data hid ) ) INTO __lead_context_distance_to_irr_hb
-    FROM hive.contexts ctx
+    FROM hive_data.contexts ctx
     WHERE ctx.name = _contexts [ 1 ];
 
     RETURN __lead_context_distance_to_irr_hb <= 0;
@@ -75,7 +75,7 @@ BEGIN
 
     SELECT
         ( ( SELECT COALESCE( MAX(hb.num), 0 ) - ctx.current_block_num FROM hive.blocks hb ) ) INTO __lead_context_distance_to_irr_hb
-    FROM hive.contexts ctx
+    FROM hive_data.contexts ctx
     WHERE ctx.name = _contexts [ 1 ];
 
     RETURN QUERY
@@ -84,7 +84,7 @@ BEGIN
               UNNEST( ctx.stages )::hive.application_stage as stage
             , ctx.name as context
             , ctx.current_block_num as current_block_num
-        FROM hive.contexts ctx
+        FROM hive_data.contexts ctx
         WHERE ctx.name = ANY( _contexts )
     ), stages_and_distance AS MATERIALIZED (
         SELECT

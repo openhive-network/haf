@@ -8,12 +8,12 @@ CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hive.context_na
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
     __schema TEXT;
 BEGIN
     __context_id = hive.get_context_id( _context );
     SELECT hc.schema INTo __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.id = __context_id;
 
     -- all %1$s substitute _context below
@@ -544,7 +544,7 @@ CREATE OR REPLACE FUNCTION hive.update_state_provider_keyauth(
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
     __template TEXT;
 BEGIN
 
@@ -565,7 +565,7 @@ CREATE OR REPLACE FUNCTION hive.drop_state_provider_keyauth( _context hive.conte
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
 BEGIN
     __context_id = hive.get_context_id( _context );
 

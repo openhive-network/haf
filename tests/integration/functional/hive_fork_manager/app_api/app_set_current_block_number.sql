@@ -48,9 +48,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.name = 'context_a' ) = 10, 'current_block_num is not 10 (a)';
-    ASSERT ( SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.name = 'context_b' ) = 10, 'current_block_num is not 10 (b)';
-    ASSERT ( SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.name = 'context_c' ) = 10, 'current_block_num is not 10 (c)';
+    ASSERT ( SELECT hc.current_block_num FROM hive_data.contexts hc WHERE hc.name = 'context_a' ) = 10, 'current_block_num is not 10 (a)';
+    ASSERT ( SELECT hc.current_block_num FROM hive_data.contexts hc WHERE hc.name = 'context_b' ) = 10, 'current_block_num is not 10 (b)';
+    ASSERT ( SELECT hc.current_block_num FROM hive_data.contexts hc WHERE hc.name = 'context_c' ) = 10, 'current_block_num is not 10 (c)';
 END;
 $BODY$
 ;

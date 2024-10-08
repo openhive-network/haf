@@ -19,7 +19,7 @@ BEGIN
     PERFORM hive.app_context_detach( 'detached_context' );
 
 
-    UPDATE hive.contexts ctx
+    UPDATE hive_data.contexts ctx
     SET current_block_num = 100
     WHERE ctx.name = 'attached_context_not_insync';
 

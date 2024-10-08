@@ -137,10 +137,10 @@ BEGIN
          , ( 11, 10, hive.operation_id(10,1,0), 3 )
     ;
 
-    UPDATE hive.contexts SET fork_id = 1, irreversible_block = 6, current_block_num = 6 WHERE name = 'context1';
-    UPDATE hive.contexts SET fork_id = 1, irreversible_block = 7, current_block_num = 7 WHERE name = 'context17';
-    UPDATE hive.contexts SET fork_id = 2, irreversible_block = 8, current_block_num = 8 WHERE name = 'context2';
-    UPDATE hive.contexts SET fork_id = 3, irreversible_block = 9, current_block_num = 9 WHERE name = 'context3';
+    UPDATE hive_data.contexts SET fork_id = 1, irreversible_block = 6, current_block_num = 6 WHERE name = 'context1';
+    UPDATE hive_data.contexts SET fork_id = 1, irreversible_block = 7, current_block_num = 7 WHERE name = 'context17';
+    UPDATE hive_data.contexts SET fork_id = 2, irreversible_block = 8, current_block_num = 8 WHERE name = 'context2';
+    UPDATE hive_data.contexts SET fork_id = 3, irreversible_block = 9, current_block_num = 9 WHERE name = 'context3';
 
     -- SUMMARY:
     --We have 3 forks: 1 (blocks: 4,5,6),2 (blocks: 7,8,9) ,3 (blocks: 8,9, 10), moreover block 1,2,3,4 are

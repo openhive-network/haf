@@ -62,7 +62,7 @@ VALUES
      , ( 1100, 'alice103', 10, 3 )
 ;
 
-UPDATE hive.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8;
+UPDATE hive_data.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8;
 END;
 $BODY$
 ;

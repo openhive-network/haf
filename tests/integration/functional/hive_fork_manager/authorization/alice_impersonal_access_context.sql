@@ -69,8 +69,8 @@ $BODY$
 BEGIN
     PERFORM hive.app_next_block( ARRAY[ 'alice_impersonal_context', 'alice_context' ] );
     PERFORM hive.app_next_block( ARRAY[ 'alice_impersonal_context', 'alice_context' ] );
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name = 'alice_impersonal_context' ) = 2, 'alice_impersonal_context cb!= 2';
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name = 'alice_context' ) = 2, 'alice_context cb!= 2';
+    ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name = 'alice_impersonal_context' ) = 2, 'alice_impersonal_context cb!= 2';
+    ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name = 'alice_context' ) = 2, 'alice_context cb!= 2';
 END;
 $BODY$
 ;

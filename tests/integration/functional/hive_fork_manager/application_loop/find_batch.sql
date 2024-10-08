@@ -67,13 +67,13 @@ DECLARE
 BEGIN
     -- check if contexts are correctly updated
     -- alice stage1
-    SELECT (hc.loop).size_of_blocks_batch  FROM hive.contexts hc WHERE hc.name = 'alice' INTO __batch_size;
+    SELECT (hc.loop).size_of_blocks_batch  FROM hive_data.contexts hc WHERE hc.name = 'alice' INTO __batch_size;
     ASSERT __batch_size = 10, 'alice batch size != 10';
 
-    SELECT (hc.loop).size_of_blocks_batch  FROM hive.contexts hc WHERE hc.name = 'alice1' INTO __batch_size;
+    SELECT (hc.loop).size_of_blocks_batch  FROM hive_data.contexts hc WHERE hc.name = 'alice1' INTO __batch_size;
     ASSERT __batch_size = 10, 'alice1 batch size != 10';
 
-    SELECT (hc.loop).size_of_blocks_batch  FROM hive.contexts hc WHERE hc.name = 'alice2' INTO __batch_size;
+    SELECT (hc.loop).size_of_blocks_batch  FROM hive_data.contexts hc WHERE hc.name = 'alice2' INTO __batch_size;
     ASSERT __batch_size = 10, 'alice2 batch size != 10';
 
 END;

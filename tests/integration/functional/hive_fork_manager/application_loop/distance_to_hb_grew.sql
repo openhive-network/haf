@@ -94,21 +94,21 @@ BEGIN
     -- check if contexts are correctly updated
     -- alice stage1
     SELECT (hc.loop).current_batch_end, hc.current_block_num, (hc.loop).current_stage.name
-    FROM hive.contexts hc WHERE hc.name = 'alice'
+    FROM hive_data.contexts hc WHERE hc.name = 'alice'
     INTO __current_batch_end, __current_block_num, __current_stage_name;
     ASSERT __current_stage_name = 'stage2', 'Alice got wrong stage != stage2';
     ASSERT __current_block_num = 110, 'Wrong Alice current block !=110';
     ASSERT __current_batch_end = 110, 'Wrong Alice end of range !=110';
 
     SELECT (hc.loop).current_batch_end, hc.current_block_num, (hc.loop).current_stage.name
-    FROM hive.contexts hc WHERE hc.name = 'alice1'
+    FROM hive_data.contexts hc WHERE hc.name = 'alice1'
     INTO __current_batch_end, __current_block_num, __current_stage_name;
     ASSERT __current_stage_name = 'stage2', 'Alice1 got wrong stage != stage2';
     ASSERT __current_block_num = 110, 'Wrong Alice1 current block !=110';
     ASSERT __current_batch_end = 110, 'Wrong Alice1 end of range !=110';
 
     SELECT (hc.loop).current_batch_end, hc.current_block_num, (hc.loop).current_stage.name
-    FROM hive.contexts hc WHERE hc.name = 'alice2'
+    FROM hive_data.contexts hc WHERE hc.name = 'alice2'
     INTO __current_batch_end, __current_block_num, __current_stage_name;
     ASSERT __current_stage_name = 'stage2', 'Alice2 got wrong stage != stage2';
     ASSERT __current_block_num = 110, 'Wrong Alice2 current block !=110';

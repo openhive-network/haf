@@ -66,19 +66,19 @@ DECLARE
 BEGIN
     -- check if contexts are correctly updated
     -- alice stage1
-    SELECT ((hc.loop).current_stage).*  FROM hive.contexts hc WHERE hc.name = 'alice' INTO __current_stage;
+    SELECT ((hc.loop).current_stage).*  FROM hive_data.contexts hc WHERE hc.name = 'alice' INTO __current_stage;
     ASSERT __current_stage = ('stage1',10 ,10 )::hive.application_stage, 'alice stage != (''stage1'',10 ,10 )';
     ASSERT hive.get_current_stage_name( 'alice' ) = 'stage1', 'Wrong name of Alice stage !=stage1';
     ASSERT hive.app_context_is_attached( 'alice' ) = FALSE, 'Context alice is attached';
 
     -- alice1 live
-    SELECT ((hc.loop).current_stage).* FROM hive.contexts hc WHERE hc.name = 'alice1' INTO __current_stage;
+    SELECT ((hc.loop).current_stage).* FROM hive_data.contexts hc WHERE hc.name = 'alice1' INTO __current_stage;
     ASSERT __current_stage = hive.live_stage(), 'alice1 stage  != live';
     ASSERT hive.get_current_stage_name( 'alice1' ) = 'live', 'Wrong name of Alice1 stage !=live';
     ASSERT hive.app_context_is_attached( 'alice1' ) = FALSE, 'Context alice1 is attached';
 
     -- alice2 stage2
-    SELECT ((hc.loop).current_stage).* FROM hive.contexts hc WHERE hc.name = 'alice2' INTO __current_stage;
+    SELECT ((hc.loop).current_stage).* FROM hive_data.contexts hc WHERE hc.name = 'alice2' INTO __current_stage;
     ASSERT __current_stage = ('stage2',40 ,100 )::hive.application_stage, 'alice2 stage  != (''stage2'',40 ,100 )';
     ASSERT hive.get_current_stage_name( 'alice2' ) = 'stage2', 'Wrong name of Alice2 stage !=stage2';
     ASSERT hive.app_context_is_attached( 'alice2' ) = FALSE, 'Context alice2 is attached';

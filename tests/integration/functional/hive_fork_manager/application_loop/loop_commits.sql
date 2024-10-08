@@ -47,7 +47,7 @@ DECLARE
     __tx_id_before_next_id BIGINT;
     __range_placeholder hive.blocks_range;
 BEGIN
-    UPDATE hive.contexts SET current_block_num = 7; -- to open any transaction
+    UPDATE hive_data.contexts SET current_block_num = 7; -- to open any transaction
     ASSERT pg_current_xact_id_if_assigned() IS NOT NULL, 'no tx at start';
 
     __tx_id_before_next_id :=  txid_current();

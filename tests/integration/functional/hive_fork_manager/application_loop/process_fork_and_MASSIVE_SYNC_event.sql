@@ -92,9 +92,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 6, 'Wrong current block num';
-    -- ASSERT ( SELECT events_id FROM hive.contexts WHERE name='context' ) = 6, 'Wrong events id';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name='context' ) = 6, 'Wrong irreversible';
+    ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name='context' ) = 6, 'Wrong current block num';
+    -- ASSERT ( SELECT events_id FROM hive_data.contexts WHERE name='context' ) = 6, 'Wrong events id';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name='context' ) = 6, 'Wrong irreversible';
 
     ASSERT ( SELECT COUNT(*)  FROM A.table1 ) = 2, 'Wrong number of rows in app table';
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 1 ), 'No id 1';

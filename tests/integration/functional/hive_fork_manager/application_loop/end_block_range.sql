@@ -66,13 +66,13 @@ DECLARE
 BEGIN
     -- check if contexts are correctly updated
     -- alice stage1
-    SELECT (hc.loop).end_block_range  FROM hive.contexts hc WHERE hc.name = 'alice' INTO __range_end;
+    SELECT (hc.loop).end_block_range  FROM hive_data.contexts hc WHERE hc.name = 'alice' INTO __range_end;
     ASSERT __range_end = 50, 'alice end range != 50';
 
-    SELECT (hc.loop).end_block_range  FROM hive.contexts hc WHERE hc.name = 'alice1' INTO __range_end;
+    SELECT (hc.loop).end_block_range  FROM hive_data.contexts hc WHERE hc.name = 'alice1' INTO __range_end;
     ASSERT __range_end = 50, 'alice1 end range != 50';
 
-    SELECT (hc.loop).end_block_range  FROM hive.contexts hc WHERE hc.name = 'alice2' INTO __range_end;
+    SELECT (hc.loop).end_block_range  FROM hive_data.contexts hc WHERE hc.name = 'alice2' INTO __range_end;
     ASSERT __range_end = 50, 'alice2 end range != 50';
 
 END;

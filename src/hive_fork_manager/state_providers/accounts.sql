@@ -8,11 +8,11 @@ CREATE OR REPLACE FUNCTION hive.start_provider_accounts( _context hive.context_n
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
     __table_name TEXT := _context || '_accounts';
 BEGIN
     SELECT hac.id
-    FROM hive.contexts hac
+    FROM hive_data.contexts hac
     WHERE hac.name = _context
     INTO __context_id;
 
@@ -44,12 +44,12 @@ CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block hiv
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
     __table_name TEXT := _context || '_accounts';
     __context_schema TEXT;
 BEGIN
     SELECT hac.id, hac.schema
-    FROM hive.contexts hac
+    FROM hive_data.contexts hac
     WHERE hac.name = _context
     INTO __context_id, __context_schema;
 
@@ -80,11 +80,11 @@ CREATE OR REPLACE FUNCTION hive.drop_state_provider_accounts( _context hive.cont
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
     __table_name TEXT := _context || '_accounts';
 BEGIN
     SELECT hac.id
-    FROM hive.contexts hac
+    FROM hive_data.contexts hac
     WHERE hac.name = _context
     INTO __context_id;
 

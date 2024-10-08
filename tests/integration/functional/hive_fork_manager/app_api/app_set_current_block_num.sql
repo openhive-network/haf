@@ -37,7 +37,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT hc.current_block_num FROM hive.contexts hc WHERE hc.name = 'context' ) = 2, 'current_block_num is not 2';
+    ASSERT ( SELECT hc.current_block_num FROM hive_data.contexts hc WHERE hc.name = 'context' ) = 2, 'current_block_num is not 2';
 END;
 $BODY$
 ;

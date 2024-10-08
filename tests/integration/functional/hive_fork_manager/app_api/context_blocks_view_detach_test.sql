@@ -39,7 +39,7 @@ BEGIN
         , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-    UPDATE hive.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 1;
+    UPDATE hive_data.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 1;
 END;
 $BODY$
 ;

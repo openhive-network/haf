@@ -142,7 +142,7 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
     SELECT ARRAY_AGG( hc.name ) INTO __result
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name::TEXT = ANY( _context_names ) AND hc.is_forking = TRUE;
 
     IF array_length( __result, 1 ) IS NULL THEN
@@ -188,7 +188,7 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
     -- prevent auto-detaching the context when app is actively asking for new blocks
-    UPDATE hive.contexts
+    UPDATE hive_data.contexts
     SET last_active_at = NOW()
     WHERE name =ANY(_context_names);
 
@@ -235,7 +235,7 @@ BEGIN
     LOCK TABLE hive.contexts_attachment IN ROW SHARE MODE;
 
     SELECT hc.current_block_num INTO __current_block_num
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = __lead_context;
 
     SELECT hir.consistent_block INTO __head_of_irreversible_block
@@ -248,7 +248,7 @@ BEGIN
 
     SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= GREATEST(__current_block_num, 1);
 
-    UPDATE hive.contexts
+    UPDATE hive_data.contexts
     SET   fork_id = __fork_id
       , irreversible_block = COALESCE( __head_of_irreversible_block, 0 )
       , events_id = 0 -- during app_next_block correct event will be found
@@ -360,7 +360,7 @@ BEGIN
           hive.context_detach( context.* )
     FROM unnest( _contexts ) as context;
 
-    UPDATE hive.contexts hc
+    UPDATE hive_data.contexts hc
     SET is_forking = false
       , last_active_at = NOW()
     WHERE hc.name = ANY( _contexts );
@@ -369,12 +369,12 @@ BEGIN
     -- because now the contexts are non-forking
     PERFORM
         hive.context_attach( context.text, hc.irreversible_block )
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 
     PERFORM hive.drop_rowid_index( hrt.origin_table_schema, hrt.origin_table_name )
     FROM hive.registered_tables hrt
-    JOIN hive.contexts hc ON hrt.context_id = hc.id
+    JOIN hive_data.contexts hc ON hrt.context_id = hc.id
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 END;
 $BODY$
@@ -407,7 +407,7 @@ BEGIN
         hive.context_detach( context.* )
     FROM unnest( _contexts ) as context;
 
-    UPDATE hive.contexts hc
+    UPDATE hive_data.contexts hc
     SET is_forking = true
       , last_active_at = NOW()
     WHERE hc.name = ANY( _contexts );
@@ -415,12 +415,12 @@ BEGIN
     -- to recreate triggers
     PERFORM
         hive.context_attach( context.text, hc.irreversible_block )
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 
     PERFORM hive.create_rowid_index( hrt.origin_table_schema, hrt.origin_table_name )
     FROM hive.registered_tables hrt
-    JOIN hive.contexts hc ON hrt.context_id = hc.id
+    JOIN hive_data.contexts hc ON hrt.context_id = hc.id
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 
 END;
@@ -450,7 +450,7 @@ DECLARE
     __schema VARCHAR;
 BEGIN
     SELECT schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context;
     EXECUTE format( 'ALTER TABLE %I.%s ADD COLUMN hive_rowid BIGINT NOT NULL DEFAULT 0', _table_schema, _table_name );
     EXECUTE format( 'ALTER TABLE %I.%s INHERIT %I.%s', _table_schema, _table_name, __schema, _context );
@@ -471,13 +471,13 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.app_get_irreversible_block()
-    RETURNS hive.contexts.irreversible_block%TYPE
+    RETURNS hive_data.contexts.irreversible_block%TYPE
     LANGUAGE plpgsql
     STABLE
 AS
 $BODY$
 DECLARE
-    __result hive.contexts.irreversible_block%TYPE;
+    __result hive_data.contexts.irreversible_block%TYPE;
 BEGIN
     SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hive.irreversible_data;
     RETURN __result;
@@ -485,18 +485,18 @@ END;
 $BODY$;
 
 CREATE OR REPLACE FUNCTION hive.app_get_irreversible_block( _context_name hive.context_name )
-    RETURNS hive.contexts.irreversible_block%TYPE
+    RETURNS hive_data.contexts.irreversible_block%TYPE
     LANGUAGE plpgsql
     STABLE
 AS
 $BODY$
 DECLARE
-    __result hive.contexts.irreversible_block%TYPE;
+    __result hive_data.contexts.irreversible_block%TYPE;
 BEGIN
     IF hive.app_is_forking( _context_name )
     THEN
         SELECT hc.irreversible_block INTO __result
-        FROM hive.contexts hc
+        FROM hive_data.contexts hc
         WHERE hc.name = _context_name;
     ELSE
         __result := COALESCE((SELECT hb.num from hive.blocks hb ORDER BY num DESC LIMIT 1), 0);
@@ -519,7 +519,7 @@ BEGIN
 
     SELECT ARRAY_AGG( DISTINCT(hca.is_attached) )  is_attached INTO __result
     FROM hive.contexts_attachment hca
-    JOIN hive.contexts hc ON hc.id = hca.context_id
+    JOIN hive_data.contexts hc ON hc.id = hca.context_id
     WHERE hc.name =ANY( _contexts );
 
     IF __result IS NULL OR ARRAY_LENGTH( __result, 1 ) != 1 THEN
@@ -554,14 +554,14 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     SELECT ARRAY_AGG(id) INTO __contexts_id
-    FROM hive.contexts
+    FROM hive_data.contexts
     WHERE name = ANY( _contexts );
 
     IF __contexts_id IS NULL THEN
         RAISE EXCEPTION 'Contexts do not exist';
     END IF;
 
-    UPDATE hive.contexts SET last_active_at = NOW()
+    UPDATE hive_data.contexts SET last_active_at = NOW()
     WHERE id =ANY( __contexts_id );
 END;
 $BODY$;
@@ -589,7 +589,7 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     SELECT ARRAY_AGG(id) INTO __contexts_id
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     JOIN hive.contexts_attachment hca ON hca.context_id = hc.id
     WHERE name = ANY( _contexts ) AND hca.is_attached = FALSE;
 
@@ -600,7 +600,7 @@ BEGIN
         RAISE EXCEPTION 'Cannot directly set current_block_num when contexts are attached';
     END IF;
 
-    UPDATE hive.contexts SET current_block_num = _block_num, last_active_at = NOW()
+    UPDATE hive_data.contexts SET current_block_num = _block_num, last_active_at = NOW()
     WHERE id =ANY( __contexts_id );
 END;
 $BODY$;
@@ -629,7 +629,7 @@ BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     SELECT ARRAY_AGG( current_block_num ) current_block_num INTO __result
-    FROM hive.contexts
+    FROM hive_data.contexts
     WHERE name =ANY( _contexts );
 
     IF __result IS NULL THEN
@@ -681,11 +681,11 @@ CREATE OR REPLACE FUNCTION hive.app_state_provider_import( _state_provider hive.
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
 BEGIN
 
     SELECT hac.id, hive.check_owner( hac.name, hac.owner )
-    FROM hive.contexts hac
+    FROM hive_data.contexts hac
     WHERE hac.name = _context
     INTO __context_id;
 
@@ -726,12 +726,12 @@ CREATE OR REPLACE FUNCTION hive.app_state_providers_update( _first_block hive.bl
 AS
 $BODY$
 DECLARE
-    __context_id hive.contexts.id%TYPE;
+    __context_id hive_data.contexts.id%TYPE;
     __is_attached BOOL;
     __current_block_num hive.blocks.num%TYPE;
 BEGIN
     SELECT hac.id, hca.is_attached, hac.current_block_num
-    FROM hive.contexts hac
+    FROM hive_data.contexts hac
     JOIN hive.contexts_attachment hca ON hac.id = hca.context_id
     WHERE hac.name = _context
         INTO __context_id, __is_attached, __current_block_num;
@@ -768,10 +768,10 @@ BEGIN
         );
 
     DELETE FROM hive.state_providers_registered hsp
-        USING hive.contexts hc
+        USING hive_data.contexts hc
     WHERE hc.name = _context AND hsp.state_provider = _state_provider AND hc.id = hsp.context_id;
 
-    UPDATE hive.contexts
+    UPDATE hive_data.contexts
     SET last_active_at = NOW()
     WHERE name = _context;
 END;
@@ -787,7 +787,7 @@ $BODY$
 BEGIN
     PERFORM hive.app_state_provider_drop( hsp.state_provider, _context )
     FROM hive.state_providers_registered hsp
-    JOIN hive.contexts hc ON hc.id = hsp.context_id
+    JOIN hive_data.contexts hc ON hc.id = hsp.context_id
     WHERE hc.name = _context;
 END;
 $BODY$
@@ -835,7 +835,7 @@ BEGIN
                  , (ctx.loop).end_block_range
         )
     ) INTO __number_of_rows
-    FROM hive.contexts ctx
+    FROM hive_data.contexts ctx
     JOIN hive.contexts_attachment hca ON hca.context_id = ctx.id
     WHERE ctx.name =ANY(_contexts);
 
@@ -854,7 +854,7 @@ $BODY$
 BEGIN
     RETURN COALESCE((SELECT BOOL_AND(hc.id IS NOT NULL AND hca.is_attached AND consistent_block - hc.current_block_num <= 1)
                      FROM UNNEST(_contexts) AS context_names(name)
-                     LEFT JOIN hive.contexts hc USING(name)
+                     LEFT JOIN hive_data.contexts hc USING(name)
                      JOIN hive.contexts_attachment hca ON hca.context_id = hc.id
                      CROSS JOIN hive.irreversible_data), FALSE);
 END;

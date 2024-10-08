@@ -93,7 +93,7 @@ BEGIN
          , ( hive.operation_id(10, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive.operation, 3 )
     ;
 
-    UPDATE hive.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 1;
+    UPDATE hive_data.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 1;
 END;
 $BODY$
 ;

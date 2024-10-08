@@ -33,23 +33,23 @@ DECLARE
 BEGIN
     SELECT * INTO __result FROM hive.app_next_block( 'context' );
     ASSERT __result = (1,4), 'Wrong blocks range instead of (1,4)';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context' ) = 4, 'Internally irreversible_block has changed';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context' ) = 4, 'Internally irreversible_block has changed';
 
     SELECT * INTO __result FROM hive.app_next_block( 'context' );
     ASSERT __result = (2,4), 'Wrong blocks range instead of (2,4)';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context' ) = 4, 'Internally irreversible_block has changed';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context' ) = 4, 'Internally irreversible_block has changed';
 
     SELECT * INTO __result FROM hive.app_next_block( 'context' );
     ASSERT __result = (3,4), 'Wrong blocks range instead of (3,4)';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context' ) = 4, 'Internally irreversible_block has changed';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context' ) = 4, 'Internally irreversible_block has changed';
 
     SELECT * INTO __result FROM hive.app_next_block( 'context' );
     ASSERT __result = (4,4), 'Wrong blocks range instead of (4,4)';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context' ) = 4, 'Internally irreversible_block has changed';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context' ) = 4, 'Internally irreversible_block has changed';
 
     SELECT * INTO __result FROM hive.app_next_block( 'context' );
     ASSERT __result IS NULL, 'NUll was expected after end on irreversible blocks';
-    ASSERT ( SELECT irreversible_block FROM hive.contexts WHERE name = 'context' ) = 4, 'Internally irreversible_block has changed';
+    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name = 'context' ) = 4, 'Internally irreversible_block has changed';
 END
 $BODY$
 ;

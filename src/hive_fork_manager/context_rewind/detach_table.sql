@@ -70,7 +70,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.attach_table( _table_schema TEXT, _table_name TEXT, _context_id hive.contexts.id%TYPE )
+CREATE OR REPLACE FUNCTION hive.attach_table( _table_schema TEXT, _table_name TEXT, _context_id hive_data.contexts.id%TYPE )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -83,7 +83,7 @@ DECLARE
 BEGIN
     SELECT hrt.id, hrt.shadow_table_name, hc.is_forking
     FROM hive.registered_tables hrt
-    JOIN hive.contexts hc ON hc.id = hrt.context_id
+    JOIN hive_data.contexts hc ON hc.id = hrt.context_id
     JOIN hive.contexts_attachment hca ON hc.id = hca.context_id
     WHERE
           hrt.origin_table_schema = lower( _table_schema )

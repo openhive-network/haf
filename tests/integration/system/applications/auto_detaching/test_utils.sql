@@ -25,7 +25,7 @@ DECLARE
   __time_shift INTERVAL;
 BEGIN
   SELECT c.last_active_at INTO __last_activity
-         FROM hive.contexts c
+         FROM hive_data.contexts c
          WHERE c.name = _contextName;
   
    IF __last_activity  IS NULL OR NOT __last_activity BETWEEN __now - _accepted_margin AND __now + _accepted_margin THEN

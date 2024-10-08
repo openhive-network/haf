@@ -54,20 +54,20 @@ CREATE OR REPLACE FUNCTION hive.register_state_provider_tables( _context hive.co
 AS
 $BODY$
 BEGIN
-    IF EXISTS ( SELECT 1 FROM hive.contexts WHERE name=_context AND registering_state_provider = TRUE )
+    IF EXISTS ( SELECT 1 FROM hive_data.contexts WHERE name=_context AND registering_state_provider = TRUE )
        OR hive.app_is_forking( _context ) THEN
             RETURN;
     END IF;
 
     -- register tables
-    UPDATE hive.contexts SET registering_state_provider = TRUE WHERE name =  _context;
+    UPDATE hive_data.contexts SET registering_state_provider = TRUE WHERE name =  _context;
 
     PERFORM hive.app_register_table( 'hive', unnest( hsp.tables ), _context )
     FROM hive.state_providers_registered hsp
-    JOIN hive.contexts hc ON hc.id = hsp.context_id
+    JOIN hive_data.contexts hc ON hc.id = hsp.context_id
     WHERE hc.name = _context;
 
-    UPDATE hive.contexts SET registering_state_provider = FALSE WHERE name =  _context;
+    UPDATE hive_data.contexts SET registering_state_provider = FALSE WHERE name =  _context;
 END;
 $BODY$
 ;
@@ -99,7 +99,7 @@ BEGIN
     FROM
         ( SELECT * FROM pg_event_trigger_ddl_commands() ) as tr
         JOIN hive.registered_tables hrt ON ( hrt.origin_table_schema || '.' || hrt.origin_table_name ) = tr.object_identity
-        JOIN hive.contexts hc ON hrt.context_id = hc.id
+        JOIN hive_data.contexts hc ON hrt.context_id = hc.id
     INTO __ignore_event, __shadow_table_name, __origin_table_schema, __origin_table_name, __context_schema;
 
     IF __shadow_table_name IS NULL THEN
@@ -114,7 +114,7 @@ BEGIN
             FROM pg_event_trigger_ddl_commands() as tr
             JOIN pg_catalog.pg_inherits pgi ON tr.objid = pgi.inhrelid
             JOIN pg_class pgc ON pgc.oid = tr.objid
-            JOIN hive.contexts hc ON hc.baseclass_id = pgi.inhparent
+            JOIN hive_data.contexts hc ON hc.baseclass_id = pgi.inhparent
             WHERE tr.object_type = 'table'
         ) as tables;
         RETURN;
@@ -201,7 +201,7 @@ BEGIN
         FROM pg_event_trigger_ddl_commands() as tr
         JOIN pg_catalog.pg_inherits pgi ON tr.objid = pgi.inhrelid
         JOIN pg_class pgc ON pgc.oid = tr.objid
-        JOIN hive.contexts hc ON hc.baseclass_id = pgi.inhparent
+        JOIN hive_data.contexts hc ON hc.baseclass_id = pgi.inhparent
         WHERE tr.object_type = 'table'
     ) as tables;
 END;

@@ -24,8 +24,8 @@ CREATE OR REPLACE PROCEDURE test_hived_test_when()
 AS
 $BODY$
 BEGIN
-    DELETE FROM hive.contexts WHERE name = 'alice_context';
-    UPDATE hive.contexts SET current_block_num = 100 WHERE name = 'alice_context';
+    DELETE FROM hive_data.contexts WHERE name = 'alice_context';
+    UPDATE hive_data.contexts SET current_block_num = 100 WHERE name = 'alice_context';
 END;
 $BODY$
 ;
@@ -36,7 +36,7 @@ AS
 $BODY$
 BEGIN
     -- hived need to see context data to correctly tailore reversible blocks and events queue
-    ASSERT EXISTS( SELECT * FROM hive.contexts WHERE name='alice_context' ), 'Hived does not see Alice''s context';
+    ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name='alice_context' ), 'Hived does not see Alice''s context';
 
     BEGIN
         CREATE TABLE hived_table(id INT ) INHERITS( alice.alice_context );
@@ -107,8 +107,8 @@ CREATE OR REPLACE PROCEDURE alice_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS( SELECT * FROM hive.contexts WHERE name = 'alice_context' ), 'Alice''s context was removed by hived';
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name = 'alice_context' ) = 2, 'Alice''s context was updated by hived';
+    ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name = 'alice_context' ), 'Alice''s context was removed by hived';
+    ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name = 'alice_context' ) = 2, 'Alice''s context was updated by hived';
     ASSERT ( SELECT COUNT(*) FROM hive.state_providers_registered ) = 1, 'Alice lost her state providers';
 END;
 $BODY$

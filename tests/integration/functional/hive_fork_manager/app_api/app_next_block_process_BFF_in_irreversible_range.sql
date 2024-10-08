@@ -46,7 +46,7 @@ BEGIN
         ( 'BACK_FROM_FORK', __fork_id ),
         ( 'NEW_BLOCK', 4)
     ;
-    SELECT fork_id INTO __fork_id FROM hive.contexts WHERE name = 'context';
+    SELECT fork_id INTO __fork_id FROM hive_data.contexts WHERE name = 'context';
 END
 $BODY$
 ;
@@ -61,13 +61,13 @@ DECLARE
     __blocks hive.blocks_range;
     __irreversible_block INT;
 BEGIN
-    SELECT fork_id INTO __context_fork_id FROM hive.contexts WHERE name = 'context'; --(1,3)
+    SELECT fork_id INTO __context_fork_id FROM hive_data.contexts WHERE name = 'context'; --(1,3)
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
-    SELECT irreversible_block INTO  __irreversible_block FROM hive.contexts WHERE name = 'context';
+    SELECT irreversible_block INTO  __irreversible_block FROM hive_data.contexts WHERE name = 'context';
     RAISE NOTICE 'Blocks: % ir % fork %', __blocks, __irreversible_block, __context_fork_id;
     ASSERT __blocks = (1,3), 'Wrong range of blocks !=(1,3)';
 
-    SELECT fork_id INTO __context_fork_id FROM hive.contexts WHERE name = 'context';
+    SELECT fork_id INTO __context_fork_id FROM hive_data.contexts WHERE name = 'context';
     SELECT MAX(hf.id) INTO __recent_fork_id FROM hive.fork hf;
 
     ASSERT __context_fork_id = __recent_fork_id, 'Context has invalid fork id';

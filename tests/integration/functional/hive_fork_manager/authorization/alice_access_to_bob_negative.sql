@@ -333,11 +333,11 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
     END;
 
-    DELETE FROM hive.contexts WHERE name='alice_context';
-    ASSERT EXISTS( SELECT * FROM hive.contexts WHERE name='alice_context' ), 'Bob can delete alice context';
+    DELETE FROM hive_data.contexts WHERE name='alice_context';
+    ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name='alice_context' ), 'Bob can delete alice context';
 
     BEGIN
-        UPDATE hive.contexts SET name='false_alice' WHERE name='alice_context';
+        UPDATE hive_data.contexts SET name='false_alice' WHERE name='alice_context';
         ASSERT FALSE, 'Bob can update Alice context';
     EXCEPTION WHEN OTHERS THEN
     END;

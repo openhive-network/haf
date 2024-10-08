@@ -256,7 +256,7 @@ BEGIN
     SELECT COALESCE( min(hc.fork_id), __min_ctx_fork_id )
          , COALESCE( min(irreversible_block), __lowest_irreversible_block )
     INTO __min_ctx_fork_id, __lowest_irreversible_block
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     JOIN hive.contexts_attachment hca ON hca.context_id = hc.id
     WHERE hca.is_attached = TRUE
     AND hc.is_forking = TRUE;
@@ -321,7 +321,7 @@ BEGIN
     WHERE heq.event != 'BACK_FROM_FORK' AND heq.block_num = ( _new_irreversible_block + 1 ); --next block after irreversible
 
     -- You may think that SELECT FOR UPDATE needs to be used here in USING clause
-    -- but SELECT FOR UPDATE will lock hive.contexts, so it want to acquire lock
+    -- but SELECT FOR UPDATE will lock hive_data.contexts, so it want to acquire lock
     -- between hived and application, and if application will modify contexts and never commit (by mistake or maliciously)
     -- then hived will be locked forever
     --
@@ -335,7 +335,7 @@ BEGIN
     -- context may back to event 9 and then when DELETE is being committed it will violate FK(event_queue(id)<->contexts(events_id))
 
     DELETE FROM hive.events_queue heq
-    USING ( SELECT MIN( hc.events_id) as id FROM hive.contexts hc ) as min_event
+    USING ( SELECT MIN( hc.events_id) as id FROM hive_data.contexts hc ) as min_event
     WHERE ( heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL )  AND ( heq.id < min_event.id OR min_event.id IS NULL ) AND heq.id != 0 AND heq.id != hive.unreachable_event_id();
 
 END;

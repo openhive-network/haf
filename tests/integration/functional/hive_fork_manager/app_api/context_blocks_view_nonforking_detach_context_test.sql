@@ -39,7 +39,7 @@ BEGIN
     ;
 
     -- it is important that currently we are at first block, lower than irreversible block
-    UPDATE hive.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 1;
+    UPDATE hive_data.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 1;
 END;
 $BODY$
 ;

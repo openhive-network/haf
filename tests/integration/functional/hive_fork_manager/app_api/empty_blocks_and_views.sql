@@ -67,7 +67,7 @@ BEGIN
         ( hive.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation, 2 )
     ;
 
-    UPDATE hive.contexts SET fork_id = 3, irreversible_block = 1, current_block_num = 2;
+    UPDATE hive_data.contexts SET fork_id = 3, irreversible_block = 1, current_block_num = 2;
 END;
 $BODY$
 ;

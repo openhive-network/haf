@@ -46,7 +46,7 @@ BEGIN
     PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'context' );
 
-    UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 6;
+    UPDATE hive_data.contexts SET current_block_num = 1, irreversible_block = 6;
 END;
 $BODY$
 ;

@@ -64,9 +64,9 @@ $BODY$
 DECLARE
         __result hive.blocks_range;
 BEGIN
-    ASSERT EXISTS ( SELECT * FROM hive.contexts hc JOIN hive.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context' AND hca.is_attached = TRUE ), 'Attach flag is still set';
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 1, 'Wrong current_block_num';
-    ASSERT ( SELECT is_forking FROM hive.contexts WHERE name='context' ) = FALSE, 'context is is still marked as forking';
+    ASSERT EXISTS ( SELECT * FROM hive_data.contexts hc JOIN hive.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context' AND hca.is_attached = TRUE ), 'Attach flag is still set';
+    ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name='context' ) = 1, 'Wrong current_block_num';
+    ASSERT ( SELECT is_forking FROM hive_data.contexts WHERE name='context' ) = FALSE, 'context is is still marked as forking';
 
     ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 0, 'Trigger inserted something into shadow table1';
 

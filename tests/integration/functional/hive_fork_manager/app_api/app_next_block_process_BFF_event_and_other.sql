@@ -89,7 +89,7 @@ LANGUAGE 'plpgsql'
 $BODY$
 BEGIN
     -- precondition, the context is on BFF(2) event
-    ASSERT ( SELECT hc.events_id FROM hive.contexts hc WHERE hc.name = 'context' ) = 5, 'The context is not on BFF(2) event';
+    ASSERT ( SELECT hc.events_id FROM hive_data.contexts hc WHERE hc.name = 'context' ) = 5, 'The context is not on BFF(2) event';
     -- the contex is moving forward, it is expected next move will set in on new version of block 3 eid=6
     PERFORM hive.app_next_block( 'context' );
 END
@@ -106,7 +106,7 @@ BEGIN
     -- constraint violation when a new NEW_IRREVERSIBLE event will be pushed and events queue is cleared
     -- from already processed events: DELETE operation on hive.events_queue takes eid=5 as an upper bound, but after the context move
     -- its ctx may back to eid=3, and DELETE will fail what stops the hived process
-    ASSERT ( SELECT hc.events_id FROM hive.contexts hc WHERE hc.name = 'context' ) = 6, 'Wrong events_id after move context in new fork';
+    ASSERT ( SELECT hc.events_id FROM hive_data.contexts hc WHERE hc.name = 'context' ) = 6, 'Wrong events_id after move context in new fork';
 END
 $BODY$
 ;

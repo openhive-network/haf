@@ -91,21 +91,21 @@ BEGIN
     -- check if contexts are correctly updated
     -- alice stage1
     SELECT (hc.loop).current_batch_end, hc.current_block_num
-    FROM hive.contexts hc WHERE hc.name = 'alice'
+    FROM hive_data.contexts hc WHERE hc.name = 'alice'
     INTO __current_batch_end, __current_block_num;
     ASSERT __current_block_num = 15, 'Wrong Alice current block !=15';
     ASSERT __current_batch_end = 15, 'Wrong Alice end of range !=15'; --not 51 because head block=50 limits range
     ASSERT hive.app_context_is_attached( 'alice' ) = FALSE, 'Context alice is attached';
 
     SELECT (hc.loop).current_batch_end, hc.current_block_num
-    FROM hive.contexts hc WHERE hc.name = 'alice1'
+    FROM hive_data.contexts hc WHERE hc.name = 'alice1'
     INTO __current_batch_end, __current_block_num;
     ASSERT __current_block_num = 15, 'Wrong Alice1 current block !=15';
     ASSERT __current_batch_end = 15, 'Wrong Alice1 end of range !=15'; --not 51 because head block=50 limits range
     ASSERT hive.app_context_is_attached( 'alice1' ) = FALSE, 'Context alice1 is attached';
 
     SELECT (hc.loop).current_batch_end, hc.current_block_num
-    FROM hive.contexts hc WHERE hc.name = 'alice2'
+    FROM hive_data.contexts hc WHERE hc.name = 'alice2'
     INTO __current_batch_end, __current_block_num;
     ASSERT __current_block_num = 15, 'Wrong Alice2 current block !=15';
     ASSERT __current_batch_end = 15, 'Wrong Alice2 end of range !=15'; --not 51 because head block=50 limits range

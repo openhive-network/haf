@@ -31,7 +31,7 @@ BEGIN
     PERFORM hive.app_create_context( 'attached_context_not_insync_is_forking', _schema => 'a', _is_forking => FALSE );
     PERFORM hive.app_create_context( 'attached_context_not_insync_loop', _schema => 'a' );
 
-    UPDATE hive.contexts ctx
+    UPDATE hive_data.contexts ctx
     SET
         current_block_num = 1
       , irreversible_block = 1
@@ -40,31 +40,31 @@ BEGIN
       , fork_id = 1
     ;
 
-    UPDATE hive.contexts ctx
+    UPDATE hive_data.contexts ctx
     SET
         current_block_num = 2
     WHERE ctx.name = 'attached_context_not_insync_bn'
     ;
 
-    UPDATE hive.contexts ctx
+    UPDATE hive_data.contexts ctx
     SET
         irreversible_block = 2
     WHERE ctx.name = 'attached_context_not_insync_ir'
     ;
 
-    UPDATE hive.contexts ctx
+    UPDATE hive_data.contexts ctx
     SET
         events_id = 1
     WHERE ctx.name = 'attached_context_not_insync_ev'
     ;
 
-    UPDATE hive.contexts ctx
+    UPDATE hive_data.contexts ctx
     SET
         fork_id = 2
     WHERE ctx.name = 'attached_context_not_insync_fr'
     ;
 
-    UPDATE hive.contexts ctx
+    UPDATE hive_data.contexts ctx
     SET
         loop = (10, hive.live_stage(), 10, 10, 10)::hive.application_loop_state
     WHERE ctx.name = 'attached_context_not_insync_loop'

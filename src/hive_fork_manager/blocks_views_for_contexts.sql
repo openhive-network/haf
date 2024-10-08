@@ -8,7 +8,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.context_data_view AS
@@ -27,7 +27,7 @@ EXECUTE format(
             , hc.current_block_num
         ) AS min_block,
         hc.current_block_num > hc.irreversible_block AND hc.is_forking AS reversible_range
-        FROM hive.contexts hc
+        FROM hive_data.contexts hc
         WHERE hc.name::text = ''%s''::text
         limit 1
         ;', __schema, _context_name
@@ -46,7 +46,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format( 'DROP VIEW IF EXISTS %s.context_data_view CASCADE;', __schema );
 END;
@@ -65,7 +65,7 @@ DECLARE
   __owner_name NAME;
   __schema TEXT;
 BEGIN
-  SELECT c.owner, c.schema INTO __owner_name, __schema FROM hive.contexts c WHERE c.name = _context_name;
+  SELECT c.owner, c.schema INTO __owner_name, __schema FROM hive_data.contexts c WHERE c.name = _context_name;
 
   EXECUTE format('ALTER VIEW %s.%s OWNER TO %s;', __schema, _view_base_name, __owner_name);
 
@@ -83,7 +83,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 
     EXECUTE format(
@@ -172,7 +172,7 @@ DECLARE
     __schema TEXT;
 BEGIN
 SELECT hc.schema INTO __schema
-FROM hive.contexts hc
+FROM hive_data.contexts hc
 WHERE hc.name = _context_name;
 
 EXECUTE format(
@@ -214,7 +214,7 @@ DECLARE
     __schema TEXT;
 BEGIN
 SELECT hc.schema INTO __schema
-FROM hive.contexts hc
+FROM hive_data.contexts hc
 WHERE hc.name = _context_name;
 EXECUTE format( 'DROP VIEW IF EXISTS %s.blocks_view CASCADE;', __schema );
 END;
@@ -231,7 +231,7 @@ DECLARE
     __schema TEXT;
 BEGIN
 SELECT hc.schema INTO __schema
-FROM hive.contexts hc
+FROM hive_data.contexts hc
 WHERE hc.name = _context_name;
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.transactions_view AS
@@ -298,7 +298,7 @@ DECLARE
     __schema TEXT;
 BEGIN
 SELECT hc.schema INTO __schema
-FROM hive.contexts hc
+FROM hive_data.contexts hc
 WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.transactions_view AS
@@ -328,7 +328,7 @@ DECLARE
     __schema TEXT;
 BEGIN
 SELECT hc.schema INTO __schema
-FROM hive.contexts hc
+FROM hive_data.contexts hc
 WHERE hc.name = _context_name;
     EXECUTE format( 'DROP VIEW IF EXISTS %s.transactions_view CASCADE;', __schema );
 END;
@@ -345,7 +345,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view_extended
@@ -410,7 +410,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view
@@ -466,7 +466,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view_extended
@@ -499,7 +499,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view
@@ -530,7 +530,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
     EXECUTE format( 'DROP VIEW IF EXISTS %s.operations_view CASCADE;', __schema );
 END;
@@ -547,7 +547,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
     EXECUTE format( 'DROP VIEW IF EXISTS %s.operations_view_extended CASCADE;', __schema );
 END;
@@ -564,7 +564,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
     'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW
@@ -618,7 +618,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
     'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW
@@ -646,7 +646,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
     EXECUTE format( 'DROP VIEW IF EXISTS %s.TRANSACTIONS_MULTISIG_VIEW CASCADE;', __schema );
 END;
@@ -663,7 +663,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.accounts_view AS
@@ -712,7 +712,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.accounts_view AS
@@ -738,7 +738,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format( 'DROP VIEW IF EXISTS %s.accounts_view CASCADE;', __schema );
 END;
@@ -755,7 +755,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.account_operations_view AS
@@ -811,7 +811,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.account_operations_view AS
@@ -840,7 +840,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
     EXECUTE format( 'DROP VIEW IF EXISTS %s.account_operations_view CASCADE;', __schema );
 END;
@@ -858,7 +858,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.applied_hardforks_view AS
@@ -912,7 +912,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.applied_hardforks_view AS
@@ -939,7 +939,7 @@ DECLARE
     __schema TEXT;
 BEGIN
     SELECT hc.schema INTO __schema
-    FROM hive.contexts hc
+    FROM hive_data.contexts hc
     WHERE hc.name = _context_name;
     EXECUTE format( 'DROP VIEW IF EXISTS %s.applied_hardforks_view;', __schema );
 END;

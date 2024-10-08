@@ -487,7 +487,7 @@ BEGIN
 
   SELECT ARRAY_AGG(ctxs.name) INTO __contexts FROM (
     SELECT c.name
-    FROM hive.contexts c
+    FROM hive_data.contexts c
     JOIN hive.contexts_attachment hca ON hca.context_id = c.id
     WHERE hca.is_attached
       AND c.last_active_at < __now - _app_timeout FOR UPDATE SKIP LOCKED
@@ -501,7 +501,7 @@ BEGIN
       BEGIN
       RAISE WARNING 'Attempting to automatically detach application context: %', __ctx;
       SELECT hc.current_block_num INTO __current_block_before_detach
-      FROM hive.contexts hc WHERE hc.name = __ctx;
+      FROM hive_data.contexts hc WHERE hc.name = __ctx;
       PERFORM hive.app_context_detach(__ctx);
       -- Detach functionality is specifically designed for use within the application's main loop.
       -- It automatically steps back by one block, which is previously incremented by 'app_next_block.'
@@ -515,7 +515,7 @@ BEGIN
       -- the only problem is with app_next_block which is executed by the iteration, but the lock taken here
       -- on the function beginning ensures the iteration loop work consistent
 
-      UPDATE hive.contexts
+      UPDATE hive_data.contexts
       SET current_block_num = __current_block_before_detach
       WHERE name = __ctx AND stages IS NULL;
       RAISE WARNING 'Done automatic detaching of application context: %', __ctx;

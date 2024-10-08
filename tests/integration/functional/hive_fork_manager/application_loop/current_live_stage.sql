@@ -43,7 +43,7 @@ BEGIN
     PERFORM hive.app_create_context( 'alice2', 'alice', _stages => __alice2_stages );
 
     -- temporary insert stage by force
-    UPDATE hive.contexts
+    UPDATE hive_data.contexts
     SET current_block_num = 80;
 END;
 $BODY$;

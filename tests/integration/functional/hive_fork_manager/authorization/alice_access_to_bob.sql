@@ -74,8 +74,8 @@ BEGIN
     PERFORM hive.app_get_current_block_num( ARRAY[ 'bob_context_detached' ] );
     PERFORM hive.app_get_current_block_num( ARRAY[ 'bob_context' ] );
 
-    ASSERT EXISTS( SELECT * FROM hive.contexts WHERE name = 'bob_context' ), 'Alice does not see Bob context';
-    ASSERT EXISTS( SELECT * FROM hive.contexts WHERE name = 'bob_context_detached' ), 'Alice does not see Bob context detached';
+    ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name = 'bob_context' ), 'Alice does not see Bob context';
+    ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name = 'bob_context_detached' ), 'Alice does not see Bob context detached';
 END
 $BODY$
 ;
@@ -91,8 +91,8 @@ BEGIN
     PERFORM hive.app_get_current_block_num( ARRAY[ 'alice_context_detached' ] );
     PERFORM hive.app_get_current_block_num( ARRAY[ 'alice_context' ] );
 
-    ASSERT EXISTS( SELECT * FROM hive.contexts WHERE name = 'alice_context' ), 'Bob does not see Alice context';
-    ASSERT EXISTS( SELECT * FROM hive.contexts WHERE name = 'alice_context_detached' ), 'Bob does not see Alice context detached';
+    ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name = 'alice_context' ), 'Bob does not see Alice context';
+    ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name = 'alice_context_detached' ), 'Bob does not see Alice context detached';
 END;
 $BODY$
 ;
