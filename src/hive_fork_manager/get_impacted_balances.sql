@@ -8,11 +8,11 @@ CREATE TYPE hive.impacted_balances_return AS
 );
 
 CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body hive.operation, IN _is_hf01 bool)
-RETURNS SETOF impacted_balances_return
+RETURNS SETOF hive.impacted_balances_return
 AS 'MODULE_PATHNAME', 'get_impacted_balances' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body text, IN _is_hf01 bool)
-  RETURNS SETOF impacted_balances_return
+  RETURNS SETOF hive.impacted_balances_return
   LANGUAGE plpgsql
   VOLATILE
 AS
