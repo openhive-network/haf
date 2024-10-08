@@ -29,8 +29,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 hs WHERE hs.id = 123 AND hs.smth='balbla' ) = 2, 'No expected id value in shadow table';
-    ASSERT EXISTS ( SELECT FROM hive.shadow_a_table1 hs WHERE hs.id = 123 AND hs.smth='balbla' AND hs.hive_block_num = 2 AND hs.hive_operation_type = 'DELETE' AND hive_operation_id = 2 ), 'Wrong block num';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 hs WHERE hs.id = 123 AND hs.smth='balbla' ) = 2, 'No expected id value in shadow table';
+    ASSERT EXISTS ( SELECT FROM hive_data.shadow_a_table1 hs WHERE hs.id = 123 AND hs.smth='balbla' AND hs.hive_block_num = 2 AND hs.hive_operation_type = 'DELETE' AND hive_operation_id = 2 ), 'Wrong block num';
 END
 $BODY$
 ;

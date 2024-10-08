@@ -15,7 +15,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
     AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM hive.contexts ) = 999, 'Wrong number of contexts !=999';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.contexts ) = 999, 'Wrong number of contexts !=999';
 END
 $BODY$
 ;

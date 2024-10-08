@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.validate_stages( _stages hive.application_stages )
+CREATE OR REPLACE FUNCTION hive.validate_stages( _stages hive_data.application_stages )
 RETURNS void
 LANGUAGE plpgsql
 IMMUTABLE
@@ -25,7 +25,7 @@ BEGIN
 
     SELECT count(*) INTO __number_of_stages
     FROM ( SELECT ROW(s.*) FROM UNNEST( _stages ) s ) as s1
-    WHERE s1.row = hive.live_stage();
+    WHERE s1.row = hive_data.live_stage();
 
     IF __number_of_stages = 0 THEN
         RAISE EXCEPTION 'No live stage in stages array %', _stages;
@@ -35,7 +35,7 @@ $BODY$;
 
 -- abs livesync occur when context is working on reversible blocks
 -- is a subset of livesync, which may occur starting form some distance to irreversible head block
-CREATE OR REPLACE FUNCTION hive.is_abs_livesync( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.is_abs_livesync( _contexts hive_data.contexts_group )
     RETURNS BOOL
     LANGUAGE plpgsql
     STABLE
@@ -45,8 +45,8 @@ DECLARE
     __lead_context_distance_to_irr_hb INTEGER;
 BEGIN
     SELECT
-        ( ( SELECT COALESCE( hid.consistent_block, 0 ) - ctx.current_block_num FROM hive.irreversible_data hid ) ) INTO __lead_context_distance_to_irr_hb
-    FROM hive.contexts ctx
+        ( ( SELECT COALESCE( hid.consistent_block, 0 ) - ctx.current_block_num FROM hive_data.irreversible_data hid ) ) INTO __lead_context_distance_to_irr_hb
+    FROM hive_data.contexts ctx
     WHERE ctx.name = _contexts [ 1 ];
 
     RETURN __lead_context_distance_to_irr_hb <= 0;
@@ -54,8 +54,8 @@ END;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION hive.get_current_stage( _contexts hive.contexts_group )
-    RETURNS TABLE( stage hive.application_stage, context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.get_current_stage( _contexts hive_data.contexts_group )
+    RETURNS TABLE( stage hive_data.application_stage, context hive_data.context_name )
     LANGUAGE plpgsql
     STABLE
 AS
@@ -68,23 +68,23 @@ BEGIN
     -- if we are traversing reversible blocks
     IF hive.is_abs_livesync( _contexts ) THEN
         RETURN QUERY SELECT
-            hive.live_stage() as stage
+            hive_data.live_stage() as stage
           , UNNEST( _contexts ) as context
         ;
     END IF;
 
     SELECT
-        ( ( SELECT COALESCE( MAX(hb.num), 0 ) - ctx.current_block_num FROM hive.blocks hb ) ) INTO __lead_context_distance_to_irr_hb
-    FROM hive.contexts ctx
+        ( ( SELECT COALESCE( MAX(hb.num), 0 ) - ctx.current_block_num FROM hive_data.blocks hb ) ) INTO __lead_context_distance_to_irr_hb
+    FROM hive_data.contexts ctx
     WHERE ctx.name = _contexts [ 1 ];
 
     RETURN QUERY
     WITH stages AS MATERIALIZED (
         SELECT
-              UNNEST( ctx.stages )::hive.application_stage as stage
+              UNNEST( ctx.stages )::hive_data.application_stage as stage
             , ctx.name as context
             , ctx.current_block_num as current_block_num
-        FROM hive.contexts ctx
+        FROM hive_data.contexts ctx
         WHERE ctx.name = ANY( _contexts )
     ), stages_and_distance AS MATERIALIZED (
         SELECT

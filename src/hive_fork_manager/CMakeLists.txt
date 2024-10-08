@@ -1,6 +1,7 @@
 ADD_PSQL_EXTENSION(
     NAME hive_fork_manager
-    SCHEMA_SOURCES context_rewind/data_schema_types.sql
+    SCHEMA_SOURCES schemas.sql
+             context_rewind/data_schema_types.sql
              application_loop/stages.sql
              context_rewind/data_schema.sql
              context_rewind/table_schema.sql
@@ -20,6 +21,7 @@ ADD_PSQL_EXTENSION(
              hived_api_impl_indexes.sql
              hived_api.sql
              state_providers/keyauth_types.sql
+             save_restore_view_data.sql
 
     DEPLOY_SOURCES trigger_switch/trigger_off.sql
             context_rewind/sink_id_functions.sql
@@ -39,11 +41,11 @@ ADD_PSQL_EXTENSION(
             block_day_stats_view.sql
             block_day_stats_all_op_view.sql
             blocks_views_for_contexts.sql
+            state_providers/keyauth.sql
             get_keyauths.sql
             get_metadata.sql
             get_vesting_balance.sql
             state_providers/accounts.sql
-            state_providers/keyauth.sql
             state_providers/metadata.sql
             hived_api_impl.sql
             app_api_impl.sql

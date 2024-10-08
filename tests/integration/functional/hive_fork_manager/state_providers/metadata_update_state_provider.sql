@@ -5,7 +5,7 @@ AS
 $BODY$
 BEGIN
 
-    INSERT INTO hive.operation_types
+    INSERT INTO hive_data.operation_types
     VALUES
         ( 43, 'hive::protocol::account_update2_operation', FALSE ),
         ( 9, 'hive::protocol::account_create_operation', FALSE ),
@@ -15,7 +15,7 @@ BEGIN
          -- non containing keys
     ;
  
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     VALUES
            ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -35,7 +35,7 @@ BEGIN
          , (16, '\xBADDD0', '\xCAFED0', '2016-06-22 19:10:33-09'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
      ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hive_data.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1),
     (6, 'test-safari', 1),
     (7, 'howo', 1),
@@ -52,7 +52,7 @@ BEGIN
     (18, 'eos-polska', 1)
     ;
 
-    INSERT INTO hive.transactions
+    INSERT INTO hive_data.transactions
     VALUES
            ( 1, 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
          , ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
@@ -61,7 +61,7 @@ BEGIN
          , ( 5, 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hive.operations
+    INSERT INTO hive_data.operations
     VALUES
     -- account_update2_operation
         -- posting json metadata exists, json metadata empty
@@ -75,7 +75,7 @@ BEGIN
                 "extensions": []
             }
         }            
-        '::jsonb::hive.operation),
+        '::jsonb::hive_data.operation),
 
         --empty json and posting metadata
         ( hive.operation_id(2, 43, 0), 0, 0, '
@@ -87,7 +87,7 @@ BEGIN
                     "posting_json_metadata": "\"\"",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hive_data.operation
         ),
 
         ( hive.operation_id(15, 43, 0), 0, 0, '
@@ -99,7 +99,7 @@ BEGIN
                     "posting_json_metadata": "{}",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hive_data.operation
         ),
 
 
@@ -113,7 +113,7 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hive_data.operation
         ),
 
         --posting metadata equal to ""
@@ -126,7 +126,7 @@ BEGIN
                 "posting_json_metadata": "\"\"",
                 "extensions": []
             }
-        }'::jsonb::hive.operation),
+        }'::jsonb::hive_data.operation),
 
         --posting_metadata equal to {}
         ( hive.operation_id(5, 43, 0), 0, 0, '
@@ -139,7 +139,7 @@ BEGIN
                     "posting_json_metadata": "{}",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hive_data.operation
         ),
 
     -- account_create operation 
@@ -188,7 +188,7 @@ BEGIN
                     "memo_key": "STM84bJQnKmM7rMAbsFPXZpQTQi5rBscbpuXkJ6XuVYEundE2Q1yx",
                     "json_metadata": "{}"
                 }
-            }'::jsonb::hive.operation),
+            }'::jsonb::hive_data.operation),
 
         ( hive.operation_id(16, 43, 0), 0, 0, '
             {
@@ -199,7 +199,7 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hive_data.operation
         ),
 
         -- json metadata equal to  ""
@@ -247,7 +247,7 @@ BEGIN
                     "memo_key": "STM6NrLK9cwh9aAdouhSL3KhucAXU4ejReXF1vPvCeWXKrisMcoa8",
                     "json_metadata": "\"\""
                 }
-            }'::jsonb::hive.operation),
+            }'::jsonb::hive_data.operation),
 
         --json metadata equal to {}
         ( hive.operation_id(8, 9, 0), 0, 0, '
@@ -294,7 +294,7 @@ BEGIN
                     "memo_key": "STM5eK3sJ42oUd6KB5AZU5AHXdxBBK6tcfw69rTx7phnHH3yBmQxk",
                     "json_metadata": "{}"
                 }
-            }'::jsonb::hive.operation),
+            }'::jsonb::hive_data.operation),
 
         -- json metadata with a non empty value
         ( hive.operation_id(9, 9, 0), 0, 0, '
@@ -341,7 +341,7 @@ BEGIN
                     "memo_key": "STM5Da24pp7ZztCipiUjp32eYxHXiQPDApY43PiMTfs9ivbhBrdgX",
                     "json_metadata": "{\"profile\":{\"about\":\"This account was instantly created via @hivewallet.app - available for iOS and Android!\",\"website\":\"https://hivewallet.app\"}}"
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hive_data.operation
         ),
 
     -- account_create_with_delegation_operation 
@@ -410,7 +410,7 @@ BEGIN
                     "json_metadata": "{\"owner\":\"genievot\"}",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hive_data.operation
         ),
 
     -- account_update2_operation
@@ -423,7 +423,7 @@ BEGIN
                     "posting_json_metadata": "{\"profile\":{\"name\":\"Jeremy\",\"about\":\"               \",\"cover_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg\",\"profile_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg\",\"website\":\" \",\"location\":\"NC, USA\",\"pinned\":\"\",\"version\":2,\"portfolio\":\"enabled\",\"trail\":true,\"collections\":\"enabled\"}}",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation),
+            }'::jsonb::hive_data.operation),
 
     -- account_update_operation 
         ( hive.operation_id(12, 10, 0), 0, 0, '
@@ -493,7 +493,7 @@ BEGIN
                     "memo_key": "STM6jwfUrLcnd47hX87JQv6Q78UwUZm7RPAfjqjtQ2K7793Jsjuoy",
                     "json_metadata": "{\"beneficiaries\":[{\"name\":\"threespeak\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}"
                 }
-            }'::jsonb::hive.operation),
+            }'::jsonb::hive_data.operation),
 
     -- create_claimed_account_operation
         ( hive.operation_id(13, 23, 0), 0, 0, '
@@ -536,7 +536,7 @@ BEGIN
                     "json_metadata": "{\"beneficiaries\":[{\"name\":\"fractalnode\",\"weight\":300,\"label\":\"referrer\"},{\"name\":\"ocdb\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hive_data.operation
         ),
 
         -- second update for the same account in the blocks range
@@ -549,7 +549,7 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hive_data.operation
         )
 
 
@@ -560,7 +560,7 @@ BEGIN
     PERFORM hive.app_state_provider_import( 'METADATA', 'context' );
     PERFORM hive.app_context_detach( 'context' );
 
-    UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 16;
+    UPDATE hive_data.contexts SET current_block_num = 1, irreversible_block = 16;
 
 END;
 $BODY$
@@ -654,7 +654,7 @@ STABLE AS
 $BODY$
 BEGIN ASSERT 1 = (
         SELECT COUNT(*)
-        FROM hive.context_metadata
+        FROM hive_data.context_metadata
         WHERE _account_id = account_id AND
               _json_metadata = json_metadata AND
               _posting_json_metadata = posting_json_metadata
