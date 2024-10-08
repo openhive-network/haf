@@ -44,13 +44,13 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     auto NUMBER_OF_PROCESSORS_THREADS = ONE_THREAD_WRITERS_NUMBER + operations_threads + transactions_threads + account_operation_threads;
     auto execute_push_block = [this](block_num_rendezvous_trigger::BLOCK_NUM _block_num ){
       if ( !_block.empty() ) {
-        std::string block_to_dump = _block + "::hive.blocks";
-        std::string transactions_to_dump = "ARRAY[" + _transaction_writer->get_merged_strings() + "]::hive.transactions[]";
-        std::string signatures_to_dump = "ARRAY[" + std::move( _transactions_multisig ) + "]::hive.transactions_multisig[]";
-        std::string operations_to_dump = "ARRAY[" + _operation_writer->get_merged_strings() + "]::hive.operations[]";
-        std::string accounts_to_dump = "ARRAY[" + std::move( _accounts ) + "]::hive.accounts[]";
-        std::string account_operations_to_dump = "ARRAY[" + _account_operations_writer->get_merged_strings() + "]::hive.account_operations[]";
-        std::string applied_hardforks_to_dump = "ARRAY[" + std::move( _applied_hardforks ) + "]::hive.applied_hardforks[]";
+        std::string block_to_dump = _block + "::hive_data.blocks";
+        std::string transactions_to_dump = "ARRAY[" + _transaction_writer->get_merged_strings() + "]::hive_data.transactions[]";
+        std::string signatures_to_dump = "ARRAY[" + std::move( _transactions_multisig ) + "]::hive_data.transactions_multisig[]";
+        std::string operations_to_dump = "ARRAY[" + _operation_writer->get_merged_strings() + "]::hive_data.operations[]";
+        std::string accounts_to_dump = "ARRAY[" + std::move( _accounts ) + "]::hive_data.accounts[]";
+        std::string account_operations_to_dump = "ARRAY[" + _account_operations_writer->get_merged_strings() + "]::hive_data.account_operations[]";
+        std::string applied_hardforks_to_dump = "ARRAY[" + std::move( _applied_hardforks ) + "]::hive_data.applied_hardforks[]";
 
         std::string sql_command = "SELECT hive.push_block(" +
                 block_to_dump +

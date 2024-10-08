@@ -13,7 +13,7 @@ SET ROLE test_owner;
 
 CREATE SCHEMA test AUTHORIZATION test_owner;
 
-CREATE OR REPLACE FUNCTION test.validate_activity_time(IN _contextName hive.context_name, IN _accepted_margin INTERVAL = '1 min'::INTERVAL)
+CREATE OR REPLACE FUNCTION test.validate_activity_time(IN _contextName hive_data.context_name, IN _accepted_margin INTERVAL = '1 min'::INTERVAL)
   RETURNS void
   LANGUAGE plpgsql
   STABLE
@@ -25,7 +25,7 @@ DECLARE
   __time_shift INTERVAL;
 BEGIN
   SELECT c.last_active_at INTO __last_activity
-         FROM hive.contexts c
+         FROM hive_data.contexts c
          WHERE c.name = _contextName;
   
    IF __last_activity  IS NULL OR NOT __last_activity BETWEEN __now - _accepted_margin AND __now + _accepted_margin THEN
@@ -37,7 +37,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION test.verify_is_attached_context(IN _contextName hive.context_name, IN _expected BOOLEAN)
+CREATE OR REPLACE FUNCTION test.verify_is_attached_context(IN _contextName hive_data.context_name, IN _expected BOOLEAN)
   RETURNS void
   LANGUAGE plpgsql
   STABLE

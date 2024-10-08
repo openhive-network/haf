@@ -32,7 +32,7 @@ DECLARE
   EndTime timestamptz;
   Delta double precision;
 BEGIN
-    TRUNCATE hive.shadow_public_src_table; --to do not revert inserts
+    TRUNCATE hive_data.shadow_public_src_table; --to do not revert inserts
     StartTime := clock_timestamp();
     UPDATE src_table SET name='changed';
     EndTime := clock_timestamp();

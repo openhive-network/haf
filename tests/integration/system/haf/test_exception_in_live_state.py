@@ -19,7 +19,7 @@ def test_exception_in_live_state(haf_node):
 
     # Alter operations table so that worker thread raises an exception when storing data in it
     session = haf_node.session
-    session.execute(sqlalchemy.text('ALTER TABLE hive.operations ADD CONSTRAINT check_length CHECK (octet_length(body_binary) <= 21)'))
+    session.execute(sqlalchemy.text('ALTER TABLE hive_data.operations ADD CONSTRAINT check_length CHECK (octet_length(body_binary) <= 21)'))
     connect_nodes(init_node, haf_node)
     haf_node.config.psql_index_threshold = 1
     haf_node.run(

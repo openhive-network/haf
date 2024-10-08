@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 SQL_TABLE_COUNT: Final[str] = """
 SELECT COUNT(*)
-FROM hive.{table};
+FROM hive_data.{table};
 """
 
 class Test:

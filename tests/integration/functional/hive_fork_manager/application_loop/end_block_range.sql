@@ -4,12 +4,12 @@ AS
 $BODY$
 BEGIN
     -- here we pretend that 50 is the head block
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     VALUES
         ( 50, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hive_data.accounts( id, name, block_num )
     VALUES (5, 'initminer', 50)
     ;
 
@@ -23,20 +23,20 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 DECLARE
-    __alice_stages hive.application_stages :=
-        ARRAY[ ('stage2',100 ,100 )::hive.application_stage
-            , ('stage1',10 ,10 )::hive.application_stage
-            , hive.live_stage()
+    __alice_stages hive_data.application_stages :=
+        ARRAY[ ('stage2',100 ,100 )::hive_data.application_stage
+            , ('stage1',10 ,10 )::hive_data.application_stage
+            , hive_data.live_stage()
             ];
-    __alice1_stages hive.application_stages :=
-        ARRAY[ ('stage2',100 ,100 )::hive.application_stage
-            , ('stage1',60 ,10 )::hive.application_stage
-            , hive.live_stage()
+    __alice1_stages hive_data.application_stages :=
+        ARRAY[ ('stage2',100 ,100 )::hive_data.application_stage
+            , ('stage1',60 ,10 )::hive_data.application_stage
+            , hive_data.live_stage()
             ];
-    __alice2_stages hive.application_stages :=
-        ARRAY[ ('stage2',40 ,100 )::hive.application_stage
-            , ('stage1',30 ,10 )::hive.application_stage
-            , hive.live_stage()
+    __alice2_stages hive_data.application_stages :=
+        ARRAY[ ('stage2',40 ,100 )::hive_data.application_stage
+            , ('stage1',30 ,10 )::hive_data.application_stage
+            , hive_data.live_stage()
             ];
 BEGIN
     CREATE SCHEMA alice;
@@ -66,13 +66,13 @@ DECLARE
 BEGIN
     -- check if contexts are correctly updated
     -- alice stage1
-    SELECT (hc.loop).end_block_range  FROM hive.contexts hc WHERE hc.name = 'alice' INTO __range_end;
+    SELECT (hc.loop).end_block_range  FROM hive_data.contexts hc WHERE hc.name = 'alice' INTO __range_end;
     ASSERT __range_end = 50, 'alice end range != 50';
 
-    SELECT (hc.loop).end_block_range  FROM hive.contexts hc WHERE hc.name = 'alice1' INTO __range_end;
+    SELECT (hc.loop).end_block_range  FROM hive_data.contexts hc WHERE hc.name = 'alice1' INTO __range_end;
     ASSERT __range_end = 50, 'alice1 end range != 50';
 
-    SELECT (hc.loop).end_block_range  FROM hive.contexts hc WHERE hc.name = 'alice2' INTO __range_end;
+    SELECT (hc.loop).end_block_range  FROM hive_data.contexts hc WHERE hc.name = 'alice2' INTO __range_end;
     ASSERT __range_end = 50, 'alice2 end range != 50';
 
 END;

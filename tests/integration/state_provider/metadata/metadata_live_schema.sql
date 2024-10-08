@@ -58,7 +58,7 @@ BEGIN
     m.json_metadata,
     m.posting_json_metadata
   FROM
-    hive.metadata_live_metadata m JOIN hive.accounts_view av ON m.account_id = av.id
+    hive_data.metadata_live_metadata m JOIN hive.accounts_view av ON m.account_id = av.id
   WHERE av.name = _account;
 END
 $$;
