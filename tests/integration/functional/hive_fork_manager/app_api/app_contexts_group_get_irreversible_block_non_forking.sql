@@ -9,11 +9,11 @@ BEGIN
     PERFORM hive.app_create_context( 'context_b', _schema => 'a', _is_forking =>FALSE );
 
     -- hived inserts once irreversible block
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hive_data.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
          , (6, 'alice', 1)
     ;

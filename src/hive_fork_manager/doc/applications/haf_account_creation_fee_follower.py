@@ -22,7 +22,7 @@ class sql_account_creation_fee_follower(haf_base):
     self.get_witness_updates = '''
       SELECT block_num, body
       FROM hive.{}_operations_view o
-      JOIN hive.operation_types ot ON o.op_type_id = ot.id
+      JOIN hive_data.operation_types ot ON o.op_type_id = ot.id
       WHERE ot.name = 'hive::protocol::witness_update_operation' AND block_num >= {} and block_num <= {}
     '''
     self.insert_into_history  = []

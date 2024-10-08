@@ -78,7 +78,7 @@ DROP TYPE IF EXISTS hive.hive_future_extensions CASCADE;
 CREATE TYPE hive.hive_future_extensions AS ();
 
 DROP DOMAIN IF EXISTS hive.extensions_type CASCADE;
-CREATE DOMAIN hive.extensions_type AS hive_future_extensions[];
+CREATE DOMAIN hive.extensions_type AS hive.hive_future_extensions[];
 
 DROP TYPE IF EXISTS hive.comment_operation CASCADE;
 CREATE TYPE hive.comment_operation AS (
@@ -467,8 +467,8 @@ CREATE TYPE hive.pow2_operation AS (
   props hive.legacy_chain_properties
 );
 
-DROP TYPE IF EXISTS pow CASCADE;
-CREATE TYPE pow AS (
+DROP TYPE IF EXISTS hive.pow CASCADE;
+CREATE TYPE hive.pow AS (
   worker hive.public_key_type,
   input hive.digest_type,
   signature hive.signature_type,
