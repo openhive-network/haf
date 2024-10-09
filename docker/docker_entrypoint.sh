@@ -79,6 +79,7 @@ enable_pg_cron() {
     sudo service postgresql restart
     psql -c 'CREATE EXTENSION IF NOT EXISTS pg_cron' haf_block_log
     psql -c 'GRANT USAGE ON SCHEMA cron to haf_maintainer' haf_block_log
+    psql -c 'GRANT USAGE ON SCHEMA cron to pghero' haf_block_log
     psql -f ~/cron_jobs.sql haf_block_log
 }
 
