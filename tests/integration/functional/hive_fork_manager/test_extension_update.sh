@@ -61,7 +61,7 @@ done
 
 test_extension_update() {
 
-    POSTGRES_VERSION=16
+    POSTGRES_VERSION=17
     # old libhfm has to be removed so in case of an corrupted setup of haf the old libhfm won't be used
     sudo rm -rf /usr/lib/postgresql/${POSTGRES_VERSION}/lib/libhfm-*
     # modify the hived_api.sql file

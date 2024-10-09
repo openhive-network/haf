@@ -7,7 +7,7 @@ set -eu -o pipefail
 SCRIPTPATH="$(cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P)"
 SCRIPTS_DIR="$SCRIPTPATH/../../../../scripts"
 UPDATE_DB_NAME=update-db-test
-POSTGRES_VERSION=16
+POSTGRES_VERSION=17
 
 export PGUSER="haf_admin"
 export PGHOST="/var/run/postgresql"
