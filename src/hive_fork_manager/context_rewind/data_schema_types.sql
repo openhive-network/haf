@@ -1,1 +1,1 @@
-CREATE TYPE hive.trigger_operation AS ENUM( 'INSERT', 'DELETE', 'UPDATE' );
+CREATE TYPE hive_data.trigger_operation AS ENUM( 'INSERT', 'DELETE', 'UPDATE' );
