@@ -20,14 +20,14 @@ BEGIN
     END IF;
 
     -- remove triggers functions
-    FOR  __trigger_funtion_name IN SELECT ht.function_name FROM hive.triggers ht
+    FOR  __trigger_funtion_name IN SELECT ht.function_name FROM hive_data.triggers ht
     WHERE ht.registered_table_id = __table_id
     LOOP
        EXECUTE format( 'DROP FUNCTION %s', __trigger_funtion_name );
     END LOOP;
 
     -- remove informations about triggers
-    DELETE FROM hive.triggers ht WHERE ht.registered_table_id = __table_id;
+    DELETE FROM hive_data.triggers ht WHERE ht.registered_table_id = __table_id;
 
     --drop shadow table
     EXECUTE format( 'DROP TABLE hive.%I', __shadow_table_name );

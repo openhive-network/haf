@@ -143,7 +143,7 @@ BEGIN
         EXCEPTION WHEN OTHERS THEN
     END;
 
-    ASSERT NOT EXISTS( SELECT * FROM hive.triggers WHERE trigger_name='hive_insert_trigger_bob_bob_table' ), 'Alice can see Bobs''s trigers from hive.triggers';
+    ASSERT NOT EXISTS( SELECT * FROM hive_data.triggers WHERE trigger_name='hive_insert_trigger_bob_bob_table' ), 'Alice can see Bobs''s trigers from hive_data.triggers';
     ASSERT NOT EXISTS( SELECT * FROM hive_data.registered_tables WHERE origin_table_name='bob_table' ), 'Alice can see Bobs''s tables from hive_data.registered_tables';
 
     BEGIN
@@ -298,7 +298,7 @@ BEGIN
         EXCEPTION WHEN OTHERS THEN
     END;
 
-    ASSERT NOT EXISTS( SELECT * FROM hive.triggers WHERE trigger_name='hive_insert_trigger_alice_alice_table' ), 'Bob can see Alice''s trigers from hive.triggers';
+    ASSERT NOT EXISTS( SELECT * FROM hive_data.triggers WHERE trigger_name='hive_insert_trigger_alice_alice_table' ), 'Bob can see Alice''s trigers from hive_data.triggers';
     ASSERT NOT EXISTS( SELECT * FROM hive_data.registered_tables WHERE origin_table_name='alice_table' ), 'Bob can see Alice''s tables from hive_data.registered_tables';
 
     BEGIN

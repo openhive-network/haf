@@ -377,7 +377,7 @@ BEGIN
     -- save information about the trigger function names
     -- it is required when triggers are removed automatically by postgres when a register table is dropped
     -- in such situation we made cleanup after the deletion in hive.clean_after_uregister_table
-    INSERT INTO hive.triggers( registered_table_id, trigger_name, function_name, owner )
+    INSERT INTO hive_data.triggers( registered_table_id, trigger_name, function_name, owner )
     VALUES
        ( __registered_table_id, __hive_insert_trigger_name, __hive_triggerfunction_name_insert, current_user )
      , ( __registered_table_id, __hive_delete_trigger_name, __hive_triggerfunction_name_delete, current_user )
@@ -419,7 +419,7 @@ BEGIN
     EXECUTE format( 'DROP TABLE IF EXISTS hive.%s CASCADE', __shadow_table_name );
 
     -- remove information about triggers
-    DELETE FROM hive.triggers WHERE registered_table_id = __registered_table_id;
+    DELETE FROM hive_data.triggers WHERE registered_table_id = __registered_table_id;
 
     -- remove entry about the regitered table
     DELETE FROM hive_data.registered_tables as hrt  WHERE hrt.origin_table_schema = lower( _table_schema ) AND hrt.origin_table_name = lower( _table_name );

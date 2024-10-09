@@ -41,19 +41,19 @@ BEGIN
     ASSERT NOT EXISTS ( SELECT FROM hive_data.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table_base' ), 'Table shall not be registerd';
 
     ---- triggers
-    ASSERT EXISTS ( SELECT FROM hive.triggers WHERE trigger_name='hive.insert_trigger_a_table1' AND function_name='hive.on_insert_a_table1' );
+    ASSERT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive.insert_trigger_a_table1' AND function_name='hive.on_insert_a_table1' );
     ASSERT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hive.insert_trigger_a_table1');
     ASSERT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_insert_a_table1');
 
-    ASSERT EXISTS ( SELECT FROM hive.triggers WHERE trigger_name='hive.delete_trigger_a_table1' AND function_name='hive.on_delete_a_table1'  );
+    ASSERT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive.delete_trigger_a_table1' AND function_name='hive.on_delete_a_table1'  );
     ASSERT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hive.delete_trigger_a_table1' );
     ASSERT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_delete_a_table1');
 --
-    ASSERT EXISTS ( SELECT FROM hive.triggers WHERE trigger_name='hive.update_trigger_a_table1' AND function_name='hive.on_update_a_table1' );
+    ASSERT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive.update_trigger_a_table1' AND function_name='hive.on_update_a_table1' );
     ASSERT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hive.update_trigger_a_table1' );
     ASSERT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_update_a_table1');
 --
-    ASSERT EXISTS ( SELECT FROM hive.triggers WHERE trigger_name='hive.truncate_trigger_a_table1' AND function_name='hive.on_truncate_a_table1' );
+    ASSERT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive.truncate_trigger_a_table1' AND function_name='hive.on_truncate_a_table1' );
     ASSERT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hive.truncate_trigger_a_table1' );
     ASSERT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_truncate_a_table1');
 END

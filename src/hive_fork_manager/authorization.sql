@@ -54,7 +54,7 @@ ALTER TABLE hive.write_ahead_log_state OWNER TO hived_group;
 -- generic protection for tables in hive schema
 -- 1. hived_group allow to edit every table in hive schema
 -- 2. hive_applications_group can ready every table in hive schema
--- 3. hive_applications_group can modify hive_data.contexts, hive_data.registered_tables, hive.triggers, hive.state_providers_registered
+-- 3. hive_applications_group can modify hive_data.contexts, hive_data.registered_tables, hive_data.triggers, hive.state_providers_registered
 GRANT ALL ON SCHEMA hive to hived_group, hive_applications_group;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA hive TO hived_group, hive_applications_group;
 GRANT ALL ON  ALL TABLES IN SCHEMA hive TO hived_group;
@@ -66,7 +66,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA hive_data TO hive_applications_group;
 GRANT ALL ON hive_data.contexts TO hive_applications_group;
 GRANT ALL ON hive_data.contexts_attachment TO hive_applications_group;
 GRANT ALL ON hive_data.registered_tables TO hive_applications_group;
-GRANT ALL ON hive.triggers TO hive_applications_group;
+GRANT ALL ON hive_data.triggers TO hive_applications_group;
 GRANT ALL ON hive.state_providers_registered TO hive_applications_group;
 
 -- protect an application rows aginst other applications
@@ -113,9 +113,9 @@ ALTER TABLE hive_data.registered_tables ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS policy_hive_registered_tables ON hive_data.registered_tables CASCADE;
 CREATE POLICY policy_hive_registered_tables ON hive_data.registered_tables FOR ALL USING ( hive.can_impersonate(current_user, owner) );
 
-ALTER TABLE hive.triggers ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS policy_hive_triggers ON hive.triggers CASCADE;
-CREATE POLICY policy_hive_triggers ON hive.triggers FOR ALL USING ( hive.can_impersonate(current_user, owner) );
+ALTER TABLE hive_data.triggers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS policy_hive_triggers ON hive_data.triggers CASCADE;
+CREATE POLICY policy_hive_triggers ON hive_data.triggers FOR ALL USING ( hive.can_impersonate(current_user, owner) );
 
 ALTER TABLE hive.state_providers_registered ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS dp_state_providers_registered ON hive.state_providers_registered CASCADE;
