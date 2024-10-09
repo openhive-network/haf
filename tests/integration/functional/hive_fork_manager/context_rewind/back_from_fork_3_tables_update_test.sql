@@ -18,9 +18,9 @@ BEGIN
 
     PERFORM hive.context_next_block( 'my_context' );
 
-    TRUNCATE hive.shadow_public_table1; --to do not revert inserts
-    TRUNCATE hive.shadow_public_table2; --to do not revert inserts
-    TRUNCATE hive.shadow_public_table3; --to do not revert inserts
+    TRUNCATE hive_data.shadow_public_table1; --to do not revert inserts
+    TRUNCATE hive_data.shadow_public_table2; --to do not revert inserts
+    TRUNCATE hive_data.shadow_public_table3; --to do not revert inserts
 
     UPDATE table1 SET smth='blabla4';
     UPDATE table2 SET smth='blabla5';
@@ -45,13 +45,13 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM table1 WHERE id=123 AND smth='blabla1' AND hive_rowid=1 ) = 1, 'Updated row was not reverted table1';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table1 ) = 0, 'Shadow table is not empty table2';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_table1 ) = 0, 'Shadow table is not empty table2';
 
     ASSERT ( SELECT COUNT(*) FROM table2 WHERE id=223 AND smth='blabla2' AND hive_rowid=1 ) = 1, 'Updated row was not reverted table2';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table2 ) = 0, 'Shadow table is not empty table2';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_table2 ) = 0, 'Shadow table is not empty table2';
 
     ASSERT ( SELECT COUNT(*) FROM table3 WHERE id=323 AND smth='blabla3' AND hive_rowid=1 ) = 1, 'Updated row was not reverted table3';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table3 ) = 0, 'Shadow table is not empty table3';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_table3 ) = 0, 'Shadow table is not empty table3';
 END
 $BODY$
 ;

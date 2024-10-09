@@ -72,7 +72,7 @@ BEGIN
 
 
     INSERT INTO A.table1( id ) VALUES (10);
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 1, 'Nothing was inserted into shadow table1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 ) = 1, 'Nothing was inserted into shadow table1';
 END
 $BODY$
 ;

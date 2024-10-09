@@ -99,7 +99,7 @@ BEGIN
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 2 ), 'No id 2';
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 3 ), 'No id 3';
 
-    ASSERT NOT EXISTS ( SELECT * FROM hive.shadow_a_table1 ), 'Shadow table is not empty';
+    ASSERT NOT EXISTS ( SELECT * FROM hive_data.shadow_a_table1 ), 'Shadow table is not empty';
 
     ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name='context2' ) = 4, 'Wrong current block num';
     ASSERT ( SELECT events_id FROM hive_data.contexts WHERE name='context2' ) = 5, 'Wrong events id';
@@ -111,7 +111,7 @@ BEGIN
     ASSERT EXISTS ( SELECT *  FROM B.table2 WHERE id = 3 ), 'No id 3';
     ASSERT EXISTS ( SELECT *  FROM B.table2 WHERE id = 4 ), 'No id 4';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_b_table2 ) = 1, 'Shadow table B.table2 is not empty';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_b_table2 ) = 1, 'Shadow table B.table2 is not empty';
 END
 $BODY$
 ;

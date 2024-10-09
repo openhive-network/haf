@@ -120,25 +120,25 @@ BEGIN
     END;
 
     BEGIN
-            PERFORM * FROM hive.shadow_alice_alice_table;
+            PERFORM * FROM hive_data.shadow_alice_alice_table;
     EXCEPTION WHEN OTHERS THEN
             ASSERT FALSE, 'Alice cannot read her own shadow table';
     END;
 
     BEGIN
-            PERFORM * FROM hive.shadow_bob_bob_table;
+            PERFORM * FROM hive_data.shadow_bob_bob_table;
             ASSERT FALSE, 'Alice can read Bobs''s shadow table';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        UPDATE hive.shadow_bob_bob_table SET hive_rowid = 0;
+        UPDATE hive_data.shadow_bob_bob_table SET hive_rowid = 0;
         ASSERT FALSE, 'Alice can update Bob''s shadow table';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DELETE FROM hive.shadow_bob_bob_table;
+        DELETE FROM hive_data.shadow_bob_bob_table;
         ASSERT FALSE, 'Alice can delete from Bob''s shadow table';
         EXCEPTION WHEN OTHERS THEN
     END;
@@ -275,25 +275,25 @@ BEGIN
     END;
 
     BEGIN
-        PERFORM * FROM hive.shadow_bob_bob_table;
+        PERFORM * FROM hive_data.shadow_bob_bob_table;
     EXCEPTION WHEN OTHERS THEN
         ASSERT FALSE, 'Bob cannot read his own shadow table';
     END;
 
     BEGIN
-        PERFORM * FROM hive.shadow_alice_alice_table;
+        PERFORM * FROM hive_data.shadow_alice_alice_table;
         ASSERT FALSE, 'Bob can read Alice''s shadow table';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        UPDATE hive.shadow_alice_alice_table SET hive_rowid = 0;
+        UPDATE hive_data.shadow_alice_alice_table SET hive_rowid = 0;
         ASSERT FALSE, 'Bob can update Alice''s shadow table';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DELETE FROM hive.shadow_alice_alice_table;
+        DELETE FROM hive_data.shadow_alice_alice_table;
         ASSERT FALSE, 'Bob can delete from Alice''s shadow table';
         EXCEPTION WHEN OTHERS THEN
     END;

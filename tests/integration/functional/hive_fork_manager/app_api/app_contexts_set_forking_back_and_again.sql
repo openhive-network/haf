@@ -82,10 +82,10 @@ BEGIN
 
 
     INSERT INTO A.table1( id ) VALUES (10);
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 1, 'Nothing was inserted into shadow table1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 ) = 1, 'Nothing was inserted into shadow table1';
 
     INSERT INTO B.table1( id ) VALUES (10);
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_b_table1 ) = 1, 'b) Nothing was inserted into shadow table1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_b_table1 ) = 1, 'b) Nothing was inserted into shadow table1';
 
     ASSERT EXISTS (SELECT 0 FROM pg_class where relname = 'idx_a_table1_row_id' ), 'No index for table a.table1 rowid still exists';
     ASSERT EXISTS (SELECT 0 FROM pg_class where relname = 'idx_b_table1_row_id' ), 'No index for table b.table1 rowid still exists';

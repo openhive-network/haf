@@ -101,7 +101,7 @@ BEGIN
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 2 ), 'No id 2';
 
 
-    ASSERT NOT EXISTS ( SELECT * FROM hive.shadow_a_table1 ), 'Shadow table is not empty';
+    ASSERT NOT EXISTS ( SELECT * FROM hive_data.shadow_a_table1 ), 'Shadow table is not empty';
 END
 $BODY$
 ;

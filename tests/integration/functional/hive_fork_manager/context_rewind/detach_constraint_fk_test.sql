@@ -19,8 +19,8 @@ BEGIN
     INSERT INTO table1( id, smth ) VALUES( 123, 'blabla1' );
     INSERT INTO table2( id, smth, table1_id ) VALUES( 223, 'blabla2', 123 );
     -- cleans up shadow tables
-    TRUNCATE hive.shadow_public_table1;
-    TRUNCATE hive.shadow_public_table2;
+    TRUNCATE hive_data.shadow_public_table1;
+    TRUNCATE hive_data.shadow_public_table2;
 END;
 $BODY$
 ;

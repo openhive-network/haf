@@ -19,7 +19,7 @@ BEGIN
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO a.table1( test_column ) VALUES( 10 );
 
-    TRUNCATE hive.shadow_a_table1; --to do not revert already inserted rows
+    TRUNCATE hive_data.shadow_a_table1; --to do not revert already inserted rows
     INSERT INTO a.table1( smth, name ) VALUES( 1, 'abc' );
     UPDATE a.table1 SET test_column = 1 WHERE test_column= 10;
 

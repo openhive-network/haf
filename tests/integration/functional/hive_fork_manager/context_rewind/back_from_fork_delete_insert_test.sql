@@ -10,7 +10,7 @@ BEGIN
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO A.table1( id, smth ) VALUES( 123, 'blabla' );
 
-    TRUNCATE hive.shadow_a_table1; --to do not revert inserts
+    TRUNCATE hive_data.shadow_a_table1; --to do not revert inserts
     DELETE FROM A.table1 WHERE id=123;
     INSERT INTO A.table1( id, smth ) VALUES( 123, '1blabla1' );
 END;
@@ -34,7 +34,7 @@ $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 1;
     ASSERT ( SELECT COUNT(*) FROM A.table1 WHERE id=123 AND smth='blabla' ) = 1, 'Deleted row was not reinserted';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 0, 'Shadow table is not empty';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 ) = 0, 'Shadow table is not empty';
 END
 $BODY$
 ;

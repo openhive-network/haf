@@ -35,7 +35,7 @@ BEGIN
             INSERT INTO %I.%I( %s )
             (
                 SELECT %s
-                FROM hive.%I st
+                FROM hive_data.%I st
                 WHERE st.hive_operation_id = _operation_id
             );
         END;
@@ -56,7 +56,7 @@ BEGIN
         BEGIN
             UPDATE %I.%I as t SET ( %s ) = (
             SELECT %s
-            FROM hive.%I st1
+            FROM hive_data.%I st1
             WHERE st1.hive_operation_id = _operation_id
             )
             WHERE t.hive_rowid = _row_id;
@@ -115,11 +115,11 @@ DECLARE
     __hive_rowid_column_name TEXT := 'hive_rowid';
     __operation_id_column_name TEXT :=  'hive_operation_id';
 BEGIN
-    EXECUTE format('CREATE TABLE hive.%I AS TABLE %I.%I', __shadow_table_name, _table_schema, _table_name );
-    EXECUTE format('DELETE FROM hive.%I', __shadow_table_name ); --empty shadow table if origin table is not empty
-    EXECUTE format('ALTER TABLE hive.%I ADD COLUMN %I INTEGER NOT NULL', __shadow_table_name, __block_num_column_name );
-    EXECUTE format('ALTER TABLE hive.%I ADD COLUMN %I hive_data.trigger_operation NOT NULL', __shadow_table_name, __operation_column_name );
-    EXECUTE format('ALTER TABLE hive.%I ADD COLUMN %I BIGSERIAL PRIMARY KEY', __shadow_table_name, __operation_id_column_name );
+    EXECUTE format('CREATE TABLE hive_data.%I AS TABLE %I.%I', __shadow_table_name, _table_schema, _table_name );
+    EXECUTE format('DELETE FROM hive_data.%I', __shadow_table_name ); --empty shadow table if origin table is not empty
+    EXECUTE format('ALTER TABLE hive_data.%I ADD COLUMN %I INTEGER NOT NULL', __shadow_table_name, __block_num_column_name );
+    EXECUTE format('ALTER TABLE hive_data.%I ADD COLUMN %I hive_data.trigger_operation NOT NULL', __shadow_table_name, __operation_column_name );
+    EXECUTE format('ALTER TABLE hive_data.%I ADD COLUMN %I BIGSERIAL PRIMARY KEY', __shadow_table_name, __operation_id_column_name );
 
     RETURN __shadow_table_name;
 END;
@@ -263,7 +263,7 @@ BEGIN
                  RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
             END IF;
 
-            INSERT INTO hive.%I SELECT n.*,  __block_num, ''INSERT'' FROM new_table n ON CONFLICT DO NOTHING;
+            INSERT INTO hive_data.%I SELECT n.*,  __block_num, ''INSERT'' FROM new_table n ON CONFLICT DO NOTHING;
             RETURN NEW;
         END;
         $$'
@@ -295,7 +295,7 @@ BEGIN
                 RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
             END IF;
 
-            INSERT INTO hive.%I SELECT o.*, __block_num, ''DELETE'' FROM old_table o ON CONFLICT DO NOTHING;
+            INSERT INTO hive_data.%I SELECT o.*, __block_num, ''DELETE'' FROM old_table o ON CONFLICT DO NOTHING;
             RETURN NEW;
         END;
         $$'
@@ -327,7 +327,7 @@ BEGIN
                 RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
             END IF;
 
-            INSERT INTO hive.%I SELECT o.*, __block_num, ''UPDATE'' FROM old_table o ON CONFLICT DO NOTHING;
+            INSERT INTO hive_data.%I SELECT o.*, __block_num, ''UPDATE'' FROM old_table o ON CONFLICT DO NOTHING;
             RETURN NEW;
         END;
         $$'
@@ -359,7 +359,7 @@ BEGIN
                  RAISE EXCEPTION ''Did not execute hive.context_next_block before table edition'';
              END IF;
 
-             INSERT INTO hive.%I SELECT o.*, __block_num, ''DELETE'' FROM %I.%I o ON CONFLICT DO NOTHING;
+             INSERT INTO hive_data.%I SELECT o.*, __block_num, ''DELETE'' FROM %I.%I o ON CONFLICT DO NOTHING;
              RETURN NEW;
          END;
          $$'
@@ -416,7 +416,7 @@ BEGIN
     END IF;
 
     -- drop shadow table
-    EXECUTE format( 'DROP TABLE IF EXISTS hive.%s CASCADE', __shadow_table_name );
+    EXECUTE format( 'DROP TABLE IF EXISTS hive_data.%s CASCADE', __shadow_table_name );
 
     -- remove information about triggers
     DELETE FROM hive_data.triggers WHERE registered_table_id = __registered_table_id;

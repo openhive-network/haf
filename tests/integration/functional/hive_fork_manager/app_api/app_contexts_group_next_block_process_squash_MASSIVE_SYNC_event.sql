@@ -103,8 +103,8 @@ BEGIN
     ASSERT EXISTS ( SELECT *  FROM B.table1 WHERE id = 1 ), 'No id 1 b';
     ASSERT EXISTS ( SELECT *  FROM B.table1 WHERE id = 2 ), 'No id 2 b';
 
-    ASSERT NOT EXISTS ( SELECT * FROM hive.shadow_a_table1 ), 'Shadow table is not empty';
-    ASSERT NOT EXISTS ( SELECT * FROM hive.shadow_b_table1 ), 'Shadow table is not empty b';
+    ASSERT NOT EXISTS ( SELECT * FROM hive_data.shadow_a_table1 ), 'Shadow table is not empty';
+    ASSERT NOT EXISTS ( SELECT * FROM hive_data.shadow_b_table1 ), 'Shadow table is not empty b';
 END
 $BODY$
 ;

@@ -124,7 +124,7 @@ BEGIN
         RETURN;
     END IF;
 
-    EXECUTE format( 'SELECT EXISTS( SELECT * FROM hive.%I LIMIT 1 )', __shadow_table_name ) INTO __result;
+    EXECUTE format( 'SELECT EXISTS( SELECT * FROM hive_data.%I LIMIT 1 )', __shadow_table_name ) INTO __result;
 
     IF __result = TRUE THEN
         RAISE EXCEPTION 'Cannot edit structure of registered tables when some rows are not rewinded';
@@ -143,7 +143,7 @@ BEGIN
     END IF;
 
     -- drop shadow table with old format
-    EXECUTE format( 'DROP TABLE hive.%I', __shadow_table_name );
+    EXECUTE format( 'DROP TABLE hive_data.%I', __shadow_table_name );
     PERFORM hive.create_shadow_table( __origin_table_schema, __origin_table_name );
 
     --update information about columns

@@ -30,7 +30,7 @@ BEGIN
     DELETE FROM hive_data.triggers ht WHERE ht.registered_table_id = __table_id;
 
     --drop shadow table
-    EXECUTE format( 'DROP TABLE hive.%I', __shadow_table_name );
+    EXECUTE format( 'DROP TABLE hive_data.%I', __shadow_table_name );
 
     DELETE FROM hive_data.registered_tables hrt WHERE  hrt.origin_table_schema = _schema_name AND hrt.origin_table_name = _table_name;
 END;
@@ -57,7 +57,7 @@ BEGIN
         RAISE EXCEPTION 'Table %.% is not registered', _table_schema, _table_name;
     END IF;
 
-    EXECUTE format( 'SELECT EXISTS( SELECT * FROM hive.%I LIMIT 1 )', __shadow_table_name ) INTO __shadow_table_is_not_empty;
+    EXECUTE format( 'SELECT EXISTS( SELECT * FROM hive_data.%I LIMIT 1 )', __shadow_table_name ) INTO __shadow_table_is_not_empty;
 
     IF __shadow_table_is_not_empty = TRUE THEN
         RAISE EXCEPTION 'Cannot detach a table %.%. Shadow table hive.% is not empty', _table_schema, _table_name, __shadow_table_name;

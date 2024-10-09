@@ -61,9 +61,9 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM hive_data.contexts hc JOIN hive_data.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context_c' AND hca.is_attached = TRUE ), 'Attach flag is still not set C';
     ASSERT EXISTS ( SELECT * FROM hive_data.contexts WHERE name='context_c' AND fork_id = 2 ), 'Wrong fork_id C';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 1, 'Trigger inserted something into shadow A.table1';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_b_table1 ) = 1, 'Trigger inserted something into shadow B.table1';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_c_table1 ) = 1, 'Trigger inserted something into shadow C.table1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 ) = 1, 'Trigger inserted something into shadow A.table1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_b_table1 ) = 1, 'Trigger inserted something into shadow B.table1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_c_table1 ) = 1, 'Trigger inserted something into shadow C.table1';
 END;
 $BODY$
 ;

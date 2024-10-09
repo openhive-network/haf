@@ -42,7 +42,7 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM hive_data.contexts hc JOIN hive_data.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context' AND hca.is_attached = FALSE ), 'Attach flag is still set';
     ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name='context' ) = 0, 'Wrong current_block_num';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 0, 'Trigger inserted something into shadow table1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 ) = 0, 'Trigger inserted something into shadow table1';
 END;
 $BODY$
 ;

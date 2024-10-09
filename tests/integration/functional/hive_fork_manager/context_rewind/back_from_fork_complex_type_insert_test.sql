@@ -20,7 +20,7 @@ BEGIN
     VALUES( 1, 'temp1', '{{0.25, 3.4, 6}}'::FLOAT[], ROW(1, 5.8, '123abc')::custom_type, 'padu'::VARCHAR, 2.123::NUMERIC(3,2) );
 
     PERFORM hive.context_next_block( 'context' );
-    TRUNCATE hive.shadow_a_src_table; --to do not revert inserts
+    TRUNCATE hive_data.shadow_a_src_table; --to do not revert inserts
     INSERT INTO A.src_table ( smth, name, values, data, name2, num )
     VALUES( 2, 'temp2', '{{0.25, 3.14, 16}}'::FLOAT[], ROW(1, 5.8, '123abc')::custom_type, 'abcd'::VARCHAR, 2.123::NUMERIC(3,2) );
 END;
@@ -44,7 +44,7 @@ $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM A.src_table WHERE name2='padu' AND smth=1 ) = 1, 'Updated row was not reverted';
     ASSERT ( SELECT COUNT(*) FROM A.src_table ) = 1, 'Inserted row was not removed';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_src_table ) = 0, 'Shadow table is not empty';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_src_table ) = 0, 'Shadow table is not empty';
 END
 $BODY$
 ;

@@ -45,7 +45,7 @@ BEGIN
     END;
 
     BEGIN
-        DELETE FROM hive.shadow_alice_alice_table;
+        DELETE FROM hive_data.shadow_alice_alice_table;
         ASSERT FALSE, 'Hived can edit Alice''s shadow table';
     EXCEPTION WHEN OTHERS THEN
     END;

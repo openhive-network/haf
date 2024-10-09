@@ -358,7 +358,7 @@ Data from 'hive.<context_name>' is used by the fork manager to rewind operations
 
 Moreover a new table is created - a shadow table whose structure is a copy of the registered table + columns for operation registered tables. A shadow table is the place where triggers record the changes to the associated app table. A shadow table is created in the 'hive' schema and its name is created using the rule below:
 ```
-hive.shadow_<table_schema>_<table_name>
+hive_data.shadow_<table_schema>_<table_name>
 ```
 It is possible to rewind all operations stored in shadow tables with `hive.context_back_from_fork`
 

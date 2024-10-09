@@ -37,11 +37,11 @@ $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT * FROM hive_data.contexts hc JOIN hive_data.contexts_attachment hca ON hca.context_id = hc.id WHERE hc.name = 'context' AND hca.is_attached = FALSE ), 'Context is not marked as attached';
     ASSERT EXISTS ( SELECT * FROM hive_data.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' ), 'Attach flag is not set to false';
-    ASSERT NOT EXISTS ( SELECT * FROM hive.shadow_a_table1 ), 'Trigger iserted something into shadow table';
-    ASSERT NOT EXISTS ( SELECT * FROM hive.shadow_b_table2 ), 'Trigger iserted something into shadow table';
+    ASSERT NOT EXISTS ( SELECT * FROM hive_data.shadow_a_table1 ), 'Trigger iserted something into shadow table';
+    ASSERT NOT EXISTS ( SELECT * FROM hive_data.shadow_b_table2 ), 'Trigger iserted something into shadow table';
 
     ASSERT EXISTS ( SELECT * FROM hive_data.contexts hc JOIN hive_data.contexts_attachment hca ON hca.context_id = hc.id WHERE hc.name = 'context2' AND hca.is_attached = TRUE ), 'Context2 is not marked as attached';
-    ASSERT EXISTS ( SELECT * FROM hive.shadow_a_table3 ), 'Trigger did not isert something into shadow table';
+    ASSERT EXISTS ( SELECT * FROM hive_data.shadow_a_table3 ), 'Trigger did not isert something into shadow table';
 END
 $BODY$
 ;

@@ -56,8 +56,8 @@ BEGIN
     ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name='context_b' ) = 0, 'b) Wrong current_block_num';
     ASSERT ( SELECT is_forking FROM hive_data.contexts WHERE name='context_b' ) = FALSE, 'b) context is is still marked as forking';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 0, 'Trigger inserted something into shadow table1';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_b_table1 ) = 0, 'Trigger inserted something into shadow b table1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 ) = 0, 'Trigger inserted something into shadow table1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_b_table1 ) = 0, 'Trigger inserted something into shadow b table1';
 
     SELECT * INTO __result FROM hive.app_next_block( ARRAY[ 'context', 'context_b' ] );
 
