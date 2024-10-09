@@ -152,9 +152,9 @@ GRANT EXECUTE ON FUNCTION
     , hive.remove_unecessary_events( _new_irreversible_block INT )
     , hive.register_table( _table_schema TEXT,  _table_name TEXT, _context_name TEXT ) -- needs to alter tables when indexes are disabled
     , hive.chceck_constrains( _table_schema TEXT,  _table_name TEXT )
-    , hive.register_state_provider_tables( _context hive.context_name )
-    , hive.app_state_providers_update( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
-    , hive.app_state_provider_import( _state_provider hive.state_providers, _context hive.context_name )
+    , hive.register_state_provider_tables( _context hive_data.context_name )
+    , hive.app_state_providers_update( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive_data.context_name )
+    , hive.app_state_provider_import( _state_provider hive_data.state_providers, _context hive_data.context_name )
     , hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE, _first_block hive.blocks.num%TYPE )
     , hive.remove_inconsistent_irreversible_data()
     , hive.disable_indexes_of_reversible()
@@ -197,7 +197,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.calculate_schema_hash(schema_name TEXT)
     , hive.are_indexes_dropped()
     , hive.are_fk_dropped()
-    , hive.check_owner( _context hive.context_name, _context_owner TEXT )
+    , hive.check_owner( _context hive_data.context_name, _context_owner TEXT )
     , hive.can_impersonate(_role_to_check IN TEXT, _required_role IN TEXT)
     , hive.unreachable_event_id()
     , hive.max_block_num()
@@ -219,8 +219,8 @@ TO hived_group;
 
 --- Required permissions to execute all callees of app_check_contexts_synchronized
 GRANT EXECUTE ON FUNCTION
-      hive.app_context_detach(_contexts hive.contexts_group)
-    , hive.app_context_detach( _context hive.context_name )
+      hive.app_context_detach(_contexts hive_data.contexts_group)
+    , hive.app_context_detach( _context hive_data.context_name )
     , hive.context_detach
     , hive.create_all_irreversible_blocks_view
     , hive.create_all_irreversible_transactions_view
@@ -234,7 +234,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.back_from_fork_one_table
     , hive.remove_obsolete_operations
     , hive.detach_table
-    , hive.app_check_contexts_synchronized(_contexts hive.contexts_group)
+    , hive.app_check_contexts_synchronized(_contexts hive_data.contexts_group)
 TO hived_group;
 
 GRANT USAGE ON SCHEMA hive to haf_maintainer;

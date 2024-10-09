@@ -12,7 +12,7 @@ LANGUAGE plpgsql STABLE;
 
 --- Allows to wait (until specified _timeout) until HAF database will be ready for application data processing.
 --- Raises exception on _timeout.
-CREATE OR REPLACE FUNCTION hive.wait_for_ready_instance(IN _context_names hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+CREATE OR REPLACE FUNCTION hive.wait_for_ready_instance(IN _context_names hive_data.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
 RETURNS VOID
 AS
 $BODY$
@@ -42,7 +42,7 @@ END
 $BODY$
 LANGUAGE plpgsql VOLATILE;
 
-CREATE OR REPLACE FUNCTION hive.find_next_event( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.find_next_event( _contexts hive_data.contexts_group )
     RETURNS hive.events_queue
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -54,7 +54,7 @@ DECLARE
     __current_context_block_num hive.blocks.num%TYPE;
     __current_context_irreversible_block hive.blocks.num%TYPE;
     __current_fork_id hive.fork.id%TYPE;
-    __lead_context hive.context_name := _contexts[ 1 ];
+    __lead_context hive_data.context_name := _contexts[ 1 ];
     __result hive.events_queue%ROWTYPE;
     __max_event_id_to_search hive.events_queue.id%TYPE;
     __max_fork_id_in_range hive.fork.id%TYPE;
@@ -134,7 +134,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.squash_fork_events( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.squash_fork_events( _contexts hive_data.contexts_group )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -146,7 +146,7 @@ DECLARE
     __context_current_block_num INT;
     __context_id hive_data.contexts.id%TYPE;
     __cannot_jump BOOL:= TRUE;
-    __lead_context hive.context_name := _contexts[ 1 ];
+    __lead_context hive_data.context_name := _contexts[ 1 ];
 BEGIN
     -- first find a newer fork nearest current block
     SELECT heq.id, heq.block_num, hc.current_block_num, hc.id INTO __next_fork_event_id, __next_fork_block_num, __context_current_block_num, __context_id
@@ -182,7 +182,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.update_irreversible( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.update_irreversible( _contexts hive_data.contexts_group )
     RETURNS VOID
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -196,7 +196,7 @@ DECLARE
     __context_event_id hive.events_queue.id%TYPE := 0;
     __next_bff_event_id BIGINT;
     __event_block_num INT;
-    __lead_context hive.context_name := _contexts[ 1 ];
+    __lead_context hive_data.context_name := _contexts[ 1 ];
 BEGIN
     SELECT hc.events_id, hc.irreversible_block, hc.current_block_num
     INTO __context_event_id, __irreversible_block_num, __current_block_num
@@ -243,7 +243,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.squash_end_massive_sync_events( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.squash_end_massive_sync_events( _contexts hive_data.contexts_group )
     RETURNS BOOL
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -255,8 +255,8 @@ DECLARE
     __context_id hive_data.contexts.id%TYPE;
     __irreversible_block_num INT;
     __before_next_massive_sync_event_id BIGINT := NULL;
-    __lead_context hive.context_name := _contexts[ 1 ];
-    __event_type hive.event_type := NULL;
+    __lead_context hive_data.context_name := _contexts[ 1 ];
+    __event_type hive_data.event_type := NULL;
     __context_event_id hive.events_queue.id%TYPE := 0;
     __need_to_remove_reversible_data BOOLEAN := FALSE;
 BEGIN
@@ -303,7 +303,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.squash_events( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.squash_events( _contexts hive_data.contexts_group )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -341,13 +341,13 @@ CREATE TYPE hive.context_state AS (
     , is_attached BOOL
     , irreversible_block_num INT
     , next_event_id BIGINT
-    , next_event_type hive.event_type
+    , next_event_type hive_data.event_type
     , next_event_block_num INT
 );
 
 
 
-CREATE OR REPLACE FUNCTION hive.squash_and_get_state( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.squash_and_get_state( _contexts hive_data.contexts_group )
     RETURNS hive.context_state
     LANGUAGE plpgsql
     VOLATILE
@@ -355,7 +355,7 @@ AS
 $BODY$
     DECLARE
         __context_state hive.context_state;
-        __lead_context hive.context_name := _contexts[ 1 ];
+        __lead_context hive_data.context_name := _contexts[ 1 ];
     BEGIN
         PERFORM hive.squash_events( _contexts );
 
@@ -469,7 +469,7 @@ $BODY$
 -- Null -> ask again without waiting
 -- negative range -> no block to process, need to wait for next live block
 -- positive range (including 0 size) -> range of blocks to process
-CREATE OR REPLACE FUNCTION hive.app_process_event_non_forking( _context hive.context_name, _context_state hive.context_state )
+CREATE OR REPLACE FUNCTION hive.app_process_event_non_forking( _context hive_data.context_name, _context_state hive.context_state )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
@@ -504,7 +504,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_names hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_names hive_data.contexts_group )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
@@ -530,7 +530,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_names hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_names hive_data.contexts_group )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
@@ -555,7 +555,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _state_provider HIVE.STATE_PROVIDERS, _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _state_provider hive_data.state_providers, _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE

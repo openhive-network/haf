@@ -232,13 +232,13 @@ Each state provider is a SQL file placed in the `state_providers` folder and def
 * `hive.update_state_provider_<provider_name>( first_block, last_block, context )`
   The function updates all 'state providers' tables registered in the context.
 
-* `hive.drop_state_provider_<provider_name>( _context hive.context_name )`
+* `hive.drop_state_provider_<provider_name>( _context hive_data.context_name )`
   The function drops all tables created by the state provider for a given context.
 
 ### How to add a new state provider
 The template for creating a new state provider is here: [state_providers/state_provider.template](state_providers/state_provider.template).
 You may copy the template, change the file extension to .sql,  add it to the CMakeLists.txt, and change '<provider_name>' in the new file to a new state provider name.
-After this, the enum `hive.state_providers` has to be extended with the new provider name.
+After this, the enum `hive_data.state_providers` has to be extended with the new provider name.
 
 ### State providers and forks
 When the context is a non-forking one, then the state provider's tables are not registered to be rewound during a fork servicing. When the context
@@ -439,7 +439,7 @@ Creates a new context. Context name can contain only characters from the set: `a
 - '_is_attached' if create attached or not attched context
 - '_stages' optional array of stages, required for `hive.app_next_iteration`
 
-##### hive.app_remove_context( _name hive.context_name )
+##### hive.app_remove_context( _name hive_data.context_name )
 Remove the context and unregister all its tables.
 
 ##### hive.app_next_block( _context_name )

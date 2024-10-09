@@ -1,7 +1,7 @@
 -- Collects all created accounts into table hive.<context_name>_accounts
 -- Table has two columns: id INT, name TEXT
 
-CREATE OR REPLACE FUNCTION hive.start_provider_accounts( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.start_provider_accounts( _context hive_data.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE
@@ -37,7 +37,7 @@ CREATE OR REPLACE FUNCTION hive.get_created_from_account_create_operations(IN _a
 RETURNS TEXT
 AS 'MODULE_PATHNAME', 'get_created_from_account_create_operations' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -73,7 +73,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.drop_state_provider_accounts( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.drop_state_provider_accounts( _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE

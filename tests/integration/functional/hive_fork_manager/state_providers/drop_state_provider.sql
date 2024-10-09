@@ -3,7 +3,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
     AS
 $BODY$
 BEGIN
-    ALTER TYPE hive.state_providers ADD VALUE 'TESTS';
+    ALTER TYPE hive_data.state_providers ADD VALUE 'TESTS';
 END;
 $BODY$
 ;

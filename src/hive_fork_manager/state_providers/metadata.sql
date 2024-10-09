@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.get_metadata_update_function_name( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.get_metadata_update_function_name( _context hive_data.context_name )
     RETURNS TEXT
     LANGUAGE plpgsql
     IMMUTABLE
@@ -9,7 +9,7 @@ BEGIN
 END
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.start_provider_metadata( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.start_provider_metadata( _context hive_data.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE
@@ -156,7 +156,7 @@ $BODY$
 CREATE OR REPLACE FUNCTION hive.update_state_provider_metadata(
     _first_block hive.blocks.num%TYPE,
     _last_block hive.blocks.num%TYPE,
-    _context hive.context_name)
+    _context hive_data.context_name)
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -182,7 +182,7 @@ END
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.drop_state_provider_metadata( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.drop_state_provider_metadata( _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE

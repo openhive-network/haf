@@ -137,7 +137,7 @@ BEGIN
     END;
 
     INSERT INTO hive.events_queue( event, block_num )
-    VALUES ( 'MASSIVE_SYNC'::hive.event_type, _block_num );
+    VALUES ( 'MASSIVE_SYNC'::hive_data.event_type, _block_num );
 
 
 
@@ -465,7 +465,7 @@ CREATE OR REPLACE PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN 
 AS
 $BODY$
 DECLARE
-  __contexts hive.context_name[];
+  __contexts hive_data.context_name[];
   __ctx TEXT;
   __now TIMESTAMP WITHOUT TIME ZONE := NOW();
   __current_block_before_detach INT;

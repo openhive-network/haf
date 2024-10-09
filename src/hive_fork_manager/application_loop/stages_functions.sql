@@ -35,7 +35,7 @@ $BODY$;
 
 -- abs livesync occur when context is working on reversible blocks
 -- is a subset of livesync, which may occur starting form some distance to irreversible head block
-CREATE OR REPLACE FUNCTION hive.is_abs_livesync( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.is_abs_livesync( _contexts hive_data.contexts_group )
     RETURNS BOOL
     LANGUAGE plpgsql
     STABLE
@@ -54,8 +54,8 @@ END;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION hive.get_current_stage( _contexts hive.contexts_group )
-    RETURNS TABLE( stage hive.application_stage, context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.get_current_stage( _contexts hive_data.contexts_group )
+    RETURNS TABLE( stage hive.application_stage, context hive_data.context_name )
     LANGUAGE plpgsql
     STABLE
 AS

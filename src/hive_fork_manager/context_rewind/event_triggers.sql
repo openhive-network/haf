@@ -33,7 +33,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.check_owner( _context hive.context_name, _context_owner TEXT )
+CREATE OR REPLACE FUNCTION hive.check_owner( _context hive_data.context_name, _context_owner TEXT )
     RETURNS void
     LANGUAGE 'plpgsql'
     STABLE
@@ -47,7 +47,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.register_state_provider_tables( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.register_state_provider_tables( _context hive_data.context_name )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE

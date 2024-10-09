@@ -1,15 +1,15 @@
 -- New versions of PostgreSQL disallow to create schema if not exists statement for any object not belonging to extension, and given schema does not initially.
 
-CREATE DOMAIN hive.context_name AS TEXT NOT NULL CONSTRAINT non_empty_context CHECK( LENGTH( VALUE ) != 0);
-CREATE DOMAIN hive.contexts_group AS hive.context_name[] NOT NULL CONSTRAINT non_empty_contexts_group CHECK( CARDINALITY( VALUE ) > 0 );
+CREATE DOMAIN hive_data.context_name AS TEXT NOT NULL CONSTRAINT non_empty_context CHECK( LENGTH( VALUE ) != 0);
+CREATE DOMAIN hive_data.contexts_group AS hive_data.context_name[] NOT NULL CONSTRAINT non_empty_contexts_group CHECK( CARDINALITY( VALUE ) > 0 );
 
-CREATE TYPE hive.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' , 'METADATA' );
+CREATE TYPE hive_data.state_providers AS ENUM( 'ACCOUNTS', 'KEYAUTH' , 'METADATA' );
 
-CREATE TYPE hive.event_type AS ENUM( 'BACK_FROM_FORK', 'NEW_BLOCK', 'NEW_IRREVERSIBLE', 'MASSIVE_SYNC' );
+CREATE TYPE hive_data.event_type AS ENUM( 'BACK_FROM_FORK', 'NEW_BLOCK', 'NEW_IRREVERSIBLE', 'MASSIVE_SYNC' );
 
 CREATE TABLE IF NOT EXISTS hive_data.contexts(
     id SERIAL NOT NULL,
-    name hive.context_name NOT NULL,
+    name hive_data.context_name NOT NULL,
     schema TEXT NOT NULL,
     current_block_num INTEGER NOT NULL,
     irreversible_block INTEGER NOT NULL,

@@ -1,7 +1,7 @@
 -- In hive::protocol::recover_account_operation the entry recent_owner_authority is not recorded, only new_owner_authority
 -- and the whole hive::protocol::request_account_recovery_operation is not recorded at all
 
-CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hive_data.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE
@@ -536,7 +536,7 @@ $BODY$
 CREATE OR REPLACE FUNCTION hive.update_state_provider_keyauth(
     _first_block hive.blocks.num%TYPE,
     _last_block hive.blocks.num%TYPE,
-    _context hive.context_name)
+    _context hive_data.context_name)
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -558,7 +558,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.drop_state_provider_keyauth( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.drop_state_provider_keyauth( _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE

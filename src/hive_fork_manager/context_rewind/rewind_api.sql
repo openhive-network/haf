@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION hive.context_create(
-      _name hive.context_name
+      _name hive_data.context_name
     , _schema TEXT
     , _fork_id BIGINT = 1
     , _irreversible_block INT = 0
@@ -55,7 +55,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.context_remove( _name hive.context_name )
+CREATE OR REPLACE FUNCTION hive.context_remove( _name hive_data.context_name )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE

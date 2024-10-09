@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION hive.analyze_stages(
-      _contexts hive.contexts_group
+      _contexts hive_data.contexts_group
     , _blocks_range hive.blocks_range
     , _head_block INTEGER
 )
@@ -50,7 +50,7 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE FUNCTION hive.is_livesync( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.is_livesync( _contexts hive_data.contexts_group )
     RETURNS BOOL
     LANGUAGE 'plpgsql'
     STABLE
@@ -70,7 +70,7 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE FUNCTION hive.update_attachment( _contexts hive.contexts_group )
+CREATE OR REPLACE FUNCTION hive.update_attachment( _contexts hive_data.contexts_group )
     RETURNS VOID
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -109,7 +109,7 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE FUNCTION hive.get_current_stage_name( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.get_current_stage_name( _context hive_data.context_name )
     RETURNS hive.stage_name
     LANGUAGE 'plpgsql'
     STABLE
@@ -128,12 +128,12 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _contexts hive.contexts_group, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL )
+CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _contexts hive_data.contexts_group, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL )
 LANGUAGE 'plpgsql'
 AS
 $body$
 DECLARE
-    __lead_context_name hive.context_name := _contexts[ 1 ];
+    __lead_context_name hive_data.context_name := _contexts[ 1 ];
     __lead_context_state hive.application_loop_state;
 BEGIN
     -- here is the only place when main synchronization connection  makes commit
@@ -223,7 +223,7 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _context hive.context_name, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL )
+CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _context hive_data.context_name, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL )
     LANGUAGE 'plpgsql'
 AS
 $body$

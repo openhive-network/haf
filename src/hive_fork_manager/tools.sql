@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.get_context_id( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.get_context_id( _context hive_data.context_name )
     RETURNS hive_data.contexts.id%TYPE
     LANGUAGE plpgsql
     STABLE

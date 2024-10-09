@@ -1,5 +1,5 @@
 ---------------------------- TEST PROVIDER ----------------------------------------------
-CREATE OR REPLACE FUNCTION hive.start_provider_tests( _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.start_provider_tests( _context hive_data.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
     AS
@@ -23,7 +23,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.update_state_provider_tests( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.update_state_provider_tests( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive_data.context_name )
         RETURNS void
         LANGUAGE plpgsql
     AS
@@ -46,7 +46,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    ALTER TYPE hive.state_providers ADD VALUE 'TESTS';
+    ALTER TYPE hive_data.state_providers ADD VALUE 'TESTS';
 
     INSERT INTO hive.operation_types
     VALUES
