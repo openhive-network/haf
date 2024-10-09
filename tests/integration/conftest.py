@@ -31,13 +31,19 @@ class SQLNodesPreparer(NodesPreparer):
             node.config.plugin.append('sql_serializer')
             node.config.psql_url = str(self.db_url(cnt))
             node.config.psql_first_block = self.start_block
+            self.__apply_block_log_type_to_monolithic_workaround(node)
 
         for node in builder.nodes:
+            self.__apply_block_log_type_to_monolithic_workaround(node)
             node.config.log_logger = '{"name":"default","level":"debug","appender":"stderr,p2p"} '\
                                     '{"name":"user","level":"debug","appender":"stderr,p2p"} '\
                                     '{"name":"chainlock","level":"debug","appender":"p2p"} '\
                                     '{"name":"sync","level":"debug","appender":"p2p"} '\
                                     '{"name":"p2p","level":"debug","appender":"p2p"}'
+
+    def __apply_block_log_type_to_monolithic_workaround(self, node: tt.RawNode) -> None:
+        # MORE INFO: hive/tests/python/hive-local-tools/test-tools/package/test_tools/__private/node.py (class Node, block_log property)
+        node.config.block_log_split = -1
 
 
     def db_url(self, idx) -> Any:

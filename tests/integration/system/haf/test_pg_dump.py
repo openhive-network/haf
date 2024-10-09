@@ -84,7 +84,7 @@ def test_pg_dump(prepared_networks_and_database_1, database, pg_restore: Callabl
 
 def prepare_source_db(prepare_node, database) -> tuple[Session, URL]:
     node, session, db_url = prepare_node(database)
-    node.run(replay_from=create_block_log_directory_name("block_log_12_8") / "block_log", stop_at_block=30, exit_before_synchronization=True)
+    node.run(replay_from=create_block_log_directory_name("block_log_12_8"), stop_at_block=30, exit_before_synchronization=True)
     return session, db_url
 
 

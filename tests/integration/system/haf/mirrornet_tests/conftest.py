@@ -7,7 +7,7 @@ from haf_local_tools.system.haf.mirrornet.constants import SKELETON_KEY, WITNESS
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--block-log-path", action="store", type=str, help="specifies path of block_log"
+        "--block-log-dir-path", action="store", type=str, help="specifies path of block_log"
     )
     parser.addoption(
         "--snapshot-path", action="store", type=str, help="specifies path of snapshot"
@@ -15,8 +15,9 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture
-def block_log_5m_path(request):
-    return request.config.getoption("--block-log-path")
+def block_log_5m(request) -> tt.BlockLog:
+    block_log_dir_path = request.config.getoption("--block-log-dir-path")
+    return tt.BlockLog(block_log_dir_path)
 
 
 @pytest.fixture
