@@ -47,7 +47,7 @@ install_all_dev_packages() {
           postgresql-common
 
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-  DEBIAN_FRONTEND=noniteractive apt-get install -y postgresql-16 postgresql-server-dev-16 postgresql-16-cron \
+  DEBIAN_FRONTEND=noniteractive apt-get install -y postgresql-17 postgresql-server-dev-17 postgresql-17-cron \
     netcat-openbsd # needed to correctly handle --skip-hived option
 
   apt-get clean
@@ -78,7 +78,7 @@ create_haf_admin_account() {
   echo "Attempting to create $haf_admin_unix_account account..."
   assert_is_root
 
-  # Unfortunately haf_admin must be able to su as root, because it must be able to write into /usr/share/postgresql/16/extension directory, being owned by root (it could be owned by postgres)
+  # Unfortunately haf_admin must be able to su as root, because it must be able to write into /usr/share/postgresql/17/extension directory, being owned by root (it could be owned by postgres)
   if id "$haf_admin_unix_account" &>/dev/null; then
       echo "Account $haf_admin_unix_account already exists. Creation skipped."
   else

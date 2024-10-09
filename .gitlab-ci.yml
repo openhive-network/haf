@@ -14,7 +14,7 @@ variables:
   FF_ENABLE_JOB_CLEANUP: 1
   GIT_STRATEGY: clone
   # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu22.04-15
-  BUILDER_IMAGE_TAG: "@sha256:8f0313c1b46b23ea74ea4e6a3809a1c7a41354994a9b066960bd645f375a1530"
+  BUILDER_IMAGE_TAG: "@sha256:eb9e060983fab933c3a81d148c5f07f73c14a35f6d2bbec18c69c5efdabad4fc"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60

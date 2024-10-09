@@ -31,8 +31,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get update && \
-    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y curl postgresql-16 postgresql-16-cron libpq5 libboost-chrono1.74.0 libboost-context1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 busybox \
-      netcat-openbsd && \
+    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y curl postgresql-17 postgresql-17-cron libpq5 libboost-chrono1.74.0 libboost-context1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 busybox netcat-openbsd && \
     apt-get remove -y gnupg && \
     apt-get autoremove -y && \
     busybox --install -s
@@ -159,7 +158,7 @@ WORKDIR /home/haf_admin
 COPY --from=build --chown=haf_admin:users /home/haf_admin/build /home/haf_admin/build/
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}" "${HAF_SOURCE_DIR}"
 
-ENV POSTGRES_VERSION=16
+ENV POSTGRES_VERSION=17
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/docker_entrypoint.sh" .
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/postgresql.conf" /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.conf" /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
@@ -209,7 +208,7 @@ EXPOSE ${WS_PORT}
 # JSON rpc service
 EXPOSE ${HTTP_PORT}
 
-FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu22.04-14 AS minimal-instance
+FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu22.04-15 AS minimal-instance
 
 ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu22.04-8}
 
@@ -233,7 +232,7 @@ ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\n
 # Always define default value of HIVED_UID variable to make possible direct spawn of docker image (without run_hived_img.sh wrapper)
 ENV HIVED_UID=1000
 
-ENV POSTGRES_VERSION=16
+ENV POSTGRES_VERSION=17
 
 SHELL ["/bin/bash", "-c"]
 
