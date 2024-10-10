@@ -19,6 +19,7 @@ def test_massive_sync(
 
     block_log_5m = tt.BlockLog(block_log_5m_path)
 
+    apply_block_log_type_to_monolithic_workaround(mirrornet_witness_node)
     mirrornet_witness_node.run(
         load_snapshot_from=snapshot_path,
         time_control=tt.StartTimeControl(start_time="head_block_time"),

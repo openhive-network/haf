@@ -4,6 +4,7 @@ import pytest
 from pytest import StashKey, CollectReport
 from sqlalchemy_utils import drop_database
 
+from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.haf_node import HafNode
 
 phase_report_key = StashKey[Dict[str, CollectReport]]()
@@ -29,6 +30,7 @@ def haf_node(request):
     """
     DB_URL = os.getenv("DB_URL")
     haf_node =  HafNode(keep_database=True, database_url=DB_URL)
+    apply_block_log_type_to_monolithic_workaround(haf_node)
     drop_database_if_test_pass = True
     yield haf_node
     if drop_database_if_test_pass:
