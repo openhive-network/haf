@@ -3,6 +3,7 @@ import sqlalchemy
 import test_tools as tt
 
 from haf_local_tools.system.haf import prepare_and_send_transactions, get_truncated_block_log, connect_nodes
+from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 
 
 def test_exception_in_live_state(haf_node):
@@ -12,6 +13,7 @@ def test_exception_in_live_state(haf_node):
     """
     # generate some operations to be synchronised to
     init_node = tt.InitNode()
+    apply_block_log_type_to_monolithic_workaround(init_node)
     init_node.run()
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
 

@@ -6,6 +6,7 @@ import test_tools as tt
 from typing import TYPE_CHECKING, Union
 
 from haf_local_tools.haf_node._haf_node import HafNode
+from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from test_tools.__private.network import Network
 from test_tools.__private.user_handles.get_implementation import get_implementation
 from test_tools.__private.user_handles.handles.node_handles.runnable_node_handle import RunnableNodeHandle
@@ -36,6 +37,7 @@ class HafNodeHandle(RunnableNodeHandle):
                 handle=self,
             )
         )
+        apply_block_log_type_to_monolithic_workaround(self)
 
     @property
     def __implementation(self) -> HafNode:
