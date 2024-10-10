@@ -186,9 +186,9 @@ dump_snapshot_5m_mirrornet:
     - cd "$SNAPSHOTS_PATH"
     - mkdir -vp 5m_mirrornet/snapshot
     #Prepare snapshot
-    - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --exit-before-sync --replay
+    - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --exit-before-sync --replay --block-log-split=-1
     - echo "plugin = state_snapshot" >> $MIRRORNET_WORKING_DIR/config.ini
-    - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --dump-snapshot=snapshot --exit-before-sync
+    - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --dump-snapshot=snapshot --exit-before-sync --block-log-split=-1
     #Store snapshot in cache
     - mv $MIRRORNET_WORKING_DIR/blockchain "$SNAPSHOTS_PATH/5m_mirrornet"
     - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot "$SNAPSHOTS_PATH/5m_mirrornet/snapshot"
@@ -230,8 +230,9 @@ haf_system_tests_mirrornet:
     # drop tmp location
     - rm -r $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
     # prepare environment and run tests
-    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
-    - pytest --junitxml report.xml --timeout=3600 --block-log-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --snapshot-path="$SNAPSHOTS_PATH/5m_mirrornet/snapshot/snapshot" -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
+    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests && ls -la
+    - pytest -vvv --junitxml report.xml --timeout=3600 --block-log-dir-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests --snapshot-path="$SNAPSHOTS_PATH/5m_mirrornet/snapshot/snapshot" -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
+    - du -Sah . | sort -rh
   artifacts:
     paths:
     - "**/generated_during_*"
