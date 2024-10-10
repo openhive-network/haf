@@ -81,7 +81,7 @@ VALUES
      , ( 5, 5, hive.operation_id(5,1,0) )
 ;
 
-    INSERT INTO hive.blocks_reversible
+    INSERT INTO hive_data.blocks_reversible
     VALUES
            ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
          , ( 5, '\xBADD5A', '\xCAFE5A', '2016-06-22 19:10:55-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
@@ -96,7 +96,7 @@ VALUES
          , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 7, '\x4007', E'[]', '\x2157', 'STM65w',1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-    INSERT INTO hive.accounts_reversible( block_num, name, id, fork_id)
+    INSERT INTO hive_data.accounts_reversible( block_num, name, id, fork_id)
     VALUES
            ( 4, 'u4_1',4 , 1 )
          , ( 5, 'u5_1',5 , 1 )
@@ -111,7 +111,7 @@ VALUES
          , ( 10, 'u10_3',14 , 3 )
     ;
 
-    INSERT INTO hive.transactions_reversible
+    INSERT INTO hive_data.transactions_reversible
     VALUES
            ( 4, 0::SMALLINT, '\xDEED40'::bytea, 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF'::bytea,  1 )
          , ( 5, 0::SMALLINT, '\xDEED55'::bytea, 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF'::bytea,  1 )
@@ -126,7 +126,7 @@ VALUES
          , ( 10, 0::SMALLINT, '\xDEED1102'::bytea, 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF'::bytea, 3 )
     ;
 
-    INSERT INTO hive.transactions_multisig_reversible
+    INSERT INTO hive_data.transactions_multisig_reversible
     VALUES
            ( '\xDEED40'::bytea, '\xBEEF40'::bytea,  1 )
          , ( '\xDEED55'::bytea, '\xBEEF55'::bytea,  1 )
@@ -144,7 +144,7 @@ VALUES
          , ( '\xDEED1102'::bytea, '\xBEEF13'::bytea,  3 ) -- block 10
     ;
 
-    INSERT INTO hive.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hive_data.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
     VALUES
            ( hive.operation_id(4,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation, 1 )
          , ( hive.operation_id(5,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hive.operation, 1 )
@@ -161,7 +161,7 @@ VALUES
          , ( hive.operation_id(10,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive.operation, 3 )
     ;
 
-    INSERT INTO hive.account_operations_reversible
+    INSERT INTO hive_data.account_operations_reversible
     VALUES
            ( 4, 1, hive.operation_id(4,1,0),  1 ) -- block 4 (1)
          , ( 5, 1, hive.operation_id(5,1,0),  1 ) -- block 5 (1)
@@ -178,7 +178,7 @@ VALUES
          , ( 11, 3, hive.operation_id(9,1,0), 3 ) -- block 9(3)
     ;
 
-INSERT INTO hive.applied_hardforks_reversible
+INSERT INTO hive_data.applied_hardforks_reversible
 VALUES
        ( 4, 4, hive.operation_id(4,1,0), 1 )
      , ( 5, 5, hive.operation_id(5,1,0), 1 )
@@ -238,10 +238,10 @@ BEGIN
     ) , 'Unexpected rows in hive_data.blocks';
 
 
-    ASSERT EXISTS( SELECT * FROM hive.blocks_reversible ), 'No reversible blocks';
+    ASSERT EXISTS( SELECT * FROM hive_data.blocks_reversible ), 'No reversible blocks';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.blocks_reversible
+        SELECT * FROM hive_data.blocks_reversible
         EXCEPT SELECT * FROM ( VALUES
               ( 7, '\xBADD70'::bytea, '\xCAFE70'::bytea, '2016-06-22 19:10:27-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
             , ( 8, '\xBADD80'::bytea, '\xCAFE80'::bytea, '2016-06-22 19:10:28-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
@@ -250,9 +250,9 @@ BEGIN
             , ( 9, '\xBADD90'::bytea, '\xCAFE90'::bytea, '2016-06-22 19:10:31-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
             , ( 10, '\xBADD1A'::bytea, '\xCAFE1A'::bytea, '2016-06-22 19:10:32-07'::timestamp, 7, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
         ) as pattern
-    ) , 'Unexpected rows in hive.blocks_reversible';
+    ) , 'Unexpected rows in hive_data.blocks_reversible';
 
-    ASSERT EXISTS( SELECT * FROM hive.accounts_reversible ), 'No accounts reversible';
+    ASSERT EXISTS( SELECT * FROM hive_data.accounts_reversible ), 'No accounts reversible';
 
     ASSERT ( SELECT COUNT(*) FROM hive_data.accounts WHERE id >= 0 ) = 8, 'Wrong number of accounts';
     ASSERT NOT EXISTS (
@@ -270,7 +270,7 @@ BEGIN
     ) , 'Unexpected rows in hive_data.accounts';
 
     ASSERT NOT EXISTS (
-        SELECT block_num, name, id, fork_id FROM hive.accounts_reversible
+        SELECT block_num, name, id, fork_id FROM hive_data.accounts_reversible
         EXCEPT SELECT * FROM ( VALUES
                ( 7, 'u7_2', 9 , 2 )
              , ( 8, 'u8_2', 10 , 2 )
@@ -279,7 +279,7 @@ BEGIN
              , ( 9, 'u9_3',13 , 3 )
              , ( 10, 'u10_3',14 , 3 )
         ) as pattern
-    ) , 'Unexpected rows in hive.accounts_reversible';
+    ) , 'Unexpected rows in hive_data.accounts_reversible';
 
     ASSERT EXISTS( SELECT * FROM hive_data.transactions ), 'No transactions';
 
@@ -332,11 +332,11 @@ BEGIN
         ) as pattern
     ) , 'Unexpected rows in hive_data.operations';
 
-    ASSERT EXISTS( SELECT * FROM hive.transactions_reversible ), 'No reversible transactions';
+    ASSERT EXISTS( SELECT * FROM hive_data.transactions_reversible ), 'No reversible transactions';
 
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.transactions_reversible
+        SELECT * FROM hive_data.transactions_reversible
         EXCEPT SELECT * FROM ( VALUES
                ( 7, 0::SMALLINT, '\xDEED70'::bytea, 101, 100, '2016-06-22 19:10:27-07'::timestamp, '\xBEEF'::bytea,  2 )
              , ( 8, 0::SMALLINT, '\xDEED80'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea,  2 )
@@ -345,12 +345,12 @@ BEGIN
              , ( 9, 0::SMALLINT, '\xDEED99'::bytea, 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF'::bytea,  3 )
              , ( 10, 0::SMALLINT, '\xDEED1102'::bytea, 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF'::bytea, 3 )
         ) as pattern
-    ) , 'Unexpected rows in hive.transactions_reversible';
+    ) , 'Unexpected rows in hive_data.transactions_reversible';
 
-    ASSERT EXISTS( SELECT * FROM hive.transactions_multisig_reversible ), 'No reversible signatures';
+    ASSERT EXISTS( SELECT * FROM hive_data.transactions_multisig_reversible ), 'No reversible signatures';
 
     ASSERT NOT EXISTS (
-    SELECT * FROM hive.transactions_multisig_reversible
+    SELECT * FROM hive_data.transactions_multisig_reversible
     EXCEPT SELECT * FROM ( VALUES
            ( '\xDEED70'::bytea, '\xBEEF72'::bytea,  2 ) -- block 7
          , ( '\xDEED70'::bytea, '\xBEEF73'::bytea,  2 ) -- block 7
@@ -360,12 +360,12 @@ BEGIN
          , ( '\xDEED99'::bytea, '\xBEEF93'::bytea,  3 ) -- block 9
          , ( '\xDEED1102'::bytea, '\xBEEF13'::bytea,  3 ) -- block 10
     ) as pattern
-    ) , 'Unexpected rows in hive.transactions_multisig_reversible';
+    ) , 'Unexpected rows in hive_data.transactions_multisig_reversible';
 
-    ASSERT EXISTS( SELECT * FROM hive.operations_reversible ), 'No reversible oprations';
+    ASSERT EXISTS( SELECT * FROM hive_data.operations_reversible ), 'No reversible oprations';
 
     ASSERT NOT EXISTS (
-    SELECT id, trx_in_block, op_pos, body_binary, fork_id FROM hive.operations_reversible
+    SELECT id, trx_in_block, op_pos, body_binary, fork_id FROM hive_data.operations_reversible
     EXCEPT SELECT * FROM ( VALUES
            ( hive.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive.operation, 2 )
          , ( hive.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive.operation, 2 )
@@ -375,7 +375,7 @@ BEGIN
          , ( hive.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hive.operation, 3 )
          , ( hive.operation_id(10,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive.operation, 3 )
     ) as pattern
-    ), 'Unexpected rows in hive.operations_reversible'
+    ), 'Unexpected rows in hive_data.operations_reversible'
     ;
 
     ASSERT NOT EXISTS (
@@ -410,11 +410,11 @@ BEGIN
         ) as pattern
     ) , 'Unexpected rows in hive_data.applied_hardforks';
 
-    ASSERT EXISTS( SELECT * FROM hive.applied_hardforks_reversible ), 'No reversible applied_hardforks';
+    ASSERT EXISTS( SELECT * FROM hive_data.applied_hardforks_reversible ), 'No reversible applied_hardforks';
 
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.applied_hardforks_reversible
+        SELECT * FROM hive_data.applied_hardforks_reversible
         EXCEPT SELECT * FROM ( VALUES
        ( 7, 7, hive.operation_id(7,1,0), 2 )
      , ( 8, 7, hive.operation_id(7,1,1), 2 )
@@ -424,7 +424,7 @@ BEGIN
      , ( 10, 9, hive.operation_id(9,1,0), 3 )
      , ( 11, 10, hive.operation_id(10,1,0), 3 )
         ) as pattern
-    ) , 'Unexpected rows in hive.applied_hardforks_reversible';
+    ) , 'Unexpected rows in hive_data.applied_hardforks_reversible';
     
 END;
 $BODY$

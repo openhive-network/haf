@@ -20,7 +20,7 @@ VALUES
     , ( 5, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:25-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
 ;
 
-INSERT INTO hive.blocks_reversible
+INSERT INTO hive_data.blocks_reversible
 VALUES
     ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
     , ( 5, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:55-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
@@ -45,7 +45,7 @@ VALUES
      , ( 500, 'alice5', 5 )
 ;
 
-INSERT INTO hive.accounts_reversible
+INSERT INTO hive_data.accounts_reversible
 VALUES
 ( 4, 'alice41', 4, 1 )
      , ( 500, 'alice51', 5, 1 )

@@ -74,12 +74,12 @@ BEGIN
                , NULL
                );
 
-    INSERT INTO hive.transactions_reversible
+    INSERT INTO hive_data.transactions_reversible
     VALUES
         ( 8, 0::SMALLINT, '\xDEED80', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF', 1 )
     ;
 
-    INSERT INTO hive.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hive_data.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
     VALUES
         ( hive.operation_id(8, 1, 0), 0, 0, '{"type":"account_create_operation","value":{"fee":{"amount":"0","precision":3,"nai":"@@000000021"},"creator":"initminer","new_account_name":"account_8_rev","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"memo_key":"STM7tjB4CNqUD5kbTHdrJUaHE76xicHMQdpD5N32a7wTr1qnSmG1V","json_metadata":"{}"}}' :: jsonb :: hive.operation, 1 );
 
@@ -106,12 +106,12 @@ BEGIN
                , NULL
                );
 
-    INSERT INTO hive.transactions_reversible
+    INSERT INTO hive_data.transactions_reversible
     VALUES
         ( 8, 0::SMALLINT, '\xDEED70', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF', 2 )
     ;
 
-    INSERT INTO hive.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hive_data.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
     VALUES
         ( hive.operation_id(8, 1, 0), 0, 0, '{"type":"account_create_operation","value":{"fee":{"amount":"0","precision":3,"nai":"@@000000021"},"creator":"initminer","new_account_name":"account_8","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"memo_key":"STM7tjB4CNqUD5kbTHdrJUaHE76xicHMQdpD5N32a7wTr1qnSmG1V","json_metadata":"{}"}}' :: jsonb :: hive.operation, 2 );
 

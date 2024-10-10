@@ -50,7 +50,7 @@ BEGIN
          , ( '\xDEED50', '\xBAAD50' )
     ;
 
-    INSERT INTO hive.blocks_reversible
+    INSERT INTO hive_data.blocks_reversible
     VALUES
            ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
          , ( 5, '\xBADD5A', '\xCAFE5A', '2016-06-22 19:10:55-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
@@ -65,7 +65,7 @@ BEGIN
          , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-    INSERT INTO hive.transactions_reversible
+    INSERT INTO hive_data.transactions_reversible
     VALUES
        ( 4, 0::SMALLINT, '\xDEED40', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF',  1 )
      , ( 5, 0::SMALLINT, '\xDEED55', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF',  1 )
@@ -80,7 +80,7 @@ BEGIN
      , ( 10, 0::SMALLINT, '\xDEED1102', 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF', 3 )
     ;
 
-    INSERT INTO hive.transactions_multisig_reversible
+    INSERT INTO hive_data.transactions_multisig_reversible
     VALUES
        ( '\xDEED40', '\xBEEF40',  1 )
      , ( '\xDEED55', '\xBEEF55',  1 )

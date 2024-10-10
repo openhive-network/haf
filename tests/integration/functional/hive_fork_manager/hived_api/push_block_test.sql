@@ -67,12 +67,12 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM hive_data.events_queue WHERE id = 1 AND event = 'NEW_BLOCK' AND block_num = 101 ), 'No event added';
     ASSERT ( SELECT COUNT(*) FROM hive_data.events_queue ) = 3, 'Unexpected number of events';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.blocks_reversible ) = 1, 'Unexpected number of blocks';
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_reversible ) = 2, 'Unexpected number of transactions';
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig_reversible ) = 2, 'Unexpected number of signatures';
-    ASSERT ( SELECT COUNT(*) FROM hive.operations_reversible ) = 2, 'Unexpected number of operations';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.blocks_reversible ) = 1, 'Unexpected number of blocks';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.transactions_reversible ) = 2, 'Unexpected number of transactions';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.transactions_multisig_reversible ) = 2, 'Unexpected number of signatures';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.operations_reversible ) = 2, 'Unexpected number of operations';
 
-    ASSERT  ( SELECT COUNT(*) FROM hive.blocks_reversible
+    ASSERT  ( SELECT COUNT(*) FROM hive_data.blocks_reversible
                     WHERE
                         num=101
                     AND hash='\xBADD'
@@ -83,7 +83,7 @@ BEGIN
     ) = 1, 'Wrong block data'
     ;
 
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.transactions_reversible
                     WHERE
                         block_num=101
                     AND trx_in_block=0
@@ -96,7 +96,7 @@ BEGIN
     ) = 1, 'Wrong 1 transaction data'
     ;
 
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.transactions_reversible
            WHERE
                block_num=101
            AND trx_in_block=1
@@ -109,17 +109,17 @@ BEGIN
     ) = 1, 'Wrong 2 transaction data'
     ;
 
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.transactions_multisig_reversible
             WHERE trx_hash = '\xDEED' AND signature = '\xFEED' AND fork_id = 1
     ) = 1, 'Wrong data of signature 1'
     ;
 
-    ASSERT ( SELECT COUNT(*) FROM hive.transactions_multisig_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.transactions_multisig_reversible
          WHERE trx_hash = '\xBEEF' AND signature = '\xBABE' AND fork_id = 1
              ) = 1, 'Wrong data of signature 2'
     ;
 
-    ASSERT ( SELECT COUNT(*) FROM hive.operations_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.operations_reversible
         WHERE
                   id = hive.operation_id(101,1,0)
               AND trx_in_block = 0
@@ -128,7 +128,7 @@ BEGIN
               AND fork_id = 1
     ) = 1, 'Wrong data of operation 1';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.operations_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.operations_reversible
          WHERE
                id = hive.operation_id(101,2,0)
            AND trx_in_block = 1
@@ -137,42 +137,42 @@ BEGIN
            AND fork_id = 1
      ) = 1, 'Wrong data of operation 2';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.accounts_reversible
         WHERE id = 1
         AND name = 'alice'
         AND block_num = 101
         AND fork_id = 1
     ) = 1, 'No alice account';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.accounts_reversible
          WHERE id = 2
          AND name = 'bob'
          AND block_num = 101
          AND fork_id = 1
     ) = 1, 'No bob account';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.account_operations_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.account_operations_reversible
         WHERE account_id = 1
         AND account_op_seq_no = 1
         AND operation_id = hive.operation_id(101,1,0)
         AND fork_id = 1
     ) = 1 ,'No alice operation';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.account_operations_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.account_operations_reversible
         WHERE account_id = 2
         AND account_op_seq_no = 1
         AND operation_id = hive.operation_id(101,2,0)
         AND fork_id = 1
     ) = 1 ,'No bob operation';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.applied_hardforks_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.applied_hardforks_reversible
         WHERE hardfork_num = 1
         AND block_num = 101
         AND hardfork_vop_id = 1
         AND fork_id = 1
     ) = 1, 'Wrong data of hardfork 1';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.applied_hardforks_reversible
+    ASSERT ( SELECT COUNT(*) FROM hive_data.applied_hardforks_reversible
         WHERE hardfork_num = 2
         AND block_num = 101
         AND hardfork_vop_id = 2

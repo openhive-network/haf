@@ -27,7 +27,7 @@ BEGIN
     VALUES (5, 'initminer', 1)
     ;
 
-    INSERT INTO hive.blocks_reversible
+    INSERT INTO hive_data.blocks_reversible
     VALUES
     ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
          , ( 5, '\xBADD5A', '\xCAFE5A', '2016-06-22 19:10:55-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
@@ -70,7 +70,7 @@ BEGIN
          , ( hive.operation_id(5, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive.operation )
     ;
 
-    INSERT INTO hive.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hive_data.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
     VALUES
            ( hive.operation_id(4,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive.operation, 1 )
          , ( hive.operation_id(5,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hive.operation, 1 )
@@ -95,7 +95,7 @@ BEGIN
          , ( 4, 'alice4', 4 )
     ;
 
-    INSERT INTO hive.accounts_reversible
+    INSERT INTO hive_data.accounts_reversible
     VALUES
            ( 4, 'alice41', 4, 1 )
          , ( 5, 'alice51', 5, 1 )
@@ -121,7 +121,7 @@ BEGIN
          , ( 4, 1, hive.operation_id(4, 1, 0) )
     ;
 
-    INSERT INTO hive.account_operations_reversible
+    INSERT INTO hive_data.account_operations_reversible
     VALUES
            ( 4, 1, hive.operation_id(4,1,0), 1 )
          , ( 5, 1, hive.operation_id(5,1,0), 1 )

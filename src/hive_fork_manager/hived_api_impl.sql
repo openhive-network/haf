@@ -32,7 +32,7 @@ BEGIN
         , hbr.dhf_interval_ledger
 
     FROM
-        hive.blocks_reversible hbr
+        hive_data.blocks_reversible hbr
     WHERE
         hbr.num <= _new_irreversible_block
     AND hbr.num > _head_block_of_irreversible_blocks
@@ -60,11 +60,11 @@ BEGIN
         , htr.expiration
         , htr.signature
     FROM
-        hive.transactions_reversible htr
+        hive_data.transactions_reversible htr
     JOIN ( SELECT
               DISTINCT ON ( hbr.num ) hbr.num
             , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                     hbr.num <= _new_irreversible_block
                 AND hbr.num > _head_block_of_irreversible_blocks
@@ -91,12 +91,12 @@ BEGIN
          , hor.op_pos
          , hor.body_binary
     FROM
-        hive.operations_reversible hor
+        hive_data.operations_reversible hor
         JOIN (
             SELECT
                   DISTINCT ON ( hbr.num ) hbr.num
                 , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                   hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
@@ -123,12 +123,12 @@ BEGIN
          , hjr.block_num
          , hjr.hardfork_vop_id
     FROM
-        hive.applied_hardforks_reversible hjr
+        hive_data.applied_hardforks_reversible hjr
         JOIN (
             SELECT
                   DISTINCT ON ( hbr.num ) hbr.num
                 , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                   hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
@@ -153,13 +153,13 @@ BEGIN
           tsr.trx_hash
         , tsr.signature
     FROM
-        hive.transactions_multisig_reversible tsr
-        JOIN hive.transactions_reversible htr ON htr.trx_hash = tsr.trx_hash AND htr.fork_id = tsr.fork_id
+        hive_data.transactions_multisig_reversible tsr
+        JOIN hive_data.transactions_reversible htr ON htr.trx_hash = tsr.trx_hash AND htr.fork_id = tsr.fork_id
         JOIN (
             SELECT
                   DISTINCT ON ( hbr.num ) hbr.num
                 , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                     hbr.num <= _new_irreversible_block
                 AND hbr.num > _head_block_of_irreversible_blocks
@@ -185,12 +185,12 @@ BEGIN
          , har.name
          , har.block_num
     FROM
-        hive.accounts_reversible har
+        hive_data.accounts_reversible har
         JOIN (
             SELECT
                   DISTINCT ON ( hbr.num ) hbr.num
                 , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                   hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
@@ -216,12 +216,12 @@ BEGIN
          , haor.account_op_seq_no
          , haor.operation_id
     FROM
-        hive.account_operations_reversible haor
+        hive_data.account_operations_reversible haor
         JOIN (
             SELECT
                   DISTINCT ON ( hbr.num ) hbr.num
                 , hbr.fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE
                 hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
@@ -263,40 +263,40 @@ BEGIN
 
     __max_block_num := LEAST(__lowest_irreversible_block, _new_irreversible_block);
 
-    DELETE FROM hive.account_operations_reversible har
-    USING hive.operations_reversible hor
+    DELETE FROM hive_data.account_operations_reversible har
+    USING hive_data.operations_reversible hor
     WHERE
             har.operation_id = hor.id
         AND har.fork_id = hor.fork_id
         AND ( hive.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
     ;
 
-    DELETE FROM hive.applied_hardforks_reversible hjr
+    DELETE FROM hive_data.applied_hardforks_reversible hjr
     WHERE hjr.block_num <= __max_block_num OR hjr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
-    DELETE FROM hive.operations_reversible hor
+    DELETE FROM hive_data.operations_reversible hor
     WHERE hive.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
 
-    DELETE FROM hive.transactions_multisig_reversible htmr
-    USING hive.transactions_reversible htr
+    DELETE FROM hive_data.transactions_multisig_reversible htmr
+    USING hive_data.transactions_reversible htr
     WHERE
             htr.fork_id = htmr.fork_id
         AND htr.trx_hash = htmr.trx_hash
         AND ( htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
     ;
 
-    DELETE FROM hive.transactions_reversible htr
+    DELETE FROM hive_data.transactions_reversible htr
     WHERE  htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
-    DELETE FROM hive.accounts_reversible har
+    DELETE FROM hive_data.accounts_reversible har
     WHERE har.block_num <= __max_block_num OR har.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
-    DELETE FROM hive.blocks_reversible hbr
+    DELETE FROM hive_data.blocks_reversible hbr
     WHERE hbr.num <= __max_block_num OR hbr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 END;

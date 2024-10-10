@@ -11,9 +11,9 @@ BEGIN
     -- will choose wrongly execution plans
 
     ANALYZE hive_data.operations;
-    ANALYZE hive.operations_reversible;
+    ANALYZE hive_data.operations_reversible;
     ANALYZE hive_data.account_operations;
-    ANALYZE hive.account_operations_reversible;
+    ANALYZE hive_data.account_operations_reversible;
 END;
 $BODY$
 ;
@@ -61,14 +61,14 @@ BEGIN
     INSERT INTO hive_data.events_queue( event, block_num )
         VALUES( 'NEW_BLOCK', _block.num );
 
-    INSERT INTO hive.blocks_reversible VALUES( _block.*, __fork_id );
-    INSERT INTO hive.transactions_reversible VALUES( ( unnest( _transactions ) ).*, __fork_id );
-    INSERT INTO hive.transactions_multisig_reversible VALUES( ( unnest( _signatures ) ).*, __fork_id );
-    INSERT INTO hive.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hive_data.blocks_reversible VALUES( _block.*, __fork_id );
+    INSERT INTO hive_data.transactions_reversible VALUES( ( unnest( _transactions ) ).*, __fork_id );
+    INSERT INTO hive_data.transactions_multisig_reversible VALUES( ( unnest( _signatures ) ).*, __fork_id );
+    INSERT INTO hive_data.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
       SELECT id, trx_in_block, op_pos, body_binary, __fork_id FROM unnest( _operations );
-    INSERT INTO hive.accounts_reversible VALUES( ( unnest( _accounts ) ).*, __fork_id );
-    INSERT INTO hive.account_operations_reversible VALUES( ( unnest( _account_operations ) ).*, __fork_id );
-    INSERT INTO hive.applied_hardforks_reversible VALUES( ( unnest( _applied_hardforks ) ).*, __fork_id );
+    INSERT INTO hive_data.accounts_reversible VALUES( ( unnest( _accounts ) ).*, __fork_id );
+    INSERT INTO hive_data.account_operations_reversible VALUES( ( unnest( _account_operations ) ).*, __fork_id );
+    INSERT INTO hive_data.applied_hardforks_reversible VALUES( ( unnest( _applied_hardforks ) ).*, __fork_id );
 END;
 $BODY$
 ;
@@ -274,23 +274,23 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'blocks_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_multisig_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations_reversible' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'blocks_reversible' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'transactions_reversible' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'transactions_multisig_reversible' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'operations_reversible' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'applied_hardforks_reversible' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'accounts_reversible' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'account_operations_reversible' );
 
 
 
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'blocks_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions_multisig_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'operations_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'applied_hardforks_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'accounts_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'account_operations_reversible' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'blocks_reversible' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'transactions_reversible' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'transactions_multisig_reversible' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'operations_reversible' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'applied_hardforks_reversible' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'accounts_reversible' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'account_operations_reversible' );
 
     PERFORM hive.reanalyze_indexes_with_expressions();
 
@@ -305,23 +305,23 @@ CREATE OR REPLACE FUNCTION hive.enable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.restore_indexes( 'hive.blocks_reversible' );
-    PERFORM hive.restore_indexes( 'hive.transactions_reversible' );
-    PERFORM hive.restore_indexes( 'hive.transactions_multisig_reversible' );
-    PERFORM hive.restore_indexes( 'hive.operations_reversible' );
-    PERFORM hive.restore_indexes( 'hive.accounts_reversible' );
-    PERFORM hive.restore_indexes( 'hive.account_operations_reversible' );
-    PERFORM hive.restore_indexes( 'hive.applied_hardforks_reversible' );
+    PERFORM hive.restore_indexes( 'hive_data.blocks_reversible' );
+    PERFORM hive.restore_indexes( 'hive_data.transactions_reversible' );
+    PERFORM hive.restore_indexes( 'hive_data.transactions_multisig_reversible' );
+    PERFORM hive.restore_indexes( 'hive_data.operations_reversible' );
+    PERFORM hive.restore_indexes( 'hive_data.accounts_reversible' );
+    PERFORM hive.restore_indexes( 'hive_data.account_operations_reversible' );
+    PERFORM hive.restore_indexes( 'hive_data.applied_hardforks_reversible' );
 
 
 
-    PERFORM hive.restore_foreign_keys( 'hive.blocks_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hive.transactions_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hive.transactions_multisig_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hive.operations_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hive.accounts_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hive.account_operations_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hive.applied_hardforks_reversible' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.blocks_reversible' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.transactions_reversible' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.transactions_multisig_reversible' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.operations_reversible' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.accounts_reversible' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.account_operations_reversible' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.applied_hardforks_reversible' );
 
     PERFORM hive.reanalyze_indexes_with_expressions();
 END;

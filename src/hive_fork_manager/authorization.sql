@@ -41,14 +41,14 @@ ALTER TABLE hive_data.transactions_multisig OWNER TO hived_group;
 ALTER TABLE hive_data.accounts OWNER TO hived_group;
 ALTER TABLE hive_data.account_operations OWNER TO hived_group;
 ALTER TABLE hive_data.irreversible_data OWNER TO hived_group;
-ALTER TABLE hive.blocks_reversible OWNER TO hived_group;
-ALTER TABLE hive.transactions_reversible OWNER TO hived_group;
-ALTER TABLE hive.operations_reversible OWNER TO hived_group;
-ALTER TABLE hive.transactions_multisig_reversible OWNER TO hived_group;
-ALTER TABLE hive.accounts_reversible OWNER TO hived_group;
-ALTER TABLE hive.account_operations_reversible OWNER TO hived_group;
+ALTER TABLE hive_data.blocks_reversible OWNER TO hived_group;
+ALTER TABLE hive_data.transactions_reversible OWNER TO hived_group;
+ALTER TABLE hive_data.operations_reversible OWNER TO hived_group;
+ALTER TABLE hive_data.transactions_multisig_reversible OWNER TO hived_group;
+ALTER TABLE hive_data.accounts_reversible OWNER TO hived_group;
+ALTER TABLE hive_data.account_operations_reversible OWNER TO hived_group;
 ALTER TABLE hive_data.applied_hardforks OWNER TO hived_group;
-ALTER TABLE hive.applied_hardforks_reversible OWNER TO hived_group;
+ALTER TABLE hive_data.applied_hardforks_reversible OWNER TO hived_group;
 ALTER TABLE hive.write_ahead_log_state OWNER TO hived_group;
 
 -- generic protection for tables in hive schema

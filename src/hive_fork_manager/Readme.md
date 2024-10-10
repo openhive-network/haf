@@ -379,10 +379,10 @@ When a table is edited, its shadow table is automatically adapted to the new str
 
 #### Reversible blocks
 Tables for reversible blocks are copies of irreveersible + columns for fork_id
-##### hive.blocks_reversible
-##### hive.transactions_reversible
-##### hive.transactions_multisig_reversible
-##### hive.operations_reversible
+##### hive_data.blocks_reversible
+##### hive_data.transactions_reversible
+##### hive_data.transactions_multisig_reversible
+##### hive_data.operations_reversible
 
 ### CONTEXT REWIND
 ![alt text](./doc/evq_context_rewind_db.png)

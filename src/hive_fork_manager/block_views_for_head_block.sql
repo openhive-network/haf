@@ -15,7 +15,7 @@ consistent_block AS
 ,forks AS
 (
   SELECT hbr.num, max(hbr.fork_id) AS max_fork_id
-  FROM hive.blocks_reversible hbr, consistent_block cb
+  FROM hive_data.blocks_reversible hbr, consistent_block cb
   WHERE hbr.num > cb.consistent_block
   GROUP BY hbr.num
 )
@@ -25,8 +25,8 @@ SELECT har.account_id,
        hive.operation_id_to_type_id( har.operation_id ) as op_type_id,
        hive.operation_id_to_block_num( har.operation_id ) as block_num
 FROM forks 
-JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hive.operation_id_to_block_num(hor.id)
-JOIN hive.account_operations_reversible har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
+JOIN hive_data.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hive.operation_id_to_block_num(hor.id)
+JOIN hive_data.account_operations_reversible har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
 );
 
 CREATE OR REPLACE VIEW hive.accounts_view AS
@@ -48,10 +48,10 @@ FROM
             har.id,
             har.name,
             har.fork_id
-        FROM hive.accounts_reversible har
+        FROM hive_data.accounts_reversible har
         JOIN (
             SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-            FROM hive.blocks_reversible hbr
+            FROM hive_data.blocks_reversible hbr
             WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hive_data.irreversible_data hid )
             GROUP by hbr.num
         ) as forks ON forks.max_fork_id = har.fork_id AND forks.num = har.block_num
@@ -115,11 +115,11 @@ FROM (
         hbr.current_supply,
         hbr.current_hbd_supply,
         hbr.dhf_interval_ledger
-    FROM hive.blocks_reversible hbr
+    FROM hive_data.blocks_reversible hbr
     JOIN
     (
          SELECT rb.num, MAX(rb.fork_id) AS max_fork_id
-         FROM hive.blocks_reversible rb
+         FROM hive_data.blocks_reversible rb
          WHERE rb.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hive_data.irreversible_data hid )
          GROUP BY rb.num
     ) visible_blks ON visible_blks.num = hbr.num AND visible_blks.max_fork_id = hbr.fork_id
@@ -162,10 +162,10 @@ FROM
             htr.expiration,
             htr.signature,
             htr.fork_id
-    FROM hive.transactions_reversible htr
+    FROM hive_data.transactions_reversible htr
     JOIN (
         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-        FROM hive.blocks_reversible hbr
+        FROM hive_data.blocks_reversible hbr
         WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hive_data.irreversible_data hid )
         GROUP by hbr.num
     ) as forks ON forks.max_fork_id = htr.fork_id AND forks.num = htr.block_num
@@ -202,20 +202,20 @@ FROM
         visible_ops_timestamp.created_at timestamp,
         o.body_binary,
         o.body_binary::jsonb AS body
-        FROM hive.operations_reversible o
+        FROM hive_data.operations_reversible o
       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
       -- and also hide ops present at earlier forks for given block
       JOIN
       (
         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-        FROM hive.blocks_reversible hbr
+        FROM hive_data.blocks_reversible hbr
         WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hive_data.irreversible_data hid )
         GROUP by hbr.num
       ) visible_ops on visible_ops.num = hive.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
       JOIN
       (
         SELECT hbr.num, created_at
-        FROM hive.blocks_reversible hbr
+        FROM hive_data.blocks_reversible hbr
       ) visible_ops_timestamp ON visible_ops_timestamp.num = visible_ops.num
 ) t
 ;
@@ -245,13 +245,13 @@ FROM
         o.op_pos,
         o.body_binary,
         o.body_binary::jsonb AS body
-      FROM hive.operations_reversible o
+      FROM hive_data.operations_reversible o
       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
       -- and also hide ops present at earlier forks for given block
       JOIN
       (
         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-        FROM hive.blocks_reversible hbr
+        FROM hive_data.blocks_reversible hbr
         WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hive_data.irreversible_data hid )
         GROUP by hbr.num
       ) visible_ops on visible_ops.num = hive.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
@@ -276,13 +276,13 @@ FROM (
         SELECT
                htmr.trx_hash
              , htmr.signature
-        FROM hive.transactions_multisig_reversible htmr
+        FROM hive_data.transactions_multisig_reversible htmr
         JOIN (
                 SELECT htr.trx_hash, forks.max_fork_id
-                FROM hive.transactions_reversible htr
+                FROM hive_data.transactions_reversible htr
                 JOIN (
                     SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-                    FROM hive.blocks_reversible hbr
+                    FROM hive_data.blocks_reversible hbr
                     WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hive_data.irreversible_data hid )
                     GROUP by hbr.num
                 ) as forks ON forks.max_fork_id = htr.fork_id AND forks.num = htr.block_num
@@ -305,7 +305,7 @@ consistent_block AS
 ,forks AS
 (
   SELECT hbr.num, max(hbr.fork_id) AS max_fork_id
-  FROM hive.blocks_reversible hbr, consistent_block cb
+  FROM hive_data.blocks_reversible hbr, consistent_block cb
   WHERE hbr.num > cb.consistent_block
   GROUP BY hbr.num
 )
@@ -313,8 +313,8 @@ SELECT hjr.hardfork_num,
        hjr.block_num,
        hjr.hardfork_vop_id
 FROM forks 
-JOIN hive.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hive.operation_id_to_block_num(hor.id)
-JOIN hive.applied_hardforks_reversible hjr ON forks.max_fork_id = hjr.fork_id AND hjr.hardfork_vop_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
+JOIN hive_data.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hive.operation_id_to_block_num(hor.id)
+JOIN hive_data.applied_hardforks_reversible hjr ON forks.max_fork_id = hjr.fork_id AND hjr.hardfork_vop_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
 );
 
 -- only irreversible data
