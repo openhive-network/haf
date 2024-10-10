@@ -27,11 +27,9 @@ from haf_local_tools.system.haf.mirrornet.constants import (
         "disabled_indexes_in_replay",
     ],
 )
-def test_replay(witness_node_with_haf, block_log_5m_path, psql_index_threshold):
+def test_replay(witness_node_with_haf, block_log_5m, psql_index_threshold):
 
     witness_node_with_haf.config.psql_index_threshold = psql_index_threshold
-
-    block_log_5m = tt.BlockLog(block_log_5m_path)
 
     apply_block_log_type_to_monolithic_workaround(witness_node_with_haf)
     witness_node_with_haf.run(

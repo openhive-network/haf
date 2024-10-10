@@ -52,9 +52,8 @@ WITNESSES_1M: list[str] = [
 ]
 
 @pytest.mark.mirrornet
-def test_app_autodetach(witness_node_with_haf, block_log_5m_path, tmp_path):
+def test_app_autodetach(witness_node_with_haf, block_log_5m, tmp_path):
 
-    block_log_5m = tt.BlockLog(block_log_5m_path)
     block_log_1m = block_log_5m.truncate(tmp_path, 1000000)
 
     witness_node_with_haf.config.witness = WITNESSES_1M

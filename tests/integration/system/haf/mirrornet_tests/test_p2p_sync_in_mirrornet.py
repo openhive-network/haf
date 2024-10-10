@@ -28,11 +28,10 @@ from haf_local_tools import (
     ids=["enabled_indexes", "disabled_indexes_in_p2p_sync"],
 )
 def test_p2p_sync(
-    mirrornet_witness_node, haf_node, block_log_5m_path, tmp_path, psql_index_threshold
+    mirrornet_witness_node, haf_node, block_log_5m, tmp_path, psql_index_threshold
 ):
     haf_node.config.psql_index_threshold = psql_index_threshold
 
-    block_log_5m = tt.BlockLog(block_log_5m_path)
     block_log_1m = block_log_5m.truncate(tmp_path, 1000000)
     apply_block_log_type_to_monolithic_workaround(mirrornet_witness_node)
     mirrornet_witness_node.run(
