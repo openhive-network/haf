@@ -665,11 +665,11 @@ CREATE OR REPLACE FUNCTION hive.grant_select_for_state_providers_table( _table_n
 AS
 $BODY$
 BEGIN
-    -- TODO(mickiewicz@syncad.com) Here is a problem with schema hive
+    -- TODO(mickiewicz@syncad.com) Here is a problem with schema hive_data
     -- not returned by the any of already implemented state_providers
     -- need to investigate why schema is not a part of table name
     -- in the template there is a note that hive. must be returned for each state provider table name
-    EXECUTE format( 'GRANT SELECT ON TABLE hive.%s TO hive_applications_group', _table_name );
+    EXECUTE format( 'GRANT SELECT ON TABLE hive_data.%s TO hive_applications_group', _table_name );
 END;
 $BODY$
 ;
@@ -709,7 +709,7 @@ BEGIN
 
     -- register tables
     PERFORM
-          hive.app_register_table( 'hive', unnest( hsp.tables ), _context )
+          hive.app_register_table( 'hive_data', unnest( hsp.tables ), _context )
         , hive.grant_select_for_state_providers_table( unnest( hsp.tables ) )
     FROM hive.state_providers_registered hsp
     WHERE hsp.context_id = __context_id AND hsp.state_provider = _state_provider;

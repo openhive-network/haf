@@ -416,8 +416,8 @@ BEGIN
             a.*
         ,   k.key
         ,  acc.name
-    FROM hive.context_keyauth_a a
-    JOIN hive.context_keyauth_k k ON a.key_serial_id = k.key_id
+    FROM hive_data.context_keyauth_a a
+    JOIN hive_data.context_keyauth_k k ON a.key_serial_id = k.key_id
     JOIN hive.accounts acc ON acc.id = account_id
     ;
 
@@ -444,7 +444,7 @@ BEGIN
     ASSERT EXISTS ( SELECT * FROM keyauth_view WHERE (key_kind = 'WITNESS_SIGNING' AND hive.public_key_to_string(key) = 'STM62PZocuByZa6645ERCLJmmqG7k97eB1Y9bRzQXDFPsjyUxGqVV' ) ),'witness_set_properties_operation key not correct';
 
        --overall key count
-    ASSERT ( SELECT COUNT(*) FROM hive.context_keyauth_a ) = 26, 'Wrong number of current keys' || ' Should be 26 actual is ' ||  (SELECT COUNT(*) FROM hive.context_keyauth_a)::text;
+    ASSERT ( SELECT COUNT(*) FROM hive_data.context_keyauth_a ) = 26, 'Wrong number of current keys' || ' Should be 26 actual is ' ||  (SELECT COUNT(*) FROM hive_data.context_keyauth_a)::text;
 
         -- check the whole key table
 
@@ -490,7 +490,7 @@ BEGIN
         , context_accountauth_a.block_num
         , op_serial_id
         , timestamp
-        FROM hive.context_accountauth_a
+        FROM hive_data.context_accountauth_a
         JOIN hive.accounts_view accounts_view ON accounts_view.id = context_accountauth_a.account_id
         JOIN hive.accounts_view av ON av.id = context_accountauth_a.account_auth_id
     ;

@@ -31,9 +31,9 @@ BEGIN
          RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
-    EXECUTE format('DROP TABLE IF EXISTS hive.%I', __table_name);
+    EXECUTE format('DROP TABLE IF EXISTS hive_data.%I', __table_name);
 
-    EXECUTE format( 'CREATE TABLE hive.%I(
+    EXECUTE format( 'CREATE TABLE hive_data.%I(
                        account_id INTEGER
                      , json_metadata TEXT DEFAULT ''''
                      , posting_json_metadata TEXT DEFAULT ''''
@@ -41,7 +41,7 @@ BEGIN
                    )', __table_name);
 
     EXECUTE format(
-    'CREATE OR REPLACE FUNCTION hive.%I( _blockFrom INT, _blockTo INT )
+    'CREATE OR REPLACE FUNCTION hive_data.%I( _blockFrom INT, _blockTo INT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -118,7 +118,7 @@ BEGIN
             metadata.id DESC
         )
         INSERT INTO
-            hive.%s_metadata(account_id, json_metadata, posting_json_metadata)
+            hive_data.%s_metadata(account_id, json_metadata, posting_json_metadata)
         SELECT
             av.id,
             COALESCE(sjm.json_metadata, ''''),
@@ -132,14 +132,14 @@ BEGIN
             json_metadata =
             (
                 CASE EXCLUDED.json_metadata
-                    WHEN '''' THEN hive.%s_metadata.json_metadata
+                    WHEN '''' THEN hive_data.%s_metadata.json_metadata
                     ELSE EXCLUDED.json_metadata
                 END
             ),
             posting_json_metadata =
             (
                 CASE EXCLUDED.posting_json_metadata
-                    WHEN '''' THEN hive.%s_metadata.posting_json_metadata
+                    WHEN '''' THEN hive_data.%s_metadata.posting_json_metadata
                     ELSE EXCLUDED.posting_json_metadata
                 END
             );
@@ -173,7 +173,7 @@ BEGIN
              RAISE EXCEPTION 'No context with name %', _context;
     END IF;
     EXECUTE format(
-          'SELECT hive.%I(%s, %s);'
+          'SELECT hive_data.%I(%s, %s);'
         , hive.get_metadata_update_function_name( _context )
         , _first_block
         , _last_block
@@ -198,9 +198,9 @@ BEGIN
         RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
-    EXECUTE format( 'DROP TABLE hive.%I', __table_name );
+    EXECUTE format( 'DROP TABLE hive_data.%I', __table_name );
     EXECUTE format(
-          'DROP FUNCTION IF EXISTS hive.%I'
+          'DROP FUNCTION IF EXISTS hive_data.%I'
         , hive.get_metadata_update_function_name( _context )
     );
 END;

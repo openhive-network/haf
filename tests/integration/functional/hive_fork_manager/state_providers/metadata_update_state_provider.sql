@@ -654,7 +654,7 @@ STABLE AS
 $BODY$
 BEGIN ASSERT 1 = (
         SELECT COUNT(*)
-        FROM hive.context_metadata
+        FROM hive_data.context_metadata
         WHERE _account_id = account_id AND
               _json_metadata = json_metadata AND
               _posting_json_metadata = posting_json_metadata

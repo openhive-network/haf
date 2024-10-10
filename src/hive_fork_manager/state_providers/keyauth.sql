@@ -19,13 +19,13 @@ BEGIN
     -- all %1$s substitute _context below
 
     EXECUTE format($$
-        DROP TABLE IF EXISTS hive.%1$s_keyauth_a;
-        DROP TABLE IF EXISTS hive.%1$s_keyauth_k;
+        DROP TABLE IF EXISTS hive_data.%1$s_keyauth_a;
+        DROP TABLE IF EXISTS hive_data.%1$s_keyauth_k;
         $$
         , _context);
 
     EXECUTE format(
-        $$ DROP TABLE IF EXISTS hive.%s_accountauth
+        $$ DROP TABLE IF EXISTS hive_data.%s_accountauth
         $$
         ,_context);
 
@@ -34,7 +34,7 @@ BEGIN
 -- Create keys dictionary
     EXECUTE format(
     $$
-        CREATE TABLE hive.%1$s_keyauth_k
+        CREATE TABLE hive_data.%1$s_keyauth_k
         (
             key_id SERIAL PRIMARY KEY,
             key BYTEA UNIQUE
@@ -44,7 +44,7 @@ BEGIN
 -- Create Tables
 
     EXECUTE format($$
-        CREATE TABLE hive.%1$s_keyauth_a(
+        CREATE TABLE hive_data.%1$s_keyauth_a(
         account_id INTEGER
         , key_kind hive.key_type
         , key_serial_id INTEGER
@@ -54,7 +54,7 @@ BEGIN
         , block_num INTEGER NOT NULL
         , timestamp TIMESTAMP NOT NULL
         , CONSTRAINT pk_%1$s_keyauth_a PRIMARY KEY  ( account_id, key_kind, key_serial_id )
-        , CONSTRAINT fk_%1$s_keyauth_a_key_serial_id FOREIGN KEY (key_serial_id) REFERENCES hive.%1$s_keyauth_k (key_id) DEFERRABLE
+        , CONSTRAINT fk_%1$s_keyauth_a_key_serial_id FOREIGN KEY (key_serial_id) REFERENCES hive_data.%1$s_keyauth_k (key_id) DEFERRABLE
         );
     $$
     , _context);
@@ -63,7 +63,7 @@ BEGIN
 
 
     EXECUTE format($$
-        CREATE TABLE hive.%1$s_accountauth_a(
+        CREATE TABLE hive_data.%1$s_accountauth_a(
         account_id INTEGER
         , key_kind hive.key_type
         , account_auth_id INTEGER
@@ -78,12 +78,12 @@ BEGIN
     , _context);
 
     EXECUTE format($$
-        ALTER TABLE IF EXISTS hive.%1$s_keyauth_a DROP CONSTRAINT IF EXISTS pk_%1$s_keyauth_a;
+        ALTER TABLE IF EXISTS hive_data.%1$s_keyauth_a DROP CONSTRAINT IF EXISTS pk_%1$s_keyauth_a;
     $$
     , _context);
 
     EXECUTE format($$
-        ALTER TABLE IF EXISTS hive.%1$s_keyauth_a
+        ALTER TABLE IF EXISTS hive_data.%1$s_keyauth_a
             ADD CONSTRAINT pk_%1$s_keyauth_a PRIMARY KEY (key_serial_id, account_id, key_kind )
             USING INDEX TABLESPACE haf_tablespace;
     $$
@@ -92,7 +92,7 @@ BEGIN
 
     EXECUTE format($$
         CREATE INDEX IF NOT EXISTS idx_hive_%1$s_keyauth_a_account_id_key_kind
-            ON hive.%1$s_keyauth_a USING btree
+            ON hive_data.%1$s_keyauth_a USING btree
             (account_id, key_kind)
             TABLESPACE haf_tablespace;
     $$
@@ -105,7 +105,7 @@ BEGIN
     EXECUTE format(
     $t$
 
-        CREATE OR REPLACE FUNCTION hive.%1$s_insert_into_keyauth_a(
+        CREATE OR REPLACE FUNCTION hive_data.%1$s_insert_into_keyauth_a(
         _first_block integer,
         _last_block integer)
             RETURNS void
@@ -296,7 +296,7 @@ BEGIN
                     account_id, 
                     MIN(block_num) AS min_block_num_from_stored_table
                 FROM 
-                    hive.%1$s_keyauth_a
+                    hive_data.%1$s_keyauth_a
                 GROUP BY 
                     account_id
             ),
@@ -424,7 +424,7 @@ BEGIN
         --- PROCESSING OF KEY BASED AUTHORITIES ---	
             supplement_key_dictionary as materialized
             (
-            insert into hive.%1$s_keyauth_k as dict (key)
+            insert into hive_data.%1$s_keyauth_k as dict (key)
             SELECT DISTINCT s.key_auth
             FROM effective_key_or_account_auth_records s
             where s.key_auth IS NOT NULL
@@ -443,7 +443,7 @@ BEGIN
             from effective_key_or_account_auth_records s
         )
         ,delete_obsolete_key_auth_records as materialized (
-            DELETE FROM hive.%1$s_keyauth_a as ea
+            DELETE FROM hive_data.%1$s_keyauth_a as ea
             using changed_key_authorities s
             where account_id = s.changed_account_id and key_kind = s.changed_key_kind
             RETURNING account_id as cleaned_account_id, key_kind as cleaned_key_kind, key_serial_id as cleaned_key_id
@@ -451,7 +451,7 @@ BEGIN
         ,
         store_key_auth_records as materialized
         (
-            INSERT INTO hive.%1$s_keyauth_a AS auth_entries
+            INSERT INTO hive_data.%1$s_keyauth_a AS auth_entries
             ( account_id, key_kind, key_serial_id, weight_threshold, w, op_serial_id, block_num, timestamp )
             SELECT s.account_id, s.key_kind, s.key_id, s.weight_threshold, s.w, s.op_serial_id, s.block_num, s.timestamp
             FROM extended_key_auth_records s
@@ -467,7 +467,7 @@ BEGIN
         )
         ,delete_obsolete_keys_from_dict as
         (
-            delete from hive.%1$s_keyauth_k as dict
+            delete from hive_data.%1$s_keyauth_k as dict
             where dict.key_id in (select distinct s.cleaned_key_id from store_key_auth_records s)
         ),
         --- PROCESSING OF ACCOUNT BASED AUTHORITIES ---
@@ -489,7 +489,7 @@ BEGIN
         ),
         delete_obsolete_account_auth_records as materialized 
         (
-            DELETE FROM hive.%1$s_accountauth_a as ae
+            DELETE FROM hive_data.%1$s_accountauth_a as ae
             using changed_account_authorities s
             where account_id = s.changed_account_id and key_kind = s.changed_key_kind
             RETURNING account_id as cleaned_account_id, key_kind as cleaned_key_kind, account_auth_id as cleaned_account_auth_id
@@ -497,7 +497,7 @@ BEGIN
         ,
         store_account_auth_records as
         (
-            INSERT INTO hive.%1$s_accountauth_a AS ae
+            INSERT INTO hive_data.%1$s_accountauth_a AS ae
             ( account_id, key_kind, account_auth_id, weight_threshold, w, op_serial_id, block_num, timestamp )
             SELECT s.account_id, s.key_kind, s.account_auth_id, s.weight_threshold, s.w, s.op_serial_id, s.block_num, s.timestamp
             FROM extended_account_auth_records s
@@ -550,7 +550,7 @@ BEGIN
 
     __context_id = hive.get_context_id( _context );
 
-    __template = $t$ SELECT hive.%1$s_insert_into_keyauth_a(%L, %L) $t$;
+    __template = $t$ SELECT hive_data.%1$s_insert_into_keyauth_a(%L, %L) $t$;
 
     EXECUTE format(__template, _context, _first_block, _last_block);
 
@@ -570,15 +570,15 @@ BEGIN
     __context_id = hive.get_context_id( _context );
 
     EXECUTE format($$
-        DROP TABLE hive.%1$s_keyauth_a;
-        DROP TABLE hive.%1$s_keyauth_k;
-        DROP TABLE hive.%1$s_accountauth_a;
+        DROP TABLE hive_data.%1$s_keyauth_a;
+        DROP TABLE hive_data.%1$s_keyauth_k;
+        DROP TABLE hive_data.%1$s_accountauth_a;
         $$
         , _context);
 
     EXECUTE format(
         $$
-            DROP FUNCTION IF EXISTS hive.%1$s_insert_into_keyauth_a
+            DROP FUNCTION IF EXISTS hive_data.%1$s_insert_into_keyauth_a
         $$
         , _context);
 

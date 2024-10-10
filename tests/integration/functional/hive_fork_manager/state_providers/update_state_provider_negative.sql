@@ -76,7 +76,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM hive.context_accounts ) = 0, 'Some account were added';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.context_accounts ) = 0, 'Some account were added';
 END;
 $BODY$
 ;

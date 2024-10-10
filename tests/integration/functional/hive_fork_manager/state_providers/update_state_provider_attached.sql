@@ -57,34 +57,34 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.app_state_providers_update( 1, 1, 'context' );
-    ASSERT ( SELECT COUNT(*) FROM hive.context_accounts ) = 1, 'Wrong number of accounts 1';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.context_accounts ) = 1, 'Wrong number of accounts 1';
 
-    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'from_pow' ), 'from_pow not created';
+    ASSERT EXISTS ( SELECT * FROM hive_data.context_accounts WHERE name = 'from_pow' ), 'from_pow not created';
 
     PERFORM hive.app_next_block( 'context' ); -- 2
     PERFORM hive.app_state_providers_update( 2, 2, 'context' );
-    ASSERT ( SELECT COUNT(*) FROM hive.context_accounts ) = 2, 'Wrong number of accounts 2';
-    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'from_pow2' ), 'from_pow2 not created';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.context_accounts ) = 2, 'Wrong number of accounts 2';
+    ASSERT EXISTS ( SELECT * FROM hive_data.context_accounts WHERE name = 'from_pow2' ), 'from_pow2 not created';
 
     PERFORM hive.app_next_block( 'context' ); -- 3
     PERFORM hive.app_state_providers_update( 3, 3, 'context' );
-    ASSERT ( SELECT COUNT(*) FROM hive.context_accounts ) = 3, 'Wrong number of accounts 3';
-    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'create_account' ), 'create_account not created';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.context_accounts ) = 3, 'Wrong number of accounts 3';
+    ASSERT EXISTS ( SELECT * FROM hive_data.context_accounts WHERE name = 'create_account' ), 'create_account not created';
 
     PERFORM hive.app_next_block( 'context' ); -- 4
     PERFORM hive.app_state_providers_update( 4, 4, 'context' );
-    ASSERT ( SELECT COUNT(*) FROM hive.context_accounts ) = 4, 'Wrong number of accounts 4';
-    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'claimed_account' ), 'claimed_account not created';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.context_accounts ) = 4, 'Wrong number of accounts 4';
+    ASSERT EXISTS ( SELECT * FROM hive_data.context_accounts WHERE name = 'claimed_account' ), 'claimed_account not created';
 
     PERFORM hive.app_next_block( 'context' ); -- 5
     PERFORM hive.app_state_providers_update( 5, 5, 'context' );
-    ASSERT ( SELECT COUNT(*) FROM hive.context_accounts ) = 5, 'Wrong number of accounts 5';
-    ASSERT EXISTS ( SELECT * FROM hive.context_accounts WHERE name = 'claimed_acc_del' ), 'account_create_with_delegation_operation not created';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.context_accounts ) = 5, 'Wrong number of accounts 5';
+    ASSERT EXISTS ( SELECT * FROM hive_data.context_accounts WHERE name = 'claimed_acc_del' ), 'account_create_with_delegation_operation not created';
 
     PERFORM hive.app_next_block( 'context' ); -- 6
     PERFORM hive.app_state_providers_update( 6, 6, 'context' );
 
-    ASSERT ( SELECT COUNT(*) FROM hive.context_accounts ) = 5, 'Wrong number of accounts';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.context_accounts ) = 5, 'Wrong number of accounts';
 END;
 $BODY$
 ;

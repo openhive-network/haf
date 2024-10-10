@@ -20,7 +20,7 @@ BEGIN
          RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
-    EXECUTE format( 'CREATE TABLE hive.%I(
+    EXECUTE format( 'CREATE TABLE hive_data.%I(
                       id SERIAL
                     , name TEXT
                     , CONSTRAINT pk_%s PRIMARY KEY( id )
@@ -58,7 +58,7 @@ BEGIN
     END IF;
 
     EXECUTE format(
-        'INSERT INTO hive.%s_accounts( name )
+        'INSERT INTO hive_data.%s_accounts( name )
         SELECT hive.get_created_from_account_create_operations( ov.body_binary ) as name
         FROM %s.operations_view ov
         JOIN hive.operation_types ot ON ov.op_type_id = ot.id
@@ -92,7 +92,7 @@ BEGIN
         RAISE EXCEPTION 'No context with name %', _context;
     END IF;
 
-    EXECUTE format( 'DROP TABLE hive.%I', __table_name );
+    EXECUTE format( 'DROP TABLE hive_data.%I', __table_name );
 END;
 $BODY$
 ;
