@@ -1,3 +1,4 @@
+from pathlib import Path
 import pytest
 
 import test_tools as tt
@@ -15,9 +16,12 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture
-def block_log_5m(request) -> tt.BlockLog:
-    block_log_dir_path = request.config.getoption("--block-log-dir-path")
-    return tt.BlockLog(block_log_dir_path)
+def block_log_5m(request: pytest.FixtureRequest) -> tt.BlockLog:
+    block_log_dir_path = Path(request.config.getoption("--block-log-dir-path"))
+    assert (block_log_dir_path / tt.BlockLog.MONO_BLOCK_FILE_NAME).exists(), f"block_log file does not exists in: {block_log_dir_path.as_posix()}"
+    block_log = tt.BlockLog(block_log_dir_path, mode="monolithic")
+    assert len(block_log.block_files) > 0, f"block log files does not exists in: {block_log_dir_path.as_posix()}"
+    return block_log
 
 
 @pytest.fixture

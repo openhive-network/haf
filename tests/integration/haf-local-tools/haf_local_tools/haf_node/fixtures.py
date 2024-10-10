@@ -29,6 +29,7 @@ def haf_node(request):
     """
     DB_URL = os.getenv("DB_URL")
     haf_node =  HafNode(keep_database=True, database_url=DB_URL)
+    haf_node.config.block_log_split = -1
     drop_database_if_test_pass = True
     yield haf_node
     if drop_database_if_test_pass:

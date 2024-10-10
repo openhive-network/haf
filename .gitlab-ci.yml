@@ -230,7 +230,7 @@ haf_system_tests_mirrornet:
     # drop tmp location
     - rm -r $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
     # prepare environment and run tests
-    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests
+    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests && ls -la
     - pytest --junitxml report.xml --timeout=3600 --block-log-dir-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests --snapshot-path="$SNAPSHOTS_PATH/5m_mirrornet/snapshot/snapshot" -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
   artifacts:
     paths:
