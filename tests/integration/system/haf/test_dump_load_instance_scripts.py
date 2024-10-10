@@ -96,7 +96,7 @@ class Test:
         self.dump_instance_script=scripts_path/'dump_instance.sh'
         self.load_instance_script=scripts_path/'load_instance.sh'
 
-        node.run(replay_from=create_block_log_directory_name("block_log") / "block_log", stop_at_block=stop_at_block, exit_before_synchronization=True)
+        node.run(replay_from=create_block_log_directory_name("block_log"), stop_at_block=stop_at_block, exit_before_synchronization=True)
         session.close()
 
 
