@@ -25,13 +25,13 @@ SCRIPTSDIR="/home/haf_admin/source/${HIVE_SUBDIR}/scripts"
 if sudo -Enu hived test ! -d "$DATADIR"
 then
     echo "Data directory (DATADIR) $DATADIR does not exist. Exiting."
-    exit 1
+    exit 2
 fi
 
 if sudo -Enu hived test ! -d "$SHM_DIR" && test "$SHM_DIR" != "$DATADIR/blockchain"
 then
     echo "Shared memory file directory (SHM_DIR) $SHM_DIR does not exist. Exiting."
-    exit 1
+    exit 3
 fi
 
 LOG_FILE="${DATADIR}/${LOG_FILE:-docker_entrypoint.log}"
@@ -235,6 +235,17 @@ fi
 # Directory haf_db_store has to be world readable to avoid the following error:
 # Error: /home/hived/datadir/haf_db_store/pgdata is not accessible; please fix the directory permissions (/home/hived/datadir/haf_db_store/ should be world readable)
 sudo -n --user=hived mkdir -p -m 755 "$HAF_DB_STORE"
+
+# Check if correct PostgreSQL version is installed
+# This is to avoid initdb invocation failing with cryptic
+# 'sudo: a password is required' message
+if [[ -d "/usr/lib/postgresql/${POSTGRES_VERSION}" ]]; then
+  echo "PostgreSQL ${POSTGRES_VERSION} appears to be installed"
+else
+  echo "PostgreSQL ${POSTGRES_VERSION} seems to be missing. Available versions:"
+  ls -lAh "/usr/lib/postgresql"
+  exit 4
+fi
 
 # Prepare HBA file before starting PostgreSQL
 prepare_pg_hba_file
