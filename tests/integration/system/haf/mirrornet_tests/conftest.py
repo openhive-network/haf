@@ -3,6 +3,7 @@ import pytest
 import test_tools as tt
 
 from haf_local_tools.system.haf.mirrornet.constants import SKELETON_KEY, WITNESSES_5M
+from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 
 
 def pytest_addoption(parser):
@@ -33,6 +34,9 @@ def mirrornet_witness_node():
     witness_node.config.enable_stale_production = True
     witness_node.config.required_participation = 0
     witness_node.config.plugin.append("database_api")
+    witness_node.config.plugin.append("witness")
+    witness_node.config.plugin.append("account_by_key")
+    apply_block_log_type_to_monolithic_workaround(witness_node)
     return witness_node
 
 
