@@ -40,10 +40,10 @@ BEGIN
     ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'context_metadata' ), 'Accounts table still exists';
     ASSERT ( SELECT COUNT(*) FROM hive_data.registered_tables WHERE origin_table_schema = 'hive' AND origin_table_name = 'context_metadata' AND context_id = 1 ) = 0, 'State provider table is still registered';
 
-    ASSERT NOT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive.insert_trigger_hive_context_metadata' ), 'Insert trigger not cleaned';
-    ASSERT NOT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive.update_trigger_hive_context_metadata' ), 'Update trigger not cleaned';
-    ASSERT NOT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive.delete_trigger_hive_context_metadata' ), 'Delete trigger not cleaned';
-    ASSERT NOT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive.truncate_trigger_hive_context_metadata' ), 'Truncate trigger not cleaned';
+    ASSERT NOT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive_data.insert_trigger_hive_context_metadata' ), 'Insert trigger not cleaned';
+    ASSERT NOT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive_data.update_trigger_hive_context_metadata' ), 'Update trigger not cleaned';
+    ASSERT NOT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive_data.delete_trigger_hive_context_metadata' ), 'Delete trigger not cleaned';
+    ASSERT NOT EXISTS ( SELECT FROM hive_data.triggers WHERE trigger_name='hive_data.truncate_trigger_hive_context_metadata' ), 'Truncate trigger not cleaned';
 
     ASSERT NOT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_insert_hive_context_metadata'), 'Insert trigger function not dropped';
     ASSERT NOT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_delete_hive_context_metadata'), 'Delete trigger function not dropped';

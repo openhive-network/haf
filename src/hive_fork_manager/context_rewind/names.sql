@@ -39,7 +39,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-        'hive.insert_trigger_' || lower(_table_schema) || '_' || lower( _table_name )
+        'hive_data.insert_trigger_' || lower(_table_schema) || '_' || lower( _table_name )
         , _table_name );
 END;
 $BODY$
@@ -53,7 +53,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-                        'hive.delete_trigger_' || lower(_table_schema) || '_' || lower(_table_name)
+                        'hive_data.delete_trigger_' || lower(_table_schema) || '_' || lower(_table_name)
         , _table_name
     );
 END;
@@ -68,7 +68,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-          'hive.update_trigger_' || lower(_table_schema) || '_' || lower(_table_name)
+          'hive_data.update_trigger_' || lower(_table_schema) || '_' || lower(_table_name)
         , _table_name
     );
 END;
@@ -83,7 +83,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-'hive.truncate_trigger_' || lower(_table_schema) || '_' || lower( _table_name )
+'hive_data.truncate_trigger_' || lower(_table_schema) || '_' || lower( _table_name )
     , _table_name );
 END;
 $BODY$
@@ -96,7 +96,7 @@ CREATE OR REPLACE FUNCTION hive.get_trigger_insert_function_name( _table_schema 
 AS
 $BODY$
 BEGIN
-    RETURN 'hive.on_insert_' || lower(_table_schema) || '_' || lower( _table_name );
+    RETURN 'hive_data.on_insert_' || lower(_table_schema) || '_' || lower( _table_name );
 END;
 $BODY$
 ;
@@ -109,7 +109,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-'hive.on_delete_' || lower(_table_schema) || '_' || lower( _table_name )
+'hive_data.on_delete_' || lower(_table_schema) || '_' || lower( _table_name )
     , _table_name );
 END;
 $BODY$
@@ -123,7 +123,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-        'hive.on_update_' || lower(_table_schema) || '_' || lower( _table_name )
+        'hive_data.on_update_' || lower(_table_schema) || '_' || lower( _table_name )
         , _table_name );
 END;
 $BODY$
@@ -137,7 +137,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-    'hive.on_truncate_' || lower(_table_schema) || '_' || lower( _table_name )
+    'hive_data.on_truncate_' || lower(_table_schema) || '_' || lower( _table_name )
         , _table_name
     );
 END;
