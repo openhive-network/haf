@@ -9,7 +9,7 @@ __columns TEXT = array_to_string( _columns, ',' );
 BEGIN
     -- rewind_insert
     EXECUTE format(
-        'CREATE OR REPLACE FUNCTION hive.%I_%I_revert_insert( _row_id BIGINT )
+        'CREATE OR REPLACE FUNCTION hive_data.%I_%I_revert_insert( _row_id BIGINT )
         RETURNS void
         LANGUAGE plpgsql
         VOLATILE
@@ -25,7 +25,7 @@ BEGIN
 
     --rewind delete
     EXECUTE format(
-        'CREATE OR REPLACE FUNCTION hive.%I_%I_revert_delete( _operation_id BIGINT )
+        'CREATE OR REPLACE FUNCTION hive_data.%I_%I_revert_delete( _operation_id BIGINT )
         RETURNS void
         LANGUAGE plpgsql
         VOLATILE
@@ -47,7 +47,7 @@ BEGIN
     );
 
     EXECUTE format(
-        'CREATE OR REPLACE FUNCTION hive.%I_%I_revert_update( _operation_id BIGINT, _row_id BIGINT )
+        'CREATE OR REPLACE FUNCTION hive_data.%I_%I_revert_update( _operation_id BIGINT, _row_id BIGINT )
         RETURNS void
         LANGUAGE plpgsql
         VOLATILE
@@ -80,20 +80,20 @@ $BODY$
 BEGIN
     -- rewind_insert
     EXECUTE format(
-          'DROP FUNCTION IF EXISTS hive.%I_%I_revert_insert'
+          'DROP FUNCTION IF EXISTS hive_data.%I_%I_revert_insert'
         , _table_schema,  _table_name
         , _table_schema,  _table_name
     );
 
     --rewind delete
     EXECUTE format(
-          'DROP FUNCTION IF EXISTS hive.%I_%I_revert_delete'
+          'DROP FUNCTION IF EXISTS hive_data.%I_%I_revert_delete'
         , _table_schema, _table_name
         , _table_schema, _table_name
     );
 
     EXECUTE format(
-          'DROP FUNCTION IF EXISTS hive.%I_%I_revert_update'
+          'DROP FUNCTION IF EXISTS hive_data.%I_%I_revert_update'
         , _table_schema, _table_name
         , _table_schema, _table_name
     );

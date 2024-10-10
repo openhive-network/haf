@@ -76,9 +76,9 @@ BEGIN
     EXECUTE format(
         'SELECT
         CASE st.hive_operation_type
-            WHEN ''INSERT'' THEN hive.%I_%I_revert_insert( st.hive_rowid )
-            WHEN ''DELETE'' THEN hive.%I_%I_revert_delete( st.hive_operation_id )
-            WHEN ''UPDATE'' THEN hive.%I_%I_revert_update( st.hive_operation_id, st.hive_rowid )
+            WHEN ''INSERT'' THEN hive_data.%I_%I_revert_insert( st.hive_rowid )
+            WHEN ''DELETE'' THEN hive_data.%I_%I_revert_delete( st.hive_operation_id )
+            WHEN ''UPDATE'' THEN hive_data.%I_%I_revert_update( st.hive_operation_id, st.hive_rowid )
         END
         FROM hive_data.%I st
         WHERE st.hive_block_num > %s
