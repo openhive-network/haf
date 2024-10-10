@@ -8,7 +8,7 @@ BEGIN
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
            ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     VALUES
            ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -36,7 +36,7 @@ BEGIN
          , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-    INSERT INTO hive.accounts
+    INSERT INTO hive_data.accounts
     VALUES
            ( 1, 'alice1', 1 )
          , ( 2, 'alice2', 2 )
@@ -80,7 +80,7 @@ AS
 $BODY$
 BEGIN
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.accounts WHERE id >= 0
+        SELECT * FROM hive_data.accounts WHERE id >= 0
         EXCEPT SELECT * FROM ( VALUES
                    (  1, 'alice1' , 1)
                  , (  2, 'alice2' , 2)
@@ -106,7 +106,7 @@ BEGIN
                  , (  8, 'bob72'  , 7)
                  , (  9, 'alice83', 8 )
         ) as pattern
-        EXCEPT SELECT * FROM hive.accounts WHERE id >= 0
+        EXCEPT SELECT * FROM hive_data.accounts WHERE id >= 0
     ) , 'Unexpected rows in the view2';
 
 END

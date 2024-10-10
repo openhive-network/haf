@@ -9,8 +9,8 @@ BEGIN
     PERFORM hive.app_create_context(  _name =>'context', _schema => 'a' );
 
     -- check if correct irreversibe block is set
-    INSERT INTO hive.blocks VALUES( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
-    INSERT INTO hive.accounts( id, name, block_num ) VALUES (5, 'initminer', 101);
+    INSERT INTO hive_data.blocks VALUES( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
+    INSERT INTO hive_data.accounts( id, name, block_num ) VALUES (5, 'initminer', 101);
     PERFORM hive.end_massive_sync( 101 );
 
     PERFORM hive.app_create_context( _name => 'context2', _schema => 'b' );

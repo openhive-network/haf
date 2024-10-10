@@ -8,7 +8,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.operation_types
+    INSERT INTO hive_data.operation_types
     VALUES
           ( 1, 'hive::protocol::account_create_operation', FALSE )
     	, ( 2, 'hive::protocol::account_update_operation', FALSE)
@@ -20,7 +20,7 @@ BEGIN
     ;
 
 
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     VALUES
            ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -32,7 +32,7 @@ BEGIN
          , ( 8, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:28-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
      ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hive_data.accounts( id, name, block_num )
     VALUES 
     (2, 'temp', 1),
     (4, 'steem', 1),
@@ -57,7 +57,7 @@ BEGIN
     (23, 'snail-157', 5)
     ;
 
-    INSERT INTO hive.transactions
+    INSERT INTO hive_data.transactions
     VALUES
            ( 1, 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
          , ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
@@ -66,7 +66,7 @@ BEGIN
          , ( 5, 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-   INSERT INTO hive.operations
+   INSERT INTO hive_data.operations
     VALUES
         -- one key from owner, one from active, one from posting
           ( hive.operation_id(1, 1, 0), 0, 0, '
@@ -418,7 +418,7 @@ BEGIN
         ,  acc.name
     FROM hive_data.context_keyauth_a a
     JOIN hive_data.context_keyauth_k k ON a.key_serial_id = k.key_id
-    JOIN hive.accounts acc ON acc.id = account_id
+    JOIN hive_data.accounts acc ON acc.id = account_id
     ;
 
     PERFORM hive.print_recordset_with_label('Whole resulting keyauth_view', 'SELECT * FROM keyauth_view');

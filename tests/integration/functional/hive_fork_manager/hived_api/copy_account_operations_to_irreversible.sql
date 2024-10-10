@@ -8,14 +8,14 @@ BEGIN
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
            ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 
-    INSERT INTO hive.operation_types
+    INSERT INTO hive_data.operation_types
     VALUES ( 0, 'OP 0', FALSE )
          , ( 1, 'OP 1', FALSE )
          , ( 2, 'OP 2', FALSE )
          , ( 3, 'OP 3', TRUE )
     ;
 
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     VALUES
            ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 15, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 15, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -27,7 +27,7 @@ BEGIN
          , ( 8, '\xBADD8001', '\xCAFE80', '2016-06-22 19:10:28-07'::timestamp, 15, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hive_data.accounts( id, name, block_num )
     VALUES (15, 'initminer', 1)
          , (16, 'alice', 1)
          , (17, 'bob', 1)
@@ -49,7 +49,7 @@ BEGIN
          , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 15, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-    INSERT INTO hive.operations
+    INSERT INTO hive_data.operations
     VALUES
            ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
          , ( hive.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
@@ -79,7 +79,7 @@ BEGIN
          , ( hive.operation_id(10, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive.operation, 3 )
     ;
 
-    INSERT INTO hive.accounts
+    INSERT INTO hive_data.accounts
     VALUES
            ( 1, 'alice1', 1 )
          , ( 2, 'alice2', 1 )
@@ -109,7 +109,7 @@ BEGIN
          , ( 11, 'alice103', 10, 3 )
     ;
 
-    INSERT INTO hive.account_operations(account_id, account_op_seq_no, operation_id)
+    INSERT INTO hive_data.account_operations(account_id, account_op_seq_no, operation_id)
     VALUES
            ( 1, 1, hive.operation_id(1, 1, 0) )
          , ( 1, 2, hive.operation_id(2, 1, 0) )
@@ -155,7 +155,7 @@ AS
 $BODY$
 BEGIN
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.account_operations
+        SELECT * FROM hive_data.account_operations
         EXCEPT SELECT * FROM ( VALUES
                    ( 1, 1, hive.operation_id(1, 1, 0) )
                  , ( 1, 2, hive.operation_id(2, 1, 0) )
@@ -170,7 +170,7 @@ BEGIN
                  ) as pattern
     ) , 'Unexpected rows in the account_operations1';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.account_operations ) = 10, 'Wrong number of rows';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.account_operations ) = 10, 'Wrong number of rows';
 
 END
 $BODY$

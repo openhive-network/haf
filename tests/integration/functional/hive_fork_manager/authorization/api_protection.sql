@@ -97,13 +97,13 @@ CREATE OR REPLACE PROCEDURE alice_test_then()
 AS
 $BODY$
 DECLARE
-    __block hive.blocks%ROWTYPE;
-    __transaction1 hive.transactions%ROWTYPE;
-    __transaction2 hive.transactions%ROWTYPE;
-    __operation1_1 hive.operations%ROWTYPE;
-    __operation2_1 hive.operations%ROWTYPE;
-    __signatures1 hive.transactions_multisig%ROWTYPE;
-    __signatures2 hive.transactions_multisig%ROWTYPE;
+    __block hive_data.blocks%ROWTYPE;
+    __transaction1 hive_data.transactions%ROWTYPE;
+    __transaction2 hive_data.transactions%ROWTYPE;
+    __operation1_1 hive_data.operations%ROWTYPE;
+    __operation2_1 hive_data.operations%ROWTYPE;
+    __signatures1 hive_data.transactions_multisig%ROWTYPE;
+    __signatures2 hive_data.transactions_multisig%ROWTYPE;
 BEGIN
     BEGIN
         PERFORM hive.initialize_extension_data();

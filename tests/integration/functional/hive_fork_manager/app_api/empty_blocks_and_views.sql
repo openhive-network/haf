@@ -8,7 +8,7 @@ BEGIN
     PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
     CREATE TABLE table1( id INT ) INHERITS( a.context );
 
-    INSERT INTO hive.operation_types
+    INSERT INTO hive_data.operation_types
     VALUES ( 0, 'OP 0', FALSE )
          , ( 1, 'OP 1', FALSE )
          , ( 2, 'OP 2', FALSE )
@@ -19,26 +19,26 @@ BEGIN
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
            ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     VALUES
            ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hive_data.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
     ;
 
-    INSERT INTO hive.transactions
+    INSERT INTO hive_data.transactions
     VALUES
            ( 1, 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hive.operations
+    INSERT INTO hive_data.operations
     VALUES
     ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
     ;
 
-    INSERT INTO hive.transactions_multisig
+    INSERT INTO hive_data.transactions_multisig
     VALUES
            ( '\xDEED10', '\xBAAD10' )
     ;

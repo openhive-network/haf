@@ -20,7 +20,7 @@ EXECUTE format(
             Definition of `min_block` (from least(current_block_num, irrecersible_block)) has been changed because of creation of gap,
             between app irreversible block and app reversibble blocks which are no longer in hive.reversible blocks,
             because of delay of processing blocks, which can be long enough, that blocks are no longer avaiable in previously mentioned table,
-            but are in hive.blocks.
+            but are in hive_data.blocks.
         */
         LEAST(
               hc.irreversible_block
@@ -124,7 +124,7 @@ BEGIN
             hb.current_supply,
             hb.current_hbd_supply,
             hb.dhf_interval_ledger
-           FROM hive.blocks hb
+           FROM hive_data.blocks hb
            WHERE hb.num <= c.min_block
         UNION ALL
          SELECT hbr.num,
@@ -195,7 +195,7 @@ EXECUTE format(
             hb.current_supply,
             hb.current_hbd_supply,
             hb.dhf_interval_ledger
-        FROM hive.blocks hb
+        FROM hive_data.blocks hb
         ;', __schema
     );
 
@@ -252,7 +252,7 @@ WHERE hc.name = _context_name;
                    ht.ref_block_prefix,
                    ht.expiration,
                    ht.signature
-                FROM hive.transactions ht
+                FROM hive_data.transactions ht
                 WHERE ht.block_num <= c.min_block
                 UNION ALL
                 SELECT reversible.block_num,
@@ -309,7 +309,7 @@ EXECUTE format(
            ht.ref_block_prefix,
            ht.expiration,
            ht.signature
-        FROM hive.transactions ht
+        FROM hive_data.transactions ht
        ;'
     , __schema
     );
@@ -367,8 +367,8 @@ EXECUTE format(
               ho.op_pos,
               b.created_at timestamp,
               ho.body_binary
-              FROM hive.operations ho
-              JOIN hive.blocks b ON b.num = hive.operation_id_to_block_num(ho.id)
+              FROM hive_data.operations ho
+              JOIN hive_data.blocks b ON b.num = hive.operation_id_to_block_num(ho.id)
               WHERE hive.operation_id_to_block_num(ho.id) <= c.min_block
             UNION ALL
               SELECT
@@ -430,7 +430,7 @@ EXECUTE format(
               ho.trx_in_block,
               ho.op_pos,
               ho.body_binary
-              FROM hive.operations ho
+              FROM hive_data.operations ho
               WHERE hive.operation_id_to_block_num(ho.id) <= c.min_block
             UNION ALL
               SELECT
@@ -480,8 +480,8 @@ EXECUTE format(
             b.created_at timestamp,
             ho.body_binary,
             ho.body_binary::jsonb AS body
-        FROM hive.operations ho
-        JOIN hive.blocks b ON b.num = hive.operation_id_to_block_num(ho.id)
+        FROM hive_data.operations ho
+        JOIN hive_data.blocks b ON b.num = hive.operation_id_to_block_num(ho.id)
         ;', __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
@@ -512,7 +512,7 @@ EXECUTE format(
             hive.operation_id_to_type_id( ho.id ) as op_type_id,
             ho.body_binary,
             ho.body_binary::jsonb AS body
-        FROM hive.operations ho
+        FROM hive_data.operations ho
         ;', __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
@@ -577,8 +577,8 @@ EXECUTE format(
         SELECT
                   htm.trx_hash
                 , htm.signature
-        FROM hive.transactions_multisig htm
-        JOIN hive.transactions ht ON ht.trx_hash = htm.trx_hash
+        FROM hive_data.transactions_multisig htm
+        JOIN hive_data.transactions ht ON ht.trx_hash = htm.trx_hash
         WHERE ht.block_num <= c.min_block
         UNION ALL
         SELECT
@@ -626,7 +626,7 @@ EXECUTE format(
     SELECT
           htm.trx_hash
         , htm.signature
-    FROM hive.transactions_multisig htm
+    FROM hive_data.transactions_multisig htm
     ;'
     , __schema
     );
@@ -675,7 +675,7 @@ EXECUTE format(
         (
           SELECT ha.id,
                  ha.name
-                FROM hive.accounts ha
+                FROM hive_data.accounts ha
                 WHERE COALESCE(ha.block_num,1) <= c.min_block
                 UNION ALL
                 SELECT
@@ -719,7 +719,7 @@ EXECUTE format(
         SELECT
            ha.id,
            ha.name
-        FROM hive.accounts ha
+        FROM hive_data.accounts ha
     ;', __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'accounts_view');
@@ -772,7 +772,7 @@ EXECUTE format(
                  ha.account_id,
                  ha.account_op_seq_no,
                  ha.operation_id
-                FROM hive.account_operations ha
+                FROM hive_data.account_operations ha
                 WHERE hive.operation_id_to_block_num(ha.operation_id) <= c.min_block
                 UNION ALL
                 SELECT
@@ -821,7 +821,7 @@ EXECUTE format(
            ha.account_op_seq_no,
            ha.operation_id,
            hive.operation_id_to_type_id( ha.operation_id ) as op_type_id
-        FROM hive.account_operations ha
+        FROM hive_data.account_operations ha
         ;'
     , __schema
     );
@@ -872,7 +872,7 @@ EXECUTE format(
           SELECT hr.hardfork_num,
                  hr.block_num,
                  hr.hardfork_vop_id
-                FROM hive.applied_hardforks hr
+                FROM hive_data.applied_hardforks hr
                 WHERE hr.block_num <= c.min_block
                 UNION ALL
                 SELECT
@@ -920,7 +920,7 @@ EXECUTE format(
                  hr.hardfork_num,
                  hr.block_num,
                  hr.hardfork_vop_id
-        FROM hive.applied_hardforks hr
+        FROM hive_data.applied_hardforks hr
         ;'
     , __schema
     );

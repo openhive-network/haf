@@ -4,7 +4,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.operation_types
+    INSERT INTO hive_data.operation_types
     VALUES (0, 'OP 0', FALSE )
         , ( 1, 'OP 1', FALSE )
         , ( 2, 'OP 2', FALSE )
@@ -19,19 +19,19 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 DECLARE
-    __block hive.blocks%ROWTYPE;
-    __transaction1 hive.transactions%ROWTYPE;
-    __transaction2 hive.transactions%ROWTYPE;
-    __operation1_1 hive.operations%ROWTYPE;
-    __operation2_1 hive.operations%ROWTYPE;
-    __signatures1 hive.transactions_multisig%ROWTYPE;
-    __signatures2 hive.transactions_multisig%ROWTYPE;
-    __account1 hive.accounts%ROWTYPE;
-    __account2 hive.accounts%ROWTYPE;
-    __account_operation1 hive.account_operations%ROWTYPE;
-    __account_operation2 hive.account_operations%ROWTYPE;
-    __applied_hardforks1 hive.applied_hardforks%ROWTYPE;
-    __applied_hardforks2 hive.applied_hardforks%ROWTYPE;
+    __block hive_data.blocks%ROWTYPE;
+    __transaction1 hive_data.transactions%ROWTYPE;
+    __transaction2 hive_data.transactions%ROWTYPE;
+    __operation1_1 hive_data.operations%ROWTYPE;
+    __operation2_1 hive_data.operations%ROWTYPE;
+    __signatures1 hive_data.transactions_multisig%ROWTYPE;
+    __signatures2 hive_data.transactions_multisig%ROWTYPE;
+    __account1 hive_data.accounts%ROWTYPE;
+    __account2 hive_data.accounts%ROWTYPE;
+    __account_operation1 hive_data.account_operations%ROWTYPE;
+    __account_operation2 hive_data.account_operations%ROWTYPE;
+    __applied_hardforks1 hive_data.applied_hardforks%ROWTYPE;
+    __applied_hardforks2 hive_data.applied_hardforks%ROWTYPE;
 BEGIN
     __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G' , 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
     __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
@@ -180,7 +180,7 @@ BEGIN
     ) = 1, 'Wrong data of hardfork 2';
 
 
-    ASSERT( SELECT is_dirty FROM hive.irreversible_data ) = FALSE, 'Irreversible data are dirty';
+    ASSERT( SELECT is_dirty FROM hive_data.irreversible_data ) = FALSE, 'Irreversible data are dirty';
 END
 $BODY$
 ;

@@ -16,7 +16,7 @@ $$
 DECLARE
     __result INT := 1;
 BEGIN
-    SELECT consistent_block INTO __result FROM hive.irreversible_data;
+    SELECT consistent_block INTO __result FROM hive_data.irreversible_data;
     RETURN __result;
 END
 $$

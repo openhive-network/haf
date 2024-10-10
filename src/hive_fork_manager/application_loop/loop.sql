@@ -102,7 +102,7 @@ DECLARE
     __result INTEGER;
 BEGIN
     SELECT COALESCE( MAX(hb.num), 0 )
-    FROM hive.blocks hb
+    FROM hive_data.blocks hb
     INTO __result;
 
     RETURN __result;

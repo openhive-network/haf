@@ -3,7 +3,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 DECLARE
-    __account hive.accounts%ROWTYPE;
+    __account hive_data.accounts%ROWTYPE;
 BEGIN
     __account = ( 5, 'initminer', 1 );
     PERFORM hive.push_block(

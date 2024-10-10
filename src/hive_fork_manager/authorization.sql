@@ -33,21 +33,21 @@ $$
 ;
 
 
-ALTER TABLE hive.operation_types OWNER TO hived_group;
-ALTER TABLE hive.blocks OWNER TO hived_group;
-ALTER TABLE hive.transactions OWNER TO hived_group;
-ALTER TABLE hive.operations OWNER TO hived_group;
-ALTER TABLE hive.transactions_multisig OWNER TO hived_group;
-ALTER TABLE hive.accounts OWNER TO hived_group;
-ALTER TABLE hive.account_operations OWNER TO hived_group;
-ALTER TABLE hive.irreversible_data OWNER TO hived_group;
+ALTER TABLE hive_data.operation_types OWNER TO hived_group;
+ALTER TABLE hive_data.blocks OWNER TO hived_group;
+ALTER TABLE hive_data.transactions OWNER TO hived_group;
+ALTER TABLE hive_data.operations OWNER TO hived_group;
+ALTER TABLE hive_data.transactions_multisig OWNER TO hived_group;
+ALTER TABLE hive_data.accounts OWNER TO hived_group;
+ALTER TABLE hive_data.account_operations OWNER TO hived_group;
+ALTER TABLE hive_data.irreversible_data OWNER TO hived_group;
 ALTER TABLE hive.blocks_reversible OWNER TO hived_group;
 ALTER TABLE hive.transactions_reversible OWNER TO hived_group;
 ALTER TABLE hive.operations_reversible OWNER TO hived_group;
 ALTER TABLE hive.transactions_multisig_reversible OWNER TO hived_group;
 ALTER TABLE hive.accounts_reversible OWNER TO hived_group;
 ALTER TABLE hive.account_operations_reversible OWNER TO hived_group;
-ALTER TABLE hive.applied_hardforks OWNER TO hived_group;
+ALTER TABLE hive_data.applied_hardforks OWNER TO hived_group;
 ALTER TABLE hive.applied_hardforks_reversible OWNER TO hived_group;
 ALTER TABLE hive.write_ahead_log_state OWNER TO hived_group;
 
@@ -131,7 +131,7 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hive TO hive_applications_group;
 
 GRANT EXECUTE ON FUNCTION
       hive.back_from_fork( INT )
-    , hive.push_block( hive.blocks, hive.transactions[], hive.transactions_multisig[], hive.operations[], hive.accounts[], hive.account_operations[], hive.applied_hardforks[] )
+    , hive.push_block( hive_data.blocks, hive_data.transactions[], hive_data.transactions_multisig[], hive_data.operations[], hive_data.accounts[], hive_data.account_operations[], hive_data.applied_hardforks[] )
     , hive.set_irreversible( INT )
     , hive.end_massive_sync( INTEGER )
     , hive.disable_indexes_of_irreversible()
@@ -153,9 +153,9 @@ GRANT EXECUTE ON FUNCTION
     , hive.register_table( _table_schema TEXT,  _table_name TEXT, _context_name TEXT ) -- needs to alter tables when indexes are disabled
     , hive.chceck_constrains( _table_schema TEXT,  _table_name TEXT )
     , hive.register_state_provider_tables( _context hive_data.context_name )
-    , hive.app_state_providers_update( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive_data.context_name )
+    , hive.app_state_providers_update( _first_block hive_data.blocks.num%TYPE, _last_block hive_data.blocks.num%TYPE, _context hive_data.context_name )
     , hive.app_state_provider_import( _state_provider hive_data.state_providers, _context hive_data.context_name )
-    , hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE, _first_block hive.blocks.num%TYPE )
+    , hive.connect( _git_sha TEXT, _block_num hive_data.blocks.num%TYPE, _first_block hive_data.blocks.num%TYPE )
     , hive.remove_inconsistent_irreversible_data()
     , hive.disable_indexes_of_reversible()
     , hive.enable_indexes_of_reversible()
@@ -208,12 +208,12 @@ GRANT EXECUTE ON FUNCTION
     , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
     , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
     , hive.operation_id( _block_num INTEGER, _type INTEGER, _pos INTEGER )
-    , hive.operation_id_to_pos( _id hive.operations.id%TYPE )
-    , hive.operation_id_to_type_id( _id hive.operations.id%TYPE )
-    , hive.operation_id_to_block_num( _id hive.operations.id%TYPE )
-    , hive.operation_id_to_pos( _id hive.operations.id%TYPE )
-    , hive.operation_id_to_type_id( _id hive.operations.id%TYPE )
-    , hive.operation_id_to_block_num( _id hive.operations.id%TYPE )
+    , hive.operation_id_to_pos( _id hive_data.operations.id%TYPE )
+    , hive.operation_id_to_type_id( _id hive_data.operations.id%TYPE )
+    , hive.operation_id_to_block_num( _id hive_data.operations.id%TYPE )
+    , hive.operation_id_to_pos( _id hive_data.operations.id%TYPE )
+    , hive.operation_id_to_type_id( _id hive_data.operations.id%TYPE )
+    , hive.operation_id_to_block_num( _id hive_data.operations.id%TYPE )
     , hive.reanalyze_indexes_with_expressions()
 TO hived_group;
 
@@ -246,7 +246,7 @@ GRANT SELECT ON hive.indexes_constraints TO haf_maintainer;
 
 REVOKE EXECUTE ON FUNCTION
       hive.back_from_fork( INT )
-    , hive.push_block( hive.blocks, hive.transactions[], hive.transactions_multisig[], hive.operations[], hive.accounts[], hive.account_operations[], hive.applied_hardforks[] )
+    , hive.push_block( hive_data.blocks, hive_data.transactions[], hive_data.transactions_multisig[], hive_data.operations[], hive_data.accounts[], hive_data.account_operations[], hive_data.applied_hardforks[] )
     , hive.set_irreversible( INT )
     , hive.end_massive_sync( INTEGER )
     , hive.copy_blocks_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )

@@ -50,9 +50,9 @@ AS
 $BODY$
 DECLARE
     __curent_events_id hive_data.events_queue.id%TYPE;
-    __newest_irreversible_block_num hive.blocks.num%TYPE;
-    __current_context_block_num hive.blocks.num%TYPE;
-    __current_context_irreversible_block hive.blocks.num%TYPE;
+    __newest_irreversible_block_num hive_data.blocks.num%TYPE;
+    __current_context_block_num hive_data.blocks.num%TYPE;
+    __current_context_irreversible_block hive_data.blocks.num%TYPE;
     __current_fork_id hive_data.fork.id%TYPE;
     __lead_context hive_data.context_name := _contexts[ 1 ];
     __result hive_data.events_queue%ROWTYPE;
@@ -65,7 +65,7 @@ BEGIN
          , hc.fork_id
     INTO __curent_events_id, __current_context_block_num, __current_context_irreversible_block, __current_fork_id
     FROM hive_data.contexts hc WHERE hc.name = __lead_context;
-    SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
+    SELECT consistent_block INTO __newest_irreversible_block_num FROM hive_data.irreversible_data;
 
     -- hived can at any moment commit new events
     -- because of read committed, we need to be ready such situations
@@ -203,7 +203,7 @@ BEGIN
     FROM hive_data.contexts as hc
     WHERE hc.name = __lead_context;
 
-    SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
+    SELECT consistent_block INTO __newest_irreversible_block_num FROM hive_data.irreversible_data;
 
     IF __current_block_num <= __irreversible_block_num
        AND  __newest_irreversible_block_num IS NOT NULL THEN
@@ -443,7 +443,7 @@ BEGIN
     FROM hive_data.contexts hc WHERE hc.name = _context;
 
     SELECT MIN( hb.num ), MAX( hb.num )
-    FROM hive.blocks hb
+    FROM hive_data.blocks hb
     WHERE hb.num > _context_state.current_block_num AND hb.num <= _context_state.irreversible_block_num
     INTO __next_block_to_process, __last_block_to_process;
 
@@ -481,7 +481,7 @@ DECLARE
     __result hive.blocks_range;
 BEGIN
     SELECT MIN( hb.num ), MAX( hb.num )
-    FROM hive.blocks hb
+    FROM hive_data.blocks hb
     WHERE hb.num > _context_state.current_block_num AND hb.num <= _context_state.irreversible_block_num
     INTO __next_block_to_process, __last_block_to_process;
 
@@ -555,7 +555,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _state_provider hive_data.state_providers, _context hive_data.context_name )
+CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hive_data.blocks.num%TYPE, _last_block hive_data.blocks.num%TYPE, _state_provider hive_data.state_providers, _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE

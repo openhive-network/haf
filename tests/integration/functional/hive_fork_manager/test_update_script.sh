@@ -151,7 +151,7 @@ check_relation_structure public.good_table "id|integer|||\namount|hive.hive_amou
 
 printf "\nTEST: Creating view referencing allowed types. This should pass\n"
 prepare_database
-exec_sql "create view public.good_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
+exec_sql "create view public.good_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive_data.blocks"
 exec_sql "comment on view public.good_view is 'foo'"
 update_database
 check_relation_structure public.good_view "num|integer|||\ntotal_vesting_fund_hive|hive.hive_amount|||\ntotal_vesting_shares|hive.vest_amount|||\ncurrent_hbd_supply|hive.hbd_amount|||\nhbd_interest_rate|hive.interest_rate|||"
@@ -160,11 +160,11 @@ check_relation_comment public.good_view foo
 printf "\nTEST: Creating view referencing disallowed type. This should still pass and the view should be recreated.\n"
 prepare_sql_script 0000000000000000000000000000000000000000
 prepare_database --version="0000000000000000000000000000000000000000"
-exec_sql "create view public.bad_type_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_type_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive_data.operations where op_type_id=1"
 exec_sql "comment on view public.bad_type_view is 'foo'"
-exec_sql "create view public.bad_domain_view as select id,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_domain_view as select id,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on view public.bad_domain_view is 'bar'"
-exec_sql "create view public.bad_mixed_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_mixed_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on view public.bad_mixed_view is 'baz'"
 update_database
 check_table_is_empty hive.deps_saved_ddl
@@ -177,11 +177,11 @@ check_relation_comment public.bad_mixed_view baz
 
 printf "\nTEST: Creating view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
 prepare_database
-exec_sql "create view public.bad_type_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_type_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive_data.operations where op_type_id=1"
 exec_sql "comment on view public.bad_type_view_2 is 'foo'"
-exec_sql "create view public.bad_domain_view_2 as select id,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_domain_view_2 as select id,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on view public.bad_domain_view_2 is 'bar'"
-exec_sql "create view public.bad_mixed_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_mixed_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on view public.bad_mixed_view_2 is 'baz'"
 update_database
 check_table_is_empty hive.deps_saved_ddl
@@ -194,7 +194,7 @@ check_relation_comment public.bad_mixed_view_2 baz
 
 printf "\nTEST: Creating materialized view referencing allowed types. This should pass\n"
 prepare_database
-exec_sql "create materialized view public.good_materialized_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
+exec_sql "create materialized view public.good_materialized_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive_data.blocks"
 exec_sql "comment on materialized view public.good_materialized_view is 'foo'"
 update_database
 check_relation_structure public.good_materialized_view "num|integer|||\ntotal_vesting_fund_hive|hive.hive_amount|||\ntotal_vesting_shares|hive.vest_amount|||\ncurrent_hbd_supply|hive.hbd_amount|||\nhbd_interest_rate|hive.interest_rate|||"
@@ -203,11 +203,11 @@ check_relation_comment public.good_materialized_view foo
 printf "\nTEST: Creating materialized view referencing disallowed type. This should still pass and the view should be recreated.\n"
 prepare_sql_script 0000000000000000000000000000000000000000
 prepare_database --version="0000000000000000000000000000000000000000"
-exec_sql "create materialized view public.bad_type_materialized_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_type_materialized_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive_data.operations where op_type_id=1"
 exec_sql "comment on materialized view public.bad_type_materialized_view is 'foo'"
-exec_sql "create materialized view public.bad_domain_materialized_view as select id,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_domain_materialized_view as select id,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on materialized view public.bad_domain_materialized_view is 'bar'"
-exec_sql "create materialized view public.bad_mixed_materialized_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_mixed_materialized_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on materialized view public.bad_mixed_materialized_view is 'baz'"
 update_database
 check_table_is_empty hive.deps_saved_ddl
@@ -220,11 +220,11 @@ check_relation_comment public.bad_mixed_materialized_view baz
 
 printf "\nTEST: Creating materialized view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
 prepare_database
-exec_sql "create materialized view public.bad_type_materialized_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_type_materialized_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive_data.operations where op_type_id=1"
 exec_sql "comment on materialized view public.bad_type_materialized_view_2 is 'foo'"
-exec_sql "create materialized view public.bad_domain_materialized_view_2 as select id,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_domain_materialized_view_2 as select id,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on materialized view public.bad_domain_materialized_view_2 is 'bar'"
-exec_sql "create materialized view public.bad_mixed_materialized_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_mixed_materialized_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on materialized view public.bad_mixed_materialized_view_2 is 'baz'"
 update_database
 check_table_is_empty hive.deps_saved_ddl

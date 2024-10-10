@@ -37,7 +37,7 @@ BEGIN
           _name
         , _schema
         , ( SELECT MAX( hf.id ) FROM hive_data.fork hf ) -- current fork id
-        , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
+        , COALESCE( ( SELECT hid.consistent_block FROM hive_data.irreversible_data hid ), 0 ) -- head of irreversible block
         , _is_forking
         , _is_attached
         , NULL
@@ -66,7 +66,7 @@ BEGIN
             _name
         , _schema
         , ( SELECT MAX( hf.id ) FROM hive_data.fork hf ) -- current fork id
-        , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
+        , COALESCE( ( SELECT hid.consistent_block FROM hive_data.irreversible_data hid ), 0 ) -- head of irreversible block
         , _is_forking
         , False
         , _stages
@@ -222,7 +222,7 @@ CREATE OR REPLACE FUNCTION hive.app_context_attach( _contexts hive_data.contexts
 AS
 $BODY$
 DECLARE
-    __head_of_irreversible_block hive.blocks.num%TYPE:=0;
+    __head_of_irreversible_block hive_data.blocks.num%TYPE:=0;
     __current_block_num INT;
     __fork_id hive_data.fork.id%TYPE := 1;
     __lead_context hive_data.context_name := _contexts[1];
@@ -239,7 +239,7 @@ BEGIN
     WHERE hc.name = __lead_context;
 
     SELECT hir.consistent_block INTO __head_of_irreversible_block
-    FROM hive.irreversible_data hir;
+    FROM hive_data.irreversible_data hir;
 
     IF __current_block_num > __head_of_irreversible_block THEN
         RAISE EXCEPTION 'Cannot attach context % because the block num % is grater than top of irreversible block %'
@@ -479,7 +479,7 @@ $BODY$
 DECLARE
     __result hive_data.contexts.irreversible_block%TYPE;
 BEGIN
-    SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hive.irreversible_data;
+    SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hive_data.irreversible_data;
     RETURN __result;
 END;
 $BODY$;
@@ -499,7 +499,7 @@ BEGIN
         FROM hive_data.contexts hc
         WHERE hc.name = _context_name;
     ELSE
-        __result := COALESCE((SELECT hb.num from hive.blocks hb ORDER BY num DESC LIMIT 1), 0);
+        __result := COALESCE((SELECT hb.num from hive_data.blocks hb ORDER BY num DESC LIMIT 1), 0);
     END IF;
 
     RETURN __result;
@@ -719,7 +719,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.app_state_providers_update( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive_data.context_name )
+CREATE OR REPLACE FUNCTION hive.app_state_providers_update( _first_block hive_data.blocks.num%TYPE, _last_block hive_data.blocks.num%TYPE, _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -728,7 +728,7 @@ $BODY$
 DECLARE
     __context_id hive_data.contexts.id%TYPE;
     __is_attached BOOL;
-    __current_block_num hive.blocks.num%TYPE;
+    __current_block_num hive_data.blocks.num%TYPE;
 BEGIN
     SELECT hac.id, hca.is_attached, hac.current_block_num
     FROM hive_data.contexts hac
@@ -856,7 +856,7 @@ BEGIN
                      FROM UNNEST(_contexts) AS context_names(name)
                      LEFT JOIN hive_data.contexts hc USING(name)
                      JOIN hive_data.contexts_attachment hca ON hca.context_id = hc.id
-                     CROSS JOIN hive.irreversible_data), FALSE);
+                     CROSS JOIN hive_data.irreversible_data), FALSE);
 END;
 $BODY$
 ;

@@ -197,7 +197,7 @@ run_accountauth_test()
 
 check_database_sql_serialized()
 {
-    local count=$(psql -d $HAF_POSTGRES_URL -c "SELECT COUNT(*) FROM hive.blocks;" -t -A)
+    local count=$(psql -d $HAF_POSTGRES_URL -c "SELECT COUNT(*) FROM hive_data.blocks;" -t -A)
 
 
   if [ -z "$count" ] || [ "$count" -lt 5000000 ]; then

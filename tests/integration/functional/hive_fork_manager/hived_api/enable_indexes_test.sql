@@ -83,11 +83,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT is_any_index_for_table( 'hive.blocks'::regclass::oid ) ) , 'Index hive.blocks not exists';
-    ASSERT ( SELECT is_any_index_for_table( 'hive.transactions'::regclass::oid ) ) , 'Index hive.transactions not exists';
-    ASSERT ( SELECT is_any_index_for_table( 'hive.operations'::regclass::oid ) ) , 'Index hive.operations not exists';
-    ASSERT ( SELECT is_any_index_for_table( 'hive.transactions_multisig'::regclass::oid ) ) , 'Index hive.transactions_multisig not exists';
-    ASSERT ( SELECT is_any_index_for_table( 'hive.applied_hardforks'::regclass::oid ) ) , 'Index hive.applied_hardforks not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hive_data.blocks'::regclass::oid ) ) , 'Index hive_data.blocks not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hive_data.transactions'::regclass::oid ) ) , 'Index hive_data.transactions not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hive_data.operations'::regclass::oid ) ) , 'Index hive_data.operations not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hive_data.transactions_multisig'::regclass::oid ) ) , 'Index hive_data.transactions_multisig not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hive_data.applied_hardforks'::regclass::oid ) ) , 'Index hive_data.applied_hardforks not exists';
 
 
     ASSERT ( SELECT is_constraint_exists( 'pk_hive_blocks', 'PRIMARY KEY' ) ), 'PK pk_hive_blocks not exists';
@@ -98,8 +98,8 @@ BEGIN
     ASSERT ( SELECT is_constraint_exists( 'pk_hive_applied_hardforks', 'PRIMARY KEY' ) ), 'PK pk_hive_applied_hardforks not exists';
 
 
-    ASSERT EXISTS( SELECT 1 FROM pg_index pgi WHERE pgi.indrelid = 'hive.transactions'::regclass::oid ), 'No index for table hive.transactions';
-    ASSERT EXISTS( SELECT 1 FROM pg_index pgi WHERE pgi.indrelid = 'hive.operations'::regclass::oid ), 'No index for table hive.operations';
+    ASSERT EXISTS( SELECT 1 FROM pg_index pgi WHERE pgi.indrelid = 'hive_data.transactions'::regclass::oid ), 'No index for table hive_data.transactions';
+    ASSERT EXISTS( SELECT 1 FROM pg_index pgi WHERE pgi.indrelid = 'hive_data.operations'::regclass::oid ), 'No index for table hive_data.operations';
 END;
 $BODY$
 ;

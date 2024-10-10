@@ -11,14 +11,14 @@ BEGIN
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
            ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 
-    INSERT INTO hive.operation_types
+    INSERT INTO hive_data.operation_types
     VALUES (0, 'OP 0', FALSE )
          , ( 1, 'OP 1', FALSE )
          , ( 2, 'OP 2', FALSE )
          , ( 3, 'OP 3', TRUE )
     ;
 
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     VALUES
        ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
      , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -27,7 +27,7 @@ BEGIN
      , ( 5, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( block_num, name, id )
+    INSERT INTO hive_data.accounts( block_num, name, id )
     VALUES
            ( 1, 'u1', 1 )
          , ( 2, 'u2', 2 )
@@ -36,7 +36,7 @@ BEGIN
          , ( 5, 'u5', 5 )
     ;
 
-    INSERT INTO hive.transactions
+    INSERT INTO hive_data.transactions
     VALUES
            ( 1, 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
          , ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
@@ -45,7 +45,7 @@ BEGIN
          , ( 5, 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hive.transactions_multisig
+    INSERT INTO hive_data.transactions_multisig
     VALUES
            ( '\xDEED10', '\xBAAD10' )
          , ( '\xDEED20', '\xBAAD20' )
@@ -54,7 +54,7 @@ BEGIN
          , ( '\xDEED50', '\xBAAD50' )
     ;
 
-    INSERT INTO hive.operations
+    INSERT INTO hive_data.operations
     VALUES
            ( hive.operation_id(1,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
          , ( hive.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
@@ -63,7 +63,7 @@ BEGIN
          , ( hive.operation_id(5,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive.operation )
     ;
 
-    INSERT INTO hive.account_operations(account_id, account_op_seq_no, operation_id)
+    INSERT INTO hive_data.account_operations(account_id, account_op_seq_no, operation_id)
     VALUES
        ( 1, 1, hive.operation_id(1,1,0) )
      , ( 1, 2, hive.operation_id(2,1,0) )
@@ -72,7 +72,7 @@ BEGIN
      , ( 4, 1, hive.operation_id(4,1,0) )
     ;
 
-INSERT INTO hive.applied_hardforks
+INSERT INTO hive_data.applied_hardforks
 VALUES
        ( 1, 1, hive.operation_id(1,1,0) )
      , ( 2, 2, hive.operation_id(2,1,0) )
@@ -222,9 +222,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS( SELECT * FROM hive.blocks ), 'No blocks';
+    ASSERT EXISTS( SELECT * FROM hive_data.blocks ), 'No blocks';
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.blocks WHERE num > 0
+        SELECT * FROM hive_data.blocks WHERE num > 0
         EXCEPT SELECT * FROM ( VALUES
                    ( 1, '\xBADD10'::bytea, '\xCAFE10'::bytea, '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
                  , ( 2, '\xBADD20'::bytea, '\xCAFE20'::bytea, '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -235,7 +235,7 @@ BEGIN
                  , ( 7, '\xBADD70'::bytea, '\xCAFE70'::bytea, '2016-06-22 19:10:27-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
                  , ( 8, '\xBADD83'::bytea, '\xCAFE80'::bytea, '2016-06-22 19:10:30-07'::timestamp, 6, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
                  ) as pattern
-    ) , 'Unexpected rows in hive.blocks';
+    ) , 'Unexpected rows in hive_data.blocks';
 
 
     ASSERT EXISTS( SELECT * FROM hive.blocks_reversible ), 'No reversible blocks';
@@ -254,9 +254,9 @@ BEGIN
 
     ASSERT EXISTS( SELECT * FROM hive.accounts_reversible ), 'No accounts reversible';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.accounts WHERE id >= 0 ) = 8, 'Wrong number of accounts';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.accounts WHERE id >= 0 ) = 8, 'Wrong number of accounts';
     ASSERT NOT EXISTS (
-        SELECT block_num, name, id FROM hive.accounts WHERE id >= 0
+        SELECT block_num, name, id FROM hive_data.accounts WHERE id >= 0
         EXCEPT SELECT * FROM ( VALUES
                    ( 1, 'u1', 1 )
                  , ( 2, 'u2', 2 )
@@ -267,7 +267,7 @@ BEGIN
                  , ( 7, 'u7_2', 9 )
                  , ( 8, 'u8_3', 12 )
                  ) as pattern
-    ) , 'Unexpected rows in hive.accounts';
+    ) , 'Unexpected rows in hive_data.accounts';
 
     ASSERT NOT EXISTS (
         SELECT block_num, name, id, fork_id FROM hive.accounts_reversible
@@ -281,10 +281,10 @@ BEGIN
         ) as pattern
     ) , 'Unexpected rows in hive.accounts_reversible';
 
-    ASSERT EXISTS( SELECT * FROM hive.transactions ), 'No transactions';
+    ASSERT EXISTS( SELECT * FROM hive_data.transactions ), 'No transactions';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.transactions
+        SELECT * FROM hive_data.transactions
         EXCEPT SELECT * FROM ( VALUES
                    ( 1, 0::SMALLINT, '\xDEED10'::bytea, 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF'::bytea )
                  , ( 2, 0::SMALLINT, '\xDEED20'::bytea, 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF'::bytea )
@@ -296,12 +296,12 @@ BEGIN
                  , ( 7, 1::SMALLINT, '\xDEED70B1'::bytea, 101, 100, '2016-06-22 19:10:27-07'::timestamp, '\xBEEF'::bytea )
                  , ( 8, 0::SMALLINT, '\xDEED88'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea )
                  ) as pattern
-    ) , 'Unexpected rows in hive.transactions';
+    ) , 'Unexpected rows in hive_data.transactions';
 
-    ASSERT EXISTS( SELECT * FROM hive.transactions_multisig ), 'No transactions signatures';
+    ASSERT EXISTS( SELECT * FROM hive_data.transactions_multisig ), 'No transactions signatures';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.transactions_multisig
+        SELECT * FROM hive_data.transactions_multisig
         EXCEPT SELECT * FROM ( VALUES
               ( '\xDEED10'::bytea, '\xBAAD10'::bytea )
             , ( '\xDEED20'::bytea, '\xBAAD20'::bytea )
@@ -313,12 +313,12 @@ BEGIN
             , ( '\xDEED70'::bytea, '\xBEEF73'::bytea )
             , ( '\xDEED88'::bytea, '\xBEEF83'::bytea )
          ) as pattern
-    ) , 'Unexpected rows in hive.transactions_multisig';
+    ) , 'Unexpected rows in hive_data.transactions_multisig';
 
-    ASSERT EXISTS( SELECT * FROM hive.operations ), 'No operations';
+    ASSERT EXISTS( SELECT * FROM hive_data.operations ), 'No operations';
 
     ASSERT NOT EXISTS (
-        SELECT id, trx_in_block, op_pos, body_binary FROM hive.operations
+        SELECT id, trx_in_block, op_pos, body_binary FROM hive_data.operations
         EXCEPT SELECT * FROM ( VALUES
               ( hive.operation_id(1,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
             , ( hive.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
@@ -330,7 +330,7 @@ BEGIN
             , ( hive.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive.operation )
             , ( hive.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hive.operation )
         ) as pattern
-    ) , 'Unexpected rows in hive.operations';
+    ) , 'Unexpected rows in hive_data.operations';
 
     ASSERT EXISTS( SELECT * FROM hive.transactions_reversible ), 'No reversible transactions';
 
@@ -379,7 +379,7 @@ BEGIN
     ;
 
     ASSERT NOT EXISTS (
-    SELECT * FROM hive.account_operations
+    SELECT * FROM hive_data.account_operations
     EXCEPT SELECT * FROM ( VALUES
                   ( 1, 1, hive.operation_id(1,1,0))
                 , ( 1, 2, hive.operation_id(2,1,0))
@@ -391,12 +391,12 @@ BEGIN
                 , ( 9, 2, hive.operation_id(7,1,0)) -- block 7(2)
              ) as pattern
     ) , 'Unexpected rows in the account_operations';
-    ASSERT ( SELECT COUNT(*) FROM hive.account_operations ) = 8, 'Wrong number of hive account_operations';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.account_operations ) = 8, 'Wrong number of hive account_operations';
 
-    ASSERT EXISTS( SELECT * FROM hive.applied_hardforks ), 'No applied_hardforks';
+    ASSERT EXISTS( SELECT * FROM hive_data.applied_hardforks ), 'No applied_hardforks';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.applied_hardforks
+        SELECT * FROM hive_data.applied_hardforks
         EXCEPT SELECT * FROM ( VALUES
        ( 1, 1, hive.operation_id(1,1,0) )
      , ( 2, 2, hive.operation_id(2,1,0) )
@@ -408,7 +408,7 @@ BEGIN
      , ( 8, 7, hive.operation_id(7,1,1) )
      , ( 9, 8, hive.operation_id(8,1,0) )
         ) as pattern
-    ) , 'Unexpected rows in hive.applied_hardforks';
+    ) , 'Unexpected rows in hive_data.applied_hardforks';
 
     ASSERT EXISTS( SELECT * FROM hive.applied_hardforks_reversible ), 'No reversible applied_hardforks';
 

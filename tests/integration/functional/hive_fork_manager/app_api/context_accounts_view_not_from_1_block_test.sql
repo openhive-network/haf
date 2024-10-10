@@ -12,7 +12,7 @@ INSERT INTO hive_data.fork( id, block_num, time_of_fork)
 VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
        ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 
-INSERT INTO hive.blocks
+INSERT INTO hive_data.blocks
 VALUES
       ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     , ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:23-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -36,7 +36,7 @@ VALUES
     , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-INSERT INTO hive.accounts
+INSERT INTO hive_data.accounts
 VALUES
        ( 100, 'alice1', NULL )
      , ( 200, 'alice2', 2 )

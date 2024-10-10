@@ -37,7 +37,7 @@ CREATE OR REPLACE FUNCTION hive.get_created_from_account_create_operations(IN _a
 RETURNS TEXT
 AS 'MODULE_PATHNAME', 'get_created_from_account_create_operations' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _context hive_data.context_name )
+CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block hive_data.blocks.num%TYPE, _last_block hive_data.blocks.num%TYPE, _context hive_data.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -61,7 +61,7 @@ BEGIN
         'INSERT INTO hive_data.%s_accounts( name )
         SELECT hive.get_created_from_account_create_operations( ov.body_binary ) as name
         FROM %s.operations_view ov
-        JOIN hive.operation_types ot ON ov.op_type_id = ot.id
+        JOIN hive_data.operation_types ot ON ov.op_type_id = ot.id
         WHERE
             ARRAY[ lower( ot.name ) ] <@ ARRAY[ ''hive::protocol::account_created_operation'' ]
             AND ov.block_num BETWEEN %s AND %s

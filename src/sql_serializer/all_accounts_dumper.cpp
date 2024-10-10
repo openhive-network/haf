@@ -43,10 +43,10 @@ namespace hive::plugins::sql_serializer {
     // , but making it always will make the code simpler
     queries_commit_data_processor truncate_accounts(
       _dburl
-      , "truncate hive.accounts"
+      , "truncate hive_data.accounts"
       , "trunc acc"
       , [](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
-        tx.exec("truncate hive.accounts");
+        tx.exec("truncate hive_data.accounts");
         return data_processor::data_processing_status();
       }
       , nullptr

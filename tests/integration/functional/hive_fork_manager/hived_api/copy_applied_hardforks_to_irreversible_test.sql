@@ -7,7 +7,7 @@ BEGIN
     CREATE SCHEMA A;
     PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
 
-    INSERT INTO hive.operation_types
+    INSERT INTO hive_data.operation_types
     VALUES (0, 'OP 0', FALSE )
         , ( 1, 'OP 1', FALSE )
         , ( 2, 'OP 2', FALSE )
@@ -18,7 +18,7 @@ BEGIN
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
            ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 
-    INSERT INTO hive.blocks
+    INSERT INTO hive_data.blocks
     VALUES
            ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -33,14 +33,14 @@ BEGIN
 
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hive_data.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
          , (6, 'alice', 1)
          , (7, 'bob', 1)
     ;
 
 
-    INSERT INTO hive.operations
+    INSERT INTO hive_data.operations
     VALUES
           ( hive.operation_id(1,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation )
         , ( hive.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation )
@@ -87,7 +87,7 @@ BEGIN
          , ( hive.operation_id(10,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive.operation, 3 )
     ;
 
-INSERT INTO hive.applied_hardforks
+INSERT INTO hive_data.applied_hardforks
 VALUES
        ( 1, 1, hive.operation_id(1,1,0) )
      , ( 2, 2, hive.operation_id(2,1,0) )
@@ -134,7 +134,7 @@ AS
 $BODY$
 BEGIN
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.applied_hardforks
+        SELECT * FROM hive_data.applied_hardforks
         EXCEPT SELECT * FROM ( VALUES
        ( 1, 1, hive.operation_id(1,1,0) )
      , ( 2, 2, hive.operation_id(2,1,0) )
@@ -146,7 +146,7 @@ BEGIN
      , ( 8, 7, hive.operation_id(7,1,1) )
      , ( 9, 8, hive.operation_id(8,1,0) )
         ) as pattern
-    ) , 'Unexpected rows in hive.applied_hardforks';
+    ) , 'Unexpected rows in hive_data.applied_hardforks';
 END;
 $BODY$
 ;

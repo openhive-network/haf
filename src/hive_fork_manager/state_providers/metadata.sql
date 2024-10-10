@@ -51,9 +51,9 @@ BEGIN
         __state INT := 0;
     BEGIN
 
-        IF COALESCE( ( SELECT _blockFrom > block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
+        IF COALESCE( ( SELECT _blockFrom > block_num FROM hive_data.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
             __state := 1;
-        ELSIF COALESCE( ( SELECT _blockTo <= block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
+        ELSIF COALESCE( ( SELECT _blockTo <= block_num FROM hive_data.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
             __state := -1;
         END IF;
 
@@ -66,7 +66,7 @@ BEGIN
             %s.operations_view ov
         WHERE
             ov.op_type_id in (
-            SELECT id FROM hive.operation_types WHERE name IN
+            SELECT id FROM hive_data.operation_types WHERE name IN
                 (''hive::protocol::account_create_operation'',
                  ''hive::protocol::account_update_operation'',
                  ''hive::protocol::create_claimed_account_operation'',
@@ -81,7 +81,7 @@ BEGIN
                     sm.body_binary,
                     CASE __state
                         WHEN  1 THEN TRUE
-                        WHEN  0 THEN COALESCE( ( SELECT block_num < sm.block_num FROM hive.applied_hardforks WHERE hardfork_num = 21 ), FALSE )
+                        WHEN  0 THEN COALESCE( ( SELECT block_num < sm.block_num FROM hive_data.applied_hardforks WHERE hardfork_num = 21 ), FALSE )
                         WHEN -1 THEN FALSE
                     END
                 )).*,
@@ -154,8 +154,8 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.update_state_provider_metadata(
-    _first_block hive.blocks.num%TYPE,
-    _last_block hive.blocks.num%TYPE,
+    _first_block hive_data.blocks.num%TYPE,
+    _last_block hive_data.blocks.num%TYPE,
     _context hive_data.context_name)
     RETURNS void
     LANGUAGE plpgsql

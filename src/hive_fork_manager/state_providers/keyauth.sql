@@ -141,7 +141,7 @@ BEGIN
                 1 as w,
                 __op_serial_id_dummy as op_serial_id,
                 1 as block_num,
-                (SELECT b.created_at FROM hive.blocks b WHERE b.num = 1) as timestamp,
+                (SELECT b.created_at FROM hive_data.blocks b WHERE b.num = 1) as timestamp,
                 1
                 FROM hive.get_genesis_keyauths() as g
             WHERE  _first_block <= 1 AND 1 <= _last_block 
@@ -155,7 +155,7 @@ BEGIN
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_9_block_num as block_num,
-            (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFORK_9_block_num) as timestamp,
+            (SELECT b.created_at FROM hive_data.blocks b WHERE b.num = __HARDFORK_9_block_num) as timestamp,
             hive.operation_id( __HARDFORK_9_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf09_keyauths() h
             WHERE  _first_block <= __HARDFORK_9_block_num AND __HARDFORK_9_block_num <= _last_block
@@ -168,7 +168,7 @@ BEGIN
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_21_block_num as block_num,
-            (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFORK_21_block_num) as timestamp,
+            (SELECT b.created_at FROM hive_data.blocks b WHERE b.num = __HARDFORK_21_block_num) as timestamp,
             hive.operation_id( __HARDFORK_21_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf21_keyauths() h
             WHERE  _first_block <= __HARDFORK_21_block_num AND __HARDFORK_21_block_num <= _last_block
@@ -181,7 +181,7 @@ BEGIN
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_24_block_num as block_num,
-            (SELECT b.created_at FROM hive.blocks b WHERE b.num = __HARDFORK_24_block_num) as timestamp,
+            (SELECT b.created_at FROM hive_data.blocks b WHERE b.num = __HARDFORK_24_block_num) as timestamp,
             hive.operation_id( __HARDFORK_24_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf24_keyauths() h
             WHERE  _first_block <= __HARDFORK_24_block_num AND __HARDFORK_24_block_num <= _last_block
@@ -189,11 +189,11 @@ BEGIN
 
         -- Handle 'pow' operation:
         -- 1. Distinguish between existing accounts and new account creation.
-        -- 2. Use 'hive.accounts' table that tracks account creation block number.
+        -- 2. Use 'hive_data.accounts' table that tracks account creation block number.
         -- 3. 'pow' initializes all keys for new accounts, but only updates 'ACTIVE' key for existing accounts.
         pow_op_type as MATERIALIZED (
             SELECT ot.id
-            FROM hive.operation_types ot
+            FROM hive_data.operation_types ot
             WHERE ot.name = 'hive::protocol::pow_operation'
         ),
         pow_matching_ops as MATERIALIZED
@@ -241,7 +241,7 @@ BEGIN
         -- Handle all other operations.
         matching_op_types as materialized 
             (
-            select ot.id from hive.operation_types ot WHERE ot.name IN
+            select ot.id from hive_data.operation_types ot WHERE ot.name IN
             (
             'hive::protocol::pow2_operation',
             'hive::protocol::account_create_operation',
@@ -534,8 +534,8 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.update_state_provider_keyauth(
-    _first_block hive.blocks.num%TYPE,
-    _last_block hive.blocks.num%TYPE,
+    _first_block hive_data.blocks.num%TYPE,
+    _last_block hive_data.blocks.num%TYPE,
     _context hive_data.context_name)
     RETURNS void
     LANGUAGE plpgsql

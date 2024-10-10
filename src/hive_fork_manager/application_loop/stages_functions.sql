@@ -45,7 +45,7 @@ DECLARE
     __lead_context_distance_to_irr_hb INTEGER;
 BEGIN
     SELECT
-        ( ( SELECT COALESCE( hid.consistent_block, 0 ) - ctx.current_block_num FROM hive.irreversible_data hid ) ) INTO __lead_context_distance_to_irr_hb
+        ( ( SELECT COALESCE( hid.consistent_block, 0 ) - ctx.current_block_num FROM hive_data.irreversible_data hid ) ) INTO __lead_context_distance_to_irr_hb
     FROM hive_data.contexts ctx
     WHERE ctx.name = _contexts [ 1 ];
 
@@ -74,7 +74,7 @@ BEGIN
     END IF;
 
     SELECT
-        ( ( SELECT COALESCE( MAX(hb.num), 0 ) - ctx.current_block_num FROM hive.blocks hb ) ) INTO __lead_context_distance_to_irr_hb
+        ( ( SELECT COALESCE( MAX(hb.num), 0 ) - ctx.current_block_num FROM hive_data.blocks hb ) ) INTO __lead_context_distance_to_irr_hb
     FROM hive_data.contexts ctx
     WHERE ctx.name = _contexts [ 1 ];
 

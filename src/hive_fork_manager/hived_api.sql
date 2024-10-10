@@ -10,9 +10,9 @@ BEGIN
     -- without this statistics for expressions won't exists and planner
     -- will choose wrongly execution plans
 
-    ANALYZE hive.operations;
+    ANALYZE hive_data.operations;
     ANALYZE hive.operations_reversible;
-    ANALYZE hive.account_operations;
+    ANALYZE hive_data.account_operations;
     ANALYZE hive.account_operations_reversible;
 END;
 $BODY$
@@ -38,13 +38,13 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.push_block(
-      _block hive.blocks
-    , _transactions hive.transactions[]
-    , _signatures hive.transactions_multisig[]
-    , _operations hive.operations[]
-    , _accounts hive.accounts[]
-    , _account_operations hive.account_operations[]
-    , _applied_hardforks hive.applied_hardforks[]
+      _block hive_data.blocks
+    , _transactions hive_data.transactions[]
+    , _signatures hive_data.transactions_multisig[]
+    , _operations hive_data.operations[]
+    , _accounts hive_data.accounts[]
+    , _account_operations hive_data.account_operations[]
+    , _applied_hardforks hive_data.applied_hardforks[]
 )
     RETURNS void
     LANGUAGE plpgsql
@@ -80,9 +80,9 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible( _block_num INT )
 AS
 $BODY$
 DECLARE
-    __irreversible_head_block hive.blocks.num%TYPE;
+    __irreversible_head_block hive_data.blocks.num%TYPE;
 BEGIN
-    SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hive.blocks;
+    SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hive_data.blocks;
 
     IF ( _block_num < __irreversible_head_block ) THEN
         RETURN;
@@ -113,7 +113,7 @@ BEGIN
     -- application contexts will use the event to clear data in shadow tables
     INSERT INTO hive_data.events_queue( event, block_num )
     VALUES( 'NEW_IRREVERSIBLE', _block_num );
-    UPDATE hive.irreversible_data SET consistent_block = _block_num;
+    UPDATE hive_data.irreversible_data SET consistent_block = _block_num;
 END;
 $BODY$
 ;
@@ -141,7 +141,7 @@ BEGIN
 
 
 
-    UPDATE hive.irreversible_data SET consistent_block = _block_num;
+    UPDATE hive_data.irreversible_data SET consistent_block = _block_num;
 END;
 $BODY$
 ;
@@ -153,7 +153,7 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible_dirty()
 AS
 $BODY$
 BEGIN
-    UPDATE hive.irreversible_data SET is_dirty = TRUE;
+    UPDATE hive_data.irreversible_data SET is_dirty = TRUE;
 END;
 $BODY$
 ;
@@ -165,7 +165,7 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible_not_dirty()
 AS
 $BODY$
 BEGIN
-    UPDATE hive.irreversible_data SET is_dirty = FALSE;
+    UPDATE hive_data.irreversible_data SET is_dirty = FALSE;
 END;
 $BODY$
 ;
@@ -179,7 +179,7 @@ $BODY$
 DECLARE
     __is_dirty BOOL := FALSE;
 BEGIN
-    SELECT is_dirty INTO __is_dirty FROM hive.irreversible_data;
+    SELECT is_dirty INTO __is_dirty FROM hive_data.irreversible_data;
     RETURN __is_dirty;
 END;
 $BODY$
@@ -192,13 +192,13 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'blocks' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'transactions_multisig' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'operations' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'applied_hardforks' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'accounts' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hive', 'account_operations' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'blocks' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'transactions' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'transactions_multisig' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'operations' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'applied_hardforks' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'accounts' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hive_data', 'account_operations' );
 
     PERFORM hive.reanalyze_indexes_with_expressions();
 END;
@@ -212,14 +212,14 @@ CREATE OR REPLACE FUNCTION hive.disable_fk_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'irreversible_data' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'blocks' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'transactions_multisig' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'operations' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'applied_hardforks' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'accounts' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive', 'account_operations' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'irreversible_data' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'blocks' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'transactions' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'transactions_multisig' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'operations' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'applied_hardforks' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'accounts' );
+    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hive_data', 'account_operations' );
 
 END;
 $BODY$
@@ -232,14 +232,14 @@ CREATE OR REPLACE FUNCTION hive.enable_indexes_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.restore_indexes( 'hive.blocks' );
-    PERFORM hive.restore_indexes( 'hive.transactions' );
-    PERFORM hive.restore_indexes( 'hive.transactions_multisig' );
-    PERFORM hive.restore_indexes( 'hive.operations' );
-    PERFORM hive.restore_indexes( 'hive.applied_hardforks' );
-    PERFORM hive.restore_indexes( 'hive.accounts' );
-    PERFORM hive.restore_indexes( 'hive.account_operations' );
-    PERFORM hive.restore_indexes( 'hive.irreversible_data' );
+    PERFORM hive.restore_indexes( 'hive_data.blocks' );
+    PERFORM hive.restore_indexes( 'hive_data.transactions' );
+    PERFORM hive.restore_indexes( 'hive_data.transactions_multisig' );
+    PERFORM hive.restore_indexes( 'hive_data.operations' );
+    PERFORM hive.restore_indexes( 'hive_data.applied_hardforks' );
+    PERFORM hive.restore_indexes( 'hive_data.accounts' );
+    PERFORM hive.restore_indexes( 'hive_data.account_operations' );
+    PERFORM hive.restore_indexes( 'hive_data.irreversible_data' );
 
     PERFORM hive.reanalyze_indexes_with_expressions();
 END;
@@ -254,14 +254,14 @@ CREATE OR REPLACE FUNCTION hive.enable_fk_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.restore_foreign_keys( 'hive.blocks' );
-    PERFORM hive.restore_foreign_keys( 'hive.transactions' );
-    PERFORM hive.restore_foreign_keys( 'hive.transactions_multisig' );
-    PERFORM hive.restore_foreign_keys( 'hive.operations' );
-    PERFORM hive.restore_foreign_keys( 'hive.applied_hardforks' );
-    PERFORM hive.restore_foreign_keys( 'hive.irreversible_data' );
-    PERFORM hive.restore_foreign_keys( 'hive.accounts' );
-    PERFORM hive.restore_foreign_keys( 'hive.account_operations' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.blocks' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.transactions' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.transactions_multisig' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.operations' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.applied_hardforks' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.irreversible_data' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.accounts' );
+    PERFORM hive.restore_foreign_keys( 'hive_data.account_operations' );
 
 END;
 $BODY$
@@ -330,14 +330,14 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive.blocks.num%TYPE, _first_block hive.blocks.num%TYPE )
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hive_data.blocks.num%TYPE, _first_block hive_data.blocks.num%TYPE )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __max_block hive.blocks.num%TYPE;
+    __max_block hive_data.blocks.num%TYPE;
 BEGIN
     -- assumptions:
     -- sql-serializer WAL was replayed after (re)start
@@ -419,7 +419,7 @@ BEGIN
         RETURN;
     END IF;
 
-    INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
+    INSERT INTO hive_data.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
     INSERT INTO hive_data.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
     INSERT INTO hive_data.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
     SELECT MAX(eq.id) + 1 FROM hive_data.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
