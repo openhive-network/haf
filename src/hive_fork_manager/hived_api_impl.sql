@@ -240,14 +240,14 @@ AS
 $BODY$
 DECLARE
     -- up limit
-    __max_fork_id hive.fork.id%TYPE;
+    __max_fork_id hive_data.fork.id%TYPE;
     -- down limit
-    __min_ctx_fork_id hive.fork.id%TYPE := hive.max_fork_id();
+    __min_ctx_fork_id hive_data.fork.id%TYPE := hive.max_fork_id();
     __lowest_irreversible_block hive.blocks.num%TYPE := hive.max_block_num();
     __max_block_num hive.blocks.num%TYPE;
 BEGIN
     SELECT max(hf.id) INTO __max_fork_id
-    FROM hive.fork hf;
+    FROM hive_data.fork hf;
 
     -- can only delete data from  blocks and forks already
     -- consumed by all the context, pair of lowest fork id and

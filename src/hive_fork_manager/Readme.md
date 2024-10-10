@@ -280,7 +280,7 @@ Each app should work on a snapshot of block information, which is a combination 
 
 Because apps may work at different speeds, the fork manager has to hold reversible blocks information for every block and fork not already processed by any of the apps. This requires an efficient data structure. Fortunately the solution is quite simple - it is enough to add
 a fork id to the block data inserted by hived to the irreversible blocks table. The fork manager manages forks ids - 
-information about each fork is stored in the hive.fork table. When 'hived' pushes a new block with a call to `hive.push_block`, the fork manager adds information about the current fork to a new reversible data row. Reversible data tables are presented in a generalised form in the example below:
+information about each fork is stored in the hive_data.fork table. When 'hived' pushes a new block with a call to `hive.push_block`, the fork manager adds information about the current fork to a new reversible data row. Reversible data tables are presented in a generalised form in the example below:
 
 | block_num| fork id | data      |
 |----------|---------|-----------|
@@ -318,7 +318,7 @@ The events queue is a table defined in [src/hive_fork_manager/events_queue.sql](
 
 |   event type     | block_num meaning                                           |
 |----------------- |-------------------------------------------------------------|
-| BACK_FROM_FORK   | fork id of corresponding entry in `hive.fork`               |
+| BACK_FROM_FORK   | fork id of corresponding entry in `hive_data.fork`               |
 | NEW_BLOCK        | number of the new block                                     |
 | NEW_IRREVERSIBLE | number of the latest irreversible block                     |
 | MASSIVE_SYNC     | the highest number of blocks pushed massively by hived node |

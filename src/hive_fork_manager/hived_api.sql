@@ -27,10 +27,10 @@ $BODY$
 DECLARE
     __fork_id BIGINT;
 BEGIN
-    INSERT INTO hive.fork(block_num, time_of_fork)
+    INSERT INTO hive_data.fork(block_num, time_of_fork)
     VALUES( _block_num_before_fork, LOCALTIMESTAMP );
 
-    SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf;
+    SELECT MAX(hf.id) INTO __fork_id FROM hive_data.fork hf;
     INSERT INTO hive_data.events_queue( event, block_num )
     VALUES( 'BACK_FROM_FORK', __fork_id );
 END;
@@ -52,11 +52,11 @@ CREATE OR REPLACE FUNCTION hive.push_block(
 AS
 $BODY$
 DECLARE
-    __fork_id hive.fork.id%TYPE;
+    __fork_id hive_data.fork.id%TYPE;
 BEGIN
     SELECT hf.id
     INTO __fork_id
-    FROM hive.fork hf ORDER BY hf.id DESC LIMIT 1;
+    FROM hive_data.fork hf ORDER BY hf.id DESC LIMIT 1;
 
     INSERT INTO hive_data.events_queue( event, block_num )
         VALUES( 'NEW_BLOCK', _block.num );
@@ -425,7 +425,7 @@ BEGIN
     SELECT MAX(eq.id) + 1 FROM hive_data.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
     PERFORM SETVAL( 'hive_data.events_queue_id_seq', __events_id, false );
 
-    INSERT INTO hive.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
+    INSERT INTO hive_data.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
 
     PERFORM hive.create_database_hash('hive');
 END;

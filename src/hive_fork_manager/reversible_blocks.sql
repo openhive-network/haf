@@ -8,7 +8,7 @@ SELECT pg_catalog.pg_extension_config_dump('hive.blocks_reversible', '');
 ALTER TABLE hive.blocks_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
     ADD CONSTRAINT pk_hive_blocks_reversible PRIMARY KEY( num, fork_id ),
-    ADD CONSTRAINT fk_1_hive_blocks_reversible FOREIGN KEY( fork_id ) REFERENCES hive.fork( id )
+    ADD CONSTRAINT fk_1_hive_blocks_reversible FOREIGN KEY( fork_id ) REFERENCES hive_data.fork( id )
 ;
 
 CREATE TABLE IF NOT EXISTS hive.transactions_reversible(

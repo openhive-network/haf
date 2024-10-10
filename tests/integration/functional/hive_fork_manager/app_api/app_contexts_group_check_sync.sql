@@ -18,7 +18,7 @@ BEGIN
 
     PERFORM hive.end_massive_sync(2);
 
-    INSERT INTO hive.fork( id, block_num, time_of_fork)
+    INSERT INTO hive_data.fork( id, block_num, time_of_fork)
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp );
 
     CREATE SCHEMA A;

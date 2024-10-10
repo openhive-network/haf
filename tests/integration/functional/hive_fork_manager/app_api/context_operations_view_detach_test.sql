@@ -15,7 +15,7 @@ BEGIN
         , ( 3, 'OP 3', TRUE )
     ;
 
-    INSERT INTO hive.fork( id, block_num, time_of_fork)
+    INSERT INTO hive_data.fork( id, block_num, time_of_fork)
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
            ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 

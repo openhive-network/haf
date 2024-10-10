@@ -58,26 +58,26 @@ BEGIN
     END;
 
     BEGIN
-        DELETE FROM hive.fork;
-        ASSERT FALSE, 'Alice can delete hive.fork';
+        DELETE FROM hive_data.fork;
+        ASSERT FALSE, 'Alice can delete hive_data.fork';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        INSERT INTO hive.fork VALUES( 1, 15, now() );
-        ASSERT FALSE, 'Alice can insert to hive.fork';
+        INSERT INTO hive_data.fork VALUES( 1, 15, now() );
+        ASSERT FALSE, 'Alice can insert to hive_data.fork';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        UPDATE hive.fork SET num = 10;
-        ASSERT FALSE, 'Alice can update to hive.fork';
+        UPDATE hive_data.fork SET num = 10;
+        ASSERT FALSE, 'Alice can update to hive_data.fork';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DROP TABLE hive.fork;
-        ASSERT FALSE, 'Alice can drop hive.fork';
+        DROP TABLE hive_data.fork;
+        ASSERT FALSE, 'Alice can drop hive_data.fork';
     EXCEPTION WHEN OTHERS THEN
     END;
 

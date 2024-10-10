@@ -36,7 +36,7 @@ BEGIN
     PERFORM hive.context_create(
           _name
         , _schema
-        , ( SELECT MAX( hf.id ) FROM hive.fork hf ) -- current fork id
+        , ( SELECT MAX( hf.id ) FROM hive_data.fork hf ) -- current fork id
         , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
         , _is_forking
         , _is_attached
@@ -65,7 +65,7 @@ BEGIN
     PERFORM hive.context_create(
             _name
         , _schema
-        , ( SELECT MAX( hf.id ) FROM hive.fork hf ) -- current fork id
+        , ( SELECT MAX( hf.id ) FROM hive_data.fork hf ) -- current fork id
         , COALESCE( ( SELECT hid.consistent_block FROM hive.irreversible_data hid ), 0 ) -- head of irreversible block
         , _is_forking
         , False
@@ -224,7 +224,7 @@ $BODY$
 DECLARE
     __head_of_irreversible_block hive.blocks.num%TYPE:=0;
     __current_block_num INT;
-    __fork_id hive.fork.id%TYPE := 1;
+    __fork_id hive_data.fork.id%TYPE := 1;
     __lead_context hive_data.context_name := _contexts[1];
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
@@ -246,7 +246,7 @@ BEGIN
             , _context, __current_block_num,  __head_of_irreversible_block;
     END IF;
 
-    SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf WHERE hf.block_num <= GREATEST(__current_block_num, 1);
+    SELECT MAX(hf.id) INTO __fork_id FROM hive_data.fork hf WHERE hf.block_num <= GREATEST(__current_block_num, 1);
 
     UPDATE hive_data.contexts
     SET   fork_id = __fork_id

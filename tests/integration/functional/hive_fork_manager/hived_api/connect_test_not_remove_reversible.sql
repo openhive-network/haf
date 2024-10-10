@@ -86,7 +86,7 @@ AS
 $BODY$
 BEGIN
     -- there is no need to add fork when head block is the same i n hived state and HAF
-    ASSERT( SELECT COUNT(*) FROM hive.fork WHERE id = 2 ) = 0, 'fork added after connection';
+    ASSERT( SELECT COUNT(*) FROM hive_data.fork WHERE id = 2 ) = 0, 'fork added after connection';
 END
 $BODY$
 ;

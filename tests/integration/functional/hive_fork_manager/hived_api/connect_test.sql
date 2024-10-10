@@ -103,8 +103,8 @@ BEGIN
     ASSERT( SELECT COUNT(*) FROM hive.hived_connections ) = 1, 'No connection saved';
     ASSERT( SELECT COUNT(*) FROM hive.hived_connections WHERE block_num=1 AND git_sha='123456789' ) = 1, 'No expected connection saved';
 
-    ASSERT( SELECT COUNT(*) FROM hive.fork WHERE block_num = 1 ) = 1, 'No fork added after connection on 1 block';
-    ASSERT( SELECT COUNT(*) FROM hive.fork WHERE block_num = 2 ) = 0, 'Fork added after connection on 2 block';
+    ASSERT( SELECT COUNT(*) FROM hive_data.fork WHERE block_num = 1 ) = 1, 'No fork added after connection on 1 block';
+    ASSERT( SELECT COUNT(*) FROM hive_data.fork WHERE block_num = 2 ) = 0, 'Fork added after connection on 2 block';
 
     ASSERT( SELECT is_dirty FROM hive.irreversible_data ) = FALSE, 'Irreversible data are dirty';
 END

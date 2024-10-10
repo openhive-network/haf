@@ -108,7 +108,7 @@ BEGIN
             END IF;
 
             SELECT irreversible_block INTO __irreversible_block FROM hive_data.contexts WHERE name = 'test';
-            SELECT id INTO __head_fork_id FROM hive.fork ORDER BY id DESC LIMIT 1;
+            SELECT id INTO __head_fork_id FROM hive_data.fork ORDER BY id DESC LIMIT 1;
             SELECT fork_id INTO __app_fork_id FROM hive_data.contexts WHERE name = 'test';
             RAISE NOTICE 'Max fork id %', __head_fork_id;
             RAISE NOTICE 'App fork id %', __app_fork_id;

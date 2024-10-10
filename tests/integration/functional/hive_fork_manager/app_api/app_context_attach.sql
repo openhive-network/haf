@@ -15,8 +15,8 @@ BEGIN
     VALUES (5, 'initminer', 1)
     ;
 
-    INSERT INTO hive.fork VALUES( 2, 2, '2016-06-22 19:10:24-07'::timestamp );
-    INSERT INTO hive.fork VALUES( 3, 3, '2016-06-22 19:10:25-07'::timestamp );
+    INSERT INTO hive_data.fork VALUES( 2, 2, '2016-06-22 19:10:24-07'::timestamp );
+    INSERT INTO hive_data.fork VALUES( 3, 3, '2016-06-22 19:10:25-07'::timestamp );
 
     CREATE SCHEMA A;
     PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );

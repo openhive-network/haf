@@ -6,7 +6,7 @@ $BODY$
 DECLARE
     __fork_id INT;
 BEGIN
-    SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf;
+    SELECT MAX(hf.id) INTO __fork_id FROM hive_data.fork hf;
     INSERT INTO hive_data.events_queue( event, block_num )
     VALUES
         ( 'NEW_BLOCK', 1),
@@ -62,9 +62,9 @@ BEGIN
     SELECT irreversible_block INTO  __irreversible_block FROM hive_data.contexts WHERE name = 'context';
     RAISE NOTICE 'Blocks: % ir % fork %', __blocks, __irreversible_block, __fork_id;
 
-    INSERT INTO hive.fork(block_num, time_of_fork)
+    INSERT INTO hive_data.fork(block_num, time_of_fork)
     VALUES( 3, LOCALTIMESTAMP );
-    SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf;
+    SELECT MAX(hf.id) INTO __fork_id FROM hive_data.fork hf;
 
     INSERT INTO hive_data.events_queue( event, block_num )
     VALUES
@@ -94,7 +94,7 @@ DECLARE
     __recent_fork_id INT;
 BEGIN
     SELECT fork_id INTO __context_fork_id FROM hive_data.contexts WHERE name = 'context';
-    SELECT MAX(hf.id) INTO __recent_fork_id FROM hive.fork hf;
+    SELECT MAX(hf.id) INTO __recent_fork_id FROM hive_data.fork hf;
 
     ASSERT __context_fork_id = __recent_fork_id, 'Context has invalid fork id';
 
