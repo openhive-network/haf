@@ -31,7 +31,7 @@ BEGIN
     VALUES( _block_num_before_fork, LOCALTIMESTAMP );
 
     SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf;
-    INSERT INTO hive.events_queue( event, block_num )
+    INSERT INTO hive_data.events_queue( event, block_num )
     VALUES( 'BACK_FROM_FORK', __fork_id );
 END;
 $BODY$
@@ -58,7 +58,7 @@ BEGIN
     INTO __fork_id
     FROM hive.fork hf ORDER BY hf.id DESC LIMIT 1;
 
-    INSERT INTO hive.events_queue( event, block_num )
+    INSERT INTO hive_data.events_queue( event, block_num )
         VALUES( 'NEW_BLOCK', _block.num );
 
     INSERT INTO hive.blocks_reversible VALUES( _block.*, __fork_id );
@@ -111,7 +111,7 @@ BEGIN
 
 
     -- application contexts will use the event to clear data in shadow tables
-    INSERT INTO hive.events_queue( event, block_num )
+    INSERT INTO hive_data.events_queue( event, block_num )
     VALUES( 'NEW_IRREVERSIBLE', _block_num );
     UPDATE hive.irreversible_data SET consistent_block = _block_num;
 END;
@@ -136,7 +136,7 @@ BEGIN
         -- 55P03 	lock_not_available https://www.postgresql.org/docs/current/errcodes-appendix.html
     END;
 
-    INSERT INTO hive.events_queue( event, block_num )
+    INSERT INTO hive_data.events_queue( event, block_num )
     VALUES ( 'MASSIVE_SYNC'::hive_data.event_type, _block_num );
 
 
@@ -412,18 +412,18 @@ $BODY$
 DECLARE
     __events_id BIGINT := 0;
 BEGIN
-    IF EXISTS ( SELECT 1 FROM hive.events_queue WHERE id = hive.unreachable_event_id() LIMIT 1 ) THEN
-        SELECT MAX(eq.id) + 1 FROM hive.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
-        PERFORM SETVAL( 'hive.events_queue_id_seq', __events_id, false );
+    IF EXISTS ( SELECT 1 FROM hive_data.events_queue WHERE id = hive.unreachable_event_id() LIMIT 1 ) THEN
+        SELECT MAX(eq.id) + 1 FROM hive_data.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
+        PERFORM SETVAL( 'hive_data.events_queue_id_seq', __events_id, false );
         PERFORM hive.create_database_hash('hive');
         RETURN;
     END IF;
 
     INSERT INTO hive.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
-    INSERT INTO hive.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
-    INSERT INTO hive.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
-    SELECT MAX(eq.id) + 1 FROM hive.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
-    PERFORM SETVAL( 'hive.events_queue_id_seq', __events_id, false );
+    INSERT INTO hive_data.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
+    INSERT INTO hive_data.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
+    SELECT MAX(eq.id) + 1 FROM hive_data.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
+    PERFORM SETVAL( 'hive_data.events_queue_id_seq', __events_id, false );
 
     INSERT INTO hive.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
 

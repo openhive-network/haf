@@ -7,7 +7,7 @@ DECLARE
     __fork_id INT;
 BEGIN
     SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf;
-    INSERT INTO hive.events_queue( event, block_num )
+    INSERT INTO hive_data.events_queue( event, block_num )
     VALUES
         ( 'NEW_BLOCK', 1),
         ( 'NEW_BLOCK', 2),
@@ -64,7 +64,7 @@ BEGIN
     VALUES( 3, LOCALTIMESTAMP );
     SELECT MAX(hf.id) INTO __fork_id FROM hive.fork hf;
 
-    INSERT INTO hive.events_queue( event, block_num )
+    INSERT INTO hive_data.events_queue( event, block_num )
     VALUES
         ( 'BACK_FROM_FORK', __fork_id ),
         ( 'NEW_BLOCK', 4)

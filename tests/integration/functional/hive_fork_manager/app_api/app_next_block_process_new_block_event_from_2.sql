@@ -67,8 +67,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM hive.events_queue WHERE id = 2 AND event = 'NEW_BLOCK' AND block_num = 3 ), 'No event added';
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue ) = 4, 'Unexpected number of events';
+    ASSERT EXISTS ( SELECT FROM hive_data.events_queue WHERE id = 2 AND event = 'NEW_BLOCK' AND block_num = 3 ), 'No event added';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.events_queue ) = 4, 'Unexpected number of events';
 
     ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name='context' ) = 3, 'Wrong current block num';
 END

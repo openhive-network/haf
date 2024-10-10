@@ -54,12 +54,12 @@ $BODY$
 DECLARE
     __blocks hive.blocks_range;
 BEGIN
-    ASSERT EXISTS ( SELECT FROM hive.events_queue WHERE event = 'MASSIVE_SYNC' AND block_num = 10 ), 'No event added';
+    ASSERT EXISTS ( SELECT FROM hive_data.events_queue WHERE event = 'MASSIVE_SYNC' AND block_num = 10 ), 'No event added';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue ) = 5 , 'Unexpected number of events'; -- 0, 3,6, 10
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue WHERE block_num = 3 ) = 1, 'No MASSIVE SYNC EVENT(3)';
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue WHERE block_num = 6 ) = 1, 'No MASSIVE SYNC EVENT(6)';
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue WHERE block_num = 10 ) = 1, 'No MASSIVE SYNC EVENT(10)';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.events_queue ) = 5 , 'Unexpected number of events'; -- 0, 3,6, 10
+    ASSERT ( SELECT COUNT(*) FROM hive_data.events_queue WHERE block_num = 3 ) = 1, 'No MASSIVE SYNC EVENT(3)';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.events_queue WHERE block_num = 6 ) = 1, 'No MASSIVE SYNC EVENT(6)';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.events_queue WHERE block_num = 10 ) = 1, 'No MASSIVE SYNC EVENT(10)';
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- MASSIVE_SYNC
     ASSERT __blocks.first_block = 2, 'Incorrect first block';

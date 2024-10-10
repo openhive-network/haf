@@ -317,7 +317,7 @@ BEGIN
 
     -- find the upper bound of events possible to remove
     SELECT MIN(heq.id) INTO __upper_bound_events_id
-    FROM hive.events_queue heq
+    FROM hive_data.events_queue heq
     WHERE heq.event != 'BACK_FROM_FORK' AND heq.block_num = ( _new_irreversible_block + 1 ); --next block after irreversible
 
     -- You may think that SELECT FOR UPDATE needs to be used here in USING clause
@@ -334,7 +334,7 @@ BEGIN
     -- It means that SELECT from USING clause will return min event = 10, but in case of a bug an application
     -- context may back to event 9 and then when DELETE is being committed it will violate FK(event_queue(id)<->contexts(events_id))
 
-    DELETE FROM hive.events_queue heq
+    DELETE FROM hive_data.events_queue heq
     USING ( SELECT MIN( hc.events_id) as id FROM hive_data.contexts hc ) as min_event
     WHERE ( heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL )  AND ( heq.id < min_event.id OR min_event.id IS NULL ) AND heq.id != 0 AND heq.id != hive.unreachable_event_id();
 

@@ -31,7 +31,7 @@ BEGIN
     PERFORM hive.app_next_block( 'context' ); -- (2,2)
 
 
-    -- now we have in hive.events_queue
+    -- now we have in hive_data.events_queue
     -- MASSIVE(1), NB(2), NB(3), NI(2), NB(4), NI(3), BFF(3), NB(4), NB(5), NI(4)
 END;
 $BODY$

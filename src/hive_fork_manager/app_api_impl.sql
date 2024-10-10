@@ -43,20 +43,20 @@ $BODY$
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION hive.find_next_event( _contexts hive_data.contexts_group )
-    RETURNS hive.events_queue
+    RETURNS hive_data.events_queue
     LANGUAGE 'plpgsql'
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __curent_events_id hive.events_queue.id%TYPE;
+    __curent_events_id hive_data.events_queue.id%TYPE;
     __newest_irreversible_block_num hive.blocks.num%TYPE;
     __current_context_block_num hive.blocks.num%TYPE;
     __current_context_irreversible_block hive.blocks.num%TYPE;
     __current_fork_id hive.fork.id%TYPE;
     __lead_context hive_data.context_name := _contexts[ 1 ];
-    __result hive.events_queue%ROWTYPE;
-    __max_event_id_to_search hive.events_queue.id%TYPE;
+    __result hive_data.events_queue%ROWTYPE;
+    __max_event_id_to_search hive_data.events_queue.id%TYPE;
     __max_fork_id_in_range hive.fork.id%TYPE;
 BEGIN
     SELECT hc.events_id
@@ -72,7 +72,7 @@ BEGIN
     -- and limit possible events id to max. from the moment of starting the function
     -- newly committed events will be process in the next  iteration of an application loop
     SELECT heq.id INTO __max_event_id_to_search
-    FROM hive.events_queue heq
+    FROM hive_data.events_queue heq
     WHERE heq.id != hive.unreachable_event_id()
     ORDER BY heq.id DESC LIMIT 1;
 
@@ -92,7 +92,7 @@ BEGIN
         WHERE hc.name = ANY( _contexts );
 
         SELECT * INTO  __result
-        FROM hive.events_queue heq
+        FROM hive_data.events_queue heq
         WHERE heq.block_num > __newest_irreversible_block_num
               AND heq.event != 'BACK_FROM_FORK'
               AND heq.id >= __curent_events_id
@@ -103,7 +103,7 @@ BEGIN
             -- there is no reversible blocks event
             -- the last possible event are MASSIVE_SYNC(__newest_irreversible_block_num) or NEW_IRREVERSIBLE(__newest_irreversible_block_num)
             SELECT * INTO  __result
-            FROM hive.events_queue heq
+            FROM hive_data.events_queue heq
             WHERE heq.block_num = __newest_irreversible_block_num
               AND ( heq.event = 'MASSIVE_SYNC' OR heq.event = 'NEW_IRREVERSIBLE' )
               AND heq.id <= __max_event_id_to_search
@@ -117,7 +117,7 @@ BEGIN
     ELSE
         ---- find next event
         SELECT * INTO __result
-        FROM hive.events_queue heq
+        FROM hive_data.events_queue heq
         WHERE heq.id > __curent_events_id AND heq.id <= __max_event_id_to_search
         ORDER BY id LIMIT 1;
     END IF;
@@ -150,7 +150,7 @@ DECLARE
 BEGIN
     -- first find a newer fork nearest current block
     SELECT heq.id, heq.block_num, hc.current_block_num, hc.id INTO __next_fork_event_id, __next_fork_block_num, __context_current_block_num, __context_id
-    FROM hive.events_queue heq
+    FROM hive_data.events_queue heq
     JOIN hive.fork hf ON hf.id = heq.block_num
     JOIN hive_data.contexts hc ON hc.events_id < heq.id AND hc.current_block_num >= hf.block_num
     WHERE heq.event = 'BACK_FROM_FORK' AND hc.name = __lead_context
@@ -165,7 +165,7 @@ BEGIN
     -- there may be NEW_IRREVERSIBLE or MASSIVE_SYNC in the range
     SELECT EXISTS (
         SELECT 1
-        FROM hive.events_queue heq
+        FROM hive_data.events_queue heq
         JOIN hive_data.contexts hc ON heq.id < __next_fork_event_id AND heq.id > hc.events_id
         WHERE ( heq.event = 'NEW_IRREVERSIBLE' OR heq.event = 'MASSIVE_SYNC' ) AND hc.name = _contexts[1]
     )
@@ -193,7 +193,7 @@ DECLARE
     __irreversible_block_num INT;
     __current_block_num INT;
     __newest_irreversible_block_num INT;
-    __context_event_id hive.events_queue.id%TYPE := 0;
+    __context_event_id hive_data.events_queue.id%TYPE := 0;
     __next_bff_event_id BIGINT;
     __event_block_num INT;
     __lead_context hive_data.context_name := _contexts[ 1 ];
@@ -213,7 +213,7 @@ BEGIN
     END IF;
 
     SELECT heq.id INTO __next_bff_event_id
-    FROM hive.events_queue heq
+    FROM hive_data.events_queue heq
     WHERE heq.id > __context_event_id
       AND heq.event = 'BACK_FROM_FORK'
     ORDER BY heq.id
@@ -223,7 +223,7 @@ BEGIN
     -- first find a newer massive_sync nearest current block
     SELECT heq.id, heq.block_num
     INTO __next_irreversible_event_id, __event_block_num
-    FROM hive.events_queue heq
+    FROM hive_data.events_queue heq
     JOIN hive_data.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
     WHERE ( heq.event = 'MASSIVE_SYNC' OR heq.event = 'NEW_IRREVERSIBLE' )
       AND heq.id < COALESCE( __next_bff_event_id, hive.unreachable_event_id() )
@@ -257,13 +257,13 @@ DECLARE
     __before_next_massive_sync_event_id BIGINT := NULL;
     __lead_context hive_data.context_name := _contexts[ 1 ];
     __event_type hive_data.event_type := NULL;
-    __context_event_id hive.events_queue.id%TYPE := 0;
+    __context_event_id hive_data.events_queue.id%TYPE := 0;
     __need_to_remove_reversible_data BOOLEAN := FALSE;
 BEGIN
     -- first find a newer massive_sync nearest current block
     SELECT heq.id, hc.current_block_num, hc.id, hc.irreversible_block, heq.event
     INTO __next_massive_sync_event_id, __context_current_block_num, __context_id, __irreversible_block_num, __event_type
-    FROM hive.events_queue heq
+    FROM hive_data.events_queue heq
     JOIN hive_data.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
     WHERE ( heq.event = 'MASSIVE_SYNC' ) AND hc.name = _contexts[1]
     ORDER BY heq.id DESC
@@ -282,7 +282,7 @@ BEGIN
 
     -- if in squashed events, there is a fork event it would be better to immediately drop reversible data
     SELECT TRUE INTO __need_to_remove_reversible_data
-    FROM hive.events_queue heq
+    FROM hive_data.events_queue heq
     WHERE heq.id > __context_event_id
       AND heq.id < __next_massive_sync_event_id
       AND heq.event = 'BACK_FROM_FORK'
@@ -293,7 +293,7 @@ BEGIN
     END IF;
 
     SELECT MAX( heq.id ) INTO __before_next_massive_sync_event_id
-    FROM hive.events_queue heq WHERE heq.id < __next_massive_sync_event_id;
+    FROM hive_data.events_queue heq WHERE heq.id < __next_massive_sync_event_id;
 
     UPDATE hive_data.contexts
     SET events_id = __before_next_massive_sync_event_id -- it may be null if there is no events before the massive sync
@@ -310,7 +310,7 @@ CREATE OR REPLACE FUNCTION hive.squash_events( _contexts hive_data.contexts_grou
 AS
 $BODY$
 DECLARE
-    __current_event_id hive.events_queue.id%TYPE;
+    __current_event_id hive_data.events_queue.id%TYPE;
 BEGIN
     SELECT hc.events_id INTO __current_event_id FROM hive_data.contexts hc WHERE hc.name = _contexts[ 1 ];
 

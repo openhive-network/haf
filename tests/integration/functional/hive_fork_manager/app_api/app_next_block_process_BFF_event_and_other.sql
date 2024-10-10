@@ -104,7 +104,7 @@ BEGIN
     -- check if context is on desire event
     -- if it will back to ctx.eid < 5 (state before last move) than it is a fatal issue which may ends with
     -- constraint violation when a new NEW_IRREVERSIBLE event will be pushed and events queue is cleared
-    -- from already processed events: DELETE operation on hive.events_queue takes eid=5 as an upper bound, but after the context move
+    -- from already processed events: DELETE operation on hive_data.events_queue takes eid=5 as an upper bound, but after the context move
     -- its ctx may back to eid=3, and DELETE will fail what stops the hived process
     ASSERT ( SELECT hc.events_id FROM hive_data.contexts hc WHERE hc.name = 'context' ) = 6, 'Wrong events_id after move context in new fork';
 END

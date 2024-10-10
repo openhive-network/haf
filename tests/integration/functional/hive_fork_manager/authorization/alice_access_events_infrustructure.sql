@@ -82,26 +82,26 @@ BEGIN
     END;
 
     BEGIN
-        DELETE FROM hive.events_queue;
-        ASSERT FALSE, 'Alice can delete hive.events_queue';
+        DELETE FROM hive_data.events_queue;
+        ASSERT FALSE, 'Alice can delete hive_data.events_queue';
         EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        INSERT INTO hive.events_queue VALUES( 1, 'MASSIVE_SYNC', 10 );
-        ASSERT FALSE, 'Alice can insert to hive.events_queue';
+        INSERT INTO hive_data.events_queue VALUES( 1, 'MASSIVE_SYNC', 10 );
+        ASSERT FALSE, 'Alice can insert to hive_data.events_queue';
         EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        UPDATE hive.events_queue SET event = 'MASSIVE_SYNC';
-        ASSERT FALSE, 'Alice can update to hive.events_queue';
+        UPDATE hive_data.events_queue SET event = 'MASSIVE_SYNC';
+        ASSERT FALSE, 'Alice can update to hive_data.events_queue';
         EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DROP TABLE hive.events_queue;
-        ASSERT FALSE, 'Alice can drop hive.events_queue';
+        DROP TABLE hive_data.events_queue;
+        ASSERT FALSE, 'Alice can drop hive_data.events_queue';
         EXCEPTION WHEN OTHERS THEN
     END;
 
