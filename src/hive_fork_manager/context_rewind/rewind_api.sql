@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION hive.context_create(
     , _irreversible_block INT = 0
     , _is_forking BOOLEAN = TRUE
     , _is_attached BOOLEAN = TRUE
-    , _stages hive.application_stages = NULL
+    , _stages hive_data.application_stages = NULL
 )
     RETURNS void
     LANGUAGE 'plpgsql'

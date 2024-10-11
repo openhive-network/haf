@@ -51,7 +51,7 @@ $BODY$
 CREATE OR REPLACE FUNCTION hive.app_create_context(
       _name hive_data.context_name
     , _schema TEXT
-    , _stages hive.application_stages
+    , _stages hive_data.application_stages
     , _is_forking BOOLEAN = TRUE
 )
     RETURNS void

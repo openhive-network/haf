@@ -5,7 +5,7 @@ AS
 $BODY$
 DECLARE
     __fork_id INT;
-    __context_stages hive.application_stages := ARRAY[ ('stage1',1 ,100 )::hive.application_stage, hive.live_stage() ];
+    __context_stages hive_data.application_stages := ARRAY[ ('stage1',1 ,100 )::hive.application_stage, hive.live_stage() ];
 BEGIN
     SELECT MAX(hf.id) INTO __fork_id FROM hive_data.fork hf;
 

@@ -5,7 +5,7 @@ AS
 $BODY$
 DECLARE
     __blocks hive.blocks_range;
-    __context_stages hive.application_stages :=
+    __context_stages hive_data.application_stages :=
         ARRAY[
             ('massive',2 ,100 )::hive.application_stage
             , hive.live_stage()

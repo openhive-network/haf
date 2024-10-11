@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.validate_stages( _stages hive.application_stages )
+CREATE OR REPLACE FUNCTION hive.validate_stages( _stages hive_data.application_stages )
 RETURNS void
 LANGUAGE plpgsql
 IMMUTABLE

@@ -110,13 +110,13 @@ END;
 $body$;
 
 CREATE OR REPLACE FUNCTION hive.get_current_stage_name( _context hive_data.context_name )
-    RETURNS hive.stage_name
+    RETURNS hive_data.stage_name
     LANGUAGE 'plpgsql'
     STABLE
 AS
 $body$
 DECLARE
-    __result hive.stage_name;
+    __result hive_data.stage_name;
 BEGIN
     -- when context name is wrong an exception will be thrown
     -- NULL result means that state is not known yet

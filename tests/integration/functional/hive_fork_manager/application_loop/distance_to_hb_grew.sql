@@ -25,17 +25,17 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 DECLARE
-    __alice_stages hive.application_stages :=
+    __alice_stages hive_data.application_stages :=
         ARRAY[ ('stage2',100 ,100 )::hive.application_stage
             , ('stage1',10 ,10 )::hive.application_stage
             , hive.live_stage()
             ];
-    __alice1_stages hive.application_stages :=
+    __alice1_stages hive_data.application_stages :=
         ARRAY[ ('stage2',100 ,100 )::hive.application_stage
             , ('stage1',60 ,10 )::hive.application_stage
             , hive.live_stage()
             ];
-    __alice2_stages hive.application_stages :=
+    __alice2_stages hive_data.application_stages :=
         ARRAY[ ('stage2',40 ,100 )::hive.application_stage
             , ('stage1',30 ,10 )::hive.application_stage
             , hive.live_stage()
@@ -89,7 +89,7 @@ $BODY$
 DECLARE
     __current_batch_end INTEGER;
     __current_block_num INTEGER;
-    __current_stage_name hive.stage_name;
+    __current_stage_name hive_data.stage_name;
 BEGIN
     -- check if contexts are correctly updated
     -- alice stage1

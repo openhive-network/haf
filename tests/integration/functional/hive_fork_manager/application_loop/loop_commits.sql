@@ -24,7 +24,7 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 DECLARE
-    __context_stages hive.application_stages :=
+    __context_stages hive_data.application_stages :=
         ARRAY[
             ('massive',2 ,100 )::hive.application_stage
             , hive.live_stage()

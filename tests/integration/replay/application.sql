@@ -85,7 +85,7 @@ DECLARE
     __current_event_id INT;
     __max_reversible_block INT;
     __min_reversible_block INT;
-    __context_stages hive.application_stages :=
+    __context_stages hive_data.application_stages :=
         ARRAY[
             ('massive',30 ,20000 )::hive.application_stage
             , hive.live_stage()

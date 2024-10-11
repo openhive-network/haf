@@ -4,8 +4,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 DECLARE
-    __context_stages hive.application_stages := ARRAY[ ('stage1',3 ,3 )::hive.application_stage, hive.live_stage() ];
-    __context_b_stages hive.application_stages := ARRAY[ ('stage1',3 ,3 )::hive.application_stage, hive.live_stage() ];
+    __context_stages hive_data.application_stages := ARRAY[ ('stage1',3 ,3 )::hive.application_stage, hive.live_stage() ];
+    __context_b_stages hive_data.application_stages := ARRAY[ ('stage1',3 ,3 )::hive.application_stage, hive.live_stage() ];
 BEGIN
     INSERT INTO hive_data.blocks
       VALUES  ( 1, '\xBADD10', '\xCAFE40', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )

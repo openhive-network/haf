@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS hive_data.contexts(
     is_forking BOOL NOT NULL DEFAULT TRUE,
     last_active_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, -- Stores last app activity time (updated by apps APIs like app_next_block)
     baseclass_id REGCLASS NOT NULL, -- id of context base table
-    stages hive.application_stages,
+    stages hive_data.application_stages,
     loop hive.application_loop_state,
     CONSTRAINT pk_hive_contexts PRIMARY KEY( id ),
     CONSTRAINT uq_hive_context_name UNIQUE ( name )

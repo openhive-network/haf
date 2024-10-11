@@ -1,20 +1,20 @@
 -- type is used by app_next_block to inform the application
 -- about current stage and return batch of blocks
 
-DROP DOMAIN IF EXISTS hive.blocks_count;
-CREATE DOMAIN hive.blocks_count AS INTEGER CHECK( VALUE > 0 );
+DROP DOMAIN IF EXISTS hive_data.blocks_count;
+CREATE DOMAIN hive_data.blocks_count AS INTEGER CHECK( VALUE > 0 );
 
-DROP DOMAIN IF EXISTS hive.blocks_distance;
-CREATE DOMAIN hive.blocks_distance AS INTEGER CHECK( VALUE >= 0 );
+DROP DOMAIN IF EXISTS hive_data.blocks_distance;
+CREATE DOMAIN hive_data.blocks_distance AS INTEGER CHECK( VALUE >= 0 );
 
-DROP DOMAIN IF EXISTS hive.stage_name;
-CREATE DOMAIN hive.stage_name AS TEXT CHECK( VALUE ~ '^[A-Za-z0-9_]+$' );
+DROP DOMAIN IF EXISTS hive_data.stage_name;
+CREATE DOMAIN hive_data.stage_name AS TEXT CHECK( VALUE ~ '^[A-Za-z0-9_]+$' );
 
 DROP TYPE IF EXISTS hive.application_stage CASCADE;
 CREATE TYPE hive.application_stage AS (
-    name hive.stage_name, -- name of the stage
-    min_head_block_distance hive.blocks_distance, -- it is a minimum distance to head block for which the stage can be enabled
-    blocks_limit_in_group hive.blocks_count -- max number of blocks in one group to process
+    name hive_data.stage_name, -- name of the stage
+    min_head_block_distance hive_data.blocks_distance, -- it is a minimum distance to head block for which the stage can be enabled
+    blocks_limit_in_group hive_data.blocks_count -- max number of blocks in one group to process
 );
 
 CREATE OR REPLACE FUNCTION hive.live_stage()
@@ -29,8 +29,8 @@ END;
 $BODY$;
 
 
-DROP DOMAIN IF EXISTS hive.application_stages;
-CREATE DOMAIN hive.application_stages AS hive.application_stage[];
+DROP DOMAIN IF EXISTS hive_data.application_stages;
+CREATE DOMAIN hive_data.application_stages AS hive.application_stage[];
 
 DROP TYPE IF EXISTS hive.application_loop_state;
 CREATE TYPE hive.application_loop_state AS (

@@ -139,9 +139,9 @@ check_relation_structure public.bad_table "id|integer|||\ncomment|hive.comment_o
 
 printf "\nTEST: Creating table referencing disallowed HAF domain. Upgrade should fail.\n"
 prepare_database
-exec_sql "create table public.bad_table(id int, account hive.account_name_type)"
+exec_sql "create table public.bad_table(id int, account hive_data.account_name_type)"
 failswith 4 update_database
-check_relation_structure public.bad_table "id|integer|||\naccount|hive.account_name_type|||"
+check_relation_structure public.bad_table "id|integer|||\naccount|hive_data.account_name_type|||"
 
 printf "\nTEST: Creating table referencing allowed HAF domain. Upgrade should pass.\n"
 prepare_database
@@ -169,8 +169,8 @@ exec_sql "comment on view public.bad_mixed_view is 'baz'"
 update_database
 check_table_is_empty hive.deps_saved_ddl
 check_relation_structure public.bad_type_view "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
-check_relation_structure public.bad_domain_view "id|bigint|||\nmemo|hive.memo|||"
-check_relation_structure public.bad_mixed_view "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
+check_relation_structure public.bad_domain_view "id|bigint|||\nmemo|hive_data.memo|||"
+check_relation_structure public.bad_mixed_view "id|bigint|||\namount|hive.asset|||\nmemo|hive_data.memo|||"
 check_relation_comment public.bad_type_view foo
 check_relation_comment public.bad_domain_view bar
 check_relation_comment public.bad_mixed_view baz
@@ -186,8 +186,8 @@ exec_sql "comment on view public.bad_mixed_view_2 is 'baz'"
 update_database
 check_table_is_empty hive.deps_saved_ddl
 check_relation_structure public.bad_type_view_2 "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
-check_relation_structure public.bad_domain_view_2 "id|bigint|||\nmemo|hive.memo|||"
-check_relation_structure public.bad_mixed_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
+check_relation_structure public.bad_domain_view_2 "id|bigint|||\nmemo|hive_data.memo|||"
+check_relation_structure public.bad_mixed_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hive_data.memo|||"
 check_relation_comment public.bad_type_view_2 foo
 check_relation_comment public.bad_domain_view_2 bar
 check_relation_comment public.bad_mixed_view_2 baz
@@ -212,8 +212,8 @@ exec_sql "comment on materialized view public.bad_mixed_materialized_view is 'ba
 update_database
 check_table_is_empty hive.deps_saved_ddl
 check_relation_structure public.bad_type_materialized_view "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
-check_relation_structure public.bad_domain_materialized_view "id|bigint|||\nmemo|hive.memo|||"
-check_relation_structure public.bad_mixed_materialized_view "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
+check_relation_structure public.bad_domain_materialized_view "id|bigint|||\nmemo|hive_data.memo|||"
+check_relation_structure public.bad_mixed_materialized_view "id|bigint|||\namount|hive.asset|||\nmemo|hive_data.memo|||"
 check_relation_comment public.bad_type_materialized_view foo
 check_relation_comment public.bad_domain_materialized_view bar
 check_relation_comment public.bad_mixed_materialized_view baz
@@ -229,8 +229,8 @@ exec_sql "comment on materialized view public.bad_mixed_materialized_view_2 is '
 update_database
 check_table_is_empty hive.deps_saved_ddl
 check_relation_structure public.bad_type_materialized_view_2 "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
-check_relation_structure public.bad_domain_materialized_view_2 "id|bigint|||\nmemo|hive.memo|||"
-check_relation_structure public.bad_mixed_materialized_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
+check_relation_structure public.bad_domain_materialized_view_2 "id|bigint|||\nmemo|hive_data.memo|||"
+check_relation_structure public.bad_mixed_materialized_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hive_data.memo|||"
 check_relation_comment public.bad_type_materialized_view_2 foo
 check_relation_comment public.bad_domain_materialized_view_2 bar
 check_relation_comment public.bad_mixed_materialized_view_2 baz
