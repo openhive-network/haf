@@ -1,5 +1,5 @@
 DROP FUNCTION IF EXISTS hive.get_keyauths_wrapper;
-CREATE OR REPLACE FUNCTION hive.get_keyauths_wrapper(IN _operation_body hive.operation)
+CREATE OR REPLACE FUNCTION hive.get_keyauths_wrapper(IN _operation_body hive_data.operation)
 RETURNS SETOF hive.keyauth_c_record_type
 AS 'MODULE_PATHNAME', 'get_keyauths_wrapped' LANGUAGE C;
 
@@ -42,7 +42,7 @@ RETURNS TEXT
 AS 'MODULE_PATHNAME', 'public_key_to_string' LANGUAGE C;
 
 DROP FUNCTION IF EXISTS hive.get_keyauths;
-CREATE OR REPLACE FUNCTION hive.get_keyauths(IN _operation_body hive.operation)
+CREATE OR REPLACE FUNCTION hive.get_keyauths(IN _operation_body hive_data.operation)
 RETURNS SETOF hive.keyauth_record_type
 LANGUAGE plpgsql
 IMMUTABLE

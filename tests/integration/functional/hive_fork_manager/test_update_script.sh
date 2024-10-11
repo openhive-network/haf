@@ -125,11 +125,11 @@ printf "\nTEST: Trying to upgrade from current database. It should pass, as noth
 prepare_database
 update_database
 
-printf "\nTEST: Creating table referencing hive.operation. This is allowed and should succeed.\n"
+printf "\nTEST: Creating table referencing hive_data.operation. This is allowed and should succeed.\n"
 prepare_database
-exec_sql "create table public.good_table(id int, op hive.operation)"
+exec_sql "create table public.good_table(id int, op hive_data.operation)"
 update_database
-check_relation_structure public.good_table "id|integer|||\nop|hive.operation|||"
+check_relation_structure public.good_table "id|integer|||\nop|hive_data.operation|||"
 
 printf "\nTEST: Creating table referencing disallowed HAF type. Upgrade should fail.\n"
 prepare_database

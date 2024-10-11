@@ -1,15 +1,15 @@
 -- SQL-side binary casts
 
-CREATE CAST (bytea AS hive.operation)
+CREATE CAST (bytea AS hive_data.operation)
   WITH FUNCTION hive._operation_bin_in
   AS IMPLICIT;
 
-CREATE CAST (hive.operation AS bytea)
+CREATE CAST (hive_data.operation AS bytea)
   WITH FUNCTION hive._operation_bin_out
   AS IMPLICIT;
 
-CREATE CAST (hive.operation AS jsonb)
+CREATE CAST (hive_data.operation AS jsonb)
   WITH FUNCTION hive._operation_to_jsonb;
 
-CREATE CAST (jsonb AS hive.operation)
+CREATE CAST (jsonb AS hive_data.operation)
   WITH FUNCTION hive._operation_from_jsonb;

@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS hive_data.operations (
     id bigint not null,
     trx_in_block smallint NOT NULL,
     op_pos integer NOT NULL,
-    body_binary hive.operation  DEFAULT NULL,
+    body_binary hive_data.operation  DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 );
 

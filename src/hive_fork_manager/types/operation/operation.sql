@@ -1,2 +1,2 @@
 -- hive operation shell type
-CREATE TYPE hive.operation;
+CREATE TYPE hive_data.operation;

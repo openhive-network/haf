@@ -33,7 +33,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_created_from_account_create_operations(IN _account_operation hive.operation)
+CREATE OR REPLACE FUNCTION hive.get_created_from_account_create_operations(IN _account_operation hive_data.operation)
 RETURNS TEXT
 AS 'MODULE_PATHNAME', 'get_created_from_account_create_operations' LANGUAGE C;
 

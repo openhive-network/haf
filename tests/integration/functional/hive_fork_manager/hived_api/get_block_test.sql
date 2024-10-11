@@ -55,12 +55,12 @@ BEGIN
     INSERT INTO hive_data.operations
     VALUES
         -- id, trx_in_block, op_pos, body
-          ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK ONE OP"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK TWO OP"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(3, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(3, 2, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(4, 1, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"BLOCK FOUR OP"}}' :: jsonb :: hive.operation )
-        , ( hive.operation_id(5, 1, 2), 0, 2, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE OP"}}' :: jsonb :: hive.operation )
+          ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK ONE OP"}}' :: jsonb :: hive_data.operation )
+        , ( hive.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK TWO OP"}}' :: jsonb :: hive_data.operation )
+        , ( hive.operation_id(3, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive_data.operation )
+        , ( hive.operation_id(3, 2, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive_data.operation )
+        , ( hive.operation_id(4, 1, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"BLOCK FOUR OP"}}' :: jsonb :: hive_data.operation )
+        , ( hive.operation_id(5, 1, 2), 0, 2, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE OP"}}' :: jsonb :: hive_data.operation )
     ;
 
     UPDATE hive_data.irreversible_data SET consistent_block = 5;
@@ -88,7 +88,7 @@ BEGIN
     ASSERT __block.extensions = E'[{"version":"1.26"}]'::jsonb, 'Incorrect extensions';
     ASSERT __block.witness_signature = '\x21571234'::bytea, 'Incorrect witness signature';
 
-    __transaction1 = (101, 100, '2016-06-22 19:10:23-07'::timestamp, ARRAY['{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive.operation], array_to_json(ARRAY[] :: INT[]) :: JSONB, ARRAY[ '\xBEEF'::bytea ]);
+    __transaction1 = (101, 100, '2016-06-22 19:10:23-07'::timestamp, ARRAY['{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive_data.operation], array_to_json(ARRAY[] :: INT[]) :: JSONB, ARRAY[ '\xBEEF'::bytea ]);
     ASSERT __block.transactions[1] = __transaction1, 'Incorrect first transaction';
     ASSERT __block.transactions = Array[ __transaction1 ], 'Incorrect transactions array';
     ASSERT __block.block_id = '\xBADD30'::bytea, 'Incorrect block_id';

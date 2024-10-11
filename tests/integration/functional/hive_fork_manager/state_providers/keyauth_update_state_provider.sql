@@ -114,7 +114,7 @@ BEGIN
                     "json_metadata": ""
                 }
             }
-            '::jsonb::hive.operation )
+            '::jsonb::hive_data.operation )
 
         -- three keys from one owner
             , ( hive.operation_id(2, 2, 0), 0, 0, '
@@ -162,7 +162,7 @@ BEGIN
                         "json_metadata": ""
                     }
                 }
-            '::jsonb::hive.operation)
+            '::jsonb::hive_data.operation)
 
         -- recover_account_operation
             , ( hive.operation_id(3, 1, 0), 0, 0, '
@@ -193,7 +193,7 @@ BEGIN
                         "extensions": []
                     }
                 }
-            '::jsonb::hive.operation )
+            '::jsonb::hive_data.operation )
 
             -- request_account_recovery_operation
             , ( hive.operation_id(4, 1, 0), 0, 0, '
@@ -215,7 +215,7 @@ BEGIN
                         "extensions": []
                     }
                 }
-            '::jsonb::hive.operation )
+            '::jsonb::hive_data.operation )
             , ( hive.operation_id(5, 1, 0), 0, 0,
             '
                 {
@@ -243,7 +243,7 @@ BEGIN
                         "memo_key": "STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB",
                         "json_metadata": ""
                     }
-                }            ' :: jsonb :: hive.operation )
+                }            ' :: jsonb :: hive_data.operation )
 
             -- witness_set_properties_operation
             , ( hive.operation_id(5, 7, 0), 0, 1,
@@ -264,8 +264,8 @@ BEGIN
                     ],
                     "extensions": []
                 }
-            }'::jsonb::hive.operation)
-            , ( hive.operation_id(5, 6, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hive.operation )
+            }'::jsonb::hive_data.operation)
+            , ( hive.operation_id(5, 6, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hive_data.operation )
             , ( hive.operation_id(5, 1, 2), 0, 2,
             '
             {
@@ -312,7 +312,7 @@ BEGIN
                     "json_metadata": ""
                 }
             }
-            ':: jsonb :: hive.operation )
+            ':: jsonb :: hive_data.operation )
 
 
                         
@@ -347,7 +347,7 @@ BEGIN
                         "memo_key": "STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB",
                         "json_metadata": ""
                     }
-                }            ' :: jsonb :: hive.operation )
+                }            ' :: jsonb :: hive_data.operation )
 
                 
                 -- for snail-157 account: create_account operation(above) establishes 4 keys
@@ -377,7 +377,7 @@ BEGIN
                         }
                     }
                 }
-                ':: jsonb :: hive.operation )
+                ':: jsonb :: hive_data.operation )
 
         ;
 

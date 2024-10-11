@@ -9,7 +9,7 @@ BEGIN
   CALL hive.check_eq(hive.operation_to_jsontext(hive.operation_from_jsontext(op))::jsonb, hive.operation_from_jsontext(op)::jsonb, 'operation::text::jsonb conversion doesn''t match operation::jsonb conversion');
 
   -- Make sure operation converted to jsonb can be converted back to operation of equal value.
-  CALL hive.check_eq(hive.operation_from_jsontext(op)::jsonb::hive.operation, hive.operation_from_jsontext(op), 'Converting operation to jsonb and back doesn''t match original operation');
+  CALL hive.check_eq(hive.operation_from_jsontext(op)::jsonb::hive_data.operation, hive.operation_from_jsontext(op), 'Converting operation to jsonb and back doesn''t match original operation');
 END;
 $BODY$
 ;

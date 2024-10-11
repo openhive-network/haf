@@ -17,7 +17,7 @@ CREATE TYPE hive.transaction_type AS (
       ref_block_num integer
     , ref_block_prefix bigint
     , expiration TIMESTAMP WITHOUT TIME ZONE
-    , operations hive.operation[]
+    , operations hive_data.operation[]
     , extensions jsonb
     , signatures bytea[]
     );

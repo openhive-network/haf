@@ -1,8 +1,8 @@
--- Compare functions for the hive.operation
+-- Compare functions for the hive_data.operation
 
 CREATE OPERATOR = (
-    LEFTARG    = hive.operation,
-    RIGHTARG   = hive.operation,
+    LEFTARG    = hive_data.operation,
+    RIGHTARG   = hive_data.operation,
     COMMUTATOR = =,
     NEGATOR    = !=,
     PROCEDURE  = hive._operation_eq,
@@ -12,8 +12,8 @@ CREATE OPERATOR = (
 );
 
 CREATE OPERATOR != (
-    LEFTARG    = hive.operation,
-    RIGHTARG   = hive.operation,
+    LEFTARG    = hive_data.operation,
+    RIGHTARG   = hive_data.operation,
     NEGATOR    = =,
     COMMUTATOR = !=,
     PROCEDURE  = hive._operation_ne,
@@ -22,8 +22,8 @@ CREATE OPERATOR != (
 );
 
 CREATE OPERATOR < (
-    LEFTARG    = hive.operation,
-    RIGHTARG   = hive.operation,
+    LEFTARG    = hive_data.operation,
+    RIGHTARG   = hive_data.operation,
     COMMUTATOR = <,
     NEGATOR    = >=,
     PROCEDURE  = hive._operation_lt,
@@ -32,8 +32,8 @@ CREATE OPERATOR < (
 );
 
 CREATE OPERATOR <= (
-    LEFTARG    = hive.operation,
-    RIGHTARG   = hive.operation,
+    LEFTARG    = hive_data.operation,
+    RIGHTARG   = hive_data.operation,
     COMMUTATOR = <=,
     NEGATOR    = >,
     PROCEDURE  = hive._operation_le,
@@ -42,8 +42,8 @@ CREATE OPERATOR <= (
 );
 
 CREATE OPERATOR > (
-    LEFTARG    = hive.operation,
-    RIGHTARG   = hive.operation,
+    LEFTARG    = hive_data.operation,
+    RIGHTARG   = hive_data.operation,
     COMMUTATOR = >,
     NEGATOR    = <=,
     PROCEDURE  = hive._operation_gt,
@@ -52,8 +52,8 @@ CREATE OPERATOR > (
 );
 
 CREATE OPERATOR >= (
-    LEFTARG    = hive.operation,
-    RIGHTARG   = hive.operation,
+    LEFTARG    = hive_data.operation,
+    RIGHTARG   = hive_data.operation,
     COMMUTATOR = >=,
     NEGATOR    = <,
     PROCEDURE  = hive._operation_ge,
@@ -63,11 +63,11 @@ CREATE OPERATOR >= (
 
 
 CREATE OPERATOR CLASS hive.operation_ops
-DEFAULT FOR TYPE hive.operation USING btree AS
-    OPERATOR    1   <  (hive.operation, hive.operation),
-    OPERATOR    2   <= (hive.operation, hive.operation),
-    OPERATOR    3   =  (hive.operation, hive.operation),
-    OPERATOR    4   >= (hive.operation, hive.operation),
-    OPERATOR    5   >  (hive.operation, hive.operation),
-    FUNCTION    1   hive._operation_cmp(hive.operation, hive.operation),
-STORAGE hive.operation;
+DEFAULT FOR TYPE hive_data.operation USING btree AS
+    OPERATOR    1   <  (hive_data.operation, hive_data.operation),
+    OPERATOR    2   <= (hive_data.operation, hive_data.operation),
+    OPERATOR    3   =  (hive_data.operation, hive_data.operation),
+    OPERATOR    4   >= (hive_data.operation, hive_data.operation),
+    OPERATOR    5   >  (hive_data.operation, hive_data.operation),
+    FUNCTION    1   hive._operation_cmp(hive_data.operation, hive_data.operation),
+STORAGE hive_data.operation;

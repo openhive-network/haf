@@ -218,7 +218,7 @@ check_tables_dont_reference_haf_types() {
   echo
   echo "Checking that none table references HAF type..."
 
-  # hive.operation is explicitly ignored, because we never drop this type, so it's safe as a column.
+  # hive_data.operation is explicitly ignored, because we never drop this type, so it's safe as a column.
   query="
     CREATE TEMP TABLE allowed_types(name TEXT);
     INSERT INTO allowed_types(name) VALUES

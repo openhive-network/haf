@@ -7,7 +7,7 @@ $BODY$
 BEGIN
   -- Make sure that both conversions produce the same value
   CALL hive.check_eq(hive.operation_from_jsontext(op)::TEXT, bytes);
-  CALL hive.check_eq(op::JSONB::hive.operation::TEXT, bytes);
+  CALL hive.check_eq(op::JSONB::hive_data.operation::TEXT, bytes);
 END;
 $BODY$
 ;
@@ -474,55 +474,55 @@ BEGIN
     '\x5405616c69636503626f62010000000000000003535445454d00000278780c0c0000');
 
   BEGIN
-    PERFORM '{}'::jsonb::hive.operation;
+    PERFORM '{}'::jsonb::hive_data.operation;
     RAISE EXCEPTION 'Operation cannot be created from an empty object';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"system_warning_operation","value":{"message":[]}}'::jsonb::hive.operation;
+    PERFORM '{"type":"system_warning_operation","value":{"message":[]}}'::jsonb::hive_data.operation;
     RAISE EXCEPTION 'Operation should not be created from json with incorrect message field';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"limit_order_cancel_operation","value":{"owner":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","orderid":1}}'::jsonb::hive.operation;
+    PERFORM '{"type":"limit_order_cancel_operation","value":{"owner":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","orderid":1}}'::jsonb::hive_data.operation;
     RAISE EXCEPTION 'Operation should not be created because name is too long';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":10000,"precision":3,"nai":"@@000000021"},"memo":"memo"}}'::jsonb::hive.operation;
+    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":10000,"precision":3,"nai":"@@000000021"},"memo":"memo"}}'::jsonb::hive_data.operation;
     RAISE EXCEPTION 'Operation should not be created because amount needs to be a string';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"-1","precision":3,"nai":"@@000000021"},"memo":"memo"}}'::jsonb::hive.operation;
+    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"-1","precision":3,"nai":"@@000000021"},"memo":"memo"}}'::jsonb::hive_data.operation;
     RAISE EXCEPTION 'Operation should not be created because amount cannot be negative';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"10000","precision":"3","nai":"@@000000021"},"memo":"memo"}}'::jsonb::hive.operation;
+    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"10000","precision":"3","nai":"@@000000021"},"memo":"memo"}}'::jsonb::hive_data.operation;
     RAISE EXCEPTION 'Operation should not be created because precision needs to be an integer';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"10000","precision":3,"nai":"@@000000020"},"memo":"memo"}}'::jsonb::hive.operation;
+    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"10000","precision":3,"nai":"@@000000020"},"memo":"memo"}}'::jsonb::hive_data.operation;
     RAISE EXCEPTION 'Operation should not be created because nai is incorrect';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"update_proposal_votes_operation","value":{"voter":"alice","proposal_ids":[0,1,5,3],"approve":true,"extensions":[]}}'::jsonb::hive.operation;
+    PERFORM '{"type":"update_proposal_votes_operation","value":{"voter":"alice","proposal_ids":[0,1,5,3],"approve":true,"extensions":[]}}'::jsonb::hive_data.operation;
     RAISE EXCEPTION 'Operation should not be created because proposals ids are not increasing';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"update_proposal_votes_operation","value":{"voter":"alice","proposal_ids":[0,1,1],"approve":true,"extensions":[]}}'::jsonb::hive.operation;
+    PERFORM '{"type":"update_proposal_votes_operation","value":{"voter":"alice","proposal_ids":[0,1,1],"approve":true,"extensions":[]}}'::jsonb::hive_data.operation;
     RAISE EXCEPTION 'Operation should not be created because proposals ids are not unique';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
