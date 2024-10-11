@@ -28,7 +28,7 @@ include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
   - project: 'hive/common-ci-configuration'
-    ref: 1ce04340ebfe838fd7fa09aebdde3bd7e1218bce
+    ref: 682ba2e16cfc4ef192478d2d21c4b5a52bbd4678
     file:
     - '/templates/python_projects.gitlab-ci.yml'
     - '/templates/cache_cleanup.gitlab-ci.yml'
