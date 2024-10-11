@@ -1,8 +1,8 @@
-CREATE DOMAIN hive.vest_amount AS NUMERIC NOT NULL;
-CREATE DOMAIN hive.hive_amount AS NUMERIC NOT NULL;
-CREATE DOMAIN hive.hbd_amount AS NUMERIC NOT NULL;
+CREATE DOMAIN hive_data.vest_amount AS NUMERIC NOT NULL;
+CREATE DOMAIN hive_data.hive_amount AS NUMERIC NOT NULL;
+CREATE DOMAIN hive_data.hbd_amount AS NUMERIC NOT NULL;
 --- Interest rate (in BPS - basis points)
-CREATE DOMAIN hive.interest_rate AS INT4 NOT NULL;
+CREATE DOMAIN hive_data.interest_rate AS INT4 NOT NULL;
 
 CREATE TABLE IF NOT EXISTS hive_data.blocks (
        num integer NOT NULL,
@@ -17,18 +17,18 @@ CREATE TABLE IF NOT EXISTS hive_data.blocks (
 
        --- Data specific to parts of blockchain DGPO 
 
-       hbd_interest_rate hive.interest_rate,
+       hbd_interest_rate hive_data.interest_rate,
 
-       total_vesting_fund_hive hive.hive_amount,
-       total_vesting_shares hive.vest_amount,
+       total_vesting_fund_hive hive_data.hive_amount,
+       total_vesting_shares hive_data.vest_amount,
 
-       total_reward_fund_hive hive.hive_amount,
+       total_reward_fund_hive hive_data.hive_amount,
        
-       virtual_supply hive.hive_amount,
-       current_supply hive.hive_amount,
+       virtual_supply hive_data.hive_amount,
+       current_supply hive_data.hive_amount,
 
-       current_hbd_supply hive.hbd_amount,
-       dhf_interval_ledger hive.hbd_amount,
+       current_hbd_supply hive_data.hbd_amount,
+       dhf_interval_ledger hive_data.hbd_amount,
 
        CONSTRAINT pk_hive_blocks PRIMARY KEY( num )
 );
