@@ -31,7 +31,7 @@ END;
 $body$;
 
 CREATE OR REPLACE FUNCTION hive.is_stages_analyze_required(
-          _lead_context_state hive.application_loop_state
+          _lead_context_state hive_data.application_loop_state
         , _current_head_block INTEGER
 )
     RETURNS BOOL
@@ -134,7 +134,7 @@ AS
 $body$
 DECLARE
     __lead_context_name hive_data.context_name := _contexts[ 1 ];
-    __lead_context_state hive.application_loop_state;
+    __lead_context_state hive_data.application_loop_state;
 BEGIN
     -- here is the only place when main synchronization connection  makes commit
     -- 1. commit if there is a pending commit

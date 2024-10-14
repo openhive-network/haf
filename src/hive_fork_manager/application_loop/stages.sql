@@ -26,8 +26,7 @@ $BODY$;
 
 CREATE DOMAIN hive_data.application_stages AS hive_data.application_stage[];
 
-DROP TYPE IF EXISTS hive.application_loop_state;
-CREATE TYPE hive.application_loop_state AS (
+CREATE TYPE hive_data.application_loop_state AS (
     -- distance to head block at the moment when stages were analyzed
     -- when the distance the current distance is higher it  means that with
     -- application was stopped for a while or syncing is slow
