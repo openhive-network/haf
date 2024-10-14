@@ -66,7 +66,7 @@ def trx_creator(wallet: tt.Wallet, identifier: int):
     global break_limit
 
     while break_cnt < break_limit:
-        wallet.api.transfer_nonblocking('initminer', 'null', tt.Asset.Test(1), str(memo_cnt))
+        wallet.api.transfer('initminer', 'null', tt.Asset.Test(1), str(memo_cnt))
         memo_cnt += 1
     return f'[break {identifier}] Creating transactions finished...'
 
