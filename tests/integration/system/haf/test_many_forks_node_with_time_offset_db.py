@@ -13,7 +13,7 @@ memo_cnt            = 0
 break_cnt           = 0
 break_limit         = 250
 
-def generate_break(wallet: tt.Wallet, node: tt.ApiNode, identifier: int):
+def generate_break(wallet: tt.OldWallet, node: tt.ApiNode, identifier: int):
     global break_cnt
     global break_limit
 
@@ -33,14 +33,14 @@ def haf_app_processor(before_kill_time_min: int, before_kill_time_max: int, iden
         _app.run()
     return f'[break {identifier}] Creating apps finished...'
 
-def trx_creator(wallet: tt.Wallet, identifier: int):
+def trx_creator(wallet: tt.OldWallet, identifier: int):
     global memo_cnt
 
     global break_cnt
     global break_limit
 
     while break_cnt < break_limit:
-        wallet.api.transfer('initminer', 'null', tt.Asset.Test(1), str(memo_cnt))
+        wallet.api.transfer_nonblocking('initminer', 'null', tt.Asset.Test(1), str(memo_cnt))
         memo_cnt += 1
     return f'[break {identifier}] Creating transactions finished...'
 
@@ -56,7 +56,7 @@ def test_many_forks_node_with_time_offset_db(prepared_networks_and_database_4_4_
     haf_app.setup(session, Path(__file__).parent.absolute() / ".." / ".." / ".." / ".." / "src" / "hive_fork_manager" / "doc" / "applications")
 
     node_under_test = networks_builder.networks[1].node('ApiNode0')
-    beta_wallet = tt.Wallet(attach_to = node_under_test)
+    beta_wallet = tt.OldWallet(attach_to = node_under_test)
 
     _, break_cnt = sh.info('m4', beta_wallet)
     tt.logger.info(f'initial break_cnt: {break_cnt}')

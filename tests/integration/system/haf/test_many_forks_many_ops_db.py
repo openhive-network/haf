@@ -59,14 +59,14 @@ def fork_activator(networks: Iterable[tt.Network], logs: Iterable[sh.NodeLog], m
         _cnt += 1
     return f'[break {identifier}] Creating forks finished...'
 
-def trx_creator(wallet: tt.Wallet, identifier: int):
+def trx_creator(wallet: tt.OldWallet, identifier: int):
     global memo_cnt
 
     global break_cnt
     global break_limit
 
     while break_cnt < break_limit:
-        wallet.api.transfer('initminer', 'null', tt.Asset.Test(1), str(memo_cnt))
+        wallet.api.transfer_nonblocking('initminer', 'null', tt.Asset.Test(1), str(memo_cnt))
         memo_cnt += 1
     return f'[break {identifier}] Creating transactions finished...'
 
@@ -88,8 +88,8 @@ def test_many_forks_many_ops_db(prepared_networks_and_database_17_3):
 
     logs = []
 
-    majority_wallet = tt.Wallet(attach_to = majority_api_node)
-    minority_wallet = tt.Wallet(attach_to = minority_api_node)
+    majority_wallet = tt.OldWallet(attach_to = majority_api_node)
+    minority_wallet = tt.OldWallet(attach_to = minority_api_node)
     logs.append(sh.NodeLog("M", majority_wallet))
     logs.append(sh.NodeLog("m", minority_wallet))
 
