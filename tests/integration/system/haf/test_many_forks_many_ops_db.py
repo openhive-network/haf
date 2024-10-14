@@ -59,15 +59,9 @@ def fork_activator(networks: Iterable[tt.Network], logs: Iterable[sh.NodeLog], m
         _cnt += 1
     return f'[break {identifier}] Creating forks finished...'
 
-def trx_creator(wallet: tt.Wallet, identifier: int):
-    global memo_cnt
-
-    global break_cnt
-    global break_limit
-
-    while break_cnt < break_limit:
-        wallet.api.transfer_nonblocking('initminer', 'null', tt.Asset.Test(1), str(memo_cnt))
-        memo_cnt += 1
+def trx_creator(wallet: tt.Wallet, identifier: int, start_memo: int, last_memo: int):
+    for memo in range(start_memo, last_memo):
+        wallet.api.transfer_nonblocking('initminer', 'null', tt.Asset.Test(1), str(memo))
     return f'[break {identifier}] Creating transactions finished...'
 
 #Some information in: https://gitlab.syncad.com/hive/haf/-/issues/118
@@ -115,11 +109,14 @@ def test_many_forks_many_ops_db(prepared_networks_and_database_17_3):
     with ThreadPoolExecutor(max_workers = _fork_threads + _push_threads + _app_threads + _generate_break_threads ) as executor:
         _futures.append(executor.submit(fork_activator, networks_builder.networks, logs, majority_api_node, _m, _M, 0))
 
+        step = break_limit // _push_threads
         for i in range(_push_threads):
+            start_memo = step * i
+            last_memo = start_memo + step
             if i % 2 == 0:
-                _futures.append(executor.submit(trx_creator, majority_wallet, i))
+                _futures.append(executor.submit(trx_creator, majority_wallet, i, start_memo, last_memo))
             else:
-                _futures.append(executor.submit(trx_creator, minority_wallet, i))
+                _futures.append(executor.submit(trx_creator, minority_wallet, i, start_memo, last_memo))
 
         for i in range(_app_threads):
             _futures.append(executor.submit(haf_app_processor, 5, 30, i ))
