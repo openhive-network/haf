@@ -1,13 +1,8 @@
 -- type is used by app_next_block to inform the application
 -- about current stage and return batch of blocks
 
-DROP DOMAIN IF EXISTS hive_data.blocks_count;
 CREATE DOMAIN hive_data.blocks_count AS INTEGER CHECK( VALUE > 0 );
-
-DROP DOMAIN IF EXISTS hive_data.blocks_distance;
 CREATE DOMAIN hive_data.blocks_distance AS INTEGER CHECK( VALUE >= 0 );
-
-DROP DOMAIN IF EXISTS hive_data.stage_name;
 CREATE DOMAIN hive_data.stage_name AS TEXT CHECK( VALUE ~ '^[A-Za-z0-9_]+$' );
 
 DROP TYPE IF EXISTS hive.application_stage CASCADE;
@@ -29,7 +24,7 @@ END;
 $BODY$;
 
 
-DROP DOMAIN IF EXISTS hive_data.application_stages;
+
 CREATE DOMAIN hive_data.application_stages AS hive.application_stage[];
 
 DROP TYPE IF EXISTS hive.application_loop_state;
