@@ -33,15 +33,9 @@ def haf_app_processor(before_kill_time_min: int, before_kill_time_max: int, iden
         _app.run()
     return f'[break {identifier}] Creating apps finished...'
 
-def trx_creator(wallet: tt.Wallet, identifier: int):
-    global memo_cnt
-
-    global break_cnt
-    global break_limit
-
-    while break_cnt < break_limit:
-        wallet.api.transfer_nonblocking('initminer', 'null', tt.Asset.Test(1), str(memo_cnt))
-        memo_cnt += 1
+def trx_creator(wallet: tt.Wallet, identifier: int, start_memo: int, last_memo: int):
+    for memo in range(start_memo, last_memo):
+        wallet.api.transfer_nonblocking('initminer', 'null', tt.Asset.Test(1), str(memo))
     return f'[break {identifier}] Creating transactions finished...'
 
 #Some information in: https://gitlab.syncad.com/hive/haf/-/issues/118
@@ -66,8 +60,11 @@ def test_many_forks_node_with_time_offset_db(prepared_networks_and_database_4_4_
     _app_threads            = 8
     _generate_break_threads = 1
     with ThreadPoolExecutor(max_workers = _push_threads + _app_threads + _generate_break_threads) as executor:
+        step = break_limit // _push_threads
         for i in range(_push_threads):
-            _futures.append(executor.submit(trx_creator, beta_wallet, i))
+            start_memo = step * i
+            last_memo = start_memo + step
+            _futures.append(executor.submit(trx_creator, beta_wallet, i, start_memo, last_memo))
 
         for i in range(_app_threads):
             _futures.append(executor.submit(haf_app_processor, 1, 5, i))
