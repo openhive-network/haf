@@ -87,7 +87,7 @@ DECLARE
     __min_reversible_block INT;
     __context_stages hive_data.application_stages :=
         ARRAY[
-            ('massive',30 ,20000 )::hive.application_stage
+            ('massive',30 ,20000 )::hive_data.application_stage
             , hive.live_stage()
             ];
 BEGIN

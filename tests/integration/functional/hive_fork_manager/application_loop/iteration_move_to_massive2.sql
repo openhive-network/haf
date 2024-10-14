@@ -6,7 +6,7 @@ $BODY$
 DECLARE
     __context_stages hive_data.application_stages :=
         ARRAY[
-              ('massive',2 ,100 )::hive.application_stage
+              ('massive',2 ,100 )::hive_data.application_stage
             , hive.live_stage()
             ];
 BEGIN

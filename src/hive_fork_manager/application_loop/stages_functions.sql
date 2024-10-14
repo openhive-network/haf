@@ -55,7 +55,7 @@ $BODY$;
 
 
 CREATE OR REPLACE FUNCTION hive.get_current_stage( _contexts hive_data.contexts_group )
-    RETURNS TABLE( stage hive.application_stage, context hive_data.context_name )
+    RETURNS TABLE( stage hive_data.application_stage, context hive_data.context_name )
     LANGUAGE plpgsql
     STABLE
 AS
@@ -81,7 +81,7 @@ BEGIN
     RETURN QUERY
     WITH stages AS MATERIALIZED (
         SELECT
-              UNNEST( ctx.stages )::hive.application_stage as stage
+              UNNEST( ctx.stages )::hive_data.application_stage as stage
             , ctx.name as context
             , ctx.current_block_num as current_block_num
         FROM hive_data.contexts ctx

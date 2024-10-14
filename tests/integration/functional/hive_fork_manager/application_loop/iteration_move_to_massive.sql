@@ -10,7 +10,7 @@ AS
 $BODY$
 DECLARE
     __account hive_data.accounts%ROWTYPE;
-    _context_stages hive_data.application_stages := ARRAY[ ('stage2',1 ,2 )::hive.application_stage, hive.live_stage() ];
+    _context_stages hive_data.application_stages := ARRAY[ ('stage2',1 ,2 )::hive_data.application_stage, hive.live_stage() ];
     __blocks hive.blocks_range;
 BEGIN
     CREATE SCHEMA A;

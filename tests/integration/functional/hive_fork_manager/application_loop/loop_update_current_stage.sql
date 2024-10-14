@@ -24,18 +24,18 @@ AS
 $BODY$
 DECLARE
     __alice_stages hive_data.application_stages :=
-        ARRAY[ ('stage2',100 ,100 )::hive.application_stage
-            , ('stage1',10 ,10 )::hive.application_stage
+        ARRAY[ ('stage2',100 ,100 )::hive_data.application_stage
+            , ('stage1',10 ,10 )::hive_data.application_stage
             , hive.live_stage()
             ];
     __alice1_stages hive_data.application_stages :=
-        ARRAY[ ('stage2',100 ,100 )::hive.application_stage
-            , ('stage1',60 ,10 )::hive.application_stage
+        ARRAY[ ('stage2',100 ,100 )::hive_data.application_stage
+            , ('stage1',60 ,10 )::hive_data.application_stage
             , hive.live_stage()
             ];
     __alice2_stages hive_data.application_stages :=
-        ARRAY[ ('stage2',40 ,100 )::hive.application_stage
-            , ('stage1',30 ,10 )::hive.application_stage
+        ARRAY[ ('stage2',40 ,100 )::hive_data.application_stage
+            , ('stage1',30 ,10 )::hive_data.application_stage
             , hive.live_stage()
             ];
 BEGIN
@@ -62,12 +62,12 @@ CREATE OR REPLACE PROCEDURE alice_test_then()
 AS
 $BODY$
 DECLARE
-    __current_stage hive.application_stage;
+    __current_stage hive_data.application_stage;
 BEGIN
     -- check if contexts are correctly updated
     -- alice stage1
     SELECT ((hc.loop).current_stage).*  FROM hive_data.contexts hc WHERE hc.name = 'alice' INTO __current_stage;
-    ASSERT __current_stage = ('stage1',10 ,10 )::hive.application_stage, 'alice stage != (''stage1'',10 ,10 )';
+    ASSERT __current_stage = ('stage1',10 ,10 )::hive_data.application_stage, 'alice stage != (''stage1'',10 ,10 )';
     ASSERT hive.get_current_stage_name( 'alice' ) = 'stage1', 'Wrong name of Alice stage !=stage1';
     ASSERT hive.app_context_is_attached( 'alice' ) = FALSE, 'Context alice is attached';
 
@@ -79,7 +79,7 @@ BEGIN
 
     -- alice2 stage2
     SELECT ((hc.loop).current_stage).* FROM hive_data.contexts hc WHERE hc.name = 'alice2' INTO __current_stage;
-    ASSERT __current_stage = ('stage2',40 ,100 )::hive.application_stage, 'alice2 stage  != (''stage2'',40 ,100 )';
+    ASSERT __current_stage = ('stage2',40 ,100 )::hive_data.application_stage, 'alice2 stage  != (''stage2'',40 ,100 )';
     ASSERT hive.get_current_stage_name( 'alice2' ) = 'stage2', 'Wrong name of Alice2 stage !=stage2';
     ASSERT hive.app_context_is_attached( 'alice2' ) = FALSE, 'Context alice2 is attached';
 END;

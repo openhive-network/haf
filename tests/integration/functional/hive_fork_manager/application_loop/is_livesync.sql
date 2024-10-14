@@ -37,11 +37,11 @@ BEGIN
     WHERE hc.name ='alice_live2';
 
     UPDATE hive_data.contexts hc
-    SET loop.current_stage = ('stage1',30 ,10 )::hive.application_stage
+    SET loop.current_stage = ('stage1',30 ,10 )::hive_data.application_stage
     WHERE hc.name ='alice_no_live1';
 
     UPDATE hive_data.contexts hc
-    SET loop.current_stage = ('stage2',40 ,10 )::hive.application_stage
+    SET loop.current_stage = ('stage2',40 ,10 )::hive_data.application_stage
     WHERE hc.name ='alice_no_live1';
 END;
 $BODY$;
