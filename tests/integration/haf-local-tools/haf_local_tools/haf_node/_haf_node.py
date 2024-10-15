@@ -12,7 +12,7 @@ from sqlalchemy_utils import create_database, database_exists, drop_database
 
 import test_tools as tt
 from test_tools.__private.preconfigured_node import PreconfiguredNode
-from test_tools.__private.utilities.create_accounts import WalletResponseBase as Transaction
+from test_tools.__private.wallet.constants import WalletResponseBase as Transaction
 
 from haf_local_tools.db_adapter import DbAdapter
 
