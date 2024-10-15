@@ -66,7 +66,7 @@ BEGIN
 
     UPDATE hive_data.contexts ctx
     SET
-        loop = (10, hive.live_stage(), 10, 10, 10)::hive_data.application_loop_state
+        loop = (10, hive_data.live_stage(), 10, 10, 10)::hive_data.application_loop_state
     WHERE ctx.name = 'attached_context_not_insync_loop'
     ;
 

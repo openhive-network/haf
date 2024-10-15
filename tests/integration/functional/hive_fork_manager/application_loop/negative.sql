@@ -7,7 +7,7 @@ DECLARE
     __context_stages hive_data.application_stages :=
         ARRAY[
             ('massive',2 ,100 )::hive_data.application_stage
-            , hive.live_stage()
+            , hive_data.live_stage()
             ];
 BEGIN
     CREATE SCHEMA A;

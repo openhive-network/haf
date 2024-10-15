@@ -5,7 +5,7 @@ AS
 $BODY$
 DECLARE
     __fork_id INT;
-    __context_stages hive_data.application_stages := ARRAY[ hive.live_stage() ];
+    __context_stages hive_data.application_stages := ARRAY[ hive_data.live_stage() ];
 BEGIN
     SELECT MAX(hf.id) INTO __fork_id FROM hive_data.fork hf;
     INSERT INTO hive_data.events_queue( event, block_num )

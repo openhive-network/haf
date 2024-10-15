@@ -11,7 +11,7 @@ CREATE TYPE hive_data.application_stage AS (
     blocks_limit_in_group hive_data.blocks_count -- max number of blocks in one group to process
 );
 
-CREATE OR REPLACE FUNCTION hive.live_stage()
+CREATE FUNCTION hive_data.live_stage()
     RETURNS hive_data.application_stage
     LANGUAGE plpgsql
     IMMUTABLE

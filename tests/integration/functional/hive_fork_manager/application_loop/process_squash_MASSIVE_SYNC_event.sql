@@ -4,7 +4,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 DECLARE
-    __context_stages hive_data.application_stages := ARRAY[ ('stage1',2 ,5 )::hive_data.application_stage, hive.live_stage() ];
+    __context_stages hive_data.application_stages := ARRAY[ ('stage1',2 ,5 )::hive_data.application_stage, hive_data.live_stage() ];
     __blocks hive.blocks_range;
 BEGIN
     INSERT INTO hive_data.blocks

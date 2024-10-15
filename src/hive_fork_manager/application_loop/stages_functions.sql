@@ -25,7 +25,7 @@ BEGIN
 
     SELECT count(*) INTO __number_of_stages
     FROM ( SELECT ROW(s.*) FROM UNNEST( _stages ) s ) as s1
-    WHERE s1.row = hive.live_stage();
+    WHERE s1.row = hive_data.live_stage();
 
     IF __number_of_stages = 0 THEN
         RAISE EXCEPTION 'No live stage in stages array %', _stages;
@@ -68,7 +68,7 @@ BEGIN
     -- if we are traversing reversible blocks
     IF hive.is_abs_livesync( _contexts ) THEN
         RETURN QUERY SELECT
-            hive.live_stage() as stage
+            hive_data.live_stage() as stage
           , UNNEST( _contexts ) as context
         ;
     END IF;

@@ -24,7 +24,7 @@ BEGIN
     FROM (
              SELECT MIN( (hc.loop).current_stage.blocks_limit_in_group )  as blocks
              FROM hive_data.contexts hc
-             WHERE hc.name = ANY( _contexts ) AND (hc.loop).current_stage != hive.live_stage()
+             WHERE hc.name = ANY( _contexts ) AND (hc.loop).current_stage != hive_data.live_stage()
          ) as max_limit
     WHERE ctx.name = ANY( _contexts );
 END;
@@ -63,7 +63,7 @@ BEGIN
     SELECT ( COUNT(*) = CARDINALITY(_contexts) ) INTO __result
     FROM hive_data.contexts hc
     WHERE hc.name = ANY(_contexts)
-        AND (hc.loop).current_stage = hive.live_stage()
+        AND (hc.loop).current_stage = hive_data.live_stage()
     ;
 
     RETURN __result;
