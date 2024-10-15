@@ -38,12 +38,18 @@ FILE(READ ${IN_FILE} CONTENTS)
 FILE(APPEND ${OUT_FILE} "${CONTENTS}")
 ENDFUNCTION()
 
-#concatination of deploy_sources.sql
+#concatenation of deploy_sources.sql
+# all objects in schema hive can be dropped and then recreated
+# all objects in schema hive_data cannot be updated and full resync of HAF is required in case of changes there
+# first we need to drop schema hive, thus to avoid annoying problem with ambiguity when a function
+# change list of their parameters and its old version was not removed
+FILE(WRITE ${extension_path}/${temp_deploy_sources} "DROP SCHEMA IF EXISTS hive CASCADE;\nCREATE SCHEMA hive;\n")
 FOREACH(EXTENSION_DEPLOY_SOURCES ${EXTENSION_DEPLOY_SOURCES})
 cat(${EXTENSION_DEPLOY_SOURCES} ${extension_path}/${temp_deploy_sources})
 ENDFOREACH()
 
-CONFIGURE_FILE( "${extension_path}/deploy_sources.sql" "${extension_path}/${update_control_script}")
+
+CONFIGURE_FILE( "${extension_path}/${temp_deploy_sources}" "${extension_path}/${update_control_script}")
 
 FILE (REMOVE ${extension_path}/${temp_deploy_sources})
 
