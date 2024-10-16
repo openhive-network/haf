@@ -54,7 +54,7 @@ BEGIN
         RAISE EXCEPTION 'Invalid format: %',_to;
     END;
 
-    __to_block := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at <= __converted_timestamp2 ORDER BY created_at DESC LIMIT 1);
+    __to_block := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < __converted_timestamp2 ORDER BY created_at DESC LIMIT 1);
   END IF;
 
   IF __converted_timestamp2 IS NOT NULL AND __to_block IS NULL THEN
@@ -87,8 +87,37 @@ CREATE OR REPLACE FUNCTION hive.convert_to_block_num(_block TEXT)
     STABLE
 AS
 $BODY$
-BEGIN				
-  RETURN last_block FROM hive.convert_to_blocks_range(NULL, _block);
+DECLARE
+    __block INT := NULL;
+    __converted_timestamp TIMESTAMP := NULL;
+BEGIN
+
+  -- Try to convert _to to integer
+  BEGIN
+    __block := _block::INT;
+  EXCEPTION
+    WHEN OTHERS THEN
+        -- Do nothing, move to the next block
+  END;
+
+  -- Try to convert _block to timestamp if it's not an integer
+  IF __block IS NULL THEN
+    BEGIN
+      __converted_timestamp := _block::TIMESTAMP;
+    EXCEPTION
+    -- if it's not a timestamp either - raise exception
+      WHEN OTHERS THEN
+        RAISE EXCEPTION 'Invalid format: %',_block;
+    END;
+
+    __block := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at <= __converted_timestamp ORDER BY created_at DESC LIMIT 1);
+  END IF;
+
+  IF __converted_timestamp IS NOT NULL AND __block IS NULL THEN
+    RAISE EXCEPTION 'Block-num was not found for provided timestamp (%)', __converted_timestamp;
+  END IF;
+
+  RETURN __block;
 END;
 $BODY$
 ;
