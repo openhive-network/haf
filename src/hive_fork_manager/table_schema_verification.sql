@@ -1,11 +1,11 @@
 CREATE OR REPLACE FUNCTION hive.calculate_schema_hash(schema_name TEXT)
-    RETURNS SETOF hive.verify_table_schema
+    RETURNS SETOF hive_data.verify_table_schema
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    schemarow    hive.verify_table_schema%ROWTYPE;
+    schemarow    hive_data.verify_table_schema%ROWTYPE;
     _table_name     TEXT;
     _before_hash    TEXT;
     _columns   TEXT;
