@@ -298,7 +298,7 @@ information about each fork is stored in the hive_data.fork table. When 'hived' 
 |    4     |    2    |  DATA_42  |
 |    4     |    3    |  DATA_43  |
 
-If an app is working on fork=2 and block_num=3 (this information is held by `hive.contexts` ), then its snapshot of data for the example above is:
+If an app is working on fork=2 and block_num=3 (this information is held by `hive_data.contexts` ), then its snapshot of data for the example above is:
 
 | block_num| fork id | data      |
 |----------|---------|-----------|
@@ -313,7 +313,7 @@ SELECT
     , fork_id
     , data
 FROM data_reversible
-JOIN hive.contexts hc ON fork_id <= hc.fork_id AND block_num <= hc.current_block_num
+JOIN hive_data.contexts hc ON fork_id <= hc.fork_id AND block_num <= hc.current_block_num
 WHERE hc.name = 'app_context'
 ORDER BY block_num DESC, fork_id DESC
 ```

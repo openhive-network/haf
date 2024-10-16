@@ -17,7 +17,7 @@ class haf_query:
     self.context_detached_save_block_num  = "SELECT hive.app_context_detached_save_block_num('{}', {})"
     self.context_detached_get_block_num   = "SELECT * FROM hive.app_context_detached_get_block_num('{}')".format( self.application_context )
     
-    self.context_current_block_num        = "SELECT current_block_num FROM hive.contexts WHERE NAME = '{}'".format( self.application_context )
+    self.context_current_block_num        = "SELECT current_block_num FROM hive_data.contexts WHERE NAME = '{}'".format( self.application_context )
     
     self.next_block                       = "SELECT * FROM hive.app_next_block('{}');".format( self.application_context )
 
