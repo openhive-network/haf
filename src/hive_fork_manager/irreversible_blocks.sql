@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS hive_data.operations (
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 );
 
-
+-- TODO(mickiewicz): remove this overriden declaration
 CREATE OR REPLACE FUNCTION hive.operation_id_to_pos( _id BIGINT )
     RETURNS INTEGER
     IMMUTABLE PARALLEL SAFE LEAKPROOF
