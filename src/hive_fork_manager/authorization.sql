@@ -49,7 +49,7 @@ ALTER TABLE hive_data.accounts_reversible OWNER TO hived_group;
 ALTER TABLE hive_data.account_operations_reversible OWNER TO hived_group;
 ALTER TABLE hive_data.applied_hardforks OWNER TO hived_group;
 ALTER TABLE hive_data.applied_hardforks_reversible OWNER TO hived_group;
-ALTER TABLE hive.write_ahead_log_state OWNER TO hived_group;
+ALTER TABLE hive_data.write_ahead_log_state OWNER TO hived_group;
 
 -- generic protection for tables in hive schema
 -- 1. hived_group allow to edit every table in hive schema

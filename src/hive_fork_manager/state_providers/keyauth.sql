@@ -1,6 +1,18 @@
 -- In hive::protocol::recover_account_operation the entry recent_owner_authority is not recorded, only new_owner_authority
 -- and the whole hive::protocol::request_account_recovery_operation is not recorded at all
 
+-- updatable types
+CREATE TYPE hive.keyauth_c_record_type AS
+(
+    account_name TEXT
+    , authority_c_kind INTEGER
+    , key_auth BYTEA
+    , account_auth TEXT
+    , weight_threshold INTEGER
+    , w INTEGER
+);
+
+
 CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hive_data.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
@@ -46,7 +58,7 @@ BEGIN
     EXECUTE format($$
         CREATE TABLE hive_data.%1$s_keyauth_a(
         account_id INTEGER
-        , key_kind hive.key_type
+        , key_kind hive_data.key_type
         , key_serial_id INTEGER
         , weight_threshold INTEGER
         , w INTEGER
@@ -65,7 +77,7 @@ BEGIN
     EXECUTE format($$
         CREATE TABLE hive_data.%1$s_accountauth_a(
         account_id INTEGER
-        , key_kind hive.key_type
+        , key_kind hive_data.key_type
         , account_auth_id INTEGER
         , weight_threshold INTEGER
         , w INTEGER
@@ -143,7 +155,7 @@ BEGIN
                 1 as block_num,
                 (SELECT b.created_at FROM hive_data.blocks b WHERE b.num = 1) as timestamp,
                 1
-                FROM hive.get_genesis_keyauths() as g
+                FROM hive_data.get_genesis_keyauths() as g
             WHERE  _first_block <= 1 AND 1 <= _last_block 
         ),
 
@@ -157,7 +169,7 @@ BEGIN
             __HARDFORK_9_block_num as block_num,
             (SELECT b.created_at FROM hive_data.blocks b WHERE b.num = __HARDFORK_9_block_num) as timestamp,
             hive.operation_id( __HARDFORK_9_block_num, 60, 0xFFFFFF ) as op_stable_id
-            FROM hive.get_hf09_keyauths() h
+            FROM hive_data.get_hf09_keyauths() h
             WHERE  _first_block <= __HARDFORK_9_block_num AND __HARDFORK_9_block_num <= _last_block
         ),
 
@@ -170,7 +182,7 @@ BEGIN
             __HARDFORK_21_block_num as block_num,
             (SELECT b.created_at FROM hive_data.blocks b WHERE b.num = __HARDFORK_21_block_num) as timestamp,
             hive.operation_id( __HARDFORK_21_block_num, 60, 0xFFFFFF ) as op_stable_id
-            FROM hive.get_hf21_keyauths() h
+            FROM hive_data.get_hf21_keyauths() h
             WHERE  _first_block <= __HARDFORK_21_block_num AND __HARDFORK_21_block_num <= _last_block
         ),
 
@@ -183,7 +195,7 @@ BEGIN
             __HARDFORK_24_block_num as block_num,
             (SELECT b.created_at FROM hive_data.blocks b WHERE b.num = __HARDFORK_24_block_num) as timestamp,
             hive.operation_id( __HARDFORK_24_block_num, 60, 0xFFFFFF ) as op_stable_id
-            FROM hive.get_hf24_keyauths() h
+            FROM hive_data.get_hf24_keyauths() h
             WHERE  _first_block <= __HARDFORK_24_block_num AND __HARDFORK_24_block_num <= _last_block
         ),
 
@@ -211,7 +223,7 @@ BEGIN
         ),
         pow_raw_auth_records AS MATERIALIZED
         (
-            SELECT  (hive.get_keyauths(ov.body_binary)).*,
+            SELECT  (hive_data.get_keyauths(ov.body_binary)).*,
                     ov.id as op_serial_id,
                     ov.block_num,
                     ov.timestamp,
@@ -271,7 +283,7 @@ BEGIN
             raw_auth_records AS MATERIALIZED
             (
                 SELECT
-                        (hive.get_keyauths(ov.body_binary)).*,
+                        (hive_data.get_keyauths(ov.body_binary)).*,
                         ov.id as op_serial_id,
                         ov.block_num,
                         ov.timestamp,

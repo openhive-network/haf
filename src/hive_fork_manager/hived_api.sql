@@ -439,8 +439,8 @@ CREATE OR REPLACE FUNCTION hive.update_wal_sequence_number(_new_sequence_number 
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.write_ahead_log_state VALUES (1, _new_sequence_number)
-    ON CONFLICT (id) DO UPDATE SET last_sequence_number_committed = _new_sequence_number WHERE hive.write_ahead_log_state.id = 1;
+    INSERT INTO hive_data.write_ahead_log_state VALUES (1, _new_sequence_number)
+    ON CONFLICT (id) DO UPDATE SET last_sequence_number_committed = _new_sequence_number WHERE hive_data.write_ahead_log_state.id = 1;
 END;
 $BODY$
 ;
@@ -454,7 +454,7 @@ $BODY$
 DECLARE
     __last_sequence_number_committed INT;
 BEGIN
-    SELECT last_sequence_number_committed FROM hive.write_ahead_log_state WHERE id = 1 INTO __last_sequence_number_committed;
+    SELECT last_sequence_number_committed FROM hive_data.write_ahead_log_state WHERE id = 1 INTO __last_sequence_number_committed;
     return __last_sequence_number_committed;
 END;
 $BODY$

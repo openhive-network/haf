@@ -665,7 +665,7 @@ BEGIN
             (elem->>'public_key_to_string')::TEXT AS public_key_to_string,
             (elem->>'account_id')::INTEGER AS account_id,
             (elem->>'name')::TEXT AS name,
-            (elem->>'key_kind')::hive.key_type AS key_kind,
+            (elem->>'key_kind')::hive_data.key_type AS key_kind,
             (elem->>'key_id')::INTEGER AS key_auth_key_serial,
             (elem->>'weight_threshold')::INTEGER AS weight_threshold,
             (elem->>'w')::INTEGER AS w,

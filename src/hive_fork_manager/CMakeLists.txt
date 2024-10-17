@@ -40,11 +40,11 @@ ADD_PSQL_EXTENSION(
             block_day_stats_view.sql
             block_day_stats_all_op_view.sql
             blocks_views_for_contexts.sql
+            state_providers/keyauth.sql
             get_keyauths.sql
             get_metadata.sql
             get_vesting_balance.sql
             state_providers/accounts.sql
-            state_providers/keyauth.sql
             state_providers/metadata.sql
             hived_api_impl.sql
             app_api_impl.sql
