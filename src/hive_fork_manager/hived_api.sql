@@ -355,7 +355,7 @@ BEGIN
         PERFORM hive.back_from_fork( _block_num );
     END IF;
 
-    INSERT INTO hive.hived_connections( block_num, git_sha, time )
+    INSERT INTO hive_data.hived_connections( block_num, git_sha, time )
     VALUES( _block_num, _git_sha, now() );
 END;
 $BODY$
@@ -370,7 +370,7 @@ $BODY$
 DECLARE
     __number_of_dropped_indexes INT;
 BEGIN
-    SELECT COUNT(*) FROM hive.indexes_constraints
+    SELECT COUNT(*) FROM hive_data.indexes_constraints
     WHERE is_index
     INTO __number_of_dropped_indexes;
     IF ( __number_of_dropped_indexes = 0 ) THEN
@@ -391,7 +391,7 @@ $BODY$
 DECLARE
     __number_of_dropped_fk INT;
 BEGIN
-    SELECT COUNT(*) FROM hive.indexes_constraints
+    SELECT COUNT(*) FROM hive_data.indexes_constraints
     WHERE is_foreign_key
     INTO __number_of_dropped_fk;
     IF ( __number_of_dropped_fk = 0 ) THEN

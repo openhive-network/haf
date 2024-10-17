@@ -16,7 +16,7 @@ BEGIN
     ;
     PERFORM hive.end_massive_sync(5);
 
-    INSERT INTO hive.hived_connections
+    INSERT INTO hive_data.hived_connections
     VALUES( 1, 1 , 'SHA', now() );
 END;
 $BODY$
@@ -106,26 +106,26 @@ BEGIN
     END;
 
     BEGIN
-       DELETE FROM hive.hived_connections;
-       ASSERT FALSE, 'Alice can delete from hive.hived_connections';
+       DELETE FROM hive_data.hived_connections;
+       ASSERT FALSE, 'Alice can delete from hive_data.hived_connections';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        INSERT INTO hive.hived_connections VALUES( 2,2, 'SHA', now() );
-        ASSERT FALSE, 'Alice can insert to hive.hived_connections';
+        INSERT INTO hive_data.hived_connections VALUES( 2,2, 'SHA', now() );
+        ASSERT FALSE, 'Alice can insert to hive_data.hived_connections';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        UPDATE hive.hived_connections SET git_sha = 'SHA2';
-        ASSERT FALSE, 'Alice can update hive.hived_connections';
+        UPDATE hive_data.hived_connections SET git_sha = 'SHA2';
+        ASSERT FALSE, 'Alice can update hive_data.hived_connections';
     EXCEPTION WHEN OTHERS THEN
     END;
 
     BEGIN
-        DROP TABLE hive.hived_connections;
-        ASSERT FALSE, 'Alice can drop hive.hived_connections';
+        DROP TABLE hive_data.hived_connections;
+        ASSERT FALSE, 'Alice can drop hive_data.hived_connections';
     EXCEPTION WHEN OTHERS THEN
     END;
 

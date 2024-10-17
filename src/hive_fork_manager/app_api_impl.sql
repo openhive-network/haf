@@ -5,7 +5,7 @@ AS
 $BODY$
 BEGIN
   --- Instance is ready when has built all indexes/constraints. We can consider adding here another features if needed
-  RETURN NOT EXISTS(SELECT NULL FROM hive.indexes_constraints); 
+  RETURN NOT EXISTS(SELECT NULL FROM hive_data.indexes_constraints);
 END
 $BODY$
 LANGUAGE plpgsql STABLE;

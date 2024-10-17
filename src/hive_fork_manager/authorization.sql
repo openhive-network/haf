@@ -242,7 +242,7 @@ GRANT EXECUTE ON PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN _
 GRANT EXECUTE ON FUNCTION hive.is_instance_ready() TO haf_maintainer;
 GRANT ALL ON hive_data.contexts TO haf_maintainer;
 GRANT SELECT ON hive_data.contexts_attachment TO haf_maintainer;
-GRANT SELECT ON hive.indexes_constraints TO haf_maintainer;
+GRANT SELECT ON hive_data.indexes_constraints TO haf_maintainer;
 
 REVOKE EXECUTE ON FUNCTION
       hive.back_from_fork( INT )

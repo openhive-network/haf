@@ -100,8 +100,8 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hive_data.accounts WHERE block_num = 1 ) = 4, 'No account with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hive_data.account_operations WHERE account_id = 1 ) = 1, 'No account_operations with block_num = 1';
 
-    ASSERT( SELECT COUNT(*) FROM hive.hived_connections ) = 1, 'No connection saved';
-    ASSERT( SELECT COUNT(*) FROM hive.hived_connections WHERE block_num=1 AND git_sha='123456789' ) = 1, 'No expected connection saved';
+    ASSERT( SELECT COUNT(*) FROM hive_data.hived_connections ) = 1, 'No connection saved';
+    ASSERT( SELECT COUNT(*) FROM hive_data.hived_connections WHERE block_num=1 AND git_sha='123456789' ) = 1, 'No expected connection saved';
 
     ASSERT( SELECT COUNT(*) FROM hive_data.fork WHERE block_num = 1 ) = 1, 'No fork added after connection on 1 block';
     ASSERT( SELECT COUNT(*) FROM hive_data.fork WHERE block_num = 2 ) = 0, 'Fork added after connection on 2 block';

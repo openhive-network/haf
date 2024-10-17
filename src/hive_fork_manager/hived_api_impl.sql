@@ -355,7 +355,7 @@ BEGIN
     --LEFT JOIN is needed in situation when PRIMARY KEY exists in a `_table`.
     --A method `hive.save_and_drop_constraints` finds it, but following code finds an index related to given PK as well.
     --Since dropping/restoring PK automatically drops/restores an index, then it's better to avoid storing a record with index related to PK.
-    INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hive_data.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
         T.indexname
       , _schema || '.' || _table
@@ -368,14 +368,14 @@ BEGIN
       SELECT indexname, indexdef
       FROM pg_indexes
       WHERE schemaname = _schema AND tablename = _table
-    ) T LEFT JOIN hive.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
+    ) T LEFT JOIN hive_data.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
     WHERE ic.table_name is NULL
     ON CONFLICT DO NOTHING;
 
     --dropping indexes
     OPEN __cursor FOR (
         SELECT ('DROP INDEX IF EXISTS '::TEXT || _schema || '.' || index_constraint_name || ';')
-        FROM hive.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_index = TRUE
+        FROM hive_data.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_index = TRUE
     );
 
     LOOP
@@ -388,7 +388,7 @@ BEGIN
     --dropping primary keys/unique contraints
     OPEN __cursor FOR (
         SELECT ('ALTER TABLE '::TEXT || _schema || '.' || _table || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
-        FROM hive.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_constraint = TRUE
+        FROM hive_data.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_constraint = TRUE
     );
 
     LOOP
@@ -410,7 +410,7 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hive_data.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
           DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
@@ -425,7 +425,7 @@ BEGIN
 
     OPEN __cursor FOR (
         SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
-        FROM hive.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
+        FROM hive_data.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
     );
 
     LOOP
@@ -448,7 +448,7 @@ DECLARE
 __command TEXT;
 __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hive.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hive_data.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
     SELECT
         DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
@@ -463,7 +463,7 @@ BEGIN
 
     OPEN __cursor FOR (
             SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
-            FROM hive.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
+            FROM hive_data.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
         );
 
         LOOP
@@ -488,12 +488,12 @@ DECLARE
 BEGIN
 
   __cluster_index_dropped := EXISTS(
-                SELECT command FROM hive.indexes_constraints 
+                SELECT command FROM hive_data.indexes_constraints
                 WHERE table_name = 'hive_data.account_operations' AND
                       index_constraint_name = 'hive_account_operations_uq1' LIMIT 1);
   IF (__cluster_index_dropped) THEN
     RAISE NOTICE 'Cluster index dropped, restoring it before other indexes for faster clustering';
-    SELECT command INTO __command FROM hive.indexes_constraints
+    SELECT command INTO __command FROM hive_data.indexes_constraints
     WHERE table_name = 'hive_data.account_operations' AND
           index_constraint_name = 'hive_account_operations_uq1' LIMIT 1;      
     EXECUTE __command;
@@ -501,7 +501,7 @@ BEGIN
     CLUSTER hive_data.account_operations using hive_account_operations_uq1;
     RAISE NOTICE 'Analyzing hive_data.account_operations after clustering to update statistics';
     ANALYZE hive_data.account_operations;
-    DELETE FROM hive.indexes_constraints WHERE command = __command;
+    DELETE FROM hive_data.indexes_constraints WHERE command = __command;
   END IF;
 END;
 $function$
@@ -522,7 +522,7 @@ BEGIN
   END IF;
 
   --restoring indexes, primary keys, unique contraints
-  OPEN __cursor FOR ( SELECT command FROM hive.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE );
+  OPEN __cursor FOR ( SELECT command FROM hive_data.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE );
   LOOP
     FETCH __cursor INTO __command;
     EXIT WHEN NOT FOUND;
@@ -530,7 +530,7 @@ BEGIN
   END LOOP;
   CLOSE __cursor;
 
-  DELETE FROM hive.indexes_constraints
+  DELETE FROM hive_data.indexes_constraints
   WHERE table_name = _table_name AND is_foreign_key = FALSE;
   RAISE NOTICE 'Finished restoring any dropped indexes on %', _table_name;
 END;
@@ -548,7 +548,7 @@ DECLARE
 BEGIN
 
     --restoring indexes, primary keys, unique contraints
-    OPEN __cursor FOR ( SELECT command FROM hive.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE );
+    OPEN __cursor FOR ( SELECT command FROM hive_data.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE );
     LOOP
     FETCH __cursor INTO __command;
         EXIT WHEN NOT FOUND;
@@ -556,7 +556,7 @@ BEGIN
     END LOOP;
     CLOSE __cursor;
 
-    DELETE FROM hive.indexes_constraints
+    DELETE FROM hive_data.indexes_constraints
     WHERE table_name = _table_name AND is_foreign_key = TRUE;
 
 END;

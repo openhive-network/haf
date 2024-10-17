@@ -74,7 +74,7 @@ BEGIN
 
 
     ASSERT EXISTS(
-        SELECT * FROM hive.indexes_constraints WHERE table_name='hive_data.transactions_multisig_reversible'
+        SELECT * FROM hive_data.indexes_constraints WHERE table_name='hive_data.transactions_multisig_reversible'
         AND command LIKE 'ALTER TABLE hive_data.transactions_multisig_reversible ADD CONSTRAINT fk_1_hive_transactions_multisig_reversible FOREIGN KEY (trx_hash, fork_id) REFERENCES hive_data.transactions_reversible(trx_hash, fork_id)'
     ), 'No hive_data.operation index (block_num, id)';
 END;
