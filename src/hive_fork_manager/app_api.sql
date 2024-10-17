@@ -691,14 +691,14 @@ BEGIN
 
     __context_id = hive.get_context_id( _context );
 
-    IF EXISTS( SELECT 1 FROM hive.state_providers_registered WHERE context_id = __context_id AND state_provider = _state_provider ) THEN
+    IF EXISTS( SELECT 1 FROM hive_data.state_providers_registered WHERE context_id = __context_id AND state_provider = _state_provider ) THEN
         RAISE LOG 'The state % provider is already imported for context %.', _state_provider, _context;
         RETURN;
     END IF;
 
 
     EXECUTE format(
-        'INSERT INTO hive.state_providers_registered( context_id, state_provider, tables, owner )
+        'INSERT INTO hive_data.state_providers_registered( context_id, state_provider, tables, owner )
         SELECT %s , %L, hive.start_provider_%s( %L ), current_user
         ON CONFLICT DO NOTHING', __context_id, _state_provider, _state_provider, _context
     );
@@ -711,7 +711,7 @@ BEGIN
     PERFORM
           hive.app_register_table( 'hive_data', unnest( hsp.tables ), _context )
         , hive.grant_select_for_state_providers_table( unnest( hsp.tables ) )
-    FROM hive.state_providers_registered hsp
+    FROM hive_data.state_providers_registered hsp
     WHERE hsp.context_id = __context_id AND hsp.state_provider = _state_provider;
 
 END;
@@ -749,7 +749,7 @@ BEGIN
     END IF;
 
     PERFORM hive.update_one_state_providers( _first_block, _last_block, hsp.state_provider, _context )
-    FROM hive.state_providers_registered hsp
+    FROM hive_data.state_providers_registered hsp
     WHERE hsp.context_id = __context_id;
 END;
 $BODY$
@@ -767,7 +767,7 @@ BEGIN
         , _state_provider, _context
         );
 
-    DELETE FROM hive.state_providers_registered hsp
+    DELETE FROM hive_data.state_providers_registered hsp
         USING hive_data.contexts hc
     WHERE hc.name = _context AND hsp.state_provider = _state_provider AND hc.id = hsp.context_id;
 
@@ -786,7 +786,7 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.app_state_provider_drop( hsp.state_provider, _context )
-    FROM hive.state_providers_registered hsp
+    FROM hive_data.state_providers_registered hsp
     JOIN hive_data.contexts hc ON hc.id = hsp.context_id
     WHERE hc.name = _context;
 END;

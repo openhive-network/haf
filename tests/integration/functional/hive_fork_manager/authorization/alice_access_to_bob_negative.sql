@@ -158,7 +158,7 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
     END;
 
-    ASSERT NOT EXISTS( SELECT * FROM hive.state_providers_registered ), 'Alice sees Bobs registered state provider';
+    ASSERT NOT EXISTS( SELECT * FROM hive_data.state_providers_registered ), 'Alice sees Bobs registered state provider';
 
     BEGIN
         PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'bob_context' );
@@ -319,7 +319,7 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
     END;
 
-    ASSERT ( SELECT COUNT(*) FROM hive.state_providers_registered ) = 1, 'Bob lost his state providers';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.state_providers_registered ) = 1, 'Bob lost his state providers';
 
     BEGIN
         PERFORM hive.app_set_current_block_num( 'alice_context_detached', 1 );

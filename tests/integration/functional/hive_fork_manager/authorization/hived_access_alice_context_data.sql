@@ -50,7 +50,7 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
     END;
 
-    ASSERT NOT EXISTS( SELECT * FROM hive.state_providers_registered ), 'Hived sees Alices registered state provider';
+    ASSERT NOT EXISTS( SELECT * FROM hive_data.state_providers_registered ), 'Hived sees Alices registered state provider';
 
     BEGIN
         PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'alice_context' );
@@ -109,7 +109,7 @@ $BODY$
 BEGIN
     ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name = 'alice_context' ), 'Alice''s context was removed by hived';
     ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name = 'alice_context' ) = 2, 'Alice''s context was updated by hived';
-    ASSERT ( SELECT COUNT(*) FROM hive.state_providers_registered ) = 1, 'Alice lost her state providers';
+    ASSERT ( SELECT COUNT(*) FROM hive_data.state_providers_registered ) = 1, 'Alice lost her state providers';
 END;
 $BODY$
 ;

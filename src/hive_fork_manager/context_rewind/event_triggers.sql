@@ -63,7 +63,7 @@ BEGIN
     UPDATE hive_data.contexts SET registering_state_provider = TRUE WHERE name =  _context;
 
     PERFORM hive.app_register_table( 'hive', unnest( hsp.tables ), _context )
-    FROM hive.state_providers_registered hsp
+    FROM hive_data.state_providers_registered hsp
     JOIN hive_data.contexts hc ON hc.id = hsp.context_id
     WHERE hc.name = _context;
 

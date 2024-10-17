@@ -527,7 +527,7 @@ Sets given context as forking - means process also reversible data and rewind th
 Equivalent of 'hive.app_context_set_forking' for a group of contexts.
 
 #### hive.app_state_provider_import( state_provider, context )
-Imports state provider into contexts - the state provider tables are created and registered in `HIVE.STATE_PROVIDERS_REGISTERED` table.
+Imports state provider into contexts - the state provider tables are created and registered in `hive_data.state_providers_registered` table.
 
 #### hive.app_state_providers_update( _first_block, _last_block, _context )
 All state provider registerd by the contexts are updated.

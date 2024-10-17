@@ -54,7 +54,7 @@ ALTER TABLE hive_data.write_ahead_log_state OWNER TO hived_group;
 -- generic protection for tables in hive schema
 -- 1. hived_group allow to edit every table in hive schema
 -- 2. hive_applications_group can ready every table in hive schema
--- 3. hive_applications_group can modify hive_data.contexts, hive_data.registered_tables, hive_data.triggers, hive.state_providers_registered
+-- 3. hive_applications_group can modify hive_data.contexts, hive_data.registered_tables, hive_data.triggers, hive_data.state_providers_registered
 GRANT ALL ON SCHEMA hive to hived_group, hive_applications_group;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA hive TO hived_group, hive_applications_group;
 GRANT ALL ON  ALL TABLES IN SCHEMA hive TO hived_group;
@@ -67,7 +67,7 @@ GRANT ALL ON hive_data.contexts TO hive_applications_group;
 GRANT ALL ON hive_data.contexts_attachment TO hive_applications_group;
 GRANT ALL ON hive_data.registered_tables TO hive_applications_group;
 GRANT ALL ON hive_data.triggers TO hive_applications_group;
-GRANT ALL ON hive.state_providers_registered TO hive_applications_group;
+GRANT ALL ON hive_data.state_providers_registered TO hive_applications_group;
 
 -- protect an application rows aginst other applications
 REVOKE UPDATE( is_forking, owner ) ON hive_data.contexts FROM GROUP hive_applications_group;
@@ -106,8 +106,8 @@ CREATE POLICY sp_applications_delete_hive_context ON hive_data.contexts FOR DELE
 DROP POLICY IF EXISTS sp_applications_delete_hive_contexts_attachment ON hive_data.contexts_attachment CASCADE;
 CREATE POLICY sp_applications_delete_hive_contexts_attachment ON hive_data.contexts_attachment FOR DELETE TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
 
-DROP POLICY IF EXISTS sp_applications_hive_state_providers ON hive.state_providers_registered CASCADE;
-CREATE POLICY sp_applications_hive_state_providers ON hive.state_providers_registered FOR SELECT TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
+DROP POLICY IF EXISTS sp_applications_hive_state_providers ON hive_data.state_providers_registered CASCADE;
+CREATE POLICY sp_applications_hive_state_providers ON hive_data.state_providers_registered FOR SELECT TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
 
 ALTER TABLE hive_data.registered_tables ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS policy_hive_registered_tables ON hive_data.registered_tables CASCADE;
@@ -117,9 +117,9 @@ ALTER TABLE hive_data.triggers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS policy_hive_triggers ON hive_data.triggers CASCADE;
 CREATE POLICY policy_hive_triggers ON hive_data.triggers FOR ALL USING ( hive.can_impersonate(current_user, owner) );
 
-ALTER TABLE hive.state_providers_registered ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS dp_state_providers_registered ON hive.state_providers_registered CASCADE;
-CREATE POLICY dp_state_providers_registered ON hive.state_providers_registered FOR ALL USING ( hive.can_impersonate(current_user, owner) );
+ALTER TABLE hive_data.state_providers_registered ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS dp_state_providers_registered ON hive_data.state_providers_registered CASCADE;
+CREATE POLICY dp_state_providers_registered ON hive_data.state_providers_registered FOR ALL USING ( hive.can_impersonate(current_user, owner) );
 
 
 -- protect api
