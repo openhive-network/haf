@@ -195,7 +195,7 @@ restore_views() {
     SELECT
       format('Restoring %s.%s', deps_view_schema, deps_view_name),
       hive.deps_restore_dependencies(deps_view_schema, deps_view_name)
-    FROM hive.deps_saved_ddl"
+    FROM hive_data.deps_saved_ddl"
   psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query" | uniq # do not print duplicates
 }
 

@@ -167,7 +167,7 @@ exec_sql "comment on view public.bad_domain_view is 'bar'"
 exec_sql "create view public.bad_mixed_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on view public.bad_mixed_view is 'baz'"
 update_database
-check_table_is_empty hive.deps_saved_ddl
+check_table_is_empty hive_data.deps_saved_ddl
 check_relation_structure public.bad_type_view "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
 check_relation_structure public.bad_domain_view "id|bigint|||\nmemo|hive_data.memo|||"
 check_relation_structure public.bad_mixed_view "id|bigint|||\namount|hive.asset|||\nmemo|hive_data.memo|||"
@@ -184,7 +184,7 @@ exec_sql "comment on view public.bad_domain_view_2 is 'bar'"
 exec_sql "create view public.bad_mixed_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on view public.bad_mixed_view_2 is 'baz'"
 update_database
-check_table_is_empty hive.deps_saved_ddl
+check_table_is_empty hive_data.deps_saved_ddl
 check_relation_structure public.bad_type_view_2 "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
 check_relation_structure public.bad_domain_view_2 "id|bigint|||\nmemo|hive_data.memo|||"
 check_relation_structure public.bad_mixed_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hive_data.memo|||"
@@ -210,7 +210,7 @@ exec_sql "comment on materialized view public.bad_domain_materialized_view is 'b
 exec_sql "create materialized view public.bad_mixed_materialized_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on materialized view public.bad_mixed_materialized_view is 'baz'"
 update_database
-check_table_is_empty hive.deps_saved_ddl
+check_table_is_empty hive_data.deps_saved_ddl
 check_relation_structure public.bad_type_materialized_view "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
 check_relation_structure public.bad_domain_materialized_view "id|bigint|||\nmemo|hive_data.memo|||"
 check_relation_structure public.bad_mixed_materialized_view "id|bigint|||\namount|hive.asset|||\nmemo|hive_data.memo|||"
@@ -227,7 +227,7 @@ exec_sql "comment on materialized view public.bad_domain_materialized_view_2 is 
 exec_sql "create materialized view public.bad_mixed_materialized_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive_data.operations where op_type_id=1"
 exec_sql "comment on materialized view public.bad_mixed_materialized_view_2 is 'baz'"
 update_database
-check_table_is_empty hive.deps_saved_ddl
+check_table_is_empty hive_data.deps_saved_ddl
 check_relation_structure public.bad_type_materialized_view_2 "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
 check_relation_structure public.bad_domain_materialized_view_2 "id|bigint|||\nmemo|hive_data.memo|||"
 check_relation_structure public.bad_mixed_materialized_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hive_data.memo|||"

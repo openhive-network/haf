@@ -21,6 +21,7 @@ ADD_PSQL_EXTENSION(
              hived_api_impl_indexes.sql
              hived_api.sql
              state_providers/keyauth_types.sql
+             save_restore_view_data.sql
 
     DEPLOY_SOURCES trigger_switch/trigger_off.sql
             context_rewind/sink_id_functions.sql
