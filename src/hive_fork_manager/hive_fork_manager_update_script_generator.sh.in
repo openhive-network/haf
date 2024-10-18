@@ -158,7 +158,7 @@ save_views() {
         col.table_schema<>'hive' AND
         ( col.udt_schema = 'hive' OR col.domain_schema = 'hive' )
     ;
-    SELECT format('Saving %s.%s', v.schema, v.name), hive.deps_save_and_drop_dependencies(v.schema, v.name) FROM views AS v"
+    SELECT format('Saving %s.%s', v.schema, v.name), hive_update.deps_save_and_drop_dependencies(v.schema, v.name) FROM views AS v"
   psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query"
 }
 
@@ -183,7 +183,7 @@ save_materialized_views() {
       view_ns.nspname<>'hive' AND
       view_ns.nspname<>'hive_data' AND
       col_ns.nspname='hive';
-    SELECT format('Saving %s.%s', v.schema, v.name), hive.deps_save_and_drop_dependencies(v.schema, v.name) FROM views AS v"
+    SELECT format('Saving %s.%s', v.schema, v.name), hive_update.deps_save_and_drop_dependencies(v.schema, v.name) FROM views AS v"
   psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query"
 }
 
@@ -194,7 +194,7 @@ restore_views() {
   query="
     SELECT
       format('Restoring %s.%s', deps_view_schema, deps_view_name),
-      hive.deps_restore_dependencies(deps_view_schema, deps_view_name)
+      hive_update.deps_restore_dependencies(deps_view_schema, deps_view_name)
     FROM hive_data.deps_saved_ddl"
   psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query" | uniq # do not print duplicates
 }

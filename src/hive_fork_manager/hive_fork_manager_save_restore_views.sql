@@ -5,9 +5,10 @@ See http://pretius.com/postgresql-stop-worrying-about-table-and-view-dependencie
 Enhanced by Wojciech Barcik wbarcik@syncad.com (handling of rules).
 Modified to also store and restore object definition itself.
 */
+DROP SCHEMA IF EXISTS hive_update;
+CREATE SCHEMA hive_update;
 
-
-CREATE OR REPLACE FUNCTION hive.deps_save_and_drop_dependencies(
+CREATE OR REPLACE FUNCTION hive_update.deps_save_and_drop_dependencies(
     p_view_schema character varying,
     p_view_name character varying,
     drop_relation BOOLEAN DEFAULT true
@@ -132,7 +133,7 @@ end;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION hive.deps_restore_dependencies(
+CREATE OR REPLACE FUNCTION hive_update.deps_restore_dependencies(
     p_view_schema character varying,
     p_view_name character varying
   )
