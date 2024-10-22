@@ -337,8 +337,6 @@ done
 
 export HIVED_ARGS
 
-echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[*]}"
-
 echo "${BASH_SOURCE[@]}"
 
 status=0
@@ -359,15 +357,7 @@ elif [ ${SKIP_HIVED} -eq 1 ];
 then
   echo "Not launching hived due to --skip-hived command-line option"
   echo "You can now connect to the database.  This this container will continue to exist until you shut it down"
-  # launch a webserver on port 8091 so the docker healthcheck will pass.  We probably want
-  # the healthcheck to pass so docker-compose will continue to launch dependent containers
-  # like pgadmin.
-  # The webserver running in the foreground will also act to keep this container running
-  # until the docker image is stopped.
-  mkdir -p /tmp/dummy-webserver
-  cd /tmp/dummy-webserver
-  touch index.html
-  httpd -f -p 8091
+  sleep infinity
 else
   run_instance
   status=$?
