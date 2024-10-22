@@ -287,9 +287,6 @@ void fill_return_tuples(const Collection& collection, PG_FUNCTION_ARGS, Funcs ..
 
       tuplestore_putvalues(tupstore, retvalDescription, tuple_values, nulls);
     }
-
-    tuplestore_donestoring(tupstore);
-
 }
 
 
