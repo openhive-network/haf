@@ -131,7 +131,7 @@ if [ ! -f "$DATADIR/config.ini" ]; then
 
   # set a default logging config.  We will log the usual output both to stderr and to a log file in the
   # haf-datadir/logs/hived/default directory.  Rotate daily, keep for 30 days.
-  sed -i 's|^log-appender = .*$|log-appender = {"appender":"stderr","stream":"std_error","time_format":"iso_8601_microseconds"} {"appender":"p2p","file":"logs/hived/p2p/p2p.log","truncate":false,"time_format":"iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000} {"appender": "default", "file": "logs/hived/default/default.log","truncate":false, "time_format": "iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000}|;s|^log-logger = .*$|log-logger = {"name":"default","level":"info","appenders":["stderr", "default"]} {"name":"user","level":"debug","appenders":["stderr", "default"]} {"name":"p2p","level":"warn","appenders":["p2p"]}|' "$DATADIR/config.ini"
+  sed -i 's|^# log-appender = .*$|log-appender = {"appender":"stderr","stream":"std_error","time_format":"iso_8601_microseconds"} {"appender":"p2p","file":"logs/hived/p2p/p2p.log","truncate":false,"time_format":"iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000} {"appender": "default", "file": "logs/hived/default/default.log","truncate":false, "time_format": "iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000}|;s|^log-logger = .*$|log-logger = {"name":"default","level":"info","appenders":["stderr", "default"]} {"name":"user","level":"debug","appenders":["stderr", "default"]} {"name":"p2p","level":"warn","appenders":["p2p"]}|' "$DATADIR/config.ini"
 
   # The transaction status plugin defaults to keeping transaction status history for 64000 blocks
   # (configured in "transaction-status-block-depth".  When replaying, it doesn't make sense to
@@ -151,7 +151,7 @@ if [ ! -f "$DATADIR/config.ini" ]; then
   # since block 80M.  There's little penalty for tracking a few tens of thousands
   # more than necessary.
   track_after_block=\$((approximate_head_block - 64000 - 10000))
-  sed -i 's/^transaction-status-track-after-block = .*$/transaction-status-track-after-block = '"\$track_after_block"'/g' "$DATADIR/config.ini"
+  sed -i 's/^# transaction-status-track-after-block = .*$/transaction-status-track-after-block = '"\$track_after_block"'/g' "$DATADIR/config.ini"
 fi
 
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
