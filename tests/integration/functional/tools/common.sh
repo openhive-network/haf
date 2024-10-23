@@ -47,6 +47,7 @@ setup_test_database() {
   test_name_crc="$(echo "${test_name}" | cksum | sed 's/ /_/')"
 
   DB_NAME="t_${test_name_crc}_${test_name}"
+  DB_NAME="${DB_NAME:0:63}" # Postgres database name has hard limit of 63 chars
 
   sudo -nu postgres psql -p "$postgres_port" -d postgres -v ON_ERROR_STOP=on -a -f ./tools/create_db_roles.sql
 
