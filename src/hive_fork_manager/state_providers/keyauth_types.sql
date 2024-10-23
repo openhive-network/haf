@@ -1,30 +1,30 @@
-CREATE TYPE hive_data.key_type AS ENUM( 'OWNER', 'ACTIVE', 'POSTING', 'MEMO', 'WITNESS_SIGNING');
+CREATE TYPE hafd.key_type AS ENUM( 'OWNER', 'ACTIVE', 'POSTING', 'MEMO', 'WITNESS_SIGNING');
 
 CREATE TYPE hive.key_type_c_int_to_enum AS
 (
       account_name TEXT
-    , key_kind hive_data.key_type
+    , key_kind hafd.key_type
     , key_auth BYTEA
     , account_auth TEXT
     , weight_threshold INTEGER
     , w INTEGER
 );
 
-CREATE OR REPLACE FUNCTION hive_data.key_type_c_int_to_enum(IN _pos integer)
-    RETURNS hive_data.key_type
+CREATE OR REPLACE FUNCTION hafd.key_type_c_int_to_enum(IN _pos integer)
+    RETURNS hafd.key_type
     LANGUAGE plpgsql
     IMMUTABLE
 AS
 $$
 DECLARE
-    __arr hive_data.key_type []:= enum_range(null::hive_data.key_type);
+    __arr hafd.key_type []:= enum_range(null::hafd.key_type);
 BEGIN
     return __arr[_pos + 1];
 END
 $$;
 
 
-CREATE OR REPLACE FUNCTION hive_data.get_keyauths(IN _operation_body hive_data.operation)
+CREATE OR REPLACE FUNCTION hafd.get_keyauths(IN _operation_body hafd.operation)
     RETURNS SETOF hive.key_type_c_int_to_enum
     LANGUAGE plpgsql
     IMMUTABLE
@@ -33,7 +33,7 @@ $$
 BEGIN
     RETURN QUERY SELECT
                      account_name,
-                     hive_data.key_type_c_int_to_enum(authority_c_kind),
+                     hafd.key_type_c_int_to_enum(authority_c_kind),
                      key_auth,
                      account_auth,
                      weight_threshold,
@@ -42,7 +42,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hive_data.get_genesis_keyauths()
+CREATE OR REPLACE FUNCTION hafd.get_genesis_keyauths()
     RETURNS SETOF hive.key_type_c_int_to_enum
     LANGUAGE plpgsql
     IMMUTABLE
@@ -51,7 +51,7 @@ $$
 BEGIN
     RETURN QUERY SELECT
                      account_name,
-                     hive_data.key_type_c_int_to_enum(authority_c_kind),
+                     hafd.key_type_c_int_to_enum(authority_c_kind),
                      key_auth,
                      account_auth,
                      weight_threshold,
@@ -60,7 +60,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hive_data.get_hf09_keyauths()
+CREATE OR REPLACE FUNCTION hafd.get_hf09_keyauths()
     RETURNS SETOF hive.key_type_c_int_to_enum
     LANGUAGE plpgsql
     IMMUTABLE
@@ -69,7 +69,7 @@ $$
 BEGIN
     RETURN QUERY SELECT
                      account_name,
-                     hive_data.key_type_c_int_to_enum(authority_c_kind),
+                     hafd.key_type_c_int_to_enum(authority_c_kind),
                      key_auth,
                      account_auth,
                      weight_threshold,
@@ -78,7 +78,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hive_data.get_hf21_keyauths()
+CREATE OR REPLACE FUNCTION hafd.get_hf21_keyauths()
     RETURNS SETOF hive.key_type_c_int_to_enum
     LANGUAGE plpgsql
     IMMUTABLE
@@ -87,7 +87,7 @@ $$
 BEGIN
     RETURN QUERY SELECT
                      account_name,
-                     hive_data.key_type_c_int_to_enum(authority_c_kind),
+                     hafd.key_type_c_int_to_enum(authority_c_kind),
                      key_auth,
                      account_auth,
                      weight_threshold,
@@ -96,7 +96,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hive_data.get_hf24_keyauths()
+CREATE OR REPLACE FUNCTION hafd.get_hf24_keyauths()
     RETURNS SETOF hive.key_type_c_int_to_enum
     LANGUAGE plpgsql
     IMMUTABLE
@@ -105,7 +105,7 @@ $$
 BEGIN
     RETURN QUERY SELECT
                      account_name,
-                     hive_data.key_type_c_int_to_enum(authority_c_kind),
+                     hafd.key_type_c_int_to_enum(authority_c_kind),
                      key_auth,
                      account_auth,
                      weight_threshold,

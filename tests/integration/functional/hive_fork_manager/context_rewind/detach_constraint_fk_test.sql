@@ -19,8 +19,8 @@ BEGIN
     INSERT INTO table1( id, smth ) VALUES( 123, 'blabla1' );
     INSERT INTO table2( id, smth, table1_id ) VALUES( 223, 'blabla2', 123 );
     -- cleans up shadow tables
-    TRUNCATE hive_data.shadow_public_table1;
-    TRUNCATE hive_data.shadow_public_table2;
+    TRUNCATE hafd.shadow_public_table1;
+    TRUNCATE hafd.shadow_public_table2;
 END;
 $BODY$
 ;
@@ -41,7 +41,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT * FROM hive_data.contexts hc JOIN hive_data.contexts_attachment hca ON hca.context_id = hc.id WHERE hc.name = 'context' AND hca.is_attached = TRUE ), 'Context is not marked as attached';
+    ASSERT EXISTS ( SELECT * FROM hafd.contexts hc JOIN hafd.contexts_attachment hca ON hca.context_id = hc.id WHERE hc.name = 'context' AND hca.is_attached = TRUE ), 'Context is not marked as attached';
 END
 $BODY$
 ;

@@ -1,4 +1,4 @@
-CREATE SEQUENCE hive_data.deps_saved_ddl_deps_id_seq
+CREATE SEQUENCE hafd.deps_saved_ddl_deps_id_seq
     INCREMENT 1
     START 1
     MINVALUE 1
@@ -6,9 +6,9 @@ CREATE SEQUENCE hive_data.deps_saved_ddl_deps_id_seq
     CACHE 1;
 
 
-CREATE TABLE hive_data.deps_saved_ddl
+CREATE TABLE hafd.deps_saved_ddl
 (
-    deps_id integer NOT NULL DEFAULT nextval('hive_data.deps_saved_ddl_deps_id_seq'::regclass),
+    deps_id integer NOT NULL DEFAULT nextval('hafd.deps_saved_ddl_deps_id_seq'::regclass),
     deps_view_schema character varying(255),
     deps_view_name character varying(255),
     deps_ddl_to_run text,

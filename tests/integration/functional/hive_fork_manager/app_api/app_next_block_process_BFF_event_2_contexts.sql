@@ -4,11 +4,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive_data.blocks
+    INSERT INTO hafd.blocks
     VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive_data.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
     ;
 
@@ -89,11 +89,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name='context' ) = 2, 'Wrong current block num';
-    ASSERT ( SELECT events_id FROM hive_data.contexts WHERE name='context' ) = 4, 'Wrong events id';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context' ) = 2, 'Wrong current block num';
+    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context' ) = 4, 'Wrong events id';
 
-    ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name='context2' ) = 3, 'Wrong current block num context2';
-    ASSERT ( SELECT events_id FROM hive_data.contexts WHERE name='context2' ) = 5, 'Wrong events id context2';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context2' ) = 3, 'Wrong current block num context2';
+    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context2' ) = 5, 'Wrong events id context2';
 
     ASSERT ( SELECT COUNT(*)  FROM A.table1 ) = 2, 'Wrong number of rows in app table';
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 1 ), 'No id 1' ;

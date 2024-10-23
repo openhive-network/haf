@@ -21,8 +21,8 @@ The required ordering of the sql scripts is included in the cmake file [src/hive
 Execute each script one-by-one with `psql` as in this example: `psql -d my_db_name -a -f  context_rewind/data_schema.sql`
 
 ## Architecture
-All elements of the fork manager are organized into two schemas: **`hive`** and **`hive_data`**.
-- **Schema `hive_data`** contains data types and data collected by the Hive Application Framework (HAF). These objects are critical to the system and **cannot be modified or dropped** during the HAF update process. This is because there is no efficient or safe method to alter the data that has already been collected in the tables.
+All elements of the fork manager are organized into two schemas: **`hive`** and **`hafd`**.
+- **Schema `hafd`** contains data types and data collected by the Hive Application Framework (HAF). These objects are critical to the system and **cannot be modified or dropped** during the HAF update process. This is because there is no efficient or safe method to alter the data that has already been collected in the tables.
 - **Schema `hive`**, on the other hand, contains types and run-time code definitions, such as functions, procedures, and views. These objects **can be freely modified or removed** during updates, as they are not tied to persistent data but are responsible for executing run-time logic.
 - **Schema `hive_update`**, contains only functions which are used during updating HAF.
 
@@ -239,13 +239,13 @@ Each state provider is a SQL file placed in the `state_providers` folder and def
 * `hive.update_state_provider_<provider_name>( first_block, last_block, context )`
   The function updates all 'state providers' tables registered in the context.
 
-* `hive.drop_state_provider_<provider_name>( _context hive_data.context_name )`
+* `hive.drop_state_provider_<provider_name>( _context hafd.context_name )`
   The function drops all tables created by the state provider for a given context.
 
 ### How to add a new state provider
 The template for creating a new state provider is here: [state_providers/state_provider.template](state_providers/state_provider.template).
 You may copy the template, change the file extension to .sql,  add it to the CMakeLists.txt, and change '<provider_name>' in the new file to a new state provider name.
-After this, the enum `hive_data.state_providers` has to be extended with the new provider name.
+After this, the enum `hafd.state_providers` has to be extended with the new provider name.
 
 ### State providers and forks
 When the context is a non-forking one, then the state provider's tables are not registered to be rewound during a fork servicing. When the context
@@ -287,7 +287,7 @@ Each app should work on a snapshot of block information, which is a combination 
 
 Because apps may work at different speeds, the fork manager has to hold reversible blocks information for every block and fork not already processed by any of the apps. This requires an efficient data structure. Fortunately the solution is quite simple - it is enough to add
 a fork id to the block data inserted by hived to the irreversible blocks table. The fork manager manages forks ids - 
-information about each fork is stored in the hive_data.fork table. When 'hived' pushes a new block with a call to `hive.push_block`, the fork manager adds information about the current fork to a new reversible data row. Reversible data tables are presented in a generalised form in the example below:
+information about each fork is stored in the hafd.fork table. When 'hived' pushes a new block with a call to `hive.push_block`, the fork manager adds information about the current fork to a new reversible data row. Reversible data tables are presented in a generalised form in the example below:
 
 | block_num| fork id | data      |
 |----------|---------|-----------|
@@ -299,7 +299,7 @@ information about each fork is stored in the hive_data.fork table. When 'hived' 
 |    4     |    2    |  DATA_42  |
 |    4     |    3    |  DATA_43  |
 
-If an app is working on fork=2 and block_num=3 (this information is held by `hive_data.contexts` ), then its snapshot of data for the example above is:
+If an app is working on fork=2 and block_num=3 (this information is held by `hafd.contexts` ), then its snapshot of data for the example above is:
 
 | block_num| fork id | data      |
 |----------|---------|-----------|
@@ -314,7 +314,7 @@ SELECT
     , fork_id
     , data
 FROM data_reversible
-JOIN hive_data.contexts hc ON fork_id <= hc.fork_id AND block_num <= hc.current_block_num
+JOIN hafd.contexts hc ON fork_id <= hc.fork_id AND block_num <= hc.current_block_num
 WHERE hc.name = 'app_context'
 ORDER BY block_num DESC, fork_id DESC
 ```
@@ -325,7 +325,7 @@ The events queue is a table defined in [src/hive_fork_manager/events_queue.sql](
 
 |   event type     | block_num meaning                                           |
 |----------------- |-------------------------------------------------------------|
-| BACK_FROM_FORK   | fork id of corresponding entry in `hive_data.fork`               |
+| BACK_FROM_FORK   | fork id of corresponding entry in `hafd.fork`               |
 | NEW_BLOCK        | number of the new block                                     |
 | NEW_IRREVERSIBLE | number of the latest irreversible block                     |
 | MASSIVE_SYNC     | the highest number of blocks pushed massively by hived node |
@@ -365,7 +365,7 @@ Data from 'hive.<context_name>' is used by the fork manager to rewind operations
 
 Moreover a new table is created - a shadow table whose structure is a copy of the registered table + columns for operation registered tables. A shadow table is the place where triggers record the changes to the associated app table. A shadow table is created in the 'hive' schema and its name is created using the rule below:
 ```
-hive_data.shadow_<table_schema>_<table_name>
+hafd.shadow_<table_schema>_<table_name>
 ```
 It is possible to rewind all operations stored in shadow tables with `hive.context_back_from_fork`
 
@@ -386,10 +386,10 @@ When a table is edited, its shadow table is automatically adapted to the new str
 
 #### Reversible blocks
 Tables for reversible blocks are copies of irreveersible + columns for fork_id
-##### hive_data.blocks_reversible
-##### hive_data.transactions_reversible
-##### hive_data.transactions_multisig_reversible
-##### hive_data.operations_reversible
+##### hafd.blocks_reversible
+##### hafd.transactions_reversible
+##### hafd.transactions_multisig_reversible
+##### hafd.operations_reversible
 
 ### CONTEXT REWIND
 ![alt text](./doc/evq_context_rewind_db.png)
@@ -446,7 +446,7 @@ Creates a new context. Context name can contain only characters from the set: `a
 - '_is_attached' if create attached or not attched context
 - '_stages' optional array of stages, required for `hive.app_next_iteration`
 
-##### hive.app_remove_context( _name hive_data.context_name )
+##### hive.app_remove_context( _name hafd.context_name )
 Remove the context and unregister all its tables.
 
 ##### hive.app_next_block( _context_name )
@@ -528,7 +528,7 @@ Sets given context as forking - means process also reversible data and rewind th
 Equivalent of 'hive.app_context_set_forking' for a group of contexts.
 
 #### hive.app_state_provider_import( state_provider, context )
-Imports state provider into contexts - the state provider tables are created and registered in `hive_data.state_providers_registered` table.
+Imports state provider into contexts - the state provider tables are created and registered in `hafd.state_providers_registered` table.
 
 #### hive.app_state_providers_update( _first_block, _last_block, _context )
 All state provider registerd by the contexts are updated.

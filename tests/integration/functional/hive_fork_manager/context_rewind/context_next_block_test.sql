@@ -34,8 +34,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM hive_data.contexts WHERE name = 'my_context' AND current_block_num = 1 );
-    ASSERT EXISTS ( SELECT FROM hive_data.contexts WHERE name = 'my_context2' AND current_block_num = 2 );
+    ASSERT EXISTS ( SELECT FROM hafd.contexts WHERE name = 'my_context' AND current_block_num = 1 );
+    ASSERT EXISTS ( SELECT FROM hafd.contexts WHERE name = 'my_context2' AND current_block_num = 2 );
 END
 $BODY$
 ;

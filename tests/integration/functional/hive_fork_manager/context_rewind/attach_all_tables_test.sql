@@ -40,12 +40,12 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT * FROM hive_data.contexts hc JOIN hive_data.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context' AND hca.is_attached = TRUE ), 'Attach flag is still not set';
-    ASSERT EXISTS ( SELECT * FROM hive_data.shadow_a_table1 ), 'Trigger inserted something into shadow table1';
-    ASSERT EXISTS ( SELECT * FROM hive_data.shadow_b_table2  ), 'Trigger inserted something into shadow table2';
+    ASSERT EXISTS ( SELECT * FROM hafd.contexts hc JOIN hafd.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context' AND hca.is_attached = TRUE ), 'Attach flag is still not set';
+    ASSERT EXISTS ( SELECT * FROM hafd.shadow_a_table1 ), 'Trigger inserted something into shadow table1';
+    ASSERT EXISTS ( SELECT * FROM hafd.shadow_b_table2  ), 'Trigger inserted something into shadow table2';
 
-    ASSERT EXISTS ( SELECT * FROM hive_data.contexts hc JOIN hive_data.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context2' AND hca.is_attached = FALSE ), 'Attach flag is still set';
-    ASSERT NOT EXISTS ( SELECT * FROM hive_data.shadow_a_table3 WHERE hive_block_num = 101 ), 'Trigger did not insert something into shadow table3';
+    ASSERT EXISTS ( SELECT * FROM hafd.contexts hc JOIN hafd.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context2' AND hca.is_attached = FALSE ), 'Attach flag is still set';
+    ASSERT NOT EXISTS ( SELECT * FROM hafd.shadow_a_table3 WHERE hive_block_num = 101 ), 'Trigger did not insert something into shadow table3';
 END
 $BODY$
 ;

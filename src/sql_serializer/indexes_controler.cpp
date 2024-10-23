@@ -74,14 +74,14 @@ indexes_controler::enable_indexes() {
   ilog( "Restoring HAF indexes..." );
   fc::time_point restore_indexes_start_time = fc::time_point::now();
 
-  auto restore_blocks_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive_data.blocks' )", "enable indexes" );
-  auto restore_irreversible_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive_data.irreversible_data' )", "enable indexes" );
-  auto restore_transactions_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive_data.transactions' )", "enable indexes" );
-  auto restore_transactions_sigs_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive_data.transactions_multisig' )", "enable indexes" );
-  auto restore_operations_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive_data.operations' )", "enable indexes" );
-  auto restore_accounts_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive_data.accounts' )", "enable indexes" );
-  auto restore_account_operations_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive_data.account_operations' )", "enable indexes" );
-  auto restore_applied_hardforks_idxs = start_commit_sql( true, "hive.restore_indexes( 'hive_data.applied_hardforks' )", "enable indexes" );
+  auto restore_blocks_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.blocks' )", "enable indexes" );
+  auto restore_irreversible_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.irreversible_data' )", "enable indexes" );
+  auto restore_transactions_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.transactions' )", "enable indexes" );
+  auto restore_transactions_sigs_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.transactions_multisig' )", "enable indexes" );
+  auto restore_operations_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.operations' )", "enable indexes" );
+  auto restore_accounts_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.accounts' )", "enable indexes" );
+  auto restore_account_operations_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.account_operations' )", "enable indexes" );
+  auto restore_applied_hardforks_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.applied_hardforks' )", "enable indexes" );
 
   join_processors(
     *restore_blocks_idxs,
@@ -117,13 +117,13 @@ indexes_controler::enable_constrains() {
   ilog("Restoring HAF constraints...");
   fc::time_point restore_constraints_start_time = fc::time_point::now();
 
-  auto restore_irreversible_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive_data.irreversible_data' )", "enable indexes" );
-  auto restore_transactions_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive_data.transactions' )", "enable indexes" );
-  auto restore_transactions_sigs_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive_data.transactions_multisig' )", "enable indexes" );
-  auto restore_operations_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive_data.operations' )", "enable indexes" );
-  auto restore_account_operations_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive_data.account_operations' )", "enable indexes" );
-  auto restore_accounts_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive_data.accounts' )", "enable indexes" );
-  auto restore_applied_hardforks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive_data.applied_hardforks' )", "enable indexes" );
+  auto restore_irreversible_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.irreversible_data' )", "enable indexes" );
+  auto restore_transactions_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.transactions' )", "enable indexes" );
+  auto restore_transactions_sigs_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.transactions_multisig' )", "enable indexes" );
+  auto restore_operations_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.operations' )", "enable indexes" );
+  auto restore_account_operations_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.account_operations' )", "enable indexes" );
+  auto restore_accounts_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.accounts' )", "enable indexes" );
+  auto restore_applied_hardforks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.applied_hardforks' )", "enable indexes" );
 
   join_processors(
     *restore_irreversible_fks,
@@ -135,7 +135,7 @@ indexes_controler::enable_constrains() {
     *restore_applied_hardforks_fks
   );
 
-  auto restore_blocks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hive_data.blocks' )", "enable indexes" );
+  auto restore_blocks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.blocks' )", "enable indexes" );
   restore_blocks_fks->join();
 
   fc::microseconds restore_constraints_time = fc::time_point::now() - restore_constraints_start_time;

@@ -7,7 +7,7 @@ $BODY$
 DECLARE
 BEGIN
 EXECUTE format(
-        'DELETE FROM hive_data.%I st WHERE st.hive_block_num <= %s'
+        'DELETE FROM hafd.%I st WHERE st.hive_block_num <= %s'
     , _shadow_table_name
     , _irreversible_block
     );

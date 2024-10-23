@@ -16,7 +16,7 @@ CREATE OR REPLACE PROCEDURE alice_test_then()
 $BODY$
 BEGIN
     BEGIN
-        UPDATE hive_data.contexts SET owner = 'BLABLA';
+        UPDATE hafd.contexts SET owner = 'BLABLA';
         ASSERT FALSE, 'Alice can update the context''s owner';
     EXCEPTION WHEN OTHERS THEN
     END;
