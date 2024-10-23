@@ -24,6 +24,7 @@ Execute each script one-by-one with `psql` as in this example: `psql -d my_db_na
 All elements of the fork manager are organized into two schemas: **`hive`** and **`hive_data`**.
 - **Schema `hive_data`** contains data types and data collected by the Hive Application Framework (HAF). These objects are critical to the system and **cannot be modified or dropped** during the HAF update process. This is because there is no efficient or safe method to alter the data that has already been collected in the tables.
 - **Schema `hive`**, on the other hand, contains types and run-time code definitions, such as functions, procedures, and views. These objects **can be freely modified or removed** during updates, as they are not tied to persistent data but are responsible for executing run-time logic.
+- **Schema `hive_update`**, contains only functions which are used during updating HAF.
 
 As part of the update operation, **the `hive` schema and all its objects are dropped at the beginning** of the update process to ensure a clean environment for the new definitions.
 

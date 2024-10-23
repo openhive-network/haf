@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION hive.analyze_stages(
-      _contexts hive_data.contexts_group
+      _contexts hive.contexts_group
     , _blocks_range hive.blocks_range
     , _head_block INTEGER
 )
@@ -50,7 +50,7 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE FUNCTION hive.is_livesync( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.is_livesync( _contexts hive.contexts_group )
     RETURNS BOOL
     LANGUAGE 'plpgsql'
     STABLE
@@ -70,7 +70,7 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE FUNCTION hive.update_attachment( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.update_attachment( _contexts hive.contexts_group )
     RETURNS VOID
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -128,7 +128,7 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _contexts hive_data.contexts_group, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL )
+CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _contexts hive.contexts_group, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL )
 LANGUAGE 'plpgsql'
 AS
 $body$
