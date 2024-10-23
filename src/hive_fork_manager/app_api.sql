@@ -130,7 +130,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_are_forking( _context_names hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_are_forking( _context_names hive.contexts_group )
     RETURNS BOOL
     LANGUAGE plpgsql
     STABLE
@@ -178,7 +178,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive.contexts_group )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
@@ -215,7 +215,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_attach( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_context_attach( _contexts hive.contexts_group )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -286,7 +286,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hive.appproc_context_attach( _contexts hive_data.contexts_group )
+CREATE OR REPLACE PROCEDURE hive.appproc_context_attach( _contexts hive.contexts_group )
     LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -308,7 +308,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_detach( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_context_detach( _contexts hive.contexts_group )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -346,7 +346,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _contexts hive_data.contexts_group  )
+CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _contexts hive.contexts_group  )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -393,7 +393,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_context_set_forking( _contexts hive_data.contexts_group  )
+CREATE OR REPLACE FUNCTION hive.app_context_set_forking( _contexts hive.contexts_group  )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -506,7 +506,7 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_context_are_attached( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_context_are_attached( _contexts hive.contexts_group )
     RETURNS bool
     LANGUAGE plpgsql
     STABLE
@@ -542,7 +542,7 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_update_last_active_at( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_update_last_active_at( _contexts hive.contexts_group )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -577,7 +577,7 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_set_current_block_num( _contexts hive_data.contexts_group, _block_num INTEGER )
+CREATE OR REPLACE FUNCTION hive.app_set_current_block_num( _contexts hive.contexts_group, _block_num INTEGER )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -617,7 +617,7 @@ END;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION hive.app_get_current_block_num( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_get_current_block_num( _contexts hive.contexts_group )
     RETURNS INTEGER
     LANGUAGE plpgsql
     STABLE
@@ -804,7 +804,7 @@ BEGIN
 END
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_wait_for_ready_instance(IN _contexts hive_data.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+CREATE OR REPLACE FUNCTION hive.app_wait_for_ready_instance(IN _contexts hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
   RETURNS VOID
   LANGUAGE plpgsql
   VOLATILE
@@ -815,7 +815,7 @@ BEGIN
 END
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.app_check_contexts_synchronized( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_check_contexts_synchronized( _contexts hive.contexts_group )
     RETURNS VOID
     LANGUAGE plpgsql
     STABLE
@@ -845,7 +845,7 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _contexts hive_data.contexts_group  )
+CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _contexts hive.contexts_group  )
     RETURNS BOOLEAN
     LANGUAGE 'plpgsql'
     STABLE

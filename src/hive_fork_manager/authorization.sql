@@ -219,7 +219,7 @@ TO hived_group;
 
 --- Required permissions to execute all callees of app_check_contexts_synchronized
 GRANT EXECUTE ON FUNCTION
-      hive.app_context_detach(_contexts hive_data.contexts_group)
+      hive.app_context_detach(_contexts hive.contexts_group)
     , hive.app_context_detach( _context hive_data.context_name )
     , hive.context_detach
     , hive.create_all_irreversible_blocks_view
@@ -234,7 +234,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.back_from_fork_one_table
     , hive.remove_obsolete_operations
     , hive.detach_table
-    , hive.app_check_contexts_synchronized(_contexts hive_data.contexts_group)
+    , hive.app_check_contexts_synchronized(_contexts hive.contexts_group)
 TO hived_group;
 
 GRANT USAGE ON SCHEMA hive to haf_maintainer;
