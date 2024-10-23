@@ -24,7 +24,7 @@ BEGIN
   CALL test_app.main('dead_app1', 100);
 
   -- just to "shift" in time
-  UPDATE hive_data.contexts
+  UPDATE hafd.contexts
     SET last_active_at = last_active_at - _time_shift
     WHERE name = 'dead_app1';
 END

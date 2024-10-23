@@ -30,7 +30,7 @@ def main_loop( db_connection ):
         with db_connection.begin():
             # get blocks range
             blocks_range = db_connection.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone()
-            accounts = db_connection.execute( "SELECT * FROM hive_data.{}_accounts ORDER BY id DESC LIMIT 1".format( APPLICATION_CONTEXT ) ).fetchall()
+            accounts = db_connection.execute( "SELECT * FROM hafd.{}_accounts ORDER BY id DESC LIMIT 1".format( APPLICATION_CONTEXT ) ).fetchall()
 
             print( "Blocks range {}".format( blocks_range ) )
             print( "Accounts {}".format( accounts ) )

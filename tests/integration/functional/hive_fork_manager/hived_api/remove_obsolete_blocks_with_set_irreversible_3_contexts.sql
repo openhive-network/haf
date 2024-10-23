@@ -11,18 +11,18 @@ BEGIN
     PERFORM hive.app_create_context( 'context2' , 'a' );
     PERFORM hive.app_create_context( 'context3' , 'a' );
 
-    INSERT INTO hive_data.fork( id, block_num, time_of_fork)
+    INSERT INTO hafd.fork( id, block_num, time_of_fork)
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
            ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 
-    INSERT INTO hive_data.operation_types
+    INSERT INTO hafd.operation_types
     VALUES (0, 'OP 0', FALSE )
          , ( 1, 'OP 1', FALSE )
          , ( 2, 'OP 2', FALSE )
          , ( 3, 'OP 3', TRUE )
     ;
 
-    INSERT INTO hive_data.blocks_reversible
+    INSERT INTO hafd.blocks_reversible
     VALUES
            ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
          , ( 5, '\xBADD5A', '\xCAFE5A', '2016-06-22 19:10:55-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
@@ -37,7 +37,7 @@ BEGIN
          , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-    INSERT INTO hive_data.accounts_reversible( block_num, name, id, fork_id )
+    INSERT INTO hafd.accounts_reversible( block_num, name, id, fork_id )
     VALUES
            ( 4, 'u4_1',1 , 1 )
          , ( 5, 'u5_1',2 , 1 )
@@ -52,7 +52,7 @@ BEGIN
          , ( 10, 'u10_3',11 , 3 )
     ;
 
-    INSERT INTO hive_data.transactions_reversible
+    INSERT INTO hafd.transactions_reversible
     VALUES
            ( 4, 0::SMALLINT, '\xDEED40', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF',  1 )
          , ( 5, 0::SMALLINT, '\xDEED55', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF',  1 )
@@ -67,7 +67,7 @@ BEGIN
          , ( 10, 0::SMALLINT, '\xDEED1102', 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF', 3 )
     ;
 
-    INSERT INTO hive_data.transactions_multisig_reversible
+    INSERT INTO hafd.transactions_multisig_reversible
     VALUES
            ( '\xDEED40', '\xBEEF40',  1 )
          , ( '\xDEED55', '\xBEEF55',  1 )
@@ -85,24 +85,24 @@ BEGIN
          , ( '\xDEED1102', '\xBEEF13',  3 ) -- block 10
     ;
 
-    INSERT INTO hive_data.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
     VALUES
-           ( hive.operation_id(4,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive_data.operation, 1 )
-         , ( hive.operation_id(5,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hive_data.operation, 1 )
-         , ( hive.operation_id(6,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hive_data.operation, 1 )
-         , ( hive.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hive_data.operation, 1 ) -- must be abandon because of fork2
-         , ( hive.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hive_data.operation, 1 ) -- must be abandon because of fork2
-         , ( hive.operation_id(7,1,2), 0, 2, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hive_data.operation, 1 ) -- must be abandon because of fork2
-         , ( hive.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hive_data.operation, 3 )
-         , ( hive.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hive_data.operation, 3 )
-         , ( hive.operation_id(10,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive_data.operation, 3 )
+           ( hive.operation_id(4,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hive.operation_id(5,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hive.operation_id(6,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hive.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7,1,2), 0, 2, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
+         , ( hive.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
+         , ( hive.operation_id(10,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation, 3 )
     ;
 
-    INSERT INTO hive_data.account_operations_reversible
+    INSERT INTO hafd.account_operations_reversible
     VALUES
            ( 4, 1, hive.operation_id(4,1,0), 1 )
          , ( 5, 1, hive.operation_id(5,1,0), 1 )
@@ -120,7 +120,7 @@ BEGIN
          , ( 11, 3, hive.operation_id(10,1,0), 3 )
     ;
 
-    INSERT INTO hive_data.applied_hardforks_reversible
+    INSERT INTO hafd.applied_hardforks_reversible
     VALUES
            ( 4, 4, hive.operation_id(4,1,0), 1 )
          , ( 5, 5, hive.operation_id(5,1,0), 1 )
@@ -137,10 +137,10 @@ BEGIN
          , ( 11, 10, hive.operation_id(10,1,0), 3 )
     ;
 
-    UPDATE hive_data.contexts SET fork_id = 1, irreversible_block = 6, current_block_num = 6 WHERE name = 'context1';
-    UPDATE hive_data.contexts SET fork_id = 1, irreversible_block = 7, current_block_num = 7 WHERE name = 'context17';
-    UPDATE hive_data.contexts SET fork_id = 2, irreversible_block = 8, current_block_num = 8 WHERE name = 'context2';
-    UPDATE hive_data.contexts SET fork_id = 3, irreversible_block = 9, current_block_num = 9 WHERE name = 'context3';
+    UPDATE hafd.contexts SET fork_id = 1, irreversible_block = 6, current_block_num = 6 WHERE name = 'context1';
+    UPDATE hafd.contexts SET fork_id = 1, irreversible_block = 7, current_block_num = 7 WHERE name = 'context17';
+    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 8, current_block_num = 8 WHERE name = 'context2';
+    UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 9, current_block_num = 9 WHERE name = 'context3';
 
     -- SUMMARY:
     --We have 3 forks: 1 (blocks: 4,5,6),2 (blocks: 7,8,9) ,3 (blocks: 8,9, 10), moreover block 1,2,3,4 are
@@ -170,10 +170,10 @@ BEGIN
     -- Because 'context' is processing block 8 on fork 2 we can only remove older blocks and forks, thus beacuse
     -- we don't want to lock whole tables shared between an application and the hived.
 
-    ASSERT EXISTS( SELECT * FROM hive_data.blocks_reversible ), 'No reversible blocks';
+    ASSERT EXISTS( SELECT * FROM hafd.blocks_reversible ), 'No reversible blocks';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive_data.blocks_reversible
+        SELECT * FROM hafd.blocks_reversible
         EXCEPT SELECT * FROM ( VALUES
            ( 7, '\xBADD71'::bytea, '\xCAFE71'::bytea, '2016-06-22 19:10:27-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
          , ( 10, '\xBADD11'::bytea, '\xCAFE11'::bytea, '2016-06-22 19:10:41-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
@@ -184,12 +184,12 @@ BEGIN
          , ( 9, '\xBADD90'::bytea, '\xCAFE90'::bytea, '2016-06-22 19:10:31-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
          , ( 10, '\xBADD1A'::bytea, '\xCAFE1A'::bytea, '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
         ) as pattern
-    ) , 'Unexpected rows in hive_data.blocks_reversible';
+    ) , 'Unexpected rows in hafd.blocks_reversible';
 
-    ASSERT EXISTS( SELECT * FROM hive_data.accounts_reversible ), 'No reversible accounts';
+    ASSERT EXISTS( SELECT * FROM hafd.accounts_reversible ), 'No reversible accounts';
 
     ASSERT NOT EXISTS (
-        SELECT block_num, name, id, fork_id FROM hive_data.accounts_reversible
+        SELECT block_num, name, id, fork_id FROM hafd.accounts_reversible
         EXCEPT SELECT * FROM ( VALUES
            ( 6, 'u6_1',3 , 1 )
          , ( 7, 'u7_1',4 , 1 )
@@ -201,12 +201,12 @@ BEGIN
          , ( 9, 'u9_3',10 , 3 )
          , ( 10, 'u10_3',11 , 3 )
         ) as pattern
-    ) , 'Unexpected rows in hive_data.accounts_reversible';
+    ) , 'Unexpected rows in hafd.accounts_reversible';
 
-    ASSERT EXISTS( SELECT * FROM hive_data.transactions_reversible ), 'No reversible transactions';
+    ASSERT EXISTS( SELECT * FROM hafd.transactions_reversible ), 'No reversible transactions';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive_data.transactions_reversible
+        SELECT * FROM hafd.transactions_reversible
         EXCEPT SELECT * FROM ( VALUES
            ( 7, 0::SMALLINT, '\xDEED70'::bytea, 101, 100, '2016-06-22 19:10:37-07'::timestamp, '\xBEEF'::bytea,  1 )
          , ( 10, 0::SMALLINT, '\xDEED11'::bytea, 101, 100, '2016-06-22 19:10:41-07'::timestamp, '\xBEEF'::bytea,  1 )
@@ -217,12 +217,12 @@ BEGIN
          , ( 9, 0::SMALLINT, '\xDEED99'::bytea, 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF'::bytea,  3 )
          , ( 10, 0::SMALLINT, '\xDEED1102'::bytea, 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF'::bytea, 3 )
         ) as pattern
-    ) , 'Unexpected rows in hive_data.transactions_reversible';
+    ) , 'Unexpected rows in hafd.transactions_reversible';
 
-    ASSERT EXISTS( SELECT * FROM hive_data.transactions_multisig_reversible ), 'No reversible signatures';
+    ASSERT EXISTS( SELECT * FROM hafd.transactions_multisig_reversible ), 'No reversible signatures';
 
     ASSERT NOT EXISTS (
-    SELECT * FROM hive_data.transactions_multisig_reversible
+    SELECT * FROM hafd.transactions_multisig_reversible
     EXCEPT SELECT * FROM ( VALUES
            ( '\xDEED70'::bytea, '\xBEEF7110'::bytea,  1 ) --must be abandon because of fork 2
          , ( '\xDEED70'::bytea, '\xBEEF7120'::bytea,  1 ) --must be abandon because of fork 2
@@ -236,31 +236,31 @@ BEGIN
          , ( '\xDEED99'::bytea, '\xBEEF93'::bytea,  3 ) -- block 9
          , ( '\xDEED1102'::bytea, '\xBEEF13'::bytea,  3 ) -- block 10
     ) as pattern
-    ) , 'Unexpected rows in hive_data.transactions_multisig_reversible';
+    ) , 'Unexpected rows in hafd.transactions_multisig_reversible';
 
-    ASSERT EXISTS( SELECT * FROM hive_data.operations_reversible ), 'No reversible operations';
+    ASSERT EXISTS( SELECT * FROM hafd.operations_reversible ), 'No reversible operations';
 
     ASSERT NOT EXISTS (
-    SELECT id, trx_in_block, op_pos, body_binary, fork_id FROM hive_data.operations_reversible
+    SELECT id, trx_in_block, op_pos, body_binary, fork_id FROM hafd.operations_reversible
     EXCEPT SELECT * FROM ( VALUES
-           ( hive.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hive_data.operation, 1 )
-         , ( hive.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hive_data.operation, 1 )
-         , ( hive.operation_id(7,1,2), 0, 2, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hive_data.operation, 1 )
-         , ( hive.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hive_data.operation, 3 )
-         , ( hive.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hive_data.operation, 3 )
-         , ( hive.operation_id(10,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive_data.operation, 3 )
+           ( hive.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hive.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hive.operation_id(7,1,2), 0, 2, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hive.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
+         , ( hive.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
+         , ( hive.operation_id(10,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation, 3 )
     ) as pattern
-    ), 'Unexpected rows in hive_data.operations_reversible'
+    ), 'Unexpected rows in hafd.operations_reversible'
     ;
 
 
-    ASSERT EXISTS( SELECT * FROM hive_data.applied_hardforks_reversible ), 'No reversible applied_hardforks';
+    ASSERT EXISTS( SELECT * FROM hafd.applied_hardforks_reversible ), 'No reversible applied_hardforks';
     ASSERT NOT EXISTS (
-        SELECT * FROM hive_data.applied_hardforks_reversible
+        SELECT * FROM hafd.applied_hardforks_reversible
         EXCEPT SELECT * FROM ( VALUES
        ( 7, 7, hive.operation_id(7,1,0), 1 )
      , ( 8, 7, hive.operation_id(7,1,1), 1 )
@@ -273,11 +273,11 @@ BEGIN
      , ( 10, 9, hive.operation_id(9,1,0), 3 )
      , ( 11, 10, hive.operation_id(10,1,0), 3 )
         ) as pattern
-    ) , 'Unexpected rows in hive_data.applied_hardforks_reversible';
+    ) , 'Unexpected rows in hafd.applied_hardforks_reversible';
 
-    ASSERT ( SELECT COUNT(*) FROM hive_data.account_operations_reversible ) = 11, 'Wrong number of account_operations';
+    ASSERT ( SELECT COUNT(*) FROM hafd.account_operations_reversible ) = 11, 'Wrong number of account_operations';
     ASSERT NOT EXISTS (
-    SELECT * FROM hive_data.account_operations_reversible
+    SELECT * FROM hafd.account_operations_reversible
     EXCEPT SELECT * FROM ( VALUES
                ( 7, 1, hive.operation_id(7,1,0), 1 )
              , ( 8, 1, hive.operation_id(7,1,1), 1 )
@@ -291,7 +291,7 @@ BEGIN
              , ( 10, 3, hive.operation_id(9,1,0), 3 )
              , ( 11, 3, hive.operation_id(10,1,0), 3 )
         ) as pattern
-    ), 'Unexpected rows in hive_data.account_operations_reversible'
+    ), 'Unexpected rows in hafd.account_operations_reversible'
     ;
 END;
 $BODY$

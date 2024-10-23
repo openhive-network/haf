@@ -39,10 +39,10 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 0, 'Inserted row was not removed a.table1';
-    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 ) = 0, 'Shadow table is not empty table1';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table1 ) = 0, 'Shadow table is not empty table1';
 
     ASSERT ( SELECT COUNT(*) FROM B.table1 ) = 0, 'Inserted row was not removed b.table1';
-    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_b_table1 ) = 0, 'Shadow table is not empty table2';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_b_table1 ) = 0, 'Shadow table is not empty table2';
 END
 $BODY$
 ;

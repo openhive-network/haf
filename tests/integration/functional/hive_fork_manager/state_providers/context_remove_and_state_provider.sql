@@ -27,7 +27,7 @@ AS
 $BODY$
 BEGIN
     ASSERT NOT EXISTS ( SELECT * FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'context_accounts' ), 'Accounts table was not removed';
-    ASSERT NOT EXISTS ( SELECT * FROM hive_data.state_providers_registered WHERE context_id = 1 AND state_provider = 'ACCOUNTS' ), 'State provider is still registered';
+    ASSERT NOT EXISTS ( SELECT * FROM hafd.state_providers_registered WHERE context_id = 1 AND state_provider = 'ACCOUNTS' ), 'State provider is still registered';
 END;
 $BODY$
 ;

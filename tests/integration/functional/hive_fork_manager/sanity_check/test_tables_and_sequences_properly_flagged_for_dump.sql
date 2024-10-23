@@ -18,11 +18,11 @@ BEGIN
     SELECT ARRAY_AGG(sequence_name) INTO all_sequences
     FROM information_schema.sequences 
     WHERE sequence_name <> 'deps_saved_ddl_deps_id_seq'
-    AND ( sequence_schema = 'hive' OR sequence_schema = 'hive_data' );
+    AND ( sequence_schema = 'hive' OR sequence_schema = 'hafd' );
 
     SELECT ARRAY_AGG(table_name ORDER BY table_name) INTO all_tables
     FROM  information_schema.tables
-    WHERE ( table_schema = 'hive' OR table_schema = 'hive_data'  )and table_type <> 'VIEW' and table_name <> 'deps_saved_ddl'
+    WHERE ( table_schema = 'hive' OR table_schema = 'hafd'  )and table_type <> 'VIEW' and table_name <> 'deps_saved_ddl'
     ;
 
     SELECT extconfig into oids FROM pg_extension WHERE extname = 'hive_fork_manager';
@@ -57,7 +57,7 @@ CREATE FUNCTION format_assert_message(IN intext TEXT, IN alla TEXT[], IN flagged
 AS
 $BODY$
 BEGIN
-    return format('Existing ' || intext || ' in hive/hive_data schema:' ||E'\n'|| '%s, ' ||E'\n'|| 'but flagged with pg_extension_config_dump are:'||E'\n'||'%s', alla, flagged);
+    return format('Existing ' || intext || ' in hive/hafd schema:' ||E'\n'|| '%s, ' ||E'\n'|| 'but flagged with pg_extension_config_dump are:'||E'\n'||'%s', alla, flagged);
 END
 $BODY$
 ;

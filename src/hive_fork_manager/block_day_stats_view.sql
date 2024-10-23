@@ -6,22 +6,22 @@ WITH op_day_stats AS
 (
 SELECT (o.block_num / 28800) AS block_day, o.op_type_id, COUNT(1)
 FROM hive.irreversible_operations_view o
-WHERE hive.operation_id_to_type_id(o.id) < (SELECT ot.id FROM hive_data.operation_types ot WHERE ot.is_virtual = TRUE ORDER BY ot.id LIMIT 1)
+WHERE hive.operation_id_to_type_id(o.id) < (SELECT ot.id FROM hafd.operation_types ot WHERE ot.is_virtual = TRUE ORDER BY ot.id LIMIT 1)
 GROUP BY 1, 2
 ),
 supplemented_stats AS
 (
 SELECT d.block_day, t.op_type_id, COALESCE(ods.count, 0)::INT AS COUNT
 FROM (SELECT DISTINCT block_day FROM op_day_stats) d
-CROSS JOIN (SELECT ot.id AS op_type_id FROM hive_data.operation_types ot WHERE is_virtual = FALSE) t
+CROSS JOIN (SELECT ot.id AS op_type_id FROM hafd.operation_types ot WHERE is_virtual = FALSE) t
 LEFT JOIN op_day_stats ods ON ods.block_day = d.block_day AND ods.op_type_id = t.op_type_id
 )
 SELECT s.block_day::int, ot.name::text, s.count::int FROM supplemented_stats s
-JOIN hive_data.operation_types ot on s.op_type_id = ot.id
+JOIN hafd.operation_types ot on s.op_type_id = ot.id
 ORDER BY s.block_day, ot.name
 $$
 ,
-$$ SELECT ot.name FROM hive_data.operation_types ot WHERE ot.is_virtual = FALSE ORDER BY 1 $$ -- Must match the order with interface specification
+$$ SELECT ot.name FROM hafd.operation_types ot WHERE ot.is_virtual = FALSE ORDER BY 1 $$ -- Must match the order with interface specification
 
 ) as ct(block_day INT, 
 -- This order must match to order used in above query listing all operations

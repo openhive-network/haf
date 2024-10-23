@@ -52,7 +52,7 @@ __result bool;
 BEGIN
     SELECT EXISTS (
         SELECT 1 FROM information_schema.table_constraints tc
-        WHERE tc.table_schema='hive_data' AND tc.table_name=_table_name AND tc.constraint_type = 'FOREIGN KEY'
+        WHERE tc.table_schema='hafd' AND tc.table_name=_table_name AND tc.constraint_type = 'FOREIGN KEY'
         ) INTO __result;
     RETURN __result;
 END;
@@ -82,9 +82,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions') ), 'FK for hive_data.transactions not exists';
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hive_data.transactions_multisig not exists';
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hive_data.applied_hardforks not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions') ), 'FK for hafd.transactions not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hafd.transactions_multisig not exists';
+    ASSERT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hafd.applied_hardforks not exists';
 
 
     ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_transactions', 'FOREIGN KEY' ) ), 'FK fk_1_hive_transactions not exists';

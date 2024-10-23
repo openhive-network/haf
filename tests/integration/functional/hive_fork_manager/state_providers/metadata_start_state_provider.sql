@@ -29,7 +29,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive_data' AND table_name  = 'context_metadata' ), 'Metadata table was not created';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hafd' AND table_name  = 'context_metadata' ), 'Metadata table was not created';
 END;
 $BODY$
 ;

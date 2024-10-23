@@ -24,7 +24,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT NOT EXISTS ( SELECT * FROM hive_data.contexts ), 'Some context were created';
+    ASSERT NOT EXISTS ( SELECT * FROM hafd.contexts ), 'Some context were created';
 END
 $BODY$
 ;
