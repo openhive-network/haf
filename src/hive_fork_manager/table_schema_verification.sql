@@ -1,11 +1,11 @@
 CREATE OR REPLACE FUNCTION hive.calculate_schema_hash(schema_name TEXT)
-    RETURNS SETOF hive_data.verify_table_schema
+    RETURNS SETOF hafd.verify_table_schema
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    schemarow    hive_data.verify_table_schema%ROWTYPE;
+    schemarow    hafd.verify_table_schema%ROWTYPE;
     _table_name     TEXT;
     _before_hash    TEXT;
     _columns   TEXT;
@@ -142,20 +142,20 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.create_database_hash(schema_name TEXT)
-    RETURNS SETOF hive_data.table_schema
+    RETURNS SETOF hafd.table_schema
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    ts hive_data.table_schema%ROWTYPE;
+    ts hafd.table_schema%ROWTYPE;
     _tmp TEXT;
 BEGIN
-    TRUNCATE hive_data.table_schema;
+    TRUNCATE hafd.table_schema;
 
     SELECT string_agg(table_schema, ' | ') FROM hive.calculate_schema_hash(schema_name) INTO _tmp;
 
-    INSERT INTO hive_data.table_schema VALUES (schema_name, MD5(_tmp)::uuid);
+    INSERT INTO hafd.table_schema VALUES (schema_name, MD5(_tmp)::uuid);
 
     ts.schema_name := schema_name;
     ts.schema_hash := MD5(_tmp)::uuid;

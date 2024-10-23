@@ -1,11 +1,11 @@
--- Actual hive_data.operation type implementation
+-- Actual hafd.operation type implementation
 
-CREATE TYPE hive_data.operation(
-    INPUT = hive_data._operation_in -- JSON string -> hive_data.operation
-  , OUTPUT = hive_data._operation_out -- hive_data.operation -> JSON string
+CREATE TYPE hafd.operation(
+    INPUT = hafd._operation_in -- JSON string -> hafd.operation
+  , OUTPUT = hafd._operation_out -- hafd.operation -> JSON string
 
-  , RECEIVE = hive_data._operation_bin_in_internal -- internal -> hive_data.operation
-  , SEND = hive_data._operation_bin_out -- hive_data.operation -> bytea
+  , RECEIVE = hafd._operation_bin_in_internal -- internal -> hafd.operation
+  , SEND = hafd._operation_bin_out -- hafd.operation -> bytea
 
   , INTERNALLENGTH = VARIABLE
   --- According to documentation: https://www.postgresql.org/docs/current/storage-toast.html#STORAGE-TOAST-ONDISK

@@ -33,7 +33,7 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 0, 'Inserted row was not removed';
-    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 ) = 0, 'Shadow table is not empty';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table1 ) = 0, 'Shadow table is not empty';
 END
 $BODY$
 ;

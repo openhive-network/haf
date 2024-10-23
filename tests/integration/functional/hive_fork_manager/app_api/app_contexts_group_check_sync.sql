@@ -4,21 +4,21 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive_data.blocks
+    INSERT INTO hafd.blocks
     VALUES
     ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:24-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 3, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:24-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive_data.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
          , (6, 'alice', 1)
     ;
 
     PERFORM hive.end_massive_sync(2);
 
-    INSERT INTO hive_data.fork( id, block_num, time_of_fork)
+    INSERT INTO hafd.fork( id, block_num, time_of_fork)
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp );
 
     CREATE SCHEMA A;
@@ -31,7 +31,7 @@ BEGIN
     PERFORM hive.app_create_context( 'attached_context_not_insync_is_forking', _schema => 'a', _is_forking => FALSE );
     PERFORM hive.app_create_context( 'attached_context_not_insync_loop', _schema => 'a' );
 
-    UPDATE hive_data.contexts ctx
+    UPDATE hafd.contexts ctx
     SET
         current_block_num = 1
       , irreversible_block = 1
@@ -40,33 +40,33 @@ BEGIN
       , fork_id = 1
     ;
 
-    UPDATE hive_data.contexts ctx
+    UPDATE hafd.contexts ctx
     SET
         current_block_num = 2
     WHERE ctx.name = 'attached_context_not_insync_bn'
     ;
 
-    UPDATE hive_data.contexts ctx
+    UPDATE hafd.contexts ctx
     SET
         irreversible_block = 2
     WHERE ctx.name = 'attached_context_not_insync_ir'
     ;
 
-    UPDATE hive_data.contexts ctx
+    UPDATE hafd.contexts ctx
     SET
         events_id = 1
     WHERE ctx.name = 'attached_context_not_insync_ev'
     ;
 
-    UPDATE hive_data.contexts ctx
+    UPDATE hafd.contexts ctx
     SET
         fork_id = 2
     WHERE ctx.name = 'attached_context_not_insync_fr'
     ;
 
-    UPDATE hive_data.contexts ctx
+    UPDATE hafd.contexts ctx
     SET
-        loop = (10, hive_data.live_stage(), 10, 10, 10)::hive_data.application_loop_state
+        loop = (10, hafd.live_stage(), 10, 10, 10)::hafd.application_loop_state
     WHERE ctx.name = 'attached_context_not_insync_loop'
     ;
 

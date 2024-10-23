@@ -1,5 +1,5 @@
 DROP FUNCTION IF EXISTS hive.get_keyauths_wrapper;
-CREATE OR REPLACE FUNCTION hive.get_keyauths_wrapper(IN _operation_body hive_data.operation)
+CREATE OR REPLACE FUNCTION hive.get_keyauths_wrapper(IN _operation_body hafd.operation)
 RETURNS SETOF hive.keyauth_c_record_type
 AS 'MODULE_PATHNAME', 'get_keyauths_wrapped' LANGUAGE C;
 

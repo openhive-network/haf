@@ -3,7 +3,7 @@ CREATE OR REPLACE PROCEDURE test_hived_test_given()
     AS
 $BODY$
 BEGIN
-    INSERT INTO hive_data.blocks
+    INSERT INTO hafd.blocks
     VALUES
        ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
      , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -11,7 +11,7 @@ BEGIN
      , ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:24-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
      , ( 5, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
-    INSERT INTO hive_data.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
     ;
     PERFORM hive.end_massive_sync(5);
@@ -74,8 +74,8 @@ BEGIN
     PERFORM hive.app_get_current_block_num( ARRAY[ 'bob_context_detached' ] );
     PERFORM hive.app_get_current_block_num( ARRAY[ 'bob_context' ] );
 
-    ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name = 'bob_context' ), 'Alice does not see Bob context';
-    ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name = 'bob_context_detached' ), 'Alice does not see Bob context detached';
+    ASSERT EXISTS( SELECT * FROM hafd.contexts WHERE name = 'bob_context' ), 'Alice does not see Bob context';
+    ASSERT EXISTS( SELECT * FROM hafd.contexts WHERE name = 'bob_context_detached' ), 'Alice does not see Bob context detached';
 END
 $BODY$
 ;
@@ -91,8 +91,8 @@ BEGIN
     PERFORM hive.app_get_current_block_num( ARRAY[ 'alice_context_detached' ] );
     PERFORM hive.app_get_current_block_num( ARRAY[ 'alice_context' ] );
 
-    ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name = 'alice_context' ), 'Bob does not see Alice context';
-    ASSERT EXISTS( SELECT * FROM hive_data.contexts WHERE name = 'alice_context_detached' ), 'Bob does not see Alice context detached';
+    ASSERT EXISTS( SELECT * FROM hafd.contexts WHERE name = 'alice_context' ), 'Bob does not see Alice context';
+    ASSERT EXISTS( SELECT * FROM hafd.contexts WHERE name = 'alice_context_detached' ), 'Bob does not see Alice context detached';
 END;
 $BODY$
 ;

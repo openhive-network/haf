@@ -21,7 +21,7 @@ def test_exception_in_reindex_state(haf_node):
 
     # Alter operations table so that worker thread raises an exception when storing data in it
     session = haf_node.session
-    session.execute(sqlalchemy.text('ALTER TABLE hive_data.operations ADD CONSTRAINT check_length CHECK (octet_length(body_binary) <= 21)'))
+    session.execute(sqlalchemy.text('ALTER TABLE hafd.operations ADD CONSTRAINT check_length CHECK (octet_length(body_binary) <= 21)'))
     haf_node.run(
         replay_from=block_log,
         exit_at_block=30,

@@ -1,73 +1,73 @@
--- Compare functions for the hive_data.operation
+-- Compare functions for the hafd.operation
 
 CREATE OPERATOR = (
-    LEFTARG    = hive_data.operation,
-    RIGHTARG   = hive_data.operation,
+    LEFTARG    = hafd.operation,
+    RIGHTARG   = hafd.operation,
     COMMUTATOR = =,
     NEGATOR    = !=,
-    PROCEDURE  = hive_data._operation_eq,
+    PROCEDURE  = hafd._operation_eq,
 	RESTRICT = eqsel,
     JOIN = eqjoinsel,
 	MERGES
 );
 
 CREATE OPERATOR != (
-    LEFTARG    = hive_data.operation,
-    RIGHTARG   = hive_data.operation,
+    LEFTARG    = hafd.operation,
+    RIGHTARG   = hafd.operation,
     NEGATOR    = =,
     COMMUTATOR = !=,
-    PROCEDURE  = hive_data._operation_ne,
+    PROCEDURE  = hafd._operation_ne,
 	RESTRICT = neqsel,
     JOIN = neqjoinsel
 );
 
 CREATE OPERATOR < (
-    LEFTARG    = hive_data.operation,
-    RIGHTARG   = hive_data.operation,
+    LEFTARG    = hafd.operation,
+    RIGHTARG   = hafd.operation,
     COMMUTATOR = <,
     NEGATOR    = >=,
-    PROCEDURE  = hive_data._operation_lt,
+    PROCEDURE  = hafd._operation_lt,
     RESTRICT = contsel,
 	JOIN = contjoinsel
 );
 
 CREATE OPERATOR <= (
-    LEFTARG    = hive_data.operation,
-    RIGHTARG   = hive_data.operation,
+    LEFTARG    = hafd.operation,
+    RIGHTARG   = hafd.operation,
     COMMUTATOR = <=,
     NEGATOR    = >,
-    PROCEDURE  = hive_data._operation_le,
+    PROCEDURE  = hafd._operation_le,
     RESTRICT = contsel,
 	JOIN = contjoinsel
 );
 
 CREATE OPERATOR > (
-    LEFTARG    = hive_data.operation,
-    RIGHTARG   = hive_data.operation,
+    LEFTARG    = hafd.operation,
+    RIGHTARG   = hafd.operation,
     COMMUTATOR = >,
     NEGATOR    = <=,
-    PROCEDURE  = hive_data._operation_gt,
+    PROCEDURE  = hafd._operation_gt,
     RESTRICT = contsel,
 	JOIN = contjoinsel
 );
 
 CREATE OPERATOR >= (
-    LEFTARG    = hive_data.operation,
-    RIGHTARG   = hive_data.operation,
+    LEFTARG    = hafd.operation,
+    RIGHTARG   = hafd.operation,
     COMMUTATOR = >=,
     NEGATOR    = <,
-    PROCEDURE  = hive_data._operation_ge,
+    PROCEDURE  = hafd._operation_ge,
     RESTRICT = contsel,
 	JOIN = contjoinsel
 );
 
 
 CREATE OPERATOR CLASS hive.operation_ops
-DEFAULT FOR TYPE hive_data.operation USING btree AS
-    OPERATOR    1   <  (hive_data.operation, hive_data.operation),
-    OPERATOR    2   <= (hive_data.operation, hive_data.operation),
-    OPERATOR    3   =  (hive_data.operation, hive_data.operation),
-    OPERATOR    4   >= (hive_data.operation, hive_data.operation),
-    OPERATOR    5   >  (hive_data.operation, hive_data.operation),
-    FUNCTION    1   hive_data._operation_cmp(hive_data.operation, hive_data.operation),
-STORAGE hive_data.operation;
+DEFAULT FOR TYPE hafd.operation USING btree AS
+    OPERATOR    1   <  (hafd.operation, hafd.operation),
+    OPERATOR    2   <= (hafd.operation, hafd.operation),
+    OPERATOR    3   =  (hafd.operation, hafd.operation),
+    OPERATOR    4   >= (hafd.operation, hafd.operation),
+    OPERATOR    5   >  (hafd.operation, hafd.operation),
+    FUNCTION    1   hafd._operation_cmp(hafd.operation, hafd.operation),
+STORAGE hafd.operation;
