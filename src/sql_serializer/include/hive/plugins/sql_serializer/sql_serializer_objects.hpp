@@ -236,7 +236,7 @@ namespace hive
           else
           {
             return generate([&](fc::string &ss) {
-              ss.append("INSERT INTO hive_data.operation_types VALUES ");
+              ss.append("INSERT INTO hafd.operation_types VALUES ");
               for (auto it = result.begin(); it != result.end(); it++)
               {
                 if (it != result.begin())

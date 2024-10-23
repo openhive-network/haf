@@ -44,7 +44,7 @@ BEGIN
     PERFORM constraint_index_checker( FALSE );
 
     INSERT INTO indexes_constraints2
-    SELECT * FROM hive_data.indexes_constraints io
+    SELECT * FROM hafd.indexes_constraints io
     ORDER BY io.index_constraint_name;
 
     PERFORM hive.restore_indexes( 'public.table_with_constraints' );
@@ -121,7 +121,7 @@ BEGIN
     ASSERT NOT EXISTS (
         (SELECT * FROM indexes_constraints2 ORDER BY index_constraint_name)
         EXCEPT
-        SELECT * FROM hive_data.indexes_constraints ORDER BY index_constraint_name
+        SELECT * FROM hafd.indexes_constraints ORDER BY index_constraint_name
     ) , 'Saving indexes and constraints failed';
 END;
 $BODY$

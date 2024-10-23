@@ -4,7 +4,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    UPDATE hive_data.irreversible_data SET is_dirty = FALSE;
+    UPDATE hafd.irreversible_data SET is_dirty = FALSE;
 END;
 $BODY$
 ;
@@ -24,7 +24,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT( SELECT is_dirty FROM hive_data.irreversible_data ) = TRUE, 'Irreversible data are not dirty';
+    ASSERT( SELECT is_dirty FROM hafd.irreversible_data ) = TRUE, 'Irreversible data are not dirty';
     ASSERT( SELECT * FROM hive.is_irreversible_dirty() ) = TRUE, 'hive.is_irreversible_dirty returns FALSE';
 END
 $BODY$

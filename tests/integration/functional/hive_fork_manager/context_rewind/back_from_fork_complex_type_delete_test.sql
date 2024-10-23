@@ -17,7 +17,7 @@ BEGIN
     INSERT INTO src_table ( smth, name, values, data, name2, num )
     VALUES( 1, 'temp1', '{{0.25, 3.4, 6}}'::FLOAT[], ROW(1, 5.8, '123abc')::custom_type, 'padu'::VARCHAR, 2.123::NUMERIC(3,2) );
 
-    TRUNCATE hive_data.shadow_public_src_table; --to do not revert inserts
+    TRUNCATE hafd.shadow_public_src_table; --to do not revert inserts
     PERFORM hive.context_next_block( 'context' );
     DELETE FROM src_table WHERE smth=1;
 END;
@@ -40,7 +40,7 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM src_table WHERE name2='padu' ) = 1, 'Deleted row was not reverted';
-    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_src_table ) = 0, 'Shadow table is not empty';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_public_src_table ) = 0, 'Shadow table is not empty';
 END
 $BODY$
 ;

@@ -7,7 +7,7 @@ CREATE TYPE hive.metadata_record_type AS
 );
 
 DROP FUNCTION IF EXISTS hive.get_metadata;
-CREATE OR REPLACE FUNCTION hive.get_metadata(IN _operation_body hive_data.operation, IN _is_hf21 bool)
+CREATE OR REPLACE FUNCTION hive.get_metadata(IN _operation_body hafd.operation, IN _is_hf21 bool)
 RETURNS SETOF hive.metadata_record_type
 AS 'MODULE_PATHNAME', 'get_metadata' LANGUAGE C;
 

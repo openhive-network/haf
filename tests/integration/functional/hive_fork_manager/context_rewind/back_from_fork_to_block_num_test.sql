@@ -35,10 +35,10 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM table1 WHERE id=321 ) = 1, 'Updated row was not reverted or reverted to wrong number';
-    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_table1 ) = 2, 'Unexpected number of rows in the shadow table';
-    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_table1 WHERE hive_block_num = 1 ) = 1, 'No expected row (0) in the shadow table';
-    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_table1 WHERE hive_block_num = 2 ) = 1, 'No expected row (1) in the shadow table';
-    ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name= 'context' ) = 2, 'Wrong current_block_num';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_public_table1 ) = 2, 'Unexpected number of rows in the shadow table';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_public_table1 WHERE hive_block_num = 1 ) = 1, 'No expected row (0) in the shadow table';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_public_table1 WHERE hive_block_num = 2 ) = 1, 'No expected row (1) in the shadow table';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name= 'context' ) = 2, 'Wrong current_block_num';
 END
 $BODY$
 ;

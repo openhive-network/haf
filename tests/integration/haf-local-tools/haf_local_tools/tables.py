@@ -4,11 +4,11 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.types import TypeDecorator
 
 
-HIVE_DATA_METADATA = MetaData(schema="hive_data")
+hafd_METADATA = MetaData(schema="hafd")
 HIVE_METADATA = MetaData(schema="hive")
 
 # declarative base class
-HiveDataBase = declarative_base(metadata=HIVE_DATA_METADATA)
+HiveDataBase = declarative_base(metadata=hafd_METADATA)
 HiveBase = declarative_base(metadata=HIVE_METADATA)
 
 class HiveOperation(TypeDecorator):

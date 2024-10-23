@@ -11,7 +11,7 @@ START_TEST_BLOCK = 115
 
 
 def __is_irreversible_block_in_database(self, block_num: int) -> bool:
-    sql = "SELECT exists(SELECT 1 FROM hive_data.blocks WHERE num = :block_num);"
+    sql = "SELECT exists(SELECT 1 FROM hafd.blocks WHERE num = :block_num);"
     return self.query_one(sql, block_num=block_num)
 
 

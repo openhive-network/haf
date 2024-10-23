@@ -1,5 +1,5 @@
 
-CREATE TABLE IF NOT EXISTS hive_data.verify_table_schema(
+CREATE TABLE IF NOT EXISTS hafd.verify_table_schema(
     table_name TEXT NOT NULL,
     table_schema TEXT NOT NULL,
     table_schema_hash UUID,
@@ -11,12 +11,12 @@ CREATE TABLE IF NOT EXISTS hive_data.verify_table_schema(
     table_indexes TEXT NOT NULL
 );
 
-SELECT pg_catalog.pg_extension_config_dump('hive_data.verify_table_schema', '');
+SELECT pg_catalog.pg_extension_config_dump('hafd.verify_table_schema', '');
 
-CREATE TABLE IF NOT EXISTS hive_data.table_schema(
+CREATE TABLE IF NOT EXISTS hafd.table_schema(
     schema_name TEXT NOT NULL,
     schema_hash UUID NOT NULL
 );
 
-SELECT pg_catalog.pg_extension_config_dump('hive_data.table_schema', '');
+SELECT pg_catalog.pg_extension_config_dump('hafd.table_schema', '');
 
