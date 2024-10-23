@@ -281,8 +281,6 @@ HIVED_ARGS=()
 
 echo "Processing passed arguments...: $*"
 
-SKIP_HIVED=0
-
 while [ $# -gt 0 ]; do
   case "$1" in
     --execute-maintenance-script*)
@@ -302,7 +300,9 @@ while [ $# -gt 0 ]; do
       PERFORM_LOAD=1
       ;;
     --skip-hived)
-      SKIP_HIVED=1
+      DO_MAINTENANCE=1
+      MAINTENANCE_SCRIPT_NAME="/home/haf_admin/source/scripts/maintenance-scripts/sleep_infinity.sh"
+      echo "Not launching hived due to --skip-hived command-line option"
       # allow launching the container with only the database running, but not hived.  This is useful when you want to
       # examine the database, but there's some problem that causes hived to exit at startup, since hived exiting will
       # then shut down the container, taking the database with it.
@@ -333,11 +333,6 @@ elif [ ${PERFORM_LOAD} -eq 1 ];
 then
   echo "Attempting to perform instance snapshot load"
   perform_instance_load "${BACKUP_SOURCE_DIR_NAME}"
-elif [ ${SKIP_HIVED} -eq 1 ];
-then
-  echo "Not launching hived due to --skip-hived command-line option"
-  echo "You can now connect to the database.  This this container will continue to exist until you shut it down"
-  sleep infinity
 else
   run_instance
   status=$?
