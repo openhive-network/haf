@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-examples_folder=$1
-test_path=$2;
-setup_scripts_dir_path=$3;
-postgres_port=$4;
+examples_folder="$1"
+test_path="$2"
+setup_scripts_dir_path="$3"
+postgres_port="$4"
 
 # shellcheck source=/dev/null
 . ./tools/common.sh
