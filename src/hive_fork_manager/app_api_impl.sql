@@ -12,7 +12,7 @@ LANGUAGE plpgsql STABLE;
 
 --- Allows to wait (until specified _timeout) until HAF database will be ready for application data processing.
 --- Raises exception on _timeout.
-CREATE OR REPLACE FUNCTION hive.wait_for_ready_instance(IN _context_names hive_data.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+CREATE OR REPLACE FUNCTION hive.wait_for_ready_instance(IN _context_names hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
 RETURNS VOID
 AS
 $BODY$
@@ -42,7 +42,7 @@ END
 $BODY$
 LANGUAGE plpgsql VOLATILE;
 
-CREATE OR REPLACE FUNCTION hive.find_next_event( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.find_next_event( _contexts hive.contexts_group )
     RETURNS hive_data.events_queue
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -134,7 +134,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.squash_fork_events( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.squash_fork_events( _contexts hive.contexts_group )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -182,7 +182,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.update_irreversible( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.update_irreversible( _contexts hive.contexts_group )
     RETURNS VOID
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -243,7 +243,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.squash_end_massive_sync_events( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.squash_end_massive_sync_events( _contexts hive.contexts_group )
     RETURNS BOOL
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -303,7 +303,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.squash_events( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.squash_events( _contexts hive.contexts_group )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -347,7 +347,7 @@ CREATE TYPE hive.context_state AS (
 
 
 
-CREATE OR REPLACE FUNCTION hive.squash_and_get_state( _contexts hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.squash_and_get_state( _contexts hive.contexts_group )
     RETURNS hive.context_state
     LANGUAGE plpgsql
     VOLATILE
@@ -504,7 +504,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_names hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_names hive.contexts_group )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
@@ -530,7 +530,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_names hive_data.contexts_group )
+CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_names hive.contexts_group )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
