@@ -1,5 +1,3 @@
--- SQL-side binary casts
-
 CREATE CAST (bytea AS hive_data.operation)
   WITH FUNCTION hive_data._operation_bin_in
   AS IMPLICIT;
