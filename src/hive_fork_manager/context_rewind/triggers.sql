@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.create_triggers( _table_schema TEXT,  _table_name TEXT, _context_id hive_data.contexts.id%TYPE )
+CREATE OR REPLACE FUNCTION hive.create_triggers( _table_schema TEXT,  _table_name TEXT, _context_id hafd.contexts.id%TYPE )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
@@ -120,7 +120,7 @@ $BODY$
     DECLARE
        __number_of_contexts INTEGER;
     BEGIN
-        SELECT COUNT( hc.* ) INTO __number_of_contexts FROM hive_data.contexts hc WHERE hc.owner = current_user;
+        SELECT COUNT( hc.* ) INTO __number_of_contexts FROM hafd.contexts hc WHERE hc.owner = current_user;
 
         IF ( __number_of_contexts > 1000 ) THEN
             RAISE EXCEPTION 'User % cannot create a new context %. The limit of 1000 contexts has been reached.', current_user, NEW.name;
@@ -132,5 +132,5 @@ $BODY$
 ;
 
 
-DROP TRIGGER IF EXISTS hive_contexts_limit_trigger ON hive_data.contexts;
-CREATE TRIGGER hive_contexts_limit_trigger AFTER INSERT ON hive_data.contexts FOR EACH ROW EXECUTE FUNCTION contexts_insert_trigger();
+DROP TRIGGER IF EXISTS hive_contexts_limit_trigger ON hafd.contexts;
+CREATE TRIGGER hive_contexts_limit_trigger AFTER INSERT ON hafd.contexts FOR EACH ROW EXECUTE FUNCTION contexts_insert_trigger();

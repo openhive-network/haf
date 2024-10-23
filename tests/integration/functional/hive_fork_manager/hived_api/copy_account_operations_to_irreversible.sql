@@ -4,18 +4,18 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive_data.fork( id, block_num, time_of_fork)
+    INSERT INTO hafd.fork( id, block_num, time_of_fork)
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
            ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 
-    INSERT INTO hive_data.operation_types
+    INSERT INTO hafd.operation_types
     VALUES ( 0, 'OP 0', FALSE )
          , ( 1, 'OP 1', FALSE )
          , ( 2, 'OP 2', FALSE )
          , ( 3, 'OP 3', TRUE )
     ;
 
-    INSERT INTO hive_data.blocks
+    INSERT INTO hafd.blocks
     VALUES
            ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 15, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 15, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -27,13 +27,13 @@ BEGIN
          , ( 8, '\xBADD8001', '\xCAFE80', '2016-06-22 19:10:28-07'::timestamp, 15, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive_data.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (15, 'initminer', 1)
          , (16, 'alice', 1)
          , (17, 'bob', 1)
     ;
 
-    INSERT INTO hive_data.blocks_reversible
+    INSERT INTO hafd.blocks_reversible
     VALUES
            ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 15, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
          , ( 5, '\xBADD5A', '\xCAFE5A', '2016-06-22 19:10:55-07'::timestamp, 15, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
@@ -49,37 +49,37 @@ BEGIN
          , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 15, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-    INSERT INTO hive_data.operations
+    INSERT INTO hafd.operations
     VALUES
-           ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive_data.operation )
-         , ( hive.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive_data.operation )
-         , ( hive.operation_id(3, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hive_data.operation )
-         , ( hive.operation_id(4, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive_data.operation )
-         , ( hive.operation_id(5, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hive_data.operation )
-         , ( hive.operation_id(6, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hive_data.operation )
-         , ( hive.operation_id(7, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive_data.operation )
-         , ( hive.operation_id(7, 1, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive_data.operation )
-         , ( hive.operation_id(8, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive_data.operation )
+           ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hive.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hive.operation_id(3, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hive.operation_id(4, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hive.operation_id(5, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hive.operation_id(6, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hive.operation_id(7, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hive.operation_id(7, 1, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hive.operation_id(8, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hafd.operation )
     ;
 
-    INSERT INTO hive_data.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
     VALUES
-           ( hive.operation_id(4, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hive_data.operation, 1 )
-         , ( hive.operation_id(5, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hive_data.operation, 1 )
-         , ( hive.operation_id(6, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hive_data.operation, 1 )
-         , ( hive.operation_id(7, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hive_data.operation, 1 ) -- must be abandon because of fork2
-         , ( hive.operation_id(7, 1, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hive_data.operation, 1 ) -- must be abandon because of fork2
-         , ( hive.operation_id(7, 1, 2), 0, 2, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hive_data.operation, 1 ) -- must be abandon because of fork2
-         , ( hive.operation_id(7, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(7, 1, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(8, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(9, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hive_data.operation, 2 )
-         , ( hive.operation_id(8, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hive_data.operation, 3 )
-         , ( hive.operation_id(9, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hive_data.operation, 3 )
-         , ( hive.operation_id(10, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hive_data.operation, 3 )
+           ( hive.operation_id(4, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hive.operation_id(5, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hive.operation_id(6, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hive.operation_id(7, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7, 1, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7, 1, 2), 0, 2, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
+         , ( hive.operation_id(7, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(7, 1, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(8, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(9, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hive.operation_id(8, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
+         , ( hive.operation_id(9, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
+         , ( hive.operation_id(10, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation, 3 )
     ;
 
-    INSERT INTO hive_data.accounts
+    INSERT INTO hafd.accounts
     VALUES
            ( 1, 'alice1', 1 )
          , ( 2, 'alice2', 1 )
@@ -92,7 +92,7 @@ BEGIN
          , ( 9, 'alice9', 1 )
     ;
 
-    INSERT INTO hive_data.accounts_reversible
+    INSERT INTO hafd.accounts_reversible
     VALUES
            ( 4, 'alice41', 4, 1 )
          , ( 5, 'alice51', 5, 1 )
@@ -109,7 +109,7 @@ BEGIN
          , ( 11, 'alice103', 10, 3 )
     ;
 
-    INSERT INTO hive_data.account_operations(account_id, account_op_seq_no, operation_id)
+    INSERT INTO hafd.account_operations(account_id, account_op_seq_no, operation_id)
     VALUES
            ( 1, 1, hive.operation_id(1, 1, 0) )
          , ( 1, 2, hive.operation_id(2, 1, 0) )
@@ -118,7 +118,7 @@ BEGIN
          , ( 4, 1, hive.operation_id(4, 1, 0) )
     ;
 
-    INSERT INTO hive_data.account_operations_reversible
+    INSERT INTO hafd.account_operations_reversible
     VALUES
            ( 4, 1, hive.operation_id(4, 1, 0), 1 )
          , ( 5, 1, hive.operation_id(5, 1, 0), 1 )
@@ -155,7 +155,7 @@ AS
 $BODY$
 BEGIN
     ASSERT NOT EXISTS (
-        SELECT * FROM hive_data.account_operations
+        SELECT * FROM hafd.account_operations
         EXCEPT SELECT * FROM ( VALUES
                    ( 1, 1, hive.operation_id(1, 1, 0) )
                  , ( 1, 2, hive.operation_id(2, 1, 0) )
@@ -170,7 +170,7 @@ BEGIN
                  ) as pattern
     ) , 'Unexpected rows in the account_operations1';
 
-    ASSERT ( SELECT COUNT(*) FROM hive_data.account_operations ) = 10, 'Wrong number of rows';
+    ASSERT ( SELECT COUNT(*) FROM hafd.account_operations ) = 10, 'Wrong number of rows';
 
 END
 $BODY$

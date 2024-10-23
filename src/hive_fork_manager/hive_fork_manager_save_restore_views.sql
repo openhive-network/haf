@@ -66,7 +66,7 @@ for v_curr in
   order by max(depth) desc
 ) loop
 
-  insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+  insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
   select p_view_schema, p_view_name, 'COMMENT ON ' ||
   case
     when c.relkind = 'v' then 'VIEW'
@@ -81,7 +81,7 @@ for v_curr in
   where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name
       and d.description is not null;
 
-  insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+  insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
   select p_view_schema, p_view_name, 'COMMENT ON COLUMN ' || n.nspname || '.'
       || c.relname || '.' || a.attname || ' IS '''
       || replace(d.description, '''', '''''') || ''';'
@@ -92,7 +92,7 @@ for v_curr in
   where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name
       and d.description is not null;
 
-  insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+  insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
   select p_view_schema, p_view_name, 'GRANT ' || privilege_type || ' ON '
       || table_schema || '.' || table_name || ' TO ' || grantee
   from information_schema.role_table_grants
@@ -100,19 +100,19 @@ for v_curr in
 
   if v_curr.obj_type = 'v' then
 
-    insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+    insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
     select p_view_schema, p_view_name, definition
     from pg_catalog.pg_rules
     where schemaname = v_curr.obj_schema and tablename = v_curr.obj_name;
 
-    insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+    insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
     select p_view_schema, p_view_name, 'CREATE VIEW '
         || v_curr.obj_schema || '.' || v_curr.obj_name || ' AS ' || view_definition
     from information_schema.views
     where table_schema = v_curr.obj_schema and table_name = v_curr.obj_name;
 
   elsif v_curr.obj_type = 'm' then
-    insert into hive_data.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+    insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
     select p_view_schema, p_view_name, 'CREATE MATERIALIZED VIEW '
         || v_curr.obj_schema || '.' || v_curr.obj_name || ' AS ' || definition
     from pg_matviews
@@ -153,13 +153,13 @@ begin
 for v_curr in
 (
   select deps_ddl_to_run
-  from hive_data.deps_saved_ddl
+  from hafd.deps_saved_ddl
   where deps_view_schema = p_view_schema and deps_view_name = p_view_name
   order by deps_id desc
 ) loop
   execute v_curr.deps_ddl_to_run;
 end loop;
-delete from hive_data.deps_saved_ddl
+delete from hafd.deps_saved_ddl
 where deps_view_schema = p_view_schema and deps_view_name = p_view_name;
 end;
 $BODY$;

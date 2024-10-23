@@ -78,9 +78,9 @@ FROM
       SELECT
         a.key_kind,
         hive.public_key_to_string(c.key) as key_string
-      FROM hive_data.keyauth_live_keyauth_a a
+      FROM hafd.keyauth_live_keyauth_a a
       JOIN hive.accounts_view b ON a.account_id = b.id
-      JOIN hive_data.keyauth_live_keyauth_k c ON a.key_serial_id = c.key_id
+      JOIN hafd.keyauth_live_keyauth_k c ON a.key_serial_id = c.key_id
       WHERE b.name = _account AND a.key_kind != 'WITNESS_SIGNING'
       ORDER BY key_string)
 	  SELECT key_kind, array_agg(key_string) as key_agg FROM selected GROUP BY key_kind
@@ -96,7 +96,7 @@ FROM
       SELECT
         a.key_kind,
         c.name 
-      FROM hive_data.keyauth_live_accountauth_a a
+      FROM hafd.keyauth_live_accountauth_a a
       JOIN hive.accounts_view b ON a.account_id = b.id
       JOIN hive.accounts_view c ON a.account_auth_id = c.id
       WHERE b.name = _account

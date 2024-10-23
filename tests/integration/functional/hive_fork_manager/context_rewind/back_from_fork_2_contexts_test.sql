@@ -17,12 +17,12 @@ BEGIN
     INSERT INTO a.table2( id, smth ) VALUES( 123, 'blabla' );
     PERFORM hive.context_next_block( 'context2' );
 
-    TRUNCATE hive_data.shadow_a_table1; --to do not revert context inserts
+    TRUNCATE hafd.shadow_a_table1; --to do not revert context inserts
     UPDATE a.table1 SET id=321;
     PERFORM hive.context_next_block( 'context' );
     DELETE FROM  a.table1 WHERE id=321;
 
-    TRUNCATE hive_data.shadow_a_table2; --to do not revert context inserts
+    TRUNCATE hafd.shadow_a_table2; --to do not revert context inserts
     UPDATE a.table2 SET id=321;
     PERFORM hive.context_next_block( 'context2' );
 END;
@@ -45,9 +45,9 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM a.table1 WHERE id=123 ) = 1, 'Updated row was not reverted';
-    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table1 ) = 0, 'Shadow table is not empty';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table1 ) = 0, 'Shadow table is not empty';
 
-    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_a_table2 ) != 0, 'context2 shadow table was empty';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table2 ) != 0, 'context2 shadow table was empty';
     ASSERT ( SELECT COUNT(*) FROM a.table2 WHERE id=321 ) = 1, 'Updated context2 row was reverted';
 END
 $BODY$

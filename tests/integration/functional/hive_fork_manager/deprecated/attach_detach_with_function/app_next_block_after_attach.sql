@@ -4,7 +4,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 DECLARE
-    __account hive_data.accounts%ROWTYPE;
+    __account hafd.accounts%ROWTYPE;
 BEGIN
     CREATE SCHEMA A;
     PERFORM hive.app_create_context( 'context', 'a' );

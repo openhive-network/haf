@@ -4,11 +4,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive_data.blocks
+    INSERT INTO hafd.blocks
     VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive_data.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
     ;
 
@@ -45,7 +45,7 @@ BEGIN
     );
 
     -- simualates hived massive sync
-    INSERT INTO hive_data.blocks
+    INSERT INTO hafd.blocks
     VALUES   ( 3, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
            , ( 4, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
            , ( 5, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -89,13 +89,13 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name='context' ) = 4, 'Wrong current block num';
-    ASSERT ( SELECT events_id FROM hive_data.contexts WHERE name='context' ) = 5, 'Wrong events id';
-    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name='context' ) = 6, 'Wrong irreversible';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context' ) = 4, 'Wrong current block num';
+    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context' ) = 5, 'Wrong events id';
+    ASSERT ( SELECT irreversible_block FROM hafd.contexts WHERE name='context' ) = 6, 'Wrong irreversible';
 
-    ASSERT ( SELECT current_block_num FROM hive_data.contexts WHERE name='context_b' ) = 4, 'Wrong current block num b';
-    ASSERT ( SELECT events_id FROM hive_data.contexts WHERE name='context_b' ) = 5, 'Wrong events id b';
-    ASSERT ( SELECT irreversible_block FROM hive_data.contexts WHERE name='context_b' ) = 6, 'Wrong irreversible b';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context_b' ) = 4, 'Wrong current block num b';
+    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context_b' ) = 5, 'Wrong events id b';
+    ASSERT ( SELECT irreversible_block FROM hafd.contexts WHERE name='context_b' ) = 6, 'Wrong irreversible b';
 
     ASSERT ( SELECT COUNT(*)  FROM A.table1 ) = 3, 'Wrong number of rows in app table';
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 1 ), 'No id 1';
@@ -105,8 +105,8 @@ BEGIN
     ASSERT EXISTS ( SELECT *  FROM B.table1 WHERE id = 1 ), 'No id 1 b';
     ASSERT EXISTS ( SELECT *  FROM B.table1 WHERE id = 2 ), 'No id 2 b';
 
-    ASSERT NOT EXISTS ( SELECT * FROM hive_data.shadow_a_table1 ), 'Shadow table is not empty';
-    ASSERT NOT EXISTS ( SELECT * FROM hive_data.shadow_b_table1 ), 'Shadow table is not empty b';
+    ASSERT NOT EXISTS ( SELECT * FROM hafd.shadow_a_table1 ), 'Shadow table is not empty';
+    ASSERT NOT EXISTS ( SELECT * FROM hafd.shadow_b_table1 ), 'Shadow table is not empty b';
 END
 $BODY$
 ;

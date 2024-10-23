@@ -28,7 +28,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT NOT EXISTS ( SELECT * FROM hive_data.shadow_a_table1 ), 'Trigger iserted something into shadow table';
+    ASSERT NOT EXISTS ( SELECT * FROM hafd.shadow_a_table1 ), 'Trigger iserted something into shadow table';
 END
 $BODY$
 ;

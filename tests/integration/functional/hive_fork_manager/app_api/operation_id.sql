@@ -3,7 +3,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 DECLARE
-    __test_value hive_data.operations.id%TYPE := 0x7EADBEEFB6B6B688;
+    __test_value hafd.operations.id%TYPE := 0x7EADBEEFB6B6B688;
 BEGIN
     ASSERT ( SELECT hive.operation_id_to_block_num( __test_value ) ) = 0x7EADBEEF, 'Wrong block num != 0x7EADBEEF';
     ASSERT ( SELECT hive.operation_id_to_type_id( __test_value ) ) = 0x88, 'Wrong type id != 0x88';

@@ -10,7 +10,7 @@ BEGIN
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO table1( id, smth ) VALUES( 123, 'blabla' );
     PERFORM hive.context_next_block( 'context' );
-    TRUNCATE hive_data.shadow_public_table1; --to do not revert inserts
+    TRUNCATE hafd.shadow_public_table1; --to do not revert inserts
     UPDATE table1 SET id=321;
 END;
 $BODY$
@@ -32,7 +32,7 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM table1 WHERE id=123 ) = 1, 'Updated row was not reverted';
-    ASSERT ( SELECT COUNT(*) FROM hive_data.shadow_public_table1 ) = 0, 'Shadow table is not empty';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_public_table1 ) = 0, 'Shadow table is not empty';
 END
 $BODY$
 ;

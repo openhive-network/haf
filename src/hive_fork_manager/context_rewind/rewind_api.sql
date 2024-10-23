@@ -1,11 +1,11 @@
 CREATE OR REPLACE FUNCTION hive.context_create(
-      _name hive_data.context_name
+      _name hafd.context_name
     , _schema TEXT
     , _fork_id BIGINT = 1
     , _irreversible_block INT = 0
     , _is_forking BOOLEAN = TRUE
     , _is_attached BOOLEAN = TRUE
-    , _stages hive_data.application_stages = NULL
+    , _stages hafd.application_stages = NULL
 )
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -20,7 +20,7 @@ BEGIN
     END IF;
 
     EXECUTE format( 'CREATE TABLE %I.%I( hive_rowid BIGSERIAL )', _schema, _name );
-    INSERT INTO hive_data.contexts(
+    INSERT INTO hafd.contexts(
           name
         , current_block_num
         , irreversible_block
@@ -49,34 +49,34 @@ BEGIN
     RETURNING id INTO __new_context_id
     ;
 
-    INSERT INTO hive_data.contexts_attachment( context_id, is_attached, owner )
+    INSERT INTO hafd.contexts_attachment( context_id, is_attached, owner )
     VALUES( __new_context_id, _is_attached, current_user );
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.context_remove( _name hive_data.context_name )
+CREATE OR REPLACE FUNCTION hive.context_remove( _name hafd.context_name )
     RETURNS void
     LANGUAGE 'plpgsql'
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __context_id hive_data.contexts.id%TYPE := NULL;
+    __context_id hafd.contexts.id%TYPE := NULL;
     __context_schema TEXT;
 BEGIN
-    SELECT hc.id, hc.schema INTO __context_id, __context_schema FROM hive_data.contexts hc WHERE hc.name = _name;
+    SELECT hc.id, hc.schema INTO __context_id, __context_schema FROM hafd.contexts hc WHERE hc.name = _name;
 
     IF __context_id IS NULL THEN
         RAISE EXCEPTION 'Context % does not exist', _name;
     END IF;
 
     PERFORM hive.unregister_table( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hive_data.registered_tables hrt
+    FROM hafd.registered_tables hrt
     WHERE hrt.context_id = __context_id;
 
-    DELETE FROM hive_data.contexts_attachment WHERE context_id = __context_id;
-    DELETE FROM hive_data.contexts WHERE id = __context_id;
+    DELETE FROM hafd.contexts_attachment WHERE context_id = __context_id;
+    DELETE FROM hafd.contexts WHERE id = __context_id;
 
     EXECUTE format( 'DROP TABLE IF EXISTS %I.%I', __context_schema, _name );
 END;
@@ -91,7 +91,7 @@ CREATE OR REPLACE FUNCTION hive.context_exists( _name TEXT )
 AS
 $BODY$
 BEGIN
-    RETURN EXISTS( SELECT 1 FROM hive_data.contexts hc WHERE hc.name = _name );
+    RETURN EXISTS( SELECT 1 FROM hafd.contexts hc WHERE hc.name = _name );
 END;
 $BODY$
 ;
@@ -102,7 +102,7 @@ CREATE OR REPLACE FUNCTION hive.context_next_block( _name TEXT )
     VOLATILE
 AS
 $BODY$
-UPDATE hive_data.contexts
+UPDATE hafd.contexts
 SET current_block_num = current_block_num + 1
 WHERE name = _name
     RETURNING current_block_num
@@ -123,7 +123,7 @@ BEGIN
     -- we need a flag for back_from_fork to returns from triggers immediatly
     -- we cannot use ALTER TABLE DISABLE TRIGGERS because DDL event trigger cause an error:
     -- Cannot ALTER TABLE "table" because it has pending trigger events, but only when origin tables have contstraints
-    UPDATE hive_data.contexts SET back_from_fork = TRUE WHERE name = _context AND current_block_num > _block_num_before_fork;
+    UPDATE hafd.contexts SET back_from_fork = TRUE WHERE name = _context AND current_block_num > _block_num_before_fork;
 
     SET CONSTRAINTS ALL DEFERRED;
 
@@ -134,12 +134,12 @@ BEGIN
                 , hrt.shadow_table_name
                 , _block_num_before_fork
             )
-    FROM hive_data.registered_tables hrt
-    JOIN hive_data.contexts hc ON hrt.context_id = hc.id
+    FROM hafd.registered_tables hrt
+    JOIN hafd.contexts hc ON hrt.context_id = hc.id
     WHERE hc.name = _context AND hc.current_block_num > _block_num_before_fork
     ORDER BY hrt.id;
 
-    UPDATE hive_data.contexts
+    UPDATE hafd.contexts
     SET   current_block_num = _block_num_before_fork
         , back_from_fork = FALSE
     WHERE name = _context AND current_block_num > _block_num_before_fork;
@@ -159,7 +159,7 @@ DECLARE
     __current_irreversible_block INTEGER := NULL;
 BEGIN
     SELECT ct.id, ct.current_block_num, ct.irreversible_block
-    FROM hive_data.contexts ct WHERE ct.name=_context
+    FROM hafd.contexts ct WHERE ct.name=_context
     INTO __context_id, __current_block_num, __current_irreversible_block;
 
     IF __context_id IS NULL THEN
@@ -170,20 +170,20 @@ BEGIN
 
     PERFORM
     hive.remove_obsolete_operations( hrt.shadow_table_name, __current_block_num )
-            FROM hive_data.registered_tables hrt
-            JOIN hive_data.contexts hc ON hc.id = hrt.context_id
+            FROM hafd.registered_tables hrt
+            JOIN hafd.contexts hc ON hc.id = hrt.context_id
             WHERE hc.name = _context
             ORDER BY hrt.id;
 
     PERFORM hive.detach_table( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hive_data.registered_tables hrt
+    FROM hafd.registered_tables hrt
     WHERE hrt.context_id = __context_id;
 
-    UPDATE hive_data.contexts
+    UPDATE hafd.contexts
     SET events_id = hive.unreachable_event_id()
     WHERE id = __context_id;
 
-    UPDATE hive_data.contexts_attachment
+    UPDATE hafd.contexts_attachment
     SET is_attached = FALSE
     WHERE context_id = __context_id;
 END;
@@ -201,8 +201,8 @@ DECLARE
     __current_block_num INTEGER := NULL;
 BEGIN
     SELECT ct.id, ct.current_block_num
-    FROM hive_data.contexts ct
-    JOIN hive_data.contexts_attachment hca ON hca.context_id = ct.id
+    FROM hafd.contexts ct
+    JOIN hafd.contexts_attachment hca ON hca.context_id = ct.id
     WHERE ct.name=_context AND hca.is_attached = FALSE
     INTO __context_id, __current_block_num;
 
@@ -216,16 +216,16 @@ BEGIN
 
 
     PERFORM hive.attach_table( hrt.origin_table_schema, hrt.origin_table_name, __context_id )
-    FROM hive_data.registered_tables hrt
+    FROM hafd.registered_tables hrt
     WHERE hrt.context_id = __context_id;
 
-    UPDATE hive_data.contexts
+    UPDATE hafd.contexts
     SET
         current_block_num = _last_synced_block
       , events_id = 0
     WHERE id = __context_id;
 
-    UPDATE hive_data.contexts_attachment
+    UPDATE hafd.contexts_attachment
     SET is_attached = TRUE
     WHERE context_id = __context_id;
 END;
@@ -242,20 +242,20 @@ DECLARE
     __current_irreversible INTEGER;
 BEGIN
     -- validate new irreversible
-    SELECT irreversible_block FROM hive_data.contexts hc WHERE hc.name = _context INTO __current_irreversible;
+    SELECT irreversible_block FROM hafd.contexts hc WHERE hc.name = _context INTO __current_irreversible;
 
     IF _block_num < __current_irreversible THEN
             RAISE EXCEPTION 'The proposed block number of irreversible block is lower than the current one for context %', _context;
     END IF;
 
-    UPDATE hive_data.contexts  SET irreversible_block = _block_num
+    UPDATE hafd.contexts  SET irreversible_block = _block_num
                             , last_active_at = NOW()
     WHERE name = _context;
 
     PERFORM
     hive.remove_obsolete_operations( hrt.shadow_table_name, _block_num )
-            FROM hive_data.registered_tables hrt
-            JOIN hive_data.contexts hc ON hc.id = hrt.context_id
+            FROM hafd.registered_tables hrt
+            JOIN hafd.contexts hc ON hc.id = hrt.context_id
             WHERE hc.name = _context
             ORDER BY hrt.id;
 END;
