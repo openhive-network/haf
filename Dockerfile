@@ -2,7 +2,7 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=ubuntu22.04-14
+ARG CI_IMAGE_TAG=ubuntu22.04-15
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
@@ -31,7 +31,8 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get update && \
-    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y curl postgresql-16 postgresql-16-cron libpq5 libboost-chrono1.74.0 libboost-context1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 busybox && \
+    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y curl postgresql-16 postgresql-16-cron libpq5 libboost-chrono1.74.0 libboost-context1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 busybox \
+      netcat-openbsd && \
     apt-get remove -y gnupg && \
     apt-get autoremove -y && \
     busybox --install -s
