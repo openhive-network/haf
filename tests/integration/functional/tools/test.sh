@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-extension_path=$1
-test_path=$2;
-setup_scripts_dir_path=$3;
-postgres_port=$4;
+extension_path="$1"
+test_path="$2"
+setup_scripts_dir_path="$3"
+postgres_port="$4"
 
 . ./tools/common.sh
 
@@ -11,7 +11,7 @@ setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
 
 trap on_exit EXIT;
 
-psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
+psql -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
 evaluate_result $?
 
 users="haf_admin test_hived alice alice_impersonal bob"
@@ -33,14 +33,14 @@ BEGIN
 $body
 END
 \$\$;"
-    psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "$query"
+    psql -p "$postgres_port" -d "$DB_NAME" -v ON_ERROR_STOP=on -c "$query"
     evaluate_result $?
   done
 done
 
 # add test functions:
 # load tests function
-psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ${test_path};
+psql -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  "${test_path}"
 evaluate_result $?
 
 # you can use alice_test_given, alice_test_when, alice_test_error, alice_test_then and their bob's and test_hived equivalents
@@ -66,7 +66,7 @@ for testfun in ${tests}; do
 done
 
 on_exit
-psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
+psql -p "$postgres_port" -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
 
 echo "PASSED";
 trap - EXIT;
