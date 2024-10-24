@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import Any, Tuple, Iterable
-from uuid import uuid4
+from random import randbytes
 from functools import partial
 
 import pytest
@@ -74,7 +74,7 @@ def database():
     """
 
     def make_database(url):
-        url = url + '_' + uuid4().hex
+        url = url + '_' + randbytes(8).hex()
         tt.logger.info(f'Preparing database {url}')
         if database_exists(url):
             drop_database(url)
