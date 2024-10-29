@@ -181,7 +181,7 @@ SELECT t.id,
        t.op_pos,
        hive.operation_id_to_type_id( t.id ) as op_type_id,
        t.timestamp,
-       CAST( t.body_binary AS hive.operation ) as body_binary,
+       t.body_binary as body_binary,
        t.body
 FROM
 (
@@ -227,7 +227,7 @@ SELECT t.id,
        t.trx_in_block,
        t.op_pos,
        hive.operation_id_to_type_id( t.id ) as op_type_id,
-       CAST( t.body_binary AS hive.operation ) as body_binary,
+       t.body_binary as body_binary,
        t.body
 FROM
 (
@@ -339,7 +339,7 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
         op.op_pos,
         hive.operation_id_to_type_id( op.id ) as op_type_id,
         b.created_at timestamp,
-        CAST( op.body_binary AS hive.operation ) as body_binary,
+        op.body_binary as body_binary,
         op.body_binary::jsonb AS body
     FROM hafd.operations op
     JOIN hafd.blocks b ON b.num = hive.operation_id_to_block_num(op.id);
@@ -351,7 +351,7 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
         op.trx_in_block,
         op.op_pos,
         hive.operation_id_to_type_id( op.id ) as op_type_id,
-        CAST( op.body_binary AS hive.operation ) as body_binary,
+        op.body_binary as body_binary,
         op.body_binary::jsonb AS body
     FROM hafd.operations op;
 
