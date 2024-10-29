@@ -356,7 +356,7 @@ EXECUTE format(
             t.op_pos,
             hive.operation_id_to_type_id( t.id ) as op_type_id,
             t.timestamp,
-            CAST( t.body_binary AS hive.operation ) as body_binary,
+            t.body_binary as body_binary,
             t.body_binary::jsonb AS body
           FROM %s.context_data_view c,
           LATERAL
@@ -420,7 +420,7 @@ EXECUTE format(
             t.trx_in_block,
             t.op_pos,
             hive.operation_id_to_type_id( t.id ) as op_type_id,
-            CAST( t.body_binary AS hive.operation ) as body_binary,
+            t.body_binary as body_binary,
             t.body_binary::jsonb AS body
           FROM %s.context_data_view c,
           LATERAL
@@ -478,7 +478,7 @@ EXECUTE format(
             ho.op_pos,
             hive.operation_id_to_type_id( ho.id ) as op_type_id,
             b.created_at timestamp,
-            CAST( ho.body_binary AS hive.operation ) as body_binary,
+            ho.body_binary as body_binary,
             ho.body_binary::jsonb AS body
         FROM hafd.operations ho
         JOIN hafd.blocks b ON b.num = hive.operation_id_to_block_num(ho.id)
@@ -510,7 +510,7 @@ EXECUTE format(
             ho.trx_in_block,
             ho.op_pos,
             hive.operation_id_to_type_id( ho.id ) as op_type_id,
-            CAST( ho.body_binary AS hive.operation ) as body_binary,
+            ho.body_binary as body_binary,
             ho.body_binary::jsonb AS body
         FROM hafd.operations ho
         ;', __schema
