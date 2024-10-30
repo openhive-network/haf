@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Iterable
 import pytest
-
+import loguru
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor
 
@@ -66,6 +66,7 @@ def trx_creator(wallet: tt.Wallet, identifier: int, start_memo: int, last_memo: 
 
 #Some information in: https://gitlab.syncad.com/hive/haf/-/issues/118
 def test_many_forks_many_ops_db(prepared_networks_and_database_17_3):
+    loguru.logger.enable("helpy")
     global break_cnt
     global break_limit
 

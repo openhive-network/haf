@@ -1,6 +1,6 @@
 from pathlib import Path
 import pytest
-
+import loguru
 from concurrent.futures import ThreadPoolExecutor
 
 import test_tools as tt
@@ -40,6 +40,7 @@ def trx_creator(wallet: tt.Wallet, identifier: int, start_memo: int, last_memo: 
 
 #Some information in: https://gitlab.syncad.com/hive/haf/-/issues/118
 def test_many_forks_node_with_time_offset_db(prepared_networks_and_database_4_4_4_4_4):
+    loguru.logger.enable("helpy")
     global break_cnt
     global break_limit
 
