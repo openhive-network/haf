@@ -173,16 +173,16 @@ tests-no-zope = ["cloudpickle", "hypothesis", "mypy (>=1.1.1)", "pympler", "pyte
 
 [[package]]
 name = "beekeepy"
-version = "0.0.1.dev272+1a1612f"
+version = "0.0.1.dev271+7270b8f"
 description = "All in one package for beekeeper interaction via Python interface."
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "beekeepy-0.0.1.dev272+1a1612f-py3-none-any.whl", hash = "sha256:2e18c09e254ae2c447f39af328959eb2757f4eb9831c89ea34c9552f21d49c2f"},
+    {file = "beekeepy-0.0.1.dev271+7270b8f-py3-none-any.whl", hash = "sha256:9044c3bbb0bfaf093c403f298e3dba0b5d23a8f432713ec19069ef510f9c8564"},
 ]
 
 [package.dependencies]
-helpy = "0.0.1.dev272+1a1612f"
+helpy = "0.0.1.dev271+7270b8f"
 
 [package.source]
 type = "legacy"
@@ -456,12 +456,12 @@ hyperframe = ">=6.0,<7"
 
 [[package]]
 name = "helpy"
-version = "0.0.1.dev272+1a1612f"
+version = "0.0.1.dev271+7270b8f"
 description = "Easily interact with the Hive blockchain using Python."
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "helpy-0.0.1.dev272+1a1612f-py3-none-any.whl", hash = "sha256:46ef18d20b6d1313d72441e1a1c6faa8d8d2b8face31e4910347830388dc5a1d"},
+    {file = "helpy-0.0.1.dev271+7270b8f-py3-none-any.whl", hash = "sha256:ccc8a735b1f4fcd22a28738ff5be94a36e6d037979447cb1fd27efb10a6b43f9"},
 ]
 
 [package.dependencies]
@@ -471,7 +471,7 @@ loguru = "0.7.2"
 python-dateutil = "2.8.2"
 requests = "2.27.1"
 schemas = "0.0.1.dev320+f4fdcfe"
-wax = "0.3.10.dev200+10087bf"
+wax = "0.3.10.dev227+a000255"
 
 [package.source]
 type = "legacy"
@@ -1707,7 +1707,7 @@ develop = true
 
 [package.dependencies]
 abstractcp = "0.9.9"
-beekeepy = "0.0.1.dev272+1a1612f"
+beekeepy = "0.0.1.dev271+7270b8f"
 loguru = "0.7.2"
 python-dateutil = "2.8.2"
 requests = "2.27.1"
@@ -1811,12 +1811,12 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [[package]]
 name = "wax"
-version = "0.3.10.dev200+10087bf"
+version = "0.3.10.dev227+a000255"
 description = ""
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "wax-0.3.10.dev200+10087bf-cp310-cp310-manylinux_2_35_x86_64.whl", hash = "sha256:eff3c80faf89a688c89999219e8013ad754c274ca41ed5bad53a311a031273a0"},
+    {file = "wax-0.3.10.dev227+a000255-cp310-cp310-manylinux_2_35_x86_64.whl", hash = "sha256:33d35f07c91ae3916cd1ba3dc883c2f58a4eee33f2e5a04fe8139c61d1244b69"},
 ]
 
 [package.dependencies]
