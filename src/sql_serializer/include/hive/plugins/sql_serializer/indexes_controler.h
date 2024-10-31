@@ -23,6 +23,7 @@ namespace hive::plugins::sql_serializer {
     std::unique_ptr<queries_commit_data_processor>
     start_commit_sql( bool mode, const std::string& sql_function_call, std::string objects_name );
 
+    bool are_indexes_dropped() const;
   private:
     const std::string _db_url;
     const uint32_t _psql_index_threshold;
