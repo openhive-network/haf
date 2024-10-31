@@ -17,6 +17,32 @@ indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_th
 
 }
 
+bool
+indexes_controler::are_indexes_dropped() const {
+    bool are_indexes_dropped = false;
+    queries_commit_data_processor dropped_indexes_checker(
+               _db_url
+            , "Check if indexes are dropped"
+            , "consist"
+            , [&are_indexes_dropped](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+
+                pqxx::result data = tx.exec("select hive.are_indexes_dropped() as _result;");
+                FC_ASSERT( !data.empty(), "No response from database" );
+                FC_ASSERT( data.size() == 1, "Wrong data size" );
+                const auto& record = data[0];
+                are_indexes_dropped = record[ "_result" ].as<bool>();
+                return data_processor::data_processing_status();
+            }
+            , nullptr
+            , theApp
+    );
+
+    dropped_indexes_checker.trigger(data_processor::data_chunk_ptr(), 0);
+    dropped_indexes_checker.join();
+
+    return are_indexes_dropped;
+}
+
 void
 indexes_controler::disable_indexes_depends_on_blocks( uint32_t number_of_blocks_to_insert ) {
   if (theApp.is_interrupt_request())
@@ -39,6 +65,12 @@ void
 indexes_controler::enable_indexes() {
   if (theApp.is_interrupt_request())
     return;
+
+  if ( !are_indexes_dropped() ) {
+      ilog( "Indexes already created" );
+      return;
+  }
+
   ilog( "Restoring HAF indexes..." );
   fc::time_point restore_indexes_start_time = fc::time_point::now();
 
