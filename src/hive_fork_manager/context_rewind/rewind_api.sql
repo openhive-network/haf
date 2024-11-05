@@ -71,6 +71,8 @@ BEGIN
         RAISE EXCEPTION 'Context % does not exist', _name;
     END IF;
 
+    PERFORM hive.log_context( _name, 'REMOVED'::hafd.context_event );
+
     PERFORM hive.unregister_table( hrt.origin_table_schema, hrt.origin_table_name )
     FROM hafd.registered_tables hrt
     WHERE hrt.context_id = __context_id;
@@ -166,6 +168,9 @@ BEGIN
         RAISE EXCEPTION 'Unknown context %', _context;
     END IF;
 
+    -- we are interested at which moment detach occur
+    PERFORM hive.log_context( _context, 'DETACHED'::hafd.context_event );
+
     PERFORM hive.context_back_from_fork( _context, __current_irreversible_block );
 
     PERFORM
@@ -228,6 +233,8 @@ BEGIN
     UPDATE hafd.contexts_attachment
     SET is_attached = TRUE
     WHERE context_id = __context_id;
+
+    PERFORM hive.log_context( _context, 'ATTACHED'::hafd.context_event );
 END;
 $BODY$
 ;

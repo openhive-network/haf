@@ -26,7 +26,8 @@ FOR _row in
     '(account_operations_reversible,1e6127e3-0ee0-cfea-fc51-0454061315c3,465f67a5-4c10-f8ed-39be-4365e4553fd7,41c0c887-e689-bae9-c7f9-0b3b445708af,1528735c-e90f-8b11-d30a-86dddedb3676)',
     '(applied_hardforks_reversible,f5129d5e-5b98-7f93-b786-d55899b5b8b5,d6cca068-2076-4e87-5c24-85618ff564ac,fee57151-3162-0c46-424a-da912e742160,3eeef00d-0e16-421e-659e-7ee2b12aa7eb)',
     '(contexts_attachment,c99e00c4-bc99-eb5d-1071-310575d2655a,0007a55e-0b74-b8b1-fb0d-a2e2b82a05bd,3e2b74cd-8a9a-2768-c01b-c8a307e8267d,90df8e77-2984-5c96-2a9f-908b8e7604dc)',
-    '(contexts,a1841d23-3612-d633-60d9-5ab41612d85c,5dc37b1c-1cb2-f279-92d4-cf025c786f4e,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)'
+    '(contexts,a1841d23-3612-d633-60d9-5ab41612d85c,5dc37b1c-1cb2-f279-92d4-cf025c786f4e,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)',
+    '(contexts_log,80122d29-15e5-b9a7-30e2-1cf4987bd9c9,aa673368-dc31-cf26-d7ec-fa46acd87a32,10c38e8d-5c8f-f588-0f62-9dab0e663ba6,e3d046e4-144c-4cda-176c-0f7f1a690d08)'
     ])
 LOOP
     RAISE NOTICE 'new schema hash: %', _row;
