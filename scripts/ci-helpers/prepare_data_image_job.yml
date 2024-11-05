@@ -1,6 +1,6 @@
 include:
   - project: 'hive/hive'
-    ref: 2993bfe76e532153ed1101d24da1c1d87a0af224 #develop
+    ref: 668796c9800201ab2542962864680a6c36072fe9 #develop
     file: '/scripts/ci-helpers/prepare_data_image_job.yml'
 
 .prepare_haf_image:
