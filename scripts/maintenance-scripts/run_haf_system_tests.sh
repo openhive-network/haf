@@ -30,6 +30,6 @@ python3 -m venv --system-site-packages venv/
 echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
 cd "${REPO_DIR}/tests/integration/system/haf"
-pytest --junitxml report.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "not mirrornet" ${ARGS[@]}
+pytest --junitxml report.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "not mirrornet" ${ARGS[@]} -s
 
 test_end
