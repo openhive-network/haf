@@ -44,6 +44,7 @@ BEGIN
     );
 
     PERFORM hive.app_create_views_for_contexts( _name );
+    PERFORM hive.log_context( _name, 'CREATED'::hafd.context_event );
 END;
 $BODY$
 ;
@@ -73,6 +74,7 @@ BEGIN
     );
 
     PERFORM hive.app_create_views_for_contexts( _name );
+    PERFORM hive.log_context( _name, 'CREATED'::hafd.context_event );
 END;
 $BODY$
 ;

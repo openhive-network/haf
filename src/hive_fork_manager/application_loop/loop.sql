@@ -10,11 +10,17 @@ AS
 $body$
 DECLARE
     __number_of_blocks_to_sync INTEGER := (_blocks_range.last_block - _blocks_range.first_block);
+    __placeholder BOOL;
 BEGIN
-    UPDATE hafd.contexts ctx
-    SET  loop.current_stage = stages.stage
-    FROM hive.get_current_stage( _contexts ) as stages
-    WHERE ctx.name = stages.context;
+    WITH updated_fun AS (
+        UPDATE hafd.contexts ctx
+        SET loop.current_stage = stages.stage
+        FROM hive.get_current_stage(_contexts) as stages
+        WHERE ctx.name = stages.context
+        AND ( (ctx.loop).current_stage != stages.stage OR (ctx.loop).current_stage IS NULL)
+        RETURNING hive.log_context( ctx.name, 'STATE_CHANGED'::hafd.context_event )
+    ) SELECT True INTO __placeholder; -- workaround for forbidden PERFORM with CTE UPDATE
+
 
     -- now is time to find number of blocks in one batch to process
     UPDATE hafd.contexts ctx

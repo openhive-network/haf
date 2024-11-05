@@ -22,6 +22,7 @@ ADD_PSQL_EXTENSION(
              hived_api.sql
              state_providers/keyauth_types.sql
              save_restore_view_data.sql
+             application_loop/contexts_log.sql
 
     DEPLOY_SOURCES trigger_switch/trigger_off.sql
             context_rewind/sink_id_functions.sql
@@ -69,6 +70,7 @@ ADD_PSQL_EXTENSION(
 
             application_loop/stages_functions.sql
             application_loop/loop.sql
+            application_loop/contexts_log_api.sql
 )
 
 ADD_SUBDIRECTORY( shared_lib )

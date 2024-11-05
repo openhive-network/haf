@@ -33,7 +33,8 @@ verified_tables_list = ARRAY[
 'account_operations_reversible',
 'applied_hardforks_reversible',
 'contexts_attachment',
-'contexts'
+'contexts',
+'contexts_log'
 ];
 
 FOR _table_name IN SELECT UNNEST( verified_tables_list ) as _table_name
