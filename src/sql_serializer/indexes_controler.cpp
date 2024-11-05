@@ -94,10 +94,6 @@ indexes_controler::enable_indexes() {
     *restore_applied_hardforks_idxs
   );
 
-  auto analyze_expression_idxs = start_commit_sql( true, "hive.reanalyze_indexes_with_expressions()", "enable indexes" );
-  analyze_expression_idxs->join();
-
-
   fc::time_point cluster_start_time = fc::time_point::now();
   fc::microseconds restore_indexes_time = cluster_start_time - restore_indexes_start_time;
   ilog( "PROFILE: Restored HAF table indexes: ${t}s", ("t",restore_indexes_time.to_seconds()) );
