@@ -530,6 +530,8 @@ BEGIN
   END LOOP;
   CLOSE __cursor;
 
+  EXECUTE format( 'ANALYZE %s',  _table_name );
+
   DELETE FROM hive.indexes_constraints
   WHERE table_name = _table_name AND is_foreign_key = FALSE;
   RAISE NOTICE 'Finished restoring any dropped indexes on %', _table_name;
