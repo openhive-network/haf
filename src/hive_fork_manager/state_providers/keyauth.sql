@@ -468,7 +468,7 @@ BEGIN
         ,delete_obsolete_keys_from_dict as
         (
             delete from hive.%1$s_keyauth_k as dict
-            where dict.key_id in (select distinct s.cleaned_key_id from store_key_auth_records s)
+            where dict.key_id in (select /*distinct*/ s.cleaned_key_id from store_key_auth_records s)
         ),
         --- PROCESSING OF ACCOUNT BASED AUTHORITIES ---
             extended_account_auth_records as MATERIALIZED
