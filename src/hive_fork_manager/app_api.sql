@@ -872,3 +872,27 @@ BEGIN
 END;
 $BODY$
 ;
+
+
+CREATE OR REPLACE FUNCTION hive.get_app_current_block_age(_contexts hive.contexts_group)
+    RETURNS interval
+    LANGUAGE 'plpgsql'
+    STABLE
+AS $BODY$
+BEGIN
+    RETURN now() - (select min(coalesce(hafd.blocks.created_at, to_timestamp(0))) from
+                    UNNEST(_contexts) AS context_names(name)
+                    LEFT JOIN hafd.contexts USING(name)
+                    LEFT JOIN hafd.blocks on num = hafd.contexts.current_block_num);
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.get_app_current_block_age(_context hive.context_name)
+    RETURNS interval
+    LANGUAGE 'plpgsql'
+    STABLE
+AS $BODY$
+BEGIN
+    RETURN hive.get_app_current_block_age(ARRAY[_context]);
+END;
+$BODY$;
