@@ -28,10 +28,11 @@ include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
   - project: 'hive/common-ci-configuration'
-    ref: 682ba2e16cfc4ef192478d2d21c4b5a52bbd4678
+    ref: e74d7109838ff05fdc239bced6a726aa7ad46a9b
     file:
     - '/templates/python_projects.gitlab-ci.yml'
     - '/templates/cache_cleanup.gitlab-ci.yml'
+    - '/templates/docker_image_jobs.gitlab-ci.yml'
 
 verify_poetry_lock_sanity:
   extends: .verify_poetry_lock_sanity_template
