@@ -5,7 +5,7 @@ AS
 $BODY$
 DECLARE
     __fork_id INT;
-    __context_stages hafd.application_stages := ARRAY[ ('stage1',1 ,100 )::hafd.application_stage, hafd.live_stage() ];
+    __context_stages hafd.application_stages := ARRAY[ hafd.custom_stage('stage1',1 ,100 ), hafd.live_stage() ];
 BEGIN
     SELECT MAX(hf.id) INTO __fork_id FROM hafd.fork hf;
 

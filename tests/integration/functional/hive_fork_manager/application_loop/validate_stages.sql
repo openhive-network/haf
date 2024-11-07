@@ -3,17 +3,17 @@ CREATE OR REPLACE PROCEDURE alice_test_then()
 AS
 $BODY$
 DECLARE
-    __stages_correct hafd.application_stages := ARRAY[ ('stage2',100 ,100 )::hafd.application_stage, ('stage1',10 ,10 )::hafd.application_stage, hafd.live_stage() ];
-    __stages_repeated_names hafd.application_stages := ARRAY[ ('live',1 ,1 )::hafd.application_stage, hafd.live_stage() ];
+    __stages_correct hafd.application_stages := ARRAY[ hafd.custom_stage('stage2',100 ,100 ), hafd.custom_stage('stage1',10 ,10 ), hafd.live_stage() ];
+    __stages_repeated_names hafd.application_stages := ARRAY[ hafd.custom_stage('live',1 ,1 ), hafd.live_stage() ];
     __stages_repeated_hb_distance hafd.application_stages :=
         ARRAY[
-            ('live1',1 ,1 )::hafd.application_stage,
-            ('live2',1 ,2 )::hafd.application_stage,
+            hafd.custom_stage('live1',1 ,1 ),
+            hafd.custom_stage('live2',1 ,2 ),
             hafd.live_stage()
         ];
     __no_live_stage hafd.application_stages :=
         ARRAY[
-            ('live',1 ,1 )::hafd.application_stage
+            hafd.custom_stage('live',1 ,1 )
             ];
 BEGIN
     PERFORM hive.validate_stages( __stages_correct );

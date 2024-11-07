@@ -87,7 +87,7 @@ DECLARE
     __min_reversible_block INT;
     __context_stages hafd.application_stages :=
         ARRAY[
-            ('massive',30 ,20000 )::hafd.application_stage
+            hafd.custom_stage('massive',30 ,20000 )
             , hafd.live_stage()
             ];
 BEGIN

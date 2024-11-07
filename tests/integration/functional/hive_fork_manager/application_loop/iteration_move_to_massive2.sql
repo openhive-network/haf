@@ -6,7 +6,7 @@ $BODY$
 DECLARE
     __context_stages hafd.application_stages :=
         ARRAY[
-              ('massive',2 ,100 )::hafd.application_stage
+              hafd.custom_stage('massive',2 ,100 )
             , hafd.live_stage()
             ];
 BEGIN
