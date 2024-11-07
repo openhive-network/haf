@@ -10,6 +10,9 @@ import test_tools as tt
 import shared_tools.complex_networks_helper_functions as sh
 from haf_local_tools import haf_app
 
+from schemas.policies.diagnostic_file_path import SetDiagnosticPath
+from schemas.policies.policy import set_policies
+
 START_TEST_BLOCK    = 108
 memo_cnt            = 0
 
@@ -87,6 +90,9 @@ def test_many_forks_many_ops_db(prepared_networks_and_database_17_3):
     minority_wallet = tt.Wallet(attach_to = minority_api_node)
     logs.append(sh.NodeLog("M", majority_wallet))
     logs.append(sh.NodeLog("m", minority_wallet))
+
+    file_path = Path(majority_wallet.directory / "diagnostic_file.txt")
+    set_policies(SetDiagnosticPath(set_diagnostic_path=file_path))
 
     _M = logs[0].collector
     _m = logs[1].collector

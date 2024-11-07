@@ -8,6 +8,9 @@ import test_tools as tt
 import shared_tools.complex_networks_helper_functions as sh
 from haf_local_tools import haf_app
 
+from schemas.policies.diagnostic_file_path import SetDiagnosticPath
+from schemas.policies.policy import set_policies
+
 memo_cnt            = 0
 
 break_cnt           = 0
@@ -52,6 +55,9 @@ def test_many_forks_node_with_time_offset_db(prepared_networks_and_database_4_4_
 
     node_under_test = networks_builder.networks[1].node('ApiNode0')
     beta_wallet = tt.Wallet(attach_to = node_under_test)
+
+    file_path = Path(beta_wallet.directory / "diagnostic_file.txt")
+    set_policies(SetDiagnosticPath(set_diagnostic_path=file_path))
 
     _, break_cnt = sh.info('m4', beta_wallet)
     tt.logger.info(f'initial break_cnt: {break_cnt}')
