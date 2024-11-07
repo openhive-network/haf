@@ -379,4 +379,12 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST(deprecated/attach_detach_with_function/app_next_block_after_attach.sql)
  ADD_SQL_FUNCTIONAL_TEST(deprecated/attach_detach_with_function/api_protection.sql )
 
+ ADD_SQL_FUNCTIONAL_TEST(application_log/attach_context.sql)
+ ADD_SQL_FUNCTIONAL_TEST(application_log/change_stage.sql)
+ ADD_SQL_FUNCTIONAL_TEST(application_log/create_context.sql)
+ ADD_SQL_FUNCTIONAL_TEST(application_log/detach_context.sql)
+ ADD_SQL_FUNCTIONAL_TEST(application_log/hive_log_contexts_on_no_stage_app.sql)
+ ADD_SQL_FUNCTIONAL_TEST(application_log/hive_log_contexts_simple.sql)
+ ADD_SQL_FUNCTIONAL_TEST(application_log/remove_context.sql)
+
 
