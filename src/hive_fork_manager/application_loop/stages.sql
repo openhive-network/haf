@@ -22,7 +22,20 @@ BEGIN
 END;
 $BODY$;
 
-
+CREATE FUNCTION hafd.custom_stage(
+    stage_name hafd.stage_name,
+    min_head_block_distance hafd.blocks_distance,
+    blocks_limit_in_group hafd.blocks_count
+)
+    RETURNS hafd.application_stage
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$BODY$
+BEGIN
+    RETURN ( stage_name, min_head_block_distance, blocks_limit_in_group )::hafd.application_stage;
+END;
+$BODY$;
 
 CREATE DOMAIN hafd.application_stages AS hafd.application_stage[];
 
