@@ -70,7 +70,7 @@ BEGIN
         ORDER BY log.id DESC
         LIMIT 1;
 
-        RAISE INFO 'PROFILE: CONTEXT ''%'' STAGE_CHANGED FROM ''%'' TO ''%'' AFTER % BLOCK: % FORK: % HIVE BLOCK: % HIVE FORK: %'
+        RAISE WARNING 'PROFILE: CONTEXT ''%'' STAGE_CHANGED FROM ''%'' TO ''%'' AFTER % BLOCK: % FORK: % HIVE BLOCK: % HIVE FORK: %'
             , _context_name
             , __previous_stage
             , __ctx_stage
@@ -84,7 +84,7 @@ BEGIN
         RETURN;
     END IF;
 
-    RAISE INFO 'PROFILE: CONTEXT ''%'' % STAGE: ''%'' BLOCK: % FORK: % HIVE BLOCK: % HIVE FORK: %'
+    RAISE WARNING 'PROFILE: CONTEXT ''%'' % STAGE: ''%'' BLOCK: % FORK: % HIVE BLOCK: % HIVE FORK: %'
         , _context_name
         , _reason
         , __ctx_stage
