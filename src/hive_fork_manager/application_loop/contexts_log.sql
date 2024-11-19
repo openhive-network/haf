@@ -10,7 +10,7 @@ CREATE TYPE hafd.context_event AS ENUM(
 
 CREATE TABLE hafd.contexts_log(
       id BIGSERIAL NOT NULL
-    , context_name hafd.context_name NOT NULL
+    , context_name hafd.context_name NOT NULL -- we use name instead of context id to have info about  removed contexts
     , application_stage hafd.stage_name -- NULL allowed to support old fashion apps without stages
     , event_type hafd.context_event NOT NULL
     , date TIMESTAMP WITHOUT TIME ZONE NOT NULL

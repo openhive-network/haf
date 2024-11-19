@@ -72,9 +72,9 @@ BEGIN
 
         RAISE WARNING 'PROFILE: CONTEXT ''%'' STAGE_CHANGED FROM ''%'' TO ''%'' AFTER % BLOCK: % FORK: % HIVE BLOCK: % HIVE FORK: %'
             , _context_name
-            , __previous_stage
-            , __ctx_stage
-            , __stage_latency
+            , COALESCE( __previous_stage::TEXT, 'N/A' )
+            , COALESCE( __ctx_stage::TEXT, 'N/A' )
+            , COALESCE( __stage_latency::TEXT, 'N/A' )
             , __ctx_current_block
             , __ctx_current_fork
             , __head_block
@@ -87,7 +87,7 @@ BEGIN
     RAISE WARNING 'PROFILE: CONTEXT ''%'' % STAGE: ''%'' BLOCK: % FORK: % HIVE BLOCK: % HIVE FORK: %'
         , _context_name
         , _reason
-        , __ctx_stage
+        , COALESCE(__ctx_stage::TEXT, 'N/A')
         , __ctx_current_block
         , __ctx_current_fork
         , __head_block
