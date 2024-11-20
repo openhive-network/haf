@@ -356,6 +356,9 @@ indexation_state::update_state(
       _dumper.reset();
       _indexes_controler.enable_indexes();
       _indexes_controler.enable_constrains();
+      std::thread([this]() {
+        _indexes_controler.poll_and_create_indexes();
+      }).detach();
       _dumper = std::make_unique< livesync_data_dumper >(
         _db_url
         , _main_plugin

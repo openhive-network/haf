@@ -368,16 +368,14 @@ CREATE OR REPLACE FUNCTION hive.are_indexes_dropped()
 AS
 $BODY$
 DECLARE
-    __number_of_dropped_indexes INT;
+    __an_index_exists BOOL;
 BEGIN
-    SELECT COUNT(*) FROM hafd.indexes_constraints
-    WHERE is_index
-    INTO __number_of_dropped_indexes;
-    IF ( __number_of_dropped_indexes = 0 ) THEN
-        RETURN FALSE;
-    ELSE
-        RETURN TRUE;
-    END IF;
+    SELECT COUNT(*)
+    INTO __an_index_exists
+    FROM hafd.indexes_constraints
+    WHERE is_index AND status != 'missing';
+
+    RETURN __an_index_exists = 0;
 END;
 $BODY$
 ;
@@ -389,16 +387,14 @@ CREATE OR REPLACE FUNCTION hive.are_fk_dropped()
 AS
 $BODY$
 DECLARE
-    __number_of_dropped_fk INT;
+    __a_fk_exists BOOL;
 BEGIN
-    SELECT COUNT(*) FROM hafd.indexes_constraints
-    WHERE is_foreign_key
-    INTO __number_of_dropped_fk;
-    IF ( __number_of_dropped_fk = 0 ) THEN
-        RETURN FALSE;
-    ELSE
-        RETURN TRUE;
-    END IF;
+    SELECT COUNT(*)
+    INTO __a_fk_exists
+    FROM hafd.indexes_constraints
+    WHERE is_foreign_key AND status != 'missing';
+
+    RETURN __a_fk_exists = 0;
 END;
 $BODY$
 ;

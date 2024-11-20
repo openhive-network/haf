@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
 AS
@@ -27,7 +26,8 @@ BEGIN
         command text,
         is_constraint boolean,
         is_index boolean,
-        is_foreign_key boolean
+        is_foreign_key boolean,
+        status index_status -- new column added
     );
 END;
 $BODY$
@@ -44,7 +44,8 @@ BEGIN
     PERFORM constraint_index_checker( FALSE );
 
     INSERT INTO indexes_constraints2
-    SELECT * FROM hafd.indexes_constraints io
+    SELECT table_name, index_constraint_name, command, is_constraint, is_index, is_foreign_key, status -- include new column
+    FROM hafd.indexes_constraints io
     ORDER BY io.index_constraint_name;
 
     PERFORM hive.restore_indexes( 'public.table_with_constraints' );

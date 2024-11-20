@@ -167,4 +167,69 @@ indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_
   return processor;
 }
 
+void indexes_controler::poll_and_create_indexes() {
+  std::map<std::string, std::thread> active_threads;
+
+  while (!theApp.is_interrupt_request()) {
+    // Check for tables with missing indexes that are not currently being created
+    queries_commit_data_processor missing_indexes_checker(
+      _db_url,
+      "Check for missing indexes",
+      "index_ctrl",
+      [this, &active_threads](transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+        pqxx::result data = tx.exec(
+          "SELECT DISTINCT table_name "
+          "FROM hafd.indexes_constraints "
+          "WHERE status = 'missing' "
+          "AND table_name NOT IN ("
+          "  SELECT DISTINCT table_name "
+          "  FROM hafd.indexes_constraints "
+          "  WHERE status = 'creating'"
+          ");"
+        );
+
+        for (const auto& record : data) {
+          std::string table_name = record["table_name"].as<std::string>();
+
+          // Check if a thread is already running for this table
+          if (active_threads.find(table_name) != active_threads.end() && active_threads[table_name].joinable()) {
+            continue;
+          }
+
+          // Mark the indexes as being created
+          tx.exec0(
+            "UPDATE hafd.indexes_constraints "
+            "SET status = 'creating' "
+            "WHERE table_name = " + tx.quote(table_name) + " AND status = 'missing';"
+          );
+
+          // Start a new thread to restore indexes for the table
+          active_threads[table_name] = std::thread([this, table_name, &active_threads]() {
+            auto processor = start_commit_sql(true, "hive.restore_indexes( " + table_name + " )", "restore indexes");
+            processor->join();
+            active_threads.erase(table_name); // Remove the thread from the map once done
+          });
+        }
+
+        return data_processor::data_processing_status();
+      },
+      nullptr,
+      theApp
+    );
+
+    missing_indexes_checker.trigger(data_processor::data_chunk_ptr(), 0);
+    missing_indexes_checker.join();
+
+    // Sleep for 10 seconds before polling again
+    fc::usleep(fc::seconds(10));
+  }
+
+  // Join all remaining threads before exiting
+  for (auto& [table_name, thread] : active_threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
+}
+
 }}} // namespace hive{ plugins { sql_serializer
