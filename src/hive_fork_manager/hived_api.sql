@@ -362,13 +362,13 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.are_indexes_dropped()
-    RETURNS BOOL
+    RETURNS BOOLEAN
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __an_index_exists BOOL;
+    __an_index_exists INTEGER;
 BEGIN
     SELECT COUNT(*)
     INTO __an_index_exists
@@ -387,7 +387,7 @@ CREATE OR REPLACE FUNCTION hive.are_fk_dropped()
 AS
 $BODY$
 DECLARE
-    __a_fk_exists BOOL;
+    __a_fk_exists INTEGER;
 BEGIN
     SELECT COUNT(*)
     INTO __a_fk_exists
