@@ -35,7 +35,7 @@ ADD_PSQL_EXTENSION(
             context_rewind/irreversible.sql
             context_rewind/rewind_api.sql
             # This file must be also specified here, as it contains functions which definitions should be always overwritten.
-        types/operation/compatibility_with_old_haf_apps.sql
+            types/operation/compatibility_with_old_haf_apps.sql
             types/operation/operation_flow.sql
             types/operation/operation_id.sql
             tools.sql
