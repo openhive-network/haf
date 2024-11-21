@@ -588,14 +588,14 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
   PG_FUNCTION_INFO_V1(get_keyauths_wrapped);
 
   /**
-   ** CREATE TYPE hive.authority_type AS ENUM( 'OWNER', 'ACTIVE', 'POSTING', 'WITNESS', 'NEW_OWNER_AUTHORITY', 'RECENT_OWNER_AUTHORITY');
-   ** CREATE TYPE hive.key_type_c_int_to_enum AS
+   ** CREATE TYPE hafd.key_type AS ENUM( 'OWNER', 'ACTIVE', 'POSTING', 'MEMO', 'WITNESS_SIGNING');
+   ** CREATE TYPE hafd.key_type_c_int_to_enum AS
    **        (
    **              key_auth TEXT
    **            , key_kind hive.authority_type
    **            , account_name TEXT
    **        );
-   ** FUNCTION get_keyauths_wrapped(_operation_body text) RETURNS SETOF hive.key_type_c_int_to_enum
+   ** FUNCTION get_keyauths_wrapped(_operation_body text) RETURNS SETOF hafd.key_type_c_int_to_enum
    **  It has to be wrapped, because it returns C enum as int. 
    **  Postgres then has to wrap it up to let postgresive enum enter postgress realm
    */
