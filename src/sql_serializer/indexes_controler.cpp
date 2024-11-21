@@ -177,7 +177,7 @@ void indexes_controler::poll_and_create_indexes() {
       _db_url,
       "Check for missing indexes",
       "index_ctrl",
-      [this, &active_threads](transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+      [this, &active_threads](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
         pqxx::result data = tx.exec(
           "SELECT DISTINCT table_name "
           "FROM hafd.indexes_constraints "
