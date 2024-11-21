@@ -6,6 +6,7 @@
 
 #include <fc/io/sstream.hpp>
 #include <fc/log/logger.hpp>
+#include <fc/thread/thread.hpp>
 
 
 namespace hive { namespace plugins { namespace sql_serializer {
@@ -197,15 +198,15 @@ void indexes_controler::poll_and_create_indexes() {
           }
 
           // Mark the indexes as being created
-          tx.exec0(
+          tx.exec(
             "UPDATE hafd.indexes_constraints "
             "SET status = 'creating' "
-            "WHERE table_name = " + tx.quote(table_name) + " AND status = 'missing';"
+            "WHERE table_name = '" + table_name + "' AND status = 'missing';"
           );
 
           // Start a new thread to restore indexes for the table
           active_threads[table_name] = std::thread([this, table_name, &active_threads]() {
-            auto processor = start_commit_sql(true, "hive.restore_indexes( " + table_name + " )", "restore indexes");
+            auto processor = start_commit_sql(true, "hive.restore_indexes( '" + table_name + "' )", "restore indexes");
             processor->join();
             active_threads.erase(table_name); // Remove the thread from the map once done
           });
@@ -221,7 +222,7 @@ void indexes_controler::poll_and_create_indexes() {
     missing_indexes_checker.join();
 
     // Sleep for 10 seconds before polling again
-    fc::usleep(fc::seconds(10));
+    fc::usleep(fc::seconds(1));
   }
 
   // Join all remaining threads before exiting
