@@ -144,6 +144,10 @@ BEGIN
 
     PERFORM hive.wait_for_ready_instance(_contexts, '178000000 years'::interval);
 
+    UPDATE hafd.contexts ctx
+    SET last_active_at = NOW()
+    WHERE ctx.name = ANY(_contexts);
+
     IF _limit IS NOT NULL
     THEN
         IF hive.app_get_current_block_num( __lead_context_name ) >= _limit THEN
