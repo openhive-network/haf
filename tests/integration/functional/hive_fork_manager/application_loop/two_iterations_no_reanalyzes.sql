@@ -69,8 +69,15 @@ $BODY$
 DECLARE
     __range_placeholder hive.blocks_range;
 BEGIN
+    UPDATE hafd.contexts
+    SET last_active_at = '0001-01-01 00:00:00'::TIMESTAMP;
+
     -- Alice start new iteration <102-202>
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
+
+    ASSERT ( SELECT last_active_at FROM hafd.contexts WHERE name = 'alice' ) != '0001-01-01 00:00:00'::TIMESTAMP, 'alice time not updated';
+    ASSERT ( SELECT last_active_at FROM hafd.contexts WHERE name = 'alice1' ) != '0001-01-01 00:00:00'::TIMESTAMP, 'alice1 time not updated';
+    ASSERT ( SELECT last_active_at FROM hafd.contexts WHERE name = 'alice2' ) != '0001-01-01 00:00:00'::TIMESTAMP, 'alice2 time not updated';
 END;
 $BODY$;
 
