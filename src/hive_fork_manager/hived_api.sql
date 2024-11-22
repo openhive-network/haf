@@ -369,6 +369,7 @@ AS
 $BODY$
 DECLARE
     __an_index_exists INTEGER;
+    record hafd.indexes_constraints%ROWTYPE;
 BEGIN
     -- Debugging: Log the current state of the indexes_constraints table
     RAISE NOTICE 'Current state of hafd.indexes_constraints:';
