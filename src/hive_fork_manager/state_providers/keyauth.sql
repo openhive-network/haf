@@ -12,6 +12,109 @@ CREATE TYPE hive.keyauth_c_record_type AS
     , w INTEGER
 );
 
+CREATE OR REPLACE FUNCTION hive.convert_key_type_c_int_to_enum(IN _pos integer)
+    RETURNS hafd.key_type
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$$
+DECLARE
+    __arr hafd.key_type []:= enum_range(null::hafd.key_type);
+BEGIN
+    return __arr[_pos + 1];
+END
+$$;
+
+
+CREATE OR REPLACE FUNCTION hive.get_keyauths(IN _operation_body hafd.operation)
+    RETURNS SETOF hafd.key_type_c_int_to_enum
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$$
+BEGIN
+    RETURN QUERY SELECT
+                     account_name,
+                     hive.convert_key_type_c_int_to_enum(authority_c_kind),
+                     key_auth,
+                     account_auth,
+                     weight_threshold,
+                     w
+                 FROM hive.get_keyauths_wrapper(_operation_body);
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hive.get_genesis_keyauths()
+    RETURNS SETOF hafd.key_type_c_int_to_enum
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$$
+BEGIN
+    RETURN QUERY SELECT
+                     account_name,
+                     hive.convert_key_type_c_int_to_enum(authority_c_kind),
+                     key_auth,
+                     account_auth,
+                     weight_threshold,
+                     w
+                 FROM hive.get_genesis_keyauths_wrapper();
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hive.get_hf09_keyauths()
+    RETURNS SETOF hafd.key_type_c_int_to_enum
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$$
+BEGIN
+    RETURN QUERY SELECT
+                     account_name,
+                     hive.convert_key_type_c_int_to_enum(authority_c_kind),
+                     key_auth,
+                     account_auth,
+                     weight_threshold,
+                     w
+                 FROM hive.get_hf09_keyauths_wrapper();
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hive.get_hf21_keyauths()
+    RETURNS SETOF hafd.key_type_c_int_to_enum
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$$
+BEGIN
+    RETURN QUERY SELECT
+                     account_name,
+                     hive.convert_key_type_c_int_to_enum(authority_c_kind),
+                     key_auth,
+                     account_auth,
+                     weight_threshold,
+                     w
+                 FROM hive.get_hf21_keyauths_wrapper();
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hive.get_hf24_keyauths()
+    RETURNS SETOF hafd.key_type_c_int_to_enum
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$$
+BEGIN
+    RETURN QUERY SELECT
+                     account_name,
+                     hive.convert_key_type_c_int_to_enum(authority_c_kind),
+                     key_auth,
+                     account_auth,
+                     weight_threshold,
+                     w
+                 FROM hive.get_hf24_keyauths_wrapper();
+END
+$$;
 
 CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
     RETURNS TEXT[]
@@ -155,7 +258,7 @@ BEGIN
                 1 as block_num,
                 (SELECT b.created_at FROM hafd.blocks b WHERE b.num = 1) as timestamp,
                 1
-                FROM hafd.get_genesis_keyauths() as g
+                FROM hive.get_genesis_keyauths() as g
             WHERE  _first_block <= 1 AND 1 <= _last_block 
         ),
 
@@ -169,7 +272,7 @@ BEGIN
             __HARDFORK_9_block_num as block_num,
             (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_9_block_num) as timestamp,
             hive.operation_id( __HARDFORK_9_block_num, 60, 0xFFFFFF ) as op_stable_id
-            FROM hafd.get_hf09_keyauths() h
+            FROM hive.get_hf09_keyauths() h
             WHERE  _first_block <= __HARDFORK_9_block_num AND __HARDFORK_9_block_num <= _last_block
         ),
 
@@ -182,7 +285,7 @@ BEGIN
             __HARDFORK_21_block_num as block_num,
             (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_21_block_num) as timestamp,
             hive.operation_id( __HARDFORK_21_block_num, 60, 0xFFFFFF ) as op_stable_id
-            FROM hafd.get_hf21_keyauths() h
+            FROM hive.get_hf21_keyauths() h
             WHERE  _first_block <= __HARDFORK_21_block_num AND __HARDFORK_21_block_num <= _last_block
         ),
 
@@ -195,7 +298,7 @@ BEGIN
             __HARDFORK_24_block_num as block_num,
             (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_24_block_num) as timestamp,
             hive.operation_id( __HARDFORK_24_block_num, 60, 0xFFFFFF ) as op_stable_id
-            FROM hafd.get_hf24_keyauths() h
+            FROM hive.get_hf24_keyauths() h
             WHERE  _first_block <= __HARDFORK_24_block_num AND __HARDFORK_24_block_num <= _last_block
         ),
 
@@ -223,7 +326,7 @@ BEGIN
         ),
         pow_raw_auth_records AS MATERIALIZED
         (
-            SELECT  (hafd.get_keyauths(ov.body_binary)).*,
+            SELECT  (hive.get_keyauths(ov.body_binary)).*,
                     ov.id as op_serial_id,
                     ov.block_num,
                     ov.timestamp,
@@ -283,7 +386,7 @@ BEGIN
             raw_auth_records AS MATERIALIZED
             (
                 SELECT
-                        (hafd.get_keyauths(ov.body_binary)).*,
+                        (hive.get_keyauths(ov.body_binary)).*,
                         ov.id as op_serial_id,
                         ov.block_num,
                         ov.timestamp,
