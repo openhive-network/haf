@@ -86,19 +86,6 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 );
 
--- TODO(mickiewicz): remove this overriden declaration
-CREATE OR REPLACE FUNCTION hive.operation_id_to_pos( _id BIGINT )
-    RETURNS INTEGER
-    IMMUTABLE PARALLEL SAFE LEAKPROOF
-    COST 1
-    LANGUAGE plpgsql
-AS
-$BODY$
-BEGIN
-    RETURN hive.operation_id_to_pos(_id);
-END;
-$BODY$;
-
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
 
 CREATE TABLE IF NOT EXISTS hafd.applied_hardforks (
