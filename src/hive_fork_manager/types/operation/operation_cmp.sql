@@ -62,7 +62,7 @@ CREATE OPERATOR >= (
 );
 
 
-CREATE OPERATOR CLASS hive.operation_ops
+CREATE OPERATOR CLASS hafd.operation_ops
 DEFAULT FOR TYPE hafd.operation USING btree AS
     OPERATOR    1   <  (hafd.operation, hafd.operation),
     OPERATOR    2   <= (hafd.operation, hafd.operation),
