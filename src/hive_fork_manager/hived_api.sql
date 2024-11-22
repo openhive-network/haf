@@ -370,6 +370,14 @@ $BODY$
 DECLARE
     __an_index_exists INTEGER;
 BEGIN
+    -- Debugging: Log the current state of the indexes_constraints table
+    RAISE NOTICE 'Current state of hafd.indexes_constraints:';
+    FOR record IN
+        SELECT * FROM hafd.indexes_constraints
+    LOOP
+        RAISE NOTICE 'index_constraint_name: %, table_name: %, status: %', record.index_constraint_name, record.table_name, record.status;
+    END LOOP;
+
     SELECT COUNT(*)
     INTO __an_index_exists
     FROM hafd.indexes_constraints
