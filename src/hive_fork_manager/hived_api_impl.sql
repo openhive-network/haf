@@ -369,7 +369,6 @@ BEGIN
       FROM pg_indexes
       WHERE schemaname = _schema AND tablename = _table
     ) T LEFT JOIN hafd.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
-    WHERE ic.table_name is NULL
     ON CONFLICT (index_constraint_name, table_name) DO UPDATE
     SET status = 'missing';
 
