@@ -137,7 +137,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.disable_indexes_of_irreversible()
     , hive.enable_indexes_of_irreversible()
     , hive.save_and_drop_indexes_constraints( in _schema TEXT, in _table TEXT )
-    , hive.save_and_drop_indexes_foreign_keys( in _table_schema TEXT, in _table_name TEXT )
+    , hive.save_and_drop_foreign_keys( in _table_schema TEXT, in _table_name TEXT )
     , hive.recluster_account_operations_if_index_dropped()
     , hive.restore_indexes( in _table_name TEXT )
     , hive.restore_foreign_keys( in _table_name TEXT )

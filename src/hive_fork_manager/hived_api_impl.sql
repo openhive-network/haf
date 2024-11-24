@@ -370,7 +370,9 @@ BEGIN
       WHERE schemaname = _schema AND tablename = _table
     ) T LEFT JOIN hafd.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
     WHERE ic.table_name is NULL
-    ON CONFLICT DO NOTHING;
+    ON CONFLICT (index_constraint_name, table_name) DO UPDATE
+    SET status = 'missing';
+
 
     --dropping indexes
     OPEN __cursor FOR (
@@ -402,7 +404,7 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.save_and_drop_indexes_foreign_keys( in _table_schema TEXT, in _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.save_and_drop_foreign_keys( in _table_schema TEXT, in _table_name TEXT )
 RETURNS VOID
 AS
 $function$
@@ -423,7 +425,8 @@ BEGIN
     JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
     JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
     WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
-    ON CONFLICT DO NOTHING;
+    ON CONFLICT (index_constraint_name, table_name) DO UPDATE
+    SET status = 'missing';
 
     OPEN __cursor FOR (
         SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
@@ -463,7 +466,8 @@ BEGIN
         JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
         JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
     WHERE tc.constraint_type != 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
-    ON CONFLICT DO NOTHING;
+    ON CONFLICT (index_constraint_name, table_name) DO UPDATE
+    SET status = 'missing';
 
     OPEN __cursor FOR (
             SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')

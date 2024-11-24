@@ -212,14 +212,14 @@ CREATE OR REPLACE FUNCTION hive.disable_fk_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'irreversible_data' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'blocks' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'transactions' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'transactions_multisig' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'operations' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'applied_hardforks' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'accounts' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'account_operations' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'irreversible_data' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'blocks' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_multisig' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'operations' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'applied_hardforks' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'accounts' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'account_operations' );
 
 END;
 $BODY$
@@ -274,13 +274,13 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'blocks_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'transactions_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'transactions_multisig_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'operations_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'applied_hardforks_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'accounts_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'account_operations_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'blocks_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_multisig_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'operations_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'applied_hardforks_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'accounts_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'account_operations_reversible' );
 
 
 
