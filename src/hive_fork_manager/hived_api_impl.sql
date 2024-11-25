@@ -354,7 +354,7 @@ BEGIN
     --LEFT JOIN is needed in situation when PRIMARY KEY exists in a `_table`.
     --A method `hive.save_and_drop_constraints` finds it, but following code finds an index related to given PK as well.
     --Since dropping/restoring PK automatically drops/restores an index, then it's better to avoid storing a record with index related to PK.
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, status )
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
     SELECT
         T.indexname
       , _schema || '.' || _table
@@ -362,6 +362,7 @@ BEGIN
       , FALSE as is_constraint
       , TRUE as is_index
       , FALSE as is_foreign_key
+      , ARRAY[0]
       , 'missing' as status
     FROM
     (
@@ -411,7 +412,7 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, status )
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
     SELECT
           DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
@@ -419,6 +420,7 @@ BEGIN
         , FALSE as is_constraint
         , FALSE AS is_index
         , TRUE as is_foreign_key
+        , ARRAY[0]
         , 'missing' as status
     FROM pg_constraint pgc
     JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
@@ -452,7 +454,7 @@ DECLARE
 __command TEXT;
 __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, status )
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
     SELECT
         DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
@@ -460,6 +462,7 @@ BEGIN
         , tc.constraint_type = 'PRIMARY KEY' OR tc.constraint_type = 'UNIQUE' as is_constraint
         , FALSE AS is_index
         , FALSE as is_foreign_key
+        , ARRAY[0]
         , 'missing' as status
     FROM pg_constraint pgc
         JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
@@ -609,7 +612,7 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.register_index_dependency(
-    app_context TEXT,
+    context_name TEXT,
     create_index_command TEXT
 )
 RETURNS void
@@ -620,7 +623,18 @@ DECLARE
     table_name TEXT;
     index_name TEXT;
     canonicalized_command TEXT;
+    context_id INT;
 BEGIN
+    -- Lookup the context_id using context_name
+    SELECT id INTO context_id
+    FROM hafd.contexts
+    WHERE name = context_name;
+
+        -- Abort with an error message if no context_id is found
+    IF context_id IS NULL THEN
+        RAISE EXCEPTION 'Context % not found in hafd.contexts', context_name;
+    END IF;
+
     -- Parse the index description
     SELECT table_name, index_name, canonicalized_command
     INTO table_name, index_name, canonicalized_command
@@ -635,7 +649,7 @@ BEGIN
         is_index, 
         is_foreign_key, 
         status, 
-        app_context
+        contexts
     )
     VALUES (
         table_name, 
@@ -645,10 +659,10 @@ BEGIN
         TRUE, 
         FALSE, 
         'missing', 
-        app_context
+        ARRAY[context_id]
     )
     ON CONFLICT (table_name, index_constraint_name) DO UPDATE
-    SET app_context = array_append(hafd.indexes_constraints.app_context, app_context);
+    SET contexts = array_append(hafd.indexes_constraints.contexts, context_id);
 END;
 $BODY$
 ;
