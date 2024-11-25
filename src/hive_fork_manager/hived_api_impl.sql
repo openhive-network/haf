@@ -612,33 +612,33 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.register_index_dependency(
-    context_name TEXT,
-    create_index_command TEXT
+    _context_name TEXT,
+    _create_index_command TEXT
 )
 RETURNS void
 LANGUAGE plpgsql
 AS
 $BODY$
 DECLARE
-    table_name TEXT;
-    index_name TEXT;
-    canonicalized_command TEXT;
-    context_id INT;
+    __table_name TEXT;
+    __index_name TEXT;
+    __canonicalized_command TEXT;
+    __context_id INT;
 BEGIN
     -- Lookup the context_id using context_name
-    SELECT id INTO context_id
+    SELECT id INTO __context_id
     FROM hafd.contexts
-    WHERE name = context_name;
+    WHERE name = _context_name;
 
         -- Abort with an error message if no context_id is found
-    IF context_id IS NULL THEN
+    IF __context_id IS NULL THEN
         RAISE EXCEPTION 'Context % not found in hafd.contexts', context_name;
     END IF;
 
     -- Parse the index description
     SELECT table_name, index_name, canonicalized_command
-    INTO table_name, index_name, canonicalized_command
-    FROM hive.parse_create_index_command(create_index_command);
+    INTO __table_name, __index_name, __canonicalized_command
+    FROM hive.parse_create_index_command(_create_index_command);
 
     -- Upsert the index dependency
     INSERT INTO hafd.indexes_constraints (
@@ -652,41 +652,41 @@ BEGIN
         contexts
     )
     VALUES (
-        table_name, 
-        index_name, 
-        canonicalized_command, 
+        __table_name, 
+        __index_name, 
+        __canonicalized_command, 
         FALSE, 
         TRUE, 
         FALSE, 
         'missing', 
-        ARRAY[context_id]
+        ARRAY[__context_id]
     )
     ON CONFLICT (table_name, index_constraint_name) DO UPDATE
-    SET contexts = array_append(hafd.indexes_constraints.contexts, context_id);
+    SET contexts = array_append(hafd.indexes_constraints.contexts, __context_id);
 END;
 $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.wait_till_registered_indexes_created(
-    app_context TEXT
+    _app_context TEXT
 )
 RETURNS void
 LANGUAGE plpgsql
 AS
 $BODY$
 DECLARE
-    _index RECORD;
+    index_record RECORD;
 BEGIN
-    FOR _index IN
-        SELECT create_index_command
+    FOR index_record IN
+        SELECT index_constraint_name
         FROM hafd.indexes_constraints
-        WHERE app_context = app_context AND status != 'created'
+        WHERE contexts @> ARRAY[(SELECT id FROM hafd.contexts WHERE name = _app_context)] AND status != 'created'
     LOOP
         PERFORM pg_sleep(1);
         EXIT WHEN NOT EXISTS (
             SELECT 1
             FROM hafd.indexes_constraints
-            WHERE create_index_command = _index.create_index_command AND status != 'created'
+            WHERE index_constraint_name = index_record.index_constraint_name AND status != 'created'
         );
     END LOOP;
 END;
