@@ -4,6 +4,7 @@ extension_path="$1"
 test_path="$2"
 setup_scripts_dir_path="$3"
 postgres_port="$4"
+script_to_execute_after_testfun="$5"
 
 . ./tools/common.sh
 
@@ -63,6 +64,12 @@ for testfun in ${tests}; do
       evaluate_result $?
     fi
   done
+
+  if [ -n "${script_to_execute_after_testfun}" ]; then
+    pg_call="-p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c"
+    psql ${pg_call} "UPDATE pg_extension SET extversion = '1.0' WHERE extname = 'hive_fork_manager';"
+    sudo "${script_to_execute_after_testfun}" --haf-db-name="$DB_NAME";
+  fi
 done
 
 on_exit
