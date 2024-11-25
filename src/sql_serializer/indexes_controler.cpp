@@ -172,12 +172,14 @@ void indexes_controler::poll_and_create_indexes() {
   std::map<std::string, std::thread> active_threads;
 
   while (!theApp.is_interrupt_request()) {
+    ilog("Polling for tables with missing indexes...");
     // Check for tables with missing indexes that are not currently being created
     queries_commit_data_processor missing_indexes_checker(
       _db_url,
       "Check for missing indexes",
       "index_ctrl",
       [this, &active_threads](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+        ilog("Executing query to find tables with missing indexes...");
         pqxx::result data = tx.exec(
           "SELECT DISTINCT table_name "
           "FROM hafd.indexes_constraints "
@@ -188,12 +190,14 @@ void indexes_controler::poll_and_create_indexes() {
           "  WHERE status = 'creating'"
           ");"
         );
+        ilog("Query executed. Found ${count} tables with missing indexes.", ("count", data.size()));
 
         for (const auto& record : data) {
           std::string table_name = record["table_name"].as<std::string>();
-
+          ilog("Processing table: ${table_name}", ("table_name", table_name));
           // Check if a thread is already running for this table
           if (active_threads.find(table_name) != active_threads.end() && active_threads[table_name].joinable()) {
+            ilog("A thread is already running for table: ${table_name}", ("table_name", table_name));
             continue;
           }
 
@@ -204,7 +208,7 @@ void indexes_controler::poll_and_create_indexes() {
             "WHERE table_name = '" + table_name + "' AND status = 'missing';"
           );
 
-          // Start a new thread to restore indexes for the table
+          ilog("Starting a new thread to create indexes for table: ${table_name}", ("table_name", table_name));
           active_threads[table_name] = std::thread([this, table_name, &active_threads]() {
             auto processor = start_commit_sql(true, "hive.restore_indexes( '" + table_name + "' )", "restore indexes");
             processor->join();
@@ -228,6 +232,7 @@ void indexes_controler::poll_and_create_indexes() {
   // Join all remaining threads before exiting
   for (auto& [table_name, thread] : active_threads) {
     if (thread.joinable()) {
+      ilog("Joining thread for table: ${table_name}", ("table_name", table_name));
       thread.join();
     }
   }
