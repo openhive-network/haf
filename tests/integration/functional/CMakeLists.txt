@@ -6,12 +6,18 @@ MACRO(  ADD_SQL_FUNCTIONAL_TEST sql_test_path )
 
     CMAKE_PATH( GET CMAKE_CURRENT_SOURCE_DIR FILENAME tests_folder  )
     SET( test_target test.functional.${tests_folder}.${test_name} )
+    SET( update_test_target test.functional.update.${tests_folder}.${test_name} )
     SET( sources_under_tests_path ${CMAKE_SOURCE_DIR}/src/${tests_folder} )
     SET( setup_scripts_dir_path ${PROJECT_SOURCE_DIR}/scripts/ )
+    SET( update_script_file_path ${CMAKE_BINARY_DIR}/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh )
     ADD_TEST( NAME ${test_target}
             COMMAND tools/test.sh ${sources_under_tests_path} ${tests_folder}/${sql_test_path} ${setup_scripts_dir_path} ${POSTGRES_PORT}
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/integration/functional
             )
+    ADD_TEST( NAME ${update_test_target}
+            COMMAND tools/test.sh ${sources_under_tests_path} ${tests_folder}/${sql_test_path} ${setup_scripts_dir_path} ${POSTGRES_PORT} ${update_script_file_path}
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/integration/functional
+    )
     MESSAGE( STATUS "Added a functional test '${test_target}'" )
 ENDMACRO()
 
