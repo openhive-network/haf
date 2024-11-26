@@ -36,6 +36,7 @@ prepare_database() {
 }
 
 update_database() {
+    exec_sql "UPDATE pg_extension SET extversion = '1.0' WHERE extname = 'hive_fork_manager';"
     sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
 }
 
