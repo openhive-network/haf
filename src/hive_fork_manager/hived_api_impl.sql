@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE FUNCTION hive.copy_blocks_to_irreversible(
       _head_block_of_irreversible_blocks INT
     , _new_irreversible_block INT )
@@ -355,11 +354,12 @@ BEGIN
     --LEFT JOIN is needed in situation when PRIMARY KEY exists in a `_table`.
     --A method `hive.save_and_drop_constraints` finds it, but following code finds an index related to given PK as well.
     --Since dropping/restoring PK automatically drops/restores an index, then it's better to avoid storing a record with index related to PK.
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_app_defined, is_constraint, is_index, is_foreign_key )
     SELECT
         T.indexname
       , _schema || '.' || _table
       , T.indexdef
+      , FALSE AS is_app_defined
       , FALSE as is_constraint
       , TRUE as is_index
       , FALSE as is_foreign_key
@@ -410,11 +410,12 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_app_defined, is_constraint, is_index, is_foreign_key )
     SELECT
           DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
         , 'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name || ' ADD CONSTRAINT ' || pgc.conname || ' ' || pg_get_constraintdef(pgc.oid) as command
+        , FALSE AS is_app_defined
         , FALSE as is_constraint
         , FALSE AS is_index
         , TRUE as is_foreign_key
@@ -448,11 +449,12 @@ DECLARE
 __command TEXT;
 __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_app_defined, is_constraint, is_index, is_foreign_key )
     SELECT
         DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
         , 'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name || ' ADD CONSTRAINT ' || pgc.conname || ' ' || pg_get_constraintdef(pgc.oid) as command
+        , FALSE AS is_app_defined
         , tc.constraint_type = 'PRIMARY KEY' OR tc.constraint_type = 'UNIQUE' as is_constraint
         , FALSE AS is_index
         , FALSE as is_foreign_key
@@ -533,7 +535,7 @@ BEGIN
   EXECUTE format( 'ANALYZE %s',  _table_name );
 
   DELETE FROM hafd.indexes_constraints
-  WHERE table_name = _table_name AND is_foreign_key = FALSE;
+  WHERE table_name = _table_name AND is_foreign_key = FALSE AND is_app_defined=FALSE;
   RAISE NOTICE 'Finished restoring any dropped indexes on %', _table_name;
 END;
 $function$
@@ -559,7 +561,7 @@ BEGIN
     CLOSE __cursor;
 
     DELETE FROM hafd.indexes_constraints
-    WHERE table_name = _table_name AND is_foreign_key = TRUE;
+    WHERE table_name = _table_name AND is_foreign_key = TRUE AND is_app_defined=FALSE;
 
 END;
 $function$
