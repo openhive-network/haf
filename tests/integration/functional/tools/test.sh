@@ -4,7 +4,7 @@ extension_path="$1"
 test_path="$2"
 setup_scripts_dir_path="$3"
 postgres_port="$4"
-script_to_execute_after_when="$5"
+script_to_execute_after_testfun="$5"
 
 . ./tools/common.sh
 
@@ -65,8 +65,8 @@ for testfun in ${tests}; do
     fi
   done
 
-  if [ "${testfun}" = "when" ] && [ -n "${script_to_execute_after_when}" ]; then
-    sudo "${script_to_execute_after_when}" --haf-db-name="$DB_NAME";
+  if [ -n "${script_to_execute_after_testfun}" ]; then
+    sudo "${script_to_execute_after_testfun}" --haf-db-name="$DB_NAME";
   fi
 done
 
