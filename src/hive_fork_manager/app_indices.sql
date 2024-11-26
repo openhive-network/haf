@@ -32,3 +32,32 @@ BEGIN
   END IF;
 END;
 $BODY$;
+
+CREATE OR REPLACE PROCEDURE hive.wait_till_registered_indexes_created(
+    app_context_name TEXT
+)
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    _missing_indices integer;
+BEGIN
+    LOOP
+      SELECT COUNT(*)
+        INTO _missing_indices
+        FROM hafd.indexes_constraints AS i
+        JOIN hafd.app_indices_contexts_map AS map ON i.id = map.app_index_id
+        JOIN hafd.contexts AS c ON c.id = map.context_id
+        WHERE c.name = app_context_name
+          AND status <> 'created'
+          AND is_app_defined = true;
+
+          IF _missing_indices = 0 THEN
+            RETURN;
+          END IF;
+
+        PERFORM pg_sleep(1);
+    END LOOP;
+END;
+$BODY$;
+
