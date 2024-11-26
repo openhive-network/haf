@@ -66,6 +66,8 @@ for testfun in ${tests}; do
   done
 
   if [ -n "${script_to_execute_after_testfun}" ]; then
+    pg_call="-p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c"
+    psql ${pg_call} "UPDATE pg_extension SET extversion = '1.0' WHERE extname = 'hive_fork_manager';"
     sudo "${script_to_execute_after_testfun}" --haf-db-name="$DB_NAME";
   fi
 done

@@ -43,6 +43,7 @@ ENDFUNCTION()
 # all objects in schema hafd cannot be updated and full resync of HAF is required in case of changes there
 # first we need to drop schema hive, thus to avoid annoying problem with ambiguity when a function
 # change list of their parameters and its old version was not removed
+FILE(WRITE ${extension_path}/${temp_deploy_sources} "RAISE WARNING 'Extension is being updated';\n")
 FILE(WRITE ${extension_path}/${temp_deploy_sources} "DROP SCHEMA IF EXISTS hive CASCADE;\nCREATE SCHEMA hive;\n")
 FOREACH(EXTENSION_DEPLOY_SOURCES ${EXTENSION_DEPLOY_SOURCES})
 cat(${EXTENSION_DEPLOY_SOURCES} ${extension_path}/${temp_deploy_sources})
