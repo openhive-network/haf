@@ -4,8 +4,8 @@ RETURNS BOOLEAN
 AS
 $BODY$
 BEGIN
-  --- Instance is ready when has built all indexes/constraints. We can consider adding here another features if needed
-  RETURN NOT EXISTS(SELECT NULL FROM hafd.indexes_constraints);
+  --- Instance is ready when has built all HAF indexes/constraints. We can consider adding here another features if needed
+  RETURN NOT EXISTS(SELECT NULL FROM hafd.indexes_constraints WHERE is_app_defined=FALSE LIMIT 1);
 END
 $BODY$
 LANGUAGE plpgsql STABLE;
