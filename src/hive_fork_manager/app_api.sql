@@ -97,7 +97,7 @@ BEGIN
     PERFORM hive.drop_accounts_view( _name );
     PERFORM hive.drop_account_operations_view( _name );
     PERFORM hive.drop_context_data_view( _name );
-
+    PERFORM hive.remove_index_dependencies( _name );
     PERFORM hive.context_remove( _name );
 END;
 $BODY$
