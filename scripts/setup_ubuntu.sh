@@ -48,6 +48,7 @@ install_all_dev_packages() {
 
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
   DEBIAN_FRONTEND=noniteractive apt-get install -y postgresql-17 postgresql-server-dev-17 postgresql-17-cron \
+    libkrb5-dev \
     netcat-openbsd # needed to correctly handle --skip-hived option
 
   apt-get clean
@@ -65,6 +66,10 @@ install_all_dev_packages() {
   popd
   popd
   rm -r libpqxx
+
+  git clone --depth 1 https://github.com/vibhorkum/pg_background.git
+  (cd pg_background && make && make install)
+  rm -rf pg_background
   popd
 }
 
