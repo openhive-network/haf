@@ -12,3 +12,4 @@ CREATE TABLE IF NOT EXISTS hafd.indexes_constraints (
     CONSTRAINT pk_hive_indexes_constraints UNIQUE( table_name, index_constraint_name )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.indexes_constraints', '');
+SELECT pg_catalog.pg_extension_config_dump('hafd.indexes_constraints_id_seq', '');

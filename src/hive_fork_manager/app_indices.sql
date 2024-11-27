@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS hafd.app_indices_contexts_map (
     CONSTRAINT fk_app_indices_contexts_map_app_index_id FOREIGN KEY (app_index_id) REFERENCES hafd.indexes_constraints (id),
     CONSTRAINT fk_app_indices_contexts_map_context_id FOREIGN KEY (context_id) REFERENCES hafd.contexts (id)
 );
+SELECT pg_catalog.pg_extension_config_dump('hafd.app_indices_contexts_map', '');
 
 -- Declares that given app needs given index
 CREATE OR REPLACE PROCEDURE hive.register_app_index(_context_name hafd.context_name, _table_name TEXT, _index_name TEXT, _index_content TEXT)
