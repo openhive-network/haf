@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
 AS
@@ -21,14 +20,7 @@ BEGIN
     ALTER TABLE table_with_constraints ADD CONSTRAINT table_with_constraints_6 UNIQUE USING INDEX table_with_constraints_5;
     ALTER TABLE table_with_constraints ADD CONSTRAINT table_with_constraints_7 UNIQUE (e);
 
-    CREATE TABLE IF NOT EXISTS indexes_constraints2 (
-        table_name text,
-        index_constraint_name text,
-        command text,
-        is_constraint boolean,
-        is_index boolean,
-        is_foreign_key boolean
-    );
+    CREATE TABLE indexes_constraints2 (LIKE hafd.indexes_constraints INCLUDING ALL);
 END;
 $BODY$
 ;
@@ -118,10 +110,13 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
+    -- compare all columns except for id
     ASSERT NOT EXISTS (
-        (SELECT * FROM indexes_constraints2 ORDER BY index_constraint_name)
+        (SELECT table_name, index_constraint_name, command, status, is_app_defined, is_constraint, is_index, is_foreign_key
+          FROM indexes_constraints2 ORDER BY index_constraint_name)
         EXCEPT
-        SELECT * FROM hafd.indexes_constraints ORDER BY index_constraint_name
+        SELECT table_name, index_constraint_name, command, status, is_app_defined, is_constraint, is_index, is_foreign_key
+          FROM hafd.indexes_constraints ORDER BY index_constraint_name
     ) , 'Saving indexes and constraints failed';
 END;
 $BODY$
