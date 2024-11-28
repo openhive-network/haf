@@ -55,12 +55,12 @@ BEGIN
     INSERT INTO hafd.operations
     VALUES
         -- id, trx_in_block, op_pos, body
-          ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK ONE OP"}}' :: jsonb :: hafd.operation )
-        , ( hive.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK TWO OP"}}' :: jsonb :: hafd.operation )
-        , ( hive.operation_id(3, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hafd.operation )
-        , ( hive.operation_id(3, 2, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hafd.operation )
-        , ( hive.operation_id(4, 1, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"BLOCK FOUR OP"}}' :: jsonb :: hafd.operation )
-        , ( hive.operation_id(5, 1, 2), 0, 2, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE OP"}}' :: jsonb :: hafd.operation )
+          ( hafd.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK ONE OP"}}' :: jsonb :: hafd.operation )
+        , ( hafd.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK TWO OP"}}' :: jsonb :: hafd.operation )
+        , ( hafd.operation_id(3, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hafd.operation )
+        , ( hafd.operation_id(3, 2, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hafd.operation )
+        , ( hafd.operation_id(4, 1, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"BLOCK FOUR OP"}}' :: jsonb :: hafd.operation )
+        , ( hafd.operation_id(5, 1, 2), 0, 2, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE OP"}}' :: jsonb :: hafd.operation )
     ;
 
     UPDATE hafd.irreversible_data SET consistent_block = 5;

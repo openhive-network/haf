@@ -44,11 +44,11 @@ BEGIN
 
     INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
     VALUES
-    ( hive.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+    ( hafd.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
     ;
 
     INSERT INTO hafd.account_operations_reversible
-    VALUES ( 1, 1, hive.operation_id(2,1,0), 1 )
+    VALUES ( 1, 1, hafd.operation_id(2,1,0), 1 )
     ;
 
     INSERT INTO hafd.transactions_multisig_reversible
@@ -56,7 +56,7 @@ BEGIN
     ( '\xDEED20', '\xBEEF20',  1 );
 
       INSERT INTO hafd.applied_hardforks_reversible
-    VALUES ( 1, 2, hive.operation_id(2,1,0), 1 )
+    VALUES ( 1, 2, hafd.operation_id(2,1,0), 1 )
     ;
 
 

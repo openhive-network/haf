@@ -35,7 +35,7 @@ BEGIN
 
     INSERT INTO hafd.operations
     VALUES
-    ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
+    ( hafd.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
     ;
 
     INSERT INTO hafd.transactions_multisig
@@ -64,7 +64,7 @@ BEGIN
     -- block 2 on fork 3 has no operations
     INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
     VALUES
-        ( hive.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+        ( hafd.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, 2 )
     ;
 
     UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 1, current_block_num = 2;
@@ -82,14 +82,14 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT o.id, o.trx_in_block, o.op_pos, o.body_binary, o.body FROM a.operations_view o
         EXCEPT SELECT * FROM ( VALUES
-              ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
+              ( hafd.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
         ) as pattern
     ) , 'Unexpected rows in the operations view';
 
 
     ASSERT NOT EXISTS (
         SELECT * FROM ( VALUES
-              ( hive.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
+              ( hafd.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
         ) as pattern
         EXCEPT SELECT o.id, o.trx_in_block, o.op_pos, o.body_binary, o.body FROM a.operations_view o
     ) , 'Unexpected rows in the operations view2';

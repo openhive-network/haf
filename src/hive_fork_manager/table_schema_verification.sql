@@ -56,6 +56,10 @@ LOOP
         _columns = 'EMPTY';
     END IF;
 
+    IF _table_name = 'operations' THEN
+        RAISE WARNING 'MIC columns=%',_columns;
+    END IF;
+
 -- concatenation of constraints
 
     SELECT string_agg(cc.agg_constraints, ' | ') AS columns INTO _constraints
@@ -73,6 +77,10 @@ LOOP
     constraint_name ASC) cc;
     IF _constraints IS NULL THEN
         _constraints = 'EMPTY';
+    END IF;
+
+    IF _table_name = 'operations' THEN
+        RAISE WARNING 'MIC constraints=%',_constraints;
     END IF;
 
 -- concatenation of indexes
@@ -104,6 +112,9 @@ LOOP
     a.attname ASC) idx;
     IF _indexes IS NULL THEN
         _indexes = 'EMPTY';
+    END IF;
+    IF _table_name = 'operations' THEN
+        RAISE WARNING 'MIC indexes=%',_indexes;
     END IF;
 
 -- concatenation of access rights

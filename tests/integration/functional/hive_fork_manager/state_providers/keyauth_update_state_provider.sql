@@ -69,7 +69,7 @@ BEGIN
    INSERT INTO hafd.operations
     VALUES
         -- one key from owner, one from active, one from posting
-          ( hive.operation_id(1, 1, 0), 0, 0, '
+          ( hafd.operation_id(1, 1, 0), 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -117,7 +117,7 @@ BEGIN
             '::jsonb::hafd.operation )
 
         -- three keys from one owner
-            , ( hive.operation_id(2, 2, 0), 0, 0, '
+            , ( hafd.operation_id(2, 2, 0), 0, 0, '
                 {
                     "type": "account_update_operation",
                     "value": {
@@ -165,7 +165,7 @@ BEGIN
             '::jsonb::hafd.operation)
 
         -- recover_account_operation
-            , ( hive.operation_id(3, 1, 0), 0, 0, '
+            , ( hafd.operation_id(3, 1, 0), 0, 0, '
                 {
                     "type": "recover_account_operation",
                     "value": {
@@ -196,7 +196,7 @@ BEGIN
             '::jsonb::hafd.operation )
 
             -- request_account_recovery_operation
-            , ( hive.operation_id(4, 1, 0), 0, 0, '
+            , ( hafd.operation_id(4, 1, 0), 0, 0, '
                 {
                     "type": "request_account_recovery_operation",
                     "value": {
@@ -216,7 +216,7 @@ BEGIN
                     }
                 }
             '::jsonb::hafd.operation )
-            , ( hive.operation_id(5, 1, 0), 0, 0,
+            , ( hafd.operation_id(5, 1, 0), 0, 0,
             '
                 {
                     "type": "account_update_operation",
@@ -246,7 +246,7 @@ BEGIN
                 }            ' :: jsonb :: hafd.operation )
 
             -- witness_set_properties_operation
-            , ( hive.operation_id(5, 7, 0), 0, 1,
+            , ( hafd.operation_id(5, 7, 0), 0, 1,
             '
             {
                 "type": "witness_set_properties_operation",
@@ -265,8 +265,8 @@ BEGIN
                     "extensions": []
                 }
             }'::jsonb::hafd.operation)
-            , ( hive.operation_id(5, 6, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hafd.operation )
-            , ( hive.operation_id(5, 1, 2), 0, 2,
+            , ( hafd.operation_id(5, 6, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hafd.operation )
+            , ( hafd.operation_id(5, 1, 2), 0, 2,
             '
             {
                 "type": "account_create_operation",
@@ -316,7 +316,7 @@ BEGIN
 
 
                         
-            , ( hive.operation_id(6, 1, 0), 0, 0,
+            , ( hafd.operation_id(6, 1, 0), 0, 0,
             '
                 {
                     "type": "account_update_operation",
@@ -352,7 +352,7 @@ BEGIN
                 
                 -- for snail-157 account: create_account operation(above) establishes 4 keys
                 -- the pow operation(below) changes only ACTIVE key
-                , ( hive.operation_id(6, 8, 1), 0, 1,
+                , ( hafd.operation_id(6, 8, 1), 0, 1,
                 '
                 {
                     "type": "pow_operation",
