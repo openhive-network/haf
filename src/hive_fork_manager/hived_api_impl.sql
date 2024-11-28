@@ -518,7 +518,7 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT, in concurrent BOOLEAN DEFAULT FALSE )
 RETURNS VOID
 AS
 $function$
@@ -536,6 +536,10 @@ BEGIN
   LOOP
     FETCH __cursor INTO __command;
     EXIT WHEN NOT FOUND;
+    IF concurrent THEN
+      -- Modify the command to include CONCURRENTLY
+      __command := regexp_replace(__command, 'CREATE INDEX', 'CREATE INDEX CONCURRENTLY', 'i');
+    END IF;
     EXECUTE __command;
     UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
   END LOOP;
