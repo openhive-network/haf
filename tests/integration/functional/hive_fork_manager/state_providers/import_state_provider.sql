@@ -1,30 +1,3 @@
----------------------------- TEST PROVIDER ----------------------------------------------
-CREATE OR REPLACE FUNCTION hive.start_provider_tests( _context hafd.context_name )
-    RETURNS TEXT[]
-    LANGUAGE plpgsql
-    AS
-$BODY$
-DECLARE
-    __table_1_name TEXT := _context || '_tests1';
-    __table_2_name TEXT := _context || '_tests2';
-BEGIN
-    EXECUTE format( 'CREATE TABLE hafd.%I(
-                      id SERIAL
-                    )', __table_1_name
-    );
-
-    EXECUTE format( 'CREATE TABLE hafd.%I(
-                      id SERIAL
-                    )', __table_2_name
-    );
-
-    RETURN ARRAY[ __table_1_name, __table_2_name ];
-END;
-$BODY$
-;
-
----------------------------END OF TEST PROVIDER -------------------------------------------------------------------
-
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
     AS
@@ -53,6 +26,34 @@ CREATE OR REPLACE PROCEDURE alice_test_when()
     AS
 $BODY$
 BEGIN
+    ---------------------------- TEST PROVIDER ----------------------------------------------
+    EXECUTE 'CREATE OR REPLACE FUNCTION hive.start_provider_tests( _context hafd.context_name )
+        RETURNS TEXT[]
+        LANGUAGE plpgsql
+    AS
+    $$
+    DECLARE
+        __table_1_name TEXT := _context || ''_tests1'';
+        __table_2_name TEXT := _context || ''_tests2'';
+    BEGIN
+        EXECUTE format( ''CREATE TABLE hafd.%I(
+                      id SERIAL
+                    )'', __table_1_name
+                );
+
+        EXECUTE format( ''CREATE TABLE hafd.%I(
+                      id SERIAL
+                    )'', __table_2_name
+                );
+
+        RETURN ARRAY[ __table_1_name, __table_2_name ];
+    END;
+    $$
+    ;';
+
+---------------------------END OF TEST PROVIDER -------------------------------------------------------------------
+
+
     PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'context' );
     PERFORM hive.app_state_provider_import( 'TESTS', 'context' );
 END;

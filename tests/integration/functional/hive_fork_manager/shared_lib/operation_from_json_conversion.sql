@@ -6,8 +6,8 @@ AS
 $BODY$
 BEGIN
   -- Make sure that both conversions produce the same value
-  CALL hive.check_eq(hafd.operation_from_jsontext(op)::TEXT, bytes);
-  CALL hive.check_eq(op::JSONB::hafd.operation::TEXT, bytes);
+  CALL test.check_eq(hafd.operation_from_jsontext(op)::TEXT, bytes);
+  CALL test.check_eq(op::JSONB::hafd.operation::TEXT, bytes);
 END;
 $BODY$
 ;

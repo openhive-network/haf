@@ -42,8 +42,8 @@ BEGIN
             ) as t JOIN pg_class ON oid = extconfig WHERE relkind = 'S'
         ) t;
 
-    assert hive.unordered_arrays_equal(all_tables, flagged_tables), format_assert_message('tables', all_tables, flagged_tables);
-    assert hive.unordered_arrays_equal(all_sequences, flagged_sequences), format_assert_message('sequences', all_sequences, flagged_sequences);
+    assert test.unordered_arrays_equal(all_tables, flagged_tables), format_assert_message('tables', all_tables, flagged_tables);
+    assert test.unordered_arrays_equal(all_sequences, flagged_sequences), format_assert_message('sequences', all_sequences, flagged_sequences);
 
 END
 $BODY$

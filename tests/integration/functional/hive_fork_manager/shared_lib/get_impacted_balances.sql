@@ -54,16 +54,16 @@ ASSERT _pattern2 = _test2,  'Broken impacted balances result';
 ASSERT _pattern2 = _test2a, 'Broken impacted balances result';
 ASSERT _pattern3 = _test3,  'Broken impacted balances result';
 
-ASSERT hive.unordered_arrays_equal(
+ASSERT test.unordered_arrays_equal(
     (SELECT array_agg(t.get_balance_impacting_operations) FROM hive.get_balance_impacting_operations()t),
-    (SELECT array_agg(t) FROM hive.get_balance_impacting_operations_pattern()t)
+    (SELECT array_agg(t) FROM test.get_balance_impacting_operations_pattern()t)
 ),'Broken hive.get_balance_impacting_operations';
 
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_balance_impacting_operations_pattern()
+CREATE OR REPLACE FUNCTION test.get_balance_impacting_operations_pattern()
 RETURNS SETOF TEXT
 LANGUAGE plpgsql
 IMMUTABLE

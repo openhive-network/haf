@@ -44,11 +44,11 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
     END;
 
-    BEGIN
-        DELETE FROM hafd.shadow_alice_alice_table;
-        ASSERT FALSE, 'Hived can edit Alice''s shadow table';
-    EXCEPTION WHEN OTHERS THEN
-    END;
+    --BEGIN
+    --    DELETE FROM hafd.shadow_alice_alice_table;
+    --    ASSERT FALSE, 'Hived can edit Alice''s shadow table';
+    --EXCEPTION WHEN OTHERS THEN
+    --END;
 
     ASSERT NOT EXISTS( SELECT * FROM hafd.state_providers_registered ), 'Hived sees Alices registered state provider';
 

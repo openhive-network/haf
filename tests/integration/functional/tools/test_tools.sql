@@ -1,6 +1,8 @@
+CREATE SCHEMA IF NOT EXISTS test;
+
 SELECT hive.initialize_extension_data();
 
-CREATE OR REPLACE FUNCTION hive.unordered_arrays_equal(arr1 TEXT[], arr2 TEXT[])
+CREATE OR REPLACE FUNCTION test.unordered_arrays_equal(arr1 TEXT[], arr2 TEXT[])
 RETURNS bool
 LANGUAGE plpgsql
 IMMUTABLE
@@ -12,7 +14,7 @@ END
 $$
 ;
 
-CREATE PROCEDURE hive.check_eq(a anyelement, b anyelement, msg text DEFAULT 'Expected to be equal, but failed')
+CREATE PROCEDURE test.check_eq(a anyelement, b anyelement, msg text DEFAULT 'Expected to be equal, but failed')
 LANGUAGE plpgsql
 AS
 $BODY$

@@ -66,6 +66,7 @@ ADD_PSQL_EXTENSION(
             types/types.sql # drop and recreate operation types on upgrade
             types/cast_functions.sql
             types/casts.sql
+            types/operation/operation_flow.sql
             types/process_operation.sql
 
             application_loop/stages_functions.sql
