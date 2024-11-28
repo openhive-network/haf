@@ -46,10 +46,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_when()
     LANGUAGE 'plpgsql'
 AS
 $BODY$
-DECLARE
-    index_id INTEGER;
 BEGIN
-  BEGIN
   ASSERT hive.is_instance_ready(), 'Instance not ready';
   CALL hive.register_app_index('alice', 'hafd.operations', 'hive_operations_vote_author_permlink', '
 CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hafd.operations USING gin
@@ -57,9 +54,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hafd.operatio
     jsonb_extract_path_text(body_binary::jsonb, ''value'', ''author''),
     jsonb_extract_path_text(body_binary::jsonb, ''value'', ''permlink'')
 )
-WHERE hive.operation_id_to_type_id(id) = 0')
-;
-  END;
+WHERE hive.operation_id_to_type_id(id) = 0');
 END
 $BODY$;
 

@@ -278,6 +278,8 @@ ADD_TEST( NAME test_update_script
 
  ADD_SQL_FUNCTIONAL_TEST( app_api/operation_id.sql )
 
+ ADD_SQL_FUNCTIONAL_TEST( app_api/app_index.sql )
+
  ADD_SQL_FUNCTIONAL_TEST( application_loop/validate_stages.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/current_stage.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/current_live_stage.sql )
