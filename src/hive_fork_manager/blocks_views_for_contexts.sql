@@ -351,10 +351,10 @@ EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view_extended
          AS
          SELECT t.id,
-            hive.operation_id_to_block_num( t.id ) as block_num,
+            hafd.operation_id_to_block_num( t.id ) as block_num,
             t.trx_in_block,
             t.op_pos,
-            hive.operation_id_to_type_id( t.id ) as op_type_id,
+            hafd.operation_id_to_type_id( t.id ) as op_type_id,
             t.timestamp,
             t.body_binary as body_binary,
             t.body_binary::jsonb AS body
@@ -368,8 +368,8 @@ EXECUTE format(
               b.created_at timestamp,
               ho.body_binary
               FROM hafd.operations ho
-              JOIN hafd.blocks b ON b.num = hive.operation_id_to_block_num(ho.id)
-              WHERE hive.operation_id_to_block_num(ho.id) <= c.min_block
+              JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
+              WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
             UNION ALL
               SELECT
                 o.id,
@@ -386,7 +386,7 @@ EXECUTE format(
                 FROM hafd.blocks_reversible hbr
                 WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
                 GROUP by hbr.num
-              ) visible_ops on visible_ops.num = hive.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
+              ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
               JOIN
               (
                 SELECT hbr.num, created_at
@@ -416,10 +416,10 @@ EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view
          AS
          SELECT t.id,
-            hive.operation_id_to_block_num( t.id ) as block_num,
+            hafd.operation_id_to_block_num( t.id ) as block_num,
             t.trx_in_block,
             t.op_pos,
-            hive.operation_id_to_type_id( t.id ) as op_type_id,
+            hafd.operation_id_to_type_id( t.id ) as op_type_id,
             t.body_binary as body_binary,
             t.body_binary::jsonb AS body
           FROM %s.context_data_view c,
@@ -431,7 +431,7 @@ EXECUTE format(
               ho.op_pos,
               ho.body_binary
               FROM hafd.operations ho
-              WHERE hive.operation_id_to_block_num(ho.id) <= c.min_block
+              WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
             UNION ALL
               SELECT
                 o.id,
@@ -447,7 +447,7 @@ EXECUTE format(
                 FROM hafd.blocks_reversible hbr
                 WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
                 GROUP by hbr.num
-              ) visible_ops on visible_ops.num = hive.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
+              ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
         ) t
         ;', __schema, __schema
     );
@@ -473,15 +473,15 @@ EXECUTE format(
          AS
          SELECT
             ho.id,
-            hive.operation_id_to_block_num( ho.id ) as block_num,
+            hafd.operation_id_to_block_num( ho.id ) as block_num,
             ho.trx_in_block,
             ho.op_pos,
-            hive.operation_id_to_type_id( ho.id ) as op_type_id,
+            hafd.operation_id_to_type_id( ho.id ) as op_type_id,
             b.created_at timestamp,
             ho.body_binary as body_binary,
             ho.body_binary::jsonb AS body
         FROM hafd.operations ho
-        JOIN hafd.blocks b ON b.num = hive.operation_id_to_block_num(ho.id)
+        JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
         ;', __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
@@ -506,10 +506,10 @@ EXECUTE format(
          AS
          SELECT
             ho.id,
-            hive.operation_id_to_block_num( ho.id ) as block_num,
+            hafd.operation_id_to_block_num( ho.id ) as block_num,
             ho.trx_in_block,
             ho.op_pos,
-            hive.operation_id_to_type_id( ho.id ) as op_type_id,
+            hafd.operation_id_to_type_id( ho.id ) as op_type_id,
             ho.body_binary as body_binary,
             ho.body_binary::jsonb AS body
         FROM hafd.operations ho
@@ -760,11 +760,11 @@ BEGIN
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.account_operations_view AS
         SELECT
-           hive.operation_id_to_block_num( t.operation_id ) as block_num,
+           hafd.operation_id_to_block_num( t.operation_id ) as block_num,
            t.account_id,
            t.account_op_seq_no,
            t.operation_id,
-           hive.operation_id_to_type_id( t.operation_id ) as op_type_id
+           hafd.operation_id_to_type_id( t.operation_id ) as op_type_id
         FROM %s.context_data_view c,
         LATERAL
         (
@@ -773,7 +773,7 @@ EXECUTE format(
                  ha.account_op_seq_no,
                  ha.operation_id
                 FROM hafd.account_operations ha
-                WHERE hive.operation_id_to_block_num(ha.operation_id) <= c.min_block
+                WHERE hafd.operation_id_to_block_num(ha.operation_id) <= c.min_block
                 UNION ALL
                 SELECT
                     reversible.account_id,
@@ -790,7 +790,7 @@ EXECUTE format(
                         FROM hafd.blocks_reversible hbr
                         WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
                         GROUP by hbr.num
-                ) as arr ON arr.max_fork_id = har.fork_id AND arr.num = hive.operation_id_to_block_num( har.operation_id )
+                ) as arr ON arr.max_fork_id = har.fork_id AND arr.num = hafd.operation_id_to_block_num( har.operation_id )
              ) reversible
         ) t
         ;'
@@ -816,11 +816,11 @@ BEGIN
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.account_operations_view AS
         SELECT
-           hive.operation_id_to_block_num( ha.operation_id ) as block_num,
+           hafd.operation_id_to_block_num( ha.operation_id ) as block_num,
            ha.account_id,
            ha.account_op_seq_no,
            ha.operation_id,
-           hive.operation_id_to_type_id( ha.operation_id ) as op_type_id
+           hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id
         FROM hafd.account_operations ha
         ;'
     , __schema

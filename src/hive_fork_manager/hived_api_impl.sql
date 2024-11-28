@@ -100,7 +100,7 @@ BEGIN
                   hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
             ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON hive.operation_id_to_block_num(hor.id) = num_and_forks.num AND hor.fork_id = num_and_forks.fork_id
+        ) as num_and_forks ON hafd.operation_id_to_block_num(hor.id) = num_and_forks.num AND hor.fork_id = num_and_forks.fork_id
     ;
 END;
 $BODY$
@@ -225,7 +225,7 @@ BEGIN
                 hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
             ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON haor.fork_id = num_and_forks.fork_id AND hive.operation_id_to_block_num( haor.operation_id ) = num_and_forks.num
+        ) as num_and_forks ON haor.fork_id = num_and_forks.fork_id AND hafd.operation_id_to_block_num( haor.operation_id ) = num_and_forks.num
     ;
 END;
 $BODY$
@@ -267,7 +267,7 @@ BEGIN
     WHERE
             har.operation_id = hor.id
         AND har.fork_id = hor.fork_id
-        AND ( hive.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
+        AND ( hafd.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
     ;
 
     DELETE FROM hafd.applied_hardforks_reversible hjr
@@ -275,7 +275,7 @@ BEGIN
     ;
 
     DELETE FROM hafd.operations_reversible hor
-    WHERE hive.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    WHERE hafd.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
 
@@ -600,11 +600,11 @@ BEGIN
     END IF;
 
     DELETE FROM hafd.account_operations hao
-    WHERE hive.operation_id_to_block_num(hao.operation_id) > __consistent_block;
+    WHERE hafd.operation_id_to_block_num(hao.operation_id) > __consistent_block;
 
     DELETE FROM hafd.applied_hardforks WHERE block_num > __consistent_block;
 
-    DELETE FROM hafd.operations WHERE hive.operation_id_to_block_num(id) > __consistent_block;
+    DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > __consistent_block;
 
     DELETE FROM hafd.transactions_multisig htm
     USING hafd.transactions ht

@@ -127,9 +127,9 @@ CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hafd.applied_
 
 CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hafd.transactions ( block_num, trx_in_block );
 
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations USING btree( hive.operation_id_to_block_num(id), id);
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hive.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hive.operation_id_to_type_id(id));
-CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (hive.operation_id_to_type_id(id), hive.operation_id_to_block_num(id));
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations USING btree( hafd.operation_id_to_block_num(id), id);
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
+CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (hafd.operation_id_to_type_id(id), hafd.operation_id_to_block_num(id));
 
 --Clustering to speedup get_account_history queries (returns ordered set of operations for a specific account)
 --Clustering takes 2 hours on a fast system with 4 maintenance works
@@ -140,7 +140,7 @@ CLUSTER hafd.account_operations using hive_account_operations_uq1;
 
 --This index is probably only needed for block_explorer queries right now, but maybe useful for other apps,
 --so decided to add here rather than as part of hafbe as it isn't huge.
-CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations( account_id, hive.operation_id_to_type_id(operation_id ) );
+CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations( account_id, hafd.operation_id_to_type_id(operation_id ) );
 
 CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hafd.accounts USING btree (block_num);
 

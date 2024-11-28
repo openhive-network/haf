@@ -35,8 +35,8 @@ BEGIN
 
     INSERT INTO hafd.operations
     VALUES
-           ( hive.operation_id(1,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hive.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
+           ( hafd.operation_id(1,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
     ;
 
     INSERT INTO hafd.accounts
@@ -47,14 +47,14 @@ BEGIN
 
     INSERT INTO hafd.account_operations
     VALUES
-        ( 1, 1, hive.operation_id(1,1,0) )
-      , ( 2, 1, hive.operation_id(2,1,0) )
+        ( 1, 1, hafd.operation_id(1,1,0) )
+      , ( 2, 1, hafd.operation_id(2,1,0) )
     ;
 
     INSERT INTO hafd.applied_hardforks
     VALUES
-        ( 1, 1, hive.operation_id(1,1,0) )
-       ,( 2, 2, hive.operation_id(2,1,0) )
+        ( 1, 1, hafd.operation_id(1,1,0) )
+       ,( 2, 2, hafd.operation_id(2,1,0) )
     ;
 
     -- here we simulate situation when hived claims recently only block 1
