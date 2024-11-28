@@ -15,7 +15,6 @@ BEGIN
 
     PERFORM hive.app_create_context( _name => 'context2', _schema => 'b' );
 
-    CREATE SCHEMA test;
     PERFORM hive.app_create_context( _name=>'context_test', _schema=>'test');
 END
 $BODY$
