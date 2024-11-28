@@ -271,7 +271,7 @@ BEGIN
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_9_block_num as block_num,
             (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_9_block_num) as timestamp,
-            hive.operation_id( __HARDFORK_9_block_num, 60, 0xFFFFFF ) as op_stable_id
+            hafd.operation_id( __HARDFORK_9_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf09_keyauths() h
             WHERE  _first_block <= __HARDFORK_9_block_num AND __HARDFORK_9_block_num <= _last_block
         ),
@@ -284,7 +284,7 @@ BEGIN
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_21_block_num as block_num,
             (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_21_block_num) as timestamp,
-            hive.operation_id( __HARDFORK_21_block_num, 60, 0xFFFFFF ) as op_stable_id
+            hafd.operation_id( __HARDFORK_21_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf21_keyauths() h
             WHERE  _first_block <= __HARDFORK_21_block_num AND __HARDFORK_21_block_num <= _last_block
         ),
@@ -297,7 +297,7 @@ BEGIN
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_24_block_num as block_num,
             (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_24_block_num) as timestamp,
-            hive.operation_id( __HARDFORK_24_block_num, 60, 0xFFFFFF ) as op_stable_id
+            hafd.operation_id( __HARDFORK_24_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf24_keyauths() h
             WHERE  _first_block <= __HARDFORK_24_block_num AND __HARDFORK_24_block_num <= _last_block
         ),

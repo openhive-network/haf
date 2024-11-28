@@ -35,8 +35,8 @@ BEGIN
 
     INSERT INTO hafd.operations
     VALUES
-           ( hive.operation_id(1,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hive.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
+           ( hafd.operation_id(1,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
     ;
 
     INSERT INTO hafd.accounts
@@ -47,8 +47,8 @@ BEGIN
 
     INSERT INTO hafd.account_operations
     VALUES
-          ( 1, 1, hive.operation_id(1,1,0) )
-        , ( 2, 1, hive.operation_id(2,1,0) )
+          ( 1, 1, hafd.operation_id(1,1,0) )
+        , ( 2, 1, hafd.operation_id(2,1,0) )
     ;
 
     -- here we simulate situation when hived claims recently only block 1
@@ -95,7 +95,7 @@ BEGIN
 
     ASSERT ( SELECT COUNT(*) FROM hafd.blocks WHERE num = 1 ) = 1, 'No blocks with num = 1';
     ASSERT ( SELECT COUNT(*) FROM hafd.transactions WHERE block_num = 1 ) = 1, 'No transaction with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hafd.operations WHERE hive.operation_id_to_block_num(id) = 1 ) = 1, 'No operations with block_num = 1';
+    ASSERT ( SELECT COUNT(*) FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) = 1 ) = 1, 'No operations with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hafd.transactions_multisig WHERE trx_hash = '\xDEED10'::bytea ) = 1, 'No signatures with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hafd.accounts WHERE block_num = 1 ) = 4, 'No account with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hafd.account_operations WHERE account_id = 1 ) = 1, 'No account_operations with block_num = 1';

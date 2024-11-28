@@ -35,7 +35,7 @@ def test_application_index_replay(haf_node):
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),"
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')"
             r")"
-            r"WHERE hive.operation_id_to_type_id(id) = 0")
+            r"WHERE hafd.operation_id_to_type_id(id) = 0")
     session.commit()
 
     assert_index_does_not_exist(session, 'hafd', 'operations', 'hive_operations_vote_author_permlink')
