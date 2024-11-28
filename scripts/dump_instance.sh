@@ -85,7 +85,7 @@ dump_database(){
   fi
 
   # Dump all the extensions except for pg_cron
-  pg_dump -j ${JOBS} -Fd -f "${POSTGRES_BACKUP_DIR}" "${db_parameters[@]}" -N cron -e hive_fork_manager -e plpgsql -e tablefunc -e pg_stat_statements
+  pg_dump -j ${JOBS} -Fd -f "${POSTGRES_BACKUP_DIR}" "${db_parameters[@]}" -N cron -e hive_fork_manager -e pg_background -e plpgsql -e tablefunc -e pg_stat_statements
 }
 
 
