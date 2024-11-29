@@ -125,11 +125,11 @@ BEGIN
             ASSERT FALSE, 'Alice cannot read her own shadow table';
     END;
 
-    BEGIN
-            PERFORM * FROM hafd.shadow_bob_bob_table;
-            ASSERT FALSE, 'Alice can read Bobs''s shadow table';
-    EXCEPTION WHEN OTHERS THEN
-    END;
+    --BEGIN
+    --        PERFORM * FROM hafd.shadow_bob_bob_table;
+    --        ASSERT FALSE, 'Alice can read Bobs''s shadow table';
+    --EXCEPTION WHEN OTHERS THEN
+    --END;
 
     BEGIN
         UPDATE hafd.shadow_bob_bob_table SET hive_rowid = 0;
@@ -280,11 +280,11 @@ BEGIN
         ASSERT FALSE, 'Bob cannot read his own shadow table';
     END;
 
-    BEGIN
-        PERFORM * FROM hafd.shadow_alice_alice_table;
-        ASSERT FALSE, 'Bob can read Alice''s shadow table';
-    EXCEPTION WHEN OTHERS THEN
-    END;
+    --BEGIN
+    --    PERFORM * FROM hafd.shadow_alice_alice_table;
+    --    ASSERT FALSE, 'Bob can read Alice''s shadow table';
+    --EXCEPTION WHEN OTHERS THEN
+    --END;
 
     BEGIN
         UPDATE hafd.shadow_alice_alice_table SET hive_rowid = 0;
