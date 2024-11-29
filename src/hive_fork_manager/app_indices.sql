@@ -7,10 +7,18 @@ AS
 $BODY$
 DECLARE
     _command TEXT;
+    i INTEGER;
 BEGIN
-  PERFORM pg_sleep(0.25); -- wait for background worker to commit changes
-  SELECT command INTO _command FROM hafd.indexes_constraints
-    WHERE id=app_index_id AND is_app_defined=TRUE AND status<>'created';
+  FOR i IN 1..30 LOOP
+    SELECT command INTO _command FROM hafd.indexes_constraints
+      WHERE id=app_index_id AND is_app_defined=TRUE AND status<>'created';
+      IF FOUND THEN
+        EXIT;
+      END IF;
+      RAISE LOG 'Index with ID % not found or already created (%/30)', app_index_id, i;
+      PERFORM pg_sleep(1);
+  END LOOP;
+
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Index with ID % not found or already created', app_index_id;
   END IF;
