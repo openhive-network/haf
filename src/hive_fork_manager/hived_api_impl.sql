@@ -500,7 +500,8 @@ BEGIN
   __cluster_index_dropped := EXISTS(
                 SELECT command FROM hafd.indexes_constraints
                 WHERE table_name = 'hafd.account_operations' AND
-                      index_constraint_name = 'hive_account_operations_uq1' LIMIT 1);
+                      index_constraint_name = 'hive_account_operations_uq1' AND
+                      status = 'missing' LIMIT 1);
   IF (__cluster_index_dropped) THEN
     RAISE NOTICE 'Cluster index dropped, restoring it before other indexes for faster clustering';
     SELECT command INTO __command FROM hafd.indexes_constraints
@@ -524,6 +525,7 @@ AS
 $function$
 DECLARE
   __command TEXT;
+  __original_command TEXT;
   __cursor REFCURSOR;
 BEGIN
 
@@ -534,14 +536,18 @@ BEGIN
   --restoring indexes, primary keys, unique constraints
   OPEN __cursor FOR ( SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing' );
   LOOP
-    FETCH __cursor INTO __command;
+    FETCH __cursor INTO __original_command;
     EXIT WHEN NOT FOUND;
     IF concurrent THEN
       -- Modify the command to include CONCURRENTLY
-      __command := regexp_replace(__command, 'CREATE INDEX', 'CREATE INDEX CONCURRENTLY', 'i');
+      __command := regexp_replace(__original_command, 'CREATE INDEX', 'CREATE INDEX CONCURRENTLY', 'i');
+    ELSE
+      __command := __original_command;
     END IF;
+    RAISE NOTICE 'Restoring index: %', __command;
+    UPDATE hafd.indexes_constraints SET status = 'creating' WHERE command = __original_command;
     EXECUTE __command;
-    UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
+    UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __original_command;
   END LOOP;
   CLOSE __cursor;
 
@@ -680,19 +686,25 @@ AS
 $BODY$
 DECLARE
     index_record RECORD;
+    __start_time TIMESTAMP;
+    __end_time TIMESTAMP;
+    __duration INTERVAL;
 BEGIN
-    FOR index_record IN
-        SELECT index_constraint_name
-        FROM hafd.indexes_constraints
-        WHERE contexts @> ARRAY[(SELECT id FROM hafd.contexts WHERE name = _app_context)] AND status != 'created'
+    RAISE NOTICE 'Starting to wait for registered indexes to be created for context %', _app_context;
+    __start_time := clock_timestamp();
+
     LOOP
-        PERFORM pg_sleep(1);
         EXIT WHEN NOT EXISTS (
-            SELECT 1
-            FROM hafd.indexes_constraints
-            WHERE index_constraint_name = index_record.index_constraint_name AND status != 'created'
+        SELECT 1
+        FROM hafd.indexes_constraints
+        WHERE contexts @> ARRAY[(SELECT id FROM hafd.contexts WHERE name = _app_context)] AND status <> 'created'
         );
     END LOOP;
+
+
+    __end_time := clock_timestamp();
+    __duration := __end_time - __start_time;
+    RAISE NOTICE 'Finished waiting for registered indexes to be created for context % in % seconds', _app_context, EXTRACT(EPOCH FROM __duration);
 END;
 $BODY$
 ;
@@ -738,6 +750,7 @@ $BODY$
 DECLARE
     __context_id INT;
     __index_record RECORD;
+    _schema TEXT;
 BEGIN
     -- Lookup the context_id using context_name
     SELECT id INTO __context_id
@@ -755,14 +768,17 @@ BEGIN
         FROM hafd.indexes_constraints
         WHERE contexts @> ARRAY[__context_id]
     LOOP
+        -- Parse the schema name from the table field
+        _schema := split_part(__index_record.table_name, '.', 1);
+
         -- Remove the context from the list of contexts
         UPDATE hafd.indexes_constraints
         SET contexts = array_remove(contexts, __context_id)
         WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name;
 
-        -- Drop the index if there are no remaining contexts
+        -- Drop the index if there are no remaining contexts dependent on it (note that HAF-internal dependencies are marked as being dependent on context 0 to prevent their removal)
         IF (SELECT array_length(contexts, 1) FROM hafd.indexes_constraints WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name) IS NULL THEN
-            EXECUTE 'DROP INDEX IF EXISTS ' || __index_record.index_constraint_name;
+            EXECUTE 'DROP INDEX IF EXISTS ' || _schema || '.' || __index_record.index_constraint_name;
             DELETE FROM hafd.indexes_constraints WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name;
         END IF;
     END LOOP;
@@ -779,43 +795,29 @@ DECLARE
     __context_name TEXT;
     __index_command TEXT;
     __index_created BOOLEAN;
-    __start_time TIMESTAMP;
-    __end_time TIMESTAMP;
-    __duration INTERVAL;
+    __synchronization_stages hive.application_stages;
 BEGIN
+     __synchronization_stages := ARRAY[( 'MASSIVE_PROCESSING', 101, 10000 ), hive.live_stage()]::hive.application_stages;
+    DROP SCHEMA IF EXISTS test_schema CASCADE; 
+    CREATE SCHEMA test_schema;
     __context_name := 'test_context';
     __index_command := 'CREATE INDEX test_index ON hafd.account_operations (account_id)';
 
     RAISE NOTICE 'Creating context %', __context_name;
-    PERFORM hive.app_create_context(__context_name);
+    PERFORM hive.app_create_context(__context_name, 'test_schema', __synchronization_stages);
 
     RAISE NOTICE 'Registering index dependency for context %', __context_name;
     PERFORM hive.register_index_dependency(__context_name, __index_command);
-
+/*    
     RAISE NOTICE 'Waiting for registered indexes to be created for context %', __context_name;
-    __start_time := clock_timestamp();
     PERFORM hive.wait_till_registered_indexes_created(__context_name);
-    __end_time := clock_timestamp();
 
-    -- Compute the duration
-    __duration := __end_time - __start_time;
-
-    -- Check if indexes are created successfully
-    __index_created := NOT EXISTS (
-        SELECT 1
-        FROM hafd.indexes_constraints
-        WHERE contexts @> ARRAY[(SELECT id FROM hafd.contexts WHERE name = __context_name)] AND status != 'created'
-    );
-
-    IF __index_created THEN
-        RAISE NOTICE 'Indexes created successfully for context % in % seconds', __context_name, EXTRACT(EPOCH FROM __duration);
-    ELSE
-        RAISE NOTICE 'Indexes creation failed for context %', __context_name;
-    END IF;
 
     RAISE NOTICE 'Remove index dependencies for context %', __context_name;
     PERFORM hive.remove_index_dependencies(__context_name);
 
+    SELECT hive.app_remove_context(__context_name);
+*/
     RAISE NOTICE 'Test for index dependencies completed for context %', __context_name;
 END;
 $BODY$

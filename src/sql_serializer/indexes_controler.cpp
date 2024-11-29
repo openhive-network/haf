@@ -170,16 +170,17 @@ indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_
 
 void indexes_controler::poll_and_create_indexes() {
   std::map<std::string, std::thread> active_threads;
+  std::set<std::string> threads_to_delete;
   
   while (!theApp.is_interrupt_request()) {
-    ilog("Polling for tables with missing indexes...");
+    dlog("Polling for tables with missing indexes...");
     // Check for tables with missing indexes that are not currently being created
     queries_commit_data_processor missing_indexes_checker(
       _db_url,
       "Check for missing indexes",
       "index_ctrl",
-      [this, &active_threads](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
-        ilog("Executing query to find tables with missing indexes...");
+      [this, &active_threads, &threads_to_delete](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+        dlog("Executing query to find tables with missing indexes...");
         pqxx::result data = tx.exec(
           "SELECT DISTINCT table_name "
           "FROM hafd.indexes_constraints "
@@ -190,32 +191,27 @@ void indexes_controler::poll_and_create_indexes() {
           "  WHERE status = 'creating'"
           ");"
         );
-        ilog("Query executed. Found ${count} tables with missing indexes.", ("count", data.size()));
+        dlog("Query executed. Found ${count} tables with missing indexes.", ("count", data.size()));
 
         for (const auto& record : data) {
           std::string table_name = record["table_name"].as<std::string>();
-          ilog("Processing table: ${table_name}", ("table_name", table_name));
+          dlog("Processing table: ${table_name}", ("table_name", table_name));
           // Check if a thread is already running for this table
           if (active_threads.find(table_name) != active_threads.end() && active_threads[table_name].joinable()) {
             ilog("A thread is already running for table: ${table_name}", ("table_name", table_name));
             continue;
           }
 
-          // Mark the indexes as being created
-          tx.exec(
-            "UPDATE hafd.indexes_constraints "
-            "SET status = 'creating' "
-            "WHERE table_name = '" + table_name + "' AND status = 'missing';"
-          );
-
-          ilog("Starting a new thread to create indexes for table: ${table_name}", ("table_name", table_name));
-          active_threads[table_name] = std::thread([this, table_name, &active_threads]() {
+          ilog("NOTE: Starting a new thread to create indexes for table: ${table_name}", ("table_name", table_name));
+          active_threads[table_name] = std::thread([this, table_name, &active_threads, &threads_to_delete]() {
             auto processor = start_commit_sql(true, "hive.restore_indexes( '" + table_name + "', FALSE )", "restore indexes");
             processor->join();
-            active_threads.erase(table_name); // Remove the thread from the map once done
+            ilog("Finished creating indexes for table: ${table_name}", ("table_name", table_name));
+            threads_to_delete.insert(table_name); // Mark the thread for deletion
+            ilog("Thread for table: ${table_name} has been marked for deletion", ("table_name", table_name));
           });
         }
-
+        dlog("Finished processing tables with missing indexes.");
         return data_processor::data_processing_status();
       },
       nullptr,
@@ -224,11 +220,21 @@ void indexes_controler::poll_and_create_indexes() {
 
     missing_indexes_checker.trigger(data_processor::data_chunk_ptr(), 0);
     missing_indexes_checker.join();
-
+    dlog("Finished polling for tables with missing indexes, sleep for 10s.");
     // Sleep for 10 seconds before polling again
-    fc::usleep(fc::seconds(1));
-  }
+    fc::usleep(fc::seconds(10));
 
+    // Delete threads marked for deletion
+    for (const auto& table_name : threads_to_delete) {
+      if (active_threads[table_name].joinable()) {
+        ilog("Joining thread for table: ${table_name}", ("table_name", table_name));
+        active_threads[table_name].join();
+      }
+      active_threads.erase(table_name);
+    }
+    threads_to_delete.clear();
+  }
+  ilog("Interrupt request received, stopping polling for tables with missing indexes.");
   // Join all remaining threads before exiting
   for (auto& [table_name, thread] : active_threads) {
     if (thread.joinable()) {
