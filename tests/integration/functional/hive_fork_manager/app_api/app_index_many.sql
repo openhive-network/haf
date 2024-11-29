@@ -116,85 +116,13 @@ $BODY$
 BEGIN
   ASSERT hive.is_instance_ready(), 'Instance not ready';
   CALL hive.wait_till_registered_indexes_created('alice');
-  ASSERT EXISTS (
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink_1'
-  ), format('Index hive_operations_vote_author_permlink_1 on table hafd.operations does not exist');
-  ASSERT EXISTS (
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink_2'
-  ), format('Index hive_operations_vote_author_permlink_2 on table hafd.operations does not exist');
-  ASSERT EXISTS (
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink_3'
-  ), format('Index hive_operations_vote_author_permlink_3 on table hafd.operations does not exist');
-  ASSERT EXISTS (
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink_4'
-  ), format('Index hive_operations_vote_author_permlink_4 on table hafd.operations does not exist');
-  ASSERT EXISTS (
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink_5'
-  ), format('Index hive_operations_vote_author_permlink_4 on table hafd.operations does not exist');
-  ASSERT EXISTS (
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink_6'
-  ), format('Index hive_operations_vote_author_permlink_4 on table hafd.operations does not exist');
-  ASSERT EXISTS (
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink_7'
-  ), format('Index hive_operations_vote_author_permlink_4 on table hafd.operations does not exist');
-  ASSERT EXISTS (
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink_8'
-  ), format('Index hive_operations_vote_author_permlink_4 on table hafd.operations does not exist');
+  ASSERT hive.is_index_exists('hafd', 'operations', 'hive_operations_vote_author_permlink_1'), 'Index hive_operations_vote_author_permlink_1 was not cerated';
+  ASSERT hive.is_index_exists('hafd', 'operations', 'hive_operations_vote_author_permlink_2'), 'Index hive_operations_vote_author_permlink_2 was not cerated';
+  ASSERT hive.is_index_exists('hafd', 'operations', 'hive_operations_vote_author_permlink_3'), 'Index hive_operations_vote_author_permlink_3 was not cerated';
+  ASSERT hive.is_index_exists('hafd', 'operations', 'hive_operations_vote_author_permlink_4'), 'Index hive_operations_vote_author_permlink_4 was not cerated';
+  ASSERT hive.is_index_exists('hafd', 'operations', 'hive_operations_vote_author_permlink_5'), 'Index hive_operations_vote_author_permlink_5 was not cerated';
+  ASSERT hive.is_index_exists('hafd', 'operations', 'hive_operations_vote_author_permlink_6'), 'Index hive_operations_vote_author_permlink_6 was not cerated';
+  ASSERT hive.is_index_exists('hafd', 'operations', 'hive_operations_vote_author_permlink_7'), 'Index hive_operations_vote_author_permlink_7 was not cerated';
+  ASSERT hive.is_index_exists('hafd', 'operations', 'hive_operations_vote_author_permlink_8'), 'Index hive_operations_vote_author_permlink_8 was not cerated';
 END
 $BODY$;

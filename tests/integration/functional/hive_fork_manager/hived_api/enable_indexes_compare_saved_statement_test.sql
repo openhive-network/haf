@@ -69,25 +69,6 @@ END;
 $BODY$
 ;
 
-DROP FUNCTION IF EXISTS is_index_exists;
-CREATE FUNCTION is_index_exists( _schema TEXT, _table_name TEXT, _index_name TEXT )
-    RETURNS bool
-    LANGUAGE 'plpgsql'
-    AS
-$BODY$
-DECLARE
-__result bool;
-BEGIN
-SELECT EXISTS (
-		SELECT 1
-		  FROM pg_indexes
-		  WHERE schemaname = _schema AND tablename = _table_name AND indexname = _index_name
-           ) INTO __result;
-RETURN __result;
-END;
-$BODY$
-;
-
 DROP FUNCTION IF EXISTS constraint_index_checker;
 CREATE FUNCTION constraint_index_checker( _expected_value BOOL )
         RETURNS void
@@ -100,7 +81,7 @@ BEGIN
 	ASSERT ( SELECT is_constraint_exists( 'public', 'table_with_constraints', 'table_with_constraints_3' ) = _expected_value ) , 'Problem with table_with_constraints_3';
 	ASSERT ( SELECT is_constraint_exists( 'public', 'table_with_constraints', 'table_with_constraints_6' ) = _expected_value ) , 'Problem with table_with_constraints_6';
 	ASSERT ( SELECT is_constraint_exists( 'public', 'table_with_constraints', 'table_with_constraints_7' ) = _expected_value ) , 'Problem with table_with_constraints_7';
-	ASSERT ( SELECT is_index_exists( 'public', 'table_with_constraints', 'table_with_constraints_4' ) = _expected_value ) , 'Problem with table_with_constraints_4';
+	ASSERT ( SELECT hive.is_index_exists( 'public', 'table_with_constraints', 'table_with_constraints_4' ) = _expected_value ) , 'Problem with table_with_constraints_4';
 END;
 $BODY$
 ;

@@ -65,15 +65,6 @@ $BODY$
 BEGIN
   ASSERT hive.is_instance_ready(), 'Instance not ready';
   CALL hive.wait_till_registered_indexes_created('alice');
-  ASSERT EXISTS (
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink'
-  ), format('Index hive_operations_vote_author_permlink on table hafd.operations does not exist');
+  ASSERT hive.is_index_exists('hafd', 'operations', 'hive_operations_vote_author_permlink'), 'Index hive_operations_vote_author_permlink was not cerated';
 END
 $BODY$;

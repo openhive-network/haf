@@ -24,3 +24,19 @@ END;
 $BODY$
 ;
 
+CREATE FUNCTION hive.is_index_exists(_schema TEXT, _table_name TEXT, _index_name TEXT)
+RETURNS BOOL
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  __result bool;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1
+    FROM pg_indexes
+    WHERE schemaname = _schema AND tablename = _table_name AND indexname = _index_name
+  ) INTO __result;
+  RETURN __result;
+END;
+$BODY$;
