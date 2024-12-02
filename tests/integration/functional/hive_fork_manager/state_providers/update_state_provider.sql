@@ -1,5 +1,5 @@
 ---------------------------- TEST PROVIDER ----------------------------------------------
-CREATE OR REPLACE FUNCTION hive.start_provider_tests( _context hafd.context_name )
+CREATE OR REPLACE FUNCTION test.start_provider_tests( _context hafd.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
     AS
