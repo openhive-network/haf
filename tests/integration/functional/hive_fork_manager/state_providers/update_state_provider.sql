@@ -1,52 +1,33 @@
----------------------------- TEST PROVIDER ----------------------------------------------
-CREATE OR REPLACE FUNCTION test.start_provider_tests( _context hafd.context_name )
-    RETURNS TEXT[]
-    LANGUAGE plpgsql
-    AS
-$BODY$
-DECLARE
-__table_1_name TEXT := _context || '_tests1';
-__table_2_name TEXT := _context || '_tests2';
-BEGIN
-    EXECUTE format( 'CREATE TABLE hafd.%I(
-                          id SERIAL
-                        )', __table_1_name
-        );
-
-    EXECUTE format( 'CREATE TABLE hafd.%I(
-                          id SERIAL
-                        )', __table_2_name
-        );
-
-    RETURN ARRAY[ __table_1_name, __table_2_name ];
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.update_state_provider_tests( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _context hafd.context_name )
-        RETURNS void
-        LANGUAGE plpgsql
-    AS
-$BODY$
-DECLARE
-    __table_1_name TEXT := _context || '_tests1';
-    __table_2_name TEXT := _context || '_tests2';
-BEGIN
-    EXECUTE format( 'INSERT INTO hafd.%I( id ) VALUES( %L )', __table_1_name,  _first_block + _last_block );
-    EXECUTE format( 'INSERT INTO hafd.%I( id ) VALUES( %L )', __table_2_name,  _last_block - _first_block );
-END;
-$BODY$
-;
-
----------------------------END OF TEST PROVIDER -------------------------------------------------------------------
-
-
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
     ALTER TYPE hafd.state_providers ADD VALUE 'TESTS';
+    COMMIT;
+
+    EXECUTE 'CREATE OR REPLACE FUNCTION hive.start_provider_tests( _context hafd.context_name )
+    RETURNS TEXT[]
+    LANGUAGE plpgsql
+    AS
+    $$
+    DECLARE
+        __table_1_name TEXT := _context || ''_tests1'';
+        __table_2_name TEXT := _context || ''_tests2'';
+        BEGIN
+            EXECUTE format( ''CREATE TABLE hafd.%I(
+                                  id SERIAL
+                                )'', __table_1_name
+                );
+
+            EXECUTE format( ''CREATE TABLE hafd.%I(
+                                  id SERIAL
+                                )'', __table_2_name
+                );
+
+            RETURN ARRAY[ __table_1_name, __table_2_name ];
+        END;
+        $$;';
 
     INSERT INTO hafd.operation_types
     VALUES
@@ -92,6 +73,8 @@ BEGIN
     PERFORM hive.app_context_detach( 'context' );
 
     UPDATE hafd.contexts SET current_block_num = 1, irreversible_block = 6;
+
+    PERFORM hive.app_state_provider_import( 'TESTS', 'context' ); -- TEST must be commited
 END;
 $BODY$
 ;
@@ -101,7 +84,20 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
-    PERFORM hive.app_state_provider_import( 'TESTS', 'context' ); -- TEST must be commited
+    EXECUTE 'CREATE OR REPLACE FUNCTION hive.update_state_provider_tests( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _context hafd.context_name )
+        RETURNS void
+        LANGUAGE plpgsql
+    AS
+    $$
+    DECLARE
+        __table_1_name TEXT := _context || ''_tests1'';
+        __table_2_name TEXT := _context || ''_tests2'';
+    BEGIN
+        EXECUTE format( ''INSERT INTO hafd.%I( id ) VALUES( %L )'', __table_1_name,  _first_block + _last_block );
+        EXECUTE format( ''INSERT INTO hafd.%I( id ) VALUES( %L )'', __table_2_name,  _last_block - _first_block );
+    END;
+    $$;';
+
     PERFORM hive.app_state_providers_update( 1, 6, 'context' );
 END;
 $BODY$
