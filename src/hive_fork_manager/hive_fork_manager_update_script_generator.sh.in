@@ -81,12 +81,15 @@ POSTGRES_EXTENSION_DIR='@POSTGRES_SHAREDIR@/extension'
 DB_NAME_AFTER_UPDATE="upd_${DB_NAME}" # truncate before postgres will do this
 DB_NAME_AFTER_UPDATE="${DB_NAME_AFTER_UPDATE:0:63}"
 save_table_schema() {
-  psql_do -d "$DB_NAME" -o before_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive.calculate_schema_hash('hive')"
-  psql_do -d "$DB_NAME" -o before_update_constraints.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive.calculate_schema_hash('hive')"
-  psql_do -d "$DB_NAME" -o before_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive.calculate_schema_hash('hive')"
-  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive.calculate_schema_hash('hive')"
-  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_constraings.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive.calculate_schema_hash('hive')"
-  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive.calculate_schema_hash('hive')"
+  psql_do -d "$DB_NAME" -o before_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive.calculate_schema_hash('hafd')"
+  psql_do -d "$DB_NAME" -o before_update_constraints.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive.calculate_schema_hash('hafd')"
+  psql_do -d "$DB_NAME" -o before_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive.calculate_schema_hash('hafd')"
+  psql_do -d "$DB_NAME" -o before_update_providers.txt -q -t -A -c "SELECT provider, hash FROM hive.calculate_state_provider_hashes()"
+
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive.calculate_schema_hash('hafd')"
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_constraings.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive.calculate_schema_hash('hafd')"
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive.calculate_schema_hash('hafd')"
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_providers.txt -q -t -A -c "SELECT provider, hash FROM hive.calculate_state_provider_hashes()"
 }
 
 verify_table_schema() {

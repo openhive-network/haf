@@ -421,7 +421,7 @@ BEGIN
     JOIN hafd.accounts acc ON acc.id = account_id
     ;
 
-    PERFORM hive.print_recordset_with_label('Whole resulting keyauth_view', 'SELECT * FROM keyauth_view');
+    PERFORM test.print_recordset_with_label('Whole resulting keyauth_view', 'SELECT * FROM keyauth_view');
 
         -- one key from owner, one from active, one from posting, also in posting we have array of account_auths
     ASSERT EXISTS ( SELECT * FROM keyauth_view WHERE (hive.public_key_to_string(key) = 'STM7x48ngjo2L7eNxj3u5dUnanQovAUc4BrcbRFbP8BSAS4SBxmHh' )), 'first of the keys in one key from owner, one from active, one from posting not found';
@@ -495,7 +495,7 @@ BEGIN
         JOIN hive.accounts_view av ON av.id = context_accountauth_a.account_auth_id
     ;
 
-    PERFORM hive.print_recordset_with_label('mtlk >>>> Whole resulting account_auth_view', 'SELECT * FROM account_auth_view');
+    PERFORM test.print_recordset_with_label('mtlk >>>> Whole resulting account_auth_view', 'SELECT * FROM account_auth_view');
 
     ASSERT EXISTS (
         SELECT * FROM account_auth_view WHERE 
@@ -704,7 +704,7 @@ BEGIN
     ) AS differences;
 
 
-    PERFORM hive.compare_recordsets(
+    PERFORM test.compare_recordsets(
 
         'SELECT
             public_key_to_string,
@@ -729,24 +729,24 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION hive.compare_recordsets(expected_text text, actual_text text) RETURNS void LANGUAGE plpgsql AS $BODY$
+CREATE OR REPLACE FUNCTION test.compare_recordsets(expected_text text, actual_text text) RETURNS void LANGUAGE plpgsql AS $BODY$
 BEGIN
 
-    PERFORM hive.print_recordset_with_label(
+    PERFORM test.print_recordset_with_label(
         'Common Rows', 
         'WITH expected AS (' || expected_text || '), actual AS (' || actual_text || ') ' ||
         'SELECT * FROM expected INTERSECT SELECT * FROM actual'
     );
 
 
-    PERFORM hive.print_recordset_with_label(
+    PERFORM test.print_recordset_with_label(
         'Expected Only Rows',
         'WITH expected AS (' || expected_text || '), actual AS (' || actual_text || ') ' ||
         'SELECT * FROM expected EXCEPT SELECT * FROM actual'
     );
 
 
-    PERFORM hive.print_recordset_with_label(
+    PERFORM test.print_recordset_with_label(
         'Actual Only Rows',
         'WITH expected AS (' || expected_text || '), actual AS (' || actual_text || ') ' ||
         'SELECT * FROM actual EXCEPT SELECT * FROM expected'
@@ -755,7 +755,7 @@ END;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION hive.print_recordset_with_label(label text, query_string text) RETURNS void LANGUAGE plpgsql AS $p$
+CREATE OR REPLACE FUNCTION test.print_recordset_with_label(label text, query_string text) RETURNS void LANGUAGE plpgsql AS $p$
 DECLARE 
      json_result json;
 BEGIN

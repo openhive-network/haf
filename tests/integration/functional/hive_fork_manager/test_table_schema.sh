@@ -98,12 +98,46 @@ test_extension_update() {
     # run generator script
     POSTGRES_VERSION=17
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh 2>&1 | tee -i update.txt || true
+    # back to old format of db
+    sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER TABLE hafd.accounts DROP COLUMN phone_number;"
+    # test
     if grep -q "Table schema is inconsistent" update.txt; then
-        echo "Update test succeed"
+        echo "Update test succeed (changed account table)"
     else
-        echo "Update test failed"
+        echo "Update test failed (changed account table)"
+        exit 1
+    fi
+}
+
+test_extension_update_when_state_provider_changed() {
+    # add new column to accounts table
+    echo
+    echo "Making a change in keyauth state provider by change definition of hive.start_provider_keyauth"
+
+    # change definition of a state provider
+    sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" \
+      -c "CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
+          RETURNS TEXT[]
+          LANGUAGE plpgsql
+          AS
+          \$\$
+          BEGIN
+              RETURN '{}';
+          END;
+          \$\$
+          ;"
+    # run generator script
+    POSTGRES_VERSION=17
+    sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh 2>&1 | tee -i update.txt || true
+    # back to old format of db
+    # test
+    if grep -q "Table schema is inconsistent" update.txt; then
+        echo "Update test succeed (changed state provider)"
+    else
+        echo "Update test failed (changed state provider)"
         exit 1
     fi
 }
 
 test_extension_update
+test_extension_update_when_state_provider_changed
