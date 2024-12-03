@@ -32,9 +32,7 @@ def assert_are_blocks_sync_with_haf_db(haf_node: HafNode, limit_block_num: int) 
 
 
 def assert_are_indexes_restored(haf_node: HafNode):
-    # verify that indexes are restored
-    are_indexes_dropped = haf_node.query_one("SELECT hive.are_indexes_dropped()")
-    assert are_indexes_dropped == False
+    assert haf_node.query_one("SELECT hive.are_indexes_restored()")
 
 
 def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Transaction, TransactionId]):
