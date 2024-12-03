@@ -8,6 +8,9 @@
 #include <fc/log/logger.hpp>
 #include <fc/thread/thread.hpp>
 
+#include <mutex>
+#include <set>
+#include <map>
 
 namespace hive { namespace plugins { namespace sql_serializer {
 
@@ -169,9 +172,10 @@ indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_
 }
 
 void indexes_controler::poll_and_create_indexes() {
-  std::map<std::string, std::thread> active_threads;
+  std::map<std::string, std::thread> active_threads; // Doesn't need mutex, because it's modified by one thread at a time
   std::set<std::string> threads_to_delete;
-  
+  std::mutex mtx; // Protects threads_to_delete
+
   while (!theApp.is_interrupt_request()) {
     dlog("Polling for tables with missing indexes...");
     // Check for tables with missing indexes that are not currently being created
@@ -179,7 +183,7 @@ void indexes_controler::poll_and_create_indexes() {
       _db_url,
       "Check for missing indexes",
       "index_ctrl",
-      [this, &active_threads, &threads_to_delete](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+      [this, &active_threads, &threads_to_delete, &mtx](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
         dlog("Executing query to find tables with missing indexes...");
         pqxx::result data = tx.exec(
           "SELECT DISTINCT table_name "
@@ -203,10 +207,11 @@ void indexes_controler::poll_and_create_indexes() {
           }
 
           ilog("NOTE: Starting a new thread to create indexes for table: ${table_name}", ("table_name", table_name));
-          active_threads[table_name] = std::thread([this, table_name, &active_threads, &threads_to_delete]() {
+          active_threads[table_name] = std::thread([this, table_name, &threads_to_delete, &mtx]() {
             auto processor = start_commit_sql(true, "hive.restore_indexes( '" + table_name + "', FALSE )", "restore indexes");
             processor->join();
             ilog("Finished creating indexes for table: ${table_name}", ("table_name", table_name));
+            std::lock_guard g(mtx);
             threads_to_delete.insert(table_name); // Mark the thread for deletion
             ilog("Thread for table: ${table_name} has been marked for deletion", ("table_name", table_name));
           });
@@ -225,14 +230,17 @@ void indexes_controler::poll_and_create_indexes() {
     fc::usleep(fc::seconds(10));
 
     // Delete threads marked for deletion
-    for (const auto& table_name : threads_to_delete) {
-      if (active_threads[table_name].joinable()) {
-        ilog("Joining thread for table: ${table_name}", ("table_name", table_name));
-        active_threads[table_name].join();
+    {
+      std::lock_guard g(mtx);
+      for (const auto& table_name : threads_to_delete) {
+        if (active_threads[table_name].joinable()) {
+          ilog("Joining thread for table: ${table_name}", ("table_name", table_name));
+          active_threads[table_name].join();
+        }
+        active_threads.erase(table_name);
       }
-      active_threads.erase(table_name);
+      threads_to_delete.clear();
     }
-    threads_to_delete.clear();
   }
   ilog("Interrupt request received, stopping polling for tables with missing indexes.");
   // Join all remaining threads before exiting
