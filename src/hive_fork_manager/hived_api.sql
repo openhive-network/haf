@@ -361,14 +361,14 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.are_indexes_dropped()
+CREATE OR REPLACE FUNCTION hive.all_indexes_have_status(_status TEXT)
     RETURNS BOOLEAN
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    _all_indices_missing BOOLEAN;
+    _all_indices_have_status BOOLEAN;
     record hafd.indexes_constraints%ROWTYPE;
 BEGIN
     -- Debugging: Log the current state of the indexes_constraints table
@@ -379,14 +379,36 @@ BEGIN
         RAISE NOTICE 'index_constraint_name: %, table_name: %, status: %', record.index_constraint_name, record.table_name, record.status;
     END LOOP;
 
-    SELECT bool_and(status='missing')
-    INTO _all_indices_missing
+    SELECT bool_and(status=_status)
+    INTO _all_indices_have_status
     FROM hafd.indexes_constraints;
 
-    RETURN _all_indices_missing;
+    RETURN _all_indices_have_status;
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE FUNCTION hive.are_indexes_dropped()
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+  RETURN hive.all_indexes_have_status('missing');
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.are_indexes_restored()
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+  RETURN hive.all_indexes_have_status('created');
+END;
+$BODY$;
 
 CREATE OR REPLACE FUNCTION hive.are_fk_dropped()
     RETURNS BOOL
