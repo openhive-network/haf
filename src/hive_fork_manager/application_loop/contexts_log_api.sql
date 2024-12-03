@@ -70,11 +70,11 @@ BEGIN
         ORDER BY log.id DESC
         LIMIT 1;
 
-        RAISE WARNING 'PROFILE: CONTEXT ''%'' STAGE_CHANGED FROM ''%'' TO ''%'' AFTER % BLOCK: % FORK: % HIVE BLOCK: % HIVE FORK: %'
+        RAISE WARNING 'PROFILE: ''%'' STAGE_CHANGED from ''%'' to ''%'' after % block: % fork: % head block: % head fork: %'
             , _context_name
             , COALESCE( __previous_stage::TEXT, 'N/A' )
             , COALESCE( __ctx_stage::TEXT, 'N/A' )
-            , COALESCE( __stage_latency::TEXT, 'N/A' )
+            , COALESCE( date_trunc('second',__stage_latency)::TEXT, 'N/A' )
             , __ctx_current_block
             , __ctx_current_fork
             , __head_block
@@ -84,7 +84,7 @@ BEGIN
         RETURN;
     END IF;
 
-    RAISE WARNING 'PROFILE: CONTEXT ''%'' % STAGE: ''%'' BLOCK: % FORK: % HIVE BLOCK: % HIVE FORK: %'
+    RAISE WARNING 'PROFILE: ''%'' % stage: ''%'' block: % fork: % head block: % head fork: %'
         , _context_name
         , _reason
         , COALESCE(__ctx_stage::TEXT, 'N/A')
