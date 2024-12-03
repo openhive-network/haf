@@ -361,7 +361,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.all_indexes_have_status(_status TEXT)
+CREATE OR REPLACE FUNCTION hive.all_indexes_have_status(_status hafd.index_status)
     RETURNS BOOLEAN
     LANGUAGE plpgsql
     VOLATILE
@@ -395,7 +395,7 @@ CREATE OR REPLACE FUNCTION hive.are_indexes_dropped()
 AS
 $BODY$
 BEGIN
-  RETURN hive.all_indexes_have_status('missing');
+  RETURN COALESCE(hive.all_indexes_have_status('missing'), FALSE);
 END;
 $BODY$;
 
@@ -406,7 +406,7 @@ CREATE OR REPLACE FUNCTION hive.are_indexes_restored()
 AS
 $BODY$
 BEGIN
-  RETURN hive.all_indexes_have_status('created');
+  RETURN COALESCE(hive.all_indexes_have_status('created'), TRUE);
 END;
 $BODY$;
 
