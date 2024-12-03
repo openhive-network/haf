@@ -368,7 +368,7 @@ CREATE OR REPLACE FUNCTION hive.are_indexes_dropped()
 AS
 $BODY$
 DECLARE
-    __an_index_exists INTEGER;
+    _all_indices_missing BOOLEAN;
     record hafd.indexes_constraints%ROWTYPE;
 BEGIN
     -- Debugging: Log the current state of the indexes_constraints table
@@ -379,12 +379,11 @@ BEGIN
         RAISE NOTICE 'index_constraint_name: %, table_name: %, status: %', record.index_constraint_name, record.table_name, record.status;
     END LOOP;
 
-    SELECT COUNT(*)
-    INTO __an_index_exists
-    FROM hafd.indexes_constraints
-    WHERE is_index AND status != 'missing';
+    SELECT bool_and(status='missing')
+    INTO _all_indices_missing
+    FROM hafd.indexes_constraints;
 
-    RETURN __an_index_exists = 0;
+    RETURN _all_indices_missing;
 END;
 $BODY$
 ;
