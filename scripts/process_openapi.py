@@ -386,6 +386,14 @@ def generate_rewrite_rules(rewrite_rules_file):
                     query_parts = []
                     next_placeholder = 1
                     rpc_method_name = method_data['operationId'].split('.')[-1]
+                    path_filter_present = False  # Track if `path_filter` is a parameter
+
+                    # Check for parameters
+                    if 'parameters' in method_data:
+                        for param in method_data['parameters']:
+                            if param['name'] == 'path-filter':
+                                path_filter_present = True
+
                     for path_part in path_parts:
                         assert(len(path_part) > 0)
                         if path_part[0] == '{' and path_part[-1] == '}':
@@ -393,16 +401,22 @@ def generate_rewrite_rules(rewrite_rules_file):
                             param_name = path_part[1:-1]
                             query_parts.append(f'{param_name}=${next_placeholder}')
                             next_placeholder += 1
-                            rewrite_required = True
                         else:
                             rewrite_parts.append(path_part)
 
                     rewrite_from = '/'.join(rewrite_parts)
-                    if len(query_parts) > 0:
-                        query_string = '?' + '&'.join(query_parts)
-                    else:
-                        query_string = ''
+                    # Construct the query string
+                    query_string = '?' + '&'.join(query_parts) if query_parts else ''
+
                     rewrite_to = f'/rpc/{rpc_method_name}{query_string}'
+                    
+                    # Add the path_filter parameter if present
+                    if path_filter_present:
+                        if query_string:  # If we have existing query params
+                            rewrite_to += '&path-filter=$path_filters'
+                        else:  # No existing query params
+                            rewrite_to += '?path-filter=$path_filters'
+
                     rewrite_rules_file.write(f'# endpoint for {method} {path}\n')
                     rewrite_rules_file.write(f'rewrite {rewrite_from} {rewrite_to} break;\n\n')
 
