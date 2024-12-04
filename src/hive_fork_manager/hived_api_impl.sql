@@ -642,7 +642,7 @@ BEGIN
 
         -- Abort with an error message if no context_id is found
     IF __context_id IS NULL THEN
-        RAISE EXCEPTION 'Context % not found in hafd.contexts', context_name;
+        RAISE EXCEPTION 'Context % not found in hafd.contexts', _context_name;
     END IF;
 
     -- Parse the index description
