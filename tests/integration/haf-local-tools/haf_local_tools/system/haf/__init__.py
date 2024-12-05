@@ -56,6 +56,10 @@ def assert_index_does_not_exist(session, namespace, table, indexname):
     assert not does_index_exist(session, namespace, table, indexname)
 
 
+def wait_till_registered_indexes_created(haf_node, context):
+    haf_node.session.execute("select hive.wait_till_registered_indexes_created(:ctx)", {'ctx': context})
+
+
 def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Transaction, TransactionId]):
     try:
         haf_node.wait_for_transaction_in_database(transaction=transaction, timeout=0)
