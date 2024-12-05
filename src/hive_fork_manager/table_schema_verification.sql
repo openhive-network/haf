@@ -75,9 +75,6 @@ BEGIN
     IF _indexes IS NULL THEN
         _indexes = 'EMPTY';
     END IF;
-    IF _table_name = 'operations' THEN
-        RAISE WARNING 'MIC indexes=%',_indexes;
-    END IF;
 
     schemarow.table_name := _table_name;
     --    schemarow.table_schema := (_columns || _constraints || _indexes);
@@ -93,6 +90,31 @@ BEGIN
 END;
 $BODY$;
 
+CREATE OR REPLACE FUNCTION hive.calculate_state_provider_schema_hash(schema_name TEXT, _provider hafd.state_providers )
+    RETURNS SETOF hafd.verify_table_schema
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    _table_name     TEXT;
+BEGIN
+       PERFORM hive.context_create( _name =>'test_provider_hash', _schema =>schema_name );
+       PERFORM hive.app_state_provider_import(_provider,'test_provider_hash');
+
+       FOR _table_name IN SELECT UNNEST( tables ) FROM hafd.state_providers_registered WHERE state_provider = _provider ORDER BY id DESC LIMIT 1
+       LOOP
+               RETURN NEXT hive.calculate_table_schema_hash( schema_name, _table_name);
+       END LOOP;
+
+       PERFORM hive.app_state_provider_drop_all( 'test_provider_hash' );
+       PERFORM hive.context_remove( 'test_provider_hash' );
+       RETURN;
+END;
+$BODY$;
+
+
+
 CREATE OR REPLACE FUNCTION hive.calculate_schema_hash(schema_name TEXT)
     RETURNS SETOF hafd.verify_table_schema
     LANGUAGE plpgsql
@@ -100,12 +122,8 @@ CREATE OR REPLACE FUNCTION hive.calculate_schema_hash(schema_name TEXT)
 AS
 $BODY$
 DECLARE
-    schemarow    hafd.verify_table_schema%ROWTYPE;
     _table_name     TEXT;
-    _before_hash    TEXT;
-    _columns   TEXT;
-    _constraints   TEXT;
-    _indexes    TEXT;
+    _state_provider hafd.state_providers;
     verified_tables_list TEXT[];
 BEGIN
 
@@ -131,12 +149,19 @@ verified_tables_list = ARRAY[
 'contexts',
 'contexts_log'
 ];
--- TODO(mickiewicz): add to the array registered state provider tables
-FOR _table_name IN SELECT UNNEST( verified_tables_list ) as _table_name
-LOOP
-    RETURN NEXT hive.calculate_table_schema_hash( schema_name, _table_name);
-END LOOP;
-RETURN;
+
+    FOR _table_name IN SELECT UNNEST( verified_tables_list ) as _table_name
+    LOOP
+        RETURN NEXT hive.calculate_table_schema_hash( schema_name, _table_name);
+    END LOOP;
+
+    FOR _state_provider IN SELECT unnest(enum_range(NULL::hafd.state_providers))
+        LOOP
+            RETURN NEXT hive.calculate_state_provider_schema_hash(schema_name,_state_provider);
+        END LOOP;
+
+    RETURN;
+
 END;
 $BODY$
 ;
