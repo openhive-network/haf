@@ -2,7 +2,7 @@ import test_tools as tt
 
 from haf_local_tools import create_app
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
-from haf_local_tools.system.haf import connect_nodes
+from haf_local_tools.system.haf import (connect_nodes, assert_index_exists)
 
 
 def test_application_index_one(haf_node):
@@ -36,13 +36,4 @@ def test_application_index_one(haf_node):
     # THEN
     session.execute("select hive.wait_till_registered_indexes_created('application')")
 
-    assert session.execute("""
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink'
-    """).fetchone()
+    assert_index_exists(session, 'hafd', 'operations', 'hive_operations_vote_author_permlink')

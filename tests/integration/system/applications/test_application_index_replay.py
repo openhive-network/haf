@@ -3,7 +3,7 @@ import test_tools as tt
 from haf_local_tools import create_app
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.haf_node.fixtures import haf_node
-from haf_local_tools.system.haf import connect_nodes
+from haf_local_tools.system.haf import (connect_nodes, assert_index_does_not_exist)
 
 import time
 
@@ -39,29 +39,11 @@ def test_application_index_replay(haf_node):
             r"WHERE hive.operation_id_to_type_id(id) = 0')")
     session.commit()
 
-    assert not session.execute("""
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink'
-    """).fetchone()
+    assert_index_does_not_exist(session, 'hafd', 'operations', 'hive_operations_vote_author_permlink')
 
     haf_node.run(
         exit_at_block=5,
     )
 
     # THEN
-    assert not session.execute("""
-    SELECT 1
-    FROM pg_index i
-    JOIN pg_class idx ON i.indexrelid = idx.oid
-    JOIN pg_class tbl ON i.indrelid = tbl.oid
-    JOIN pg_namespace n ON tbl.relnamespace = n.oid
-    WHERE n.nspname = 'hafd'
-    AND tbl.relname = 'operations'
-    AND idx.relname = 'hive_operations_vote_author_permlink'
-    """).fetchone()
+    assert_index_does_not_exist(session, 'hafd', 'operations', 'hive_operations_vote_author_permlink')

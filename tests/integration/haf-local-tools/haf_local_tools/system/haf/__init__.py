@@ -35,6 +35,27 @@ def assert_are_indexes_restored(haf_node: HafNode):
     assert haf_node.query_one("SELECT hive.are_indexes_restored()")
 
 
+def does_index_exist(session, namespace, table, indexname):
+    return session.execute("""
+    SELECT 1
+    FROM pg_index i
+    JOIN pg_class idx ON i.indexrelid = idx.oid
+    JOIN pg_class tbl ON i.indrelid = tbl.oid
+    JOIN pg_namespace n ON tbl.relnamespace = n.oid
+    WHERE n.nspname = :ns
+    AND tbl.relname = :table
+    AND idx.relname = :index
+    """, {'ns':namespace, 'table': table, 'index': indexname}).fetchone()
+
+
+def assert_index_exists(session, namespace, table, indexname):
+    assert does_index_exist(session, namespace, table, indexname)
+
+
+def assert_index_does_not_exist(session, namespace, table, indexname):
+    assert not does_index_exist(session, namespace, table, indexname)
+
+
 def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Transaction, TransactionId]):
     try:
         haf_node.wait_for_transaction_in_database(transaction=transaction, timeout=0)
