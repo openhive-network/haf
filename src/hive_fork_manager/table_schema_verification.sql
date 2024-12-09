@@ -90,26 +90,18 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.calculate_state_provider_schema_hash(schema_name TEXT, _provider hafd.state_providers )
-    RETURNS SETOF hafd.verify_table_schema
+CREATE OR REPLACE FUNCTION hive.calculate_state_provider_schema_hash(_provider hafd.state_providers )
+    RETURNS TEXT --md5 of start_provider function
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    _table_name     TEXT;
+    __md5     TEXT;
 BEGIN
-       PERFORM hive.context_create( _name =>'test_provider_hash', _schema =>schema_name );
-       PERFORM hive.app_state_provider_import(_provider,'test_provider_hash');
-
-       FOR _table_name IN SELECT UNNEST( tables ) FROM hafd.state_providers_registered WHERE state_provider = _provider ORDER BY id DESC LIMIT 1
-       LOOP
-               RETURN NEXT hive.calculate_table_schema_hash( schema_name, _table_name);
-       END LOOP;
-
-       PERFORM hive.app_state_provider_drop_all( 'test_provider_hash' );
-       PERFORM hive.context_remove( 'test_provider_hash' );
-       RETURN;
+       EXECUTE format( 'SELECT MD5(pg_get_functiondef(''hive.start_provider_%s''::regproc))', _provider )
+       INTO __md5;
+       RETURN __md5;
 END;
 $BODY$;
 
@@ -157,7 +149,7 @@ verified_tables_list = ARRAY[
 
     FOR _state_provider IN SELECT unnest(enum_range(NULL::hafd.state_providers))
         LOOP
-            RETURN NEXT hive.calculate_state_provider_schema_hash(schema_name,_state_provider);
+            PERFORM hive.calculate_state_provider_schema_hash(_state_provider);
         END LOOP;
 
     RETURN;
