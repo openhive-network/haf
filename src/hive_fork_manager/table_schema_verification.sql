@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION hive.calculate_table_schema_hash(schema_name TEXT,_ta
 AS
 $BODY$
 DECLARE
-    schemarow    hafd.verify_table_schema%ROWTYPE;
+    schemarow    hafd.verify_table_schema;
     _columns   TEXT;
     _constraints   TEXT;
     _indexes    TEXT;

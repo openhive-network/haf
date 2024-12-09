@@ -1,6 +1,4 @@
-
--- TODO(mickiewicz) this table exists only to use its ROWTYPE in some functions, must be replaced with TYPE
-CREATE TABLE IF NOT EXISTS hafd.verify_table_schema(
+CREATE TYPE hafd.verify_table_schema AS(
     table_name TEXT NOT NULL,
     table_schema TEXT NOT NULL,
     table_schema_hash UUID,
@@ -11,8 +9,6 @@ CREATE TABLE IF NOT EXISTS hafd.verify_table_schema(
     table_constraints TEXT NOT NULL,
     table_indexes TEXT NOT NULL
 );
-
-SELECT pg_catalog.pg_extension_config_dump('hafd.verify_table_schema', '');
 
 CREATE TABLE IF NOT EXISTS hafd.table_schema(
     schema_name TEXT NOT NULL,
