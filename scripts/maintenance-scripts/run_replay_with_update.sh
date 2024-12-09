@@ -4,16 +4,21 @@ set -xeuo pipefail
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
 
+BUILD_DIR="/home/haf_admin/build"
+REPO_COPY_DIR="$BUILD_DIR/repo_copy"
+
 LOG_FILE=replay_with_update.log
 source "$SCRIPTSDIR/maintenance-scripts/ci_common.sh"
 
+mkdir -p "$REPO_COPY_DIR"
+cp -r "$REPO_DIR"/. "$REPO_COPY_DIR"
 
 test_start
 
 # container must have /blockchain directory mounted containing block_log with at 5000000 first blocks
 export BLOCK_LOG_SOURCE_DIR_5M="/blockchain/block_log_5m"
-export PATTERNS_PATH="${REPO_DIR}/tests/integration/replay/patterns/no_filter"
-export DATADIR="${REPO_DIR}/datadir"
+export PATTERNS_PATH="${REPO_COPY_DIR}/tests/integration/replay/patterns/no_filter"
+export DATADIR="${REPO_COPY_DIR}/datadir"
 export REPLAY="--replay-blockchain --stop-at-block 1000000"
 export REPLAY_CONTINUATION="--replay-blockchain --stop-at-block 2000000"
 
@@ -32,8 +37,7 @@ $HIVED_PATH --data-dir "$DATADIR" $REPLAY --exit-before-sync --psql-url "postgre
 echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
 
 # run script that makes database update
-"${REPO_DIR}/tests/integration/functional/hive_fork_manager/test_extension_update.sh" \
-    --setup_scripts_path="$SETUP_SCRIPTS_PATH" --haf_binaries_dir="/home/haf_admin/build" --ci_project_dir="$REPO_DIR"
+"${REPO_COPY_DIR}/tests/integration/functional/hive_fork_manager/test_extension_update.sh" --haf_binaries_dir="$BUILD_DIR" --ci_project_dir="$REPO_COPY_DIR"
 
 # repeat replay from 1 milion blocks
 $HIVED_PATH --data-dir "$DATADIR" $REPLAY_CONTINUATION --exit-before-sync --psql-url "postgresql:///$DB_NAME" 2>&1 | tee -i node_logs1.log

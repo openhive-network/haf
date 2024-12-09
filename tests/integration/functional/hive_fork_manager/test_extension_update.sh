@@ -33,9 +33,6 @@ POSTGRES_PORT=5432
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --setup_scripts_path=*)
-        SETUP_DIR="${1#*=}"
-        ;;
     --haf_binaries_dir=*)
         HAF_DIR="${1#*=}"
         ;;
@@ -69,7 +66,9 @@ test_extension_update() {
     echo "Add function testfun to schema hive"
     sudo -Enu "$DB_ADMIN" psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "CREATE FUNCTION hive.testfun() RETURNS VOID AS \$\$ BEGIN END; \$\$ LANGUAGE plpgsql;"
 
-
+    echo "dupa"
+    ls -lah "${DIR}"
+    ls -lah "${DIR}/scripts"
     # old libhfm has to be removed so in case of an corrupted setup of haf the old libhfm won't be used
     sudo rm -rf /usr/lib/postgresql/${POSTGRES_VERSION}/lib/libhfm-*
     # modify the hived_api.sql file
@@ -82,7 +81,7 @@ test_extension_update() {
     git -C $DIR commit -m "test"
     # rebuild haf
     test -n "$HAF_DIR" && rm "$HAF_DIR"/* -rf
-    $SETUP_DIR/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$DIR" --haf-binaries-dir="$HAF_DIR" extension.hive_fork_manager
+    $DIR/scripts/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$DIR" --haf-binaries-dir="$HAF_DIR" extension.hive_fork_manager
     (cd $HAF_DIR; sudo ninja install)
     # run generator script
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh
