@@ -109,7 +109,7 @@ END;
 $BODY$;
 
 CREATE OR REPLACE FUNCTION hive.calculate_state_provider_hashes()
-    RETURNS SETOF hafd.state_provider_schema
+    RETURNS SETOF hafd.state_provider_and_hash
     LANGUAGE plpgsql
     STABLE
 AS

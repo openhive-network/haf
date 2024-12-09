@@ -1,4 +1,5 @@
 
+-- TODO(mickiewicz) this table exists only to use its ROWTYPE in some functions, must be replaced with TYPE
 CREATE TABLE IF NOT EXISTS hafd.verify_table_schema(
     table_name TEXT NOT NULL,
     table_schema TEXT NOT NULL,
@@ -20,10 +21,8 @@ CREATE TABLE IF NOT EXISTS hafd.table_schema(
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.table_schema', '');
 
-CREATE TABLE IF NOT EXISTS hafd.state_provider_schema(
-    provider hafd.state_providers NOT NULL,
-    hash TEXT NOT NULL
+CREATE TYPE hafd.state_provider_and_hash AS(
+    provider hafd.state_providers,
+    hash TEXT
 );
-
-SELECT pg_catalog.pg_extension_config_dump('hafd.state_provider_schema', '');
 
