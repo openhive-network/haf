@@ -785,3 +785,84 @@ BEGIN
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE FUNCTION hive.request_table_vacuum(
+    _table_name TEXT,
+    _min_interval INTERVAL DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+AS
+$BODY$
+BEGIN
+    IF _min_interval IS NOT NULL THEN
+        -- Check if the table has been vacuumed recently
+        IF EXISTS (
+            SELECT 1
+            FROM hafd.vacuum_requests
+            WHERE table_name = _table_name
+            AND last_vacuumed_time > NOW() - _min_interval
+        ) THEN
+            RAISE NOTICE 'Vacuum request for table % ignored due to recent vacuum.', _table_name;
+            RETURN;
+        END IF;
+    END IF;
+
+    -- Insert or update the vacuum request
+    INSERT INTO hafd.vacuum_requests (table_name, status)
+    VALUES (_table_name, 'requested')
+    ON CONFLICT (table_name) DO UPDATE
+    SET status = 'requested';
+
+    RAISE NOTICE 'Vacuum request for table % submitted.', _table_name;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.wait_for_table_vacuum(
+    _table_name TEXT
+)
+RETURNS void
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    __start_time TIMESTAMP;
+    __end_time TIMESTAMP;
+    __duration INTERVAL;
+BEGIN
+    RAISE NOTICE 'Waiting for vacuum to complete for table %', _table_name;
+    __start_time := clock_timestamp();
+
+    LOOP
+        EXIT WHEN NOT EXISTS (
+            SELECT 1
+            FROM hafd.vacuum_requests
+            WHERE table_name = _table_name
+            AND status <> 'vacuumed'
+        );
+    END LOOP;
+
+    __end_time := clock_timestamp();
+    __duration := __end_time - __start_time;
+    RAISE NOTICE 'Vacuum completed for table % in % seconds', _table_name, EXTRACT(EPOCH FROM __duration);
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.test_vacuum_functions()
+RETURNS void
+LANGUAGE plpgsql
+AS
+$BODY$
+BEGIN
+    -- Request a vacuum for the table hafbe_app_keyauth_a
+    PERFORM hive.request_table_vacuum('hafbe_app_keyauth_a', '1 hour'::INTERVAL);
+
+    -- Wait for the vacuum to complete
+    PERFORM hive.wait_for_table_vacuum('hafbe_app_keyauth_a');
+
+    RAISE NOTICE 'Test for vacuum functions on table hafbe_app_keyauth_a completed successfully.';
+END;
+$BODY$
+;
