@@ -20,3 +20,10 @@ CREATE TABLE IF NOT EXISTS hafd.table_schema(
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.table_schema', '');
 
+CREATE TABLE IF NOT EXISTS hafd.state_provider_schema(
+    provider hafd.state_providers NOT NULL,
+    hash TEXT NOT NULL
+);
+
+SELECT pg_catalog.pg_extension_config_dump('hafd.state_provider_schema', '');
+

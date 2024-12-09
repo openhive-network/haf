@@ -90,18 +90,36 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.calculate_state_provider_schema_hash(_provider hafd.state_providers )
+CREATE OR REPLACE FUNCTION hive.calculate_state_provider_hash(_provider hafd.state_providers )
     RETURNS TEXT --md5 of start_provider function
     LANGUAGE plpgsql
-    VOLATILE
+    STABLE
 AS
 $BODY$
 DECLARE
     __md5     TEXT;
 BEGIN
+       -- to avoid complications with establish state providers and their tables ( it wil require
+       -- to create artificial context and register state providers into it ), only hash of code
+       -- which creates sp tables is taken into consideration
        EXECUTE format( 'SELECT MD5(pg_get_functiondef(''hive.start_provider_%s''::regproc))', _provider )
        INTO __md5;
        RETURN __md5;
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.calculate_state_provider_hashes()
+    RETURNS SETOF hafd.state_provider_schema
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+BEGIN
+    RETURN QUERY
+        SELECT
+              sp.* as provider
+            , hive.calculate_state_provider_hash(sp.*) as hash
+        FROM unnest(enum_range(NULL::hafd.state_providers)) as sp;
 END;
 $BODY$;
 
@@ -147,11 +165,6 @@ verified_tables_list = ARRAY[
         RETURN NEXT hive.calculate_table_schema_hash( schema_name, _table_name);
     END LOOP;
 
-    FOR _state_provider IN SELECT unnest(enum_range(NULL::hafd.state_providers))
-        LOOP
-            PERFORM hive.calculate_state_provider_schema_hash(_state_provider);
-        END LOOP;
-
     RETURN;
 
 END;
@@ -167,12 +180,15 @@ $BODY$
 DECLARE
     ts hafd.table_schema%ROWTYPE;
     _tmp TEXT;
+    _provider_hashes TEXT;
 BEGIN
     TRUNCATE hafd.table_schema;
 
     SELECT string_agg(table_schema, ' | ') FROM hive.calculate_schema_hash(schema_name) INTO _tmp;
 
-    INSERT INTO hafd.table_schema VALUES (schema_name, MD5(_tmp)::uuid);
+    SELECT string_agg(hash, ' | ') FROM hive.calculate_state_provider_hashes() INTO _provider_hashes;
+
+    INSERT INTO hafd.table_schema VALUES (schema_name, MD5(_tmp || _provider_hashes)::uuid);
 
     ts.schema_name := schema_name;
     ts.schema_hash := MD5(_tmp)::uuid;
