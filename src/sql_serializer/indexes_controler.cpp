@@ -178,6 +178,32 @@ void indexes_controler::poll_and_create_indexes() {
 
   while (!theApp.is_interrupt_request()) {
     dlog("Polling for tables with missing indexes...");
+
+    // Check for requested table vacuums
+    queries_commit_data_processor vacuum_requests_checker(
+      _db_url,
+      "Check for vacuum requests",
+      "index_ctrl",
+      [](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+        pqxx::result data = tx.exec(
+          "SELECT table_name FROM hafd.vacuum_requests WHERE status = 'requested';"
+        );
+        for (const auto& record : data) {
+          std::string table_name = record["table_name"].as<std::string>();
+          std::string vacuum_command = "VACUUM FULL ANALYZE " + table_name;
+          ilog("Performing vacuum: ${vacuum_command}", ("vacuum_command", vacuum_command));
+          tx.exec(vacuum_command);
+          tx.exec("UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW() WHERE table_name = '" + table_name + "';");
+        }
+        return data_processor::data_processing_status();
+      },
+      nullptr,
+      theApp
+    );
+
+    vacuum_requests_checker.trigger(data_processor::data_chunk_ptr(), 0);
+    vacuum_requests_checker.join();
+
     // Check for tables with missing indexes that are not currently being created
     queries_commit_data_processor missing_indexes_checker(
       _db_url,
