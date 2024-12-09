@@ -127,7 +127,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( hived_api/set_irreversible_cleaning_events_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/disable_indexes_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/enable_indexes_test.sql )
- #DISABLE FOR NOW!!!!!!!!!!! ADD_SQL_FUNCTIONAL_TEST( hived_api/enable_indexes_compare_saved_statement_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/enable_indexes_compare_saved_statement_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_end_massive_sync_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_end_massive_sync_with_app_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/set_irreversible_not_copy_reversible_data_from_old_fork_test.sql )

@@ -27,7 +27,7 @@ BEGIN
         is_constraint boolean,
         is_index boolean,
         is_foreign_key boolean,
-        status index_status -- new column added
+        status hafd.index_status
     );
 END;
 $BODY$
@@ -120,9 +120,11 @@ AS
 $BODY$
 BEGIN
     ASSERT NOT EXISTS (
-        (SELECT * FROM indexes_constraints2 ORDER BY index_constraint_name)
+        (SELECT table_name, index_constraint_name, command, status, is_constraint, is_index, is_foreign_key
+          FROM indexes_constraints2 ORDER BY index_constraint_name)
         EXCEPT
-        SELECT * FROM hafd.indexes_constraints ORDER BY index_constraint_name
+        SELECT table_name, index_constraint_name, command, status, is_constraint, is_index, is_foreign_key
+          FROM hafd.indexes_constraints ORDER BY index_constraint_name
     ) , 'Saving indexes and constraints failed';
 END;
 $BODY$
