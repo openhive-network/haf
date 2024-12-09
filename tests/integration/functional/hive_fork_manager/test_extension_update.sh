@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 
 set -euo pipefail
 
@@ -23,13 +23,13 @@ print_help () {
     echo
 }
 
-SETUP_DIR=""
+# SETUP_DIR=""
 HAF_DIR=""
 DIR=""
 DB_ADMIN="haf_admin"
 DB_NAME="haf_block_log"
-POSTGRES_HOST="/var/run/postgresql"
-POSTGRES_PORT=5432
+# POSTGRES_HOST="/var/run/postgresql"
+# POSTGRES_PORT=5432
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -72,17 +72,18 @@ test_extension_update() {
     # old libhfm has to be removed so in case of an corrupted setup of haf the old libhfm won't be used
     sudo rm -rf /usr/lib/postgresql/${POSTGRES_VERSION}/lib/libhfm-*
     # modify the hived_api.sql file
-    echo -e "CREATE OR REPLACE FUNCTION hive.test() \n    RETURNS void \n    LANGUAGE plpgsql \n    VOLATILE AS \n\$BODY\$ \nBEGIN \nRAISE NOTICE 'test'; \nEND; \n\$BODY\$;" >> $DIR/src/hive_fork_manager/hived_api.sql
+    echo -e "CREATE OR REPLACE FUNCTION hive.test() \n    RETURNS void \n    LANGUAGE plpgsql \n    VOLATILE AS \n\$BODY\$ \nBEGIN \nRAISE NOTICE 'test'; \nEND; \n\$BODY\$;" >> "${DIR}/src/hive_fork_manager/hived_api.sql"
     # commit changes to make a new hash
-    git -C $DIR config --global user.name "abc"
-    git -C $DIR config --global user.email "abc@example.com"
-    git -C $DIR config --global --add safe.directory /builds/hive/haf
-    git -C $DIR add src/hive_fork_manager/hived_api.sql
-    git -C $DIR commit -m "test"
+    git -C "${DIR}" config --global user.name "abc"
+    git -C "${DIR}" config --global user.email "abc@example.com"
+    git -C "${DIR}" config --global --add safe.directory /builds/hive/haf
+    git -C "${DIR}" add src/hive_fork_manager/hived_api.sql
+    git -C "${DIR}" commit -m "test"
     # rebuild haf
-    test -n "$HAF_DIR" && rm "$HAF_DIR"/* -rf
-    $DIR/scripts/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$DIR" --haf-binaries-dir="$HAF_DIR" extension.hive_fork_manager
-    (cd $HAF_DIR; sudo ninja install)
+    test -n "$HAF_DIR" && rm "$HAF_DIR:?"/* -rf
+    ls -lah "${DIR}/scripts/build.sh"
+    "${DIR}/scripts/build.sh" --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="${DIR}" --haf-binaries-dir="${HAF_DIR}" extension.hive_fork_manager
+    (cd "${HAF_DIR}"; sudo ninja install)
     # run generator script
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh
 
