@@ -177,7 +177,7 @@ void indexes_controler::poll_and_create_indexes() {
   std::mutex mtx; // Protects threads_to_delete
 
   while (!theApp.is_interrupt_request()) {
-    dlog("Polling for tables with missing indexes...");
+    ilog("Polling for tables with missing indexes...");
 
     // Check for requested table vacuums
     queries_commit_data_processor vacuum_requests_checker(
