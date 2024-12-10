@@ -21,3 +21,4 @@ CREATE TABLE IF NOT EXISTS hafd.vacuum_requests (
     last_vacuumed_time timestamp,
     CONSTRAINT pk_hive_vacuum_requests UNIQUE( table_name)
 );
+SELECT pg_catalog.pg_extension_config_dump('hafd.vacuum_status', '');
