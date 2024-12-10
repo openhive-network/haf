@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE FUNCTION hive.copy_blocks_to_irreversible(
       _head_block_of_irreversible_blocks INT
     , _new_irreversible_block INT )
@@ -355,7 +354,7 @@ BEGIN
     --LEFT JOIN is needed in situation when PRIMARY KEY exists in a `_table`.
     --A method `hive.save_and_drop_constraints` finds it, but following code finds an index related to given PK as well.
     --Since dropping/restoring PK automatically drops/restores an index, then it's better to avoid storing a record with index related to PK.
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
     SELECT
         T.indexname
       , _schema || '.' || _table
@@ -363,14 +362,17 @@ BEGIN
       , FALSE as is_constraint
       , TRUE as is_index
       , FALSE as is_foreign_key
+      , ARRAY[0]
+      , 'missing' as status
     FROM
     (
       SELECT indexname, indexdef
       FROM pg_indexes
       WHERE schemaname = _schema AND tablename = _table
     ) T LEFT JOIN hafd.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
-    WHERE ic.table_name is NULL
-    ON CONFLICT DO NOTHING;
+    ON CONFLICT (index_constraint_name, table_name) DO UPDATE
+    SET status = 'missing';
+
 
     --dropping indexes
     OPEN __cursor FOR (
@@ -402,7 +404,7 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.save_and_drop_indexes_foreign_keys( in _table_schema TEXT, in _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.save_and_drop_foreign_keys( in _table_schema TEXT, in _table_name TEXT )
 RETURNS VOID
 AS
 $function$
@@ -410,7 +412,7 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
     SELECT
           DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
@@ -418,10 +420,14 @@ BEGIN
         , FALSE as is_constraint
         , FALSE AS is_index
         , TRUE as is_foreign_key
+        , ARRAY[0]
+        , 'missing' as status
     FROM pg_constraint pgc
     JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
     JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
-    WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name;
+    WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
+    ON CONFLICT (index_constraint_name, table_name) DO UPDATE
+    SET status = 'missing';
 
     OPEN __cursor FOR (
         SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
@@ -448,7 +454,7 @@ DECLARE
 __command TEXT;
 __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key )
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
     SELECT
         DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
@@ -456,10 +462,14 @@ BEGIN
         , tc.constraint_type = 'PRIMARY KEY' OR tc.constraint_type = 'UNIQUE' as is_constraint
         , FALSE AS is_index
         , FALSE as is_foreign_key
+        , ARRAY[0]
+        , 'missing' as status
     FROM pg_constraint pgc
         JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
         JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
-    WHERE tc.constraint_type != 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name;
+    WHERE tc.constraint_type != 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
+    ON CONFLICT (index_constraint_name, table_name) DO UPDATE
+    SET status = 'missing';
 
     OPEN __cursor FOR (
             SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
@@ -490,7 +500,8 @@ BEGIN
   __cluster_index_dropped := EXISTS(
                 SELECT command FROM hafd.indexes_constraints
                 WHERE table_name = 'hafd.account_operations' AND
-                      index_constraint_name = 'hive_account_operations_uq1' LIMIT 1);
+                      index_constraint_name = 'hive_account_operations_uq1' AND
+                      status = 'missing' LIMIT 1);
   IF (__cluster_index_dropped) THEN
     RAISE NOTICE 'Cluster index dropped, restoring it before other indexes for faster clustering';
     SELECT command INTO __command FROM hafd.indexes_constraints
@@ -501,19 +512,20 @@ BEGIN
     CLUSTER hafd.account_operations using hive_account_operations_uq1;
     RAISE NOTICE 'Analyzing hafd.account_operations after clustering to update statistics';
     ANALYZE hafd.account_operations;
-    DELETE FROM hafd.indexes_constraints WHERE command = __command;
+    UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
   END IF;
 END;
 $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT )
+CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT, in concurrent BOOLEAN DEFAULT FALSE )
 RETURNS VOID
 AS
 $function$
 DECLARE
   __command TEXT;
+  __original_command TEXT;
   __cursor REFCURSOR;
 BEGIN
 
@@ -521,19 +533,26 @@ BEGIN
     PERFORM hive.recluster_account_operations_if_index_dropped();
   END IF;
 
-  --restoring indexes, primary keys, unique contraints
-  OPEN __cursor FOR ( SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE );
+  --restoring indexes, primary keys, unique constraints
+  OPEN __cursor FOR ( SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing' );
   LOOP
-    FETCH __cursor INTO __command;
+    FETCH __cursor INTO __original_command;
     EXIT WHEN NOT FOUND;
+    IF concurrent THEN
+      -- Modify the command to include CONCURRENTLY
+      __command := regexp_replace(__original_command, 'CREATE INDEX', 'CREATE INDEX CONCURRENTLY', 'i');
+    ELSE
+      __command := __original_command;
+    END IF;
+    RAISE NOTICE 'Restoring index: %', __command;
+    UPDATE hafd.indexes_constraints SET status = 'creating' WHERE command = __original_command;
     EXECUTE __command;
+    UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __original_command;
   END LOOP;
   CLOSE __cursor;
 
   EXECUTE format( 'ANALYZE %s',  _table_name );
 
-  DELETE FROM hafd.indexes_constraints
-  WHERE table_name = _table_name AND is_foreign_key = FALSE;
   RAISE NOTICE 'Finished restoring any dropped indexes on %', _table_name;
 END;
 $function$
@@ -549,17 +568,15 @@ DECLARE
     __cursor REFCURSOR;
 BEGIN
 
-    --restoring indexes, primary keys, unique contraints
-    OPEN __cursor FOR ( SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE );
+    --restoring foreign keys
+    OPEN __cursor FOR ( SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE AND status = 'missing' );
     LOOP
     FETCH __cursor INTO __command;
         EXIT WHEN NOT FOUND;
         EXECUTE __command;
+        UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
     END LOOP;
     CLOSE __cursor;
-
-    DELETE FROM hafd.indexes_constraints
-    WHERE table_name = _table_name AND is_foreign_key = TRUE;
 
 END;
 $function$
@@ -600,6 +617,171 @@ BEGIN
     DELETE FROM hafd.blocks WHERE num > __consistent_block;
 
     UPDATE hafd.irreversible_data SET is_dirty = FALSE;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.register_index_dependency(
+    _context_name TEXT,
+    _create_index_command TEXT
+)
+RETURNS void
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    __table_name TEXT;
+    __index_name TEXT;
+    __canonicalized_command TEXT;
+    __context_id INT;
+BEGIN
+    -- Lookup the context_id using context_name
+    SELECT id INTO __context_id
+    FROM hafd.contexts
+    WHERE name = _context_name;
+
+        -- Abort with an error message if no context_id is found
+    IF __context_id IS NULL THEN
+        RAISE EXCEPTION 'Context % not found in hafd.contexts', _context_name;
+    END IF;
+
+    -- Parse the index description
+    SELECT table_name, index_name, canonicalized_command
+    INTO __table_name, __index_name, __canonicalized_command
+    FROM hive.parse_create_index_command(_create_index_command);
+
+    -- Upsert the index dependency
+    INSERT INTO hafd.indexes_constraints (
+        table_name, 
+        index_constraint_name, 
+        command, 
+        is_constraint, 
+        is_index, 
+        is_foreign_key, 
+        status, 
+        contexts
+    )
+    VALUES (
+        __table_name, 
+        __index_name, 
+        __canonicalized_command, 
+        FALSE, 
+        TRUE, 
+        FALSE, 
+        'missing', 
+        ARRAY[__context_id]
+    )
+    ON CONFLICT (table_name, index_constraint_name) DO UPDATE
+    SET contexts = array_append(hafd.indexes_constraints.contexts, __context_id);
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.wait_till_registered_indexes_created(
+    _app_context TEXT
+)
+RETURNS void
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    index_record RECORD;
+    __start_time TIMESTAMP;
+    __end_time TIMESTAMP;
+    __duration INTERVAL;
+BEGIN
+    RAISE NOTICE 'Starting to wait for registered indexes to be created for context %', _app_context;
+    __start_time := clock_timestamp();
+
+    LOOP
+        EXIT WHEN NOT EXISTS (
+        SELECT 1
+        FROM hafd.indexes_constraints
+        WHERE contexts @> ARRAY[(SELECT id FROM hafd.contexts WHERE name = _app_context)] AND status <> 'created'
+        );
+    END LOOP;
+
+
+    __end_time := clock_timestamp();
+    __duration := __end_time - __start_time;
+    RAISE NOTICE 'Finished waiting for registered indexes to be created for context % in % seconds', _app_context, EXTRACT(EPOCH FROM __duration);
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.parse_create_index_command(
+    create_index_command TEXT
+)
+RETURNS TABLE (
+    table_name TEXT,
+    index_name TEXT,
+    canonicalized_command TEXT
+)
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    _matches TEXT[];
+BEGIN
+    -- Extract the table name and index name using regex
+    _matches := regexp_matches(create_index_command, '^\s*CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:IF NOT EXISTS\s+)?(\w+)\s+ON\s+(\w+\.\w+)(?:\s+ONLY\s*)?', 'i');
+    IF array_length(_matches, 1) = 2 THEN
+        index_name := _matches[1];
+        table_name := _matches[2];
+    ELSE
+        RAISE EXCEPTION 'Invalid CREATE INDEX command: %', create_index_command;
+    END IF;
+
+    -- Canonicalize the command by removing extra spaces and converting to lower case
+    canonicalized_command := lower(regexp_replace(create_index_command, '\s+', ' ', 'g'));
+
+    RETURN QUERY SELECT table_name, index_name, canonicalized_command;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.remove_index_dependencies(
+    _context_name TEXT
+)
+RETURNS void
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    __context_id INT;
+    __index_record RECORD;
+    _schema TEXT;
+BEGIN
+    -- Lookup the context_id using context_name
+    SELECT id INTO __context_id
+    FROM hafd.contexts
+    WHERE name = _context_name;
+
+    -- Abort with an error message if no context_id is found
+    IF __context_id IS NULL THEN
+        RAISE EXCEPTION 'Context % not found in hafd.contexts', _context_name;
+    END IF;
+
+    -- Loop through each index that the context is dependent on
+    FOR __index_record IN
+        SELECT table_name, index_constraint_name
+        FROM hafd.indexes_constraints
+        WHERE contexts @> ARRAY[__context_id]
+    LOOP
+        -- Parse the schema name from the table field
+        _schema := split_part(__index_record.table_name, '.', 1);
+
+        -- Remove the context from the list of contexts
+        UPDATE hafd.indexes_constraints
+        SET contexts = array_remove(contexts, __context_id)
+        WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name;
+
+        -- Drop the index if there are no remaining contexts dependent on it (note that HAF-internal dependencies are marked as being dependent on context 0 to prevent their removal)
+        IF (SELECT array_length(contexts, 1) FROM hafd.indexes_constraints WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name) IS NULL THEN
+            EXECUTE 'DROP INDEX IF EXISTS ' || _schema || '.' || __index_record.index_constraint_name;
+            DELETE FROM hafd.indexes_constraints WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name;
+        END IF;
+    END LOOP;
 END;
 $BODY$
 ;

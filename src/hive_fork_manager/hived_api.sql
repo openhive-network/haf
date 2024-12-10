@@ -212,14 +212,14 @@ CREATE OR REPLACE FUNCTION hive.disable_fk_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'irreversible_data' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'blocks' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'transactions' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'transactions_multisig' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'operations' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'applied_hardforks' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'accounts' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'account_operations' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'irreversible_data' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'blocks' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_multisig' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'operations' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'applied_hardforks' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'accounts' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'account_operations' );
 
 END;
 $BODY$
@@ -274,13 +274,13 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'blocks_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'transactions_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'transactions_multisig_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'operations_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'applied_hardforks_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'accounts_reversible' );
-    PERFORM hive.save_and_drop_indexes_foreign_keys( 'hafd', 'account_operations_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'blocks_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_multisig_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'operations_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'applied_hardforks_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'accounts_reversible' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'account_operations_reversible' );
 
 
 
@@ -361,26 +361,54 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.are_indexes_dropped()
-    RETURNS BOOL
+CREATE OR REPLACE FUNCTION hive.all_indexes_have_status(_status hafd.index_status)
+    RETURNS BOOLEAN
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __number_of_dropped_indexes INT;
+    _all_indices_have_status BOOLEAN;
+    record hafd.indexes_constraints%ROWTYPE;
 BEGIN
-    SELECT COUNT(*) FROM hafd.indexes_constraints
-    WHERE is_index
-    INTO __number_of_dropped_indexes;
-    IF ( __number_of_dropped_indexes = 0 ) THEN
-        RETURN FALSE;
-    ELSE
-        RETURN TRUE;
-    END IF;
+    -- Debugging: Log the current state of the indexes_constraints table
+    RAISE NOTICE 'Current state of hafd.indexes_constraints:';
+    FOR record IN
+        SELECT * FROM hafd.indexes_constraints
+    LOOP
+        RAISE NOTICE 'index_constraint_name: %, table_name: %, status: %', record.index_constraint_name, record.table_name, record.status;
+    END LOOP;
+
+    SELECT bool_and(status=_status)
+    INTO _all_indices_have_status
+    FROM hafd.indexes_constraints;
+
+    RETURN _all_indices_have_status;
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE FUNCTION hive.are_indexes_dropped()
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+  RETURN COALESCE(hive.all_indexes_have_status('missing'), FALSE);
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.are_indexes_restored()
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+  RETURN COALESCE(hive.all_indexes_have_status('created'), TRUE);
+END;
+$BODY$;
 
 CREATE OR REPLACE FUNCTION hive.are_fk_dropped()
     RETURNS BOOL
@@ -389,16 +417,14 @@ CREATE OR REPLACE FUNCTION hive.are_fk_dropped()
 AS
 $BODY$
 DECLARE
-    __number_of_dropped_fk INT;
+    __a_fk_exists INTEGER;
 BEGIN
-    SELECT COUNT(*) FROM hafd.indexes_constraints
-    WHERE is_foreign_key
-    INTO __number_of_dropped_fk;
-    IF ( __number_of_dropped_fk = 0 ) THEN
-        RETURN FALSE;
-    ELSE
-        RETURN TRUE;
-    END IF;
+    SELECT COUNT(*)
+    INTO __a_fk_exists
+    FROM hafd.indexes_constraints
+    WHERE is_foreign_key AND status != 'missing';
+
+    RETURN __a_fk_exists = 0;
 END;
 $BODY$
 ;

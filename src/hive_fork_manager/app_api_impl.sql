@@ -4,8 +4,12 @@ RETURNS BOOLEAN
 AS
 $BODY$
 BEGIN
-  --- Instance is ready when has built all indexes/constraints. We can consider adding here another features if needed
-  RETURN NOT EXISTS(SELECT NULL FROM hafd.indexes_constraints);
+  -- Instance is ready when all indexes with a dependency on context 0 have been created
+  RETURN NOT EXISTS(
+    SELECT 1
+    FROM hafd.indexes_constraints 
+    WHERE contexts @> ARRAY[0] AND status != 'created'
+  );
 END
 $BODY$
 LANGUAGE plpgsql STABLE;
