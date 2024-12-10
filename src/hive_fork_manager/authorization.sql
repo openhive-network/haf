@@ -68,6 +68,7 @@ GRANT ALL ON hafd.contexts_attachment TO hive_applications_group;
 GRANT ALL ON hafd.registered_tables TO hive_applications_group;
 GRANT ALL ON hafd.triggers TO hive_applications_group;
 GRANT ALL ON hafd.state_providers_registered TO hive_applications_group;
+GRANT ALL ON hafd.vacuum_requests TO hive_applications_group;
 
 -- protect an application rows aginst other applications
 REVOKE UPDATE( is_forking, owner ) ON hafd.contexts FROM GROUP hive_applications_group;
