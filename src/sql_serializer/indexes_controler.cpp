@@ -189,6 +189,7 @@ void indexes_controler::poll_and_create_indexes() {
           "SELECT table_name FROM hafd.vacuum_requests WHERE status = 'requested';"
         );
         // workaround, open separate connections for non-transactional start vacuum
+        ilog("Checking for tables to vacuum...");
         auto vacuum_connection = std::make_unique<pqxx::connection>(_db_url);
         pqxx::nontransaction vacuum_txn(*vacuum_connection);
         for (const auto& record : data) {
@@ -196,7 +197,7 @@ void indexes_controler::poll_and_create_indexes() {
           std::string vacuum_command = "VACUUM FULL ANALYZE " + table_name;
           ilog("Performing vacuum: ${vacuum_command}", ("vacuum_command", vacuum_command));
           vacuum_txn.exec(vacuum_command);
-
+          ilog("Vacuumed table: ${table_name}", ("table_name", table_name));
           tx.exec("UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW() WHERE table_name = '" + table_name + "';");
         }
         return data_processor::data_processing_status();
