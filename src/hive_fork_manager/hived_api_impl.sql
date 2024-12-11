@@ -698,7 +698,8 @@ BEGIN
         SELECT 1
         FROM hafd.indexes_constraints
         WHERE contexts @> ARRAY[(SELECT id FROM hafd.contexts WHERE name = _app_context)] AND status <> 'created'
-        );
+        RAISE NOTICE 'Sleeping for 10 seconds waiting for indexes to be created';
+        PERFORM pg_sleep(10);      );
     END LOOP;
 
 
@@ -839,8 +840,10 @@ BEGIN
             SELECT 1
             FROM hafd.vacuum_requests
             WHERE table_name = _table_name
-            AND status <> 'vacuumed'
+            AND status <> 'vacuumed'            
         );
+        RAISE NOTICE 'Sleeping for 10 seconds waiting for vacuum to be done';
+        PERFORM pg_sleep(10);
     END LOOP;
 
     __end_time := clock_timestamp();
