@@ -15,7 +15,7 @@ CREATE OR REPLACE PROCEDURE alice_impersonal_test_when()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.request_table_vacuum('a.table1');
+    PERFORM hive.app_request_table_vacuum('a.table1');
 END;
 $BODY$
 ;

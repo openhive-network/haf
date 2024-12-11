@@ -786,7 +786,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.request_table_vacuum(
+CREATE OR REPLACE FUNCTION hive.app_request_table_vacuum(
     _table_name TEXT,
     _min_interval INTERVAL DEFAULT NULL
 )
@@ -819,7 +819,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.wait_for_table_vacuum(
+CREATE OR REPLACE FUNCTION hive.app_wait_for_table_vacuum(
     _table_name TEXT
 )
 RETURNS void
@@ -857,10 +857,10 @@ AS
 $BODY$
 BEGIN
     -- Request a vacuum for the table hafbe_app_keyauth_a
-    PERFORM hive.request_table_vacuum('hafbe_app_keyauth_a', '1 hour'::INTERVAL);
+    PERFORM hive.app_request_table_vacuum('hafbe_app_keyauth_a', '1 hour'::INTERVAL);
 
     -- Wait for the vacuum to complete
-    PERFORM hive.wait_for_table_vacuum('hafbe_app_keyauth_a');
+    PERFORM hive.app_wait_for_table_vacuum('hafbe_app_keyauth_a');
 
     RAISE NOTICE 'Test for vacuum functions on table hafbe_app_keyauth_a completed successfully.';
 END;
