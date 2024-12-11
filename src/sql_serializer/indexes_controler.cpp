@@ -188,7 +188,7 @@ void indexes_controler::poll_and_create_indexes() {
         ilog("Checking for tables to vacuum...");
         pqxx::result data;
         try { data = tx.exec("SELECT table_name FROM hafd.vacuum_requests WHERE status = 'requested';"); } 
-        catch (const pqxx::pqxx_exception& e) 
+        catch (const pqxx::sql_error& e) 
         {
             elog("Error while checking for vacuum requests: ${e}", ("e", e.what()));
             return data_processor::data_processing_status();
@@ -210,7 +210,7 @@ void indexes_controler::poll_and_create_indexes() {
             ilog("Updated vacuum status for table: ${table_name}", ("table_name", table_name));
             }
         } 
-        catch (const pqxx::pqxx_exception& e) { elog("Error while vacuuming tables: ${e}", ("e", e.what())); }
+        catch (const pqxx::sql_error& e) { elog("Error while vacuuming tables: ${e}", ("e", e.what())); }
         return data_processor::data_processing_status();
       },
       nullptr,
