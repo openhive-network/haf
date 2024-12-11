@@ -699,7 +699,8 @@ BEGIN
         FROM hafd.indexes_constraints
         WHERE contexts @> ARRAY[(SELECT id FROM hafd.contexts WHERE name = _app_context)] AND status <> 'created'
         RAISE NOTICE 'Sleeping for 10 seconds waiting for indexes to be created';
-        PERFORM pg_sleep(10);      );
+        );
+        PERFORM pg_sleep(10);
     END LOOP;
 
 
