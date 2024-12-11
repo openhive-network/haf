@@ -185,21 +185,32 @@ void indexes_controler::poll_and_create_indexes() {
       "Check for vacuum requests",
       "index_ctrl",
       [this](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
-        pqxx::result data = tx.exec(
-          "SELECT table_name FROM hafd.vacuum_requests WHERE status = 'requested';"
-        );
-        // workaround, open separate connections for non-transactional start vacuum
         ilog("Checking for tables to vacuum...");
-        auto vacuum_connection = std::make_unique<pqxx::connection>(_db_url);
-        pqxx::nontransaction vacuum_txn(*vacuum_connection);
-        for (const auto& record : data) {
-          std::string table_name = record["table_name"].as<std::string>();
-          std::string vacuum_command = "VACUUM FULL ANALYZE " + table_name;
-          ilog("Performing vacuum: ${vacuum_command}", ("vacuum_command", vacuum_command));
-          vacuum_txn.exec(vacuum_command);
-          ilog("Vacuumed table: ${table_name}", ("table_name", table_name));
-          tx.exec("UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW() WHERE table_name = '" + table_name + "';");
+        pqxx::result data;
+        try { data = tx.exec("SELECT table_name FROM hafd.vacuum_requests WHERE status = 'requested';"); } 
+        catch (const pqxx::pqxx_exception& e) 
+        {
+            elog("Error while checking for vacuum requests: ${e}", ("e", e.what()));
+            return data_processor::data_processing_status();
         }
+        ilog("Found ${count} tables with vacuum requests.", ("count", data.size()));
+
+        // workaround, open separate connections for non-transactional start vacuum
+        try 
+        {
+          auto vacuum_connection = std::make_unique<pqxx::connection>(_db_url);
+          pqxx::nontransaction vacuum_txn(*vacuum_connection);
+          for (const auto& record : data) {
+            std::string table_name = record["table_name"].as<std::string>();
+            std::string vacuum_command = "VACUUM FULL ANALYZE " + table_name;
+            ilog("Performing vacuum: ${vacuum_command}", ("vacuum_command", vacuum_command));
+            vacuum_txn.exec(vacuum_command);
+            ilog("Vacuumed table: ${table_name}", ("table_name", table_name));
+            tx.exec("UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW() WHERE table_name = '" + table_name + "';");
+            ilog("Updated vacuum status for table: ${table_name}", ("table_name", table_name));
+            }
+        } 
+        catch (const pqxx::pqxx_exception& e) { elog("Error while vacuuming tables: ${e}", ("e", e.what())); }
         return data_processor::data_processing_status();
       },
       nullptr,
