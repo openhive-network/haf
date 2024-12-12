@@ -701,6 +701,10 @@ BEGIN
         ON CONFLICT DO NOTHING', __context_id, _state_provider, _state_provider, _context
     );
 
+    EXECUTE format(
+            'SELECT hive.runtimecode_provider_%s( %L )', _state_provider, _context
+    );
+
     IF NOT hive.app_is_forking( _context ) THEN
         RETURN;
     END IF;

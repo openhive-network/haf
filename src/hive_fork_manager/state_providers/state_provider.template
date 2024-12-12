@@ -15,6 +15,25 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.runtimecode_provider_<provider_name>( _context hafd.context_name )
+    RETURNS TEXT[]
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+BEGIN
+    -- HERE YOU NEED TO CREATE FUNCTIONS WHICH ARE USED BY PROVIDER
+    -- the function is executed at provider registration and then during each HAF update
+    -- the functions have to be create with CREATE OR REPLACE
+    -- it should be used only for function which are created only to fill state provider table
+    -- the functions names must conform pattern:
+    -- hive.<context_name>_<function_name>
+    -- it must be created in schema hive to be removed during hfm extension update
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.update_state_provider_<provider_name>( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _context hafd.context_name )
     RETURNS void
     LANGUAGE plpgsql

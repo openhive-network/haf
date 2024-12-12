@@ -213,14 +213,31 @@ BEGIN
     $$
     , _context);
 
+    RETURN ARRAY[format('%1$s_keyauth_a', _context), format('%1$s_keyauth_k', _context), format('%1$s_accountauth_a', _context)];
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.runtimecode_provider_keyauth( _context hafd.context_name )
+    RETURNS VOID
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __schema TEXT;
+BEGIN
+    SELECT hc.schema INTo __schema
+    FROM hafd.contexts hc
+    WHERE hc.name = _context;
     -- Persistent function definition for keyauth insertion
     -- The 'hive.start_provider_keyauth_insert_into_keyauth_a' function is created here as a permanent
     -- function rather than being dynamically generated during each call to 'hive.update_state_provider_keyauth'.
 
     EXECUTE format(
-    $t$
+            $t$
 
-        CREATE OR REPLACE FUNCTION hafd.%1$s_insert_into_keyauth_a(
+        CREATE OR REPLACE FUNCTION hive.%1$s_insert_into_keyauth_a(
         _first_block integer,
         _last_block integer)
             RETURNS void
@@ -246,8 +263,8 @@ BEGIN
         -- Consider relocating this logic from the current CTE to the actual 'start_provider_keyauth' execution for better efficiency.
         WITH genesis_auth_records AS MATERIALIZED
         (
-            SELECT 
-                (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = g.account_name) as account_id, 
+            SELECT
+                (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = g.account_name) as account_id,
                 g.account_name,
                 g.key_kind,
                 g.key_auth,
@@ -259,14 +276,14 @@ BEGIN
                 (SELECT b.created_at FROM hafd.blocks b WHERE b.num = 1) as timestamp,
                 1
                 FROM hive.get_genesis_keyauths() as g
-            WHERE  _first_block <= 1 AND 1 <= _last_block 
+            WHERE  _first_block <= 1 AND 1 <= _last_block
         ),
 
         -- Hard fork 9 fixes some accounts that were compromised
         HARDFORK_9_fixed_auth_records AS MATERIALIZED
         (
             SELECT
-            (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id, 
+            (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id,
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_9_block_num as block_num,
@@ -279,7 +296,7 @@ BEGIN
         HARDFORK_21_fixed_auth_records AS MATERIALIZED
         (
             SELECT
-            (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id, 
+            (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id,
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_21_block_num as block_num,
@@ -292,7 +309,7 @@ BEGIN
         HARDFORK_24_fixed_auth_records AS MATERIALIZED
         (
             SELECT
-            (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id, 
+            (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id,
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_24_block_num as block_num,
@@ -354,7 +371,7 @@ BEGIN
         ),
 
         -- Handle all other operations.
-        matching_op_types as materialized 
+        matching_op_types as materialized
             (
             select ot.id from hafd.operation_types ot WHERE ot.name IN
             (
@@ -393,31 +410,31 @@ BEGIN
                         ov.id as op_stable_id
                     FROM matching_ops ov
                 ),
-            min_block_per_pow_account AS 
+            min_block_per_pow_account AS
             (
-                SELECT 
+                SELECT
                     r.account_name,
                     MIN(r.block_num) as min_block_num
-                FROM 
+                FROM
                     raw_auth_records r
-                INNER JOIN 
+                INNER JOIN
                     pow_extended_auth_records per ON r.account_name = per.account_name
-                GROUP BY 
+                GROUP BY
                     r.account_name
             ),
-            min_block_num_from_stored_table_per_account_id AS 
+            min_block_num_from_stored_table_per_account_id AS
             (
-                SELECT 
-                    account_id, 
+                SELECT
+                    account_id,
                     MIN(block_num) AS min_block_num_from_stored_table
-                FROM 
+                FROM
                     hafd.%1$s_keyauth_a
-                GROUP BY 
+                GROUP BY
                     account_id
             ),
             pow_extended_auth_records_with_min_block AS
             (
-                SELECT 
+                SELECT
                     pow.account_id,
                     pow.account_name,
                     pow.key_kind,
@@ -432,17 +449,17 @@ BEGIN
                     mb.min_block_num,
                     pow_min_block_num,
                     mb_table.min_block_num_from_stored_table
-                FROM 
+                FROM
                     pow_extended_auth_records pow
-                LEFT JOIN 
+                LEFT JOIN
                     min_block_per_pow_account mb ON pow.account_name = mb.account_name
-                LEFT JOIN 
+                LEFT JOIN
                     min_block_num_from_stored_table_per_account_id mb_table ON pow.account_id = mb_table.account_id
 
-            ),    
+            ),
             pow_extended_auth_records_filtered as materialized
             (
-                SELECT 
+                SELECT
                     account_id,
                     account_name,
                     key_kind,
@@ -466,9 +483,9 @@ BEGIN
             FROM raw_auth_records r
 
             UNION ALL
-            SELECT 
+            SELECT
                 *
-            FROM 
+            FROM
                 pow_extended_auth_records_filtered
 
             UNION ALL
@@ -526,7 +543,7 @@ BEGIN
             ),
         effective_key_or_account_auth_records as materialized
         (
-            with effective_tuple_ids as materialized 
+            with effective_tuple_ids as materialized
             (
             select s.account_id, s.key_kind, max(s.op_stable_id) as op_stable_id
             from extended_auth_records s
@@ -536,7 +553,7 @@ BEGIN
             from extended_auth_records s1
             join effective_tuple_ids e ON e.account_id = s1.account_id and e.key_kind = s1.key_kind and e.op_stable_id = s1.op_stable_id
         ),
-        --- PROCESSING OF KEY BASED AUTHORITIES ---	
+        --- PROCESSING OF KEY BASED AUTHORITIES ---
             supplement_key_dictionary as materialized
             (
             insert into hafd.%1$s_keyauth_k as dict (key)
@@ -552,7 +569,7 @@ BEGIN
             from effective_key_or_account_auth_records s
             join supplement_key_dictionary kd on kd.key = s.key_auth
         ),
-        changed_key_authorities as materialized 
+        changed_key_authorities as materialized
         (
             select distinct s.account_id as changed_account_id, s.key_kind as changed_key_kind
             from effective_key_or_account_auth_records s
@@ -597,12 +614,12 @@ BEGIN
             ) ds
             WHERE ds.account_auth_id IS NOT NULL
         ),
-        changed_account_authorities as materialized 
+        changed_account_authorities as materialized
         (
             select distinct s.account_id as changed_account_id, s.key_kind as changed_key_kind
             from effective_key_or_account_auth_records s
         ),
-        delete_obsolete_account_auth_records as materialized 
+        delete_obsolete_account_auth_records as materialized
         (
             DELETE FROM hafd.%1$s_accountauth_a as ae
             using changed_account_authorities s
@@ -628,9 +645,9 @@ BEGIN
 
 
 
-        SELECT 
+        SELECT
         (
-            select count(*) FROM 
+            select count(*) FROM
             store_account_auth_records
         ) as account_based_authority_entries,
             (select count(*) FROM store_key_auth_records) AS key_based_authority_entries
@@ -640,13 +657,9 @@ BEGIN
         END;
         $$;
     $t$
-    , _context, __schema);
-
-
-    RETURN ARRAY[format('%1$s_keyauth_a', _context), format('%1$s_keyauth_k', _context), format('%1$s_accountauth_a', _context)];
+        , _context, __schema);
 END;
-$BODY$
-;
+$BODY$;
 
 CREATE OR REPLACE FUNCTION hive.update_state_provider_keyauth(
     _first_block hafd.blocks.num%TYPE,
@@ -665,7 +678,7 @@ BEGIN
 
     __context_id = hive.get_context_id( _context );
 
-    __template = $t$ SELECT hafd.%1$s_insert_into_keyauth_a(%L, %L) $t$;
+    __template = $t$ SELECT hive.%1$s_insert_into_keyauth_a(%L, %L) $t$;
 
     EXECUTE format(__template, _context, _first_block, _last_block);
 
@@ -693,7 +706,7 @@ BEGIN
 
     EXECUTE format(
         $$
-            DROP FUNCTION IF EXISTS hafd.%1$s_insert_into_keyauth_a
+            DROP FUNCTION IF EXISTS hive.%1$s_insert_into_keyauth_a
         $$
         , _context);
 
