@@ -9,6 +9,8 @@ DECLARE
     __keyauth_after_hash TEXT;
     __all_before_hashes TEXT;
     __all_after_hashes TEXT;
+    __database_hash_before TEXT;
+    __database_hash_after TEXT;
 BEGIN
     ASSERT ( SELECT 1 FROM hive.calculate_state_provider_hashes() WHERE provider = 'ACCOUNTS' ) IS NOT NULL
         , 'ACCOUNTS not hashed';
@@ -25,6 +27,8 @@ BEGIN
     SELECT STRING_AGG( hash, '|') FROM hive.calculate_state_provider_hashes() INTO __all_before_hashes;
     SELECT * FROM hive.calculate_state_provider_hash( 'KEYAUTH'::hafd.state_providers ) INTO __keyauth_before_hash;
 
+    SELECT schema_hash FROM hive.create_database_hash('hafd')  INTO __database_hash_before;
+
     EXECUTE format( 'CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
@@ -39,8 +43,10 @@ BEGIN
 
     SELECT STRING_AGG( hash, '|') FROM hive.calculate_state_provider_hashes() INTO __all_after_hashes;
     SELECT * FROM hive.calculate_state_provider_hash( 'KEYAUTH'::hafd.state_providers ) INTO __keyauth_after_hash;
+    SELECT schema_hash FROM hive.create_database_hash('hafd')  INTO __database_hash_after;
 
     ASSERT __all_after_hashes != __all_before_hashes, 'Hashes not changed after modification';
     ASSERT __keyauth_after_hash != __keyauth_before_hash, 'Hash not changed after modification';
+    ASSERT __database_hash_before != __database_hash_after, 'DB Hash not changed after modification';
 END;
 $BODY$;

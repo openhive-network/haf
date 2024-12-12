@@ -186,9 +186,10 @@ BEGIN
 
     SELECT string_agg(table_schema, ' | ') FROM hive.calculate_schema_hash(schema_name) INTO _tmp;
 
-    SELECT string_agg(hash, ' | ') FROM hive.calculate_state_provider_hashes() INTO _provider_hashes;
+    SELECT string_agg(provider || hash, ' | ') FROM hive.calculate_state_provider_hashes() INTO _provider_hashes;
 
-    INSERT INTO hafd.table_schema VALUES (schema_name, MD5(_tmp || _provider_hashes)::uuid);
+    _tmp = _tmp || _provider_hashes;
+    INSERT INTO hafd.table_schema VALUES (schema_name, MD5(_tmp)::uuid);
 
     ts.schema_name := schema_name;
     ts.schema_hash := MD5(_tmp)::uuid;
