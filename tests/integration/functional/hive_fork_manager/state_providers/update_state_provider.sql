@@ -29,6 +29,15 @@ BEGIN
         END;
         $$;';
 
+    EXECUTE 'CREATE OR REPLACE FUNCTION hive.runtimecode_provider_tests(_context hafd.context_name)
+    RETURNS VOID
+    LANGUAGE plpgsql
+    AS
+    $$
+    BEGIN
+    END;
+    $$;';
+
     INSERT INTO hafd.operation_types
     VALUES
            ( 1, 'hive::protocol::account_created_operation', TRUE )

@@ -33,6 +33,17 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.runtimecode_provider_accounts( _context hafd.context_name )
+    RETURNS VOID
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    RETURN;
+END;
+$BODY$;
+
 CREATE OR REPLACE FUNCTION hive.get_created_from_account_create_operations(IN _account_operation hafd.operation)
 RETURNS TEXT
 AS 'MODULE_PATHNAME', 'get_created_from_account_create_operations' LANGUAGE C;

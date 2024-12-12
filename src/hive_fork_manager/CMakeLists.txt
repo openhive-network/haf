@@ -72,6 +72,8 @@ ADD_PSQL_EXTENSION(
             application_loop/stages_functions.sql
             application_loop/loop.sql
             application_loop/contexts_log_api.sql
+
+            state_providers/update_providers.sql
 )
 
 ADD_SUBDIRECTORY( shared_lib )
