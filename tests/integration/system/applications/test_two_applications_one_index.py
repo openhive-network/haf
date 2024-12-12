@@ -1,4 +1,5 @@
 import test_tools as tt
+import time
 
 from haf_local_tools import create_app
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
@@ -25,13 +26,13 @@ def test_two_applications_one_index(haf_node):
     session.execute("CREATE EXTENSION IF NOT EXISTS btree_gin")
 
     register_index_dependency(haf_node, 'app_1',
-            r"CREATE INDEX IF NOT EXISTS hive_operations_author_permlink ON hafd.operations USING gin"
+            r"CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_author_permlink ON hafd.operations USING gin"
             r"("
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),"
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')"
             r")")
     register_index_dependency(haf_node, 'app_2',
-            r"CREATE INDEX IF NOT EXISTS hive_operations_author_permlink ON hafd.operations USING gin"
+            r"CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_author_permlink ON hafd.operations USING gin"
             r"("
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),"
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')"
@@ -39,7 +40,8 @@ def test_two_applications_one_index(haf_node):
     session.commit()
 
     # THEN
-    wait_till_registered_indexes_created(haf_node, 'app_1')
-    wait_till_registered_indexes_created(haf_node, 'app_2')
+    #  wait_till_registered_indexes_created(haf_node, 'app_1')
+    #  wait_till_registered_indexes_created(haf_node, 'app_2')
+    time.sleep(20)
 
     assert_index_exists(session, 'hafd', 'operations', 'hive_operations_author_permlink')

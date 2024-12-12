@@ -724,7 +724,7 @@ DECLARE
     _matches TEXT[];
 BEGIN
     -- Extract the table name and index name using regex
-    _matches := regexp_matches(create_index_command, '^\s*CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:IF NOT EXISTS\s+)?(\w+)\s+ON\s+(\w+\.\w+)(?:\s+ONLY\s*)?', 'i');
+    _matches := regexp_matches(create_index_command, '^\s*CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:CONCURRENTLY\s+)?(?:IF NOT EXISTS\s+)?(\w+)\s+ON\s+(\w+\.\w+)(?:\s+ONLY\s*)?', 'i');
     IF array_length(_matches, 1) = 2 THEN
         index_name := _matches[1];
         table_name := _matches[2];
