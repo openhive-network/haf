@@ -246,7 +246,7 @@ void indexes_controler::poll_and_create_indexes()
         ilog("NOTE: Starting a new thread to create indexes for table: ${table_name}", ("table_name", table_name));
         active_threads[table_name] = std::thread([this, table_name, &threads_to_delete, &mtx]() 
         {
-          const std::string thread_name = table_name;
+          std::string thread_name = table_name;
           if (thread_name.size() > 16)
             thread_name.resize(16);
           fc::set_thread_name(thread_name.c_str());
@@ -257,15 +257,20 @@ void indexes_controler::poll_and_create_indexes()
           pqxx::result data = tx.exec("SELECT command FROM hafd.indexes_constraints WHERE status = 'missing' AND table_name = '" + table_name + "';");
           for (const auto& index : data) //iterate over missing indexes and create them concurrently
           {
-            std::string command = index["command"].as<std::string>();
-            std::regex create_index_regex(R"((CREATE\s+UNIQUE\s+INDEX|CREATE\s+INDEX))", std::regex::icase);
-            command = std::regex_replace(command, create_index_regex, "$& CONCURRENTLY");
-            ilog("Creating index: ${command}", (command));
-            auto start_time = fc::time_point::now();
-            tx.exec(command);
-            auto end_time = fc::time_point::now();
-            fc::microseconds index_creation_duration = end_time - start_time;
-            ilog("Finished creating index for table: ${table_name} in ${duration} seconds", (table_name)("duration", index_creation_duration.to_seconds()));
+            try 
+            { 
+              std::string command = index["command"].as<std::string>();
+              std::regex create_index_regex(R"((CREATE\s+UNIQUE\s+INDEX|CREATE\s+INDEX))", std::regex::icase);
+              command = std::regex_replace(command, create_index_regex, "$& CONCURRENTLY");
+              ilog("Creating index: ${command}", (command));
+              auto start_time = fc::time_point::now();
+              tx.exec(command);
+              auto end_time = fc::time_point::now();
+              fc::microseconds index_creation_duration = end_time - start_time;
+              ilog("Finished creating index for table: ${table_name} in ${duration} seconds", (table_name)("duration", index_creation_duration.to_seconds()));
+            }
+            catch (const pqxx::sql_error& e) { elog("Error while creating index: ${e}", ("e", e.what())); }
+            catch(std::exception& e ) { elog( e.what() ); }
           }
           ilog("Finished creating all indexes for table: ${table_name}", (table_name));
           std::lock_guard g(mtx);
