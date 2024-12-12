@@ -547,14 +547,12 @@ BEGIN
     END IF;
     RAISE NOTICE 'Restoring index: %', __command;
     UPDATE hafd.indexes_constraints SET status = 'creating' WHERE command = __original_command;
-    COMMIT;
     __start_time := clock_timestamp();
     EXECUTE __command;
     __end_time := clock_timestamp();
     __duration := __end_time - __start_time;
     RAISE NOTICE 'Index % created in % seconds', __command, EXTRACT(EPOCH FROM __duration);
     UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __original_command;
-    COMMIT;
   END LOOP;
 
   EXECUTE format( 'ANALYZE %s',  _table_name );
