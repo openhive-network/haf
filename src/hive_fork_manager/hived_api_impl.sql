@@ -526,7 +526,9 @@ $function$
 DECLARE
   __command TEXT;
   __original_command TEXT;
-  __cursor REFCURSOR;
+  __start_time TIMESTAMP;
+  __end_time TIMESTAMP;
+  __duration INTERVAL;
 BEGIN
 
   IF _table_name = 'hafd.account_operations' THEN
@@ -534,10 +536,9 @@ BEGIN
   END IF;
 
   --restoring indexes, primary keys, unique constraints
-  OPEN __cursor FOR ( SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing' );
+  FOR __original_command IN
+    SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing'
   LOOP
-    FETCH __cursor INTO __original_command;
-    EXIT WHEN NOT FOUND;
     IF concurrent THEN
       -- Modify the command to include CONCURRENTLY
       __command := regexp_replace(__original_command, 'CREATE INDEX', 'CREATE INDEX CONCURRENTLY', 'i');
@@ -546,10 +547,15 @@ BEGIN
     END IF;
     RAISE NOTICE 'Restoring index: %', __command;
     UPDATE hafd.indexes_constraints SET status = 'creating' WHERE command = __original_command;
+    COMMIT;
+    __start_time := clock_timestamp();
     EXECUTE __command;
+    __end_time := clock_timestamp();
+    __duration := __end_time - __start_time;
+    RAISE NOTICE 'Index % created in % seconds', __command, EXTRACT(EPOCH FROM __duration);
     UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __original_command;
+    COMMIT;
   END LOOP;
-  CLOSE __cursor;
 
   EXECUTE format( 'ANALYZE %s',  _table_name );
 
@@ -843,8 +849,8 @@ BEGIN
             WHERE table_name = _table_name
             AND status <> 'vacuumed'            
         );
-        RAISE NOTICE 'Sleeping for 10 seconds waiting for vacuum to be done';
-        PERFORM pg_sleep(10);
+        RAISE NOTICE 'Sleeping for 1 seconds waiting for vacuum to be done';
+        PERFORM pg_sleep(1);
     END LOOP;
 
     __end_time := clock_timestamp();

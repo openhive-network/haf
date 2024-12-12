@@ -177,7 +177,7 @@ void indexes_controler::poll_and_create_indexes() {
   std::mutex mtx; // Protects threads_to_delete
 
   while (!theApp.is_interrupt_request()) {
-    ilog("Polling for tables with missing indexes...");
+    ilog("Polling for tables to vacuum or with missing indexes...");
 
     // Check for requested table vacuums
     queries_commit_data_processor vacuum_requests_checker(
@@ -185,7 +185,7 @@ void indexes_controler::poll_and_create_indexes() {
       "Check for vacuum requests",
       "index_ctrl",
       [this](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
-        ilog("Checking for tables to vacuum...");
+        dlog("Checking for tables to vacuum...");
         pqxx::result data;
         try { data = tx.exec("SELECT table_name FROM hafd.vacuum_requests WHERE status = 'requested';"); } 
         catch (const pqxx::sql_error& e) 
@@ -193,7 +193,7 @@ void indexes_controler::poll_and_create_indexes() {
             elog("Error while checking for vacuum requests: ${e}", ("e", e.what()));
             return data_processor::data_processing_status();
         }
-        ilog("Found ${count} tables with vacuum requests.", ("count", data.size()));
+        dlog("Found ${count} tables with vacuum requests.", ("count", data.size()));
 
         // workaround, open separate connections for non-transactional start vacuum
         try 
@@ -204,10 +204,13 @@ void indexes_controler::poll_and_create_indexes() {
             std::string table_name = record["table_name"].as<std::string>();
             std::string vacuum_command = "VACUUM FULL ANALYZE " + table_name;
             ilog("Performing vacuum: ${vacuum_command}", ("vacuum_command", vacuum_command));
+            auto start_time = fc::time_point::now();
             vacuum_txn.exec(vacuum_command);
-            ilog("Vacuumed table: ${table_name}", ("table_name", table_name));
+            auto end_time = fc::time_point::now();
+            fc::microseconds vacuum_duration = end_time - start_time;
+            ilog("Vacuumed table: ${table_name} in ${duration} seconds", ("table_name", table_name)("duration", vacuum_duration.to_seconds()));
             tx.exec("UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW() WHERE table_name = '" + table_name + "';");
-            ilog("Updated vacuum status for table: ${table_name}", ("table_name", table_name));
+            dlog("Updated vacuum status for table: ${table_name}", ("table_name", table_name));
             }
         } 
         catch (const pqxx::sql_error& e) { elog("Error while vacuuming tables: ${e}", ("e", e.what())); }
@@ -250,12 +253,15 @@ void indexes_controler::poll_and_create_indexes() {
 
           ilog("NOTE: Starting a new thread to create indexes for table: ${table_name}", ("table_name", table_name));
           active_threads[table_name] = std::thread([this, table_name, &threads_to_delete, &mtx]() {
+            auto start_time = fc::time_point::now();
             auto processor = start_commit_sql(true, "hive.restore_indexes( '" + table_name + "', FALSE )", "restore indexes");
             processor->join();
-            ilog("Finished creating indexes for table: ${table_name}", ("table_name", table_name));
+            auto end_time = fc::time_point::now();
+            fc::microseconds index_creation_duration = end_time - start_time;
+            ilog("Finished creating indexes for table: ${table_name} in ${duration} seconds", ("table_name", table_name)("duration", index_creation_duration.to_seconds()));
             std::lock_guard g(mtx);
             threads_to_delete.insert(table_name); // Mark the thread for deletion
-            ilog("Thread for table: ${table_name} has been marked for deletion", ("table_name", table_name));
+            dlog("Thread for table: ${table_name} has been marked for deletion", ("table_name", table_name));
           });
         }
         dlog("Finished processing tables with missing indexes.");
