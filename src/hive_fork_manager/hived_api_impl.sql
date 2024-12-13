@@ -680,7 +680,7 @@ BEGIN
 END;
 $BODY$
 ;
-
+/*
 CREATE OR REPLACE FUNCTION hive.wait_till_registered_indexes_created(
     _app_context TEXT
 )
@@ -714,6 +714,7 @@ BEGIN
 END;
 $BODY$
 ;
+*/
 
 CREATE OR REPLACE FUNCTION hive.check_if_registered_indexes_created(
     _app_context TEXT

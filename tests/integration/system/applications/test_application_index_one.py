@@ -2,7 +2,7 @@ import test_tools as tt
 
 from haf_local_tools import create_app
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
-from haf_local_tools.system.haf import (connect_nodes, assert_index_exists, wait_till_registered_indexes_created, register_index_dependency)
+from haf_local_tools.system.haf import (connect_nodes, assert_index_exists, register_index_dependency)
 
 
 def test_application_index_one(haf_node):
@@ -33,6 +33,11 @@ def test_application_index_one(haf_node):
     session.commit()
 
     # THEN
-    wait_till_registered_indexes_created(haf_node, 'application')
+    while True:
+        result = session.execute("SELECT hive.check_if_registered_indexes_created('application')").scalar()
+        if result:
+            break
+        tt.logger.info("Indexes not yet created. Sleeping for 10 seconds...")
+        tt.sleep(10)
 
     assert_index_exists(session, 'hafd', 'operations', 'hive_operations_vote_author_permlink')

@@ -57,7 +57,12 @@ def assert_index_does_not_exist(session, namespace, table, indexname):
 
 
 def wait_till_registered_indexes_created(haf_node, context):
-    haf_node.session.execute("select hive.wait_till_registered_indexes_created(:ctx)", {'ctx': context})
+    while True:
+        result = haf_node.session.execute("SELECT hive.check_if_registered_indexes_created(:ctx)", {'ctx': context}).scalar()
+        if result:
+            break
+        tt.logger.info("Indexes not yet created. Sleeping for 10 seconds...")
+        tt.sleep(10)
 
 
 def register_index_dependency(haf_node, context, create_index_command):

@@ -54,7 +54,12 @@ def test_application_index_many(haf_node):
     session.commit()
 
     # THEN
-    session.execute("select hive.wait_till_registered_indexes_created('application')")
+    while True:
+        result = session.execute("SELECT hive.check_if_registered_indexes_created('application')").scalar()
+        if result:
+            break
+        tt.logger.info("Indexes not yet created. Sleeping for 10 seconds...")
+        tt.sleep(10)
 
     assert_index_exists(session, 'hafd', 'operations', 'hive_operations_vote_author_permlink_1')
     assert_index_exists(session, 'hafd', 'operations', 'hive_operations_vote_author_permlink_2')
