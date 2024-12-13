@@ -1,6 +1,7 @@
 import test_tools as tt
+import time
 
-from haf_local_tools import create_app
+from haf_local_tools import create_app_with_live_stage
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.haf_node.fixtures import haf_node
 from haf_local_tools.system.haf import (connect_nodes, assert_index_does_not_exist, register_index_dependency)
@@ -25,11 +26,11 @@ def test_application_index_replay(haf_node):
         exit_at_block=2,
     )
     session = haf_node.session
-    create_app(session, "application")
+    create_app_with_live_stage(session, "application")
 
     session.execute("CREATE EXTENSION IF NOT EXISTS btree_gin")
 
-    register_index_dependency(haf_node, 'application',
+    register_index_dependency(haf_node, 'application', 'live',
             r"CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hafd.operations USING gin"
             r"("
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),"

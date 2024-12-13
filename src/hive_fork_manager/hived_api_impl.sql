@@ -354,25 +354,40 @@ BEGIN
     --LEFT JOIN is needed in situation when PRIMARY KEY exists in a `_table`.
     --A method `hive.save_and_drop_constraints` finds it, but following code finds an index related to given PK as well.
     --Since dropping/restoring PK automatically drops/restores an index, then it's better to avoid storing a record with index related to PK.
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
+    WITH inserted_indexes AS (
+      INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, status )
+      SELECT
+          T.indexname
+        , _schema || '.' || _table
+        , T.indexdef
+        , FALSE as is_constraint
+        , TRUE as is_index
+        , FALSE as is_foreign_key
+        , 'missing' as status
+      FROM
+      (
+        SELECT indexname, indexdef
+        FROM pg_indexes
+        WHERE schemaname = _schema AND tablename = _table
+      ) T LEFT JOIN hafd.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
+      ON CONFLICT (index_constraint_name, table_name) DO UPDATE
+      SET status = 'missing'
+      RETURNING table_name, index_constraint_name
+    )
+    INSERT INTO hafd.context_indexes (
+      context,
+      stage,
+      table_name,
+      index_constraint_name
+    )
     SELECT
-        T.indexname
-      , _schema || '.' || _table
-      , T.indexdef
-      , FALSE as is_constraint
-      , TRUE as is_index
-      , FALSE as is_foreign_key
-      , ARRAY[0]
-      , 'missing' as status
-    FROM
-    (
-      SELECT indexname, indexdef
-      FROM pg_indexes
-      WHERE schemaname = _schema AND tablename = _table
-    ) T LEFT JOIN hafd.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
-    ON CONFLICT (index_constraint_name, table_name) DO UPDATE
-    SET status = 'missing';
-
+      0,
+      '',
+      table_name,
+      index_constraint_name
+      FROM inserted_indexes
+      ON CONFLICT (context, stage, table_name, index_constraint_name) 
+      DO NOTHING;
 
     --dropping indexes
     OPEN __cursor FOR (
@@ -412,7 +427,8 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
+  WITH inserted_indexes AS (
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, status )
     SELECT
           DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
@@ -420,14 +436,29 @@ BEGIN
         , FALSE as is_constraint
         , FALSE AS is_index
         , TRUE as is_foreign_key
-        , ARRAY[0]
         , 'missing' as status
     FROM pg_constraint pgc
     JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
     JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
     WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
     ON CONFLICT (index_constraint_name, table_name) DO UPDATE
-    SET status = 'missing';
+    SET status = 'missing'
+    RETURNING table_name, index_constraint_name
+  )
+  INSERT INTO hafd.context_indexes (
+    context,
+    stage,
+    table_name,
+    index_constraint_name
+  )
+  SELECT
+    0,
+    '',
+    table_name,
+    index_constraint_name
+    FROM inserted_indexes
+    ON CONFLICT (context, stage, table_name, index_constraint_name)
+    DO NOTHING;
 
     OPEN __cursor FOR (
         SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
@@ -454,7 +485,8 @@ DECLARE
 __command TEXT;
 __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
+  WITH inserted_indexes AS (
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, status )
     SELECT
         DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
         , _table_schema || '.' || _table_name as table_name
@@ -462,14 +494,29 @@ BEGIN
         , tc.constraint_type = 'PRIMARY KEY' OR tc.constraint_type = 'UNIQUE' as is_constraint
         , FALSE AS is_index
         , FALSE as is_foreign_key
-        , ARRAY[0]
         , 'missing' as status
     FROM pg_constraint pgc
         JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
         JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
     WHERE tc.constraint_type != 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
     ON CONFLICT (index_constraint_name, table_name) DO UPDATE
-    SET status = 'missing';
+    SET status = 'missing'
+    RETURNING table_name, index_constraint_name
+  )
+  INSERT INTO hafd.context_indexes (
+    context,
+    stage,
+    table_name,
+    index_constraint_name
+  )
+  SELECT
+    0,
+    '',
+    table_name,
+    index_constraint_name
+    FROM inserted_indexes
+    ON CONFLICT (context, stage, table_name, index_constraint_name)
+    DO NOTHING;
 
     OPEN __cursor FOR (
             SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
@@ -623,6 +670,7 @@ $BODY$
 
 CREATE OR REPLACE FUNCTION hive.register_index_dependency(
     _context_name TEXT,
+    _stage TEXT,
     _create_index_command TEXT
 )
 RETURNS void
@@ -650,7 +698,6 @@ BEGIN
     INTO __table_name, __index_name, __canonicalized_command
     FROM hive.parse_create_index_command(_create_index_command);
 
-    -- Upsert the index dependency
     INSERT INTO hafd.indexes_constraints (
         table_name, 
         index_constraint_name, 
@@ -658,8 +705,7 @@ BEGIN
         is_constraint, 
         is_index, 
         is_foreign_key, 
-        status, 
-        contexts
+        status
     )
     VALUES (
         __table_name, 
@@ -668,11 +714,44 @@ BEGIN
         FALSE, 
         TRUE, 
         FALSE, 
-        'missing', 
-        ARRAY[__context_id]
+        'missing'
     )
-    ON CONFLICT (table_name, index_constraint_name) DO UPDATE
-    SET contexts = array_append(hafd.indexes_constraints.contexts, __context_id);
+    ON CONFLICT (table_name, index_constraint_name) DO NOTHING;
+    INSERT INTO hafd.context_indexes (
+      context,
+      stage,
+      table_name,
+      index_constraint_name
+    )
+    VALUES (
+      __context_id,
+      _stage,
+      __table_name,
+      __index_name
+    );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.context_stage_has_all_required_indexes(
+    _app_context TEXT,
+    _app_stage TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    indices_created bool;
+BEGIN
+  SELECT bool_and(status='created') INTO indices_created
+    FROM hafd.indexes_constraints AS c
+    JOIN hafd.context_indexes AS i
+    ON c.table_name = i.table_name AND c.index_constraint_name = i.index_constraint_name
+    JOIN hafd.contexts AS ctx
+    ON ctx.id = i.context
+    WHERE ctx.name = _app_context AND i.stage = _app_stage;
+  RETURN indices_created;
 END;
 $BODY$
 ;
@@ -694,17 +773,21 @@ BEGIN
     __start_time := clock_timestamp();
 
     LOOP
-        EXIT WHEN NOT EXISTS (
-        SELECT 1
-        FROM hafd.indexes_constraints
-        WHERE contexts @> ARRAY[(SELECT id FROM hafd.contexts WHERE name = _app_context)] AND status <> 'created'
-        );
+      IF EXISTS (
+        SELECT 1 FROM (
+          SELECT (stage).name AS stage, context
+          FROM hive.get_current_stage(ARRAY[_app_context])
+          ) AS x
+        WHERE hive.context_stage_has_all_required_indexes(x.context, x.stage)
+        ) THEN EXIT;
+      END IF;
+      PERFORM pg_sleep(0.1);
     END LOOP;
-
 
     __end_time := clock_timestamp();
     __duration := __end_time - __start_time;
     RAISE NOTICE 'Finished waiting for registered indexes to be created for context % in % seconds', _app_context, EXTRACT(EPOCH FROM __duration);
+    RETURN;
 END;
 $BODY$
 ;
@@ -764,23 +847,24 @@ BEGIN
 
     -- Loop through each index that the context is dependent on
     FOR __index_record IN
-        SELECT table_name, index_constraint_name
-        FROM hafd.indexes_constraints
-        WHERE contexts @> ARRAY[__context_id]
+        SELECT DISTINCT table_name, index_constraint_name
+        FROM hafd.context_indexes
+        WHERE context = __context_id
     LOOP
         -- Parse the schema name from the table field
         _schema := split_part(__index_record.table_name, '.', 1);
 
-        -- Remove the context from the list of contexts
-        UPDATE hafd.indexes_constraints
-        SET contexts = array_remove(contexts, __context_id)
-        WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name;
+        DELETE FROM hafd.context_indexes
+        WHERE context = __context_id AND table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name;
 
         -- Drop the index if there are no remaining contexts dependent on it (note that HAF-internal dependencies are marked as being dependent on context 0 to prevent their removal)
-        IF (SELECT array_length(contexts, 1) FROM hafd.indexes_constraints WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name) IS NULL THEN
-            EXECUTE 'DROP INDEX IF EXISTS ' || _schema || '.' || __index_record.index_constraint_name;
-            DELETE FROM hafd.indexes_constraints WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name;
-        END IF;
+        DELETE FROM hafd.indexes_constraints AS c
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM hafd.context_indexes AS i
+          WHERE i.context = __context_id
+          AND i.table_name = c.table_name
+          AND i.index_constraint_name = c.index_constraint_name);
     END LOOP;
 END;
 $BODY$

@@ -180,6 +180,13 @@ def create_app(session, application_context):
     session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION.format( application_context ) )
     session.commit()
 
+def create_app_with_live_stage(session, application_context):
+    session.execute( "CREATE SCHEMA IF NOT EXISTS {}".format( application_context ) )
+    session.execute( "SELECT hive.app_create_context( '{0}', '{0}', array[hafd.live_stage()] )".format( application_context ) )
+    session.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE.format( application_context ) )
+    session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION.format( application_context ) )
+    session.commit()
+
 def wait_until_irreversible_without_new_block(session, irreversible_block, limit, interval):
 
     assert limit > 0

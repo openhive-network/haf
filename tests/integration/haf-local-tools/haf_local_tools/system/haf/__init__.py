@@ -60,9 +60,9 @@ def wait_till_registered_indexes_created(haf_node, context):
     haf_node.session.execute("select hive.wait_till_registered_indexes_created(:ctx)", {'ctx': context})
 
 
-def register_index_dependency(haf_node, context, create_index_command):
+def register_index_dependency(haf_node, context, stage, create_index_command):
     haf_node.session.execute(
-            "SELECT hive.register_index_dependency(:ctx, :cmd)", {'ctx': context, 'cmd': create_index_command})
+            "SELECT hive.register_index_dependency(:ctx, :stage, :cmd)", {'ctx':  context, 'stage': stage, 'cmd': create_index_command})
 
 
 def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Transaction, TransactionId]):

@@ -1,6 +1,6 @@
 import test_tools as tt
 
-from haf_local_tools import create_app
+from haf_local_tools import create_app_with_live_stage
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.system.haf import (connect_nodes, assert_index_exists, wait_till_registered_indexes_created, register_index_dependency)
 
@@ -19,18 +19,18 @@ def test_two_applications_one_index(haf_node):
         wait_for_live=True
     )
     session = haf_node.session
-    create_app(session, "app_1")
-    create_app(session, "app_2")
+    create_app_with_live_stage(session, "app_1")
+    create_app_with_live_stage(session, "app_2")
 
     session.execute("CREATE EXTENSION IF NOT EXISTS btree_gin")
 
-    register_index_dependency(haf_node, 'app_1',
+    register_index_dependency(haf_node, 'app_1', 'live',
             r"CREATE INDEX IF NOT EXISTS hive_operations_author_permlink ON hafd.operations USING gin"
             r"("
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),"
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')"
             r")")
-    register_index_dependency(haf_node, 'app_2',
+    register_index_dependency(haf_node, 'app_2', 'live',
             r"CREATE INDEX IF NOT EXISTS hive_operations_author_permlink ON hafd.operations USING gin"
             r"("
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),"

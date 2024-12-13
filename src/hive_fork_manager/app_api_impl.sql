@@ -7,8 +7,10 @@ BEGIN
   -- Instance is ready when all indexes with a dependency on context 0 have been created
   RETURN NOT EXISTS(
     SELECT 1
-    FROM hafd.indexes_constraints 
-    WHERE contexts @> ARRAY[0] AND status != 'created'
+    FROM hafd.context_indexes AS i
+    JOIN hafd.indexes_constraints AS c
+    ON c.table_name = i.table_name AND c.index_constraint_name = i.index_constraint_name
+    WHERE i.context = 0 AND c.status != 'created'
   );
 END
 $BODY$
