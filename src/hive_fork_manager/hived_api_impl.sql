@@ -824,7 +824,7 @@ BEGIN
 END;
 $BODY$
 ;
-
+/*
 CREATE OR REPLACE FUNCTION hive.app_wait_for_table_vacuum(
     _table_name TEXT
 )
@@ -874,3 +874,4 @@ BEGIN
 END;
 $BODY$
 ;
+*/
