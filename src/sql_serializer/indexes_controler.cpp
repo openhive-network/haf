@@ -254,7 +254,7 @@ void indexes_controler::poll_and_create_indexes()
 
           pqxx::connection conn(_db_url);
           pqxx::nontransaction tx(conn);
-          pqxx::result data = tx.exec("SELECT command FROM hafd.indexes_constraints WHERE status = 'missing' AND table_name = '" + table_name + "';");
+          pqxx::result data = tx.exec("SELECT index_constraint_name, command FROM hafd.indexes_constraints WHERE status = 'missing' AND table_name = '" + table_name + "';");
           for (const auto& index : data) //iterate over missing indexes and create them concurrently
           {
             try 
