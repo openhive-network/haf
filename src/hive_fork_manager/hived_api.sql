@@ -200,7 +200,7 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'accounts' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'account_operations' );
 
-    PERFORM hive.reanalyze_indexes_with_expressions();
+    PERFORM hive.reanalyze_indexes_with_expressions(); --I wonder if reanalyzing is really needed when indexes are dropped
 END;
 $BODY$
 ;
@@ -292,7 +292,7 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'accounts_reversible' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'account_operations_reversible' );
 
-    PERFORM hive.reanalyze_indexes_with_expressions();
+    PERFORM hive.reanalyze_indexes_with_expressions(); --I wonder if reanalyzing is really needed when indexes are dropped
 
 END;
 $BODY$
