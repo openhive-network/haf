@@ -264,7 +264,7 @@ void indexes_controler::poll_and_create_indexes()
               std::regex create_index_regex(R"((CREATE\s+UNIQUE\s+INDEX|CREATE\s+INDEX))", std::regex::icase);
               std::string command = std::regex_replace(original_command, create_index_regex, "$& CONCURRENTLY");
               std::string update_table = "UPDATE hafd.indexes_constraints SET status = 'creating' WHERE index_constraint_name ='"+index_constraint_name+"';"
-              idump(update_table);
+              idump((update_table));
               tx.exec(update_table);
               ilog("Creating index: ${command}", (command));
               auto start_time = fc::time_point::now();
