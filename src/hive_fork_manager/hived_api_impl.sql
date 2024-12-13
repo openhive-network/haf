@@ -715,6 +715,37 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.check_if_registered_indexes_created(
+    _app_context TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    __context_id INT;
+BEGIN
+    RAISE NOTICE 'Checking if registered indexes are created for context %', _app_context;
+    -- Lookup the context_id using context_name
+    SELECT id INTO __context_id
+    FROM hafd.contexts
+    WHERE name = _app_context;
+
+    -- Abort with an error message if no context_id is found
+    IF __context_id IS NULL THEN
+        RAISE EXCEPTION 'Context % not found in hafd.contexts', _app_context;
+    END IF;
+
+    -- Check if there are any indexes that are not created yet
+    RETURN NOT EXISTS (
+        SELECT 1
+        FROM hafd.indexes_constraints
+        WHERE contexts @> ARRAY[__context_id] AND status <> 'created'
+    );
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.parse_create_index_command(
     create_index_command TEXT
 )
