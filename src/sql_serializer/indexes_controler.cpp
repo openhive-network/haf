@@ -259,17 +259,20 @@ void indexes_controler::poll_and_create_indexes()
           {
             try 
             { 
-              std::string command = index["command"].as<std::string>();
+              std::string index_constraint_name = index["index_constraint_name"].as<std::string>();
+              std::string original_command = index["command"].as<std::string>();
               std::regex create_index_regex(R"((CREATE\s+UNIQUE\s+INDEX|CREATE\s+INDEX))", std::regex::icase);
-              command = std::regex_replace(command, create_index_regex, "$& CONCURRENTLY");
+              std::string command = std::regex_replace(original_command, create_index_regex, "$& CONCURRENTLY");
+              std::string update_table = "UPDATE hafd.indexes_constraints SET status = 'creating' WHERE index_constraint_name ='"+index_constraint_name+"';"
+              idump(update_table);
+              tx.exec(update_table);
               ilog("Creating index: ${command}", (command));
-              tx.exec("UPDATE hafd.indexes_constraints SET status = 'creating' WHERE command ='"+command+"';");
               auto start_time = fc::time_point::now();
               tx.exec(command);
               auto end_time = fc::time_point::now();
               fc::microseconds index_creation_duration = end_time - start_time;
               ilog("Finished creating index for table: ${table_name} in ${duration} seconds", (table_name)("duration", index_creation_duration.to_seconds()));
-              tx.exec("UPDATE hafd.indexes_constraints SET status = 'created' WHERE command ='"+command+"';");
+              tx.exec("UPDATE hafd.indexes_constraints SET status = 'created' WHERE index_constraint_name ='"+index_constraint_name+"';");
             }
             catch (const pqxx::sql_error& e) { elog("Error while creating index: ${e}", ("e", e.what())); }
             catch(std::exception& e ) { elog( e.what() ); }
