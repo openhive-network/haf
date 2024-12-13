@@ -519,14 +519,15 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT, in concurrent BOOLEAN DEFAULT FALSE )
+CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT)
 RETURNS VOID
 AS
 $function$
 DECLARE
   __command TEXT;
-  __original_command TEXT;
-  __cursor REFCURSOR;
+  __start_time TIMESTAMP;
+  __end_time TIMESTAMP;
+  __duration INTERVAL;
 BEGIN
 
   IF _table_name = 'hafd.account_operations' THEN
@@ -534,22 +535,18 @@ BEGIN
   END IF;
 
   --restoring indexes, primary keys, unique constraints
-  OPEN __cursor FOR ( SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing' );
+  FOR __command IN
+    SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing'
   LOOP
-    FETCH __cursor INTO __original_command;
-    EXIT WHEN NOT FOUND;
-    IF concurrent THEN
-      -- Modify the command to include CONCURRENTLY
-      __command := regexp_replace(__original_command, 'CREATE INDEX', 'CREATE INDEX CONCURRENTLY', 'i');
-    ELSE
-      __command := __original_command;
-    END IF;
     RAISE NOTICE 'Restoring index: %', __command;
-    UPDATE hafd.indexes_constraints SET status = 'creating' WHERE command = __original_command;
+    UPDATE hafd.indexes_constraints SET status = 'creating' WHERE command = __command;
+    __start_time := clock_timestamp();
     EXECUTE __command;
-    UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __original_command;
+    __end_time := clock_timestamp();
+    __duration := __end_time - __start_time;
+    RAISE NOTICE 'Index % created in % seconds', __command, EXTRACT(EPOCH FROM __duration);
+    UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
   END LOOP;
-  CLOSE __cursor;
 
   EXECUTE format( 'ANALYZE %s',  _table_name );
 
@@ -676,7 +673,7 @@ BEGIN
 END;
 $BODY$
 ;
-
+/*
 CREATE OR REPLACE FUNCTION hive.wait_till_registered_indexes_created(
     _app_context TEXT
 )
@@ -699,12 +696,46 @@ BEGIN
         FROM hafd.indexes_constraints
         WHERE contexts @> ARRAY[(SELECT id FROM hafd.contexts WHERE name = _app_context)] AND status <> 'created'
         );
+        RAISE NOTICE 'Sleeping for 10 seconds waiting for indexes to be created';
+        PERFORM pg_sleep(10);
     END LOOP;
 
 
     __end_time := clock_timestamp();
     __duration := __end_time - __start_time;
     RAISE NOTICE 'Finished waiting for registered indexes to be created for context % in % seconds', _app_context, EXTRACT(EPOCH FROM __duration);
+END;
+$BODY$
+;
+*/
+
+CREATE OR REPLACE FUNCTION hive.check_if_registered_indexes_created(
+    _app_context TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    __context_id INT;
+BEGIN
+    RAISE NOTICE 'Checking if registered indexes are created for context %', _app_context;
+    -- Lookup the context_id using context_name
+    SELECT id INTO __context_id
+    FROM hafd.contexts
+    WHERE name = _app_context;
+
+    -- Abort with an error message if no context_id is found
+    IF __context_id IS NULL THEN
+        RAISE EXCEPTION 'Context % not found in hafd.contexts', _app_context;
+    END IF;
+
+    -- Check if there are any indexes that are not created yet
+    RETURN NOT EXISTS (
+        SELECT 1
+        FROM hafd.indexes_constraints
+        WHERE contexts @> ARRAY[__context_id] AND status <> 'created'
+    );
 END;
 $BODY$
 ;
@@ -785,3 +816,87 @@ BEGIN
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE FUNCTION hive.app_request_table_vacuum(
+    _table_name TEXT,
+    _min_interval INTERVAL DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+AS
+$BODY$
+BEGIN
+    IF _min_interval IS NOT NULL THEN
+        -- Check if the table has been vacuumed recently
+        IF EXISTS (
+            SELECT 1
+            FROM hafd.vacuum_requests
+            WHERE table_name = _table_name
+            AND last_vacuumed_time > NOW() - _min_interval
+        ) THEN
+            RAISE NOTICE 'Vacuum request for table % ignored due to recent vacuum.', _table_name;
+            RETURN;
+        END IF;
+    END IF;
+
+    -- Insert or update the vacuum request
+    INSERT INTO hafd.vacuum_requests (table_name, status)
+    VALUES (_table_name, 'requested')
+    ON CONFLICT (table_name) DO UPDATE
+    SET status = 'requested';
+
+    RAISE NOTICE 'Vacuum request for table % submitted.', _table_name;
+END;
+$BODY$
+;
+/*
+CREATE OR REPLACE FUNCTION hive.app_wait_for_table_vacuum(
+    _table_name TEXT
+)
+RETURNS void
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    __start_time TIMESTAMP;
+    __end_time TIMESTAMP;
+    __duration INTERVAL;
+BEGIN
+    RAISE NOTICE 'Waiting for vacuum to complete for table %', _table_name;
+    __start_time := clock_timestamp();
+
+    LOOP
+        EXIT WHEN NOT EXISTS (
+            SELECT 1
+            FROM hafd.vacuum_requests
+            WHERE table_name = _table_name
+            AND status <> 'vacuumed'            
+        );
+        RAISE NOTICE 'Sleeping for 1 seconds waiting for vacuum to be done';
+        PERFORM pg_sleep(1);
+    END LOOP;
+
+    __end_time := clock_timestamp();
+    __duration := __end_time - __start_time;
+    RAISE NOTICE 'Vacuum completed for table % in % seconds', _table_name, EXTRACT(EPOCH FROM __duration);
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.test_vacuum_functions()
+RETURNS void
+LANGUAGE plpgsql
+AS
+$BODY$
+BEGIN
+    -- Request a vacuum for the table hafbe_app_keyauth_a
+    PERFORM hive.app_request_table_vacuum('hafbe_app_keyauth_a', '1 hour'::INTERVAL);
+
+    -- Wait for the vacuum to complete
+    PERFORM hive.app_wait_for_table_vacuum('hafbe_app_keyauth_a');
+
+    RAISE NOTICE 'Test for vacuum functions on table hafbe_app_keyauth_a completed successfully.';
+END;
+$BODY$
+;
+*/
