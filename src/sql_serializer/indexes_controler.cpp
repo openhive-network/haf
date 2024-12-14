@@ -23,19 +23,19 @@ indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_th
 }
 
 bool
-indexes_controler::are_indexes_dropped() const {
-    bool are_indexes_dropped = false;
+indexes_controler::are_any_indexes_missing() const {
+    bool are_any_indexes_missing = false;
     queries_commit_data_processor dropped_indexes_checker(
                _db_url
             , "Check if indexes are dropped"
             , "consist"
-            , [&are_indexes_dropped](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+            , [&are_any_indexes_missing](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
 
-                pqxx::result data = tx.exec("select hive.are_indexes_dropped() as _result;");
+                pqxx::result data = tx.exec("select hive.are_any_indexes_missing() as _result;");
                 FC_ASSERT( !data.empty(), "No response from database" );
                 FC_ASSERT( data.size() == 1, "Wrong data size" );
                 const auto& record = data[0];
-                are_indexes_dropped = record[ "_result" ].as<bool>();
+                are_any_indexes_missing = record[ "_result" ].as<bool>();
                 return data_processor::data_processing_status();
             }
             , nullptr
@@ -45,7 +45,7 @@ indexes_controler::are_indexes_dropped() const {
     dropped_indexes_checker.trigger(data_processor::data_chunk_ptr(), 0);
     dropped_indexes_checker.join();
 
-    return are_indexes_dropped;
+    return are_any_indexes_missing;
 }
 
 void
@@ -71,7 +71,7 @@ indexes_controler::enable_indexes() {
   if (theApp.is_interrupt_request())
     return;
 
-  if ( !are_indexes_dropped() ) {
+  if ( !are_any_indexes_missing() ) {
       ilog( "Indexes already created" );
       return;
   }

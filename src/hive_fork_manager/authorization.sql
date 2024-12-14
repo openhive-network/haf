@@ -197,7 +197,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.create_database_hash(schema_name TEXT)
     , hive.calculate_schema_hash(schema_name TEXT)
     , hive.all_indexes_have_status(_status hafd.index_status)
-    , hive.are_indexes_dropped()
+    , hive.are_any_indexes_missing()
     , hive.are_indexes_restored()
     , hive.are_fk_dropped()
     , hive.check_owner( _context hafd.context_name, _context_owner TEXT )
