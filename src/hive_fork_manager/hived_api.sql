@@ -388,14 +388,24 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.are_indexes_dropped()
+CREATE OR REPLACE FUNCTION hive.are_any_indexes_missing()
     RETURNS BOOLEAN
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __number_of_dropped_indexes INT;
 BEGIN
-  RETURN COALESCE(hive.all_indexes_have_status('missing'), FALSE);
+    SELECT COUNT(*) FROM hafd.indexes_constraints
+    WHERE is_index AND status = 'missing'
+    INTO __number_of_dropped_indexes;
+    IF ( __number_of_dropped_indexes = 0 ) THEN
+        RETURN FALSE;
+    ELSE
+        RETURN TRUE;
+    END IF;
+ 
 END;
 $BODY$;
 

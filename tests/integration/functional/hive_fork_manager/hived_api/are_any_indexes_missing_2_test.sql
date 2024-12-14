@@ -14,7 +14,6 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_when()
 $BODY$
 BEGIN
     PERFORM hive.disable_indexes_of_irreversible();
-    PERFORM hive.enable_indexes_of_irreversible();
 END;
 $BODY$
 ;
@@ -24,7 +23,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT hive.are_indexes_dropped() ) = FALSE, 'Indexes are disabled';
+    ASSERT ( SELECT hive.are_any_indexes_missing() ) = TRUE, 'Indexes are enabled';
 END;
 $BODY$
 ;
