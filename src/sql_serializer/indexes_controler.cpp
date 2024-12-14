@@ -185,13 +185,13 @@ void indexes_controler::poll_and_create_indexes()
 
   while (!theApp.is_interrupt_request()) 
   {    
-    ilog("Checking for table vacuum requests...");
+    dlog("Checking for table vacuum requests...");
     pqxx::connection conn(_db_url);
     pqxx::nontransaction tx(conn);
     try 
     { 
       pqxx::result data = tx.exec("SELECT table_name FROM hafd.vacuum_requests WHERE status = 'requested';"); 
-      ilog("Found ${count} tables with vacuum requests.", ("count", data.size()));
+      dlog("Found ${count} tables with vacuum requests.", ("count", data.size()));
       
       try 
       {
@@ -220,7 +220,7 @@ void indexes_controler::poll_and_create_indexes()
     // Check for tables with missing indexes that are not currently being created
     try 
     { 
-      ilog("Executing query to find tables with missing indexes...");
+      dlog("Executing query to find tables with missing indexes...");
       pqxx::result data = tx.exec(
             "SELECT DISTINCT table_name "
             "FROM hafd.indexes_constraints "
@@ -231,7 +231,7 @@ void indexes_controler::poll_and_create_indexes()
             "  WHERE status = 'creating'"
             ");"
         );
-      ilog("Query executed. Found ${count} tables with missing indexes.", ("count", data.size()));
+      dlog("Query executed. Found ${count} tables with missing indexes.", ("count", data.size()));
       for (const auto& record : data) //iterate over tables with missing indexes
       {
         std::string table_name = record["table_name"].as<std::string>();
