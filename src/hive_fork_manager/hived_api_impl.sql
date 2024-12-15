@@ -669,7 +669,8 @@ BEGIN
         ARRAY[__context_id]
     )
     ON CONFLICT (table_name, index_constraint_name) DO UPDATE
-    SET contexts = array_append(hafd.indexes_constraints.contexts, __context_id);
+    SET contexts = array_append(hafd.indexes_constraints.contexts, __context_id)
+    WHERE NOT (__context_id = ANY(hafd.indexes_constraints.contexts));
 END;
 $BODY$
 ;
