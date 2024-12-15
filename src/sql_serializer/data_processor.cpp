@@ -55,7 +55,7 @@ data_processor::data_processor( std::string description, std::string short_descr
 {
   auto body = [this, dataProcessor]() -> void
   {
-    ilog("Entering data processor thread: ${d}", ("d", _description));
+    dlog("Entering data processor thread: ${d}", ("d", _description));
     const std::string thread_name = "sql[" + _short_description + "]";
     fc::set_thread_name(thread_name.c_str());
     fc::thread::current().set_name(thread_name);
@@ -111,7 +111,7 @@ data_processor::data_processor( std::string description, std::string short_descr
       auto current_exception = std::current_exception();
       handle_exception( current_exception );
     }
-    ilog("Leaving data processor thread: ${d}", ("d", _description));
+    dlog("Leaving data processor thread: ${d}", ("d", _description));
   };
 
   _future = std::async(std::launch::async, body);
@@ -185,9 +185,9 @@ void data_processor::join()
   _continue.store(false);
 
   {
-    ilog("Trying to resume data processor: ${d}...", ("d", _description));
+    dlog("Trying to resume data processor: ${d}...", ("d", _description));
     std::lock_guard<std::mutex> lk(_mtx);
-    ilog("Data processor: ${d} resumed...", ("d", _description));
+    dlog("Data processor: ${d} resumed...", ("d", _description));
   }
   _cv.notify_one();
 
