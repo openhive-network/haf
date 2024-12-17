@@ -163,7 +163,6 @@ BEGIN
         account_id INTEGER
         , key_kind hafd.key_type
         , key_serial_id INTEGER
-        , weight_threshold INTEGER
         , w INTEGER
         , op_serial_id  BIGINT NOT NULL
         , block_num INTEGER NOT NULL
@@ -174,15 +173,22 @@ BEGIN
     $$
     , _context);
 
-
-
+    EXECUTE format($$
+        CREATE TABLE hafd.%1$s_weight_threshold(
+        account_id INTEGER
+        , key_kind hafd.key_type
+        , weight_threshold INTEGER
+        , op_serial_id  BIGINT NOT NULL
+        , CONSTRAINT pk_%1$s_weight_threshold PRIMARY KEY ( account_id, key_kind )
+        );
+    $$
+    , _context);
 
     EXECUTE format($$
         CREATE TABLE hafd.%1$s_accountauth_a(
         account_id INTEGER
         , key_kind hafd.key_type
         , account_auth_id INTEGER
-        , weight_threshold INTEGER
         , w INTEGER
         , op_serial_id  BIGINT NOT NULL
         , block_num INTEGER NOT NULL
@@ -213,7 +219,8 @@ BEGIN
     $$
     , _context);
 
-    RETURN ARRAY[format('%1$s_keyauth_a', _context), format('%1$s_keyauth_k', _context), format('%1$s_accountauth_a', _context)];
+    RETURN ARRAY[format('%1$s_keyauth_a', _context), format('%1$s_keyauth_k', _context),
+        format('%1$s_accountauth_a', _context), format('%1$s_weight_threshold', _context)];
 END;
 $BODY$
 ;
@@ -543,24 +550,24 @@ BEGIN
             ),
         effective_key_or_account_auth_records as materialized
         (
-            with effective_tuple_ids as materialized
+            WITH effective_tuple_ids as materialized 
             (
-            select s.account_id, s.key_kind, max(s.op_stable_id) as op_stable_id
-            from extended_auth_records s
-            group by s.account_id, s.key_kind
+                SELECt s.account_id, s.key_kind, max(s.op_stable_id) as op_stable_id
+                FROM extended_auth_records s
+                GROUP BY s.account_id, s.key_kind
             )
-            select s1.*
-            from extended_auth_records s1
-            join effective_tuple_ids e ON e.account_id = s1.account_id and e.key_kind = s1.key_kind and e.op_stable_id = s1.op_stable_id
+            SELECT s1.*
+            FROM extended_auth_records s1
+            JOIN effective_tuple_ids e ON e.account_id = s1.account_id and e.key_kind = s1.key_kind and e.op_stable_id = s1.op_stable_id
         ),
         --- PROCESSING OF KEY BASED AUTHORITIES ---
             supplement_key_dictionary as materialized
             (
-            insert into hafd.%1$s_keyauth_k as dict (key)
+            INSERT INTO hafd.%1$s_keyauth_k as dict (key)
             SELECT DISTINCT s.key_auth
             FROM effective_key_or_account_auth_records s
-            where s.key_auth IS NOT NULL
-            on conflict (key) do update set key = EXCLUDED.key -- the only way to always get key-id (even it is already in dict)
+            WHERE s.key_auth IS NOT NULL
+            ON conflict (key) do update set key = EXCLUDED.key -- the only way to always get key-id (even it is already in dict)
             returning (xmax = 0) as is_new_key, dict.key_id, dict.key
             ),
         extended_key_auth_records as materialized
@@ -579,18 +586,16 @@ BEGIN
             using changed_key_authorities s
             where account_id = s.changed_account_id and key_kind = s.changed_key_kind
             RETURNING account_id as cleaned_account_id, key_kind as cleaned_key_kind, key_serial_id as cleaned_key_id
-        )
-        ,
+        ),
         store_key_auth_records as materialized
         (
             INSERT INTO hafd.%1$s_keyauth_a AS auth_entries
-            ( account_id, key_kind, key_serial_id, weight_threshold, w, op_serial_id, block_num, timestamp )
-            SELECT s.account_id, s.key_kind, s.key_id, s.weight_threshold, s.w, s.op_serial_id, s.block_num, s.timestamp
+            ( account_id, key_kind, key_serial_id, w, op_serial_id, block_num, timestamp )
+            SELECT s.account_id, s.key_kind, s.key_id, s.w, s.op_serial_id, s.block_num, s.timestamp
             FROM extended_key_auth_records s
         --		LEFT JOIN delete_obsolete_key_auth_records d ON d.cleaned_account_id = s.account_id and d.cleaned_key_kind = s.key_kind
             ON CONFLICT ON CONSTRAINT pk_%1$s_keyauth_a DO UPDATE SET
             key_serial_id = EXCLUDED.key_serial_id,
-            weight_threshold =    EXCLUDED.weight_threshold,
             w =                   EXCLUDED.w,
             op_serial_id =        EXCLUDED.op_serial_id,
             block_num =           EXCLUDED.block_num,
@@ -625,25 +630,37 @@ BEGIN
             using changed_account_authorities s
             where account_id = s.changed_account_id and key_kind = s.changed_key_kind
             RETURNING account_id as cleaned_account_id, key_kind as cleaned_key_kind, account_auth_id as cleaned_account_auth_id
-        )
-        ,
+        ),
         store_account_auth_records as
         (
             INSERT INTO hafd.%1$s_accountauth_a AS ae
-            ( account_id, key_kind, account_auth_id, weight_threshold, w, op_serial_id, block_num, timestamp )
-            SELECT s.account_id, s.key_kind, s.account_auth_id, s.weight_threshold, s.w, s.op_serial_id, s.block_num, s.timestamp
+            ( account_id, key_kind, account_auth_id, w, op_serial_id, block_num, timestamp )
+            SELECT s.account_id, s.key_kind, s.account_auth_id, s.w, s.op_serial_id, s.block_num, s.timestamp
             FROM extended_account_auth_records s
             ON CONFLICT ON CONSTRAINT pk_%1$s_accountauth_a DO UPDATE SET
             account_auth_id = EXCLUDED.account_auth_id,
-            weight_threshold =    EXCLUDED.weight_threshold,
             w =                   EXCLUDED.w,
             op_serial_id =        EXCLUDED.op_serial_id,
             block_num =           EXCLUDED.block_num,
             timestamp =           EXCLUDED.timestamp
             RETURNING (xmax = 0) as is_new_entry, ae.account_id, ae.key_kind, ae.account_auth_id as cleaned_account_auth_id
+        ),
+        changed_weight_thresholds as
+        (
+            SELECT DISTINCT s.account_id, s.key_kind, s.weight_threshold, s.op_serial_id
+            from effective_key_or_account_auth_records s
+        ),
+        store_weight_threshold_records as
+        (
+            INSERT INTO hafd.%1$s_weight_threshold AS ae
+            ( account_id, key_kind, weight_threshold, op_serial_id)
+            SELECT s.account_id, s.key_kind, s.weight_threshold, s.op_serial_id
+            FROM changed_weight_thresholds s
+            ON CONFLICT ON CONSTRAINT pk_%1$s_weight_threshold DO UPDATE SET
+            weight_threshold =    EXCLUDED.weight_threshold,
+            op_serial_id =        EXCLUDED.op_serial_id
+            RETURNING (xmax = 0) as is_new_entry, ae.account_id, ae.key_kind, ae.weight_threshold
         )
-
-
 
         SELECT
         (
@@ -701,6 +718,7 @@ BEGIN
         DROP TABLE hafd.%1$s_keyauth_a;
         DROP TABLE hafd.%1$s_keyauth_k;
         DROP TABLE hafd.%1$s_accountauth_a;
+        DROP TABLE hafd.%1$s_weight_threshold;
         $$
         , _context);
 
