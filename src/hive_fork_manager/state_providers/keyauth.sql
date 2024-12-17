@@ -482,18 +482,12 @@ BEGIN
                 WHERE LEAST(pow_min_block_num, min_block_num, min_block_num_from_stored_table) = block_num OR key_kind = 'ACTIVE'
             ),
             --Collect all paths (pow, genesis, hf9, rest)
-            extended_auth_records as materialized
+            extended_auth_records_without_pow as materialized
             (
             SELECT (select a.id FROM %2$s.accounts_view a
                 where a.name = r.account_name) as account_id,
                 r.*
             FROM raw_auth_records r
-
-            UNION ALL
-            SELECT
-                *
-            FROM
-                pow_extended_auth_records_filtered
 
             UNION ALL
             SELECT
@@ -547,6 +541,23 @@ BEGIN
             SELECT *
             FROM
                 genesis_auth_records
+            ),
+        extended_auth_records AS MATERIALIZED
+        (
+            SELECT 
+                *
+            FROM extended_auth_records_without_pow
+            UNION ALL
+            SELECT 
+                *
+            FROM 
+                pow_extended_auth_records_filtered
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM extended_auth_records_without_pow e
+                WHERE e.account_id = pow_extended_auth_records_filtered.account_id
+                AND e.key_kind = pow_extended_auth_records_filtered.key_kind
+            ) 
             ),
         effective_key_or_account_auth_records as materialized
         (
