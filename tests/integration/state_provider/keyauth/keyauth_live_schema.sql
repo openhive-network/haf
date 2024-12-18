@@ -93,7 +93,7 @@ FROM
       SELECT
         a.key_kind,
         a.weight_threshold
-      FROM hafd.keyauth_live_weight_threshold a
+      FROM hafd.keyauth_live_authority_definition a
       WHERE a.account_id = _account_id
     ) AS key_agg_subquery
   ) AS weight_threshold_subquery,
