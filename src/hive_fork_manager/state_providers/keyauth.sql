@@ -174,12 +174,12 @@ BEGIN
     , _context);
 
     EXECUTE format($$
-        CREATE TABLE hafd.%1$s_weight_threshold(
+        CREATE TABLE hafd.%1$s_authority_definition(
         account_id INTEGER
         , key_kind hafd.key_type
         , weight_threshold INTEGER
         , op_serial_id  BIGINT NOT NULL
-        , CONSTRAINT pk_%1$s_weight_threshold PRIMARY KEY ( account_id, key_kind )
+        , CONSTRAINT pk_%1$s_authority_definition PRIMARY KEY ( account_id, key_kind )
         );
     $$
     , _context);
@@ -220,7 +220,7 @@ BEGIN
     , _context);
 
     RETURN ARRAY[format('%1$s_keyauth_a', _context), format('%1$s_keyauth_k', _context),
-        format('%1$s_accountauth_a', _context), format('%1$s_weight_threshold', _context)];
+        format('%1$s_accountauth_a', _context), format('%1$s_authority_definition', _context)];
 END;
 $BODY$
 ;
@@ -258,6 +258,7 @@ BEGIN
         DECLARE
         __account_ae_count INT;
         __key_ae_count INT;
+        __weight_threshold_count INT;
         __HARDFORK_9_block_num INT  := 3202773;
         __HARDFORK_21_block_num INT := 35921786;
         __HARDFORK_24_block_num INT := 47797680;
@@ -656,18 +657,18 @@ BEGIN
             timestamp =           EXCLUDED.timestamp
             RETURNING (xmax = 0) as is_new_entry, ae.account_id, ae.key_kind, ae.account_auth_id as cleaned_account_auth_id
         ),
-        changed_weight_thresholds as
+        changed_authority_definitions as
         (
             SELECT DISTINCT s.account_id, s.key_kind, s.weight_threshold, s.op_serial_id
             from effective_key_or_account_auth_records s
         ),
-        store_weight_threshold_records as
+        store_authority_definition_records as
         (
-            INSERT INTO hafd.%1$s_weight_threshold AS ae
+            INSERT INTO hafd.%1$s_authority_definition AS ae
             ( account_id, key_kind, weight_threshold, op_serial_id)
             SELECT s.account_id, s.key_kind, s.weight_threshold, s.op_serial_id
-            FROM changed_weight_thresholds s
-            ON CONFLICT ON CONSTRAINT pk_%1$s_weight_threshold DO UPDATE SET
+            FROM changed_authority_definitions s
+            ON CONFLICT ON CONSTRAINT pk_%1$s_authority_definition DO UPDATE SET
             weight_threshold =    EXCLUDED.weight_threshold,
             op_serial_id =        EXCLUDED.op_serial_id
             RETURNING (xmax = 0) as is_new_entry, ae.account_id, ae.key_kind, ae.weight_threshold
@@ -678,8 +679,9 @@ BEGIN
             select count(*) FROM
             store_account_auth_records
         ) as account_based_authority_entries,
-            (select count(*) FROM store_key_auth_records) AS key_based_authority_entries
-        into __account_ae_count, __key_ae_count;
+            (select count(*) FROM store_key_auth_records) AS key_based_authority_entries,
+            (select count(*) FROM store_authority_definition_records) AS weight_threshold_entries
+        into __account_ae_count, __key_ae_count, __weight_threshold_count;
 
 
         END;
@@ -729,7 +731,7 @@ BEGIN
         DROP TABLE hafd.%1$s_keyauth_a;
         DROP TABLE hafd.%1$s_keyauth_k;
         DROP TABLE hafd.%1$s_accountauth_a;
-        DROP TABLE hafd.%1$s_weight_threshold;
+        DROP TABLE hafd.%1$s_authority_definition;
         $$
         , _context);
 

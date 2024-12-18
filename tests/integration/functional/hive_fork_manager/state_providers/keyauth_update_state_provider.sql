@@ -419,7 +419,7 @@ BEGIN
         ,  acc.name
     FROM hafd.context_keyauth_a a
     JOIN hafd.context_keyauth_k k ON a.key_serial_id = k.key_id
-    JOIN hafd.context_weight_threshold wt ON wt.account_id = a.account_id AND wt.key_kind = a.key_kind
+    JOIN hafd.context_authority_definition wt ON wt.account_id = a.account_id AND wt.key_kind = a.key_kind
     JOIN hafd.accounts acc ON acc.id = a.account_id
     ;
 
@@ -493,7 +493,7 @@ BEGIN
         , a.op_serial_id
         , a.timestamp
         FROM hafd.context_accountauth_a a
-        JOIN hafd.context_weight_threshold wt ON wt.account_id = a.account_id AND wt.key_kind = a.key_kind
+        JOIN hafd.context_authority_definition wt ON wt.account_id = a.account_id AND wt.key_kind = a.key_kind
         JOIN hive.accounts_view accounts_view ON accounts_view.id = a.account_id
         JOIN hive.accounts_view av ON av.id = a.account_auth_id
     ;
