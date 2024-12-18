@@ -117,9 +117,9 @@ $BODY$
 BEGIN
     RETURN QUERY
         SELECT
-              sp.* as provider
-            , hive.calculate_state_provider_hash(sp.*) as hash
-        FROM unnest(enum_range(NULL::hafd.state_providers)) as sp;
+              DISTINCT sp.state_provider as provider
+            , hive.calculate_state_provider_hash(sp.state_provider) as hash
+        FROM hafd.state_providers_registered sp;
 END;
 $BODY$;
 
@@ -188,7 +188,10 @@ BEGIN
 
     SELECT string_agg(provider || hash, ' | ') FROM hive.calculate_state_provider_hashes() INTO _provider_hashes;
 
-    _tmp = _tmp || _provider_hashes;
+    IF _provider_hashes IS NOT NULL THEN
+        _tmp = _tmp || _provider_hashes;
+    END IF;
+
     INSERT INTO hafd.table_schema VALUES (schema_name, MD5(_tmp)::uuid);
 
     ts.schema_name := schema_name;
