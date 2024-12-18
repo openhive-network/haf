@@ -1,3 +1,19 @@
+CREATE OR REPLACE PROCEDURE haf_admin_test_given()
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+BEGIN
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name => 'context', _schema => 'a' );
+    PERFORM hive.app_create_context( _name => 'context2', _schema => 'a' );
+
+    PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'context' );
+    PERFORM hive.app_state_provider_import( 'KEYAUTH', 'context' );
+    PERFORM hive.app_state_provider_import( 'METADATA', 'context' );
+    PERFORM hive.app_state_provider_import( 'ACCOUNTS','context2' );
+END;
+$BODY$;
+
 
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_then()
