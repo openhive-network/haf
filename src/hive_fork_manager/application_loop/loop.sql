@@ -148,7 +148,11 @@ BEGIN
         COMMIT;
     END IF;
 
-    PERFORM hive.wait_for_ready_instance(_contexts, '178000000 years'::interval);
+    IF NOT hive.is_instance_ready() THEN
+        PERFORM pg_sleep( 0.2 );
+        _blocks_range := NULL;
+        RETURN;
+    END IF;
 
     UPDATE hafd.contexts ctx
     SET last_active_at = NOW()
