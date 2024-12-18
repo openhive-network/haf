@@ -414,11 +414,13 @@ BEGIN
     CREATE VIEW keyauth_view AS
     SELECT 
             a.*
+        ,   wt.weight_threshold
         ,   k.key
         ,  acc.name
     FROM hafd.context_keyauth_a a
     JOIN hafd.context_keyauth_k k ON a.key_serial_id = k.key_id
-    JOIN hafd.accounts acc ON acc.id = account_id
+    JOIN hafd.context_weight_threshold wt ON wt.account_id = a.account_id AND wt.key_kind = a.key_kind
+    JOIN hafd.accounts acc ON acc.id = a.account_id
     ;
 
     PERFORM test.print_recordset_with_label('Whole resulting keyauth_view', 'SELECT * FROM keyauth_view');
@@ -472,7 +474,7 @@ BEGIN
                 {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"MEMO","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"},
                 {"public_key_to_string":"STM8GC13uCZbP44HzMLV6zPZGwVQ8Nt4Kji8PapsPiNq1BK153XTX","account_id":5,"name":"initminer","key_kind":"ACTIVE","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x03bc5cd80588b23948aaa1e65be1a8b32cd9bed062a346c471c9319e62ba82a9ef"},
                 {"public_key_to_string":"STM8GC13uCZbP44HzMLV6zPZGwVQ8Nt4Kji8PapsPiNq1BK153XTX","account_id":5,"name":"initminer","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x03bc5cd80588b23948aaa1e65be1a8b32cd9bed062a346c471c9319e62ba82a9ef"},
-                {"public_key_to_string":"STM1111111111111111111111111111111114T1Anm","account_id":2,"name":"temp","key_kind":"MEMO","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x000000000000000000000000000000000000000000000000000000000000000000"},
+                {"public_key_to_string":"STM1111111111111111111111111111111114T1Anm","account_id":2,"name":"temp","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x000000000000000000000000000000000000000000000000000000000000000000"},
                 {"public_key_to_string":"STM8GC13uCZbP44HzMLV6zPZGwVQ8Nt4Kji8PapsPiNq1BK153XTX","account_id":5,"name":"initminer","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x03bc5cd80588b23948aaa1e65be1a8b32cd9bed062a346c471c9319e62ba82a9ef"},
                 {"public_key_to_string":"STM8GC13uCZbP44HzMLV6zPZGwVQ8Nt4Kji8PapsPiNq1BK153XTX","account_id":5,"name":"initminer","key_kind":"MEMO","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x03bc5cd80588b23948aaa1e65be1a8b32cd9bed062a346c471c9319e62ba82a9ef"}
                 ]');
@@ -480,19 +482,20 @@ BEGIN
 
 
     CREATE VIEW account_auth_view AS SELECT
-        account_id
+        a.account_id
         , accounts_view.name account_name
-        , key_kind
-        , account_auth_id
+        , a.key_kind
+        , a.account_auth_id
         , av.name as account_supervisor_name
-        , weight_threshold
-        , w
-        , context_accountauth_a.block_num
-        , op_serial_id
-        , timestamp
-        FROM hafd.context_accountauth_a
-        JOIN hive.accounts_view accounts_view ON accounts_view.id = context_accountauth_a.account_id
-        JOIN hive.accounts_view av ON av.id = context_accountauth_a.account_auth_id
+        , wt.weight_threshold
+        , a.w
+        , a.block_num
+        , a.op_serial_id
+        , a.timestamp
+        FROM hafd.context_accountauth_a a
+        JOIN hafd.context_weight_threshold wt ON wt.account_id = a.account_id AND wt.key_kind = a.key_kind
+        JOIN hive.accounts_view accounts_view ON accounts_view.id = a.account_id
+        JOIN hive.accounts_view av ON av.id = a.account_auth_id
     ;
 
     PERFORM test.print_recordset_with_label('mtlk >>>> Whole resulting account_auth_view', 'SELECT * FROM account_auth_view');
@@ -632,7 +635,7 @@ BEGIN
                  {"public_key_to_string":"STM5vp6ivg5iDZF4TmEJcQfW4ZV9849nqNbAQKMBNT7C4QiTzvMhm","account_id":13,"name":"jcalfee","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":12884901889,"block_num":3,"timestamp":"2016-06-22T19:10:23","key":"\\x0288f8a188036e2de2b7683f5419c0c597acd1d89df22e23fa196bd6b3ab00e70f"},
                  {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":21474836993,"block_num":5,"timestamp":"2016-06-22T19:10:25","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
                  {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":21474836993,"block_num":5,"timestamp":"2016-06-22T19:10:25","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
-                 {"public_key_to_string":"STM6ym1sYXLg1sqA1YV3xMUheheNVy8B44oNha9ahSu9bVdcrSRVw","account_id":23,"name":"snail-157","key_kind":"ACTIVE","weight_threshold":0,"w":0,"op_serial_id":25769804040,"block_num":6,"timestamp":"2016-06-22T19:10:26","key":"\\x03135bc3ce5a69b97151003ced77be2654b8e36c2fe7ebce75105cfc76554be0b1"},
+                 {"public_key_to_string":"STM6ym1sYXLg1sqA1YV3xMUheheNVy8B44oNha9ahSu9bVdcrSRVw","account_id":23,"name":"snail-157","key_kind":"ACTIVE","weight_threshold":1,"w":1,"op_serial_id":25769804040,"block_num":6,"timestamp":"2016-06-22T19:10:26","key":"\\x03135bc3ce5a69b97151003ced77be2654b8e36c2fe7ebce75105cfc76554be0b1"},
                  {"public_key_to_string":"STM6KAT3hPJj4bhZL1gh9Q4zFMbcTCFe6X2omuXajc8CrBPsoWxCu","account_id":23,"name":"snail-157","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":21474836993,"block_num":5,"timestamp":"2016-06-22T19:10:25","key":"\\x02bbb8ba99cd9b81fc7995d15857c813fa3a8f98d43f0e93ff1b8e3844a4e55c74"},
                  {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"ACTIVE","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"},
                  {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"},
@@ -640,7 +643,7 @@ BEGIN
                  {"public_key_to_string":"STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G","account_id":4,"name":"steem","key_kind":"MEMO","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x029db013797711c88cccca3692407f9ff9b9ce7221aaa2d797f1692be2215d0a5f"},
                  {"public_key_to_string":"STM8GC13uCZbP44HzMLV6zPZGwVQ8Nt4Kji8PapsPiNq1BK153XTX","account_id":5,"name":"initminer","key_kind":"ACTIVE","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x03bc5cd80588b23948aaa1e65be1a8b32cd9bed062a346c471c9319e62ba82a9ef"},
                  {"public_key_to_string":"STM8GC13uCZbP44HzMLV6zPZGwVQ8Nt4Kji8PapsPiNq1BK153XTX","account_id":5,"name":"initminer","key_kind":"OWNER","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x03bc5cd80588b23948aaa1e65be1a8b32cd9bed062a346c471c9319e62ba82a9ef"},
-                 {"public_key_to_string":"STM1111111111111111111111111111111114T1Anm","account_id":2,"name":"temp","key_kind":"MEMO","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x000000000000000000000000000000000000000000000000000000000000000000"},
+                 {"public_key_to_string":"STM1111111111111111111111111111111114T1Anm","account_id":2,"name":"temp","key_kind":"MEMO","weight_threshold":0,"w":0,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x000000000000000000000000000000000000000000000000000000000000000000"},
                  {"public_key_to_string":"STM8GC13uCZbP44HzMLV6zPZGwVQ8Nt4Kji8PapsPiNq1BK153XTX","account_id":5,"name":"initminer","key_kind":"POSTING","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x03bc5cd80588b23948aaa1e65be1a8b32cd9bed062a346c471c9319e62ba82a9ef"},
                  {"public_key_to_string":"STM8GC13uCZbP44HzMLV6zPZGwVQ8Nt4Kji8PapsPiNq1BK153XTX","account_id":5,"name":"initminer","key_kind":"MEMO","weight_threshold":1,"w":1,"op_serial_id":13755805291514172,"block_num":1,"timestamp":"2016-06-22T19:10:21","key":"\\x03bc5cd80588b23948aaa1e65be1a8b32cd9bed062a346c471c9319e62ba82a9ef"}
 
