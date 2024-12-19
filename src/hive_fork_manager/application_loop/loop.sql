@@ -1,3 +1,24 @@
+CREATE OR REPLACE FUNCTION hive.set_waiting_for_haf_stage(
+    _contexts hive.contexts_group
+)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __placeholder BOOL;
+BEGIN
+    WITH updated_fun AS (
+        UPDATE hafd.contexts ctx
+            SET loop.current_stage = hafd.wait_for_haf_stage()
+            WHERE ctx.name = ANY(_contexts)
+            AND ( (ctx.loop).current_stage != hafd.wait_for_haf_stage() OR (ctx.loop).current_stage IS NULL)
+            RETURNING hive.log_context( ctx.name, 'STATE_CHANGED'::hafd.context_event )
+    ) SELECT True INTO __placeholder; -- workaround for forbidden PERFORM with CTE UPDATE
+END;
+$BODY$;
+
 CREATE OR REPLACE FUNCTION hive.analyze_stages(
       _contexts hive.contexts_group
     , _blocks_range hive.blocks_range
@@ -49,6 +70,8 @@ BEGIN
     RETURN
           -- we did not start any iteration
           _lead_context_state IS NULL
+          -- we are in wait_for_haf stage
+       OR _lead_context_state.current_stage = hafd.wait_for_haf_stage()
           -- end of range processing
        OR _lead_context_state.end_block_range <= _lead_context_state.current_batch_end
           -- distance to head block grew instead become smaller
@@ -148,15 +171,12 @@ BEGIN
         COMMIT;
     END IF;
 
+    PERFORM hive.app_check_contexts_synchronized( _contexts );
+    _blocks_range := NULL;
+
     UPDATE hafd.contexts ctx
     SET last_active_at = NOW()
     WHERE ctx.name = ANY(_contexts);
-
-    IF NOT hive.is_instance_ready() THEN
-        PERFORM pg_sleep( 0.5 );
-        _blocks_range := NULL;
-        RETURN;
-    END IF;
 
     IF _limit IS NOT NULL
     THEN
@@ -165,8 +185,11 @@ BEGIN
         END IF;
     END IF;
 
-    PERFORM hive.app_check_contexts_synchronized( _contexts );
-    _blocks_range := NULL;
+    IF NOT hive.is_instance_ready() THEN
+        PERFORM hive.set_waiting_for_haf_stage( _contexts );
+        PERFORM pg_sleep( 0.5 );
+        RETURN;
+    END IF;
 
     ASSERT _override_max_batch IS NULL OR _override_max_batch > 0, 'Custom size of  blocks range is less than 1';
 
