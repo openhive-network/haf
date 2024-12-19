@@ -67,6 +67,8 @@ determine the range of blocks to synchronize, commit, and stop the application.
 
 1. The author of the application needs to divide synchronization into stages. Stages are defined here: [src/application_loop/stages.sql]
    There is a special stage LIVE, which is always chosen when application is working near to head block or on reversible blocks.
+   There is also another special stage 'wait_for_haf' which is automatically set on an application when it waits for HAF entering to live blocks synchronization.
+   In 'wait_for_haf' stage applications cannot process blocks because they won't get ranges of blocks for processing.
 2. During the creation of a context, an array of stages needs to be passed to 'hive.app_create_context'. The array must contain LIVE stage, which is returned by 'hive.live_stage' function.
 3. The procedure 'hive.app_next_iteration' will return the range of blocks to synchronize (as the out parameter _blocks_range) or NULL if there are no new blocks.
 4. The name of the current stage of a context can be obtained with 'hive.get_current_stage_name'.

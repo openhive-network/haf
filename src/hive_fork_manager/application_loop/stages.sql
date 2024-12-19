@@ -22,6 +22,19 @@ BEGIN
 END;
 $BODY$;
 
+CREATE FUNCTION hafd.wait_for_haf_stage()
+    RETURNS hafd.application_stage
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$BODY$
+BEGIN
+    RETURN ( 'wait_for_haf'
+        , 2147483647 -- max int
+        , 1 )::hafd.application_stage;
+END;
+$BODY$;
+
 
 
 CREATE DOMAIN hafd.application_stages AS hafd.application_stage[];
