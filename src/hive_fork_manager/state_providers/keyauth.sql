@@ -614,11 +614,14 @@ BEGIN
             timestamp =           EXCLUDED.timestamp
             RETURNING (xmax = 0) as is_new_entry, auth_entries.account_id, auth_entries.key_kind, auth_entries.key_serial_id as cleaned_key_id
         )
+        /*
         ,delete_obsolete_keys_from_dict as
         (
-            delete from hafd.%1$s_keyauth_k as dict
-            where dict.key_id in (select /*distinct*/ s.cleaned_key_id from store_key_auth_records s)
-        ),
+            delete from hafd.%1$s_keyauth_k
+            where key_id in (select /*distinct*/ cleaned_key_id from store_key_auth_records)
+        )
+        */
+        ,
         --- PROCESSING OF ACCOUNT BASED AUTHORITIES ---
             extended_account_auth_records as MATERIALIZED
         (
