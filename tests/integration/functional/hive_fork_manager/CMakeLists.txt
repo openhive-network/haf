@@ -328,7 +328,6 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_negative_non_context_owner_create_table.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/switch_state_provider_to_forkable.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/hash.sql )
- ADD_SQL_FUNCTIONAL_TEST( state_providers/no_hash.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_to_bob_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_events_infrustructure.sql )

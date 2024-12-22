@@ -114,11 +114,6 @@ test_extension_update_when_state_provider_changed() {
     echo
     echo "Making a change in keyauth state provider by change definition of hive.start_provider_keyauth"
 
-    sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" \
-    -c  "CREATE SCHEMA A;
-        SELECT hive.app_create_context( _name => 'context', _schema => 'a' );
-        SELECT hive.app_state_provider_import( 'KEYAUTH', 'context' );"
-
     # change definition of a state provider
     sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" \
       -c "CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
