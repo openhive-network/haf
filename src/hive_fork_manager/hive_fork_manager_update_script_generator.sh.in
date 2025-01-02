@@ -108,10 +108,8 @@ verify_table_schema() {
     echo "Table schema is inconsistent"
     echo "COLUMNS"
     diff --suppress-common-lines before_update_columns.txt after_update_columns.txt || true
-    echo "CONSTRAINTS"
-    diff --suppress-common-lines before_update_constraints.txt after_update_constraings.txt || true
-    echo "INDEXES"
-    diff --suppress-common-lines before_update_indexes.txt after_update_indexes.txt || true
+    echo "PROVIDERS"
+    diff --suppress-common-lines before_update_providers.txt after_update_providers.txt || true
     echo "Dropping temporary database"
     psql_do -a -d postgres -c "DROP DATABASE IF EXISTS $DB_NAME_AFTER_UPDATE;"
     find -type f -name '*.txt' > /dev/null 2>&1
