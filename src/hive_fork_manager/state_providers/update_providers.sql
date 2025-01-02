@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION hive.state_provider_update_runtime( _provider hafd.st
 AS
 $BODY$
 BEGIN
-    EXECUTE format('hive.runtimecode_provider_%s(%L)', _provider, _context );
+    EXECUTE format('SELECT hive.runtimecode_provider_%s(%L)', _provider, _context );
 END;
 $BODY$
 ;
@@ -23,5 +23,4 @@ END;
 $BODY$
 ;
 
-SELECT hive.state_providers_update_runtime();
 

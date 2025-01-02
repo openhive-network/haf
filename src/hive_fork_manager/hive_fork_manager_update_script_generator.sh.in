@@ -109,7 +109,7 @@ verify_table_schema() {
     echo "COLUMNS"
     diff --suppress-common-lines before_update_columns.txt after_update_columns.txt || true
     echo "PROVIDERS"
-    diff --suppress-common-lines before_update_providers.txt after_update_providers.txt || true
+    ate diff --suppress-common-lines before_update_providers.txt after_update_providers.txt || true
     echo "Dropping temporary database"
     psql_do -a -d postgres -c "DROP DATABASE IF EXISTS $DB_NAME_AFTER_UPDATE;"
     find -type f -name '*.txt' > /dev/null 2>&1
@@ -142,6 +142,7 @@ make_update() {
   echo "Attempting to update your database..."
 
   psql_do -d "$DB_NAME" -c "ALTER EXTENSION hive_fork_manager UPDATE"
+  psql_do -d "$DB_NAME" -c "SELECT hive.state_providers_update_runtime();"
 }
 
 save_views() {
@@ -210,7 +211,7 @@ check_tables_dont_reference_haf_types() {
       WHERE
         cls.relkind = 'r' AND
         col.udt_schema='hive' AND
-        ( col.table_schema='hive' OR col.table_schema='hafd' )"
+        col.table_schema<>'hive'"
   psql_do -d "$DB_NAME" -q -t -A -c "$query" | \
     awk -F'|' '{print($1"."$2, "contains column", $3, "of type", $4"."$5, "which would be dropped on upgrade")} END{exit NR > 0 ? 4 : 0}'
 }
@@ -226,7 +227,7 @@ check_tables_dont_reference_haf_domains() {
       WHERE
         cls.relkind = 'r' AND
         col.domain_schema='hive' AND
-        ( col.table_schema='hive' OR col.table_schema='hafd' )"
+        col.table_schema<>'hive'"
   psql_do -d "$DB_NAME" -q -t -A -c "$query" | \
     awk -F'|' '{print($1"."$2, "contains column", $3, "of type", $4"."$5, "which would be dropped on upgrade")} END{exit NR > 0 ? 4 : 0}'
 }
