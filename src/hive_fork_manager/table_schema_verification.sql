@@ -125,7 +125,8 @@ $BODY$;
 
 
 
-CREATE OR REPLACE FUNCTION hive.calculate_schema_hash(schema_name TEXT)
+-- calculate hafd schema hash
+CREATE OR REPLACE FUNCTION hive.calculate_schema_hash()
     RETURNS SETOF hafd.verify_table_schema
     LANGUAGE plpgsql
     VOLATILE
@@ -162,7 +163,7 @@ verified_tables_list = ARRAY[
 
     FOR _table_name IN SELECT UNNEST( verified_tables_list ) as _table_name
     LOOP
-        RETURN NEXT hive.calculate_table_schema_hash( schema_name, _table_name);
+        RETURN NEXT hive.calculate_table_schema_hash( 'hafd', _table_name);
     END LOOP;
 
     RETURN;
@@ -171,7 +172,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_database_hash(schema_name TEXT)
+CREATE OR REPLACE FUNCTION hive.create_database_hash()
     RETURNS SETOF hafd.table_schema
     LANGUAGE plpgsql
     VOLATILE
@@ -184,14 +185,14 @@ DECLARE
 BEGIN
     TRUNCATE hafd.table_schema;
 
-    SELECT string_agg(table_schema, ' | ') FROM hive.calculate_schema_hash(schema_name) INTO _tmp;
+    SELECT string_agg(table_schema, ' | ') FROM hive.calculate_schema_hash() INTO _tmp;
 
     SELECT string_agg(provider || hash, ' | ') FROM hive.calculate_state_provider_hashes() INTO _provider_hashes;
 
     _tmp = _tmp || _provider_hashes;
-    INSERT INTO hafd.table_schema VALUES (schema_name, MD5(_tmp)::uuid);
+    INSERT INTO hafd.table_schema VALUES ('hafd', MD5(_tmp)::uuid);
 
-    ts.schema_name := schema_name;
+    ts.schema_name := 'hafd';
     ts.schema_hash := MD5(_tmp)::uuid;
 RETURN NEXT ts;
 END;

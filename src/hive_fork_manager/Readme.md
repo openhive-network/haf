@@ -594,10 +594,10 @@ Disables triggers attached to a register table. It is useful for processing irre
 ##### hive.get_impacted_accounts( operation_body )
 Returns list of accounts ( their names ) impacted by the operation. 
 
-###### hive.calculate_schema_hash( schema_name )
-Calculates hash for group of tables, used by hive.create_database_hash.
-###### hive.create_database_hash( schema_name )
-Used in update procedure, creates database hash using table schema.
+###### hive.calculate_schema_hash()
+Calculates hash for group of tables in hafd schema, used by hive.create_database_hash.
+###### hive.create_database_hash()
+Used in update procedure, creates database hash.
 
 ## Known Problems
 1. FOREIGN KEY constraints must be DEFERRABLE, otherwise we cannot guarantee success rewinding changes - the process may temporarily violate tables constraints.

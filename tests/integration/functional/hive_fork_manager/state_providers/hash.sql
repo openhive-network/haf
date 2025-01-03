@@ -27,7 +27,7 @@ BEGIN
     SELECT STRING_AGG( hash, '|') FROM hive.calculate_state_provider_hashes() INTO __all_before_hashes;
     SELECT * FROM hive.calculate_state_provider_hash( 'KEYAUTH'::hafd.state_providers ) INTO __keyauth_before_hash;
 
-    SELECT schema_hash FROM hive.create_database_hash('hafd')  INTO __database_hash_before;
+    SELECT schema_hash FROM hive.create_database_hash()  INTO __database_hash_before;
 
     EXECUTE format( 'CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
     RETURNS TEXT[]
@@ -43,7 +43,7 @@ BEGIN
 
     SELECT STRING_AGG( hash, '|') FROM hive.calculate_state_provider_hashes() INTO __all_after_hashes;
     SELECT * FROM hive.calculate_state_provider_hash( 'KEYAUTH'::hafd.state_providers ) INTO __keyauth_after_hash;
-    SELECT schema_hash FROM hive.create_database_hash('hafd')  INTO __database_hash_after;
+    SELECT schema_hash FROM hive.create_database_hash()  INTO __database_hash_after;
 
     ASSERT __all_after_hashes != __all_before_hashes, 'Hashes not changed after modification';
     ASSERT __keyauth_after_hash != __keyauth_before_hash, 'Hash not changed after modification';
