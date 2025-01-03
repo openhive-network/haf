@@ -249,6 +249,9 @@ check_functions_were_updated() {
 
 psql_do -d "$DB_NAME" -q -t -A -f "$SCRIPTPATH/hive_fork_manager_save_restore_views.sql"
 
+# inject newer version of hash computation
+psql_do -d "$DB_NAME" -q -t -A -f "$SCRIPTPATH/table_schema_verification.sql"
+
 verify_table_schema
 
 get_deployed_version

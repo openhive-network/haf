@@ -74,6 +74,8 @@ CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/hive_fork_manager_update_script_gen
 # Only needed to be able to run update script from ${CMAKE_CURRENT_SOURCE_DIR} dir
 CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/hive_fork_manager_save_restore_views.sql"
   "${extension_path}/hive_fork_manager_save_restore_views.sql" @ONLY)
+CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/table_schema_verification.sql"
+        "${extension_path}/table_schema_verification.sql" @ONLY)
 
 MESSAGE( STATUS "CONFIGURING the control file: ${CMAKE_BINARY_DIR}/extensions/${EXTENSION_NAME}/hive_fork_manager.control" )
 
@@ -108,6 +110,12 @@ INSTALL ( FILES "${CMAKE_CURRENT_SOURCE_DIR}/hive_fork_manager_save_restore_view
           GROUP_EXECUTE GROUP_READ
           WORLD_EXECUTE WORLD_READ
         )
+INSTALL ( FILES "${CMAKE_CURRENT_SOURCE_DIR}/table_schema_verification.sql"
+        DESTINATION ${POSTGRES_SHAREDIR}/extension
+        PERMISSIONS OWNER_WRITE OWNER_READ
+        GROUP_EXECUTE GROUP_READ
+        WORLD_EXECUTE WORLD_READ
+)
 INSTALL ( FILES "${extension_path}/${update_control_script}" "${extension_path}/${EXTENSION_NAME}.control" "${extension_path}/${extension_control_script}"
           DESTINATION ${POSTGRES_SHAREDIR}/extension
           PERMISSIONS OWNER_WRITE OWNER_READ
