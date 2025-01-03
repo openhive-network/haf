@@ -129,45 +129,15 @@ $BODY$;
 CREATE OR REPLACE FUNCTION hive.calculate_schema_hash()
     RETURNS SETOF hafd.verify_table_schema
     LANGUAGE plpgsql
-    VOLATILE
+    STABLE
 AS
 $BODY$
-DECLARE
-    _table_name     TEXT;
-    _state_provider hafd.state_providers;
-    verified_tables_list TEXT[];
 BEGIN
 
-verified_tables_list = ARRAY[
-'blocks',
-'irreversible_data',
-'transactions',
-'transactions_multisig',
-'operation_types',
-'operations',
-'applied_hardforks',
-'accounts',
-'account_operations',
-'fork',
-'blocks_reversible',
-'transactions_reversible',
-'transactions_multisig_reversible',
-'operations_reversible',
-'accounts_reversible',
-'account_operations_reversible',
-'applied_hardforks_reversible',
-'contexts_attachment',
-'contexts',
-'contexts_log'
-];
-
-    FOR _table_name IN SELECT UNNEST( verified_tables_list ) as _table_name
-    LOOP
-        RETURN NEXT hive.calculate_table_schema_hash( 'hafd', _table_name);
-    END LOOP;
-
-    RETURN;
-
+    RETURN QUERY SELECT (hive.calculate_table_schema_hash( 'hafd', table_name)).*
+    FROM information_schema.tables
+    WHERE table_schema = 'hafd'
+    AND table_type = 'BASE TABLE';
 END;
 $BODY$
 ;
