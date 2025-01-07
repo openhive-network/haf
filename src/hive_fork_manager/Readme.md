@@ -594,7 +594,7 @@ Disables triggers attached to a register table. It is useful for processing irre
 ##### hive.get_impacted_accounts( operation_body )
 Returns list of accounts ( their names ) impacted by the operation. 
 
-###### hive.calculate_schema_hash()
+###### hive-update.calculate_schema_hash()
 Calculates hash for group of tables in hafd schema, used by hive.create_database_hash.
 ###### hive.create_database_hash()
 Used in update procedure, creates database hash.

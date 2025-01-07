@@ -70,7 +70,7 @@ for testfun in ${tests}; do
     psql ${pg_call} -c "UPDATE pg_extension SET extversion = '1.0' WHERE extname = 'hive_fork_manager';"
     sudo "${script_to_execute_after_testfun}" --haf-db-name="$DB_NAME";
     # for testing hash functions we ned to add them after update which remove them
-    psql ${pg_call} -f "${extension_path}/table_schema_verification.sql"
+    psql ${pg_call} -f "${extension_path}/update.sql"
   fi
 done
 

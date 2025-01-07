@@ -451,7 +451,7 @@ BEGIN
     IF EXISTS ( SELECT 1 FROM hafd.events_queue WHERE id = hive.unreachable_event_id() LIMIT 1 ) THEN
         SELECT MAX(eq.id) + 1 FROM hafd.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
         PERFORM SETVAL( 'hafd.events_queue_id_seq', __events_id, false );
-        -- PERFORM hive.create_database_hash();
+        -- PERFORM hive_update.create_database_hash();
         RETURN;
     END IF;
 
@@ -463,7 +463,7 @@ BEGIN
 
     INSERT INTO hafd.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
 
-    -- PERFORM hive.create_database_hash();
+    -- PERFORM hive_update.create_database_hash();
 END;
 $BODY$
 ;
