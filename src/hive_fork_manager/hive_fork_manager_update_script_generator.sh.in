@@ -81,14 +81,14 @@ POSTGRES_EXTENSION_DIR='@POSTGRES_SHAREDIR@/extension'
 DB_NAME_AFTER_UPDATE="upd_${DB_NAME}" # truncate before postgres will do this
 DB_NAME_AFTER_UPDATE="${DB_NAME_AFTER_UPDATE:0:63}"
 save_table_schema() {
-  psql_do -d "$DB_NAME" -o before_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive.calculate_schema_hash()"
-  psql_do -d "$DB_NAME" -o before_update_constraints.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive.calculate_schema_hash()"
-  psql_do -d "$DB_NAME" -o before_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive.calculate_schema_hash()"
+  psql_do -d "$DB_NAME" -o before_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive-update.calculate_schema_hash()"
+  psql_do -d "$DB_NAME" -o before_update_constraints.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive-update.calculate_schema_hash()"
+  psql_do -d "$DB_NAME" -o before_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive-update.calculate_schema_hash()"
   psql_do -d "$DB_NAME" -o before_update_providers.txt -q -t -A -c "SELECT provider, hash FROM hive.calculate_state_provider_hashes()"
 
-  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive.calculate_schema_hash()"
-  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_constraings.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive.calculate_schema_hash()"
-  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive.calculate_schema_hash()"
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive-update.calculate_schema_hash()"
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_constraings.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive-update.calculate_schema_hash()"
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive-update.calculate_schema_hash()"
   psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_providers.txt -q -t -A -c "SELECT provider, hash FROM hive.calculate_state_provider_hashes()"
 }
 
@@ -96,10 +96,10 @@ verify_table_schema() {
   echo "Attempting to verify if existing table schema is correct..."
   psql_do -a -d postgres -c "CREATE DATABASE $DB_NAME_AFTER_UPDATE WITH OWNER $DB_ADMIN;"
   psql_do -a -d "$DB_NAME_AFTER_UPDATE" -c 'CREATE EXTENSION hive_fork_manager CASCADE;'
-  psql_do -d "$DB_NAME_AFTER_UPDATE" -q -t -A -f "$SCRIPTPATH/table_schema_verification.sql"
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -q -t -A -f "$SCRIPTPATH/update.sql"
 
-  BEFORE_UPDATE=$(psql_do -d "$DB_NAME" -t -A -c "SELECT schema_hash FROM hive.create_database_hash()")
-  AFTER_UPDATE=$(psql_do -d "$DB_NAME_AFTER_UPDATE" -t -A -c "SELECT schema_hash FROM hive.create_database_hash()")
+  BEFORE_UPDATE=$(psql_do -d "$DB_NAME" -t -A -c "SELECT schema_hash FROM hive_update.create_database_hash()")
+  AFTER_UPDATE=$(psql_do -d "$DB_NAME_AFTER_UPDATE" -t -A -c "SELECT schema_hash FROM hive_update.create_database_hash()")
   if [ "$BEFORE_UPDATE" = "$AFTER_UPDATE" ]; then
     echo "The table schema is correct, verification completed."
     echo "Dropping temporary database"
@@ -248,10 +248,8 @@ check_functions_were_updated() {
   echo "End of Checking that all C functions were properly updated..."
 }
 
-psql_do -d "$DB_NAME" -q -t -A -f "$SCRIPTPATH/hive_fork_manager_save_restore_views.sql"
-
 # inject newer version of hash computation
-psql_do -d "$DB_NAME" -q -t -A -f "$SCRIPTPATH/table_schema_verification.sql"
+psql_do -d "$DB_NAME" -q -t -A -f "$SCRIPTPATH/update.sql"
 
 verify_table_schema
 

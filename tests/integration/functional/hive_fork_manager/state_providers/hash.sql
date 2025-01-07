@@ -12,22 +12,22 @@ DECLARE
     __database_hash_before TEXT;
     __database_hash_after TEXT;
 BEGIN
-    ASSERT ( SELECT 1 FROM hive.calculate_state_provider_hashes() WHERE provider = 'ACCOUNTS' ) IS NOT NULL
+    ASSERT ( SELECT 1 FROM hive_update.calculate_state_provider_hashes() WHERE provider = 'ACCOUNTS' ) IS NOT NULL
         , 'ACCOUNTS not hashed';
 
-    ASSERT ( SELECT 1 FROM hive.calculate_state_provider_hashes() WHERE provider = 'KEYAUTH' ) IS NOT NULL
+    ASSERT ( SELECT 1 FROM hive_update.calculate_state_provider_hashes() WHERE provider = 'KEYAUTH' ) IS NOT NULL
         , 'KEYAUTH not hashed';
 
-    ASSERT ( SELECT 1 FROM hive.calculate_state_provider_hashes() WHERE provider = 'METADATA' ) IS NOT NULL
+    ASSERT ( SELECT 1 FROM hive_update.calculate_state_provider_hashes() WHERE provider = 'METADATA' ) IS NOT NULL
         , 'METADATA not hashed';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.calculate_state_provider_hashes() ) = 3
+    ASSERT ( SELECT COUNT(*) FROM hive_update.calculate_state_provider_hashes() ) = 3
         , 'More   than 3 known providers are hashed';
 
-    SELECT STRING_AGG( hash, '|') FROM hive.calculate_state_provider_hashes() INTO __all_before_hashes;
-    SELECT * FROM hive.calculate_state_provider_hash( 'KEYAUTH'::hafd.state_providers ) INTO __keyauth_before_hash;
+    SELECT STRING_AGG( hash, '|') FROM hive_update.calculate_state_provider_hashes() INTO __all_before_hashes;
+    SELECT * FROM hive_update.calculate_state_provider_hash( 'KEYAUTH'::hafd.state_providers ) INTO __keyauth_before_hash;
 
-    SELECT schema_hash FROM hive.create_database_hash()  INTO __database_hash_before;
+    SELECT schema_hash FROM hive_update.create_database_hash()  INTO __database_hash_before;
 
     EXECUTE format( 'CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
     RETURNS TEXT[]
@@ -41,9 +41,9 @@ BEGIN
     $$
     ;');
 
-    SELECT STRING_AGG( hash, '|') FROM hive.calculate_state_provider_hashes() INTO __all_after_hashes;
-    SELECT * FROM hive.calculate_state_provider_hash( 'KEYAUTH'::hafd.state_providers ) INTO __keyauth_after_hash;
-    SELECT schema_hash FROM hive.create_database_hash()  INTO __database_hash_after;
+    SELECT STRING_AGG( hash, '|') FROM hive_update.calculate_state_provider_hashes() INTO __all_after_hashes;
+    SELECT * FROM hive_update.calculate_state_provider_hash( 'KEYAUTH'::hafd.state_providers ) INTO __keyauth_after_hash;
+    SELECT schema_hash FROM hive_update.create_database_hash()  INTO __database_hash_after;
 
     ASSERT __all_after_hashes != __all_before_hashes, 'Hashes not changed after modification';
     ASSERT __keyauth_after_hash != __keyauth_before_hash, 'Hash not changed after modification';
