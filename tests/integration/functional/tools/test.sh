@@ -8,7 +8,7 @@ script_to_execute_after_testfun="$5"
 
 . ./tools/common.sh
 
-setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
+setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path" "$extension_path"
 
 trap on_exit EXIT;
 
@@ -66,9 +66,11 @@ for testfun in ${tests}; do
   done
 
   if [ -n "${script_to_execute_after_testfun}" ]; then
-    pg_call="-p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c"
-    psql ${pg_call} "UPDATE pg_extension SET extversion = '1.0' WHERE extname = 'hive_fork_manager';"
+    pg_call="-p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on"
+    psql ${pg_call} -c "UPDATE pg_extension SET extversion = '1.0' WHERE extname = 'hive_fork_manager';"
     sudo "${script_to_execute_after_testfun}" --haf-db-name="$DB_NAME";
+    # for testing hash functions we ned to add them after update which remove them
+    psql ${pg_call} -f "${extension_path}/table_schema_verification.sql"
   fi
 done
 

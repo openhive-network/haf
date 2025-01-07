@@ -39,6 +39,7 @@ setup_test_database() {
   setup_scripts_dir_path="$1"
   postgres_port="$2"
   test_path="$3"
+  extension_path="$4"
 
   test_directory=$(dirname "${test_path}");
   sql_setup_fixture="./${test_directory}/fixture.sql";
@@ -57,6 +58,10 @@ setup_test_database() {
     echo "FAILED. Cannot setup database"
     exit 1
   fi
+
+  # ATTENTION: normally the extension does not contain hash functions
+  # so the db is little different than production state, but these are functional tests so IMO it is acceptable
+  psql -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -f "${extension_path}/table_schema_verification.sql"
 
   # TODO(mickiewicz@syncad.com): remove when releasing on pg16 where 'public' schema is not accessible by default
   if ! psql -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -c "REVOKE CREATE ON SCHEMA public FROM PUBLIC;";

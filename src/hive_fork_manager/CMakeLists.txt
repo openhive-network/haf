@@ -53,7 +53,6 @@ ADD_PSQL_EXTENSION(
             app_api_impl.sql
             hived_api.sql
             app_api.sql
-            table_schema_verification.sql
             api_helpers/block_api_support.sql
             authorization.sql
             get_impacted_accounts.sql

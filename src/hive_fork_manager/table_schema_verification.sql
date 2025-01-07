@@ -1,4 +1,5 @@
-CREATE OR REPLACE FUNCTION hive.calculate_table_schema_hash(schema_name TEXT,_table_name TEXT)
+DROP FUNCTION IF EXISTS hive.calculate_table_schema_hash;
+CREATE FUNCTION hive.calculate_table_schema_hash(schema_name TEXT,_table_name TEXT)
     RETURNS hafd.verify_table_schema
     LANGUAGE plpgsql
     STABLE
@@ -90,7 +91,8 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.calculate_state_provider_hash(_provider hafd.state_providers )
+DROP FUNCTION IF EXISTS hive.calculate_state_provider_hash;
+CREATE FUNCTION hive.calculate_state_provider_hash(_provider hafd.state_providers )
     RETURNS TEXT --md5 of start_provider function
     LANGUAGE plpgsql
     STABLE
@@ -108,7 +110,8 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.calculate_state_provider_hashes()
+DROP FUNCTION IF EXISTS hive.calculate_state_provider_hashes;
+CREATE FUNCTION hive.calculate_state_provider_hashes()
     RETURNS SETOF hafd.state_provider_and_hash
     LANGUAGE plpgsql
     STABLE
@@ -126,7 +129,8 @@ $BODY$;
 
 
 -- calculate hafd schema hash
-CREATE OR REPLACE FUNCTION hive.calculate_schema_hash()
+DROP FUNCTION IF EXISTS hive.calculate_schema_hash;
+CREATE FUNCTION hive.calculate_schema_hash()
     RETURNS SETOF hafd.verify_table_schema
     LANGUAGE plpgsql
     STABLE
@@ -142,7 +146,8 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.create_database_hash()
+DROP FUNCTION IF EXISTS hive.create_database_hash();
+CREATE FUNCTION hive.create_database_hash()
     RETURNS SETOF hafd.table_schema
     LANGUAGE plpgsql
     VOLATILE

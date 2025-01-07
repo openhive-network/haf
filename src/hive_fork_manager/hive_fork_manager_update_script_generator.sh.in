@@ -96,6 +96,7 @@ verify_table_schema() {
   echo "Attempting to verify if existing table schema is correct..."
   psql_do -a -d postgres -c "CREATE DATABASE $DB_NAME_AFTER_UPDATE WITH OWNER $DB_ADMIN;"
   psql_do -a -d "$DB_NAME_AFTER_UPDATE" -c 'CREATE EXTENSION hive_fork_manager CASCADE;'
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -q -t -A -f "$SCRIPTPATH/table_schema_verification.sql"
 
   BEFORE_UPDATE=$(psql_do -d "$DB_NAME" -t -A -c "SELECT schema_hash FROM hive.create_database_hash()")
   AFTER_UPDATE=$(psql_do -d "$DB_NAME_AFTER_UPDATE" -t -A -c "SELECT schema_hash FROM hive.create_database_hash()")
