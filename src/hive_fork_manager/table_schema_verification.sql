@@ -1,12 +1,25 @@
+CREATE TYPE hive.verify_table_schema AS(
+   table_name TEXT,
+   table_schema TEXT,
+   table_schema_hash UUID,
+   columns_hash UUID,
+   constraints_hash UUID,
+   indexes_hash UUID,
+   table_columns TEXT,
+   table_constraints TEXT,
+   table_indexes TEXT
+);
+
+
 DROP FUNCTION IF EXISTS hive.calculate_table_schema_hash;
 CREATE FUNCTION hive.calculate_table_schema_hash(schema_name TEXT,_table_name TEXT)
-    RETURNS hafd.verify_table_schema
+    RETURNS hive.verify_table_schema
     LANGUAGE plpgsql
     STABLE
 AS
 $BODY$
 DECLARE
-    schemarow    hafd.verify_table_schema;
+    schemarow    hive.verify_table_schema;
     _columns   TEXT;
     _constraints   TEXT;
     _indexes    TEXT;
@@ -131,7 +144,7 @@ $BODY$;
 -- calculate hafd schema hash
 DROP FUNCTION IF EXISTS hive.calculate_schema_hash;
 CREATE FUNCTION hive.calculate_schema_hash()
-    RETURNS SETOF hafd.verify_table_schema
+    RETURNS SETOF hive.verify_table_schema
     LANGUAGE plpgsql
     STABLE
 AS
