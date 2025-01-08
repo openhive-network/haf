@@ -33,6 +33,7 @@ prepare_sql_script() {
 
 prepare_database() {
     "$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME" "$@"
+    exec_sql "SELECT hive.initialize_extension_data();"
 }
 
 update_database() {
@@ -240,5 +241,39 @@ printf "\nTEST: Check that function defined in hafd namespace that doesn't refer
 prepare_database
 exec_sql "CREATE FUNCTION hafd.bad_function() RETURNS VOID VOLATILE AS '/lib/postgresql/${POSTGRES_VERSION}/lib/tablefunc.so', 'crosstab' language c;"
 failswith 3 update_database
+
+printf "\nTEST: Change keyauth state provider, but not use it. This should pass\n"
+prepare_database
+exec_sql "CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
+             RETURNS TEXT[]
+             LANGUAGE plpgsql
+             VOLATILE
+             AS
+             \$\$
+             BEGIN
+                 RETURN '';
+             END;
+             \$\$
+             ;"
+update_database
+
+printf "\nTEST: Change keyauth state provider, and not use it. This should fail\n"
+prepare_database
+exec_sql "CREATE SCHEMA workaround;
+          SELECT hive.app_create_context('workaround', 'workaround');
+          SELECT hive.app_state_provider_import( 'KEYAUTH', 'workaround' );
+          "
+exec_sql "CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
+             RETURNS TEXT[]
+             LANGUAGE plpgsql
+             VOLATILE
+             AS
+             \$\$
+             BEGIN
+                 RETURN '';
+             END;
+             \$\$
+             ;"
+failswith 1 update_database
 
 echo "Succeeded"

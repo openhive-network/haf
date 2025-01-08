@@ -299,7 +299,7 @@ END;
 $BODY$;
 
 DROP FUNCTION IF EXISTS hive_update.calculate_state_provider_hashes;
-CREATE FUNCTION hive_update.calculate_state_provider_hashes()
+CREATE FUNCTION hive_update.calculate_state_provider_hashes( include_providers hafd.state_providers[] )
     RETURNS SETOF hive_update.state_provider_and_hash
     LANGUAGE plpgsql
     STABLE
@@ -310,7 +310,7 @@ BEGIN
         SELECT
               sp.* as provider
             , hive_update.calculate_state_provider_hash(sp.*) as hash
-        FROM unnest(enum_range(NULL::hafd.state_providers)) as sp;
+        FROM unnest(include_providers) as sp;
 END;
 $BODY$;
 
@@ -335,7 +335,7 @@ $BODY$
 ;
 
 DROP FUNCTION IF EXISTS hive_update.create_database_hash;
-CREATE FUNCTION hive_update.create_database_hash()
+CREATE FUNCTION hive_update.create_database_hash(include_providers hafd.state_providers[] = enum_range(NULL::hafd.state_providers))
     RETURNS UUID
     LANGUAGE plpgsql
     STABLE
@@ -346,11 +346,29 @@ DECLARE
     _provider_hashes TEXT;
 BEGIN
     SELECT string_agg(table_schema, ' | ') FROM hive_update.calculate_schema_hash() INTO _tmp;
-    SELECT string_agg(provider || hash, ' | ') FROM hive_update.calculate_state_provider_hashes() INTO _provider_hashes;
-
-    _tmp = _tmp || _provider_hashes;
+    SELECT string_agg(provider || hash, ' | ') FROM hive_update.calculate_state_provider_hashes(include_providers) INTO _provider_hashes;
+    IF _provider_hashes IS NOT NULL THEN
+        _tmp = _tmp || _provider_hashes;
+    END IF;
     RETURN MD5(_tmp)::uuid;
 END;
 $BODY$
 ;
 
+DROP FUNCTION IF EXISTS hive_update.get_used_state_providers;
+CREATE FUNCTION hive_update.get_used_state_providers()
+    RETURNS hafd.state_providers[]
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __result hafd.state_providers[];
+BEGIN
+    SELECT ARRAY_AGG( DISTINCT sp.state_provider ) INTO __result
+    FROM hafd.state_providers_registered sp;
+
+    RETURN COALESCE( __result, ARRAY[]::hafd.state_providers[] );
+END;
+$BODY$
+;
