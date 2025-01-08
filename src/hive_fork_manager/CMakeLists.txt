@@ -4,7 +4,6 @@ ADD_PSQL_EXTENSION(
              context_rewind/data_schema_types.sql
              application_loop/stages.sql
              context_rewind/data_schema.sql
-             context_rewind/table_schema.sql
              events_queue.sql
              forks.sql
              app_context.sql
