@@ -98,8 +98,8 @@ verify_table_schema() {
   psql_do -a -d "$DB_NAME_AFTER_UPDATE" -c 'CREATE EXTENSION hive_fork_manager CASCADE;'
   psql_do -d "$DB_NAME_AFTER_UPDATE" -q -t -A -f "$SCRIPTPATH/update.sql"
 
-  BEFORE_UPDATE=$(psql_do -d "$DB_NAME" -t -A -c "SELECT schema_hash FROM hive_update.create_database_hash()")
-  AFTER_UPDATE=$(psql_do -d "$DB_NAME_AFTER_UPDATE" -t -A -c "SELECT schema_hash FROM hive_update.create_database_hash()")
+  BEFORE_UPDATE=$(psql_do -d "$DB_NAME" -t -A -c "SELECT hive_update.create_database_hash()")
+  AFTER_UPDATE=$(psql_do -d "$DB_NAME_AFTER_UPDATE" -t -A -c "SELECT hive_update.create_database_hash()")
   if [ "$BEFORE_UPDATE" = "$AFTER_UPDATE" ]; then
     echo "The table schema is correct, verification completed."
     echo "Dropping temporary database"
