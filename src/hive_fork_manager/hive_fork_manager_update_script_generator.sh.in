@@ -81,15 +81,15 @@ POSTGRES_EXTENSION_DIR='@POSTGRES_SHAREDIR@/extension'
 DB_NAME_AFTER_UPDATE="upd_${DB_NAME}" # truncate before postgres will do this
 DB_NAME_AFTER_UPDATE="${DB_NAME_AFTER_UPDATE:0:63}"
 save_table_schema() {
-  psql_do -d "$DB_NAME" -o before_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive-update.calculate_schema_hash()"
-  psql_do -d "$DB_NAME" -o before_update_constraints.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive-update.calculate_schema_hash()"
-  psql_do -d "$DB_NAME" -o before_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive-update.calculate_schema_hash()"
-  psql_do -d "$DB_NAME" -o before_update_providers.txt -q -t -A -c "SELECT provider, hash FROM hive.calculate_state_provider_hashes()"
+  psql_do -d "$DB_NAME" -o before_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive_update.calculate_schema_hash()"
+  psql_do -d "$DB_NAME" -o before_update_constraints.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive_update.calculate_schema_hash()"
+  psql_do -d "$DB_NAME" -o before_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive_update.calculate_schema_hash()"
+  psql_do -d "$DB_NAME" -o before_update_providers.txt -q -t -A -c "SELECT provider, hash FROM hive_update.calculate_state_provider_hashes(enum_range(NULL::hafd.state_providers))"
 
-  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive-update.calculate_schema_hash()"
-  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_constraings.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive-update.calculate_schema_hash()"
-  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive-update.calculate_schema_hash()"
-  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_providers.txt -q -t -A -c "SELECT provider, hash FROM hive.calculate_state_provider_hashes()"
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive_update.calculate_schema_hash()"
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_constraings.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive_update.calculate_schema_hash()"
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive_update.calculate_schema_hash()"
+  psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_providers.txt -q -t -A -c "SELECT provider, hash FROM hive_update.calculate_state_provider_hashes(enum_range(NULL::hafd.state_providers))"
 }
 
 verify_table_schema() {
@@ -98,8 +98,9 @@ verify_table_schema() {
   psql_do -a -d "$DB_NAME_AFTER_UPDATE" -c 'CREATE EXTENSION hive_fork_manager CASCADE;'
   psql_do -d "$DB_NAME_AFTER_UPDATE" -q -t -A -f "$SCRIPTPATH/update.sql"
 
-  BEFORE_UPDATE=$(psql_do -d "$DB_NAME" -t -A -c "SELECT hive_update.create_database_hash()")
-  AFTER_UPDATE=$(psql_do -d "$DB_NAME_AFTER_UPDATE" -t -A -c "SELECT hive_update.create_database_hash()")
+  STATE_PROVIDERS=$(psql_do -d "$DB_NAME" -t -A -c "SELECT hive_update.get_used_state_providers()")
+  BEFORE_UPDATE=$(psql_do -d "$DB_NAME" -t -A -c "SELECT hive_update.create_database_hash('${STATE_PROVIDERS}'::hafd.state_providers[])")
+  AFTER_UPDATE=$(psql_do -d "$DB_NAME_AFTER_UPDATE" -t -A -c "SELECT hive_update.create_database_hash('${STATE_PROVIDERS}'::hafd.state_providers[])")
   if [ "$BEFORE_UPDATE" = "$AFTER_UPDATE" ]; then
     echo "The table schema is correct, verification completed."
     echo "Dropping temporary database"
@@ -110,7 +111,7 @@ verify_table_schema() {
     echo "COLUMNS"
     diff --suppress-common-lines before_update_columns.txt after_update_columns.txt || true
     echo "PROVIDERS"
-    ate diff --suppress-common-lines before_update_providers.txt after_update_providers.txt || true
+    diff --suppress-common-lines before_update_providers.txt after_update_providers.txt || true
     echo "Dropping temporary database"
     psql_do -a -d postgres -c "DROP DATABASE IF EXISTS $DB_NAME_AFTER_UPDATE;"
     find -type f -name '*.txt' > /dev/null 2>&1
