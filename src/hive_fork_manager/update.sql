@@ -336,28 +336,20 @@ $BODY$
 
 DROP FUNCTION IF EXISTS hive_update.create_database_hash;
 CREATE FUNCTION hive_update.create_database_hash()
-    RETURNS SETOF hafd.table_schema
+    RETURNS UUID
     LANGUAGE plpgsql
-    VOLATILE
+    STABLE
 AS
 $BODY$
 DECLARE
-    ts hafd.table_schema%ROWTYPE;
     _tmp TEXT;
     _provider_hashes TEXT;
 BEGIN
-    TRUNCATE hafd.table_schema;
-
     SELECT string_agg(table_schema, ' | ') FROM hive_update.calculate_schema_hash() INTO _tmp;
-
     SELECT string_agg(provider || hash, ' | ') FROM hive_update.calculate_state_provider_hashes() INTO _provider_hashes;
 
     _tmp = _tmp || _provider_hashes;
-    INSERT INTO hafd.table_schema VALUES ('hafd', MD5(_tmp)::uuid);
-
-    ts.schema_name := 'hafd';
-    ts.schema_hash := MD5(_tmp)::uuid;
-RETURN NEXT ts;
+    RETURN MD5(_tmp)::uuid;
 END;
 $BODY$
 ;
