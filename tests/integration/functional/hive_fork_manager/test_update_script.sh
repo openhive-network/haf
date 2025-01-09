@@ -276,4 +276,13 @@ exec_sql "CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.
              ;"
 failswith 1 update_database
 
+
+printf "\nTEST: Use state provider. This should pass\n"
+prepare_database
+exec_sql "CREATE SCHEMA workaround;
+          SELECT hive.app_create_context('workaround', 'workaround');
+          SELECT hive.app_state_provider_import( 'KEYAUTH', 'workaround' );
+          "
+update_database
+
 echo "Succeeded"
