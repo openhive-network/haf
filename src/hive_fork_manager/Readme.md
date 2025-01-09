@@ -352,6 +352,42 @@ When using HAF database, you may want to update already installed extension inst
 
 To use this script you have to rebuild the project and then run `hive_fork_manager_update_script_generator.sh`. If you did not build your PostgreSQL server and HAF database with recommended methods (setup scripts) you may need to use flags `--haf-admin-account=NAME` and `--haf-db-name=NAME` to change default values (haf_admin, haf_block_log).
 
+#### How the Update Works
+
+1. **Determine Update Feasibility**
+   The script first checks if the update is possible by creating a temporary database with the new version of the `hive_fork_manager`.
+   It computes the database hash using a "naked" database (only the core extension is installed, without any contexts or block data):
+    - Functions from the `update.sql` file are added to the new database. This file creates a temporary schema, `hive_update`, containing utility functions for the update process.
+    - Functions within the `hive_update` schema compute the database hash. The hash is based on:
+        - Column definitions of tables in the `hafd` schema (excluding tables created by state providers).
+        - The bodies of `start_providers` functions that are actively used in the database being updated.
+
+2. **Compute Database Hash for the Current Database**
+    - A similar procedure as above is used to compute the hash for the database being updated.
+    - The `hive_update` schema is injected into the existing database using the new version's sources, it means the same
+      hash algorith is used for old and new version.
+
+3. **Compare Database Hashes**
+    - The hash of the "naked" `hive_fork_manager` database is compared with the hash of the current database:
+        - If the hashes are **equal**, it indicates no structural differences exist between the old and new `hafd` schema or state providers, and the update is deemed possible.
+        - If the hashes **differ**, the update is impossible, and the procedure terminates.
+
+4. Generate update extension sql script
+5. Checks for any tables using types or domains from the `hive` schema:
+        - If such tables exist, the update is aborted because their columns would be removed when the `hive` schema is dropped.
+6. All views are saved to the `deps_saved_ddl` table. This prevents the loss of views containing elements from the `hive` schema, which would otherwise be cascade-deleted when the schema is dropped.
+7. The update process executes the command: `ALTER EXTENSION hive_fork_manager UPDATE`.
+    - The update script performs the following steps:
+        - The `hive` schema is dropped along with all its content. The `hafd` schema remains unmodified.
+        - A new version of the `hive` schema is created, containing only runtime code and excluding tables.
+8. Saved views are restored.
+9. Functions connected to the 'shared lib' are verified to ensure they use the correct version of the shared library.
+
+
+**Warning**: The update check ensures that the database schema structure allows for the update, but it **does not guarantee compatibility of the shared library (written in C++)** with the current table content.
+While most updates are compatible, changes in the shared library may introduce functionality that conflicts with the existing data.
+
+
 ### CONTEXT REWIND
 Context_rewind is the part of the fork manager which is responsible for registering app tables and the saving/rewinding operation on the tables to handle fork switching.
 
@@ -594,9 +630,9 @@ Disables triggers attached to a register table. It is useful for processing irre
 ##### hive.get_impacted_accounts( operation_body )
 Returns list of accounts ( their names ) impacted by the operation. 
 
-###### hive-update.calculate_schema_hash()
+###### hive_update.calculate_schema_hash()
 Calculates hash for group of tables in hafd schema, used by hive.create_database_hash.
-###### hive.create_database_hash()
+###### hive_update.create_database_hash()
 Used in update procedure, creates database hash.
 
 ## Known Problems
