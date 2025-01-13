@@ -164,6 +164,8 @@ $body$
 DECLARE
     __lead_context_name hafd.context_name := _contexts[ 1 ];
     __lead_context_state hafd.application_loop_state;
+    __now TIMESTAMP := NOW();
+    __previous_active_at_time TIMESTAMP;
 BEGIN
     -- here is the only place when main synchronization connection  makes commit
     -- 1. commit if there is a pending commit
@@ -171,11 +173,14 @@ BEGIN
         COMMIT;
     END IF;
 
+    SELECT last_active_at INTO __previous_active_at_time
+    FROM hafd.contexts  WHERE name = __lead_context_name;
+
     PERFORM hive.app_check_contexts_synchronized( _contexts );
     _blocks_range := NULL;
 
     UPDATE hafd.contexts ctx
-    SET last_active_at = NOW()
+    SET last_active_at = __now
     WHERE ctx.name = ANY(_contexts);
 
     IF _limit IS NOT NULL
@@ -200,6 +205,13 @@ BEGIN
 
     SELECT (hc.loop).* INTO __lead_context_state
     FROM hafd.contexts hc WHERE hc.name = __lead_context_name;
+
+    IF __lead_context_state IS NOT NULL
+      AND ( __now - __previous_active_at_time ) >= (__lead_context_state).current_stage.processing_alarm_threshold
+    THEN
+        -- only lead context is reported
+        PERFORM hive.log_context( __lead_context_name, 'SLOW_PROCESSING'::hafd.context_event );
+    END IF;
 
     -- 2. find current stage if:
     IF hive.is_stages_analyze_required( __lead_context_state, hive.get_irreversible_head_block() )
