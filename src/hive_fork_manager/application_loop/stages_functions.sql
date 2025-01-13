@@ -81,7 +81,7 @@ BEGIN
     RETURN QUERY
     WITH stages AS MATERIALIZED (
         SELECT
-              UNNEST( ctx.stages )::hafd.application_stage as stage
+              UNNEST ( ctx.stages )::hafd.application_stage as stage
             , ctx.name as context
             , ctx.current_block_num as current_block_num
         FROM hafd.contexts ctx
@@ -104,5 +104,26 @@ BEGIN
          , md.context
         FROM max_distance md
         JOIN stages_and_distance sg ON sg.context = md.context AND sg.distance_to_stage = md.max_distance_to_stage;
+END;
+$BODY$;
+
+
+CREATE FUNCTION hive.stage(
+      _name hafd.stage_name
+    , _min_head_block_distance hafd.blocks_distance
+    , _blocks_limit_in_group hafd.blocks_count
+    , _processing_alarm_threshold INTERVAL = '5 seconds')
+    RETURNS hafd.application_stage
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$BODY$
+BEGIN
+    RETURN (
+          _name
+        , _min_head_block_distance
+        , _blocks_limit_in_group
+        , _processing_alarm_threshold
+    )::hafd.application_stage;
 END;
 $BODY$;

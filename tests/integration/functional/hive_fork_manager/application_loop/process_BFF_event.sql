@@ -7,7 +7,7 @@ DECLARE
     __blocks hive.blocks_range;
     __context_stages hafd.application_stages :=
         ARRAY[
-            ('massive',2 ,100 )::hafd.application_stage
+            hive.stage('massive',2 ,100 )
             , hafd.live_stage()
             ];
 BEGIN
