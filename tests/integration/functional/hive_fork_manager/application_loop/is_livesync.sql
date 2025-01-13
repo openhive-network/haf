@@ -37,11 +37,11 @@ BEGIN
     WHERE hc.name ='alice_live2';
 
     UPDATE hafd.contexts hc
-    SET loop.current_stage = ('stage1',30 ,10 )::hafd.application_stage
+    SET loop.current_stage = hive.stage('stage1',30 ,10 )
     WHERE hc.name ='alice_no_live1';
 
     UPDATE hafd.contexts hc
-    SET loop.current_stage = ('stage2',40 ,10 )::hafd.application_stage
+    SET loop.current_stage = hive.stage('stage2',40 ,10 )
     WHERE hc.name ='alice_no_live1';
 END;
 $BODY$;
