@@ -17,6 +17,18 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.get_shadow_table_name_prefix()
+    RETURNS TEXT
+    LANGUAGE 'plpgsql'
+    IMMUTABLE
+AS
+$BODY$
+BEGIN
+    RETURN  'shadow_';
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.get_shadow_table_name( _table_schema TEXT,  _table_name TEXT )
     RETURNS TEXT
     LANGUAGE 'plpgsql'
@@ -25,7 +37,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-        'shadow_' || lower(_table_schema) || '_' || lower(_table_name)
+            hive.get_shadow_table_name_prefix() || lower(_table_schema) || '_' || lower(_table_name)
         , _table_name );
 END;
 $BODY$
