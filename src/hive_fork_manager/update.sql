@@ -328,11 +328,12 @@ BEGIN
 
     RETURN QUERY SELECT (hive_update.calculate_table_schema_hash( 'hafd', ist.table_name)).*
     FROM information_schema.tables ist
+    LEFT JOIN hafd.registered_tables hrt ON ist.table_name ILIKE hrt.shadow_table_name
     LEFT JOIN hafd.state_providers_registered spr ON ist.table_name ILIKE ANY( spr.tables )
     WHERE ist.table_schema = 'hafd'
     AND ist.table_type = 'BASE TABLE'
-    AND spr.tables IS NULL
-    AND ist.table_name NOT ILIKE 'shadow_hafd_%'; -- shadow tables, only possible for state providers
+    AND hrt.shadow_table_name IS NULL -- is not a shadow table
+    AND spr.tables IS NULL; -- is not a state provider table
 END;
 $BODY$
 ;
