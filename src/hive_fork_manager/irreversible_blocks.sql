@@ -39,7 +39,7 @@ CREATE TYPE hafd.sync_state AS ENUM (
 );
 
 
-CREATE TABLE IF NOT EXISTS hafd.irreversible_data (
+CREATE TABLE IF NOT EXISTS hafd.hive_state (
       id integer,
       consistent_block integer,
       is_dirty bool NOT NULL,
@@ -50,8 +50,8 @@ CREATE TABLE IF NOT EXISTS hafd.irreversible_data (
 -- We use ADD CONSTRAINT with ALTER TABLE followed by NOT VALID because the NOT VALID option isn't documented
 -- or supported within CREATE TABLE, and thus, seems not to work there.
 -- This applies to the following tables as well.
-ALTER TABLE hafd.irreversible_data ADD CONSTRAINT fk_1_hive_irreversible_data FOREIGN KEY (consistent_block) REFERENCES hafd.blocks (num) NOT VALID;
-SELECT pg_catalog.pg_extension_config_dump('hafd.irreversible_data', '');
+ALTER TABLE hafd.hive_state ADD CONSTRAINT fk_1_hive_irreversible_data FOREIGN KEY (consistent_block) REFERENCES hafd.blocks (num) NOT VALID;
+SELECT pg_catalog.pg_extension_config_dump('hafd.hive_state', '');
 
 CREATE TABLE IF NOT EXISTS hafd.transactions (
     block_num integer NOT NULL,

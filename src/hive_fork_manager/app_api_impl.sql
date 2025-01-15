@@ -69,7 +69,7 @@ BEGIN
          , hc.fork_id
     INTO __curent_events_id, __current_context_block_num, __current_context_irreversible_block, __current_fork_id
     FROM hafd.contexts hc WHERE hc.name = __lead_context;
-    SELECT consistent_block INTO __newest_irreversible_block_num FROM hafd.irreversible_data;
+    SELECT consistent_block INTO __newest_irreversible_block_num FROM hafd.hive_state;
 
     -- hived can at any moment commit new events
     -- because of read committed, we need to be ready such situations
@@ -207,7 +207,7 @@ BEGIN
     FROM hafd.contexts as hc
     WHERE hc.name = __lead_context;
 
-    SELECT consistent_block INTO __newest_irreversible_block_num FROM hafd.irreversible_data;
+    SELECT consistent_block INTO __newest_irreversible_block_num FROM hafd.hive_state;
 
     IF __current_block_num <= __irreversible_block_num
        AND  __newest_irreversible_block_num IS NOT NULL THEN

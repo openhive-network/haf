@@ -118,7 +118,7 @@ BEGIN
          , ( 1100, 3, hafd.operation_id(10,1,0), 3 )
     ;
 
-    UPDATE hafd.irreversible_data SET consistent_block = 4;
+    UPDATE hafd.hive_state SET consistent_block = 4;
 END;
 $BODY$
 ;

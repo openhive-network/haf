@@ -113,7 +113,7 @@ BEGIN
     -- application contexts will use the event to clear data in shadow tables
     INSERT INTO hafd.events_queue( event, block_num )
     VALUES( 'NEW_IRREVERSIBLE', _block_num );
-    UPDATE hafd.irreversible_data SET consistent_block = _block_num;
+    UPDATE hafd.hive_state SET consistent_block = _block_num;
 END;
 $BODY$
 ;
@@ -141,7 +141,7 @@ BEGIN
 
 
 
-    UPDATE hafd.irreversible_data SET consistent_block = _block_num;
+    UPDATE hafd.hive_state SET consistent_block = _block_num;
 END;
 $BODY$
 ;
@@ -153,7 +153,7 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible_dirty()
 AS
 $BODY$
 BEGIN
-    UPDATE hafd.irreversible_data SET is_dirty = TRUE;
+    UPDATE hafd.hive_state SET is_dirty = TRUE;
 END;
 $BODY$
 ;
@@ -165,7 +165,7 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible_not_dirty()
 AS
 $BODY$
 BEGIN
-    UPDATE hafd.irreversible_data SET is_dirty = FALSE;
+    UPDATE hafd.hive_state SET is_dirty = FALSE;
 END;
 $BODY$
 ;
@@ -179,7 +179,7 @@ $BODY$
 DECLARE
     __is_dirty BOOL := FALSE;
 BEGIN
-    SELECT is_dirty INTO __is_dirty FROM hafd.irreversible_data;
+    SELECT is_dirty INTO __is_dirty FROM hafd.hive_state;
     RETURN __is_dirty;
 END;
 $BODY$
@@ -212,7 +212,7 @@ CREATE OR REPLACE FUNCTION hive.disable_fk_of_irreversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'irreversible_data' );
+    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'hive_state' );
     PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'blocks' );
     PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions' );
     PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_multisig' );
@@ -239,7 +239,7 @@ BEGIN
     PERFORM hive.restore_indexes( 'hafd.applied_hardforks' );
     PERFORM hive.restore_indexes( 'hafd.accounts' );
     PERFORM hive.restore_indexes( 'hafd.account_operations' );
-    PERFORM hive.restore_indexes( 'hafd.irreversible_data' );
+    PERFORM hive.restore_indexes( 'hafd.hive_state' );
 
     PERFORM hive.reanalyze_indexes_with_expressions();
 END;
@@ -259,7 +259,7 @@ BEGIN
     PERFORM hive.restore_foreign_keys( 'hafd.transactions_multisig' );
     PERFORM hive.restore_foreign_keys( 'hafd.operations' );
     PERFORM hive.restore_foreign_keys( 'hafd.applied_hardforks' );
-    PERFORM hive.restore_foreign_keys( 'hafd.irreversible_data' );
+    PERFORM hive.restore_foreign_keys( 'hafd.hive_state' );
     PERFORM hive.restore_foreign_keys( 'hafd.accounts' );
     PERFORM hive.restore_foreign_keys( 'hafd.account_operations' );
 
@@ -455,7 +455,7 @@ BEGIN
         RETURN;
     END IF;
 
-    INSERT INTO hafd.irreversible_data VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
+    INSERT INTO hafd.hive_state VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
     INSERT INTO hafd.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
     INSERT INTO hafd.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
     SELECT MAX(eq.id) + 1 FROM hafd.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;

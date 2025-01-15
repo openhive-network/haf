@@ -55,7 +55,7 @@ BEGIN
     -- block 2 was not claimed, and it is possible not all information about it was dumped - maybe hived crashes
     PERFORM hive.end_massive_sync( 1 );
 
-    UPDATE hafd.irreversible_data SET is_dirty = TRUE;
+    UPDATE hafd.hive_state SET is_dirty = TRUE;
 END;
 $BODY$
 ;
@@ -106,7 +106,7 @@ BEGIN
     ASSERT( SELECT COUNT(*) FROM hafd.fork WHERE block_num = 1 ) = 1, 'No fork added after connection on 1 block';
     ASSERT( SELECT COUNT(*) FROM hafd.fork WHERE block_num = 2 ) = 0, 'Fork added after connection on 2 block';
 
-    ASSERT( SELECT is_dirty FROM hafd.irreversible_data ) = FALSE, 'Irreversible data are dirty';
+    ASSERT( SELECT is_dirty FROM hafd.hive_state ) = FALSE, 'Irreversible data are dirty';
 END
 $BODY$
 ;

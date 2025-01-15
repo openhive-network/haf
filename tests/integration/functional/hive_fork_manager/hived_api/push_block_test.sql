@@ -180,7 +180,7 @@ BEGIN
     ) = 1, 'Wrong data of hardfork 2';
 
 
-    ASSERT( SELECT is_dirty FROM hafd.irreversible_data ) = FALSE, 'Irreversible data are dirty';
+    ASSERT( SELECT is_dirty FROM hafd.hive_state ) = FALSE, 'Irreversible data are dirty';
 END
 $BODY$
 ;

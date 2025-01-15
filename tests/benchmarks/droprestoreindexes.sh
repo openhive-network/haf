@@ -14,7 +14,7 @@ psql "$POSTGRES_ACCESS" --command="${cmd}"
 #restore indexes
 cmd="select hive.restore_indexes( 'hafd.blocks' );"
 psql "$POSTGRES_ACCESS" --command="${cmd}" &
-cmd="select hive.restore_indexes( 'hafd.irreversible_data' );"
+cmd="select hive.restore_indexes( 'hafd.hive_state' );"
 psql "$POSTGRES_ACCESS" --command="${cmd}" &
 cmd="select hive.restore_indexes( 'hafd.transactions' );"
 psql "$POSTGRES_ACCESS" --command="${cmd}" &
