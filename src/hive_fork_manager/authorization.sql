@@ -236,6 +236,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.remove_obsolete_operations
     , hive.detach_table
     , hive.app_check_contexts_synchronized(_contexts hive.contexts_group)
+    , hive.set_sync_state( _new_state hafd.sync_state )
+    , hive.get_sync_state()
 TO hived_group;
 
 GRANT USAGE ON SCHEMA hive to haf_maintainer;
