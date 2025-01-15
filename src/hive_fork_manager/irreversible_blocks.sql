@@ -34,10 +34,16 @@ CREATE TABLE IF NOT EXISTS hafd.blocks (
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.blocks', '');
 
+CREATE TYPE hafd.sync_state AS ENUM (
+    'START', 'WAIT', 'REINDEX_WAIT', 'REINDEX', 'P2P', 'LIVE'
+);
+
+
 CREATE TABLE IF NOT EXISTS hafd.irreversible_data (
       id integer,
       consistent_block integer,
       is_dirty bool NOT NULL,
+      state hafd.sync_state NOT NULL DEFAULT 'START',
       CONSTRAINT pk_irreversible_data PRIMARY KEY ( id )
 );
 
