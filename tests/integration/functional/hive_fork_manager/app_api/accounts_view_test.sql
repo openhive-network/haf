@@ -59,7 +59,7 @@ BEGIN
          , ( 1100, 'alice103', 10, 3 )
     ;
 
-    UPDATE hafd.irreversible_data SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = 5;
 END;
 $BODY$
 ;

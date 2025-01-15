@@ -16,7 +16,7 @@ $$
 DECLARE
     __result INT := 1;
 BEGIN
-    SELECT consistent_block INTO __result FROM hafd.irreversible_data;
+    SELECT consistent_block INTO __result FROM hafd.hive_state;
     RETURN __result;
 END
 $$

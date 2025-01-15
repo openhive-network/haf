@@ -61,7 +61,7 @@ BEGIN
     -- block 2 was not claimed, and it is possible not all information about it was dumped - maybe hived crashes
     PERFORM hive.end_massive_sync( 1 );
 
-    UPDATE hafd.irreversible_data SET is_dirty = TRUE;
+    UPDATE hafd.hive_state SET is_dirty = TRUE;
 END;
 $BODY$
 ;

@@ -79,7 +79,7 @@ BEGIN
         , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-    UPDATE hafd.irreversible_data SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = 5;
 END;
 $BODY$
 ;

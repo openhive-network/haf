@@ -70,8 +70,8 @@ BEGIN
     ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.transactions'::regclass::oid ) ) , 'Index hafd.transactions exists';
     ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.operations'::regclass::oid ) ) , 'Index hafd.operations exists';
     ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.transactions_multisig'::regclass::oid ) ) , 'Index hafd.transactions_multisig exists';
-    -- hafd.irreversible_data pk must exist because ON CONFLICT is used during restarting HAF node
-    ASSERT ( SELECT is_any_index_for_table( 'hafd.irreversible_data'::regclass::oid ) ) , 'Index hafd.irreversible_data does not exists';
+    -- hafd.hive_state pk must exist because ON CONFLICT is used during restarting HAF node
+    ASSERT ( SELECT is_any_index_for_table( 'hafd.hive_state'::regclass::oid ) ) , 'Index hafd.hive_state does not exists';
     ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.accounts'::regclass::oid ) ) , 'Index hafd.accounts exists';
     ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.account_operations'::regclass::oid ) ) , 'Index hafd.account_operations exists';
     ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.applied_hardforks'::regclass::oid ) ) , 'Index hafd.applied_hardforks exists';
@@ -80,8 +80,8 @@ BEGIN
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'blocks') ), 'FK for hafd.blocks exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions') ), 'FK for hafd.transactions exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hafd.transactions_multisig exists';
-    -- we need to disable hafd.irreversible_data fk because its dependency with hafd.blocks
-    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'irreversible_data') ), 'FK for hafd.irreversible_data exists';
+    -- we need to disable hafd.hive_state fk because its dependency with hafd.blocks
+    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'hive_state') ), 'FK for hafd.hive_state exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'accounts') ), 'FK for hafd.accounts exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'account_operations') ), 'FK for hafd.account_operations exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hafd.applied_hardforks exists';

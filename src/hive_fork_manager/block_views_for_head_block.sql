@@ -11,7 +11,7 @@ UNION ALL
 (
 WITH 
 consistent_block AS
-(SELECT COALESCE(hid.consistent_block, 0) AS consistent_block FROM hafd.irreversible_data hid LIMIT 1)
+(SELECT COALESCE(hid.consistent_block, 0) AS consistent_block FROM hafd.hive_state hid LIMIT 1)
 ,forks AS
 (
   SELECT hbr.num, max(hbr.fork_id) AS max_fork_id
@@ -52,7 +52,7 @@ FROM
         JOIN (
             SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
             FROM hafd.blocks_reversible hbr
-            WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.irreversible_data hid )
+            WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
             GROUP by hbr.num
         ) as forks ON forks.max_fork_id = har.fork_id AND forks.num = har.block_num
     ) reversible
@@ -120,7 +120,7 @@ FROM (
     (
          SELECT rb.num, MAX(rb.fork_id) AS max_fork_id
          FROM hafd.blocks_reversible rb
-         WHERE rb.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.irreversible_data hid )
+         WHERE rb.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
          GROUP BY rb.num
     ) visible_blks ON visible_blks.num = hbr.num AND visible_blks.max_fork_id = hbr.fork_id
 ) t
@@ -166,7 +166,7 @@ FROM
     JOIN (
         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
         FROM hafd.blocks_reversible hbr
-        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.irreversible_data hid )
+        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
         GROUP by hbr.num
     ) as forks ON forks.max_fork_id = htr.fork_id AND forks.num = htr.block_num
     ) reversible
@@ -209,7 +209,7 @@ FROM
       (
         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
         FROM hafd.blocks_reversible hbr
-        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.irreversible_data hid )
+        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
         GROUP by hbr.num
       ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
       JOIN
@@ -252,7 +252,7 @@ FROM
       (
         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
         FROM hafd.blocks_reversible hbr
-        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.irreversible_data hid )
+        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
         GROUP by hbr.num
       ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
 ) t
@@ -283,7 +283,7 @@ FROM (
                 JOIN (
                     SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
                     FROM hafd.blocks_reversible hbr
-                    WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.irreversible_data hid )
+                    WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
                     GROUP by hbr.num
                 ) as forks ON forks.max_fork_id = htr.fork_id AND forks.num = htr.block_num
         ) as trr ON trr.trx_hash = htmr.trx_hash AND trr.max_fork_id = htmr.fork_id
@@ -301,7 +301,7 @@ UNION ALL
 (
 WITH 
 consistent_block AS
-(SELECT COALESCE(hid.consistent_block, 0) AS consistent_block FROM hafd.irreversible_data hid LIMIT 1)
+(SELECT COALESCE(hid.consistent_block, 0) AS consistent_block FROM hafd.hive_state hid LIMIT 1)
 ,forks AS
 (
   SELECT hbr.num, max(hbr.fork_id) AS max_fork_id

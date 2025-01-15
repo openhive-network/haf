@@ -37,7 +37,7 @@ BEGIN
           _name
         , _schema
         , ( SELECT MAX( hf.id ) FROM hafd.fork hf ) -- current fork id
-        , COALESCE( ( SELECT hid.consistent_block FROM hafd.irreversible_data hid ), 0 ) -- head of irreversible block
+        , COALESCE( ( SELECT hid.consistent_block FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
         , _is_forking
         , _is_attached
         , NULL
@@ -67,7 +67,7 @@ BEGIN
             _name
         , _schema
         , ( SELECT MAX( hf.id ) FROM hafd.fork hf ) -- current fork id
-        , COALESCE( ( SELECT hid.consistent_block FROM hafd.irreversible_data hid ), 0 ) -- head of irreversible block
+        , COALESCE( ( SELECT hid.consistent_block FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
         , _is_forking
         , False
         , _stages
@@ -241,7 +241,7 @@ BEGIN
     WHERE hc.name = __lead_context;
 
     SELECT hir.consistent_block INTO __head_of_irreversible_block
-    FROM hafd.irreversible_data hir;
+    FROM hafd.hive_state hir;
 
     IF __current_block_num > __head_of_irreversible_block THEN
         RAISE EXCEPTION 'Cannot attach context % because the block num % is grater than top of irreversible block %'
@@ -477,7 +477,7 @@ $BODY$
 DECLARE
     __result hafd.contexts.irreversible_block%TYPE;
 BEGIN
-    SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hafd.irreversible_data;
+    SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hafd.hive_state;
     RETURN __result;
 END;
 $BODY$;
@@ -858,7 +858,7 @@ BEGIN
                      FROM UNNEST(_contexts) AS context_names(name)
                      LEFT JOIN hafd.contexts hc USING(name)
                      JOIN hafd.contexts_attachment hca ON hca.context_id = hc.id
-                     CROSS JOIN hafd.irreversible_data), FALSE);
+                     CROSS JOIN hafd.hive_state), FALSE);
 END;
 $BODY$
 ;

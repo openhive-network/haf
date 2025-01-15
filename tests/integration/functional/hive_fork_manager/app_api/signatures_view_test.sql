@@ -87,7 +87,7 @@ BEGIN
      , ( '\xDEED1102', '\xBEEF13',  3 )
     ;
 
-    UPDATE hafd.irreversible_data SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = 5;
 END;
 $BODY$
 ;

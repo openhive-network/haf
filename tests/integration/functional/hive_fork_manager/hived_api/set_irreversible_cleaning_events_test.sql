@@ -76,7 +76,7 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM hafd.events_queue ) = 4, 'Wrong number of events';
-    ASSERT ( SELECT hid.consistent_block FROM hafd.irreversible_data hid ) = 3 , 'Wrong consisten irreversible block';
+    ASSERT ( SELECT hid.consistent_block FROM hafd.hive_state hid ) = 3 , 'Wrong consisten irreversible block';
     ASSERT EXISTS ( SELECT * FROM hafd.events_queue WHERE event = 'NEW_BLOCK' AND block_num=4 ), 'No NEW_BLOCK event 4';
     ASSERT EXISTS ( SELECT * FROM hafd.events_queue WHERE event = 'NEW_IRREVERSIBLE' AND block_num=3 ), 'No NEW_IRREVERSIBLE event';
 END;
