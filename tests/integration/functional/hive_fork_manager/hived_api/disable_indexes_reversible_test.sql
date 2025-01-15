@@ -67,7 +67,7 @@ BEGIN
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions_reversible') ), 'FK for hafd.transactions exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'operations_reversible') ), 'FK for hafd.operations exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig_reversible') ), 'FK for hafd.transactions_multisig exists';
-    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'irreversible_data_reversible') ), 'FK for hafd.irreversible_data exists';
+    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'irreversible_data_reversible') ), 'FK for hafd.hive_state exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'accounts_reversible') ), 'FK for hafd.accounts exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'account_operations_reversible') ), 'FK for hafd.account_operations exists';
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks_reversible') ), 'FK for hafd.applied_hardforks exists';

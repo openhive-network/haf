@@ -63,7 +63,7 @@ BEGIN
         , ( hafd.operation_id(5, 1, 2), 0, 2, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE OP"}}' :: jsonb :: hafd.operation )
     ;
 
-    UPDATE hafd.irreversible_data SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = 5;
 END;
 $BODY$
 ;

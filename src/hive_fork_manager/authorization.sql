@@ -40,7 +40,7 @@ ALTER TABLE hafd.operations OWNER TO hived_group;
 ALTER TABLE hafd.transactions_multisig OWNER TO hived_group;
 ALTER TABLE hafd.accounts OWNER TO hived_group;
 ALTER TABLE hafd.account_operations OWNER TO hived_group;
-ALTER TABLE hafd.irreversible_data OWNER TO hived_group;
+ALTER TABLE hafd.hive_state OWNER TO hived_group;
 ALTER TABLE hafd.blocks_reversible OWNER TO hived_group;
 ALTER TABLE hafd.transactions_reversible OWNER TO hived_group;
 ALTER TABLE hafd.operations_reversible OWNER TO hived_group;

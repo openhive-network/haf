@@ -312,7 +312,7 @@ DECLARE
     __upper_bound_events_id BIGINT := NULL;
     __max_block_num INTEGER := NULL;
 BEGIN
-    SELECT consistent_block INTO __max_block_num FROM hafd.irreversible_data;
+    SELECT consistent_block INTO __max_block_num FROM hafd.hive_state;
 
     -- find the upper bound of events possible to remove
     SELECT MIN(heq.id) INTO __upper_bound_events_id
@@ -590,7 +590,7 @@ DECLARE
     __consistent_block INTEGER := NULL;
     __is_dirty BOOL := TRUE;
 BEGIN
-    SELECT consistent_block, is_dirty INTO __consistent_block, __is_dirty FROM hafd.irreversible_data;
+    SELECT consistent_block, is_dirty INTO __consistent_block, __is_dirty FROM hafd.hive_state;
 
     IF ( __is_dirty = FALSE ) THEN
         RETURN;
@@ -613,7 +613,7 @@ BEGIN
 
     DELETE FROM hafd.blocks WHERE num > __consistent_block;
 
-    UPDATE hafd.irreversible_data SET is_dirty = FALSE;
+    UPDATE hafd.hive_state SET is_dirty = FALSE;
 END;
 $BODY$
 ;

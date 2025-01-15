@@ -45,7 +45,7 @@ DECLARE
     __lead_context_distance_to_irr_hb INTEGER;
 BEGIN
     SELECT
-        ( ( SELECT COALESCE( hid.consistent_block, 0 ) - ctx.current_block_num FROM hafd.irreversible_data hid ) ) INTO __lead_context_distance_to_irr_hb
+        ( ( SELECT COALESCE( hid.consistent_block, 0 ) - ctx.current_block_num FROM hafd.hive_state hid ) ) INTO __lead_context_distance_to_irr_hb
     FROM hafd.contexts ctx
     WHERE ctx.name = _contexts [ 1 ];
 

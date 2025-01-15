@@ -215,7 +215,7 @@ class EventsQueue(HiveDataBase):
 
 
 class IrreversibleData(HiveDataBase):
-    __tablename__ = "irreversible_data"
+    __tablename__ = "hive_state"
 
     id = Column(Integer, primary_key=True)
     consistent_block = Column(Integer)
