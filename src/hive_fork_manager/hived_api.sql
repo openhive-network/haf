@@ -565,3 +565,32 @@ END;
 $BODY$
 ;
 
+
+CREATE OR REPLACE FUNCTION hive.get_sync_state()
+    RETURNS hafd.sync_state
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __result hafd.sync_state;
+BEGIN
+    SELECT state INTO __result
+    FROM hafd.hive_state;
+
+    RETURN __result;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.set_sync_state( _new_state hafd.sync_state )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    UPDATE hafd.hive_state SET state = _new_state;
+END;
+$BODY$
+;
