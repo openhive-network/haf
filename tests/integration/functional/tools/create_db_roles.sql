@@ -9,6 +9,7 @@ $$
 BEGIN
     IF NOT EXISTS ( SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'test_hived' ) THEN
         CREATE ROLE test_hived LOGIN PASSWORD 'test' INHERIT IN ROLE hived_group;
+        GRANT haf_maintainer TO test_hived WITH SET OPTION;
     END IF;
 
     IF NOT EXISTS ( SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'alice' ) THEN

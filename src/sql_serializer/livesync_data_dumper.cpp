@@ -18,6 +18,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     )
   : _plugin( plugin )
   , _chain_db( chain_db )
+  , app(app)
   , transactions_controller(transaction_controllers::build_own_transaction_controller(db_url, "Livesync dumper", app, true /*sync_commits*/))
   , _psql_first_block( psql_first_block )
   , _write_ahead_log(write_ahead_log)
@@ -43,13 +44,13 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     auto NUMBER_OF_PROCESSORS_THREADS = ONE_THREAD_WRITERS_NUMBER + operations_threads + transactions_threads + account_operation_threads;
     auto execute_push_block = [this](block_num_rendezvous_trigger::BLOCK_NUM _block_num ){
       if ( !_block.empty() ) {
-        std::string block_to_dump = _block + "::hive.blocks";
-        std::string transactions_to_dump = "ARRAY[" + _transaction_writer->get_merged_strings() + "]::hive.transactions[]";
-        std::string signatures_to_dump = "ARRAY[" + std::move( _transactions_multisig ) + "]::hive.transactions_multisig[]";
-        std::string operations_to_dump = "ARRAY[" + _operation_writer->get_merged_strings() + "]::hive.operations[]";
-        std::string accounts_to_dump = "ARRAY[" + std::move( _accounts ) + "]::hive.accounts[]";
-        std::string account_operations_to_dump = "ARRAY[" + _account_operations_writer->get_merged_strings() + "]::hive.account_operations[]";
-        std::string applied_hardforks_to_dump = "ARRAY[" + std::move( _applied_hardforks ) + "]::hive.applied_hardforks[]";
+        std::string block_to_dump = _block + "::hafd.blocks";
+        std::string transactions_to_dump = "ARRAY[" + _transaction_writer->get_merged_strings() + "]::hafd.transactions[]";
+        std::string signatures_to_dump = "ARRAY[" + std::move( _transactions_multisig ) + "]::hafd.transactions_multisig[]";
+        std::string operations_to_dump = "ARRAY[" + _operation_writer->get_merged_strings() + "]::hafd.operations[]";
+        std::string accounts_to_dump = "ARRAY[" + std::move( _accounts ) + "]::hafd.accounts[]";
+        std::string account_operations_to_dump = "ARRAY[" + _account_operations_writer->get_merged_strings() + "]::hafd.account_operations[]";
+        std::string applied_hardforks_to_dump = "ARRAY[" + std::move( _applied_hardforks ) + "]::hafd.applied_hardforks[]";
 
         std::string sql_command = "SELECT hive.push_block(" +
                 block_to_dump +
@@ -88,7 +89,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     ilog( "livesync dumper is closing..." );
     disconnect_irreversible_event();
     disconnect_fork_event();
-    livesync_data_dumper::join();
+    try {
+      join();
+    } FC_CAPTURE_AND_LOG(())
     ilog( "livesync dumper closed" );
   }
 
@@ -109,10 +112,26 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_writer->complete_data_processing();
     _account_operations_writer->complete_data_processing();
     _applied_hardforks_writer->complete_data_processing();
+    if (app.is_interrupt_request())
+    {
+      cancel();
+    }
+  }
+
+  void livesync_data_dumper::cancel() {
+    cancel_processors(
+      *_block_writer,
+      *_transaction_writer,
+      *_operation_writer,
+      *_transaction_multisig_writer,
+      *_account_writer,
+      *_account_operations_writer,
+      *_applied_hardforks_writer
+    );
   }
 
   void livesync_data_dumper::join() {
-    join_writers(
+    join_processors(
         *_block_writer
       , *_transaction_writer
       , *_transaction_multisig_writer
@@ -130,7 +149,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     if ( block_num >= _psql_first_block )
     {
       _processing_thread.enqueue("SELECT hive.set_irreversible(" + std::to_string(block_num) + ")");
-      _processing_thread.enqueue("SET ROLE hived_group; CALL hive.proc_perform_dead_app_contexts_auto_detach();");
     }
   }
 

@@ -25,13 +25,13 @@ SCRIPTSDIR="/home/haf_admin/source/${HIVE_SUBDIR}/scripts"
 if sudo -Enu hived test ! -d "$DATADIR"
 then
     echo "Data directory (DATADIR) $DATADIR does not exist. Exiting."
-    exit 1
+    exit 2
 fi
 
 if sudo -Enu hived test ! -d "$SHM_DIR" && test "$SHM_DIR" != "$DATADIR/blockchain"
 then
     echo "Shared memory file directory (SHM_DIR) $SHM_DIR does not exist. Exiting."
-    exit 1
+    exit 3
 fi
 
 LOG_FILE="${DATADIR}/${LOG_FILE:-docker_entrypoint.log}"
@@ -45,7 +45,7 @@ source "$SCRIPTSDIR/common.sh"
 HAF_DB_STORE="$DATADIR/haf_db_store"
 PGDATA=$HAF_DB_STORE/pgdata
 
-export POSTGRES_VERSION=${POSTGRES_VERSION:-14}
+export POSTGRES_VERSION=${POSTGRES_VERSION:-17}
 
 DO_MAINTENANCE=0 #Allows to enter some maintenance mode (when postgres is started but hived not yet. Rather for internal debugging/development purposes)
 PERFORM_DUMP=0
@@ -71,6 +71,16 @@ then
 fi
 
 echo "Postgres process: $postgres_pid finished."
+}
+
+enable_pg_cron() {
+    echo 'enabling pg_cron'
+    sudo sed -i'' -E -e "s/^shared_preload_libraries = '([^']+)'/shared_preload_libraries = '\1,pg_cron'/" "/etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf"
+    sudo service postgresql restart
+    psql -c 'CREATE EXTENSION IF NOT EXISTS pg_cron' haf_block_log
+    psql -c 'GRANT USAGE ON SCHEMA cron to haf_maintainer' haf_block_log
+    psql -c 'GRANT USAGE ON SCHEMA cron to pghero' haf_block_log
+    psql -f ~/cron_jobs.sql haf_block_log
 }
 
 perform_instance_dump() {
@@ -101,9 +111,11 @@ run_instance() {
 trap cleanup INT TERM
 trap cleanup EXIT
 
+enable_pg_cron
+
 {
-sudo --user=hived -En /bin/bash << EOF
-echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
+sudo --user=hived -En LD_PRELOAD="${OVERRIDE_LD_PRELOAD:-}" /bin/bash <<EOF
+echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[*]}"
 set -euo pipefail
 
 if [ ! -f "$DATADIR/config.ini" ]; then
@@ -115,38 +127,19 @@ if [ ! -f "$DATADIR/config.ini" ]; then
     ${HIVED_ARGS[@]} --dump-config > /dev/null 2>&1
 
   # add a default set of plugins that API nodes should run
-  sed -i 's/^plugin = .*$/plugin = node_status_api account_by_key account_by_key_api block_api condenser_api database_api json_rpc market_history market_history_api network_broadcast_api p2p rc_api state_snapshot transaction_status transaction_status_api wallet_bridge_api webserver/g' "$DATADIR/config.ini"
+  sed -i 's/^# plugin = .*$/plugin = node_status_api account_by_key account_by_key_api block_api condenser_api database_api json_rpc market_history market_history_api network_broadcast_api p2p rc_api state_snapshot transaction_status transaction_status_api wallet_bridge_api webserver/g' "$DATADIR/config.ini"
 
   # set a default logging config.  We will log the usual output both to stderr and to a log file in the
   # haf-datadir/logs/hived/default directory.  Rotate daily, keep for 30 days.
-  sed -i 's|^log-appender = .*$|log-appender = {"appender":"stderr","stream":"std_error","time_format":"iso_8601_microseconds"} {"appender":"p2p","file":"logs/hived/p2p/p2p.log","truncate":false,"time_format":"iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000} {"appender": "default", "file": "logs/hived/default/default.log","truncate":false, "time_format": "iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000}|;s|^log-logger = .*$|log-logger = {"name":"default","level":"info","appenders":["stderr", "default"]} {"name":"user","level":"debug","appenders":["stderr", "default"]} {"name":"p2p","level":"warn","appenders":["p2p"]}|' "$DATADIR/config.ini"
-
-  # The transaction status plugin defaults to keeping transaction status history for 64000 blocks
-  # (configured in "transaction-status-block-depth".  When replaying, it doesn't make sense to
-  # track the status until we get within 64000 blocks of the current head block, because we'll
-  # discard that data before the end of the replay.  There's a parameter,
-  # "transaction-status-track-after-block", that allows us to skip processing until we reach that
-  # block.  Unfortunately, this defaults to 0, so we end up doing a lot of useless work, adding
-  # a few hours to a typical replay
-  #
-  # Here we try to estimate what block number is 64000 blocks behind the current block, based
-  # on the current time and the time we know when block 80M was produced
-  now_epoch=\$(date +%s)
-  eightymil_epoch=\$(date +%s -d '2023-11-09 03:59:51')
-  # if no blocks were skipped, we're currently at block:
-  approximate_head_block=\$((80000000 + (now_epoch - eightymil_epoch) / 3))
-  # go back an extra 10000 blocks to account for any blocks that may have been skipped
-  # since block 80M.  There's little penalty for tracking a few tens of thousands
-  # more than necessary.
-  track_after_block=\$((approximate_head_block - 64000 - 10000))
-  sed -i 's/^transaction-status-track-after-block = .*$/transaction-status-track-after-block = '"\$track_after_block"'/g' "$DATADIR/config.ini"
+  sed -i 's|^# log-appender = .*$|log-appender = {"appender":"stderr","stream":"std_error","time_format":"iso_8601_microseconds"} {"appender":"p2p","file":"logs/hived/p2p/p2p.log","truncate":false,"time_format":"iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000} {"appender": "default", "file": "logs/hived/default/default.log","truncate":false, "time_format": "iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000}|;s|^log-logger = .*$|log-logger = {"name":"default","level":"info","appenders":["stderr", "default"]} {"name":"user","level":"debug","appenders":["stderr", "default"]} {"name":"p2p","level":"warn","appenders":["p2p"]}|' "$DATADIR/config.ini"
 fi
 
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
   --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --psql-wal-directory="$WAL_DIR" \
   --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
   ${HIVED_ARGS[@]}
-echo "$? Hived process finished execution."
+hived_return_code="\$?"
+echo "\$hived_return_code Hived process finished execution."
 EOF
 
 stop_postresql
@@ -224,6 +217,17 @@ fi
 # Error: /home/hived/datadir/haf_db_store/pgdata is not accessible; please fix the directory permissions (/home/hived/datadir/haf_db_store/ should be world readable)
 sudo -n --user=hived mkdir -p -m 755 "$HAF_DB_STORE"
 
+# Check if correct PostgreSQL version is installed
+# This is to avoid initdb invocation failing with cryptic
+# 'sudo: a password is required' message
+if [[ -d "/usr/lib/postgresql/${POSTGRES_VERSION}" ]]; then
+  echo "PostgreSQL ${POSTGRES_VERSION} appears to be installed"
+else
+  echo "PostgreSQL ${POSTGRES_VERSION} seems to be missing. Available versions:"
+  ls -lAh "/usr/lib/postgresql"
+  exit 4
+fi
+
 # Prepare HBA file before starting PostgreSQL
 prepare_pg_hba_file
 
@@ -250,7 +254,7 @@ if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
 
   echo "Attempting to setup postgres instance: running setup_postgres.sh..."
 
-  sudo -n /home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace" --install-extension=${HAF_INSTALL_EXTENSION:-yes}
+  sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh" --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace" --install-extension=${HAF_INSTALL_EXTENSION:-yes}
 
   echo "Postgres instance setup completed."
 
@@ -277,8 +281,6 @@ HIVED_ARGS=()
 
 echo "Processing passed arguments...: $*"
 
-SKIP_HIVED=0
-
 while [ $# -gt 0 ]; do
   case "$1" in
     --execute-maintenance-script*)
@@ -298,7 +300,9 @@ while [ $# -gt 0 ]; do
       PERFORM_LOAD=1
       ;;
     --skip-hived)
-      SKIP_HIVED=1
+      DO_MAINTENANCE=1
+      MAINTENANCE_SCRIPT_NAME="/home/haf_admin/source/scripts/maintenance-scripts/sleep_infinity.sh"
+      echo "Not launching hived due to --skip-hived command-line option"
       # allow launching the container with only the database running, but not hived.  This is useful when you want to
       # examine the database, but there's some problem that causes hived to exit at startup, since hived exiting will
       # then shut down the container, taking the database with it.
@@ -313,16 +317,14 @@ done
 
 export HIVED_ARGS
 
-echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[@]}"
-
 echo "${BASH_SOURCE[@]}"
 
 status=0
 
 if [ ${DO_MAINTENANCE} -eq 1 ];
 then
-  echo "Running maintance script located at ${MAINTENANCE_SCRIPT_NAME} using additional command line arguments:" "${HIVED_ARGS[@]}"
-  $MAINTENANCE_SCRIPT_NAME ${HIVED_ARGS[@]}
+  echo "Running maintance script located at ${MAINTENANCE_SCRIPT_NAME} using additional command line arguments:" "${HIVED_ARGS[*]}"
+  $MAINTENANCE_SCRIPT_NAME "${HIVED_ARGS[@]}"
 elif [ ${PERFORM_DUMP} -eq 1 ];
 then
   echo "Attempting to perform instance snapshot dump"
@@ -331,18 +333,6 @@ elif [ ${PERFORM_LOAD} -eq 1 ];
 then
   echo "Attempting to perform instance snapshot load"
   perform_instance_load "${BACKUP_SOURCE_DIR_NAME}"
-elif [ ${SKIP_HIVED} -eq 1 ];
-then
-  echo "Not launching hived due to --skip-hived command-line option"
-  echo "You can now connect to the database.  This this container will continue to exist until you shut it down"
-  # launch a webserver on port 8091 so the docker healthcheck will pass.  We probably want
-  # the healthcheck to pass so docker-compose will continue to launch dependent containers
-  # like pgadmin.
-  # The webserver running in the foreground will also act to keep this container running
-  # until the docker image is stopped.
-  mkdir -p /tmp/dummy-webserver
-  cd /tmp/dummy-webserver
-  /home/haf_admin/.local/share/pypoetry/venv/bin/python -m http.server 8091
 else
   run_instance
   status=$?

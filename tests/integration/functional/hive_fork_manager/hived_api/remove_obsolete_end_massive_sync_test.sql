@@ -5,7 +5,7 @@ AS
 $BODY$
 BEGIN
     -- simualte massive push by hived
-    INSERT INTO hive.blocks
+    INSERT INTO hafd.blocks
     VALUES
        ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
      , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -19,7 +19,7 @@ BEGIN
      , ( 10, '\xBADD11', '\xCAFE11', '2016-06-22 19:10:30-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
          , (6, 'alice', 1)
          , (7, 'bob', 1)
@@ -45,8 +45,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM hive.events_queue WHERE event = 'MASSIVE_SYNC' AND block_num = 10 ), 'No event added';
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue ) = 3, 'Unexpected number of events';
+    ASSERT EXISTS ( SELECT FROM hafd.events_queue WHERE event = 'MASSIVE_SYNC' AND block_num = 10 ), 'No event added';
+    ASSERT ( SELECT COUNT(*) FROM hafd.events_queue ) = 3, 'Unexpected number of events';
 END
 $BODY$
 ;

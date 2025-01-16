@@ -31,5 +31,5 @@ sudo tail -n 10000 $POSTGRESLOG
 echo "mtlk end listing postgres log"
 
 echo "CHECK NUMBER OF REPLAYED BLOCKS"
-psql -d haf_block_log -c 'select count (*) from hive.blocks' 2>&1 | tee -i ${LOG_FILE}
+psql -d haf_block_log -c 'select count (*) from hafd.blocks' 2>&1 | tee -i ${LOG_FILE}
 

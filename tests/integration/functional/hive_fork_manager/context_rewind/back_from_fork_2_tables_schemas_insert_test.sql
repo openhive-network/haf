@@ -4,12 +4,14 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_create( 'context' );
     CREATE SCHEMA A;
     CREATE SCHEMA B;
 
-    CREATE TABLE A.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
-    CREATE TABLE B.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
+    PERFORM hive.context_create( 'context', 'a' );
+
+
+    CREATE TABLE A.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
+    CREATE TABLE B.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
 
 
     PERFORM hive.context_next_block( 'context' );
@@ -37,10 +39,10 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 0, 'Inserted row was not removed a.table1';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 0, 'Shadow table is not empty table1';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table1 ) = 0, 'Shadow table is not empty table1';
 
     ASSERT ( SELECT COUNT(*) FROM B.table1 ) = 0, 'Inserted row was not removed b.table1';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_b_table1 ) = 0, 'Shadow table is not empty table2';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_b_table1 ) = 0, 'Shadow table is not empty table2';
 END
 $BODY$
 ;

@@ -17,6 +17,18 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.get_shadow_table_name_prefix()
+    RETURNS TEXT
+    LANGUAGE 'plpgsql'
+    IMMUTABLE
+AS
+$BODY$
+BEGIN
+    RETURN  'shadow_';
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.get_shadow_table_name( _table_schema TEXT,  _table_name TEXT )
     RETURNS TEXT
     LANGUAGE 'plpgsql'
@@ -25,7 +37,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-        'shadow_' || lower(_table_schema) || '_' || lower(_table_name)
+            hive.get_shadow_table_name_prefix() || lower(_table_schema) || '_' || lower(_table_name)
         , _table_name );
 END;
 $BODY$
@@ -39,7 +51,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-        'hive.insert_trigger_' || lower(_table_schema) || '_' || lower( _table_name )
+        'hafd.insert_trigger_' || lower(_table_schema) || '_' || lower( _table_name )
         , _table_name );
 END;
 $BODY$
@@ -53,7 +65,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-                        'hive.delete_trigger_' || lower(_table_schema) || '_' || lower(_table_name)
+                        'hafd.delete_trigger_' || lower(_table_schema) || '_' || lower(_table_name)
         , _table_name
     );
 END;
@@ -68,7 +80,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-          'hive.update_trigger_' || lower(_table_schema) || '_' || lower(_table_name)
+          'hafd.update_trigger_' || lower(_table_schema) || '_' || lower(_table_name)
         , _table_name
     );
 END;
@@ -83,7 +95,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-'hive.truncate_trigger_' || lower(_table_schema) || '_' || lower( _table_name )
+'hafd.truncate_trigger_' || lower(_table_schema) || '_' || lower( _table_name )
     , _table_name );
 END;
 $BODY$
@@ -96,7 +108,7 @@ CREATE OR REPLACE FUNCTION hive.get_trigger_insert_function_name( _table_schema 
 AS
 $BODY$
 BEGIN
-    RETURN 'hive.on_insert_' || lower(_table_schema) || '_' || lower( _table_name );
+    RETURN 'hafd.on_insert_' || lower(_table_schema) || '_' || lower( _table_name );
 END;
 $BODY$
 ;
@@ -109,7 +121,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-'hive.on_delete_' || lower(_table_schema) || '_' || lower( _table_name )
+'hafd.on_delete_' || lower(_table_schema) || '_' || lower( _table_name )
     , _table_name );
 END;
 $BODY$
@@ -123,7 +135,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-        'hive.on_update_' || lower(_table_schema) || '_' || lower( _table_name )
+        'hafd.on_update_' || lower(_table_schema) || '_' || lower( _table_name )
         , _table_name );
 END;
 $BODY$
@@ -137,7 +149,7 @@ AS
 $BODY$
 BEGIN
     RETURN  hive.validate_name(
-    'hive.on_truncate_' || lower(_table_schema) || '_' || lower( _table_name )
+    'hafd.on_truncate_' || lower(_table_schema) || '_' || lower( _table_name )
         , _table_name
     );
 END;

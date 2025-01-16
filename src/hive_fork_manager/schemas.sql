@@ -1,0 +1,2 @@
+-- CREATE SCHEMA hafd;
+CREATE SCHEMA hive;

@@ -37,7 +37,7 @@ BEGIN
     SET max_parallel_maintenance_workers = 16;
     SET parallel_setup_cost = 0;
     SET parallel_tuple_cost = 0;
-    SET force_parallel_mode = true;
+    SET debug_parallel_query = true;
     SET min_parallel_table_scan_size = 0;
 
     PERFORM A, B FROM  test_table WHERE A < 200000 and B < 4;

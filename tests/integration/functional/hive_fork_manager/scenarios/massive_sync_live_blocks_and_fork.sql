@@ -5,7 +5,7 @@ AS
 $BODY$
 BEGIN
 -- massive sync
-INSERT INTO hive.blocks
+INSERT INTO hafd.blocks
 VALUES
       ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -13,7 +13,7 @@ VALUES
     , ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:24-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     , ( 5, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
 ;
-INSERT INTO hive.accounts( id, name, block_num )
+INSERT INTO hafd.accounts( id, name, block_num )
 VALUES (5, 'initminer', 1)
 ;
 PERFORM hive.end_massive_sync(5);
@@ -93,9 +93,9 @@ $BODY$
 DECLARE
 __blocks hive.blocks_range;
 BEGIN
-PERFORM hive.app_create_context( 'context' );
 CREATE SCHEMA A;
-CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
+PERFORM hive.app_create_context( 'context', 'a' );
+CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
 
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 1 MASSIVE SYNC EVENT
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks';
@@ -146,13 +146,13 @@ SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 8
 ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 7, 'Wrong number of rows after fork(7)';
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (8,8)';
 ASSERT __blocks = (8,8), 'Incorrect range (8,8)';
-ASSERT '\xBADD81'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 8 ), 'Unexpect hash of block 8';
+ASSERT '\xBADD81'::bytea = ( SELECT hash FROM a.blocks_view WHERE num = 8 ), 'Unexpect hash of block 8';
 INSERT INTO A.table1(id) VALUES( 8 );
 
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; --block 9
 ASSERT __blocks IS NOT NULL, 'Null is returned instead of range of blocks (9,9)';
 ASSERT __blocks = (9,9), 'Incorrect range (9,9)';
-ASSERT '\xBADD91'::bytea = ( SELECT hash FROM hive.context_blocks_view WHERE num = 9 ), 'Unexpect hash of block 9';
+ASSERT '\xBADD91'::bytea = ( SELECT hash FROM a.blocks_view WHERE num = 9 ), 'Unexpect hash of block 9';
 INSERT INTO A.table1(id) VALUES( 9 );
 
 SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- no blocks

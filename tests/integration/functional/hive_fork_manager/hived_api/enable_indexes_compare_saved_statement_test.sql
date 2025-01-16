@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
 AS
@@ -27,7 +26,8 @@ BEGIN
         command text,
         is_constraint boolean,
         is_index boolean,
-        is_foreign_key boolean
+        is_foreign_key boolean,
+        status hafd.index_status
     );
 END;
 $BODY$
@@ -44,7 +44,8 @@ BEGIN
     PERFORM constraint_index_checker( FALSE );
 
     INSERT INTO indexes_constraints2
-    SELECT * FROM hive.indexes_constraints io
+    SELECT table_name, index_constraint_name, command, is_constraint, is_index, is_foreign_key, status -- include new column
+    FROM hafd.indexes_constraints io
     ORDER BY io.index_constraint_name;
 
     PERFORM hive.restore_indexes( 'public.table_with_constraints' );
@@ -119,9 +120,11 @@ AS
 $BODY$
 BEGIN
     ASSERT NOT EXISTS (
-        (SELECT * FROM indexes_constraints2 ORDER BY index_constraint_name)
+        (SELECT table_name, index_constraint_name, command, status, is_constraint, is_index, is_foreign_key
+          FROM indexes_constraints2 ORDER BY index_constraint_name)
         EXCEPT
-        SELECT * FROM hive.indexes_constraints ORDER BY index_constraint_name
+        SELECT table_name, index_constraint_name, command, status, is_constraint, is_index, is_foreign_key
+          FROM hafd.indexes_constraints ORDER BY index_constraint_name
     ) , 'Saving indexes and constraints failed';
 END;
 $BODY$

@@ -5,9 +5,9 @@ AS
 $BODY$
 BEGIN
     CREATE SCHEMA A;
-    PERFORM hive.context_create( 'context' );
-    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( hive.context );
-    CREATE TABLE table1(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( hive.context );
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( a.context );
+    CREATE TABLE table1(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( a.context );
 END;
 $BODY$
 ;
@@ -27,25 +27,25 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT NOT EXISTS ( SELECT FROM hive.triggers WHERE trigger_name='hive.insert_trigger_a_table1' ), 'Insert trigger not cleaned';
-    ASSERT NOT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hive.insert_trigger_a_table1'), 'Insert trigger not dropped';
+    ASSERT NOT EXISTS ( SELECT FROM hafd.triggers WHERE trigger_name='hafd.insert_trigger_a_table1' ), 'Insert trigger not cleaned';
+    ASSERT NOT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hafd.insert_trigger_a_table1'), 'Insert trigger not dropped';
     ASSERT NOT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_insert_a_table1'), 'Insert trigger function not dropped';
 
-    ASSERT NOT EXISTS ( SELECT FROM hive.triggers WHERE trigger_name='hive.delete_trigger_a_table1' ), 'Delete trigger not cleaned';
-    ASSERT NOT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hive.delete_trigger_a_table1' ), 'Delete trigger not dropped';
+    ASSERT NOT EXISTS ( SELECT FROM hafd.triggers WHERE trigger_name='hafd.delete_trigger_a_table1' ), 'Delete trigger not cleaned';
+    ASSERT NOT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hafd.delete_trigger_a_table1' ), 'Delete trigger not dropped';
     ASSERT NOT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_delete_a_table1') ,'Delete trigger function not dropped';
 
-    ASSERT NOT EXISTS ( SELECT FROM hive.triggers WHERE trigger_name='hive.update_trigger_a_table1' ), 'Update trigger not cleaned';
-    ASSERT NOT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hive.update_trigger_a_table1' ), 'Update trigger not dropped';
+    ASSERT NOT EXISTS ( SELECT FROM hafd.triggers WHERE trigger_name='hafd.update_trigger_a_table1' ), 'Update trigger not cleaned';
+    ASSERT NOT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hafd.update_trigger_a_table1' ), 'Update trigger not dropped';
     ASSERT NOT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_update_a_table1'), 'Update trigger function not dropped';
 
-    ASSERT NOT EXISTS ( SELECT FROM hive.triggers WHERE trigger_name='hive.truncate_trigger_a_table1' ), 'Truncate trigger not cleaned';
-    ASSERT NOT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hive.truncate_trigger_a_table1' ), 'Truncate trigger not dropped';
+    ASSERT NOT EXISTS ( SELECT FROM hafd.triggers WHERE trigger_name='hafd.truncate_trigger_a_table1' ), 'Truncate trigger not cleaned';
+    ASSERT NOT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hafd.truncate_trigger_a_table1' ), 'Truncate trigger not dropped';
     ASSERT NOT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'on_truncate_a_table1'), 'Truncate trigger function not dropped';
 
-    ASSERT NOT EXISTS ( SELECT * FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'shadow_a_table1' ), 'Shadow table was not dropped';
+    ASSERT NOT EXISTS ( SELECT * FROM information_schema.tables WHERE table_schema='hafd' AND table_name  = 'shadow_a_table1' ), 'Shadow table was not dropped';
 
-    ASSERT NOT EXISTS ( SELECT * FROM hive.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' ), 'Entry in registered_tables was not deleted';
+    ASSERT NOT EXISTS ( SELECT * FROM hafd.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' ), 'Entry in registered_tables was not deleted';
 END
 $BODY$
 ;

@@ -4,15 +4,15 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 DECLARE
-    __account hive.accounts%ROWTYPE;
+    __account hafd.accounts%ROWTYPE;
 BEGIN
-    PERFORM hive.app_create_context( 'context' );
-    PERFORM hive.app_create_context( 'context_b' );
     CREATE SCHEMA A;
-    CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
-
     CREATE SCHEMA B;
-    CREATE TABLE B.table1(id  INTEGER ) INHERITS( hive.context_b );
+    PERFORM hive.app_create_context( _name => 'context', _schema => 'a'  );
+    PERFORM hive.app_create_context( _name => 'context_b', _schema => 'b' );
+
+    CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
+    CREATE TABLE B.table1(id  INTEGER ) INHERITS( b.context_b );
 
     __account = ( 5, 'initminer', 1 );
     PERFORM hive.push_block(

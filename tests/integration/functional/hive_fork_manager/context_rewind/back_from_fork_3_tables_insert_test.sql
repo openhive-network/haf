@@ -6,11 +6,11 @@ $BODY$
 BEGIN
     CREATE SCHEMA A;
     CREATE SCHEMA B;
-    PERFORM hive.context_create( 'context' );
+    PERFORM hive.context_create( 'context', 'a' );
 
-    CREATE TABLE A.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
-    CREATE TABLE B.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
-    CREATE TABLE table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
+    CREATE TABLE A.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
+    CREATE TABLE B.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
+    CREATE TABLE table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
 
     PERFORM hive.context_next_block( 'context' );
 
@@ -38,13 +38,13 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 0, 'Inserted row was not removed table1';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 0, 'Shadow table is not empty table1';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table1 ) = 0, 'Shadow table is not empty table1';
 
     ASSERT ( SELECT COUNT(*) FROM B.table1 ) = 0, 'Inserted row was not removed table2';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_b_table1 ) = 0, 'Shadow table is not empty table2';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_b_table1 ) = 0, 'Shadow table is not empty table2';
 
     ASSERT ( SELECT COUNT(*) FROM table1 ) = 0, 'Inserted row was not removed table3';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table1 ) = 0, 'Shadow table is not empty table3';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_public_table1 ) = 0, 'Shadow table is not empty table3';
 END
 $BODY$
 ;

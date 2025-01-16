@@ -5,11 +5,11 @@ import sqlalchemy
 
 APPLICATION_CONTEXT = "accounts_ctx"
 SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE = """
-    CREATE TABLE IF NOT EXISTS public.trx_histogram(
+    CREATE TABLE IF NOT EXISTS applications.trx_histogram(
           day DATE
         , trx INT
         , CONSTRAINT pk_trx_histogram PRIMARY KEY( day ) )
-    INHERITS( hive.{} )
+    INHERITS( applications.{} )
     """.format( APPLICATION_CONTEXT )
 
 def create_db_engine(db_name, pg_port):
@@ -21,10 +21,11 @@ def create_db_engine(db_name, pg_port):
                 echo=False)
 
 def prepare_application_data( db_connection ):
+        db_connection.execute( "CREATE SCHEMA IF NOT EXISTS applications" )
         # create a new context only if it not already exists
         exist = db_connection.execute( "SELECT hive.app_context_exists( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone();
         if exist[ 0 ] == False:
-            db_connection.execute( "SELECT hive.app_create_context( '{}', TRUE )".format( APPLICATION_CONTEXT ) )
+            db_connection.execute( "SELECT hive.app_create_context( '{}', _schema=>'applications', _is_forking => TRUE )".format( APPLICATION_CONTEXT ) )
 
         # create and register a table
         db_connection.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE )
@@ -39,7 +40,7 @@ def main_loop( db_connection ):
         with db_connection.begin():
             # get blocks range
             blocks_range = db_connection.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone()
-            accounts = db_connection.execute( "SELECT * FROM hive.{}_accounts ORDER BY id DESC LIMIT 1".format( APPLICATION_CONTEXT ) ).fetchall()
+            accounts = db_connection.execute( "SELECT * FROM hafd.{}_accounts ORDER BY id DESC LIMIT 1".format( APPLICATION_CONTEXT ) ).fetchall()
 
             print( "Blocks range {}".format( blocks_range ) )
             print( "Accounts {}".format( accounts ) )

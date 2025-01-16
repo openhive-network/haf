@@ -4,10 +4,12 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.types import TypeDecorator
 
 
+hafd_METADATA = MetaData(schema="hafd")
 HIVE_METADATA = MetaData(schema="hive")
 
 # declarative base class
-Base = declarative_base(metadata=HIVE_METADATA)
+HiveDataBase = declarative_base(metadata=hafd_METADATA)
+HiveBase = declarative_base(metadata=HIVE_METADATA)
 
 class HiveOperation(TypeDecorator):
     impl = LargeBinary
@@ -21,7 +23,7 @@ class HiveOperation(TypeDecorator):
         return process
 
 
-class Accounts(Base):
+class Accounts(HiveDataBase):
     __tablename__ = "accounts"
 
     id = Column(Integer, primary_key=True)
@@ -29,7 +31,7 @@ class Accounts(Base):
     block_num = Column(Integer)
 
 
-class AccountsReversible(Base):
+class AccountsReversible(HiveDataBase):
     __tablename__ = "accounts_reversible"
 
     id = Column(Integer, primary_key=True)
@@ -38,13 +40,13 @@ class AccountsReversible(Base):
     fork_id = Column(Integer, primary_key=True)
 
 
-class AccountsView(Base):
+class AccountsView(HiveBase):
     __tablename__ = "accounts_view"
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
 
-class AccountOperations(Base):
+class AccountOperations(HiveDataBase):
     __tablename__ = "account_operations"
 
     account_id = Column(Integer, primary_key=True)
@@ -52,7 +54,7 @@ class AccountOperations(Base):
     operation_id = Column(BigInteger)
 
 
-class AccountOperationsReversible(Base):
+class AccountOperationsReversible(HiveDataBase):
     __tablename__ = "account_operations_reversible"
 
     account_id = Column(Integer, primary_key=True)
@@ -61,7 +63,7 @@ class AccountOperationsReversible(Base):
     fork_id = Column(Integer, primary_key=True)
 
 
-class Blocks(Base):
+class Blocks(HiveDataBase):
     __tablename__ = "blocks"
 
     num = Column(Integer, primary_key=True)
@@ -75,7 +77,7 @@ class Blocks(Base):
     signing_key = Column(Text)
 
 
-class BlocksReversible(Base):
+class BlocksReversible(HiveDataBase):
     __tablename__ = "blocks_reversible"
 
     num = Column(Integer, primary_key=True)
@@ -90,7 +92,7 @@ class BlocksReversible(Base):
     fork_id = Column(BigInteger, primary_key=True)
 
 
-class BlocksView(Base):
+class BlocksView(HiveBase):
     __tablename__ = "blocks_view"
 
     num = Column(Integer, primary_key=True)
@@ -104,20 +106,26 @@ class BlocksView(Base):
     signing_key = Column(Text)
 
 
-class Operations(Base):
+class Operations(HiveDataBase):
     __tablename__ = "operations"
 
     id = Column(BigInteger, primary_key=True)
-    block_num = Column(Integer)
     trx_in_block = Column(SmallInteger)
     op_pos = Column(Integer)
-    op_type_id = Column(SmallInteger)
-    timestamp = Column(DateTime)
     body_binary = Column(HiveOperation)
 
 
-class OperationsReversible(Base):
+class OperationsReversible(HiveDataBase):
     __tablename__ = "operations_reversible"
+
+    id = Column(BigInteger, primary_key=True)
+    trx_in_block = Column(SmallInteger)
+    op_pos = Column(Integer)
+    body_binary = Column(HiveOperation)
+    fork_id = Column(BigInteger, primary_key=True)
+
+class OperationsExtendedView(HiveBase):
+    __tablename__ = "operations_view_extended"
 
     id = Column(BigInteger, primary_key=True)
     block_num = Column(Integer)
@@ -126,10 +134,39 @@ class OperationsReversible(Base):
     op_type_id = Column(SmallInteger)
     timestamp = Column(DateTime)
     body_binary = Column(HiveOperation)
-    fork_id = Column(BigInteger, primary_key=True)
 
+class OperationsView(HiveBase):
+    __tablename__ = "operations_view"
 
-class Transactions(Base):
+    id = Column(BigInteger, primary_key=True)
+    block_num = Column(Integer)
+    trx_in_block = Column(SmallInteger)
+    op_pos = Column(Integer)
+    op_type_id = Column(SmallInteger)
+    body_binary = Column(HiveOperation)
+
+class OperationsIrreversibleViewExtended(HiveBase):
+    __tablename__ = "irreversible_operations_view_extended"
+
+    id = Column(BigInteger, primary_key=True)
+    block_num = Column(Integer)
+    trx_in_block = Column(SmallInteger)
+    op_pos = Column(Integer)
+    op_type_id = Column(SmallInteger)
+    timestamp = Column(DateTime)
+    body_binary = Column(HiveOperation)
+
+class OperationsIrreversibleView(HiveBase):
+    __tablename__ = "irreversible_operations_view"
+
+    id = Column(BigInteger, primary_key=True)
+    block_num = Column(Integer)
+    trx_in_block = Column(SmallInteger)
+    op_pos = Column(Integer)
+    op_type_id = Column(SmallInteger)
+    body_binary = Column(HiveOperation)
+
+class Transactions(HiveDataBase):
     __tablename__ = "transactions"
 
     block_num = Column(Integer)
@@ -141,7 +178,7 @@ class Transactions(Base):
     signature = Column(LargeBinary)
 
 
-class TransactionsReversible(Base):
+class TransactionsReversible(HiveDataBase):
     __tablename__ = "transactions_reversible"
 
     block_num = Column(Integer)
@@ -154,14 +191,14 @@ class TransactionsReversible(Base):
     fork_id = Column(BigInteger, primary_key=True)
 
 
-class TransactionsMultisig(Base):
+class TransactionsMultisig(HiveDataBase):
     __tablename__ = "transactions_multisig"
 
     trx_hash = Column(LargeBinary, primary_key=True)
     signature = Column(LargeBinary, primary_key=True)
 
 
-class TransactionsMultisigReversible(Base):
+class TransactionsMultisigReversible(HiveDataBase):
     __tablename__ = "transactions_multisig_reversible"
 
     trx_hash = Column(LargeBinary, primary_key=True)
@@ -169,7 +206,7 @@ class TransactionsMultisigReversible(Base):
     fork_id = Column(BigInteger, primary_key=True)
 
 
-class EventsQueue(Base):
+class EventsQueue(HiveDataBase):
     __tablename__ = "events_queue"
 
     id = Column(BigInteger, primary_key=True)
@@ -177,7 +214,7 @@ class EventsQueue(Base):
     block_num = Column(BigInteger)
 
 
-class IrreversibleData(Base):
+class IrreversibleData(HiveDataBase):
     __tablename__ = "irreversible_data"
 
     id = Column(Integer, primary_key=True)

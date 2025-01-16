@@ -4,11 +4,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.fork( id, block_num, time_of_fork)
+    INSERT INTO hafd.fork( id, block_num, time_of_fork)
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
            ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 
-    INSERT INTO hive.blocks
+    INSERT INTO hafd.blocks
     VALUES
            ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -20,7 +20,7 @@ BEGIN
          , ( 8, '\xBADD80', '\xCAFE80', '2016-06-22 19:10:25-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.blocks_reversible
+    INSERT INTO hafd.blocks_reversible
     VALUES
            ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
          , ( 5, '\xBADD5A', '\xCAFE5A', '2016-06-22 19:10:55-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
@@ -36,7 +36,7 @@ BEGIN
          , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-    INSERT INTO hive.accounts
+    INSERT INTO hafd.accounts
     VALUES
            ( 1, 'alice1', 1 )
          , ( 2, 'alice2', 2 )
@@ -44,7 +44,7 @@ BEGIN
          , ( 4, 'alice4', 4 )
     ;
 
-    INSERT INTO hive.accounts_reversible
+    INSERT INTO hafd.accounts_reversible
     VALUES
            ( 4, 'alice41', 4, 1 )
          , ( 5, 'alice51', 5, 1 )
@@ -80,7 +80,7 @@ AS
 $BODY$
 BEGIN
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.accounts WHERE id >= 0
+        SELECT * FROM hafd.accounts WHERE id >= 0
         EXCEPT SELECT * FROM ( VALUES
                    (  1, 'alice1' , 1)
                  , (  2, 'alice2' , 2)
@@ -106,7 +106,7 @@ BEGIN
                  , (  8, 'bob72'  , 7)
                  , (  9, 'alice83', 8 )
         ) as pattern
-        EXCEPT SELECT * FROM hive.accounts WHERE id >= 0
+        EXCEPT SELECT * FROM hafd.accounts WHERE id >= 0
     ) , 'Unexpected rows in the view2';
 
 END

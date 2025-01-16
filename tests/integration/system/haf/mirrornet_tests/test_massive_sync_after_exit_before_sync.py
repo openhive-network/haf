@@ -2,6 +2,7 @@ import pytest
 
 import test_tools as tt
 
+from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.system.haf import (
     connect_nodes,
     assert_are_indexes_restored,
@@ -14,11 +15,9 @@ from haf_local_tools.system.haf.mirrornet.constants import (
 
 @pytest.mark.mirrornet
 def test_massive_sync(
-    mirrornet_witness_node, haf_node, block_log_5m_path, snapshot_path
+    mirrornet_witness_node, haf_node, block_log_5m, snapshot_path
 ):
-
-    block_log_5m = tt.BlockLog(block_log_5m_path)
-
+    apply_block_log_type_to_monolithic_workaround(mirrornet_witness_node)
     mirrornet_witness_node.run(
         load_snapshot_from=snapshot_path,
         time_control=tt.StartTimeControl(start_time="head_block_time"),

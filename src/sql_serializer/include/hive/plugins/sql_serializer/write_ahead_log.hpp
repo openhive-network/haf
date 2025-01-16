@@ -31,7 +31,7 @@ namespace hive::plugins::sql_serializer {
   // sequence number was executed last, and if we have any more recent queries written
   // to our write-ahead log, we know that those were lost and we need to replay them
   // before continuing.  On the database side, the sequence number is stored in a 
-  // one-line table `hive.write_ahead_log_state`
+  // one-line table `hafd.write_ahead_log_state`
   //
   // That's the situation in livesync, which is the only place the write-ahead log
   // is currently used.
@@ -48,7 +48,7 @@ namespace hive::plugins::sql_serializer {
   // (connection_number, 0) entry pair to the database before allowing that connection
   // to do any work (write anything to the write-ahead log).  When a connection is closed
   // cleanly (e.g, exiting massive sync), it would remove (w/commit) its entry from the 
-  // `hive.write_ahead_log_state` table.
+  // `hafd.write_ahead_log_state` table.
   // At startup, we first read the database table to find out what connections were
   // active at shutdown time.  Then, we scan through the write-ahead log.  We can ignore
   // any write-ahead log entries for connection numbers not referenced in the table; those

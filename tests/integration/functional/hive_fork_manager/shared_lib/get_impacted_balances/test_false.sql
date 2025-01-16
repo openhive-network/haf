@@ -40,7 +40,7 @@ BEGIN
     BEGIN
     SELECT ARRAY_AGG(ROW(f.account_name, f.amount, f.asset_precision, f.asset_symbol_nai)::hive.impacted_balances_return)
     INTO test1
-    FROM hive.get_impacted_balances(''::hive.operation, FALSE) f
+    FROM hive.get_impacted_balances(''::hafd.operation, FALSE) f
     ;
 
     ASSERT FALSE, 'TEST1 should throw exception: "feature_not_supported"';

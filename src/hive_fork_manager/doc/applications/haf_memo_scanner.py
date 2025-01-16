@@ -23,7 +23,7 @@ class sql_memo_scanner(haf_base):
     self.get_transfers = '''
       SELECT block_num, trx_in_block, op_pos, body
       FROM hive.{}_operations_view o
-      JOIN hive.operation_types ot ON o.op_type_id = ot.id
+      JOIN hafd.operation_types ot ON o.op_type_id = ot.id
       WHERE ot.name = 'hive::protocol::transfer_operation' AND block_num >= {} and block_num <= {}
     '''
     self.insert_into_memos  = []

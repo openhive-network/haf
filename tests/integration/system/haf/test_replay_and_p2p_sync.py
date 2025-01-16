@@ -2,20 +2,14 @@ import pytest
 
 import test_tools as tt
 
+from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.system.haf import (
     assert_are_blocks_sync_with_haf_db,
     assert_are_indexes_restored,
     connect_nodes,
     prepare_and_send_transactions,
+    get_truncated_block_log,
 )
-
-def get_truncated_block_log(node, block_count: int):
-    output_block_log_path = tt.context.get_current_directory() / "block_log"
-    output_block_log_path.unlink(missing_ok=True)
-    output_block_log_artifacts_path = (tt.context.get_current_directory() / "block_log.artifacts")
-    output_block_log_artifacts_path.unlink(missing_ok=True)
-    block_log = node.block_log.truncate(tt.context.get_current_directory(), block_count)
-    return block_log
 
 
 @pytest.mark.parametrize(
@@ -29,6 +23,7 @@ def get_truncated_block_log(node, block_count: int):
 )
 def test_replay_and_p2p_sync(haf_node, psql_index_threshold):
     init_node = tt.InitNode()
+    apply_block_log_type_to_monolithic_workaround(init_node)
     init_node.run()
 
     haf_node.config.psql_index_threshold = psql_index_threshold

@@ -1,7 +1,7 @@
 import pytest
 
 import test_tools as tt
-
+from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.system.haf import (
     assert_are_blocks_sync_with_haf_db,
     assert_are_indexes_restored,
@@ -27,12 +27,11 @@ from haf_local_tools.system.haf.mirrornet.constants import (
         "disabled_indexes_in_replay",
     ],
 )
-def test_replay(witness_node_with_haf, block_log_5m_path, psql_index_threshold):
+def test_replay(witness_node_with_haf, block_log_5m, psql_index_threshold):
 
     witness_node_with_haf.config.psql_index_threshold = psql_index_threshold
 
-    block_log_5m = tt.BlockLog(block_log_5m_path)
-
+    apply_block_log_type_to_monolithic_workaround(witness_node_with_haf)
     witness_node_with_haf.run(
         replay_from=block_log_5m,
         time_control=tt.StartTimeControl(start_time="head_block_time"),

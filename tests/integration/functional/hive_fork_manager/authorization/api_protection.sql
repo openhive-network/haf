@@ -4,7 +4,8 @@ AS
 $BODY$
 BEGIN
     BEGIN
-        PERFORM hive.app_create_context( 'hived_context' );
+        CREATE SCHEMA A;
+        PERFORM hive.app_create_context( 'hived_context', 'a' );
         ASSERT FALSE, 'Hived can create a context';
     EXCEPTION WHEN OTHERS THEN
     END;
@@ -40,8 +41,9 @@ BEGIN
     END;
 
     BEGIN
-        CREATE TABLE hived_table(id INT);
-        PERFORM hive.app_register_table( 'hived_table' );
+        CREATE SCHEMA B;
+        CREATE TABLE b.hived_table(id INT);
+        PERFORM hive.app_register_table( 'b','hived_table', 'alice' );
         ASSERT FALSE, 'Hived can call app_register_table';
     EXCEPTION WHEN OTHERS THEN
     END;
@@ -79,10 +81,13 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice_context' );
-    PERFORM hive.app_create_context( 'alice_context_detached' );
+    CREATE SCHEMA ALICE;
+
+    PERFORM hive.app_create_context( 'alice_context', 'alice' );
+    PERFORM hive.app_create_context( 'alice_context_detached', 'alice' );
     PERFORM hive.app_context_detach( 'alice_context_detached' );
-    CREATE TABLE alice_table( id INT ) INHERITS( hive.alice_context );
+
+    CREATE TABLE alice.alice_table( id INT ) INHERITS( alice.alice_context );
 END;
 $BODY$
 ;
@@ -92,13 +97,13 @@ CREATE OR REPLACE PROCEDURE alice_test_then()
 AS
 $BODY$
 DECLARE
-    __block hive.blocks%ROWTYPE;
-    __transaction1 hive.transactions%ROWTYPE;
-    __transaction2 hive.transactions%ROWTYPE;
-    __operation1_1 hive.operations%ROWTYPE;
-    __operation2_1 hive.operations%ROWTYPE;
-    __signatures1 hive.transactions_multisig%ROWTYPE;
-    __signatures2 hive.transactions_multisig%ROWTYPE;
+    __block hafd.blocks%ROWTYPE;
+    __transaction1 hafd.transactions%ROWTYPE;
+    __transaction2 hafd.transactions%ROWTYPE;
+    __operation1_1 hafd.operations%ROWTYPE;
+    __operation2_1 hafd.operations%ROWTYPE;
+    __signatures1 hafd.transactions_multisig%ROWTYPE;
+    __signatures2 hafd.transactions_multisig%ROWTYPE;
 BEGIN
     BEGIN
         PERFORM hive.initialize_extension_data();
@@ -116,8 +121,8 @@ BEGIN
         __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp );
         __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
         __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED' );
-        __operation1_1 = ( 1, 101, 0, 0, 1, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hive.operation );
-        __operation2_1 = ( 2, 101, 1, 0, 2, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hive.operation );
+        __operation1_1 = ( 1, 101, 0, 0, 1, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation );
+        __operation2_1 = ( 2, 101, 1, 0, 2, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation );
         __signatures1 = ( '\xDEED', '\xFEED' );
         __signatures2 = ( '\xBEEF', '\xBABE' );
         PERFORM hive.push_block(

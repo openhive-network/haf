@@ -6,11 +6,11 @@ $BODY$
 BEGIN
     CREATE SCHEMA A;
     CREATE SCHEMA B;
-    PERFORM hive.context_create( 'context' );
+    PERFORM hive.context_create( 'context', 'a' );
 
-    CREATE TABLE A.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
-    CREATE TABLE B.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
-    CREATE TABLE table3( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
+    CREATE TABLE A.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
+    CREATE TABLE B.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
+    CREATE TABLE table3( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
 
     PERFORM hive.context_next_block( 'context' );
 
@@ -20,9 +20,9 @@ BEGIN
 
     PERFORM hive.context_next_block( 'context' );
 
-    TRUNCATE hive.shadow_a_table1; --to do not revert inserts
-    TRUNCATE hive.shadow_b_table1; --to do not revert inserts
-    TRUNCATE hive.shadow_public_table3; --to do not revert inserts
+    TRUNCATE hafd.shadow_a_table1; --to do not revert inserts
+    TRUNCATE hafd.shadow_b_table1; --to do not revert inserts
+    TRUNCATE hafd.shadow_public_table3; --to do not revert inserts
 
     TRUNCATE A.table1;
     TRUNCATE B.table1;
@@ -48,15 +48,15 @@ $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM A.table1 WHERE id=123 AND smth='blabla1' ) = 1, 'Deleted row was not reinserted table1';
     ASSERT ( SELECT COUNT(*) FROM A.table1 ) = 1, 'Incorretc number of rows table1';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 0, 'Shadow table is not empty table1';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table1 ) = 0, 'Shadow table is not empty table1';
 
     ASSERT ( SELECT COUNT(*) FROM B.table1 WHERE id=223 AND smth='blabla2' ) = 1, 'Deleted row was not reinserted table2';
     ASSERT ( SELECT COUNT(*) FROM B.table1 ) = 1, 'Incorretc number of rows table2';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_b_table1 ) = 0, 'Shadow table is not empty table2';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_b_table1 ) = 0, 'Shadow table is not empty table2';
 
     ASSERT ( SELECT COUNT(*) FROM table3 WHERE id=323 AND smth='blabla3' ) = 1, 'Deleted row was not reinserted table3';
     ASSERT ( SELECT COUNT(*) FROM table3 ) = 1, 'Incorretc number of rows table3';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table3 ) = 0, 'Shadow table is not empty table3';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_public_table3 ) = 0, 'Shadow table is not empty table3';
 END
 $BODY$
 ;

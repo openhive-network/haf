@@ -4,25 +4,26 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_create( 'context' );
-    CREATE TABLE table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
+    CREATE SCHEMA A;
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE a.table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
     PERFORM hive.context_next_block( 'context' );
-    INSERT INTO table1( id, smth ) VALUES( 123, 'blabla' );
+    INSERT INTO a.table1( id, smth ) VALUES( 123, 'blabla' );
     PERFORM hive.context_next_block( 'context' );
 
-    PERFORM hive.context_create( 'context2' );
-    CREATE TABLE table2( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context2 );
+    PERFORM hive.context_create( 'context2', 'a' );
+    CREATE TABLE a.table2( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context2 );
     PERFORM hive.context_next_block( 'context2' );
-    INSERT INTO table2( id, smth ) VALUES( 123, 'blabla' );
+    INSERT INTO a.table2( id, smth ) VALUES( 123, 'blabla' );
     PERFORM hive.context_next_block( 'context2' );
 
-    TRUNCATE hive.shadow_public_table1; --to do not revert context inserts
-    UPDATE table1 SET id=321;
+    TRUNCATE hafd.shadow_a_table1; --to do not revert context inserts
+    UPDATE a.table1 SET id=321;
     PERFORM hive.context_next_block( 'context' );
-    DELETE FROM  table1 WHERE id=321;
+    DELETE FROM  a.table1 WHERE id=321;
 
-    TRUNCATE hive.shadow_public_table2; --to do not revert context inserts
-    UPDATE table2 SET id=321;
+    TRUNCATE hafd.shadow_a_table2; --to do not revert context inserts
+    UPDATE a.table2 SET id=321;
     PERFORM hive.context_next_block( 'context2' );
 END;
 $BODY$
@@ -43,11 +44,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM table1 WHERE id=123 ) = 1, 'Updated row was not reverted';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table1 ) = 0, 'Shadow table is not empty';
+    ASSERT ( SELECT COUNT(*) FROM a.table1 WHERE id=123 ) = 1, 'Updated row was not reverted';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table1 ) = 0, 'Shadow table is not empty';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table2 ) != 0, 'context2 shadow table was empty';
-    ASSERT ( SELECT COUNT(*) FROM table2 WHERE id=321 ) = 1, 'Updated context2 row was reverted';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table2 ) != 0, 'context2 shadow table was empty';
+    ASSERT ( SELECT COUNT(*) FROM a.table2 WHERE id=321 ) = 1, 'Updated context2 row was reverted';
 END
 $BODY$
 ;

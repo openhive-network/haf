@@ -28,7 +28,7 @@ $$;
 
 DO $$
 BEGIN
-    CREATE ROLE hived_group WITH NOLOGIN INHERIT SUPERUSER IN ROLE haf_administrators_group;
+    CREATE ROLE hived_group WITH NOLOGIN;
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
     RAISE NOTICE 'hived_group role already exists';
 END
@@ -50,5 +50,13 @@ BEGIN
     EXCEPTION WHEN DUPLICATE_OBJECT THEN
         RAISE NOTICE 'haf_app_public role already exists';
     END;
+END
+$$;
+
+DO $$
+BEGIN
+    CREATE ROLE haf_maintainer WITH LOGIN SUPERUSER;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+    RAISE NOTICE 'haf_maintainer role already exists';
 END
 $$;

@@ -356,6 +356,9 @@ indexation_state::update_state(
       _dumper.reset();
       _indexes_controler.enable_indexes();
       _indexes_controler.enable_constrains();
+      std::thread([this]() {
+        _indexes_controler.poll_and_create_indexes();
+      }).detach();
       _dumper = std::make_unique< livesync_data_dumper >(
         _db_url
         , _main_plugin
@@ -377,7 +380,14 @@ indexation_state::update_state(
       break;
       }
    case INDEXATION::WAIT:
-     ilog("PROFILE: Entering WAIT sync, creating indexes/constraints as needed: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
+      ilog("PROFILE: Entering WAIT sync: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
+      _trigger.reset();
+      _dumper.reset();
+      _trigger = std::make_shared< fake_flush_trigger >();
+      _dumper = std::make_shared< fake_data_dumper >();
+      ilog("PROFILE: Entered WAIT sync from start state: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
+      break;
+     ilog("PROFILE: Entering WAIT sync: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       _trigger.reset();
       _dumper.reset();
       _trigger = std::make_shared< fake_flush_trigger >();
@@ -385,12 +395,12 @@ indexation_state::update_state(
       ilog("PROFILE: Entered WAIT sync from start state: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       break;
     case INDEXATION::REINDEX_WAIT:
-      ilog("PROFILE: Entering REINDEX_WAIT sync, creating indexes/constraints as needed: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
+      ilog("PROFILE: Entering REINDEX_WAIT sync: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       _trigger.reset();
       _dumper.reset();
       _trigger = std::make_shared< fake_flush_trigger >();
       _dumper = std::make_shared< fake_data_dumper >();
-      ilog("PROFILE: Entered REINDEX_WAIT sync, creating indexes/constraints as needed: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
+      ilog("PROFILE: Entered REINDEX_WAIT sync: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       break;
     default:
       FC_ASSERT( false, "Unknown INDEXATION state" );

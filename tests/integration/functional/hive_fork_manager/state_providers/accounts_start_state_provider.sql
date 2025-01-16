@@ -4,7 +4,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context' );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
 END;
 $BODY$
 ;
@@ -28,7 +29,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'context_accounts' ), 'Accounts table was not created';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hafd' AND table_name  = 'context_accounts' ), 'Accounts table was not created';
 END;
 $BODY$
 ;

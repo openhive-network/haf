@@ -41,12 +41,14 @@ install_all_dev_packages() {
   apt-get update
   DEBIAN_FRONTEND=noniteractive apt-get install -y \
           systemd \
-          postgresql \
-          postgresql-contrib \
           libpq-dev \
           tox \
           joe \
-          postgresql-server-dev-all
+          postgresql-common
+
+  /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+  DEBIAN_FRONTEND=noniteractive apt-get install -y postgresql-17 postgresql-server-dev-17 postgresql-17-cron \
+    netcat-openbsd # needed to correctly handle --skip-hived option
 
   apt-get clean
   rm -rf /var/lib/apt/lists/*
@@ -76,7 +78,7 @@ create_haf_admin_account() {
   echo "Attempting to create $haf_admin_unix_account account..."
   assert_is_root
 
-  # Unfortunately haf_admin must be able to su as root, because it must be able to write into /usr/share/postgresql/14/extension directory, being owned by root (it could be owned by postgres)
+  # Unfortunately haf_admin must be able to su as root, because it must be able to write into /usr/share/postgresql/17/extension directory, being owned by root (it could be owned by postgres)
   if id "$haf_admin_unix_account" &>/dev/null; then
       echo "Account $haf_admin_unix_account already exists. Creation skipped."
   else
@@ -84,6 +86,11 @@ create_haf_admin_account() {
       usermod -a -G users "$haf_admin_unix_account"
       chown -Rc "$haf_admin_unix_account":users "/home/$haf_admin_unix_account"
   fi
+}
+
+create_maintenance_account() {
+  echo "Attempting to create haf_maintainer account..."
+  useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service account" -U haf_maintainer
 }
 
 create_hived_account() {
@@ -96,6 +103,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --dev)
         install_all_dev_packages
+        create_maintenance_account
         ;;
     --user)
         install_user_packages

@@ -1,17 +1,18 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-extension_path=$1
-test_path=$2;
-setup_scripts_dir_path=$3;
-postgres_port=$4;
+extension_path="$1"
+test_path="$2"
+setup_scripts_dir_path="$3"
+postgres_port="$4"
+script_to_execute_after_testfun="$5"
 
 . ./tools/common.sh
 
-setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
+setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path" "$extension_path"
 
 trap on_exit EXIT;
 
-psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
+psql -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
 evaluate_result $?
 
 users="haf_admin test_hived alice alice_impersonal bob"
@@ -33,14 +34,14 @@ BEGIN
 $body
 END
 \$\$;"
-    psql -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c "$query"
+    psql -p "$postgres_port" -d "$DB_NAME" -v ON_ERROR_STOP=on -c "$query"
     evaluate_result $?
   done
 done
 
 # add test functions:
 # load tests function
-psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f  ${test_path};
+psql -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  "${test_path}"
 evaluate_result $?
 
 # you can use alice_test_given, alice_test_when, alice_test_error, alice_test_then and their bob's and test_hived equivalents
@@ -63,10 +64,18 @@ for testfun in ${tests}; do
       evaluate_result $?
     fi
   done
+
+  if [ -n "${script_to_execute_after_testfun}" ]; then
+    pg_call="-p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on"
+    psql ${pg_call} -c "UPDATE pg_extension SET extversion = '1.0' WHERE extname = 'hive_fork_manager';"
+    sudo "${script_to_execute_after_testfun}" --haf-db-name="$DB_NAME";
+    # for testing hash functions we ned to add them after update which remove them
+    psql ${pg_call} -f "${extension_path}/update.sql"
+  fi
 done
 
 on_exit
-psql -p $postgres_port -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
+psql -p "$postgres_port" -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
 
 echo "PASSED";
 trap - EXIT;

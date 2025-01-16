@@ -23,10 +23,13 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice_context' );
-    PERFORM hive.app_create_context( 'alice_context_detached' );
+    CREATE SCHEMA alice;
+
+    PERFORM hive.app_create_context( 'alice_context', 'alice' );
+    PERFORM hive.app_create_context( 'alice_context_detached', 'alice' );
     PERFORM hive.app_context_detach( 'alice_context_detached' );
-    CREATE TABLE alice_table( id INT ) INHERITS( hive.alice_context );
+
+    CREATE TABLE alice.alice_table( id INT ) INHERITS( alice.alice_context );
 END;
 $BODY$
 ;

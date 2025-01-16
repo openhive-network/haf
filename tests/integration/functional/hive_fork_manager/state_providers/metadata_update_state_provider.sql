@@ -5,7 +5,7 @@ AS
 $BODY$
 BEGIN
 
-    INSERT INTO hive.operation_types
+    INSERT INTO hafd.operation_types
     VALUES
         ( 43, 'hive::protocol::account_update2_operation', FALSE ),
         ( 9, 'hive::protocol::account_create_operation', FALSE ),
@@ -15,7 +15,7 @@ BEGIN
          -- non containing keys
     ;
  
-    INSERT INTO hive.blocks
+    INSERT INTO hafd.blocks
     VALUES
            ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
          , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -35,7 +35,7 @@ BEGIN
          , (16, '\xBADDD0', '\xCAFED0', '2016-06-22 19:10:33-09'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
      ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1),
     (6, 'test-safari', 1),
     (7, 'howo', 1),
@@ -52,7 +52,7 @@ BEGIN
     (18, 'eos-polska', 1)
     ;
 
-    INSERT INTO hive.transactions
+    INSERT INTO hafd.transactions
     VALUES
            ( 1, 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
          , ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
@@ -61,11 +61,11 @@ BEGIN
          , ( 5, 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hive.operations
+    INSERT INTO hafd.operations
     VALUES
     -- account_update2_operation
         -- posting json metadata exists, json metadata empty
-        ( 1, 1, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(1, 43, 0), 0, 0, '
         {
             "type": "account_update2_operation",
             "value": {
@@ -75,10 +75,10 @@ BEGIN
                 "extensions": []
             }
         }            
-        '::jsonb::hive.operation),
+        '::jsonb::hafd.operation),
 
         --empty json and posting metadata
-        ( 2, 2, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(2, 43, 0), 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -87,24 +87,24 @@ BEGIN
                     "posting_json_metadata": "\"\"",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hafd.operation
         ),
 
-        ( 15, 15, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(15, 43, 0), 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
                     "account": "howo",
                     "json_metadata": "",
-                    "posting_json_metadata": "",
+                    "posting_json_metadata": "{}",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hafd.operation
         ),
 
 
         -- empty posting_metadata, json_metadata exists
-        ( 3, 3, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(3, 43, 0), 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -113,11 +113,11 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hafd.operation
         ),
 
         --posting metadata equal to ""
-                ( 4, 4, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+                ( hafd.operation_id(4, 43, 0), 0, 0, '
         {
             "type": "account_update2_operation",
             "value": {
@@ -126,10 +126,10 @@ BEGIN
                 "posting_json_metadata": "\"\"",
                 "extensions": []
             }
-        }'::jsonb::hive.operation),
+        }'::jsonb::hafd.operation),
 
         --posting_metadata equal to {}
-        ( 5, 5, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(5, 43, 0), 0, 0, '
 
             {
                 "type": "account_update2_operation",
@@ -139,12 +139,12 @@ BEGIN
                     "posting_json_metadata": "{}",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hafd.operation
         ),
 
     -- account_create operation 
         -- empty json metadata
-        ( 6, 6, 0, 0, 9, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(6, 9, 0), 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -188,9 +188,9 @@ BEGIN
                     "memo_key": "STM84bJQnKmM7rMAbsFPXZpQTQi5rBscbpuXkJ6XuVYEundE2Q1yx",
                     "json_metadata": "{}"
                 }
-            }'::jsonb::hive.operation),
+            }'::jsonb::hafd.operation),
 
-        ( 16, 16, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(16, 43, 0), 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -199,11 +199,11 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hafd.operation
         ),
 
         -- json metadata equal to  ""
-        ( 7, 7, 0, 0, 9, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(7, 9, 0), 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -247,10 +247,10 @@ BEGIN
                     "memo_key": "STM6NrLK9cwh9aAdouhSL3KhucAXU4ejReXF1vPvCeWXKrisMcoa8",
                     "json_metadata": "\"\""
                 }
-            }'::jsonb::hive.operation),
+            }'::jsonb::hafd.operation),
 
         --json metadata equal to {}
-        ( 8, 8, 0, 0, 9, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(8, 9, 0), 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -294,10 +294,10 @@ BEGIN
                     "memo_key": "STM5eK3sJ42oUd6KB5AZU5AHXdxBBK6tcfw69rTx7phnHH3yBmQxk",
                     "json_metadata": "{}"
                 }
-            }'::jsonb::hive.operation),
+            }'::jsonb::hafd.operation),
 
         -- json metadata with a non empty value
-        ( 9, 9, 0, 0, 9, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(9, 9, 0), 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -341,11 +341,11 @@ BEGIN
                     "memo_key": "STM5Da24pp7ZztCipiUjp32eYxHXiQPDApY43PiMTfs9ivbhBrdgX",
                     "json_metadata": "{\"profile\":{\"about\":\"This account was instantly created via @hivewallet.app - available for iOS and Android!\",\"website\":\"https://hivewallet.app\"}}"
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hafd.operation
         ),
 
     -- account_create_with_delegation_operation 
-        ( 10, 10, 0, 0, 41, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(10, 41, 0), 0, 0, '
             {
                 "type": "account_create_with_delegation_operation",
                 "value": {
@@ -410,11 +410,11 @@ BEGIN
                     "json_metadata": "{\"owner\":\"genievot\"}",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hafd.operation
         ),
 
     -- account_update2_operation
-        ( 11, 11, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(11, 43, 0), 0, 0, '
             {
             "type": "account_update2_operation",
                 "value": {
@@ -423,10 +423,10 @@ BEGIN
                     "posting_json_metadata": "{\"profile\":{\"name\":\"Jeremy\",\"about\":\"               \",\"cover_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg\",\"profile_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg\",\"website\":\" \",\"location\":\"NC, USA\",\"pinned\":\"\",\"version\":2,\"portfolio\":\"enabled\",\"trail\":true,\"collections\":\"enabled\"}}",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation),
+            }'::jsonb::hafd.operation),
 
     -- account_update_operation 
-        ( 12, 12, 0, 0, 10, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(12, 10, 0), 0, 0, '
             {
                 "type": "account_update_operation",
                 "value": {
@@ -493,10 +493,10 @@ BEGIN
                     "memo_key": "STM6jwfUrLcnd47hX87JQv6Q78UwUZm7RPAfjqjtQ2K7793Jsjuoy",
                     "json_metadata": "{\"beneficiaries\":[{\"name\":\"threespeak\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}"
                 }
-            }'::jsonb::hive.operation),
+            }'::jsonb::hafd.operation),
 
     -- create_claimed_account_operation
-        ( 13, 13, 0, 0, 23, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(13, 23, 0), 0, 0, '
             {
                 "type": "create_claimed_account_operation",
                 "value": {
@@ -536,11 +536,11 @@ BEGIN
                     "json_metadata": "{\"beneficiaries\":[{\"name\":\"fractalnode\",\"weight\":300,\"label\":\"referrer\"},{\"name\":\"ocdb\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hafd.operation
         ),
 
         -- second update for the same account in the blocks range
-        ( 14, 14, 0, 0, 43, '2016-06-22 19:10:21-07'::timestamp, '
+        ( hafd.operation_id(14, 43, 0), 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -549,17 +549,18 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hive.operation
+            }'::jsonb::hafd.operation
         )
 
 
         ;
 
-    PERFORM hive.app_create_context( 'context' );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
     PERFORM hive.app_state_provider_import( 'METADATA', 'context' );
     PERFORM hive.app_context_detach( 'context' );
 
-    UPDATE hive.contexts SET current_block_num = 1, irreversible_block = 16;
+    UPDATE hafd.contexts SET current_block_num = 1, irreversible_block = 16;
 
 END;
 $BODY$
@@ -581,7 +582,7 @@ AS
 $BODY$
 BEGIN
     PERFORM ASSERT_METADATA_VALUES(6 /*'test-safari'*/   , '','{"profile":{"name":"Leonardo Da VinciXX","about":"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..","website":"http://www.davincilife.com/","location":"Florence","cover_image":"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg","profile_image":"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg"}}');
-    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '""');
+    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '{}');
     PERFORM ASSERT_METADATA_VALUES(8 /*'bassman077'*/    , '{"maleficiaries":[{"name":"oracle-d","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"},{"name":"spk.beneficiary","label":"referrer","weight":300}]}', '');
     PERFORM ASSERT_METADATA_VALUES(9 /*'spscontest'*/    ,'','""');
     PERFORM ASSERT_METADATA_VALUES(10 /*'xenomorphosis'*/,'','{}');
@@ -591,14 +592,8 @@ BEGIN
     PERFORM ASSERT_METADATA_VALUES(14 /*'margemnlpz08'*/ ,'{"profile":{"about":"This account was instantly created via @hivewallet.app - available for iOS and Android!","website":"https://hivewallet.app"}}','');
     PERFORM ASSERT_METADATA_VALUES(15 /*'steem.kit'*/    ,'{"owner":"genievot"}','');
     PERFORM ASSERT_METADATA_VALUES(16 /*'jte1023'*/      ,'{"profile":{"name":"Jeremy","about":"               ","cover_image":"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg","profile_image":"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg","website":" ","location":"NC, USA","pinned":"","version":2,"portfolio":"enabled","trail":true,"collections":"enabled"}}', '{"profile":{"name":"Jeremy","about":"               ","cover_image":"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg","profile_image":"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg","website":" ","location":"NC, USA","pinned":"","version":2,"portfolio":"enabled","trail":true,"collections":"enabled"}}');
-    PERFORM ASSERT_METADATA_VALUES(17 /*'adedayoolumide'*/,'{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
+    PERFORM ASSERT_METADATA_VALUES(17 /*'adedayoolumide'*/,'{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}');
     PERFORM ASSERT_METADATA_VALUES(18 /*'eos-polska'*/   ,'{"beneficiaries":[{"name":"fractalnode","weight":300,"label":"referrer"},{"name":"ocdb","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
-
-        --check overall operations used
-    ASSERT hive.unordered_arrays_equal(
-        (SELECT array_agg(t.get_metadata_operations) FROM hive.get_metadata_operations()t),
-        (SELECT array_agg(t) FROM hive.get_metadata_operations_pattern()t)
-    ), 'Broken hive.get_metadata_operations';
 
 END;
 $BODY$
@@ -610,7 +605,7 @@ AS
 $BODY$
 BEGIN
     PERFORM ASSERT_METADATA_VALUES(6 /*'test-safari'*/   , '','{"profile":{"name":"Leonardo Da VinciXX","about":"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..","website":"http://www.davincilife.com/","location":"Florence","cover_image":"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg","profile_image":"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg"}}');
-    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '""');
+    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '{}');
     PERFORM ASSERT_METADATA_VALUES(8 /*'bassman077'*/    , '{"maleficiaries":[{"name":"oracle-d","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"},{"name":"spk.beneficiary","label":"referrer","weight":300}]}', '');
     PERFORM ASSERT_METADATA_VALUES(9 /*'spscontest'*/    ,'','""');
     PERFORM ASSERT_METADATA_VALUES(10 /*'xenomorphosis'*/,'','{}');
@@ -620,7 +615,7 @@ BEGIN
     PERFORM ASSERT_METADATA_VALUES(14 /*'margemnlpz08'*/ ,'{"profile":{"about":"This account was instantly created via @hivewallet.app - available for iOS and Android!","website":"https://hivewallet.app"}}','');
     PERFORM ASSERT_METADATA_VALUES(15 /*'steem.kit'*/    ,'{"owner":"genievot"}','');
     PERFORM ASSERT_METADATA_VALUES(16 /*'jte1023'*/      ,'{"profile":{"name":"Jeremy","about":"               ","cover_image":"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg","profile_image":"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg","website":" ","location":"NC, USA","pinned":"","version":2,"portfolio":"enabled","trail":true,"collections":"enabled"}}', '{"profile":{"name":"Jeremy","about":"               ","cover_image":"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg","profile_image":"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg","website":" ","location":"NC, USA","pinned":"","version":2,"portfolio":"enabled","trail":true,"collections":"enabled"}}');
-    PERFORM ASSERT_METADATA_VALUES(17 /*'adedayoolumide'*/,'{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
+    PERFORM ASSERT_METADATA_VALUES(17 /*'adedayoolumide'*/,'{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}');
     PERFORM ASSERT_METADATA_VALUES(18 /*'eos-polska'*/   ,'{"beneficiaries":[{"name":"fractalnode","weight":300,"label":"referrer"},{"name":"ocdb","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
 END;
 $BODY$
@@ -632,7 +627,7 @@ AS
 $BODY$
 BEGIN
     PERFORM ASSERT_METADATA_VALUES(6 /*'test-safari'*/   , '','{"profile":{"name":"Leonardo Da VinciXX","about":"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..","website":"http://www.davincilife.com/","location":"Florence","cover_image":"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg","profile_image":"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg"}}');
-    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '""');
+    PERFORM ASSERT_METADATA_VALUES(7 /*'howo'*/          , '{}', '{}');
     PERFORM ASSERT_METADATA_VALUES(8 /*'bassman077'*/    , '{"maleficiaries":[{"name":"oracle-d","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"},{"name":"spk.beneficiary","label":"referrer","weight":300}]}', '');
     PERFORM ASSERT_METADATA_VALUES(9 /*'spscontest'*/    ,'','""');
     PERFORM ASSERT_METADATA_VALUES(10 /*'xenomorphosis'*/,'','{}');
@@ -642,7 +637,7 @@ BEGIN
     PERFORM ASSERT_METADATA_VALUES(14 /*'margemnlpz08'*/ ,'{"profile":{"about":"This account was instantly created via @hivewallet.app - available for iOS and Android!","website":"https://hivewallet.app"}}','');
     PERFORM ASSERT_METADATA_VALUES(15 /*'steem.kit'*/    ,'{"owner":"genievot"}','');
     PERFORM ASSERT_METADATA_VALUES(16 /*'jte1023'*/      ,'{"profile":{"name":"Jeremy","about":"               ","cover_image":"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg","profile_image":"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg","website":" ","location":"NC, USA","pinned":"","version":2,"portfolio":"enabled","trail":true,"collections":"enabled"}}', '{"profile":{"name":"Jeremy","about":"               ","cover_image":"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg","profile_image":"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg","website":" ","location":"NC, USA","pinned":"","version":2,"portfolio":"enabled","trail":true,"collections":"enabled"}}');
-    PERFORM ASSERT_METADATA_VALUES(17 /*'adedayoolumide'*/,'{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
+    PERFORM ASSERT_METADATA_VALUES(17 /*'adedayoolumide'*/,'{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','{"beneficiaries":[{"name":"threespeak","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}');
     PERFORM ASSERT_METADATA_VALUES(18 /*'eos-polska'*/   ,'{"beneficiaries":[{"name":"fractalnode","weight":300,"label":"referrer"},{"name":"ocdb","weight":100,"label":"creator"},{"name":"hiveonboard","weight":100,"label":"provider"}]}','');
 END;
 $BODY$
@@ -659,7 +654,7 @@ STABLE AS
 $BODY$
 BEGIN ASSERT 1 = (
         SELECT COUNT(*)
-        FROM hive.context_metadata
+        FROM hafd.context_metadata
         WHERE _account_id = account_id AND
               _json_metadata = json_metadata AND
               _posting_json_metadata = posting_json_metadata
@@ -668,19 +663,3 @@ BEGIN ASSERT 1 = (
 END
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.get_metadata_operations_pattern()
-RETURNS SETOF TEXT
-LANGUAGE plpgsql
-IMMUTABLE
-AS
-$$
-BEGIN
-RETURN QUERY
-            SELECT 'hive::protocol::account_create_operation'
-  UNION ALL SELECT 'hive::protocol::account_create_with_delegation_operation'
-  UNION ALL SELECT 'hive::protocol::account_update2_operation'
-  UNION ALL SELECT 'hive::protocol::account_update_operation'
-  UNION ALL SELECT 'hive::protocol::create_claimed_account_operation'
-;
-END
-$$;

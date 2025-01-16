@@ -66,35 +66,34 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT NOT ( SELECT is_any_index_for_table( 'hive.blocks'::regclass::oid ) ) , 'Index hive.blocks exists';
-    ASSERT NOT ( SELECT is_any_index_for_table( 'hive.transactions'::regclass::oid ) ) , 'Index hive.transactions exists';
-    ASSERT NOT ( SELECT is_any_index_for_table( 'hive.operations'::regclass::oid ) ) , 'Index hive.operations exists';
-    ASSERT NOT ( SELECT is_any_index_for_table( 'hive.transactions_multisig'::regclass::oid ) ) , 'Index hive.transactions_multisig exists';
-    -- hive.irreversible_data pk must exist because ON CONFLICT is used during restarting HAF node
-    ASSERT ( SELECT is_any_index_for_table( 'hive.irreversible_data'::regclass::oid ) ) , 'Index hive.irreversible_data does not exists';
-    ASSERT NOT ( SELECT is_any_index_for_table( 'hive.accounts'::regclass::oid ) ) , 'Index hive.accounts exists';
-    ASSERT NOT ( SELECT is_any_index_for_table( 'hive.account_operations'::regclass::oid ) ) , 'Index hive.account_operations exists';
-    ASSERT NOT ( SELECT is_any_index_for_table( 'hive.applied_hardforks'::regclass::oid ) ) , 'Index hive.applied_hardforks exists';
+    ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.blocks'::regclass::oid ) ) , 'Index hafd.blocks exists';
+    ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.transactions'::regclass::oid ) ) , 'Index hafd.transactions exists';
+    ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.operations'::regclass::oid ) ) , 'Index hafd.operations exists';
+    ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.transactions_multisig'::regclass::oid ) ) , 'Index hafd.transactions_multisig exists';
+    -- hafd.irreversible_data pk must exist because ON CONFLICT is used during restarting HAF node
+    ASSERT ( SELECT is_any_index_for_table( 'hafd.irreversible_data'::regclass::oid ) ) , 'Index hafd.irreversible_data does not exists';
+    ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.accounts'::regclass::oid ) ) , 'Index hafd.accounts exists';
+    ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.account_operations'::regclass::oid ) ) , 'Index hafd.account_operations exists';
+    ASSERT NOT ( SELECT is_any_index_for_table( 'hafd.applied_hardforks'::regclass::oid ) ) , 'Index hafd.applied_hardforks exists';
 
 
-    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'blocks') ), 'FK for hive.blocks exists';
-    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions') ), 'FK for hive.transactions exists';
-    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'operations') ), 'FK for hive.operations exists';
-    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hive.transactions_multisig exists';
-    -- we need to disable hive.irreversible_data fk because its dependency with hive.blocks
-    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'irreversible_data') ), 'FK for hive.irreversible_data exists';
-    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'accounts') ), 'FK for hive.accounts exists';
-    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'account_operations') ), 'FK for hive.account_operations exists';
-    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hive.applied_hardforks exists';
+    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'blocks') ), 'FK for hafd.blocks exists';
+    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions') ), 'FK for hafd.transactions exists';
+    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hafd.transactions_multisig exists';
+    -- we need to disable hafd.irreversible_data fk because its dependency with hafd.blocks
+    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'irreversible_data') ), 'FK for hafd.irreversible_data exists';
+    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'accounts') ), 'FK for hafd.accounts exists';
+    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'account_operations') ), 'FK for hafd.account_operations exists';
+    ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hafd.applied_hardforks exists';
 
 
     ASSERT EXISTS(
-        SELECT * FROM hive.indexes_constraints WHERE table_name='hive.operations' AND command LIKE 'CREATE INDEX hive_operations_block_num_id_idx ON hive.operations USING btree (block_num, id)'
-    ), 'No hive.operation index (block_num, id)';
+        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.operations' AND command LIKE 'CREATE INDEX hive_operations_block_num_id_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id), id)'
+    ), 'No hafd.operation index (block_num, id)';
 
     ASSERT EXISTS(
-        SELECT * FROM hive.indexes_constraints WHERE table_name='hive.account_operations' AND command LIKE 'ALTER TABLE hive.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE (account_id, account_op_seq_no)'
-    ), 'No hive.account_operations unique (account_id, account_op_seq_no)';
+        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.account_operations' AND command LIKE 'ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE (account_id, account_op_seq_no)'
+    ), 'No hafd.account_operations unique (account_id, account_op_seq_no)';
 
 END;
 $BODY$

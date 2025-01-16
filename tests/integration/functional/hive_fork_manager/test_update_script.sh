@@ -6,8 +6,8 @@ set -eu -o pipefail
 
 SCRIPTPATH="$(cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P)"
 SCRIPTS_DIR="$SCRIPTPATH/../../../../scripts"
-UPDATE_DB_NAME=update-db-test
-POSTGRES_VERSION=14
+UPDATE_DB_NAME=update_db_test
+POSTGRES_VERSION=17
 
 export PGUSER="haf_admin"
 export PGHOST="/var/run/postgresql"
@@ -33,9 +33,11 @@ prepare_sql_script() {
 
 prepare_database() {
     "$SCRIPTS_DIR/setup_db.sh" --haf-db-name="$UPDATE_DB_NAME" "$@"
+    exec_sql "SELECT hive.initialize_extension_data();"
 }
 
 update_database() {
+    exec_sql "UPDATE pg_extension SET extversion = '1.0' WHERE extname = 'hive_fork_manager';"
     sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
 }
 
@@ -125,11 +127,11 @@ printf "\nTEST: Trying to upgrade from current database. It should pass, as noth
 prepare_database
 update_database
 
-printf "\nTEST: Creating table referencing hive.operation. This is allowed and should succeed.\n"
+printf "\nTEST: Creating table referencing hafd.operation. This is allowed and should succeed.\n"
 prepare_database
-exec_sql "create table public.good_table(id int, op hive.operation)"
+exec_sql "create table public.good_table(id int, op hafd.operation)"
 update_database
-check_relation_structure public.good_table "id|integer|||\nop|hive.operation|||"
+check_relation_structure public.good_table "id|integer|||\nop|hafd.operation|||"
 
 printf "\nTEST: Creating table referencing disallowed HAF type. Upgrade should fail.\n"
 prepare_database
@@ -145,29 +147,29 @@ check_relation_structure public.bad_table "id|integer|||\naccount|hive.account_n
 
 printf "\nTEST: Creating table referencing allowed HAF domain. Upgrade should pass.\n"
 prepare_database
-exec_sql "create table public.good_table(id int, amount hive.hive_amount)"
+exec_sql "create table public.good_table(id int, amount hafd.hive_amount)"
 update_database
-check_relation_structure public.good_table "id|integer|||\namount|hive.hive_amount|||"
+check_relation_structure public.good_table "id|integer|||\namount|hafd.hive_amount|||"
 
 printf "\nTEST: Creating view referencing allowed types. This should pass\n"
 prepare_database
-exec_sql "create view public.good_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
+exec_sql "create view public.good_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hafd.blocks"
 exec_sql "comment on view public.good_view is 'foo'"
 update_database
-check_relation_structure public.good_view "num|integer|||\ntotal_vesting_fund_hive|hive.hive_amount|||\ntotal_vesting_shares|hive.vest_amount|||\ncurrent_hbd_supply|hive.hbd_amount|||\nhbd_interest_rate|hive.interest_rate|||"
+check_relation_structure public.good_view "num|integer|||\ntotal_vesting_fund_hive|hafd.hive_amount|||\ntotal_vesting_shares|hafd.vest_amount|||\ncurrent_hbd_supply|hafd.hbd_amount|||\nhbd_interest_rate|hafd.interest_rate|||"
 check_relation_comment public.good_view foo
 
 printf "\nTEST: Creating view referencing disallowed type. This should still pass and the view should be recreated.\n"
 prepare_sql_script 0000000000000000000000000000000000000000
 prepare_database --version="0000000000000000000000000000000000000000"
-exec_sql "create view public.bad_type_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_type_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on view public.bad_type_view is 'foo'"
-exec_sql "create view public.bad_domain_view as select id,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_domain_view as select id,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on view public.bad_domain_view is 'bar'"
-exec_sql "create view public.bad_mixed_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_mixed_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on view public.bad_mixed_view is 'baz'"
 update_database
-check_table_is_empty hive.deps_saved_ddl
+check_table_is_empty hafd.deps_saved_ddl
 check_relation_structure public.bad_type_view "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
 check_relation_structure public.bad_domain_view "id|bigint|||\nmemo|hive.memo|||"
 check_relation_structure public.bad_mixed_view "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
@@ -177,14 +179,14 @@ check_relation_comment public.bad_mixed_view baz
 
 printf "\nTEST: Creating view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
 prepare_database
-exec_sql "create view public.bad_type_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_type_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on view public.bad_type_view_2 is 'foo'"
-exec_sql "create view public.bad_domain_view_2 as select id,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_domain_view_2 as select id,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on view public.bad_domain_view_2 is 'bar'"
-exec_sql "create view public.bad_mixed_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create view public.bad_mixed_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on view public.bad_mixed_view_2 is 'baz'"
 update_database
-check_table_is_empty hive.deps_saved_ddl
+check_table_is_empty hafd.deps_saved_ddl
 check_relation_structure public.bad_type_view_2 "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
 check_relation_structure public.bad_domain_view_2 "id|bigint|||\nmemo|hive.memo|||"
 check_relation_structure public.bad_mixed_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
@@ -194,23 +196,23 @@ check_relation_comment public.bad_mixed_view_2 baz
 
 printf "\nTEST: Creating materialized view referencing allowed types. This should pass\n"
 prepare_database
-exec_sql "create materialized view public.good_materialized_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hive.blocks"
+exec_sql "create materialized view public.good_materialized_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hafd.blocks"
 exec_sql "comment on materialized view public.good_materialized_view is 'foo'"
 update_database
-check_relation_structure public.good_materialized_view "num|integer|||\ntotal_vesting_fund_hive|hive.hive_amount|||\ntotal_vesting_shares|hive.vest_amount|||\ncurrent_hbd_supply|hive.hbd_amount|||\nhbd_interest_rate|hive.interest_rate|||"
+check_relation_structure public.good_materialized_view "num|integer|||\ntotal_vesting_fund_hive|hafd.hive_amount|||\ntotal_vesting_shares|hafd.vest_amount|||\ncurrent_hbd_supply|hafd.hbd_amount|||\nhbd_interest_rate|hafd.interest_rate|||"
 check_relation_comment public.good_materialized_view foo
 
 printf "\nTEST: Creating materialized view referencing disallowed type. This should still pass and the view should be recreated.\n"
 prepare_sql_script 0000000000000000000000000000000000000000
 prepare_database --version="0000000000000000000000000000000000000000"
-exec_sql "create materialized view public.bad_type_materialized_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_type_materialized_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on materialized view public.bad_type_materialized_view is 'foo'"
-exec_sql "create materialized view public.bad_domain_materialized_view as select id,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_domain_materialized_view as select id,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on materialized view public.bad_domain_materialized_view is 'bar'"
-exec_sql "create materialized view public.bad_mixed_materialized_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_mixed_materialized_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on materialized view public.bad_mixed_materialized_view is 'baz'"
 update_database
-check_table_is_empty hive.deps_saved_ddl
+check_table_is_empty hafd.deps_saved_ddl
 check_relation_structure public.bad_type_materialized_view "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
 check_relation_structure public.bad_domain_materialized_view "id|bigint|||\nmemo|hive.memo|||"
 check_relation_structure public.bad_mixed_materialized_view "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
@@ -220,14 +222,14 @@ check_relation_comment public.bad_mixed_materialized_view baz
 
 printf "\nTEST: Creating materialized view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
 prepare_database
-exec_sql "create materialized view public.bad_type_materialized_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_type_materialized_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on materialized view public.bad_type_materialized_view_2 is 'foo'"
-exec_sql "create materialized view public.bad_domain_materialized_view_2 as select id,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_domain_materialized_view_2 as select id,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on materialized view public.bad_domain_materialized_view_2 is 'bar'"
-exec_sql "create materialized view public.bad_mixed_materialized_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hive.operations where op_type_id=1"
+exec_sql "create materialized view public.bad_mixed_materialized_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on materialized view public.bad_mixed_materialized_view_2 is 'baz'"
 update_database
-check_table_is_empty hive.deps_saved_ddl
+check_table_is_empty hafd.deps_saved_ddl
 check_relation_structure public.bad_type_materialized_view_2 "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
 check_relation_structure public.bad_domain_materialized_view_2 "id|bigint|||\nmemo|hive.memo|||"
 check_relation_structure public.bad_mixed_materialized_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
@@ -235,9 +237,52 @@ check_relation_comment public.bad_type_materialized_view_2 foo
 check_relation_comment public.bad_domain_materialized_view_2 bar
 check_relation_comment public.bad_mixed_materialized_view_2 baz
 
-printf "\nTEST: Check that function defined in hive namespace that doesn't reference current commit hash fails the upgrade.\n"
+printf "\nTEST: Check that function defined in hafd namespace that doesn't reference current commit hash fails the upgrade.\n"
 prepare_database
-exec_sql "CREATE FUNCTION hive.bad_function() RETURNS VOID VOLATILE AS '/lib/postgresql/${POSTGRES_VERSION}/lib/tablefunc.so', 'crosstab' language c;"
+exec_sql "CREATE FUNCTION hafd.bad_function() RETURNS VOID VOLATILE AS '/lib/postgresql/${POSTGRES_VERSION}/lib/tablefunc.so', 'crosstab' language c;"
 failswith 3 update_database
+
+printf "\nTEST: Change keyauth state provider, but not use it. This should pass\n"
+prepare_database
+exec_sql "CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
+             RETURNS TEXT[]
+             LANGUAGE plpgsql
+             VOLATILE
+             AS
+             \$\$
+             BEGIN
+                 RETURN '';
+             END;
+             \$\$
+             ;"
+update_database
+
+printf "\nTEST: Change keyauth state provider, and not use it. This should fail\n"
+prepare_database
+exec_sql "CREATE SCHEMA workaround;
+          SELECT hive.app_create_context('workaround', 'workaround');
+          SELECT hive.app_state_provider_import( 'KEYAUTH', 'workaround' );
+          "
+exec_sql "CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
+             RETURNS TEXT[]
+             LANGUAGE plpgsql
+             VOLATILE
+             AS
+             \$\$
+             BEGIN
+                 RETURN '';
+             END;
+             \$\$
+             ;"
+failswith 1 update_database
+
+
+printf "\nTEST: Use state provider. This should pass\n"
+prepare_database
+exec_sql "CREATE SCHEMA workaround;
+          SELECT hive.app_create_context('workaround', 'workaround');
+          SELECT hive.app_state_provider_import( 'KEYAUTH', 'workaround' );
+          "
+update_database
 
 echo "Succeeded"

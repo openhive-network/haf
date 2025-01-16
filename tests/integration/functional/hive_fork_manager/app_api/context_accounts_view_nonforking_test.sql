@@ -4,13 +4,14 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context', FALSE );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( 'context', _schema => 'a', _is_forking => FALSE );
 
-    INSERT INTO hive.fork( id, block_num, time_of_fork)
+    INSERT INTO hafd.fork( id, block_num, time_of_fork)
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
            ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 
-    INSERT INTO hive.blocks
+    INSERT INTO hafd.blocks
     VALUES
           ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
         , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -19,7 +20,7 @@ BEGIN
         , ( 5, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:25-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.blocks_reversible
+    INSERT INTO hafd.blocks_reversible
     VALUES
         ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
         , ( 5, '\xBADD5A', '\xCAFE5A', '2016-06-22 19:10:55-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
@@ -35,7 +36,7 @@ BEGIN
         , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 100, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
         ;
 
-    INSERT INTO hive.accounts
+    INSERT INTO hafd.accounts
     VALUES
            ( 100, 'alice1', 1 )
          , ( 200, 'alice2', 2 )
@@ -43,7 +44,7 @@ BEGIN
          , ( 400, 'alice4', 4 )
     ;
 
-    INSERT INTO hive.accounts_reversible
+    INSERT INTO hafd.accounts_reversible
     VALUES
            ( 400, 'alice41', 4, 1 )
          , ( 500, 'alice51', 5, 1 )
@@ -60,7 +61,7 @@ BEGIN
          , ( 1100, 'alice103', 10, 3 )
     ;
 
-    UPDATE hive.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8;
+    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8;
 END;
 $BODY$
 ;
@@ -70,10 +71,10 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_accounts_view' ), 'No context accounts view';
+    ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='accounts_view' ), 'No context accounts view';
 
     ASSERT NOT EXISTS (
-        SELECT * FROM hive.context_accounts_view
+        SELECT * FROM a.accounts_view
         EXCEPT SELECT * FROM ( VALUES
                    ( 100, 'alice1' )
                  , ( 200, 'alice2')
@@ -82,7 +83,7 @@ BEGIN
                  ) as pattern
     ) , 'Unexpected rows in the view';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.context_accounts_view ) = 4, 'Not all rows are visible';
+    ASSERT ( SELECT COUNT(*) FROM a.accounts_view ) = 4, 'Not all rows are visible';
 
 END
 $BODY$

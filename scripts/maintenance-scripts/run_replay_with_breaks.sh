@@ -4,7 +4,7 @@
 # works correctly when during replay the hived is broken with SIG_INT
 # In the past sometimes HAF could not restart after break because of irreversible data inconsistency
 # test scenario:
-# 1. HAF is replayed to 100 of blocks and stops, thus to be sure that hive.blocks has some content
+# 1. HAF is replayed to 100 of blocks and stops, thus to be sure that hafd.blocks has some content
 # 2. HAF is started in the background to continue replay with limit 3m but now with huge psql-live-sync-threshold
 #   ad is restarted in a loop after each 3s
 # 4. HAF app is stopped after syncing 3m of blocks, test is finished
@@ -29,8 +29,8 @@ test_start
 export BLOCK_LOG_SOURCE_DIR_5M="/blockchain/block_log_5m"
 export PATTERNS_PATH="${REPO_DIR}/tests/integration/replay/patterns/no_filter"
 export DATADIR="${REPO_DIR}/datadir"
-export REPLAY="--replay-blockchain --stop-replay-at-block $NUMBER_OF_BLOCKS_TO_FIRST_REPLAY --exit-after-replay"
-export REPLAY_CONTINUATION="--replay-blockchain --stop-replay-at-block $LAST_BLOCK_TO_SYNC"
+export REPLAY="--replay-blockchain --stop-at-block $NUMBER_OF_BLOCKS_TO_FIRST_REPLAY --exit-before-sync"
+export REPLAY_CONTINUATION="--replay-blockchain --stop-at-block $LAST_BLOCK_TO_SYNC"
 
 if ! test -e "${BLOCK_LOG_SOURCE_DIR_5M}/block_log"
 then

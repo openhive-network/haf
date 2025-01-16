@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 SQL_TABLE_COUNT: Final[str] = """
 SELECT COUNT(*)
-FROM hive.{table};
+FROM hafd.{table};
 """
 
 class Test:
@@ -58,7 +58,7 @@ class Test:
 
         ]
     )
-    def test_dump_load_instance_scripts(self, prepared_networks_and_database_1, database, first_run : int, dump_exit_before_sync : int, dump_stop_replay_at_block : int, load_exit_before_sync : int, load_stop_replay_at_block : int, after_dump : int, after_load : int):
+    def test_dump_load_instance_scripts(self, prepared_networks_and_database_1, database, first_run : int, dump_exit_before_sync : bool, dump_stop_replay_at_block : int, load_exit_before_sync : bool, load_stop_replay_at_block : int, after_dump : int, after_load : int):
         # GIVEN
         self.run_node_with_db(prepared_networks_and_database_1, database, first_run)
         
@@ -96,7 +96,7 @@ class Test:
         self.dump_instance_script=scripts_path/'dump_instance.sh'
         self.load_instance_script=scripts_path/'load_instance.sh'
 
-        node.run(replay_from=create_block_log_directory_name("block_log") / "block_log", stop_at_block=stop_at_block, exit_before_synchronization=True)
+        node.run(replay_from=create_block_log_directory_name("block_log"), stop_at_block=stop_at_block, exit_before_synchronization=True)
         session.close()
 
 
@@ -140,12 +140,12 @@ class Test:
         session.close()
 
     @staticmethod
-    def generate_additional_command_line(dump_exit_before_sync : bool, dump_stop_replay_at_block : bool) -> str:
+    def generate_additional_command_line(dump_exit_before_sync : bool, dump_stop_replay_at_block : int) -> str:
         additional_command_line = ''
         if dump_exit_before_sync:
             additional_command_line+=' --exit-before-sync'
         if dump_stop_replay_at_block:
-            additional_command_line+=f' --stop-replay-at-block={dump_stop_replay_at_block}'
+            additional_command_line+=f' --stop-at-block={dump_stop_replay_at_block}'
         return additional_command_line
 
 def shell(command: str) -> None:

@@ -10,8 +10,9 @@ BEGIN
         name TEXT
         );
 
-    PERFORM hive.context_create( 'context' );
-    CREATE TABLE src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT, values FLOAT[], data custom_type, name2 VARCHAR, num NUMERIC(3,2) ) INHERITS( hive.context );
+    CREATE SCHEMA A;
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT, values FLOAT[], data custom_type, name2 VARCHAR, num NUMERIC(3,2) ) INHERITS( a.context );
 
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO src_table ( smth, name, values, data, name2, num )
@@ -31,7 +32,7 @@ DECLARE
   EndTime timestamptz;
   Delta double precision;
 BEGIN
-    TRUNCATE hive.shadow_public_src_table; --to do not revert inserts
+    TRUNCATE hafd.shadow_public_src_table; --to do not revert inserts
     StartTime := clock_timestamp();
     UPDATE src_table SET name='changed';
     EndTime := clock_timestamp();

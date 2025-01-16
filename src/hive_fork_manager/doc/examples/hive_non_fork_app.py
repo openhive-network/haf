@@ -3,27 +3,27 @@
 import sys
 import sqlalchemy
 
-APPLICATION_CONTEXT = "trx_histogram"
+APPLICATION_CONTEXT = "trx_histogram_ctx"
 SQL_CREATE_HISTOGRAM_TABLE = """
-    CREATE TABLE IF NOT EXISTS public.trx_histogram(
+    CREATE TABLE IF NOT EXISTS applications.trx_histogram(
           day DATE
         , trx INT
         , CONSTRAINT pk_trx_histogram PRIMARY KEY( day ) )
     """
 SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION = """
-    CREATE OR REPLACE FUNCTION public.update_histogram( _first_block INT, _last_block INT )
+    CREATE OR REPLACE FUNCTION applications.update_histogram( _first_block INT, _last_block INT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
     AS
      $function$
      BEGIN
-        INSERT INTO public.trx_histogram as th( day, trx )
+        INSERT INTO applications.trx_histogram as th( day, trx )
         SELECT
               DATE(hb.created_at) as date
             , COUNT(1) as trx
-        FROM hive.trx_histogram_blocks_view hb
-        JOIN hive.trx_histogram_transactions_view ht ON ht.block_num = hb.num
+        FROM applications.blocks_view hb
+        JOIN applications.transactions_view ht ON ht.block_num = hb.num
         WHERE hb.num >= _first_block AND hb.num <= _last_block
         GROUP BY DATE(hb.created_at)
         ON CONFLICT ON CONSTRAINT pk_trx_histogram DO UPDATE
@@ -43,10 +43,12 @@ def create_db_engine(db_name, pg_port):
                 echo=False)
 
 def prepare_application_data( db_connection ):
+        db_connection.execute( "CREATE SCHEMA IF NOT EXISTS applications" )
         # create a new context only if it not already exists
         exist = db_connection.execute( "SELECT hive.app_context_exists( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone();
         if exist[ 0 ] == False:
-            db_connection.execute( "SELECT hive.app_create_context( '{}', FALSE )".format( APPLICATION_CONTEXT ) )
+            db_connection.execute( "SELECT hive.app_create_context( '{}', _schema => 'applications', _is_forking => FALSE )".format( APPLICATION_CONTEXT ) )
+
 
         # create and register a table
         db_connection.execute( SQL_CREATE_HISTOGRAM_TABLE )
@@ -77,7 +79,7 @@ def main_loop( db_connection ):
                 db_connection.execute( "SELECT hive.app_context_detach( '{}' )".format( APPLICATION_CONTEXT ) )
 
                 # update massivly the application's table - one commit transaction for whole massive edition
-                db_connection.execute( "SELECT public.update_histogram( {}, {} )".format( first_block, last_block ) )
+                db_connection.execute( "SELECT applications.update_histogram( {}, {} )".format( first_block, last_block ) )
 
                 # attach context and moves it to last synced block
                 db_connection.execute( "SELECT hive.app_set_current_block_num( '{}', {} )".format( APPLICATION_CONTEXT, last_block ) )
@@ -85,7 +87,7 @@ def main_loop( db_connection ):
                 continue
 
             # process the first block in range - one commit after each block
-            db_connection.execute( "SELECT public.update_histogram( {}, {} )".format( first_block, last_block ) )
+            db_connection.execute( "SELECT applications.update_histogram( {}, {} )".format( first_block, last_block ) )
 
 def start_application(db_name, pg_port):
     engine = create_db_engine(db_name, pg_port)

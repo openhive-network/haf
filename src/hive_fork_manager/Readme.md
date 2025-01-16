@@ -21,7 +21,14 @@ The required ordering of the sql scripts is included in the cmake file [src/hive
 Execute each script one-by-one with `psql` as in this example: `psql -d my_db_name -a -f  context_rewind/data_schema.sql`
 
 ## Architecture
-All elements of the fork manager are placed in a schema called 'hive'.
+All elements of the fork manager are organized into two schemas: **`hive`** and **`hafd`**.
+- **Schema `hafd`** contains data types and data collected by the Hive Application Framework (HAF). These objects are critical to the system and **cannot be modified or dropped** during the HAF update process. This is because there is no efficient or safe method to alter the data that has already been collected in the tables.
+- **Schema `hive`**, on the other hand, contains types and run-time code definitions, such as functions, procedures, and views. These objects **can be freely modified or removed** during updates, as they are not tied to persistent data but are responsible for executing run-time logic.
+- **Schema `hive_update`**, contains only functions which are used during updating HAF.
+
+As part of the update operation, **the `hive` schema and all its objects are dropped at the beginning** of the update process to ensure a clean environment for the new definitions.
+
+ 
 
 The fork manager is written using an "events source" architecture style. This means that during live sync, hived only schedules new events (by writing block data to the database), and then HAF apps process them at their own pace (by using fork manager API queries to get alerted whenever hived has modified the block data).
 
@@ -32,7 +39,7 @@ The fork manager enables multiple Hive apps to use a single block database and p
 Hive block data is stored in two separated, but similar tables: irreversible and reversible blocks. Whenever a block becomes irreversible, hived uses the hive_fork_manager api to signal that the associated data should be moved from the reversible tables to the irreversible tables.
 
 A HAF app groups its tables into a named "context". A context name can only be composed of alphanumerical characters and underscores. An app's context holds information about its processed events, blocks, and the fork which is now being processed by the app. These pieces of information
-are enough to automatically create views which combine irreversible and reversible block data seamlessly for queries by the app. The auto-constructed view names use the following template: 'hive.{context_name}_{blocks|transactions|multi_signatures|operations}_view'.
+are enough to automatically create views which combine irreversible and reversible block data seamlessly for queries by the app. The auto-constructed view names use the following template: '{context_schema}.{blocks|transactions|multi_signatures|operations}_view'.
 
 ### Overview of the fork manager and its interactions with hived and HAF apps
 ![alt text](./doc/evq_c3.png )
@@ -42,16 +49,45 @@ are enough to automatically create views which combine irreversible and reversib
 
 
 ### Requirements for an HAF app algorithm using the fork manager API
-![alt text](./doc/evq_app_process_block.png)
-
 Only roles ( users ) which inherits from 'hive_applications_group' have access to 'The App API', and only these roles allow apps to work with 'hive_fork_manager'
 
 Any HAF app must first create a context, then create its tables which inherit from `hive.<context_name>`. The context is owned and can be accessed only by the role which created it.
 
+#### Recommended synchronization loop algorithm for applications
+It turned out that most applications (if not all) have synchronization divided into stages relative
+to the distance between the Hive head block and the application's last synchronized blocks.
+Usually, at different stages, some indexes are dropped or created, which impacts synchronization performance.
+Based on this observation, a simple algorithm for block synchronization is proposed.
+In this algorithm, the context defines stages with a name, distance to the head block when they 
+will be enabled, and the number of blocks to process in one turn.
+There is no need to have knowledge about the fork manager's implementation details to correctly 
+determine the range of blocks to synchronize, commit, and stop the application.
+
+![alt text](./doc/evq_new_app_process_block.png)
+
+1. The author of the application needs to divide synchronization into stages. Stages are defined here: [src/application_loop/stages.sql]
+   There is a special stage LIVE, which is always chosen when application is working near to head block or on reversible blocks.
+   There is also another special stage 'wait_for_haf' which is automatically set on an application when it waits for HAF entering to live blocks synchronization.
+   In 'wait_for_haf' stage applications cannot process blocks because they won't get ranges of blocks for processing.
+2. During the creation of a context, an array of stages needs to be passed to 'hive.app_create_context'. The array must contain LIVE stage, which is returned by 'hive.live_stage' function.
+3. The procedure 'hive.app_next_iteration' will return the range of blocks to synchronize (as the out parameter _blocks_range) or NULL if there are no new blocks.
+4. The name of the current stage of a context can be obtained with 'hive.get_current_stage_name'.
+5. At the beginning of 'hive.app_next_iteration', a transaction commit is issued.
+6. If the application needs to be stopped, then stop processing immediately after calling 'hive.app_next_iteration'.
+
+#### Old still supported, most flexible but complicated algorithm
+For the sake of compliance with applications that used the old fork manager version, the old method of
+block synchronization is still supported. It is a complicated algorithm in which the application 
+author needs to understand concepts such as massive sync, details of context attachments, the current
+block state, and when to issue a commit. While this method has proven to be prone to bugs,
+it offers more flexibility to applications without requiring predefined stages.
+
+![alt text](./doc/evq_app_process_block.png)
+
 A HAF app calls `hive.app_next_block` to get the next block number to process. If NULL was returned, the app must immediatly call `hive.app_next_block` again. Note: the app will automatically be blocked when it calls `hive.app_next_block` if there are no blocks to process. 
 
 When a range of block numbers is returned by app_next_block, the app may edit its own tables and use the appropriate snapshot of the blocks
-data by querying the 'hive.{context_name}_{ blocks | transactions | operations | transactions_multisig }' views. These view present a data snapshot for the first block in the returned block range. If the number of blocks in the returned range is large, then it may be more efficient for the app to do a "massive sync" instead of syncing block-by-block.
+data by querying the '{context_schema}.{ blocks | transactions | operations | transactions_multisig }' views. These view present a data snapshot for the first block in the returned block range. If the number of blocks in the returned range is large, then it may be more efficient for the app to do a "massive sync" instead of syncing block-by-block.
 
 To perform a massive sync, an app should detach the context, execute its sync algorithm using the block data, then reattach the context. This will eliminate the performance overhead associated with the triggers installed by the fork manager that monitor changes to the app's tables.
 
@@ -158,6 +194,7 @@ Instead such apps can just read the data for the current HEAD BLOCK using the vi
 * hive.accounts_view
 * hive.blocks_view
 * hive.transactions_view
+* hive.operations_view_extended
 * hive.operations_view
 * hive.transactions_multisig_view
 * hive.applied_hardforks_view
@@ -170,6 +207,7 @@ Here are views which return only irreversible data:
 * hive.irreversible_blocks_view
 * hive.irreversible_transactions_view
 * hive.irreversible_operations_view
+* hive.irreversible_operations_view_extended
 * hive.irreversible_transactions_multisig_view
 * hive.irreversible_applied_hardforks_view
 
@@ -203,13 +241,13 @@ Each state provider is a SQL file placed in the `state_providers` folder and def
 * `hive.update_state_provider_<provider_name>( first_block, last_block, context )`
   The function updates all 'state providers' tables registered in the context.
 
-* `hive.drop_state_provider_<provider_name>( _context hive.context_name )`
+* `hive.drop_state_provider_<provider_name>( _context hafd.context_name )`
   The function drops all tables created by the state provider for a given context.
 
 ### How to add a new state provider
 The template for creating a new state provider is here: [state_providers/state_provider.template](state_providers/state_provider.template).
 You may copy the template, change the file extension to .sql,  add it to the CMakeLists.txt, and change '<provider_name>' in the new file to a new state provider name.
-After this, the enum `hive.state_providers` has to be extended with the new provider name.
+After this, the enum `hafd.state_providers` has to be extended with the new provider name.
 
 ### State providers and forks
 When the context is a non-forking one, then the state provider's tables are not registered to be rewound during a fork servicing. When the context
@@ -251,7 +289,7 @@ Each app should work on a snapshot of block information, which is a combination 
 
 Because apps may work at different speeds, the fork manager has to hold reversible blocks information for every block and fork not already processed by any of the apps. This requires an efficient data structure. Fortunately the solution is quite simple - it is enough to add
 a fork id to the block data inserted by hived to the irreversible blocks table. The fork manager manages forks ids - 
-information about each fork is stored in the hive.fork table. When 'hived' pushes a new block with a call to `hive.push_block`, the fork manager adds information about the current fork to a new reversible data row. Reversible data tables are presented in a generalised form in the example below:
+information about each fork is stored in the hafd.fork table. When 'hived' pushes a new block with a call to `hive.push_block`, the fork manager adds information about the current fork to a new reversible data row. Reversible data tables are presented in a generalised form in the example below:
 
 | block_num| fork id | data      |
 |----------|---------|-----------|
@@ -263,7 +301,7 @@ information about each fork is stored in the hive.fork table. When 'hived' pushe
 |    4     |    2    |  DATA_42  |
 |    4     |    3    |  DATA_43  |
 
-If an app is working on fork=2 and block_num=3 (this information is held by `hive.contexts` ), then its snapshot of data for the example above is:
+If an app is working on fork=2 and block_num=3 (this information is held by `hafd.contexts` ), then its snapshot of data for the example above is:
 
 | block_num| fork id | data      |
 |----------|---------|-----------|
@@ -278,7 +316,7 @@ SELECT
     , fork_id
     , data
 FROM data_reversible
-JOIN hive.contexts hc ON fork_id <= hc.fork_id AND block_num <= hc.current_block_num
+JOIN hafd.contexts hc ON fork_id <= hc.fork_id AND block_num <= hc.current_block_num
 WHERE hc.name = 'app_context'
 ORDER BY block_num DESC, fork_id DESC
 ```
@@ -289,7 +327,7 @@ The events queue is a table defined in [src/hive_fork_manager/events_queue.sql](
 
 |   event type     | block_num meaning                                           |
 |----------------- |-------------------------------------------------------------|
-| BACK_FROM_FORK   | fork id of corresponding entry in `hive.fork`               |
+| BACK_FROM_FORK   | fork id of corresponding entry in `hafd.fork`               |
 | NEW_BLOCK        | number of the new block                                     |
 | NEW_IRREVERSIBLE | number of the latest irreversible block                     |
 | MASSIVE_SYNC     | the highest number of blocks pushed massively by hived node |
@@ -314,6 +352,46 @@ When using HAF database, you may want to update already installed extension inst
 
 To use this script you have to rebuild the project and then run `hive_fork_manager_update_script_generator.sh`. If you did not build your PostgreSQL server and HAF database with recommended methods (setup scripts) you may need to use flags `--haf-admin-account=NAME` and `--haf-db-name=NAME` to change default values (haf_admin, haf_block_log).
 
+#### How the Update Works
+
+1. **Determine Update Feasibility**
+   The script first checks if the update is possible by creating a temporary database with the new version of the `hive_fork_manager`.
+   It computes the database hash using a "naked" database (only the core extension is installed, without any contexts or block data):
+    - Functions from the `update.sql` file are added to the new database. This file creates a temporary schema, `hive_update`, containing utility functions for the update process.
+    - Functions within the `hive_update` schema compute the database hash. The hash is based on:
+        - Column definitions of tables in the `hafd` schema (excluding tables created by state providers).
+        - The bodies of `start_providers` functions that are actively used in the database being updated.
+
+2. **Compute Database Hash for the Current Database**
+    - A similar procedure as above is used to compute the hash for the database being updated.
+    - The `hive_update` schema is injected into the existing database using the new version's sources, it means the same
+      hash algorith is used for old and new version.
+
+3. **Compare Database Hashes**
+    - The hash of the "naked" `hive_fork_manager` database is compared with the hash of the current database:
+        - If the hashes are **equal**, it indicates no structural differences exist between the old and new `hafd` schema or state providers, and the update is deemed possible.
+        - If the hashes **differ**, the update is impossible, and the procedure terminates.
+
+4. Generate update extension sql script
+5. Checks for any tables using types or domains from the `hive` schema:
+        - If such tables exist, the update is aborted because their columns would be removed when the `hive` schema is dropped.
+6. All views are saved to the `deps_saved_ddl` table. This prevents the loss of views containing elements from the `hive` schema, which would otherwise be cascade-deleted when the schema is dropped.
+7. The update process executes the command: `ALTER EXTENSION hive_fork_manager UPDATE`.
+    - The update script performs the following steps:
+        - The `hive` schema is dropped along with all its content. The `hafd` schema remains unmodified.
+        - A new version of the `hive` schema is created, containing only runtime code and excluding tables.
+8. Saved views are restored.
+9. Functions connected to the 'shared lib' are verified to ensure they use the correct version of the shared library.
+
+
+**Warning**: The update check ensures that the database schema structure allows for the update, but it **does not guarantee compatibility of the shared library (written in C++)** with the current table content.
+While most updates are compatible, changes in the shared library may introduce functionality that conflicts with the existing data.
+
+#### Using hive_fork_manager_update_script_generator.sh to upgrade existing HAF database
+When using HAF database, you may want to update already installed extension instead of dropping it and installing new database and filling it with data again. Using `hive_fork_manager_update_script_generator.sh` script located in `/build/extensions/hive_fork_manager`.
+
+To use this script you have to rebuild the project and then run `hive_fork_manager_update_script_generator.sh`. If you did not build your PostgreSQL server and HAF database with recommended methods (setup scripts) you may need to use flags `--haf-admin-account=NAME` and `--haf-db-name=NAME` to change default values (haf_admin, haf_block_log).
+
 ### CONTEXT REWIND
 Context_rewind is the part of the fork manager which is responsible for registering app tables and the saving/rewinding operation on the tables to handle fork switching.
 
@@ -329,7 +407,7 @@ Data from 'hive.<context_name>' is used by the fork manager to rewind operations
 
 Moreover a new table is created - a shadow table whose structure is a copy of the registered table + columns for operation registered tables. A shadow table is the place where triggers record the changes to the associated app table. A shadow table is created in the 'hive' schema and its name is created using the rule below:
 ```
-hive.shadow_<table_schema>_<table_name>
+hafd.shadow_<table_schema>_<table_name>
 ```
 It is possible to rewind all operations stored in shadow tables with `hive.context_back_from_fork`
 
@@ -350,10 +428,10 @@ When a table is edited, its shadow table is automatically adapted to the new str
 
 #### Reversible blocks
 Tables for reversible blocks are copies of irreveersible + columns for fork_id
-##### hive.blocks_reversible
-##### hive.transactions_reversible
-##### hive.transactions_multisig_reversible
-##### hive.operations_reversible
+##### hafd.blocks_reversible
+##### hafd.transactions_reversible
+##### hafd.transactions_multisig_reversible
+##### hafd.operations_reversible
 
 ### CONTEXT REWIND
 ![alt text](./doc/evq_context_rewind_db.png)
@@ -403,11 +481,14 @@ Reads the 'dirty' flag.
 #### APP API
 The functions which should be used by a HAF app
 
-##### hive.app_create_context( _name, _is_forking )
+##### hive.app_create_context( _name, _schema, _is_forking = TRUE, _is_attached = TRUE, _stages = NULL )
 Creates a new context. Context name can contain only characters from the set: `a-zA-Z0-9_`.
-Parameter '_is_forking' sets contexts as forking or non-forking.
+- '_schema' name of postgreSQL schema used by context to hold there its views
+- '_is_forking' sets contexts as forking or non-forking.
+- '_is_attached' if create attached or not attched context
+- '_stages' optional array of stages, required for `hive.app_next_iteration`
 
-##### hive.app_remove_context( _name hive.context_name )
+##### hive.app_remove_context( _name hafd.context_name )
 Remove the context and unregister all its tables.
 
 ##### hive.app_next_block( _context_name )
@@ -430,7 +511,7 @@ Detaches triggers attached to tables registered in a given context or contexts. 
 
 ##### hive.appproc_context_attach( context_name )
 ##### hive.appproc_context_attach( array_of_contexts )
-Stored procedures. Enables triggers attached to registered tables in a given context. The context `cuurent_block_num` cannot
+Stored procedures. Enables triggers attached to registered tables in a given context. The context `current_block_num` cannot
 be greater than the latest irreversible block. The context's views are recreated to return both reversible and irreversible data limited to the context's current block.
 
 
@@ -489,7 +570,7 @@ Sets given context as forking - means process also reversible data and rewind th
 Equivalent of 'hive.app_context_set_forking' for a group of contexts.
 
 #### hive.app_state_provider_import( state_provider, context )
-Imports state provider into contexts - the state provider tables are created and registered in `HIVE.STATE_PROVIDERS_REGISTERED` table.
+Imports state provider into contexts - the state provider tables are created and registered in `hafd.state_providers_registered` table.
 
 #### hive.app_state_providers_update( _first_block, _last_block, _context )
 All state provider registerd by the contexts are updated.
@@ -499,6 +580,19 @@ State provider become unregistered from contexts, and its tables are dropped.
 
 #### hive.app_state_provider_drop_all( context )
 All state providers become unregistered from contexts,and their tables are dropped.
+
+#### hive.get_current_stage_name( context )
+Function. Returns name  of a current context stage computed by `hive.app_next_iteration`
+
+#### hive.app_next_iteration( _array_of_contexts, [OUT] _blocks_range, _override_max_batch INTEGER = NULL )
+The procedure finds a possible range of blocks to process, decides in which stage the application will work,
+and attaches or detaches the context. It issues the pending transaction commit. It requires contexts 
+to have defined stages. When the returned _blocks_range is NULL, it means that there were 
+no blocks to process during the last call.
+
+It is possible to override the batch size of blocks to process by using the parameter '_override_max_batch'.
+With this parameter, the number of blocks to process in one turn will be less than or equal to the specified value.
+
 
 #### CONTEXT REWIND
 Context rewind functions shall not be used by hived and apps.
@@ -540,10 +634,10 @@ Disables triggers attached to a register table. It is useful for processing irre
 ##### hive.get_impacted_accounts( operation_body )
 Returns list of accounts ( their names ) impacted by the operation. 
 
-###### hive.calculate_schema_hash( schema_name )
-Calculates hash for group of tables, used by hive.create_database_hash.
-###### hive.create_database_hash( schema_name )
-Used in update procedure, creates database hash using table schema.
+###### hive_update.calculate_schema_hash()
+Calculates hash for group of tables in hafd schema, used by hive.create_database_hash.
+###### hive_update.create_database_hash()
+Used in update procedure, creates database hash.
 
 ## Known Problems
 1. FOREIGN KEY constraints must be DEFERRABLE, otherwise we cannot guarantee success rewinding changes - the process may temporarily violate tables constraints.

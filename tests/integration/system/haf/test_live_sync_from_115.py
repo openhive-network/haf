@@ -4,14 +4,14 @@ from sqlalchemy.dialects.postgresql import JSONB
 import test_tools as tt
 
 from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress, wait_for_irreversible_in_database, get_first_block_with_transaction
-from haf_local_tools.tables import AccountsView, Blocks, BlocksView, Transactions, Operations
+from haf_local_tools.tables import AccountsView, Blocks, BlocksView, Transactions, OperationsIrreversibleView
 
 
 START_TEST_BLOCK = 115
 
 
 def __is_irreversible_block_in_database(self, block_num: int) -> bool:
-    sql = "SELECT exists(SELECT 1 FROM hive.blocks WHERE num = :block_num);"
+    sql = "SELECT exists(SELECT 1 FROM hafd.blocks WHERE num = :block_num);"
     return self.query_one(sql, block_num=block_num)
 
 
@@ -79,7 +79,9 @@ def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
       session
       , range(transaction_block_num, transaction_block_num + nr_blocks))
 
-    ops = session.query(Operations).add_columns(cast(Operations.body_binary, JSONB).label('body'), Operations.block_num).filter(Operations.block_num == transaction_block_num).all()
+    ops = (session.query(OperationsIrreversibleView)
+           .add_columns(cast(OperationsIrreversibleView.body_binary, JSONB).label('body'), OperationsIrreversibleView.block_num)
+           .filter(OperationsIrreversibleView.block_num == transaction_block_num).all())
     types = [op.body['type'] for op in ops]
 
     assert 'transfer_operation' in types

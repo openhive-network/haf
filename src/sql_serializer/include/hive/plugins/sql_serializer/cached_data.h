@@ -28,7 +28,7 @@ namespace hive::plugins::sql_serializer {
 
     ~cached_data_t()
     {
-      ilog(
+      dlog(
         "blocks: ${b} trx: ${t} operations: ${o} total size: ${ts}...",
         ("b", blocks.size() )
         ("t", transactions.size() )

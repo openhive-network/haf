@@ -4,8 +4,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
+    CREATE SCHEMA A;
     -- simualte massive push by hived
-    INSERT INTO hive.blocks
+    INSERT INTO hafd.blocks
     VALUES
        ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
      , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -19,13 +20,13 @@ BEGIN
      , ( 10, '\xBADD11', '\xCAFE11', '2016-06-22 19:10:30-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
          , (6, 'alice', 1)
          , (7, 'bob', 1)
     ;
 
-    PERFORM hive.app_create_context( 'context' );
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
 END;
 $BODY$
 ;
@@ -53,12 +54,12 @@ $BODY$
 DECLARE
     __blocks hive.blocks_range;
 BEGIN
-    ASSERT EXISTS ( SELECT FROM hive.events_queue WHERE event = 'MASSIVE_SYNC' AND block_num = 10 ), 'No event added';
+    ASSERT EXISTS ( SELECT FROM hafd.events_queue WHERE event = 'MASSIVE_SYNC' AND block_num = 10 ), 'No event added';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue ) = 5 , 'Unexpected number of events'; -- 0, 3,6, 10
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue WHERE block_num = 3 ) = 1, 'No MASSIVE SYNC EVENT(3)';
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue WHERE block_num = 6 ) = 1, 'No MASSIVE SYNC EVENT(6)';
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue WHERE block_num = 10 ) = 1, 'No MASSIVE SYNC EVENT(10)';
+    ASSERT ( SELECT COUNT(*) FROM hafd.events_queue ) = 5 , 'Unexpected number of events'; -- 0, 3,6, 10
+    ASSERT ( SELECT COUNT(*) FROM hafd.events_queue WHERE block_num = 3 ) = 1, 'No MASSIVE SYNC EVENT(3)';
+    ASSERT ( SELECT COUNT(*) FROM hafd.events_queue WHERE block_num = 6 ) = 1, 'No MASSIVE SYNC EVENT(6)';
+    ASSERT ( SELECT COUNT(*) FROM hafd.events_queue WHERE block_num = 10 ) = 1, 'No MASSIVE SYNC EVENT(10)';
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks; -- MASSIVE_SYNC
     ASSERT __blocks.first_block = 2, 'Incorrect first block';

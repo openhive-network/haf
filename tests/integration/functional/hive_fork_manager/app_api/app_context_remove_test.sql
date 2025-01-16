@@ -4,9 +4,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context' );
-    CREATE SCHEMA a;
-    CREATE TABLE a.table1( id INT ) INHERITS( hive.context );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
+    CREATE TABLE a.table1( id INT ) INHERITS( a.context );
 END;
 $BODY$
 ;
@@ -26,13 +26,13 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT NOT EXISTS ( SELECT FROM hive.contexts WHERE name = 'context' ), 'The contexts is still in hive.contexts';
+    ASSERT NOT EXISTS ( SELECT FROM hafd.contexts WHERE name = 'context' ), 'The contexts is still in hafd.contexts';
     ASSERT NOT EXISTS ( SELECT FROM information_schema.columns WHERE table_name='table1' AND column_name='hive_rowid' ), 'hive.row_id column exists';
 
-    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'shadow_a_table1' ), 'shadow table exists';
-    ASSERT NOT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema='hive' AND table_name='shadow_a_table1' AND column_name='hive_block_num' AND data_type='integer' );
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hafd' AND table_name  = 'shadow_a_table1' ), 'shadow table exists';
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema='hafd' AND table_name='shadow_a_table1' AND column_name='hive_block_num' AND data_type='integer' );
 
-    ASSERT NOT EXISTS ( SELECT FROM hive.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' AND shadow_table_name='shadow_a_table1' ), 'entry about';
+    ASSERT NOT EXISTS ( SELECT FROM hafd.registered_tables WHERE origin_table_schema='a' AND origin_table_name='table1' AND shadow_table_name='shadow_a_table1' ), 'entry about';
 
     ASSERT NOT EXISTS ( SELECT FROM pg_trigger WHERE tgname='hive_insert_trigger_a_table1'), 'Insert trigger not dropped';
     ASSERT NOT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'hive_on_table_trigger_insert_a_table1'), 'Insert trigger function not dropped';
@@ -45,16 +45,16 @@ BEGIN
 
     ASSERT NOT EXISTS ( SELECT * FROM pg_proc WHERE proname = 'hive_on_table_trigger_truncate_a_table1'), 'Truncate trigger function not dropped';
 
-    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name  = 'context' ), 'Context base table exists';
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name  = 'context' ), 'Context base table exists';
 
-    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_context_data_view' ), 'context_data_view exists';
-    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_blocks_view' ), 'context blocks view exists';
-    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_transactions_view' ), 'context transactions view exists';
-    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_operations_view' ), 'context operations view exists';
-    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_transactions_multisig_view' ), 'context signatures view exists';
-    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_accounts_view' ), 'context accounts view exists';
-    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_account_operations_view' ), 'context account_operation view exists';
-    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='context_applied_hardforks_view' ), 'context applied_hardforks view exists';
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='context_data_view' ), 'context_data_view exists';
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='blocks_view' ), 'context blocks view exists';
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='transactions_view' ), 'context transactions view exists';
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='operations_view' ), 'context operations view exists';
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='transactions_multisig_view' ), 'context signatures view exists';
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='accounts_view' ), 'context accounts view exists';
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='account_operations_view' ), 'context account_operation view exists';
+    ASSERT NOT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='applied_hardforks_view' ), 'context applied_hardforks view exists';
 
 END;
 $BODY$

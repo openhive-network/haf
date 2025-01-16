@@ -4,8 +4,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_create( 'context' );
-    CREATE TABLE table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
+    CREATE SCHEMA A;
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
     PERFORM hive.context_next_block( 'context' ); -- block: 1
     INSERT INTO table1( id, smth ) VALUES( 123, 'blabla' );
     PERFORM hive.context_next_block( 'context' ); -- block: 2
@@ -34,10 +35,10 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM table1 WHERE id=321 ) = 1, 'Updated row was not reverted or reverted to wrong number';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table1 ) = 2, 'Unexpected number of rows in the shadow table';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table1 WHERE hive_block_num = 1 ) = 1, 'No expected row (0) in the shadow table';
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table1 WHERE hive_block_num = 2 ) = 1, 'No expected row (1) in the shadow table';
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name= 'context' ) = 2, 'Wrong current_block_num';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_public_table1 ) = 2, 'Unexpected number of rows in the shadow table';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_public_table1 WHERE hive_block_num = 1 ) = 1, 'No expected row (0) in the shadow table';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_public_table1 WHERE hive_block_num = 2 ) = 1, 'No expected row (1) in the shadow table';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name= 'context' ) = 2, 'Wrong current_block_num';
 END
 $BODY$
 ;

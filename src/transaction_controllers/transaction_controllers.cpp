@@ -34,8 +34,8 @@ private:
   public:
     explicit own_transaction(own_tx_controller* owner) : _owner(owner)
     {
-      FC_ASSERT(_owner->_opened_tx == nullptr);
-      _owner->_opened_tx = this;
+      FC_ASSERT(_owner->_own_tx == nullptr);
+      _owner->_own_tx = this;
 
       with_retry([]() -> void
         {
@@ -142,8 +142,8 @@ private:
     {
       if(_owner != nullptr)
       {
-        FC_ASSERT(_owner->_opened_tx == this);
-        _owner->_opened_tx = nullptr;
+        FC_ASSERT(_owner->_own_tx == this);
+        _owner->_own_tx = nullptr;
         _owner = nullptr;
       }
     }
@@ -171,7 +171,7 @@ private:
   bool                  _sync_commits;
 
   std::unique_ptr<pqxx::connection> _opened_connection;
-  own_transaction* _opened_tx = nullptr;
+  own_transaction *_own_tx = nullptr;
 
 public:
 
@@ -226,8 +226,8 @@ void own_tx_controller::disconnect()
 {
   if(_opened_connection)
   {
-    if(_opened_tx != nullptr) {
-      _opened_tx->rollback();
+    if(_own_tx != nullptr) {
+      _own_tx->rollback();
     }
 
     _opened_connection->close();

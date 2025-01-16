@@ -4,11 +4,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.blocks
+    INSERT INTO hafd.blocks
     VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
     ;
 
@@ -46,13 +46,13 @@ BEGIN
         , NULL
     );
 
-    PERFORM hive.app_create_context( 'context' );
-    PERFORM hive.app_create_context( 'context_b' );
     CREATE SCHEMA A;
-    CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.context );
-
     CREATE SCHEMA B;
-    CREATE TABLE B.table1(id  INTEGER ) INHERITS( hive.context_b );
+    PERFORM hive.app_create_context( _name => 'context', _schema => 'a'  );
+    PERFORM hive.app_create_context( _name => 'context_b', _schema => 'b' );
+
+    CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
+    CREATE TABLE B.table1(id  INTEGER ) INHERITS( b.context_b );
 
     PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ); -- (1,1) END_MASSIVE_SYNC e1
     INSERT INTO A.table1(id) VALUES( 1 );
@@ -84,10 +84,10 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 2, 'Wrong current block num';
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context_b' ) = 2, 'Wrong current block num b';
-    ASSERT ( SELECT events_id FROM hive.contexts WHERE name='context' ) = 4, 'Wrong events id';
-    ASSERT ( SELECT events_id FROM hive.contexts WHERE name='context_b' ) = 4, 'Wrong events id b';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context' ) = 2, 'Wrong current block num';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context_b' ) = 2, 'Wrong current block num b';
+    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context' ) = 4, 'Wrong events id';
+    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context_b' ) = 4, 'Wrong events id b';
 
     ASSERT ( SELECT COUNT(*)  FROM A.table1 ) = 2, 'Wrong number of rows in app table';
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 1 ), 'No id 1' ;

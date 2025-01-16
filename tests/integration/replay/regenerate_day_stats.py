@@ -8,12 +8,12 @@ To quickly generate haf_rows_count.json use following query:
 
 SELECT json_build_object(
     'BLOCK_LOG_LENGTH', 5000000,
-    'BLOCKS_COUNT', (SELECT COUNT(*) FROM hive.blocks),
-    'OPERATIONS_COUNT', (SELECT COUNT(*) FROM hive.operations),
-    'TRANSACTIONS_COUNT', (SELECT COUNT(*) FROM hive.transactions),
-    'TRANSACTIONS_MULTISIG_COUNT', (SELECT COUNT(*) FROM hive.transactions_multisig),
-    'ACCOUNTS_COUNT', (SELECT COUNT(*) FROM hive.accounts),
-    'ACCOUNT_OPERATIONS_COUNT', (SELECT COUNT(*) FROM hive.account_operations)
+    'BLOCKS_COUNT', (SELECT COUNT(*) FROM hafd.blocks),
+    'OPERATIONS_COUNT', (SELECT COUNT(*) FROM hafd.operations),
+    'TRANSACTIONS_COUNT', (SELECT COUNT(*) FROM hafd.transactions),
+    'TRANSACTIONS_MULTISIG_COUNT', (SELECT COUNT(*) FROM hafd.transactions_multisig),
+    'ACCOUNTS_COUNT', (SELECT COUNT(*) FROM hafd.accounts),
+    'ACCOUNT_OPERATIONS_COUNT', (SELECT COUNT(*) FROM hafd.account_operations)
 );
 
 '''

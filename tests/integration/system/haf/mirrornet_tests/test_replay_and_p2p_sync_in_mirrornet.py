@@ -2,6 +2,7 @@ import pytest
 
 import test_tools as tt
 
+from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.system.haf import (
     connect_nodes,
     assert_are_blocks_sync_with_haf_db,
@@ -30,13 +31,12 @@ from haf_local_tools.system.haf.mirrornet.constants import (
     ],
 )
 def test_replay_and_p2p_sync(
-    mirrornet_witness_node, haf_node, block_log_5m_path, tmp_path, psql_index_threshold, snapshot_path
+    mirrornet_witness_node, haf_node, block_log_5m, tmp_path, psql_index_threshold, snapshot_path
 ):
     haf_node.config.psql_index_threshold = psql_index_threshold
 
-    block_log_5m = tt.BlockLog(block_log_5m_path)
     block_log_4_5m = block_log_5m.truncate(tmp_path, 4500000)
-
+    apply_block_log_type_to_monolithic_workaround(mirrornet_witness_node)
     mirrornet_witness_node.run(
         load_snapshot_from=snapshot_path,
         time_control=tt.StartTimeControl(start_time="head_block_time"),

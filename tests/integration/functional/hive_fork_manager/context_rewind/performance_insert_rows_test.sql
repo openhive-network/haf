@@ -9,9 +9,10 @@ BEGIN
         val FLOAT,
         name TEXT
         );
+    CREATE SCHEMA A;
 
-    PERFORM hive.context_create( 'context' );
-    CREATE TABLE hive.src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT, values FLOAT[], data custom_type, name2 VARCHAR, num NUMERIC(3,2) ) INHERITS( hive.context );
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE test.src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT, values FLOAT[], data custom_type, name2 VARCHAR, num NUMERIC(3,2) ) INHERITS( a.context );
 
     PERFORM hive.context_next_block( 'context' );
 END;
@@ -28,7 +29,7 @@ DECLARE
   Delta double precision;
 BEGIN
     StartTime := clock_timestamp();
-    INSERT INTO hive.src_table ( smth, name, values, data, name2, num )
+    INSERT INTO test.src_table ( smth, name, values, data, name2, num )
     SELECT gen.id, val.name, val.arr, val.rec, val.name2, val.num
     FROM generate_series(1, 10000) AS gen(id)
          JOIN ( VALUES( 'temp1', '{{0.25, 3.4, 6}}'::FLOAT[], ROW(1, 5.8, '123abc')::custom_type, 'padu'::VARCHAR, 2.123::NUMERIC(3,2) ) ) as val(name,arr,rec, name2, num) ON True;
@@ -44,7 +45,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM hive.src_table ) = 10000, 'Not all rows were inserted';
+    ASSERT ( SELECT COUNT(*) FROM test.src_table ) = 10000, 'Not all rows were inserted';
 END
 $BODY$
 ;

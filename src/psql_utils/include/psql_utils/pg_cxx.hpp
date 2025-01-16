@@ -63,11 +63,9 @@ namespace PsqlTools::PsqlUtils {
       // If we're here, it most likely means we got an error from Postgres function  we called without guarding PG_TRY/PG_CATCH.
       // This most likely caused some C++ object to be `longjmp`ed over without proper destruction.
       //
-      // We're in ErrorContext now, but CopyErrorData should not be called from that context, so we switch temporarily to context from before PG_TRY.
-      // Once we get the copy of error data, switch back to ErrorContext and report error.
-      MemoryContext errorContext = MemoryContextSwitchTo(oldcontext);
+      // We're in ErrorContext now, but CopyErrorData should not be called from that context, so we switch back to context from before PG_TRY.
+      MemoryContextSwitchTo(oldcontext);
       ErrorData *edata = CopyErrorData();
-      MemoryContextSwitchTo(errorContext);
       ereport( ERROR, ( errmsg( "An unexpected error occurred when executing C++ code: %s", edata->message ) ) );
     }
     PG_END_TRY();
@@ -116,14 +114,14 @@ namespace PsqlTools::PsqlUtils {
     }
     PG_CATCH();
     {
-      MemoryContext errorContext = MemoryContextSwitchTo(oldcontext);
+      MemoryContextSwitchTo(oldcontext);
       ErrorData *edata = CopyErrorData();
       error_message = edata->message;
-      MemoryContextSwitchTo(errorContext);
+      FlushErrorState();
     }
     PG_END_TRY();
     if (ret.has_value()) return ret.value();
-    else throw PgError(error_message ? error_message : "");
+    else throw PgError(error_message ? error_message :  "Unknown error while calling pg function");
   }
 
   template <size_t N>

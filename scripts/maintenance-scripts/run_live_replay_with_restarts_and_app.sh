@@ -33,8 +33,8 @@ test_start
 export BLOCK_LOG_SOURCE_DIR_5M="/blockchain/block_log_5m"
 export PATTERNS_PATH="${REPO_DIR}/tests/integration/replay/patterns/no_filter"
 export DATADIR="${REPO_DIR}/datadir"
-export REPLAY="--replay-blockchain --stop-replay-at-block $NUMBER_OF_BLOCKS_TO_FIRST_REPLAY --exit-after-replay"
-export REPLAY_CONTINUATION="--replay-blockchain --psql-livesync-threshold=1000000000 --stop-replay-at-block $LAST_BLOCK_TO_SYNC"
+export REPLAY="--replay-blockchain --stop-at-block $NUMBER_OF_BLOCKS_TO_FIRST_REPLAY --exit-before-sync"
+export REPLAY_CONTINUATION="--replay-blockchain --psql-livesync-threshold=1000000000 --stop-at-block $LAST_BLOCK_TO_SYNC"
 
 if ! test -e "${BLOCK_LOG_SOURCE_DIR_5M}/block_log"
 then

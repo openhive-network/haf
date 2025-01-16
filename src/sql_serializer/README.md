@@ -42,7 +42,7 @@ The sql_serializer extends hived with these new parameters:
 * **psql-livesync-threshold**[default: 0] limit of number of blocks required to sync to reach the network HEAD_BLOCK. After starting the HAF, if the number of blocks to sync is 
   greater than the limit, then synchronization process will move through massive sync states (reindex and p2p), otherwise it will immediately transition to the 'live' state, facilitating testing in that state
 * **psql-first-block**[default: 1] Start collect information about blocks staring from a given block num or from first block
-  after entering into live sync. Accounts (table hive.accounts) are filled with all data regardless if they are created before first synced block.
+  after entering into live sync. Accounts (table hafd.accounts) are filled with all data regardless if they are created before first synced block.
   When there are blocks already dumped, then the limit is omitted.
 ## Filter parameters
 * **psql-enable-filter**[default: true] enable filtering accounts and operations
@@ -55,7 +55,7 @@ The sql_serializer extends hived with these new parameters:
 
 ### Example hived command
 
-	./hived --replay-blockchain --stop-replay-at-block 5000000 --exit-after-replay -d ../../../datadir --force-replay --psql-index-threshold 65432
+	./hived --replay-blockchain --stop-at-block 5000000 --exit-before-sync -d ../../../datadir --force-replay --psql-index-threshold 65432
 
 ## How the sql_serializer serializes blockchain data
 The sql_serializer is connected to the internal database of the hived node (aka chainbase) by event notifications (boost signals). These signals notify the sql_serializer about the starting/ending of the reindex process (i.e. replay of a block_log file) and when new block data has been added to the state of chainbase from the peer-to-peer network.

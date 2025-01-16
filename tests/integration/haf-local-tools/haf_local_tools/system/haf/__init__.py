@@ -5,13 +5,13 @@ import test_tools as tt
 
 from haf_local_tools.haf_node._haf_node import HafNode, Transaction, TransactionId
 from haf_local_tools.tables import BlocksView
+import time
 
-
-def connect_nodes(first_node: tt.RawNode, second_node: tt.RawNode) -> None:
+def connect_nodes(seed_node: tt.RawNode, peer_node: tt.RawNode) -> None:
     """
     This place have to be removed after solving issue https://gitlab.syncad.com/hive/test-tools/-/issues/10
     """
-    second_node.config.p2p_seed_node = first_node.p2p_endpoint.as_string()
+    peer_node.config.p2p_seed_node = seed_node.p2p_endpoint.as_string()
 
 
 def prepare_and_send_transactions(node: tt.InitNode) -> [dict, dict]:
@@ -32,9 +32,42 @@ def assert_are_blocks_sync_with_haf_db(haf_node: HafNode, limit_block_num: int) 
 
 
 def assert_are_indexes_restored(haf_node: HafNode):
-    # verify that indexes are restored
-    are_indexes_dropped = haf_node.query_one("SELECT hive.are_indexes_dropped()")
-    assert are_indexes_dropped == False
+    assert haf_node.query_one("SELECT hive.are_indexes_restored()")
+
+
+def does_index_exist(session, namespace, table, indexname):
+    return session.execute("""
+    SELECT 1
+    FROM pg_index i
+    JOIN pg_class idx ON i.indexrelid = idx.oid
+    JOIN pg_class tbl ON i.indrelid = tbl.oid
+    JOIN pg_namespace n ON tbl.relnamespace = n.oid
+    WHERE n.nspname = :ns
+    AND tbl.relname = :table
+    AND idx.relname = :index
+    """, {'ns':namespace, 'table': table, 'index': indexname}).fetchone()
+
+
+def assert_index_exists(session, namespace, table, indexname):
+    assert does_index_exist(session, namespace, table, indexname)
+
+
+def assert_index_does_not_exist(session, namespace, table, indexname):
+    assert not does_index_exist(session, namespace, table, indexname)
+
+
+def wait_till_registered_indexes_created(haf_node, context):
+    while True:
+        result = haf_node.session.execute("SELECT hive.check_if_registered_indexes_created(:ctx)", {'ctx': context}).scalar()
+        if result:
+            break
+        tt.logger.info("Indexes not yet created. Sleeping for 10 seconds...")
+        time.sleep(10)
+
+
+def register_index_dependency(haf_node, context, create_index_command):
+    haf_node.session.execute(
+            "SELECT hive.register_index_dependency(:ctx, :cmd)", {'ctx': context, 'cmd': create_index_command})
 
 
 def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Transaction, TransactionId]):
@@ -43,3 +76,12 @@ def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Tra
     except TimeoutError:
         assert False, "Transaction NOT exist in database"
     return True
+
+
+def get_truncated_block_log(node, block_count: int):
+    output_block_log_path = tt.context.get_current_directory() / "block_log"
+    output_block_log_path.unlink(missing_ok=True)
+    output_block_log_artifacts_path = (tt.context.get_current_directory() / "block_log.artifacts")
+    output_block_log_artifacts_path.unlink(missing_ok=True)
+    block_log = node.block_log.truncate(tt.context.get_current_directory(), block_count)
+    return block_log

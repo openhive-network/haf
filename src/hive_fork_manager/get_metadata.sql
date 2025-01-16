@@ -7,19 +7,7 @@ CREATE TYPE hive.metadata_record_type AS
 );
 
 DROP FUNCTION IF EXISTS hive.get_metadata;
-CREATE OR REPLACE FUNCTION hive.get_metadata(IN _operation_body hive.operation)
+CREATE OR REPLACE FUNCTION hive.get_metadata(IN _operation_body hafd.operation, IN _is_hf21 bool)
 RETURNS SETOF hive.metadata_record_type
 AS 'MODULE_PATHNAME', 'get_metadata' LANGUAGE C;
 
-DROP TYPE IF EXISTS hive.get_metadata_operations_type CASCADE;
-CREATE TYPE hive.get_metadata_operations_type AS
-(
-      get_metadata_operations TEXT
-);
-
-DROP FUNCTION IF EXISTS hive.get_metadata_operations;
-CREATE OR REPLACE FUNCTION hive.get_metadata_operations()
-RETURNS SETOF hive.get_metadata_operations_type
-AS 'MODULE_PATHNAME', 'get_metadata_operations' LANGUAGE C;
-
-DROP FUNCTION IF EXISTS hive.is_metadata_operation;

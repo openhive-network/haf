@@ -18,11 +18,13 @@ namespace hive::plugins::sql_serializer {
     void enable_indexes();
     void disable_constraints();
     void enable_constrains();
+    void poll_and_create_indexes();
 
   private:
     std::unique_ptr<queries_commit_data_processor>
-    start_commit_sql( bool mode, const std::string& sql_function_call, const std::string& objects_name );
+    start_commit_sql( bool mode, const std::string& sql_function_call, std::string objects_name );
 
+    bool are_any_indexes_missing() const;
   private:
     const std::string _db_url;
     const uint32_t _psql_index_threshold;

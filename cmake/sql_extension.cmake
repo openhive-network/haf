@@ -38,12 +38,19 @@ FILE(READ ${IN_FILE} CONTENTS)
 FILE(APPEND ${OUT_FILE} "${CONTENTS}")
 ENDFUNCTION()
 
-#concatination of deploy_sources.sql
+#concatenation of deploy_sources.sql
+# all objects in schema hive can be dropped and then recreated
+# all objects in schema hafd cannot be updated and full resync of HAF is required in case of changes there
+# first we need to drop schema hive, thus to avoid annoying problem with ambiguity when a function
+# change list of their parameters and its old version was not removed
+FILE(WRITE ${extension_path}/${temp_deploy_sources} "RAISE WARNING 'Extension is being updated';\n")
+FILE(WRITE ${extension_path}/${temp_deploy_sources} "DROP SCHEMA IF EXISTS hive CASCADE;\nCREATE SCHEMA hive;\n")
 FOREACH(EXTENSION_DEPLOY_SOURCES ${EXTENSION_DEPLOY_SOURCES})
 cat(${EXTENSION_DEPLOY_SOURCES} ${extension_path}/${temp_deploy_sources})
 ENDFOREACH()
 
-CONFIGURE_FILE( "${extension_path}/deploy_sources.sql" "${extension_path}/${update_control_script}")
+
+CONFIGURE_FILE( "${extension_path}/${temp_deploy_sources}" "${extension_path}/${update_control_script}")
 
 FILE (REMOVE ${extension_path}/${temp_deploy_sources})
 
@@ -65,8 +72,8 @@ CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/hive_fork_manager_update_script_gen
   "${extension_path}/hive_fork_manager_update_script_generator.sh" @ONLY)
 
 # Only needed to be able to run update script from ${CMAKE_CURRENT_SOURCE_DIR} dir
-CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/hive_fork_manager_save_restore_views.sql"
-  "${extension_path}/hive_fork_manager_save_restore_views.sql" @ONLY)
+CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/update.sql"
+        "${extension_path}/update.sql" @ONLY)
 
 MESSAGE( STATUS "CONFIGURING the control file: ${CMAKE_BINARY_DIR}/extensions/${EXTENSION_NAME}/hive_fork_manager.control" )
 
@@ -95,12 +102,12 @@ INSTALL ( FILES "${extension_path}/hive_fork_manager_update_script_generator.sh"
           GROUP_EXECUTE GROUP_READ
           WORLD_EXECUTE WORLD_READ
         )
-INSTALL ( FILES "${CMAKE_CURRENT_SOURCE_DIR}/hive_fork_manager_save_restore_views.sql"
-          DESTINATION ${POSTGRES_SHAREDIR}/extension
-          PERMISSIONS OWNER_WRITE OWNER_READ
-          GROUP_EXECUTE GROUP_READ
-          WORLD_EXECUTE WORLD_READ
-        )
+INSTALL ( FILES "${CMAKE_CURRENT_SOURCE_DIR}/update.sql"
+        DESTINATION ${POSTGRES_SHAREDIR}/extension
+        PERMISSIONS OWNER_WRITE OWNER_READ
+        GROUP_EXECUTE GROUP_READ
+        WORLD_EXECUTE WORLD_READ
+)
 INSTALL ( FILES "${extension_path}/${update_control_script}" "${extension_path}/${EXTENSION_NAME}.control" "${extension_path}/${extension_control_script}"
           DESTINATION ${POSTGRES_SHAREDIR}/extension
           PERMISSIONS OWNER_WRITE OWNER_READ

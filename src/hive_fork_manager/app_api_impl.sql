@@ -4,8 +4,12 @@ RETURNS BOOLEAN
 AS
 $BODY$
 BEGIN
-  --- Instance is ready when has built all indexes/constraints. We can consider adding here another features if needed
-  RETURN NOT EXISTS(SELECT NULL FROM hive.indexes_constraints); 
+  -- Instance is ready when all indexes with a dependency on context 0 have been created
+  RETURN NOT EXISTS(
+    SELECT 1
+    FROM hafd.indexes_constraints 
+    WHERE contexts @> ARRAY[0] AND status != 'created'
+  );
 END
 $BODY$
 LANGUAGE plpgsql STABLE;
@@ -30,7 +34,7 @@ BEGIN
     RAISE NOTICE '# %, waiting time: % s - waiting for another % s', __retry, extract(epoch from (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP())), extract(epoch from (_wait_time));
 
     --- Update last activity time to prevent auto-detaching of apps stopped by this call, when HAF enters live mode
-    UPDATE hive.contexts
+    UPDATE hafd.contexts
     SET last_active_at = NOW()
     WHERE name = ANY(_context_names);
 
@@ -43,36 +47,36 @@ $BODY$
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION hive.find_next_event( _contexts hive.contexts_group )
-    RETURNS hive.events_queue
+    RETURNS hafd.events_queue
     LANGUAGE 'plpgsql'
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __curent_events_id hive.events_queue.id%TYPE;
-    __newest_irreversible_block_num hive.blocks.num%TYPE;
-    __current_context_block_num hive.blocks.num%TYPE;
-    __current_context_irreversible_block hive.blocks.num%TYPE;
-    __current_fork_id hive.fork.id%TYPE;
-    __lead_context hive.context_name := _contexts[ 1 ];
-    __result hive.events_queue%ROWTYPE;
-    __max_event_id_to_search hive.events_queue.id%TYPE;
-    __max_fork_id_in_range hive.fork.id%TYPE;
+    __curent_events_id hafd.events_queue.id%TYPE;
+    __newest_irreversible_block_num hafd.blocks.num%TYPE;
+    __current_context_block_num hafd.blocks.num%TYPE;
+    __current_context_irreversible_block hafd.blocks.num%TYPE;
+    __current_fork_id hafd.fork.id%TYPE;
+    __lead_context hafd.context_name := _contexts[ 1 ];
+    __result hafd.events_queue%ROWTYPE;
+    __max_event_id_to_search hafd.events_queue.id%TYPE;
+    __max_fork_id_in_range hafd.fork.id%TYPE;
 BEGIN
     SELECT hc.events_id
          , hc.current_block_num
          , hc.irreversible_block
          , hc.fork_id
     INTO __curent_events_id, __current_context_block_num, __current_context_irreversible_block, __current_fork_id
-    FROM hive.contexts hc WHERE hc.name = __lead_context;
-    SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
+    FROM hafd.contexts hc WHERE hc.name = __lead_context;
+    SELECT consistent_block INTO __newest_irreversible_block_num FROM hafd.irreversible_data;
 
     -- hived can at any moment commit new events
     -- because of read committed, we need to be ready such situations
     -- and limit possible events id to max. from the moment of starting the function
     -- newly committed events will be process in the next  iteration of an application loop
     SELECT heq.id INTO __max_event_id_to_search
-    FROM hive.events_queue heq
+    FROM hafd.events_queue heq
     WHERE heq.id != hive.unreachable_event_id()
     ORDER BY heq.id DESC LIMIT 1;
 
@@ -83,16 +87,16 @@ BEGIN
         -- processing irreversible blocks or find next event after irreversible
         -- first of all update fork id, for forks in already irreversible block range
         SELECT MAX(hf.id) INTO __max_fork_id_in_range
-        FROM hive.fork hf
+        FROM hafd.fork hf
         WHERE hf.block_num <= __newest_irreversible_block_num
         AND hf.id > __current_fork_id;
 
-        UPDATE hive.contexts hc
+        UPDATE hafd.contexts hc
         SET fork_id = COALESCE( __max_fork_id_in_range, fork_id )
         WHERE hc.name = ANY( _contexts );
 
         SELECT * INTO  __result
-        FROM hive.events_queue heq
+        FROM hafd.events_queue heq
         WHERE heq.block_num > __newest_irreversible_block_num
               AND heq.event != 'BACK_FROM_FORK'
               AND heq.id >= __curent_events_id
@@ -103,7 +107,7 @@ BEGIN
             -- there is no reversible blocks event
             -- the last possible event are MASSIVE_SYNC(__newest_irreversible_block_num) or NEW_IRREVERSIBLE(__newest_irreversible_block_num)
             SELECT * INTO  __result
-            FROM hive.events_queue heq
+            FROM hafd.events_queue heq
             WHERE heq.block_num = __newest_irreversible_block_num
               AND ( heq.event = 'MASSIVE_SYNC' OR heq.event = 'NEW_IRREVERSIBLE' )
               AND heq.id <= __max_event_id_to_search
@@ -117,13 +121,13 @@ BEGIN
     ELSE
         ---- find next event
         SELECT * INTO __result
-        FROM hive.events_queue heq
+        FROM hafd.events_queue heq
         WHERE heq.id > __curent_events_id AND heq.id <= __max_event_id_to_search
         ORDER BY id LIMIT 1;
     END IF;
 
     IF __result IS NOT NULL THEN
-        UPDATE hive.contexts
+        UPDATE hafd.contexts
         SET events_id = __result.id
         WHERE name =ANY( _contexts );
     END IF;
@@ -144,15 +148,15 @@ DECLARE
     __next_fork_event_id BIGINT;
     __next_fork_block_num INT;
     __context_current_block_num INT;
-    __context_id hive.contexts.id%TYPE;
+    __context_id hafd.contexts.id%TYPE;
     __cannot_jump BOOL:= TRUE;
-    __lead_context hive.context_name := _contexts[ 1 ];
+    __lead_context hafd.context_name := _contexts[ 1 ];
 BEGIN
     -- first find a newer fork nearest current block
     SELECT heq.id, heq.block_num, hc.current_block_num, hc.id INTO __next_fork_event_id, __next_fork_block_num, __context_current_block_num, __context_id
-    FROM hive.events_queue heq
-    JOIN hive.fork hf ON hf.id = heq.block_num
-    JOIN hive.contexts hc ON hc.events_id < heq.id AND hc.current_block_num >= hf.block_num
+    FROM hafd.events_queue heq
+    JOIN hafd.fork hf ON hf.id = heq.block_num
+    JOIN hafd.contexts hc ON hc.events_id < heq.id AND hc.current_block_num >= hf.block_num
     WHERE heq.event = 'BACK_FROM_FORK' AND hc.name = __lead_context
     ORDER BY hf.block_num ASC, heq.id DESC
     LIMIT 1;
@@ -165,8 +169,8 @@ BEGIN
     -- there may be NEW_IRREVERSIBLE or MASSIVE_SYNC in the range
     SELECT EXISTS (
         SELECT 1
-        FROM hive.events_queue heq
-        JOIN hive.contexts hc ON heq.id < __next_fork_event_id AND heq.id > hc.events_id
+        FROM hafd.events_queue heq
+        JOIN hafd.contexts hc ON heq.id < __next_fork_event_id AND heq.id > hc.events_id
         WHERE ( heq.event = 'NEW_IRREVERSIBLE' OR heq.event = 'MASSIVE_SYNC' ) AND hc.name = _contexts[1]
     )
     INTO __cannot_jump;
@@ -175,7 +179,7 @@ BEGIN
         RETURN;
     END IF;
 
-    UPDATE hive.contexts
+    UPDATE hafd.contexts
     SET events_id = __next_fork_event_id - 1 -- -1 because we pretend that we stay just before the next fork
     WHERE name =ANY(_contexts);
 END;
@@ -193,17 +197,17 @@ DECLARE
     __irreversible_block_num INT;
     __current_block_num INT;
     __newest_irreversible_block_num INT;
-    __context_event_id hive.events_queue.id%TYPE := 0;
+    __context_event_id hafd.events_queue.id%TYPE := 0;
     __next_bff_event_id BIGINT;
     __event_block_num INT;
-    __lead_context hive.context_name := _contexts[ 1 ];
+    __lead_context hafd.context_name := _contexts[ 1 ];
 BEGIN
     SELECT hc.events_id, hc.irreversible_block, hc.current_block_num
     INTO __context_event_id, __irreversible_block_num, __current_block_num
-    FROM hive.contexts as hc
+    FROM hafd.contexts as hc
     WHERE hc.name = __lead_context;
 
-    SELECT consistent_block INTO __newest_irreversible_block_num FROM hive.irreversible_data;
+    SELECT consistent_block INTO __newest_irreversible_block_num FROM hafd.irreversible_data;
 
     IF __current_block_num <= __irreversible_block_num
        AND  __newest_irreversible_block_num IS NOT NULL THEN
@@ -213,7 +217,7 @@ BEGIN
     END IF;
 
     SELECT heq.id INTO __next_bff_event_id
-    FROM hive.events_queue heq
+    FROM hafd.events_queue heq
     WHERE heq.id > __context_event_id
       AND heq.event = 'BACK_FROM_FORK'
     ORDER BY heq.id
@@ -223,8 +227,8 @@ BEGIN
     -- first find a newer massive_sync nearest current block
     SELECT heq.id, heq.block_num
     INTO __next_irreversible_event_id, __event_block_num
-    FROM hive.events_queue heq
-    JOIN hive.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
+    FROM hafd.events_queue heq
+    JOIN hafd.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
     WHERE ( heq.event = 'MASSIVE_SYNC' OR heq.event = 'NEW_IRREVERSIBLE' )
       AND heq.id < COALESCE( __next_bff_event_id, hive.unreachable_event_id() )
       AND heq.block_num > __irreversible_block_num
@@ -252,26 +256,26 @@ $BODY$
 DECLARE
     __next_massive_sync_event_id BIGINT;
     __context_current_block_num INT;
-    __context_id hive.contexts.id%TYPE;
+    __context_id hafd.contexts.id%TYPE;
     __irreversible_block_num INT;
     __before_next_massive_sync_event_id BIGINT := NULL;
-    __lead_context hive.context_name := _contexts[ 1 ];
-    __event_type hive.event_type := NULL;
-    __context_event_id hive.events_queue.id%TYPE := 0;
+    __lead_context hafd.context_name := _contexts[ 1 ];
+    __event_type hafd.event_type := NULL;
+    __context_event_id hafd.events_queue.id%TYPE := 0;
     __need_to_remove_reversible_data BOOLEAN := FALSE;
 BEGIN
     -- first find a newer massive_sync nearest current block
     SELECT heq.id, hc.current_block_num, hc.id, hc.irreversible_block, heq.event
     INTO __next_massive_sync_event_id, __context_current_block_num, __context_id, __irreversible_block_num, __event_type
-    FROM hive.events_queue heq
-    JOIN hive.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
+    FROM hafd.events_queue heq
+    JOIN hafd.contexts hc ON COALESCE( hc.events_id, 1 ) < heq.id -- 1 because we don't want squash only the first event
     WHERE ( heq.event = 'MASSIVE_SYNC' ) AND hc.name = _contexts[1]
     ORDER BY heq.id DESC
     LIMIT 1;
 
     SELECT hc.current_block_num, hc.events_id
     INTO __context_current_block_num, __context_event_id
-    FROM hive.contexts hc
+    FROM hafd.contexts hc
     WHERE hc.name = __lead_context
     ;
 
@@ -282,7 +286,7 @@ BEGIN
 
     -- if in squashed events, there is a fork event it would be better to immediately drop reversible data
     SELECT TRUE INTO __need_to_remove_reversible_data
-    FROM hive.events_queue heq
+    FROM hafd.events_queue heq
     WHERE heq.id > __context_event_id
       AND heq.id < __next_massive_sync_event_id
       AND heq.event = 'BACK_FROM_FORK'
@@ -293,9 +297,9 @@ BEGIN
     END IF;
 
     SELECT MAX( heq.id ) INTO __before_next_massive_sync_event_id
-    FROM hive.events_queue heq WHERE heq.id < __next_massive_sync_event_id;
+    FROM hafd.events_queue heq WHERE heq.id < __next_massive_sync_event_id;
 
-    UPDATE hive.contexts
+    UPDATE hafd.contexts
     SET events_id = __before_next_massive_sync_event_id -- it may be null if there is no events before the massive sync
     WHERE name =ANY( _contexts );
     RETURN TRUE;
@@ -310,9 +314,9 @@ CREATE OR REPLACE FUNCTION hive.squash_events( _contexts hive.contexts_group )
 AS
 $BODY$
 DECLARE
-    __current_event_id hive.events_queue.id%TYPE;
+    __current_event_id hafd.events_queue.id%TYPE;
 BEGIN
-    SELECT hc.events_id INTO __current_event_id FROM hive.contexts hc WHERE hc.name = _contexts[ 1 ];
+    SELECT hc.events_id INTO __current_event_id FROM hafd.contexts hc WHERE hc.name = _contexts[ 1 ];
 
     -- do not squash not initialzed context
     IF __current_event_id = 0  THEN
@@ -341,7 +345,7 @@ CREATE TYPE hive.context_state AS (
     , is_attached BOOL
     , irreversible_block_num INT
     , next_event_id BIGINT
-    , next_event_type hive.event_type
+    , next_event_type hafd.event_type
     , next_event_block_num INT
 );
 
@@ -355,21 +359,23 @@ AS
 $BODY$
     DECLARE
         __context_state hive.context_state;
-        __lead_context hive.context_name := _contexts[ 1 ];
+        __lead_context hafd.context_name := _contexts[ 1 ];
     BEGIN
         PERFORM hive.squash_events( _contexts );
 
         SELECT
                hac.current_block_num
-             , hac.is_attached
+             , hca.is_attached
              , hac.irreversible_block
-        FROM hive.contexts hac
+        FROM hafd.contexts hac
+        JOIN hafd.contexts_attachment hca ON hca.context_id = hac.id
         WHERE hac.name = __lead_context
         INTO __context_state;
 
         IF __context_state.current_block_num IS NULL THEN
             RAISE EXCEPTION 'No context with name %', __lead_context;
         END IF;
+
 
         IF __context_state.is_attached = FALSE THEN
             RAISE EXCEPTION 'Context % is detached', __lead_context;
@@ -404,12 +410,12 @@ BEGIN
     CASE _context_state.next_event_type
         WHEN 'BACK_FROM_FORK' THEN
             SELECT hf.id, hf.block_num INTO __fork_id, __next_event_block_num
-            FROM hive.fork hf
+            FROM hafd.fork hf
             WHERE hf.id = _context_state.next_event_block_num; -- block_num for BFF events = fork_id
 
             PERFORM hive.context_back_from_fork( _context, __next_event_block_num );
 
-            UPDATE hive.contexts
+            UPDATE hafd.contexts
             SET
                 current_block_num = __next_event_block_num
               , fork_id = __fork_id
@@ -422,7 +428,7 @@ BEGIN
         WHEN 'NEW_BLOCK' THEN
             ASSERT  _context_state.next_event_block_num > _context_state.current_block_num, 'We could not process block without consume event';
             IF _context_state.next_event_block_num = ( _context_state.current_block_num + 1 ) THEN
-                UPDATE hive.contexts
+                UPDATE hafd.contexts
                 SET current_block_num = _context_state.next_event_block_num
                 WHERE name = _context;
 
@@ -438,10 +444,10 @@ BEGIN
 
     -- if there is no event or we still process irreversible blocks
     SELECT hc.irreversible_block INTO _context_state.irreversible_block_num
-    FROM hive.contexts hc WHERE hc.name = _context;
+    FROM hafd.contexts hc WHERE hc.name = _context;
 
     SELECT MIN( hb.num ), MAX( hb.num )
-    FROM hive.blocks hb
+    FROM hafd.blocks hb
     WHERE hb.num > _context_state.current_block_num AND hb.num <= _context_state.irreversible_block_num
     INTO __next_block_to_process, __last_block_to_process;
 
@@ -452,7 +458,7 @@ BEGIN
         RETURN __result;
     END IF;
 
-    UPDATE hive.contexts
+    UPDATE hafd.contexts
     SET current_block_num = __next_block_to_process
     WHERE name = _context;
 
@@ -467,7 +473,7 @@ $BODY$
 -- Null -> ask again without waiting
 -- negative range -> no block to process, need to wait for next live block
 -- positive range (including 0 size) -> range of blocks to process
-CREATE OR REPLACE FUNCTION hive.app_process_event_non_forking( _context hive.context_name, _context_state hive.context_state )
+CREATE OR REPLACE FUNCTION hive.app_process_event_non_forking( _context hafd.context_name, _context_state hive.context_state )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
@@ -479,7 +485,7 @@ DECLARE
     __result hive.blocks_range;
 BEGIN
     SELECT MIN( hb.num ), MAX( hb.num )
-    FROM hive.blocks hb
+    FROM hafd.blocks hb
     WHERE hb.num > _context_state.current_block_num AND hb.num <= _context_state.irreversible_block_num
     INTO __next_block_to_process, __last_block_to_process;
 
@@ -490,7 +496,7 @@ BEGIN
         RETURN __result;
     END IF;
 
-    UPDATE hive.contexts
+    UPDATE hafd.contexts
     SET current_block_num = __next_block_to_process
     WHERE name = _context;
 
@@ -553,7 +559,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hive.blocks.num%TYPE, _last_block hive.blocks.num%TYPE, _state_provider HIVE.STATE_PROVIDERS, _context hive.context_name )
+CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _state_provider hafd.state_providers, _context hafd.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -565,7 +571,7 @@ BEGIN
         , _state_provider, _first_block, _last_block, _context
     );
 
-    UPDATE hive.contexts
+    UPDATE hafd.contexts
     SET last_active_at = NOW()
     WHERE name = _context;
 END;

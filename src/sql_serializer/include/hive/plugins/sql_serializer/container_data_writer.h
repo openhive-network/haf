@@ -6,6 +6,8 @@
 
 #include <fc/exception/exception.hpp>
 
+#include "span.hpp"
+
 namespace hive::plugins::sql_serializer {
   /**
    * @brief Common implementation of data writer to be used for all SQL entities.
@@ -46,6 +48,7 @@ namespace hive::plugins::sql_serializer {
         void trigger(DataContainer&& data, uint32_t last_block_num);
         void complete_data_processing();
         void join();
+        void cancel();
 
       private:
         using data_processing_status = data_processor::data_processing_status;
@@ -95,6 +98,13 @@ namespace hive::plugins::sql_serializer {
   container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::join()
   {
     _processor->join();
+  }
+
+  template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor>
+  inline void
+  container_data_writer<DataContainer, TupleConverter, TABLE_NAME, COLUMN_LIST, Processor >::cancel()
+  {
+    _processor->cancel();
   }
 
   template <class DataContainer, class TupleConverter, const char* const TABLE_NAME, const char* const COLUMN_LIST, typename Processor>
@@ -151,11 +161,21 @@ namespace hive::plugins::sql_serializer {
     return processingStatus;
   }
 
-  template< typename Writer >
+  /**
+   * Returns first non-falsy value. If all values are falsy, return default constructed value.
+   */
+  template<typename T>
+  inline T coalesce(span<T> a) {
+    auto it = std::find_if(std::begin(a), std::end(a), [](const T& t){return (bool)t;});
+    if (it != std::end(a)) return *it;
+    return {};
+  }
+
+  template< typename Processor >
   inline std::exception_ptr
-  join_writers_impl( Writer& writer ) try {
+  join_processors_impl( Processor& processor ) try {
     try{
-      writer.join();
+      processor.join();
     }
     FC_CAPTURE_AND_RETHROW()
     return nullptr;
@@ -163,23 +183,58 @@ namespace hive::plugins::sql_serializer {
     return std::current_exception();
   }
 
-  template< typename Writer, typename... Writers >
-  inline std::exception_ptr
-  join_writers_impl( Writer& writer, Writers& ...writers ) {
-    std::exception_ptr current_exception = join_writers_impl( writer );;
-    auto next_exception = join_writers_impl( writers... );
-    if ( current_exception != nullptr ) {
-      return current_exception;
-    }
-    return next_exception;
-  }
-
-  template< typename... Writers >
+  template< typename... Processors >
   inline void
-  join_writers( Writers& ...writers ) {
-    auto exception = join_writers_impl( writers... );
+  join_processors( Processors& ...processors ) {
+    auto exception = coalesce(span(std::array{join_processors_impl(processors)...}));
     if ( exception != nullptr ) {
       std::rethrow_exception( exception );
     }
   }
+
+  template< typename Processor >
+  inline void
+  join_processors( std::vector<Processor>& processors ) {
+    std::vector<std::exception_ptr> results;
+    results.reserve(processors.size());
+    std::transform(std::begin(processors), std::end(processors), std::back_inserter(results), join_processors_impl<Processor>);
+    auto exception = coalesce(span(results));
+    if ( exception != nullptr ) {
+      std::rethrow_exception( exception );
+    }
+  }
+
+  template< typename Processor >
+  inline std::exception_ptr
+  cancel_processors_impl( Processor& processor ) try {
+    try{
+      processor.join();
+    }
+    FC_CAPTURE_AND_RETHROW()
+    return nullptr;
+  } catch( ... ) {
+    return std::current_exception();
+  }
+
+  template< typename... Processors >
+  inline void
+  cancel_processors( Processors& ...processors ) {
+    auto exception = coalesce(span(std::array{cancel_processors_impl(processors)...}));
+    if ( exception != nullptr ) {
+      std::rethrow_exception( exception );
+    }
+  }
+
+  template< typename Processor >
+  inline void
+  cancel_processors( std::vector<Processor>& processors ) {
+    std::vector<std::exception_ptr> results;
+    results.reserve(processors.size());
+    std::transform(std::begin(processors), std::end(processors), std::back_inserter(results), cancel_processors_impl<Processor>);
+    auto exception = coalesce(span(results));
+    if ( exception != nullptr ) {
+      std::rethrow_exception( exception );
+    }
+  }
+
 } // namespace hive::plugins::sql_serializer

@@ -4,12 +4,16 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context_attached_a' );
-    PERFORM hive.app_create_context( 'context_attached_b' );
-    PERFORM hive.app_create_context( 'context_attached_c' );
-    PERFORM hive.app_create_context( 'context_detached_a' );
-    PERFORM hive.app_create_context( 'context_detached_b' );
-    PERFORM hive.app_create_context( 'context_detached_c' );
+    CREATE SCHEMA A;
+    CREATE SCHEMA B;
+    CREATE SCHEMA C;
+
+    PERFORM hive.app_create_context( 'context_attached_a', 'a' );
+    PERFORM hive.app_create_context( 'context_attached_b', 'a' );
+    PERFORM hive.app_create_context( 'context_attached_c', 'b' );
+    PERFORM hive.app_create_context( 'context_detached_a', 'b' );
+    PERFORM hive.app_create_context( 'context_detached_b', 'c' );
+    PERFORM hive.app_create_context( 'context_detached_c', 'c' );
 END;
 $BODY$
 ;

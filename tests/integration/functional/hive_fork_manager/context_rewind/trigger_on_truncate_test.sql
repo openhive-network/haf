@@ -4,8 +4,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_create( 'context' );
-    CREATE TABLE table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( hive.context );
+    CREATE SCHEMA A;
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE table1( id INTEGER NOT NULL, smth TEXT NOT NULL ) INHERITS( a.context );
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO table1( id, smth ) VALUES( 123, 'balbla' );
 END;
@@ -28,8 +29,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_public_table1 hs WHERE hs.id = 123 AND hs.smth='balbla' ) = 2, 'No expected id value in shadow table';
-    ASSERT EXISTS ( SELECT FROM hive.shadow_public_table1 hs WHERE hs.id = 123 AND hs.smth='balbla' AND hive_block_num = 2 AND hive_operation_type = 'DELETE' AND hive_operation_id = 2 ), 'Wrong block num';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_public_table1 hs WHERE hs.id = 123 AND hs.smth='balbla' ) = 2, 'No expected id value in shadow table';
+    ASSERT EXISTS ( SELECT FROM hafd.shadow_public_table1 hs WHERE hs.id = 123 AND hs.smth='balbla' AND hive_block_num = 2 AND hive_operation_type = 'DELETE' AND hive_operation_id = 2 ), 'Wrong block num';
 END
 $BODY$
 ;

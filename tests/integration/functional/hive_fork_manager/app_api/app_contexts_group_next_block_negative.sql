@@ -4,18 +4,18 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'attached_context', FALSE );
-    PERFORM hive.app_create_context( 'attached_context_not_insync', FALSE );
-    PERFORM hive.app_create_context( 'detached_context', FALSE );
-    PERFORM hive.app_create_context( 'forking_context' );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( 'attached_context', _schema => 'a', _is_forking => FALSE );
+    PERFORM hive.app_create_context( 'attached_context_not_insync', _schema => 'a', _is_forking => FALSE );
+    PERFORM hive.app_create_context( 'detached_context', _schema => 'a', _is_forking => FALSE );
+    PERFORM hive.app_create_context( 'forking_context', 'a' );
     PERFORM hive.app_context_detach( 'detached_context' );
 
-    UPDATE hive.contexts ctx
+    UPDATE hafd.contexts ctx
     SET current_block_num = 100
     WHERE ctx.name = 'attached_context_not_insync';
 
-    CREATE SCHEMA A;
-    CREATE TABLE A.table1(id  INTEGER ) INHERITS( hive.forking_context );
+    CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.forking_context );
 END;
 $BODY$
 ;

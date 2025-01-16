@@ -9,12 +9,13 @@
 
 #include <exception>
 
+#include <unistd.h>
 #include <signal.h>
 
 namespace {
   void kill_node() {
     elog( "An error occured and HAF is stopping synchronization..." );
-    kill( 0, SIGINT );
+    kill( getpid(), SIGINT );
   }
 }
 
@@ -54,7 +55,7 @@ data_processor::data_processor( std::string description, std::string short_descr
 {
   auto body = [this, dataProcessor]() -> void
   {
-    ilog("Entering data processor thread: ${d}", ("d", _description));
+    dlog("Entering data processor thread: ${d}", ("d", _description));
     const std::string thread_name = "sql[" + _short_description + "]";
     fc::set_thread_name(thread_name.c_str());
     fc::thread::current().set_name(thread_name);
@@ -110,7 +111,7 @@ data_processor::data_processor( std::string description, std::string short_descr
       auto current_exception = std::current_exception();
       handle_exception( current_exception );
     }
-    ilog("Leaving data processor thread: ${d}", ("d", _description));
+    dlog("Leaving data processor thread: ${d}", ("d", _description));
   };
 
   _future = std::async(std::launch::async, body);
@@ -143,7 +144,7 @@ void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
   {
     dlog("Waiting until data_processor ${d} will consume a data...", ("d", _description));
     std::unique_lock<std::mutex> lk(_mtx);
-    _cv.wait(lk, [this] {return _dataPtr.valid() == false; });
+    _cv.wait(lk, [this] {return _dataPtr.valid() == false || _cancel; });
   }
 
   dlog("Leaving trigger of data data processor: ${d}...", ("d", _description));
@@ -184,14 +185,17 @@ void data_processor::join()
   _continue.store(false);
 
   {
-    ilog("Trying to resume data processor: ${d}...", ("d", _description));
+    dlog("Trying to resume data processor: ${d}...", ("d", _description));
     std::lock_guard<std::mutex> lk(_mtx);
-    ilog("Data processor: ${d} resumed...", ("d", _description));
+    dlog("Data processor: ${d} resumed...", ("d", _description));
   }
   _cv.notify_one();
 
   try {
+    if (_future.valid())
+    {
       _future.get();
+    }
   } catch (...) {
     elog( "Caught unhandled exception ${diagnostic}", ("diagnostic", boost::current_exception_diagnostic_information()) );
     throw;
@@ -204,8 +208,10 @@ void
 data_processor::handle_exception( std::exception_ptr exception_ptr ) {
   try {
     if ( exception_ptr ) {
+      std::unique_lock<std::mutex> lk(_mtx);
       _cancel.store(true);
       _continue.store(false);
+      _cv.notify_one();
       std::rethrow_exception( exception_ptr );
     }
   }

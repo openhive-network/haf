@@ -10,8 +10,9 @@ BEGIN
         name TEXT
         );
 
-    PERFORM hive.context_create( 'context' );
-    CREATE TABLE src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT, values FLOAT[], data custom_type, name2 VARCHAR, num NUMERIC(3,2) ) INHERITS( hive.context );
+    CREATE SCHEMA A;
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE src_table(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT, values FLOAT[], data custom_type, name2 VARCHAR, num NUMERIC(3,2) ) INHERITS( a.context );
 
     PERFORM hive.context_next_block( 'context' );
     INSERT INTO src_table ( smth, name, values, data, name2, num )
@@ -20,7 +21,7 @@ BEGIN
              JOIN ( VALUES( 'temp1', '{{0.25, 3.4, 6}}'::FLOAT[], ROW(1, 5.8, '123abc')::custom_type, 'padu'::VARCHAR, 2.123::NUMERIC(3,2) ) ) as val(name,arr,rec, name2, num) ON True;
 
     PERFORM hive.context_next_block( 'context' );
-    TRUNCATE hive.shadow_public_src_table; --to do not revert inserts
+    TRUNCATE hafd.shadow_public_src_table; --to do not revert inserts
     UPDATE src_table SET name='changed';
 END;
 $BODY$

@@ -23,18 +23,18 @@ DUMP_FILENAME: Final[str] = "adump.Fcsql"
 SQL_ALL_TABLES_AND_VIEWS: Final[str] = """
 SELECT table_name
 FROM information_schema.tables
-WHERE table_schema = 'hive' ORDER BY table_name;
+WHERE table_schema = 'hafd' ORDER BY table_name;
 """
 
 SQL_TABLE_COLUMNS: Final[str] = """
 SELECT column_name
 FROM information_schema.columns
-WHERE table_schema = 'hive' AND table_name = :table;
+WHERE table_schema = 'hafd' AND table_name = :table;
 """
 
 SQL_TABLE_CONTENT: Final[str] = """
 SELECT *
-FROM hive.{table}
+FROM hafd.{table}
 ORDER BY {columns};
 """
 
@@ -84,7 +84,7 @@ def test_pg_dump(prepared_networks_and_database_1, database, pg_restore: Callabl
 
 def prepare_source_db(prepare_node, database) -> tuple[Session, URL]:
     node, session, db_url = prepare_node(database)
-    node.run(replay_from=create_block_log_directory_name("block_log_12_8") / "block_log", stop_at_block=30, exit_before_synchronization=True)
+    node.run(replay_from=create_block_log_directory_name("block_log_12_8"), stop_at_block=30, exit_before_synchronization=True)
     return session, db_url
 
 

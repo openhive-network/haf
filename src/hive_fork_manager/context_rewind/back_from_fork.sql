@@ -26,7 +26,7 @@ BEGIN
         'INSERT INTO %I.%I( %s )
         (
             SELECT %s
-            FROM hive.%I st
+            FROM hafd.%I st
             WHERE st.hive_operation_id = %s
         )'
         , _table_schema
@@ -50,7 +50,7 @@ BEGIN
 EXECUTE format(
     'UPDATE %I.%I as t SET ( %s ) = (
         SELECT %s
-        FROM hive.%I st1
+        FROM hafd.%I st1
         WHERE st1.hive_operation_id = %s
     )
     WHERE t.hive_rowid = %s'
@@ -76,11 +76,11 @@ BEGIN
     EXECUTE format(
         'SELECT
         CASE st.hive_operation_type
-            WHEN ''INSERT'' THEN hive.%I_%I_revert_insert( st.hive_rowid )
-            WHEN ''DELETE'' THEN hive.%I_%I_revert_delete( st.hive_operation_id )
-            WHEN ''UPDATE'' THEN hive.%I_%I_revert_update( st.hive_operation_id, st.hive_rowid )
+            WHEN ''INSERT'' THEN hafd.%I_%I_revert_insert( st.hive_rowid )
+            WHEN ''DELETE'' THEN hafd.%I_%I_revert_delete( st.hive_operation_id )
+            WHEN ''UPDATE'' THEN hafd.%I_%I_revert_update( st.hive_operation_id, st.hive_rowid )
         END
-        FROM hive.%I st
+        FROM hafd.%I st
         WHERE st.hive_block_num > %s
         ORDER BY st.hive_operation_id DESC'
         , _table_schema, _table_name
@@ -91,7 +91,7 @@ BEGIN
     );
 
     -- remove rows from shadow table
-    EXECUTE format( 'DELETE FROM hive.%I st WHERE st.hive_block_num > %s', _shadow_table_name, _block_num_before_fork );
+    EXECUTE format( 'DELETE FROM hafd.%I st WHERE st.hive_block_num > %s', _shadow_table_name, _block_num_before_fork );
 END;
 $BODY$
 ;

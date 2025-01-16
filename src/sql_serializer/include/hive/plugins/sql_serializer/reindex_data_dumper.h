@@ -32,6 +32,7 @@ namespace hive::plugins::sql_serializer {
 
     void trigger_data_flush( cached_data_t& cached_data, int last_block_num ) override;
   private:
+    void cancel();
     void join();
     void mark_irreversible_data_as_dirty( bool is_dirty );
 
@@ -71,6 +72,8 @@ namespace hive::plugins::sql_serializer {
         >
       >
     >;
+
+    appbase::application& app;
 
     std::unique_ptr< block_data_container_t_writer > _block_writer;
     std::unique_ptr< transaction_data_container_t_writer > _transaction_writer;

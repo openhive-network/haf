@@ -327,7 +327,7 @@ public:
   void init_database()
   {
     if ( psql_first_block > 1 ) {
-      /* There is no much sense to disable and then enable indexes on hive.accounts
+      /* There is no much sense to disable and then enable indexes on hafd.accounts
       * After syncing  80M of blocks dumping all accounts ( c.a. 2.5M  ) lasted 100s
       */
       const auto number_of_threads =
@@ -364,7 +364,7 @@ public:
     queries_commit_data_processor block_loader(db_url, "Block loader", "blockload",
                                                 [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
       {
-        pqxx::result data = tx.exec("SELECT hb.num AS _max_block FROM hive.blocks hb ORDER BY hb.num DESC LIMIT 1;");
+        pqxx::result data = tx.exec("SELECT hb.num AS _max_block FROM hafd.blocks hb ORDER BY hb.num DESC LIMIT 1;");
         if( !data.empty() )
         {
           FC_ASSERT( data.size() == 1, "Data size" );
@@ -389,14 +389,9 @@ public:
 };
 
 void sql_serializer_plugin_impl::replay_wal_if_necessary() {
-
-  //if we are replaying block_log, don't clear wal instead of replaying it
-  if (replay_blocklog)
-  {
-    ilog("clear old wal since replaying");
-    write_ahead_log.clear_log();
-    return;
-  }
+  // WAL needs to be replayed always to directly move with path which previously hived has walked
+  // all blocks, forks and irreversible events needs to be aligned to hived, otherwise there may be situation
+  // when micro forks which happens in previously closed hived do not rewind applications data correctly
 
   elog("sql_serializer_plugin_impl::replay_wal_if_necessary");
   std::optional<int32_t> last_wal_sequence_number_in_db;
@@ -447,7 +442,7 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
     const auto CONNECT_QUERY = "SELECT hive.connect('"s
                                + fc::git_revision_sha
                                + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER"
-                               + ");"s;
+                               + ","s + std::to_string( psql_first_block ) + "::INTEGER)"s;
     tx.exec( CONNECT_QUERY );
     return data_processing_status();
   };
@@ -610,7 +605,6 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
       note.block,
       note.trx_in_block,
       note.op_in_trx,
-      chain_db.head_block_time(),
       note.op
     );
   }
@@ -619,53 +613,61 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
 
 void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& note)
 {
-  _last_block_num = note.block_num;
-  if(!can_collect_blocks())
-    return;
-  op_in_block_number = 0;
-
-  handle_transactions(note.full_block->get_full_transactions(), note.block_num);
-
-  const hive::chain::signed_block_header& block_header = note.full_block->get_block_header();
-  const auto* account_ptr = chain_db.find_account(block_header.witness);
-  int32_t account_id = account_ptr->get_id();
-  const hive::chain::witness_object* witness_ptr = chain_db.find_witness(block_header.witness);
-
-  const hive::chain::dynamic_global_property_object& dgpo = chain_db.get_dynamic_global_properties();
-
-  currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
-  currently_caching_data->blocks.emplace_back(
-    note.block_id,
-    note.block_num,
-    block_header.timestamp,
-    note.prev_block_id,
-    account_id,
-    block_header.transaction_merkle_root,
-    (block_header.extensions.size() == 0) ? fc::optional<std::string>() : fc::optional<std::string>(fc::json::to_string( block_header.extensions )),
-    block_header.witness_signature,
-    witness_ptr->signing_key,
-    
-    dgpo.hbd_interest_rate,
-
-    dgpo.total_vesting_shares,
-    dgpo.total_vesting_fund_hive,
-
-    dgpo.total_reward_fund_hive,
-
-    dgpo.virtual_supply,
-    dgpo.current_supply,
-
-    dgpo.current_hbd_supply,
-    dgpo.init_hbd_supply
-    );
-
-  _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
-
-  filter.clear();
-
-  if(note.block_num % 100'000 == 0)
+  try
   {
-    log_statistics();
+    _last_block_num = note.block_num;
+    if(!can_collect_blocks())
+      return;
+    op_in_block_number = 0;
+
+    handle_transactions(note.full_block->get_full_transactions(), note.block_num);
+
+    const hive::chain::signed_block_header& block_header = note.full_block->get_block_header();
+    const auto* account_ptr = chain_db.find_account(block_header.witness);
+    int32_t account_id = account_ptr->get_id();
+    const hive::chain::witness_object* witness_ptr = chain_db.find_witness(block_header.witness);
+
+    const hive::chain::dynamic_global_property_object& dgpo = chain_db.get_dynamic_global_properties();
+
+    currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
+    currently_caching_data->blocks.emplace_back(
+      note.block_id,
+      note.block_num,
+      block_header.timestamp,
+      note.prev_block_id,
+      account_id,
+      block_header.transaction_merkle_root,
+      (block_header.extensions.size() == 0) ? fc::optional<std::string>() : fc::optional<std::string>(fc::json::to_string( block_header.extensions )),
+      block_header.witness_signature,
+      witness_ptr->signing_key,
+
+      dgpo.hbd_interest_rate,
+
+      dgpo.total_vesting_shares,
+      dgpo.total_vesting_fund_hive,
+
+      dgpo.total_reward_fund_hive,
+
+      dgpo.virtual_supply,
+      dgpo.current_supply,
+
+      dgpo.current_hbd_supply,
+      dgpo.init_hbd_supply
+      );
+
+    _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
+
+    filter.clear();
+
+    if(note.block_num % 100'000 == 0)
+    {
+      log_statistics();
+    }
+  }
+  catch (...)
+  {
+    theApp.kill();
+    throw;
   }
 }
 
@@ -778,7 +780,7 @@ sql_serializer_plugin_impl::is_database_initialized() {
     , "Check if any block is dumped"
     , "blockcheck"
     , [&is_database_initialized](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
-      pqxx::result data = tx.exec("select 1 from hive.operation_types limit 1");
+      pqxx::result data = tx.exec("select 1 from hafd.operation_types limit 1");
       is_database_initialized = !data.empty();
       return data_processor::data_processing_status();
     }

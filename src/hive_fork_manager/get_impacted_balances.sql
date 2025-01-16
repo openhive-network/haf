@@ -7,32 +7,32 @@ CREATE TYPE hive.impacted_balances_return AS
   asset_symbol_nai INT -- Type of asset symbol used in the operation
 );
 
-CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body hive.operation, IN _is_hf01 bool)
-RETURNS SETOF impacted_balances_return
+CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body hafd.operation, IN _is_hf01 bool)
+RETURNS SETOF hive.impacted_balances_return
 AS 'MODULE_PATHNAME', 'get_impacted_balances' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body text, IN _is_hf01 bool)
-  RETURNS SETOF impacted_balances_return
+  RETURNS SETOF hive.impacted_balances_return
   LANGUAGE plpgsql
   VOLATILE
 AS
 $BODY$
 BEGIN
-  RETURN QUERY SELECT * FROM hive.get_impacted_balances(_operation_body::jsonb::hive.operation, _is_hf01);
+  RETURN QUERY SELECT * FROM hive.get_impacted_balances(_operation_body::jsonb::hafd.operation, _is_hf01);
 END;
 $BODY$
 ;
 
 --- Returns set of operations which impact account balances.
 
-CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body hive.operation, IN _operation_block_number INT)
+CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body hafd.operation, IN _operation_block_number INT)
     RETURNS SETOF hive.impacted_balances_return
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-is_hf01 BOOLEAN := (SELECT (block_num < _operation_block_number) FROM hive.applied_hardforks WHERE hardfork_num = 1);
+is_hf01 BOOLEAN := (SELECT (block_num < _operation_block_number) FROM hafd.applied_hardforks WHERE hardfork_num = 1);
 BEGIN
 
 RETURN QUERY SELECT * FROM hive.get_impacted_balances(_operation_body, is_hf01);

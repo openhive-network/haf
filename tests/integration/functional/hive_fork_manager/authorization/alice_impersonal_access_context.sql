@@ -3,7 +3,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 DECLARE
-    __account hive.accounts%ROWTYPE;
+    __account hafd.accounts%ROWTYPE;
 BEGIN
     __account = ( 5, 'initminer', 1 );
     PERFORM hive.push_block(
@@ -45,7 +45,8 @@ CREATE OR REPLACE PROCEDURE alice_test_when()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice_context' );
+    CREATE SCHEMA ALICE;
+    PERFORM hive.app_create_context( 'alice_context', 'alice' );
 END;
 $BODY$
 ;
@@ -55,7 +56,8 @@ CREATE OR REPLACE PROCEDURE alice_impersonal_test_when()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice_impersonal_context' );
+    CREATE SCHEMA ALICE_IMPERSONAL;
+    PERFORM hive.app_create_context( 'alice_impersonal_context', 'alice_impersonal' );
 END;
 $BODY$
 ;
@@ -67,8 +69,8 @@ $BODY$
 BEGIN
     PERFORM hive.app_next_block( ARRAY[ 'alice_impersonal_context', 'alice_context' ] );
     PERFORM hive.app_next_block( ARRAY[ 'alice_impersonal_context', 'alice_context' ] );
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name = 'alice_impersonal_context' ) = 2, 'alice_impersonal_context cb!= 2';
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name = 'alice_context' ) = 2, 'alice_context cb!= 2';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name = 'alice_impersonal_context' ) = 2, 'alice_impersonal_context cb!= 2';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name = 'alice_context' ) = 2, 'alice_context cb!= 2';
 END;
 $BODY$
 ;

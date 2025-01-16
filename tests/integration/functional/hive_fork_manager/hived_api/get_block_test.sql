@@ -4,14 +4,15 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'context' );
-    CREATE TABLE table1( id INT ) INHERITS( hive.context );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
+    CREATE TABLE table1( id INT ) INHERITS( a.context );
 
-    INSERT INTO hive.fork( id, block_num, time_of_fork)
+    INSERT INTO hafd.fork( id, block_num, time_of_fork)
     VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp ),
            ( 3, 7, '2020-06-22 19:10:25-07'::timestamp );
 
-    INSERT INTO hive.blocks
+    INSERT INTO hafd.blocks
     VALUES
           ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
         , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -20,11 +21,11 @@ BEGIN
         , ( 5, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
     ;
 
-    INSERT INTO hive.transactions
+    INSERT INTO hafd.transactions
     VALUES
           ( 1, 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
         , ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
@@ -33,7 +34,7 @@ BEGIN
         , ( 5, 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hive.blocks_reversible
+    INSERT INTO hafd.blocks_reversible
     VALUES
           ( 4, '\xBADD40', '\xCAFE42', '2016-06-22 19:10:24-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
         , ( 5, '\xBADD50', '\xCAFE52', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
@@ -49,20 +50,20 @@ BEGIN
         , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-    INSERT INTO hive.operation_types VALUES (1, 'example_op', FALSE),(2, 'example_vop', TRUE);
+    INSERT INTO hafd.operation_types VALUES (1, 'example_op', FALSE),(2, 'example_vop', TRUE);
 
-    INSERT INTO hive.operations
+    INSERT INTO hafd.operations
     VALUES
-        -- id, block_num, trx_in_block, op_pos, op_type_id, timestamp, body
-          ( 1, 1, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK ONE OP"}}' :: jsonb :: hive.operation )
-        , ( 2, 2, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK TWO OP"}}' :: jsonb :: hive.operation )
-        , ( 3, 3, 0, 0, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive.operation )
-        , ( 4, 3, 0, 1, 2, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive.operation )
-        , ( 5, 4, 0, 1, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK FOUR OP"}}' :: jsonb :: hive.operation )
-        , ( 6, 5, 0, 2, 1, '2016-06-22 19:10:21-07'::timestamp, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE OP"}}' :: jsonb :: hive.operation )
+        -- id, trx_in_block, op_pos, body
+          ( hafd.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK ONE OP"}}' :: jsonb :: hafd.operation )
+        , ( hafd.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK TWO OP"}}' :: jsonb :: hafd.operation )
+        , ( hafd.operation_id(3, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hafd.operation )
+        , ( hafd.operation_id(3, 2, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hafd.operation )
+        , ( hafd.operation_id(4, 1, 1), 0, 1, '{"type":"system_warning_operation","value":{"message":"BLOCK FOUR OP"}}' :: jsonb :: hafd.operation )
+        , ( hafd.operation_id(5, 1, 2), 0, 2, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE OP"}}' :: jsonb :: hafd.operation )
     ;
 
-    UPDATE hive.irreversible_data SET consistent_block = 5;
+    UPDATE hafd.irreversible_data SET consistent_block = 5;
 END;
 $BODY$
 ;
@@ -87,7 +88,7 @@ BEGIN
     ASSERT __block.extensions = E'[{"version":"1.26"}]'::jsonb, 'Incorrect extensions';
     ASSERT __block.witness_signature = '\x21571234'::bytea, 'Incorrect witness signature';
 
-    __transaction1 = (101, 100, '2016-06-22 19:10:23-07'::timestamp, ARRAY['{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hive.operation], array_to_json(ARRAY[] :: INT[]) :: JSONB, ARRAY[ '\xBEEF'::bytea ]);
+    __transaction1 = (101, 100, '2016-06-22 19:10:23-07'::timestamp, ARRAY['{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hafd.operation], array_to_json(ARRAY[] :: INT[]) :: JSONB, ARRAY[ '\xBEEF'::bytea ]);
     ASSERT __block.transactions[1] = __transaction1, 'Incorrect first transaction';
     ASSERT __block.transactions = Array[ __transaction1 ], 'Incorrect transactions array';
     ASSERT __block.block_id = '\xBADD30'::bytea, 'Incorrect block_id';

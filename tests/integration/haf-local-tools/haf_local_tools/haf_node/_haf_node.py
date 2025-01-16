@@ -12,6 +12,7 @@ from sqlalchemy_utils import create_database, database_exists, drop_database
 
 import test_tools as tt
 from test_tools.__private.preconfigured_node import PreconfiguredNode
+from test_tools.__private.wallet.constants import WalletResponseBase as Transaction
 
 from haf_local_tools.db_adapter import DbAdapter
 
@@ -21,9 +22,6 @@ if TYPE_CHECKING:
     from test_tools.__private.user_handles.handles.node_handles.node_handle_base import NodeHandleBase as NodeHandle
 
     from haf_local_tools.db_adapter import ColumnType, ScalarType
-
-class Transaction(TypedDict):
-    transaction_id: str
 
 TransactionId = str
 
@@ -52,6 +50,7 @@ class HafNode(PreconfiguredNode):
 
         self.config.log_appender = '{"appender":"stderr","stream":"std_error"}'
         self.config.log_logger = '{"name":"default","level":"info","appender":"stderr"}'
+        self.__make_database()
 
     @property
     def session(self) -> Session:
@@ -106,8 +105,8 @@ class HafNode(PreconfiguredNode):
         timeout: float | timedelta = math.inf,
         poll_time: float = 1.0,
     ):
-        if isinstance(transaction, dict):
-            transaction_hash = transaction["transaction_id"]
+        if isinstance(transaction, Transaction):
+            transaction_hash = transaction.transaction_id
 
         if isinstance(transaction, TransactionId):
             transaction_hash = transaction

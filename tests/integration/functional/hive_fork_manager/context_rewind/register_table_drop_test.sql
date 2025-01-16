@@ -4,8 +4,9 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.context_create( 'context' );
-    CREATE TABLE hive.table1( id SERIAL PRIMARY KEY, smth INTEGER, name TEXT ) INHERITS( hive.context );
+    CREATE SCHEMA A;
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE test.table1( id SERIAL PRIMARY KEY, smth INTEGER, name TEXT ) INHERITS( a.context );
 END;
 $BODY$
 ;
@@ -15,7 +16,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    DROP TABLE hive.table1;
+    DROP TABLE test.table1;
 END;
 $BODY$
 ;

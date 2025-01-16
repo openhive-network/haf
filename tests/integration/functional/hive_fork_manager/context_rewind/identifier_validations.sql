@@ -4,7 +4,7 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
 $BODY$
 BEGIN
     CREATE SCHEMA A;
-    PERFORM hive.context_create( 'context' );
+    PERFORM hive.context_create( 'context', 'a' );
 END;
 $BODY$
 ;
@@ -18,7 +18,7 @@ BEGIN
     BEGIN
         CREATE TABLE A.very_very_long_named_table_to_register_into_context_context(
             id  SERIAL PRIMARY KEY DEFERRABLE, smth INTEGER, name TEXT)
-        INHERITS( hive.context );
+        INHERITS( a.context );
         ASSERT FALSE, 'No expected exception';
     EXCEPTION WHEN OTHERS THEN
     END;

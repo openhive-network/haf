@@ -5,8 +5,8 @@ AS
 $BODY$
 BEGIN
     CREATE SCHEMA A;
-    PERFORM hive.context_create( 'context' );
-    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( hive.context );
+    PERFORM hive.context_create( 'context', 'a' );
+    CREATE TABLE A.table1(id  SERIAL PRIMARY KEY, smth INTEGER, name TEXT) INHERITS( a.context );
 END;
 $BODY$
 ;
@@ -28,7 +28,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT NOT EXISTS ( SELECT * FROM hive.shadow_a_table1 ), 'Trigger iserted something into shadow table';
+    ASSERT NOT EXISTS ( SELECT * FROM hafd.shadow_a_table1 ), 'Trigger iserted something into shadow table';
 END
 $BODY$
 ;

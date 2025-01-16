@@ -6,8 +6,8 @@ AS
 $BODY$
 BEGIN
   -- Make sure that both conversions produce the same value
-  CALL hive.check_eq(hive.operation_from_jsontext(op)::TEXT, bytes);
-  CALL hive.check_eq(op::JSONB::hive.operation::TEXT, bytes);
+  CALL test.check_eq(hafd.operation_from_jsontext(op)::TEXT, bytes);
+  CALL test.check_eq(op::JSONB::hafd.operation::TEXT, bytes);
 END;
 $BODY$
 ;
@@ -51,13 +51,13 @@ BEGIN
   '\x0e08736d696e6572313000015d56d6e721ede5aad1babb0fe818203cbeeb2a000000000000000306b7270831d7e89a5d2b23ba614e6af9f587d2916cbd8f5fd736faa08acdda1ac55811a1a9cf6a281acad3aba38223027158186cfd280c41fffe5e2b0d2d6e0b1fbce97f375ac58c185905ac8e44a9c8b50b7e618bf4a7559816d8316e3b09ff54da096c2f5eddcca1229cf0b9da9597eac2ae676e424bdb432a7855295cd81a00000000049711861bce6185671b672696eca64398586a66319eacd875155b77fca08601000000000003535445454d000000000200e803');
 
   BEGIN
-    PERFORM hive.operation_from_jsontext('{}');
+    PERFORM hafd.operation_from_jsontext('{}');
     RAISE EXCEPTION 'Operation cannot be created from an empty object';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM hive.operation_from_jsontext('{"type":"system_warning_operation","value":{"message":[]}}');
+    PERFORM hafd.operation_from_jsontext('{"type":"system_warning_operation","value":{"message":[]}}');
     RAISE EXCEPTION 'Operation should not be created from json with incorrect message field';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
@@ -223,7 +223,7 @@ BEGIN
       "requestid": 1468315395
     }
   }',
-  '\x32057865726f6303b7845780841e00000000000353424400000000d73b09000000000003535445454d0000');
+  '\x32057865726f6303b7845780841e0000000000d73b090000000000');
 
   PERFORM ASSERT_THIS_TEST('{
     "type": "author_reward_operation",
@@ -252,7 +252,7 @@ BEGIN
       }
     }
   }',
-  '\x33057865726f6348746869732d706973746f6e2d726f636b732d7075626c69632d737465656d2d737465656d2d6170692d666f722d706973746f6e2d75736572732d616e642d646576656c6f7065727315000000000000000353424400000000000000000000000003535445454d000029a0c7010000000006564553545300000000000000000000065645535453000000');
+  '\x33057865726f6348746869732d706973746f6e2d726f636b732d7075626c69632d737465656d2d737465656d2d6170692d666f722d706973746f6e2d75736572732d616e642d646576656c6f706572731500000000000000000000000000000029a0c70100000000000000000000000000');
 
   PERFORM ASSERT_THIS_TEST('{
     "type": "curation_reward_operation",
@@ -268,7 +268,7 @@ BEGIN
       }
     }
   }',
-  '\x340763616d696c6c61a6d7c9040000000006564553545300000c616e6361336472616e646f6d2f737465656d6172742d7468652d6172742d6f662d7175696c6c696e672d70617065722d737465656d69742d6c6f676f00');
+  '\x340763616d696c6c61a6d7c904000000000c616e6361336472616e646f6d2f737465656d6172742d7468652d6172742d6f662d7175696c6c696e672d70617065722d737465656d69742d6c6f676f00');
 
   PERFORM ASSERT_THIS_TEST('{
     "type": "comment_reward_operation",
@@ -298,7 +298,7 @@ BEGIN
       }
     }
   }',
-  '\x35057865726f6348746869732d706973746f6e2d726f636b732d7075626c69632d737465656d2d737465656d2d6170692d666f722d706973746f6e2d75736572732d616e642d646576656c6f706572732d0000000000000003534244000000000d000000000000006dc10e0000000000035342440000000064ec050000000000035342440000000000000000000000000353424400000000');
+  '\x35057865726f6348746869732d706973746f6e2d726f636b732d7075626c69632d737465656d2d737465656d2d6170692d666f722d706973746f6e2d75736572732d616e642d646576656c6f706572732d000000000000000d000000000000006dc10e000000000064ec0500000000000000000000000000');
 
   PERFORM ASSERT_THIS_TEST('{
     "type": "liquidity_reward_operation",
@@ -311,7 +311,7 @@ BEGIN
       }
     }
   }',
-  '\x360361646d804f12000000000003535445454d0000');
+  '\x360361646d804f120000000000');
 
   PERFORM ASSERT_THIS_TEST('{
     "type": "interest_operation",
@@ -324,7 +324,7 @@ BEGIN
       "owner": "xeroc"
     }
   }',
-  '\x37057865726f63f700000000000000035342440000000000');
+  '\x37057865726f63f70000000000000000');
 
   PERFORM ASSERT_THIS_TEST('{
     "type": "fill_vesting_withdraw_operation",
@@ -343,7 +343,7 @@ BEGIN
       }
     }
   }',
-  '\x3808627533323831313808627533323831313879e852050000000006564553545300001a0000000000000003535445454d0000');
+  '\x3808627533323831313808627533323831313879e85205000000001a0000000000000003535445454d0000');
 
   PERFORM ASSERT_THIS_TEST('{
     "type": "fill_order_operation",
@@ -400,7 +400,7 @@ BEGIN
       "weight": 0
     }
   }',
-  '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d66726565000000000000000087918e0300000000000000000000000003000000000000000353424400000000');
+  '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d66726565000000000000000087918e030000000000000000000000000300000000000000');
 
   PERFORM ASSERT_THIS_TEST('{"type":"ineffective_delete_comment_operation","value":{"author":"jsc","permlink":"just-test-20160603t163718014z"}}',
     '\x49036a73631d6a7573742d746573742d3230313630363033743136333731383031347a');
@@ -432,7 +432,7 @@ BEGIN
       }
     }
   }',
-  '\x4d0b626c6f636b747261646573066b726970746fe98b0a000000000003535445454d00000e4a66f6080200000656455354530000');
+  '\x4d0b626c6f636b747261646573066b726970746fe98b0a00000000000e4a66f608020000');
 
   PERFORM ASSERT_THIS_TEST('{
     "type": "pow_reward_operation",
@@ -464,7 +464,7 @@ BEGIN
       "new_account_name": "singapore"
     }
   }',
-  '\x500973696e6761706f726505737465656db2ff88e102000000065645535453000000000000000000000656455354530000');
+  '\x500973696e6761706f726505737465656db2ff88e1020000000000000000000000');
 
   PERFORM ASSERT_THIS_TEST('{"type":"system_warning_operation","value":{"message":"Changingmaximumblocksizefrom2097152to131072"}}',
     '\x522b4368616e67696e676d6178696d756d626c6f636b73697a6566726f6d32303937313532746f313331303732');
@@ -474,55 +474,55 @@ BEGIN
     '\x5405616c69636503626f62010000000000000003535445454d00000278780c0c0000');
 
   BEGIN
-    PERFORM '{}'::jsonb::hive.operation;
+    PERFORM '{}'::jsonb::hafd.operation;
     RAISE EXCEPTION 'Operation cannot be created from an empty object';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"system_warning_operation","value":{"message":[]}}'::jsonb::hive.operation;
+    PERFORM '{"type":"system_warning_operation","value":{"message":[]}}'::jsonb::hafd.operation;
     RAISE EXCEPTION 'Operation should not be created from json with incorrect message field';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"limit_order_cancel_operation","value":{"owner":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","orderid":1}}'::jsonb::hive.operation;
+    PERFORM '{"type":"limit_order_cancel_operation","value":{"owner":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","orderid":1}}'::jsonb::hafd.operation;
     RAISE EXCEPTION 'Operation should not be created because name is too long';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":10000,"precision":3,"nai":"@@000000021"},"memo":"memo"}}'::jsonb::hive.operation;
+    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":10000,"precision":3,"nai":"@@000000021"},"memo":"memo"}}'::jsonb::hafd.operation;
     RAISE EXCEPTION 'Operation should not be created because amount needs to be a string';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"-1","precision":3,"nai":"@@000000021"},"memo":"memo"}}'::jsonb::hive.operation;
+    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"-1","precision":3,"nai":"@@000000021"},"memo":"memo"}}'::jsonb::hafd.operation;
     RAISE EXCEPTION 'Operation should not be created because amount cannot be negative';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"10000","precision":"3","nai":"@@000000021"},"memo":"memo"}}'::jsonb::hive.operation;
+    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"10000","precision":"3","nai":"@@000000021"},"memo":"memo"}}'::jsonb::hafd.operation;
     RAISE EXCEPTION 'Operation should not be created because precision needs to be an integer';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"10000","precision":3,"nai":"@@000000020"},"memo":"memo"}}'::jsonb::hive.operation;
+    PERFORM '{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"10000","precision":3,"nai":"@@000000020"},"memo":"memo"}}'::jsonb::hafd.operation;
     RAISE EXCEPTION 'Operation should not be created because nai is incorrect';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"update_proposal_votes_operation","value":{"voter":"alice","proposal_ids":[0,1,5,3],"approve":true,"extensions":[]}}'::jsonb::hive.operation;
+    PERFORM '{"type":"update_proposal_votes_operation","value":{"voter":"alice","proposal_ids":[0,1,5,3],"approve":true,"extensions":[]}}'::jsonb::hafd.operation;
     RAISE EXCEPTION 'Operation should not be created because proposals ids are not increasing';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
 
   BEGIN
-    PERFORM '{"type":"update_proposal_votes_operation","value":{"voter":"alice","proposal_ids":[0,1,1],"approve":true,"extensions":[]}}'::jsonb::hive.operation;
+    PERFORM '{"type":"update_proposal_votes_operation","value":{"voter":"alice","proposal_ids":[0,1,1],"approve":true,"extensions":[]}}'::jsonb::hafd.operation;
     RAISE EXCEPTION 'Operation should not be created because proposals ids are not unique';
   EXCEPTION WHEN invalid_text_representation THEN
   END;
@@ -561,7 +561,7 @@ BEGIN
       "weight": 0
     }
   }',
-  '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d667265650000000000000000ffffffffffffffff000000000000000003000000000000000353424400000000');
+  '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d667265650000000000000000ffffffffffffffff00000000000000000300000000000000');
   PERFORM ASSERT_THIS_TEST('{
     "type": "effective_comment_vote_operation",
     "value": {
@@ -578,7 +578,7 @@ BEGIN
       "weight": 18446744073709551615
     }
   }',
-  '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d66726565ffffffffffffffff87918e0300000000000000000000000003000000000000000353424400000000');
+  '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d66726565ffffffffffffffff87918e030000000000000000000000000300000000000000');
   PERFORM ASSERT_THIS_TEST('{
     "type": "effective_comment_vote_operation",
     "value": {
@@ -595,7 +595,7 @@ BEGIN
       "weight": "-18446744073709551615"
     }
   }',
-  '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d66726565010000000000000087918e0300000000000000000000000003000000000000000353424400000000');
+  '\x480c6d6173736d696e64726170650b77617463686f6e6c696e6536737569636964652d73717561642d323031362d77617463682d66756c6c2d6d6f7669652d73747265616d2d6f6e6c696e652d66726565010000000000000087918e030000000000000000000000000300000000000000');
 END;
 $BODY$
 ;

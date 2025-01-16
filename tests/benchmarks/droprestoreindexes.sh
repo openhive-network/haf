@@ -12,21 +12,21 @@ psql "$POSTGRES_ACCESS" --command="${cmd}"
 
 
 #restore indexes
-cmd="select hive.restore_indexes( 'hive.blocks' );"
+cmd="select hive.restore_indexes( 'hafd.blocks' );"
 psql "$POSTGRES_ACCESS" --command="${cmd}" &
-cmd="select hive.restore_indexes( 'hive.irreversible_data' );"
+cmd="select hive.restore_indexes( 'hafd.irreversible_data' );"
 psql "$POSTGRES_ACCESS" --command="${cmd}" &
-cmd="select hive.restore_indexes( 'hive.transactions' );"
+cmd="select hive.restore_indexes( 'hafd.transactions' );"
 psql "$POSTGRES_ACCESS" --command="${cmd}" &
-cmd="select hive.restore_indexes( 'hive.transactions_multisig' );"
+cmd="select hive.restore_indexes( 'hafd.transactions_multisig' );"
 psql "$POSTGRES_ACCESS" --command="${cmd}" &
-cmd="select hive.restore_indexes( 'hive.operations' );"
+cmd="select hive.restore_indexes( 'hafd.operations' );"
 psql "$POSTGRES_ACCESS" --command="${cmd}" &
-cmd="select hive.restore_indexes( 'hive.accounts' );"
+cmd="select hive.restore_indexes( 'hafd.accounts' );"
 psql "$POSTGRES_ACCESS" --command="${cmd}" &
-cmd="select hive.restore_indexes( 'hive.account_operations' );"
+cmd="select hive.restore_indexes( 'hafd.account_operations' );"
 psql "$POSTGRES_ACCESS" --command="${cmd}" &
-cmd="select hive.restore_indexes( 'hive.applied_hardforks' );"
+cmd="select hive.restore_indexes( 'hafd.applied_hardforks' );"
 psql "$POSTGRES_ACCESS" --command="${cmd}" &
 
 wait

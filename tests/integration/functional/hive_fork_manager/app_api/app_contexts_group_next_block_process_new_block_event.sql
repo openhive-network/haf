@@ -4,7 +4,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.operation_types
+    INSERT INTO hafd.operation_types
     VALUES
           ( 0, 'OP 0', FALSE )
         , ( 1, 'OP 1', FALSE )
@@ -12,11 +12,11 @@ BEGIN
         , ( 3, 'OP 3', TRUE )
     ;
 
-    INSERT INTO hive.blocks
+    INSERT INTO hafd.blocks
     VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
     ;
 
@@ -32,13 +32,15 @@ BEGIN
         , NULL
     );
 
-    PERFORM hive.app_create_context( 'context' );
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
     -- create a table to test forking app
-    CREATE TABLE table1( id INT) INHERITS( hive.context );
+    CREATE TABLE table1( id INT) INHERITS( a.context );
 
-    PERFORM hive.app_create_context( 'context_b' );
+    CREATE SCHEMA B;
+    PERFORM hive.app_create_context( _name => 'context_b', _schema => 'b' );
     -- create a table to test forking app
-    CREATE TABLE tableB( id INT) INHERITS( hive.context_b );
+    CREATE TABLE tableB( id INT) INHERITS( b.context_b );
 END;
 $BODY$
 ;
@@ -70,10 +72,10 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM hive.events_queue WHERE id = 2 AND event = 'NEW_BLOCK' AND block_num = 2 ), 'No event added';
-    ASSERT ( SELECT COUNT(*) FROM hive.events_queue ) = 4, 'Unexpected number of events';
+    ASSERT EXISTS ( SELECT FROM hafd.events_queue WHERE id = 2 AND event = 'NEW_BLOCK' AND block_num = 2 ), 'No event added';
+    ASSERT ( SELECT COUNT(*) FROM hafd.events_queue ) = 4, 'Unexpected number of events';
 
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 2, 'Wrong current block num';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context' ) = 2, 'Wrong current block num';
 END
 $BODY$
 ;

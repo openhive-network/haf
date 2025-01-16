@@ -4,7 +4,8 @@ LANGUAGE 'plpgsql'
 $BODY$
 
 BEGIN
-    PERFORM hive.context_create( 'context_' || gen.* ) FROM generate_series(1, 999) as gen;
+    CREATE SCHEMA A;
+    PERFORM hive.context_create( 'context_' || gen.*, 'a' ) FROM generate_series(1, 999) as gen;
 END
 $BODY$
 ;
@@ -14,7 +15,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
     AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT COUNT(*) FROM hive.contexts ) = 999, 'Wrong number of contexts !=999';
+    ASSERT ( SELECT COUNT(*) FROM hafd.contexts ) = 999, 'Wrong number of contexts !=999';
 END
 $BODY$
 ;

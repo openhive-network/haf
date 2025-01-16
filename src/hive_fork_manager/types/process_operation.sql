@@ -1,4 +1,4 @@
--- Process an operation given in `op` record.  It should be any record type containing `body` and `op_type_id` columns of types `hive.operation` and `smallint` respectively.
+-- Process an operation given in `op` record.  It should be any record type containing `body` and `op_type_id` columns of types `hafd.operation` and `smallint` respectively.
 -- Depending on the operation type in `op_type_id`, `op.body` will be cast to appropriate concrete operation type (e.g. vote_operation, custom_json_operation)
 -- and passed to user provided function given by `namespace` and `proc`.
 -- Provided function overload must exist for given operation type. Otherwise an exception is raised.

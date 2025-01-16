@@ -4,7 +4,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hive.operation_types
+    INSERT INTO hafd.operation_types
     VALUES
     ( 0, 'OP 0', FALSE )
          , ( 1, 'OP 1', FALSE )
@@ -12,11 +12,11 @@ BEGIN
          , ( 3, 'OP 3', TRUE )
     ;
 
-    INSERT INTO hive.blocks
+    INSERT INTO hafd.blocks
     VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hive.accounts( id, name, block_num )
+    INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
     ;
 
@@ -33,9 +33,9 @@ BEGIN
         );
 
     -- create non-forking context and its table
-    PERFORM hive.app_create_context( 'context' );
     CREATE SCHEMA A;
-    CREATE TABLE A.table1( id INT) INHERITS( hive.context );
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
+    CREATE TABLE A.table1( id INT) INHERITS( a.context );
 
     -- move to irreversible block (1,1)
     PERFORM hive.app_next_block( 'context' );
@@ -64,11 +64,11 @@ $BODY$
 DECLARE
         __result hive.blocks_range;
 BEGIN
-    ASSERT EXISTS ( SELECT * FROM hive.contexts WHERE name='context' AND is_attached = TRUE ), 'Attach flag is still set';
-    ASSERT ( SELECT current_block_num FROM hive.contexts WHERE name='context' ) = 1, 'Wrong current_block_num';
-    ASSERT ( SELECT is_forking FROM hive.contexts WHERE name='context' ) = FALSE, 'context is is still marked as forking';
+    ASSERT EXISTS ( SELECT * FROM hafd.contexts hc JOIN hafd.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context' AND hca.is_attached = TRUE ), 'Attach flag is still set';
+    ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context' ) = 1, 'Wrong current_block_num';
+    ASSERT ( SELECT is_forking FROM hafd.contexts WHERE name='context' ) = FALSE, 'context is is still marked as forking';
 
-    ASSERT ( SELECT COUNT(*) FROM hive.shadow_a_table1 ) = 0, 'Trigger inserted something into shadow table1';
+    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table1 ) = 0, 'Trigger inserted something into shadow table1';
 
     SELECT * INTO __result FROM hive.app_next_block( 'context' );
     ASSERT __result IS NULL, 'Non forking context reach reversible block';

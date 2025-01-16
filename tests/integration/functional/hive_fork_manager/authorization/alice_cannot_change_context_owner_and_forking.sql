@@ -3,7 +3,8 @@ CREATE OR REPLACE PROCEDURE alice_test_given()
     AS
 $BODY$
 BEGIN
-    PERFORM hive.app_create_context( 'alice_context' );
+    CREATE SCHEMA ALICE;
+    PERFORM hive.app_create_context( 'alice_context', 'alice' );
 END;
 $BODY$
 ;
@@ -15,7 +16,7 @@ CREATE OR REPLACE PROCEDURE alice_test_then()
 $BODY$
 BEGIN
     BEGIN
-        UPDATE hive.contexts SET owner = 'BLABLA';
+        UPDATE hafd.contexts SET owner = 'BLABLA';
         ASSERT FALSE, 'Alice can update the context''s owner';
     EXCEPTION WHEN OTHERS THEN
     END;

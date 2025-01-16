@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import Any, Tuple, Iterable
-from uuid import uuid4
+from random import randbytes
 from functools import partial
 
 import pytest
@@ -16,6 +16,7 @@ import test_tools as tt
 
 import shared_tools.networks_architecture as networks
 from shared_tools.complex_networks import NodesPreparer, run_whole_network, prepare_time_offsets, create_block_log_directory_name
+from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 
 class SQLNodesPreparer(NodesPreparer):
     def __init__(self, database, start_block=1) -> None:
@@ -31,8 +32,10 @@ class SQLNodesPreparer(NodesPreparer):
             node.config.plugin.append('sql_serializer')
             node.config.psql_url = str(self.db_url(cnt))
             node.config.psql_first_block = self.start_block
+            apply_block_log_type_to_monolithic_workaround(node)
 
         for node in builder.nodes:
+            apply_block_log_type_to_monolithic_workaround(node)
             node.config.log_logger = '{"name":"default","level":"debug","appender":"stderr,p2p"} '\
                                     '{"name":"user","level":"debug","appender":"stderr,p2p"} '\
                                     '{"name":"chainlock","level":"debug","appender":"p2p"} '\
@@ -71,7 +74,7 @@ def database():
     """
 
     def make_database(url):
-        url = url + '_' + uuid4().hex
+        url = url + '_' + randbytes(8).hex()
         tt.logger.info(f'Preparing database {url}')
         if database_exists(url):
             drop_database(url)

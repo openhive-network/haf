@@ -7,8 +7,9 @@ CREATE OR REPLACE PROCEDURE bob_test_given()
 $BODY$
 BEGIN
     -- query shall not be broken
-    CREATE TABLE numbers( num INT );
-    INSERT INTO numbers SELECT generate_series(1,10000);
+    CREATE SCHEMA A;
+    CREATE TABLE a.numbers( num INT );
+    INSERT INTO a.numbers SELECT generate_series(1,10000);
 END
 $BODY$
 ;
@@ -18,7 +19,7 @@ CREATE OR REPLACE PROCEDURE bob_test_then()
 AS
 $BODY$
 BEGIN
-    CREATE TABLE test AS SELECT * FROM  numbers;
+    CREATE TABLE a.test AS SELECT * FROM  a.numbers;
 END
 $BODY$
 ;

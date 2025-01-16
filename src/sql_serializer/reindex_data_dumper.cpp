@@ -9,7 +9,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , appbase::application& app
     , uint32_t operations_threads
     , uint32_t transactions_threads
-    , uint32_t account_operation_threads ) {
+    , uint32_t account_operation_threads ) : app(app) {
     ilog( "Starting reindexing dump to database with ${o} operations and ${t} transactions threads", ("o", operations_threads )("t", transactions_threads) );
     _transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "reindex dumper", app );
     _end_massive_sync_processor = std::make_unique< end_massive_sync_processor >( db_url, app );
@@ -40,7 +40,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   reindex_data_dumper::~reindex_data_dumper() {
     ilog( "Reindex dumper is closing...." );
-    reindex_data_dumper::join();
+    try {
+      join();
+    } FC_CAPTURE_AND_LOG(())
     ilog( "Reindex dumper closed" );
   }
 
@@ -52,11 +54,27 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_writer->trigger( std::move( cached_data.accounts ), last_block_num );
     _account_operations_writer->trigger( std::move( cached_data.account_operations ), last_block_num );
     _applied_hardforks_writer->trigger( std::move( cached_data.applied_hardforks ), last_block_num );
+    if (app.is_interrupt_request())
+    {
+      cancel();
+    }
+  }
+
+  void reindex_data_dumper::cancel() {
+    cancel_processors(
+      *_block_writer,
+      *_transaction_writer,
+      *_operation_writer,
+      *_transaction_multisig_writer,
+      *_account_writer,
+      *_account_operations_writer,
+      *_applied_hardforks_writer
+    );
   }
 
   void reindex_data_dumper::join() {
     // _end_massive_sync_processor should be joined last
-    join_writers(
+    join_processors(
         *_block_writer
       , *_transaction_writer
       , *_transaction_multisig_writer
