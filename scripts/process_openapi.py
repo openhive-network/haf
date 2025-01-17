@@ -3,6 +3,7 @@ import yaml
 import json
 import re
 import sys
+import os
 
 from pathlib import Path
 
@@ -382,9 +383,13 @@ def dump_openapi_spec(sql_output):
     sql_output.write('\n$$;\n')
     sql_output.write('-- openapi-generated-code-end\n')
 
-def generate_rewrite_rules(rewrite_rules_file):
+def generate_rewrite_rules(rewrite_rules_file, output_dir):
     if 'paths' in collected_openapi_fragments:
-        with open(rewrite_rules_file, 'w') as rewrite_rules_file:
+        output_filepath = output_dir / Path(rewrite_rules_file)
+        output_filepath.parent.mkdir(parents = True, exist_ok = True)
+        print(f"Attempting to generate ngnix rewrite rules into: {output_filepath}")
+
+        with open(output_filepath, 'w') as rewrite_rules_file:
             # generate default rules that are always the same
             rewrite_rules_file.write(f'# default endpoint for everything else\n')
             rewrite_rules_file.write(f'rewrite ^/(.*)$ /rpc/$1 break;\n\n')
@@ -434,6 +439,8 @@ def generate_rewrite_rules(rewrite_rules_file):
 
                     rewrite_rules_file.write(f'# endpoint for {method} {path}\n')
                     rewrite_rules_file.write(f'rewrite {rewrite_from} {rewrite_to} break;\n\n')
+    else:
+        print("Warning: missing path element in the collected collected_openapi_fragments")
 
 def process_sql_file(sql_input, sql_output):
     yaml_comment_path = []
@@ -491,17 +498,28 @@ def process_sql_file(sql_input, sql_output):
 
 def process_sql_files(input_sql_filenames, output_dir = None):
     for input_sql_filename in input_sql_filenames:
-        with open(input_sql_filename) as sql_input:
+        input_sql_path = Path(input_sql_filename).absolute().resolve(True)
+
+        with open(input_sql_path) as sql_input:
             if output_dir == None:
+                print(f"Processing SQL file: {input_sql_path}")
                 process_sql_file(sql_input, None)
             else:
-                output_sql_filename = output_dir / Path(input_sql_filename)
-                output_sql_filename.parent.mkdir(parents = True, exist_ok = True)
-                with output_sql_filename.open(mode = 'w') as sql_output:
+                relative_output_dir = output_dir
+                commonPath = os.path.commonpath([output_dir, input_sql_path])
+                relative_sql_path = input_sql_path.relative_to(commonPath)
+                output_sql_filepath = output_dir / relative_sql_path
+                print(f"Transforming input SQL file: {input_sql_path} into: {output_sql_filepath}")
+                output_sql_filepath.parent.mkdir(parents = True, exist_ok = True)
+
+                with output_sql_filepath.open(mode = 'w') as sql_output:
                     process_sql_file(sql_input, sql_output)
 
 # needs proper command-line parsing
-output_dir = Path(sys.argv[1])
+output_dir = Path(sys.argv[1]).absolute()
+print(f"Attempting to create output directory: {output_dir}")
+output_dir.mkdir(parents = True, exist_ok = True)
+
 input_files = sys.argv[2:]
 rewrite_rules_file = 'rewrite_rules.conf'
 
@@ -510,4 +528,4 @@ process_sql_files(input_files)
 # Then a second pass that does the substitutions, writing output files to `output_dir`
 process_sql_files(input_files, output_dir)
 # and dump the nginx rewrite rules
-generate_rewrite_rules(rewrite_rules_file)
+generate_rewrite_rules(rewrite_rules_file, output_dir)
