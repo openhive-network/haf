@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/bash -x
 
 set -euo pipefail
 
@@ -64,6 +64,13 @@ done
 
 
 test_extension_update() {
+    # copy sources to build directory, they will be modified there to create real new version of hfm extension
+    COPY_SRC_PATH="${HAF_DIR}/src_copy"
+    COPY_BUILD_PATH="${HAF_DIR}/src_copy/build"
+    rm -rf ${COPY_SRC_PATH}
+    mkdir -p ${COPY_SRC_PATH}
+    mkdir -p ${COPY_BUILD_PATH}
+    cp -a ${DIR}/. ${COPY_SRC_PATH}
 
     POSTGRES_VERSION=17
     echo "Add function testfun to schema hive"
@@ -72,18 +79,17 @@ test_extension_update() {
 
     # old libhfm has to be removed so in case of an corrupted setup of haf the old libhfm won't be used
     sudo rm -rf /usr/lib/postgresql/${POSTGRES_VERSION}/lib/libhfm-*
-    # modify the hived_api.sql file
-    echo -e "CREATE OR REPLACE FUNCTION hive.test() \n    RETURNS void \n    LANGUAGE plpgsql \n    VOLATILE AS \n\$BODY\$ \nBEGIN \nRAISE NOTICE 'test'; \nEND; \n\$BODY\$;" >> $DIR/src/hive_fork_manager/hived_api.sql
+    # modify the hived_api.sql file, new function test added to the new version of hfm
+    echo -e "CREATE OR REPLACE FUNCTION hive.test() \n    RETURNS void \n    LANGUAGE plpgsql \n    VOLATILE AS \n\$BODY\$ \nBEGIN \nRAISE NOTICE 'test'; \nEND; \n\$BODY\$;" >> "${COPY_SRC_PATH}/src/hive_fork_manager/hived_api.sql"
     # commit changes to make a new hash
-    git -C $DIR config --global user.name "abc"
-    git -C $DIR config --global user.email "abc@example.com"
-    git -C $DIR config --global --add safe.directory /builds/hive/haf
-    git -C $DIR add src/hive_fork_manager/hived_api.sql
-    git -C $DIR commit -m "test"
-    # rebuild haf
-    test -n "$HAF_DIR" && rm "$HAF_DIR"/* -rf
-    $SETUP_DIR/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="$DIR" --haf-binaries-dir="$HAF_DIR" extension.hive_fork_manager
-    (cd $HAF_DIR; sudo ninja install)
+    git -C ${COPY_BUILD_PATH} config --global user.name "abc"
+    git -C ${COPY_BUILD_PATH} config --global user.email "abc@example.com"
+    git -C ${COPY_BUILD_PATH} config --global --add safe.directory /builds/hive/haf
+    git -C ${COPY_BUILD_PATH} add "${COPY_SRC_PATH}/src/hive_fork_manager/hived_api.sql"
+    git -C ${COPY_BUILD_PATH} commit -m "test"
+    # rebuild copy of haf
+    ${COPY_SRC_PATH}/scripts/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="${COPY_SRC_PATH}" --haf-binaries-dir="${COPY_BUILD_PATH}" extension.hive_fork_manager
+    (cd ${COPY_BUILD_PATH}; sudo ninja install)
     # run generator script
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh
 
@@ -101,7 +107,19 @@ test_extension_update() {
     END
     \$\$ LANGUAGE plpgsql;"
 
-
+    # check if function test added in new hfm version exists
+    sudo -Enu "$DB_ADMIN" psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "
+    DO \$\$
+    BEGIN
+        ASSERT EXISTS (
+            SELECT 1
+            FROM pg_proc
+            JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid
+            WHERE pg_proc.proname = 'test'
+            AND pg_namespace.nspname = 'hive'
+        ), 'Function hive.test() not exists when it should not.';
+    END
+    \$\$ LANGUAGE plpgsql;"
 }
 
 test_extension_update

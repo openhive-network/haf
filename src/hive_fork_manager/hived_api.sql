@@ -565,15 +565,3 @@ END;
 $BODY$
 ;
 
-
-CREATE OR REPLACE FUNCTION hive.test()
-    RETURNS VOID
-    LANGUAGE plpgsql
-    IMMUTABLE
-AS
-$BODY$
-BEGIN
-    RETURN;
-END;
-$BODY$
-;
