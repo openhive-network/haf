@@ -391,11 +391,11 @@ def generate_rewrite_rules(rewrite_rules_file, output_dir):
 
         with open(output_filepath, 'w') as rewrite_rules_file:
             # generate default rules that are always the same
-            rewrite_rules_file.write(f'# default endpoint for everything else\n')
-            rewrite_rules_file.write(f'rewrite ^/(.*)$ /rpc/$1 break;\n\n')
-            rewrite_rules_file.write(f'# endpoint for openapi spec itself\n')
-            rewrite_rules_file.write(f'rewrite ^/$ / break;\n\n')
-            for path, methods_for_path in collected_openapi_fragments['paths'].items():
+            print(f"Gathered: {len(collected_openapi_fragments['paths'])} path items")
+            # rewrite rules must be generated starting from most specific to less (deeper first) to avoid catching a call by more general rule
+            reversedPaths = list(reversed(collected_openapi_fragments['paths'].items()))
+            for path, methods_for_path in reversedPaths: #collected_openapi_fragments['paths'].items():
+                print(f"Processing methods for path: {path}")
                 for method, method_data in methods_for_path.items():
                     path_parts = path.split('/')
                     # paths in openapi spec will start with / and then the name of the API, like: GET /hafbe/witnesses
@@ -439,6 +439,11 @@ def generate_rewrite_rules(rewrite_rules_file, output_dir):
 
                     rewrite_rules_file.write(f'# endpoint for {method} {path}\n')
                     rewrite_rules_file.write(f'rewrite {rewrite_from} {rewrite_to} break;\n\n')
+
+            rewrite_rules_file.write(f'# default endpoint for everything else\n')
+            rewrite_rules_file.write(f'rewrite ^/(.*)$ /rpc/$1 break;\n\n')
+            rewrite_rules_file.write(f'# endpoint for openapi spec itself\n')
+            rewrite_rules_file.write(f'rewrite ^/$ / break;\n\n')
     else:
         print("Warning: missing path element in the collected collected_openapi_fragments")
 
