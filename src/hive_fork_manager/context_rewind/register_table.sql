@@ -197,7 +197,20 @@ DECLARE
     __attached_context BOOLEAN := FALSE;
     __columns_names TEXT[];
     __is_forking BOOLEAN := TRUE;
+    __schema TEXT;
 BEGIN
+    SELECT hc.is_forking,hc.schema INTO __is_forking, __schema
+    FROM hafd.contexts hc WHERE hc.name = _context_name;
+
+    IF NOT __is_forking THEN
+        -- non-forking application does not need to be registerd
+        -- for sake of migration to forking simplicity a non-forking app can register tables
+        -- but it does nothing
+        -- we must remove rowid column
+        EXECUTE format( 'ALTER TABLE %I.%I NO INHERIT %I.%I;', _table_schema, _table_name, __schema, _context_name );
+        RETURN;
+    END IF;
+
     PERFORM hive.chceck_constrains(_table_schema, _table_name);
 
     -- create a shadow table
@@ -213,8 +226,7 @@ BEGIN
           context_id
         , id
         , (SELECT hca.is_attached FROM hafd.contexts hc2 JOIN hafd.contexts_attachment hca ON hca.context_id=hc2.id WHERE hc2.id = hrt.context_id)
-        , (SELECT hc2.is_forking FROM hafd.contexts hc2 WHERE hc2.id = hrt.context_id)
-        INTO __context_id, __registered_table_id, __attached_context, __is_forking
+        INTO __context_id, __registered_table_id, __attached_context
     ;
 
     -- create and set separated sequence for hive.base part of the registered table
@@ -231,9 +243,8 @@ BEGIN
         , lower( _table_name )
         );
 
-    IF __is_forking THEN
-        PERFORM hive.create_rowid_index(_table_schema, _table_name );
-    END IF;
+
+    PERFORM hive.create_rowid_index(_table_schema, _table_name );
 
     ASSERT __context_id IS NOT NULL, 'There is no context %', _context_name;
     ASSERT __registered_table_id IS NOT NULL;
@@ -404,8 +415,10 @@ DECLARE
     __context_name TEXT := NULL;
     __context_schema TEXT;
     __registered_table_id INTEGER := NULL;
+    __is_forking BOOLEAN := TRUE;
 BEGIN
-    SELECT hc.name, hrt.id, hc.schema INTO __context_name, __registered_table_id, __context_schema
+    SELECT hc.name, hrt.id, hc.schema, hc.is_forking
+    INTO __context_name, __registered_table_id, __context_schema, __is_forking
     FROM hafd.contexts hc
     JOIN hafd.registered_tables hrt ON hrt.context_id = hc.id
     WHERE hrt.origin_table_schema = lower(_table_schema) AND hrt.origin_table_name = lower(_table_name)
