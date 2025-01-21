@@ -559,11 +559,6 @@ The context will back to last processed irreversible block.
 #### hive.app_contexts_set_non_forking( _array_of_contexts )
 Equivalent of 'hive.app_contexts_set_non_forking' for a group of contexts.
 
-#### hive.app_context_set_forking( _context_name )
-Sets given context as forking - means process also reversible data and rewind them during back form abandoned fork.
-
-#### hive.app_context_set_forking( _array_of_contexts )
-Equivalent of 'hive.app_context_set_forking' for a group of contexts.
 
 #### hive.app_state_provider_import( state_provider, context )
 Imports state provider into contexts - the state provider tables are created and registered in `hafd.state_providers_registered` table.

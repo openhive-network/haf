@@ -47,31 +47,6 @@ BEGIN
         ASSERT FALSE, 'Hived can call app_register_table';
     EXCEPTION WHEN OTHERS THEN
     END;
-
-    BEGIN
-        PERFORM hive.app_context_set_non_forking( ARRAY[ 'alice_context' ] );
-        ASSERT FALSE, 'Hived can call app_context_set_non_forking';
-    EXCEPTION WHEN OTHERS THEN
-    END;
-
-    BEGIN
-        PERFORM hive.app_context_set_non_forking( 'alice_context' );
-            ASSERT FALSE, 'Hived can call app_context_set_non_forking';
-    EXCEPTION WHEN OTHERS THEN
-    END;
-
-    BEGIN
-        PERFORM hive.app_context_set_forking( ARRAY[ 'alice_context' ]  );
-        ASSERT FALSE, 'Hived can call hive.app_context_set_forking';
-    EXCEPTION WHEN OTHERS THEN
-    END;
-
-    BEGIN
-        PERFORM hive.app_context_set_forking( 'alice_context' );
-        ASSERT FALSE, 'Hived can call hive.app_context_set_forking';
-    EXCEPTION WHEN OTHERS THEN
-    END;
-
 END;
 $BODY$
 ;
