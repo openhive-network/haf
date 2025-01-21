@@ -11,6 +11,8 @@ from deepmerge import always_merger
 from jsonpointer import resolve_pointer
 
 collected_openapi_fragments = {}
+app_version='version-placeholder'
+swagger_json_file = 'swagger-doc.json'
 
 def merge_openapi_fragment(new_fragment):
     global collected_openapi_fragments
@@ -376,10 +378,14 @@ def is_sql_keyword(word):
     return word.upper() in keywords
 
 
-def dump_openapi_spec(sql_output):
+def dump_openapi_spec(sql_output, json_output):
+    global app_version
     sql_output.write('-- openapi-generated-code-begin\n')
     sql_output.write('  openapi json = $$\n')
-    sql_output.write(json.dumps(collected_openapi_fragments, indent = 2))
+    collected_openapi_fragments['info']['version']=app_version
+    json_str = json.dumps(collected_openapi_fragments, indent = 2)
+    sql_output.write(json_str)
+    json_output.write(json_str)
     sql_output.write('\n$$;\n')
     sql_output.write('-- openapi-generated-code-end\n')
 
@@ -447,7 +453,8 @@ def generate_rewrite_rules(rewrite_rules_file, output_dir):
     else:
         print("Warning: missing path element in the collected collected_openapi_fragments")
 
-def process_sql_file(sql_input, sql_output):
+def process_sql_file(sql_input, sql_output, output_dir):
+    global swagger_json_file
     yaml_comment_path = []
     yaml_comment_lines = []
     in_yaml_comment = False
@@ -491,7 +498,10 @@ def process_sql_file(sql_input, sql_output):
 
                 matches_openapi_spec_comment = re.match(r'^\s*-- openapi-spec\s*$', line)
                 if matches_openapi_spec_comment:
-                    dump_openapi_spec(sql_output)
+                    swagger_json_path = output_dir/swagger_json_file
+                    print(f"Generating swagger json into file: {swagger_json_path}")
+                    with swagger_json_path.open(mode = 'w') as swagger_json_output:
+                        dump_openapi_spec(sql_output, swagger_json_output)
 
             matches_openapi_fragment = re.match(r'^\s*\/\*\*\s*openapi(?::((?:\w+)(?::\w+)*))?\s*$', line)
             if matches_openapi_fragment:
@@ -508,19 +518,36 @@ def process_sql_files(input_sql_filenames, output_dir = None):
         with open(input_sql_path) as sql_input:
             if output_dir == None:
                 print(f"Processing SQL file: {input_sql_path}")
-                process_sql_file(sql_input, None)
+                process_sql_file(sql_input, None, None)
             else:
                 relative_output_dir = output_dir
                 commonPath = os.path.commonpath([output_dir, input_sql_path])
                 relative_sql_path = input_sql_path.relative_to(commonPath)
                 output_sql_filepath = output_dir / relative_sql_path
+
                 print(f"Transforming input SQL file: {input_sql_path} into: {output_sql_filepath}")
                 output_sql_filepath.parent.mkdir(parents = True, exist_ok = True)
 
                 with output_sql_filepath.open(mode = 'w') as sql_output:
-                    process_sql_file(sql_input, sql_output)
+                    process_sql_file(sql_input, sql_output, output_dir)
 
 # needs proper command-line parsing
+
+while len(sys.argv) > 2 and (sys.argv[1] == '--version' or sys.argv[1] == '--swagger_json'):
+    if sys.argv[1] == '--version':
+        sys.argv.pop(1)
+        app_version=sys.argv[1]
+        sys.argv.pop(1)
+        print(f"Using version: {app_version}")
+    elif sys.argv[1] == '--swagger_json':
+        sys.argv.pop(1)
+        swagger_json_file=sys.argv[1]
+        sys.argv.pop(1)
+        print(f"Using swagger json output: {swagger_json_file}")
+    else:
+        print("Error: Invalid arguments: {sys.argv}. Usage process_openapi.py [--version <version>] [--swagger_json <path>] <output-dir-path> <input-files...>")
+        exit(1)
+
 output_dir = Path(sys.argv[1]).absolute()
 print(f"Attempting to create output directory: {output_dir}")
 output_dir.mkdir(parents = True, exist_ok = True)
