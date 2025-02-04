@@ -1,6 +1,6 @@
 include:
   - project: 'hive/hive'
-    ref: 1c2fe378cbb7c61147881dce247a6d9c28188f9e #develop
+    ref: 0c8f0c3e57f14ad544c1e5dca9c90eeb703a19f6 #develop
     file: '/scripts/ci-helpers/prepare_data_image_job.yml'
 
 .prepare_haf_image:
@@ -15,7 +15,7 @@ include:
     HIVE_NETWORK_TYPE: mainnet
   script:
     - $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh
-        "$SUBMODULE_DIR" registry.gitlab.syncad.com/hive/haf/ HAF "$REGISTRY_USER" "$REGISTRY_PASS"
+        "$SUBMODULE_DIR" registry.gitlab.syncad.com/hive/haf HAF "$REGISTRY_USER" "$REGISTRY_PASS"
         --export-binaries="$BINARY_CACHE_PATH" --network-type="$HIVE_NETWORK_TYPE"
     - chmod -Rc a+rwx "$BINARY_CACHE_PATH"
     - ls -la $BINARY_CACHE_PATH/*
