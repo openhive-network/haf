@@ -30,19 +30,20 @@ The image above shows the main components of a HAF installation:
 https://gitlab.syncad.com/hive/haf_api_node**
 
 But if you prefer to build your own HAF docker image, you can follow the steps below:
-```
+
+```bash
   git clone --recurse --branch develop https://gitlab.syncad.com/hive/haf.git
   mkdir -p workdir/haf-datadir/blockchain
   cd workdir
-  ../haf/scripts/ci-helpers/build_instance.sh local-develop ../haf/ registry.gitlab.syncad.com/hive/haf/
+  ../haf/scripts/ci-helpers/build_instance.sh local-develop ../haf/ registry.gitlab.syncad.com/hive/haf
 ```
 
-Now you can either sync your hived node from scratch via the Hive P2P network, or you can download a copy of the blockchain's block_log file from a location you trust (e.g. https://gtg.openhive.network/get/blockchain/compressed/block_log) and replay the block_log. The latter method is typically faster, because a replay doesn't re-validate the blocks, but the first method (syncing from scratch) requires the least trust.
+Now you can either sync your hived node from scratch via the Hive P2P network, or you can download a copy of the blockchain's block_log file from a location you trust (e.g. [https://gtg.openhive.network/get/blockchain/compressed/block_log](https://gtg.openhive.network/get/blockchain/compressed/block_log)) and replay the block_log. The latter method is typically faster, because a replay doesn't re-validate the blocks, but the first method (syncing from scratch) requires the least trust.
 
 To start your HAF server, type:
 
-```
-  ../haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf/instance:local-develop --name=haf-instance --webserver-http-endpoint=8091 --webserver-ws-endpoint=8090  --data-dir=$(pwd)/haf-datadir --replay
+```bash
+  ../haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf:local-develop --name=haf-instance --webserver-http-endpoint=8091 --webserver-ws-endpoint=8090  --data-dir=$(pwd)/haf-datadir --replay
 ```
 
 If you don't have a local block_log file, just remove the `--replay` option from the command line above to get the blockchain blocks using the P2P network via the normal sync procedure.

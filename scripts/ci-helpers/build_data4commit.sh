@@ -1,10 +1,12 @@
 #! /bin/bash
 
+set -e
+
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
-SRCROOTDIR="$SCRIPTSDIR/.."
 
-LOG_FILE=build_data4commit.log
+export LOG_FILE=build_data4commit.log
+# shellcheck source=../common.sh
 source "$SCRIPTSDIR/common.sh"
 
 COMMIT=${1:?"Missing arg 1 to specify COMMIT"}
