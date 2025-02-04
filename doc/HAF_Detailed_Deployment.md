@@ -22,30 +22,32 @@ To build an instance docker image from a HAF repo, perform the steps below:
 
 ```
 git clone --recurse --branch develop https://gitlab.syncad.com/hive/haf.git
-./haf/scripts/ci-helpers/build_instance.sh local ./haf registry.gitlab.syncad.com/hive/haf/
+./haf/scripts/ci-helpers/build_instance.sh local ./haf registry.gitlab.syncad.com/hive/haf
 ```
 
 where:
 `local` is a suffix to the image tag that will be created for the docker image being built
 `./haf` points to the source directory from which to build the docker image
-`registry.gitlab.syncad.com/hive/haf/` specifies a docker registry where the built image can potentially be pushed (actually pushing the image to the registry requires additional steps).
+`registry.gitlab.syncad.com/hive/haf` specifies a docker registry where the built image can potentially be pushed (actually pushing the image to the registry requires additional steps).
 
-The above command will result in creation of a local docker image: `registry.gitlab.syncad.com/hive/haf/instance:local`
+The above command will result in creation of a local docker image: `registry.gitlab.syncad.com/hive/haf:local`
 
 ### Building a HAF docker image from a specific git commit hash
 
 A HAF instance image can also be built from a specific git commit hash in the HAF repo using the `build_instance4commit.sh` script below:
 
-```
-build_instance4commit.sh fdebe397498f814920e959d5d11863d8fe51be22 registry.gitlab.syncad.com/hive/haf/
+
+```bash
+build_instance4commit.sh fdebe397498f814920e959d5d11863d8fe51be22 registry.gitlab.syncad.com/hive/haf
 
 ```
-This will create an image called: `registry.gitlab.syncad.com/hive/haf/instance:fdebe39`
+
+This will create an image called: `registry.gitlab.syncad.com/hive/haf:fdebe39`
 
 The examples below assume the following directory structure:
 
-```
-+--- /home/haf-tester
+```bash
++----/home/haf-tester
 |
 +----/home/haf-tester/haf     # Already checked out HAF sources
 |
@@ -53,6 +55,7 @@ The examples below assume the following directory structure:
 ```
 
 ## Starting a HAF server container
+
 Before you start your HAF server, you will typically want to configure a hived datadir on your host system to speed up filling your hive database. For full details on how to do this, you can refer to the docs in the `hive` repo, but below is a short summary of steps required to speed up setup.
 
 Create a hived datadir on your host. Inside your hived datadir, create a `config.ini` file. Note that the command-line launch of hived forces the sql_serializer plugin to be enabled (HAF depends on it), so you may want to set some of the other options that control how the sql_serializer operates inside your config file.
@@ -62,11 +65,12 @@ Next create a `blockchain` subdirectory inside the datadir with a valid block_lo
 With these preliminaries out of the way, you can start your instance container using a command like the one below:
 
 ```
-./haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf/instance:local --data-dir=/storage1/mainnet-5M-haf --name=haf-instance-5M --replay --stop-at-block=5000000
+./haf/scripts/run_hived_img.sh registry.gitlab.syncad.com/hive/haf:local --data-dir=/storage1/mainnet-5M-haf --name=haf-instance-5M --replay --stop-at-block=5000000
 ```
 
 This example works as follows:
-- `registry.gitlab.syncad.com/hive/haf/instance:local` points to the HAF image you built in previous steps.
+
+- `registry.gitlab.syncad.com/hive/haf:local` points to the HAF image you built in previous steps.
 - `--data-dir=/storage1/mainnet-5M-haf` option enforces proper volume mapping from your host machine to the docker container you are starting and points to a data directory where the hived node shall put its data.
 - `--name=haf-instance-5M`- names your docker container for docker commands.
 - other options `--replay --stop-at-block=5000000` are passed directly to the hived command line
@@ -83,9 +87,10 @@ All the persistent data required by a HAF instance after restart is stored on th
 ## Mapping ports on an already running HAF server
 
 Hived operates on several ports:
-  - P2P port for hived (defaults to 2001 inside container)
-  - HTTP port for hived to support JSON-RPC calls (defaults to 8090 inside container)
-  - WebSocket port (useful for cli_wallet support) (defaults to 8090 inside docker)
+
+- P2P port for hived (defaults to 2001 inside container)
+- HTTP port for hived to support JSON-RPC calls (defaults to 8090 inside container)
+- WebSocket port (useful for cli_wallet support) (defaults to 8090 inside docker)
 
 Additionally, the HAF docker image contains a postgreSQL cluster which manages HAF data. It operates on the standard postgreSQL port (5432).
 

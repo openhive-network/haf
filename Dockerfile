@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.6
 # Base docker file having defined environment for build and run of HAF instance.
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
@@ -93,122 +94,36 @@ SHELL ["/bin/bash", "-c"]
 # Get everything from cwd as sources to be built.
 COPY --chown=haf_admin:users . /home/haf_admin/source
 
-RUN \
+RUN <<-EOF
+  set -e
+
+  INSTALLATION_DIR="/home/hived/bin"
+  sudo --user=hived mkdir -p "${INSTALLATION_DIR}"
+
   "${HAF_SOURCE_DIR}/scripts/build.sh" --haf-source-dir="${HAF_SOURCE_DIR}" --haf-binaries-dir="./build" \
   --cmake-arg="-DBUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}" \
   --cmake-arg="-DENABLE_SMT_SUPPORT=${ENABLE_SMT_SUPPORT}" \
   --cmake-arg="-DHIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}" \
   --cmake-arg="-DHIVE_LINT=${HIVE_LINT}" \
-  && \
-  cd ./build && \
-  find . -name *.o  -type f -delete && \
-  find . -name *.a  -type f -delete
+  --flat-binary-directory="${INSTALLATION_DIR}" \
+  --clean-after-build
 
-# Here we could use a smaller image without packages specific to build requirements
-FROM ${CI_REGISTRY_IMAGE}ci-base-image:$CI_IMAGE_TAG AS base_instance
+  sudo chown -R hived "${INSTALLATION_DIR}/"*
+EOF
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-1}
+FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-1 AS instance
 
-ARG P2P_PORT=2001
-ENV P2P_PORT=${P2P_PORT}
+ARG BUILD_HIVE_TESTNET=OFF
+ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
 
-ARG WS_PORT=8090
-ENV WS_PORT=${WS_PORT}
+ARG ENABLE_SMT_SUPPORT=OFF
+ENV ENABLE_SMT_SUPPORT=${ENABLE_SMT_SUPPORT}
 
-ARG HTTP_PORT=8091
-ENV HTTP_PORT=${HTTP_PORT}
+ARG HIVE_CONVERTER_BUILD=OFF
+ENV HIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}
 
-ARG HIVE_SUBDIR=.
-ENV HIVE_SUBDIR=${HIVE_SUBDIR}
-
-# Environment variable which allows to override system time using a libfaketime
-# https://github.com/wolfcw/libfaketime
-ENV OVERRIDE_LD_PRELOAD=""
-RUN echo 'Defaults env_keep += "LD_PRELOAD"' | sudo tee -a /etc/sudoers > /dev/null
-
-ENV HAF_SOURCE_DIR="/home/haf_admin/source/${HIVE_SUBDIR}"
-
-# Environment variable which allows to override default postgres access specification in pg_hba.conf
-ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\nhost    all     pghero    172.0.0.0/8    trust"
-
-# Always define default value of HIVED_UID variable to make possible direct spawn of docker image (without run_hived_img.sh wrapper)
-ENV HIVED_UID=1000
-
-SHELL ["/bin/bash", "-c"]
-
-USER hived
-WORKDIR /home/hived
-
-RUN mkdir -p /home/hived/bin && \
-    mkdir /home/hived/shm_dir && \
-    mkdir /home/hived/datadir && \
-    chown -Rc hived:users /home/hived/
-
-COPY --from=build --chown=hived:users \
-  /home/haf_admin/build/hive/programs/hived/hived \
-  /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet \
-  /home/haf_admin/build/hive/programs/util/* \
-  /home/haf_admin/build/hive/programs/blockchain_converter/blockchain_converter* \
-  /home/haf_admin/build/tests/unit/* \
-  /home/hived/bin/
-
-USER haf_admin
-WORKDIR /home/haf_admin
-
-COPY --from=build --chown=haf_admin:users /home/haf_admin/build /home/haf_admin/build/
-COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}" "${HAF_SOURCE_DIR}"
-
-ENV POSTGRES_VERSION=17
-COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/docker_entrypoint.sh" .
-COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/postgresql.conf" /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
-COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.conf" /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
-COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/cron_jobs.sql" .
-
-ENV DATADIR=/home/hived/datadir
-# Use default location (inside datadir) of shm file. If SHM should be placed on some different device, then set it to mapped volume `/home/hived/shm_dir` and map it in docker run
-ENV SHM_DIR=${DATADIR}/blockchain
-ENV WAL_DIR=${DATADIR}/blockchain/haf_wal
-
-STOPSIGNAL SIGINT
-
-# JSON rpc service
-EXPOSE ${HTTP_PORT}
-
-ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
-
-ARG BUILD_TIME
-ARG GIT_COMMIT_SHA
-ARG GIT_CURRENT_BRANCH
-ARG GIT_LAST_LOG_MESSAGE
-ARG GIT_LAST_COMMITTER
-ARG GIT_LAST_COMMIT_DATE
-LABEL org.opencontainers.image.created="$BUILD_TIME"
-LABEL org.opencontainers.image.url="https://hive.io/"
-LABEL org.opencontainers.image.documentation="https://gitlab.syncad.com/hive/haf"
-LABEL org.opencontainers.image.source="https://gitlab.syncad.com/hive/haf"
-#LABEL org.opencontainers.image.version="${VERSION}"
-LABEL org.opencontainers.image.revision="$GIT_COMMIT_SHA"
-LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.ref.name="HAF Core"
-LABEL org.opencontainers.image.title="Hive Application Framework (HAF) Core Image"
-LABEL org.opencontainers.image.description="Runs both the PostgreSQL database server and the hived instance that feeds it blockchain data"
-LABEL io.hive.image.branch="$GIT_CURRENT_BRANCH"
-LABEL io.hive.image.commit.log_message="$GIT_LAST_LOG_MESSAGE"
-LABEL io.hive.image.commit.author="$GIT_LAST_COMMITTER"
-LABEL io.hive.image.commit.date="$GIT_LAST_COMMIT_DATE"
-
-FROM ${CI_REGISTRY_IMAGE}${IMAGE_TAG_PREFIX}base_instance:${BUILD_IMAGE_TAG} AS instance
-
-# Embedded postgres service
-EXPOSE 5432
-
-EXPOSE ${P2P_PORT}
-# websocket service
-EXPOSE ${WS_PORT}
-# JSON rpc service
-EXPOSE ${HTTP_PORT}
-
-FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-1 AS minimal-instance
+ARG HIVE_LINT=OFF
+ENV HIVE_LINT=${HIVE_LINT}
 
 ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-1}
 
@@ -235,6 +150,11 @@ ENV HIVED_UID=1000
 ENV POSTGRES_VERSION=17
 
 SHELL ["/bin/bash", "-c"]
+
+USER hived_admin
+RUN mkdir -p /home/hived_admin/hive_base_config/faketime/src/ && \
+    chown -Rc hived_admin:users /home/hived_admin && \
+    sudo mkdir -p /usr/local/lib/faketime
 
 USER hived
 WORKDIR /home/hived
@@ -245,11 +165,22 @@ RUN mkdir -p /home/hived/bin && \
     mkdir /home/hived/datadir && \
     chown -Rc hived:users /home/hived/
 
+# Copy necessary binaries, blockchain_converter is optional
 COPY --from=build --chown=hived:users \
-  /home/haf_admin/build/hive/programs/hived/hived \
-  /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet \
-  /home/haf_admin/build/hive/programs/util/compress_block_log \
+  /home/hived/bin/hived \
+  /home/hived/bin/cli_wallet \
+  /home/hived/bin/compress_block_log \
+  /home/hived/bin/get_dev_key \
+  /home/hived/bin/blockchain_converte[r] \
+  /home/hived/bin/block_log_util \
   /home/hived/bin/
+
+# This should be removed before merge
+# COPY --from=build --chown=haf_admin:users /home/haf_admin/build /home/haf_admin/build/
+
+COPY --from=build --chown=hived_admin:users /home/hived_admin/hive_base_config/faketime/src/libfaketime*.so.1 \
+  /home/hived_admin/hive_base_config/faketime/src/
+COPY --from=build --chown=root:root /usr/local/lib/faketime/* /usr/local/lib/faketime/
 
 COPY --from=build \
   /home/haf_admin/build/extensions/hive_fork_manager/* \
@@ -311,3 +242,4 @@ LABEL io.hive.image.branch="$GIT_CURRENT_BRANCH"
 LABEL io.hive.image.commit.log_message="$GIT_LAST_LOG_MESSAGE"
 LABEL io.hive.image.commit.author="$GIT_LAST_COMMITTER"
 LABEL io.hive.image.commit.date="$GIT_LAST_COMMIT_DATE"
+ENV HAF_COMMIT=${GIT_COMMIT_SHA}

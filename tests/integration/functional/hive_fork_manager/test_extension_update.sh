@@ -28,13 +28,14 @@ HAF_DIR=""
 DIR=""
 DB_ADMIN="haf_admin"
 DB_NAME="haf_block_log"
-POSTGRES_HOST="/var/run/postgresql"
-POSTGRES_PORT=5432
+export POSTGRES_HOST="/var/run/postgresql"
+export POSTGRES_PORT=5432
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --setup_scripts_path=*)
         SETUP_DIR="${1#*=}"
+        export SETUP_DIR
         ;;
     --haf_binaries_dir=*)
         HAF_DIR="${1#*=}"
@@ -67,10 +68,10 @@ test_extension_update() {
     # copy sources to build directory, they will be modified there to create real new version of hfm extension
     COPY_SRC_PATH="${HAF_DIR}/src_copy"
     COPY_BUILD_PATH="${HAF_DIR}/src_copy/build"
-    rm -rf ${COPY_SRC_PATH}
-    mkdir -p ${COPY_SRC_PATH}
-    mkdir -p ${COPY_BUILD_PATH}
-    cp -a ${DIR}/. ${COPY_SRC_PATH}
+    rm -rf "${COPY_SRC_PATH}"
+    mkdir -p "${COPY_SRC_PATH}"
+    mkdir -p "${COPY_BUILD_PATH}"
+    cp -a "${DIR}/." "${COPY_SRC_PATH}"
 
     POSTGRES_VERSION=17
     echo "Add function testfun to schema hive"
@@ -82,14 +83,14 @@ test_extension_update() {
     # modify the hived_api.sql file, new function test added to the new version of hfm
     echo -e "CREATE OR REPLACE FUNCTION hive.test() \n    RETURNS void \n    LANGUAGE plpgsql \n    VOLATILE AS \n\$BODY\$ \nBEGIN \nRAISE NOTICE 'test'; \nEND; \n\$BODY\$;" >> "${COPY_SRC_PATH}/src/hive_fork_manager/hived_api.sql"
     # commit changes to make a new hash
-    git -C ${COPY_BUILD_PATH} config --global user.name "abc"
-    git -C ${COPY_BUILD_PATH} config --global user.email "abc@example.com"
-    git -C ${COPY_BUILD_PATH} config --global --add safe.directory /builds/hive/haf
-    git -C ${COPY_BUILD_PATH} add "${COPY_SRC_PATH}/src/hive_fork_manager/hived_api.sql"
-    git -C ${COPY_BUILD_PATH} commit -m "test"
+    git -C "${COPY_BUILD_PATH}" config --global user.name "abc"
+    git -C "${COPY_BUILD_PATH}" config --global user.email "abc@example.com"
+    git -C "${COPY_BUILD_PATH}" config --global --add safe.directory /builds/hive/haf
+    git -C "${COPY_BUILD_PATH}" add "${COPY_SRC_PATH}/src/hive_fork_manager/hived_api.sql"
+    git -C "${COPY_BUILD_PATH}" commit -m "test"
     # rebuild copy of haf
-    ${COPY_SRC_PATH}/scripts/build.sh --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="${COPY_SRC_PATH}" --haf-binaries-dir="${COPY_BUILD_PATH}" extension.hive_fork_manager
-    (cd ${COPY_BUILD_PATH}; sudo ninja install)
+    "${COPY_SRC_PATH}/scripts/build.sh" --cmake-arg="-DHIVE_LINT=OFF" --haf-source-dir="${COPY_SRC_PATH}" --haf-binaries-dir="${COPY_BUILD_PATH}" extension.hive_fork_manager
+    (cd "${COPY_BUILD_PATH}" || exit 1; sudo ninja install)
     # run generator script
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh
 

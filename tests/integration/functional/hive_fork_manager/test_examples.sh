@@ -27,7 +27,7 @@ python3 -mpip install wheel==0.41.2
 
 python3 -mpip install \
   pexpect==4.8 \
-  psycopg2==2.9.3 \
+  psycopg2-binary==2.9.3 \
   sqlalchemy==1.4.52 \
   jinja2==2.10
 

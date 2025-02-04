@@ -31,7 +31,7 @@ print_help () {
 }
 
 psql_do() {
-     sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -v ON_ERROR_STOP=on -U "$DB_ADMIN" "$@"
+     sudo -Enu "$DB_ADMIN" psql -w "${POSTGRES_ACCESS[@]}" -v ON_ERROR_STOP=on -U "$DB_ADMIN" "$@"
 }
 
 DB_NAME="haf_block_log"
@@ -74,7 +74,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-POSTGRES_ACCESS="--host $POSTGRES_HOST --port $POSTGRES_PORT"
+POSTGRES_ACCESS=("--host=$POSTGRES_HOST" "--port=$POSTGRES_PORT")
 COMMIT_PREV_ID=''
 COMMIT_NEW_ID='@HAF_GIT_REVISION_SHA@'
 POSTGRES_EXTENSION_DIR='@POSTGRES_SHAREDIR@/extension'
@@ -114,7 +114,7 @@ verify_table_schema() {
     diff --suppress-common-lines before_update_providers.txt after_update_providers.txt || true
     echo "Dropping temporary database"
     psql_do -a -d postgres -c "DROP DATABASE IF EXISTS $DB_NAME_AFTER_UPDATE;"
-    find -type f -name '*.txt' > /dev/null 2>&1
+    find . -type f -name '*.txt' > /dev/null 2>&1
     exit 1
   fi
 }

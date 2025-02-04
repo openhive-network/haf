@@ -1,10 +1,14 @@
 #! /bin/bash
 set -xeuo pipefail
 
+sudo apt-get update
+sudo apt-get install -y git python3 python3-venv python3-pip
+
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
 
-LOG_FILE=applications_system_tests.log
+export LOG_FILE=applications_system_tests.log
+# shellcheck source=./ci_common.sh
 source "$SCRIPTSDIR/maintenance-scripts/ci_common.sh"
 
 ARGS=()
@@ -25,12 +29,16 @@ export DB_URL="postgresql://haf_admin@127.0.0.1:5432/$DB_NAME"
 
 echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
 python3 -m venv --system-site-packages venv/
+# shellcheck disable=SC1091
 . venv/bin/activate
+python3 -m pip install pipx
+python3 -m pipx ensurepath
+pipx install poetry
 (cd "${REPO_DIR}/tests/integration/haf-local-tools" && poetry install)
 echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
 
 cd "${REPO_DIR}/tests/integration/system/applications"
-pytest --junitxml report.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "not mirrornet" ${ARGS[@]}
+pytest --junitxml report.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "not mirrornet" "${ARGS[@]}"
 
 test_end
