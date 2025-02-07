@@ -1,0 +1,1 @@
+../docker-entrypoint-initdb.d/260-setup-cron-jobs.sql
