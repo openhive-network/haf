@@ -68,6 +68,26 @@ haf_image_build_mirrornet:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVE_NETWORK_TYPE: mirrornet
+  # Necessary to tag mirrornet images to be used in Denser's CI
+  after_script:
+    - |
+      source docker_image_name.env
+      echo "Pushing hived image for commits on develop, master and tagged"
+      docker images
+      IMAGE_NAME_PREFIX="$CI_REGISTRY_IMAGE/mirrornet:"
+      if [[ "$CI_COMMIT_BRANCH" == "develop" ]];
+      then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}latest
+        docker push ${IMAGE_NAME_PREFIX}latest
+      elif [[ "$CI_COMMIT_BRANCH" == "master" ]];
+      then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}stable
+        docker push ${IMAGE_NAME_PREFIX}stable
+      elif [[ -n "$CI_COMMIT_TAG" ]];
+      then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
+        docker push ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
+      fi
 
 .haf-service: &haf-service
   name: $HAF_IMAGE_NAME
