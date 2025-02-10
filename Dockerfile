@@ -277,6 +277,8 @@ COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.con
 
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/cron_jobs.sql" .
 
+# Reset HIVE_SUBDIR after copying files from build stage
+ENV HIVE_SUBDIR=.
 ENV DATADIR=/home/hived/datadir
 # Use default location (inside datadir) of shm file. If SHM should be placed on some different device, then set it to mapped volume `/home/hived/shm_dir` and map it in docker run
 ENV SHM_DIR=${DATADIR}/blockchain
