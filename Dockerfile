@@ -105,7 +105,7 @@ RUN \
   find . -name *.a  -type f -delete
 
 # Here we could use a smaller image without packages specific to build requirements
-FROM ${CI_REGISTRY_IMAGE}ci-base-image:$CI_IMAGE_TAG as base_instance
+FROM ${CI_REGISTRY_IMAGE}ci-base-image:$CI_IMAGE_TAG AS base_instance
 
 ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu22.04-8}
 
@@ -197,7 +197,7 @@ LABEL io.hive.image.commit.log_message="$GIT_LAST_LOG_MESSAGE"
 LABEL io.hive.image.commit.author="$GIT_LAST_COMMITTER"
 LABEL io.hive.image.commit.date="$GIT_LAST_COMMIT_DATE"
 
-FROM ${CI_REGISTRY_IMAGE}${IMAGE_TAG_PREFIX}base_instance:${BUILD_IMAGE_TAG} as instance
+FROM ${CI_REGISTRY_IMAGE}${IMAGE_TAG_PREFIX}base_instance:${BUILD_IMAGE_TAG} AS instance
 
 # Embedded postgres service
 EXPOSE 5432
