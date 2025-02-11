@@ -84,14 +84,30 @@ EOF
 }
 
 install_extension() {
-  echo "Script path is: $SCRIPTPATH"
-  local build_dir
-  build_dir=$(realpath -e --relative-base="$SCRIPTPATH" "$1")
-  build_dir=${build_dir%%[[:space:]]}
-  echo "Attempting to install hive_fork_manager extenstion into PostgreSQL directories..."
-  pushd "$build_dir" || return
-  ninja install
-  popd || return
+  local src_dir=${1}
+  local share_dir=${2:-}
+  local lib_dir=${3:-}
+
+  # If the path to the extension and the PostgreSQL installation are provided,
+  # simply copy the files.
+  # Otherwise, build and install the extension using ninja.
+  if [[ -n $share_dir && -n $lib_dir ]]; then
+    echo -e "Attempting to install hive_fork_manager extenstion from $src_dir into PostgreSQL directories at $share_dir and $lib_dir..."
+    cp --verbose "$src_dir/extensions/hive_fork_manager/"* "$share_dir/extension/"
+    cp --verbose "$src_dir/lib/libquery_supervisor.so" "$lib_dir/lib/"
+    cp --verbose "$src_dir/lib/libhfm-"* "$lib_dir/lib/"
+    ls -lah "$share_dir/extension/"
+    ls -lah "$lib_dir/lib/"
+  else
+    echo "Script path is: $SCRIPTPATH"
+    local build_dir
+    build_dir=$(realpath -e --relative-base="$SCRIPTPATH" "$src_dir")
+    build_dir=${build_dir%%[[:space:]]}
+    echo "Attempting to install hive_fork_manager extenstion into PostgreSQL directories..."
+    pushd "$build_dir" || return
+    ninja install
+    popd || return
+  fi
 }
 
 HAF_ADMIN_ACCOUNT="haf_admin"
@@ -103,6 +119,9 @@ HAF_BINARY_DIR="../build"
 POSTGRES_HOST="/var/run/postgresql"
 POSTGRES_PORT=5432
 INSTALL_EXTENSION=""
+EXTENSION_SRC=""
+SHARED_DST=""
+LIB_DST=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -122,7 +141,13 @@ while [ $# -gt 0 ]; do
         HAF_TABLESPACE_LOCATION="${1#*=}"
         ;;
     --install-extension=*)
-        INSTALL_EXTENSION="${1#*=}"
+        # Read comma-separated options into an array
+        IFS="," read -ra INSTALL_EXTENSION_OPTIONS <<< "${1#*=}"
+        # The first option is mandatory, the other three are optional
+        INSTALL_EXTENSION="${INSTALL_EXTENSION_OPTIONS[0]}"
+        EXTENSION_SRC="${INSTALL_EXTENSION_OPTIONS[1]:-"${HAF_BINARY_DIR}"}"
+        SHARED_DST="${INSTALL_EXTENSION_OPTIONS[2]:-}"
+        LIB_DST="${INSTALL_EXTENSION_OPTIONS[3]:-}"
         ;;
     --help)
         print_help
@@ -152,7 +177,7 @@ if [ "$EUID" -ne 0 ]
 fi
 
 if [ "$INSTALL_EXTENSION" != "no" ]; then
-  install_extension "$HAF_BINARY_DIR"
+  install_extension "$EXTENSION_SRC" "$SHARED_DST" "$LIB_DST"
 fi
 
 # Be sure PostgreSQL is started.
