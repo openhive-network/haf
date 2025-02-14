@@ -130,6 +130,7 @@ BEGIN
     -- the contexts are locked by the apps during attach: hive.app_context_attach
     BEGIN
      -- remove all events less than lowest context events_id
+        LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
         PERFORM hive.remove_unecessary_events( _block_num );
         PERFORM hive.remove_obsolete_reversible_data( _block_num );
     EXCEPTION WHEN SQLSTATE '55P03' THEN
@@ -192,6 +193,10 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_irreversible()
 AS
 $BODY$
 BEGIN
+    IF hive.is_pruning_enabled() = TRUE THEN
+       RETURN;
+    END IF;
+
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'blocks' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions_multisig' );
@@ -220,7 +225,6 @@ BEGIN
     PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'applied_hardforks' );
     PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'accounts' );
     PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'account_operations' );
-
 END;
 $BODY$
 ;
@@ -330,7 +334,7 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE )
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -338,6 +342,7 @@ AS
 $BODY$
 DECLARE
     __max_block hafd.blocks.num%TYPE;
+    __last_pruning integer;
 BEGIN
     -- assumptions:
     -- sql-serializer WAL was replayed after (re)start
@@ -357,6 +362,12 @@ BEGIN
 
     INSERT INTO hafd.hived_connections( block_num, git_sha, time )
     VALUES( _block_num, _git_sha, now() );
+
+    ASSERT ( COALESCE(__max_block,0) > 0 OR ( _pruning = 0 AND hive.is_pruning_enabled() = FALSE )  )
+           , 'Cannot initialize as non‑pruned: existing database is pruned. Drop/recreate the database or run in pruned mode.';
+
+    UPDATE hafd.hive_state
+    SET pruning = _pruning;
 END;
 $BODY$
 ;
@@ -594,3 +605,12 @@ BEGIN
 END;
 $BODY$
 ;
+
+CREATE OR REPLACE FUNCTION hive.get_vacuum_full_commands(schema_name TEXT DEFAULT 'hafd')
+RETURNS SETOF TEXT
+LANGUAGE sql
+AS $$
+    SELECT format('VACUUM FULL %I.%I;', schemaname, tablename) as vacuum_cmd
+    FROM pg_tables
+    WHERE schemaname = schema_name;
+$$;

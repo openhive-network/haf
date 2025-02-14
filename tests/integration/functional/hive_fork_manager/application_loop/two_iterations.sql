@@ -54,6 +54,9 @@ $BODY$
 DECLARE
     __range_placeholder hive.blocks_range;
 BEGIN
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num(50);
+
     -- alices context are moved to range (1,10)
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
     RAISE INFO 'blocks range: %', __range_placeholder;
@@ -74,6 +77,9 @@ $BODY$
 DECLARE
     __range_placeholder hive.blocks_range;
 BEGIN
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num(60);
+
     -- Alice start new iteration 10-20
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
     RAISE INFO 'blocks range: %', __range_placeholder;

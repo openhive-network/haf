@@ -54,6 +54,9 @@ $BODY$
 DECLARE
     __range_placeholder hive.blocks_range;
 BEGIN
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num(50);
+
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
 END;
 $BODY$;

@@ -72,7 +72,7 @@ BEGIN
           _lead_context_state IS NULL
           -- we are in wait_for_haf stage
        OR _lead_context_state.current_stage = hafd.wait_for_haf_stage()
-          -- end of range processing
+          -- end of range processing. actually this is decisive if we need to call again app_next_block
        OR _lead_context_state.end_block_range <= _lead_context_state.current_batch_end
           -- distance to head block grew instead become smaller
        OR _lead_context_state.last_analyze_distance_to_head_block < ( _current_head_block - _lead_context_state.current_batch_end );
@@ -130,9 +130,27 @@ $body$
 DECLARE
     __result INTEGER;
 BEGIN
-    SELECT COALESCE( MAX(hb.num), 0 )
-    FROM hafd.blocks hb
+    SELECT consistent_block
+    FROM hafd.hive_state hs
     INTO __result;
+
+    RETURN __result;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION hive.get_estimated_hive_head_block()
+    RETURNS INTEGER
+    LANGUAGE 'plpgsql'
+    STABLE
+AS
+$body$
+DECLARE
+    __result INTEGER;
+BEGIN
+    SELECT EXTRACT(EPOCH FROM (now() - hb.created_at))::INT / 3 + hb.num INTO __result
+    FROM hafd.blocks hb
+    JOIN hafd.hive_state hs ON hs.consistent_block = hb.num
+    LIMIT 1;
 
     RETURN __result;
 END;
@@ -157,6 +175,7 @@ BEGIN
 END;
 $body$;
 
+
 CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _contexts hive.contexts_group, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL )
 LANGUAGE 'plpgsql'
 AS
@@ -166,8 +185,9 @@ DECLARE
     __lead_context_state hafd.application_loop_state;
     __now TIMESTAMP := NOW();
     __previous_active_at_time TIMESTAMP;
+    __hive_sync_state hafd.sync_state;
 BEGIN
-    -- here is the only place when main synchronization connection  makes commit
+    -- here is the only place when main synchronization connection makes commit
     -- 1. commit if there is a pending commit
     IF pg_current_xact_id_if_assigned() IS NOT NULL THEN
         COMMIT;
@@ -182,6 +202,7 @@ BEGIN
     UPDATE hafd.contexts ctx
     SET last_active_at = __now
     WHERE ctx.name = ANY(_contexts);
+
 
     IF _limit IS NOT NULL
     THEN
@@ -214,16 +235,23 @@ BEGIN
     END IF;
 
     -- 2. find current stage if:
-    IF hive.is_stages_analyze_required( __lead_context_state, hive.get_irreversible_head_block() )
+    IF hive.is_stages_analyze_required( __lead_context_state, hive.get_estimated_hive_head_block() )
     THEN
         -- get lock to synchronize with potentially running autodetach
         PERFORM  1 FROM hafd.contexts c WHERE c.name = ANY(_contexts) FOR UPDATE;
-
-        IF NOT hive.app_context_are_attached( _contexts )
+        SELECT hive.get_sync_state() INTO __hive_sync_state;
+        IF NOT hive.app_context_are_attached( _contexts ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
         THEN
             PERFORM hive.app_context_attach( _contexts );
         END IF;
 
+        -- pruning makes a problem here:
+        -- HAF is synchronizing only a small batch of blocks in ahead of ctx cb
+        -- but at the beginning there is no sense to switch stages when
+        -- there is a lot of block to the hive blockchain head (not to the head on our instance)
+        -- app next block return range of irreversible blocks which are already synced
+        -- but sync is in progress in sqlserializer and we may got millions of blocks
+        -- here is no sense to switch the contexts
         SELECT * FROM hive.app_next_block( _contexts ) INTO _blocks_range;
         IF _blocks_range IS NULL
         THEN
@@ -231,37 +259,45 @@ BEGIN
         END IF;
 
         -- all context now got computed their stages
-        PERFORM hive.analyze_stages( _contexts, _blocks_range,hive.get_irreversible_head_block() );
+        PERFORM hive.analyze_stages( _contexts, _blocks_range,hive.get_estimated_hive_head_block() );
         SELECT (hc.loop).* INTO __lead_context_state
         FROM hafd.contexts hc WHERE hc.name = __lead_context_name;
+
+        _blocks_range.last_block := LEAST(
+              _blocks_range.last_block
+            , COALESCE(
+                    _blocks_range.first_block + _override_max_batch - 1
+                , _blocks_range.first_block + __lead_context_state.size_of_blocks_batch - 1
+              )
+            , COALESCE( _limit, __lead_context_state.end_block_range)
+            , __lead_context_state.end_block_range
+        );
     ELSE
         -- we continue iterating blocks in range
+        IF hive.get_irreversible_head_block() < __lead_context_state.current_batch_end + 1
+        THEN
+            -- there may be a situation when there are no irreversible blocks dumped yest
+            -- because stage analyze is based on real hive blockchain head block, not on blocks already synced by the hived
+            RETURN;
+        END IF;
+
         _blocks_range.first_block = __lead_context_state.current_batch_end + 1;
-    END IF;
 
-    IF _override_max_batch IS NOT NULL
-    THEN
         _blocks_range.last_block := LEAST(
-              _blocks_range.first_block + _override_max_batch - 1
+              COALESCE(
+                    _blocks_range.first_block + _override_max_batch - 1
+                  , _blocks_range.first_block + __lead_context_state.size_of_blocks_batch - 1
+              )
+            , COALESCE( _limit, __lead_context_state.end_block_range)
             , __lead_context_state.end_block_range
-        );
-    ELSE
-        _blocks_range.last_block = LEAST(
-              _blocks_range.first_block + __lead_context_state.size_of_blocks_batch - 1
-            , __lead_context_state.end_block_range
-        );
-    END IF;
-
-    IF _limit IS NOT NULL
-    THEN
-        _blocks_range.last_block = LEAST(
-              _blocks_range.last_block
-            , _limit
+            , hive.get_irreversible_head_block()
         );
     END IF;
 
     UPDATE hafd.contexts ctx
-    SET loop.current_batch_end = _blocks_range.last_block
+    SET
+          loop.current_batch_end = _blocks_range.last_block
+        , loop.end_block_range = __lead_context_state.end_block_range
     WHERE ctx.name=ANY(_contexts);
 
     PERFORM hive.update_attachment( _contexts );

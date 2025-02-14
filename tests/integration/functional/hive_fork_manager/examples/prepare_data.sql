@@ -1,5 +1,8 @@
 START TRANSACTION;
 
+SELECT test.install_mock_hive_get_estimated_hive_head_block();
+SELECT test.set_head_block_num(6);
+
 INSERT INTO hafd.operation_types
 VALUES
        ( 1, 'hive::protocol::account_created_operation', TRUE )

@@ -4,6 +4,9 @@ RETURNS BOOLEAN
 AS
 $BODY$
 BEGIN
+  IF hive.is_pruning_enabled() THEN
+      RETURN TRUE;
+  END IF;
   -- Instance is ready when all indexes with a dependency on context 0 have been created
   RETURN NOT EXISTS(
     SELECT 1
@@ -360,8 +363,11 @@ $BODY$
     DECLARE
         __context_state hive.context_state;
         __lead_context hafd.context_name := _contexts[ 1 ];
+        __hive_sync_state hafd.sync_state;
     BEGIN
         PERFORM hive.squash_events( _contexts );
+
+        SELECT hive.get_sync_state() INTO __hive_sync_state;
 
         SELECT
                hac.current_block_num
@@ -374,11 +380,6 @@ $BODY$
 
         IF __context_state.current_block_num IS NULL THEN
             RAISE EXCEPTION 'No context with name %', __lead_context;
-        END IF;
-
-
-        IF __context_state.is_attached = FALSE THEN
-            RAISE EXCEPTION 'Context % is detached', __lead_context;
         END IF;
 
         SELECT * INTO __context_state.next_event_id, __context_state.next_event_type,  __context_state.next_event_block_num
@@ -543,21 +544,45 @@ $BODY$
 DECLARE
     __result hive.blocks_range[];
     __context_state hive.context_state;
+    __hive_sync_state hafd.sync_state;
+    __i INTEGER := 0;
+    __is_pruning_enabled BOOLEAN := FALSE;
 BEGIN
     PERFORM hive.wait_for_ready_instance(_context_names, '178000000 years'::interval);
-    SELECT * FROM hive.squash_and_get_state( _context_names ) INTO __context_state;
-    SELECT ARRAY_AGG( hive.app_process_event_non_forking(contexts.*, __context_state) ) INTO __result
-    FROM unnest( _context_names ) as contexts;
+    SELECT hive.is_pruning_enabled() INTO __is_pruning_enabled;
 
-    IF __result[1].first_block > __result[1].last_block THEN
-        PERFORM pg_sleep( 1.5 );
-        RETURN NULL;
-    END IF;
+    -- Passive polling for new blocks using a FOR loop to be sure that app won't
+    -- stay here for more than 1.5s
+    FOR __i IN 1..150 LOOP
+        SELECT * FROM hive.squash_and_get_state( _context_names ) INTO __context_state;
 
-    RETURN __result[1];
+        SELECT ARRAY_AGG( hive.app_process_event_non_forking(contexts.*, __context_state) ) INTO __result
+        FROM unnest( _context_names ) as contexts;
+
+        SELECT hive.get_sync_state() INTO __hive_sync_state;
+
+        IF NOT( __result[1].first_block > __result[1].last_block ) THEN
+            RETURN __result[1];
+        END IF;
+
+       -- currently there are no more blocks to process
+        IF  NOT __is_pruning_enabled
+            OR (__hive_sync_state != 'REINDEX'::hafd.sync_state
+                AND __hive_sync_state != 'P2P'::hafd.sync_state
+            )
+        THEN
+            -- we are in LIVE sync or waiting for the first block (*WAIT states)
+            PERFORM pg_sleep( 1.5 );
+            EXIT;
+        END IF;
+
+        -- During reindex/p2p we expect new blocks within milliseconds
+        -- Stay in this loop to avoid expensive application main loop overhead
+        PERFORM pg_sleep( 0.01 );
+    END LOOP;
+    RETURN NULL;
 END;
-$BODY$
-;
+$BODY$;
 
 CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _state_provider hafd.state_providers, _context hafd.context_name )
     RETURNS void

@@ -53,6 +53,9 @@ $BODY$
 DECLARE
     __range_placeholder hive.blocks_range;
 BEGIN
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num(50);
+
     UPDATE hafd.contexts
     SET last_active_at = '0001-01-01 00:00:00'::TIMESTAMP;
 

@@ -37,6 +37,9 @@ ADD_PSQL_EXTENSION(
             types/operation/compatibility_with_old_haf_apps.sql
             types/operation/operation_flow.sql
             types/operation/operation_id.sql
+
+            pruning/prune_irreversible_blocks.sql
+
             tools.sql
             block_views_for_head_block.sql
             block_day_stats_view.sql
@@ -72,6 +75,7 @@ ADD_PSQL_EXTENSION(
             application_loop/contexts_log_api.sql
 
             state_providers/update_providers.sql
+
 )
 
 ADD_SUBDIRECTORY( shared_lib )

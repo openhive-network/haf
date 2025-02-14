@@ -530,7 +530,6 @@ DECLARE
   __end_time TIMESTAMP;
   __duration INTERVAL;
 BEGIN
-
   IF _table_name = 'hafd.account_operations' THEN
     PERFORM hive.recluster_account_operations_if_index_dropped();
   END IF;
@@ -565,7 +564,6 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-
     --restoring foreign keys
     OPEN __cursor FOR ( SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE AND status = 'missing' );
     LOOP

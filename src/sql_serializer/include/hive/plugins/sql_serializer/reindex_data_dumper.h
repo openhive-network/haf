@@ -22,6 +22,7 @@ namespace hive::plugins::sql_serializer {
       , uint32_t operations_threads
       , uint32_t transactions_threads
       , uint32_t account_operation_threads
+      , uint32_t pruning_tail_size
     );
 
     ~reindex_data_dumper();
@@ -83,8 +84,10 @@ namespace hive::plugins::sql_serializer {
     std::unique_ptr< account_operations_data_container_t_writer > _account_operations_writer;
     std::unique_ptr< applied_hardforks_container_t_writer > _applied_hardforks_writer;
 
-    std::unique_ptr<end_massive_sync_processor> _end_massive_sync_processor;
+    std::unique_ptr< end_massive_sync_processor > _end_massive_sync_processor;
     std::shared_ptr< transaction_controllers::transaction_controller > _transactions_controller;
+
+    std::string _db_url;
   };
 
 } // namespace hive::plugins::sql_serializer

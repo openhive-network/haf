@@ -195,7 +195,33 @@ an API for managing table vacuuming has been introduced. This API allows applica
 vacuuming for specific tables while ensuring that excessive vacuum operations do not negatively
 impact system performance.
 
-#####  API Functions
+### Pruned mode
+
+The HAF server can operate in a pruned mode that retains only recent blockchain data needed for live operation, reducing disk usage and time‑to‑first‑query while preserving correctness near head.
+
+#### Configuration
+- Enable pruning by starting hived with: `--psql-prune-blocks=<retention_blocks>`
+- `<retention_blocks>` is the number of most recent blocks to keep in the HAF database.
+- Use `--psql-prune-blocks=0` (or omit the flag) for non‑pruned (full) mode.
+
+#### Key capabilities
+- Concurrent startup: synchronize HAF and your application at the same time; no need to wait for HAF to reach live sync.
+- Indexes preserved: pruning removes historical rows only; all HAF indexes remain to keep near‑head queries and ingestion fast.
+- Sync pacing: HAF slows synchronization to track the slowest application, minimizing the gap to the head block and keeping only a small, bounded amount of raw blocks data.
+
+#### Suitability
+- Use pruned mode only if your application never requires raw HAF data older than the configured retention window.
+- Applications may read raw HAF data within the window and/or materialize it into their own tables, but must not depend on data beyond retention.
+
+#### Mode selection and switching
+- Mode is determined by the hived parameter at initialization.
+- You can switch from non‑pruned (full) to pruned by restarting with `--psql-prune-blocks=<retention_blocks>` and reinitializing as required by your deployment.
+- You cannot switch from pruned to non‑pruned in place. To “unprune,” start with an empty data directory (or restore a full‑history backup) and perform a full sync.
+
+#### Notice
+- Pruning is supported only for applications that use the modern HAF application loop with stages and the `hive.app_next_iteration` function. Apps not using this loop are not supported in pruned mode.
+
+###  API Functions
 
 ##### Requesting Table Vacuuming
 Applications can request vacuuming for a table using the function **`hive.app_request_table_vacuum`**.
@@ -555,12 +581,13 @@ There are some indexes created by the extension on irreversible block data. Thos
 #### hive.enable_indexes_of_irreversible()
 It restores indexes and FK constarint dropped and saved by the function above.
 
-#### hive.connect( _git_sha, _block_num )
+#### hive.connect( _git_sha, _block_num, _pruning )
 The Hive node (hived) calls this function each time it starts synchronization with the database. This function
 clear irreversible data from inconsistent blocks (blocks which are not fully dumped during previous connection) and
 saves information about the connection occurence into table hived_connections.
 - **_git_sha** - is a GIT version of hived code
 - **_block_num** - head block number for which the hived is synchronized
+- **_pruning** - block pruning option
 
 #### hive.set_irreversible_dirty()
 Sets 'dirty' flag, what marks irreversible data as inconsistent.

@@ -65,7 +65,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM hive.connect( '123456789', 1, 1 );
+    PERFORM hive.connect( '123456789', 1, 1, 10 );
 END
 $BODY$
 ;
@@ -76,7 +76,7 @@ AS
 $BODY$
 BEGIN
     -- hived has more blocks than HAF
-    PERFORM hive.connect( '123456789', 100, 1 );
+    PERFORM hive.connect( '123456789', 100, 1, 0 );
 END
 $BODY$
 ;
@@ -107,6 +107,8 @@ BEGIN
     ASSERT( SELECT COUNT(*) FROM hafd.fork WHERE block_num = 2 ) = 0, 'Fork added after connection on 2 block';
 
     ASSERT( SELECT is_dirty FROM hafd.hive_state ) = FALSE, 'Irreversible data are dirty';
+    ASSERT( SELECT pruning FROM hafd.hive_state ) = 10, 'Wrong pruning';
+    ASSERT hive.is_pruning_enabled(), 'Pruning is not enabled';
 END
 $BODY$
 ;

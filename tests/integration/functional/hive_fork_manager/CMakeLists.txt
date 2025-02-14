@@ -394,4 +394,10 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST(application_log/hive_log_contexts_simple.sql)
  ADD_SQL_FUNCTIONAL_TEST(application_log/remove_context.sql)
 
-
+ ADD_SQL_FUNCTIONAL_TEST(pruning/application_no_blocks.sql)
+ ADD_SQL_FUNCTIONAL_TEST(pruning/no_application_no_blocks.sql)
+ ADD_SQL_FUNCTIONAL_TEST(pruning/no_application_blocks.sql)
+ ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_no_application_blocks.sql )
+ ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_application_blocks.sql )
+ ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_no_application_no_blocks.sql)
+ ADD_SQL_FUNCTIONAL_TEST(pruning/tail_lower_than_0.sql)

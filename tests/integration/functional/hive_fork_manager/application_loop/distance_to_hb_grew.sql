@@ -1,3 +1,6 @@
+SELECT test.install_mock_hive_get_estimated_hive_head_block();
+
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS
@@ -16,6 +19,7 @@ BEGIN
     ;
 
     PERFORM hive.set_irreversible( 50 );
+    PERFORM test.set_head_block_num(50);
 END;
 $BODY$;
 
@@ -66,6 +70,7 @@ BEGIN
         , ( 400, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
     PERFORM hive.set_irreversible( 400 );
+    PERFORM test.set_head_block_num(400);
 END;
 $BODY$;
 

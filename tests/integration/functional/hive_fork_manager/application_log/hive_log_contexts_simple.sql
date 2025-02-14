@@ -1,3 +1,6 @@
+SELECT test.install_mock_hive_get_estimated_hive_head_block();
+SELECT test.set_head_block_num(50);
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS

@@ -15,6 +15,9 @@ trap on_exit EXIT;
 psql -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
 evaluate_result $?
 
+psql -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  ./tools/mocks.sql;
+evaluate_result $?
+
 users="haf_admin test_hived alice alice_impersonal bob"
 tests="given when error then"
 

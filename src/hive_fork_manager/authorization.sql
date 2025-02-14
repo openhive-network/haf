@@ -156,7 +156,10 @@ GRANT EXECUTE ON FUNCTION
     , hive.register_state_provider_tables( _context hafd.context_name )
     , hive.app_state_providers_update( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _context hafd.context_name )
     , hive.app_state_provider_import( _state_provider hafd.state_providers, _context hafd.context_name )
-    , hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE )
+    , hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer )
+    , hive.is_pruning_enabled()
+    , hive.wait_for_contexts( _tail_size INTEGER )
+    , hive.prune_blocks_data( _tail_size INTEGER )
     , hive.remove_inconsistent_irreversible_data()
     , hive.disable_indexes_of_reversible()
     , hive.enable_indexes_of_reversible()
@@ -238,6 +241,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.app_check_contexts_synchronized(_contexts hive.contexts_group)
     , hive.set_sync_state( _new_state hafd.sync_state )
     , hive.get_sync_state()
+    , hive.get_vacuum_full_commands(schema_name TEXT)
 TO hived_group;
 
 GRANT USAGE ON SCHEMA hive to haf_maintainer;
@@ -260,6 +264,8 @@ REVOKE EXECUTE ON FUNCTION
     , hive.remove_obsolete_reversible_data( _new_irreversible_block INT )
     , hive.remove_unecessary_events( _new_irreversible_block INT )
     , hive.initialize_extension_data()
+    , hive.wait_for_contexts( _tail_size INTEGER )
+    , hive.prune_blocks_data( _tail_size INTEGER )
 FROM hive_applications_group;
 
 REVOKE EXECUTE ON PROCEDURE

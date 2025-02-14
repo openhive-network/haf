@@ -53,6 +53,9 @@ DECLARE
     __current_stage hafd.application_stage;
     __context TEXT;
 BEGIN
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num(50);
+
     -- alice stage1
     SELECT (stg).context FROM hive.get_current_stage( ARRAY[ 'alice'] ) stg INTO __context;
     SELECT ((stg).stage::hafd.application_stage).* FROM hive.get_current_stage( ARRAY[ 'alice'] ) stg INTO __current_stage;

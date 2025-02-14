@@ -3,7 +3,6 @@
 --  stuck for a while, then after re-run it will process block one by one instead of move
 -- to massively processing all irreversible blocks that were added during pause.
 
-
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
 AS
@@ -87,6 +86,9 @@ $BODY$
 DECLARE
     __blocks hive.blocks_range;
 BEGIN
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num(4);
+
     CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks );
     ASSERT __blocks IS NOT NULL, 'Null returned';
     ASSERT hive.app_context_is_attached( 'context' ) = FALSE, 'Context is still attached';

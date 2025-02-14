@@ -36,6 +36,7 @@ namespace hive::plugins::sql_serializer {
         , uint32_t psql_index_threshold
         , uint32_t psql_livesync_threshold
         , uint32_t psql_first_block
+        , uint32_t pruning_tail_size
         , write_ahead_log_manager& write_ahead_log
       );
       ~indexation_state() = default;
@@ -59,6 +60,7 @@ namespace hive::plugins::sql_serializer {
       // is current state allow to collect blocks
       bool collect_blocks() const;
 
+      void wait_for_contexts();
     private:
       static constexpr uint32_t COLLECT_BLOCKS_MASK = 0xA0;
       enum class INDEXATION : uint32_t {
@@ -78,6 +80,7 @@ namespace hive::plugins::sql_serializer {
     public:
 
       void move_irreversible_blocks( cached_data_t& cached_data );
+      bool is_pruning_enabled() const { return _psql_pruning_tail_size > 0; }
 
     private:
       void force_trigger_flush_with_all_data( cached_data_t& cached_data, int last_block_num );
@@ -97,6 +100,7 @@ namespace hive::plugins::sql_serializer {
       const uint32_t _psql_account_operations_threads_number;
       const uint32_t _psql_livesync_threshold;
       const uint32_t _psql_first_block;
+      const uint32_t _psql_pruning_tail_size;
 
       boost::signals2::connection _on_irreversible_block_conn;
       std::shared_ptr< data_dumper > _dumper;
