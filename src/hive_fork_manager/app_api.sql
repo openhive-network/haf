@@ -186,6 +186,8 @@ CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive.contexts_gro
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __hive_sync_state hafd.sync_state;
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
@@ -194,8 +196,10 @@ BEGIN
     SET last_active_at = NOW()
     WHERE name =ANY(_context_names);
 
+    SELECT hive.get_sync_state() INTO __hive_sync_state;
+
     -- if there there is  registered table for given context
-    IF hive.app_are_forking( _context_names )
+    IF hive.app_are_forking( _context_names ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
     THEN
         RETURN hive.app_next_block_forking_app( _context_names );
     END IF;
@@ -245,7 +249,7 @@ BEGIN
 
     IF __current_block_num > __head_of_irreversible_block THEN
         RAISE EXCEPTION 'Cannot attach context % because the block num % is grater than top of irreversible block %'
-            , _context, __current_block_num,  __head_of_irreversible_block;
+            , _contexts, __current_block_num,  __head_of_irreversible_block;
     END IF;
 
     SELECT MAX(hf.id) INTO __fork_id FROM hafd.fork hf WHERE hf.block_num <= GREATEST(__current_block_num, 1);

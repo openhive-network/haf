@@ -19,6 +19,7 @@ psql-account-operations-threads-number = 2
 psql-enable-account-operations-dump = true
 psql-force-open-inconsistent = false
 psql-livesync-threshold = 100000
+psql-prune-blocks = 0
 ```
 
 ## Parameters
@@ -44,6 +45,9 @@ The sql_serializer extends hived with these new parameters:
 * **psql-first-block**[default: 1] Start collect information about blocks staring from a given block num or from first block
   after entering into live sync. Accounts (table hafd.accounts) are filled with all data regardless if they are created before first synced block.
   When there are blocks already dumped, then the limit is omitted.
+* **psql-prune-blocks** [default: 0] if set to a value greater than 0, enables pruning of older blocks from the database. Blocks older than
+  the specified value (e.g., `psql-prune-blocks=10000` keeps the latest 10,000 blocks) will be removed. If set to 0, no pruning is performed, retaining all blocks indefinitely.
+
 ## Filter parameters
 * **psql-enable-filter**[default: true] enable filtering accounts and operations
 * **psql-track-account-range**[default: empty] defines a range of accounts to track as a json pair [\"from\",\"to\"] [from,to]. Can be specified multiple times.

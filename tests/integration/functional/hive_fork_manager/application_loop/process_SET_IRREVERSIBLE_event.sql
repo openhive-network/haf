@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
 AS
@@ -16,6 +15,8 @@ BEGIN
     ;
 
     PERFORM hive.end_massive_sync( 1 );
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num(3);
 
     PERFORM hive.push_block(
          ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -60,6 +61,10 @@ DECLARE
     __blocks hive.blocks_range;
 BEGIN
     PERFORM hive.set_irreversible( 3 );
+
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num(3);
+
     CALL hive.app_next_iteration( ARRAY[ 'context' ], __blocks );
     ASSERT hive.app_context_is_attached( 'context' ) = TRUE, 'Context context is not attached';
     ASSERT __blocks IS NULL, 'Processing  SET_IRREVERSIBLE event did not return NULL';

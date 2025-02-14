@@ -15,6 +15,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , uint32_t account_operation_threads
     , uint32_t psql_first_block
     , write_ahead_log_manager& write_ahead_log
+    , uint32_t pruning
     )
   : _plugin( plugin )
   , _chain_db( chain_db )
@@ -22,7 +23,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   , transactions_controller(transaction_controllers::build_own_transaction_controller(db_url, "Livesync dumper", app, true /*sync_commits*/))
   , _psql_first_block( psql_first_block )
   , _write_ahead_log(write_ahead_log)
-  , _processing_thread(transactions_controller, write_ahead_log, app)
+  , _processing_thread(transactions_controller, write_ahead_log, app, pruning)
+  , _pruning(pruning)
   {
     auto blocks_callback = [this]( std::string&& _text ){
       _block = std::move( _text );
@@ -188,10 +190,12 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   livesync_data_dumper::processing_thread::processing_thread(std::shared_ptr<transaction_controllers::transaction_controller> transactions_controller,
                                                              write_ahead_log_manager& write_ahead_log,
-                                                             appbase::application& app) :
+                                                             appbase::application& app,
+                                                             uint32_t pruning) :
     _transactions_controller(transactions_controller),
     _write_ahead_log(write_ahead_log),
-    _app(app)
+    _app(app),
+    _pruning(pruning)
   {
     _future = std::async([this]() { run(); });
   }
@@ -242,6 +246,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
         auto transaction = _transactions_controller->openTx();
         transaction->exec(command_to_run.second);
         transaction->exec("SELECT hive.update_wal_sequence_number(" + std::to_string(command_to_run.first) + ")");
+        if ( _pruning > 0 && command_to_run.first % 10 == 0 ) {
+            transaction->exec("SELECT hive.prune_blocks_data(" + std::to_string(_pruning) +");");
+        }
         transaction->commit();
       }
       catch (const pqxx::failure& ex)

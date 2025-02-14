@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS hafd.hive_state (
       consistent_block integer,
       is_dirty bool NOT NULL,
       state hafd.sync_state NOT NULL DEFAULT 'START',
+      pruning integer NOT NULL DEFAULT 0,
       CONSTRAINT pk_irreversible_data PRIMARY KEY ( id )
 );
 
@@ -172,4 +173,3 @@ COMMENT ON COLUMN hafd.write_ahead_log_state.id IS 'an id column.  this table wi
 COMMENT ON COLUMN hafd.write_ahead_log_state.last_sequence_number_committed IS 'The sequence number of the last commited transaction, or NULL if we''re operating in a mode that doesn''t track sequence numbers.  Will always be non-negative';
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.write_ahead_log_state', '');
-

@@ -45,9 +45,15 @@ DECLARE
     __lead_context_distance_to_irr_hb INTEGER;
 BEGIN
     SELECT
-        ( ( SELECT COALESCE( hid.consistent_block, 0 ) - ctx.current_block_num FROM hafd.hive_state hid ) ) INTO __lead_context_distance_to_irr_hb
+        CASE hive.get_sync_state()
+        WHEN 'LIVE' THEN
+            ( COALESCE( hive.app_get_irreversible_block(), 0 ) - ctx.current_block_num )
+        ELSE
+            ( COALESCE( hive.get_estimated_hive_head_block(), 0 ) - ctx.current_block_num )
+        END INTO __lead_context_distance_to_irr_hb
     FROM hafd.contexts ctx
-    WHERE ctx.name = _contexts [ 1 ];
+    WHERE ctx.name = _contexts [ 1 ]
+    LIMIT 1;
 
     RETURN __lead_context_distance_to_irr_hb <= 0;
 END;
@@ -74,9 +80,16 @@ BEGIN
     END IF;
 
     SELECT
-        ( ( SELECT COALESCE( MAX(hb.num), 0 ) - ctx.current_block_num FROM hafd.blocks hb ) ) INTO __lead_context_distance_to_irr_hb
+        CASE hive.get_sync_state()
+        WHEN 'LIVE' THEN
+            ( COALESCE( hive.app_get_irreversible_block(), 0 ) - ctx.current_block_num )
+        ELSE
+            ( COALESCE( hive.get_estimated_hive_head_block(), 0 ) - ctx.current_block_num )
+        END
+        INTO __lead_context_distance_to_irr_hb
     FROM hafd.contexts ctx
-    WHERE ctx.name = _contexts [ 1 ];
+    WHERE ctx.name = _contexts [ 1 ]
+    LIMIT 1;
 
     RETURN QUERY
     WITH stages AS MATERIALIZED (

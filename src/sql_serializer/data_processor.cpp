@@ -63,9 +63,9 @@ data_processor::data_processor( std::string description, std::string short_descr
     try
     {
       {
-        ilog("${d} data processor is connecting ...",("d", _description));
+        dlog("${d} data processor is connecting ...",("d", _description));
         std::unique_lock<std::mutex> lk(_mtx);
-        ilog("${d} data processor connected successfully ...", ("d", _description));
+        dlog("${d} data processor connected successfully ...", ("d", _description));
         _cv.notify_one();
       }
 
@@ -119,7 +119,7 @@ data_processor::data_processor( std::string description, std::string short_descr
 
 data_processor::~data_processor()
 {
-  ilog("~data_processor: ${d}", ("d", _description));
+  dlog("~data_processor: ${d}", ("d", _description));
 }
 
 void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
@@ -201,7 +201,7 @@ void data_processor::join()
     throw;
   }
 
-  ilog("Data processor: ${d} finished execution...", ("d", _description));
+  dlog("Data processor: ${d} finished execution...", ("d", _description));
 }
 
 void

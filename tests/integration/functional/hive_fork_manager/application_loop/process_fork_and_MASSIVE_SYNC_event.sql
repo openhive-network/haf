@@ -1,3 +1,6 @@
+-- override global dynamic information
+SELECT test.install_mock_hive_get_estimated_hive_head_block();
+
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
@@ -36,6 +39,7 @@ BEGIN
     );
 
     PERFORM hive.set_irreversible( 2 );
+    PERFORM test.set_head_block_num(2);
 
     PERFORM hive.push_block(
          ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -65,6 +69,7 @@ BEGIN
     PERFORM hive.back_from_fork( 2 );
 
     PERFORM hive.end_massive_sync(6);
+    PERFORM test.set_head_block_num(6);
 END;
 $BODY$
 ;

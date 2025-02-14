@@ -13,6 +13,7 @@
 
 #include <exception>
 #include <type_traits>
+#include <thread>
 
 namespace hive{ namespace plugins{ namespace sql_serializer {
 
@@ -144,6 +145,7 @@ indexation_state::indexation_state(
   , uint32_t psql_index_threshold
   , uint32_t psql_livesync_threshold
   , uint32_t psql_first_block
+  , uint32_t pruning_tail_size
   , write_ahead_log_manager& write_ahead_log
 )
   : _main_plugin( main_plugin )
@@ -155,6 +157,7 @@ indexation_state::indexation_state(
   , _psql_account_operations_threads_number( psql_account_operations_threads_number )
   , _psql_livesync_threshold( psql_livesync_threshold )
   , _psql_first_block( psql_first_block )
+  , _psql_pruning_tail_size( pruning_tail_size )
   , _irreversible_block_num( NO_IRREVERSIBLE_BLOCK )
   , _indexes_controler( db_url, psql_index_threshold, app )
   , _write_ahead_log{write_ahead_log} 
@@ -297,6 +300,9 @@ indexation_state::update_state(
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
+
+      set_state(state);
+
       _indexes_controler.disable_constraints();
       _indexes_controler.disable_indexes_depends_on_blocks( expected_number_of_blocks_to_sync() );
       _dumper = std::make_shared< reindex_data_dumper >(
@@ -305,6 +311,7 @@ indexation_state::update_state(
         , _psql_operations_threads_number
         , _psql_transactions_threads_number
         , _psql_account_operations_threads_number
+        , _psql_pruning_tail_size
       );
       _irreversible_block_num = NO_IRREVERSIBLE_BLOCK;
       _trigger = std::make_unique< p2p_flush_trigger >(
@@ -323,6 +330,9 @@ indexation_state::update_state(
       force_trigger_flush_with_all_data( cached_data, last_block_num );
       _trigger.reset();
       _dumper.reset();
+
+      set_state(state);
+
       _indexes_controler.disable_constraints();
       _indexes_controler.disable_indexes_depends_on_blocks(
         number_of_blocks_to_add == 0 // stop_replay_at_block = 0
@@ -335,6 +345,7 @@ indexation_state::update_state(
         , _psql_operations_threads_number
         , _psql_transactions_threads_number
         , _psql_account_operations_threads_number
+        , _psql_pruning_tail_size
       );
       _trigger = std::make_unique< reindex_flush_trigger >(
         [this]( cached_data_t& cached_data, int last_block_num ) {
@@ -354,6 +365,9 @@ indexation_state::update_state(
 
       _trigger.reset();
       _dumper.reset();
+
+      set_state(state);
+
       _indexes_controler.enable_indexes();
       _indexes_controler.enable_constrains();
       std::thread([this]() {
@@ -369,6 +383,7 @@ indexation_state::update_state(
         , _psql_account_operations_threads_number
         , _psql_first_block
         , _write_ahead_log
+        , _psql_pruning_tail_size
         );
       _trigger = std::make_unique< live_flush_trigger >(
         [this]( cached_data_t& cached_data, int last_block_num ) {
@@ -383,13 +398,9 @@ indexation_state::update_state(
       ilog("PROFILE: Entering WAIT sync: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       _trigger.reset();
       _dumper.reset();
-      _trigger = std::make_shared< fake_flush_trigger >();
-      _dumper = std::make_shared< fake_data_dumper >();
-      ilog("PROFILE: Entered WAIT sync from start state: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
-      break;
-     ilog("PROFILE: Entering WAIT sync: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
-      _trigger.reset();
-      _dumper.reset();
+
+      set_state(state);
+
       _trigger = std::make_shared< fake_flush_trigger >();
       _dumper = std::make_shared< fake_data_dumper >();
       ilog("PROFILE: Entered WAIT sync from start state: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
@@ -398,6 +409,9 @@ indexation_state::update_state(
       ilog("PROFILE: Entering REINDEX_WAIT sync: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
       _trigger.reset();
       _dumper.reset();
+
+      set_state(state);
+
       _trigger = std::make_shared< fake_flush_trigger >();
       _dumper = std::make_shared< fake_data_dumper >();
       ilog("PROFILE: Entered REINDEX_WAIT sync: ${t} s",("t",(fc::time_point::now() - _start_state_time).to_seconds()));
@@ -406,12 +420,12 @@ indexation_state::update_state(
       FC_ASSERT( false, "Unknown INDEXATION state" );
   }
 
-  set_state(state);
+
 }
 
 void
 indexation_state::trigger_data_flush( cached_data_t& cached_data, int last_block_num ) {
-  _trigger->flush( cached_data, last_block_num, _irreversible_block_num );
+    _trigger->flush( cached_data, last_block_num, _irreversible_block_num );
 }
 
 void
@@ -419,6 +433,8 @@ indexation_state::force_trigger_flush_with_all_data( cached_data_t& cached_data,
   if ( cached_data.blocks.empty() ) {
     return;
   }
+
+  wait_for_contexts();
   _dumper->trigger_data_flush( cached_data, last_block_num );
 }
 
@@ -477,6 +493,37 @@ indexation_state::on_switch_fork( cached_data_t& cached_data, uint32_t block_num
 bool
 indexation_state::collect_blocks() const {
   return static_cast< uint32_t >( get_state() ) & COLLECT_BLOCKS_MASK;
+}
+
+void
+indexation_state::wait_for_contexts() {
+    using namespace std::string_literals;
+
+    if ( !is_pruning_enabled() ) {
+        return;
+    }
+
+    // Don't slow down live sync
+    if ( get_state() == INDEXATION::LIVE )
+        return;
+
+    {
+        queries_commit_data_processor wait_for_contexts(
+                _db_url, "Wait for contexts", "waits", [this](const data_processor::data_chunk_ptr &,
+                                                              transaction_controllers::transaction &tx) -> data_processor::data_processing_status {
+
+                    pqxx::result data = tx.exec(
+                            "select hive.wait_for_contexts("s
+                            + std::to_string(1000)
+                            + ");"
+                    );
+                    return data_processor::data_processing_status();
+                }, nullptr, theApp
+        );
+
+        wait_for_contexts.trigger(data_processor::data_chunk_ptr(), 0);
+        wait_for_contexts.join();
+    }
 }
 
 indexation_state::INDEXATION

@@ -9,17 +9,18 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , appbase::application& app
     , uint32_t operations_threads
     , uint32_t transactions_threads
-    , uint32_t account_operation_threads ) : app(app) {
+    , uint32_t account_operation_threads
+    , uint32_t pruning_tail_size) : app(app) {
+    using namespace std::string_literals;
     ilog( "Starting reindexing dump to database with ${o} operations and ${t} transactions threads", ("o", operations_threads )("t", transactions_threads) );
     _transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "reindex dumper", app );
     _end_massive_sync_processor = std::make_unique< end_massive_sync_processor >( db_url, app );
     constexpr auto ONE_THREAD_WRITERS_NUMBER = 4; // a thread for dumping blocks + a thread dumping multisignatures + a thread for accounts
     auto NUMBER_OF_PROCESSORS_THREADS = ONE_THREAD_WRITERS_NUMBER + operations_threads + transactions_threads + account_operation_threads;
-    auto execute_end_massive_sync_callback = [this](block_num_rendezvous_trigger::BLOCK_NUM _block_num ){
-      if ( !_block_num ) {
-        return;
+    auto execute_end_massive_sync_callback = [this, pruning_tail_size](block_num_rendezvous_trigger::BLOCK_NUM _block_num ) {
+      if (_block_num) {
+          _end_massive_sync_processor->trigger_block_number(_block_num);
       }
-      _end_massive_sync_processor->trigger_block_number( _block_num );
     };
 
     auto api_trigger = std::make_shared< block_num_rendezvous_trigger >( NUMBER_OF_PROCESSORS_THREADS, execute_end_massive_sync_callback );
@@ -54,6 +55,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_writer->trigger( std::move( cached_data.accounts ), last_block_num );
     _account_operations_writer->trigger( std::move( cached_data.account_operations ), last_block_num );
     _applied_hardforks_writer->trigger( std::move( cached_data.applied_hardforks ), last_block_num );
+
     if (app.is_interrupt_request())
     {
       cancel();

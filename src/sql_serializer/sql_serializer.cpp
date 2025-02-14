@@ -213,6 +213,7 @@ public:
     , uint32_t _psql_index_threshold
     , uint32_t _psql_livesync_threshold
     , uint32_t _psql_first_block
+    , uint32_t _pruning_tail_size
     , bool     _psql_enable_filter
   )
   :   db_url{url},
@@ -223,6 +224,7 @@ public:
       psql_operations_threads_number( _psql_operations_threads_number ),
       psql_account_operations_threads_number( _psql_account_operations_threads_number ),
       psql_first_block( _psql_first_block ),
+      psql_pruning_tail_size( _pruning_tail_size ),
       filter( _psql_enable_filter, op_extractor ),
       _indexation_state( _main_plugin, _chain_db, url, app,
                          _psql_transactions_threads_number,
@@ -231,6 +233,7 @@ public:
                          _psql_index_threshold,
                          _psql_livesync_threshold,
                          _psql_first_block,
+                         _pruning_tail_size,
                          write_ahead_log)
   {
     HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
@@ -300,6 +303,7 @@ public:
   uint32_t psql_operations_threads_number = 5;
   uint32_t psql_account_operations_threads_number = 2;
   uint32_t psql_first_block = 1u;
+  uint32_t psql_pruning_tail_size = -1;
   bool     psql_dump_account_operations = true;
 
   bool replay_blocklog = false;
@@ -456,7 +460,8 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
     const auto CONNECT_QUERY = "SELECT hive.connect('"s
                                + fc::git_revision_sha
                                + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER"
-                               + ","s + std::to_string( psql_first_block ) + "::INTEGER)"s;
+                               + ","s + std::to_string( psql_first_block ) + "::INTEGER"s
+                               + ","s + std::to_string( psql_pruning_tail_size ) + "::INTEGER)"s;
     tx.exec( CONNECT_QUERY );
     return data_processing_status();
   };
@@ -673,9 +678,33 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
 
     filter.clear();
 
+    if ( _indexation_state.is_pruning_enabled() && note.block_num % 500'000 == 0 )
+    {
+      pqxx::connection conn(db_url);
+      pqxx::nontransaction tx(conn);
+
+      try
+      {
+          pqxx::result data = tx.exec("SELECT hive.get_vacuum_full_commands() as vacuum_cmd;");
+          for (const auto& record : data) {
+              std::string vacuum_command = record["vacuum_cmd"].as<std::string>();
+              auto start_time = fc::time_point::now();
+              tx.exec(vacuum_command);
+              auto end_time = fc::time_point::now();
+              fc::microseconds vacuum_duration = end_time - start_time;
+              ilog("${cmd} in ${duration} ms", ("cmd",vacuum_command)("duration", vacuum_duration.count()/1000));
+          }
+      }
+      catch (const pqxx::sql_error& e)
+      {
+          elog("Error while checking for vacuum requests: ${e}", ("e", e.what()));
+          throw;
+      }
+    }
+
     if(note.block_num % 100'000 == 0)
     {
-      log_statistics();
+        log_statistics();
     }
   }
   catch (...)
@@ -830,6 +859,7 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
                     ("psql-enable-filter", appbase::bpo::value<bool>()->default_value( true ), "enable filtering accounts and operations")
                     ("psql-first-block", appbase::bpo::value<uint32_t>()->default_value( 1u ), "first synced block")
                     ("psql-wal-directory", boost::program_options::value<bfs::path>(), "write-ahead log for data sent from hived to PostgreSQL")
+                    ("psql-prune-blocks", appbase::bpo::value<uint32_t>()->default_value( 0 ), "number of recent blocks to keep; older processed blocks are pruned. 0 disables pruning")
                     ;
 }
 
@@ -861,6 +891,7 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , options["psql-index-threshold"].as<uint32_t>()
     , options["psql-livesync-threshold"].as<uint32_t>()
     , options["psql-first-block"].as<uint32_t>()
+    , options["psql-prune-blocks"].as<uint32_t>()
     , options["psql-enable-filter"].as<bool>()
   );
 

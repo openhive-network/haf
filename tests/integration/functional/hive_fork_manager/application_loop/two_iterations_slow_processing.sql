@@ -1,3 +1,4 @@
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS
@@ -15,8 +16,12 @@ BEGIN
     ;
 
     PERFORM hive.set_irreversible( 50 );
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num(50);
 END;
 $BODY$;
+
+
 
 
 CREATE OR REPLACE PROCEDURE alice_test_given()
@@ -54,6 +59,9 @@ $BODY$
 DECLARE
     __range_placeholder hive.blocks_range;
 BEGIN
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num(50);
+
     -- alices context are moved to range (1,10)
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
     RAISE INFO 'blocks range: %', __range_placeholder;
@@ -64,6 +72,7 @@ BEGIN
         , ( 60, '\xBADD51', '\xCAFE51', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
     PERFORM hive.set_irreversible( 60 );
+    PERFORM test.set_head_block_num(60);
     PERFORM pg_sleep( 10 ); -- ensure that process limit is exceeded
 END;
 $BODY$;
@@ -75,6 +84,9 @@ $BODY$
 DECLARE
     __range_placeholder hive.blocks_range;
 BEGIN
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num(60);
+
     -- Alice start new iteration 10-20
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
     RAISE INFO 'blocks range: %', __range_placeholder;

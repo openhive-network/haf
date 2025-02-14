@@ -42,6 +42,7 @@ namespace hive::plugins::sql_serializer {
       , uint32_t account_operation_threads
       , uint32_t start_block_num
       , write_ahead_log_manager& write_ahead_log
+      , uint32_t pruning
     );
 
     ~livesync_data_dumper();
@@ -118,6 +119,7 @@ namespace hive::plugins::sql_serializer {
     std::shared_ptr< transaction_controllers::transaction_controller > transactions_controller;
 
     const uint32_t _psql_first_block;
+    const uint32_t _pruning; // <=0 no pruning, > 0 tail of blocks
 
     // worker thread that executes sql commands in the background
     // when enqueued, commands are written to a write-ahead log from the main thread.
@@ -139,10 +141,11 @@ namespace hive::plugins::sql_serializer {
       std::shared_ptr<transaction_controllers::transaction_controller> _transactions_controller;
       write_ahead_log_manager& _write_ahead_log;
       appbase::application& _app;
+      const uint32_t _pruning; // <=0 no pruning, > 0 tail of blocks
     public:
       processing_thread(std::shared_ptr<transaction_controllers::transaction_controller> transactions_controller,
                         write_ahead_log_manager& write_ahead_log,
-                        appbase::application& app);
+                        appbase::application& app, uint32_t pruning);
       ~processing_thread();
       void run();
       void enqueue(std::string&& sql_command);
