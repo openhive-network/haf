@@ -1,0 +1,6 @@
+-- start pruning function
+--      no registered contexts
+--      blocks to prune exists
+-- expected result:
+--          remove all blocks data
+--          check if accounts are not removed

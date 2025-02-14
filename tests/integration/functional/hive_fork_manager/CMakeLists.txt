@@ -395,3 +395,6 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST(pruning/application_no_blocks.sql)
  ADD_SQL_FUNCTIONAL_TEST(pruning/no_application_no_blocks.sql)
  ADD_SQL_FUNCTIONAL_TEST(pruning/no_application_blocks.sql)
+ ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_no_application_blocks.sql )
+ ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_application_blocks.sql )
+ ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_no_application_no_blocks.sql)

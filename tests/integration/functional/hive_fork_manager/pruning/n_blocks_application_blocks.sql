@@ -1,0 +1,6 @@
+-- start pruning function
+--      registered two contexts on different current block
+--      blocks to prune
+-- expected result:
+--          remove blocks lower than the lowest current block
+--          check if accounts are not removed
