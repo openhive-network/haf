@@ -71,7 +71,10 @@ ADD_PSQL_EXTENSION(
             application_loop/loop.sql
             application_loop/contexts_log_api.sql
 
+            pruning/prune_irreversible_blocks.sql
+
             state_providers/update_providers.sql
+
 )
 
 ADD_SUBDIRECTORY( shared_lib )
