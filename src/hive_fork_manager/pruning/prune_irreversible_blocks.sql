@@ -1,15 +1,25 @@
-CREATE OR REPLACE FUNCTION hive.prune_blocks_data()
+CREATE OR REPLACE FUNCTION hive.prune_blocks_data( _tail_size INTEGER)
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __upper_bound_block_num INTEGER := NULL;
+    __upper_bound_block_num INTEGER;
+    __max_block_num INTEGER;
 BEGIN
-    SELECT min(irreversible_block)
+    SELECT consistent_block INTO __max_block_num FROM hafd.irreversible_data;
+
+    SELECT COLAESCE( min(irreversible_block), __max_block_num )
     INTO __upper_bound_block_num
     FROM hafd.contexts hc;
+
+    IF __upper_bound_block_num <= _tail_size THEN
+        RETURN;
+    END IF;
+
+    __upper_bound_block_num = __upper_bound_block_num - _tail_size;
+
 
     --TODO(mickiewicz@syncad.com): when block is removed account needs to be set created_block to NULL
     --TODO(mickiewicz@syncad.com): too much times the same schema occur: all hafd blocks tables are modified
