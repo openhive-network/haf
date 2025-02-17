@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.prune_blocks_data( _tail_size INTEGER)
+CREATE OR REPLACE FUNCTION hive.prune_blocks_data( _tail_size INTEGER  = 0 )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -8,9 +8,13 @@ DECLARE
     __upper_bound_block_num INTEGER;
     __max_block_num INTEGER;
 BEGIN
+    IF _tail_size < 0 THEN
+        RAISE EXCEPTION 'Blocks tail cannot be lower than 0  but is %', _tail_size;
+    END IF;
+
     SELECT consistent_block INTO __max_block_num FROM hafd.irreversible_data;
 
-    SELECT COLAESCE( min(irreversible_block), __max_block_num )
+    SELECT COALESCE( min(irreversible_block), __max_block_num )
     INTO __upper_bound_block_num
     FROM hafd.contexts hc;
 
@@ -20,8 +24,6 @@ BEGIN
 
     __upper_bound_block_num = __upper_bound_block_num - _tail_size;
 
-
-    --TODO(mickiewicz@syncad.com): when block is removed account needs to be set created_block to NULL
     --TODO(mickiewicz@syncad.com): too much times the same schema occur: all hafd blocks tables are modified
     --                   need to add some container to make it automatically (table with oid of hafd tables ?)
     --                   without repeating tables names each time
@@ -37,7 +39,7 @@ BEGIN
     ;
 
     DELETE FROM hafd.operations hor
-    WHERE hafd.operation_id_to_block_num(hor.id) < __upper_bound_block_num;
+    WHERE hafd.operation_id_to_block_num(hor.id) < __upper_bound_block_num
     ;
 
 
@@ -52,9 +54,9 @@ BEGIN
     WHERE  htr.block_num < __upper_bound_block_num
     ;
 
-    UPDATE hafd.accounts harss
-    SET har.block_num = NULL
-    WHERE har.block_num < __upper_bound_block_num
+    UPDATE hafd.accounts ha
+    SET block_num = NULL
+    WHERE ha.block_num < __upper_bound_block_num
     ;
 
     DELETE FROM hafd.blocks hbr
