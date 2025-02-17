@@ -9,7 +9,7 @@
 --      no registered contexts
 --      blocks to prune no  exists
 -- expected result:
---          remove 5 blocks
+--          remove 4 blocks
 --          check if accounts are not removed
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
