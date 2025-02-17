@@ -2,7 +2,7 @@
 --      no registered contexts
 --      blocks to prune no  exists
 -- expected result:
---          remove all blocks data
+--          remove 5 blocks
 --          check if accounts are not removed
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
@@ -25,7 +25,7 @@ AS
 $BODY$
 BEGIN
     -- TODO(mickiewicz@syncad.com): i'm not sre if hived will call prune
-    PERFORM hive.prune_blocks_data();
+    PERFORM hive.prune_blocks_data(5);
 END;
 $BODY$
 ;

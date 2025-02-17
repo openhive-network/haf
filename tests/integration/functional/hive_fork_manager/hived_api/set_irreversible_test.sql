@@ -7,7 +7,7 @@ BEGIN
     CREATE SCHEMA A;
     PERFORM hive.app_create_context( 'context', 'a' );
 
-    PERFORM hive.fill_with_blocks_data();
+    PERFORM test.fill_with_blocks_data();
 
 END;
 $BODY$
