@@ -48,11 +48,60 @@ CREATE EXTENSION vector;
 | `facebook/laser2` | 1024 | 100+ | Bardzo dobry dla długich dokumentów | Duży model | CC BY-NC 4.0 |
 | `text-embedding-ada-002` (OpenAI) | 1536 | 100+ | Wysoka jakość embeddingów | API płatne | OpenAI API Terms of Use |
 
-I suggest first to use: https://huggingface.co/intfloat/multilingual-e5-large
+I suggest first to use: https://huggingface.co/intfloat/multilingual-e5-large, but it only supports 512 tokens
+`facebook/laser2` 12000 tokenow, ale nie wyglada na popularny, i jest stary
+https://github.com/timescale/pgai/ fajne 
 
 ## Python libraries
-   torch
-   sentence-transformer
+   1. **pgai** wszystko jest zrobione, tylko mało kontroli dla nas
+      - TimescaleDB, zapewne chodzi o [pgvectorscale](https://github.com/timescale/pgvectorscale/) (fork pgvector) ale czy tylko ?
+        pgvector scale twierdzi że pgvector nie radzi sobie z duzą iloscią danych, pgvectorscale instaluje też pgvector
+      - TimescaleDb Community license: można używać o ile nie pobiera się pieniędzy za servisów
+      - Wygląda na to ze mała kontrola nad tym co się dzieje, poprostu jestrujemy tablice i mówimy która kolumna ma podlegać
+        wektoryzacji i metode chunkowaniam uruchami się process w tele który dokonuje vektoryzacji oraz sa troggery które
+        regują na pojawienie się nowych wersji.
+      - Nie dokońća wiadomo które featurs z TisescaleDb sa uzywane, jeśli hypertables to updaty mogą powodować problemy
+      - Możliwe że nie bedzie moglo dzialać efektywnie w massive syncu, tylko trzeba będzie wypełnić tablice postów a potemją przekazać do vektoryzacji.
+        Obawiam się że tak masowe inserty jak my robimy zabiją mechanizm śledzenia modyfikacji tabeli źródłowej. A moze nawet nie można modyfikowac gdy wektoryzacja się wykonuje
+        trzeba to sprawdzić.
+      - wspiera komercyjne model z API (wymaga kluczy do nich) oraz Ollama, ale to wszystko to komunikacja po API, zapewne
+        dla performance nie ma to znaczenia ale bowiem komunikacja bedzie znikomym wysiłkiem w porównaniu do generowania embeddings
+      - jeśli ollama to dla nas najlepsze modele: BGE-M3 lub starszy BGE-Large (oba 8192 tokeny i wektory 1024), multi języczne 100+
+   2. **sentence-transformer**  specjalizowna do embeddings, wszystkie modele huggingface (BGE3-M3 też), używa ich bezpośrednio
+        bez stawiania ollamy i wołania API. Trzeba by napisac program w pythonie ktory prztwarza zebrane post i wrzuca pgvectorscale
+   3. **pyTorch** jest zbyt ogólny, dla wyszukiwarki wystarczy wyspecjalizowany sentence-transformer, który i tag go używa
+   4. [laser](https://github.com/facebookresearch/LASER) -> całkowicie inny interfejs, nie wygląda na popularny
 
+### Space126'738'273 -> number of posts in hive
+posts are writen in different languages (ofc. english is a leader)
+vector of 1024 float8 gives 1'038'239'932'416B > 1TB
+HNSW ~= 3TB
+IVFFLat ~= 200GB
+
+
+### jade z donstalowaniem pgai do hiveminda
+1. instalacja 
+    git clone https://github.com/timescale/pgai.git --branch extension-0.8.0 
+    cd pgai sudo python3 -m pip install --upgrade pip
+    sudo python3 -m pip install --upgrade pip
+    sudo projects/extension/build.py install
+    sudo apt update
+    sudo apt install postgresql-plpython3-17
+
+2. w bazie danych: CREATE EXTENSION IF NOT EXISTS ai CASCADE;
+3. wskazanie gdzie nalezy pytac ollame:
+   ```bash
+    INSERT INTO vectorized_posts (id, embedding)
+    SELECT
+    posts.id,
+    ai.ollama_embed('bge-m3:latest', posts.body, host => 'http://192.168.6.17:11434')
+    FROM (
+    SELECT hp.id, hpd.body
+    FROM hivemind_app.hive_posts as hp
+    JOIN hivemind_app.hive_post_data as hpd ON hpd.id = hp.id
+    WHERE hp.root_id=hp.parent_id LIMIT 1000
+    ) AS posts;
+   ```
+4. 
 
 
