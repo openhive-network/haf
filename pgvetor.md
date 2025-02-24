@@ -102,6 +102,17 @@ IVFFLat ~= 200GB
     WHERE hp.root_id=hp.parent_id LIMIT 1000
     ) AS posts;
    ```
-4. 
+4. vectorscale, nie jest czescia pgai, trzeba instalowac oddzielnie
+   - Najpierw rust jako haf_admin
+   ```bash
+   git clone https://github.com/timescale/pgvectorscale.git
+   cd pgvectorscale
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   sudo su # potrzebny by kopiowac do extension postgresa
+   . /home/haf_admin/.cargo/env
+    cargo install --locked cargo-pgrx --version $(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "pgrx") | .version')
+    cargo pgrx init --pg17 pg_config
+    cargo pgrx install --release
+i   ```
 
 
