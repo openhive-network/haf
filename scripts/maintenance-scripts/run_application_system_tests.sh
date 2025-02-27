@@ -4,7 +4,8 @@ set -xeuo pipefail
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
 
-LOG_FILE=applications_system_tests.log
+export LOG_FILE=applications_system_tests.log
+# shellcheck source=./ci_common.sh
 source "$SCRIPTSDIR/maintenance-scripts/ci_common.sh"
 
 ARGS=()
@@ -25,6 +26,7 @@ export DB_URL="postgresql://haf_admin@127.0.0.1:5432/$DB_NAME"
 
 echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
 python3 -m venv --system-site-packages venv/
+# shellcheck disable=SC1091
 . venv/bin/activate
 (cd "${REPO_DIR}/tests/integration/haf-local-tools" && poetry install)
 echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
