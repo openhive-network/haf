@@ -288,7 +288,7 @@ applications_system_tests:
       set -e
 
       sudo apt-get update
-      sudo apt-get install -y git
+      sudo apt-get install -y git python3
 
       /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_application_system_tests.sh
   artifacts:
