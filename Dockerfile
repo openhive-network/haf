@@ -144,7 +144,9 @@ RUN mkdir -p /home/hived/bin && \
 COPY --from=build --chown=hived:users \
   /home/haf_admin/build/hive/programs/hived/hived \
   /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet \
+  /home/haf_admin/build/hive/programs/util/block_log_util \
   /home/haf_admin/build/hive/programs/util/compress_block_log \
+  /home/haf_admin/build/hive/programs/util/get_dev_key \
   /home/hived/bin/
 
 COPY --from=build \
