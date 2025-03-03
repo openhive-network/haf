@@ -111,7 +111,7 @@ haf_image_build_mirrornet:
                 "host    all              test_app_owner   0.0.0.0/0    trust"
                 "host    all              hived            0.0.0.0/0    trust"
                 "host    all              all              0.0.0.0/0    scram-sha-256"
-  command: [ "--execute-maintenance-script=${HAF_SOURCE_DIR}/scripts/maintenance-scripts/sleep_infinity.sh" ]
+  command: [ "--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh" ]
 
 .hfm_functional_tests:
   extends: .job-defaults
@@ -127,6 +127,7 @@ haf_image_build_mirrornet:
 
       sudo apt-get update
       sudo apt-get install -y git cmake
+      git config --global --add safe.directory "$CI_PROJECT_DIR"
 
       /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
   artifacts:

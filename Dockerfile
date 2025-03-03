@@ -141,6 +141,12 @@ RUN mkdir -p /home/hived/bin && \
     mkdir /home/hived/datadir && \
     chown -Rc hived:users /home/hived/
 
+# COPY --from=build --chown=hived:users \
+#   /home/haf_admin/build/hive/programs/hived/hived \
+#   /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet \
+#   /home/haf_admin/build/hive/programs/util/compress_block_log \
+#   /home/hived/bin/
+  
 COPY --from=build --chown=hived:users \
   /home/haf_admin/build/hive/programs/hived/hived \
   /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet \
@@ -149,7 +155,9 @@ COPY --from=build --chown=hived:users \
   /home/haf_admin/build/tests/unit/* \
   /home/hived/bin/
 
+# This should be removed before merge
 COPY --from=build --chown=haf_admin:users /home/haf_admin/build /home/haf_admin/build/
+COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}" "${HAF_SOURCE_DIR}"
 
 COPY --from=build \
   /home/haf_admin/build/extensions/hive_fork_manager/* \
