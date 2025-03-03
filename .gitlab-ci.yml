@@ -126,7 +126,7 @@ haf_image_build_mirrornet:
       set -e
 
       sudo apt-get update
-      sudo apt-get install -y git cmake
+      sudo apt-get install -y git cmake python3 python3-venv python3-pip
       git config --global --add safe.directory "$CI_PROJECT_DIR"
 
       /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
