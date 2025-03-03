@@ -17,13 +17,11 @@ export DB_NAME=haf_block_log
 export DB_ADMIN="haf_admin"
 
 test_start() {
-
   pushd "$REPO_DIR"
   echo "Will use tests from commit $(git rev-parse HEAD)"
   exec > >(tee -i "${LOG_FILE}") 2>&1
 }
 
 test_end() {
-
-  echo done
+  echo "Done!"
 }

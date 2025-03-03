@@ -122,7 +122,13 @@ haf_image_build_mirrornet:
   variables:
     PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
+    - |
+      set -e
+
+      sudo apt-get update
+      sudo apt-get install -y git cmake
+
+      /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
   artifacts:
     paths:
       - "**/*.log"
