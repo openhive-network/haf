@@ -145,6 +145,8 @@ COPY --from=build --chown=hived:users \
   /home/haf_admin/build/hive/programs/hived/hived \
   /home/haf_admin/build/hive/programs/cli_wallet/cli_wallet \
   /home/haf_admin/build/hive/programs/util/* \
+  /home/haf_admin/build/hive/programs/blockchain_converter/blockchain_converter* \
+  /home/haf_admin/build/tests/unit/* \
   /home/hived/bin/
 
 COPY --from=build \
