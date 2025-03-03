@@ -149,6 +149,8 @@ COPY --from=build --chown=hived:users \
   /home/haf_admin/build/tests/unit/* \
   /home/hived/bin/
 
+COPY --from=build --chown=haf_admin:users /home/haf_admin/build /home/haf_admin/build/
+
 COPY --from=build \
   /home/haf_admin/build/extensions/hive_fork_manager/* \
   /usr/share/postgresql/${POSTGRES_VERSION}/extension
