@@ -484,7 +484,7 @@ replay_with_json_metadata:
       set -e
       
       sudo apt-get update
-      sudo apt-get install -y python3 python3-venv python3-pip
+      sudo apt-get install -y git python3 python3-pip
       python3 -m pip install --user pipx
 
       /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_json_metadata.sh
