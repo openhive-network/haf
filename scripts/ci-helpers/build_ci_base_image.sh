@@ -1,7 +1,7 @@
 #! /bin/bash
 
 REGISTRY=${1:-registry.gitlab.syncad.com/hive/haf/}
-CI_IMAGE_TAG=ubuntu22.04-16
+CI_IMAGE_TAG=ubuntu22.04-17
 
 # exit when any command fails
 set -e

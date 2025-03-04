@@ -14,8 +14,8 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
   FF_ENABLE_JOB_CLEANUP: 1
   GIT_STRATEGY: clone
-  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu22.04-16
-  BUILDER_IMAGE_TAG: "@sha256:e5492a0fc58cf86009a1e27574f63bf597c4740767b837fa23af803cf606cffb"
+  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu22.04-17
+  BUILDER_IMAGE_TAG: "@sha256:234d3592e53d4cd7cc6df8e61366e8cbe69ac439355475c34fb2b0daf40e7a26"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
