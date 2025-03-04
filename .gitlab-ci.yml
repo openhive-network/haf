@@ -119,6 +119,7 @@ haf_image_build_mirrornet:
     name: $HAF_IMAGE_NAME
     entrypoint: [""]
   stage: build_and_test_phase_1
+  timeout: 80m
   variables:
     PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
   script:
