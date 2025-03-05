@@ -488,7 +488,7 @@ replay_with_json_metadata:
       python3 -m pip install --user pipx
       git config --global --add safe.directory "$CI_PROJECT_DIR"
 
-      /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_json_metadata.sh
+      /bin/bash /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_json_metadata.sh
   artifacts:
     paths:
       - "replay_with_json_metadata.log"

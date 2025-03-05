@@ -24,6 +24,7 @@ mkdir -p "${DATADIR}/blockchain"
 cp "${BLOCK_LOG_SOURCE_DIR_5M}/block_log" "${DATADIR}/blockchain"
 cp "${CURRENT_PROJECT_DIR}/config.ini" "${DATADIR}"
 IFS=" " read -ra REPLAY_ARRAY <<< "$REPLAY"
+echo "Replay arguments: ${REPLAY_ARRAY{*]}"
 $HIVED_PATH --data-dir "$DATADIR" "${REPLAY_ARRAY{@]}" --exit-before-sync --psql-url "postgresql:///$DB_NAME" 2>&1 | tee -i node_logs.log
 echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
 
