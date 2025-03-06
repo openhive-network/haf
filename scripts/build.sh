@@ -2,10 +2,10 @@
 
 set -euo pipefail
 
-LOG_FILE=build.log
+export LOG_FILE=build.log
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-
+# shellcheck source=./common.sh
 source "$SCRIPTPATH/../hive/scripts/common.sh"
 
 log_exec_params "$@"
@@ -63,8 +63,8 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-abs_src_dir=`realpath -e --relative-base="$SCRIPTPATH" "$HAF_SOURCE_DIR"`
-abs_build_dir=`realpath -m --relative-base="$SCRIPTPATH" "$HAF_BINARY_DIR"`
+abs_src_dir=$(realpath -e --relative-base="$SCRIPTPATH" "$HAF_SOURCE_DIR")
+abs_build_dir=$(realpath -m --relative-base="$SCRIPTPATH" "$HAF_BINARY_DIR")
 
 "$SCRIPTPATH/../hive/scripts/build.sh" --source-dir="$abs_src_dir" --binary-dir="$abs_build_dir" "${CMAKE_ARGS[@]}" "$@"
 
