@@ -23,9 +23,7 @@ echo -e "\e[0Ksection_start:$(date +%s):replay[collapsed=true]\r\e[0KExecuting r
 mkdir -p "${DATADIR}/blockchain"
 cp "${BLOCK_LOG_SOURCE_DIR_5M}/block_log" "${DATADIR}/blockchain"
 cp "${CURRENT_PROJECT_DIR}/config.ini" "${DATADIR}"
-IFS=" " read -ra REPLAY_ARRAY <<< "$REPLAY"
-echo "Replay arguments: ${REPLAY_ARRAY{*]}"
-$HIVED_PATH --data-dir "$DATADIR" "${REPLAY_ARRAY{@]}" --exit-before-sync --psql-url "postgresql:///$DB_NAME" 2>&1 | tee -i node_logs.log
+$HIVED_PATH --data-dir "$DATADIR" "${REPLAY[@]}" --exit-before-sync --psql-url "postgresql:///$DB_NAME" 2>&1 | tee -i node_logs.log
 echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
 
 psql -w -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f "${CURRENT_PROJECT_DIR}/${NAME}/${NAME}_live_schema.sql"
