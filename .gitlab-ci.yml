@@ -440,7 +440,7 @@ replay_with_update:
       set -e
 
       sudo apt-get update
-      sudo apt-get -y install git cmake ninja-build build-essential liburing-dev libboost-all-dev
+      sudo apt-get -y install git cmake ninja-build build-essential liburing-dev libboost-all-dev libssl-dev
 
       /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_update.sh
   artifacts:
