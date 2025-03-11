@@ -2,7 +2,7 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=ubuntu22.04-17
+ARG CI_IMAGE_TAG=ubuntu22.04-18
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
