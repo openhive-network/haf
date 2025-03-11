@@ -82,11 +82,12 @@ IVFFLat ~= 200GB
 ### jade z donstalowaniem pgai do hiveminda
 1. instalacja 
     git clone https://github.com/timescale/pgai.git --branch extension-0.8.0 
-    cd pgai sudo python3 -m pip install --upgrade pip
+    cd pgai
+    sudo python3 -m pip install --upgrade pip
     sudo python3 -m pip install --upgrade pip
     sudo projects/extension/build.py install
     sudo apt update
-    sudo apt install postgresql-plpython3-17
+    sudo apt install postgresql-plpython3-17 postgresql-17-pgvector
 
 2. w bazie danych: CREATE EXTENSION IF NOT EXISTS ai CASCADE;
 3. wskazanie gdzie nalezy pytac ollame:

@@ -18,6 +18,7 @@ print_help () {
     echo "  --user                    Install packages to a subdirectory of the user's home directory."
     echo "  --haf-admin-account=NAME  Specify the unix account name to be used for HAF administration (will be associated with the PostgreSQL role)."
     echo "  --hived-account=NAME      Specify the unix account name to be used for hived (will be associated with the PostgreSQL role)."
+    echo "  --pgai                    Install pgai postgres extension"
     echo "  --help                    Display this help screen and exit."
     echo
 }
@@ -47,7 +48,7 @@ install_all_dev_packages() {
           postgresql-common
 
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-  DEBIAN_FRONTEND=noniteractive apt-get install -y postgresql-17 postgresql-server-dev-17 postgresql-17-cron \
+  DEBIAN_FRONTEND=noniteractive apt-get install -y postgresql-17 postgresql-plpython3-17 postgresql-17-pgvector postgresql-server-dev-17 postgresql-17-cron \
     netcat-openbsd # needed to correctly handle --skip-hived option
 
   apt-get clean
@@ -66,16 +67,21 @@ install_all_dev_packages() {
   popd
   rm -r libpqxx
 
-  git clone https://github.com/timescale/pgai.git --branch extension-0.8.0
-  pushd pgai
-  python3 -m venv venv/
-  . venv/bin/activate
-  python3 -m pip install --upgrade pip
-  projects/extension/build.py install
   popd
-  rm -r pgai
+}
 
-  popd
+install_pgai() {
+    whereis git
+    pushd /tmp
+      git clone https://github.com/timescale/pgai.git --branch extension-0.8.0
+      pushd pgai
+        python3 -m venv venv/
+        . venv/bin/activate
+        python3 -m pip install --upgrade pip
+        projects/extension/build.py install
+      popd
+      rm -r pgai
+    popd
 }
 
 install_user_packages() {
@@ -114,6 +120,7 @@ while [ $# -gt 0 ]; do
     --dev)
         install_all_dev_packages
         create_maintenance_account
+        install_pgai
         ;;
     --user)
         install_user_packages
@@ -126,6 +133,9 @@ while [ $# -gt 0 ]; do
         hived_unix_account="${1#*=}"
         create_hived_account
         ;;
+    --pgai)
+      install_pgai
+      ;;
     --help)
         print_help
         exit 0
