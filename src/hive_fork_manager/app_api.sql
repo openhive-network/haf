@@ -245,7 +245,7 @@ BEGIN
 
     IF __current_block_num > __head_of_irreversible_block THEN
         RAISE EXCEPTION 'Cannot attach context % because the block num % is grater than top of irreversible block %'
-            , _context, __current_block_num,  __head_of_irreversible_block;
+            , __lead_context, __current_block_num,  __head_of_irreversible_block;
     END IF;
 
     SELECT MAX(hf.id) INTO __fork_id FROM hafd.fork hf WHERE hf.block_num <= GREATEST(__current_block_num, 1);
