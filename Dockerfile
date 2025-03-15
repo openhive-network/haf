@@ -256,9 +256,6 @@ COPY --from=build \
   /usr/share/postgresql/${POSTGRES_VERSION}/extension
 
 COPY --from=build \
-  /home/haf_admin/build/lib/libquery_supervisor.so \
-  /usr/lib/postgresql/${POSTGRES_VERSION}/lib
-COPY --from=build \
   /home/haf_admin/build/lib/libhfm-* \
   /usr/lib/postgresql/${POSTGRES_VERSION}/lib
 
