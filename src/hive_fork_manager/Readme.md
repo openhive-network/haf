@@ -187,6 +187,32 @@ To optimize performance, applications should register their required indexes **b
 initiating synchronization. This approach ensures that index creation is integrated into the
 synchronization process, improving efficiency and reducing system load.
 
+#### Managing Table Vacuuming
+
+`hived` is responsible for maintaining the integrity and performance of the database by executing
+periodic vacuum operations at optimal moments. To enhance efficiency and prevent table bloat,
+an API for managing table vacuuming has been introduced. This API allows applications to request
+vacuuming for specific tables while ensuring that excessive vacuum operations do not negatively
+impact system performance.
+
+#####  API Functions
+
+##### Requesting Table Vacuuming
+Applications can request vacuuming for a table using the function **`hive.app_request_table_vacuum`**.
+This function:
+- Inserts a vacuum request for the specified table.
+- Optionally checks if the table has been vacuumed recently to avoid redundant operations.
+- Updates the request status to ensure that the vacuuming process is tracked properly.
+
+###### Example Usage:
+An application can request vacuuming of a specific table, ensuring that it has not been vacuumed
+within a given interval. If the table was vacuumed recently, the request will be ignored.
+
+```sql
+-- Request vacuuming for 'my_table' if it has not been vacuumed in the last hour
+SELECT hive.app_request_table_vacuum('my_table', INTERVAL '1 hour');
+```
+
 #### Using HAF built-in roles
 Based on extensive experience with a diverse range of applications, it is recommended to configure Postgres roles
 in accordance with the guidelines depicted in the image below. This illustration provides a comprehensive overview
