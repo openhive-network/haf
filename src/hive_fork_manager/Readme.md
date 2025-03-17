@@ -116,6 +116,77 @@ When using synchronized contexts, it is of utmost importance to ensure that all 
 are consistently in the same state. This means that the contexts shall always traverse blocks together within 
 the same group of contexts passed to the functions.
 
+#### Managing Indexes
+
+Indexes in **HAF** are managed by **`hived`**, ensuring consistency, security, and optimal
+query performance. The **Index Management API** is designed to manage indexes on **HAF-managed
+tables** only. Applications must not create indexes manually on these tables. However, for
+application-specific private tables, applications retain full control over index creation and
+management.
+
+##### - Registering an Index Dependency
+
+Applications should use the function **`hive.register_index_dependency`** to declare an index
+they require on **HAF-managed tables**. This function:
+- Parses the **`CREATE INDEX`** command.
+- Associates the index with a **specific application context**.
+- Ensures that indexes are only created by **`hived`**, preventing direct modifications by
+  applications.
+
+##### Example Usage:
+```sql
+SELECT hive.register_index_dependency(
+    'my_app_context',
+    'CREATE INDEX my_index ON my_schema.my_table (column_name);'
+);
+```
+This request is stored in **`hafd.indexes_constraints`**, and `hived` will later process and
+create the required indexes.
+
+##### - Checking Index Creation Status
+
+Applications can check if `hived` has finished creating the registered indexes using
+**`hive.check_if_registered_indexes_created`**.
+
+##### Example Usage:
+```sql
+SELECT hive.check_if_registered_indexes_created('my_app_context');
+```
+- Returns `TRUE` if all indexes registered under the given application context are created.
+- Returns `FALSE` if any index is still missing.
+
+##### - Removing Index Dependencies
+
+When an application no longer needs its registered indexes, it should call
+**`hive.remove_index_dependencies`** to clean up the dependency records. However, indexes
+are **not removed if other application contexts depend on them**. The system ensures that
+indexes remain available until all dependent applications have deregistered their use.
+
+##### Example Usage:
+```sql
+SELECT hive.remove_index_dependencies('my_app_context');
+```
+- This removes the application context from the index dependency list.
+- If no other application contexts rely on the index, the index will be **dropped**.
+
+##### - Index Creation Timing Considerations
+
+The timing of index creation significantly impacts performance and system efficiency.
+Applications should consider:
+
+- **Before Synchronization:** Registering index dependencies prior to synchronization allows
+  `hived` to incorporate these indexes during its initial setup. This ensures that indexes
+  are built non-concurrently alongside other HAF indexes, leading to a streamlined process.
+
+- **After Synchronization:** If indexes are registered post-synchronization, `hived` will create
+  them concurrently to avoid disrupting operations. This may result in longer index creation
+  times and increased resource usage.
+
+**Recommendation:**
+To optimize performance, applications should register their required indexes **before**
+initiating synchronization. This approach ensures that index creation is integrated into the
+synchronization process, improving efficiency and reducing system load.
+
 #### Using HAF built-in roles
 Based on extensive experience with a diverse range of applications, it is recommended to configure Postgres roles
 in accordance with the guidelines depicted in the image below. This illustration provides a comprehensive overview
