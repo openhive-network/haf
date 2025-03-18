@@ -86,7 +86,21 @@ There are two class which are responsible for dumping block data to the hive_for
 **Note:** the `end_massive_sync` function name is somewhat misleading: it does NOT indicate that sql_serializer is leaving massive_sync mode, only that it has completed the serialization of the current batch of blocks being serialized. In the future, this function will probably be renamed to something like serialization_of_batch_completed. The sql_serializer indicates that it has actually exited massive sync mode when it calls the hive_fork_manager function that creates the indexes and foreign keys.
   
   ![](./doc/reindex_dumper.png)
-- [livesync_data_dumper](./include/hive/plugins/sql_serializer/livesync_data_dumper.h) is used to dump one block at a time using the `hive.push_block` function (defined in hive_fork_manager). Both reversible and irreversible blocks can be dumped. Each block is processed by several threads that convert the block data into SQL-formatted std::strings. When all the threads have finished processing the block, a rendevouz object makes a SQL query to call `hive.push_block` with the prepared strings as its parameters.
+
+- [livesync_data_dumper](./include/hive/plugins/sql_serializer/livesync_data_dumper.h)
+is responsible for dumping one block at a time using the `hive.push_block` function (defined in `hive_fork_manager`).  
+It supports both reversible and irreversible blocks. Each block is processed concurrently by multiple threads, which convert  
+the block data into SQL-formatted `std::string`s. Once all threads havecompleted processing the block, a rendezvous object assembles the SQL  
+query and passes it to the Write-Ahead Log (WAL)([write_ahead_log.h](./include/hive/plugins/sql_serializer/write_ahead_log.hpp)) for scheduling
+the block insertion into the database. The WAL mechanism allows `hived` to immediately return to its main  
+synchronization loop without waiting for database operations to complete. To ensure resilience against unexpected shutdowns, all scheduled blocks  
+are first written to a WAL file, which is stored in a separate folder alongside the block log in the HAF data directory.
+A dedicated WAL thread processes this file by pushing blocks to the database using `hive.push_block` and then removing the corresponding  
+entries from the WAL file after successful insertion.
+
+
+
+
   ![](./doc/livesync_dumper.png)
 
 The dumpers are triggered by the implementation of `indexation_state::flush_trigger`. This trigger makes the decision if cached data can be dumped or not. There are 3 implementation of this trigger:
