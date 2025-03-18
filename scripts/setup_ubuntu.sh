@@ -39,7 +39,7 @@ install_all_dev_packages() {
   "$SRC_DIR/hive/scripts/setup_ubuntu.sh" --runtime --dev
 
   apt-get update
-  DEBIAN_FRONTEND=noniteractive apt-get install -y \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
           systemd \
           libpq-dev \
           tox \
@@ -47,7 +47,7 @@ install_all_dev_packages() {
           postgresql-common
 
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-  DEBIAN_FRONTEND=noniteractive apt-get install -y postgresql-17 postgresql-server-dev-17 postgresql-17-cron \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-17 postgresql-server-dev-17 postgresql-17-cron \
     netcat-openbsd # needed to correctly handle --skip-hived option
 
   apt-get clean

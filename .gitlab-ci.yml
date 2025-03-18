@@ -14,8 +14,8 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
   FF_ENABLE_JOB_CLEANUP: 1
   GIT_STRATEGY: clone
-  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu22.04-18
-  BUILDER_IMAGE_TAG: "@sha256:3f3198e1db9e438ccfa1a559f7529a173129b74e74ae35e1c189f8820361c397"
+  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-1
+  BUILDER_IMAGE_TAG: "@sha256:a3793dfccca6762c33adf819588960ea45463bf00be2ba61d8040260c3e648b1"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
@@ -28,12 +28,7 @@ variables:
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
-  - project: 'hive/common-ci-configuration'
-    ref: e74d7109838ff05fdc239bced6a726aa7ad46a9b
-    file:
-    - '/templates/python_projects.gitlab-ci.yml'
-    - '/templates/cache_cleanup.gitlab-ci.yml'
-    - '/templates/docker_image_jobs.gitlab-ci.yml'
+  # Do not include common-ci-configuration here, it is already referenced by scripts/ci-helpers/prepare_data_image_job.yml included from Hive
 
 verify_poetry_lock_sanity:
   extends: .verify_poetry_lock_sanity_template
