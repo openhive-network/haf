@@ -109,7 +109,7 @@ all blocks in a batch are fully processed AND the current_block_number has been 
 #### Using a group of contexts
 In certain situations, it becomes necessary to ensure that multiple contexts are synchronized
 and point to the same block. This synchronization of contexts allows for consistent behavior
-across different applications. To achieve this, there are specific functions available, such as 'hive.app_next_block',
+across different applications. To achieve this, there are specific functions/procedures available, such as 'hive.app_next_iteration',
 that operate on an array of contexts and move them synchronously.
 
 When using synchronized contexts, it is of utmost importance to ensure that all the contexts within a group
@@ -235,12 +235,12 @@ For example, some apps perform irreversible external operations such as a transf
 
 Other apps require very high performance, and don't want to incur the extra performance overhead associated with maintaining the data required to rollback blocks in the case of a fork. In such case, it may make sense to trade off the responsiveness of presenting the most recent blockchain data in order to create an app that can respond to api queries faster and support more users.
 
-HAF distinguish which appl will only traverse irreversible block data. This means that calls to `hive.app_next_block` will return only the range of irreversible blocks which are not already processed or NULL (blocks that are not yet marked as irreversible will be excluded). Similarly, the set of views for an irreversible context only deliver a snapshot of irreversible data up to the block already processed by the app.
+HAF distinguish which appl will only traverse irreversible block data. This means that calls to `hive.app_next_iteration` will return only the range of irreversible blocks which are not already processed or NULL (blocks that are not yet marked as irreversible will be excluded). Similarly, the set of views for an irreversible context only deliver a snapshot of irreversible data up to the block already processed by the app.
 The user needs to decide if an application is non-forking, he can do this during creation af a context with 'hive.app_create_context' and passing an argument
 '_is_forking' = FALSE.
 
 It is possible to change an already created context from non-forking to forking and vice versa with methods
-`app_context_set_non_forking(context_name)` and `hive.app_context_set_forking(context_name)`
+`hive.app_context_set_non_forking(context_name)` and `hive.app_context_set_forking(context_name)`
 
 :warning: **Switching from forking to non-forking appl will delete all its reversible data**
 
