@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.4
 # docker buildx build --tag registry.gitlab.syncad.com/hive/haf/ci-base-image:$CI_IMAGE_TAG-jmeter --progress=plain --file Dockerfile.jmeter .
-ARG CI_IMAGE_TAG=ubuntu22.04-8
+ARG CI_IMAGE_TAG=ubuntu24.04-1
 
-FROM phusion/baseimage:jammy-1.0.1 AS build
+FROM phusion/baseimage:noble-1.0.1 AS build
 
 COPY <<-EOF /opt/patch.sed
   s/jtl2junit/m2u/g
@@ -46,6 +46,7 @@ RUN <<EOF
   git clone --single-branch --branch master https://github.com/tguzik/m2u.git m2u-source
   cd m2u-source
   find -name CommandLineParser.java -exec sed -i -f /opt/patch.sed {} \;
+  #### FIXME: m2u doesn't build with recent jdk, appears to be abandonware
   mvn
 
   # Install m2u

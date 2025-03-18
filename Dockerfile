@@ -2,12 +2,12 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=ubuntu22.04-18
+ARG CI_IMAGE_TAG=ubuntu24.04-1
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
 
-FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu22.04-13 AS minimal-runtime
+FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu24.04-1 AS minimal-runtime
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
@@ -28,10 +28,10 @@ RUN bash -x ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-ac
 #       everyone to upgrade their haf_api_node in sync with this commit.  We should switch haf_api_node's healthcheck to
 #       use wget once images based on this Dockerfile are made official, and we can drop curl soon thereafter
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get update && \
-    DEBIAN_FRONTEND=noniteractive apt-get install --no-install-recommends -y curl postgresql-17 postgresql-17-cron libpq5 libboost-chrono1.74.0 libboost-context1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 busybox netcat-openbsd && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y curl postgresql-17 postgresql-17-cron libpq5 libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
     apt-get remove -y gnupg && \
     apt-get autoremove -y && \
     busybox --install -s
@@ -44,7 +44,7 @@ RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service 
 USER haf_admin
 WORKDIR /home/haf_admin
 
-FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu22.04-13 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu24.04-1 AS ci-base-image
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
@@ -107,7 +107,7 @@ RUN \
 # Here we could use a smaller image without packages specific to build requirements
 FROM ${CI_REGISTRY_IMAGE}ci-base-image:$CI_IMAGE_TAG AS base_instance
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu22.04-8}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-1}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
@@ -208,9 +208,9 @@ EXPOSE ${WS_PORT}
 # JSON rpc service
 EXPOSE ${HTTP_PORT}
 
-FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu22.04-18 AS minimal-instance
+FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-1 AS minimal-instance
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu22.04-18}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-1}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
