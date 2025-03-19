@@ -32,19 +32,19 @@ psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "SELECT hive.app_create_
 psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "SELECT hive.app_state_provider_import('${TYPE}', '${NAME}_live');"
 
 echo "Replay of ${NAME}..."
-psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "CALL ${NAME}_live.main('${NAME}_live', 0, 5000000, 500000);" 
+psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "CALL ${NAME}_live.main('${NAME}_live', 0, 5000000, 500000);"
 
 echo "Clearing tables..."
 psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "TRUNCATE ${NAME}_live.${TABLE_NAME};"
 psql -w -d $DB_NAME -v ON_ERROR_STOP=on -U $DB_ADMIN -c "TRUNCATE ${NAME}_live.differing_accounts;"
 
 echo "Installing dependencies..."
-pip install psycopg2-binary
+pip install --break-system-packages psycopg2-binary
 
 rm -f "${CURRENT_PROJECT_DIR}/account_data/accounts_dump.json"
 # The line below is somewhat problematic. Gunzip by default deletes gz file after decompression,
 # but the '-k' parameter, which prevents that from happening is not supported on some of its versions.
-# 
+#
 # Thus, depending on the OS, the line below may need to be replaced with one of the following:
 # gunzip -c "${SCRIPTDIR}/accounts_dump.json.gz" > "${SCRIPTDIR}/accounts_dump.json"
 # gzcat "${SCRIPTDIR}/accounts_dump.json.gz" > "${SCRIPTDIR}/accounts_dump.json"

@@ -5,6 +5,7 @@
 #include <optional>
 #include <deque>
 #include <atomic>
+#include <fstream>
 
 namespace hive::plugins::sql_serializer {
   namespace bfs = boost::filesystem;

@@ -1,8 +1,8 @@
+#include <boost/algorithm/string.hpp>
+
 #include "configuration.hpp"
 
 #include "psql_utils/logger.hpp"
-
-#include <boost/algorithm/string.hpp>
 
 #include <cassert>
 
