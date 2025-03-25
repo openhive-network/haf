@@ -75,6 +75,7 @@ ExecutorStart_hook_type ExecutorStart_hook;
 ExecutorRun_hook_type ExecutorRun_hook;
 ExecutorFinish_hook_type ExecutorFinish_hook;
 ExecutorEnd_hook_type ExecutorEnd_hook;
+int MyProcPid;
 
 volatile sig_atomic_t QueryCancelPending;
 

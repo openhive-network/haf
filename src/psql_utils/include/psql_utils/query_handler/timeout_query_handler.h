@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <functional>
+#include <thread>
 
 #include "psql_utils/postgres_includes.hpp"
 
@@ -38,5 +39,8 @@ namespace PsqlTools::PsqlUtils {
     private:
       const TimeoutLimitGetter m_timeoutLimitGetter;
       TimeoutId m_pendingQueryTimeout{USER_TIMEOUT};
+
+      // the thread is used to sent SIGINT signal to main  process
+      std::thread m_breakingThread;
   };
 } // namespace PsqlTools::PsqlUtils
