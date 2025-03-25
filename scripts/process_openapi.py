@@ -51,10 +51,23 @@ def generate_type_string_from_schema(schema):
                 if schema['format'] == 'date-time':
                     return 'TIMESTAMP'
             return 'TEXT'
+        elif schema_type == 'array':
+            items = schema['items']
+            if '$ref' in items:
+                reference = items['$ref']
+                # openapi references typically start with #, but that's not a valid json pointer
+                if len(reference) > 0 and reference[0] == '#':
+                    reference = reference[1:]
+                referent = resolve_pointer(collected_openapi_fragments, reference)
+                return reference.split('/')[-1] + '[]'
+            if 'type' in items:
+                return generate_type_string_from_schema(items) + '[]'
         elif schema_type == 'boolean':
             return 'BOOLEAN'
         elif schema_type == 'number':
             return 'FLOAT'
+        elif schema_type == 'object':
+            return 'object'
         else:
             assert(False)
 
@@ -163,6 +176,8 @@ def generate_code_from_openapi_fragment(openapi_fragment, sql_output):
             assert('type' in schema)
             if schema['type'] == 'string' and 'enum' in schema:
                 generate_code_for_enum_openapi_fragment(schema_name, schema['enum'], sql_output)
+            elif schema['type'] == 'object' and 'properties' and 'x-sql-datatype' in schema:
+                pass
             elif schema['type'] == 'object' and 'properties' in schema:
                 generate_code_for_object_openapi_fragment(schema_name, schema['properties'], sql_output)
             elif schema['type'] == 'array':
