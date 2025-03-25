@@ -162,6 +162,8 @@ indexation_state::indexation_state(
   FC_ASSERT( _psql_first_block >= 1, "psql-first-block=${v} < 1", ("v", _psql_first_block) );
   cached_data_t empty_data{0};
   set_state( INDEXATION::START );
+  ilog( "Entered START sync state" );
+  _start_state_time = fc::time_point::now();
 
   _on_irreversible_block_conn = _chain_db.add_irreversible_block_handler(
       [this]( uint32_t block_num ){ on_irreversible_block( block_num ); }
@@ -289,8 +291,6 @@ indexation_state::update_state(
   FC_ASSERT( get_state() != INDEXATION::LIVE, "Move from LIVE state is illegal" );
   switch ( state ) {
     case INDEXATION::START:
-      ilog( "Entered START sync state" );
-      _start_state_time = fc::time_point::now();
       break;
     case INDEXATION::P2P:
       ilog("Entering P2P sync...");
