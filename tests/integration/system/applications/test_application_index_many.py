@@ -5,6 +5,8 @@ from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_
 from haf_local_tools.system.haf import (connect_nodes, assert_index_exists, register_index_dependency)
 import time
 
+from sqlalchemy.sql import text
+
 def test_application_index_many(haf_node):
     tt.logger.info(f'Start test_application_index_many')
 
@@ -21,7 +23,7 @@ def test_application_index_many(haf_node):
     session = haf_node.session
     create_app(session, "application")
 
-    session.execute("CREATE EXTENSION IF NOT EXISTS btree_gin")
+    session.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gin"))
 
     register_index_dependency(haf_node, 'application',
             r"CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink_1 ON hafd.operations USING gin"
@@ -55,7 +57,7 @@ def test_application_index_many(haf_node):
 
     # THEN
     while True:
-        result = session.execute("SELECT hive.check_if_registered_indexes_created('application')").scalar()
+        result = session.execute(text("SELECT hive.check_if_registered_indexes_created('application')")).scalar()
         if result:
             break
         tt.logger.info("Indexes not yet created. Sleeping for 10 seconds...")

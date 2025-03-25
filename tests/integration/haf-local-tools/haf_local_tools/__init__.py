@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from sqlalchemy.engine.row import Row
     from sqlalchemy.orm.session import Session
 
+from sqlalchemy.sql import text
 
 BLOCKS_IN_FORK = 5
 BLOCKS_AFTER_FORK = 5
@@ -174,10 +175,10 @@ SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION = """
 
 
 def create_app(session, application_context):
-    session.execute( "CREATE SCHEMA IF NOT EXISTS {}".format( application_context ) )
-    session.execute( "SELECT hive.app_create_context( '{0}', '{0}' )".format( application_context ) )
-    session.execute( SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE.format( application_context ) )
-    session.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION.format( application_context ) )
+    session.execute( text("CREATE SCHEMA IF NOT EXISTS {}".format( application_context )) )
+    session.execute( text("SELECT hive.app_create_context( '{0}', '{0}' )".format( application_context )) )
+    session.execute( text(SQL_CREATE_AND_REGISTER_HISTOGRAM_TABLE.format( application_context )) )
+    session.execute( text(SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION.format( application_context )) )
     session.commit()
 
 def wait_until_irreversible_without_new_block(session, irreversible_block, limit, interval):
@@ -222,12 +223,12 @@ def wait_until_irreversible(node_under_test, session):
 
 def query_col(session: Session, sql: str, **kwargs) -> list[Any]:
     """Perform a `SELECT n*1`"""
-    return [row[0] for row in session.execute(sql, params=kwargs).fetchall()]
+    return [row[0] for row in session.execute(text(sql), params=kwargs).fetchall()]
 
 
 def query_all(session: Session, sql: str, **kwargs) -> list[Row]:
     """Perform a `SELECT n*m`"""
-    return session.execute(sql, params=kwargs).fetchall()
+    return session.execute(text(sql), params=kwargs).fetchall()
 
 
 def wait_for_irreversible_in_database(

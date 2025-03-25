@@ -1,4 +1,5 @@
 from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy.sql import text
 
 import test_tools as tt
 
@@ -17,15 +18,15 @@ APPLICATION_CONTEXT = "application"
 
 def update_app_continuously(session, application_context, cycles):
     for i in range(cycles):
-        blocks_range = session.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( application_context ) ).fetchone()
+        blocks_range = session.execute( text("SELECT * FROM hive.app_next_block( '{}' )".format( application_context )) ).fetchone()
         (first_block, last_block) = blocks_range
         if last_block is None:
             tt.logger.info( "next blocks_range was NULL\n" )
             continue
         tt.logger.info( "next blocks_range: {}\n".format( blocks_range ) )
-        session.execute( "SELECT public.update_histogram( {}, {} )".format( first_block, last_block ) )
+        session.execute( text("SELECT public.update_histogram( {}, {} )".format( first_block, last_block )) )
         session.commit()
-        ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( application_context ) ).fetchone()
+        ctx_stats = session.execute( text("SELECT current_block_num, irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( application_context )) ).fetchone()
         tt.logger.info(f'ctx_stats-update-app: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
 
 
@@ -59,25 +60,25 @@ def test_application_broken(prepared_networks_and_database_12_8_without_block_lo
     # system under test
     create_app(second_session, APPLICATION_CONTEXT)
 
-    blocks_range = session.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone()
+    blocks_range = session.execute( text("SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT )) ).fetchone()
     (first_block, last_block) = blocks_range
     # Last event in `events_queue` == `NEW_IRREVERSIBLE` (before it was `NEW_BLOCK`) therefore first call `hive.app_next_block` returns {None, None}
     if first_block is None:
-        blocks_range = session.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone()
+        blocks_range = session.execute( text("SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT )) ).fetchone()
         (first_block, last_block) = blocks_range
 
     tt.logger.info(f'first_block: {first_block}, last_block: {last_block}')
 
-    ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()
+    ctx_stats = session.execute( text("SELECT current_block_num, irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT )) ).fetchone()
     tt.logger.info(f'ctx_stats-before-detach: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
 
-    session.execute( "SELECT hive.app_context_detach( '{}' )".format( APPLICATION_CONTEXT ) )
-    session.execute( "SELECT public.update_histogram( {}, {} )".format( first_block, CONTEXT_ATTACH_BLOCK ) )
-    session.execute( "SELECT hive.app_set_current_block_num( '{}', {} )".format( APPLICATION_CONTEXT, CONTEXT_ATTACH_BLOCK ) )
-    session.execute( "SELECT hive.app_context_attach( '{}' )".format( APPLICATION_CONTEXT ) )
+    session.execute( text("SELECT hive.app_context_detach( '{}' )".format( APPLICATION_CONTEXT )) )
+    session.execute( text("SELECT public.update_histogram( {}, {} )".format( first_block, CONTEXT_ATTACH_BLOCK )) )
+    session.execute( text("SELECT hive.app_set_current_block_num( '{}', {} )".format( APPLICATION_CONTEXT, CONTEXT_ATTACH_BLOCK )) )
+    session.execute( text("SELECT hive.app_context_attach( '{}' )".format( APPLICATION_CONTEXT )) )
     session.commit()
 
-    ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()
+    ctx_stats = session.execute( text("SELECT current_block_num, irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT )) ).fetchone()
     tt.logger.info(f'ctx_stats-after-attach: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
 
     # THEN
@@ -85,7 +86,7 @@ def test_application_broken(prepared_networks_and_database_12_8_without_block_lo
     update_app_continuously(second_session, APPLICATION_CONTEXT, nr_cycles)
     wait_for_irreversible_progress(node_under_test, START_TEST_BLOCK)
 
-    ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()
+    ctx_stats = session.execute( text("SELECT current_block_num, irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT )) ).fetchone()
     tt.logger.info(f'ctx_stats-after-waiting: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
 
     wait_for_irreversible_in_database(session, START_TEST_BLOCK+3)
@@ -107,13 +108,13 @@ def test_application_broken(prepared_networks_and_database_12_8_without_block_lo
     nr_cycles = 1
     update_app_continuously(second_session, APPLICATION_CONTEXT, nr_cycles)
 
-    ctx_stats = session.execute( "SELECT current_block_num, irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()
+    ctx_stats = session.execute( text("SELECT current_block_num, irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT )) ).fetchone()
     tt.logger.info(f'ctx_stats-after-waiting-2: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
 
     haf_irreversible = session.query(IrreversibleData).one()
     tt.logger.info(f'consistent_block {haf_irreversible.consistent_block}')
 
-    context_irreversible_block = session.execute( "SELECT irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT ) ).fetchone()[0]
+    context_irreversible_block = session.execute( text("SELECT irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT )) ).fetchone()[0]
     tt.logger.info(f'context_irreversible_block {context_irreversible_block}')
 
     assert irreversible_block == haf_irreversible.consistent_block
