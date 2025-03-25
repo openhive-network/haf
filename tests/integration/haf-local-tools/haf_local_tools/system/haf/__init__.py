@@ -1,4 +1,6 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import text
+
 from typing import TYPE_CHECKING, Union
 
 import test_tools as tt
@@ -36,7 +38,7 @@ def assert_are_indexes_restored(haf_node: HafNode):
 
 
 def does_index_exist(session, namespace, table, indexname):
-    return session.execute("""
+    return session.execute(text("""
     SELECT 1
     FROM pg_index i
     JOIN pg_class idx ON i.indexrelid = idx.oid
@@ -45,7 +47,7 @@ def does_index_exist(session, namespace, table, indexname):
     WHERE n.nspname = :ns
     AND tbl.relname = :table
     AND idx.relname = :index
-    """, {'ns':namespace, 'table': table, 'index': indexname}).fetchone()
+    """), {'ns':namespace, 'table': table, 'index': indexname}).fetchone()
 
 
 def assert_index_exists(session, namespace, table, indexname):
@@ -58,7 +60,7 @@ def assert_index_does_not_exist(session, namespace, table, indexname):
 
 def wait_till_registered_indexes_created(haf_node, context):
     while True:
-        result = haf_node.session.execute("SELECT hive.check_if_registered_indexes_created(:ctx)", {'ctx': context}).scalar()
+        result = haf_node.session.execute(text("SELECT hive.check_if_registered_indexes_created(:ctx)"), {'ctx': context}).scalar()
         if result:
             break
         tt.logger.info("Indexes not yet created. Sleeping for 10 seconds...")
@@ -67,7 +69,7 @@ def wait_till_registered_indexes_created(haf_node, context):
 
 def register_index_dependency(haf_node, context, create_index_command):
     haf_node.session.execute(
-            "SELECT hive.register_index_dependency(:ctx, :cmd)", {'ctx': context, 'cmd': create_index_command})
+            text("SELECT hive.register_index_dependency(:ctx, :cmd)"), {'ctx': context, 'cmd': create_index_command})
 
 
 def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Transaction, TransactionId]):

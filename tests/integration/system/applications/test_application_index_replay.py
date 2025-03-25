@@ -7,6 +7,7 @@ from haf_local_tools.system.haf import (connect_nodes, assert_index_does_not_exi
 
 import time
 
+from sqlalchemy.sql import text
 
 def test_application_index_replay(haf_node):
     tt.logger.info(f'Start test_application_index_replay')
@@ -27,7 +28,7 @@ def test_application_index_replay(haf_node):
     session = haf_node.session
     create_app(session, "application")
 
-    session.execute("CREATE EXTENSION IF NOT EXISTS btree_gin")
+    session.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gin"))
 
     register_index_dependency(haf_node, 'application',
             r"CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hafd.operations USING gin"

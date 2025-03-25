@@ -6,6 +6,7 @@ from haf_local_tools import create_app
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.system.haf import (connect_nodes, assert_index_exists, wait_till_registered_indexes_created, register_index_dependency)
 
+from sqlalchemy.sql import text
 
 def test_application_invalid_index(haf_node):
     tt.logger.info(f'Start test_application_invalid_index')
@@ -23,7 +24,7 @@ def test_application_invalid_index(haf_node):
     session = haf_node.session
     create_app(session, "app")
 
-    session.execute("CREATE EXTENSION IF NOT EXISTS btree_gin")
+    session.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gin"))
 
     # THEN
     with pytest.raises(sqlalchemy.exc.InternalError):
