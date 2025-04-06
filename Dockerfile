@@ -3,12 +3,12 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=ubuntu24.04-1
+ARG CI_IMAGE_TAG=ubuntu24.04-pg18-1
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
 
-FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu24.04-1 AS minimal-runtime
+FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu24.04-1 AS minimal-runtime-base
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
@@ -31,11 +31,42 @@ RUN bash -x ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-ac
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
+    sed -i -e 's/Suites: noble-pgdg/Suites: noble-pgdg-snapshot/'  -e 's/Components: main/Components: main 18/' /etc/apt/sources.list.d/pgdg.sources && \
+    echo 'Package: *' > /etc/apt/preferences.d/pgdg.pref && \
+    echo 'Pin: origin apt.postgresql.org' >> /etc/apt/preferences.d/pgdg.pref && \
+    echo 'Pin-Priority: 1001' >> /etc/apt/preferences.d/pgdg.pref && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y curl postgresql-17 postgresql-17-cron libpq5 libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y curl postgresql-18 libpq5 libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
     apt-get remove -y gnupg && \
     apt-get autoremove -y && \
     busybox --install -s
+
+FROM minimal-runtime-base AS pgcron-builder
+
+# Install the build tools and dev packages needed to build pg_cron.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential git postgresql-18 postgresql-server-dev-18
+
+# Clone the pg_cron repository.
+WORKDIR /tmp
+RUN git clone https://github.com/citusdata/pg_cron.git
+
+# Build and "install" pg_cron to a temporary location (using DESTDIR).
+WORKDIR /tmp/pg_cron
+
+# Apply patch to make pg_cron compatible with PostgreSQL 18
+RUN sed -i \
+  's/PortalDefineQuery(portal, NULL, sql, commandTag, plantree_list, NULL);/PortalDefineQuery(portal, NULL, sql, commandTag, plantree_list, NULL, NULL);/' \
+  src/pg_cron.c
+RUN make && make install DESTDIR=/pgcron
+
+FROM minimal-runtime-base AS minimal-runtime
+
+# Copy the built pg_cron library and extension files into the appropriate directories.
+# (Assuming PostgreSQL 18 is installed, these paths match pg_config output.)
+COPY --from=pgcron-builder /pgcron/usr/lib/postgresql/18/lib/pg_cron.so /usr/lib/postgresql/18/lib/
+COPY --from=pgcron-builder /pgcron/usr/share/postgresql/18/extension/pg_cron* /usr/share/postgresql/18/extension/
+
 # change the UID and GID to match the ones postgres is assigned in our non-minimal runtime
 RUN (chown -Rf --from=postgres 105 / || true) && (chown -Rf --from=:postgres :109 / || true) && usermod -u 105 postgres && groupmod -g 109 postgres
 RUN usermod -a -G users -c "PostgreSQL daemon account" postgres
@@ -125,7 +156,7 @@ ENV HIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}
 ARG HIVE_LINT=OFF
 ENV HIVE_LINT=${HIVE_LINT}
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-1}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-pg18-1}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
@@ -147,7 +178,7 @@ ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\n
 # Always define default value of HIVED_UID variable to make possible direct spawn of docker image (without run_hived_img.sh wrapper)
 ENV HIVED_UID=1000
 
-ENV POSTGRES_VERSION=17
+ENV POSTGRES_VERSION=18
 
 ENV PGDATABASE=haf_block_log
 

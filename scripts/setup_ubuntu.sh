@@ -47,11 +47,31 @@ install_all_dev_packages() {
           postgresql-common
 
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-  DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-17 postgresql-server-dev-17 postgresql-17-cron \
+
+  sed -i -e 's/Suites: noble-pgdg/Suites: noble-pgdg-snapshot/'  -e 's/Components: main/Components: main 18/' /etc/apt/sources.list.d/pgdg.sources
+  echo 'Package: *' > /etc/apt/preferences.d/pgdg.pref
+  echo 'Pin: origin apt.postgresql.org' >> /etc/apt/preferences.d/pgdg.pref
+  echo 'Pin-Priority: 1001' >> /etc/apt/preferences.d/pgdg.pref
+
+  apt-get update
+
+  DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-18 postgresql-server-dev-18 \
     netcat-openbsd # needed to correctly handle --skip-hived option
 
   apt-get clean
   rm -rf /var/lib/apt/lists/*
+
+  pushd /tmp
+  git clone https://github.com/citusdata/pg_cron.git
+  cd pg_cron
+
+  # Apply patch to make pg_cron compatible with PostgreSQL 18
+  sed -i 's/PortalDefineQuery(portal, NULL, sql, commandTag, plantree_list, NULL);/PortalDefineQuery(portal, NULL, sql, commandTag, plantree_list, NULL, NULL);/' src/pg_cron.c
+  make && make install
+  cd ..
+  rm -r pg_cron
+  popd
+
 
   sudo usermod -a -G users -c "PostgreSQL daemon account" postgres
 
