@@ -13,12 +13,12 @@ namespace PsqlTools::PsqlUtils {
     assert( m_statistics.size() == 5 ); // all Filter flags are in the map
   }
 
-  void TuplesStatisticsQueryHandler::onRootQueryRun(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {
+  void TuplesStatisticsQueryHandler::onRootQueryRun(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count ) {
     resetStatistics();
     addInstrumentation( _queryDesc );
   }
 
-  void TuplesStatisticsQueryHandler::onSubQueryRun(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {
+  void TuplesStatisticsQueryHandler::onSubQueryRun(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count ) {
     addInstrumentation( _queryDesc );
   }
 

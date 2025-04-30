@@ -157,7 +157,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesStatisticsQueryH
       ;
 
     // WHEN
-    ExecutorRun_hook(m_subQuery.get(), BackwardScanDirection, 0, true );
+    ExecutorRun_hook(m_subQuery.get(), BackwardScanDirection, 0 );
     ExecutorFinish_hook(m_subQuery.get());
   }
 
@@ -188,7 +188,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesStatisticsQueryH
 
     // WHEN
     // pretend that PostgreSQL calls our finish handler
-    ExecutorRun_hook(m_subQuery.get(), BackwardScanDirection, 0, true );
+    ExecutorRun_hook(m_subQuery.get(), BackwardScanDirection, 0 );
     ExecutorFinish_hook(m_subQuery.get());
     ExecutorFinish_hook(m_rootQuery.get());
 
@@ -231,7 +231,7 @@ BOOST_FIXTURE_TEST_SUITE( tuples_query_handler, Fixtures::TuplesStatisticsQueryH
 
     // WHEN
     // pretend that PostgreSQL calls our finish handler
-    ExecutorRun_hook(m_subQuery.get(), BackwardScanDirection, 0, true );
+    ExecutorRun_hook(m_subQuery.get(), BackwardScanDirection, 0 );
     ExecutorFinish_hook(m_subQuery.get());
     ExecutorFinish_hook(m_rootQuery.get());
 

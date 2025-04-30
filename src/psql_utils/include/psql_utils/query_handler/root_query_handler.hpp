@@ -19,12 +19,12 @@ namespace PsqlTools::PsqlUtils {
 
     virtual void onRootQueryStart( QueryDesc* _queryDesc, int _eflags ) {}
     virtual void onRootQueryEnd( QueryDesc* _queryDesc ) {}
-    virtual void onRootQueryRun(  QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {}
+    virtual void onRootQueryRun(  QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count ) {}
     virtual void onRootQueryFinish( QueryDesc* _queryDesc ) {}
 
     virtual void onSubQueryStart( QueryDesc* _queryDesc, int _eflags ) {}
     virtual void onSubQueryEnd( QueryDesc* _queryDesc ) {}
-    virtual void onSubQueryRun(  QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {}
+    virtual void onSubQueryRun(  QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count ) {}
     virtual void onSubQueryFinish( QueryDesc* _queryDesc ) {}
     void onError( const QueryDesc& _queryDesc ) override;
 
@@ -33,7 +33,7 @@ namespace PsqlTools::PsqlUtils {
   private:
     void onStartQuery( QueryDesc* _queryDesc, int _eflags ) override;
     void onEndQuery( QueryDesc* _queryDesc ) override;
-    void onRunQuery( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) override;
+    void onRunQuery( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count ) override;
     void onFinishQuery( QueryDesc* _queryDesc ) override;
 
     bool isPendingRootQuery(QueryDesc* _queryDesc) const;
