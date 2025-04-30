@@ -45,16 +45,16 @@ namespace {
 
 int SPI_result = SPI_ERROR_NOATTRIBUTE;
 
-void executorStartHook(QueryDesc* _queryDesc, int _eflags) {
+bool executorStartHook(QueryDesc* _queryDesc, int _eflags) {
   assert(POSTGRES_MOCK.lock() && "No mock created, please execute first PostgresMock::create_and_get");
 
   EXECUTE_MOCK( executorStartHook( _queryDesc, _eflags ) );
 }
 
-void executorRunHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once) {
+void executorRunHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count) {
   assert(POSTGRES_MOCK.lock() && "No mock created, please execute first PostgresMock::create_and_get");
 
-  EXECUTE_MOCK( executorRunHook( _queryDesc, _direction, _count, _execute_once ) );
+  EXECUTE_MOCK( executorRunHook( _queryDesc, _direction, _count ) );
 }
 
 void executorFinishHook(QueryDesc* _queryDesc) {
@@ -181,7 +181,7 @@ void disable_timeout(TimeoutId id, bool keep_indicator) {
   EXECUTE_MOCK(disable_timeout( id, keep_indicator ));
 }
 
-void standard_ExecutorStart(QueryDesc *queryDesc, int eflags) {
+bool standard_ExecutorStart(QueryDesc *queryDesc, int eflags) {
   EXECUTE_MOCK(standard_ExecutorStart( queryDesc, eflags ));
 }
 
@@ -189,8 +189,8 @@ void standard_ExecutorEnd(QueryDesc *queryDesc) {
   EXECUTE_MOCK(standard_ExecutorEnd( queryDesc ));
 }
 
-void standard_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool execute_once) {
-  EXECUTE_MOCK(standard_ExecutorRun( queryDesc, direction, count, execute_once ));
+void standard_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count) {
+  EXECUTE_MOCK(standard_ExecutorRun( queryDesc, direction, count ));
 }
 
 void standard_ExecutorFinish(QueryDesc *queryDesc) {

@@ -25,15 +25,15 @@ namespace PsqlTools::PsqlUtils {
     this->onSubQueryEnd( _queryDesc );
   }
 
-  void RootQueryHandler::onRunQuery( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {
+  void RootQueryHandler::onRunQuery( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count ) {
     assert( isRootQueryPending() );
 
     if ( isPendingRootQuery( _queryDesc ) ) {
-      this->onRootQueryRun( _queryDesc, _direction, _count, _execute_once );
+      this->onRootQueryRun( _queryDesc, _direction, _count );
       return;
     }
 
-    this->onSubQueryRun( _queryDesc, _direction, _count, _execute_once );
+    this->onSubQueryRun( _queryDesc, _direction, _count );
   }
 
   void RootQueryHandler::onFinishQuery( QueryDesc* _queryDesc ) {
