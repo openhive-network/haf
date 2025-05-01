@@ -149,6 +149,8 @@ ENV HIVED_UID=1000
 
 ENV POSTGRES_VERSION=17
 
+ENV PGDATABASE=haf_block_log
+
 SHELL ["/bin/bash", "-c"]
 
 USER hived_admin
