@@ -73,7 +73,7 @@ test_extension_update() {
     mkdir -p "${COPY_BUILD_PATH}"
     cp -a "${DIR}/." "${COPY_SRC_PATH}"
 
-    POSTGRES_VERSION=17
+    POSTGRES_VERSION=18
     echo "Add function testfun to schema hive"
     sudo -Enu "$DB_ADMIN" psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "CREATE FUNCTION hive.testfun() RETURNS VOID AS \$\$ BEGIN END; \$\$ LANGUAGE plpgsql;"
 

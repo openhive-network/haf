@@ -96,7 +96,7 @@ test_extension_update() {
 
     sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER TABLE hafd.accounts ADD COLUMN phone_number VARCHAR;"
     # run generator script
-    POSTGRES_VERSION=17
+    POSTGRES_VERSION=18
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh 2>&1 | tee -i update.txt || true
     # back to old format of db
     sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER TABLE hafd.accounts DROP COLUMN phone_number;"
