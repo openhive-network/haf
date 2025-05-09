@@ -142,7 +142,7 @@ RUN <<-EOF
   sudo chown -R hived "${INSTALLATION_DIR}/"*
 EOF
 
-FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-1 AS instance
+FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-pg18-1 AS instance
 
 ARG BUILD_HIVE_TESTNET=OFF
 ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
