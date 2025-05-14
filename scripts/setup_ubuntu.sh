@@ -15,6 +15,7 @@ print_help () {
     echo "Setup this machine for HAF installation."
     echo "OPTIONS:"
     echo "  --dev                     Install packages required to build and run a HAF server."
+    echo "  --ai                      Install pgai"
     echo "  --user                    Install packages to a subdirectory of the user's home directory."
     echo "  --haf-admin-account=NAME  Specify the unix account name to be used for HAF administration (will be associated with the PostgreSQL role)."
     echo "  --hived-account=NAME      Specify the unix account name to be used for hived (will be associated with the PostgreSQL role)."
@@ -30,6 +31,31 @@ assert_is_root() {
     then echo "Please run as root."
     exit 1
   fi
+}
+
+install_ai_packages() {
+  apt-get update
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    git \
+    python3.12 python3.12-venv python3.12-dev python3-pip \
+    postgresql-17-pgvector postgresql-plpython3-17 \
+    curl
+
+  # required by Hivesense as pgai
+    python3.12 -m pip install --break-system-packages langchain
+
+    pushd /tmp
+      git clone https://github.com/timescale/pgai.git --branch extension-0.8.0
+      pushd pgai
+        python3.12 -m venv venv/
+        # shellcheck disable=SC1091
+        . venv/bin/activate
+        python3.12 -m pip install --upgrade pip
+        projects/extension/build.py install
+        deactivate
+      popd
+      rm -r pgai
+    popd
 }
 
 install_all_dev_packages() {
@@ -48,7 +74,8 @@ install_all_dev_packages() {
 
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
   DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-17 postgresql-server-dev-17 postgresql-17-cron \
-    netcat-openbsd # needed to correctly handle --skip-hived option
+    netcat-openbsd \
+    git python3.12 python3.12-venv python3.12-dev python3-pip postgresql-17-pgvector postgresql-plpython3-17 curl # for hivesense
 
   apt-get clean
   rm -rf /var/lib/apt/lists/*
@@ -103,7 +130,11 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --dev)
         install_all_dev_packages
+        install_ai_packages
         create_maintenance_account
+        ;;
+    --ai)
+        install_ai_packages
         ;;
     --user)
         install_user_packages
