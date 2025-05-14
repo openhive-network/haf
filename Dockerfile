@@ -188,6 +188,10 @@ COPY --from=build --chown=hived_admin:users /home/hived_admin/hive_base_config/f
 COPY --from=build --chown=root:root /usr/local/lib/faketime/* /usr/local/lib/faketime/
 
 COPY --from=build \
+  /usr/share/postgresql/${POSTGRES_VERSION}/extension/* \
+  /usr/share/postgresql/${POSTGRES_VERSION}/extension
+
+COPY --from=build \
   /home/haf_admin/build/extensions/hive_fork_manager/* \
   /usr/share/postgresql/${POSTGRES_VERSION}/extension
 
