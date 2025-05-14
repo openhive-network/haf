@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS hafd.blocks (
 SELECT pg_catalog.pg_extension_config_dump('hafd.blocks', '');
 
 CREATE STATISTICS IF NOT EXISTS blocks_num_hash_prev_dependency_stats (dependencies) ON num, hash, prev, created_at FROM hafd.blocks;
-CREATE STATISTICS IF NOT EXISTS blocks_transaction_merkle_root_correlation_stats (correlation) ON transaction_merkle_root, num FROM hafd.blocks;
 
 CREATE TYPE hafd.sync_state AS ENUM (
     'START', 'WAIT', 'REINDEX_WAIT', 'REINDEX', 'P2P', 'LIVE'
