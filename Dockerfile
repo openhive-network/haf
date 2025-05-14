@@ -3,12 +3,12 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=ubuntu24.04-1
+ARG CI_IMAGE_TAG=ubuntu24.04-2
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
 
-FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu24.04-1 AS minimal-runtime
+FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu24.04-2 AS minimal-runtime
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
@@ -36,6 +36,9 @@ RUN apt-get update && \
     apt-get remove -y gnupg && \
     apt-get autoremove -y && \
     busybox --install -s
+
+RUN bash -x ./scripts/setup_ubuntu.sh --ai --haf-admin-account="haf_admin" --hived-account="hived" && rm -rf /var/lib/apt/lists/*
+
 # change the UID and GID to match the ones postgres is assigned in our non-minimal runtime
 RUN (chown -Rf --from=postgres 105 / || true) && (chown -Rf --from=:postgres :109 / || true) && usermod -u 105 postgres && groupmod -g 109 postgres
 RUN usermod -a -G users -c "PostgreSQL daemon account" postgres
@@ -45,7 +48,7 @@ RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service 
 USER haf_admin
 WORKDIR /home/haf_admin
 
-FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu24.04-1 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu24.04-2 AS ci-base-image
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
@@ -111,7 +114,7 @@ RUN <<-EOF
   sudo chown -R hived "${INSTALLATION_DIR}/"*
 EOF
 
-FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-1 AS instance
+FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-2 AS instance
 
 ARG BUILD_HIVE_TESTNET=OFF
 ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
@@ -125,7 +128,7 @@ ENV HIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}
 ARG HIVE_LINT=OFF
 ENV HIVE_LINT=${HIVE_LINT}
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-1}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-2}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
