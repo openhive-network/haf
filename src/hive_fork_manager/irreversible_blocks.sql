@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS hafd.blocks (
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.blocks', '');
 
+CREATE STATISTICS IF NOT EXISTS blocks_num_hash_prev_dependency_stats (dependencies) ON num, hash, prev, created_at FROM hafd.blocks;
+
 CREATE TYPE hafd.sync_state AS ENUM (
     'START', 'WAIT', 'REINDEX_WAIT', 'REINDEX', 'P2P', 'LIVE'
 );
@@ -65,6 +67,8 @@ CREATE TABLE IF NOT EXISTS hafd.transactions (
 );
 ALTER TABLE hafd.transactions ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hafd.blocks (num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.transactions', '');
+CREATE STATISTICS IF NOT EXISTS transactions_ref_block_dependency_stats (dependencies) ON ref_block_num, ref_block_prefix FROM hafd.transactions;
+
 
 CREATE TABLE IF NOT EXISTS hafd.transactions_multisig (
     trx_hash bytea NOT NULL,
@@ -82,6 +86,7 @@ CREATE TABLE IF NOT EXISTS hafd.operation_types (
     CONSTRAINT uq_hive_operation_types UNIQUE (name)
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.operation_types', '');
+CREATE STATISTICS IF NOT EXISTS operation_types_id_name_dependency_stats (dependencies) ON id, name FROM hafd.operation_types;
 
 CREATE TABLE IF NOT EXISTS hafd.operations (
     -- id is encoded || 32b blocknum | 24b seq | 8b operation type ||
@@ -104,6 +109,8 @@ ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_1_hive_applied_hardforks FO
 ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_2_hive_applied_hardforks FOREIGN KEY (block_num) REFERENCES hafd.blocks(num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.applied_hardforks', '');
 
+CREATE STATISTICS IF NOT EXISTS applied_hardforks_hardfork_block_vop_dependency_stats (dependencies) ON hardfork_num, block_num, hardfork_vop_id FROM hafd.applied_hardforks;
+
 CREATE TABLE IF NOT EXISTS hafd.accounts (
       id INTEGER NOT NULL
     , name VARCHAR(16) NOT NULL
@@ -114,6 +121,8 @@ CREATE TABLE IF NOT EXISTS hafd.accounts (
 );
 ALTER TABLE hafd.accounts ADD CONSTRAINT fk_1_hive_accounts FOREIGN KEY (block_num) REFERENCES hafd.blocks (num) MATCH FULL NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.accounts', '');
+
+CREATE STATISTICS IF NOT EXISTS accounts_id_name_blocknum_dependency_stats (dependencies) ON id, name, block_num FROM hafd.accounts;
 
 CREATE TABLE IF NOT EXISTS hafd.account_operations
 (
