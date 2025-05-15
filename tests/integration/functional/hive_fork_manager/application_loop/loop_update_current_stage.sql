@@ -24,18 +24,18 @@ AS
 $BODY$
 DECLARE
     __alice_stages hafd.application_stages :=
-        ARRAY[ ('stage2',100 ,100 )::hafd.application_stage
-            , ('stage1',10 ,10 )::hafd.application_stage
+        ARRAY[ hive.stage('stage2',100 ,100 )
+            , hive.stage('stage1',10 ,10 )
             , hafd.live_stage()
             ];
     __alice1_stages hafd.application_stages :=
-        ARRAY[ ('stage2',100 ,100 )::hafd.application_stage
-            , ('stage1',60 ,10 )::hafd.application_stage
+        ARRAY[ hive.stage('stage2',100 ,100 )
+            , hive.stage('stage1',60 ,10 )
             , hafd.live_stage()
             ];
     __alice2_stages hafd.application_stages :=
-        ARRAY[ ('stage2',40 ,100 )::hafd.application_stage
-            , ('stage1',30 ,10 )::hafd.application_stage
+        ARRAY[ hive.stage('stage2',40 ,100 )
+            , hive.stage('stage1',30 ,10 )
             , hafd.live_stage()
             ];
 BEGIN
@@ -74,7 +74,7 @@ BEGIN
     -- check if contexts are correctly updated
     -- alice stage1
     SELECT ((hc.loop).current_stage).*  FROM hafd.contexts hc WHERE hc.name = 'alice' INTO __current_stage;
-    ASSERT __current_stage = ('stage1',10 ,10 )::hafd.application_stage, 'alice stage != (''stage1'',10 ,10 )';
+    ASSERT __current_stage = hive.stage('stage1',10 ,10 ), 'alice stage != (''stage1'',10 ,10 )';
     ASSERT hive.get_current_stage_name( 'alice' ) = 'stage1', 'Wrong name of Alice stage !=stage1';
     ASSERT hive.app_context_is_attached( 'alice' ) = FALSE, 'Context alice is attached';
 
@@ -86,7 +86,7 @@ BEGIN
 
     -- alice2 stage2
     SELECT ((hc.loop).current_stage).* FROM hafd.contexts hc WHERE hc.name = 'alice2' INTO __current_stage;
-    ASSERT __current_stage = ('stage2',40 ,100 )::hafd.application_stage, 'alice2 stage  != (''stage2'',40 ,100 )';
+    ASSERT __current_stage = hive.stage('stage2',40 ,100 ), 'alice2 stage  != (''stage2'',40 ,100 )';
     ASSERT hive.get_current_stage_name( 'alice2' ) = 'stage2', 'Wrong name of Alice2 stage !=stage2';
     ASSERT hive.app_context_is_attached( 'alice2' ) = FALSE, 'Context alice2 is attached';
 END;

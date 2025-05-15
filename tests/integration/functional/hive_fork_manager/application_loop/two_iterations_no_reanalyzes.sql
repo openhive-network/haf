@@ -33,18 +33,18 @@ AS
 $BODY$
 DECLARE
     __alice_stages hafd.application_stages :=
-        ARRAY[ ('stage2',100 ,100 )::hafd.application_stage
-            , ('stage1',10 ,10 )::hafd.application_stage
+        ARRAY[ hive.stage('stage2',100 ,100 )
+            , hive.stage('stage1',10 ,10 )
             , hafd.live_stage()
             ];
     __alice1_stages hafd.application_stages :=
-        ARRAY[ ('stage2',100 ,100 )::hafd.application_stage
-            , ('stage1',60 ,10 )::hafd.application_stage
+        ARRAY[ hive.stage('stage2',100 ,100 )
+            , hive.stage('stage1',60 ,10 )
             , hafd.live_stage()
             ];
     __alice2_stages hafd.application_stages :=
-        ARRAY[ ('stage2',40 ,100 )::hafd.application_stage
-            , ('stage1',30 ,10 )::hafd.application_stage
+        ARRAY[ hive.stage('stage2',40 ,100 )
+            , hive.stage('stage1',30 ,10 )
             , hafd.live_stage()
             ];
     __range_placeholder hive.blocks_range;
