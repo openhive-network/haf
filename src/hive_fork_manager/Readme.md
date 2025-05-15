@@ -686,6 +686,12 @@ no blocks to process during the last call.
 It is possible to override the batch size of blocks to process by using the parameter '_override_max_batch'.
 With this parameter, the number of blocks to process in one turn will be less than or equal to the specified value.
 
+#### hive.stage( hafd.stage_name, hafd.blocks_distance, hafd.blocks_count, _processing_alarm_threshold INTERVAL = '5 seconds' )
+This function is designed to create a stage for application context in a
+streamlined manner. Instead of directly creating the hafd.application_stage
+type, use this function to ensure seamless migration of an application to
+newer versions of the Hive Application Framework (HAF). This approach
+provides better compatibility and maintainability across updates.
 
 #### CONTEXT REWIND
 Context rewind functions shall not be used by hived and apps.

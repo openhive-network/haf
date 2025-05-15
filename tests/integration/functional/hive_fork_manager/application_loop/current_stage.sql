@@ -23,18 +23,18 @@ AS
 $BODY$
 DECLARE
     __alice_stages hafd.application_stages :=
-        ARRAY[ ('stage2',100 ,100 )::hafd.application_stage
-             , ('stage1',10 ,10 )::hafd.application_stage
+        ARRAY[ hive.stage('stage2',100 ,100 )
+             , hive.stage('stage1',10 ,10 )
              , hafd.live_stage()
         ];
     __alice1_stages hafd.application_stages :=
-        ARRAY[ ('stage2',100 ,100 )::hafd.application_stage
-            , ('stage1',60 ,10 )::hafd.application_stage
+        ARRAY[ hive.stage('stage2',100 ,100 )
+            , hive.stage('stage1',60 ,10 )
             , hafd.live_stage()
             ];
     __alice2_stages hafd.application_stages :=
-        ARRAY[ ('stage2',40 ,100 )::hafd.application_stage
-            , ('stage1',30 ,10 )::hafd.application_stage
+        ARRAY[ hive.stage('stage2',40 ,100 )
+            , hive.stage('stage1',30 ,10 )
             , hafd.live_stage()
             ];
 BEGIN
@@ -57,7 +57,7 @@ BEGIN
     SELECT (stg).context FROM hive.get_current_stage( ARRAY[ 'alice'] ) stg INTO __context;
     SELECT ((stg).stage::hafd.application_stage).* FROM hive.get_current_stage( ARRAY[ 'alice'] ) stg INTO __current_stage;
     ASSERT __context = 'alice' , 'ctx != alice' ;
-    ASSERT __current_stage = ('stage1',10 ,10 )::hafd.application_stage, 'alice stage != (''stage1'',10 ,10 )';
+    ASSERT __current_stage = hive.stage('stage1',10 ,10 ), 'alice stage != (''stage1'',10 ,10 )';
 
     -- alice1 live
     SELECT (stg).context FROM hive.get_current_stage( ARRAY[ 'alice1'] ) stg INTO __context;
@@ -69,12 +69,12 @@ BEGIN
     SELECT (stg).context FROM hive.get_current_stage( ARRAY[ 'alice2'] ) stg INTO __context;
     SELECT ((stg).stage::hafd.application_stage).* FROM hive.get_current_stage( ARRAY[ 'alice2'] ) stg INTO __current_stage;
     ASSERT __context = 'alice2' , 'ctx != alice' ;
-    ASSERT __current_stage = ('stage2',40 ,100 )::hafd.application_stage, 'alice2 stage  != (''stage2'',40 ,100 )';
+    ASSERT __current_stage = hive.stage('stage2',40 ,100 ), 'alice2 stage  != (''stage2'',40 ,100 )';
 
 
     SELECT ((stg).stage::hafd.application_stage).* FROM hive.get_current_stage( ARRAY[ 'alice', 'alice1', 'alice2' ] ) stg
     WHERE (stg).context = 'alice'  INTO __current_stage;
-    ASSERT __current_stage = ('stage1',10 ,10 )::hafd.application_stage, 'alice stage != (''stage1'',10 ,10 )';
+    ASSERT __current_stage = hive.stage('stage1',10 ,10 ), 'alice stage != (''stage1'',10 ,10 )';
 
     SELECT ((stg).stage::hafd.application_stage).* FROM hive.get_current_stage( ARRAY[ 'alice', 'alice1', 'alice2' ] ) stg
     WHERE (stg).context = 'alice1'  INTO __current_stage;
@@ -82,7 +82,7 @@ BEGIN
 
     SELECT ((stg).stage::hafd.application_stage).* FROM hive.get_current_stage( ARRAY[ 'alice', 'alice1', 'alice2' ] ) stg
     WHERE (stg).context = 'alice2' INTO __current_stage;
-    ASSERT __current_stage = ('stage2',40 ,100 )::hafd.application_stage, 'alice2 stage  != (''stage2'',40 ,100 )';
+    ASSERT __current_stage = hive.stage('stage2',40 ,100 ), 'alice2 stage  != (''stage2'',40 ,100 )';
 
 END;
 $BODY$;

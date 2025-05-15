@@ -64,6 +64,7 @@ BEGIN
         , ( 60, '\xBADD51', '\xCAFE51', '2016-06-22 19:10:21-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
     PERFORM hive.set_irreversible( 60 );
+    PERFORM pg_sleep( 10 ); -- ensure that process limit is exceeded
 END;
 $BODY$;
 

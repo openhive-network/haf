@@ -6,6 +6,7 @@ CREATE TYPE hafd.context_event AS ENUM(
       , 'DETACHED'
       , 'REMOVED'
       , 'STATE_CHANGED'
+      , 'SLOW_PROCESSING'
 );
 
 CREATE TABLE hafd.contexts_log(

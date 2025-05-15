@@ -56,7 +56,7 @@ def prepare_application_data( db_connection ):
                   "SELECT hive.app_create_context("
                   " '{}', _schema => 'applications'"
                   ", _is_forking => TRUE"
-                  ", _stages => ARRAY[ ('MASSIVE',2 ,100 )::hafd.application_stage, hafd.live_stage()]"
+                  ", _stages => ARRAY[ hive.stage('MASSIVE',2 ,100 ), hafd.live_stage()]"
                   ")".format(APPLICATION_CONTEXT)
             )
 
