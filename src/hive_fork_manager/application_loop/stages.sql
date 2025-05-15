@@ -8,7 +8,8 @@ CREATE DOMAIN hafd.stage_name AS TEXT CHECK( VALUE ~ '^[A-Za-z0-9_]+$' );
 CREATE TYPE hafd.application_stage AS (
     name hafd.stage_name, -- name of the stage
     min_head_block_distance hafd.blocks_distance, -- it is a minimum distance to head block for which the stage can be enabled
-    blocks_limit_in_group hafd.blocks_count -- max number of blocks in one group to process
+    blocks_limit_in_group hafd.blocks_count, -- max number of blocks in one group to process
+    processing_alarm_threshold INTERVAL -- when block are processed longer than the threshold a warning wil be produced
 );
 
 CREATE FUNCTION hafd.live_stage()
@@ -18,7 +19,7 @@ CREATE FUNCTION hafd.live_stage()
 AS
 $BODY$
 BEGIN
-    RETURN ( 'live', 0, 1 )::hafd.application_stage;
+    RETURN hive.stage( 'live', 0, 1, '3 seconds' );
 END;
 $BODY$;
 
@@ -31,7 +32,8 @@ $BODY$
 BEGIN
     RETURN ( 'wait_for_haf'
         , 2147483647 -- max int
-        , 1 )::hafd.application_stage;
+        , 1
+        , '3 seconds' )::hafd.application_stage;
 END;
 $BODY$;
 
