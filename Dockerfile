@@ -32,7 +32,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y curl postgresql-17 postgresql-17-cron libpq5 libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y curl postgresql-17 postgresql-17-cron postgresql-17-rum libpq5 libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
     apt-get remove -y gnupg && \
     apt-get autoremove -y && \
     busybox --install -s

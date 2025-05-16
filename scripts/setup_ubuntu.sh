@@ -73,7 +73,7 @@ install_all_dev_packages() {
           postgresql-common
 
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-  DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-17 postgresql-server-dev-17 postgresql-17-cron \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-17 postgresql-server-dev-17 postgresql-17-cron postgresql-17-rum \
     netcat-openbsd \
     git python3.12 python3.12-venv python3.12-dev python3-pip postgresql-17-pgvector postgresql-plpython3-17 curl # for hivesense
 
