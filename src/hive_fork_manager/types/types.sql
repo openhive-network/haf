@@ -748,7 +748,8 @@ CREATE TYPE hive.failed_recurrent_transfer_operation AS (
   memo hive.memo,
   consecutive_failures int2, -- uint8_t: 1 byte, but unsigned (int2)
   remaining_executions int4, -- uint16_t: 2 bytes, but unsigned (int4)
-  deleted boolean
+  deleted boolean,
+  extensions hive.recurrent_transfer_extensions_type
 );
 
 DROP TYPE IF EXISTS hive.fill_collateralized_convert_request_operation CASCADE;
@@ -784,7 +785,8 @@ CREATE TYPE hive.fill_recurrent_transfer_operation AS (
   "to" hive.account_name_type,
   amount hive.asset,
   memo hive.memo,
-  remaining_executions int4 -- uint16_t: 2 bytes, but unsigned (int4)
+  remaining_executions int4, -- uint16_t: 2 bytes, but unsigned (int4)
+  extensions hive.recurrent_transfer_extensions_type
 );
 
 DROP TYPE IF EXISTS hive.fill_transfer_from_savings_operation CASCADE;

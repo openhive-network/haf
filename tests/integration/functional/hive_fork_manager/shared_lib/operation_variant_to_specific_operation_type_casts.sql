@@ -1203,7 +1203,7 @@ DECLARE
   op hive.failed_recurrent_transfer_operation;
 BEGIN
   raise notice 'checking conversion to failed_recurrent_transfer_operation';
-  op := '{"type":"failed_recurrent_transfer_operation","value":{"from":"blackknight1423","to":"aa111","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"","consecutive_failures":1,"remaining_executions":0,"deleted":false}}'::JSONB::hafd.operation::hive.failed_recurrent_transfer_operation;
+  op := '{"type":"failed_recurrent_transfer_operation","value":{"from":"blackknight1423","to":"aa111","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"","consecutive_failures":1,"remaining_executions":0,"deleted":false,"extensions":[]}}'::JSONB::hafd.operation::hive.failed_recurrent_transfer_operation;
   ASSERT (select op."from" = 'blackknight1423'), format('Unexpected value of failed_recurrent_transfer_operation.from: %s', op."from");
   ASSERT (select op."to" = 'aa111'), format('Unexpected value of failed_recurrent_transfer_operation.to: %s', op."to");
   ASSERT (select op.amount = '(1000,3,@@000000021)'::hive.asset), format('Unexpected value of failed_recurrent_transfer_operation.amount: %s', op.amount);
@@ -1211,6 +1211,7 @@ BEGIN
   ASSERT (select op.consecutive_failures = 1), format('Unexpected value of failed_recurrent_transfer_operation.consecutive_failures: %s', op.consecutive_failures);
   ASSERT (select op.remaining_executions = 0), format('Unexpected value of failed_recurrent_transfer_operation.remaining_executions: %s', op.remaining_executions);
   ASSERT (select op.deleted = False), format('Unexpected value of failed_recurrent_transfer_operation.deleted: %s', op.deleted);
+  ASSERT (select op.extensions = '()'::hive.recurrent_transfer_extensions_type), format('Unexpected value of failed_recurrent_transfer_operation.extensions: %s', op.extensions);
 END;
 $BODY$
 ;
@@ -1281,12 +1282,13 @@ DECLARE
   op hive.fill_recurrent_transfer_operation;
 BEGIN
   raise notice 'checking conversion to fill_recurrent_transfer_operation';
-  op := '{"type":"fill_recurrent_transfer_operation","value":{"from":"deathwing","to":"rishi556","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"test","remaining_executions":4}}'::JSONB::hafd.operation::hive.fill_recurrent_transfer_operation;
+  op := '{"type":"fill_recurrent_transfer_operation","value":{"from":"deathwing","to":"rishi556","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":"test","remaining_executions":4,"extensions":[]}}'::JSONB::hafd.operation::hive.fill_recurrent_transfer_operation;
   ASSERT (select op."from" = 'deathwing'), format('Unexpected value of fill_recurrent_transfer_operation.from: %s', op."from");
   ASSERT (select op."to" = 'rishi556'), format('Unexpected value of fill_recurrent_transfer_operation.to: %s', op."to");
   ASSERT (select op.amount = '(1000,3,@@000000021)'::hive.asset), format('Unexpected value of fill_recurrent_transfer_operation.amount: %s', op.amount);
   ASSERT (select op.memo = 'test'), format('Unexpected value of fill_recurrent_transfer_operation.memo: %s', op.memo);
   ASSERT (select op.remaining_executions = 4), format('Unexpected value of fill_recurrent_transfer_operation.remaining_executions: %s', op.remaining_executions);
+  ASSERT (select op.extensions = '()'::hive.recurrent_transfer_extensions_type), format('Unexpected value of fill_recurrent_transfer_operation.extensions: %s', op.extensions);
 END;
 $BODY$
 ;
