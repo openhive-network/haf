@@ -470,8 +470,8 @@ BEGIN
     '\x522b4368616e67696e676d6178696d756d626c6f636b73697a6566726f6d32303937313532746f313331303732');
   PERFORM ASSERT_THIS_TEST('{"type":"producer_missed_operation","value":{"producer":"ladygaga"}}',
     '\x56086c61647967616761');
-  PERFORM ASSERT_THIS_TEST('{"type":"failed_recurrent_transfer_operation","value":{"from":"alice","to":"bob","amount":{"amount":"1","precision":3,"nai":"@@000000021"},"memo":"xx","consecutive_failures":12,"remaining_executions":12,"deleted":false}}',
-    '\x5405616c69636503626f62010000000000000003535445454d00000278780c0c0000');
+  PERFORM ASSERT_THIS_TEST('{"type":"failed_recurrent_transfer_operation","value":{"from":"alice","to":"bob","amount":{"amount":"1","precision":3,"nai":"@@000000021"},"memo":"xx","consecutive_failures":12,"remaining_executions":12,"deleted":false,"extensions":[]}}',
+    '\x5405616c69636503626f62010000000000000003535445454d00000278780c0c000000');
 
   BEGIN
     PERFORM '{}'::jsonb::hafd.operation;
