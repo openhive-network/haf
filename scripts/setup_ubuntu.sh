@@ -56,6 +56,20 @@ install_ai_packages() {
       popd
       rm -r pgai
     popd
+
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+    rm -rf /root/.cache ~/.cache /tmp/* /var/tmp/*
+    find / -type d -name '__pycache__' -exec rm -rf {} +
+    rm -rf  /usr/local/lib/pgai/0.8.0/google
+    rm -rf  /usr/local/lib/pgai/0.8.0/litellm
+
+    rm -rf /usr/local/lib/pgai/0.4.0
+    rm -rf /usr/local/lib/pgai/0.4.1
+    rm -rf /usr/local/lib/pgai/0.5.0
+    rm -rf /usr/local/lib/pgai/0.6.0
+    rm -rf /usr/local/lib/pgai/0.7.0
+
 }
 
 install_all_dev_packages() {
