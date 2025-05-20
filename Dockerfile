@@ -36,7 +36,8 @@ RUN apt-get update && \
     apt-get remove -y gnupg && \
     apt-get autoremove -y && \
     busybox --install -s && \
-    python3.12 -m pip install --break-system-packages langchain
+    python3.12 -m pip install --break-system-packages langchain && \
+    rm -rf /var/lib/apt/lists/*
 
 # change the UID and GID to match the ones postgres is assigned in our non-minimal runtime
 RUN (chown -Rf --from=postgres 105 / || true) && (chown -Rf --from=:postgres :109 / || true) && usermod -u 105 postgres && groupmod -g 109 postgres
