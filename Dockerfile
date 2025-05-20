@@ -32,12 +32,11 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y curl postgresql-17 postgresql-17-cron libpq5 libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3-pip curl postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
     apt-get remove -y gnupg && \
     apt-get autoremove -y && \
-    busybox --install -s
-
-RUN bash -x ./scripts/setup_ubuntu.sh --ai --haf-admin-account="haf_admin" --hived-account="hived" && rm -rf /var/lib/apt/lists/*
+    busybox --install -s && \
+    python3.12 -m pip install --break-system-packages langchain
 
 # change the UID and GID to match the ones postgres is assigned in our non-minimal runtime
 RUN (chown -Rf --from=postgres 105 / || true) && (chown -Rf --from=:postgres :109 / || true) && usermod -u 105 postgres && groupmod -g 109 postgres
@@ -201,6 +200,10 @@ COPY --from=build \
 COPY --from=build \
   /home/haf_admin/build/lib/libhfm-* \
   /usr/lib/postgresql/${POSTGRES_VERSION}/lib
+
+COPY --from=build \
+    /usr/local/lib/pgai \
+    /usr/local/lib/pgai
 
 # set a variable telling the entrypoint not to try to install the extension from source, we just did it above
 ENV HAF_INSTALL_EXTENSION=no
