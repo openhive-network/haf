@@ -69,6 +69,7 @@ install_ai_packages() {
     rm -rf /usr/local/lib/pgai/0.5.0
     rm -rf /usr/local/lib/pgai/0.6.0
     rm -rf /usr/local/lib/pgai/0.7.0
+    rm -rf /usr/local/lib/pgai/0.8.0/pyarrow
 
 }
 
