@@ -1,6 +1,10 @@
 include:
   - project: 'hive/hive'
+<<<<<<< HEAD
     ref: c63425ca017460e145a844728aa5342cff78b751 #develop
+=======
+    ref: 45821f1f8a004b138f72072e3481b6dbda1ea16f  #develop
+>>>>>>> daf08840 (update hive submodule)
     file: '/scripts/ci-helpers/prepare_data_image_job.yml'
 
 .prepare_haf_image:
