@@ -446,6 +446,11 @@ indexation_state::flush_all_data_to_reversible( cached_data_t& cached_data ) {
   ilog( "Flushed all reversible blocks" );
 }
 
+void indexation_state::move_irreversible_blocks( cached_data_t& cached_data ) {
+  auto irreversible_cached_data = move_irreveresible_blocks(cached_data, _irreversible_block_num );
+  force_trigger_flush_with_all_data( irreversible_cached_data, _irreversible_block_num );
+}
+
 void
 indexation_state::on_irreversible_block( uint32_t block_num ) {
   _irreversible_block_num = block_num;
