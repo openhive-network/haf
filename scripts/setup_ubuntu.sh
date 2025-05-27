@@ -42,7 +42,8 @@ install_ai_packages() {
     curl
 
   # required by Hivesense as pgai
-    python3.12 -m pip install --break-system-packages langchain
+    #python3.12 -m pip install --break-system-packages langchain spacy transformers beautifulsoup4 lxml pysbd
+    #python3.12 -m pip install --break-system-packages "xx_sent_ud_sm @ https://sourceforge.net/projects/spacy-models.mirror/files/xx_sent_ud_sm-3.8.0/xx_sent_ud_sm-3.8.0-py3-none-any.whl"
 
     pushd /tmp
       git clone https://github.com/timescale/pgai.git --branch extension-0.8.0
@@ -56,6 +57,28 @@ install_ai_packages() {
       popd
       rm -r pgai
     popd
+
+    python3.12 -m pip install -t /usr/local/lib/pgai/0.8.0/ langchain spacy transformers beautifulsoup4 lxml pysbd huggingface_hub
+    python3.12 -m pip install -t /usr/local/lib/pgai/0.8.0/ "xx_sent_ud_sm @ https://sourceforge.net/projects/spacy-models.mirror/files/xx_sent_ud_sm-3.8.0/xx_sent_ud_sm-3.8.0-py3-none-any.whl"
+
+    mkdir -p /home/hived/tokenizer-files
+    cat << EOF > /tmp/download-tokenizer-files.py
+import sys
+sys.path.insert(0, "/usr/local/lib/pgai/0.8.0/")
+
+from huggingface_hub import snapshot_download
+
+snapshot_download(
+    repo_id="intfloat/multilingual-e5-base",
+    local_dir="/home/hived/tokenizer-files/e5-base",
+    allow_patterns=[
+      "tokenizer.json"
+    ]
+)
+EOF
+        python3 /tmp/download-tokenizer-files.py
+        rm /tmp/download-tokenizer-files.py
+        chown -R hived.users /home/hived/tokenizer-files
 
     apt-get clean
     rm -rf /var/lib/apt/lists/*
