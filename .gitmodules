@@ -1,3 +1,4 @@
 [submodule "hive"]
 	path = hive
 	url = ../hive.git
+	ignore = all
