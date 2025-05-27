@@ -15,6 +15,29 @@ then
   sudo -n usermod -o -u "${HIVED_UID}" hived
 fi
 
+# Configure sudo for hived to allow specific tee commands without a password
+SUDOERS_FILE="/etc/sudoers"
+SUDO_RULE_TEE_VM="hived ALL=(ALL) NOPASSWD: /usr/bin/tee /host-proc/sys/vm/dirty_bytes, /usr/bin/tee /host-proc/sys/vm/dirty_background_bytes, /usr/bin/tee /host-proc/sys/vm/dirty_expire_centisecs, /usr/bin/tee /host-proc/sys/vm/swappiness"
+
+echo "Attempting to configure sudoers for hived VM parameter access..."
+if sudo -n grep -qF -- "$SUDO_RULE_TEE_VM" "$SUDOERS_FILE"; then
+    echo "Sudo rule for hived VM parameters already exists in $SUDOERS_FILE."
+else
+    echo "Adding sudo rule for hived VM parameters to $SUDOERS_FILE..."
+    # Ensure the file is writable by root to append the rule
+    sudo -n chmod 0640 "$SUDOERS_FILE"
+    echo "$SUDO_RULE_TEE_VM" | sudo -n tee -a "$SUDOERS_FILE" > /dev/null
+    # Set permissions back to read-only for security
+    sudo -n chmod 0440 "$SUDOERS_FILE"
+    echo "Sudo rule added."
+fi
+
+echo "Verifying sudoers file permissions and content..."
+sudo -n ls -l "$SUDOERS_FILE"
+echo "Relevant sudo rule:"
+sudo -n grep "hived ALL=(ALL) NOPASSWD: /usr/bin/tee /host-proc/sys/vm/" "$SUDOERS_FILE" || echo "Rule not found or grep failed."
+echo "Sudo configuration for hived VM parameters complete."
+# End of sudo configuration
 
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="/home/haf_admin/source/${HIVE_SUBDIR}/scripts"
