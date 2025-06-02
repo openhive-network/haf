@@ -238,13 +238,23 @@ public:
 
   ~sql_serializer_plugin_impl()
   {
+    ilog(
+    "Flushing: blocks: ${b} trx: ${t} operations: ${o} accounts: ${a} account_operations: ${ao} applied hardforks: ${ah} total size: ${ts}...",
+    ("b", currently_caching_data->blocks.size() )
+    ("t", currently_caching_data->transactions.size() )
+    ("o", currently_caching_data->operations.size() )
+    ("a", currently_caching_data->accounts.size() )
+    ("ao", currently_caching_data->account_operations.size() )
+    ("ah", currently_caching_data->applied_hardforks.size())
+    ("ts", currently_caching_data->total_size )
+    );
+    _indexation_state.move_irreversible_blocks( *currently_caching_data );
+
     ilog("Serializer plugin is closing");
   }
 
   void connect_signals();
   void disconnect_signals();
-
-  void flush();
 
   void on_pre_reindex(const reindex_notification& note);
   void on_post_reindex(const reindex_notification& note);
@@ -734,21 +744,6 @@ void sql_serializer_plugin_impl::handle_transactions(const vector<std::shared_pt
   }
 }
 
-void sql_serializer_plugin_impl::flush()
-{
-  ilog(
-  "Flushing: blocks: ${b} trx: ${t} operations: ${o} accounts: ${a} account_operations: ${ao} applied hardforks: ${ah} total size: ${ts}...",
-  ("b", currently_caching_data->blocks.size() )
-  ("t", currently_caching_data->transactions.size() )
-  ("o", currently_caching_data->operations.size() )
-  ("a", currently_caching_data->accounts.size() )
-  ("ao", currently_caching_data->account_operations.size() )
-  ("ah", currently_caching_data->applied_hardforks.size())
-  ("ts", currently_caching_data->total_size )
-  );
-  _indexation_state.move_irreversible_blocks( *currently_caching_data );
-}
-
 void sql_serializer_plugin_impl::on_pre_reindex(const reindex_notification& note)
 {
   ilog("Entering a reindex init...");
@@ -905,8 +900,6 @@ void sql_serializer_plugin::plugin_shutdown()
   ilog("Flushing left data...");
 
   my->disconnect_signals();
-
-  my->flush();
 
   ilog("Done. Connection closed");
 }
