@@ -39,37 +39,60 @@ install_ai_packages() {
     git \
     python3.12 python3.12-venv python3.12-dev python3-pip \
     postgresql-17-pgvector postgresql-plpython3-17 \
-    curl
+    curl \
+    python3-bs4 python3-lxml
+
+
 
   # required by Hivesense as pgai
-    python3.12 -m pip install --break-system-packages langchain
-
-    pushd /tmp
-      git clone https://github.com/timescale/pgai.git --branch extension-0.8.0
-      pushd pgai
-        python3.12 -m venv venv/
-        # shellcheck disable=SC1091
-        . venv/bin/activate
-        python3.12 -m pip install --upgrade pip
-        projects/extension/build.py install
-        deactivate
-      popd
-      rm -r pgai
+  pushd /tmp
+    git clone https://github.com/timescale/pgai.git --branch extension-0.8.0
+    pushd pgai
+      python3.12 -m venv venv/
+      # shellcheck disable=SC1091
+      . venv/bin/activate
+      python3.12 -m pip install --upgrade pip
+      projects/extension/build.py install
+      deactivate
     popd
+    rm -r pgai
+  popd
 
-    apt-get clean
-    rm -rf /var/lib/apt/lists/*
-    rm -rf /root/.cache ~/.cache /tmp/* /var/tmp/*
-    find / -type d -name '__pycache__' -exec rm -rf {} +
-    rm -rf  /usr/local/lib/pgai/0.8.0/google
-    rm -rf  /usr/local/lib/pgai/0.8.0/litellm
+  apt-get clean
+  rm -rf /var/lib/apt/lists/*
+  rm -rf /root/.cache ~/.cache /tmp/* /var/tmp/*
+  find / -type d -name '__pycache__' -exec rm -rf {} +
+  rm -rf  /usr/local/lib/pgai/0.8.0/google
+  rm -rf  /usr/local/lib/pgai/0.8.0/litellm
 
-    rm -rf /usr/local/lib/pgai/0.4.0
-    rm -rf /usr/local/lib/pgai/0.4.1
-    rm -rf /usr/local/lib/pgai/0.5.0
-    rm -rf /usr/local/lib/pgai/0.6.0
-    rm -rf /usr/local/lib/pgai/0.7.0
-    rm -rf /usr/local/lib/pgai/0.8.0/pyarrow
+  rm -rf /usr/local/lib/pgai/0.4.0
+  rm -rf /usr/local/lib/pgai/0.4.1
+  rm -rf /usr/local/lib/pgai/0.5.0
+  rm -rf /usr/local/lib/pgai/0.6.0
+  rm -rf /usr/local/lib/pgai/0.7.0
+  rm -rf /usr/local/lib/pgai/0.8.0/pyarrow
+
+
+  pip3 install --break-system-packages tokenizers
+
+  mkdir -p /home/hived/tokenizer-files
+  cat << EOF > /tmp/download-tokenizer-files.py
+from huggingface_hub import snapshot_download
+
+snapshot_download(
+    repo_id="intfloat/multilingual-e5-base",
+    local_dir="/home/hived/tokenizer-files/e5-base",
+    allow_patterns=[
+      "tokenizer.json",
+      "tokenizer_config.json",
+      "special_tokens_map.json",
+      "sentencepiece.bpe.model",
+    ]
+)
+EOF
+  python3 /tmp/download-tokenizer-files.py
+  rm /tmp/download-tokenizer-files.py
+  chown -R hived.users /home/hived/tokenizer-files
 
 }
 

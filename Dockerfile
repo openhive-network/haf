@@ -22,25 +22,37 @@ COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 
 # create required accounts
 RUN bash -x ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived" && rm -rf /var/lib/apt/lists/*
-# install postgres.  Installation automatically does an initdb, so remove the 29+MB database that we don't need afterwards
-# Note: We started out having curl in the image, and used that for the docker healthcheck.  On 2024-04-20 we added busybox
-#       to the image which provides wget, and we could just as easily use that for healthchecks.  Right now, we're keeping
-#       curl only because the healthchecks are defined in the haf_api_node repo, and if we dropped curl we'd need to force
-#       everyone to upgrade their haf_api_node in sync with this commit.  We should switch haf_api_node's healthcheck to
-#       use wget once images based on this Dockerfile are made official, and we can drop curl soon thereafter
+# install postgres
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3-pip curl postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3-pip postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 \
+                                                                              libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
+    # Add BeautifulSoup for hivesense preprocessing posts (3.1MB)
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3-bs4 python3-lxml && \
+    # Install Tokenizers (~48MB) for hivesense
+    python3.12 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd && \
     apt-get remove -y gnupg && \
     apt-get autoremove -y && \
     busybox --install -s && \
-    python3.12 -m pip install --break-system-packages langchain && \
+    # installing the postgresql-{ver} package does an initdb, remove the ~30MB database, we'll never use it
+    rm -rf /var/lib/postgresql/${POSTGRES_VERSION}/main && \
+    # change the UID and GID to match the ones postgres is assigned in our non-minimal runtime
+    (chown -Rf --from=postgres 105 / || true) && (chown -Rf --from=:postgres :109 / || true) && usermod -u 105 postgres && groupmod -g 109 postgres && \
     rm -rf /var/lib/apt/lists/*
 
-# change the UID and GID to match the ones postgres is assigned in our non-minimal runtime
-RUN (chown -Rf --from=postgres 105 / || true) && (chown -Rf --from=:postgres :109 / || true) && usermod -u 105 postgres && groupmod -g 109 postgres
+USER hived:users
+RUN mkdir -p /home/hived/tokenizer-files
+RUN python3 -c "\
+from huggingface_hub import snapshot_download; \
+snapshot_download(\
+  repo_id='intfloat/multilingual-e5-base', \
+  local_dir='/home/hived/tokenizer-files/e5-base', \
+  allow_patterns=['tokenizer.json']\
+)"
+USER root
+
 RUN usermod -a -G users -c "PostgreSQL daemon account" postgres
 
 RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service account" -U haf_maintainer
