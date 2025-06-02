@@ -20,6 +20,8 @@
 #include <hive/protocol/config.hpp>
 #include <hive/protocol/operations.hpp>
 
+#include <hive/utilities/signal.hpp>
+
 #include <hive/plugins/sql_serializer/blockchain_data_filter.hpp>
 
 #include <fc/git_revision.hpp>
@@ -483,19 +485,19 @@ void sql_serializer_plugin_impl::connect_signals()
 void sql_serializer_plugin_impl::disconnect_signals()
 {
   if(__on_pre_apply_block_con_initialization.connected())
-    chain::util::disconnect_signal(__on_pre_apply_block_con_initialization);
+    hive::utilities::disconnect_signal(__on_pre_apply_block_con_initialization);
   if(_on_pre_apply_operation_con.connected())
-    chain::util::disconnect_signal(_on_pre_apply_operation_con);
+    hive::utilities::disconnect_signal(_on_pre_apply_operation_con);
   if(_on_starting_reindex.connected())
-    chain::util::disconnect_signal(_on_starting_reindex);
+    hive::utilities::disconnect_signal(_on_starting_reindex);
   if(_on_finished_reindex.connected())
-    chain::util::disconnect_signal(_on_finished_reindex);
+    hive::utilities::disconnect_signal(_on_finished_reindex);
   if ( _on_end_of_syncing_con.connected() )
-    chain::util::disconnect_signal(_on_end_of_syncing_con);
+    hive::utilities::disconnect_signal(_on_end_of_syncing_con);
   if ( _on_switch_fork_conn.connected() )
-    chain::util::disconnect_signal(_on_switch_fork_conn);
+    hive::utilities::disconnect_signal(_on_switch_fork_conn);
   if ( _on_pre_apply_operation_con.connected() )
-    chain::util::disconnect_signal(_on_pre_apply_operation_con);
+    hive::utilities::disconnect_signal(_on_pre_apply_operation_con);
 }
 
 void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& note)
@@ -510,7 +512,7 @@ void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& no
 
   if ( can_collect_blocks() ) {
     if(__on_pre_apply_block_con_initialization.connected())
-      chain::util::disconnect_signal(__on_pre_apply_block_con_initialization);
+      hive::utilities::disconnect_signal(__on_pre_apply_block_con_initialization);
   }
 }
 
