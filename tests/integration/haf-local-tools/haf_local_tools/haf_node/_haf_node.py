@@ -47,6 +47,7 @@ class HafNode(PreconfiguredNode):
 
         self.config.plugin.append("sql_serializer")
         self.config.psql_operations_threads_number = 3
+        self.config.psql_livesync_threshold = 0
 
         self.config.log_appender = '{"appender":"stderr","stream":"std_error"}'
         self.config.log_logger = '{"name":"default","level":"info","appender":"stderr"}'
