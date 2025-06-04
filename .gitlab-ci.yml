@@ -165,6 +165,7 @@ haf_system_tests:
     entrypoint: [""]
   variables:
     PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    LOGURU_LEVEL: "TRACE"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_system_tests.sh
   artifacts:
