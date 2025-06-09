@@ -333,7 +333,8 @@ BEGIN
     WHERE ist.table_schema = 'hafd'
     AND ist.table_type = 'BASE TABLE'
     AND hrt.shadow_table_name IS NULL -- is not a shadow table
-    AND spr.tables IS NULL; -- is not a state provider table
+    AND spr.tables IS NULL -- is not a state provider table
+    ORDER BY ist.table_name;
 END;
 $BODY$
 ;
