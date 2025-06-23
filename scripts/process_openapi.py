@@ -3,6 +3,7 @@ import yaml
 import json
 import re
 import sys
+import argparse
 
 from pathlib import Path
 
@@ -382,14 +383,22 @@ def dump_openapi_spec(sql_output):
     sql_output.write('\n$$;\n')
     sql_output.write('-- openapi-generated-code-end\n')
 
-def generate_rewrite_rules(rewrite_rules_file):
+def generate_rewrite_rules(rewrite_rules_file, use_home_rewrite=False):
     if 'paths' in collected_openapi_fragments:
         with open(rewrite_rules_file, 'w') as rewrite_rules_file:
             # generate default rules that are always the same
-            rewrite_rules_file.write(f'# default endpoint for everything else\n')
-            rewrite_rules_file.write(f'rewrite ^/(.*)$ /rpc/$1 break;\n\n')
-            rewrite_rules_file.write(f'# endpoint for openapi spec itself\n')
-            rewrite_rules_file.write(f'rewrite ^/$ / break;\n\n')
+
+            if use_home_rewrite:
+                rewrite_rules_file.write(f'# endpoint for json-rpc 2.0\n')
+                rewrite_rules_file.write(f'rewrite ^/(.*)$ /rpc/home break;\n\n')
+            else:
+                rewrite_rules_file.write(f'# default endpoint for everything else\n')
+                rewrite_rules_file.write(f'rewrite ^/(.*)$ /rpc/$1 break;\n\n')
+
+            if not use_home_rewrite:
+                rewrite_rules_file.write(f'# endpoint for openapi spec itself\n')
+                rewrite_rules_file.write(f'rewrite ^/$ / break;\n\n')
+
             for path, methods_for_path in collected_openapi_fragments['paths'].items():
                 for method, method_data in methods_for_path.items():
                     path_parts = path.split('/')
@@ -500,14 +509,21 @@ def process_sql_files(input_sql_filenames, output_dir = None):
                 with output_sql_filename.open(mode = 'w') as sql_output:
                     process_sql_file(sql_input, sql_output)
 
-# needs proper command-line parsing
-output_dir = Path(sys.argv[1])
-input_files = sys.argv[2:]
-rewrite_rules_file = 'rewrite_rules.conf'
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("output_dir", type=Path)
+    parser.add_argument("input_files", nargs='+')
+    parser.add_argument("--home-rewrite", action="store_true", help="Use /rpc/home rewrite rule")
+    args = parser.parse_args()
 
-# Do a first pass that just collects all the openapi fragments
-process_sql_files(input_files)
-# Then a second pass that does the substitutions, writing output files to `output_dir`
-process_sql_files(input_files, output_dir)
-# and dump the nginx rewrite rules
-generate_rewrite_rules(rewrite_rules_file)
+    output_dir = args.output_dir
+    input_files = args.input_files
+    rewrite_rules_file = 'rewrite_rules.conf'
+    use_home_rewrite = args.home_rewrite
+
+    # Do a first pass that just collects all the openapi fragments
+    process_sql_files(input_files)
+    # Then a second pass that does the substitutions, writing output files to `output_dir`
+    process_sql_files(input_files, output_dir)
+    # and dump the nginx rewrite rules
+    generate_rewrite_rules(rewrite_rules_file, use_home_rewrite)
