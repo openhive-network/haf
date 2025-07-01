@@ -20,7 +20,7 @@ variables:
   FF_NETWORK_PER_BUILD: 1
 
   # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-6
-  BUILDER_IMAGE_TAG: "@sha256:dd8cd40f081b8c06175c6fe93d95006adab4b4994e2874e30100726a8da95098"
+  BUILDER_IMAGE_TAG: "@sha256:9d5cacf26a0f21b6debc933909a7e8c56fb10c1346fe26dc5ce9ae1bc775190d"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
