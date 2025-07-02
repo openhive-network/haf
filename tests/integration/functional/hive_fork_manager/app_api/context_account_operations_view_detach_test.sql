@@ -95,30 +95,30 @@ BEGIN
          , ( 11, 'alice103', 10, 3 )
     ;
 
-    INSERT INTO hafd.account_operations(account_id, account_op_seq_no, operation_id)
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, operation_id)
     VALUES
-           ( 1, 1, hafd.operation_id(1, 1, 0) )
-         , ( 1, 2, hafd.operation_id(2, 1, 0) )
-         , ( 2, 1, hafd.operation_id(2, 1, 0) )
-         , ( 3, 1, hafd.operation_id(3, 1, 0) )
+           ( 1, 1, 1, hafd.operation_id(1, 1, 0) )
+         , ( 1, 1, 2, hafd.operation_id(2, 1, 0) )
+         , ( 2, 2, 1, hafd.operation_id(2, 1, 0) )
+         , ( 3, 3, 1, hafd.operation_id(3, 1, 0) )
     ;
 
     INSERT INTO hafd.account_operations_reversible
     VALUES
-           ( 4, 1, hafd.operation_id(4,1,0), 1 )
-         , ( 5, 1, hafd.operation_id(5,1,0), 1 )
-         , ( 6, 1, hafd.operation_id(6,1,0), 1 )
-         , ( 7, 1, hafd.operation_id(7,1,0), 1 ) -- must be overriden by fork 2
-         , ( 8, 1, hafd.operation_id(7,1,1), 1 ) -- must be overriden by fork 2
-         , ( 9, 1, hafd.operation_id(7,1,2), 1 ) -- must be overriden by fork 2
-         , ( 7, 2, hafd.operation_id(7,1,0), 2 )
-         , ( 8, 2, hafd.operation_id(7,1,1), 2 ) -- will be abandoned since fork 3 doesn not have this account operation
-         , ( 9, 2, hafd.operation_id(8,1,0), 2 )
-         , ( 9, 3, hafd.operation_id(7,1,0), 2 )
-         , ( 10, 2, hafd.operation_id(9,1,0), 2 )
-         , ( 9, 3, hafd.operation_id(8,1,0), 3 )
-         , ( 10, 3, hafd.operation_id(9,1,0), 3 )
-         , ( 11, 3, hafd.operation_id(10,1,0), 3 )
+           ( 4, 4, 1, hafd.operation_id(4,1,0), 1 )
+         , ( 5, 5, 1, hafd.operation_id(5,1,0), 1 )
+         , ( 6, 6, 1, hafd.operation_id(6,1,0), 1 )
+         , ( 7, 7, 1, hafd.operation_id(7,1,0), 1 ) -- must be overriden by fork 2
+         , ( 8, 8, 1, hafd.operation_id(7,1,1), 1 ) -- must be overriden by fork 2
+         , ( 9, 9, 1, hafd.operation_id(7,1,2), 1 ) -- must be overriden by fork 2
+         , ( 7, 7, 2, hafd.operation_id(7,1,0), 2 )
+         , ( 8, 8, 2, hafd.operation_id(7,1,1), 2 ) -- will be abandoned since fork 3 doesn not have this account operation
+         , ( 9, 9, 2, hafd.operation_id(8,1,0), 2 )
+         , ( 9, 9, 3, hafd.operation_id(7,1,0), 2 )
+         , ( 10, 10, 2, hafd.operation_id(9,1,0), 2 )
+         , ( 9, 9, 3, hafd.operation_id(8,1,0), 3 )
+         , ( 10, 10, 3, hafd.operation_id(9,1,0), 3 )
+         , ( 11, 11, 3, hafd.operation_id(10,1,0), 3 )
     ;
 
 UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8;
@@ -146,10 +146,10 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM a.account_operations_view
         EXCEPT SELECT * FROM ( VALUES
-                      ( 1, 1, 1, hafd.operation_id(1, 1, 0), 1 )
-                    , ( 2, 1, 2, hafd.operation_id(2, 1, 0), 1 )
-                    , ( 2, 2, 1, hafd.operation_id(2, 1, 0), 1 )
-                    , ( 3, 3, 1, hafd.operation_id(3, 1, 0), 1 )
+                      ( 1, 1, 1, 1, hafd.operation_id(1, 1, 0), 1 )
+                    , ( 2, 1, 1, 2, hafd.operation_id(2, 1, 0), 1 )
+                    , ( 2, 2, 2, 1, hafd.operation_id(2, 1, 0), 1 )
+                    , ( 3, 3, 3, 1, hafd.operation_id(3, 1, 0), 1 )
         ) as pattern
     ) , 'Unexpected rows in the view';
 
