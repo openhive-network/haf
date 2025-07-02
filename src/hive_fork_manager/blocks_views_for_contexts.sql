@@ -81,81 +81,128 @@ AS
 $BODY$
 DECLARE
     __schema TEXT;
+    __is_forking BOOL;
 BEGIN
-    SELECT hc.schema INTO __schema
+    SELECT hc.schema, hc.is_forking INTO __schema, __is_forking;
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    EXECUTE format(
-        'CREATE OR REPLACE VIEW %s.blocks_view
-        AS
-        SELECT t.num,
-            t.hash,
-            t.prev,
-            t.created_at,
-            t.producer_account_id,
-            t.transaction_merkle_root,
-            t.extensions,
-            t.witness_signature,
-            t.signing_key,
-            t.hbd_interest_rate,
-            t.total_vesting_fund_hive,
-            t.total_vesting_shares,
-            t.total_reward_fund_hive,
-            t.virtual_supply,
-            t.current_supply,
-            t.current_hbd_supply,
-            t.dhf_interval_ledger
-        FROM %s.context_data_view c,
-        LATERAL ( SELECT hb.num,
-            hb.hash,
-            hb.prev,
-            hb.created_at,
-            hb.producer_account_id,
-            hb.transaction_merkle_root,
-            hb.extensions,
-            hb.witness_signature,
-            hb.signing_key,
-            hb.hbd_interest_rate,
-            hb.total_vesting_fund_hive,
-            hb.total_vesting_shares,
-            hb.total_reward_fund_hive,
-            hb.virtual_supply,
-            hb.current_supply,
-            hb.current_hbd_supply,
-            hb.dhf_interval_ledger
-           FROM hafd.blocks hb
-           WHERE hb.num <= c.min_block
-        UNION ALL
-         SELECT hbr.num,
-            hbr.hash,
-            hbr.prev,
-            hbr.created_at,
-            hbr.producer_account_id,
-            hbr.transaction_merkle_root,
-            hbr.extensions,
-            hbr.witness_signature,
-            hbr.signing_key,
-            hbr.hbd_interest_rate,
-            hbr.total_vesting_fund_hive,
-            hbr.total_vesting_shares,
-            hbr.total_reward_fund_hive,
-            hbr.virtual_supply,
-            hbr.current_supply,
-            hbr.current_hbd_supply,
-            hbr.dhf_interval_ledger
-           FROM hafd.blocks_reversible hbr
-           JOIN
-           (
-             SELECT rb.num, MAX(rb.fork_id) AS max_fork_id
-             FROM hafd.blocks_reversible rb
-             WHERE c.reversible_range AND rb.num > c.irreversible_block AND rb.fork_id <= c.fork_id AND rb.num <= c.current_block_num
-             GROUP BY rb.num
-           ) visible_blks ON visible_blks.num = hbr.num AND visible_blks.max_fork_id = hbr.fork_id
+    IF __is_forking THEN
+        EXECUTE format(
+            'CREATE OR REPLACE VIEW %s.blocks_view
+            AS
+            SELECT t.num,
+                t.hash,
+                t.prev,
+                t.created_at,
+                t.producer_account_id,
+                t.transaction_merkle_root,
+                t.extensions,
+                t.witness_signature,
+                t.signing_key,
+                t.hbd_interest_rate,
+                t.total_vesting_fund_hive,
+                t.total_vesting_shares,
+                t.total_reward_fund_hive,
+                t.virtual_supply,
+                t.current_supply,
+                t.current_hbd_supply,
+                t.dhf_interval_ledger
+            FROM %s.context_data_view c,
+            LATERAL ( SELECT hb.num,
+                hb.hash,
+                hb.prev,
+                hb.created_at,
+                hb.producer_account_id,
+                hb.transaction_merkle_root,
+                hb.extensions,
+                hb.witness_signature,
+                hb.signing_key,
+                hb.hbd_interest_rate,
+                hb.total_vesting_fund_hive,
+                hb.total_vesting_shares,
+                hb.total_reward_fund_hive,
+                hb.virtual_supply,
+                hb.current_supply,
+                hb.current_hbd_supply,
+                hb.dhf_interval_ledger
+               FROM hafd.blocks hb
+               WHERE hb.num <= c.min_block
+            UNION ALL
+             SELECT hbr.num,
+                hbr.hash,
+                hbr.prev,
+                hbr.created_at,
+                hbr.producer_account_id,
+                hbr.transaction_merkle_root,
+                hbr.extensions,
+                hbr.witness_signature,
+                hbr.signing_key,
+                hbr.hbd_interest_rate,
+                hbr.total_vesting_fund_hive,
+                hbr.total_vesting_shares,
+                hbr.total_reward_fund_hive,
+                hbr.virtual_supply,
+                hbr.current_supply,
+                hbr.current_hbd_supply,
+                hbr.dhf_interval_ledger
+               FROM hafd.blocks_reversible hbr
+               JOIN
+               (
+                 SELECT rb.num, MAX(rb.fork_id) AS max_fork_id
+                 FROM hafd.blocks_reversible rb
+                 WHERE c.reversible_range AND rb.num > c.irreversible_block AND rb.fork_id <= c.fork_id AND rb.num <= c.current_block_num
+                 GROUP BY rb.num
+               ) visible_blks ON visible_blks.num = hbr.num AND visible_blks.max_fork_id = hbr.fork_id
 
-        ) t;
-        ;', __schema, __schema
-    );
+            ) t;
+            ;', __schema, __schema
+        );
+    ELSE
+        EXECUTE format(
+            'CREATE OR REPLACE VIEW %s.blocks_view
+                AS
+                SELECT t.num,
+                    t.hash,
+                    t.prev,
+                    t.created_at,
+                    t.producer_account_id,
+                    t.transaction_merkle_root,
+                    t.extensions,
+                    t.witness_signature,
+                    t.signing_key,
+                    t.hbd_interest_rate,
+                    t.total_vesting_fund_hive,
+                    t.total_vesting_shares,
+                    t.total_reward_fund_hive,
+                    t.virtual_supply,
+                    t.current_supply,
+                    t.current_hbd_supply,
+                    t.dhf_interval_ledger
+                FROM %s.context_data_view c,
+                LATERAL ( SELECT hb.num,
+                    hb.hash,
+                    hb.prev,
+                    hb.created_at,
+                    hb.producer_account_id,
+                    hb.transaction_merkle_root,
+                    hb.extensions,
+                    hb.witness_signature,
+                    hb.signing_key,
+                    hb.hbd_interest_rate,
+                    hb.total_vesting_fund_hive,
+                    hb.total_vesting_shares,
+                    hb.total_reward_fund_hive,
+                    hb.virtual_supply,
+                    hb.current_supply,
+                    hb.current_hbd_supply,
+                    hb.dhf_interval_ledger
+                   FROM hafd.blocks hb
+                   WHERE hb.num <= c.min_block
+            ) t;
+            ;', __schema, __schema
+        );
+    END IF;
 
     PERFORM hive.adjust_view_ownership(_context_name, 'blocks_view');
 END;
