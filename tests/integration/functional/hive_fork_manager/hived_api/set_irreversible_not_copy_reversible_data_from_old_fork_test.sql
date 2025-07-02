@@ -48,7 +48,7 @@ BEGIN
     ;
 
     INSERT INTO hafd.account_operations_reversible
-    VALUES ( 1, 1, hafd.operation_id(2,1,0), 1 )
+    VALUES ( 1, 1, 1, hafd.operation_id(2,1,0), 1 )
     ;
 
     INSERT INTO hafd.transactions_multisig_reversible

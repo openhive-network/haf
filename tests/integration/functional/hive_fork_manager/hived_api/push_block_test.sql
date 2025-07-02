@@ -42,8 +42,8 @@ BEGIN
     __signatures2 = ( '\xBEEF', '\xBABE' );
     __account1 = ( 1, 'alice', 101 );
     __account2 = ( 2, 'bob', 101 );
-    __account_operation1 = ( 1, 1, hafd.operation_id(101,1,0) );
-    __account_operation2 = ( 2, 1, hafd.operation_id(101,2,0) );
+    __account_operation1 = ( 1, 1, 1, hafd.operation_id(101,1,0) );
+    __account_operation2 = ( 2, 1, 1, hafd.operation_id(101,2,0) );
     __applied_hardforks1 = (1, 101, 1);
     __applied_hardforks2 = (2, 101, 2);
     PERFORM hive.push_block(

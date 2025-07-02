@@ -91,31 +91,31 @@ BEGIN
          , (  1100, 'alice103', 10, 3 )
     ;
 
-    INSERT INTO hafd.account_operations(account_id, account_op_seq_no, operation_id)
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, operation_id)
     VALUES
-           ( 100, 1, hafd.operation_id(1, 1, 0) )
-         , ( 100, 2, hafd.operation_id(2, 1, 0) )
-         , ( 200, 1, hafd.operation_id(2, 1, 0) )
-         , ( 300, 1, hafd.operation_id(3, 1, 0) )
-         , ( 400, 1, hafd.operation_id(4, 1, 0) )
+           ( 100, 100, 1, hafd.operation_id(1, 1, 0) )
+         , ( 100, 100, 2, hafd.operation_id(2, 1, 0) )
+         , ( 200, 100, 1, hafd.operation_id(2, 1, 0) )
+         , ( 300, 100, 1, hafd.operation_id(3, 1, 0) )
+         , ( 400, 100, 1, hafd.operation_id(4, 1, 0) )
     ;
 
     INSERT INTO hafd.account_operations_reversible
     VALUES
-           ( 400, 1, hafd.operation_id(4,1,0), 1 )
-         , ( 500, 1, hafd.operation_id(5,1,0), 1 )
-         , ( 600, 1, hafd.operation_id(6,1,0), 1 )
-         , ( 700, 1, hafd.operation_id(7,1,0), 1 ) -- must be overriden by fork 2
-         , ( 800, 1, hafd.operation_id(7,1,1), 1 ) -- must be overriden by fork 2
-         , ( 900, 1, hafd.operation_id(7,1,2), 1 ) -- must be overriden by fork 2
-         , ( 700, 2, hafd.operation_id(7,1,0), 2 )
-         , ( 800, 2, hafd.operation_id(7,1,1), 2 ) -- will be abandoned since fork 3 doesn not have this account operation
-         , ( 900, 2, hafd.operation_id(8,1,0), 2 )
-         , ( 900, 3, hafd.operation_id(7,1,0), 2 )
-         , ( 1000, 2, hafd.operation_id(9,1,0), 2 )
-         , ( 900, 3, hafd.operation_id(9,1,0), 3 )
-         , ( 100, 3, hafd.operation_id(10,1,0), 3 )
-         , ( 1100, 3, hafd.operation_id(10,1,0), 3 )
+           ( 400, 400, 1, hafd.operation_id(4,1,0), 1 )
+         , ( 500, 500, 1, hafd.operation_id(5,1,0), 1 )
+         , ( 600, 600, 1, hafd.operation_id(6,1,0), 1 )
+         , ( 700, 700, 1, hafd.operation_id(7,1,0), 1 ) -- must be overriden by fork 2
+         , ( 800, 800, 1, hafd.operation_id(7,1,1), 1 ) -- must be overriden by fork 2
+         , ( 900, 900, 1, hafd.operation_id(7,1,2), 1 ) -- must be overriden by fork 2
+         , ( 700, 700, 2, hafd.operation_id(7,1,0), 2 )
+         , ( 800, 800, 2, hafd.operation_id(7,1,1), 2 ) -- will be abandoned since fork 3 doesn not have this account operation
+         , ( 900, 900, 2, hafd.operation_id(8,1,0), 2 )
+         , ( 900, 900, 3, hafd.operation_id(7,1,0), 2 )
+         , ( 1000, 1000, 2, hafd.operation_id(9,1,0), 2 )
+         , ( 900, 900, 3, hafd.operation_id(9,1,0), 3 )
+         , ( 100, 100, 3, hafd.operation_id(10,1,0), 3 )
+         , ( 1100, 1100, 3, hafd.operation_id(10,1,0), 3 )
     ;
 
     UPDATE hafd.hive_state SET consistent_block = 4;
@@ -131,22 +131,22 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='account_operations_view' ), 'No account operations view';
 
     ASSERT NOT EXISTS (
-        SELECT aov.block_num, aov.account_id, aov.account_op_seq_no, aov.operation_id, aov.op_type_id 
+        SELECT aov.block_num, aov.account_id, aov.transacting_account_id, aov.account_op_seq_no, aov.operation_id, aov.op_type_id 
         FROM hive.account_operations_view aov
         EXCEPT SELECT * FROM ( VALUES
-              ( 1,  100, 1, hafd.operation_id(1, 1, 0), 1 )
-            , ( 2,  100, 2, hafd.operation_id(2, 1, 0), 1 )
-            , ( 2,  200, 1, hafd.operation_id(2, 1, 0), 1 )
-            , ( 3,  300, 1, hafd.operation_id(3, 1, 0), 1 )
-            , ( 4,  400, 1, hafd.operation_id(4, 1, 0), 1 )
-            , ( 5,  500, 1, hafd.operation_id(5, 1, 0), 1 )
-            , ( 6,  600, 1, hafd.operation_id(6, 1, 0), 1 )
-            , ( 7,  700, 2, hafd.operation_id(7, 1, 0), 1 )
-            , ( 7,  800, 2, hafd.operation_id(7, 1, 1), 1 )
-            , ( 7,  900, 3, hafd.operation_id(7, 1, 0), 1 )
-            , ( 9,  900, 3, hafd.operation_id(9, 1, 0), 1 )
-            , (10,  100, 3, hafd.operation_id(10, 1, 0), 1 )
-            , (10, 1100, 3, hafd.operation_id(10, 1, 0), 1 )
+              ( 1,  100, 100, 1, hafd.operation_id(1, 1, 0), 1 )
+            , ( 2,  100, 100, 2, hafd.operation_id(2, 1, 0), 1 )
+            , ( 2,  200, 200, 1, hafd.operation_id(2, 1, 0), 1 )
+            , ( 3,  300, 300, 1, hafd.operation_id(3, 1, 0), 1 )
+            , ( 4,  400, 400, 1, hafd.operation_id(4, 1, 0), 1 )
+            , ( 5,  500, 500, 1, hafd.operation_id(5, 1, 0), 1 )
+            , ( 6,  600, 600, 1, hafd.operation_id(6, 1, 0), 1 )
+            , ( 7,  700, 700, 2, hafd.operation_id(7, 1, 0), 1 )
+            , ( 7,  800, 800, 2, hafd.operation_id(7, 1, 1), 1 )
+            , ( 7,  900, 900, 3, hafd.operation_id(7, 1, 0), 1 )
+            , ( 9,  900, 900, 3, hafd.operation_id(9, 1, 0), 1 )
+            , (10,  100, 100, 3, hafd.operation_id(10, 1, 0), 1 )
+            , (10, 1100, 1100, 3, hafd.operation_id(10, 1, 0), 1 )
         ) as pattern
     ) , 'Unexpected rows in the view';
 
@@ -155,14 +155,14 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='irreversible_account_operations_view' ), 'No account operations view';
 
     ASSERT NOT EXISTS (
-        SELECT aov.block_num, aov.account_id, aov.account_op_seq_no, aov.operation_id, aov.op_type_id
+        SELECT aov.block_num, aov.account_id, aov.transacting_account_id, aov.account_op_seq_no, aov.operation_id, aov.op_type_id
         FROM hive.irreversible_account_operations_view aov
         EXCEPT SELECT * FROM ( VALUES
-                                  ( 1, 100, 1, hafd.operation_id(1, 1, 0), 1 )
-                                , ( 2, 100, 2, hafd.operation_id(2, 1, 0), 1 )
-                                , ( 2, 200, 1, hafd.operation_id(2, 1, 0), 1 )
-                                , ( 3, 300, 1, hafd.operation_id(3, 1, 0), 1 )
-                                , ( 4, 400, 1, hafd.operation_id(4, 1, 0), 1 )
+                                  ( 1, 100, 100, 1, hafd.operation_id(1, 1, 0), 1 )
+                                , ( 2, 100, 100, 2, hafd.operation_id(2, 1, 0), 1 )
+                                , ( 2, 200, 200, 1, hafd.operation_id(2, 1, 0), 1 )
+                                , ( 3, 300, 300, 1, hafd.operation_id(3, 1, 0), 1 )
+                                , ( 4, 400, 400, 1, hafd.operation_id(4, 1, 0), 1 )
                              ) as pattern
     ) , 'Unexpected rows in the irreversible view';
 
