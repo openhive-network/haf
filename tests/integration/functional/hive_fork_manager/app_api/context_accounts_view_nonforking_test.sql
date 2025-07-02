@@ -73,6 +73,13 @@ $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='accounts_view' ), 'No context accounts view';
 
+    ASSERT NOT EXISTS (SELECT definition
+                       FROM pg_views
+                       WHERE schemaname = 'a'
+                         AND viewname = 'accounts_view'
+                         AND definition ILIKE '%hafd.accounts_reversible%'
+    ), 'The view uses reversible data';
+
     ASSERT NOT EXISTS (
         SELECT * FROM a.accounts_view
         EXCEPT SELECT * FROM ( VALUES
