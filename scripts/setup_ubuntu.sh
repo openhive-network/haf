@@ -42,36 +42,10 @@ install_ai_packages() {
     curl \
     python3-bs4 python3-lxml
 
-
-
-  # required by Hivesense as pgai
-  pushd /tmp
-    git clone https://github.com/timescale/pgai.git --branch extension-0.8.0
-    pushd pgai
-      python3.12 -m venv venv/
-      # shellcheck disable=SC1091
-      . venv/bin/activate
-      python3.12 -m pip install --upgrade pip
-      projects/extension/build.py install
-      deactivate
-    popd
-    rm -r pgai
-  popd
-
   apt-get clean
   rm -rf /var/lib/apt/lists/*
   rm -rf /root/.cache ~/.cache /tmp/* /var/tmp/*
   find / -type d -name '__pycache__' -exec rm -rf {} +
-  rm -rf  /usr/local/lib/pgai/0.8.0/google
-  rm -rf  /usr/local/lib/pgai/0.8.0/litellm
-
-  rm -rf /usr/local/lib/pgai/0.4.0
-  rm -rf /usr/local/lib/pgai/0.4.1
-  rm -rf /usr/local/lib/pgai/0.5.0
-  rm -rf /usr/local/lib/pgai/0.6.0
-  rm -rf /usr/local/lib/pgai/0.7.0
-  rm -rf /usr/local/lib/pgai/0.8.0/pyarrow
-
 
   pip3 install --break-system-packages tokenizers
 
@@ -93,7 +67,6 @@ EOF
   python3 /tmp/download-tokenizer-files.py
   rm /tmp/download-tokenizer-files.py
   chown -R hived.users /home/hived/tokenizer-files
-
 }
 
 install_all_dev_packages() {

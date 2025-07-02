@@ -3,7 +3,7 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=ubuntu24.04-6
+ARG CI_IMAGE_TAG=ubuntu24.04-7
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
@@ -126,7 +126,7 @@ RUN <<-EOF
   sudo chown -R hived "${INSTALLATION_DIR}/"*
 EOF
 
-FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-6 AS instance
+FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-7 AS instance
 
 ARG BUILD_HIVE_TESTNET=OFF
 ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
@@ -140,7 +140,7 @@ ENV HIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}
 ARG HIVE_LINT=OFF
 ENV HIVE_LINT=${HIVE_LINT}
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-6}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-7}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
@@ -213,10 +213,6 @@ COPY --from=build \
 COPY --from=build \
   /home/haf_admin/build/lib/libhfm-* \
   /usr/lib/postgresql/${POSTGRES_VERSION}/lib
-
-COPY --from=build \
-    /usr/local/lib/pgai \
-    /usr/local/lib/pgai
 
 # set a variable telling the entrypoint not to try to install the extension from source, we just did it above
 ENV HAF_INSTALL_EXTENSION=no
