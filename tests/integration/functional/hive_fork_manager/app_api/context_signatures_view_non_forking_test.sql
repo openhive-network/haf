@@ -101,6 +101,13 @@ $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='transactions_multisig_view' ), 'No context transactions multisig view';
 
+    ASSERT NOT EXISTS (SELECT definition
+                       FROM pg_views
+                       WHERE schemaname = 'a'
+                         AND viewname = 'transactions_multisig_view'
+                         AND definition ILIKE '%hafd.transactions_multisig_reversible%'
+    ), 'The view uses reversible data';
+
     ASSERT NOT EXISTS (
         SELECT * FROM a.transactions_multisig_view
         EXCEPT SELECT * FROM ( VALUES

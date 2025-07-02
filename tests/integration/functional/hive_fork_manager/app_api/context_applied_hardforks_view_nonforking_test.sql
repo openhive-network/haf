@@ -110,6 +110,13 @@ $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='applied_hardforks_view' ), 'No context applied_hardfroks view';
 
+    ASSERT NOT EXISTS (SELECT definition
+                       FROM pg_views
+                       WHERE schemaname = 'a'
+                       AND viewname = 'applied_hardforks'
+                       AND definition ILIKE '%hafd.applied_hardforks_reversible%'
+    ), 'The view uses reversible data';
+
     ASSERT NOT EXISTS (
         SELECT * FROM a.applied_hardforks_view
         EXCEPT SELECT * FROM ( VALUES
