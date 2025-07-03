@@ -74,6 +74,7 @@ namespace hive::plugins::sql_serializer {
       fc::optional<int64_t> _creation_operation_id;
 
       flat_set<hive::protocol::account_name_type> _impacted;
+      hive::protocol::account_name_type _owner_impacted;
       bool _psql_dump_account_operations;
     };
 

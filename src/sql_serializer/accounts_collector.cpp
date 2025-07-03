@@ -14,7 +14,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _processed_operation_type_id = static_cast<int32_t>(op.which());
     _block_num = block_num;
     _impacted.clear();
-    hive::app::operation_get_impacted_accounts(op, _impacted);
+    hive::app::operation_get_owner_impacted_accounts(op, _impacted, _owner_impacted);
 
     on_collect( op, _impacted );
 
@@ -113,11 +113,13 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
     const account_ops_seq_object* op_seq_obj = _chain_db.find< account_ops_seq_object, hive::chain::by_id >( account_id );
 
+    //_owner_impacted
+
     if( op_seq_obj == nullptr )
       return;
 
     if( _psql_dump_account_operations && _allow_add_operation )
-      _cached_data.account_operations.emplace_back(_block_num, operation_id, account_id, op_seq_obj->operation_count, operation_type_id);
+      _cached_data.account_operations.emplace_back(_block_num, operation_id, account_id, /*_owner_impacted,*/ op_seq_obj->operation_count, operation_type_id);
 
     _chain_db.modify( *op_seq_obj, [&]( account_ops_seq_object& o)
     {
