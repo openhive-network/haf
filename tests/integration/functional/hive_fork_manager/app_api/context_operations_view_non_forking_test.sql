@@ -105,6 +105,13 @@ $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='operations_view' ), 'No context operations view';
 
+    ASSERT NOT EXISTS (SELECT definition
+                       FROM pg_views
+                       WHERE schemaname = 'a'
+                         AND viewname = 'operations_view'
+                         AND definition ILIKE '%hafd.operations_reversible%'
+    ), 'The view uses reversible data';
+
     ASSERT NOT EXISTS (
         SELECT o.id, o.trx_in_block, o.op_pos, o.body_binary, o.body FROM a.operations_view o
         EXCEPT SELECT * FROM ( VALUES

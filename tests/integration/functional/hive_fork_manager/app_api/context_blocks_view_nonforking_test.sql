@@ -51,6 +51,13 @@ $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='blocks_view' ), 'No context blocks view';
 
+    ASSERT NOT EXISTS (SELECT definition
+                       FROM pg_views
+                       WHERE schemaname = 'a'
+                         AND viewname = 'blocks_view'
+                         AND definition ILIKE '%hafd.blocks_reversible%'
+    ), 'The view uses reversible data';
+
     ASSERT NOT EXISTS (
         SELECT * FROM a.blocks_view
         EXCEPT SELECT * FROM ( VALUES
