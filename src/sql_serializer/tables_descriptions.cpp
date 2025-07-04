@@ -70,14 +70,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::TABLE[] = "hafd.account_operations";
-  template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::COLS[] = "account_id, account_op_seq_no, operation_id";
+  template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, operation_id";
 
   template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::TABLE[] = "hafd.account_operations";
-  template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::COLS[] = "account_id, account_op_seq_no, operation_id";
+  template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, operation_id";
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::account_operation_data_t& account_operation)
   {
-    stream.write_values(account_operation.account_id, account_operation.operation_seq_no, account_operation.operation_id);
+    stream.write_values(account_operation.account_id, account_operation.transacting_account_id, account_operation.operation_seq_no, account_operation.operation_id);
   }
 
 

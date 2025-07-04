@@ -50,6 +50,7 @@ class AccountOperations(HiveDataBase):
     __tablename__ = "account_operations"
 
     account_id = Column(Integer, primary_key=True)
+    transacting_account_id = Column(Integer, primary_key=True)
     account_op_seq_no = Column(Integer, primary_key=True)
     operation_id = Column(BigInteger)
 
@@ -58,6 +59,7 @@ class AccountOperationsReversible(HiveDataBase):
     __tablename__ = "account_operations_reversible"
 
     account_id = Column(Integer, primary_key=True)
+    transacting_account_id = Column(Integer, primary_key=True)
     account_op_seq_no = Column(Integer, primary_key=True)
     operation_id = Column(BigInteger)
     fork_id = Column(Integer, primary_key=True)

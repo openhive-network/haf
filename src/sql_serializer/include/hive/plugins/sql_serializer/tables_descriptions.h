@@ -131,7 +131,7 @@ namespace hive::plugins::sql_serializer {
       std::string operator()(typename container_t::const_reference data) const
       {
         return std::to_string(data.account_id) + ',' + std::to_string(data.operation_seq_no) + ',' +
-        std::to_string(data.operation_id);
+        std::to_string(data.operation_id) + ',' + std::to_string(data.transacting_account_id);
       }
       };
     };
