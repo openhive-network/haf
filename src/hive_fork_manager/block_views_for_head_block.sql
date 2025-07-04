@@ -1,6 +1,7 @@
 CREATE OR REPLACE VIEW hive.account_operations_view AS
  (
   SELECT ha.account_id,
+         ha.transacting_account_id,
          ha.account_op_seq_no,
          ha.operation_id,
          hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id,
@@ -20,6 +21,7 @@ consistent_block AS
   GROUP BY hbr.num
 )
 SELECT har.account_id,
+       har.transacting_account_id,
        har.account_op_seq_no,
        har.operation_id,
        hafd.operation_id_to_type_id( har.operation_id ) as op_type_id,
@@ -321,6 +323,7 @@ JOIN hafd.applied_hardforks_reversible hjr ON forks.max_fork_id = hjr.fork_id AN
 CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS
     SELECT
        ha.account_id,
+       ha.transacting_account_id,
        ha.account_op_seq_no,
        ha.operation_id,
        hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id,
