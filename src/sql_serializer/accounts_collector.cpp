@@ -14,6 +14,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _processed_operation_type_id = static_cast<int32_t>(op.which());
     _block_num = block_num;
     _impacted.clear();
+    _owner_impacted.clear();
     hive::app::operation_get_owner_impacted_accounts(op, _impacted, _owner_impacted);
 
     on_collect( op, _impacted );
