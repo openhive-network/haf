@@ -51,8 +51,31 @@ namespace hive::plugins::sql_serializer {
     {
       if ( !accounts_collector::is_op_accepted() )
         return;
+
+      auto owner_it = _owner_impacted.begin();
+      hive::protocol::account_name_type last_owner_name;
+      bool has_owner = false;
+
       for( const auto& account_name : _impacted )
-        on_new_operation(account_name, _owner_impacted, _processed_operation_id, _processed_operation_type_id);
+      {
+        hive::protocol::account_name_type owner_name;
+        if(owner_it != _owner_impacted.end())
+        {
+          owner_name = *owner_it++;
+          last_owner_name = owner_name;
+          has_owner = true;
+        }
+        else if(has_owner)
+        {
+          owner_name = last_owner_name;
+        }
+        else
+        {
+          owner_name = account_name; // fallback if no owner at all
+        }
+
+        on_new_operation(account_name, owner_name, _processed_operation_id, _processed_operation_type_id);
+      }
     }
 
     private:
@@ -74,7 +97,7 @@ namespace hive::plugins::sql_serializer {
       fc::optional<int64_t> _creation_operation_id;
 
       flat_set<hive::protocol::account_name_type> _impacted;
-      hive::protocol::account_name_type _owner_impacted;
+      flat_set<hive::protocol::account_name_type> _owner_impacted;
       bool _psql_dump_account_operations;
     };
 
