@@ -127,6 +127,7 @@ CREATE STATISTICS IF NOT EXISTS accounts_id_name_blocknum_dependency_stats (depe
 CREATE TABLE IF NOT EXISTS hafd.account_operations
 (
       account_id INTEGER NOT NULL --- Identifier of account involved in given operation.
+    , transacting_account_id INTEGER NOT NULL --- Identifier of account that performed the operation.
     , account_op_seq_no INTEGER NOT NULL --- Operation sequence number specific to given account.
     , operation_id BIGINT NOT NULL --- Id of operation held in hive_opreations table.
     , CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no ) --try account,op_type,account_op_seq_no?
@@ -135,6 +136,7 @@ CREATE TABLE IF NOT EXISTS hafd.account_operations
 );
 ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_1 FOREIGN KEY (account_id) REFERENCES hafd.accounts(id) NOT VALID;
 ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hafd.operations(id) NOT VALID;
+ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_3 FOREIGN KEY (transacting_account_id) REFERENCES hafd.accounts(id) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations', '');
 
 

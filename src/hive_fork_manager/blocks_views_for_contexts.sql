@@ -1023,6 +1023,7 @@ EXECUTE format(
         SELECT
            hafd.operation_id_to_block_num( ha.operation_id ) as block_num,
            ha.account_id,
+           ha.transacting_account_id,
            ha.account_op_seq_no,
            ha.operation_id,
            hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id
