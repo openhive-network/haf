@@ -944,6 +944,7 @@ BEGIN
                 SELECT
                    hafd.operation_id_to_block_num( t.operation_id ) as block_num,
                    t.account_id,
+                   t.transacting_account_id,
                    t.account_op_seq_no,
                    t.operation_id,
                    hafd.operation_id_to_type_id( t.operation_id ) as op_type_id
@@ -952,6 +953,7 @@ BEGIN
                 (
                   SELECT
                          ha.account_id,
+                         ha.transacting_account_id,
                          ha.account_op_seq_no,
                          ha.operation_id
                         FROM hafd.account_operations ha
@@ -959,10 +961,12 @@ BEGIN
                         UNION ALL
                         SELECT
                             reversible.account_id,
+                            reversible.transacting_account_id,
                             reversible.account_op_seq_no,
                             reversible.operation_id
                         FROM ( SELECT
                             har.account_id,
+                            har.transacting_account_id,
                             har.account_op_seq_no,
                             har.operation_id,
                             har.fork_id
@@ -984,6 +988,7 @@ BEGIN
                 SELECT
                    hafd.operation_id_to_block_num( t.operation_id ) as block_num,
                    t.account_id,
+                   t.transacting_account_id,
                    t.account_op_seq_no,
                    t.operation_id,
                    hafd.operation_id_to_type_id( t.operation_id ) as op_type_id
@@ -992,6 +997,7 @@ BEGIN
                 (
                   SELECT
                          ha.account_id,
+                         ha.transacting_account_id,
                          ha.account_op_seq_no,
                          ha.operation_id
                         FROM hafd.account_operations ha

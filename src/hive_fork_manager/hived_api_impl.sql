@@ -212,7 +212,7 @@ BEGIN
     INSERT INTO hafd.account_operations
     SELECT
            haor.account_id
-         , haor.transacting_account_id,
+         , haor.transacting_account_id
          , haor.account_op_seq_no
          , haor.operation_id
     FROM
