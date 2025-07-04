@@ -95,9 +95,9 @@ BEGIN
     VALUES
            ( 100, 100, 1, hafd.operation_id(1, 1, 0) )
          , ( 100, 100, 2, hafd.operation_id(2, 1, 0) )
-         , ( 200, 100, 1, hafd.operation_id(2, 1, 0) )
-         , ( 300, 100, 1, hafd.operation_id(3, 1, 0) )
-         , ( 400, 100, 1, hafd.operation_id(4, 1, 0) )
+         , ( 200, 200, 1, hafd.operation_id(2, 1, 0) )
+         , ( 300, 300, 1, hafd.operation_id(3, 1, 0) )
+         , ( 400, 400, 1, hafd.operation_id(4, 1, 0) )
     ;
 
     INSERT INTO hafd.account_operations_reversible
