@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS hafd.account_operations
     , transacting_account_id INTEGER NOT NULL --- Identifier of account that performed the operation.
     , account_op_seq_no INTEGER NOT NULL --- Operation sequence number specific to given account.
     , operation_id BIGINT NOT NULL --- Id of operation held in hive_opreations table.
-    , CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, transacting_account_id, account_op_seq_no ) -- try transacting_account_id in this index, if breaks haf_block_explorer's query
+    , CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no, transacting_account_id ) -- try transacting_account_id in this index, if breaks haf_block_explorer's query
     -- Hopefully not needed anymore, let's find out
     --, CONSTRAINT hive_account_operations_uq2 UNIQUE ( account,operation_id )
 );
@@ -157,7 +157,7 @@ CLUSTER hafd.account_operations using hive_account_operations_uq1;
 
 --This index is probably only needed for block_explorer queries right now, but maybe useful for other apps,
 --so decided to add here rather than as part of hafbe as it isn't huge.
-CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations( account_id, transacting_account_id, hafd.operation_id_to_type_id(operation_id ) );
+CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations( account_id, hafd.operation_id_to_type_id(operation_id ), transacting_account_id );
 
 CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hafd.accounts USING btree (block_num);
 
