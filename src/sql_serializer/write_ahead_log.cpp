@@ -185,6 +185,16 @@ namespace hive::plugins::sql_serializer {
     boost::filesystem::create_directories(_wal_directory);
     FC_ASSERT(boost::filesystem::is_directory(_wal_directory), "${_wal_directory} must be a directory", (_wal_directory));
 
+    try {
+      bfs::path test_file = _wal_directory / ".write_test";
+      std::ofstream test_stream(test_file);
+      FC_ASSERT(test_stream.good(), "Directory ${_wal_directory} is not writeable", (_wal_directory));
+      test_stream.close();
+      boost::filesystem::remove(test_file);
+    } catch (const std::exception& e) {
+      FC_THROW("Directory ${_wal_directory} is not writeable: ${error}", (_wal_directory)("error", e.what()));
+    }
+
     // is_wal_file() is a simple check, just to avoid screwing up if you accidentally drop a log file in the wal directory.
     // it could (maybe should) be more comprehensive
     auto is_wal_file = [](std::string_view filename) { return boost::algorithm::ends_with(filename, ".wal"); };
