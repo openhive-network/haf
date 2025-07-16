@@ -7,7 +7,6 @@
 
 namespace {
   void timeoutHandler() {
-    LOG_WARNING( "The query was terminated due to a timeout being reached." );
     StatementCancelHandler(0);
   }
 } // namespace
