@@ -129,8 +129,10 @@ namespace hive::plugins::sql_serializer {
       using data2_sql_tuple_base::data2_sql_tuple_base;
 
       std::string operator()(typename container_t::const_reference data) const
-      {
-        return std::to_string(data.account_id) + ',' + std::to_string(data.transacting_account_id) + ',' + 
+      {      
+        std::string transacting_account_id_str = data.transacting_account_id.valid() ? std::to_string(*data.transacting_account_id) : "NULL";
+
+        return std::to_string(data.account_id) + ',' + transacting_account_id_str + ',' + 
         std::to_string(data.operation_seq_no) + ',' + std::to_string(data.operation_id);
       }
       };

@@ -84,7 +84,7 @@ SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations_reversible',
 ALTER TABLE hafd.account_operations_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
     ADD CONSTRAINT fk_1_hive_account_operations_reversible FOREIGN KEY ( operation_id, fork_id ) REFERENCES hafd.operations_reversible( id, fork_id ),
-    ADD CONSTRAINT pk_hive_account_operations_reversible PRIMARY KEY( account_id, account_op_seq_no, transacting_account_id, fork_id )
+    ADD CONSTRAINT pk_hive_account_operations_reversible PRIMARY KEY( account_id, account_op_seq_no, fork_id )
 ;
 
 CREATE TABLE IF NOT EXISTS hafd.applied_hardforks_reversible(

@@ -92,8 +92,8 @@ BEGIN
     ), 'No hafd.operation index (block_num, id)';
 
     ASSERT EXISTS(
-        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.account_operations' AND command LIKE 'ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE (account_id, account_op_seq_no, transacting_account_id)'
-    ), 'No hafd.account_operations unique (account_id, account_op_seq_no, transacting_account_id)';
+        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.account_operations' AND command LIKE 'CREATE UNIQUE INDEX hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations USING btree (account_id, account_op_seq_no DESC, hafd.operation_id_to_type_id(operation_id))'
+    ), 'No hafd.account_operations unique (account_id, transacting_account_id, op_type_id)';
 
 END;
 $BODY$

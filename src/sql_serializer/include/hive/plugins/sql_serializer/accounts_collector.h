@@ -53,28 +53,25 @@ namespace hive::plugins::sql_serializer {
         return;
 
       auto owner_it = _owner_impacted.begin();
-      hive::protocol::account_name_type last_owner_name;
-      bool has_owner = false;
+      fc::optional<hive::protocol::account_name_type> _last_owner;
 
       for( const auto& account_name : _impacted )
       {
-        hive::protocol::account_name_type owner_name;
-        if(owner_it != _owner_impacted.end())
+        if( !_last_owner && owner_it == _owner_impacted.end() )//for virtual ops
         {
-          owner_name = *owner_it++;
-          last_owner_name = owner_name;
-          has_owner = true;
-        }
-        else if(has_owner)
-        {
-          owner_name = last_owner_name;
+          on_new_operation(account_name, fc::optional<hive::protocol::account_name_type>(), _processed_operation_id, _processed_operation_type_id);
         }
         else
         {
-          owner_name = account_name; // fallback if no owner at all
+          if( owner_it == _owner_impacted.end() )
+            on_new_operation(account_name, _last_owner, _processed_operation_id, _processed_operation_type_id);  
+          else
+          {
+            on_new_operation(account_name, *owner_it, _processed_operation_id, _processed_operation_type_id);  
+            _last_owner = *owner_it;
+          }
+          ++owner_it;
         }
-
-        on_new_operation(account_name, owner_name, _processed_operation_id, _processed_operation_type_id);
       }
     }
 
@@ -83,7 +80,7 @@ namespace hive::plugins::sql_serializer {
 
       void on_new_account(const hive::protocol::account_name_type& account_name);
 
-      void on_new_operation(const hive::protocol::account_name_type& account_name, const hive::protocol::account_name_type& account_owner_name, int64_t operation_id, int32_t operation_type_id, bool is_current_operation = true);
+      void on_new_operation(const hive::protocol::account_name_type& account_name, const fc::optional<hive::protocol::account_name_type>& account_owner_name, int64_t operation_id, int32_t operation_type_id, bool is_current_operation = true);
 
     private:
       hive::chain::database& _chain_db;

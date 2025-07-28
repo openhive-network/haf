@@ -127,16 +127,21 @@ CREATE STATISTICS IF NOT EXISTS accounts_id_name_blocknum_dependency_stats (depe
 CREATE TABLE IF NOT EXISTS hafd.account_operations
 (
       account_id INTEGER NOT NULL --- Identifier of account involved in given operation.
-    , transacting_account_id INTEGER NOT NULL --- Identifier of account that performed the operation.
+    , transacting_account_id INTEGER --- Identifier of account that performed the operation.
     , account_op_seq_no INTEGER NOT NULL --- Operation sequence number specific to given account.
     , operation_id BIGINT NOT NULL --- Id of operation held in hive_opreations table.
-    , CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no, transacting_account_id ) -- try transacting_account_id in this index, if breaks haf_block_explorer's query
+    --, CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no ) --replaced with unique index
     -- Hopefully not needed anymore, let's find out
     --, CONSTRAINT hive_account_operations_uq2 UNIQUE ( account,operation_id )
 );
+
 ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_1 FOREIGN KEY (account_id) REFERENCES hafd.accounts(id) NOT VALID;
 ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hafd.operations(id) NOT VALID;
-ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_3 FOREIGN KEY (transacting_account_id) REFERENCES hafd.accounts(id) NOT VALID;
+--transacting_account_id can be NULL, so we can't add a foreign key constraint for it
+--ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_3 FOREIGN KEY (transacting_account_id) REFERENCES hafd.accounts(id) NOT VALID;
+
+-- To create a unique constraint on (account_id, account_op_seq_no, hafd.operation_id_to_type_id(operation_id))
+-- we need to create an index first, then add the constraint.
 SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations', '');
 
 
@@ -147,17 +152,21 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hafd.
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations USING btree( hafd.operation_id_to_block_num(id), id);
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
 CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (hafd.operation_id_to_type_id(id), hafd.operation_id_to_block_num(id));
+CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations (account_id, account_op_seq_no DESC, hafd.operation_id_to_type_id(operation_id));
 
 --Clustering to speedup get_account_history queries (returns ordered set of operations for a specific account)
 --Clustering takes 2 hours on a fast system with 4 maintenance works
 --Clustering is actually done by hived, and the line below could technically be removed.
 --Eventually we need functions on haf side to perform the clustering and make it part
 --of adding indexes to the account_operations table to allow for more parallelism.
-CLUSTER hafd.account_operations using hive_account_operations_uq1;
+CLUSTER hafd.account_operations using hive_account_operations_account_id_op_type_id_idx;
 
 --This index is probably only needed for block_explorer queries right now, but maybe useful for other apps,
 --so decided to add here rather than as part of hafbe as it isn't huge.
-CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations( account_id, hafd.operation_id_to_type_id(operation_id ), transacting_account_id );
+--EDIT: This index will be used specifically by the account history in hivemind and hafah
+--transacting_account_id is needed to filter out operations performed by muted accounts
+CREATE INDEX IF NOT EXISTS hive_account_operations_trx_account_id_op_type_id_idx ON hafd.account_operations( account_id, transacting_account_id, hafd.operation_id_to_type_id(operation_id))
+WHERE transacting_account_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hafd.accounts USING btree (block_num);
 
