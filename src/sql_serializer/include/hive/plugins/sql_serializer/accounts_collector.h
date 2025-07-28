@@ -34,6 +34,8 @@ namespace hive::plugins::sql_serializer {
 
     void collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
 
+    void operator()(const hive::protocol::recover_account_operation& op);
+
     void operator()(const hive::protocol::account_create_operation& op);
 
     void operator()(const hive::protocol::account_create_with_delegation_operation& op);

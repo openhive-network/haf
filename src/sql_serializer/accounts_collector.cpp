@@ -32,6 +32,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     op.visit(*this);
   }
 
+  void accounts_collector::operator()(const hive::protocol::recover_account_operation& op)
+  {
+    if ( !accounts_collector::is_op_accepted() )
+      return;
+
+    on_new_operation(op.account_to_recover, op.account_to_recover, _processed_operation_id, _processed_operation_type_id);  
+  }
+
   void accounts_collector::operator()(const hive::protocol::account_create_operation& op)
   {
     fc::optional<hive::protocol::account_name_type> impacted_account = op.creator;
