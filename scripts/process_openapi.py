@@ -11,12 +11,38 @@ from deepmerge import always_merger
 from jsonpointer import resolve_pointer
 
 collected_openapi_fragments = {}
+all_openapi_fragments = {}  # Includes internal endpoints for rewrite rules
 
 def merge_openapi_fragment(new_fragment):
-    global collected_openapi_fragments
+    global collected_openapi_fragments, all_openapi_fragments
     # sys.stdout.write('Before:')
     # sys.stdout.write(yaml.dump(collected_openapi_fragments, Dumper=yaml.Dumper))
-    collected_openapi_fragments = always_merger.merge(collected_openapi_fragments, new_fragment)
+    
+    # Always merge to all_openapi_fragments for rewrite rules
+    all_openapi_fragments = always_merger.merge(all_openapi_fragments, new_fragment)
+    
+    # Check if this is a path fragment with x-internal flag
+    filtered_fragment = new_fragment.copy()
+    if 'paths' in filtered_fragment:
+        filtered_paths = {}
+        for path, methods in filtered_fragment['paths'].items():
+            filtered_methods = {}
+            for method, method_data in methods.items():
+                # Skip internal endpoints in the public API spec
+                if not method_data.get('x-internal', False):
+                    filtered_methods[method] = method_data
+            if filtered_methods:
+                filtered_paths[path] = filtered_methods
+        if filtered_paths:
+            filtered_fragment['paths'] = filtered_paths
+        else:
+            # If all paths were internal, don't add the fragment at all
+            if len(filtered_fragment) == 1:  # Only 'paths' key
+                return
+            else:
+                del filtered_fragment['paths']
+    
+    collected_openapi_fragments = always_merger.merge(collected_openapi_fragments, filtered_fragment)
     # sys.stdout.write('After:')
     # sys.stdout.write(yaml.dump(collected_openapi_fragments, Dumper=yaml.Dumper))
 
@@ -384,7 +410,8 @@ def dump_openapi_spec(sql_output):
     sql_output.write('-- openapi-generated-code-end\n')
 
 def generate_rewrite_rules(rewrite_rules_file, use_home_rewrite=False):
-    if 'paths' in collected_openapi_fragments:
+    # Use all_openapi_fragments for rewrite rules (includes internal endpoints)
+    if 'paths' in all_openapi_fragments:
         with open(rewrite_rules_file, 'w') as rewrite_rules_file:
             # generate default rules that are always the same
 
@@ -399,7 +426,7 @@ def generate_rewrite_rules(rewrite_rules_file, use_home_rewrite=False):
                 rewrite_rules_file.write(f'# endpoint for openapi spec itself\n')
                 rewrite_rules_file.write(f'rewrite ^/$ / break;\n\n')
 
-            for path, methods_for_path in collected_openapi_fragments['paths'].items():
+            for path, methods_for_path in all_openapi_fragments['paths'].items():
                 for method, method_data in methods_for_path.items():
                     path_parts = path.split('/')
                     # paths in openapi spec will start with / and then the name of the API, like: GET /hafbe/witnesses
@@ -441,7 +468,9 @@ def generate_rewrite_rules(rewrite_rules_file, use_home_rewrite=False):
                         else:  # No existing query params
                             rewrite_to += '?path-filter=$path_filters'
 
-                    rewrite_rules_file.write(f'# endpoint for {method} {path}\n')
+                    # Add comment indicating if endpoint is internal
+                    internal_comment = ' (internal)' if method_data.get('x-internal', False) else ''
+                    rewrite_rules_file.write(f'# endpoint for {method} {path}{internal_comment}\n')
                     rewrite_rules_file.write(f'rewrite {rewrite_from} {rewrite_to} break;\n\n')
 
 def process_sql_file(sql_input, sql_output):
