@@ -3,7 +3,7 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=ubuntu24.04-7
+ARG CI_IMAGE_TAG=ubuntu24.04-8
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
@@ -24,7 +24,7 @@ COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 RUN bash -x ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived" && rm -rf /var/lib/apt/lists/*
 # install postgres
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg curl ca-certificates && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3-pip postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 \
@@ -33,7 +33,12 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3-bs4 python3-lxml && \
     # Install Tokenizers (~48MB) for hivesense
     python3.12 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd && \
-    apt-get remove -y gnupg && \
+    # Install ParadeDB pg_search extension for BM25 search
+    # Get the latest release URL from GitHub
+    curl -L "https://github.com/paradedb/paradedb/releases/download/v0.17.3/postgresql-17-pg-search_0.17.3-1PARADEDB-noble_amd64.deb" -o /tmp/pg_search.deb && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y /tmp/pg_search.deb && \
+    rm /tmp/pg_search.deb && \
+    apt-get remove -y gnupg curl && \
     apt-get autoremove -y && \
     busybox --install -s && \
     # installing the postgresql-{ver} package does an initdb, remove the ~30MB database, we'll never use it
@@ -126,7 +131,7 @@ RUN <<-EOF
   sudo chown -R hived "${INSTALLATION_DIR}/"*
 EOF
 
-FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-7 AS instance
+FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-8 AS instance
 
 ARG BUILD_HIVE_TESTNET=OFF
 ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
@@ -140,7 +145,7 @@ ENV HIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}
 ARG HIVE_LINT=OFF
 ENV HIVE_LINT=${HIVE_LINT}
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-7}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-8}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
