@@ -22,20 +22,15 @@ COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 
 # create required accounts
 RUN bash -x ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived" && rm -rf /var/lib/apt/lists/*
-# install postgres
-# install TimescaleDB on PostgreSQL 17
+# install postgres with timescaledb
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg curl ca-certificates && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg curl ca-certificates lsb-release && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
+    curl -sSL https://packagecloud.io/timescale/timescaledb/gpgkey | gpg --dearmor -o /usr/share/keyrings/timescaledb.keyring && \
+    echo "deb [signed-by=/usr/share/keyrings/timescaledb.keyring] https://packagecloud.io/timescale/timescaledb/ubuntu/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/timescaledb.list && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
-    python3.12 python3-pip postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 \
-    libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd wget && \
-    # Add TimescaleDB repository and key
-    curl -fsSL https://packagecloud.io/timescale/timescaledb/gpgkey | apt-key add - && \
-    echo "deb https://packagecloud.io/timescale/timescaledb/debian/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/timescaledb.list && \
-    apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y timescaledb-postgresql-17 && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3-pip postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 \
+                                                                              libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd timescaledb-2-postgresql-17 && \
     # Add BeautifulSoup for hivesense preprocessing posts (3.1MB)
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3-bs4 python3-lxml && \
     # Install Tokenizers (~48MB) for hivesense
@@ -45,7 +40,7 @@ RUN apt-get update && \
     curl -L "https://github.com/paradedb/paradedb/releases/download/v0.17.3/postgresql-17-pg-search_0.17.3-1PARADEDB-noble_amd64.deb" -o /tmp/pg_search.deb && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y /tmp/pg_search.deb && \
     rm /tmp/pg_search.deb && \
-    apt-get remove -y gnupg curl wget && \
+    apt-get remove -y gnupg curl && \
     apt-get autoremove -y && \
     busybox --install -s && \
     # installing the postgresql-{ver} package does an initdb, remove the ~30MB database, we'll never use it
