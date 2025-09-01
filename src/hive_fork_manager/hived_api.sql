@@ -363,7 +363,7 @@ BEGIN
     INSERT INTO hafd.hived_connections( block_num, git_sha, time )
     VALUES( _block_num, _git_sha, now() );
 
-    ASSERT ( COALESCE(__max_block,0) > 0 OR ( _pruning = 0 AND hive.is_pruning_enabled() = FALSE )  )
+    ASSERT ( COALESCE(__max_block,0) = 0 OR hive.is_pruning_enabled() = FALSE OR ( hive.is_pruning_enabled() = TRUE AND _pruning > 0 ) )
            , 'Cannot initialize as non‑pruned: existing database is pruned. Drop/recreate the database or run in pruned mode.';
 
     UPDATE hafd.hive_state

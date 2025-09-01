@@ -8,6 +8,12 @@
 -- and checks most problematic thing: attaching context while in
 -- parallel hived removes unnecessary events.
 
+\if :{?LAST_BLOCK}
+\else
+\set LAST_BLOCK 1020000
+\endif
+
+
 CREATE OR REPLACE FUNCTION get_irreversibe_block()
     RETURNS INT
     LANGUAGE 'plpgsql'
@@ -70,12 +76,12 @@ END
 $$
 ;
 
-CREATE OR REPLACE PROCEDURE test_app_main()
+CREATE OR REPLACE PROCEDURE test_app_main(_last_block INT DEFAULT :LAST_BLOCK)
     LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-    __last_block INT := 1020000;
+    __last_block INT := _last_block;
     __detach_limit INT := 30;
     __next_block_range hive.blocks_range;
     __wait_for_block hive.blocks_range;
