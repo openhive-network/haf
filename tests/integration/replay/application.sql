@@ -85,6 +85,7 @@ DECLARE
     __current_event_id INT;
     __max_reversible_block INT;
     __min_reversible_block INT;
+    __number_of_irreversible_blocks INT;
     __context_stages hafd.application_stages :=
         ARRAY[
             hive.stage('massive',30 ,20000 )
@@ -103,13 +104,12 @@ BEGIN
                 RETURN;
             END IF;
 
-            IF __next_block_range IS NULL THEN
-                CONTINUE;
-            END IF;
+
 
             SELECT irreversible_block INTO __irreversible_block FROM hafd.contexts WHERE name = 'test';
             SELECT id INTO __head_fork_id FROM hafd.fork ORDER BY id DESC LIMIT 1;
             SELECT fork_id INTO __app_fork_id FROM hafd.contexts WHERE name = 'test';
+            SELECT COUNT(*) INTO __number_of_irreversible_blocks FROM hafd.blocks;
             RAISE NOTICE 'Max fork id %', __head_fork_id;
             RAISE NOTICE 'App fork id %', __app_fork_id;
             RAISE NOTICE 'App current_block_num %', hive.app_get_current_block_num( 'test' );
@@ -120,6 +120,12 @@ BEGIN
             SELECT MAX(num), MIN(num) INTO __max_reversible_block, __min_reversible_block FROM hafd.blocks_reversible WHERE fork_id = __app_fork_id;
             RAISE NOTICE 'Max reversible block: %', __max_reversible_block;
             RAISE NOTICE 'Min reversible block: %', __min_reversible_block;
+            RAISE NOTICE 'MAX irreversible block: %', hive.app_get_irreversible_block();
+            RAISE NOTICE 'Number of irreversible block: %', __number_of_irreversible_blocks;
+
+            IF __next_block_range IS NULL THEN
+                CONTINUE;
+            END IF;
             ASSERT EXISTS( SELECT 1 FROM hive.blocks_view WHERE num = __next_block_range.first_block ), 'No data for expected block in HAF HEAD BLOCK view';
             ASSERT EXISTS( SELECT 1 FROM test.blocks_view WHERE num = __next_block_range.first_block ), 'No data for expected block';
             ASSERT if_tx_for_last_operation_exists(__next_block_range.first_block), 'No data for expected operation in HAF HEAD BLOCK view';
