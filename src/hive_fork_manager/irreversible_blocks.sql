@@ -102,7 +102,7 @@ PARTITION BY RANGE (id);
 DO $$
 DECLARE
     step int := 1000000; -- block size per partition
-    i int := 1;
+    i int := 0;
     j int;
 BEGIN
     WHILE i <= 100000000 LOOP
@@ -117,6 +117,13 @@ BEGIN
         i := j;
     END LOOP;
 END $$;
+
+-- Catch-all partition for anything above block 100,000,000
+EXECUTE format(
+    'CREATE TABLE hafd.operations_overflow PARTITION OF hafd.operations
+        FOR VALUES FROM (%s) TO (MAXVALUE);',
+    (100000000::bigint << 32)
+);
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
 
