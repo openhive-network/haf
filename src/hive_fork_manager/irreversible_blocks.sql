@@ -105,12 +105,12 @@ DECLARE
     i int := 0;
     j int;
 BEGIN
-    WHILE i <= 100000000 LOOP
+    WHILE i < 100000000 LOOP
         j := i + step; -- exclusive upper bound
         EXECUTE format(
             'CREATE TABLE hafd.operations_%s_%s PARTITION OF hafd.operations
              FOR VALUES FROM (%s) TO (%s);',
-            i, j - 1,
+            i, j,
             (i::bigint << 32),  -- lowest id of block i
             (j::bigint << 32)   -- first id of block j (exclusive)
         );
