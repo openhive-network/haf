@@ -116,14 +116,13 @@ BEGIN
         );
         i := j;
     END LOOP;
+    -- Catch-all partition for anything above block 100,000,000
+    EXECUTE format(
+        'CREATE TABLE hafd.operations_overflow PARTITION OF hafd.operations
+            FOR VALUES FROM (%s) TO (MAXVALUE);',
+        (100000000::bigint << 32)
+    );
 END $$;
-
--- Catch-all partition for anything above block 100,000,000
-EXECUTE format(
-    'CREATE TABLE hafd.operations_overflow PARTITION OF hafd.operations
-        FOR VALUES FROM (%s) TO (MAXVALUE);',
-    (100000000::bigint << 32)
-);
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
 
