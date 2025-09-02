@@ -201,9 +201,11 @@ BEGIN
     -- if there there is  registered table for given context
     IF hive.app_are_forking( _context_names ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
     THEN
+        RAISE WARNING 'MICKIEWICZ: forking app next block';
         RETURN hive.app_next_block_forking_app( _context_names );
     END IF;
 
+    RAISE WARNING 'MICKIEWICZ: NON forking app next block';
     RETURN hive.app_next_block_non_forking_app( _context_names );
 END;
 $BODY$

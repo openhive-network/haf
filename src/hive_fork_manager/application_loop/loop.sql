@@ -237,6 +237,7 @@ BEGIN
     -- 2. find current stage if:
     IF hive.is_stages_analyze_required( __lead_context_state, hive.get_estimated_hive_head_block() )
     THEN
+        RAISE WARNING 'MICKIEWICZ: stage analyze required';
         -- get lock to synchronize with potentially running autodetach
         PERFORM  1 FROM hafd.contexts c WHERE c.name = ANY(_contexts) FOR UPDATE;
         SELECT hive.get_sync_state() INTO __hive_sync_state;
@@ -273,6 +274,7 @@ BEGIN
             , __lead_context_state.end_block_range
         );
     ELSE
+        RAISE WARNING 'MICKIEWICZ: NO stage analyze required';
         -- we continue iterating blocks in range
         IF hive.get_irreversible_head_block() < __lead_context_state.current_batch_end + 1
         THEN

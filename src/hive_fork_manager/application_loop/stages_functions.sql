@@ -73,6 +73,7 @@ BEGIN
 
     -- if we are traversing reversible blocks
     IF hive.is_abs_livesync( _contexts ) THEN
+        RAISE WARNING 'MICKIEWICZ: is abs live sync';
         RETURN QUERY SELECT
             hafd.live_stage() as stage
           , UNNEST( _contexts ) as context

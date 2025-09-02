@@ -23,6 +23,7 @@ DECLARE
     __upper_bound_block_num INTEGER;
     __max_block_num INTEGER;
 BEGIN
+    RAISE WARNING 'MICKIEWICZ: prune blocks';
     IF _tail_size < 0 THEN
         -- one block at least must stay because of FK hafd.irreversible_data
         RAISE EXCEPTION 'Blocks tail cannot be lower than 0  but is %', _tail_size;
