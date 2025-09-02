@@ -427,6 +427,8 @@ BEGIN
     JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
     JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
     WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
+    -- skip inherited fk indexes that point to partitioned tables
+    AND NOT EXISTS (SELECT 1 FROM pg_inherits i WHERE i.inhrelid = pgc.confrelid)
     ON CONFLICT (index_constraint_name, table_name) DO UPDATE
     SET status = 'missing';
 
