@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     body_binary hafd.operation  DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 )
-PARTITION BY RANGE ((id >> 32)); -- block_number converted to id
+PARTITION BY RANGE (id);
 
 -- Generate 100 partitions, each covering 1 million blocks
 DO $$
@@ -110,7 +110,9 @@ BEGIN
         EXECUTE format(
             'CREATE TABLE hafd.operations_%s_%s PARTITION OF hafd.operations
              FOR VALUES FROM (%s) TO (%s);',
-            i, j - 1, i, j
+            i, j - 1,
+            (i::bigint << 32),  -- lowest id of block i
+            (j::bigint << 32)   -- first id of block j (exclusive)
         );
         i := j;
     END LOOP;
