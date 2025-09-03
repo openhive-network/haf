@@ -58,6 +58,8 @@ namespace hive::plugins::sql_serializer {
     void disconnect_irreversible_event();
     void connect_fork_event();
     void disconnect_fork_event();
+    void connect_block_fail_event();
+    void disconnect_block_fail_event();
 
     transaction_controllers::transaction_controller& get_transaction_controller() { return *transactions_controller; };
 
@@ -65,6 +67,7 @@ namespace hive::plugins::sql_serializer {
     void join();
     void on_irreversible_block( uint32_t block_num );
     void on_switch_fork( uint32_t block_num );
+    void on_block_fail( uint32_t block_num );
 
   private:
     using block_data_container_t_writer = table_data_writer<hive_blocks, string_data_processor>;
@@ -116,6 +119,7 @@ namespace hive::plugins::sql_serializer {
 
     boost::signals2::connection _on_irreversible_block_conn;
     boost::signals2::connection _on_switch_fork_conn;
+    boost::signals2::connection _on_block_fail_conn;
     std::shared_ptr< transaction_controllers::transaction_controller > transactions_controller;
 
     const uint32_t _psql_first_block;
