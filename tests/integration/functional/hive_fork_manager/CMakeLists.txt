@@ -333,6 +333,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( state_providers/hash.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/no_hash.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/update_state_provider_runtime.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_nonforking_app.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_to_bob_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_events_infrustructure.sql )
