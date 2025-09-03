@@ -15,6 +15,18 @@ namespace hive::plugins::sql_serializer {
 
     size_t total_size;
 
+    struct sizes_stash {
+        size_t blocks;
+        size_t transactions;
+        size_t transactions_multisig;
+        size_t operations;
+        size_t accounts;
+        size_t account_operations;
+        size_t applied_hardforks;
+    };
+
+    sizes_stash stash;
+
     explicit cached_data_t(const size_t reservation_size) : total_size{ 0ul }
     {
       blocks.reserve(reservation_size);
@@ -40,7 +52,27 @@ namespace hive::plugins::sql_serializer {
         );
     }
 
-    };
+    void snapshot_current_sizes() {
+        stash.blocks = blocks.size();
+        stash.transactions = transactions.size();
+        stash.transactions_multisig = transactions_multisig.size();
+        stash.operations = operations.size();
+        stash.accounts = accounts.size();
+        stash.account_operations = account_operations.size();
+        stash.applied_hardforks = applied_hardforks.size();
+    }
+
+    void revert_to_snapshot() {
+        blocks.erase( blocks.begin() + stash.blocks, blocks.end() );
+        transactions.erase( transactions.begin() + stash.transactions, transactions.end() );
+        transactions_multisig.erase( transactions_multisig.begin() + stash.transactions_multisig, transactions_multisig.end() );
+        operations.erase( operations.begin() + stash.operations, operations.end() );
+        accounts.erase( accounts.begin() + stash.accounts, accounts.end() );
+        account_operations.erase( account_operations.begin() + stash.account_operations, account_operations.end() );
+        applied_hardforks.erase( applied_hardforks.begin() + stash.applied_hardforks, applied_hardforks.end() );
+        snapshot_current_sizes();
+    }
+  };
 
   using cached_containter_t = std::unique_ptr<cached_data_t>;
 } //namespace hive::plugins::sql_serializer

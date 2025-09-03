@@ -83,6 +83,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
     connect_irreversible_event();
     connect_fork_event();
+    connect_block_fail_event();
 
     ilog( "livesync dumper created" );
   }
@@ -91,6 +92,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     ilog( "livesync dumper is closing..." );
     disconnect_irreversible_event();
     disconnect_fork_event();
+    disconnect_block_fail_event();
     try {
       join();
     } FC_CAPTURE_AND_LOG(())
@@ -158,6 +160,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _processing_thread.enqueue("SELECT hive.back_from_fork(" + std::to_string(block_num) + ")");
   }
 
+  void livesync_data_dumper::on_block_fail( uint32_t block_num ) {
+    // sometimes block apply may fail in the last step, when some plugin throw an exception
+    // when servicing on_post_apply signal, it is possible that we already passed this block
+    // to wal (or even dump to the db), applications could already process it, so we cannot simply
+    // remove it from db, we need to start an artificial fork to allow apps to rewind from it
+    _processing_thread.enqueue("SELECT hive.back_from_fork(" + std::to_string(block_num-1) + ")");
+  }
+
   void livesync_data_dumper::connect_irreversible_event() {
     if ( _on_irreversible_block_conn.connected() ) {
       return;
@@ -184,8 +194,23 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     );
   }
 
+  void livesync_data_dumper::connect_block_fail_event() {
+    if ( _on_block_fail_conn.connected() ) {
+      return;
+    }
+
+    _on_block_fail_conn = _chain_db.add_fail_apply_block_handler(
+            [this]( const hive::chain::block_notification& note ){ on_block_fail( note.block_num ); }
+            , _plugin
+    );
+  }
+
   void livesync_data_dumper::disconnect_fork_event() {
     _on_switch_fork_conn.disconnect();
+  }
+
+  void livesync_data_dumper::disconnect_block_fail_event() {
+    _on_block_fail_conn.disconnect();
   }
 
   livesync_data_dumper::processing_thread::processing_thread(std::shared_ptr<transaction_controllers::transaction_controller> transactions_controller,
