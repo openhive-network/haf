@@ -709,6 +709,11 @@ BEGIN
             'SELECT hive.runtimecode_provider_%s( %L )', _state_provider, _context
     );
 
+    PERFORM
+        hive.grant_select_for_state_providers_table( unnest( hsp.tables ) )
+    FROM hafd.state_providers_registered hsp
+    WHERE hsp.context_id = __context_id AND hsp.state_provider = _state_provider;
+
     IF NOT hive.app_is_forking( _context ) THEN
         RETURN;
     END IF;
@@ -716,7 +721,6 @@ BEGIN
     -- register tables
     PERFORM
           hive.app_register_table( 'hafd', unnest( hsp.tables ), _context )
-        , hive.grant_select_for_state_providers_table( unnest( hsp.tables ) )
     FROM hafd.state_providers_registered hsp
     WHERE hsp.context_id = __context_id AND hsp.state_provider = _state_provider;
 
