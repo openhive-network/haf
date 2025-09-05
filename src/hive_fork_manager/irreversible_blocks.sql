@@ -93,10 +93,11 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     id bigint not null,
     trx_in_block smallint NOT NULL,
     op_pos integer NOT NULL,
+    op_type_id int GENERATED ALWAYS AS (hafd.operation_id_to_type_id(id)) STORED,
     body_binary hafd.operation  DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 )
-PARTITION BY LIST (hafd.operation_id_to_type_id(id));
+PARTITION BY LIST (op_type_id);
 
 -- Generate partitions for each operation type
 DO $$
