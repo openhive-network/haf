@@ -96,32 +96,17 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     body_binary hafd.operation  DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 )
-PARTITION BY RANGE (id);
+PARTITION BY LIST (hafd.operation_id_to_type_id(id));
 
--- Generate 100 partitions, each covering 1 million blocks
+-- Generate partitions for each operation type
 DO $$
-DECLARE
-    step int := 1000000; -- block size per partition
-    i int := 0;
-    j int;
 BEGIN
-    WHILE i < 100000000 LOOP
-        j := i + step; -- exclusive upper bound
+    FOR i IN 0..92 LOOP
         EXECUTE format(
-            'CREATE TABLE hafd.operations_%s_%s PARTITION OF hafd.operations
-             FOR VALUES FROM (%s) TO (%s);',
-            i, j,
-            (i::bigint << 32),  -- lowest id of block i
-            (j::bigint << 32)   -- first id of block j (exclusive)
+            'CREATE TABLE hafd.operations_type_%s PARTITION OF hafd.operations FOR VALUES IN (%s);',
+            i, i
         );
-        i := j;
     END LOOP;
-    -- Catch-all partition for anything above block 100,000,000
-    EXECUTE format(
-        'CREATE TABLE hafd.operations_overflow PARTITION OF hafd.operations
-            FOR VALUES FROM (%s) TO (MAXVALUE);',
-        (100000000::bigint << 32)
-    );
 END $$;
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
