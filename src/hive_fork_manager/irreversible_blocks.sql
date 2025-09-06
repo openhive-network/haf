@@ -118,7 +118,8 @@ CREATE TABLE IF NOT EXISTS hafd.applied_hardforks (
     hardfork_vop_id bigint NOT NULL,
     CONSTRAINT pk_hive_applied_hardforks PRIMARY KEY (hardfork_num)
 );
-ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_1_hive_applied_hardforks FOREIGN KEY (hardfork_vop_id) REFERENCES hafd.operations(id) NOT VALID;
+-- Dropped as part of partitioning tests on op_type_id - we can't reference id because we can't have a unique index on id (because partitioning)
+-- ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_1_hive_applied_hardforks FOREIGN KEY (hardfork_vop_id) REFERENCES hafd.operations(id) NOT VALID;
 ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_2_hive_applied_hardforks FOREIGN KEY (block_num) REFERENCES hafd.blocks(num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.applied_hardforks', '');
 
@@ -148,7 +149,8 @@ CREATE TABLE IF NOT EXISTS hafd.account_operations
     --, CONSTRAINT hive_account_operations_uq2 UNIQUE ( account,operation_id )
 );
 ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_1 FOREIGN KEY (account_id) REFERENCES hafd.accounts(id) NOT VALID;
-ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hafd.operations(id) NOT VALID;
+-- Dropped as part of partitioning tests on op_type_id - we can't reference id because we can't have a unique index on id (because partitioning)
+-- ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hafd.operations(id) NOT VALID;
 ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_3 FOREIGN KEY (transacting_account_id) REFERENCES hafd.accounts(id) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations', '');
 
