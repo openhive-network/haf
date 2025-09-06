@@ -88,6 +88,7 @@ BEGIN
            hor.id
          , hor.trx_in_block
          , hor.op_pos
+         , hor.op_type_id
          , hor.body_binary
     FROM
         hafd.operations_reversible hor

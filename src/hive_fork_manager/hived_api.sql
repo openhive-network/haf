@@ -64,7 +64,7 @@ BEGIN
     INSERT INTO hafd.blocks_reversible VALUES( _block.*, __fork_id );
     INSERT INTO hafd.transactions_reversible VALUES( ( unnest( _transactions ) ).*, __fork_id );
     INSERT INTO hafd.transactions_multisig_reversible VALUES( ( unnest( _signatures ) ).*, __fork_id );
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, hafd.operation_id_to_type_id(id), body_binary, fork_id)
       SELECT id, trx_in_block, op_pos, body_binary, __fork_id FROM unnest( _operations );
     INSERT INTO hafd.accounts_reversible VALUES( ( unnest( _accounts ) ).*, __fork_id );
     INSERT INTO hafd.account_operations_reversible VALUES( ( unnest( _account_operations ) ).*, __fork_id );

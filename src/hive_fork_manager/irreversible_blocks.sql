@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     id bigint not null,
     trx_in_block smallint NOT NULL,
     op_pos integer NOT NULL,
-    op_type_id int GENERATED ALWAYS AS (hafd.operation_id_to_type_id(id)) STORED,
+    op_type_id smallint NOT NULL,
     body_binary hafd.operation  DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 )
