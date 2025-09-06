@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     op_pos integer NOT NULL,
     op_type_id smallint NOT NULL,
     body_binary hafd.operation  DEFAULT NULL,
-    CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
+    CONSTRAINT pk_hive_operations PRIMARY KEY ( id, op_type_id )
 )
 PARTITION BY LIST (op_type_id);
 
