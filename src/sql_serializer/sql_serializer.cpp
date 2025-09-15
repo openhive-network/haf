@@ -289,6 +289,7 @@ public:
   boost::signals2::connection _on_finished_reindex;
   boost::signals2::connection _on_end_of_syncing_con;
   boost::signals2::connection _on_switch_fork_conn;
+  boost::signals2::connection _on_block_failed;
 
   std::string db_url;
   hive::chain::database& chain_db;
@@ -484,7 +485,14 @@ void sql_serializer_plugin_impl::connect_signals()
     [&]( uint32_t block_num ){ _indexation_state.on_switch_fork( *currently_caching_data, block_num ); }, main_plugin );
 
   _on_pre_apply_block_con_unblock_operations = chain_db.add_pre_apply_block_handler([&](const block_notification& note) { unblock_operation_handlers(note); }, main_plugin);
-  _on_post_apply_block_con_block_operations = chain_db.add_post_apply_block_handler([&](const block_notification& note) { block_operation_handlers(note); }, main_plugin);
+
+  // in case when on_post_apply_block throws, then we block notifications with handling fail_apply_block
+  // generated because of the exception
+  _on_post_apply_block_con_block_operations = chain_db.add_post_apply_block_handler(
+          [&](const block_notification& note) { on_post_apply_block(note);block_operation_handlers(note); }
+          , main_plugin);
+
+  _on_block_failed = chain_db.add_fail_apply_block_handler( [&](const block_notification& note) { block_operation_handlers(note); currently_caching_data->revert_to_snapshot(); }, main_plugin );;
 }
 
 void sql_serializer_plugin_impl::disconnect_signals()
@@ -503,6 +511,8 @@ void sql_serializer_plugin_impl::disconnect_signals()
     hive::utilities::disconnect_signal(_on_switch_fork_conn);
   if ( _on_pre_apply_operation_con.connected() )
     hive::utilities::disconnect_signal(_on_pre_apply_operation_con);
+  if ( _on_block_failed.connected() )
+    hive::utilities::disconnect_signal(_on_block_failed);
 }
 
 void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& note)
@@ -587,6 +597,7 @@ int get_hardfork_id(const hive::protocol::operation& op)
 
 void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notification& note)
 {
+  // we need to work in the preapply stage because only here we can collect virtual operations
   FC_ASSERT((chain_db.is_processing_block() && chain_db.is_producing_block()==false), "SQL serializer shall process only operations contained by finished blocks");
 
   if(!is_effective_operation(note.op))
@@ -716,14 +727,12 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
 
 void sql_serializer_plugin_impl::unblock_operation_handlers(const block_notification& note)
 {
+  currently_caching_data->snapshot_current_sizes();
   _pre_apply_operation_blocker->unblock();
 }
 
 void sql_serializer_plugin_impl::block_operation_handlers(const block_notification& note)
 {
-  /// Do the same as usually
-  on_post_apply_block(note);
-
   /// block operations signals
   _pre_apply_operation_blocker->block();
 }
