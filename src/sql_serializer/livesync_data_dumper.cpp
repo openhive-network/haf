@@ -65,6 +65,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
           ")";
 
         _processing_thread.enqueue(std::move(sql_command));
+        _last_dumped_block = _block_num;
       }
       _block.clear();
       _transactions_multisig.clear();
@@ -165,6 +166,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     // when servicing on_post_apply signal, it is possible that we already passed this block
     // to wal (or even dump to the db), applications could already process it, so we cannot simply
     // remove it from db, we need to start an artificial fork to allow apps to rewind from it
+    if ( _last_dumped_block != block_num ) {
+      // the block failed before we dumped it to the db, so we don't need to do anything
+      return;
+    }
+
     _processing_thread.enqueue("SELECT hive.back_from_fork(" + std::to_string(block_num-1) + ")");
   }
 
