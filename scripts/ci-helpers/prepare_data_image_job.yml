@@ -1,7 +1,7 @@
 include:
-  - project: 'hive/hive'
-    ref: 445dc467ac62861d620183ea1e94d54ff80cd657 #develop
-    file: '/scripts/ci-helpers/prepare_data_image_job.yml'
+- project: 'hive/hive'
+  ref: 9b5f467a1c0ce807d8894d5d386580e34b57a247   #develop
+  file: '/scripts/ci-helpers/prepare_data_image_job.yml'
 
 .prepare_haf_image:
   extends: .docker_image_builder_job
@@ -14,18 +14,17 @@ include:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
   script:
-    - $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh
-        "$SUBMODULE_DIR" registry.gitlab.syncad.com/hive/haf HAF "$REGISTRY_USER" "$REGISTRY_PASS"
-        --export-binaries="$BINARY_CACHE_PATH" --network-type="$HIVE_NETWORK_TYPE"
-    - chmod -Rc a+rwx "$BINARY_CACHE_PATH"
-    - ls -la $BINARY_CACHE_PATH/*
+  - $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh "$SUBMODULE_DIR" registry.gitlab.syncad.com/hive/haf
+    HAF "$REGISTRY_USER" "$REGISTRY_PASS" --export-binaries="$BINARY_CACHE_PATH" --network-type="$HIVE_NETWORK_TYPE"
+  - chmod -Rc a+rwx "$BINARY_CACHE_PATH"
+  - ls -la $BINARY_CACHE_PATH/*
 
   artifacts:
     reports:
       dotenv: docker_image_name.env
     paths:
-      - $BINARY_CACHE_PATH/*
-      - ./docker_image_name.env
+    - $BINARY_CACHE_PATH/*
+    - ./docker_image_name.env
 
 .prepare_haf_data_5m:
   extends: .docker_image_builder_job
@@ -38,21 +37,22 @@ include:
     HIVE_NETWORK_TYPE: mainnet
     DATA_CACHE_DIR: "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
   script:
-    - mkdir "${DATA_CACHE_DIR}/datadir" -pv
-    - cd "${DATA_CACHE_DIR}/datadir"
-    - flock "${DATA_CACHE_DIR}/datadir" $SCRIPTS_PATH/ci-helpers/build_data.sh $HAF_IMAGE_NAME
-        --data-cache="${DATA_CACHE_DIR}" --block-log-source-dir="$BLOCK_LOG_SOURCE_DIR" --config-ini-source="$CONFIG_INI_SOURCE"
-    - cd "$CI_PROJECT_DIR"
-    - cp "${DATA_CACHE_DIR}/datadir/hived_uid.env" "$CI_PROJECT_DIR/hived_uid.env"
-    - cp "${DATA_CACHE_DIR}/datadir/docker_entrypoint.log" "${CI_PROJECT_DIR}/docker_entrypoint.log"
-    - ls -la "${DATA_CACHE_DIR}/datadir/"
+  - mkdir "${DATA_CACHE_DIR}/datadir" -pv
+  - cd "${DATA_CACHE_DIR}/datadir"
+  - flock "${DATA_CACHE_DIR}/datadir" $SCRIPTS_PATH/ci-helpers/build_data.sh $HAF_IMAGE_NAME
+    --data-cache="${DATA_CACHE_DIR}" --block-log-source-dir="$BLOCK_LOG_SOURCE_DIR"
+    --config-ini-source="$CONFIG_INI_SOURCE"
+  - cd "$CI_PROJECT_DIR"
+  - cp "${DATA_CACHE_DIR}/datadir/hived_uid.env" "$CI_PROJECT_DIR/hived_uid.env"
+  - cp "${DATA_CACHE_DIR}/datadir/docker_entrypoint.log" "${CI_PROJECT_DIR}/docker_entrypoint.log"
+  - ls -la "${DATA_CACHE_DIR}/datadir/"
   after_script:
-    - rm "${DATA_CACHE_DIR}/replay_running" -f
+  - rm "${DATA_CACHE_DIR}/replay_running" -f
 
   artifacts:
     reports:
       dotenv:
-        - docker_image_name.env
-        - hived_uid.env
+      - docker_image_name.env
+      - hived_uid.env
     paths:
-      - "${CI_PROJECT_DIR}/docker_entrypoint.log"
+    - "${CI_PROJECT_DIR}/docker_entrypoint.log"
