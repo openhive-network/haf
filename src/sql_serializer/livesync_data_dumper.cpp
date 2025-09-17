@@ -271,12 +271,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
         auto transaction = _transactions_controller->openTx();
         transaction->exec(command_to_run.second);
         transaction->exec("SELECT hive.update_wal_sequence_number(" + std::to_string(command_to_run.first) + ")");
+        transaction->commit();
         if ( _pruning > 0 && command_to_run.first % 10 == 0 ) {
+            // auto transaction2 = _transactions_controller->openTx();
             ilog( "MICKIEWICZ: wal livesync prune blocks" );
-            transaction->exec("SELECT hive.prune_blocks_data(" + std::to_string(_pruning) +");");
+            // transaction2->exec("SELECT hive.prune_blocks_data(" + std::to_string(_pruning) +");");
+            // transaction2->commit();
         }
         ilog( "MICKIEWICZ: wal livesync dump block ${d}", ("d",command_to_run.second) );
-        transaction->commit();
       }
       catch (const pqxx::failure& ex)
       {
