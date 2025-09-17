@@ -195,6 +195,7 @@ COPY --from=build --chown=hived:users \
   /home/hived/bin/get_dev_key \
   /home/hived/bin/blockchain_converte[r] \
   /home/hived/bin/block_log_util \
+  /home/hived/bin/op_body_filter \
   /home/hived/bin/
 
 # This should be removed before merge
