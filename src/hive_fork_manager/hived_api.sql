@@ -363,11 +363,17 @@ BEGIN
     INSERT INTO hafd.hived_connections( block_num, git_sha, time )
     VALUES( _block_num, _git_sha, now() );
 
-    ASSERT ( COALESCE(__max_block,0) = 0 OR hive.is_pruning_enabled() = FALSE OR ( hive.is_pruning_enabled() = TRUE AND _pruning > 0 ) )
+    ASSERT ( hive.is_pruning_enabled() = FALSE OR ( hive.is_pruning_enabled() = TRUE AND _pruning > 0 ) )
            , 'Cannot initialize as non‑pruned: existing database is pruned. Drop/recreate the database or run in pruned mode.';
 
     UPDATE hafd.hive_state
     SET pruning = _pruning;
+
+    IF hive.is_pruning_enabled() = TRUE THEN
+        -- we need to drop FK to fast remove from hafd.operations
+        -- because it is impossible to back from pruned to non-pruned we do not bother with FK recreations
+        ALTER TABLE hafd.account_operations DROP CONSTRAINT IF EXISTS hive_account_operations_fk_2;
+    END IF;
 END;
 $BODY$
 ;

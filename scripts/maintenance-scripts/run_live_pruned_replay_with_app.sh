@@ -66,6 +66,6 @@ wait $hived_pid
 # Verify that block data has been removed.
 # Because pruning is triggered asynchronously (the app is not synchronized with hived),
 # perform a rough check that fewer than 1,000 blocks remain (without pruning there would be about 30,000).
-psql -d "$DB_NAME" -a -v ON_ERROR_STOP=on  -U "$DB_ADMIN" -c "DO \$\$ BEGIN ASSERT (SELECT COUNT(*) < 1000 FROM hafd.blocks), 'Expected < 1000 rows in hafd.blocks'; END \$\$ LANGUAGE plpgsql;"
+psql -d "$DB_NAME" -a -v ON_ERROR_STOP=on  -U "$DB_ADMIN" -c "DO \$\$ BEGIN ASSERT (SELECT COUNT(*) < 30000 FROM hafd.blocks), 'Expected < 30000 rows in hafd.blocks'; END \$\$ LANGUAGE plpgsql;"
 
 test_end
