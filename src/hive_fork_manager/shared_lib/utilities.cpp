@@ -9,6 +9,9 @@
 #include <fc/io/json.hpp>
 #include <fc/string.hpp>
 
+#include <psql_utils/pg_cxx.hpp>
+#include <psql_utils/logger.hpp>
+
 #include <vector>
 
 using hive::protocol::account_name_type;
@@ -810,4 +813,137 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
     PG_RETURN_BOOL( true );
   }
+
+PG_FUNCTION_INFO_V1(decode_asset_symbol);
+
+/**
+
+CREATE TYPE hive.asset_symbol_info AS
+(
+  precision SMALLINT, -- Precision of assets (probably only for future cases when custom tokens will be available)
+  nai INT,            -- Type of asset symbol used in the operation
+  is_liquid BOOLEAN,  -- True if given asset_symbol represents liquid version of asset
+  is_native BOOLEAN,  -- True if given asset_symbol represents native Hive asset
+);
+
+FUNCTION hive.decode_asset_symbol(IN _symbol hive.asset_symbol) RETURNS hive.asset_symbol_info;
+*/
+
+Datum decode_asset_symbol(PG_FUNCTION_ARGS)
+{
+  const uint32_t asset_num = PG_GETARG_INT64(0);
+
+  HeapTuple retval = nullptr;
+
+  PsqlTools::PsqlUtils::pg_call_cxx([asset_num, &retval]() {
+
+    auto ast = hive::protocol::asset_symbol_type::from_asset_num(asset_num);
+
+    const bool is_liquid = ast.is_vesting() == false;
+    const bool is_native = ast.space() == hive::protocol::asset_symbol_type::legacy_space;
+
+    TupleDesc desc = RelationNameGetTupleDesc("hive.asset_symbol_info");
+    BlessTupleDesc(desc);
+    Datum values[] = {
+      UInt16GetDatum(ast.decimals()), /// precision
+      Int64GetDatum(ast.to_nai()),    /// nai
+      BoolGetDatum(is_liquid), /// is_liquid
+      BoolGetDatum(is_native) /// is_native
+    };
+    bool nulls[] = {
+      false,
+      false,
+      false,
+      false
+    };
+
+    retval = heap_form_tuple(desc, values, nulls);
+  }, ERRCODE_DATA_EXCEPTION);
+
+  PG_RETURN_DATUM(HeapTupleGetDatum(retval));
 }
+
+/**
+FUNCTION hive.get_paired_symbol(IN _symbol hive.asset_symbol) RETURNS hive.asset_symbol
+*/
+PG_FUNCTION_INFO_V1(get_paired_asset_symbol);
+
+Datum get_paired_asset_symbol(PG_FUNCTION_ARGS)
+{
+  if (PG_ARGISNULL(0))
+  {
+    PG_RETURN_INT64(0);
+  }
+
+  const uint32_t asset_num = PG_GETARG_INT64(0);
+
+  int64_t retval = 0;
+
+  PsqlTools::PsqlUtils::pg_call_cxx([asset_num, &retval]() {
+    hive::protocol::asset_symbol_type ast = hive::protocol::asset_symbol_type::from_asset_num(asset_num);
+    const auto paired_symbol = ast.get_paired_symbol();
+    retval = paired_symbol.asset_num;
+    }, ERRCODE_DATA_EXCEPTION);
+
+  PG_RETURN_INT64(retval);
+}
+
+/**
+CREATE OR REPLACE FUNCTION hive.asset_symbol_to_nai_string(IN _symbol hive.asset_symbol) RETURNS TEXT;
+*/
+PG_FUNCTION_INFO_V1(asset_symbol_to_nai_string);
+
+Datum asset_symbol_to_nai_string(PG_FUNCTION_ARGS)
+{
+  if (PG_ARGISNULL(0))
+  {
+    text* result = cstring_to_text("");
+    PG_RETURN_TEXT_P(result);
+  }
+
+  const uint32_t asset_num = PG_GETARG_INT64(0);
+
+  std::string retval;
+
+  PsqlTools::PsqlUtils::pg_call_cxx([asset_num, &retval]() {
+    hive::protocol::asset_symbol_type ast = hive::protocol::asset_symbol_type::from_asset_num(asset_num);
+    retval = ast.to_nai_string();
+  }, ERRCODE_DATA_EXCEPTION);
+
+  text* result = cstring_to_text(retval.c_str());
+
+  PG_RETURN_TEXT_P(result);
+}
+
+/**
+  FUNCTION hive.asset_symbol_from_nai_string(IN _nai_string TEXT, IN _precision SMALLINT) RETURNS hive.asset_symbol
+*/
+PG_FUNCTION_INFO_V1(asset_symbol_from_nai_string);
+
+Datum asset_symbol_from_nai_string(PG_FUNCTION_ARGS)
+{
+  if (PG_ARGISNULL(0) || PG_ARGISNULL(1))
+  {
+    PG_RETURN_INT64(0);
+  }
+
+  const text* __nai_string = PG_GETARG_TEXT_P(0);
+  
+  const char* nai_string = text_to_cstring(__nai_string);
+  const uint8_t precision = PG_GETARG_UINT16(1);
+
+  //LOG_INFO("nai_string: %s\n", nai_string);
+  //LOG_INFO("precision: %d\n", int(precision));
+
+  int64_t retval = 0;
+
+  PsqlTools::PsqlUtils::pg_call_cxx([&nai_string, &retval, precision]() {
+
+    hive::protocol::asset_symbol_type ast = hive::protocol::asset_symbol_type::from_nai_string(nai_string, precision);
+    retval = ast.asset_num;
+    }, ERRCODE_DATA_EXCEPTION);
+
+  PG_RETURN_INT64(retval);
+}
+
+} /// extern "C"
