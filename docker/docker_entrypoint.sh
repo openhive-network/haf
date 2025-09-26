@@ -186,6 +186,12 @@ cleanup () {
 prepare_pg_hba_file() {
   sudo -En /bin/bash << EOF
   echo -e "${PG_ACCESS}" > "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
+
+  # Append any PG_ACCESS_* environment variables
+  for var in \$(compgen -e | grep '^PG_ACCESS_' | sort); do
+    echo -e "\${!var}" >> "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
+  done
+
   cat "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf.default" >> "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
   #cat "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
 EOF
