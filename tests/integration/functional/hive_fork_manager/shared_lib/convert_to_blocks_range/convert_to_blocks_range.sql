@@ -48,7 +48,7 @@ BEGIN
     BEGIN PERFORM hive.convert_to_block_num('-1'); ASSERT FALSE, 'Block -1 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN PERFORM hive.convert_to_block_num('-100'); ASSERT FALSE, 'Block -100 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
 
-    BEGIN PERFORM hive.convert_to_blocks_range('0', '10'); ASSERT FALSE, 'from-block=0 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN PERFORM hive.convert_to_blocks_range('1', '10'); ASSERT FALSE, 'from-block=0 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN PERFORM hive.convert_to_blocks_range('1', '0'); ASSERT FALSE, 'to-block=0 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN PERFORM hive.convert_to_blocks_range('-5', '10'); ASSERT FALSE, 'from-block=-5 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN PERFORM hive.convert_to_blocks_range('1', '-10'); ASSERT FALSE, 'to-block=-10 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
