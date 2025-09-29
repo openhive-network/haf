@@ -74,6 +74,14 @@ BEGIN
     RAISE EXCEPTION 'The starting block (%) must be less than or equal to the ending block (%).', __from_block, __to_block;
   
   END IF;
+
+  IF __from_block <= 0 THEN
+    RAISE EXCEPTION 'the starting Block-num must be a positive integer or a valid timestamp, found: %d', __from_block;
+  END IF;
+
+  IF __to_block <= 0 THEN
+    RAISE EXCEPTION 'the ending Block-num must be a positive integer or a valid timestamp, found: %d', __to_block;
+  END IF;
   
   -- Return both results
   RETURN (__from_block,__to_block)::hive.blocks_range;
@@ -115,6 +123,10 @@ BEGIN
 
   IF __converted_timestamp IS NOT NULL AND __block IS NULL THEN
     RAISE EXCEPTION 'Block-num was not found for provided timestamp (%)', __converted_timestamp;
+  END IF;
+
+  IF __block <= 0 THEN
+    RAISE EXCEPTION 'Block-num must be a positive integer or a valid timestamp';
   END IF;
 
   RETURN __block;
