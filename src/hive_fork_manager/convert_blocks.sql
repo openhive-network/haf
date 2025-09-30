@@ -19,6 +19,11 @@ BEGIN
     -- Do nothing, move to the next block
   END;
 
+  -- if successfully converted _from to integer, check if the number is less than 0
+  IF __from_block IS NOT NULL AND __from_block <= 0 THEN
+    RAISE EXCEPTION 'the starting Block-num must be a positive integer or a valid timestamp, found: %d', __from_block;
+  END IF;
+
   -- Try to convert _from to timestamp if it's not an integer
   IF __from_block IS NULL THEN
     BEGIN
@@ -43,6 +48,11 @@ BEGIN
     WHEN OTHERS THEN
         -- Do nothing, move to the next block
   END;
+
+  -- if successfully converted _to to integer, check if the number is less than 0
+  IF __to_block IS NOT NULL AND __to_block <= 0 THEN
+    RAISE EXCEPTION 'the ending Block-num must be a positive integer or a valid timestamp, found: %d', __to_block;
+  END IF;
 
   -- Try to convert _to to timestamp if it's not an integer
   IF __to_block IS NULL THEN
@@ -75,14 +85,6 @@ BEGIN
   
   END IF;
 
-  IF __from_block <= 0 THEN
-    RAISE EXCEPTION 'the starting Block-num must be a positive integer or a valid timestamp, found: %d', __from_block;
-  END IF;
-
-  IF __to_block <= 0 THEN
-    RAISE EXCEPTION 'the ending Block-num must be a positive integer or a valid timestamp, found: %d', __to_block;
-  END IF;
-  
   -- Return both results
   RETURN (__from_block,__to_block)::hive.blocks_range;
 END
@@ -100,13 +102,18 @@ DECLARE
     __converted_timestamp TIMESTAMP := NULL;
 BEGIN
 
-  -- Try to convert _to to integer
+  -- Try to convert _block to integer
   BEGIN
     __block := _block::INT;
   EXCEPTION
     WHEN OTHERS THEN
         -- Do nothing, move to the next block
   END;
+
+  -- if successfully converted _block to integer, check if the number is less than 0
+  IF __block IS NOT NULL AND __block <= 0 THEN
+    RAISE EXCEPTION 'Block-num must be a positive integer or a valid timestamp';
+  END IF;
 
   -- Try to convert _block to timestamp if it's not an integer
   IF __block IS NULL THEN
@@ -123,10 +130,6 @@ BEGIN
 
   IF __converted_timestamp IS NOT NULL AND __block IS NULL THEN
     RAISE EXCEPTION 'Block-num was not found for provided timestamp (%)', __converted_timestamp;
-  END IF;
-
-  IF __block <= 0 THEN
-    RAISE EXCEPTION 'Block-num must be a positive integer or a valid timestamp';
   END IF;
 
   RETURN __block;

@@ -38,6 +38,13 @@ BEGIN
     ASSERT (SELECT hive.convert_to_block_num('2016-06-22 19:10:56-07')) = 4, 'Results on > block 4 do not match';
     ASSERT (SELECT hive.convert_to_block_num('2016-06-22 19:10:54-07')) = 3, 'Results on > block 3 do not match';
     ASSERT (SELECT hive.convert_to_block_num(NULL)) IS NULL, 'conversion did not return NULL';
+
+    BEGIN PERFORM hive.convert_to_block_num('0'); ASSERT FALSE, 'Block 0 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN PERFORM hive.convert_to_block_num('-1'); ASSERT FALSE, 'Block -1 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN PERFORM hive.convert_to_block_num('-100'); ASSERT FALSE, 'Block -100 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN PERFORM hive.convert_to_block_num('not-a-date'); ASSERT FALSE, 'Random text should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN PERFORM hive.convert_to_block_num('invalid-format-123'); ASSERT FALSE, 'Invalid format should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN PERFORM hive.convert_to_block_num('2015-01-01 00:00:00'); ASSERT FALSE, 'Timestamp before first block should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
 END;
 $BODY$
 ;

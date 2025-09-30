@@ -48,10 +48,22 @@ BEGIN
     BEGIN PERFORM hive.convert_to_block_num('-1'); ASSERT FALSE, 'Block -1 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN PERFORM hive.convert_to_block_num('-100'); ASSERT FALSE, 'Block -100 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
 
-    BEGIN PERFORM hive.convert_to_blocks_range('1', '10'); ASSERT FALSE, 'from-block=0 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+
+    BEGIN PERFORM hive.convert_to_blocks_range('0', '10'); ASSERT FALSE, 'from-block=0 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN PERFORM hive.convert_to_blocks_range('1', '0'); ASSERT FALSE, 'to-block=0 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN PERFORM hive.convert_to_blocks_range('-5', '10'); ASSERT FALSE, 'from-block=-5 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN PERFORM hive.convert_to_blocks_range('1', '-10'); ASSERT FALSE, 'to-block=-10 should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+
+    -- Test timestamps in wrong order (to < from)
+    BEGIN PERFORM hive.convert_to_blocks_range('2016-06-22 19:10:55', '2016-06-22 19:10:21'); ASSERT FALSE, 'Reversed timestamps should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+
+    -- Test timestamps outside of block range
+    BEGIN PERFORM hive.convert_to_blocks_range('2015-01-01', '2015-12-31'); ASSERT FALSE, 'Timestamps before blocks should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+
+    -- Test mixed invalid cases
+    BEGIN PERFORM hive.convert_to_blocks_range('0', '2016-06-22'); ASSERT FALSE, 'Invalid from-block with valid timestamp should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN PERFORM hive.convert_to_blocks_range('2016-06-22', '-1'); ASSERT FALSE, 'Valid timestamp with invalid to-block should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN PERFORM hive.convert_to_blocks_range('abc', '2016-06-22'); ASSERT FALSE, 'Invalid format with valid timestamp should fail'; EXCEPTION WHEN OTHERS THEN NULL; END;
 
 END;
 $BODY$
