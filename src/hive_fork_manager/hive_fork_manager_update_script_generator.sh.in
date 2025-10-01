@@ -127,6 +127,14 @@ get_deployed_version() {
   echo "Already deployed hive_fork_manager has a version: $COMMIT_PREV_ID"
 }
 
+check_commit_difference() {
+  # Check if the commit IDs are the same
+  if [ "$COMMIT_PREV_ID" = "$COMMIT_NEW_ID" ]; then
+    echo "No changes detected between commits. Skipping update file generation."
+    exit 0
+  fi
+}
+
 generate_final_update_script() {
   echo
   echo "Attempting to generate update file..."
@@ -255,6 +263,8 @@ psql_do -d "$DB_NAME" -q -t -A -f "$SCRIPTPATH/update.sql"
 verify_table_schema
 
 get_deployed_version
+
+check_commit_difference
 
 generate_final_update_script
 
