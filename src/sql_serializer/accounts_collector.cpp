@@ -76,8 +76,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     on_new_account(op.new_account_name);
 
     // Use op.creator as the owner for the new account
-    if( _creation_operation_id.valid() )
-      on_new_operation(op.new_account_name, op.creator, *_creation_operation_id, _creation_operation_type_id, false/*is_current_operation*/ );
+    if( _creation_operation_id.valid() ) {
+      on_new_operation(op.new_account_name, op.creator, *_creation_operation_id, _creation_operation_type_id,
+                       false/*is_current_operation*/ );
+      _creation_operation_id.reset();
+    }
     on_new_operation(op.new_account_name, op.creator, _processed_operation_id, _processed_operation_type_id);
 
     if( op.creator != op.new_account_name )
