@@ -4,6 +4,11 @@ RETURNS BOOLEAN
 AS
 $BODY$
 BEGIN
+  IF NOT EXISTS( SELECT 1 FROM hafd.events_queue ) THEN
+      -- hived has not be started yet and db is not fully initialized
+      RETURN FALSE;
+  END IF;
+
   IF hive.is_pruning_enabled() THEN
       RETURN TRUE;
   END IF;
