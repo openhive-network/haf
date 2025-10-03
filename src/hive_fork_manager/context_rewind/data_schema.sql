@@ -13,8 +13,8 @@ CREATE TABLE IF NOT EXISTS hafd.contexts(
     current_block_num INTEGER NOT NULL,
     irreversible_block INTEGER NOT NULL,
     back_from_fork BOOL NOT NULL DEFAULT FALSE,
-    events_id BIGINT NOT NULL DEFAULT 0, -- 0 - is a special fake event, means no events are processed, it is required to satisfy FK constraint
-    fork_id BIGINT NOT NULL DEFAULT 1,
+    events_id BIGINT, -- 0 - is a special fake event, means no events are processed, it is required to satisfy FK constraint
+    fork_id BIGINT,
     owner NAME NOT NULL,
     registering_state_provider BOOL NOT NULL DEFAULT FALSE,
     is_forking BOOL NOT NULL DEFAULT TRUE,

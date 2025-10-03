@@ -15,10 +15,10 @@ CREATE TABLE hafd.contexts_log(
     , application_stage hafd.stage_name -- NULL allowed to support old fashion apps without stages
     , event_type hafd.context_event NOT NULL
     , date TIMESTAMP WITHOUT TIME ZONE NOT NULL
-    , application_block INTEGER NOT NULL
-    , application_fork BIGINT NOT NULL
-    , head_block  INTEGER NOT NULL
-    , head_fork_id BIGINT NOT NULL
+    , application_block INTEGER
+    , application_fork BIGINT -- NULL when context was created before hived has started
+    , head_block  INTEGER
+    , head_fork_id BIGINT
     , CONSTRAINT pk_hive_contexts_log PRIMARY KEY( id )
 );
 

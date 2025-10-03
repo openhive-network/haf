@@ -480,7 +480,18 @@ BEGIN
 
     INSERT INTO hafd.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
 
-    -- PERFORM hive_update.create_database_hash();
+    -- if contexts are created before starting hived
+    UPDATE hafd.contexts hc
+    SET fork_id = 1, events_id = 0
+    FROM hafd.contexts_attachment  hac
+    WHERE hac.context_id = hc.id
+    AND hac.is_attached = TRUE;
+
+    UPDATE hafd.contexts hc
+    SET fork_id = 1, events_id = hive.unreachable_event_id()
+    FROM hafd.contexts_attachment  hac
+    WHERE hac.context_id = hc.id
+    AND hac.is_attached = FALSE;
 END;
 $BODY$
 ;

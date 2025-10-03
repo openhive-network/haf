@@ -14,10 +14,15 @@ AS
 $BODY$
 DECLARE
     __new_context_id INTEGER;
+    __min_events_id INTEGER;
 BEGIN
     IF NOT _name SIMILAR TO '[a-zA-Z0-9_]+' THEN
         RAISE EXCEPTION 'Incorrect context name %, only characters a-z A-Z 0-9 _ are allowed', _name;
     END IF;
+
+    -- it could be null when hived has not yet initialized db
+    -- during initialization by hived it is changed to 0
+    SELECT MIN(id) INTO __min_events_id FROM hafd.events_queue;
 
     EXECUTE format( 'CREATE TABLE %I.%I( hive_rowid BIGSERIAL )', _schema, _name );
     INSERT INTO hafd.contexts(
@@ -37,7 +42,7 @@ BEGIN
            _name
           , 0
           , _irreversible_block
-          , 0
+          , __min_events_id
           , _fork_id
           , current_user
           , _is_forking
