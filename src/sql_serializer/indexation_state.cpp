@@ -514,7 +514,7 @@ indexation_state::wait_for_contexts() {
 
                     pqxx::result data = tx.exec(
                             "select hive.wait_for_contexts("s
-                            + std::to_string(1000)
+                            + std::to_string(_psql_pruning_tail_size)
                             + ");"
                     );
                     return data_processor::data_processing_status();
