@@ -4,6 +4,7 @@
 
 #include <hive/protocol/forward_impacted.hpp>
 #include <hive/protocol/forward_keyauths.hpp>
+#include <hive/protocol/operation_util.hpp>
 #include <hive/protocol/misc_utilities.hpp>
 
 #include <fc/io/json.hpp>
@@ -96,6 +97,21 @@ collected_keyauth_collection_t collect_hf24_keyauths()
 collected_metadata_collection_t collect_metadata(const hive::protocol::operation& op, const bool is_hf21)
 {
     return hive::app::operation_get_metadata(op, is_hf21);
+}
+
+flat_set< account_name_type > collect_required_authorities(const hive::protocol::operation& op)
+{
+  using namespace hive::protocol;
+  flat_set< account_name_type > req_active;
+  flat_set< account_name_type > req_owner;
+  flat_set< account_name_type > req_posting;
+  flat_set< account_name_type > req_witness;
+  std::vector< authority > other_auths;
+
+  get_required_auth_visitor visitor(req_active, req_owner, req_posting, req_witness, other_auths);
+  op.visit(visitor);
+
+  return req_active;
 }
 
 } // namespace
@@ -682,6 +698,33 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
     collected_keyauths = collect_hf24_keyauths();
 
     fill_and_return_keyauths(collected_keyauths, fcinfo);
+
+    return (Datum)0;
+  }
+
+  PG_FUNCTION_INFO_V1(get_required_authorities);
+  Datum get_required_authorities(PG_FUNCTION_ARGS)
+  {
+    _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
+
+    flat_set< account_name_type > collected;
+
+    colect_operation_data_and_fill_returned_recordset(
+      [=, &collected](const hive::protocol::operation& op)
+      {
+        collected = collect_required_authorities(op);
+      },
+
+      [=, &collected]()
+      {
+        fill_return_tuples(collected, fcinfo,
+          [] (const auto& item) { fc::string _str = item; return make_datum_pair(CStringGetTextDatum(_str.c_str())); }
+        );
+      },
+
+      __FUNCTION__,
+      VARDATA_ANY( operation_body ), VARSIZE_ANY_EXHDR( operation_body )
+    );
 
     return (Datum)0;
   }
