@@ -38,7 +38,8 @@ FOR _row in
     '(deps_saved_ddl,ea91c6c0-eb6a-b473-eb1c-e426eadb1d09,549ba4bd-64d6-c554-11f4-d27e4b37b6e6,d3176a21-5841-14c3-0d52-6566cf12299e,cc8a1233-564b-27fd-3ffd-ce376cd366f7)',
     '(registered_tables,01d11432-b7d9-fb8e-a345-2e412e782cfd,ff824909-7631-1102-16f9-5b6ba2f88b74,07ad4206-ab16-75cc-4aaa-18ed4006d4f6,fe6f193c-4d9c-266a-3f43-0a67d8a6dcfb)',
     '(events_queue,47c432ad-9eab-ba67-7956-1c14fa210dec,0a710f7b-0af2-9ec6-b1eb-37e181e01473,a5e6d444-fbcd-9518-618b-cc3479932005,48a3b028-2a9e-c01e-0615-0737d43b7b81)',
-    '(state_providers_registered,b41e740b-372c-cbf5-c89e-121fc30ae222,e5256de7-28e9-0079-dd6d-c410fb648f41,47f62787-773b-c098-9df3-4a9bae4b65c0,3b033100-aacc-10b4-16f9-1dcf276565ff)'
+    '(state_providers_registered,b41e740b-372c-cbf5-c89e-121fc30ae222,e5256de7-28e9-0079-dd6d-c410fb648f41,47f62787-773b-c098-9df3-4a9bae4b65c0,3b033100-aacc-10b4-16f9-1dcf276565ff)',
+    '(applications_transactions_register,653cd81b-479f-8175-2b96-cda4f9e84648,bdc946e2-ebe9-30a7-c6b4-0f072a427fa8,3d44a077-b3a7-75c3-03ed-34e9e892eac2,d704deb8-8357-3550-9bd1-90f6031a8f89)'
   ])
 LOOP
     RAISE NOTICE 'new schema hash: %', _row;

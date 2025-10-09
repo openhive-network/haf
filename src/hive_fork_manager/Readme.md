@@ -221,6 +221,94 @@ The HAF server can operate in a pruned mode that retains only recent blockchain 
 #### Notice
 - Pruning is supported only for applications that use the modern HAF application loop with stages and the `hive.app_next_iteration` function. Apps not using this loop are not supported in pruned mode.
 
+## Application-level Transactions (Non-forking Contexts)
+
+Application-level transactions allow HAF applications to perform reversible updates independently of blockchain forks.
+They provide per-application rollback and commit mechanisms above HAF’s block-level logic, enabling multi-table transactional grouping even within a single irreversible block.
+
+### Overview
+
+This mode is intended for **non-forking contexts** only.
+It uses the same shadow-table and trigger infrastructure as context rewind,
+but instead of deriving rollback boundaries from block numbers or forks,
+the rollback limit is defined by an **application transaction id (`app_tx_id`)** stored in the table
+`hafd.applications_transactions_register`.
+
+Each registered table tracks its own changes per application transaction.
+Applications can start, commit, or rollback their own transactions through dedicated SQL functions.
+
+### Schema
+
+```
+hafd.applications_transactions_register
+------------------------------------------------------------
+id                   SERIAL PRIMARY KEY
+name                 TEXT UNIQUE -- context name
+owner                TEXT NOT NULL
+current_app_tx_id    BIGINT DEFAULT 0
+rollback_in_progress BOOLEAN DEFAULT FALSE
+registered_tables    TEXT[] DEFAULT '{}'  -- ["schema.table", ...]
+```
+
+This table replaces `hafd.contexts` for rollback bookkeeping when operating in application-managed mode.
+
+### Registration
+
+```
+SELECT hive.app_transaction_table_register('schema', 'table', 'context');
+```
+
+Registers a table for application-level transactions:
+
+* Creates a shadow table `hafd.shadow_<schema>_<table>`
+* Adds triggers to capture `INSERT`, `UPDATE`, `DELETE`, and `TRUNCATE`
+* Ensures the context exists in `hafd.applications_transactions_register`
+* Extends the `registered_tables` array for that context
+
+Only non-forking contexts can be used.
+
+### Transaction Control
+
+| Operation             | Function                                                           | Description                                      |
+| --------------------- | ------------------------------------------------------------------ | ------------------------------------------------ |
+| Begin                 | `hive.app_transaction_begin(context)`                              | Increments and returns new transaction id        |
+| Commit single table   | `hive.app_transaction_commit_on_table(schema, table, tx_id)`       | Clears shadow entries up to given tx id          |
+| Commit context        | `hive.app_transaction_commit(context, max_tx_id DEFAULT infinity)` | Commits all tables up to tx id                   |
+| Rollback single table | `hive.app_transaction_rollback_on_table(schema, table, tx_id)`     | Reverts changes recorded after tx id             |
+| Rollback context      | `hive.app_transaction_rollback(context, tx_id DEFAULT 0)`          | Reverts all tables to given tx id                |
+| Unregister context    | `hive.app_transaction_unregister_context(context)`                 | Drops shadow tables, triggers, and context entry |
+
+### Usage Flow Example
+
+A typical non-forking HAF application loop:
+
+```sql
+-- Wait for next irreversible blocks
+CALL hive.app_next_iteration('ctx', __range);
+
+-- Begin app-level transaction
+PERFORM hive.app_transaction_begin('ctx');
+
+-- Process application logic
+PERFORM app.update_stats(__range.first_block, __range.last_block);
+
+-- Validate and commit or rollback
+IF (app.stats_added >= 10) THEN
+  PERFORM hive.app_transaction_commit('ctx');
+ELSE
+  PERFORM hive.app_transaction_rollback('ctx');
+END IF;
+```
+
+### Summary
+
+* Provides **lightweight rollback and commit** for analytical or aggregation apps
+  without depending on blockchain forks.
+* Works entirely inside **non-forking contexts**.
+* Uses existing shadow-table and trigger logic from context rewind.
+* Allows multiple application-level transactions per single HAF block.
+
+
 ###  API Functions
 
 ##### Requesting Table Vacuuming

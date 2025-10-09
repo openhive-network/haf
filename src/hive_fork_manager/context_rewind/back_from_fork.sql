@@ -66,7 +66,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.back_from_fork_one_table( _table_schema TEXT, _table_name TEXT, _shadow_table_name TEXT, _block_num_before_fork INT )
+CREATE OR REPLACE FUNCTION hive.back_from_fork_one_table( _table_schema TEXT, _table_name TEXT, _shadow_table_name TEXT, _block_num_before_fork BIGINT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE

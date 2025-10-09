@@ -86,6 +86,8 @@ CREATE OR REPLACE FUNCTION hive.app_remove_context( _name hafd.context_name )
 AS
 $BODY$
 BEGIN
+    PERFORM hive.app_transaction_unregister_context(_name);
+
     PERFORM hive.app_state_provider_drop_all( _name );
 
     PERFORM hive.drop_applied_hardforks_view( _name );

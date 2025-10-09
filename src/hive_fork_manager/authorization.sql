@@ -69,16 +69,23 @@ GRANT ALL ON hafd.registered_tables TO hive_applications_group;
 GRANT ALL ON hafd.triggers TO hive_applications_group;
 GRANT ALL ON hafd.state_providers_registered TO hive_applications_group;
 GRANT ALL ON hafd.vacuum_requests TO hive_applications_group;
+GRANT ALL ON hafd.applications_transactions_register TO hive_applications_group;
 
 -- protect an application rows aginst other applications
 REVOKE UPDATE( is_forking, owner ) ON hafd.contexts FROM GROUP hive_applications_group;
 ALTER TABLE hafd.contexts ENABLE ROW LEVEL SECURITY;
+
+REVOKE UPDATE( owner ) ON hafd.applications_transactions_register FROM GROUP hive_applications_group;
+ALTER TABLE hafd.applications_transactions_register ENABLE ROW LEVEL SECURITY;
 
 REVOKE UPDATE( owner ) ON hafd.contexts_attachment FROM GROUP hive_applications_group;
 ALTER TABLE hafd.contexts_attachment ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS dp_hive_context ON hafd.contexts CASCADE;
 CREATE POLICY dp_hive_context ON hafd.contexts FOR INSERT WITH CHECK ( current_user = owner );
+
+DROP POLICY IF EXISTS dp_hive_managed_rollback ON hafd.applications_transactions_register CASCADE;
+CREATE POLICY dp_hive_managed_rollback ON hafd.applications_transactions_register FOR INSERT WITH CHECK ( current_user = owner );
 
 DROP POLICY IF EXISTS dp_hive_contexts_attachment ON hafd.contexts_attachment CASCADE;
 CREATE POLICY dp_hive_contexts_attachment ON hafd.contexts_attachment FOR INSERT WITH CHECK ( current_user = owner );
@@ -92,17 +99,27 @@ CREATE POLICY sp_hived_hive_contexts_attachment ON hafd.contexts_attachment FOR 
 DROP POLICY IF EXISTS sp_applications_hive_context ON hafd.contexts CASCADE;
 CREATE POLICY sp_applications_hive_context ON hafd.contexts FOR SELECT TO hive_applications_group USING( TRUE );
 
+DROP POLICY IF EXISTS sp_applications_managed_rollback ON hafd.applications_transactions_register CASCADE;
+CREATE POLICY sp_applications_managed_rollback ON hafd.applications_transactions_register FOR SELECT TO hive_applications_group USING( TRUE );
+
+
 DROP POLICY IF EXISTS sp_applications_hive_contexts_attachment ON hafd.contexts_attachment CASCADE;
 CREATE POLICY sp_applications_hive_contexts_attachment ON hafd.contexts_attachment FOR SELECT TO hive_applications_group USING( TRUE );
 
 DROP POLICY IF EXISTS sp_applications_update_hive_context ON hafd.contexts CASCADE;
 CREATE POLICY sp_applications_update_hive_context ON hafd.contexts FOR UPDATE TO hive_applications_group USING( TRUE ) WITH CHECK( hive.can_impersonate(current_user, owner) ) ;
 
+DROP POLICY IF EXISTS sp_applications_update_hive_application_managed_rollback ON hafd.applications_transactions_register CASCADE;
+CREATE POLICY sp_applications_update_hive_application_managed_rollback ON hafd.applications_transactions_register FOR UPDATE TO hive_applications_group USING( TRUE ) WITH CHECK( hive.can_impersonate(current_user, owner) ) ;
+
 DROP POLICY IF EXISTS sp_applications_update_hive_contexts_attachment ON hafd.contexts_attachment CASCADE;
 CREATE POLICY sp_applications_update_hive_contexts_attachment ON hafd.contexts_attachment FOR UPDATE TO hive_applications_group USING( TRUE ) WITH CHECK( hive.can_impersonate(current_user, owner) ) ;
 
 DROP POLICY IF EXISTS sp_applications_delete_hive_context ON hafd.contexts CASCADE;
 CREATE POLICY sp_applications_delete_hive_context ON hafd.contexts FOR DELETE TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
+
+DROP POLICY IF EXISTS sp_applications_delete_hive_managed_rollback ON hafd.applications_transactions_register CASCADE;
+CREATE POLICY sp_applications_delete_hive_managed_rollback ON hafd.applications_transactions_register FOR DELETE TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
 
 DROP POLICY IF EXISTS sp_applications_delete_hive_contexts_attachment ON hafd.contexts_attachment CASCADE;
 CREATE POLICY sp_applications_delete_hive_contexts_attachment ON hafd.contexts_attachment FOR DELETE TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
@@ -248,6 +265,7 @@ GRANT USAGE ON SCHEMA hive to haf_maintainer;
 GRANT EXECUTE ON PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL ) TO haf_maintainer;
 GRANT EXECUTE ON FUNCTION hive.is_instance_ready() TO haf_maintainer;
 GRANT ALL ON hafd.contexts TO haf_maintainer;
+GRANT ALL ON hafd.applications_transactions_register TO haf_maintainer;
 GRANT SELECT ON hafd.contexts_attachment TO haf_maintainer;
 GRANT SELECT ON hafd.indexes_constraints TO haf_maintainer;
 
