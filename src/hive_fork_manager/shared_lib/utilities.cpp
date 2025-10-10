@@ -118,14 +118,14 @@ flat_set< account_name_type > collect_required_authorities(const hive::protocol:
 
 
 template <typename T>
-std::pair<Datum, bool> make_datum_pair(T value, bool null = false) 
+std::pair<Datum, bool> make_datum_pair(T&& value, bool null = false)
 {
-    return {value, null};
+    return {std::forward<T>(value), null};
 }
 
 //use this template instead of Postgres' MemoryContextSwitchTo
 template<typename T>
-auto MemoryContextSwitcher(MemoryContext new_ctx, T statements) -> decltype(statements())
+auto MemoryContextSwitcher(MemoryContext new_ctx, T&& statements) -> decltype(statements())
 {
   class Switch
   {
@@ -228,8 +228,8 @@ TupleDesc build_tuple_descriptor(PG_FUNCTION_ARGS)
   }
 
 template<typename Collect, typename FillReturnTuple, typename ArgValueGetter>
-Datum colect_data_and_fill_returned_recordset(Collect collect, FillReturnTuple fill_return_tuple,
-  const char* C_function_name, ArgValueGetter arg_getter) noexcept
+Datum colect_data_and_fill_returned_recordset(Collect&& collect, FillReturnTuple&& fill_return_tuple,
+  const char* C_function_name, ArgValueGetter&& arg_getter) noexcept
 {
   try
   {
@@ -245,8 +245,8 @@ Datum colect_data_and_fill_returned_recordset(Collect collect, FillReturnTuple f
 }
 
 template<typename Collect, typename FillReturnTuple>
-Datum colect_operation_data_and_fill_returned_recordset(Collect collect,
-  FillReturnTuple fill_return_tuple, const char* C_function_name, const char* raw_data, uint32_t data_length) noexcept
+Datum colect_operation_data_and_fill_returned_recordset(Collect&& collect,
+  FillReturnTuple&& fill_return_tuple, const char* C_function_name, const char* raw_data, uint32_t data_length) noexcept
 {
   try
   {
@@ -256,7 +256,7 @@ Datum colect_operation_data_and_fill_returned_recordset(Collect collect,
 
     return colect_data_and_fill_returned_recordset( [&]{
       collect(op);
-    }, fill_return_tuple, C_function_name,
+    }, std::forward<FillReturnTuple>(fill_return_tuple), C_function_name,
     [&op] {
       fc::variant v;
       fc::to_variant(op, v);
@@ -267,24 +267,23 @@ Datum colect_operation_data_and_fill_returned_recordset(Collect collect,
 }
 
 template<typename ElemT, typename F>
-void fill_record_field(Datum* tuple_values, bool* nulls, ElemT elem, const F& func, std::size_t counter)
+void fill_record_field(Datum* tuple_values, bool* nulls, const ElemT& elem, const F& func, std::size_t counter)
 {
-
     auto [result, is_null] = func(elem);
-    
+
     *(tuple_values + counter) = result;
     *(nulls + counter) = is_null;
 }
 
 template<typename ElemT, typename ... Funcs>
-void fill_record(Datum* tuple_values, bool* nulls, ElemT elem, Funcs ... funcs)
+void fill_record(Datum* tuple_values, bool* nulls, const ElemT& elem, const Funcs& ... funcs)
 {
     std::size_t counter = 0;
     std::initializer_list<int>{ ( fill_record_field(tuple_values, nulls, elem, funcs, counter++), 0) ... };
 }
 
 template<typename Collection,typename ... Funcs>
-void fill_return_tuples(const Collection& collection, PG_FUNCTION_ARGS, Funcs ... funcs)
+void fill_return_tuples(const Collection& collection, PG_FUNCTION_ARGS, const Funcs& ... funcs)
 {
     check_return_mode(fcinfo);
 
