@@ -353,6 +353,7 @@ ADD_TEST( NAME test_update_script
  ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/accounts_provider_application.py )
  ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/accounts_provider_non_fork_application.py )
 
+ ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_required_authorities.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_impacted_accounts.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_impacted_balances.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_impacted_balances/test_no_virtual_operations.sql )
