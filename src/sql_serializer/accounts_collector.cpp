@@ -43,17 +43,25 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   void accounts_collector::operator()(const hive::protocol::pow_operation& op)
   {
     fc::optional<hive::protocol::account_name_type> impacted_account;
+    bool is_creating_account = true;
 
     // check if pow_operation is creating new account
-    if( _chain_db.find_account(op.get_worker_account()) != nullptr )
-      impacted_account = op.get_worker_account();
+    if( _chain_db.find_account(op.get_worker_account()) != nullptr ) {
+        impacted_account = op.get_worker_account();
+        is_creating_account = false;
+    }
 
     process_account_creation_op(impacted_account);
+
+    if ( !is_creating_account ) { // means new account was not cerated
+      _creation_operation_id.reset(); // do not cache this operation, vop account_created_operation won't be generated to handle it
+    }
   }
 
   void accounts_collector::operator()(const hive::protocol::pow2_operation& op)
   {
     fc::optional<hive::protocol::account_name_type> impacted_account;
+    bool is_creating_account = true;
 
     // check if pow_operation is creating new account
     hive::protocol::account_name_type worker_account;
@@ -62,10 +70,16 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     else if( op.work.which() == hive::protocol::pow2_work::tag<hive::protocol::equihash_pow>::value )
       worker_account = op.work.get<hive::protocol::equihash_pow>().input.worker_account;
 
-    if( _chain_db.find_account(worker_account) != nullptr )
+    if( _chain_db.find_account(worker_account) != nullptr ) {
       impacted_account = worker_account;
+      is_creating_account = false;
+    }
 
     process_account_creation_op(impacted_account);
+
+    if ( !is_creating_account ) { // means new account was not cerated
+        _creation_operation_id.reset(); // do not cache this operation, vop account_created_operation won't be generated to handle it
+    }
   }
 
   void accounts_collector::operator()(const hive::protocol::account_created_operation& op)
