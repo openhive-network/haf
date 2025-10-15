@@ -38,3 +38,27 @@ WITNESSES_5M: list[str] = [
     "rabbit-63",
     "pfunk",
 ]
+
+WITNESSES_2M: list[str] = [
+    "abderus",
+    "xeldal",
+    "roadscape",
+    "abit",
+    "pharesim",
+    "kushed",
+    "au1nethyb1",
+    "dele-puppy",
+    "silversteem",
+    "steemed",
+    "smooth.witness",
+    "complexring",
+    "masteryoda",
+    "nextgencrypto",
+    "arhag",
+    "riverhead",
+    "bitcube",
+    "blocktrades",
+    "witness.svk",
+    "clayop",
+    "steempty",
+]
