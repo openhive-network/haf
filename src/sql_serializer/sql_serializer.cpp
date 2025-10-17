@@ -689,7 +689,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
 
     filter.clear();
 
-    if ( _indexation_state.is_pruning_enabled() && note.block_num % 500'000 == 0 )
+    if ( _indexation_state.is_pruning_enabled() && note.block_num % 200'000 == 0 )
     {
       pqxx::connection conn(db_url);
       pqxx::nontransaction tx(conn);

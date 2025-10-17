@@ -116,7 +116,7 @@ BEGIN
     WHERE ctx.stages IS NOT NULL;
 
     SELECT num INTO __irreversible_head_block FROM hafd.blocks ORDER BY num DESC LIMIT 1;
-    FOR i IN 1..1000 LOOP -- after 10s back to close transaction
+    FOR i IN 1..12000 LOOP -- after 2min back to close transaction
         SELECT COALESCE( MIN( current_block_num ), 0 ) INTO __slowest_context_block FROM hafd.contexts;
 
         IF ( __irreversible_head_block <= __slowest_context_block ) THEN
