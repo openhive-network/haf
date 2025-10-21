@@ -52,35 +52,35 @@ BEGIN
         USING hafd.operations hor
     WHERE
         har.operation_id = hor.id
-      AND ( hafd.operation_id_to_block_num(hor.id) <= __upper_bound_block_num )
+      AND ( hafd.operation_id_to_block_num(hor.id) < __upper_bound_block_num )
     ;
 
     DELETE FROM hafd.applied_hardforks hjr
-    WHERE hjr.block_num <= __upper_bound_block_num
+    WHERE hjr.block_num < __upper_bound_block_num
     ;
 
     DELETE FROM hafd.operations hor
-    WHERE hafd.operation_id_to_block_num(hor.id) <= __upper_bound_block_num
+    WHERE hafd.operation_id_to_block_num(hor.id) < __upper_bound_block_num
     ;
 
     DELETE FROM hafd.transactions_multisig htmr
         USING hafd.transactions htr
     WHERE
         htr.trx_hash = htmr.trx_hash
-      AND ( htr.block_num <= __upper_bound_block_num )
+      AND ( htr.block_num < __upper_bound_block_num )
     ;
 
     DELETE FROM hafd.transactions htr
-    WHERE htr.block_num <= __upper_bound_block_num
+    WHERE htr.block_num < __upper_bound_block_num
     ;
 
     UPDATE hafd.accounts ha
     SET block_num = NULL
-    WHERE ha.block_num <= __upper_bound_block_num
+    WHERE ha.block_num < __upper_bound_block_num
     ;
 
     DELETE FROM hafd.blocks hbr
-    WHERE hbr.num <= __upper_bound_block_num
+    WHERE hbr.num < __upper_bound_block_num
     ;
 
 END;
