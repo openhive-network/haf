@@ -11,12 +11,13 @@ from haf_local_tools.system.haf.mirrornet.constants import CHAIN_ID, SKELETON_KE
 
 
 @pytest.mark.mirrornet
-def test_proper_shutdown_during_index_creation(mirrornet_witness_node, haf_node, block_log_5m):
+def test_proper_shutdown_during_index_creation(mirrornet_witness_node, haf_node, block_log_5m, tmp_path):
     """
     Related to: https://gitlab.syncad.com/hive/hive/-/issues/794
     """
+    block_log_1m = block_log_5m.truncate(tmp_path, 1000000)
     mirrornet_witness_node.run(
-        replay_from=block_log_5m,
+        replay_from=block_log_1m,
         time_control=tt.StartTimeControl(start_time="head_block_time"),
         wait_for_live=True,
         timeout=3600,
@@ -28,7 +29,7 @@ def test_proper_shutdown_during_index_creation(mirrornet_witness_node, haf_node,
     connect_nodes(mirrornet_witness_node, haf_node)
 
     haf_node.run(
-        replay_from=block_log_5m,
+        replay_from=block_log_1m,
         time_control=tt.StartTimeControl(start_time=head_block_time),
         exit_before_synchronization=True,
         timeout=3600,
