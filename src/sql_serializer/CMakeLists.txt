@@ -24,6 +24,7 @@ ADD_LIBRARY(
     indexation_state.cpp
     accounts_collector.cpp
     indexes_controler.cpp
+    indexes_interruptor.cpp
     blockchain_data_filter.cpp
     filter_collector.cpp
     all_accounts_dumper.cpp
