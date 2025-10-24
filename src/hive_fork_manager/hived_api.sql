@@ -82,6 +82,10 @@ $BODY$
 DECLARE
     __irreversible_head_block hafd.blocks.num%TYPE;
 BEGIN
+    IF hive.get_sync_state() != 'LIVE' THEN
+       RETURN;
+    END IF;
+
     SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hafd.blocks;
 
     IF ( _block_num < __irreversible_head_block ) THEN
@@ -130,9 +134,11 @@ BEGIN
     -- the contexts are locked by the apps during attach: hive.app_context_attach
     BEGIN
      -- remove all events less than lowest context events_id
-        LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
-        PERFORM hive.remove_unecessary_events( _block_num );
-        PERFORM hive.remove_obsolete_reversible_data( _block_num );
+        IF hive.get_sync_state() = 'LIVE' THEN
+            LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
+            PERFORM hive.remove_unecessary_events( _block_num );
+            PERFORM hive.remove_obsolete_reversible_data( _block_num );
+        END IF;
     EXCEPTION WHEN SQLSTATE '55P03' THEN
         -- 55P03 	lock_not_available https://www.postgresql.org/docs/current/errcodes-appendix.html
     END;
@@ -366,7 +372,7 @@ BEGIN
     ASSERT ( hive.is_pruning_enabled() = FALSE OR ( hive.is_pruning_enabled() = TRUE AND _pruning > 0 ) )
            , 'Cannot initialize as non‑pruned: existing database is pruned. Drop/recreate the database or run in pruned mode.';
 
-    UPDATE hafd.hive_state
+    UPDATE hafd.hive_stable_state
     SET pruning = _pruning;
 
     IF hive.is_pruning_enabled() = TRUE THEN
@@ -473,6 +479,7 @@ BEGIN
     END IF;
 
     INSERT INTO hafd.hive_state VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
+    INSERT INTO hafd.hive_stable_state VALUES(1,0) ON CONFLICT DO NOTHING;
     INSERT INTO hafd.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
     INSERT INTO hafd.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
     SELECT MAX(eq.id) + 1 FROM hafd.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;

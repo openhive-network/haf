@@ -41,6 +41,7 @@ ALTER TABLE hafd.transactions_multisig OWNER TO hived_group;
 ALTER TABLE hafd.accounts OWNER TO hived_group;
 ALTER TABLE hafd.account_operations OWNER TO hived_group;
 ALTER TABLE hafd.hive_state OWNER TO hived_group;
+ALTER TABLE hafd.hive_stable_state OWNER TO hived_group;
 ALTER TABLE hafd.blocks_reversible OWNER TO hived_group;
 ALTER TABLE hafd.transactions_reversible OWNER TO hived_group;
 ALTER TABLE hafd.operations_reversible OWNER TO hived_group;
@@ -158,7 +159,6 @@ GRANT EXECUTE ON FUNCTION
     , hive.app_state_provider_import( _state_provider hafd.state_providers, _context hafd.context_name )
     , hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer )
     , hive.is_pruning_enabled()
-    , hive.wait_for_contexts( _tail_size INTEGER )
     , hive.prune_blocks_data( _tail_size INTEGER )
     , hive.remove_inconsistent_irreversible_data()
     , hive.disable_indexes_of_reversible()
@@ -244,6 +244,10 @@ GRANT EXECUTE ON FUNCTION
     , hive.get_vacuum_full_commands(schema_name TEXT)
 TO hived_group;
 
+GRANT EXECUTE ON PROCEDURE
+    hive.wait_for_contexts( _tail_size INTEGER )
+TO hived_group;
+
 GRANT USAGE ON SCHEMA hive to haf_maintainer;
 GRANT EXECUTE ON PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL ) TO haf_maintainer;
 GRANT EXECUTE ON FUNCTION hive.is_instance_ready() TO haf_maintainer;
@@ -264,11 +268,11 @@ REVOKE EXECUTE ON FUNCTION
     , hive.remove_obsolete_reversible_data( _new_irreversible_block INT )
     , hive.remove_unecessary_events( _new_irreversible_block INT )
     , hive.initialize_extension_data()
-    , hive.wait_for_contexts( _tail_size INTEGER )
     , hive.prune_blocks_data( _tail_size INTEGER )
 FROM hive_applications_group;
 
 REVOKE EXECUTE ON PROCEDURE
       hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL )
+    , hive.wait_for_contexts( _tail_size INTEGER )
 FROM hive_applications_group,
      public;

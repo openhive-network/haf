@@ -46,8 +46,13 @@ CREATE TABLE IF NOT EXISTS hafd.hive_state (
       consistent_block integer,
       is_dirty bool NOT NULL,
       state hafd.sync_state NOT NULL DEFAULT 'START',
-      pruning integer NOT NULL DEFAULT 0,
       CONSTRAINT pk_irreversible_data PRIMARY KEY ( id )
+);
+
+CREATE TABLE IF NOT EXISTS hafd.hive_stable_state (
+    id integer,
+    pruning integer NOT NULL DEFAULT 0,
+    CONSTRAINT pk_hive_stable_state PRIMARY KEY ( id )
 );
 
 -- We use ADD CONSTRAINT with ALTER TABLE followed by NOT VALID because the NOT VALID option isn't documented

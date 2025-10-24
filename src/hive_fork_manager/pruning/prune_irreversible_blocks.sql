@@ -7,7 +7,7 @@ $BODY$
 DECLARE
     __pruning_is_enabled BOOLEAN := FALSE;
 BEGIN
-    SELECT COALESCE( pruning > 0, FALSE) INTO __pruning_is_enabled FROM hafd.hive_state;
+    SELECT COALESCE( pruning > 0, FALSE) INTO __pruning_is_enabled FROM hafd.hive_stable_state;
     RETURN __pruning_is_enabled;
 END;
 $BODY$;
@@ -89,10 +89,8 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION hive.wait_for_contexts( _tail_size INTEGER  = 1 )
-    RETURNS void
+CREATE OR REPLACE PROCEDURE hive.wait_for_contexts( _tail_size INTEGER )
     LANGUAGE plpgsql
-    VOLATILE
 AS
 $BODY$
 DECLARE
@@ -120,17 +118,16 @@ BEGIN
         SELECT COALESCE( MIN( current_block_num ), 0 ) INTO __slowest_context_block FROM hafd.contexts;
 
         IF ( __irreversible_head_block <= __slowest_context_block ) THEN
-            PERFORM hive.prune_blocks_data( _tail_size );
-            RETURN;
+            EXIT;
         END IF;
 
        -- HAF is faster than applications
         IF ( __irreversible_head_block  > __slowest_context_block + __blocks_before_apps ) THEN
+            COMMIT; -- to release locks
             PERFORM pg_sleep(0.010);
             CONTINUE;
         END IF;
-        PERFORM hive.prune_blocks_data( _tail_size );
-        RETURN;
+        EXIT;
     END LOOP;
     -- the apps are so slow that within 10s they cannot reach head block
     -- anyway we perform prune to clean as much blocks as possible
