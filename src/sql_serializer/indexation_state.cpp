@@ -507,23 +507,13 @@ indexation_state::wait_for_contexts() {
     if ( get_state() == INDEXATION::LIVE )
         return;
 
-    {
-        queries_commit_data_processor wait_for_contexts(
-                _db_url, "Wait for contexts", "waits", [this](const data_processor::data_chunk_ptr &,
-                                                              transaction_controllers::transaction &tx) -> data_processor::data_processing_status {
-
-                    pqxx::result data = tx.exec(
-                            "select hive.wait_for_contexts("s
-                            + std::to_string(_psql_pruning_tail_size)
-                            + ");"
-                    );
-                    return data_processor::data_processing_status();
-                }, nullptr, theApp
-        );
-
-        wait_for_contexts.trigger(data_processor::data_chunk_ptr(), 0);
-        wait_for_contexts.join();
-    }
+    pqxx::connection conn(_db_url);
+    pqxx::nontransaction tx(conn);
+    pqxx::result data = tx.exec(
+            "CALL hive.wait_for_contexts("s
+            + std::to_string(_psql_pruning_tail_size)
+            + ");"
+    );
 }
 
 indexation_state::INDEXATION

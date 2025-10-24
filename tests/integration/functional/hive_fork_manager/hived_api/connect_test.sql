@@ -107,7 +107,7 @@ BEGIN
     ASSERT( SELECT COUNT(*) FROM hafd.fork WHERE block_num = 2 ) = 0, 'Fork added after connection on 2 block';
 
     ASSERT( SELECT is_dirty FROM hafd.hive_state ) = FALSE, 'Irreversible data are dirty';
-    ASSERT( SELECT pruning FROM hafd.hive_state ) = 10, 'Wrong pruning';
+    ASSERT( SELECT pruning FROM hafd.hive_stable_state ) = 10, 'Wrong pruning';
     ASSERT hive.is_pruning_enabled(), 'Pruning is not enabled';
 END
 $BODY$
