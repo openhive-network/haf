@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <hive/plugins/sql_serializer/indexes_interruptor.h>
 
 namespace appbase
 {
@@ -28,6 +29,7 @@ namespace hive::plugins::sql_serializer {
   private:
     const std::string _db_url;
     const uint32_t _psql_index_threshold;
+    indexes_interruptor _interruptor;
     appbase::application& theApp;
   };
 

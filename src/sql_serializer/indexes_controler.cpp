@@ -1,6 +1,7 @@
 #include <hive/plugins/sql_serializer/container_data_writer.h>
 #include <hive/plugins/sql_serializer/indexes_controler.h>
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
+#include <hive/plugins/sql_serializer/indexes_interruptor.h>
 
 #include <appbase/application.hpp>
 
@@ -15,11 +16,34 @@
 
 namespace hive { namespace plugins { namespace sql_serializer {
 
+namespace {
+std::string db_url_with_app(const std::string& db_url, const char* app_name)
+{
+  const std::string app_kv = std::string("application_name=") + app_name;
+  if (db_url.find("application_name=") != std::string::npos)
+    return db_url;
+  const bool is_uri = db_url.rfind("postgres://", 0) == 0 || db_url.rfind("postgresql://", 0) == 0;
+  if (is_uri)
+  {
+    const char sep = (db_url.find('?') == std::string::npos) ? '?' : '&';
+    return db_url + sep + app_kv;
+  }
+  return db_url + " " + app_kv;
+}
+
+std::string db_url_with_hived_app(const std::string& db_url)
+{
+  return db_url_with_app(db_url, "hived_index");
+}
+
+}
+
 indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_threshold, appbase::application& app )
 : _db_url( std::move(db_url) )
 , _psql_index_threshold( psql_index_threshold )
-, theApp( app ) {
-
+, _interruptor(_db_url, app)
+, theApp( app )
+{
 }
 
 bool
@@ -154,7 +178,7 @@ indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_
   std::string query = std::string("SELECT ") + sql_function_call + ";";
   std::string description = "Query processor: `" + query + "'";
   std::string short_description = "index_ctrl";
-  auto processor=std::make_unique< queries_commit_data_processor >(_db_url, description, std::move(short_description), 
+  auto processor=std::make_unique< queries_commit_data_processor >(db_url_with_hived_app(_db_url), description, std::move(short_description), 
                                                                    [query, objects_name=std::move(objects_name), mode, description](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status
   {
     ilog("Attempting to execute query: `${query}`...", ("query", query ) );
@@ -184,15 +208,15 @@ void indexes_controler::poll_and_create_indexes()
 
 
   while (!theApp.is_interrupt_request()) 
-  {    
+  {
     dlog("Checking for table vacuum requests...");
-    pqxx::connection conn(_db_url);
+    pqxx::connection conn(db_url_with_hived_app(_db_url));
     pqxx::nontransaction tx(conn);
-    try 
-    { 
+    try
+    {
       pqxx::result data = tx.exec("SELECT table_name FROM hafd.vacuum_requests WHERE status = 'requested';"); 
       dlog("Found ${count} tables with vacuum requests.", ("count", data.size()));
-      
+
       try 
       {
         for (const auto& record : data) 
@@ -252,7 +276,7 @@ void indexes_controler::poll_and_create_indexes()
           fc::set_thread_name(thread_name.c_str());
           fc::thread::current().set_name(thread_name);
 
-          pqxx::connection conn(_db_url);
+          pqxx::connection conn(db_url_with_hived_app(_db_url));
           pqxx::nontransaction tx(conn);
           pqxx::result data = tx.exec("SELECT index_constraint_name, command FROM hafd.indexes_constraints WHERE status = 'missing' AND table_name = '" + table_name + "';");
           for (const auto& index : data) //iterate over missing indexes and create them concurrently
