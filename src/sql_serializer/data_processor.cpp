@@ -217,9 +217,17 @@ data_processor::handle_exception( std::exception_ptr exception_ptr ) {
   }
   catch(const pqxx::sql_error& ex)
   {
-    elog("Data processor ${d} detected SQL statement execution failure. Failing statement: `${q}'.", ("d", _description)("q", ex.query()));
-    kill_node();
-    throw;
+    if (ex.sqlstate() == "57014") // query cancelled
+    {
+      wlog("Data processor ${d} detected SQL cancellation. Failing statement: `${q}'.", ("d", _description)("q", ex.query()));
+      throw;
+    }
+    else
+    {
+      elog("Data processor ${d} detected SQL statement execution failure. Failing statement: `${q}'.", ("d", _description)("q", ex.query()));
+      kill_node();
+      throw;
+    }
   }
   catch(const pqxx::failure& ex)
   {
