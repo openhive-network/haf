@@ -444,7 +444,7 @@ indexation_state::force_trigger_flush_with_all_data( cached_data_t& cached_data,
 void
 indexation_state::flush_all_data_to_reversible( cached_data_t& cached_data ) {
   ilog("Flushing reversible blocks...");
-  while ( !cached_data.blocks.empty() ) {
+  while ( !cached_data.blocks.empty() && !theApp.is_interrupt_request() ) {
     const auto current_block = cached_data.blocks.front().block_number;
     cached_data_t reversible_data{0};
 
