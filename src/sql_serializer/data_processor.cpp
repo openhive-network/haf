@@ -220,6 +220,7 @@ data_processor::handle_exception( std::exception_ptr exception_ptr ) {
     if (ex.sqlstate() == "57014") // query cancelled
     {
       wlog("Data processor ${d} detected SQL cancellation. Failing statement: `${q}'.", ("d", _description)("q", ex.query()));
+      kill_node();
     }
     else
     {
