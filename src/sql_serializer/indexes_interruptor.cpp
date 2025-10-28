@@ -25,6 +25,7 @@ void indexes_interruptor::run() {
     while (!_stop.load(std::memory_order_relaxed)) {
       if (_app.is_interrupt_request()) {
         try {
+          wlog("Canceling index related queries...");
           pqxx::connection conn(_db_url);
           pqxx::nontransaction tx(conn);
           pqxx::result cancelled = tx.exec(
@@ -46,12 +47,12 @@ void indexes_interruptor::run() {
             auto state = row[3].is_null() ? std::string("") : row[3].as<std::string>();
             auto query = row[4].is_null() ? std::string("") : row[4].as<std::string>();
             ++cancelled_count;
-            ilog("Cancelled connection pid=${pid} user='${user}' addr='${addr}' state='${state}' query='${query}'",
+            wlog("Cancelled connection pid=${pid} user='${user}' addr='${addr}' state='${state}' query='${query}'",
                  ("pid", pid)("user", user)("addr", addr)("state", state)("query", query));
           }
-          ilog("Cancelled ${n} backend connections", ("n", cancelled_count));
+          wlog("Cancelled ${n} backend connections", ("n", cancelled_count));
         } catch (const std::exception& e) {
-          wlog("Failed to cancel hived connections: ${e}", ("e", e.what()));
+          elog("Failed to cancel index queries: ${e}", ("e", e.what()));
         }
         break;
       }
