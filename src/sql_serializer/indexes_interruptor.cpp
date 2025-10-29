@@ -56,7 +56,7 @@ void indexes_interruptor::run() {
         }
         break;
       }
-      fc::usleep(fc::seconds(1));
+      fc::usleep(fc::seconds(5));
     }
   } catch (const std::exception& e) {
     wlog("indexes_interruptor thread error: ${e}", ("e", e.what()));
