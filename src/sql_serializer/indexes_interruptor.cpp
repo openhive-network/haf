@@ -34,6 +34,7 @@ void indexes_interruptor::run() {
             "  FROM pg_stat_activity "
             "  WHERE application_name = 'hived_index' "
             "    AND pid <> pg_backend_pid()"
+            "    AND datname = current_database()"
             "), cancels AS ("
             "  SELECT t.*, pg_cancel_backend(t.pid) AS cancelled FROM targets t"
             ")"
