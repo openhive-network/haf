@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS hafd.hive_stable_state (
 -- This applies to the following tables as well.
 ALTER TABLE hafd.hive_state ADD CONSTRAINT fk_1_hive_irreversible_data FOREIGN KEY (consistent_block) REFERENCES hafd.blocks (num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.hive_state', '');
+SELECT pg_catalog.pg_extension_config_dump('hafd.hive_stable_state', '');
 
 CREATE TABLE IF NOT EXISTS hafd.transactions (
     block_num integer NOT NULL,
