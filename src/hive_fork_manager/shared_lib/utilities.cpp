@@ -717,7 +717,8 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       [=, &collected]()
       {
         fill_return_tuples(collected, fcinfo,
-          [] (const auto& item) { fc::string _str = item; return make_datum_pair(CStringGetTextDatum(_str.c_str())); }
+          [] (const auto& item) { fc::string _str = item; return make_datum_pair(CStringGetTextDatum(_str.c_str())); },
+          [] (const auto&) { return make_datum_pair(CStringGetTextDatum("active")); }
         );
       },
 
