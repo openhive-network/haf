@@ -1,7 +1,8 @@
 DROP TYPE IF EXISTS hive.get_required_authorities_return_type CASCADE;
 CREATE TYPE hive.get_required_authorities_return_type AS
 (
-  account_name TEXT
+  account_name TEXT,
+  role TEXT
 );
 
 DROP FUNCTION IF EXISTS hive.get_required_authorities;

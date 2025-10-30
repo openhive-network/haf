@@ -6,31 +6,33 @@ DECLARE
   _result_text hive.get_required_authorities_return_type[];
   _result_jsonb hive.get_required_authorities_return_type[];
   _result_op hive.get_required_authorities_return_type[];
+  _expected_typed hive.get_required_authorities_return_type[];
 BEGIN
   SELECT COALESCE(
-    ARRAY_AGG(ROW(f.account_name)::hive.get_required_authorities_return_type),
+    ARRAY_AGG(f),
     '{}'::hive.get_required_authorities_return_type[]
   )
   INTO _result_op
   FROM hive.get_required_authorities(op_text :: jsonb :: hafd.operation) AS f;
 
   SELECT COALESCE(
-    ARRAY_AGG(ROW(f.account_name)::hive.get_required_authorities_return_type),
+    ARRAY_AGG(f),
     '{}'::hive.get_required_authorities_return_type[]
   )
   INTO _result_text
   FROM hive.get_required_authorities(op_text) AS f;
 
   SELECT COALESCE(
-    ARRAY_AGG(ROW(f.account_name)::hive.get_required_authorities_return_type),
+    ARRAY_AGG(f),
     '{}'::hive.get_required_authorities_return_type[]
   )
   INTO _result_jsonb
   FROM hive.get_required_authorities(op_text :: jsonb) AS f;
 
-  ASSERT (expected)::hive.get_required_authorities_return_type[] = _result_op, err_msg || ' (hafd.operation overload)';
-  ASSERT (expected)::hive.get_required_authorities_return_type[] = _result_text, err_msg || ' (text overload)';
-  ASSERT (expected)::hive.get_required_authorities_return_type[] = _result_jsonb, err_msg || ' (jsonb overload)';
+  _expected_typed := (expected)::hive.get_required_authorities_return_type[];
+  ASSERT _expected_typed = _result_op, err_msg || ' (hafd.operation overload)';
+  ASSERT _expected_typed = _result_text, err_msg || ' (text overload)';
+  ASSERT _expected_typed = _result_jsonb, err_msg || ' (jsonb overload)';
 END;
 $$;
 
@@ -42,7 +44,7 @@ BEGIN
 
 PERFORM assert_get_required_authorities(
   '{"type":"transfer_operation","value":{"from":"alice","to":"bob","amount":{"amount":"1000","precision":3,"nai":"@@000000021"},"memo":""}}',
-  '{"(alice)"}',
+  '{"(alice,active)"}',
   'Broken get_required_authorities result for transfer_operation'
 );
 
@@ -54,25 +56,25 @@ PERFORM assert_get_required_authorities(
 
   PERFORM assert_get_required_authorities(
     '{"type":"create_proposal_operation","value":{"creator":"carol","receiver":"dave","start_date":"2020-01-01T00:00:00","end_date":"2020-01-10T00:00:00","daily_pay":{"amount":"5000","precision":3,"nai":"@@000000013"},"subject":"test proposal","permlink":"test-permlink","extensions":[]}}',
-    '{"(carol)"}',
+    '{"(carol,active)"}',
     'Broken get_required_authorities result for create_proposal_operation'
   );
 
   PERFORM assert_get_required_authorities(
     '{"type":"update_proposal_operation","value":{"proposal_id":1,"creator":"carol","daily_pay":{"amount":"4000","precision":3,"nai":"@@000000013"},"subject":"updated proposal","permlink":"test-permlink","extensions":[]}}',
-    '{"(carol)"}',
+    '{"(carol,active)"}',
     'Broken get_required_authorities result for update_proposal_operation'
   );
 
   PERFORM assert_get_required_authorities(
     '{"type":"update_proposal_votes_operation","value":{"voter":"erin","proposal_ids":[1,2,3],"approve":true,"extensions":[]}}',
-    '{"(erin)"}',
+    '{"(erin,active)"}',
     'Broken get_required_authorities result for update_proposal_votes_operation'
   );
 
   PERFORM assert_get_required_authorities(
     '{"type":"remove_proposal_operation","value":{"proposal_owner":"frank","proposal_ids":[10,11],"extensions":[]}}',
-    '{"(frank)"}',
+    '{"(frank,active)"}',
     'Broken get_required_authorities result for remove_proposal_operation'
   );
 
@@ -90,7 +92,7 @@ PERFORM assert_get_required_authorities(
         "json_metadata":"{}"
       }
     }',
-    '{"(george)"}',
+    '{"(george,active)"}',
     'Broken get_required_authorities result for account_create_operation'
   );
 
@@ -110,7 +112,7 @@ PERFORM assert_get_required_authorities(
         "extensions":[]
       }
     }',
-    '{"(henry)"}',
+    '{"(henry,active)"}',
     'Broken get_required_authorities result for account_create_with_delegation_operation'
   );
 
@@ -123,7 +125,7 @@ PERFORM assert_get_required_authorities(
         "json_metadata":"{}"
       }
     }',
-    '{"(ingrid)"}',
+    '{"(ingrid,active)"}',
     'Broken get_required_authorities result for account_update_operation'
   );
 
@@ -136,7 +138,7 @@ PERFORM assert_get_required_authorities(
         "posting_json_metadata":""
       }
     }',
-    '{"(jane)"}',
+    '{"(jane,active)"}',
     'Broken get_required_authorities result for account_update2_operation'
   );
 
@@ -149,7 +151,7 @@ PERFORM assert_get_required_authorities(
         "extensions":[]
       }
     }',
-    '{"(kate)"}',
+    '{"(kate,active)"}',
     'Broken get_required_authorities result for claim_account_operation'
   );
 
@@ -167,7 +169,7 @@ PERFORM assert_get_required_authorities(
         "extensions":[]
       }
     }',
-    '{"(luke)"}',
+    '{"(luke,active)"}',
     'Broken get_required_authorities result for create_claimed_account_operation'
   );
 
@@ -187,7 +189,7 @@ PERFORM assert_get_required_authorities(
         "escrow_expiration":"2020-01-10T00:00:00"
       }
     }',
-    '{"(mike)"}',
+    '{"(mike,active)"}',
     'Broken get_required_authorities result for escrow_transfer_operation'
   );
 
@@ -203,7 +205,7 @@ PERFORM assert_get_required_authorities(
         "approve":true
       }
     }',
-    '{"(nina)"}',
+    '{"(nina,active)"}',
     'Broken get_required_authorities result for escrow_approve_operation'
   );
 
@@ -218,7 +220,7 @@ PERFORM assert_get_required_authorities(
         "escrow_id":1
       }
     }',
-    '{"(olga)"}',
+    '{"(olga,active)"}',
     'Broken get_required_authorities result for escrow_dispute_operation'
   );
 
@@ -236,7 +238,7 @@ PERFORM assert_get_required_authorities(
         "hive_amount":{"amount":"1","precision":3,"nai":"@@000000021"}
       }
     }',
-    '{"(paul)"}',
+    '{"(paul,active)"}',
     'Broken get_required_authorities result for escrow_release_operation'
   );
 
@@ -249,7 +251,7 @@ PERFORM assert_get_required_authorities(
         "amount":{"amount":"1000","precision":3,"nai":"@@000000021"}
       }
     }',
-    '{"(quinn)"}',
+    '{"(quinn,active)"}',
     'Broken get_required_authorities result for transfer_to_vesting_operation'
   );
 
@@ -261,7 +263,7 @@ PERFORM assert_get_required_authorities(
         "vesting_shares":{"amount":"1000000","precision":6,"nai":"@@000000037"}
       }
     }',
-    '{"(rita)"}',
+    '{"(rita,active)"}',
     'Broken get_required_authorities result for withdraw_vesting_operation'
   );
 
@@ -275,7 +277,7 @@ PERFORM assert_get_required_authorities(
         "auto_vest":false
       }
     }',
-    '{"(sam)"}',
+    '{"(sam,active)"}',
     'Broken get_required_authorities result for set_withdraw_vesting_route_operation'
   );
 
@@ -294,7 +296,7 @@ PERFORM assert_get_required_authorities(
         "fee":{"amount":"0","precision":3,"nai":"@@000000021"}
       }
     }',
-    '{"(tom)"}',
+    '{"(tom,active)"}',
     'Broken get_required_authorities result for witness_update_operation'
   );
 
@@ -307,7 +309,7 @@ PERFORM assert_get_required_authorities(
         "approve":true
       }
     }',
-    '{"(uma)"}',
+    '{"(uma,active)"}',
     'Broken get_required_authorities result for account_witness_vote_operation'
   );
 
@@ -319,7 +321,7 @@ PERFORM assert_get_required_authorities(
         "proxy":"alice"
       }
     }',
-    '{"(victor)"}',
+    '{"(victor,active)"}',
     'Broken get_required_authorities result for account_witness_proxy_operation'
   );
 
@@ -332,7 +334,7 @@ PERFORM assert_get_required_authorities(
         "data":"0a"
       }
     }',
-    '{"(walt)"}',
+    '{"(walt,active)"}',
     'Broken get_required_authorities result for custom_operation'
   );
 
@@ -346,7 +348,7 @@ PERFORM assert_get_required_authorities(
         "json":"{}"
       }
     }',
-    '{"(xena)"}',
+    '{"(xena,active)"}',
     'Broken get_required_authorities result for custom_json_operation'
   );
 
@@ -362,7 +364,7 @@ PERFORM assert_get_required_authorities(
         "data":""
       }
     }',
-    '{"(yuri)"}',
+    '{"(yuri,active)"}',
     'Broken get_required_authorities result for custom_binary_operation'
   );
 
@@ -377,7 +379,7 @@ PERFORM assert_get_required_authorities(
         }
       }
     }',
-    '{"(initminer)"}',
+    '{"(initminer,active)"}',
     'Broken get_required_authorities result for feed_publish_operation'
   );
 
@@ -390,7 +392,7 @@ PERFORM assert_get_required_authorities(
         "amount":{"amount":"127144","precision":3,"nai":"@@000000013"}
       }
     }',
-    '{"(adam)"}',
+    '{"(adam,active)"}',
     'Broken get_required_authorities result for convert_operation'
   );
 
@@ -403,7 +405,7 @@ PERFORM assert_get_required_authorities(
         "amount":{"amount":"1000","precision":3,"nai":"@@000000021"}
       }
     }',
-    '{"(beth)"}',
+    '{"(beth,active)"}',
     'Broken get_required_authorities result for collateralized_convert_operation'
   );
 
@@ -419,7 +421,7 @@ PERFORM assert_get_required_authorities(
         "expiration":"2023-01-02T11:43:07"
       }
     }',
-    '{"(carl)"}',
+    '{"(carl,active)"}',
     'Broken get_required_authorities result for limit_order_create_operation'
   );
 
@@ -438,7 +440,7 @@ PERFORM assert_get_required_authorities(
         "expiration":"2023-01-02T11:43:07"
       }
     }',
-    '{"(dina)"}',
+    '{"(dina,active)"}',
     'Broken get_required_authorities result for limit_order_create2_operation'
   );
 
@@ -450,7 +452,7 @@ PERFORM assert_get_required_authorities(
         "orderid":1
       }
     }',
-    '{"(edgar)"}',
+    '{"(edgar,active)"}',
     'Broken get_required_authorities result for limit_order_cancel_operation'
   );
 
@@ -494,7 +496,7 @@ PERFORM assert_get_required_authorities(
         "work": {"type": "pow2","value": {"input": {"nonce": "2363830237862599931","prev_block": "003ead0c90b0cd80e9145805d303957015c50ef1","worker_account": "thedao"},"pow_summary": 3878270667}}
       }
     }',
-    '{"(thedao)"}',
+    '{"(thedao,active)"}',
     'Broken get_required_authorities result for pow2_operation (should be empty)'
   );
 
@@ -508,7 +510,7 @@ PERFORM assert_get_required_authorities(
         "extensions":[]
       }
     }',
-    '{"(initminer)"}',
+    '{"(initminer,active)"}',
     'Broken get_required_authorities result for request_account_recovery_operation'
   );
 
@@ -521,7 +523,7 @@ PERFORM assert_get_required_authorities(
         "new_owner_authority":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM1111111111111111111111111111111114T1Anm",1]]}
       }
     }',
-    '{"(resetter)"}',
+    '{"(resetter,active)"}',
     'Broken get_required_authorities result for reset_account_operation'
   );
 
@@ -535,7 +537,7 @@ PERFORM assert_get_required_authorities(
         "memo":"memo"
       }
     }',
-    '{"(u1)"}',
+    '{"(u1,active)"}',
     'Broken get_required_authorities result for transfer_to_savings_operation'
   );
 
@@ -550,7 +552,7 @@ PERFORM assert_get_required_authorities(
         "memo":"memo"
       }
     }',
-    '{"(u2)"}',
+    '{"(u2,active)"}',
     'Broken get_required_authorities result for transfer_from_savings_operation'
   );
 
@@ -562,7 +564,7 @@ PERFORM assert_get_required_authorities(
         "request_id":1
       }
     }',
-    '{"(u3)"}',
+    '{"(u3,active)"}',
     'Broken get_required_authorities result for cancel_transfer_from_savings_operation'
   );
 
@@ -575,7 +577,7 @@ PERFORM assert_get_required_authorities(
         "vesting_shares":{"amount":"1000000","precision":6,"nai":"@@000000037"}
       }
     }',
-    '{"(del)"}',
+    '{"(del,active)"}',
     'Broken get_required_authorities result for delegate_vesting_shares_operation'
   );
 
@@ -592,7 +594,7 @@ PERFORM assert_get_required_authorities(
         "extensions":[]
       }
     }',
-    '{"(rfrom)"}',
+    '{"(rfrom,active)"}',
     'Broken get_required_authorities result for recurrent_transfer_operation'
   );
 END;
