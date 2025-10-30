@@ -11,7 +11,8 @@ from haf_local_tools.system.haf.mirrornet.constants import CHAIN_ID, SKELETON_KE
 
 
 @pytest.mark.mirrornet
-def test_proper_shutdown_during_index_creation(mirrornet_witness_node, haf_node, block_log_5m, tmp_path):
+@pytest.mark.parametrize("signal_type", [signal.SIGINT, signal.SIGKILL])
+def test_proper_shutdown_during_index_creation(mirrornet_witness_node, haf_node, block_log_5m, tmp_path, signal_type):
     """
     Related to: https://gitlab.syncad.com/hive/hive/-/issues/794
     """
@@ -59,17 +60,17 @@ def test_proper_shutdown_during_index_creation(mirrornet_witness_node, haf_node,
                 continue
 
             if "PROFILE: Entering LIVE sync, creating indexes/constraints as needed" in new_data:
-                os.kill(haf_node_pid, signal.SIGINT)
-                tt.logger.info(f"Sent sigint signal to haf_node on pid: {haf_node_pid}!")
+                os.kill(haf_node_pid, signal_type)
+                tt.logger.info(f"Sent {signal_type.name} to haf_node on pid: {haf_node_pid}!")
 
                 time.sleep(10) # time to gently exit haf node
 
                 f.seek(0, 0)
                 full_log = f.read()
                 if "exited cleanly" in full_log:
-                    tt.logger.info("Haf node exited cleanly after SIGINT.")
+                    tt.logger.info(f"Haf node exited cleanly after {signal_type.name}.")
                     break
                 else:
-                    pytest.fail("Haf node did not exit cleanly after SIGINT.")
+                    pytest.fail(f"Haf node did not exit cleanly after {signal_type.name}.")
         else:
             pytest.fail(f"Phase `exited cleanly` not found in log within {search_timeout} seconds")
