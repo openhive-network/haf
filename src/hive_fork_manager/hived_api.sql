@@ -82,10 +82,6 @@ $BODY$
 DECLARE
     __irreversible_head_block hafd.blocks.num%TYPE;
 BEGIN
-    IF hive.get_sync_state() != 'LIVE' THEN
-       RETURN;
-    END IF;
-
     SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hafd.blocks;
 
     IF ( _block_num < __irreversible_head_block ) THEN
@@ -134,19 +130,15 @@ BEGIN
     -- the contexts are locked by the apps during attach: hive.app_context_attach
     BEGIN
      -- remove all events less than lowest context events_id
-        IF hive.get_sync_state() = 'LIVE' THEN
-            LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
-            PERFORM hive.remove_unecessary_events( _block_num );
-            PERFORM hive.remove_obsolete_reversible_data( _block_num );
-        END IF;
+        LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
+        PERFORM hive.remove_unecessary_events( _block_num );
+        PERFORM hive.remove_obsolete_reversible_data( _block_num );
     EXCEPTION WHEN SQLSTATE '55P03' THEN
         -- 55P03 	lock_not_available https://www.postgresql.org/docs/current/errcodes-appendix.html
     END;
 
     INSERT INTO hafd.events_queue( event, block_num )
     VALUES ( 'MASSIVE_SYNC'::hafd.event_type, _block_num );
-
-
 
     UPDATE hafd.hive_state SET consistent_block = _block_num;
 END;

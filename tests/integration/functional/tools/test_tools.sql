@@ -5,8 +5,6 @@ GRANT ALL ON SCHEMA test TO PUBLIC;
 
 SELECT hive.initialize_extension_data();
 
-SELECT hive.set_sync_state( 'LIVE' );
-
 CREATE OR REPLACE FUNCTION test.unordered_arrays_equal(arr1 TEXT[], arr2 TEXT[])
 RETURNS bool
 LANGUAGE plpgsql
