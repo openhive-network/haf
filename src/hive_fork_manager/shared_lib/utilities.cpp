@@ -99,7 +99,7 @@ collected_metadata_collection_t collect_metadata(const hive::protocol::operation
     return hive::app::operation_get_metadata(op, is_hf21);
 }
 
-flat_set< account_name_type > collect_required_authorities(const hive::protocol::operation& op)
+std::vector< std::pair< account_name_type, std::string > > collect_required_authorities(const hive::protocol::operation& op)
 {
   using namespace hive::protocol;
   flat_set< account_name_type > req_active;
@@ -111,7 +111,27 @@ flat_set< account_name_type > collect_required_authorities(const hive::protocol:
   get_required_auth_visitor visitor(req_active, req_owner, req_posting, req_witness, other_auths);
   op.visit(visitor);
 
-  return req_active;
+  std::vector< std::pair< account_name_type, std::string > > result;
+  result.reserve(req_active.size() + req_owner.size() + req_posting.size() + req_witness.size() + other_auths.size());
+
+  for (const auto& name : req_active)
+    result.emplace_back(name, "active");
+  for (const auto& name : req_owner)
+    result.emplace_back(name, "owner");
+  for (const auto& name : req_posting)
+    result.emplace_back(name, "posting");
+  for (const auto& name : req_witness)
+    result.emplace_back(name, "witness");
+
+  for (const auto& auth : other_auths)
+  {
+    for (const auto& account : auth.get_accounts())
+    {
+      result.emplace_back(account, "other");
+    }
+  }
+
+  return result;
 }
 
 } // namespace
@@ -706,7 +726,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
   {
     _operation* operation_body = PG_GETARG_HIVE_OPERATION_PP( 0 );
 
-    flat_set< account_name_type > collected;
+    std::vector< std::pair< account_name_type, std::string > > collected;
 
     colect_operation_data_and_fill_returned_recordset(
       [=, &collected](const hive::protocol::operation& op)
@@ -717,8 +737,8 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
       [=, &collected]()
       {
         fill_return_tuples(collected, fcinfo,
-          [] (const auto& item) { fc::string _str = item; return make_datum_pair(CStringGetTextDatum(_str.c_str())); },
-          [] (const auto&) { return make_datum_pair(CStringGetTextDatum("active")); }
+          [] (const auto& item) { fc::string _str = item.first; return make_datum_pair(CStringGetTextDatum(_str.c_str())); },
+          [] (const auto& item) { return make_datum_pair(CStringGetTextDatum(item.second.c_str())); }
         );
       },
 
