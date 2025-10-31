@@ -50,8 +50,8 @@ PERFORM assert_get_required_authorities(
 
 PERFORM assert_get_required_authorities(
   '{"type":"vote_operation","value":{"voter":"alice","author":"bob","permlink":"post","weight":1000}}',
-  '{}',
-  'Broken get_required_authorities result for posting-only operation (should be empty)'
+  '{"(alice,posting)"}',
+  'Broken get_required_authorities result for posting-only operation'
 );
 
   PERFORM assert_get_required_authorities(
@@ -354,17 +354,31 @@ PERFORM assert_get_required_authorities(
 
   PERFORM assert_get_required_authorities(
     '{
+      "type":"custom_json_operation",
+      "value":{
+        "required_auths":[],
+        "required_posting_auths":["xena"],
+        "id":"follow",
+        "json":"{}"
+      }
+    }',
+    '{"(xena,posting)"}',
+    'Broken get_required_authorities result for custom_json_operation'
+  );
+
+  PERFORM assert_get_required_authorities(
+    '{
       "type":"custom_binary_operation",
       "value":{
-        "required_owner_auths":[],
-        "required_active_auths":["yuri"],
-        "required_posting_auths":[],
+        "required_owner_auths":["yuri1"],
+        "required_active_auths":["yuri2"],
+        "required_posting_auths":["yuri3"],
         "required_auths":[],
         "id":"binid",
         "data":""
       }
     }',
-    '{"(yuri,active)"}',
+    '{"(yuri2,active)","(yuri1,owner)","(yuri3,posting)"}',
     'Broken get_required_authorities result for custom_binary_operation'
   );
 
