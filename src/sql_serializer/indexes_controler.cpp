@@ -207,7 +207,21 @@ void indexes_controler::poll_and_create_indexes()
   fc::thread::current().set_name(thread_name);
 
 
-  while (!theApp.is_interrupt_request()) 
+  {
+    pqxx::connection conn(db_url_with_hived_app(_db_url));
+    pqxx::nontransaction tx(conn);
+    try
+    {
+      dlog("Resetting indexes creation states before polling loop...");
+      tx.exec("UPDATE hafd.indexes_constraints SET status = 'missing' WHERE status = 'creating';");
+    }
+    catch (const std::exception& e)
+    {
+      elog("Error while resetting indexes creation states: ${e}", ("e", e.what()));
+    }
+  }
+
+  while (!theApp.is_interrupt_request())
   {
     dlog("Checking for table vacuum requests...");
     pqxx::connection conn(db_url_with_hived_app(_db_url));
