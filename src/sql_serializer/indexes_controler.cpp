@@ -217,11 +217,12 @@ void indexes_controler::poll_and_create_indexes()
       pqxx::result data = tx.exec("SELECT table_name FROM hafd.vacuum_requests WHERE status = 'requested';"); 
       dlog("Found ${count} tables with vacuum requests.", ("count", data.size()));
 
-      try 
+      for (const auto& record : data)
       {
-        for (const auto& record : data) 
+        std::string table_name;
+        try
         {
-          std::string table_name = record["table_name"].as<std::string>();
+          table_name = record["table_name"].as<std::string>();
           std::string vacuum_command = "VACUUM FULL ANALYZE " + table_name;
           ilog("Performing vacuum: ${vacuum_command}", (vacuum_command));
           auto start_time = fc::time_point::now();
@@ -233,10 +234,13 @@ void indexes_controler::poll_and_create_indexes()
           tx.exec("UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW() WHERE table_name = '" + table_name + "';");
           ilog("Updated vacuum status for table: ${table_name}", ("table_name", table_name));
         }
-      } 
-      catch (const pqxx::sql_error& e) { elog("Error while vacuuming tables: ${e}", ("e", e.what())); }
-    } 
-    catch (const pqxx::sql_error& e) 
+        catch (const std::exception& e)
+        {
+           elog("Error while vacuuming table: ${table_name}: ${e}", ("table_name", table_name)("e", e.what()));
+        }
+      }
+    }
+    catch (const std::exception& e)
     {
       elog("Error while checking for vacuum requests: ${e}", ("e", e.what()));
     }
@@ -299,8 +303,10 @@ void indexes_controler::poll_and_create_indexes()
               ilog("Finished creating index for table: ${table_name} in ${duration} seconds", (table_name)("duration", index_creation_duration.to_seconds()));
               tx.exec("UPDATE hafd.indexes_constraints SET status = 'created' WHERE index_constraint_name ='"+index_constraint_name+"';");
             }
-            catch (const pqxx::sql_error& e) { elog("Error while creating index: ${e}", ("e", e.what())); }
-            catch(std::exception& e ) { elog( e.what() ); }
+            catch (const std::exception& e)
+            {
+               elog("Error while creating index: ${e}", ("e", e.what()));
+            }
           }
           ilog("Finished creating all indexes for table: ${table_name}", (table_name));
           try
@@ -309,9 +315,11 @@ void indexes_controler::poll_and_create_indexes()
             std::string analyze_table = "ANALYZE " + table_name + ";";
             tx.exec(analyze_table);
           }
-          catch (const pqxx::sql_error& e) { elog("Error while analyzing table: ${e}", ("e", e.what())); }
-          catch(std::exception& e ) { elog( e.what() ); }
-          
+          catch (const std::exception& e)
+          {
+             elog("Error while analyzing table: ${e}", ("e", e.what()));
+          }
+
           std::lock_guard g(mtx);
           threads_to_delete.insert(table_name); // Mark the thread for deletion
           ilog("Thread for table: ${table_name} has been marked for deletion", (table_name));
@@ -319,7 +327,7 @@ void indexes_controler::poll_and_create_indexes()
       } //end for tables with missing indexes
       dlog("Finished polling for tables with missing indexes, sleep for 10s.");
     }
-    catch (const pqxx::sql_error& e) 
+    catch (const std::exception& e)
     {
       elog("Error while checking for missing indexes: ${e}", ("e", e.what()));
     }
