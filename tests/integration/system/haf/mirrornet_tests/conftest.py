@@ -3,7 +3,7 @@ import pytest
 
 import test_tools as tt
 
-from haf_local_tools.system.haf.mirrornet.constants import SKELETON_KEY, WITNESSES_5M
+from haf_local_tools.system.haf.mirrornet.constants import SKELETON_KEY, WITNESSES_5M, WITNESSES_2M
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 
 
@@ -33,9 +33,9 @@ def snapshot_path(request):
 @pytest.fixture
 def mirrornet_witness_node():
     witness_node = tt.RawNode()
-    witness_node.config.witness = WITNESSES_5M
+    witness_node.config.witness = WITNESSES_2M
     witness_node.config.private_key = SKELETON_KEY
-    witness_node.config.shared_file_size = "2G"
+    witness_node.config.shared_file_size = "5G"
     witness_node.config.enable_stale_production = True
     witness_node.config.required_participation = 0
     witness_node.config.plugin.append("database_api")

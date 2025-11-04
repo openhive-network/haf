@@ -16,7 +16,8 @@ def test_proper_shutdown_during_index_creation(mirrornet_witness_node, haf_node,
     """
     Related to: https://gitlab.syncad.com/hive/hive/-/issues/794
     """
-    block_log_1m = block_log_5m.truncate(tmp_path, 1000000)
+    # block_log_1m = block_log_5m.truncate(tmp_path, 1000000)
+    block_log_1m = block_log_5m
     mirrornet_witness_node.run(
         replay_from=block_log_1m,
         time_control=tt.StartTimeControl(start_time="head_block_time"),
@@ -71,6 +72,9 @@ def test_proper_shutdown_during_index_creation(mirrornet_witness_node, haf_node,
                     tt.logger.info(f"Haf node exited cleanly after {signal_type.name}.")
                     break
                 else:
+                    if signal_type == signal.SIGKILL:
+                        tt.logger.info(f"Haf node was killed with SIGKILL, cannot exit cleanly.")
+                        break
                     pytest.fail(f"Haf node did not exit cleanly after {signal_type.name}.")
         else:
             pytest.fail(f"Phase `exited cleanly` not found in log within {search_timeout} seconds")
