@@ -133,8 +133,55 @@ indexes_controler::disable_constraints() {
   if (theApp.is_interrupt_request())
     return;
 
-  auto processor = start_commit_sql(false, "hive.disable_fk_of_irreversible()", "disable fk-s" );
-  processor->join();
+  // Foreign keys (FKs) are dropped for one table at a time to avoid deadlocks with concurrent applications.
+  // When multiple applications access the same tables, dropping FKs for all tables simultaneously 
+  // could lead to deadlocks due to competing exclusive locks. By processing one table at a time, 
+  // HAF ensures it only holds an exclusive lock on a single table,
+  // reducing contention and eliminating potential deadlock scenarios.
+  // Deadlock problem affects only pruning mode when apps are synced in parallel with HAF sync. In classical mode
+  // apps are not syncing data before indexes and FKs are present in the LIVE mode.
+
+  start_commit_sql(
+      true
+    , "hive.save_and_drop_foreign_keys( 'hafd', 'hive_state' );"
+    , "disable FKs"
+  )->join();
+  start_commit_sql(
+          true
+          , "hive.save_and_drop_foreign_keys( 'hafd', 'blocks' )"
+          , "disable FKs"
+  )->join();
+  start_commit_sql(
+          true
+          , "hive.save_and_drop_foreign_keys( 'hafd', 'transactions' )"
+          , "disable FKs"
+  )->join();
+  start_commit_sql(
+          true
+          , "hive.save_and_drop_foreign_keys( 'hafd', 'transactions_multisig' )"
+          , "disable FKs"
+  )->join();
+  start_commit_sql(
+          true
+          , "hive.save_and_drop_foreign_keys( 'hafd', 'operations' )"
+          , "disable FKs"
+  )->join();
+  start_commit_sql(
+          true
+          , "hive.save_and_drop_foreign_keys( 'hafd', 'applied_hardforks' )"
+          , "disable FKs"
+  )->join();
+  start_commit_sql(
+          true
+          , "hive.save_and_drop_foreign_keys( 'hafd', 'accounts' )"
+          , "disable FKs"
+  )->join();
+  start_commit_sql(
+          true
+          , "hive.save_and_drop_foreign_keys( 'hafd', 'account_operations' )"
+          , "disable FKs"
+  )->join();
+
   ilog( "All irreversible blocks tables foreign keys are dropped" );
 }
 
@@ -143,29 +190,48 @@ indexes_controler::enable_constrains() {
   if (theApp.is_interrupt_request())
     return;
 
+  // Foreign keys (FKs) are restored for one table at a time to avoid deadlocks with concurrent applications.
+  // When multiple applications access the same tables, restoring FKs for all tables simultaneously 
+  // could lead to deadlocks due to competing exclusive locks. By processing one table at a time,
+  // HAF ensures it only holds an exclusive lock on a single table,
+  // reducing contention and eliminating potential deadlock scenarios.
+
   ilog("Restoring HAF constraints...");
   fc::time_point restore_constraints_start_time = fc::time_point::now();
 
-  auto restore_irreversible_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.hive_state' )", "hive_state foreign keys" );
-  auto restore_transactions_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.transactions' )", "transactions foreign keys" );
-  auto restore_transactions_sigs_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.transactions_multisig' )", "transactions_multisig foreign keys" );
-  auto restore_operations_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.operations' )", "operations foreign keys" );
-  auto restore_account_operations_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.account_operations' )", "account_operations foreign keys" );
-  auto restore_accounts_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.accounts' )", "accounts foreign keys" );
-  auto restore_applied_hardforks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.applied_hardforks' )", "applied_hardforks foreign keys" );
+  start_commit_sql(
+          true, "hive.restore_foreign_keys( 'hafd.hive_state' )", "enable indexes"
+  )->join();
 
-  join_processors(
-    *restore_irreversible_fks,
-    *restore_transactions_fks,
-    *restore_transactions_sigs_fks,
-    *restore_operations_fks,
-    *restore_account_operations_fks,
-    *restore_accounts_fks,
-    *restore_applied_hardforks_fks
-  );
+  start_commit_sql(
+          true, "hive.restore_foreign_keys( 'hafd.transactions' )", "enable indexes"
+  )->join();
 
-  auto restore_blocks_fks = start_commit_sql( true, "hive.restore_foreign_keys( 'hafd.blocks' )", "blocks foreign keys" );
-  restore_blocks_fks->join();
+  start_commit_sql(
+          true, "hive.restore_foreign_keys( 'hafd.transactions_multisig' )", "enable indexes"
+  )->join();
+
+  start_commit_sql(
+          true, "hive.restore_foreign_keys( 'hafd.operations' )", "enable indexes"
+  )->join();
+
+  start_commit_sql(
+          true, "hive.restore_foreign_keys( 'hafd.account_operations' )", "enable indexes"
+  )->join();
+
+  start_commit_sql(
+          true, "hive.restore_foreign_keys( 'hafd.accounts' )", "enable indexes"
+  )->join();
+
+  start_commit_sql(
+          true, "hive.restore_foreign_keys( 'hafd.applied_hardforks' )"
+      , "enable indexes"
+  )->join();
+
+  start_commit_sql(
+          true, "hive.restore_foreign_keys( 'hafd.blocks' )", "enable indexes"
+  )->join();
+  
 
   fc::microseconds restore_constraints_time = fc::time_point::now() - restore_constraints_start_time;
   ilog( "PROFILE: Restored HAF constraints: ${t}s", ("t",restore_constraints_time.to_seconds()) );
