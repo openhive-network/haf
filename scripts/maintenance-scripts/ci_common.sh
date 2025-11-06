@@ -19,8 +19,6 @@ export DB_ADMIN="haf_admin"
 
 test_start() {
   pushd "${REPO_DIR}"
-  git config --global --add safe.directory "$(realpath "${REPO_DIR}")"
-  echo "Will use tests from commit $(git rev-parse HEAD)"
   exec > >(tee -i "${LOG_FILE}") 2>&1
 }
 

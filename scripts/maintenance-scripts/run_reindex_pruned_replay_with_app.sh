@@ -11,9 +11,6 @@
 
 set -xeuo pipefail
 
-sudo apt-get update
-sudo apt-get install -y git
-
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
 
@@ -21,7 +18,6 @@ export LOG_FILE=replay_with_update.log
 # shellcheck source=./ci_common.sh
 source "$SCRIPTSDIR/maintenance-scripts/ci_common.sh"
 NUMBER_OF_BLOCKS_TO_REPLAY=1000000
-
 
 test_start
 

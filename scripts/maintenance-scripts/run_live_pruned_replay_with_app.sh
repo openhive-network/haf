@@ -16,9 +16,6 @@
 
 set -xeuo pipefail
 
-sudo apt-get update
-sudo apt-get install -y git
-
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
 
