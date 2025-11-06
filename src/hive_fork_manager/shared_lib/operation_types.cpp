@@ -427,7 +427,7 @@ std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<hive::
 template<>
 std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<hive::protocol::account_name_type>()
 {
-  return {"hive", "account_name_type"};
+  return {"hafd", "account_name_type"};
 }
 template<>
 std::pair<std::string, std::string> sql_namespace_and_type_name_from_type<uint32_t>()

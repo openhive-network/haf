@@ -889,7 +889,7 @@ CREATE TYPE hive.asset_symbol_info AS
   is_native BOOLEAN,  -- True if given asset_symbol represents native Hive asset
 );
 
-FUNCTION hive.decode_asset_symbol(IN _symbol hive.asset_symbol) RETURNS hive.asset_symbol_info;
+FUNCTION hive.decode_asset_symbol(IN _symbol hafd.asset_symbol) RETURNS hive.asset_symbol_info;
 */
 
 Datum decode_asset_symbol(PG_FUNCTION_ARGS)
@@ -927,7 +927,7 @@ Datum decode_asset_symbol(PG_FUNCTION_ARGS)
 }
 
 /**
-FUNCTION hive.get_paired_symbol(IN _symbol hive.asset_symbol) RETURNS hive.asset_symbol
+FUNCTION hive.get_paired_symbol(IN _symbol hafd.asset_symbol) RETURNS hafd.asset_symbol
 */
 PG_FUNCTION_INFO_V1(get_paired_asset_symbol);
 
@@ -952,7 +952,7 @@ Datum get_paired_asset_symbol(PG_FUNCTION_ARGS)
 }
 
 /**
-CREATE OR REPLACE FUNCTION hive.asset_symbol_to_nai_string(IN _symbol hive.asset_symbol) RETURNS TEXT;
+CREATE OR REPLACE FUNCTION hive.asset_symbol_to_nai_string(IN _symbol hafd.asset_symbol) RETURNS TEXT;
 */
 PG_FUNCTION_INFO_V1(asset_symbol_to_nai_string);
 
@@ -979,7 +979,7 @@ Datum asset_symbol_to_nai_string(PG_FUNCTION_ARGS)
 }
 
 /**
-  FUNCTION hive.asset_symbol_from_nai_string(IN _nai_string TEXT, IN _precision SMALLINT) RETURNS hive.asset_symbol
+  FUNCTION hive.asset_symbol_from_nai_string(IN _nai_string TEXT, IN _precision SMALLINT) RETURNS hafd.asset_symbol
 */
 PG_FUNCTION_INFO_V1(asset_symbol_from_nai_string);
 

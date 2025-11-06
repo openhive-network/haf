@@ -3,10 +3,10 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 DECLARE
-    hbdAssetSymbol hive.asset_symbol;
-    hiveAssetSymbol hive.asset_symbol;
-    vestsAssetSymbol hive.asset_symbol;
-    customAssetSymbol hive.asset_symbol;
+    hbdAssetSymbol hafd.asset_symbol;
+    hiveAssetSymbol hafd.asset_symbol;
+    vestsAssetSymbol hafd.asset_symbol;
+    customAssetSymbol hafd.asset_symbol;
 
     assetInfo hive.asset_symbol_info;
 BEGIN

@@ -141,9 +141,9 @@ check_relation_structure public.bad_table "id|integer|||\ncomment|hive.comment_o
 
 printf "\nTEST: Creating table referencing disallowed HAF domain. Upgrade should fail.\n"
 prepare_database
-exec_sql "create table public.bad_table(id int, account hive.account_name_type)"
+exec_sql "create table public.bad_table(id int, extensions hive.extensions_type)"
 failswith 4 update_database
-check_relation_structure public.bad_table "id|integer|||\naccount|hive.account_name_type|||"
+check_relation_structure public.bad_table "id|integer|||\nextensions|hive.extensions_type|||"
 
 printf "\nTEST: Creating table referencing allowed HAF domain. Upgrade should pass.\n"
 prepare_database
@@ -164,15 +164,15 @@ prepare_sql_script 0000000000000000000000000000000000000000
 prepare_database --version="0000000000000000000000000000000000000000"
 exec_sql "create view public.bad_type_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on view public.bad_type_view is 'foo'"
-exec_sql "create view public.bad_domain_view as select id,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create view public.bad_domain_view as select id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where hafd.operation_id_to_type_id(id)=42"
 exec_sql "comment on view public.bad_domain_view is 'bar'"
 exec_sql "create view public.bad_mixed_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on view public.bad_mixed_view is 'baz'"
 update_database
 check_table_is_empty hafd.deps_saved_ddl
 check_relation_structure public.bad_type_view "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
-check_relation_structure public.bad_domain_view "id|bigint|||\nmemo|hive.memo|||"
-check_relation_structure public.bad_mixed_view "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
+check_relation_structure public.bad_domain_view "id|bigint|||\nextensions|hive.extensions_type|||"
+check_relation_structure public.bad_mixed_view "id|bigint|||\namount|hive.asset|||\nmemo|hafd.memo|||"
 check_relation_comment public.bad_type_view foo
 check_relation_comment public.bad_domain_view bar
 check_relation_comment public.bad_mixed_view baz
@@ -181,15 +181,15 @@ printf "\nTEST: Creating view referencing disallowed type with no update taking 
 prepare_database
 exec_sql "create view public.bad_type_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on view public.bad_type_view_2 is 'foo'"
-exec_sql "create view public.bad_domain_view_2 as select id,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create view public.bad_domain_view_2 as select id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where hafd.operation_id_to_type_id(id)=42"
 exec_sql "comment on view public.bad_domain_view_2 is 'bar'"
 exec_sql "create view public.bad_mixed_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on view public.bad_mixed_view_2 is 'baz'"
 update_database
 check_table_is_empty hafd.deps_saved_ddl
 check_relation_structure public.bad_type_view_2 "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
-check_relation_structure public.bad_domain_view_2 "id|bigint|||\nmemo|hive.memo|||"
-check_relation_structure public.bad_mixed_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
+check_relation_structure public.bad_domain_view_2 "id|bigint|||\nextensions|hive.extensions_type|||"
+check_relation_structure public.bad_mixed_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hafd.memo|||"
 check_relation_comment public.bad_type_view_2 foo
 check_relation_comment public.bad_domain_view_2 bar
 check_relation_comment public.bad_mixed_view_2 baz
@@ -207,15 +207,15 @@ prepare_sql_script 0000000000000000000000000000000000000000
 prepare_database --version="0000000000000000000000000000000000000000"
 exec_sql "create materialized view public.bad_type_materialized_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on materialized view public.bad_type_materialized_view is 'foo'"
-exec_sql "create materialized view public.bad_domain_materialized_view as select id,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create materialized view public.bad_domain_materialized_view as select id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where hafd.operation_id_to_type_id(id)=42"
 exec_sql "comment on materialized view public.bad_domain_materialized_view is 'bar'"
 exec_sql "create materialized view public.bad_mixed_materialized_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on materialized view public.bad_mixed_materialized_view is 'baz'"
 update_database
 check_table_is_empty hafd.deps_saved_ddl
 check_relation_structure public.bad_type_materialized_view "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
-check_relation_structure public.bad_domain_materialized_view "id|bigint|||\nmemo|hive.memo|||"
-check_relation_structure public.bad_mixed_materialized_view "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
+check_relation_structure public.bad_domain_materialized_view "id|bigint|||\nextensions|hive.extensions_type|||"
+check_relation_structure public.bad_mixed_materialized_view "id|bigint|||\namount|hive.asset|||\nmemo|hafd.memo|||"
 check_relation_comment public.bad_type_materialized_view foo
 check_relation_comment public.bad_domain_materialized_view bar
 check_relation_comment public.bad_mixed_materialized_view baz
@@ -224,15 +224,15 @@ printf "\nTEST: Creating materialized view referencing disallowed type with no u
 prepare_database
 exec_sql "create materialized view public.bad_type_materialized_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on materialized view public.bad_type_materialized_view_2 is 'foo'"
-exec_sql "create materialized view public.bad_domain_materialized_view_2 as select id,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create materialized view public.bad_domain_materialized_view_2 as select id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where hafd.operation_id_to_type_id(id)=42"
 exec_sql "comment on materialized view public.bad_domain_materialized_view_2 is 'bar'"
 exec_sql "create materialized view public.bad_mixed_materialized_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
 exec_sql "comment on materialized view public.bad_mixed_materialized_view_2 is 'baz'"
 update_database
 check_table_is_empty hafd.deps_saved_ddl
 check_relation_structure public.bad_type_materialized_view_2 "id|bigint|||\nbody_binary|hive.transfer_operation|||\namount|hive.asset|||"
-check_relation_structure public.bad_domain_materialized_view_2 "id|bigint|||\nmemo|hive.memo|||"
-check_relation_structure public.bad_mixed_materialized_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hive.memo|||"
+check_relation_structure public.bad_domain_materialized_view_2 "id|bigint|||\nextensions|hive.extensions_type|||"
+check_relation_structure public.bad_mixed_materialized_view_2 "id|bigint|||\namount|hive.asset|||\nmemo|hafd.memo|||"
 check_relation_comment public.bad_type_materialized_view_2 foo
 check_relation_comment public.bad_domain_materialized_view_2 bar
 check_relation_comment public.bad_mixed_materialized_view_2 baz

@@ -7,6 +7,7 @@ ADD_PSQL_EXTENSION(
              events_queue.sql
              forks.sql
              app_context.sql
+             types/domains.sql
              types/operation/operation.sql
              types/operation/operation_flow.sql
              types/operation/operation_impl.sql
