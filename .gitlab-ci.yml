@@ -19,8 +19,8 @@ variables:
   FF_ENABLE_JOB_CLEANUP: 1
   FF_NETWORK_PER_BUILD: 1
 
-  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-8
-  BUILDER_IMAGE_TAG: "@sha256:587be4db84e4ca4c7ef366eb77928c5d79ba6e3fc635dec0fe5d22f604ba1ead"
+  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-9
+  BUILDER_IMAGE_TAG: "@sha256:42596d769fe7f5366f9f0f3532a6f025ddb9d7edd83caf679a9311d56080e9db"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
