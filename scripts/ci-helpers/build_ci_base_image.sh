@@ -1,7 +1,7 @@
 #! /bin/bash
 
 REGISTRY=${1:-registry.gitlab.syncad.com/hive/haf}
-CI_IMAGE_TAG=ubuntu24.04-8
+CI_IMAGE_TAG=mic_pg_search_0.19.5
 
 # exit when any command fails
 set -e
