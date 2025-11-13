@@ -712,6 +712,24 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
           throw;
       }
     }
+    else if (note.block_num % 100'000 == 0)
+    {
+      pqxx::connection conn(db_url);
+      pqxx::nontransaction tx(conn);
+      try
+      {
+        auto start_time = fc::time_point::now();
+        tx.exec("VACUUM (FULL, VERBOSE, ANALYZE) hafd.contexts;");
+        auto end_time = fc::time_point::now();
+        fc::microseconds vacuum_duration = end_time - start_time;
+        ilog("VACUUM FULL hafd.contexts in ${duration} ms", ("duration", vacuum_duration.count()/1000));
+      }
+      catch (const pqxx::sql_error& e)
+      {
+        elog("Error while vacuuming hafd.contexts: ${e}", ("e", e.what()));
+        throw;
+      }
+    }
 
     if(note.block_num % 100'000 == 0)
     {
