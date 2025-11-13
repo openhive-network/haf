@@ -130,10 +130,10 @@ BEGIN
             ASSERT EXISTS( SELECT 1 FROM test.blocks_view WHERE num = __next_block_range.first_block ), 'No data for expected block';
             ASSERT if_tx_for_last_operation_exists(__next_block_range.first_block), 'No data for expected operation in HAF HEAD BLOCK view';
             ASSERT if_tx_for_last_operation_in_context_exists(__next_block_range.first_block), 'No data for expected operation';
-            PERFORM pg_sleep( 1 );
+
             IF __next_block_range.last_block % 50 = 0 THEN
                 RAISE NOTICE 'App is waiting for bunch of blocks...';
-                --PERFORM pg_sleep( 1 ); -- wait 1;
+                PERFORM pg_sleep( 1 ); -- wait 1;
                 RAISE NOTICE 'App ended waiting for bunch of blocks';
             END IF;
         END LOOP;

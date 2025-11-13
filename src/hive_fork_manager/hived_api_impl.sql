@@ -435,8 +435,6 @@ BEGIN
     ON CONFLICT (index_constraint_name, table_name) DO UPDATE
     SET status = 'missing';
 
-    PERFORM pg_sleep(2);
-
     OPEN __cursor FOR (
         SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
         FROM hafd.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
