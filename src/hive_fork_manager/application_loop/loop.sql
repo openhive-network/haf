@@ -196,6 +196,8 @@ BEGIN
     SELECT last_active_at INTO __previous_active_at_time
     FROM hafd.contexts  WHERE name = __lead_context_name;
 
+    LOCK TABLE hafd.hive_state IN ACCESS SHARE MODE;
+
     PERFORM hive.app_check_contexts_synchronized( _contexts );
     _blocks_range := NULL;
 
