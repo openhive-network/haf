@@ -34,9 +34,14 @@ BEGIN
 
     SELECT num INTO __max_block_num FROM hafd.blocks ORDER BY num DESC LIMIT 1;
 
-    SELECT COALESCE( min(current_block_num), __max_block_num )
+    SELECT min(current_block_num)
     INTO __upper_bound_block_num
     FROM hafd.contexts hc;
+
+    IF __upper_bound_block_num IS NULL THEN
+        -- when there are no contexts yet, then do not prune blocks
+        RETURN;
+    END IF;
 
     IF __upper_bound_block_num <= _tail_size THEN
         RETURN;
