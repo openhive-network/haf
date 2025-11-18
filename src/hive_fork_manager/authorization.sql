@@ -241,7 +241,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.app_check_contexts_synchronized(_contexts hive.contexts_group)
     , hive.set_sync_state( _new_state hafd.sync_state )
     , hive.get_sync_state()
-    , hive.get_vacuum_full_commands(schema_name TEXT)
+    , hive.get_vacuum_full_prune_commands(schema_name TEXT)
+    , hive.get_vacuum_full_periodic_commands()
 TO hived_group;
 
 GRANT USAGE ON SCHEMA hive to haf_maintainer;

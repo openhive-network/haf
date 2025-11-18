@@ -692,7 +692,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
 
       try
       {
-          pqxx::result data = tx.exec("SELECT hive.get_vacuum_full_commands() as vacuum_cmd;");
+          pqxx::result data = tx.exec("SELECT hive.get_vacuum_full_prune_commands() as vacuum_cmd;");
           for (const auto& record : data) {
               std::string vacuum_command = record["vacuum_cmd"].as<std::string>();
               auto start_time = fc::time_point::now();
@@ -714,15 +714,19 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
       pqxx::nontransaction tx(conn);
       try
       {
-        auto start_time = fc::time_point::now();
-        tx.exec("VACUUM (FULL, VERBOSE, ANALYZE) hafd.contexts;");
-        auto end_time = fc::time_point::now();
-        fc::microseconds vacuum_duration = end_time - start_time;
-        ilog("VACUUM FULL hafd.contexts in ${duration} ms", ("duration", vacuum_duration.count()/1000));
+        pqxx::result data = tx.exec("SELECT hive.get_vacuum_full_periodic_commands() as vacuum_cmd;");
+        for (const auto& record : data) {
+          std::string vacuum_command = record["vacuum_cmd"].as<std::string>();
+          auto start_time = fc::time_point::now();
+          tx.exec(vacuum_command);
+          auto end_time = fc::time_point::now();
+          fc::microseconds vacuum_duration = end_time - start_time;
+          ilog("${cmd} in ${duration} ms", ("cmd",vacuum_command)("duration", vacuum_duration.count()/1000));
+        }
       }
       catch (const pqxx::sql_error& e)
       {
-        elog("Error while vacuuming hafd.contexts: ${e}", ("e", e.what()));
+        elog("Error while checking for periodic vacuum requests: ${e}", ("e", e.what()));
         throw;
       }
     }

@@ -623,11 +623,20 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.get_vacuum_full_commands(schema_name TEXT DEFAULT 'hafd')
+CREATE OR REPLACE FUNCTION hive.get_vacuum_full_prune_commands(schema_name TEXT DEFAULT 'hafd')
 RETURNS SETOF TEXT
 LANGUAGE sql
 AS $$
     SELECT format('VACUUM FULL %I.%I;', schemaname, tablename) as vacuum_cmd
     FROM pg_tables
     WHERE schemaname = schema_name;
+$$;
+
+CREATE OR REPLACE FUNCTION hive.get_vacuum_full_periodic_commands()
+RETURNS SETOF TEXT
+LANGUAGE sql
+AS $$
+    SELECT 'VACUUM FULL hafd.contexts;'::text
+    UNION ALL
+    SELECT 'VACUUM FULL hafd.hive_state;'::text
 $$;
