@@ -10,6 +10,7 @@
 #include <hive/plugins/sql_serializer/data_processor.hpp>
 
 #include <hive/plugins/sql_serializer/sql_serializer_objects.hpp>
+#include <hive/plugins/sql_serializer/vacuum_cleaner.h>
 
 #include <hive/chain/util/impacted.hpp>
 #include <hive/chain/util/supplement_operations.hpp>
@@ -238,7 +239,8 @@ public:
                          _psql_livesync_threshold,
                          _psql_first_block,
                          _pruning_tail_size,
-                         write_ahead_log)
+                         write_ahead_log),
+      _vacuum_cleaner( db_url )
   {
     HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
     _is_database_initialized = is_database_initialized();
@@ -324,6 +326,7 @@ public:
 
   indexation_state _indexation_state;
   bool _is_database_initialized;
+  vacuum_cleaner _vacuum_cleaner;
 
   void log_statistics()
   {
@@ -685,51 +688,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
 
     filter.clear();
 
-    if ( _indexation_state.is_pruning_enabled() && note.block_num % 500'000 == 0 )
-    {
-      pqxx::connection conn(db_url);
-      pqxx::nontransaction tx(conn);
-
-      try
-      {
-          pqxx::result data = tx.exec("SELECT hive.get_vacuum_full_prune_commands() as vacuum_cmd;");
-          for (const auto& record : data) {
-              std::string vacuum_command = record["vacuum_cmd"].as<std::string>();
-              auto start_time = fc::time_point::now();
-              tx.exec(vacuum_command);
-              auto end_time = fc::time_point::now();
-              fc::microseconds vacuum_duration = end_time - start_time;
-              ilog("${cmd} in ${duration} ms", ("cmd",vacuum_command)("duration", vacuum_duration.count()/1000));
-          }
-      }
-      catch (const pqxx::sql_error& e)
-      {
-          elog("Error while checking for vacuum requests: ${e}", ("e", e.what()));
-          throw;
-      }
-    }
-    else if (note.block_num % 100'000 == 0)
-    {
-      pqxx::connection conn(db_url);
-      pqxx::nontransaction tx(conn);
-      try
-      {
-        pqxx::result data = tx.exec("SELECT hive.get_vacuum_full_periodic_commands() as vacuum_cmd;");
-        for (const auto& record : data) {
-          std::string vacuum_command = record["vacuum_cmd"].as<std::string>();
-          auto start_time = fc::time_point::now();
-          tx.exec(vacuum_command);
-          auto end_time = fc::time_point::now();
-          fc::microseconds vacuum_duration = end_time - start_time;
-          ilog("${cmd} in ${duration} ms", ("cmd",vacuum_command)("duration", vacuum_duration.count()/1000));
-        }
-      }
-      catch (const pqxx::sql_error& e)
-      {
-        elog("Error while checking for periodic vacuum requests: ${e}", ("e", e.what()));
-        throw;
-      }
-    }
+    _vacuum_cleaner.vacuum( _indexation_state.is_pruning_enabled(), note.block_num );
 
     if(note.block_num % 100'000 == 0)
     {

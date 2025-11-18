@@ -29,6 +29,7 @@ ADD_LIBRARY(
     filter_collector.cpp
     all_accounts_dumper.cpp
     write_ahead_log.cpp
+    vacuum_cleaner.cpp
     ${HEADERS}
 )
 
