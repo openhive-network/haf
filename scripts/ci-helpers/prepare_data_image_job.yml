@@ -1,7 +1,8 @@
 include:
 - project: 'hive/hive'
-  ref: 24c4fa7878e04fdd54f68024544506cbe2a0aadc   #develop
+  ref: 3ed062f57284426f59b56494cbaaa84ce41934c2   #develop
   file: '/scripts/ci-helpers/prepare_data_image_job.yml'
+- local: '/scripts/ci-helpers/ci_image_tag_vars.yml'
 
 .prepare_haf_image:
   extends: .docker_image_builder_job
