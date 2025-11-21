@@ -65,7 +65,7 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM hive.connect( '123456789', 1, 1, 10 );
+    PERFORM hive.connect( '123456789', 1, 1, 10, 0 );
 END
 $BODY$
 ;
@@ -76,7 +76,7 @@ AS
 $BODY$
 BEGIN
     -- hived has more blocks than HAF
-    PERFORM hive.connect( '123456789', 100, 1, 0 );
+    PERFORM hive.connect( '123456789', 100, 1, 0 , 0);
 END
 $BODY$
 ;

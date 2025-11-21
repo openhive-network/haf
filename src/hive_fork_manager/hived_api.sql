@@ -332,7 +332,7 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer )
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer, _pruning_min_contexts integer )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -365,7 +365,9 @@ BEGIN
            , 'Cannot initialize as non‑pruned: existing database is pruned. Drop/recreate the database or run in pruned mode.';
 
     UPDATE hafd.hive_stable_state
-    SET pruning = _pruning;
+    SET pruning = _pruning,
+        pruning_min_contexts = _pruning_min_contexts
+    ;
 
     IF hive.is_pruning_enabled() = TRUE THEN
         -- we need to drop FK to fast remove from hafd.operations

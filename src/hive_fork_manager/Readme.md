@@ -581,13 +581,14 @@ There are some indexes created by the extension on irreversible block data. Thos
 #### hive.enable_indexes_of_irreversible()
 It restores indexes and FK constarint dropped and saved by the function above.
 
-#### hive.connect( _git_sha, _block_num, _pruning )
+#### hive.connect( _git_sha, _block_num, _pruning, _pruning_min_contexts )
 The Hive node (hived) calls this function each time it starts synchronization with the database. This function
 clear irreversible data from inconsistent blocks (blocks which are not fully dumped during previous connection) and
 saves information about the connection occurence into table hived_connections.
 - **_git_sha** - is a GIT version of hived code
 - **_block_num** - head block number for which the hived is synchronized
 - **_pruning** - block pruning option
+- **_pruning_min_contexts** - wait with pruning until the number of contexts become added
 
 #### hive.set_irreversible_dirty()
 Sets 'dirty' flag, what marks irreversible data as inconsistent.

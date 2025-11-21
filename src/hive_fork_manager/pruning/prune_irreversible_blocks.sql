@@ -7,8 +7,39 @@ $BODY$
 DECLARE
     __pruning_is_enabled BOOLEAN := FALSE;
 BEGIN
-    SELECT COALESCE( pruning > 0, FALSE) INTO __pruning_is_enabled FROM hafd.hive_stable_state;
+    SELECT
+        COALESCE( pruning > 0, FALSE)
+    INTO
+        __pruning_is_enabled
+    FROM hafd.hive_stable_state;
+
     RETURN __pruning_is_enabled;
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.is_pruning_allowed()
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __pruning_min_contexts INTEGER;
+    __contexts_count INTEGER;
+BEGIN
+    IF NOT hive.is_pruning_enabled() THEN
+        RETURN FALSE;
+    END IF;
+
+    SELECT
+        COALESCE( pruning_min_contexts, 0 )
+    INTO
+        __pruning_min_contexts
+    FROM hafd.hive_stable_state;
+
+    SELECT COUNT(*) INTO __contexts_count FROM hafd.contexts;
+
+    RETURN __contexts_count >= __pruning_min_contexts;
 END;
 $BODY$;
 
@@ -103,6 +134,10 @@ DECLARE
     __slowest_context_block INTEGER;
     __blocks_before_apps INTEGER;
 BEGIN
+    IF NOT hive.is_pruning_allowed() THEN
+        RETURN;
+    END IF;
+
     IF NOT EXISTS( SELECT current_block_num FROM hafd.contexts ) THEN
         RETURN;
     END IF;

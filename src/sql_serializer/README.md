@@ -47,6 +47,12 @@ The sql_serializer extends hived with these new parameters:
   When there are blocks already dumped, then the limit is omitted.
 * **psql-prune-blocks** [default: 0] if set to a value greater than 0, enables pruning of older blocks from the database. Blocks older than
   the specified value (e.g., `psql-prune-blocks=10000` keeps the latest 10,000 blocks) will be removed. If set to 0, no pruning is performed, retaining all blocks indefinitely.
+* **psql-prune-min-contexts** [default: 0]  
+  Defines the minimum number of HAF contexts that must exist before pruning of old blocks is allowed.  
+  This setting works together with `psql-prune-blocks`: pruning will not start until both conditions are met —  
+  (1) pruning is enabled (`psql-prune-blocks > 0`), and  
+  (2) the number of rows in `hafd.contexts` is at least the value specified here.  
+  A value of **0** allows pruning immediately, without waiting for any contexts.
 
 ## Filter parameters
 * **psql-enable-filter**[default: true] enable filtering accounts and operations

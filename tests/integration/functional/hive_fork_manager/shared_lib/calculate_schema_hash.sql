@@ -39,7 +39,8 @@ FOR _row in
     '(registered_tables,01d11432-b7d9-fb8e-a345-2e412e782cfd,ff824909-7631-1102-16f9-5b6ba2f88b74,07ad4206-ab16-75cc-4aaa-18ed4006d4f6,fe6f193c-4d9c-266a-3f43-0a67d8a6dcfb)',
     '(events_queue,47c432ad-9eab-ba67-7956-1c14fa210dec,0a710f7b-0af2-9ec6-b1eb-37e181e01473,a5e6d444-fbcd-9518-618b-cc3479932005,48a3b028-2a9e-c01e-0615-0737d43b7b81)',
     '(state_providers_registered,b41e740b-372c-cbf5-c89e-121fc30ae222,e5256de7-28e9-0079-dd6d-c410fb648f41,47f62787-773b-c098-9df3-4a9bae4b65c0,3b033100-aacc-10b4-16f9-1dcf276565ff)',
-    '(hive_state,5467a57d-00ca-a492-dc5e-3835c745f74c,da91100e-58d4-0d29-083d-d046f6c71e18,77ed7932-7dab-20e3-b506-4a2d3fccfe75,db0a6fb3-b072-2629-7a5d-0fa6487b43f5)'
+    '(hive_state,5467a57d-00ca-a492-dc5e-3835c745f74c,da91100e-58d4-0d29-083d-d046f6c71e18,77ed7932-7dab-20e3-b506-4a2d3fccfe75,db0a6fb3-b072-2629-7a5d-0fa6487b43f5)',
+    '(hive_stable_state,bc97f3da-892e-2b3a-0cbd-7c109a295239,9d99270a-d49b-1d49-4bd5-1a04efeb82fb,0b55ef77-5495-550f-a4fd-a79831c16066,fd9a2344-6e74-1b36-186f-fba0b3e1afd2)'
   ])
 LOOP
     RAISE NOTICE 'new schema hash: %', _row;

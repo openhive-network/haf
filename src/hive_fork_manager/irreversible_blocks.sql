@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS hafd.hive_state (
 CREATE TABLE IF NOT EXISTS hafd.hive_stable_state (
     id integer,
     pruning integer NOT NULL DEFAULT 0,
+    pruning_min_contexts integer NOT NULL DEFAULT 0,
     CONSTRAINT pk_hive_stable_state PRIMARY KEY ( id )
 );
 

@@ -214,6 +214,7 @@ public:
     , uint32_t _psql_livesync_threshold
     , uint32_t _psql_first_block
     , uint32_t _pruning_tail_size
+    , uint32_t _pruning_min_contexts
     , bool     _psql_enable_filter
   )
   :   db_url{url},
@@ -225,6 +226,7 @@ public:
       psql_account_operations_threads_number( _psql_account_operations_threads_number ),
       psql_first_block( _psql_first_block ),
       psql_pruning_tail_size( _pruning_tail_size ),
+      psql_pruning_min_contexts( _pruning_min_contexts ),
       filter( _psql_enable_filter, op_extractor ),
       _indexation_state( _main_plugin, _chain_db, url, app,
                          _psql_transactions_threads_number,
@@ -305,6 +307,7 @@ public:
   uint32_t psql_account_operations_threads_number = 2;
   uint32_t psql_first_block = 1u;
   uint32_t psql_pruning_tail_size = -1;
+  uint32_t psql_pruning_min_contexts = 0;
   bool     psql_dump_account_operations = true;
 
   bool replay_blocklog = false;
@@ -462,7 +465,8 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
                                + fc::git_revision_sha
                                + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER"
                                + ","s + std::to_string( psql_first_block ) + "::INTEGER"s
-                               + ","s + std::to_string( psql_pruning_tail_size ) + "::INTEGER)"s;
+                               + ","s + std::to_string( psql_pruning_tail_size ) + "::INTEGER"s
+                               + ","s + std::to_string( psql_pruning_min_contexts ) + "::INTEGER)"s;
     tx.exec( CONNECT_QUERY );
     return data_processing_status();
   };
@@ -869,6 +873,7 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
                     ("psql-first-block", appbase::bpo::value<uint32_t>()->default_value( 1u ), "first synced block")
                     ("psql-wal-directory", boost::program_options::value<bfs::path>(), "write-ahead log for data sent from hived to PostgreSQL")
                     ("psql-prune-blocks", appbase::bpo::value<uint32_t>()->default_value( 0 ), "number of recent blocks to keep; older processed blocks are pruned. 0 disables pruning")
+                    ("psql-prune-min-contexts", appbase::bpo::value<uint32_t>()->default_value( 0 ), "minimum number of contexts required before pruning is allowed; 0 prunes immediately")
                     ;
 }
 
@@ -901,6 +906,7 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , options["psql-livesync-threshold"].as<uint32_t>()
     , options["psql-first-block"].as<uint32_t>()
     , options["psql-prune-blocks"].as<uint32_t>()
+    , options["psql-prune-min-contexts"].as<uint32_t>()
     , options["psql-enable-filter"].as<bool>()
   );
 
