@@ -29,6 +29,18 @@ RUN apt-get update && \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3-pip postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 \
                                                                               libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-server-dev-17 build-essential git cmake && \
+    git clone https://github.com/timescale/timescaledb && \
+    cd timescaledb && \
+    git checkout 2.23.1 && \
+    ./bootstrap && \
+    cd build && \
+    make && \
+    make install && \
+    cd ../.. && \
+    rm -r timescaledb && \
+    apt-get remove --purge -y postgresql-server-dev-17 build-essential git cmake && \
+    apt-get autoremove -y && \
     # Add BeautifulSoup for hivesense preprocessing posts (3.1MB)
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3-bs4 python3-lxml && \
     # Install Tokenizers (~48MB) for hivesense
@@ -131,7 +143,7 @@ RUN <<-EOF
   sudo chown -R hived "${INSTALLATION_DIR}/"*
 EOF
 
-FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-8 AS instance
+FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-11 AS instance
 
 ARG BUILD_HIVE_TESTNET=OFF
 ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
@@ -145,7 +157,7 @@ ENV HIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}
 ARG HIVE_LINT=OFF
 ENV HIVE_LINT=${HIVE_LINT}
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-8}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-11}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
