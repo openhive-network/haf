@@ -7,6 +7,9 @@ CREATE OR REPLACE FUNCTION hive.make_block_range_irreversible(
 AS
 $BODY$
 BEGIN
+    -- With block_id schema, we only need to update hafd.blocks
+    -- Other tables reference via block_id which is auto-computed from (num, fork_id)
+    
     -- 1. Identify winning forks for the range
     CREATE TEMP TABLE winning_forks ON COMMIT DROP AS
     SELECT num, MAX(fork_id) as max_fork_id
@@ -14,77 +17,14 @@ BEGIN
     WHERE num > _head_block_of_irreversible_blocks AND num <= _new_irreversible_block
     GROUP BY num;
 
-    -- 2. Update blocks to fork_id = 0
+    -- 2. Update blocks to fork_id = 0 (block_id will auto-update via GENERATED column)
     UPDATE hafd.blocks b
     SET fork_id = 0
     FROM winning_forks wf
     WHERE b.num = wf.num AND b.fork_id = wf.max_fork_id;
 
-    -- 3. Update dependent tables to fork_id = 0
-    UPDATE hafd.transactions t
-    SET fork_id = 0
-    FROM winning_forks wf
-    WHERE t.block_num = wf.num AND t.fork_id = wf.max_fork_id;
-
-    UPDATE hafd.transactions_multisig t
-    SET fork_id = 0
-    FROM hafd.transactions ht
-    JOIN winning_forks wf ON ht.block_num = wf.num AND ht.fork_id = wf.max_fork_id
-    WHERE t.trx_hash = ht.trx_hash AND t.fork_id = wf.max_fork_id;
-
-    UPDATE hafd.operations o
-    SET fork_id = 0
-    FROM winning_forks wf
-    WHERE hafd.operation_id_to_block_num(o.id) = wf.num AND o.fork_id = wf.max_fork_id;
-
-    UPDATE hafd.accounts a
-    SET fork_id = 0
-    FROM winning_forks wf
-    WHERE a.block_num = wf.num AND a.fork_id = wf.max_fork_id;
-
-    UPDATE hafd.account_operations ao
-    SET fork_id = 0
-    FROM winning_forks wf
-    WHERE hafd.operation_id_to_block_num(ao.operation_id) = wf.num AND ao.fork_id = wf.max_fork_id;
-
-    UPDATE hafd.applied_hardforks h
-    SET fork_id = 0
-    FROM winning_forks wf
-    WHERE h.block_num = wf.num AND h.fork_id = wf.max_fork_id;
-
-    -- 4. Delete losing forks in the range
-    DELETE FROM hafd.account_operations
-    WHERE hafd.operation_id_to_block_num(operation_id) <= _new_irreversible_block 
-      AND hafd.operation_id_to_block_num(operation_id) > _head_block_of_irreversible_blocks
-      AND fork_id > 0;
-
-    DELETE FROM hafd.accounts
-    WHERE block_num <= _new_irreversible_block
-      AND block_num > _head_block_of_irreversible_blocks
-      AND fork_id > 0;
-
-    DELETE FROM hafd.operations
-    WHERE hafd.operation_id_to_block_num(id) <= _new_irreversible_block
-      AND hafd.operation_id_to_block_num(id) > _head_block_of_irreversible_blocks
-      AND fork_id > 0;
-
-    DELETE FROM hafd.transactions_multisig m
-    USING hafd.transactions t
-    WHERE m.trx_hash = t.trx_hash AND m.fork_id = t.fork_id
-      AND t.block_num <= _new_irreversible_block
-      AND t.block_num > _head_block_of_irreversible_blocks
-      AND m.fork_id > 0;
-
-    DELETE FROM hafd.transactions
-    WHERE block_num <= _new_irreversible_block
-      AND block_num > _head_block_of_irreversible_blocks
-      AND fork_id > 0;
-
-    DELETE FROM hafd.applied_hardforks
-    WHERE block_num <= _new_irreversible_block
-      AND block_num > _head_block_of_irreversible_blocks
-      AND fork_id > 0;
-
+    -- 3. Delete losing forks (blocks with non-winning fork_id)
+    -- This cascades to dependent tables via FK constraints
     DELETE FROM hafd.blocks
     WHERE num <= _new_irreversible_block
       AND num > _head_block_of_irreversible_blocks

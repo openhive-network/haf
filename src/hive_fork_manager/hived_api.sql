@@ -61,27 +61,31 @@ BEGIN
 
     _block.fork_id = __fork_id;
     INSERT INTO hafd.blocks VALUES( _block.* );
+    
+    -- Compute block_id for this block
+    DECLARE __block_id BIGINT := hafd.block_id(_block.num, __fork_id);
+    
     INSERT INTO hafd.transactions
     SELECT
-        trx_hash, block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, signature, __fork_id
+        __block_id, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature
     FROM unnest( _transactions );
     INSERT INTO hafd.transactions_multisig
     SELECT
-        trx_hash, signature, __fork_id
+        trx_hash, signature
     FROM unnest( _signatures );
-    INSERT INTO hafd.operations(id, trx_in_block, op_pos, body_binary, fork_id)
-      SELECT id, trx_in_block, op_pos, body_binary, __fork_id FROM unnest( _operations );
+    INSERT INTO hafd.operations(id, block_id, trx_in_block, op_pos, body_binary)
+      SELECT id, __block_id, trx_in_block, op_pos, body_binary FROM unnest( _operations );
     INSERT INTO hafd.accounts
     SELECT
-        id, name, block_num, __fork_id
+        id, name, __block_id
     FROM unnest( _accounts );
     INSERT INTO hafd.account_operations
     SELECT
-        account_id, transacting_account_id, account_op_seq_no, operation_id, __fork_id
+        account_id, transacting_account_id, account_op_seq_no, operation_id
     FROM unnest( _account_operations );
     INSERT INTO hafd.applied_hardforks
     SELECT
-        hardfork_num, block_num, hardfork_vop_id, __fork_id
+        hardfork_num, __block_id, hardfork_vop_id
     FROM unnest( _applied_hardforks );
 END;
 $BODY$
@@ -121,7 +125,10 @@ BEGIN
     -- application contexts will use the event to clear data in shadow tables
     INSERT INTO hafd.events_queue( event, block_num )
     VALUES( 'NEW_IRREVERSIBLE', _block_num );
-    UPDATE hafd.hive_state SET consistent_block = _block_num;
+    
+    -- Update consistent_block_id with the block_id of the new irreversible block
+    UPDATE hafd.hive_state 
+    SET consistent_block_id = hafd.block_id(_block_num, 0); -- fork_id=0 for irreversible
 END;
 $BODY$
 ;
@@ -150,7 +157,7 @@ BEGIN
 
 
 
-    UPDATE hafd.hive_state SET consistent_block = _block_num;
+    UPDATE hafd.hive_state SET consistent_block_id = hafd.block_id(_block_num, 0);
 END;
 $BODY$
 ;
