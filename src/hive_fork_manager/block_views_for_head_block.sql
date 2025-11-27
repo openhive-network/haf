@@ -7,6 +7,7 @@ CREATE OR REPLACE VIEW hive.account_operations_view AS
          hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id,
          hafd.operation_id_to_block_num( ha.operation_id ) as block_num
   FROM hafd.account_operations ha
+   WHERE ha.fork_id = 0
  )
 UNION ALL
 (
@@ -16,8 +17,8 @@ consistent_block AS
 ,forks AS
 (
   SELECT hbr.num, max(hbr.fork_id) AS max_fork_id
-  FROM hafd.blocks_reversible hbr, consistent_block cb
-  WHERE hbr.num > cb.consistent_block
+  FROM hafd.blocks hbr, consistent_block cb
+  WHERE hbr.num > cb.consistent_block AND hbr.fork_id > 0
   GROUP BY hbr.num
 )
 SELECT har.account_id,
@@ -27,8 +28,8 @@ SELECT har.account_id,
        hafd.operation_id_to_type_id( har.operation_id ) as op_type_id,
        hafd.operation_id_to_block_num( har.operation_id ) as block_num
 FROM forks 
-JOIN hafd.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hafd.operation_id_to_block_num(hor.id)
-JOIN hafd.account_operations_reversible har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
+JOIN hafd.operations hor ON forks.max_fork_id = hor.fork_id AND forks.num = hafd.operation_id_to_block_num(hor.id)
+JOIN hafd.account_operations har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations by block_num column and eliminate need to join operations
 );
 
 CREATE OR REPLACE VIEW hive.accounts_view AS
@@ -41,6 +42,7 @@ FROM
         ha.id,
         ha.name
     FROM hafd.accounts ha
+    WHERE ha.fork_id = 0
     UNION ALL
     SELECT
         reversible.id,
@@ -50,11 +52,11 @@ FROM
             har.id,
             har.name,
             har.fork_id
-        FROM hafd.accounts_reversible har
+        FROM hafd.accounts har
         JOIN (
             SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
+            FROM hafd.blocks hbr
+            WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid ) AND hbr.fork_id > 0
             GROUP by hbr.num
         ) as forks ON forks.max_fork_id = har.fork_id AND forks.num = har.block_num
     ) reversible
@@ -99,6 +101,7 @@ FROM (
         hb.current_hbd_supply,
         hb.dhf_interval_ledger
     FROM hafd.blocks hb
+    WHERE hb.fork_id = 0
     UNION ALL
     SELECT hbr.num,
         hbr.hash,
@@ -117,12 +120,12 @@ FROM (
         hbr.current_supply,
         hbr.current_hbd_supply,
         hbr.dhf_interval_ledger
-    FROM hafd.blocks_reversible hbr
+    FROM hafd.blocks hbr
     JOIN
     (
          SELECT rb.num, MAX(rb.fork_id) AS max_fork_id
-         FROM hafd.blocks_reversible rb
-         WHERE rb.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
+         FROM hafd.blocks rb
+         WHERE rb.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid ) AND rb.fork_id > 0
          GROUP BY rb.num
     ) visible_blks ON visible_blks.num = hbr.num AND visible_blks.max_fork_id = hbr.fork_id
 ) t
@@ -147,6 +150,7 @@ FROM
            ht.expiration,
            ht.signature
     FROM hafd.transactions ht
+    WHERE ht.fork_id = 0
     UNION ALL
     SELECT reversible.block_num,
             reversible.trx_in_block,
@@ -164,11 +168,11 @@ FROM
             htr.expiration,
             htr.signature,
             htr.fork_id
-    FROM hafd.transactions_reversible htr
+    FROM hafd.transactions htr
     JOIN (
         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-        FROM hafd.blocks_reversible hbr
-        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
+        FROM hafd.blocks hbr
+        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid ) AND hbr.fork_id > 0
         GROUP by hbr.num
     ) as forks ON forks.max_fork_id = htr.fork_id AND forks.num = htr.block_num
     ) reversible
@@ -195,7 +199,8 @@ FROM
           ho.body_binary,
           ho.body_binary::jsonb AS body
     FROM hafd.operations ho
-    JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
+    JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id) AND b.fork_id = 0
+    WHERE ho.fork_id = 0
     UNION ALL
       SELECT
         o.id,
@@ -204,21 +209,21 @@ FROM
         visible_ops_timestamp.created_at timestamp,
         o.body_binary,
         o.body_binary::jsonb AS body
-        FROM hafd.operations_reversible o
+        FROM hafd.operations o
       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
       -- and also hide ops present at earlier forks for given block
       JOIN
       (
         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-        FROM hafd.blocks_reversible hbr
-        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
+        FROM hafd.blocks hbr
+        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid ) AND hbr.fork_id > 0
         GROUP by hbr.num
       ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
       JOIN
       (
-        SELECT hbr.num, created_at
-        FROM hafd.blocks_reversible hbr
-      ) visible_ops_timestamp ON visible_ops_timestamp.num = visible_ops.num
+        SELECT hbr.num, created_at, hbr.fork_id
+        FROM hafd.blocks hbr
+      ) visible_ops_timestamp ON visible_ops_timestamp.num = visible_ops.num AND visible_ops_timestamp.fork_id = visible_ops.max_fork_id
 ) t
 ;
 
@@ -240,6 +245,7 @@ FROM
           ho.body_binary,
           ho.body_binary::jsonb AS body
     FROM hafd.operations ho
+    WHERE ho.fork_id = 0
     UNION ALL
       SELECT
         o.id,
@@ -247,14 +253,14 @@ FROM
         o.op_pos,
         o.body_binary,
         o.body_binary::jsonb AS body
-      FROM hafd.operations_reversible o
+      FROM hafd.operations o
       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
       -- and also hide ops present at earlier forks for given block
       JOIN
       (
         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-        FROM hafd.blocks_reversible hbr
-        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
+        FROM hafd.blocks hbr
+        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid ) AND hbr.fork_id > 0
         GROUP by hbr.num
       ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
 ) t
@@ -270,6 +276,7 @@ FROM (
           htm.trx_hash
         , htm.signature
     FROM hafd.transactions_multisig htm
+    WHERE htm.fork_id = 0
     UNION ALL
     SELECT
            reversible.trx_hash
@@ -278,14 +285,14 @@ FROM (
         SELECT
                htmr.trx_hash
              , htmr.signature
-        FROM hafd.transactions_multisig_reversible htmr
+        FROM hafd.transactions_multisig htmr
         JOIN (
                 SELECT htr.trx_hash, forks.max_fork_id
-                FROM hafd.transactions_reversible htr
+                FROM hafd.transactions htr
                 JOIN (
                     SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-                    FROM hafd.blocks_reversible hbr
-                    WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
+                    FROM hafd.blocks hbr
+                    WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid ) AND hbr.fork_id > 0
                     GROUP by hbr.num
                 ) as forks ON forks.max_fork_id = htr.fork_id AND forks.num = htr.block_num
         ) as trr ON trr.trx_hash = htmr.trx_hash AND trr.max_fork_id = htmr.fork_id
@@ -298,6 +305,7 @@ CREATE OR REPLACE VIEW hive.applied_hardforks_view AS
          hr.block_num,
          hr.hardfork_vop_id
   FROM hafd.applied_hardforks hr
+  WHERE hr.fork_id = 0
  )
 UNION ALL
 (
@@ -307,16 +315,16 @@ consistent_block AS
 ,forks AS
 (
   SELECT hbr.num, max(hbr.fork_id) AS max_fork_id
-  FROM hafd.blocks_reversible hbr, consistent_block cb
-  WHERE hbr.num > cb.consistent_block
+  FROM hafd.blocks hbr, consistent_block cb
+  WHERE hbr.num > cb.consistent_block AND hbr.fork_id > 0
   GROUP BY hbr.num
 )
 SELECT hjr.hardfork_num,
        hjr.block_num,
        hjr.hardfork_vop_id
 FROM forks 
-JOIN hafd.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hafd.operation_id_to_block_num(hor.id)
-JOIN hafd.applied_hardforks_reversible hjr ON forks.max_fork_id = hjr.fork_id AND hjr.hardfork_vop_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
+JOIN hafd.operations hor ON forks.max_fork_id = hor.fork_id AND forks.num = hafd.operation_id_to_block_num(hor.id)
+JOIN hafd.applied_hardforks hjr ON forks.max_fork_id = hjr.fork_id AND hjr.hardfork_vop_id = hor.id -- We can consider to extend account_operations by block_num column and eliminate need to join operations
 );
 
 -- only irreversible data
@@ -328,11 +336,12 @@ CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS
        ha.operation_id,
        hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id,
        hafd.operation_id_to_block_num( ha.operation_id ) as block_num
-    FROM hafd.account_operations ha;
+    FROM hafd.account_operations ha
+    WHERE ha.fork_id = 0;
 
-CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS SELECT ha.id, ha.name FROM  hafd.accounts ha;
-CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS SELECT * FROM hafd.blocks;
-CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS SELECT * FROM hafd.transactions;
+CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS SELECT ha.id, ha.name FROM  hafd.accounts ha WHERE ha.fork_id = 0;
+CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS SELECT * FROM hafd.blocks WHERE fork_id = 0;
+CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS SELECT * FROM hafd.transactions WHERE fork_id = 0;
 
 CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
     SELECT
@@ -345,7 +354,8 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
         op.body_binary as body_binary,
         op.body_binary::jsonb AS body
     FROM hafd.operations op
-    JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(op.id);
+    JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(op.id) AND b.fork_id = 0
+    WHERE op.fork_id = 0;
 
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
     SELECT
@@ -356,8 +366,9 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
         hafd.operation_id_to_type_id( op.id ) as op_type_id,
         op.body_binary as body_binary,
         op.body_binary::jsonb AS body
-    FROM hafd.operations op;
+    FROM hafd.operations op
+    WHERE op.fork_id = 0;
 
 
-CREATE OR REPLACE VIEW hive.irreversible_transactions_multisig_view AS SELECT * FROM hafd.transactions_multisig;
-CREATE OR REPLACE VIEW hive.irreversible_applied_hardforks_view AS SELECT * FROM hafd.applied_hardforks;
+CREATE OR REPLACE VIEW hive.irreversible_transactions_multisig_view AS SELECT * FROM hafd.transactions_multisig WHERE fork_id = 0;
+CREATE OR REPLACE VIEW hive.irreversible_applied_hardforks_view AS SELECT * FROM hafd.applied_hardforks WHERE fork_id = 0;

@@ -41,14 +41,9 @@ ALTER TABLE hafd.transactions_multisig OWNER TO hived_group;
 ALTER TABLE hafd.accounts OWNER TO hived_group;
 ALTER TABLE hafd.account_operations OWNER TO hived_group;
 ALTER TABLE hafd.hive_state OWNER TO hived_group;
-ALTER TABLE hafd.blocks_reversible OWNER TO hived_group;
-ALTER TABLE hafd.transactions_reversible OWNER TO hived_group;
-ALTER TABLE hafd.operations_reversible OWNER TO hived_group;
-ALTER TABLE hafd.transactions_multisig_reversible OWNER TO hived_group;
-ALTER TABLE hafd.accounts_reversible OWNER TO hived_group;
-ALTER TABLE hafd.account_operations_reversible OWNER TO hived_group;
+
 ALTER TABLE hafd.applied_hardforks OWNER TO hived_group;
-ALTER TABLE hafd.applied_hardforks_reversible OWNER TO hived_group;
+
 ALTER TABLE hafd.write_ahead_log_state OWNER TO hived_group;
 
 -- generic protection for tables in hive schema

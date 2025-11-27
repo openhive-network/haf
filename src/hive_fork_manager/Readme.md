@@ -36,7 +36,7 @@ The fork manager is designed to work with [transaction isolation level](https://
 
 The fork manager enables multiple Hive apps to use a single block database and process blocks completely independently of each other (apps do not need to place locks on the shared blockchain data tables).
 
-Hive block data is stored in two separated, but similar tables: irreversible and reversible blocks. Whenever a block becomes irreversible, hived uses the hive_fork_manager api to signal that the associated data should be moved from the reversible tables to the irreversible tables.
+Hive block data is stored in main tables (e.g. `hafd.blocks`), distinguished by `fork_id`. Whenever a block becomes irreversible, hived uses the hive_fork_manager api to signal that the associated data should be marked as irreversible (fork_id=1) and other forks removed.
 
 A HAF app groups its tables into a named "context". A context name can only be composed of alphanumerical characters and underscores. An app's context holds information about its processed events, blocks, and the fork which is now being processed by the app. These pieces of information
 are enough to automatically create views which combine irreversible and reversible block data seamlessly for queries by the app. The auto-constructed view names use the following template: '{context_schema}.{blocks|transactions|multi_signatures|operations}_view'.
@@ -405,14 +405,13 @@ These tables are defined in [src/hive_fork_manager/irreversible_blocks.sql](./ir
 
 Hived pushes MASSIVE_SYNC_EVENT and NEW_IRREVERSIBLE_EVENT to mark the block number for which data is consistent so that it can be read directly from the irreversible tables.
 
-REVERSIBLE BLOCKS is a set of database tables for blocks which could still be reverted by a fork switch.
-These tables are defined in [src/hive_fork_manager/reversible_blocks.sql](./reversible_blocks.sql)
+REVERSIBLE BLOCKS are blocks which could still be reverted by a fork switch. They are stored in the same tables as irreversible blocks but with `fork_id > 1`.
 
 Each app should work on a snapshot of block information, which is a combination of reversible and irreversible information based on the current status of the app's context (status being the state of the app's last processed block and the associated fork for that block).
 
 Because apps may work at different speeds, the fork manager has to hold reversible blocks information for every block and fork not already processed by any of the apps. This requires an efficient data structure. Fortunately the solution is quite simple - it is enough to add
-a fork id to the block data inserted by hived to the irreversible blocks table. The fork manager manages forks ids - 
-information about each fork is stored in the hafd.fork table. When 'hived' pushes a new block with a call to `hive.push_block`, the fork manager adds information about the current fork to a new reversible data row. Reversible data tables are presented in a generalised form in the example below:
+a fork id to the block data. The fork manager manages forks ids - 
+information about each fork is stored in the hafd.fork table. When 'hived' pushes a new block with a call to `hive.push_block`, the fork manager adds information about the current fork to the block data. Block data tables are presented in a generalised form in the example below:
 
 | block_num| fork id | data      |
 |----------|---------|-----------|
@@ -438,10 +437,11 @@ SELECT
       DISTINCT ON (block_num) block_num
     , fork_id
     , data
-FROM data_reversible
-JOIN hafd.contexts hc ON fork_id <= hc.fork_id AND block_num <= hc.current_block_num
+FROM hafd.blocks b
+JOIN hafd.contexts hc ON b.fork_id <= hc.fork_id AND b.num <= hc.current_block_num
 WHERE hc.name = 'app_context'
-ORDER BY block_num DESC, fork_id DESC
+AND (b.fork_id = hc.fork_id OR b.fork_id = 1)
+ORDER BY b.num DESC, b.fork_id DESC
 ```
 Remark: The fork_id is not a part of the real blockchain data, it is an artifact created by the fork manager, and may differ across instances of an app running in different HAF databases.
 
@@ -546,11 +546,7 @@ When a table is edited, its shadow table is automatically adapted to the new str
 ![alt text](./doc/evq_fork_db.png)
 
 #### Reversible blocks
-Tables for reversible blocks are copies of irreveersible + columns for fork_id
-##### hafd.blocks_reversible
-##### hafd.transactions_reversible
-##### hafd.transactions_multisig_reversible
-##### hafd.operations_reversible
+Tables for reversible blocks are merged into main tables with `fork_id` column.
 
 ### CONTEXT REWIND
 ![alt text](./doc/evq_context_rewind_db.png)

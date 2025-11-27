@@ -11,9 +11,7 @@ BEGIN
     -- will choose wrongly execution plans
 
     ANALYZE hafd.operations;
-    ANALYZE hafd.operations_reversible;
     ANALYZE hafd.account_operations;
-    ANALYZE hafd.account_operations_reversible;
 END;
 $BODY$
 ;
@@ -61,14 +59,30 @@ BEGIN
     INSERT INTO hafd.events_queue( event, block_num )
         VALUES( 'NEW_BLOCK', _block.num );
 
-    INSERT INTO hafd.blocks_reversible VALUES( _block.*, __fork_id );
-    INSERT INTO hafd.transactions_reversible VALUES( ( unnest( _transactions ) ).*, __fork_id );
-    INSERT INTO hafd.transactions_multisig_reversible VALUES( ( unnest( _signatures ) ).*, __fork_id );
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    _block.fork_id = __fork_id;
+    INSERT INTO hafd.blocks VALUES( _block.* );
+    INSERT INTO hafd.transactions
+    SELECT
+        trx_hash, block_num, trx_in_block, ref_block_num, ref_block_prefix, expiration, signature, __fork_id
+    FROM unnest( _transactions );
+    INSERT INTO hafd.transactions_multisig
+    SELECT
+        trx_hash, signature, __fork_id
+    FROM unnest( _signatures );
+    INSERT INTO hafd.operations(id, trx_in_block, op_pos, body_binary, fork_id)
       SELECT id, trx_in_block, op_pos, body_binary, __fork_id FROM unnest( _operations );
-    INSERT INTO hafd.accounts_reversible VALUES( ( unnest( _accounts ) ).*, __fork_id );
-    INSERT INTO hafd.account_operations_reversible VALUES( ( unnest( _account_operations ) ).*, __fork_id );
-    INSERT INTO hafd.applied_hardforks_reversible VALUES( ( unnest( _applied_hardforks ) ).*, __fork_id );
+    INSERT INTO hafd.accounts
+    SELECT
+        id, name, block_num, __fork_id
+    FROM unnest( _accounts );
+    INSERT INTO hafd.account_operations
+    SELECT
+        account_id, transacting_account_id, account_op_seq_no, operation_id, __fork_id
+    FROM unnest( _account_operations );
+    INSERT INTO hafd.applied_hardforks
+    SELECT
+        hardfork_num, block_num, hardfork_vop_id, __fork_id
+    FROM unnest( _applied_hardforks );
 END;
 $BODY$
 ;
@@ -89,13 +103,7 @@ BEGIN
     END IF;
 
     -- copy to irreversible
-    PERFORM hive.copy_blocks_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_transactions_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_operations_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_signatures_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_accounts_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_account_operations_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_applied_hardforks_to_irreversible( __irreversible_head_block, _block_num );
+    PERFORM hive.make_block_range_irreversible( __irreversible_head_block, _block_num );
 
     -- if we cannot get exclusive lock for contexts row then we return and will back here
     -- next time, when hived will try to remove blocks with next irreversible block
@@ -278,26 +286,6 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'blocks_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_multisig_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'operations_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'applied_hardforks_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'accounts_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'account_operations_reversible' );
-
-
-
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'blocks_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions_multisig_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'operations_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'applied_hardforks_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'accounts_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'account_operations_reversible' );
-
-    PERFORM hive.reanalyze_indexes_with_expressions(); --I wonder if reanalyzing is really needed when indexes are dropped
-
 END;
 $BODY$
 ;
@@ -309,25 +297,6 @@ CREATE OR REPLACE FUNCTION hive.enable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.restore_indexes( 'hafd.blocks_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.transactions_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.transactions_multisig_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.operations_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.accounts_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.account_operations_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.applied_hardforks_reversible' );
-
-
-
-    PERFORM hive.restore_foreign_keys( 'hafd.blocks_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.transactions_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.transactions_multisig_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.operations_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.accounts_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.account_operations_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.applied_hardforks_reversible' );
-
-    PERFORM hive.reanalyze_indexes_with_expressions();
 END;
 $BODY$
 ;
@@ -482,13 +451,13 @@ BEGIN
 
     -- if contexts are created before starting hived
     UPDATE hafd.contexts hc
-    SET fork_id = 1, events_id = 0
+    SET fork_id = 0, events_id = 0
     FROM hafd.contexts_attachment  hac
     WHERE hac.context_id = hc.id
     AND hac.is_attached = TRUE;
 
     UPDATE hafd.contexts hc
-    SET fork_id = 1, events_id = hive.unreachable_event_id()
+    SET fork_id = 0, events_id = hive.unreachable_event_id()
     FROM hafd.contexts_attachment  hac
     WHERE hac.context_id = hc.id
     AND hac.is_attached = FALSE;

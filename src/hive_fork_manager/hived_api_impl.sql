@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hive.copy_blocks_to_irreversible(
+CREATE OR REPLACE FUNCTION hive.make_block_range_irreversible(
       _head_block_of_irreversible_blocks INT
     , _new_irreversible_block INT )
     RETURNS void
@@ -7,227 +7,89 @@ CREATE OR REPLACE FUNCTION hive.copy_blocks_to_irreversible(
 AS
 $BODY$
 BEGIN
-    INSERT INTO hafd.blocks
-    SELECT
-          DISTINCT ON ( hbr.num ) hbr.num
-        , hbr.hash
-        , hbr.prev
-        , hbr.created_at
-        , hbr.producer_account_id
-        , hbr.transaction_merkle_root
-        , hbr.extensions
-        , hbr.witness_signature
-        , hbr.signing_key
+    -- 1. Identify winning forks for the range
+    CREATE TEMP TABLE winning_forks ON COMMIT DROP AS
+    SELECT num, MAX(fork_id) as max_fork_id
+    FROM hafd.blocks
+    WHERE num > _head_block_of_irreversible_blocks AND num <= _new_irreversible_block
+    GROUP BY num;
 
-        , hbr.hbd_interest_rate
+    -- 2. Update blocks to fork_id = 0
+    UPDATE hafd.blocks b
+    SET fork_id = 0
+    FROM winning_forks wf
+    WHERE b.num = wf.num AND b.fork_id = wf.max_fork_id;
 
-        , hbr.total_vesting_fund_hive
-        , hbr.total_vesting_shares
+    -- 3. Update dependent tables to fork_id = 0
+    UPDATE hafd.transactions t
+    SET fork_id = 0
+    FROM winning_forks wf
+    WHERE t.block_num = wf.num AND t.fork_id = wf.max_fork_id;
 
-        , hbr.total_reward_fund_hive
-        , hbr.virtual_supply
-        , hbr.current_supply
-        , hbr.current_hbd_supply
-        , hbr.dhf_interval_ledger
+    UPDATE hafd.transactions_multisig t
+    SET fork_id = 0
+    FROM hafd.transactions ht
+    JOIN winning_forks wf ON ht.block_num = wf.num AND ht.fork_id = wf.max_fork_id
+    WHERE t.trx_hash = ht.trx_hash AND t.fork_id = wf.max_fork_id;
 
-    FROM
-        hafd.blocks_reversible hbr
-    WHERE
-        hbr.num <= _new_irreversible_block
-    AND hbr.num > _head_block_of_irreversible_blocks
-    ORDER BY hbr.num ASC, hbr.fork_id DESC;
-END;
-$BODY$
-;
+    UPDATE hafd.operations o
+    SET fork_id = 0
+    FROM winning_forks wf
+    WHERE hafd.operation_id_to_block_num(o.id) = wf.num AND o.fork_id = wf.max_fork_id;
 
-CREATE OR REPLACE FUNCTION hive.copy_transactions_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.transactions
-    SELECT
-          htr.block_num
-        , htr.trx_in_block
-        , htr.trx_hash
-        , htr.ref_block_num
-        , htr.ref_block_prefix
-        , htr.expiration
-        , htr.signature
-    FROM
-        hafd.transactions_reversible htr
-    JOIN ( SELECT
-              DISTINCT ON ( hbr.num ) hbr.num
-            , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                    hbr.num <= _new_irreversible_block
-                AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-    ) as num_and_forks ON htr.block_num = num_and_forks.num AND htr.fork_id = num_and_forks.fork_id
-    ;
-END;
-$BODY$
-;
+    UPDATE hafd.accounts a
+    SET fork_id = 0
+    FROM winning_forks wf
+    WHERE a.block_num = wf.num AND a.fork_id = wf.max_fork_id;
 
-CREATE OR REPLACE FUNCTION hive.copy_operations_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.operations
-    SELECT
-           hor.id
-         , hor.trx_in_block
-         , hor.op_pos
-         , hor.body_binary
-    FROM
-        hafd.operations_reversible hor
-        JOIN (
-            SELECT
-                  DISTINCT ON ( hbr.num ) hbr.num
-                , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                  hbr.num <= _new_irreversible_block
-              AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON hafd.operation_id_to_block_num(hor.id) = num_and_forks.num AND hor.fork_id = num_and_forks.fork_id
-    ;
-END;
-$BODY$
-;
+    UPDATE hafd.account_operations ao
+    SET fork_id = 0
+    FROM winning_forks wf
+    WHERE hafd.operation_id_to_block_num(ao.operation_id) = wf.num AND ao.fork_id = wf.max_fork_id;
 
+    UPDATE hafd.applied_hardforks h
+    SET fork_id = 0
+    FROM winning_forks wf
+    WHERE h.block_num = wf.num AND h.fork_id = wf.max_fork_id;
 
-CREATE OR REPLACE FUNCTION hive.copy_applied_hardforks_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.applied_hardforks
-    SELECT
-           hjr.hardfork_num
-         , hjr.block_num
-         , hjr.hardfork_vop_id
-    FROM
-        hafd.applied_hardforks_reversible hjr
-        JOIN (
-            SELECT
-                  DISTINCT ON ( hbr.num ) hbr.num
-                , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                  hbr.num <= _new_irreversible_block
-              AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON hjr.block_num = num_and_forks.num AND hjr.fork_id = num_and_forks.fork_id
-    ;
-END;
-$BODY$
-;
+    -- 4. Delete losing forks in the range
+    DELETE FROM hafd.account_operations
+    WHERE hafd.operation_id_to_block_num(operation_id) <= _new_irreversible_block 
+      AND hafd.operation_id_to_block_num(operation_id) > _head_block_of_irreversible_blocks
+      AND fork_id > 0;
 
-CREATE OR REPLACE FUNCTION hive.copy_signatures_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.transactions_multisig
-    SELECT
-          tsr.trx_hash
-        , tsr.signature
-    FROM
-        hafd.transactions_multisig_reversible tsr
-        JOIN hafd.transactions_reversible htr ON htr.trx_hash = tsr.trx_hash AND htr.fork_id = tsr.fork_id
-        JOIN (
-            SELECT
-                  DISTINCT ON ( hbr.num ) hbr.num
-                , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                    hbr.num <= _new_irreversible_block
-                AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON htr.block_num = num_and_forks.num AND htr.fork_id = num_and_forks.fork_id
-    ;
-END;
-$BODY$
-;
+    DELETE FROM hafd.accounts
+    WHERE block_num <= _new_irreversible_block
+      AND block_num > _head_block_of_irreversible_blocks
+      AND fork_id > 0;
 
-CREATE OR REPLACE FUNCTION hive.copy_accounts_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.accounts
-    SELECT
-           har.id
-         , har.name
-         , har.block_num
-    FROM
-        hafd.accounts_reversible har
-        JOIN (
-            SELECT
-                  DISTINCT ON ( hbr.num ) hbr.num
-                , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                  hbr.num <= _new_irreversible_block
-              AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON har.block_num = num_and_forks.num AND har.fork_id = num_and_forks.fork_id
-    ;
-END;
-$BODY$
-;
+    DELETE FROM hafd.operations
+    WHERE hafd.operation_id_to_block_num(id) <= _new_irreversible_block
+      AND hafd.operation_id_to_block_num(id) > _head_block_of_irreversible_blocks
+      AND fork_id > 0;
 
-CREATE OR REPLACE FUNCTION hive.copy_account_operations_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.account_operations
-    SELECT
-           haor.account_id
-         , haor.transacting_account_id
-         , haor.account_op_seq_no
-         , haor.operation_id
-    FROM
-        hafd.account_operations_reversible haor
-        JOIN (
-            SELECT
-                  DISTINCT ON ( hbr.num ) hbr.num
-                , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                hbr.num <= _new_irreversible_block
-              AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON haor.fork_id = num_and_forks.fork_id AND hafd.operation_id_to_block_num( haor.operation_id ) = num_and_forks.num
-    ;
+    DELETE FROM hafd.transactions_multisig m
+    USING hafd.transactions t
+    WHERE m.trx_hash = t.trx_hash AND m.fork_id = t.fork_id
+      AND t.block_num <= _new_irreversible_block
+      AND t.block_num > _head_block_of_irreversible_blocks
+      AND m.fork_id > 0;
+
+    DELETE FROM hafd.transactions
+    WHERE block_num <= _new_irreversible_block
+      AND block_num > _head_block_of_irreversible_blocks
+      AND fork_id > 0;
+
+    DELETE FROM hafd.applied_hardforks
+    WHERE block_num <= _new_irreversible_block
+      AND block_num > _head_block_of_irreversible_blocks
+      AND fork_id > 0;
+
+    DELETE FROM hafd.blocks
+    WHERE num <= _new_irreversible_block
+      AND num > _head_block_of_irreversible_blocks
+      AND fork_id > 0;
+
 END;
 $BODY$
 ;
@@ -263,41 +125,52 @@ BEGIN
 
     __max_block_num := LEAST(__lowest_irreversible_block, _new_irreversible_block);
 
-    DELETE FROM hafd.account_operations_reversible har
-    USING hafd.operations_reversible hor
+    DELETE FROM hafd.account_operations har
+    USING hafd.operations hor
     WHERE
             har.operation_id = hor.id
         AND har.fork_id = hor.fork_id
-        AND ( hafd.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
+        AND (
+              (hafd.operation_id_to_block_num(hor.id) <= __max_block_num AND hor.fork_id > 0)
+              OR (hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) AND hor.fork_id > 0)
+            )
     ;
 
-    DELETE FROM hafd.applied_hardforks_reversible hjr
-    WHERE hjr.block_num <= __max_block_num OR hjr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    DELETE FROM hafd.applied_hardforks hjr
+    WHERE (hjr.block_num <= __max_block_num AND hjr.fork_id > 0)
+       OR (hjr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) AND hjr.fork_id > 0)
     ;
 
-    DELETE FROM hafd.operations_reversible hor
-    WHERE hafd.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    DELETE FROM hafd.operations hor
+    WHERE (hafd.operation_id_to_block_num(hor.id) <= __max_block_num AND hor.fork_id > 0)
+       OR (hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) AND hor.fork_id > 0)
     ;
 
 
-    DELETE FROM hafd.transactions_multisig_reversible htmr
-    USING hafd.transactions_reversible htr
+    DELETE FROM hafd.transactions_multisig htmr
+    USING hafd.transactions htr
     WHERE
             htr.fork_id = htmr.fork_id
         AND htr.trx_hash = htmr.trx_hash
-        AND ( htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
+        AND (
+              (htr.block_num <= __max_block_num AND htr.fork_id > 0)
+              OR (htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) AND htr.fork_id > 0)
+            )
     ;
 
-    DELETE FROM hafd.transactions_reversible htr
-    WHERE  htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    DELETE FROM hafd.transactions htr
+    WHERE  (htr.block_num <= __max_block_num AND htr.fork_id > 0)
+       OR (htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) AND htr.fork_id > 0)
     ;
 
-    DELETE FROM hafd.accounts_reversible har
-    WHERE har.block_num <= __max_block_num OR har.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    DELETE FROM hafd.accounts har
+    WHERE (har.block_num <= __max_block_num AND har.fork_id > 0)
+       OR (har.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) AND har.fork_id > 0)
     ;
 
-    DELETE FROM hafd.blocks_reversible hbr
-    WHERE hbr.num <= __max_block_num OR hbr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    DELETE FROM hafd.blocks hbr
+    WHERE (hbr.num <= __max_block_num AND hbr.fork_id > 0)
+       OR (hbr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) AND hbr.fork_id > 0)
     ;
 END;
 $BODY$

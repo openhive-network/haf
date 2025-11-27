@@ -127,7 +127,7 @@ BEGIN
                 hb.current_hbd_supply,
                 hb.dhf_interval_ledger
                FROM hafd.blocks hb
-               WHERE hb.num <= c.min_block
+               WHERE hb.num <= c.min_block AND hb.fork_id = 0
             UNION ALL
              SELECT hbr.num,
                 hbr.hash,
@@ -146,12 +146,12 @@ BEGIN
                 hbr.current_supply,
                 hbr.current_hbd_supply,
                 hbr.dhf_interval_ledger
-               FROM hafd.blocks_reversible hbr
+               FROM hafd.blocks hbr
                JOIN
                (
                  SELECT rb.num, MAX(rb.fork_id) AS max_fork_id
-                 FROM hafd.blocks_reversible rb
-                 WHERE c.reversible_range AND rb.num > c.irreversible_block AND rb.fork_id <= c.fork_id AND rb.num <= c.current_block_num
+                 FROM hafd.blocks rb
+                 WHERE c.reversible_range AND rb.num > c.irreversible_block AND rb.fork_id <= c.fork_id AND rb.num <= c.current_block_num AND rb.fork_id > 0
                  GROUP BY rb.num
                ) visible_blks ON visible_blks.num = hbr.num AND visible_blks.max_fork_id = hbr.fork_id
 
@@ -198,7 +198,7 @@ BEGIN
                     hb.current_hbd_supply,
                     hb.dhf_interval_ledger
                    FROM hafd.blocks hb
-                   WHERE hb.num <= c.min_block
+                   WHERE hb.num <= c.min_block AND hb.fork_id = 0
             ) t;
             ;', __schema, __schema
         );
@@ -243,6 +243,7 @@ EXECUTE format(
             hb.current_hbd_supply,
             hb.dhf_interval_ledger
         FROM hafd.blocks hb
+        WHERE hb.fork_id = 0
         ;', __schema
     );
 
@@ -303,7 +304,7 @@ BEGIN
                        ht.expiration,
                        ht.signature
                     FROM hafd.transactions ht
-                    WHERE ht.block_num <= c.min_block
+                    WHERE ht.block_num <= c.min_block AND ht.fork_id = 0
                     UNION ALL
                     SELECT reversible.block_num,
                         reversible.trx_in_block,
@@ -321,11 +322,11 @@ BEGIN
                         htr.expiration,
                         htr.signature,
                         htr.fork_id
-                    FROM hafd.transactions_reversible htr
+                    FROM hafd.transactions htr
                     JOIN (
                         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-                        FROM hafd.blocks_reversible hbr
-                        WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
+                        FROM hafd.blocks hbr
+                        WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num AND hbr.fork_id > 0
                         GROUP by hbr.num
                     ) as forks ON forks.max_fork_id = htr.fork_id AND forks.num = htr.block_num
                  ) reversible
@@ -354,7 +355,7 @@ BEGIN
                            ht.expiration,
                            ht.signature
                         FROM hafd.transactions ht
-                        WHERE ht.block_num <= c.min_block
+                        WHERE ht.block_num <= c.min_block AND ht.fork_id = 0
                 ) t
                 ;'
             , __schema, __schema
@@ -387,6 +388,7 @@ EXECUTE format(
            ht.expiration,
            ht.signature
         FROM hafd.transactions ht
+        WHERE ht.fork_id = 0
        ;'
     , __schema
     );
@@ -448,8 +450,8 @@ BEGIN
                       b.created_at timestamp,
                       ho.body_binary
                       FROM hafd.operations ho
-                      JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
-                      WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
+                      JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id) AND b.fork_id = 0
+                      WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block AND ho.fork_id = 0
                     UNION ALL
                       SELECT
                         o.id,
@@ -457,21 +459,21 @@ BEGIN
                         o.op_pos,
                         visible_ops_timestamp.created_at timestamp,
                         o.body_binary
-                      FROM hafd.operations_reversible o
+                      FROM hafd.operations o
                       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
                       -- and also hide ops present at earlier forks for given block
                       JOIN
                       (
                         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-                        FROM hafd.blocks_reversible hbr
-                        WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
+                        FROM hafd.blocks hbr
+                        WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num AND hbr.fork_id > 0
                         GROUP by hbr.num
                       ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
                       JOIN
                       (
-                        SELECT hbr.num, created_at
-                        FROM hafd.blocks_reversible hbr
-                      ) visible_ops_timestamp ON visible_ops_timestamp.num = visible_ops.num
+                        SELECT hbr.num, created_at, hbr.fork_id
+                        FROM hafd.blocks hbr
+                      ) visible_ops_timestamp ON visible_ops_timestamp.num = visible_ops.num AND visible_ops_timestamp.fork_id = visible_ops.max_fork_id
                 ) t
                 ;', __schema, __schema
             );
@@ -497,8 +499,8 @@ BEGIN
                           b.created_at timestamp,
                           ho.body_binary
                         FROM hafd.operations ho
-                        JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
-                        WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
+                        JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id) AND b.fork_id = 0
+                        WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block AND ho.fork_id = 0
                     ) t
                     ;', __schema, __schema
                     );
@@ -542,21 +544,21 @@ BEGIN
                       ho.op_pos,
                       ho.body_binary
                       FROM hafd.operations ho
-                      WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
+                      WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block AND ho.fork_id = 0
                     UNION ALL
                       SELECT
                         o.id,
                         o.trx_in_block,
                         o.op_pos,
                         o.body_binary
-                      FROM hafd.operations_reversible o
+                      FROM hafd.operations o
                       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
                       -- and also hide ops present at earlier forks for given block
                       JOIN
                       (
                         SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-                        FROM hafd.blocks_reversible hbr
-                        WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
+                        FROM hafd.blocks hbr
+                        WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num AND hbr.fork_id > 0
                         GROUP by hbr.num
                       ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
                 ) t
@@ -582,7 +584,7 @@ BEGIN
                       ho.op_pos,
                       ho.body_binary
                       FROM hafd.operations ho
-                      WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
+                      WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block AND ho.fork_id = 0
                   ) t
                 ;', __schema, __schema
         );
@@ -617,7 +619,8 @@ EXECUTE format(
             ho.body_binary as body_binary,
             ho.body_binary::jsonb AS body
         FROM hafd.operations ho
-        JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
+        JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id) AND b.fork_id = 0
+        WHERE ho.fork_id = 0
         ;', __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
@@ -649,6 +652,7 @@ EXECUTE format(
             ho.body_binary as body_binary,
             ho.body_binary::jsonb AS body
         FROM hafd.operations ho
+        WHERE ho.fork_id = 0
         ;', __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
@@ -717,8 +721,8 @@ BEGIN
                           htm.trx_hash
                         , htm.signature
                 FROM hafd.transactions_multisig htm
-                JOIN hafd.transactions ht ON ht.trx_hash = htm.trx_hash
-                WHERE ht.block_num <= c.min_block
+                JOIN hafd.transactions ht ON ht.trx_hash = htm.trx_hash AND ht.fork_id = 0
+                WHERE ht.block_num <= c.min_block AND htm.fork_id = 0
                 UNION ALL
                 SELECT
                        reversible.trx_hash
@@ -727,14 +731,14 @@ BEGIN
                     SELECT
                            htmr.trx_hash
                          , htmr.signature
-                    FROM hafd.transactions_multisig_reversible htmr
+                    FROM hafd.transactions_multisig htmr
                     JOIN (
                             SELECT htr.trx_hash, forks.max_fork_id
-                            FROM hafd.transactions_reversible htr
+                            FROM hafd.transactions htr
                             JOIN (
                                 SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-                                FROM hafd.blocks_reversible hbr
-                                WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
+                                FROM hafd.blocks hbr
+                                WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num AND hbr.fork_id > 0
                                 GROUP by hbr.num
                             ) as forks ON forks.max_fork_id = htr.fork_id AND forks.num = htr.block_num
                     ) as trr ON trr.trx_hash = htmr.trx_hash AND trr.max_fork_id = htmr.fork_id
@@ -755,8 +759,8 @@ BEGIN
                       htm.trx_hash
                     , htm.signature
                     FROM hafd.transactions_multisig htm
-                    JOIN hafd.transactions ht ON ht.trx_hash = htm.trx_hash
-                    WHERE ht.block_num <= c.min_block
+                    JOIN hafd.transactions ht ON ht.trx_hash = htm.trx_hash AND ht.fork_id = 0
+                    WHERE ht.block_num <= c.min_block AND htm.fork_id = 0
             ) t;'
             , __schema, __schema
         );
@@ -785,6 +789,7 @@ EXECUTE format(
           htm.trx_hash
         , htm.signature
     FROM hafd.transactions_multisig htm
+    WHERE htm.fork_id = 0
     ;'
     , __schema
     );
@@ -837,7 +842,7 @@ BEGIN
                   SELECT ha.id,
                          ha.name
                         FROM hafd.accounts ha
-                        WHERE COALESCE(ha.block_num,1) <= c.min_block
+                        WHERE COALESCE(ha.block_num,1) <= c.min_block AND ha.fork_id = 0
                         UNION ALL
                         SELECT
                             reversible.id,
@@ -846,11 +851,11 @@ BEGIN
                             har.id,
                             har.name,
                             har.fork_id
-                        FROM hafd.accounts_reversible har
+                        FROM hafd.accounts har
                         JOIN (
                             SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-                            FROM hafd.blocks_reversible hbr
-                            WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
+                            FROM hafd.blocks hbr
+                            WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num AND hbr.fork_id > 0
                             GROUP by hbr.num
                         ) as forks ON forks.max_fork_id = har.fork_id AND forks.num = har.block_num
                      ) reversible
@@ -870,7 +875,7 @@ BEGIN
                   SELECT ha.id,
                          ha.name
                         FROM hafd.accounts ha
-                        WHERE COALESCE(ha.block_num,1) <= c.min_block
+                        WHERE COALESCE(ha.block_num,1) <= c.min_block AND ha.fork_id = 0
                 ) t
                 ;'
             , __schema, __schema
@@ -899,6 +904,7 @@ EXECUTE format(
            ha.id,
            ha.name
         FROM hafd.accounts ha
+        WHERE ha.fork_id = 0
     ;', __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'accounts_view');
@@ -957,7 +963,7 @@ BEGIN
                          ha.account_op_seq_no,
                          ha.operation_id
                         FROM hafd.account_operations ha
-                        WHERE hafd.operation_id_to_block_num(ha.operation_id) <= c.min_block
+                        WHERE hafd.operation_id_to_block_num(ha.operation_id) <= c.min_block AND ha.fork_id = 0
                         UNION ALL
                         SELECT
                             reversible.account_id,
@@ -970,11 +976,11 @@ BEGIN
                             har.account_op_seq_no,
                             har.operation_id,
                             har.fork_id
-                        FROM hafd.account_operations_reversible har
+                        FROM hafd.account_operations har
                         JOIN (
                                 SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-                                FROM hafd.blocks_reversible hbr
-                                WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
+                                FROM hafd.blocks hbr
+                                WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num AND hbr.fork_id > 0
                                 GROUP by hbr.num
                         ) as arr ON arr.max_fork_id = har.fork_id AND arr.num = hafd.operation_id_to_block_num( har.operation_id )
                      ) reversible
@@ -1001,7 +1007,7 @@ BEGIN
                          ha.account_op_seq_no,
                          ha.operation_id
                         FROM hafd.account_operations ha
-                        WHERE hafd.operation_id_to_block_num(ha.operation_id) <= c.min_block
+                        WHERE hafd.operation_id_to_block_num(ha.operation_id) <= c.min_block AND ha.fork_id = 0
                 ) t
                 ;'
             , __schema, __schema
@@ -1034,6 +1040,7 @@ EXECUTE format(
            ha.operation_id,
            hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id
         FROM hafd.account_operations ha
+        WHERE ha.fork_id = 0
         ;'
     , __schema
     );
@@ -1088,7 +1095,7 @@ BEGIN
                          hr.block_num,
                          hr.hardfork_vop_id
                         FROM hafd.applied_hardforks hr
-                        WHERE hr.block_num <= c.min_block
+                        WHERE hr.block_num <= c.min_block AND hr.fork_id = 0
                         UNION ALL
                         SELECT
                             reversible.hardfork_num,
@@ -1099,11 +1106,11 @@ BEGIN
                             hjr.block_num,
                             hjr.hardfork_vop_id,
                             hjr.fork_id
-                        FROM hafd.applied_hardforks_reversible hjr
+                        FROM hafd.applied_hardforks hjr
                         JOIN (
                             SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-                            FROM hafd.blocks_reversible hbr
-                            WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
+                            FROM hafd.blocks hbr
+                            WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num AND hbr.fork_id > 0
                             GROUP by hbr.num
                             ) as hfrr ON hfrr.max_fork_id = hjr.fork_id AND hfrr.num = hjr.block_num
                      ) reversible
@@ -1125,7 +1132,7 @@ BEGIN
                          hr.block_num,
                          hr.hardfork_vop_id
                         FROM hafd.applied_hardforks hr
-                        WHERE hr.block_num <= c.min_block
+                        WHERE hr.block_num <= c.min_block AND hr.fork_id = 0
                 ) t
                 ;'
             , __schema, __schema
@@ -1156,6 +1163,7 @@ EXECUTE format(
                  hr.block_num,
                  hr.hardfork_vop_id
         FROM hafd.applied_hardforks hr
+        WHERE hr.fork_id = 0
         ;'
     , __schema
     );

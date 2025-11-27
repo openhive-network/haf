@@ -15,7 +15,7 @@ ADD_PSQL_EXTENSION(
              types/operation/operation_casts.sql
              types/operation/operation_id.sql
              irreversible_blocks.sql
-             reversible_blocks.sql
+
              state_provider.sql
              hived_connections.sql
              hived_api_impl_indexes.sql

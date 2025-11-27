@@ -890,12 +890,10 @@ CREATE OR REPLACE FUNCTION hive.get_app_current_block_age(_contexts hive.context
     STABLE
 AS $BODY$
 BEGIN
-    RETURN now() - (select min(coalesce(hafd.blocks.created_at, hafd.blocks_reversible.created_at, to_timestamp(0))) from
+    RETURN now() - (select min(coalesce(b.created_at, to_timestamp(0))) from
                     UNNEST(_contexts) AS context_names(name)
-                    LEFT JOIN hafd.contexts USING(name)
-                    LEFT JOIN hafd.blocks on hafd.blocks.num = hafd.contexts.current_block_num
-                    LEFT JOIN hafd.blocks_reversible on hafd.blocks_reversible.num = hafd.contexts.current_block_num AND
-                                                        hafd.blocks_reversible.fork_id = hafd.contexts.fork_id
+                    LEFT JOIN hafd.contexts c USING(name)
+                    LEFT JOIN hafd.blocks b on b.num = c.current_block_num AND (b.fork_id = c.fork_id OR b.fork_id = 0)
                     );
 END;
 $BODY$;
