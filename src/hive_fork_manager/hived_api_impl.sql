@@ -7,8 +7,8 @@ CREATE OR REPLACE FUNCTION hive.make_block_range_irreversible(
 AS
 $BODY$
 BEGIN
-    -- With block_id schema, we only need to update hafd.blocks
-    -- Other tables reference via block_id which is auto-computed from (num, fork_id)
+    -- With the new architecture, we no longer set fork_id = 0 for irreversible blocks
+    -- Instead, we keep the original fork_id and use consistent_block_id as the boundary
     
     -- 1. Identify winning forks for the range
     CREATE TEMP TABLE winning_forks ON COMMIT DROP AS
@@ -17,18 +17,15 @@ BEGIN
     WHERE num > _head_block_of_irreversible_blocks AND num <= _new_irreversible_block
     GROUP BY num;
 
-    -- 2. Update blocks to fork_id = 0 (block_id will auto-update via GENERATED column)
-    UPDATE hafd.blocks b
-    SET fork_id = 0
-    FROM winning_forks wf
-    WHERE b.num = wf.num AND b.fork_id = wf.max_fork_id;
-
-    -- 3. Delete losing forks (blocks with non-winning fork_id)
+    -- 2. Delete losing forks (blocks with non-winning fork_id)
     -- This cascades to dependent tables via FK constraints
-    DELETE FROM hafd.blocks
-    WHERE num <= _new_irreversible_block
-      AND num > _head_block_of_irreversible_blocks
-      AND fork_id > 0;
+    DELETE FROM hafd.blocks b
+    WHERE b.num <= _new_irreversible_block
+      AND b.num > _head_block_of_irreversible_blocks
+      AND NOT EXISTS (
+        SELECT 1 FROM winning_forks wf 
+        WHERE wf.num = b.num AND wf.max_fork_id = b.fork_id
+      );
 
 END;
 $BODY$

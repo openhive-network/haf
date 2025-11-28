@@ -91,8 +91,39 @@ CREATE TABLE IF NOT EXISTS hafd.hive_state (
 -- We use ADD CONSTRAINT with ALTER TABLE followed by NOT VALID because the NOT VALID option isn't documented
 -- or supported within CREATE TABLE, and thus, seems not to work there.
 -- This applies to the following tables as well.
-ALTER TABLE hafd.hive_state ADD CONSTRAINT fk_1_hive_irreversible_data FOREIGN KEY (consistent_block_id) REFERENCES hafd.blocks (block_id) NOT VALID;
+ALTER TABLE hafd.hive_state ADD CONSTRAINT fk_1_hive_irreversible_data FOREIGN KEY (consistent_block_id) REFERENCES hafd.blocks (block_id) ON UPDATE CASCADE NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.hive_state', '');
+
+-- Reversible boundary table for partial index support
+-- This table stores the block number boundary between irreversible and reversible blocks
+-- It's updated automatically when consistent_block_id changes
+CREATE TABLE IF NOT EXISTS hafd.reversible_boundary (
+      id integer NOT NULL DEFAULT 1,
+      boundary_block_num integer NOT NULL DEFAULT 0,
+      CONSTRAINT pk_reversible_boundary PRIMARY KEY (id),
+      CONSTRAINT single_row CHECK (id = 1)
+);
+SELECT pg_catalog.pg_extension_config_dump('hafd.reversible_boundary', '');
+
+-- Initialize the boundary
+INSERT INTO hafd.reversible_boundary (id, boundary_block_num) VALUES (1, 0) ON CONFLICT DO NOTHING;
+
+-- Trigger function to update reversible_boundary when consistent_block_id changes
+CREATE OR REPLACE FUNCTION hafd.update_reversible_boundary()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE hafd.reversible_boundary 
+  SET boundary_block_num = hafd.block_id_to_num(COALESCE(NEW.consistent_block_id, 0))
+  WHERE id = 1;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to automatically update the boundary
+CREATE TRIGGER trg_update_reversible_boundary
+AFTER UPDATE OF consistent_block_id ON hafd.hive_state
+FOR EACH ROW
+EXECUTE FUNCTION hafd.update_reversible_boundary();
 
 CREATE TABLE IF NOT EXISTS hafd.transactions (
     block_id BIGINT NOT NULL,
@@ -114,7 +145,7 @@ CREATE TABLE IF NOT EXISTS hafd.transactions_multisig (
     signature bytea NOT NULL,
     CONSTRAINT pk_hive_transactions_multisig PRIMARY KEY ( trx_hash, signature )
 );
-ALTER TABLE hafd.transactions_multisig ADD CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash) REFERENCES hafd.transactions (trx_hash) NOT VALID;
+-- ALTER TABLE hafd.transactions_multisig ADD CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash) REFERENCES hafd.transactions (trx_hash) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.transactions_multisig', '');
 
 CREATE TABLE IF NOT EXISTS hafd.operation_types (
@@ -213,3 +244,27 @@ COMMENT ON COLUMN hafd.write_ahead_log_state.id IS 'an id column.  this table wi
 COMMENT ON COLUMN hafd.write_ahead_log_state.last_sequence_number_committed IS 'The sequence number of the last commited transaction, or NULL if we''re operating in a mode that doesn''t track sequence numbers.  Will always be non-negative';
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.write_ahead_log_state', '');
+
+-- Partial indexes for reversible blocks
+-- These indexes cover only the small reversible window at the head of the chain
+-- They dramatically improve performance for queries on reversible data
+
+-- Partial index on operations for reversible blocks
+CREATE INDEX IF NOT EXISTS idx_operations_reversible_block_id 
+ON hafd.operations ((block_id >> 20), (block_id & 1048575), block_id)
+WHERE (block_id >> 20) > (SELECT boundary_block_num FROM hafd.reversible_boundary WHERE id = 1);
+
+-- Partial index on transactions for reversible blocks  
+CREATE INDEX IF NOT EXISTS idx_transactions_reversible_block_id
+ON hafd.transactions ((block_id >> 20), (block_id & 1048575), block_id)
+WHERE (block_id >> 20) > (SELECT boundary_block_num FROM hafd.reversible_boundary WHERE id = 1);
+
+-- Partial index on accounts for reversible blocks
+CREATE INDEX IF NOT EXISTS idx_accounts_reversible_block_id
+ON hafd.accounts ((block_id >> 20), (block_id & 1048575), block_id)
+WHERE (block_id >> 20) > (SELECT boundary_block_num FROM hafd.reversible_boundary WHERE id = 1);
+
+-- Partial index on applied_hardforks for reversible blocks
+CREATE INDEX IF NOT EXISTS idx_applied_hardforks_reversible_block_id
+ON hafd.applied_hardforks ((block_id >> 20), (block_id & 1048575), block_id)
+WHERE (block_id >> 20) > (SELECT boundary_block_num FROM hafd.reversible_boundary WHERE id = 1);
