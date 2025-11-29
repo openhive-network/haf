@@ -252,11 +252,13 @@ if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
   echo "Attempting to setup postgres instance: running initdb..."
 
   # initdb will refuse to run in a non-empty directory, so run initdb in an empty temporary directory then copy the files over
-  mkdir -p /tmp/$$/pgdata
-  sudo -n chown -Rc postgres:postgres /tmp/$$/pgdata
-  sudo --user=postgres -n PGDATA="/tmp/$$/pgdata" "/usr/lib/postgresql/${POSTGRES_VERSION}/bin/initdb"
-  sudo --user=postgres -n bash -c "cd /tmp/$$/pgdata && tar cf - ." | sudo --user=postgres -n bash -c "cd \"$PGDATA\" && tar xf -"
-  sudo -n rm -r /tmp/$$/pgdata
+  # Note: Using mktemp instead of /tmp/$$ because $$ is always 1 inside Docker containers,
+  # which can cause collisions if /tmp is shared or not cleaned between runs
+  INITDB_TMPDIR=$(mktemp -d /tmp/initdb.XXXXXX)
+  sudo -n chown -Rc postgres:postgres "$INITDB_TMPDIR"
+  sudo --user=postgres -n PGDATA="$INITDB_TMPDIR" "/usr/lib/postgresql/${POSTGRES_VERSION}/bin/initdb"
+  sudo --user=postgres -n bash -c "cd '$INITDB_TMPDIR' && tar cf - ." | sudo --user=postgres -n bash -c "cd \"$PGDATA\" && tar xf -"
+  sudo -n rm -r "$INITDB_TMPDIR"
 
   echo "Attempting to setup postgres instance: running setup_postgres.sh..."
 
