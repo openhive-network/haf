@@ -217,6 +217,7 @@ dump_snapshot_5m_mirrornet:
     - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot "$SNAPSHOTS_PATH/5m_mirrornet/snapshot"
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 haf_system_tests_mirrornet:
   stage: build_and_test_phase_2
@@ -272,6 +273,7 @@ haf_system_tests_mirrornet:
   interruptible: true
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 applications_system_tests:
   extends: .job-defaults
@@ -606,6 +608,7 @@ replay_filtered_haf_data_accounts_body_operations:
     DATA_CACHE_DIR: "${PIPELINE_DATA_CACHE_HAF_DIRECTORY}_replay_accounts_body_operations_filtered"
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 block_api_tests:
   extends: .jmeter_benchmark_job
@@ -662,6 +665,7 @@ block_api_tests:
     expire_in: 1 week
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 prepare_haf_data:
   extends: .prepare_haf_data_5m
@@ -675,6 +679,7 @@ prepare_haf_data:
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 # Creates a temporary copy of replay data for the exclusive use of current pipeline
 replay_data_copy:
@@ -692,6 +697,7 @@ replay_data_copy:
       sudo cp -a "${DATA_CACHE_HAF_PREFIX:?}_${HAF_COMMIT:?}" "${PIPELINE_DATA_CACHE_HAF_DIRECTORY:?}"
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 dead_app_auto_detach:
   extends: .job-defaults
@@ -724,6 +730,7 @@ dead_app_auto_detach:
     - scenario*.log
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 start_haf_as_service:
   extends: .job-defaults
@@ -757,6 +764,7 @@ start_haf_as_service:
     - docker_entrypoint.log
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 cleanup_haf_cache_manual:
   extends: .cleanup_cache_manual_template
@@ -765,6 +773,7 @@ cleanup_haf_cache_manual:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 cleanup_haf_snapshot_from_cache:
   extends: .cleanup_cache_manual_template
@@ -773,6 +782,7 @@ cleanup_haf_snapshot_from_cache:
     CLEANUP_PATH_PATTERN: "/cache/snapshots_pipeline_*"
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 cleanup_old_haf_cache:
   extends: .cleanup_old_cache_template
@@ -781,6 +791,7 @@ cleanup_old_haf_cache:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 # Deletes replay data used by the tests and created by replay_data_copy
 cleanup_pipeline_cache:
@@ -796,6 +807,7 @@ cleanup_pipeline_cache:
   when: always
   tags:
     - data-cache-storage
+    - hive-builder-9
 
 build_and_publish_image:
   stage: publish
