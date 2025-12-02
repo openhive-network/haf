@@ -50,6 +50,7 @@ verify_poetry_lock_sanity:
   tags:
     - public-runner-docker
     - hived-for-tests
+    - hived
 
 haf_image_build:
   extends: .haf_image_build
