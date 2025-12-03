@@ -186,11 +186,18 @@ DECLARE
     __now TIMESTAMP := NOW();
     __previous_active_at_time TIMESTAMP;
     __hive_sync_state hafd.sync_state;
+    __current_block_num INTEGER;
 BEGIN
+    SELECT current_block_num INTO __current_block_num
+    FROM hafd.contexts  WHERE name = __lead_context_name;
+
     -- here is the only place when main synchronization connection makes commit
     -- 1. commit if there is a pending commit
     IF pg_current_xact_id_if_assigned() IS NOT NULL THEN
         COMMIT;
+        IF hive.is_livesync(_contexts) AND _blocks_range.last_block % 1000 = 0 THEN
+            PERFORM hive.vacuum_shadow_tables(__lead_context_name);
+        END IF;
     END IF;
 
     SELECT last_active_at INTO __previous_active_at_time
