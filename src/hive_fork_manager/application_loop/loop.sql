@@ -196,7 +196,10 @@ BEGIN
     IF pg_current_xact_id_if_assigned() IS NOT NULL THEN
         COMMIT;
         IF hive.is_livesync(_contexts) AND _blocks_range.last_block % 1000 = 0 THEN
-            PERFORM hive.vacuum_shadow_tables(__lead_context_name);
+            PERFORM hive.vacuum_shadow_tables(rt.shadow_table_name)
+            FROM hafd.registered_tables AS rt
+            JOIN hafd.contexts AS c ON rt.context_id = c.id
+            WHERE c.name = __lead_context_name;
         END IF;
     END IF;
 

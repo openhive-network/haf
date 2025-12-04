@@ -8,76 +8,18 @@ extern "C"
 {
 
 /**
- * Vacuum shadow tables for registered application tables of a specific context.
+ * Vacuum a single shadow table.
  *
- * @param _context_name The name of the context whose shadow tables to vacuum
+ * @param _table_name The name of the shadow table to vacuum (without schema prefix)
  */
 PG_FUNCTION_INFO_V1(vacuum_shadow_tables);
 Datum vacuum_shadow_tables(PG_FUNCTION_ARGS)
 {
-  int ret;
-  uint64 processed_tables = 0;
-
-  text* context_name_text = PG_GETARG_TEXT_PP(0);
-  char* context_name = text_to_cstring(context_name_text);
+  text* table_name_text = PG_GETARG_TEXT_PP(0);
+  char* table_name = text_to_cstring(table_name_text);
 
   ereport(NOTICE,
-    (errmsg("vacuum_shadow_tables: starting vacuum for context '%s'", context_name)));
-
-  if (SPI_connect() != SPI_OK_CONNECT)
-  {
-    ereport(ERROR,
-      (errcode(ERRCODE_INTERNAL_ERROR),
-       errmsg("vacuum_shadow_tables: could not connect to SPI")));
-  }
-
-  Oid argtypes[1] = { TEXTOID };
-  Datum values[1] = { CStringGetTextDatum(context_name) };
-
-  ret = SPI_execute_with_args(
-    "SELECT rt.shadow_table_name "
-    "FROM hafd.registered_tables AS rt "
-    "JOIN hafd.contexts AS c ON rt.context_id = c.id "
-    "WHERE c.name = $1",
-    1,      /* nargs */
-    argtypes,
-    values,
-    NULL,   /* nulls */
-    true,   /* read only */
-    0       /* no limit */
-  );
-
-  if (ret != SPI_OK_SELECT)
-  {
-    SPI_finish();
-    ereport(ERROR,
-      (errcode(ERRCODE_INTERNAL_ERROR),
-       errmsg("vacuum_shadow_tables: failed to query registered_tables")));
-  }
-
-  if (SPI_processed == 0)
-  {
-    SPI_finish();
-    PG_RETURN_INT64(0);
-  }
-
-  char** shadow_tables = palloc_array(char*, SPI_processed);
-  uint64 shadow_tables_count = 0;
-
-  for (uint64 i = 0; i < SPI_processed; i++)
-  {
-    bool is_null;
-    Datum val = SPI_getbinval(SPI_tuptable->vals[i],
-                              SPI_tuptable->tupdesc,
-                              1,
-                              &is_null);
-    if (!is_null)
-    {
-      shadow_tables[shadow_tables_count++] = TextDatumGetCString(val);
-    }
-  }
-
-  SPI_finish();
+    (errmsg("vacuum_shadow_tables: starting vacuum for table '%s'", table_name)));
 
   /*
    * This function is called from within Postgres transaction.
@@ -110,45 +52,39 @@ Datum vacuum_shadow_tables(PG_FUNCTION_ARGS)
 
   PG_TRY();
   {
-    for (uint64 i = 0; i < shadow_tables_count; ++i)
+    char* vacuum_cmd = psprintf("VACUUM FULL hafd.%s", table_name);
+
+    TimestampTz start_time = GetCurrentTimestamp();
+    PGresult* res = PQexec(conn, vacuum_cmd);
+    TimestampTz end_time = GetCurrentTimestamp();
+    ExecStatusType status = PQresultStatus(res);
+    PQclear(res);
+
+    if (status == PGRES_COMMAND_OK)
     {
-      const char* table_name = shadow_tables[i];
-      char* vacuum_cmd = psprintf("VACUUM FULL hafd.%s", table_name);
+      long secs;
+      int usecs;
+      TimestampDifference(start_time, end_time, &secs, &usecs);
+      long elapsed_ms = secs * 1000L + usecs / 1000;
 
-      TimestampTz start_time = GetCurrentTimestamp();
-      PGresult* res = PQexec(conn, vacuum_cmd);
-      TimestampTz end_time = GetCurrentTimestamp();
-      ExecStatusType status = PQresultStatus(res);
-      PQclear(res);
+      ereport(NOTICE,
+        (errmsg("vacuum_shadow_tables: vacuumed hafd.%s in %ld ms",
+                table_name, elapsed_ms)));
 
-      if (status == PGRES_COMMAND_OK)
-      {
-        long secs;
-        int usecs;
-        TimestampDifference(start_time, end_time, &secs, &usecs);
-        long elapsed_ms = secs * 1000L + usecs / 1000;
-
-        processed_tables++;
-        ereport(NOTICE,
-          (errmsg("vacuum_shadow_tables: vacuumed hafd.%s in %ld ms",
-                  table_name, elapsed_ms)));
-      }
-      else
-      {
-        const char* err = PQerrorMessage(conn);
-        ereport(WARNING,
-          (errmsg("vacuum_shadow_tables: VACUUM failed for hafd.%s: %s",
-                  table_name, err)));
-      }
+      PQfinish(conn);
+      PG_RETURN_BOOL(true);
+    }
+    else
+    {
+      const char* err = PQerrorMessage(conn);
+      ereport(WARNING,
+        (errcode(ERRCODE_INTERNAL_ERROR),
+         errmsg("vacuum_shadow_tables: VACUUM failed for hafd.%s: %s",
+                table_name, err)));
+      PQfinish(conn);
+      PG_RETURN_BOOL(false);
     }
 
-    PQfinish(conn);
-
-    ereport(NOTICE,
-      (errmsg("vacuum_shadow_tables: vacuumed %lu shadow tables for context '%s'",
-              processed_tables, context_name)));
-
-    PG_RETURN_INT64(processed_tables);
   }
   PG_CATCH();
   {
@@ -157,7 +93,7 @@ Datum vacuum_shadow_tables(PG_FUNCTION_ARGS)
   }
   PG_END_TRY();
 
-  PG_RETURN_INT64(processed_tables);
+  PG_RETURN_BOOL(false);
 }
 
 } /* extern "C" */
