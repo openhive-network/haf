@@ -75,12 +75,8 @@ data_processor::data_processor( std::string description, std::string short_descr
         std::unique_lock<std::mutex> lk(_mtx);
         _cv.wait(lk, [this] {return _dataPtr.valid() || _continue.load() == false; });
 
-        dlog("${d} data processor resumed by DATA-READY signal...", ("d", _description));
-
-        if(_continue.load() == false) {
-          dlog("${d} data processor _continue.load() == false", ("d", _description));
+        if(_continue.load() == false)
           break;
-        }
 
         fc::optional<data_chunk_ptr> dataPtr(std::move(_dataPtr));
         uint32_t last_block_num_in_stage = _last_block_num;
@@ -89,10 +85,9 @@ data_processor::data_processor( std::string description, std::string short_descr
         dlog("${d} data processor consumed data - notifying trigger process...", ("d", _description));
         _cv.notify_one();
 
-        if(_cancel.load())
-          break;
-
-        dlog("${d} data processor starts a data processing...", ("d", _description));
+        // NOTE: We do NOT exit early on _cancel here to prevent data loss.
+        // We must process the data and report to rendezvous so execute_push_block() gets called with valid data.
+        // The cancel will be handled after processing completes.
 
         {
           data_processing_status_notifier notifier(&_is_processing_data, &_data_processing_mtx, &_data_processing_finished_cv);
@@ -102,8 +97,6 @@ data_processor::data_processor( std::string description, std::string short_descr
           if ( _randezvous_trigger && last_block_num_in_stage )
             _randezvous_trigger->report_complete_thread_stage( last_block_num_in_stage );
         }
-
-        dlog("${d} data processor finished processing a data chunk...", ("d", _description));
       }
     }
     catch(...)
@@ -124,30 +117,28 @@ data_processor::~data_processor()
 
 void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
 {
-  if ( _cancel.load() ) {
-    wlog( "Trying to trigger data processor: ${d} but its execution is already canceled. The data are ignored.", ("d", _description) );
-    return;
+  const bool is_canceled = _cancel.load();
+  if ( !is_canceled )
+  {
+    /// Set immediately data processing flag only if not canceled
+    _is_processing_data = true;
   }
-  /// Set immediately data processing flag
-  _is_processing_data = true;
 
   {
-  dlog("Trying to trigger data processor: ${d}...", ("d", _description));
   std::lock_guard<std::mutex> lk(_mtx);
   _dataPtr = std::move(dataPtr);
   _last_block_num = last_blocknum;
-  dlog("Data processor: ${d} triggerred...", ("d", _description));
   }
   _cv.notify_one();
 
   /// wait for the worker
   {
-    dlog("Waiting until data_processor ${d} will consume a data...", ("d", _description));
     std::unique_lock<std::mutex> lk(_mtx);
     _cv.wait(lk, [this] {return _dataPtr.valid() == false || _cancel; });
   }
 
-  dlog("Leaving trigger of data data processor: ${d}...", ("d", _description));
+  if ( is_canceled )
+    only_report_batch_finished( last_blocknum );
 }
 
 void
@@ -166,16 +157,12 @@ void data_processor::complete_data_processing()
   if(_is_processing_data == false)
     return;
 
-  dlog("Awaiting for data processing finish in the  data processor: ${d}...", ("d", _description));
   std::unique_lock<std::mutex> lk(_data_processing_mtx);
-  _data_processing_finished_cv.wait(lk, [this] { return _is_processing_data == false; });
-  dlog("Data processor: ${d} finished processing data...", ("d", _description));
+  _data_processing_finished_cv.wait(lk, [this] { return _is_processing_data == false || _cancel.load(); });
 }
 
 void data_processor::cancel()
 {
-  ilog("Attempting to cancel execution of data processor: ${d}...", ("d", _description));
-
   _cancel.store(true);
   join();
 }
@@ -196,15 +183,11 @@ void data_processor::join()
 
   try {
     if (_future.valid())
-    {
       _future.get();
-    }
   } catch (...) {
     elog( "Caught unhandled exception ${diagnostic}", ("diagnostic", boost::current_exception_diagnostic_information()) );
     throw;
   }
-
-  dlog("Data processor: ${d} finished execution...", ("d", _description));
 }
 
 void

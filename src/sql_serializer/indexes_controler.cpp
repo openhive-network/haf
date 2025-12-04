@@ -262,7 +262,7 @@ indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_
   return processor;
 }
 
-void indexes_controler::poll_and_create_indexes() 
+void indexes_controler::poll_and_create_indexes()
 {
   std::map<std::string, std::thread> active_threads; // Doesn't need mutex, because it's modified by one thread at a time
   std::set<std::string> threads_to_delete;

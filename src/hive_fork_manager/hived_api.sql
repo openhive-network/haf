@@ -372,8 +372,8 @@ BEGIN
     IF hive.is_pruning_enabled() = TRUE THEN
         -- we need to drop FK to fast remove from hafd.operations
         -- because it is impossible to back from pruned to non-pruned we do not bother with FK recreations
-        LOCK TABLE hafd.hive_state IN ACCESS EXCLUSIVE MODE;
-        ALTER TABLE hafd.account_operations DROP CONSTRAINT IF EXISTS hive_account_operations_fk_2;
+        LOCK TABLE hafd.hive_stable_state IN ACCESS EXCLUSIVE MODE;
+            ALTER TABLE hafd.account_operations DROP CONSTRAINT IF EXISTS hive_account_operations_fk_2;
     END IF;
 END;
 $BODY$

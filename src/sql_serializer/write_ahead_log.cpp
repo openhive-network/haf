@@ -223,7 +223,7 @@ namespace hive::plugins::sql_serializer {
         _log_files.back().get_size() > max_log_size)
     {
       // time to create a new log file.  Filename is in the format: yyyymmddThhmmss.###.wal
-      // where ### is usually 0, unless we need to create multiple log files in the same second; then we increment it 
+      // where ### is usually 0, unless we need to create multiple log files in the same second; then we increment it
       // as needed (so this supports up to 1000 log files per second)
       const std::string time_string = boost::posix_time::to_iso_string(boost::posix_time::second_clock::universal_time());
 

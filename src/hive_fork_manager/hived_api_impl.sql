@@ -351,7 +351,7 @@ DECLARE
     __cursor REFCURSOR;
 BEGIN
     -- lock applications
-    LOCK TABLE hafd.hive_state IN ACCESS EXCLUSIVE MODE;
+    LOCK TABLE hafd.hive_stable_state IN ACCESS EXCLUSIVE MODE;
 
     PERFORM hive.save_and_drop_constraints( _schema, _table );
 
@@ -416,7 +416,7 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-    LOCK TABLE hafd.hive_state IN ACCESS EXCLUSIVE MODE;
+    LOCK TABLE hafd.hive_stable_state IN ACCESS EXCLUSIVE MODE;
 
     INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
     SELECT
@@ -569,7 +569,7 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-    LOCK TABLE hafd.hive_state IN ACCESS EXCLUSIVE MODE;
+    LOCK TABLE hafd.hive_stable_state IN ACCESS EXCLUSIVE MODE;
     --restoring foreign keys
     OPEN __cursor FOR ( SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE AND status = 'missing' );
     LOOP
