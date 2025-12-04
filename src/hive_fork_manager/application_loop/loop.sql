@@ -197,7 +197,7 @@ BEGIN
         SELECT current_block_num INTO __current_block_num
         FROM hafd.contexts  WHERE name = __lead_context_name;
 
-        IF hive.is_livesync(_contexts) AND _blocks_range.last_block % 1200 = 0 THEN
+        IF hive.is_livesync(_contexts) AND __current_block_num % 1200 = 0 THEN
             PERFORM hive.vacuum_shadow_table(rt.shadow_table_name)
             FROM hafd.registered_tables AS rt
             JOIN hafd.contexts AS c ON rt.context_id = c.id
