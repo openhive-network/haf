@@ -188,13 +188,15 @@ DECLARE
     __hive_sync_state hafd.sync_state;
     __current_block_num INTEGER;
 BEGIN
-    SELECT current_block_num INTO __current_block_num
-    FROM hafd.contexts  WHERE name = __lead_context_name;
-
     -- here is the only place when main synchronization connection makes commit
-    -- 1. commit if there is a pending commit
+    -- 1. commit if there is a pending transaction
+    -- This should be the first line in the procedure.
     IF pg_current_xact_id_if_assigned() IS NOT NULL THEN
         COMMIT;
+
+        SELECT current_block_num INTO __current_block_num
+        FROM hafd.contexts  WHERE name = __lead_context_name;
+
         IF hive.is_livesync(_contexts) AND _blocks_range.last_block % 1000 = 0 THEN
             PERFORM hive.vacuum_shadow_table(rt.shadow_table_name)
             FROM hafd.registered_tables AS rt
