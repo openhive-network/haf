@@ -16,6 +16,12 @@ try:
 except ImportError:
     from beekeepy.exceptions import ErrorInResponseError
 
+# CommunicationError occurs when a node is temporarily unreachable during fork scenarios
+try:
+    from beekeepy._exceptions.base import CommunicationError
+except ImportError:
+    from beekeepy.exceptions import CommunicationError
+
 memo_cnt            = 0
 
 break_cnt           = 0
@@ -56,6 +62,13 @@ def trx_creator(wallet: tt.Wallet, identifier: int, start_memo: int, last_memo: 
                     time.sleep(0.1)  # Brief delay to allow fork resolution
                     continue
                 raise  # Re-raise if not TAPOS or max retries exceeded
+            except CommunicationError as e:
+                # Node may be temporarily unreachable during fork resolution
+                if attempt < max_retries - 1:
+                    tt.logger.warning(f'[trx_creator {identifier}] Communication error on memo {memo}, retrying (attempt {attempt + 1}/{max_retries}): {e}')
+                    time.sleep(0.5)  # Longer delay for node recovery
+                    continue
+                raise  # Re-raise if max retries exceeded
     return f'[break {identifier}] Creating transactions finished...'
 
 #Some information in: https://gitlab.syncad.com/hive/haf/-/issues/118
