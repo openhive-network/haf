@@ -182,11 +182,14 @@ void data_processor::cancel()
 
 void data_processor::join()
 {
-  _continue.store(false);
-
   {
     dlog("Trying to resume data processor: ${d}...", ("d", _description));
     std::lock_guard<std::mutex> lk(_mtx);
+    // Set _continue to false under the lock to ensure proper synchronization
+    // with the condition variable wait predicate in the worker thread.
+    // This prevents a race condition where the worker thread might miss the
+    // shutdown signal if it checks _continue between our store and notify.
+    _continue.store(false);
     dlog("Data processor: ${d} resumed...", ("d", _description));
   }
   _cv.notify_one();

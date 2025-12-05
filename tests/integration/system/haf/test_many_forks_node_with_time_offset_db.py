@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import test_tools as tt
 
 import shared_tools.complex_networks_helper_functions as sh
-from haf_local_tools import haf_app, wait_for_irreversible_progress, get_irreversible_block
+from haf_local_tools import haf_app, wait_for_irreversible_progress, get_irreversible_block, wait_for_irreversible_in_database
 
 memo_cnt            = 0
 
@@ -80,6 +80,10 @@ def test_many_forks_node_with_time_offset_db(prepared_networks_and_database_4_4_
     # This ensures all pending operations are flushed and prevents race conditions
     # during session/database cleanup (fixes issue #251)
     final_irreversible_block = get_irreversible_block(node_under_test)
-    tt.logger.info(f'Waiting for irreversible block {final_irreversible_block} to be processed...')
+    tt.logger.info(f'Waiting for irreversible block {final_irreversible_block} to be processed by node...')
     wait_for_irreversible_progress(node_under_test, final_irreversible_block)
+    # Also wait for the block to actually be written to the HAF database
+    # The node may report the block as irreversible before HAF finishes writing it
+    tt.logger.info(f'Waiting for irreversible block {final_irreversible_block} to be written to HAF database...')
+    wait_for_irreversible_in_database(session, final_irreversible_block, timeout=60.0)
 
