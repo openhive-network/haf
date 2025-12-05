@@ -2,11 +2,11 @@ import pytest
 
 import test_tools as tt
 
-from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.system.haf import (
     assert_are_blocks_sync_with_haf_db,
     assert_are_indexes_restored,
     connect_nodes,
+    create_and_run_init_node_with_retry,
     prepare_and_send_transactions,
 )
 
@@ -17,9 +17,7 @@ from haf_local_tools.system.haf import (
     ids=["enabled_indexes", "disabled_indexes_in_p2p_sync"],
 )
 def test_p2p_sync(haf_node, psql_index_threshold):
-    init_node = tt.InitNode()
-    apply_block_log_type_to_monolithic_workaround(init_node)
-    init_node.run()
+    init_node = create_and_run_init_node_with_retry()
 
     haf_node.config.psql_index_threshold = psql_index_threshold
 

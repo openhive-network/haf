@@ -2,10 +2,10 @@ import pytest
 
 import test_tools as tt
 
-from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.system.haf import (
     assert_are_blocks_sync_with_haf_db,
     assert_are_indexes_restored,
+    create_and_run_init_node_with_retry,
     prepare_and_send_transactions,
     BlocksView
 )
@@ -20,9 +20,7 @@ from haf_local_tools.system.haf import (
     ],
 )
 def test_replay_from_4(haf_node, psql_index_threshold):
-    init_node = tt.InitNode()
-    apply_block_log_type_to_monolithic_workaround(init_node)
-    init_node.run()
+    init_node = create_and_run_init_node_with_retry()
 
     haf_node.config.psql_index_threshold = psql_index_threshold
     haf_node.config.psql_first_block = 4

@@ -4,8 +4,12 @@ import pytest
 import test_tools as tt
 from beekeepy.exceptions import FailedToStartExecutableError
 
-from haf_local_tools.system.haf import prepare_and_send_transactions, get_truncated_block_log, connect_nodes
-from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
+from haf_local_tools.system.haf import (
+    connect_nodes,
+    create_and_run_init_node_with_retry,
+    get_truncated_block_log,
+    prepare_and_send_transactions,
+)
 
 
 def test_exception_in_live_state(haf_node):
@@ -14,9 +18,7 @@ def test_exception_in_live_state(haf_node):
     The node should catch the exception, kill all the workers and exit cleanly.
     """
     # generate some operations to be synchronised to
-    init_node = tt.InitNode()
-    apply_block_log_type_to_monolithic_workaround(init_node)
-    init_node.run()
+    init_node = create_and_run_init_node_with_retry()
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
 
     # Alter operations table so that worker thread raises an exception when storing data in it

@@ -2,8 +2,11 @@ import sqlalchemy
 
 import test_tools as tt
 
-from haf_local_tools.system.haf import prepare_and_send_transactions, get_truncated_block_log
-from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
+from haf_local_tools.system.haf import (
+    create_and_run_init_node_with_retry,
+    get_truncated_block_log,
+    prepare_and_send_transactions,
+)
 
 
 def test_exception_in_reindex_state(haf_node):
@@ -12,9 +15,7 @@ def test_exception_in_reindex_state(haf_node):
     The node should catch the exception, kill all the workers and exit cleanly.
     """
     # generate some operations to be replayed
-    init_node = tt.InitNode()
-    apply_block_log_type_to_monolithic_workaround(init_node)
-    init_node.run()
+    init_node = create_and_run_init_node_with_retry()
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
     init_node.close()
     block_log = get_truncated_block_log(init_node, transaction_0["block_num"] + 1)

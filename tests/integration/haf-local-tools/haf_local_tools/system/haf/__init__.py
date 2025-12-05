@@ -6,8 +6,43 @@ from typing import TYPE_CHECKING, Union
 import test_tools as tt
 
 from haf_local_tools.haf_node._haf_node import HafNode, Transaction, TransactionId
+from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.tables import BlocksView
 import time
+
+
+def create_and_run_init_node_with_retry(max_retries: int = 2, retry_delay: float = 1.0) -> tt.InitNode:
+    """Create and run an InitNode with retry logic to handle transient startup failures in parallel test execution.
+
+    When running tests in parallel, hived startup can occasionally fail due to port detection
+    issues in beekeepy when multiple hived processes run simultaneously. This function provides
+    resilience by retrying node creation on transient failures.
+
+    Args:
+        max_retries: Maximum number of retry attempts (default: 2)
+        retry_delay: Delay in seconds between retries (default: 1.0)
+
+    Returns:
+        A running InitNode instance
+
+    Raises:
+        The last exception encountered if all retries are exhausted
+    """
+    last_error = None
+    for attempt in range(max_retries + 1):
+        try:
+            node = tt.InitNode()
+            apply_block_log_type_to_monolithic_workaround(node)
+            node.run()
+            return node
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries:
+                tt.logger.warning(f"InitNode startup failed (attempt {attempt + 1}/{max_retries + 1}): {e}. Retrying...")
+                time.sleep(retry_delay)
+            else:
+                raise last_error
+
 
 def connect_nodes(seed_node: tt.RawNode, peer_node: tt.RawNode) -> None:
     """
