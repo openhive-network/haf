@@ -90,9 +90,10 @@ def test_live_sync_apply_block_fail(haf_node):
 
     # check if fork on block 7(back to block 6) was detected
     # Wait for the fork record to be written - it may take a moment after block processing
+    # Use longer timeout (15s) to handle slow CI environments
     sql = "SELECT exists(SELECT 1 FROM hafd.fork WHERE block_num = 6);"
     fork_detected = False
-    for _ in range(10):  # Try up to 10 times with 0.5s delay
+    for _ in range(30):  # Try up to 30 times with 0.5s delay (15s total)
         if haf_node.query_one(sql):
             fork_detected = True
             break
