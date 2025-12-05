@@ -43,7 +43,7 @@ Datum vacuum_shadow_table(PG_FUNCTION_ARGS)
   PGconn* conn = PQconnectdb(conninfo);
   if (PQstatus(conn) != CONNECTION_OK)
   {
-    const char* err = PQerrorMessage(conn);
+    char* err = pstrdup(PQerrorMessage(conn));
     PQfinish(conn);
     ereport(ERROR,
       (errcode(ERRCODE_CONNECTION_FAILURE),
