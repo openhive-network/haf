@@ -4,11 +4,19 @@ import pytest
 import loguru
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor
+import time
 
 import test_tools as tt
 
 import shared_tools.complex_networks_helper_functions as sh
 from haf_local_tools import haf_app, wait_for_irreversible_progress, get_irreversible_block, wait_for_irreversible_in_database
+
+# Exception for handling TAPOS (Transaction as Proof of Stake) validation errors
+# that occur when a transaction references a block that no longer exists due to a fork
+try:
+    from beekeepy._exceptions.overseer import ErrorInResponseError
+except ImportError:
+    from beekeepy.exceptions import ErrorInResponseError
 
 START_TEST_BLOCK    = 108
 memo_cnt            = 0
@@ -60,8 +68,20 @@ def fork_activator(networks: Iterable[tt.Network], logs: Iterable[sh.NodeLog], m
     return f'[break {identifier}] Creating forks finished...'
 
 def trx_creator(wallet: tt.Wallet, identifier: int, start_memo: int, last_memo: int):
+    max_retries = 3
     for memo in range(start_memo, last_memo):
-        wallet.api.transfer_nonblocking('initminer', 'null', tt.Asset.Test(1), str(memo))
+        for attempt in range(max_retries):
+            try:
+                wallet.api.transfer_nonblocking('initminer', 'null', tt.Asset.Test(1), str(memo))
+                break  # Success, move to next memo
+            except ErrorInResponseError as e:
+                # TAPOS exception occurs when the referenced block no longer exists due to a fork
+                # This is expected behavior during fork scenarios - retry with fresh block reference
+                if 'tapos' in str(e).lower() and attempt < max_retries - 1:
+                    tt.logger.warning(f'[trx_creator {identifier}] TAPOS exception on memo {memo}, retrying (attempt {attempt + 1}/{max_retries})')
+                    time.sleep(0.1)  # Brief delay to allow fork resolution
+                    continue
+                raise  # Re-raise if not TAPOS or max retries exceeded
     return f'[break {identifier}] Creating transactions finished...'
 
 #Some information in: https://gitlab.syncad.com/hive/haf/-/issues/118
