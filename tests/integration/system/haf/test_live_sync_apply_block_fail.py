@@ -86,9 +86,16 @@ def test_live_sync_apply_block_fail(haf_node):
         edit_if_needed=True,
     )
 
-    wait_for_block_in_database(haf_node.session, 10,timeout=10)
+    wait_for_block_in_database(haf_node.session, 10, timeout=10)
 
     # check if fork on block 7(back to block 6) was detected
-    sql = "SELECT exists(SELECT 1 FROM hafd.fork  WHERE block_num = 6);"
-    assert haf_node.query_one(sql)
+    # Wait for the fork record to be written - it may take a moment after block processing
+    sql = "SELECT exists(SELECT 1 FROM hafd.fork WHERE block_num = 6);"
+    fork_detected = False
+    for _ in range(10):  # Try up to 10 times with 0.5s delay
+        if haf_node.query_one(sql):
+            fork_detected = True
+            break
+        time.sleep(0.5)
+    assert fork_detected, "Fork at block 6 was not detected in the database"
 

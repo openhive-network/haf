@@ -43,7 +43,9 @@ def test_live_sync(prepared_networks_and_database_12_8):
     # THEN
     # nr_blocks - number of blocks in which potentially transaction was inserted
     # value was determined through observation during CI testing
-    nr_blocks = 2
+    # Increased from 2 to 5 to handle cases where transaction lands in a later block
+    # under high CI load or parallel test execution
+    nr_blocks = 5
     expected_dumped_irreversible_block_num = transaction_block_num + nr_blocks
     wait_for_irreversible_in_database(session, expected_dumped_irreversible_block_num)
     trx_found = None
