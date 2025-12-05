@@ -349,60 +349,70 @@ $function$
 DECLARE
     __command TEXT;
     __cursor REFCURSOR;
+    __has_indexes_or_constraints BOOLEAN;
 BEGIN
-    -- lock applications
-    LOCK TABLE hafd.hive_stable_state IN ACCESS EXCLUSIVE MODE;
+    -- Check if table has any indexes or constraints to drop
+    SELECT EXISTS(
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = _schema AND tablename = _table
+    ) INTO __has_indexes_or_constraints;
 
-    PERFORM hive.save_and_drop_constraints( _schema, _table );
+    -- Only lock if there are actually indexes or constraints to process
+    IF __has_indexes_or_constraints THEN
+        -- lock applications
+        LOCK TABLE hafd.hive_stable_state IN ACCESS EXCLUSIVE MODE;
 
-    --LEFT JOIN is needed in situation when PRIMARY KEY exists in a `_table`.
-    --A method `hive.save_and_drop_constraints` finds it, but following code finds an index related to given PK as well.
-    --Since dropping/restoring PK automatically drops/restores an index, then it's better to avoid storing a record with index related to PK.
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
-    SELECT
-        T.indexname
-      , _schema || '.' || _table
-      , T.indexdef
-      , FALSE as is_constraint
-      , TRUE as is_index
-      , FALSE as is_foreign_key
-      , ARRAY[0]
-      , 'missing' as status
-    FROM
-    (
-      SELECT indexname, indexdef
-      FROM pg_indexes
-      WHERE schemaname = _schema AND tablename = _table
-    ) T LEFT JOIN hafd.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
-    ON CONFLICT (index_constraint_name, table_name) DO UPDATE
-    SET status = 'missing';
+        PERFORM hive.save_and_drop_constraints( _schema, _table );
+
+        --LEFT JOIN is needed in situation when PRIMARY KEY exists in a `_table`.
+        --A method `hive.save_and_drop_constraints` finds it, but following code finds an index related to given PK as well.
+        --Since dropping/restoring PK automatically drops/restores an index, then it's better to avoid storing a record with index related to PK.
+        INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
+        SELECT
+            T.indexname
+          , _schema || '.' || _table
+          , T.indexdef
+          , FALSE as is_constraint
+          , TRUE as is_index
+          , FALSE as is_foreign_key
+          , ARRAY[0]
+          , 'missing' as status
+        FROM
+        (
+          SELECT indexname, indexdef
+          FROM pg_indexes
+          WHERE schemaname = _schema AND tablename = _table
+        ) T LEFT JOIN hafd.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
+        ON CONFLICT (index_constraint_name, table_name) DO UPDATE
+        SET status = 'missing';
 
 
-    --dropping indexes
-    OPEN __cursor FOR (
-        SELECT ('DROP INDEX IF EXISTS '::TEXT || _schema || '.' || index_constraint_name || ';')
-        FROM hafd.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_index = TRUE
-    );
+        --dropping indexes
+        OPEN __cursor FOR (
+            SELECT ('DROP INDEX IF EXISTS '::TEXT || _schema || '.' || index_constraint_name || ';')
+            FROM hafd.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_index = TRUE
+        );
 
-    LOOP
-    FETCH __cursor INTO __command;
-        EXIT WHEN NOT FOUND;
-        EXECUTE __command;
-    END LOOP;
-    CLOSE __cursor;
+        LOOP
+        FETCH __cursor INTO __command;
+            EXIT WHEN NOT FOUND;
+            EXECUTE __command;
+        END LOOP;
+        CLOSE __cursor;
 
-    --dropping primary keys/unique contraints
-    OPEN __cursor FOR (
-        SELECT ('ALTER TABLE '::TEXT || _schema || '.' || _table || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
-        FROM hafd.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_constraint = TRUE
-    );
+        --dropping primary keys/unique contraints
+        OPEN __cursor FOR (
+            SELECT ('ALTER TABLE '::TEXT || _schema || '.' || _table || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
+            FROM hafd.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_constraint = TRUE
+        );
 
-    LOOP
-    FETCH __cursor INTO __command;
-        EXIT WHEN NOT FOUND;
-        EXECUTE __command;
-    END LOOP;
-    CLOSE __cursor;
+        LOOP
+        FETCH __cursor INTO __command;
+            EXIT WHEN NOT FOUND;
+            EXECUTE __command;
+        END LOOP;
+        CLOSE __cursor;
+    END IF;
 END;
 $function$
 LANGUAGE plpgsql VOLATILE
@@ -415,38 +425,50 @@ $function$
 DECLARE
     __command TEXT;
     __cursor REFCURSOR;
+    __has_fks BOOLEAN;
 BEGIN
-    LOCK TABLE hafd.hive_stable_state IN ACCESS EXCLUSIVE MODE;
+    -- Check if table has any foreign keys to drop
+    SELECT EXISTS(
+        SELECT 1 FROM pg_constraint pgc
+        JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
+        JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
+    ) INTO __has_fks;
 
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
-    SELECT
-          DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
-        , _table_schema || '.' || _table_name as table_name
-        , 'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name || ' ADD CONSTRAINT ' || pgc.conname || ' ' || pg_get_constraintdef(pgc.oid) as command
-        , FALSE as is_constraint
-        , FALSE AS is_index
-        , TRUE as is_foreign_key
-        , ARRAY[0]
-        , 'missing' as status
-    FROM pg_constraint pgc
-    JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
-    JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
-    WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
-    ON CONFLICT (index_constraint_name, table_name) DO UPDATE
-    SET status = 'missing';
+    -- Only lock if there are actually FKs to process
+    IF __has_fks THEN
+        LOCK TABLE hafd.hive_stable_state IN ACCESS EXCLUSIVE MODE;
 
-    OPEN __cursor FOR (
-        SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
-        FROM hafd.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
-    );
+        INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
+        SELECT
+              DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
+            , _table_schema || '.' || _table_name as table_name
+            , 'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name || ' ADD CONSTRAINT ' || pgc.conname || ' ' || pg_get_constraintdef(pgc.oid) as command
+            , FALSE as is_constraint
+            , FALSE AS is_index
+            , TRUE as is_foreign_key
+            , ARRAY[0]
+            , 'missing' as status
+        FROM pg_constraint pgc
+        JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
+        JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
+        ON CONFLICT (index_constraint_name, table_name) DO UPDATE
+        SET status = 'missing';
 
-    LOOP
-        FETCH __cursor INTO __command;
-            EXIT WHEN NOT FOUND;
-            EXECUTE __command;
-    END LOOP;
+        OPEN __cursor FOR (
+            SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
+            FROM hafd.indexes_constraints WHERE table_name = ( _table_schema || '.' || _table_name ) AND is_foreign_key = TRUE
+        );
 
-    CLOSE __cursor;
+        LOOP
+            FETCH __cursor INTO __command;
+                EXIT WHEN NOT FOUND;
+                EXECUTE __command;
+        END LOOP;
+
+        CLOSE __cursor;
+    END IF;
 END;
 $function$
 LANGUAGE plpgsql VOLATILE
@@ -568,17 +590,28 @@ $function$
 DECLARE
     __command TEXT;
     __cursor REFCURSOR;
+    __has_missing_fks BOOLEAN;
 BEGIN
-    LOCK TABLE hafd.hive_stable_state IN ACCESS EXCLUSIVE MODE;
-    --restoring foreign keys
-    OPEN __cursor FOR ( SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE AND status = 'missing' );
-    LOOP
-    FETCH __cursor INTO __command;
-        EXIT WHEN NOT FOUND;
-        EXECUTE __command;
-        UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
-    END LOOP;
-    CLOSE __cursor;
+    -- Check if there are any missing foreign keys to restore
+    SELECT EXISTS(
+        SELECT 1 FROM hafd.indexes_constraints
+        WHERE table_name = _table_name AND is_foreign_key = TRUE AND status = 'missing'
+    ) INTO __has_missing_fks;
+
+    -- Only lock if there are actually FKs to restore
+    IF __has_missing_fks THEN
+        LOCK TABLE hafd.hive_stable_state IN ACCESS EXCLUSIVE MODE;
+
+        --restoring foreign keys
+        OPEN __cursor FOR ( SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = TRUE AND status = 'missing' );
+        LOOP
+        FETCH __cursor INTO __command;
+            EXIT WHEN NOT FOUND;
+            EXECUTE __command;
+            UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
+        END LOOP;
+        CLOSE __cursor;
+    END IF;
 
 END;
 $function$
