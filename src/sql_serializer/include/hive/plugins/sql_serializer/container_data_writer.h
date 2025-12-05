@@ -208,7 +208,7 @@ namespace hive::plugins::sql_serializer {
   inline std::exception_ptr
   cancel_processors_impl( Processor& processor ) try {
     try{
-      processor.join();
+      processor.cancel();
     }
     FC_CAPTURE_AND_RETHROW()
     return nullptr;
