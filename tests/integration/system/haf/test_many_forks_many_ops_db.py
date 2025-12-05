@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 import test_tools as tt
 
 import shared_tools.complex_networks_helper_functions as sh
-from haf_local_tools import haf_app
+from haf_local_tools import haf_app, wait_for_irreversible_progress, get_irreversible_block
 
 START_TEST_BLOCK    = 108
 memo_cnt            = 0
@@ -126,4 +126,11 @@ def test_many_forks_many_ops_db(prepared_networks_and_database_17_3):
 
     tt.logger.info("results:")
     for future in _futures:
-        tt.logger.info(f'{future.result()}') # Possible random fail: https://gitlab.syncad.com/hive/haf/-/issues/251
+        tt.logger.info(f'{future.result()}')
+
+    # Wait for the database to be properly synchronized before test cleanup
+    # This ensures all pending operations are flushed and prevents race conditions
+    # during session/database cleanup (fixes issue #251)
+    final_irreversible_block = get_irreversible_block(majority_api_node)
+    tt.logger.info(f'Waiting for irreversible block {final_irreversible_block} to be processed...')
+    wait_for_irreversible_progress(majority_api_node, final_irreversible_block)
