@@ -48,8 +48,29 @@ _error() {
     echo "[cache-manager] ERROR: $1" >&2
 }
 
-# Check if NFS is mounted and accessible
+# Check if running on the NFS host (where NFS path is local, not a mount)
+# On NFS host: /nfs/ci-cache is a symlink to /storage1/ci-cache (local storage)
+# On clients: /nfs/ci-cache is an NFS mount point
+_is_nfs_host() {
+    # If it's a symlink, we're on the NFS host
+    if [[ -L "$CACHE_NFS_PATH" ]]; then
+        return 0
+    fi
+    # If it exists but is NOT a mount point, we're on the NFS host
+    if [[ -d "$CACHE_NFS_PATH" ]] && ! mountpoint -q "$CACHE_NFS_PATH" 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+# Check if NFS is mounted and accessible (or we're on the NFS host)
 _nfs_available() {
+    # On NFS host, the path is local (symlink or direct), not a mount
+    if _is_nfs_host; then
+        [[ -d "$CACHE_NFS_PATH" ]]
+        return $?
+    fi
+    # On clients, check for mount
     [[ -d "$CACHE_NFS_PATH" ]] && mountpoint -q "$CACHE_NFS_PATH" 2>/dev/null
 }
 
@@ -59,7 +80,14 @@ _get_paths() {
     local cache_key="$2"
 
     NFS_CACHE_DIR="${CACHE_NFS_PATH}/${cache_type}/${cache_key}"
-    LOCAL_CACHE_DIR="${CACHE_LOCAL_PATH}/${cache_type}_${cache_key}"
+
+    # On NFS host, use NFS path as local path to avoid redundant copies
+    if _is_nfs_host; then
+        LOCAL_CACHE_DIR="$NFS_CACHE_DIR"
+    else
+        LOCAL_CACHE_DIR="${CACHE_LOCAL_PATH}/${cache_type}_${cache_key}"
+    fi
+
     LOCK_FILE="${NFS_CACHE_DIR}/.lock"
     METADATA_FILE="${NFS_CACHE_DIR}/.metadata"
     LRU_INDEX="${CACHE_NFS_PATH}/.lru_index"
