@@ -102,19 +102,18 @@ _update_lru() {
     local entry="${cache_type}/${cache_key}"
 
     # Acquire global lock for index update
-    (
-        flock -w 30 200 || { _error "Failed to acquire global lock for LRU update"; return 1; }
-
+    touch "$GLOBAL_LOCK"
+    flock -w 30 "$GLOBAL_LOCK" -c "
         # Create or update LRU index (simple format: timestamp|path per line)
-        if [[ -f "$LRU_INDEX" ]]; then
+        if [[ -f '$LRU_INDEX' ]]; then
             # Remove old entry and add new one
-            grep -v "^[0-9]*|${entry}$" "$LRU_INDEX" > "${LRU_INDEX}.tmp" 2>/dev/null || true
-            echo "${timestamp}|${entry}" >> "${LRU_INDEX}.tmp"
-            mv "${LRU_INDEX}.tmp" "$LRU_INDEX"
+            grep -v '^[0-9]*|${entry}\$' '$LRU_INDEX' > '${LRU_INDEX}.tmp' 2>/dev/null || true
+            echo '${timestamp}|${entry}' >> '${LRU_INDEX}.tmp'
+            mv '${LRU_INDEX}.tmp' '$LRU_INDEX'
         else
-            echo "${timestamp}|${entry}" > "$LRU_INDEX"
+            echo '${timestamp}|${entry}' > '$LRU_INDEX'
         fi
-    ) 200>"$GLOBAL_LOCK"
+    " || _error "Failed to acquire global lock for LRU update"
 }
 
 # Write metadata for a cache entry
@@ -179,22 +178,21 @@ cmd_get() {
     mkdir -p "$(dirname "$LOCK_FILE")"
     touch "$LOCK_FILE"
 
-    (
-        flock -s -w "$CACHE_LOCK_TIMEOUT" 200 || { _error "Failed to acquire shared lock"; return 1; }
-
-        _log "Copying from NFS to local: $local_dest"
-        mkdir -p "$(dirname "$local_dest")"
-
-        # Use rsync for efficient copy with progress
-        rsync -a --info=progress2 "$NFS_CACHE_DIR/" "$local_dest/" 2>/dev/null || \
-            cp -a "$NFS_CACHE_DIR" "$local_dest"
-
+    # Acquire shared lock and copy
+    if flock -s -w "$CACHE_LOCK_TIMEOUT" "$LOCK_FILE" -c "
+        echo '[cache-manager] Copying from NFS to local: $local_dest' >&2
+        mkdir -p '$(dirname "$local_dest")'
+        rsync -a '$NFS_CACHE_DIR/' '$local_dest/' 2>/dev/null || cp -a '$NFS_CACHE_DIR' '$local_dest'
+    "; then
         # Also cache locally for future use
         if [[ "$LOCAL_CACHE_DIR" != "$local_dest" ]]; then
             mkdir -p "$(dirname "$LOCAL_CACHE_DIR")"
             cp -a "$local_dest" "$LOCAL_CACHE_DIR" 2>/dev/null || true
         fi
-    ) 200>"$LOCK_FILE"
+    else
+        _error "Failed to acquire shared lock"
+        return 1
+    fi
 
     _update_lru "$cache_type" "$cache_key"
     return 0
@@ -236,22 +234,21 @@ cmd_put() {
     mkdir -p "$NFS_CACHE_DIR"
     touch "$LOCK_FILE"
 
-    (
-        flock -x -w "$CACHE_LOCK_TIMEOUT" 200 || { _error "Failed to acquire exclusive lock"; return 1; }
-
+    if ! flock -x -w "$CACHE_LOCK_TIMEOUT" "$LOCK_FILE" -c "
         # Double-check after acquiring lock
-        if [[ -f "$METADATA_FILE" ]]; then
-            _log "Cache was created while waiting for lock"
-            return 0
+        if [[ -f '$METADATA_FILE' ]]; then
+            echo '[cache-manager] Cache was created while waiting for lock' >&2
+            exit 0
         fi
 
-        _log "Copying to NFS: $NFS_CACHE_DIR"
-        rsync -a --info=progress2 "$local_source/" "$NFS_CACHE_DIR/" 2>/dev/null || \
-            cp -a "$local_source"/* "$NFS_CACHE_DIR/"
+        echo '[cache-manager] Copying to NFS: $NFS_CACHE_DIR' >&2
+        rsync -a '$local_source/' '$NFS_CACHE_DIR/' 2>/dev/null || cp -a '$local_source'/* '$NFS_CACHE_DIR/'
+    "; then
+        _error "Failed to acquire exclusive lock"
+        return 1
+    fi
 
-        _write_metadata "$cache_type" "$cache_key" "$NFS_CACHE_DIR"
-
-    ) 200>"$LOCK_FILE"
+    _write_metadata "$cache_type" "$cache_key" "$NFS_CACHE_DIR"
 
     _update_lru "$cache_type" "$cache_key"
     _log "Cache stored successfully"
@@ -296,72 +293,69 @@ cmd_cleanup() {
     local max_size_bytes=$((max_size_gb * 1024 * 1024 * 1024))
     local cutoff_timestamp=$(($(date +%s) - max_age_days * 86400))
 
-    (
-        flock -x -w 60 200 || { _error "Failed to acquire global lock for cleanup"; return 1; }
+    local lru_index="${CACHE_NFS_PATH}/.lru_index"
 
-        # Calculate current total size
-        local search_path="$CACHE_NFS_PATH"
-        [[ -n "$cache_type" ]] && search_path="$CACHE_NFS_PATH/$cache_type"
+    # Calculate current total size
+    local search_path="$CACHE_NFS_PATH"
+    [[ -n "$cache_type" ]] && search_path="$CACHE_NFS_PATH/$cache_type"
 
-        local total_size=$(du -sb "$search_path" 2>/dev/null | cut -f1 || echo 0)
-        _log "Current cache size: $((total_size / 1024 / 1024 / 1024))GB"
+    local total_size=$(du -sb "$search_path" 2>/dev/null | cut -f1 || echo 0)
+    _log "Current cache size: $((total_size / 1024 / 1024 / 1024))GB"
 
-        if [[ ! -f "$LRU_INDEX" ]]; then
-            _log "No LRU index found, nothing to clean"
-            return 0
+    if [[ ! -f "$lru_index" ]]; then
+        _log "No LRU index found, nothing to clean"
+        return 0
+    fi
+
+    # Sort by timestamp (oldest first) and process
+    local removed=0
+    while IFS='|' read -r timestamp entry; do
+        # Skip if filtering by type and doesn't match
+        if [[ -n "$cache_type" && ! "$entry" =~ ^${cache_type}/ ]]; then
+            continue
         fi
 
-        # Sort by timestamp (oldest first) and process
-        local removed=0
-        while IFS='|' read -r timestamp entry; do
-            # Skip if filtering by type and doesn't match
-            if [[ -n "$cache_type" && ! "$entry" =~ ^${cache_type}/ ]]; then
+        local entry_path="$CACHE_NFS_PATH/$entry"
+
+        # Skip if doesn't exist
+        [[ -d "$entry_path" ]] || continue
+
+        # Check if should remove (age or size)
+        local should_remove=false
+
+        if [[ $timestamp -lt $cutoff_timestamp ]]; then
+            _log "Entry $entry is older than ${max_age_days} days"
+            should_remove=true
+        elif [[ $total_size -gt $max_size_bytes ]]; then
+            _log "Total size exceeds limit, removing oldest: $entry"
+            should_remove=true
+        fi
+
+        if [[ "$should_remove" == "true" ]]; then
+            # Check if locked (skip if in use)
+            local lock_file="$entry_path/.lock"
+            if [[ -f "$lock_file" ]] && ! flock -n "$lock_file" -c "true" 2>/dev/null; then
+                _log "Skipping $entry - currently locked"
                 continue
             fi
 
-            local entry_path="$CACHE_NFS_PATH/$entry"
+            local entry_size=$(du -sb "$entry_path" 2>/dev/null | cut -f1 || echo 0)
+            _log "Removing: $entry (${entry_size} bytes)"
+            rm -rf "$entry_path"
+            total_size=$((total_size - entry_size))
+            removed=$((removed + 1))
 
-            # Skip if doesn't exist
-            [[ -d "$entry_path" ]] || continue
+            # Remove from LRU index
+            grep -v "|${entry}$" "$lru_index" > "${lru_index}.tmp" 2>/dev/null || true
+            mv "${lru_index}.tmp" "$lru_index"
+        fi
 
-            # Check if should remove (age or size)
-            local should_remove=false
+        # Stop if under limit
+        [[ $total_size -le $max_size_bytes ]] && break
 
-            if [[ $timestamp -lt $cutoff_timestamp ]]; then
-                _log "Entry $entry is older than ${max_age_days} days"
-                should_remove=true
-            elif [[ $total_size -gt $max_size_bytes ]]; then
-                _log "Total size exceeds limit, removing oldest: $entry"
-                should_remove=true
-            fi
+    done < <(sort -t'|' -k1 -n "$lru_index")
 
-            if [[ "$should_remove" == "true" ]]; then
-                # Check if locked (skip if in use)
-                local lock_file="$entry_path/.lock"
-                if [[ -f "$lock_file" ]] && ! flock -n "$lock_file" true 2>/dev/null; then
-                    _log "Skipping $entry - currently locked"
-                    continue
-                fi
-
-                local entry_size=$(du -sb "$entry_path" 2>/dev/null | cut -f1 || echo 0)
-                _log "Removing: $entry (${entry_size} bytes)"
-                rm -rf "$entry_path"
-                total_size=$((total_size - entry_size))
-                removed=$((removed + 1))
-
-                # Remove from LRU index
-                grep -v "|${entry}$" "$LRU_INDEX" > "${LRU_INDEX}.tmp" 2>/dev/null || true
-                mv "${LRU_INDEX}.tmp" "$LRU_INDEX"
-            fi
-
-            # Stop if under limit
-            [[ $total_size -le $max_size_bytes ]] && break
-
-        done < <(sort -t'|' -k1 -n "$LRU_INDEX")
-
-        _log "Cleanup complete, removed $removed entries"
-
-    ) 200>"$GLOBAL_LOCK"
+    _log "Cleanup complete, removed $removed entries"
 }
 
 # Maybe trigger cleanup if size is getting large
@@ -448,15 +442,18 @@ cmd_status() {
     echo "Local Path:   $CACHE_LOCAL_PATH"
     echo "Max Size:     ${CACHE_MAX_SIZE_GB}GB"
     echo "Max Age:      ${CACHE_MAX_AGE_DAYS} days"
+    echo "NFS Host:     $(_is_nfs_host && echo "YES (local storage)" || echo "NO (NFS client)")"
     echo ""
 
+    local lru_index="${CACHE_NFS_PATH}/.lru_index"
+
     if _nfs_available; then
-        echo "NFS Status:   MOUNTED"
+        echo "NFS Status:   AVAILABLE"
         local total=$(du -sh "$CACHE_NFS_PATH" 2>/dev/null | cut -f1 || echo "?")
         echo "NFS Usage:    $total"
 
-        if [[ -f "$LRU_INDEX" ]]; then
-            local count=$(wc -l < "$LRU_INDEX")
+        if [[ -f "$lru_index" ]]; then
+            local count=$(wc -l < "$lru_index")
             echo "Cache Entries: $count"
         fi
     else
