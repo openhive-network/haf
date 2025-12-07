@@ -48,6 +48,44 @@ _error() {
     echo "[cache-manager] ERROR: $1" >&2
 }
 
+# Portable flock with timeout (works with BusyBox which lacks -w option)
+# Usage: _flock_with_timeout <timeout_seconds> <lock_file> [-s|-x] -c "command"
+_flock_with_timeout() {
+    local timeout="$1"
+    local lock_file="$2"
+    shift 2
+
+    # Parse remaining args to get mode and command
+    local mode="-x"
+    local cmd=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -s) mode="-s"; shift ;;
+            -x) mode="-x"; shift ;;
+            -c) cmd="$2"; shift 2 ;;
+            *) shift ;;
+        esac
+    done
+
+    # Check if flock supports -w (GNU coreutils)
+    if flock --help 2>&1 | grep -q -- '-w'; then
+        flock $mode -w "$timeout" "$lock_file" -c "$cmd"
+        return $?
+    fi
+
+    # BusyBox fallback: retry loop with -n (non-blocking)
+    local elapsed=0
+    while [[ $elapsed -lt $timeout ]]; do
+        if flock -n $mode "$lock_file" -c "$cmd" 2>/dev/null; then
+            return 0
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+
+    return 1
+}
+
 # Check if running on the NFS host (where NFS path is local, not a mount)
 # On NFS host: /nfs/ci-cache is a symlink to /storage1/ci-cache (local storage)
 # On clients: /nfs/ci-cache is an NFS mount point
@@ -103,7 +141,7 @@ _update_lru() {
 
     # Acquire global lock for index update
     touch "$GLOBAL_LOCK"
-    flock -w 30 "$GLOBAL_LOCK" -c "
+    _flock_with_timeout 30 "$GLOBAL_LOCK" -c "
         # Create or update LRU index (simple format: timestamp|path per line)
         if [[ -f '$LRU_INDEX' ]]; then
             # Remove old entry and add new one
@@ -190,7 +228,7 @@ cmd_get() {
     touch "$LOCK_FILE"
 
     # Acquire shared lock and copy
-    if flock -s -w "$CACHE_LOCK_TIMEOUT" "$LOCK_FILE" -c "
+    if _flock_with_timeout "$CACHE_LOCK_TIMEOUT" "$LOCK_FILE" -s -c "
         echo '[cache-manager] Copying from NFS to local: $local_dest' >&2
         mkdir -p '$(dirname "$local_dest")'
         rsync -a '$NFS_CACHE_DIR/' '$local_dest/' 2>/dev/null || cp -a '$NFS_CACHE_DIR' '$local_dest'
@@ -239,7 +277,7 @@ cmd_put() {
             _log "Storing cache on NFS host: $NFS_CACHE_DIR"
             mkdir -p "$NFS_CACHE_DIR"
             touch "$LOCK_FILE"
-            flock -x -w "$CACHE_LOCK_TIMEOUT" "$LOCK_FILE" -c "
+            _flock_with_timeout "$CACHE_LOCK_TIMEOUT" "$LOCK_FILE" -x -c "
                 rsync -a '$local_source/' '$NFS_CACHE_DIR/' 2>/dev/null || cp -a '$local_source'/* '$NFS_CACHE_DIR/'
             " || { _error "Failed to store cache"; return 1; }
         else
@@ -279,7 +317,7 @@ cmd_put() {
     mkdir -p "$NFS_CACHE_DIR"
     touch "$LOCK_FILE"
 
-    if ! flock -x -w "$CACHE_LOCK_TIMEOUT" "$LOCK_FILE" -c "
+    if ! _flock_with_timeout "$CACHE_LOCK_TIMEOUT" "$LOCK_FILE" -x -c "
         # Double-check after acquiring lock
         if [[ -f '$METADATA_FILE' ]]; then
             echo '[cache-manager] Cache was created while waiting for lock' >&2
