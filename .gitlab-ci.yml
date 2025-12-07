@@ -51,6 +51,7 @@ verify_poetry_lock_sanity:
     - public-runner-docker
     - hived-for-tests
 
+# BENCHMARK: Full parallelism build on 48-core 3960X (192GB)
 haf_image_build:
   extends: .haf_image_build
   variables:
@@ -58,19 +59,20 @@ haf_image_build:
     HIVE_NETWORK_TYPE: mainnet
   tags:
     - public-runner-docker
-    - hived-for-tests
-    - haf-build-mainnet
+    - hive-builder-7
 
+# BENCHMARK: Full parallelism build on 32-core 5950X (128GB)
+# Using builder-9 since 8 and 10 are busy with other pipeline
 haf_image_build_testnet:
   extends: .haf_image_build
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
-    HIVE_NETWORK_TYPE: testnet
+    HIVE_NETWORK_TYPE: mainnet
   tags:
     - public-runner-docker
-    - hived-for-tests
-    - haf-build-testnet
+    - hive-builder-9
 
+# Mirrornet still needed for downstream jobs - run on builder-10
 haf_image_build_mirrornet:
   extends: .haf_image_build
   variables:
@@ -78,28 +80,7 @@ haf_image_build_mirrornet:
     HIVE_NETWORK_TYPE: mirrornet
   tags:
     - public-runner-docker
-    - hived-for-tests
-    - haf-build-mirrornet
-  # Necessary to tag mirrornet images to be used in Denser's CI
-  after_script:
-    - |
-      source docker_image_name.env
-      echo "Pushing hived image for commits on develop, master and tagged"
-      docker images
-      IMAGE_NAME_PREFIX="$CI_REGISTRY_IMAGE/mirrornet:"
-      if [[ "$CI_COMMIT_BRANCH" == "develop" ]];
-      then
-        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}latest
-        docker push ${IMAGE_NAME_PREFIX}latest
-      elif [[ "$CI_COMMIT_BRANCH" == "master" ]];
-      then
-        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}stable
-        docker push ${IMAGE_NAME_PREFIX}stable
-      elif [[ -n "$CI_COMMIT_TAG" ]];
-      then
-        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
-        docker push ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
-      fi
+    - hive-builder-10
 
 .haf-service: &haf-service
   name: $HAF_IMAGE_NAME
