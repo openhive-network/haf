@@ -37,6 +37,8 @@ include:
     CONFIG_INI_SOURCE: ""
     HIVE_NETWORK_TYPE: mainnet
     DATA_CACHE_DIR: "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
+    # Shared memory file size (1G for 5M blocks, 8G for full chain)
+    SHARED_FILE_SIZE: "1G"
     # NFS cache configuration
     CACHE_NFS_PATH: "/nfs/ci-cache"
     CACHE_LOCAL_PATH: "/cache"
@@ -58,7 +60,7 @@ include:
       cd "${DATA_CACHE_DIR}/datadir"
       flock "${DATA_CACHE_DIR}/datadir" $SCRIPTS_PATH/ci-helpers/build_data.sh $HAF_IMAGE_NAME \
         --data-cache="${DATA_CACHE_DIR}" --block-log-source-dir="$BLOCK_LOG_SOURCE_DIR" \
-        --config-ini-source="$CONFIG_INI_SOURCE"
+        --config-ini-source="$CONFIG_INI_SOURCE" --shared-file-size="$SHARED_FILE_SIZE"
       cd "$CI_PROJECT_DIR"
 
       # Push to NFS cache for future use
