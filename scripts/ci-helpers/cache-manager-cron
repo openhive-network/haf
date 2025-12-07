@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+# cache-manager-cron - Daily cleanup cron job for CI cache
+#
+# Install on NFS host (hive-builder-10):
+#   sudo cp cache-manager-cron /etc/cron.daily/
+#   sudo chmod +x /etc/cron.daily/cache-manager-cron
+#
+# Or add to crontab for specific timing:
+#   0 3 * * * /path/to/cache-manager-cron
+#
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CACHE_MANAGER="${SCRIPT_DIR}/cache-manager.sh"
+
+# Fallback paths if not in same directory
+if [[ ! -x "$CACHE_MANAGER" ]]; then
+    CACHE_MANAGER="/nfs/ci-cache/scripts/cache-manager.sh"
+fi
+if [[ ! -x "$CACHE_MANAGER" ]]; then
+    CACHE_MANAGER="/opt/ci-tools/cache-manager.sh"
+fi
+
+if [[ ! -x "$CACHE_MANAGER" ]]; then
+    echo "ERROR: cache-manager.sh not found" >&2
+    exit 1
+fi
+
+LOG_FILE="/var/log/cache-manager-cleanup.log"
+exec >> "$LOG_FILE" 2>&1
+
+echo "=========================================="
+echo "Cache cleanup started: $(date -Iseconds)"
+echo "=========================================="
+
+# Cleanup each cache type with appropriate limits
+# HAF caches are large (~50-100GB each), keep fewer
+"$CACHE_MANAGER" cleanup haf --max-size-gb 500 --max-age-days 14
+
+# App caches are smaller, can keep more
+for cache_type in balance_tracker hivemind hafah haf_block_explorer reputation_tracker; do
+    if [[ -d "/nfs/ci-cache/${cache_type}" ]]; then
+        "$CACHE_MANAGER" cleanup "$cache_type" --max-size-gb 200 --max-age-days 21
+    fi
+done
+
+echo ""
+echo "Final cache status:"
+"$CACHE_MANAGER" status
+
+echo ""
+echo "Cleanup completed: $(date -Iseconds)"
