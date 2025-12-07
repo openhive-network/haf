@@ -213,7 +213,7 @@ dump_snapshot_5m_mirrornet:
     - |
       if [[ ! -f "$BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log" ]]; then
         echo "Mirrornet block_log not found locally, fetching from NFS cache..."
-        $CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh get haf block_log_5m_mirrornet "$BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M"
+        $CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh get hive block_log_5m_mirrornet "$BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M"
       fi
     #Prepare environment for hived run
     - cd $CI_PROJECT_DIR/docker
@@ -265,7 +265,7 @@ haf_system_tests_mirrornet:
     - |
       if [[ ! -f "$BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log" ]]; then
         echo "Mirrornet block_log not found locally, fetching from NFS cache..."
-        $CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh get haf block_log_5m_mirrornet "$BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M"
+        $CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh get hive block_log_5m_mirrornet "$BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M"
       fi
     - mkdir $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
     # This cp and call to compress_block_log is to keep backcompatibility with pipelines on master branch (where still 1.27.X line is present until next HF will apply),
