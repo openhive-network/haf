@@ -56,18 +56,30 @@ haf_image_build:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
+  tags:
+    - public-runner-docker
+    - hived-for-tests
+    - haf-build-mainnet
 
 haf_image_build_testnet:
   extends: .haf_image_build
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
     HIVE_NETWORK_TYPE: testnet
+  tags:
+    - public-runner-docker
+    - hived-for-tests
+    - haf-build-testnet
 
 haf_image_build_mirrornet:
   extends: .haf_image_build
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVE_NETWORK_TYPE: mirrornet
+  tags:
+    - public-runner-docker
+    - hived-for-tests
+    - haf-build-mirrornet
   # Necessary to tag mirrornet images to be used in Denser's CI
   after_script:
     - |
