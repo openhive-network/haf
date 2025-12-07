@@ -147,13 +147,18 @@ cmd_get() {
 
     _get_paths "$cache_type" "$cache_key"
 
-    # 1. Check local cache first
+    local is_nfs_host=false
+    _is_nfs_host && is_nfs_host=true
+
+    # 1. Check local cache first (on NFS host, this IS the NFS cache)
     if [[ -d "$LOCAL_CACHE_DIR" ]]; then
-        _log "Local cache hit: $LOCAL_CACHE_DIR"
+        _log "Cache hit: $LOCAL_CACHE_DIR"
         if [[ "$LOCAL_CACHE_DIR" != "$local_dest" ]]; then
             _log "Copying to destination: $local_dest"
             mkdir -p "$(dirname "$local_dest")"
             cp -a "$LOCAL_CACHE_DIR" "$local_dest"
+        else
+            _log "Destination is cache dir, no copy needed"
         fi
         # Update LRU if NFS available
         if _nfs_available; then
@@ -162,7 +167,13 @@ cmd_get() {
         return 0
     fi
 
-    # 2. Check NFS cache
+    # On NFS host, local and NFS are the same - if local miss, it's a miss
+    if [[ "$is_nfs_host" == "true" ]]; then
+        _log "NFS host cache miss: $NFS_CACHE_DIR"
+        return 1
+    fi
+
+    # 2. Check NFS cache (only for NFS clients)
     if ! _nfs_available; then
         _log "NFS not available, cache miss"
         return 1
@@ -173,7 +184,7 @@ cmd_get() {
         return 1
     fi
 
-    # 3. Copy from NFS to local (with shared lock)
+    # 3. Copy from NFS to local (with shared lock) - NFS clients only
     _log "NFS cache hit: $NFS_CACHE_DIR"
     mkdir -p "$(dirname "$LOCK_FILE")"
     touch "$LOCK_FILE"
@@ -211,7 +222,41 @@ cmd_put() {
 
     _get_paths "$cache_type" "$cache_key"
 
-    # Store in local cache too
+    local is_nfs_host=false
+    _is_nfs_host && is_nfs_host=true
+
+    # On NFS host, LOCAL_CACHE_DIR == NFS_CACHE_DIR, so one copy does both
+    if [[ "$is_nfs_host" == "true" ]]; then
+        # Check if already exists
+        if [[ -d "$NFS_CACHE_DIR" && -f "$METADATA_FILE" ]]; then
+            _log "Cache already exists on NFS host, updating timestamp"
+            _update_lru "$cache_type" "$cache_key"
+            return 0
+        fi
+
+        # Copy directly to NFS path (which is local storage on this host)
+        if [[ "$local_source" != "$NFS_CACHE_DIR" ]]; then
+            _log "Storing cache on NFS host: $NFS_CACHE_DIR"
+            mkdir -p "$NFS_CACHE_DIR"
+            touch "$LOCK_FILE"
+            flock -x -w "$CACHE_LOCK_TIMEOUT" "$LOCK_FILE" -c "
+                rsync -a '$local_source/' '$NFS_CACHE_DIR/' 2>/dev/null || cp -a '$local_source'/* '$NFS_CACHE_DIR/'
+            " || { _error "Failed to store cache"; return 1; }
+        else
+            _log "Source is already at NFS path, no copy needed"
+            mkdir -p "$(dirname "$METADATA_FILE")"
+        fi
+
+        _write_metadata "$cache_type" "$cache_key" "$NFS_CACHE_DIR"
+        _update_lru "$cache_type" "$cache_key"
+        _log "Cache stored successfully on NFS host"
+        _maybe_cleanup &
+        return 0
+    fi
+
+    # NFS client path: store locally AND on NFS
+
+    # Store in local cache
     if [[ "$LOCAL_CACHE_DIR" != "$local_source" ]]; then
         _log "Caching locally: $LOCAL_CACHE_DIR"
         mkdir -p "$(dirname "$LOCAL_CACHE_DIR")"
