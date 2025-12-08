@@ -793,6 +793,9 @@ BEGIN
         head_block_num INT
     );
 
+    -- Grant permissions to application users
+    GRANT SELECT, UPDATE ON test.mock_head_block TO PUBLIC;
+
     -- Initialize with default value
     TRUNCATE test.mock_head_block;
     INSERT INTO test.mock_head_block VALUES (50);
