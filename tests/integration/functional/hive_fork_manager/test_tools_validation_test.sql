@@ -67,9 +67,11 @@ BEGIN
     ASSERT EXISTS (SELECT FROM hafd.accounts WHERE name = 'bob'),
         'Missing bob account';
 
-    -- Verify forks were created
-    ASSERT (SELECT COUNT(*) FROM hafd.fork) = 2,
-        'Expected 2 forks';
+    -- Verify forks were created (fork #1 always exists by default, plus 2 more from create_forks())
+    ASSERT (SELECT COUNT(*) FROM hafd.fork) = 3,
+        'Expected 3 forks (fork #1 + 2 created by test)';
+    ASSERT EXISTS (SELECT FROM hafd.fork WHERE id = 1),
+        'Missing fork 1 (default fork)';
     ASSERT EXISTS (SELECT FROM hafd.fork WHERE id = 2 AND block_num = 6),
         'Missing fork 2 at block 6';
     ASSERT EXISTS (SELECT FROM hafd.fork WHERE id = 3 AND block_num = 7),
