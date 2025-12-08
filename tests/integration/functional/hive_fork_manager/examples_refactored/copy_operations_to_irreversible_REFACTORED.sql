@@ -6,6 +6,9 @@
 --
 -- Original file: hived_api/copy_operations_to_irreversible_test.sql
 
+-- Load test utilities
+\ir ../test_tools.sql
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS
