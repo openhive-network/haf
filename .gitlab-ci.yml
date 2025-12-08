@@ -26,7 +26,7 @@ variables:
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
   PIPELINE_DATA_CACHE_HAF_DIRECTORY: "${DATA_CACHE_HAF_PREFIX}_pipeline_${CI_PIPELINE_ID}"
-  BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
+  BLOCK_LOG_SOURCE_DIR_5M: /cache/blockchain/block_log_5m
   SNAPSHOTS_PATH: /cache/snapshots_pipeline_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /cache/block_log_5m_mirrornet
 
@@ -329,7 +329,7 @@ applications_system_tests:
     - *hfm-only-service
   variables:
     PATTERNS_PATH: "" #Should be overriden in derived jobs
-    RO_BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
+    RO_BLOCK_LOG_DIRECTORY: "/cache/blockchain/block_log_5m/"
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
     HIVED_PATH: "$CI_PROJECT_DIR/haf-binaries/hived"
     DB_NAME: haf_block_log
