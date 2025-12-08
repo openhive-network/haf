@@ -701,12 +701,27 @@ replay_data_copy:
   needs:
     - prepare_haf_data
     - haf_image_build
+  variables:
+    SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   script:
     - |
       set -e
+      CACHE_MANAGER="$SCRIPTS_PATH/ci-helpers/cache-manager.sh"
+      SOURCE_CACHE="${DATA_CACHE_HAF_PREFIX:?}_${HAF_COMMIT:?}"
 
       echo "Copying replay data to ${PIPELINE_DATA_CACHE_HAF_DIRECTORY:?}"
-      sudo cp -a "${DATA_CACHE_HAF_PREFIX:?}_${HAF_COMMIT:?}" "${PIPELINE_DATA_CACHE_HAF_DIRECTORY:?}"
+
+      # Try local cache first, fall back to NFS via cache-manager
+      if [[ -d "$SOURCE_CACHE" ]]; then
+        echo "Using local cache: $SOURCE_CACHE"
+        sudo cp -a "$SOURCE_CACHE" "${PIPELINE_DATA_CACHE_HAF_DIRECTORY:?}"
+      elif [[ -x "$CACHE_MANAGER" ]]; then
+        echo "Local cache not found, fetching from NFS..."
+        "$CACHE_MANAGER" get haf "${HAF_COMMIT:?}" "${PIPELINE_DATA_CACHE_HAF_DIRECTORY:?}"
+      else
+        echo "ERROR: No local cache and cache-manager not available"
+        exit 1
+      fi
   tags:
     - data-cache-storage
     - fast
