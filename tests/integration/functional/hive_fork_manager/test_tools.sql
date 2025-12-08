@@ -728,8 +728,9 @@ LANGUAGE 'plpgsql' AS
 $BODY$
 BEGIN
     PERFORM test.create_operation_types();
-    PERFORM test.create_accounts();
+    -- Create blocks before accounts due to FK constraint
     PERFORM test.create_blocks(1, num_blocks);
+    PERFORM test.create_accounts();
     PERFORM test.create_transactions(1, num_blocks);
     PERFORM test.create_operations(1, num_blocks);
 END;
@@ -747,10 +748,12 @@ $BODY$
 BEGIN
     PERFORM test.create_operation_types();
     PERFORM test.create_forks(); -- Default: forks 2 and 3 at blocks 6 and 7
-    PERFORM test.create_accounts();
 
-    -- Irreversible data (blocks 1-5)
+    -- Irreversible data (blocks 1-5) - must be before accounts due to FK
     PERFORM test.create_blocks(1, 5);
+
+    -- Create accounts after blocks (FK constraint)
+    PERFORM test.create_accounts();
     PERFORM test.create_transactions(1, 5);
     PERFORM test.create_operations(1, 5);
 

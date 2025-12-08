@@ -15,8 +15,9 @@ AS
 $BODY$
 BEGIN
     -- Create minimal blockchain for application loop testing
-    PERFORM test.create_accounts(account_names => ARRAY['initminer']);
+    -- Create blocks before accounts due to FK constraint
     PERFORM test.create_blocks(1, 1);
+    PERFORM test.create_accounts(account_names => ARRAY['initminer']);
 
     -- Add head block (block 50)
     INSERT INTO hafd.blocks
