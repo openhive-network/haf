@@ -6,6 +6,9 @@
 --
 -- Original file: app_api/app_next_block_process_new_block_event.sql
 
+-- Load test utilities
+\ir ../test_tools.sql
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS
