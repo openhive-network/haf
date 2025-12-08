@@ -46,7 +46,7 @@ BEGIN
     -- Create operations
     PERFORM test.create_operations(1, 5);
 
-    -- Create account_operations entries
+    -- Create account_operations entries (up to block 4, matching old fill_with_blocks_data)
     INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, operation_id)
     VALUES
            ( 1, 1, 1, hafd.operation_id(1,1,0) )
@@ -54,7 +54,6 @@ BEGIN
          , ( 2, 2, 1, hafd.operation_id(2,1,0) )
          , ( 3, 3, 1, hafd.operation_id(3,1,0) )
          , ( 4, 4, 1, hafd.operation_id(4,1,0) )
-         , ( 5, 5, 1, hafd.operation_id(5,1,0) )
     ;
 
     CREATE SCHEMA A;
