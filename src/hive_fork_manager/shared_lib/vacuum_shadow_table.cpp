@@ -26,7 +26,6 @@ Datum vacuum_shadow_table(PG_FUNCTION_ARGS)
    * Vacuum can't be called in active transaction.
    * To workaround this, create a new db connection and use that to do vacuum.
    */
-  const char* current_user = GetUserNameFromId(GetUserId(), false);
   Datum db_name_datum = OidFunctionCall0(F_CURRENT_DATABASE);
   const char* dbname = DatumGetCString(db_name_datum);
   if (dbname == NULL)
@@ -36,9 +35,7 @@ Datum vacuum_shadow_table(PG_FUNCTION_ARGS)
        errmsg("vacuum_shadow_table: could not get database name")));
   }
 
-  char* conninfo = psprintf("dbname=%s user=%s application_name=vacuum_shadow_table",
-                            dbname,
-                            current_user);
+  char* conninfo = psprintf("dbname=%s user=postgres application_name=vacuum_shadow_table", dbname);
 
   PGconn* conn = PQconnectdb(conninfo);
   if (PQstatus(conn) != CONNECTION_OK)
