@@ -56,9 +56,10 @@ include:
       echo "Cache miss for HAF commit $CACHE_KEY - performing replay"
       mkdir "${DATA_CACHE_DIR}/datadir" -pv
       cd "${DATA_CACHE_DIR}/datadir"
-      flock "${DATA_CACHE_DIR}/datadir" $SCRIPTS_PATH/ci-helpers/build_data.sh $HAF_IMAGE_NAME \
+      # Run in subshell to prevent build_data.sh's exit from terminating the script block
+      (flock "${DATA_CACHE_DIR}/datadir" $SCRIPTS_PATH/ci-helpers/build_data.sh $HAF_IMAGE_NAME \
         --data-cache="${DATA_CACHE_DIR}" --block-log-source-dir="$BLOCK_LOG_SOURCE_DIR" \
-        --config-ini-source="$CONFIG_INI_SOURCE"
+        --config-ini-source="$CONFIG_INI_SOURCE")
       cd "$CI_PROJECT_DIR"
 
       # Make haf_db_store readable so it can be cached/copied
