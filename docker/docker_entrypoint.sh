@@ -276,6 +276,9 @@ else
   # container where postgres user had different uid/gid. Without this, PostgreSQL fails with:
   # "Error: The cluster is owned by group id NNN which does not exist"
   sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
+  # Restore pgdata permissions to 700 - required when cache permissions were relaxed for copying.
+  # PostgreSQL requires the data directory to have mode 700 (owner-only access).
+  sudo -n chmod 700 "$PGDATA" 2>/dev/null || true
 
   # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
   sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh" --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace" --install-extension="${HAF_INSTALL_EXTENSION:-"yes"},/home/haf_admin/build,/usr/share/postgresql/${POSTGRES_VERSION},/usr/lib/postgresql/${POSTGRES_VERSION}"
