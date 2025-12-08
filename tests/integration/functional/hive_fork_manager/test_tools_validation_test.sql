@@ -86,7 +86,7 @@ BEGIN
         'Expected 5 transactions';
 
     -- Verify operations were created
-    ASSERT (SELECT COUNT(*) FROM hafd.operations WHERE hafd.operation_block_num(id) BETWEEN 1 AND 5) = 5,
+    ASSERT (SELECT COUNT(*) FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) BETWEEN 1 AND 5) = 5,
         'Expected 5 operations';
 
     -- Verify reversible blocks for fork 1
