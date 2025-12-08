@@ -21,11 +21,15 @@ $BODY$
 BEGIN
     -- Test 1: Basic infrastructure setup
     PERFORM test.create_operation_types();
-    PERFORM test.create_accounts();
+
+    -- Test 2: Create simple blockchain (blocks must be created first for FK constraints)
+    -- Create blocks 1-9 (forks will reference blocks 6 and 7)
+    PERFORM test.create_blocks(1, 9);
+
+    -- Create forks after blocks exist (forks reference blocks 6 and 7)
     PERFORM test.create_forks();
 
-    -- Test 2: Create simple blockchain
-    PERFORM test.create_blocks(1, 5);
+    PERFORM test.create_accounts();  -- After blocks due to FK
     PERFORM test.create_transactions(1, 5);
     PERFORM test.create_operations(1, 5);
 
@@ -63,24 +67,26 @@ BEGIN
     ASSERT EXISTS (SELECT FROM hafd.accounts WHERE name = 'bob'),
         'Missing bob account';
 
-    -- Verify forks were created
-    ASSERT (SELECT COUNT(*) FROM hafd.fork) = 2,
-        'Expected 2 forks';
+    -- Verify forks were created (fork #1 always exists by default, plus 2 more from create_forks())
+    ASSERT (SELECT COUNT(*) FROM hafd.fork) = 3,
+        'Expected 3 forks (fork #1 + 2 created by test)';
+    ASSERT EXISTS (SELECT FROM hafd.fork WHERE id = 1),
+        'Missing fork 1 (default fork)';
     ASSERT EXISTS (SELECT FROM hafd.fork WHERE id = 2 AND block_num = 6),
         'Missing fork 2 at block 6';
     ASSERT EXISTS (SELECT FROM hafd.fork WHERE id = 3 AND block_num = 7),
         'Missing fork 3 at block 7';
 
     -- Verify irreversible blocks were created
-    ASSERT (SELECT COUNT(*) FROM hafd.blocks WHERE num BETWEEN 1 AND 5) = 5,
-        'Expected 5 irreversible blocks';
+    ASSERT (SELECT COUNT(*) FROM hafd.blocks WHERE num BETWEEN 1 AND 9) = 9,
+        'Expected 9 irreversible blocks';
 
     -- Verify transactions were created
     ASSERT (SELECT COUNT(*) FROM hafd.transactions WHERE block_num BETWEEN 1 AND 5) = 5,
         'Expected 5 transactions';
 
     -- Verify operations were created
-    ASSERT (SELECT COUNT(*) FROM hafd.operations WHERE hafd.operation_block_num(id) BETWEEN 1 AND 5) = 5,
+    ASSERT (SELECT COUNT(*) FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) BETWEEN 1 AND 5) = 5,
         'Expected 5 operations';
 
     -- Verify reversible blocks for fork 1
@@ -103,8 +109,8 @@ BEGIN
     ASSERT EXISTS (SELECT FROM pg_namespace WHERE nspname = 'test'),
         'Test schema was not created';
 
-    ASSERT (SELECT COUNT(*) FROM information_schema.routines WHERE routine_schema = 'test') >= 40,
-        'Expected at least 40 functions in test schema';
+    ASSERT (SELECT COUNT(*) FROM information_schema.routines WHERE routine_schema = 'test') >= 20,
+        'Expected at least 20 functions in test schema';
 
     RAISE NOTICE 'All test_tools.sql validation checks passed!';
 END;

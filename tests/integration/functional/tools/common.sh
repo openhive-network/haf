@@ -40,11 +40,16 @@ setup_test_database() {
   postgres_port="$2"
   test_path="$3"
   extension_path="$4"
+  is_update_test="$5"
 
   test_directory=$(dirname "${test_path}");
   sql_setup_fixture="./${test_directory}/fixture.sql";
 
   test_name=$(test_name_from_path "$test_path")
+  # Add suffix for update tests to avoid race condition with base tests
+  if [ -n "$is_update_test" ]; then
+    test_name="${test_name}_upd"
+  fi
   test_name_crc="$(echo "${test_name}" | cksum | sed 's/ /_/')"
 
   DB_NAME="t_${test_name_crc}_${test_name}"

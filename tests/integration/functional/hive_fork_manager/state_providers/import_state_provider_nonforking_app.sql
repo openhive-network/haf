@@ -1,3 +1,6 @@
+-- Load test utilities
+\ir ../test_tools.sql
+
 CREATE OR REPLACE FUNCTION hafd.create_function_a()
     RETURNS VOID
     LANGUAGE plpgsql
