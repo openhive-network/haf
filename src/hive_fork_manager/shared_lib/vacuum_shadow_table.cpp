@@ -47,6 +47,8 @@ Datum vacuum_shadow_table(PG_FUNCTION_ARGS)
        errmsg("vacuum_shadow_table: connection failed: %s", err)));
   }
 
+  bool result = false;
+
   PG_TRY();
   {
     char* vacuum_cmd = psprintf("VACUUM FULL hafd.%s", table_name);
@@ -68,8 +70,7 @@ Datum vacuum_shadow_table(PG_FUNCTION_ARGS)
         (errmsg("vacuum_shadow_table: vacuumed hafd.%s in %ld ms",
                 table_name, elapsed_ms)));
 
-      PQfinish(conn);
-      PG_RETURN_BOOL(true);
+      result = true;
     }
     else
     {
@@ -78,8 +79,7 @@ Datum vacuum_shadow_table(PG_FUNCTION_ARGS)
         (errcode(ERRCODE_INTERNAL_ERROR),
          errmsg("vacuum_shadow_table: VACUUM failed for hafd.%s: %s",
                 table_name, err)));
-      PQfinish(conn);
-      PG_RETURN_BOOL(false);
+      result = false;
     }
 
   }
@@ -90,7 +90,8 @@ Datum vacuum_shadow_table(PG_FUNCTION_ARGS)
   }
   PG_END_TRY();
 
-  PG_RETURN_BOOL(false);
+  PQfinish(conn);
+  PG_RETURN_BOOL(result);
 }
 
 } /* extern "C" */
