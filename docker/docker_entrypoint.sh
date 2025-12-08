@@ -272,6 +272,11 @@ if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
 else
   echo "Attempting to setup postgres instance already containing HAF database..."
 
+  # Fix ownership of existing database files - required when cache was created in a different
+  # container where postgres user had different uid/gid. Without this, PostgreSQL fails with:
+  # "Error: The cluster is owned by group id NNN which does not exist"
+  sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
+
   # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
   sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh" --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace" --install-extension="${HAF_INSTALL_EXTENSION:-"yes"},/home/haf_admin/build,/usr/share/postgresql/${POSTGRES_VERSION},/usr/lib/postgresql/${POSTGRES_VERSION}"
   sudo -n "/usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh" --haf-admin-account=haf_admin --haf-db-name=haf_block_log
