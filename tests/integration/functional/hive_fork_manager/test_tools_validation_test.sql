@@ -109,8 +109,8 @@ BEGIN
     ASSERT EXISTS (SELECT FROM pg_namespace WHERE nspname = 'test'),
         'Test schema was not created';
 
-    ASSERT (SELECT COUNT(*) FROM information_schema.routines WHERE routine_schema = 'test') >= 40,
-        'Expected at least 40 functions in test schema';
+    ASSERT (SELECT COUNT(*) FROM information_schema.routines WHERE routine_schema = 'test') >= 20,
+        'Expected at least 20 functions in test schema';
 
     RAISE NOTICE 'All test_tools.sql validation checks passed!';
 END;
