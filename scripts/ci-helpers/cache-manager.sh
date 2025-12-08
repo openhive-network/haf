@@ -218,7 +218,9 @@ cmd_get() {
         if [[ "$LOCAL_CACHE_DIR" != "$local_dest" ]]; then
             _log "Copying to destination: $local_dest"
             mkdir -p "$(dirname "$local_dest")"
-            cp -a "$LOCAL_CACHE_DIR" "$local_dest"
+            # Use cp -r instead of cp -a to avoid permission issues on NFS
+            # (cp -a tries to preserve ownership which can fail on NFS)
+            cp -r "$LOCAL_CACHE_DIR" "$local_dest"
         else
             _log "Destination is cache dir, no copy needed"
         fi
@@ -259,7 +261,7 @@ cmd_get() {
     if _flock_with_timeout "$CACHE_LOCK_TIMEOUT" -s "$LOCK_FILE" -c "
         echo '[cache-manager] Copying from NFS to local: $local_dest' >&2
         mkdir -p '$(dirname "$local_dest")'
-        rsync -a '$NFS_CACHE_DIR/' '$local_dest/' 2>/dev/null || cp -a '$NFS_CACHE_DIR' '$local_dest'
+        rsync -a '$NFS_CACHE_DIR/' '$local_dest/' 2>/dev/null || cp -r '$NFS_CACHE_DIR' '$local_dest'
     "; then
         # Also cache locally for future use
         if [[ "$LOCAL_CACHE_DIR" != "$local_dest" ]]; then
