@@ -19,6 +19,9 @@ ADD_TEST( NAME test_update_script
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
 
+ # Test to validate test_tools.sql utility library
+ ADD_SQL_FUNCTIONAL_TEST( test_tools_validation_test.sql )
+
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/schema_test.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_test.sql )
