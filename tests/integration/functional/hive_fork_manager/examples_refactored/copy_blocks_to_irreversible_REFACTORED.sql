@@ -16,10 +16,12 @@ $BODY$
 BEGIN
     -- Setup infrastructure
     PERFORM test.create_forks();
-    PERFORM test.create_accounts();
 
-    -- Create irreversible blocks 1-5
+    -- Create irreversible blocks 1-5 (must be before accounts due to FK)
     PERFORM test.create_blocks(1, 5);
+
+    -- Create accounts (after blocks due to FK constraint)
+    PERFORM test.create_accounts();
 
     -- Create reversible blocks for 3 forks
     -- Fork 1: blocks 4-6
