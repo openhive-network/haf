@@ -406,3 +406,10 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_application_blocks.sql )
  ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_no_application_no_blocks.sql)
  ADD_SQL_FUNCTIONAL_TEST(pruning/tail_lower_than_0.sql)
+
+ # Refactored test examples using test_tools.sql
+ # These demonstrate the test refactoring approach and validate test_tools functions
+ ADD_SQL_FUNCTIONAL_TEST(examples_refactored/copy_blocks_to_irreversible_REFACTORED.sql)
+ ADD_SQL_FUNCTIONAL_TEST(examples_refactored/copy_operations_to_irreversible_REFACTORED.sql)
+ ADD_SQL_FUNCTIONAL_TEST(examples_refactored/app_next_block_process_new_block_event_REFACTORED.sql)
+ ADD_SQL_FUNCTIONAL_TEST(examples_refactored/two_iterations_REFACTORED.sql)
