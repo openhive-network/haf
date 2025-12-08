@@ -5,6 +5,9 @@
 --          remove 5 blocks
 --          check if accounts are not removed
 
+-- Load test utilities
+\ir ../test_tools.sql
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS

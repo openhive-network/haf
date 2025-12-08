@@ -1,3 +1,5 @@
+\ir ../test_tools.sql
+
 SELECT test.install_mock_hive_get_estimated_hive_head_block();
 
 

@@ -728,8 +728,9 @@ LANGUAGE 'plpgsql' AS
 $BODY$
 BEGIN
     PERFORM test.create_operation_types();
-    PERFORM test.create_accounts();
+    -- Create blocks before accounts due to FK constraint
     PERFORM test.create_blocks(1, num_blocks);
+    PERFORM test.create_accounts();
     PERFORM test.create_transactions(1, num_blocks);
     PERFORM test.create_operations(1, num_blocks);
 END;
@@ -747,10 +748,12 @@ $BODY$
 BEGIN
     PERFORM test.create_operation_types();
     PERFORM test.create_forks(); -- Default: forks 2 and 3 at blocks 6 and 7
-    PERFORM test.create_accounts();
 
-    -- Irreversible data (blocks 1-5)
+    -- Irreversible data (blocks 1-5) - must be before accounts due to FK
     PERFORM test.create_blocks(1, 5);
+
+    -- Create accounts after blocks (FK constraint)
+    PERFORM test.create_accounts();
     PERFORM test.create_transactions(1, 5);
     PERFORM test.create_operations(1, 5);
 
@@ -790,6 +793,9 @@ BEGIN
         head_block_num INT
     );
 
+    -- Grant permissions to application users
+    GRANT SELECT, UPDATE ON test.mock_head_block TO PUBLIC;
+
     -- Initialize with default value
     TRUNCATE test.mock_head_block;
     INSERT INTO test.mock_head_block VALUES (50);
@@ -822,6 +828,405 @@ $BODY$;
 
 COMMENT ON FUNCTION test.set_head_block_num(INT) IS
 'Sets the mock head block number used by test.install_mock_hive_get_estimated_hive_head_block()';
+
+
+-- ============================================================================
+-- SECTION 10: HASH GENERATION FUNCTIONS (for assertions)
+-- ============================================================================
+
+-- Get expected block hash for a given block number
+-- This matches the hash generation pattern used in create_blocks()
+CREATE OR REPLACE FUNCTION test.expected_block_hash(
+    block_num INT,
+    fork_id INT DEFAULT NULL
+)
+RETURNS BYTEA
+LANGUAGE 'plpgsql' AS
+$BODY$
+DECLARE
+    hash_suffix TEXT;
+BEGIN
+    IF fork_id IS NULL THEN
+        hash_suffix := lpad(to_hex(block_num * 16), 2, '0');
+    ELSE
+        hash_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
+    END IF;
+    RETURN decode('BADD' || hash_suffix, 'hex');
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.expected_block_hash(INT, INT) IS
+'Returns the expected block hash for a given block number (and optional fork_id).
+Use in assertions to verify block data without hardcoding hex values.
+Example: ASSERT hash = test.expected_block_hash(5) OR test.expected_block_hash(5, 2) for fork 2';
+
+
+-- Get expected prev hash for a given block number
+CREATE OR REPLACE FUNCTION test.expected_prev_hash(
+    block_num INT,
+    fork_id INT DEFAULT NULL
+)
+RETURNS BYTEA
+LANGUAGE 'plpgsql' AS
+$BODY$
+DECLARE
+    prev_suffix TEXT;
+BEGIN
+    IF fork_id IS NULL THEN
+        prev_suffix := lpad(to_hex(block_num * 16), 2, '0');
+    ELSE
+        prev_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
+    END IF;
+    RETURN decode('CAFE' || prev_suffix, 'hex');
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.expected_prev_hash(INT, INT) IS
+'Returns the expected prev hash for a given block number (and optional fork_id).
+Use in assertions to verify block data without hardcoding hex values.';
+
+
+-- Get expected transaction hash for a given block number
+CREATE OR REPLACE FUNCTION test.expected_trx_hash(
+    block_num INT,
+    fork_id INT DEFAULT NULL
+)
+RETURNS BYTEA
+LANGUAGE 'plpgsql' AS
+$BODY$
+DECLARE
+    hash_suffix TEXT;
+BEGIN
+    IF fork_id IS NULL THEN
+        hash_suffix := lpad(to_hex(block_num * 16), 2, '0');
+    ELSE
+        hash_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
+    END IF;
+    RETURN decode('DEED' || hash_suffix, 'hex');
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.expected_trx_hash(INT, INT) IS
+'Returns the expected transaction hash for a given block number (and optional fork_id).';
+
+
+-- Get expected timestamp for a given block number
+CREATE OR REPLACE FUNCTION test.expected_block_timestamp(
+    block_num INT,
+    base_time TIMESTAMP DEFAULT '2016-06-22 19:10:21-07'::timestamp
+)
+RETURNS TIMESTAMP
+LANGUAGE 'plpgsql' AS
+$BODY$
+BEGIN
+    RETURN base_time + ((block_num - 1) || ' seconds')::interval;
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.expected_block_timestamp(INT, TIMESTAMP) IS
+'Returns the expected timestamp for a given block number based on the standard time increment pattern.';
+
+
+-- ============================================================================
+-- SECTION 11: VIEW TEST SCENARIO BUILDERS
+-- ============================================================================
+
+-- Setup the standard scenario used by most view tests in app_api
+-- This creates the exact data pattern expected by blocks_view_test, transactions_view_test, etc.
+CREATE OR REPLACE FUNCTION test.setup_view_test_scenario()
+RETURNS void
+LANGUAGE 'plpgsql' AS
+$BODY$
+BEGIN
+    -- Create forks 2 and 3
+    INSERT INTO hafd.fork(id, block_num, time_of_fork)
+    VALUES (2, 6, '2020-06-22 19:10:25-07'::timestamp),
+           (3, 7, '2020-06-22 19:10:25-07'::timestamp);
+
+    -- Create irreversible blocks 1-5
+    PERFORM test.create_blocks(1, 5);
+
+    -- Create initminer account
+    INSERT INTO hafd.accounts(id, name, block_num) VALUES (5, 'initminer', 1);
+
+    -- Reversible blocks for fork 1: blocks 4-9
+    PERFORM test.create_blocks_reversible(4, 6, 1);
+    -- Blocks 7-9 for fork 1 (will be overridden by fork 2)
+    PERFORM test.create_blocks_reversible(7, 9, 1);
+
+    -- Reversible blocks for fork 2: blocks 7-9
+    PERFORM test.create_blocks_reversible(7, 9, 2);
+
+    -- Reversible blocks for fork 3: blocks 8-10
+    PERFORM test.create_blocks_reversible(8, 10, 3);
+
+    -- Set consistent block
+    UPDATE hafd.hive_state SET consistent_block = 5;
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.setup_view_test_scenario() IS
+'Sets up the standard scenario for view tests (blocks_view_test, etc.):
+- Forks 2 and 3 at blocks 6 and 7
+- Irreversible blocks 1-5
+- Reversible blocks: fork 1 (4-9), fork 2 (7-9), fork 3 (8-10)
+- consistent_block = 5';
+
+
+-- Setup scenario with transactions for transaction view tests
+CREATE OR REPLACE FUNCTION test.setup_transactions_view_test_scenario()
+RETURNS void
+LANGUAGE 'plpgsql' AS
+$BODY$
+BEGIN
+    -- Create forks
+    INSERT INTO hafd.fork(id, block_num, time_of_fork)
+    VALUES (2, 6, '2020-06-22 19:10:25-07'::timestamp),
+           (3, 7, '2020-06-22 19:10:25-07'::timestamp);
+
+    -- Create irreversible blocks and transactions
+    PERFORM test.create_blocks(1, 5);
+    INSERT INTO hafd.accounts(id, name, block_num) VALUES (5, 'initminer', 1);
+    PERFORM test.create_transactions(1, 5);
+
+    -- Reversible blocks and transactions for fork 1
+    PERFORM test.create_blocks_reversible(4, 9, 1);
+    PERFORM test.create_transactions_reversible(4, 9, 1);
+
+    -- Reversible blocks and transactions for fork 2
+    PERFORM test.create_blocks_reversible(7, 9, 2);
+    PERFORM test.create_transactions_reversible(7, 9, 2);
+
+    -- Reversible blocks and transactions for fork 3
+    PERFORM test.create_blocks_reversible(8, 10, 3);
+    PERFORM test.create_transactions_reversible(8, 10, 3);
+
+    UPDATE hafd.hive_state SET consistent_block = 5;
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.setup_transactions_view_test_scenario() IS
+'Sets up the standard scenario for transaction view tests with blocks and transactions.';
+
+
+-- Setup scenario with operations for operation view tests
+CREATE OR REPLACE FUNCTION test.setup_operations_view_test_scenario()
+RETURNS void
+LANGUAGE 'plpgsql' AS
+$BODY$
+BEGIN
+    PERFORM test.create_operation_types();
+
+    -- Create forks
+    INSERT INTO hafd.fork(id, block_num, time_of_fork)
+    VALUES (2, 6, '2020-06-22 19:10:25-07'::timestamp),
+           (3, 7, '2020-06-22 19:10:25-07'::timestamp);
+
+    -- Create irreversible data
+    PERFORM test.create_blocks(1, 5);
+    INSERT INTO hafd.accounts(id, name, block_num) VALUES (5, 'initminer', 1);
+    PERFORM test.create_transactions(1, 5);
+    PERFORM test.create_operations(1, 5);
+
+    -- Reversible data for fork 1
+    PERFORM test.create_blocks_reversible(4, 9, 1);
+    PERFORM test.create_transactions_reversible(4, 9, 1);
+    PERFORM test.create_operations_reversible(4, 9, 1);
+
+    -- Reversible data for fork 2
+    PERFORM test.create_blocks_reversible(7, 9, 2);
+    PERFORM test.create_transactions_reversible(7, 9, 2);
+    PERFORM test.create_operations_reversible(7, 9, 2);
+
+    -- Reversible data for fork 3
+    PERFORM test.create_blocks_reversible(8, 10, 3);
+    PERFORM test.create_transactions_reversible(8, 10, 3);
+    PERFORM test.create_operations_reversible(8, 10, 3);
+
+    UPDATE hafd.hive_state SET consistent_block = 5;
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.setup_operations_view_test_scenario() IS
+'Sets up the standard scenario for operation view tests with blocks, transactions, and operations.';
+
+
+-- Setup scenario with signatures for signature view tests
+CREATE OR REPLACE FUNCTION test.setup_signatures_view_test_scenario()
+RETURNS void
+LANGUAGE 'plpgsql' AS
+$BODY$
+BEGIN
+    -- Create forks
+    INSERT INTO hafd.fork(id, block_num, time_of_fork)
+    VALUES (2, 6, '2020-06-22 19:10:25-07'::timestamp),
+           (3, 7, '2020-06-22 19:10:25-07'::timestamp);
+
+    -- Create irreversible data
+    PERFORM test.create_blocks(1, 5);
+    INSERT INTO hafd.accounts(id, name, block_num) VALUES (5, 'initminer', 1);
+    PERFORM test.create_transactions(1, 5);
+    PERFORM test.create_transaction_signatures(1, 5);
+
+    -- Reversible data for fork 1
+    PERFORM test.create_blocks_reversible(4, 9, 1);
+    PERFORM test.create_transactions_reversible(4, 9, 1);
+    PERFORM test.create_transaction_signatures_reversible(4, 9, 1);
+
+    -- Reversible data for fork 2
+    PERFORM test.create_blocks_reversible(7, 9, 2);
+    PERFORM test.create_transactions_reversible(7, 9, 2);
+    PERFORM test.create_transaction_signatures_reversible(7, 9, 2);
+
+    -- Reversible data for fork 3
+    PERFORM test.create_blocks_reversible(8, 10, 3);
+    PERFORM test.create_transactions_reversible(8, 10, 3);
+    PERFORM test.create_transaction_signatures_reversible(8, 10, 3);
+
+    UPDATE hafd.hive_state SET consistent_block = 5;
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.setup_signatures_view_test_scenario() IS
+'Sets up the standard scenario for signature view tests with blocks, transactions, and signatures.';
+
+
+-- Setup scenario with accounts for account view tests
+CREATE OR REPLACE FUNCTION test.setup_accounts_view_test_scenario()
+RETURNS void
+LANGUAGE 'plpgsql' AS
+$BODY$
+BEGIN
+    -- Create forks
+    INSERT INTO hafd.fork(id, block_num, time_of_fork)
+    VALUES (2, 6, '2020-06-22 19:10:25-07'::timestamp),
+           (3, 7, '2020-06-22 19:10:25-07'::timestamp);
+
+    -- Create irreversible blocks and accounts
+    PERFORM test.create_blocks(1, 5);
+    INSERT INTO hafd.accounts(id, name, block_num)
+    VALUES (5, 'initminer', 1),
+           (6, 'alice', 2),
+           (7, 'bob', 3);
+
+    -- Reversible blocks for fork 1
+    PERFORM test.create_blocks_reversible(4, 9, 1);
+    -- Reversible accounts for fork 1
+    INSERT INTO hafd.accounts_reversible(id, name, block_num, fork_id)
+    VALUES (8, 'carol', 7, 1),
+           (9, 'dan', 8, 1);
+
+    -- Reversible blocks for fork 2
+    PERFORM test.create_blocks_reversible(7, 9, 2);
+    INSERT INTO hafd.accounts_reversible(id, name, block_num, fork_id)
+    VALUES (8, 'eve', 7, 2);
+
+    -- Reversible blocks for fork 3
+    PERFORM test.create_blocks_reversible(8, 10, 3);
+    INSERT INTO hafd.accounts_reversible(id, name, block_num, fork_id)
+    VALUES (8, 'frank', 8, 3),
+           (9, 'grace', 9, 3);
+
+    UPDATE hafd.hive_state SET consistent_block = 5;
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.setup_accounts_view_test_scenario() IS
+'Sets up the standard scenario for account view tests with blocks and accounts.';
+
+
+-- Setup scenario with account operations for account_operations view tests
+CREATE OR REPLACE FUNCTION test.setup_account_operations_view_test_scenario()
+RETURNS void
+LANGUAGE 'plpgsql' AS
+$BODY$
+BEGIN
+    PERFORM test.create_operation_types();
+
+    -- Create forks
+    INSERT INTO hafd.fork(id, block_num, time_of_fork)
+    VALUES (2, 6, '2020-06-22 19:10:25-07'::timestamp),
+           (3, 7, '2020-06-22 19:10:25-07'::timestamp);
+
+    -- Create irreversible data
+    PERFORM test.create_blocks(1, 5);
+    INSERT INTO hafd.accounts(id, name, block_num)
+    VALUES (5, 'initminer', 1),
+           (6, 'alice', 2);
+    PERFORM test.create_transactions(1, 5);
+    PERFORM test.create_operations(1, 5);
+    PERFORM test.create_account_operations(1, 5, 5);  -- for initminer
+
+    -- Reversible data for fork 1
+    PERFORM test.create_blocks_reversible(4, 9, 1);
+    PERFORM test.create_transactions_reversible(4, 9, 1);
+    PERFORM test.create_operations_reversible(4, 9, 1);
+    PERFORM test.create_account_operations_reversible(4, 9, 5, 1);
+
+    -- Reversible data for fork 2
+    PERFORM test.create_blocks_reversible(7, 9, 2);
+    PERFORM test.create_transactions_reversible(7, 9, 2);
+    PERFORM test.create_operations_reversible(7, 9, 2);
+    PERFORM test.create_account_operations_reversible(7, 9, 5, 2);
+
+    -- Reversible data for fork 3
+    PERFORM test.create_blocks_reversible(8, 10, 3);
+    PERFORM test.create_transactions_reversible(8, 10, 3);
+    PERFORM test.create_operations_reversible(8, 10, 3);
+    PERFORM test.create_account_operations_reversible(8, 10, 5, 3);
+
+    UPDATE hafd.hive_state SET consistent_block = 5;
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.setup_account_operations_view_test_scenario() IS
+'Sets up the standard scenario for account_operations view tests.';
+
+
+-- Setup scenario with applied hardforks
+CREATE OR REPLACE FUNCTION test.setup_applied_hardforks_view_test_scenario()
+RETURNS void
+LANGUAGE 'plpgsql' AS
+$BODY$
+BEGIN
+    PERFORM test.create_operation_types();
+
+    -- Create forks
+    INSERT INTO hafd.fork(id, block_num, time_of_fork)
+    VALUES (2, 6, '2020-06-22 19:10:25-07'::timestamp),
+           (3, 7, '2020-06-22 19:10:25-07'::timestamp);
+
+    -- Create irreversible data
+    PERFORM test.create_blocks(1, 5);
+    INSERT INTO hafd.accounts(id, name, block_num) VALUES (5, 'initminer', 1);
+    PERFORM test.create_transactions(1, 5);
+    PERFORM test.create_operations(1, 5);
+    PERFORM test.create_applied_hardforks(1, 5);
+
+    -- Reversible data for fork 1
+    PERFORM test.create_blocks_reversible(4, 9, 1);
+    PERFORM test.create_transactions_reversible(4, 9, 1);
+    PERFORM test.create_operations_reversible(4, 9, 1);
+    PERFORM test.create_applied_hardforks_reversible(4, 9, 1);
+
+    -- Reversible data for fork 2
+    PERFORM test.create_blocks_reversible(7, 9, 2);
+    PERFORM test.create_transactions_reversible(7, 9, 2);
+    PERFORM test.create_operations_reversible(7, 9, 2);
+    PERFORM test.create_applied_hardforks_reversible(7, 9, 2);
+
+    -- Reversible data for fork 3
+    PERFORM test.create_blocks_reversible(8, 10, 3);
+    PERFORM test.create_transactions_reversible(8, 10, 3);
+    PERFORM test.create_operations_reversible(8, 10, 3);
+    PERFORM test.create_applied_hardforks_reversible(8, 10, 3);
+
+    UPDATE hafd.hive_state SET consistent_block = 5;
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.setup_applied_hardforks_view_test_scenario() IS
+'Sets up the standard scenario for applied_hardforks view tests.';
 
 
 -- ============================================================================

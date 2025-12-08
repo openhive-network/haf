@@ -6,6 +6,9 @@
 --
 -- Original file: app_api/app_next_block_process_new_block_event.sql
 
+-- Load test utilities
+\ir ../test_tools.sql
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS
@@ -13,8 +16,9 @@ $BODY$
 BEGIN
     -- Create minimal irreversible blockchain
     PERFORM test.create_operation_types();
-    PERFORM test.create_accounts(account_names => ARRAY['initminer']);
+    -- Create blocks before accounts due to FK constraint
     PERFORM test.create_blocks(1, 1);
+    PERFORM test.create_accounts(account_names => ARRAY['initminer']);
 
     -- End massive sync
     PERFORM hive.end_massive_sync( 1 );
