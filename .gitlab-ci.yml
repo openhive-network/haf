@@ -124,12 +124,60 @@ test_ssh_localhost_copy:
 
     - |
       echo ""
-      echo "=== Test 6: Try NFS copy comparison ==="
+      echo "=== Test 6: Try copy via Docker (bypassing job container overlay) ==="
+      TEST_DIR="/cache/ssh_test_$$"
+      DEST_DOCKER="/cache/ssh_test_docker_copy_$$"
+      DEST_DOCKER_NFS="/nfs/ci-cache/ssh_test_docker_$$"
+
+      # The dind service has direct host volume mounts
+      # Running a container via docker should have direct access
+      echo "Docker version:"
+      docker version --format '{{.Server.Version}}' 2>/dev/null || echo "Docker not available"
+
+      echo ""
+      echo "Testing local copy via docker run (alpine)..."
+      time docker run --rm \
+        -v /cache:/cache \
+        -v /nfs/ci-cache:/nfs/ci-cache \
+        alpine:latest \
+        cp -a "$TEST_DIR" "$DEST_DOCKER"
+      echo "Docker local copy complete"
+
+      # Verify
+      if [[ -d "$DEST_DOCKER" ]]; then
+        echo "SUCCESS: Docker copy created $DEST_DOCKER"
+        du -sh "$DEST_DOCKER"
+        rm -rf "$DEST_DOCKER"
+      else
+        echo "FAILED: Docker copy did not create destination"
+      fi
+
+      echo ""
+      echo "Testing NFS copy via docker run..."
+      time docker run --rm \
+        -v /cache:/cache \
+        -v /nfs/ci-cache:/nfs/ci-cache \
+        alpine:latest \
+        cp -a "$TEST_DIR" "$DEST_DOCKER_NFS"
+      echo "Docker NFS copy complete"
+
+      # Verify and cleanup
+      if [[ -d "$DEST_DOCKER_NFS" ]]; then
+        echo "SUCCESS: Docker NFS copy created $DEST_DOCKER_NFS"
+        du -sh "$DEST_DOCKER_NFS"
+        rm -rf "$DEST_DOCKER_NFS"
+      else
+        echo "FAILED: Docker NFS copy did not create destination"
+      fi
+
+    - |
+      echo ""
+      echo "=== Test 7: Try NFS copy inside container (baseline) ==="
       TEST_DIR="/cache/ssh_test_$$"
       DEST_NFS="/nfs/ci-cache/ssh_test_$$"
 
       if [[ -d /nfs/ci-cache ]]; then
-        echo "Copying $TEST_DIR -> $DEST_NFS (to NFS, inside container)..."
+        echo "Copying $TEST_DIR -> $DEST_NFS (to NFS, inside job container)..."
         time cp -a "$TEST_DIR" "$DEST_NFS"
         echo "NFS copy complete"
         rm -rf "$DEST_NFS"
