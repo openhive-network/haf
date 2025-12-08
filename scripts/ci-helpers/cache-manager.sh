@@ -173,6 +173,34 @@ _write_metadata() {
 EOF
 }
 
+# Relax PostgreSQL pgdata permissions for caching
+# Makes pgdata readable so it can be copied to NFS
+_relax_pgdata_permissions() {
+    local source_dir="$1"
+    local pgdata_path="${source_dir}/datadir/haf_db_store/pgdata"
+
+    if [[ -d "$pgdata_path" ]]; then
+        _log "Relaxing pgdata permissions for caching"
+        # Make readable for copying (PostgreSQL creates mode 700)
+        sudo chmod -R a+rX "$pgdata_path" 2>/dev/null || chmod -R a+rX "$pgdata_path" 2>/dev/null || true
+    fi
+}
+
+# Restore PostgreSQL pgdata permissions after cache retrieval
+# pgdata must be mode 700 or 750, owned by postgres user for PostgreSQL to start
+_restore_pgdata_permissions() {
+    local dest_dir="$1"
+    local pgdata_path="${dest_dir}/datadir/haf_db_store/pgdata"
+
+    if [[ -d "$pgdata_path" ]]; then
+        _log "Restoring pgdata permissions to mode 700"
+        # Restore strict permissions required by PostgreSQL
+        sudo chmod 700 "$pgdata_path" 2>/dev/null || chmod 700 "$pgdata_path" 2>/dev/null || true
+        # Restore ownership to postgres user (uid 105 in HAF containers)
+        sudo chown -R 105:105 "$pgdata_path" 2>/dev/null || true
+    fi
+}
+
 # GET: Check local, then NFS, copy to local if found on NFS
 cmd_get() {
     local cache_type="$1"
@@ -193,6 +221,10 @@ cmd_get() {
             cp -a "$LOCAL_CACHE_DIR" "$local_dest"
         else
             _log "Destination is cache dir, no copy needed"
+        fi
+        # Restore pgdata permissions for HAF caches
+        if [[ "$cache_type" == "haf" ]]; then
+            _restore_pgdata_permissions "$local_dest"
         fi
         # Update LRU if NFS available
         if _nfs_available; then
@@ -234,6 +266,10 @@ cmd_get() {
             mkdir -p "$(dirname "$LOCAL_CACHE_DIR")"
             cp -a "$local_dest" "$LOCAL_CACHE_DIR" 2>/dev/null || true
         fi
+        # Restore pgdata permissions for HAF caches
+        if [[ "$cache_type" == "haf" ]]; then
+            _restore_pgdata_permissions "$local_dest"
+        fi
     else
         _error "Failed to acquire shared lock"
         return 1
@@ -252,6 +288,11 @@ cmd_put() {
     if [[ ! -d "$local_source" ]]; then
         _error "Source directory does not exist: $local_source"
         return 1
+    fi
+
+    # Relax pgdata permissions for HAF caches so they can be copied
+    if [[ "$cache_type" == "haf" ]]; then
+        _relax_pgdata_permissions "$local_source"
     fi
 
     _get_paths "$cache_type" "$cache_key"

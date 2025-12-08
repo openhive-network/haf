@@ -62,11 +62,8 @@ include:
         --config-ini-source="$CONFIG_INI_SOURCE")
       cd "$CI_PROJECT_DIR"
 
-      # Make haf_db_store readable so it can be cached/copied
-      # PostgreSQL creates pgdata with mode 700, owned by postgres user
-      sudo chmod -R a+rX "${DATA_CACHE_DIR}/datadir/haf_db_store" || true
-
       # Push to NFS cache for future use
+      # Note: cache-manager.sh handles pgdata permission relaxation/restoration automatically
       if [[ -x "$CACHE_MANAGER" ]]; then
         "$CACHE_MANAGER" put haf "$CACHE_KEY" "${DATA_CACHE_DIR}" || echo "Warning: Failed to push to NFS cache"
       fi
