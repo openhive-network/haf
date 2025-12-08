@@ -21,11 +21,15 @@ $BODY$
 BEGIN
     -- Test 1: Basic infrastructure setup
     PERFORM test.create_operation_types();
+
+    -- Test 2: Create simple blockchain (blocks must be created first for FK constraints)
+    -- Create blocks 1-9 (forks will reference blocks 6 and 7)
+    PERFORM test.create_blocks(1, 9);
+
+    -- Create forks after blocks exist (forks reference blocks 6 and 7)
     PERFORM test.create_forks();
 
-    -- Test 2: Create simple blockchain (blocks must be created before accounts due to FK)
-    PERFORM test.create_blocks(1, 5);
-    PERFORM test.create_accounts();  -- Moved after blocks
+    PERFORM test.create_accounts();  -- After blocks due to FK
     PERFORM test.create_transactions(1, 5);
     PERFORM test.create_operations(1, 5);
 
@@ -72,8 +76,8 @@ BEGIN
         'Missing fork 3 at block 7';
 
     -- Verify irreversible blocks were created
-    ASSERT (SELECT COUNT(*) FROM hafd.blocks WHERE num BETWEEN 1 AND 5) = 5,
-        'Expected 5 irreversible blocks';
+    ASSERT (SELECT COUNT(*) FROM hafd.blocks WHERE num BETWEEN 1 AND 9) = 9,
+        'Expected 9 irreversible blocks';
 
     -- Verify transactions were created
     ASSERT (SELECT COUNT(*) FROM hafd.transactions WHERE block_num BETWEEN 1 AND 5) = 5,
