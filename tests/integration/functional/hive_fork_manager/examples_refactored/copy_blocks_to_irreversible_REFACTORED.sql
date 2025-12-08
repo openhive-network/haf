@@ -24,13 +24,15 @@ BEGIN
     PERFORM test.create_accounts();
 
     -- Create reversible blocks for 3 forks
+    -- Use same base_time as irreversible blocks to get sequential timestamps
     -- Fork 1: blocks 4-6
-    PERFORM test.create_blocks_reversible(4, 6, 1);
+    PERFORM test.create_blocks_reversible(4, 6, 1, 5, '2016-06-22 19:10:21-07'::timestamp);
     -- Fork 2: blocks 7-9
-    PERFORM test.create_blocks_reversible(7, 9, 2);
-    -- Fork 3: blocks 8-10 (with producer_id 6 for block 8, 7 for block 10)
-    PERFORM test.create_blocks_reversible(8, 9, 3);
-    -- Custom block 10 with specific producer
+    PERFORM test.create_blocks_reversible(7, 9, 2, 5, '2016-06-22 19:10:21-07'::timestamp);
+    -- Fork 3: blocks 8-10 (custom INSERTs due to non-standard producer and timestamp)
+    INSERT INTO hafd.blocks_reversible
+    VALUES (8, '\xBADD83', '\xCAFE83', '2016-06-22 19:10:30-07'::timestamp, 6, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3);
+    PERFORM test.create_blocks_reversible(9, 9, 3, 5, '2016-06-22 19:10:21-07'::timestamp);
     INSERT INTO hafd.blocks_reversible
     VALUES (10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 7, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3);
 END;
