@@ -15,9 +15,10 @@ AS
 $BODY$
 BEGIN
     -- Create minimal blockchain for application loop testing
-    -- Create blocks before accounts due to FK constraint
-    PERFORM test.create_blocks(1, 1);
-    PERFORM test.create_accounts(account_names => ARRAY['initminer']);
+    -- Create blocks before accounts due to FK constraint (use producer_id=1)
+    PERFORM test.create_blocks(1, 1, producer_id => 1);
+    -- Use start_id=1 to match original test (all blocks use producer_account_id=1)
+    PERFORM test.create_accounts(start_id => 1, account_names => ARRAY['initminer']);
 
     -- Add head block (block 50)
     INSERT INTO hafd.blocks
@@ -70,9 +71,9 @@ BEGIN
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
     RAISE INFO 'blocks range: %', __range_placeholder;
 
-    -- Now hb is moved to 100 - add more blocks
-    PERFORM test.create_blocks(21, 21);
-    PERFORM test.create_blocks(60, 60);
+    -- Now hb is moved to 100 - add more blocks (use producer_id=1 to match account)
+    PERFORM test.create_blocks(21, 21, producer_id => 1);
+    PERFORM test.create_blocks(60, 60, producer_id => 1);
     PERFORM hive.set_irreversible( 60 );
 END;
 $BODY$;
