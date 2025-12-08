@@ -21,11 +21,11 @@ $BODY$
 BEGIN
     -- Test 1: Basic infrastructure setup
     PERFORM test.create_operation_types();
-    PERFORM test.create_accounts();
     PERFORM test.create_forks();
 
-    -- Test 2: Create simple blockchain
+    -- Test 2: Create simple blockchain (blocks must be created before accounts due to FK)
     PERFORM test.create_blocks(1, 5);
+    PERFORM test.create_accounts();  -- Moved after blocks
     PERFORM test.create_transactions(1, 5);
     PERFORM test.create_operations(1, 5);
 
