@@ -1,3 +1,6 @@
+-- Load test utilities
+\ir ../test_tools.sql
+
 SELECT test.install_mock_hive_get_estimated_hive_head_block();
 SELECT test.set_head_block_num(50);
 

@@ -1,3 +1,6 @@
+-- Load test utilities
+\ir ../test_tools.sql
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS
@@ -53,6 +56,8 @@ $BODY$
 BEGIN
     TRUNCATE hafd.contexts_log;
     ALTER SEQUENCE hafd.contexts_log_id_seq RESTART WITH 1;
+    -- Install mock must be done by haf_admin (function owner)
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
 END;
 $BODY$;
 
@@ -64,7 +69,6 @@ $BODY$
 DECLARE
     __range_placeholder hive.blocks_range;
 BEGIN
-    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
     PERFORM test.set_head_block_num(50);
 
     CALL hive.app_next_iteration( ARRAY[ 'alice', 'alice1', 'alice2' ], __range_placeholder );
