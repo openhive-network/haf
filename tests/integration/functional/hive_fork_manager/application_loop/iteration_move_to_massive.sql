@@ -1,6 +1,3 @@
--- Load test utilities
-\ir ../test_tools.sql
-
 -- When a HAF application is working on the blockchain head its context's irreversible
 -- block is always behind a current block num. When for some reason an application
 --  stuck for a while, then after re-run it will process block one by one instead of move
