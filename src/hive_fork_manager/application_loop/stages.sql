@@ -54,6 +54,8 @@ CREATE TYPE hafd.application_loop_state AS (
     -- how many blocks are processed during one iteration
     size_of_blocks_batch INTEGER,
     -- end block of last batch
-    current_batch_end INTEGER --sharp condition
+    current_batch_end INTEGER, --sharp condition
+    -- last block number when shadow tables were vacuumed
+    last_shadow_vacuum_block INTEGER
 );
 

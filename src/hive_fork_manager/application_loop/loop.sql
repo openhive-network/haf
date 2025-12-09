@@ -187,6 +187,8 @@ DECLARE
     __previous_active_at_time TIMESTAMP;
     __hive_sync_state hafd.sync_state;
     __current_block_num INTEGER;
+    __last_shadow_vacuum_block INTEGER;
+    __vacuum_performed BOOLEAN := FALSE;
 BEGIN
     -- here is the only place when main synchronization connection makes commit
     -- 1. commit if there is a pending transaction
@@ -194,14 +196,17 @@ BEGIN
     IF pg_current_xact_id_if_assigned() IS NOT NULL THEN
         COMMIT;
 
-        SELECT current_block_num INTO __current_block_num
+        SELECT current_block_num, (loop).last_shadow_vacuum_block
+        INTO __current_block_num, __last_shadow_vacuum_block
         FROM hafd.contexts  WHERE name = __lead_context_name;
 
-        IF hive.is_livesync(_contexts) AND __current_block_num % 1200 = 0 THEN
+        IF hive.is_livesync(_contexts) AND __current_block_num % 1200 = 0 AND (__last_shadow_vacuum_block IS NULL OR __current_block_num > __last_shadow_vacuum_block) THEN
             PERFORM hive.vacuum_shadow_table(rt.shadow_table_name)
             FROM hafd.registered_tables AS rt
             JOIN hafd.contexts AS c ON rt.context_id = c.id
             WHERE c.name = __lead_context_name;
+
+            __vacuum_performed := TRUE;
         END IF;
     END IF;
 
@@ -310,6 +315,7 @@ BEGIN
     SET
           loop.current_batch_end = _blocks_range.last_block
         , loop.end_block_range = __lead_context_state.end_block_range
+        , loop.last_shadow_vacuum_block = CASE WHEN __vacuum_performed THEN _blocks_range.last_block ELSE (ctx.loop).last_shadow_vacuum_block END
     WHERE ctx.name=ANY(_contexts);
 
     PERFORM hive.update_attachment( _contexts );
