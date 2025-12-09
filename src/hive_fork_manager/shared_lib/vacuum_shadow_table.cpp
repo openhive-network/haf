@@ -51,7 +51,7 @@ Datum vacuum_shadow_table(PG_FUNCTION_ARGS)
 
   PG_TRY();
   {
-    char* vacuum_cmd = psprintf("VACUUM FULL hafd.%s", table_name);
+    char* vacuum_cmd = psprintf("VACUUM FULL hafd.%s", quote_identifier(table_name));
 
     TimestampTz start_time = GetCurrentTimestamp();
     PGresult* res = PQexec(conn, vacuum_cmd);
