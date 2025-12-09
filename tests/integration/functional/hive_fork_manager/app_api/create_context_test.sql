@@ -1,3 +1,6 @@
+-- Load test utilities
+\ir ../test_tools.sql
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_when()
 LANGUAGE 'plpgsql'
 AS
@@ -9,7 +12,7 @@ BEGIN
     PERFORM hive.app_create_context(  _name =>'context', _schema => 'a' );
 
     -- check if correct irreversibe block is set
-    INSERT INTO hafd.blocks VALUES( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
+    PERFORM test.create_blocks(101, 101);
     INSERT INTO hafd.accounts( id, name, block_num ) VALUES (5, 'initminer', 101);
     PERFORM hive.end_massive_sync( 101 );
 
