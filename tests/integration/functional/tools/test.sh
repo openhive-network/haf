@@ -8,7 +8,7 @@ script_to_execute_after_testfun="$5"
 
 . ./tools/common.sh
 
-setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path" "$extension_path"
+setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path" "$extension_path" "$script_to_execute_after_testfun"
 
 trap on_exit EXIT;
 
