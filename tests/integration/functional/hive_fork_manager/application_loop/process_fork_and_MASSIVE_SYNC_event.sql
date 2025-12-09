@@ -1,6 +1,3 @@
--- Load test utilities
-\ir ../test_tools.sql
-
 -- override global dynamic information
 SELECT test.install_mock_hive_get_estimated_hive_head_block();
 
