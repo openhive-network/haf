@@ -66,7 +66,7 @@ BEGIN
 
     UPDATE hafd.contexts ctx
     SET
-        loop = (10, hafd.live_stage(), 10, 10, 10)::hafd.application_loop_state
+        loop = (10, hafd.live_stage(), 10, 10, 10, 0)::hafd.application_loop_state
     WHERE ctx.name = 'attached_context_not_insync_loop'
     ;
 
