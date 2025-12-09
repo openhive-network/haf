@@ -1,6 +1,3 @@
--- Load test utilities
-\ir ../test_tools.sql
-
 SELECT test.install_mock_hive_get_estimated_hive_head_block();
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()

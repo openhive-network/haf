@@ -1,6 +1,3 @@
--- Load test utilities
-\ir ../test_tools.sql
-
 CREATE OR REPLACE PROCEDURE alice_test_then()
     LANGUAGE 'plpgsql'
 AS
