@@ -1,3 +1,4 @@
+\ir ../test_tools.sql
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
@@ -17,15 +18,8 @@ BEGIN
         ( 'NEW_IRREVERSIBLE', 2),
         ( 'NEW_IRREVERSIBLE', 3)
     ;
-    INSERT INTO hafd.blocks
-    VALUES ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-    ;
-    INSERT INTO hafd.blocks
-    VALUES (2, '\xBADD12', '\xCAFE12', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-    ;
-    INSERT INTO hafd.blocks
-    VALUES (3, '\xBADD13', '\xCAFE13', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-    ;
+    PERFORM test.create_blocks(1, 3);
+
     INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
     ;
