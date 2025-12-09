@@ -27,8 +27,8 @@ Datum vacuum_shadow_table(PG_FUNCTION_ARGS)
    * To workaround this, create a new db connection and use that to do vacuum.
    */
   Datum db_name_datum = OidFunctionCall0(F_CURRENT_DATABASE);
-  const char* dbname = DatumGetCString(db_name_datum);
-  if (dbname == NULL)
+  const char* dbname = NameStr(*DatumGetName(db_name_datum));
+  if (dbname == NULL || dbname[0] == '\0')
   {
     ereport(ERROR,
       (errcode(ERRCODE_INTERNAL_ERROR),
