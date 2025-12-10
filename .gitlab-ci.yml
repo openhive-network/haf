@@ -143,9 +143,26 @@ haf_image_build_mirrornet:
     PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
+  after_script:
+    - |
+      if [ "${CI_JOB_STATUS}" != "success" ]; then
+        echo "Collecting Postgres logs after failure..."
+        mkdir -p "$CI_PROJECT_DIR/postgres_logs"
+        # Copy PostgreSQL logs directly from the log directory
+        if [ -d "/var/log/postgresql" ]; then
+          echo "Copying logs from /var/log/postgresql..."
+          sudo cp -r /var/log/postgresql/* "$CI_PROJECT_DIR/postgres_logs/" || true
+          sudo chown -R $(id -u):$(id -g) "$CI_PROJECT_DIR/postgres_logs/" || true
+        else
+          echo "PostgreSQL log directory /var/log/postgresql not found"
+        fi
+      fi
   artifacts:
     paths:
       - "**/*.log"
+      - "postgres_logs/*.log"
+    when: always
+    expire_in: 1 week
   interruptible: true
   tags:
     - public-runner-docker
