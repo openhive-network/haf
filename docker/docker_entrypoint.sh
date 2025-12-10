@@ -223,6 +223,18 @@ fi
 # Error: /home/hived/datadir/haf_db_store/pgdata is not accessible; please fix the directory permissions (/home/hived/datadir/haf_db_store/ should be world readable)
 sudo -n --user=hived mkdir -p -m 755 "$HAF_DB_STORE"
 
+# Fix ownership of existing database files BEFORE checking if PGDATA exists.
+# This is required when using cached data created in a different container where
+# postgres user had different uid/gid. Without this fix, the postgres user can't
+# read PGDATA, causing the conditional check below to incorrectly think PGDATA
+# doesn't exist, which then triggers initdb + tar extraction into a non-empty
+# directory, failing with "Cannot open: File exists".
+# Only fix ownership if PGDATA already exists (cached data scenario).
+# If PGDATA doesn't exist, leave ownership for the mkdir commands below.
+if [[ -d "$PGDATA" ]]; then
+  sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
+fi
+
 # Check if correct PostgreSQL version is installed
 # This is to avoid initdb invocation failing with cryptic
 # 'sudo: a password is required' message
@@ -271,6 +283,14 @@ if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
   sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_pghero.sh" --database=haf_block_log
 else
   echo "Attempting to setup postgres instance already containing HAF database..."
+
+  # Fix ownership of existing database files - required when cache was created in a different
+  # container where postgres user had different uid/gid. Without this, PostgreSQL fails with:
+  # "Error: The cluster is owned by group id NNN which does not exist"
+  sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
+  # Fix pgdata permissions - PostgreSQL requires mode 700 or 750
+  # Cached data may have relaxed permissions (a+rX) for NFS copying
+  sudo -n chmod 700 "$PGDATA" 2>/dev/null || true
 
   # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
   sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh" --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace" --install-extension="${HAF_INSTALL_EXTENSION:-"yes"},/home/haf_admin/build,/usr/share/postgresql/${POSTGRES_VERSION},/usr/lib/postgresql/${POSTGRES_VERSION}"

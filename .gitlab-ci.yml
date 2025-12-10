@@ -9,7 +9,9 @@ stages:
 variables:
   PYTEST_NUMBER_OF_PROCESSES: 8
   CTEST_NUMBER_OF_JOBS: 4
-  
+  # HAF_COMMIT is used as cache key - in HAF's own CI, it's the current commit
+  HAF_COMMIT: $CI_COMMIT_SHA
+
   GIT_STRATEGY: clone
   GIT_DEPTH: 0
   GIT_SUBMODULE_DEPTH: 0
@@ -25,9 +27,13 @@ variables:
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
-  PIPELINE_DATA_CACHE_HAF_DIRECTORY: "${DATA_CACHE_HAF_PREFIX}_pipeline_${CI_PIPELINE_ID}"
+  # Pipeline-specific cache on NFS for cross-builder access
+  PIPELINE_DATA_CACHE_HAF_DIRECTORY: "/nfs/ci-cache/haf/pipeline_${CI_PIPELINE_ID}"
+  # Local path for pipeline data (copied from NFS for HAF service access)
+  PIPELINE_DATA_CACHE_LOCAL: "/cache/haf_pipeline_${CI_PIPELINE_ID}"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
-  SNAPSHOTS_PATH: /cache/snapshots_pipeline_${CI_PIPELINE_ID}
+  # Mirrornet snapshot path on NFS for cross-builder access
+  SNAPSHOTS_PATH: /nfs/ci-cache/haf/snapshots_pipeline_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /cache/block_log_5m_mirrornet
 
 include:
@@ -109,7 +115,8 @@ haf_image_build_mirrornet:
     PG_ACCESS: |
                 "host    all              haf_admin        0.0.0.0/0    trust"
 
-    DATA_SOURCE: "${PIPELINE_DATA_CACHE_HAF_DIRECTORY}"
+    # Use local cache path (copied from NFS by pipeline_data_local_copy job)
+    DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
     LOG_FILE: $CI_JOB_NAME.log
   command: ["--replay-blockchain", "--stop-at-block=5000000"]
 
@@ -216,8 +223,9 @@ dump_snapshot_5m_mirrornet:
     - mkdir blockchain
     - cd blockchain
     - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log .
-    #Prepare snapshot storage
-    - mkdir -vp "$SNAPSHOTS_PATH"
+    #Prepare snapshot storage on NFS (sudo for cross-user write access)
+    - sudo mkdir -vp "$SNAPSHOTS_PATH"
+    - sudo chown -R $(id -u):$(id -g) "$SNAPSHOTS_PATH"
     - cd "$SNAPSHOTS_PATH"
     - mkdir -vp 5m_mirrornet/snapshot
     #Prepare snapshot
@@ -613,11 +621,84 @@ replay_filtered_haf_data_accounts_body_operations:
     - job: haf_image_build
       artifacts: true
   stage: build_and_test_phase_1
+  timeout: 80m
   variables:
     HIVE_NETWORK_TYPE: mainnet
     BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered/config.ini"
-    DATA_CACHE_DIR: "${PIPELINE_DATA_CACHE_HAF_DIRECTORY}_replay_accounts_body_operations_filtered"
+    # Use NFS for pipeline-specific filtered data so it can be accessed from any builder
+    DATA_CACHE_DIR: "/nfs/ci-cache/haf/pipeline_${CI_PIPELINE_ID}_filtered"
+  after_script:
+    # Call parent's after_script
+    - rm "${DATA_CACHE_DIR}/replay_running" -f
+    # Relax pgdata permissions so block_api_tests can copy and restore them
+    - |
+      PGDATA="${DATA_CACHE_DIR}/datadir/haf_db_store/pgdata"
+      if [[ -d "$PGDATA" ]]; then
+        echo "Relaxing pgdata permissions for cross-builder access..."
+        sudo chmod -R 755 "$PGDATA"
+        sudo chown -R $(id -u):$(id -g) "$PGDATA"
+      fi
+      TABLESPACE="${DATA_CACHE_DIR}/datadir/haf_db_store/tablespace"
+      if [[ -d "$TABLESPACE" ]]; then
+        echo "Relaxing tablespace permissions..."
+        sudo chmod -R 755 "$TABLESPACE"
+        sudo chown -R $(id -u):$(id -g) "$TABLESPACE"
+      fi
+  tags:
+    - data-cache-storage
+    - fast
+
+# Copy filtered replay data from NFS to local cache for block_api_tests
+# Uses resource_group to ensure this job and block_api_tests run on the same runner
+filtered_data_local_copy:
+  extends: .job-defaults
+  image: "${CI_REGISTRY_IMAGE}/ci-base-image${BUILDER_IMAGE_TAG}"
+  stage: build_and_test_phase_2
+  resource_group: filtered_data_${CI_PIPELINE_ID}
+  needs:
+    - replay_filtered_haf_data_accounts_body_operations
+    - haf_image_build
+  variables:
+    NFS_SOURCE: "/nfs/ci-cache/haf/pipeline_${CI_PIPELINE_ID}_filtered"
+    LOCAL_DEST: "/cache/haf_pipeline_${CI_PIPELINE_ID}_filtered"
+  script:
+    - |
+      set -e
+      echo "Copying filtered data from NFS to local cache..."
+      echo "Source: ${NFS_SOURCE}"
+      echo "Destination: ${LOCAL_DEST}"
+
+      if [[ ! -d "${NFS_SOURCE}/datadir" ]]; then
+        echo "ERROR: Source directory not found: ${NFS_SOURCE}/datadir"
+        exit 1
+      fi
+
+      # Clean local destination if it exists
+      if [[ -d "$LOCAL_DEST" ]]; then
+        echo "Cleaning existing local cache..."
+        sudo rm -rf "$LOCAL_DEST"
+      fi
+
+      # Copy from NFS to local - use cp -r (not -a or -p) to avoid NFS permission errors
+      sudo cp -r "$NFS_SOURCE" "$LOCAL_DEST"
+
+      # Restore pgdata permissions for PostgreSQL
+      PGDATA="${LOCAL_DEST}/datadir/haf_db_store/pgdata"
+      if [[ -d "$PGDATA" ]]; then
+        echo "Restoring pgdata permissions..."
+        sudo chmod 700 "$PGDATA"
+        sudo chown -R 105:105 "$PGDATA"
+      fi
+      TABLESPACE="${LOCAL_DEST}/datadir/haf_db_store/tablespace"
+      if [[ -d "$TABLESPACE" ]]; then
+        echo "Restoring tablespace permissions..."
+        sudo chmod 700 "$TABLESPACE"
+        sudo chown -R 105:105 "$TABLESPACE"
+      fi
+
+      echo "Filtered data copy complete."
+      ls -la "$LOCAL_DEST/datadir/"
   tags:
     - data-cache-storage
     - fast
@@ -625,10 +706,12 @@ replay_filtered_haf_data_accounts_body_operations:
 block_api_tests:
   extends: .jmeter_benchmark_job
   stage: build_and_test_phase_2
+  resource_group: filtered_data_${CI_PIPELINE_ID}
   needs:
-    - job: replay_filtered_haf_data_accounts_body_operations
-      artifacts: true
+    - job: filtered_data_local_copy
     - job: haf_image_build
+      artifacts: true
+    - job: replay_filtered_haf_data_accounts_body_operations
       artifacts: true
 
   variables:
@@ -642,15 +725,21 @@ block_api_tests:
 
     BENCHMARK_DB_URL: "postgresql://hived@haf-instance:5432/haf_block_log"
     HIVED_UID: $HIVED_UID
+    # Local path for filtered replay data (copied from NFS by filtered_data_local_copy)
+    FILTERED_DATA_LOCAL: "/cache/haf_pipeline_${CI_PIPELINE_ID}_filtered"
 
   services:
     - name: ${HAF_IMAGE_NAME}
       alias: haf-instance
       variables:
         PG_ACCESS: "${HAF_DB_ACCESS}"
-        DATA_SOURCE: "${PIPELINE_DATA_CACHE_HAF_DIRECTORY}_replay_accounts_body_operations_filtered"
+        # Use local cache path - data copied from NFS by filtered_data_local_copy job
+        DATA_SOURCE: "${FILTERED_DATA_LOCAL}"
         LOG_FILE: $CI_JOB_NAME.log
       command: ["--replay-blockchain", "--stop-at-block=5000000"]
+  tags:
+    - data-cache-storage
+    - fast
 
 
   script:
@@ -675,9 +764,6 @@ block_api_tests:
       - $CI_PROJECT_DIR/python_benchmark.log
     when: always
     expire_in: 1 week
-  tags:
-    - data-cache-storage
-    - fast
 
 prepare_haf_data:
   extends: .prepare_haf_data_5m
@@ -685,6 +771,7 @@ prepare_haf_data:
     - job: haf_image_build
       artifacts: true
   stage: build_and_test_phase_1
+  timeout: 80m
   variables:
     HIVE_NETWORK_TYPE: mainnet
     BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
@@ -701,12 +788,103 @@ replay_data_copy:
   needs:
     - prepare_haf_data
     - haf_image_build
+  variables:
+    SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   script:
     - |
       set -e
+      CACHE_MANAGER="$SCRIPTS_PATH/ci-helpers/cache-manager.sh"
+      SOURCE_CACHE="${DATA_CACHE_HAF_PREFIX:?}_${HAF_COMMIT:?}"
 
       echo "Copying replay data to ${PIPELINE_DATA_CACHE_HAF_DIRECTORY:?}"
-      sudo cp -a "${DATA_CACHE_HAF_PREFIX:?}_${HAF_COMMIT:?}" "${PIPELINE_DATA_CACHE_HAF_DIRECTORY:?}"
+
+      # Try local cache first, fall back to NFS via cache-manager
+      if [[ -d "$SOURCE_CACHE" ]]; then
+        echo "Using local cache: $SOURCE_CACHE"
+        sudo cp -a "$SOURCE_CACHE" "${PIPELINE_DATA_CACHE_HAF_DIRECTORY:?}"
+      elif [[ -x "$CACHE_MANAGER" ]]; then
+        echo "Local cache not found, fetching from NFS..."
+        # First check local cache via cache-manager (fetches from NFS if needed)
+        LOCAL_CACHE="/cache/haf_${HAF_COMMIT:?}"
+        if "$CACHE_MANAGER" get haf "${HAF_COMMIT:?}" "$LOCAL_CACHE"; then
+          echo "Copying from local cache to pipeline directory..."
+          sudo cp -a "$LOCAL_CACHE" "${PIPELINE_DATA_CACHE_HAF_DIRECTORY:?}"
+        else
+          echo "ERROR: Failed to get cache for HAF commit ${HAF_COMMIT:?}"
+          exit 1
+        fi
+      else
+        echo "ERROR: No local cache and cache-manager not available"
+        exit 1
+      fi
+
+      # Restore PostgreSQL pgdata permissions (must be 700 or 750 for PostgreSQL to start)
+      PGDATA="${PIPELINE_DATA_CACHE_HAF_DIRECTORY}/datadir/haf_db_store/pgdata"
+      if [[ -d "$PGDATA" ]]; then
+        echo "Restoring pgdata permissions..."
+        sudo chmod 700 "$PGDATA"
+        sudo chown -R 105:105 "$PGDATA"
+      fi
+      TABLESPACE="${PIPELINE_DATA_CACHE_HAF_DIRECTORY}/datadir/haf_db_store/tablespace"
+      if [[ -d "$TABLESPACE" ]]; then
+        echo "Restoring tablespace permissions..."
+        sudo chmod 700 "$TABLESPACE"
+        sudo chown -R 105:105 "$TABLESPACE"
+      fi
+  tags:
+    - data-cache-storage
+    - fast
+
+# Copy pipeline data from NFS to local cache for HAF service access
+# This avoids NFS cp -pr permission issues in the HAF container's copy_datadir.sh
+# Uses resource_group to ensure jobs using this data run on the same runner
+pipeline_data_local_copy:
+  extends: .job-defaults
+  image: "${CI_REGISTRY_IMAGE}/ci-base-image${BUILDER_IMAGE_TAG}"
+  stage: build_and_test_phase_2
+  resource_group: pipeline_data_${CI_PIPELINE_ID}
+  needs:
+    - replay_data_copy
+    - haf_image_build
+  script:
+    - |
+      set -e
+      echo "Copying pipeline data from NFS to local cache..."
+      echo "Source: ${PIPELINE_DATA_CACHE_HAF_DIRECTORY}"
+      echo "Destination: ${PIPELINE_DATA_CACHE_LOCAL}"
+
+      if [[ ! -d "${PIPELINE_DATA_CACHE_HAF_DIRECTORY}/datadir" ]]; then
+        echo "ERROR: Source directory not found: ${PIPELINE_DATA_CACHE_HAF_DIRECTORY}/datadir"
+        exit 1
+      fi
+
+      # Clean local destination if it exists
+      if [[ -d "$PIPELINE_DATA_CACHE_LOCAL" ]]; then
+        echo "Cleaning existing local cache..."
+        sudo rm -rf "$PIPELINE_DATA_CACHE_LOCAL"
+      fi
+
+      # Copy from NFS to local - use cp -r (not -a or -rL) to avoid:
+      # - NFS permission preservation errors (no -a/-p)
+      # - Broken symlink errors in pg_tblspc (no -L)
+      sudo cp -r "$PIPELINE_DATA_CACHE_HAF_DIRECTORY" "$PIPELINE_DATA_CACHE_LOCAL"
+
+      # Restore pgdata permissions for PostgreSQL
+      PGDATA="${PIPELINE_DATA_CACHE_LOCAL}/datadir/haf_db_store/pgdata"
+      if [[ -d "$PGDATA" ]]; then
+        echo "Restoring pgdata permissions..."
+        sudo chmod 700 "$PGDATA"
+        sudo chown -R 105:105 "$PGDATA"
+      fi
+      TABLESPACE="${PIPELINE_DATA_CACHE_LOCAL}/datadir/haf_db_store/tablespace"
+      if [[ -d "$TABLESPACE" ]]; then
+        echo "Restoring tablespace permissions..."
+        sudo chmod 700 "$TABLESPACE"
+        sudo chown -R 105:105 "$TABLESPACE"
+      fi
+
+      echo "Pipeline data copy complete."
+      ls -la "$PIPELINE_DATA_CACHE_LOCAL/datadir/"
   tags:
     - data-cache-storage
     - fast
@@ -714,11 +892,12 @@ replay_data_copy:
 dead_app_auto_detach:
   extends: .job-defaults
   stage: build_and_test_phase_2
+  resource_group: pipeline_data_${CI_PIPELINE_ID}
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   needs:
     - job: prepare_haf_data
       artifacts: true
-    - job: replay_data_copy
+    - job: pipeline_data_local_copy
   services:
     - name: $HAF_IMAGE_NAME
       alias: haf-instance
@@ -729,7 +908,8 @@ dead_app_auto_detach:
                     "host    all              hived            0.0.0.0/0    trust"
                     "host    all              test_app_owner   0.0.0.0/0    trust"
 
-        DATA_SOURCE: "${PIPELINE_DATA_CACHE_HAF_DIRECTORY}"
+        # Use local cache path (copied from NFS by pipeline_data_local_copy job)
+        DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
         LOG_FILE: $CI_JOB_NAME.log
       command: ["--replay-blockchain", "--stop-at-block=1000000"]
   variables:
@@ -747,11 +927,12 @@ dead_app_auto_detach:
 start_haf_as_service:
   extends: .job-defaults
   stage: build_and_test_phase_2
+  resource_group: pipeline_data_${CI_PIPELINE_ID}
   image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   needs:
     - job: prepare_haf_data
       artifacts: true
-    - job: replay_data_copy
+    - job: pipeline_data_local_copy
   services:
     - *haf-service
   variables:
@@ -811,11 +992,12 @@ cleanup_pipeline_cache:
     - replay_data_copy
     - start_haf_as_service
     - dead_app_auto_detach
-  extends: 
+  extends:
     - .cleanup_cache_manual_template
   stage: cleanup
   variables:
-    CLEANUP_PATH_PATTERN: "${DATA_CACHE_HAF_PREFIX}_pipeline_*"
+    # Pipeline-specific cache is now on NFS (both pipeline data and snapshots)
+    CLEANUP_PATH_PATTERN: "/nfs/ci-cache/haf/*_pipeline_${CI_PIPELINE_ID}*"
   when: always
   tags:
     - data-cache-storage

@@ -26,7 +26,7 @@ NUMBER_OF_BLOCKS_TO_REPLAY=1000000
 test_start
 
 # container must have /blockchain directory mounted containing block_log with at 5000000 first blocks
-export BLOCK_LOG_SOURCE_DIR_5M="/blockchain/block_log_5m"
+export BLOCK_LOG_SOURCE_DIR_5M="${BLOCK_LOG_SOURCE_DIR_5M:-/blockchain/block_log_5m}"
 export PATTERNS_PATH="${REPO_DIR}/tests/integration/replay/patterns/no_filter"
 export DATADIR="${REPO_DIR}/datadir"
 export INIT_DB=("--replay-blockchain" "--psql-prune-blocks=10" "--exit-at-block=1")
