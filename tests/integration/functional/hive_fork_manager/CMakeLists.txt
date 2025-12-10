@@ -309,7 +309,11 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( application_loop/iteration_after_limit.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/two_iterations_slow_processing.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/vacuum_shadow_tables.sql )
-
+SET_TESTS_PROPERTIES(
+  test.functional.hive_fork_manager.application_loop.vacuum_shadow_tables
+  test.functional.update.hive_fork_manager.application_loop.vacuum_shadow_tables
+  PROPERTIES RUN_SERIAL TRUE
+)
 
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork.sql )
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork_non_forking_app.sql )
