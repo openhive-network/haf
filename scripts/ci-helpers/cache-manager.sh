@@ -605,9 +605,14 @@ cmd_put() {
     _log "Creating tar archive on NFS: $NFS_TAR_FILE"
 
     # Create tar archive with exclusions
+    # Use sudo for HAF-based caches to read PostgreSQL files (mode 700, owned by postgres)
     local tar_result=0
+    local tar_cmd="tar"
+    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" || "$cache_type" == "haf_pipeline" || "$cache_type" == "hivemind_sync" ]]; then
+        tar_cmd="sudo tar"
+    fi
     # shellcheck disable=SC2086
-    if ! tar cf "${NFS_TAR_FILE}.tmp" $tar_excludes -C "$local_source" .; then
+    if ! $tar_cmd cf "${NFS_TAR_FILE}.tmp" $tar_excludes -C "$local_source" .; then
         tar_result=1
     fi
 
