@@ -286,12 +286,17 @@ _relax_pgdata_permissions() {
     if [[ -d "$pgdata_path" ]]; then
         _log "Relaxing pgdata permissions for caching"
         # Make readable for copying (PostgreSQL creates mode 700)
-        sudo chmod -R a+rX "$pgdata_path" 2>/dev/null || chmod -R a+rX "$pgdata_path" 2>/dev/null || true
+        # Use find with -exec to handle permission issues - chmod dirs first, then files
+        sudo find "$pgdata_path" -type d -exec chmod a+rx {} + 2>/dev/null || true
+        sudo find "$pgdata_path" -type f -exec chmod a+r {} + 2>/dev/null || true
     fi
 
     if [[ -d "$tablespace_path" ]]; then
         _log "Relaxing tablespace permissions for caching"
-        sudo chmod -R a+rX "$tablespace_path" 2>/dev/null || chmod -R a+rX "$tablespace_path" 2>/dev/null || true
+        # Use find with -exec to handle nested directories with restrictive permissions
+        # chmod directories first so we can descend into them, then files
+        sudo find "$tablespace_path" -type d -exec chmod a+rx {} + 2>/dev/null || true
+        sudo find "$tablespace_path" -type f -exec chmod a+r {} + 2>/dev/null || true
     fi
 
     # DISABLED: Fix pg_tblspc symlinks to use relative paths
