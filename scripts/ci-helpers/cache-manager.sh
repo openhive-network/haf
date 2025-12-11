@@ -240,6 +240,41 @@ _write_metadata() {
 EOF
 }
 
+# Fix pg_tblspc symlinks to use relative paths
+# PostgreSQL creates symlinks like pg_tblspc/16396 -> /home/hived/datadir/haf_db_store/tablespace
+# These absolute paths don't exist outside the container, breaking cp -rL
+# We replace them with relative symlinks: pg_tblspc/16396 -> ../../tablespace
+_fix_pg_tblspc_symlinks() {
+    local source_dir="$1"
+    local pg_tblspc="${source_dir}/datadir/haf_db_store/pgdata/pg_tblspc"
+    local tablespace_dir="${source_dir}/datadir/haf_db_store/tablespace"
+
+    if [[ ! -d "$pg_tblspc" ]]; then
+        return 0
+    fi
+
+    # Find all symlinks in pg_tblspc and replace with relative paths
+    for link in "$pg_tblspc"/*; do
+        if [[ -L "$link" ]]; then
+            local link_name
+            link_name=$(basename "$link")
+            local target
+            target=$(readlink "$link")
+
+            # Check if target contains 'tablespace' (the directory we need to point to)
+            if [[ "$target" == *"tablespace"* ]] && [[ -d "$tablespace_dir" ]]; then
+                _log "Fixing pg_tblspc symlink: $link_name (was -> $target)"
+                # Remove old symlink and create relative one
+                # From pg_tblspc/, relative path to tablespace is ../../tablespace
+                # Use sudo since symlink may be owned by postgres (uid 105)
+                sudo rm -f "$link" 2>/dev/null || rm -f "$link"
+                sudo ln -s "../../tablespace" "$link" 2>/dev/null || ln -s "../../tablespace" "$link"
+                _log "Fixed pg_tblspc symlink: $link_name -> ../../tablespace"
+            fi
+        fi
+    done
+}
+
 # Relax PostgreSQL pgdata permissions for caching
 # Makes pgdata and tablespace readable so they can be copied to NFS
 _relax_pgdata_permissions() {
@@ -258,6 +293,12 @@ _relax_pgdata_permissions() {
         _log "Relaxing tablespace permissions for caching"
         sudo chmod -R a+rX "$tablespace_path" 2>/dev/null || chmod -R a+rX "$tablespace_path" 2>/dev/null || true
     fi
+
+    # DISABLED: Fix pg_tblspc symlinks to use relative paths
+    # PostgreSQL requires absolute paths for tablespaces. Relative symlinks break
+    # when the data is extracted and reused. We always extract to fixed paths
+    # (/cache/haf_pipeline_*, /cache/haf_sync_*), so portability isn't needed.
+    # _fix_pg_tblspc_symlinks "$source_dir"
 }
 
 # Restore PostgreSQL pgdata permissions after cache retrieval
@@ -398,6 +439,8 @@ cmd_get() {
 
     # 3. Copy from NFS to local - NFS clients only
     mkdir -p "$local_dest"
+    # Ensure directory is writable by all users (jobs may run as different UIDs)
+    chmod 777 "$local_dest" 2>/dev/null || true
 
     # Clean up any existing data that might have restrictive permissions
     # This handles cases where old postgres data (700 perms) prevents extraction
@@ -456,7 +499,7 @@ cmd_put() {
     fi
 
     # Relax pgdata permissions for HAF caches so they can be copied
-    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" ]]; then
+    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" || "$cache_type" == "haf_pipeline" ]]; then
         _relax_pgdata_permissions "$local_source"
     fi
 
@@ -479,6 +522,8 @@ cmd_put() {
         if [[ "$local_source" != "$NFS_CACHE_DIR" ]]; then
             _log "Storing cache on NFS host: $NFS_CACHE_DIR"
             mkdir -p "$NFS_CACHE_DIR"
+            # Ensure directory is writable by all users (jobs may run as different UIDs)
+            chmod 777 "$NFS_CACHE_DIR" 2>/dev/null || true
 
             # Use NFS-safe locking for consistency (even though this path is local on NFS host)
             local host_lock_dir="${NFS_CACHE_DIR}/.lock.d"
@@ -533,12 +578,14 @@ cmd_put() {
     # Benchmark: cp -a 19GB/1844 files = 74s, tar archive = 25s
     # Writing single large file to NFS is much faster than many small files
     mkdir -p "$(dirname "$NFS_TAR_FILE")"
+    # Ensure directory is writable by all users (jobs may run as different UIDs)
+    chmod 777 "$(dirname "$NFS_TAR_FILE")" 2>/dev/null || true
     # Use NFS-safe mkdir-based locking instead of flock (unreliable on NFS)
     local NFS_TAR_LOCK="${NFS_TAR_FILE}.lock.d"
 
     # Build exclusions for HAF caches (saves ~7.5GB by excluding unnecessary WAL and blockchain)
     local tar_excludes=""
-    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" ]]; then
+    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" || "$cache_type" == "haf_pipeline" ]]; then
         tar_excludes=$(_build_haf_tar_excludes "$local_source")
     fi
 
