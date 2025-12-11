@@ -7,8 +7,21 @@ import argparse
 
 from pathlib import Path
 
-from deepmerge import always_merger
+from deepmerge import Merger
 from jsonpointer import resolve_pointer
+
+# Create a custom merger that replaces lists instead of appending them
+# This prevents duplication of enum values, oneOf arrays, etc.
+openapi_merger = Merger(
+    # List strategy: replace the old list with the new one
+    [(list, ["override"]),
+     (dict, ["merge"]),
+     (set, ["union"])],
+    # Fallback strategies
+    ["override"],
+    # Type conflict strategies
+    ["override"]
+)
 
 collected_openapi_fragments = {}
 all_openapi_fragments = {}  # Includes internal endpoints for rewrite rules
@@ -19,7 +32,7 @@ def merge_openapi_fragment(new_fragment):
     # sys.stdout.write(yaml.dump(collected_openapi_fragments, Dumper=yaml.Dumper))
     
     # Always merge to all_openapi_fragments for rewrite rules
-    all_openapi_fragments = always_merger.merge(all_openapi_fragments, new_fragment)
+    all_openapi_fragments = openapi_merger.merge(all_openapi_fragments, new_fragment)
     
     # Check if this is a path fragment with x-internal flag
     filtered_fragment = new_fragment.copy()
@@ -42,7 +55,7 @@ def merge_openapi_fragment(new_fragment):
             else:
                 del filtered_fragment['paths']
     
-    collected_openapi_fragments = always_merger.merge(collected_openapi_fragments, filtered_fragment)
+    collected_openapi_fragments = openapi_merger.merge(collected_openapi_fragments, filtered_fragment)
     # sys.stdout.write('After:')
     # sys.stdout.write(yaml.dump(collected_openapi_fragments, Dumper=yaml.Dumper))
 
