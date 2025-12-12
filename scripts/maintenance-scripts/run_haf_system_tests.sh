@@ -37,6 +37,13 @@ pipx install poetry
 (cd "${REPO_DIR}/tests/integration/haf-local-tools" && poetry install)
 echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
+# Run process_openapi script unit tests
+echo -e "\e[0Ksection_start:$(date +%s):process_openapi_tests[collapsed=true]\r\e[0KRunning process_openapi script tests..."
+pip install -r "${REPO_DIR}/scripts/tests/requirements.txt"
+cd "${REPO_DIR}/scripts/tests"
+pytest -v --junitxml="${REPO_DIR}/scripts/tests/report.xml" --timeout=60
+echo -e "\e[0Ksection_end:$(date +%s):process_openapi_tests\r\e[0K"
+
 cd "${REPO_DIR}/tests/integration/system/haf"
 pytest --junitxml report.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "not mirrornet" "${ARGS[@]}"
 

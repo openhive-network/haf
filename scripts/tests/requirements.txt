@@ -1,0 +1,6 @@
+# Requirements for process_openapi.py tests
+pytest>=7.0.0
+pytest-timeout>=2.0.0
+PyYAML>=6.0
+deepmerge>=1.0.0
+jsonpointer>=2.0
