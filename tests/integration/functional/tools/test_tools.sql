@@ -233,7 +233,7 @@ BEGIN
     --that block nr 8 is last known irreversible block.
 
     UPDATE hafd.hive_state
-    SET consistent_block = 5;
+    SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$
 ;

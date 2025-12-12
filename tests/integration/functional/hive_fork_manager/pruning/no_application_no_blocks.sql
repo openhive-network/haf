@@ -14,7 +14,7 @@ AS
 $BODY$
 BEGIN
     -- Create 2 accounts with NULL block_num (not associated with any block)
-    INSERT INTO hafd.accounts( block_num, name, id )
+    INSERT INTO hafd.accounts( id, name, block_id )
     VALUES
     ( NULL, 'u1', 1 )
          , ( NULL, 'u2', 2 )

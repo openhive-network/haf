@@ -59,7 +59,7 @@ def test_live_sync(prepared_networks_and_database_12_8):
         session
         , range(transaction_block_num, transaction_block_num + nr_blocks))
 
-    blks = session.query(Blocks).filter(Blocks.num <= expected_dumped_irreversible_block_num).order_by(Blocks.num).all()
+    blks = session.query(BlocksView).filter(BlocksView.num <= expected_dumped_irreversible_block_num).order_by(BlocksView.num).all()
     block_nums = [block.num for block in blks]
 
     assert sorted(block_nums) == [i for i in range(1, expected_dumped_irreversible_block_num+1)]

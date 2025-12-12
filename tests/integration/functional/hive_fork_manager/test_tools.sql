@@ -1,6 +1,10 @@
 -- HAF Test Tools: Common functions for test data setup
 -- This file provides reusable functions to reduce code duplication across functional tests
 -- All functions are in the 'test' schema to avoid conflicts with production code
+--
+-- NOTE: This version works with unified tables using block_id encoding.
+-- There are no separate *_reversible tables. All data goes into unified tables
+-- with block_id = make_block_id(block_num, fork_id).
 
 -- Create test schema if it doesn't exist
 DO $$
@@ -56,7 +60,7 @@ COMMENT ON FUNCTION test.create_forks(INT[], INT[], TIMESTAMP) IS
 'Creates fork entries in hafd.fork table. Default creates forks 2 and 3 at blocks 6 and 7';
 
 
--- Setup standard test accounts (irreversible)
+-- Setup standard test accounts (irreversible, fork_id=0)
 CREATE OR REPLACE FUNCTION test.create_accounts(
     start_id INT DEFAULT 5,
     account_names TEXT[] DEFAULT ARRAY['initminer', 'alice', 'bob'],
@@ -67,10 +71,12 @@ LANGUAGE 'plpgsql' AS
 $BODY$
 DECLARE
     i INT;
+    __block_id hafd.block_id;
 BEGIN
+    __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0 for irreversible
     FOR i IN 1..array_length(account_names, 1) LOOP
-        INSERT INTO hafd.accounts(id, name, block_num)
-        VALUES (start_id + i - 1, account_names[i], block_num);
+        INSERT INTO hafd.accounts(id, name, block_id)
+        VALUES (start_id + i - 1, account_names[i], __block_id);
     END LOOP;
 END;
 $BODY$;
@@ -83,7 +89,7 @@ COMMENT ON FUNCTION test.create_accounts(INT, TEXT[], INT) IS
 -- SECTION 2: BLOCK CREATION FUNCTIONS
 -- ============================================================================
 
--- Create a range of irreversible blocks
+-- Create a range of irreversible blocks (fork_id=0)
 CREATE OR REPLACE FUNCTION test.create_blocks(
     start_block INT,
     end_block INT,
@@ -97,14 +103,16 @@ DECLARE
     block_num INT;
     hash_suffix TEXT;
     prev_suffix TEXT;
+    __block_id hafd.block_id;
 BEGIN
     FOR block_num IN start_block..end_block LOOP
         hash_suffix := lpad(to_hex(block_num * 16), 2, '0');
         prev_suffix := lpad(to_hex(block_num * 16), 2, '0');
+        __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0 for irreversible
 
         INSERT INTO hafd.blocks
         VALUES (
-            block_num,
+            __block_id,
             decode('BADD' || hash_suffix, 'hex'),
             decode('CAFE' || prev_suffix, 'hex'),
             base_time + ((block_num - 1) || ' seconds')::interval,
@@ -120,10 +128,10 @@ END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_blocks(INT, INT, INT, TIMESTAMP) IS
-'Creates a range of irreversible blocks in hafd.blocks table with auto-generated hashes';
+'Creates a range of irreversible blocks (fork_id=0) in hafd.blocks table with auto-generated hashes';
 
 
--- Create a range of reversible blocks
+-- Create a range of reversible blocks (with specified fork_id)
 CREATE OR REPLACE FUNCTION test.create_blocks_reversible(
     start_block INT,
     end_block INT,
@@ -138,15 +146,17 @@ DECLARE
     block_num INT;
     hash_suffix TEXT;
     prev_suffix TEXT;
+    __block_id hafd.block_id;
 BEGIN
     FOR block_num IN start_block..end_block LOOP
         -- Add fork_id to hash to create unique hashes per fork
         hash_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
         prev_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
+        __block_id := hafd.make_block_id(block_num, fork_id);
 
-        INSERT INTO hafd.blocks_reversible
+        INSERT INTO hafd.blocks
         VALUES (
-            block_num,
+            __block_id,
             decode('BADD' || hash_suffix, 'hex'),
             decode('CAFE' || prev_suffix, 'hex'),
             base_time + ((block_num - 1) || ' seconds')::interval,
@@ -155,22 +165,21 @@ BEGIN
             '[]'::jsonb,
             '\x2157'::bytea,
             'STM65w',
-            1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000,
-            fork_id
+            1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000
         );
     END LOOP;
 END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_blocks_reversible(INT, INT, INT, INT, TIMESTAMP) IS
-'Creates a range of reversible blocks in hafd.blocks_reversible table with fork_id';
+'Creates a range of reversible blocks in hafd.blocks table with specified fork_id';
 
 
 -- ============================================================================
 -- SECTION 3: TRANSACTION CREATION FUNCTIONS
 -- ============================================================================
 
--- Create irreversible transactions
+-- Create irreversible transactions (fork_id=0)
 CREATE OR REPLACE FUNCTION test.create_transactions(
     start_block INT,
     end_block INT,
@@ -183,13 +192,15 @@ $BODY$
 DECLARE
     block_num INT;
     hash_suffix TEXT;
+    __block_id hafd.block_id;
 BEGIN
     FOR block_num IN start_block..end_block LOOP
         hash_suffix := lpad(to_hex(block_num * 16), 2, '0');
+        __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0 for irreversible
 
         INSERT INTO hafd.transactions
         VALUES (
-            block_num,
+            __block_id,
             trx_in_block,
             decode('DEED' || hash_suffix, 'hex'),
             101,
@@ -202,10 +213,10 @@ END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_transactions(INT, INT, SMALLINT, TIMESTAMP) IS
-'Creates irreversible transactions in hafd.transactions table';
+'Creates irreversible transactions (fork_id=0) in hafd.transactions table';
 
 
--- Create reversible transactions
+-- Create reversible transactions (with specified fork_id)
 CREATE OR REPLACE FUNCTION test.create_transactions_reversible(
     start_block INT,
     end_block INT,
@@ -219,30 +230,31 @@ $BODY$
 DECLARE
     block_num INT;
     hash_suffix TEXT;
+    __block_id hafd.block_id;
 BEGIN
     FOR block_num IN start_block..end_block LOOP
         hash_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
+        __block_id := hafd.make_block_id(block_num, fork_id);
 
-        INSERT INTO hafd.transactions_reversible
+        INSERT INTO hafd.transactions
         VALUES (
-            block_num,
+            __block_id,
             trx_in_block,
             decode('DEED' || hash_suffix, 'hex'),
             101,
             100,
             base_time + ((block_num - 1) || ' seconds')::interval,
-            '\xBEEF'::bytea,
-            fork_id
+            '\xBEEF'::bytea
         );
     END LOOP;
 END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_transactions_reversible(INT, INT, INT, SMALLINT, TIMESTAMP) IS
-'Creates reversible transactions in hafd.transactions_reversible table with fork_id';
+'Creates reversible transactions in hafd.transactions table with specified fork_id';
 
 
--- Create transaction signatures (multisig) - irreversible
+-- Create transaction signatures (multisig) - irreversible (fork_id=0)
 CREATE OR REPLACE FUNCTION test.create_transaction_signatures(
     start_block INT,
     end_block INT
@@ -252,16 +264,17 @@ LANGUAGE 'plpgsql' AS
 $BODY$
 DECLARE
     block_num INT;
-    trx_hash_suffix TEXT;
     sig_suffix TEXT;
+    __block_id hafd.block_id;
 BEGIN
     FOR block_num IN start_block..end_block LOOP
-        trx_hash_suffix := lpad(to_hex(block_num * 16), 2, '0');
         sig_suffix := lpad(to_hex(block_num * 16), 2, '0');
+        __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0
 
         INSERT INTO hafd.transactions_multisig
         VALUES (
-            decode('DEED' || trx_hash_suffix, 'hex'),
+            __block_id,
+            0::SMALLINT,  -- trx_in_block
             decode('BAAD' || sig_suffix, 'hex')
         );
     END LOOP;
@@ -269,7 +282,7 @@ END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_transaction_signatures(INT, INT) IS
-'Creates transaction signatures in hafd.transactions_multisig table';
+'Creates transaction signatures in hafd.transactions_multisig table (fork_id=0)';
 
 
 -- Create transaction signatures (multisig) - reversible
@@ -283,32 +296,32 @@ LANGUAGE 'plpgsql' AS
 $BODY$
 DECLARE
     block_num INT;
-    trx_hash_suffix TEXT;
     sig_suffix TEXT;
+    __block_id hafd.block_id;
 BEGIN
     FOR block_num IN start_block..end_block LOOP
-        trx_hash_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
         sig_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
+        __block_id := hafd.make_block_id(block_num, fork_id);
 
-        INSERT INTO hafd.transactions_multisig_reversible
+        INSERT INTO hafd.transactions_multisig
         VALUES (
-            decode('DEED' || trx_hash_suffix, 'hex'),
-            decode('BEEF' || sig_suffix, 'hex'),
-            fork_id
+            __block_id,
+            0::SMALLINT,  -- trx_in_block
+            decode('BEEF' || sig_suffix, 'hex')
         );
     END LOOP;
 END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_transaction_signatures_reversible(INT, INT, INT) IS
-'Creates reversible transaction signatures in hafd.transactions_multisig_reversible table';
+'Creates reversible transaction signatures in hafd.transactions_multisig table';
 
 
 -- ============================================================================
 -- SECTION 4: OPERATION CREATION FUNCTIONS
 -- ============================================================================
 
--- Create irreversible operations
+-- Create irreversible operations (fork_id=0)
 CREATE OR REPLACE FUNCTION test.create_operations(
     start_block INT,
     end_block INT,
@@ -321,13 +334,17 @@ $BODY$
 DECLARE
     block_num INT;
     message TEXT;
+    __block_id hafd.block_id;
 BEGIN
     FOR block_num IN start_block..end_block LOOP
         message := 'OPERATION BLOCK ' || block_num::TEXT;
+        __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0
 
-        INSERT INTO hafd.operations
+        INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
         VALUES (
-            hafd.operation_id(block_num, trx_in_block, op_pos),
+            __block_id,
+            trx_in_block,  -- seq_in_block
+            op_pos,        -- op_type_id
             trx_in_block - 1,
             op_pos,
             ('{"type":"system_warning_operation","value":{"message":"' || message || '"}}')::jsonb::hafd.operation
@@ -337,7 +354,7 @@ END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_operations(INT, INT, INT, INT) IS
-'Creates irreversible operations in hafd.operations table';
+'Creates irreversible operations (fork_id=0) in hafd.operations table';
 
 
 -- Create reversible operations
@@ -354,31 +371,34 @@ $BODY$
 DECLARE
     block_num INT;
     message TEXT;
+    __block_id hafd.block_id;
 BEGIN
     FOR block_num IN start_block..end_block LOOP
         message := 'OPERATION BLOCK ' || block_num::TEXT || ' FORK ' || fork_id::TEXT;
+        __block_id := hafd.make_block_id(block_num, fork_id);
 
-        INSERT INTO hafd.operations_reversible
+        INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
         VALUES (
-            hafd.operation_id(block_num, trx_in_block, op_pos),
+            __block_id,
+            trx_in_block,  -- seq_in_block
+            op_pos,        -- op_type_id
             trx_in_block - 1,
             op_pos,
-            ('{"type":"system_warning_operation","value":{"message":"' || message || '"}}')::jsonb::hafd.operation,
-            fork_id
+            ('{"type":"system_warning_operation","value":{"message":"' || message || '"}}')::jsonb::hafd.operation
         );
     END LOOP;
 END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_operations_reversible(INT, INT, INT, INT, INT) IS
-'Creates reversible operations in hafd.operations_reversible table with fork_id';
+'Creates reversible operations in hafd.operations table with specified fork_id';
 
 
 -- ============================================================================
 -- SECTION 5: ACCOUNT OPERATIONS FUNCTIONS
 -- ============================================================================
 
--- Create account operations (irreversible)
+-- Create account operations (irreversible, fork_id=0)
 CREATE OR REPLACE FUNCTION test.create_account_operations(
     start_block INT,
     end_block INT,
@@ -394,16 +414,20 @@ DECLARE
     block_num INT;
     seq_no INT := 1;
     trans_acc_id INT;
+    __block_id hafd.block_id;
 BEGIN
     trans_acc_id := COALESCE(transacting_account_id, account_id);
 
     FOR block_num IN start_block..end_block LOOP
-        INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, operation_id)
+        __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0
+
+        INSERT INTO hafd.account_operations(block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
         VALUES (
+            __block_id,
+            trx_in_block,  -- seq_in_block (matches operation)
             account_id,
             trans_acc_id,
-            seq_no,
-            hafd.operation_id(block_num, trx_in_block, op_pos)
+            seq_no
         );
         seq_no := seq_no + 1;
     END LOOP;
@@ -411,7 +435,7 @@ END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_account_operations(INT, INT, INT, INT, INT, INT) IS
-'Creates account operations in hafd.account_operations table for a specific account';
+'Creates account operations (fork_id=0) in hafd.account_operations table for a specific account';
 
 
 -- Create account operations (reversible)
@@ -431,17 +455,20 @@ DECLARE
     block_num INT;
     seq_no INT := 1;
     trans_acc_id INT;
+    __block_id hafd.block_id;
 BEGIN
     trans_acc_id := COALESCE(transacting_account_id, account_id);
 
     FOR block_num IN start_block..end_block LOOP
-        INSERT INTO hafd.account_operations_reversible
+        __block_id := hafd.make_block_id(block_num, fork_id);
+
+        INSERT INTO hafd.account_operations(block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
         VALUES (
+            __block_id,
+            trx_in_block,  -- seq_in_block (matches operation)
             account_id,
             trans_acc_id,
-            seq_no,
-            hafd.operation_id(block_num, trx_in_block, op_pos),
-            fork_id
+            seq_no
         );
         seq_no := seq_no + 1;
     END LOOP;
@@ -449,7 +476,7 @@ END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_account_operations_reversible(INT, INT, INT, INT, INT, INT, INT) IS
-'Creates reversible account operations with fork_id for a specific account';
+'Creates reversible account operations with specified fork_id for a specific account';
 
 
 -- Create accounts (reversible)
@@ -465,28 +492,30 @@ LANGUAGE 'plpgsql' AS
 $BODY$
 DECLARE
     acc_id INT;
+    __block_id hafd.block_id;
 BEGIN
+    __block_id := hafd.make_block_id(block_num, fork_id);
+
     FOR acc_id IN start_id..end_id LOOP
-        INSERT INTO hafd.accounts_reversible
+        INSERT INTO hafd.accounts(id, name, block_id)
         VALUES (
             acc_id,
             name_prefix || acc_id::TEXT,
-            block_num,
-            fork_id
+            __block_id
         );
     END LOOP;
 END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_accounts_reversible(INT, INT, INT, INT, TEXT) IS
-'Creates reversible accounts in hafd.accounts_reversible table';
+'Creates reversible accounts in hafd.accounts table with specified fork_id';
 
 
 -- ============================================================================
 -- SECTION 6: APPLIED HARDFORKS FUNCTIONS
 -- ============================================================================
 
--- Create applied hardforks (irreversible)
+-- Create applied hardforks (irreversible, fork_id=0)
 CREATE OR REPLACE FUNCTION test.create_applied_hardforks(
     start_block INT,
     end_block INT,
@@ -499,14 +528,17 @@ $BODY$
 DECLARE
     block_num INT;
     hf_num INT;
+    __block_id hafd.block_id;
 BEGIN
     hf_num := start_block;
     FOR block_num IN start_block..end_block LOOP
-        INSERT INTO hafd.applied_hardforks
+        __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0
+
+        INSERT INTO hafd.applied_hardforks(hardfork_num, block_id, hardfork_vop_id)
         VALUES (
             hf_num,
-            block_num,
-            hafd.operation_id(block_num, trx_in_block, op_pos)
+            __block_id,
+            trx_in_block  -- hardfork_vop_id
         );
         hf_num := hf_num + 1;
     END LOOP;
@@ -514,7 +546,7 @@ END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_applied_hardforks(INT, INT, INT, INT) IS
-'Creates applied hardforks in hafd.applied_hardforks table';
+'Creates applied hardforks (fork_id=0) in hafd.applied_hardforks table';
 
 
 -- Create applied hardforks (reversible)
@@ -531,15 +563,17 @@ $BODY$
 DECLARE
     block_num INT;
     hf_num INT;
+    __block_id hafd.block_id;
 BEGIN
     hf_num := start_block;
     FOR block_num IN start_block..end_block LOOP
-        INSERT INTO hafd.applied_hardforks_reversible
+        __block_id := hafd.make_block_id(block_num, fork_id);
+
+        INSERT INTO hafd.applied_hardforks(hardfork_num, block_id, hardfork_vop_id)
         VALUES (
             hf_num,
-            block_num,
-            hafd.operation_id(block_num, trx_in_block, op_pos),
-            fork_id
+            __block_id,
+            trx_in_block  -- hardfork_vop_id
         );
         hf_num := hf_num + 1;
     END LOOP;
@@ -547,7 +581,7 @@ END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_applied_hardforks_reversible(INT, INT, INT, INT, INT) IS
-'Creates reversible applied hardforks with fork_id';
+'Creates reversible applied hardforks with specified fork_id';
 
 
 -- ============================================================================
@@ -599,7 +633,7 @@ END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_irreversible_data(INT, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN) IS
-'Creates a complete set of irreversible blockchain data up to specified block. Flags control which data types to include.';
+'Creates a complete set of irreversible blockchain data (fork_id=0) up to specified block. Flags control which data types to include.';
 
 
 -- Create reversible data for a specific fork
@@ -758,19 +792,19 @@ BEGIN
     PERFORM test.create_operations(1, 5);
 
     -- Reversible data for fork 1 (main)
-    PERFORM test.create_blocks_reversible(4, 10, 1);
-    PERFORM test.create_transactions_reversible(4, 10, 1);
-    PERFORM test.create_operations_reversible(4, 10, 1);
+    PERFORM test.create_blocks_reversible(4, hafd.make_block_id(10, 0), 1);
+    PERFORM test.create_transactions_reversible(4, hafd.make_block_id(10, 0), 1);
+    PERFORM test.create_operations_reversible(4, hafd.make_block_id(10, 0), 1);
 
     -- Reversible data for fork 2
-    PERFORM test.create_blocks_reversible(7, 10, 2);
-    PERFORM test.create_transactions_reversible(7, 10, 2);
-    PERFORM test.create_operations_reversible(7, 10, 2);
+    PERFORM test.create_blocks_reversible(7, hafd.make_block_id(10, 0), 2);
+    PERFORM test.create_transactions_reversible(7, hafd.make_block_id(10, 0), 2);
+    PERFORM test.create_operations_reversible(7, hafd.make_block_id(10, 0), 2);
 
     -- Reversible data for fork 3
-    PERFORM test.create_blocks_reversible(8, 10, 3);
-    PERFORM test.create_transactions_reversible(8, 10, 3);
-    PERFORM test.create_operations_reversible(8, 10, 3);
+    PERFORM test.create_blocks_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_transactions_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_operations_reversible(8, hafd.make_block_id(10, 0), 3);
 END;
 $BODY$;
 
@@ -943,32 +977,33 @@ BEGIN
     VALUES (2, 6, '2020-06-22 19:10:25-07'::timestamp),
            (3, 7, '2020-06-22 19:10:25-07'::timestamp);
 
-    -- Create irreversible blocks 1-5
+    -- Create irreversible blocks 1-5 (fork_id=0)
     PERFORM test.create_blocks(1, 5);
 
-    -- Create initminer account
-    INSERT INTO hafd.accounts(id, name, block_num) VALUES (5, 'initminer', 1);
+    -- Create initminer account (fork_id=0)
+    INSERT INTO hafd.accounts(id, name, block_id)
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0));
 
-    -- Reversible blocks for fork 1: blocks 4-9
-    PERFORM test.create_blocks_reversible(4, 6, 1);
+    -- Reversible blocks for fork 1: blocks 4-6
+    PERFORM test.create_blocks_reversible(4, hafd.make_block_id(6, 0), 1);
     -- Blocks 7-9 for fork 1 (will be overridden by fork 2)
-    PERFORM test.create_blocks_reversible(7, 9, 1);
+    PERFORM test.create_blocks_reversible(7, hafd.make_block_id(9, 0), 1);
 
     -- Reversible blocks for fork 2: blocks 7-9
-    PERFORM test.create_blocks_reversible(7, 9, 2);
+    PERFORM test.create_blocks_reversible(7, hafd.make_block_id(9, 0), 2);
 
     -- Reversible blocks for fork 3: blocks 8-10
-    PERFORM test.create_blocks_reversible(8, 10, 3);
+    PERFORM test.create_blocks_reversible(8, hafd.make_block_id(10, 0), 3);
 
     -- Set consistent block
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
 COMMENT ON FUNCTION test.setup_view_test_scenario() IS
 'Sets up the standard scenario for view tests (blocks_view_test, etc.):
 - Forks 2 and 3 at blocks 6 and 7
-- Irreversible blocks 1-5
+- Irreversible blocks 1-5 (fork_id=0)
 - Reversible blocks: fork 1 (4-9), fork 2 (7-9), fork 3 (8-10)
 - consistent_block = 5';
 
@@ -986,22 +1021,23 @@ BEGIN
 
     -- Create irreversible blocks and transactions
     PERFORM test.create_blocks(1, 5);
-    INSERT INTO hafd.accounts(id, name, block_num) VALUES (5, 'initminer', 1);
+    INSERT INTO hafd.accounts(id, name, block_id)
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0));
     PERFORM test.create_transactions(1, 5);
 
     -- Reversible blocks and transactions for fork 1
-    PERFORM test.create_blocks_reversible(4, 9, 1);
-    PERFORM test.create_transactions_reversible(4, 9, 1);
+    PERFORM test.create_blocks_reversible(4, hafd.make_block_id(9, 0), 1);
+    PERFORM test.create_transactions_reversible(4, hafd.make_block_id(9, 0), 1);
 
     -- Reversible blocks and transactions for fork 2
-    PERFORM test.create_blocks_reversible(7, 9, 2);
-    PERFORM test.create_transactions_reversible(7, 9, 2);
+    PERFORM test.create_blocks_reversible(7, hafd.make_block_id(9, 0), 2);
+    PERFORM test.create_transactions_reversible(7, hafd.make_block_id(9, 0), 2);
 
     -- Reversible blocks and transactions for fork 3
-    PERFORM test.create_blocks_reversible(8, 10, 3);
-    PERFORM test.create_transactions_reversible(8, 10, 3);
+    PERFORM test.create_blocks_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_transactions_reversible(8, hafd.make_block_id(10, 0), 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1024,26 +1060,27 @@ BEGIN
 
     -- Create irreversible data
     PERFORM test.create_blocks(1, 5);
-    INSERT INTO hafd.accounts(id, name, block_num) VALUES (5, 'initminer', 1);
+    INSERT INTO hafd.accounts(id, name, block_id)
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0));
     PERFORM test.create_transactions(1, 5);
     PERFORM test.create_operations(1, 5);
 
     -- Reversible data for fork 1
-    PERFORM test.create_blocks_reversible(4, 9, 1);
-    PERFORM test.create_transactions_reversible(4, 9, 1);
-    PERFORM test.create_operations_reversible(4, 9, 1);
+    PERFORM test.create_blocks_reversible(4, hafd.make_block_id(9, 0), 1);
+    PERFORM test.create_transactions_reversible(4, hafd.make_block_id(9, 0), 1);
+    PERFORM test.create_operations_reversible(4, hafd.make_block_id(9, 0), 1);
 
     -- Reversible data for fork 2
-    PERFORM test.create_blocks_reversible(7, 9, 2);
-    PERFORM test.create_transactions_reversible(7, 9, 2);
-    PERFORM test.create_operations_reversible(7, 9, 2);
+    PERFORM test.create_blocks_reversible(7, hafd.make_block_id(9, 0), 2);
+    PERFORM test.create_transactions_reversible(7, hafd.make_block_id(9, 0), 2);
+    PERFORM test.create_operations_reversible(7, hafd.make_block_id(9, 0), 2);
 
     -- Reversible data for fork 3
-    PERFORM test.create_blocks_reversible(8, 10, 3);
-    PERFORM test.create_transactions_reversible(8, 10, 3);
-    PERFORM test.create_operations_reversible(8, 10, 3);
+    PERFORM test.create_blocks_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_transactions_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_operations_reversible(8, hafd.make_block_id(10, 0), 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1064,26 +1101,27 @@ BEGIN
 
     -- Create irreversible data
     PERFORM test.create_blocks(1, 5);
-    INSERT INTO hafd.accounts(id, name, block_num) VALUES (5, 'initminer', 1);
+    INSERT INTO hafd.accounts(id, name, block_id)
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0));
     PERFORM test.create_transactions(1, 5);
     PERFORM test.create_transaction_signatures(1, 5);
 
     -- Reversible data for fork 1
-    PERFORM test.create_blocks_reversible(4, 9, 1);
-    PERFORM test.create_transactions_reversible(4, 9, 1);
-    PERFORM test.create_transaction_signatures_reversible(4, 9, 1);
+    PERFORM test.create_blocks_reversible(4, hafd.make_block_id(9, 0), 1);
+    PERFORM test.create_transactions_reversible(4, hafd.make_block_id(9, 0), 1);
+    PERFORM test.create_transaction_signatures_reversible(4, hafd.make_block_id(9, 0), 1);
 
     -- Reversible data for fork 2
-    PERFORM test.create_blocks_reversible(7, 9, 2);
-    PERFORM test.create_transactions_reversible(7, 9, 2);
-    PERFORM test.create_transaction_signatures_reversible(7, 9, 2);
+    PERFORM test.create_blocks_reversible(7, hafd.make_block_id(9, 0), 2);
+    PERFORM test.create_transactions_reversible(7, hafd.make_block_id(9, 0), 2);
+    PERFORM test.create_transaction_signatures_reversible(7, hafd.make_block_id(9, 0), 2);
 
     -- Reversible data for fork 3
-    PERFORM test.create_blocks_reversible(8, 10, 3);
-    PERFORM test.create_transactions_reversible(8, 10, 3);
-    PERFORM test.create_transaction_signatures_reversible(8, 10, 3);
+    PERFORM test.create_blocks_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_transactions_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_transaction_signatures_reversible(8, hafd.make_block_id(10, 0), 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1104,30 +1142,30 @@ BEGIN
 
     -- Create irreversible blocks and accounts
     PERFORM test.create_blocks(1, 5);
-    INSERT INTO hafd.accounts(id, name, block_num)
-    VALUES (5, 'initminer', 1),
-           (6, 'alice', 2),
-           (7, 'bob', 3);
+    INSERT INTO hafd.accounts(id, name, block_id)
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0)),
+           (6, 'alice', hafd.make_block_id(2, 0)),
+           (7, 'bob', hafd.make_block_id(3, 0));
 
     -- Reversible blocks for fork 1
-    PERFORM test.create_blocks_reversible(4, 9, 1);
+    PERFORM test.create_blocks_reversible(4, hafd.make_block_id(9, 0), 1);
     -- Reversible accounts for fork 1
-    INSERT INTO hafd.accounts_reversible(id, name, block_num, fork_id)
-    VALUES (8, 'carol', 7, 1),
-           (9, 'dan', 8, 1);
+    INSERT INTO hafd.accounts(id, name, block_id)
+    VALUES (8, 'carol', hafd.make_block_id(7, 1)),
+           (9, 'dan', hafd.make_block_id(8, 1));
 
     -- Reversible blocks for fork 2
-    PERFORM test.create_blocks_reversible(7, 9, 2);
-    INSERT INTO hafd.accounts_reversible(id, name, block_num, fork_id)
-    VALUES (8, 'eve', 7, 2);
+    PERFORM test.create_blocks_reversible(7, hafd.make_block_id(9, 0), 2);
+    INSERT INTO hafd.accounts(id, name, block_id)
+    VALUES (8, 'eve', hafd.make_block_id(7, 2));
 
     -- Reversible blocks for fork 3
-    PERFORM test.create_blocks_reversible(8, 10, 3);
-    INSERT INTO hafd.accounts_reversible(id, name, block_num, fork_id)
-    VALUES (8, 'frank', 8, 3),
-           (9, 'grace', 9, 3);
+    PERFORM test.create_blocks_reversible(8, hafd.make_block_id(10, 0), 3);
+    INSERT INTO hafd.accounts(id, name, block_id)
+    VALUES (8, 'frank', hafd.make_block_id(8, 3)),
+           (9, 'grace', hafd.make_block_id(9, 3));
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1150,32 +1188,32 @@ BEGIN
 
     -- Create irreversible data
     PERFORM test.create_blocks(1, 5);
-    INSERT INTO hafd.accounts(id, name, block_num)
-    VALUES (5, 'initminer', 1),
-           (6, 'alice', 2);
+    INSERT INTO hafd.accounts(id, name, block_id)
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0)),
+           (6, 'alice', hafd.make_block_id(2, 0));
     PERFORM test.create_transactions(1, 5);
     PERFORM test.create_operations(1, 5);
-    PERFORM test.create_account_operations(1, 5, 5);  -- for initminer
+    PERFORM test.create_account_operations(1, hafd.make_block_id(5, 0), 5);  -- for initminer
 
     -- Reversible data for fork 1
-    PERFORM test.create_blocks_reversible(4, 9, 1);
-    PERFORM test.create_transactions_reversible(4, 9, 1);
-    PERFORM test.create_operations_reversible(4, 9, 1);
+    PERFORM test.create_blocks_reversible(4, hafd.make_block_id(9, 0), 1);
+    PERFORM test.create_transactions_reversible(4, hafd.make_block_id(9, 0), 1);
+    PERFORM test.create_operations_reversible(4, hafd.make_block_id(9, 0), 1);
     PERFORM test.create_account_operations_reversible(4, 9, 5, 1);
 
     -- Reversible data for fork 2
-    PERFORM test.create_blocks_reversible(7, 9, 2);
-    PERFORM test.create_transactions_reversible(7, 9, 2);
-    PERFORM test.create_operations_reversible(7, 9, 2);
+    PERFORM test.create_blocks_reversible(7, hafd.make_block_id(9, 0), 2);
+    PERFORM test.create_transactions_reversible(7, hafd.make_block_id(9, 0), 2);
+    PERFORM test.create_operations_reversible(7, hafd.make_block_id(9, 0), 2);
     PERFORM test.create_account_operations_reversible(7, 9, 5, 2);
 
     -- Reversible data for fork 3
-    PERFORM test.create_blocks_reversible(8, 10, 3);
-    PERFORM test.create_transactions_reversible(8, 10, 3);
-    PERFORM test.create_operations_reversible(8, 10, 3);
+    PERFORM test.create_blocks_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_transactions_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_operations_reversible(8, hafd.make_block_id(10, 0), 3);
     PERFORM test.create_account_operations_reversible(8, 10, 5, 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1198,30 +1236,31 @@ BEGIN
 
     -- Create irreversible data
     PERFORM test.create_blocks(1, 5);
-    INSERT INTO hafd.accounts(id, name, block_num) VALUES (5, 'initminer', 1);
+    INSERT INTO hafd.accounts(id, name, block_id)
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0));
     PERFORM test.create_transactions(1, 5);
     PERFORM test.create_operations(1, 5);
     PERFORM test.create_applied_hardforks(1, 5);
 
     -- Reversible data for fork 1
-    PERFORM test.create_blocks_reversible(4, 9, 1);
-    PERFORM test.create_transactions_reversible(4, 9, 1);
-    PERFORM test.create_operations_reversible(4, 9, 1);
-    PERFORM test.create_applied_hardforks_reversible(4, 9, 1);
+    PERFORM test.create_blocks_reversible(4, hafd.make_block_id(9, 0), 1);
+    PERFORM test.create_transactions_reversible(4, hafd.make_block_id(9, 0), 1);
+    PERFORM test.create_operations_reversible(4, hafd.make_block_id(9, 0), 1);
+    PERFORM test.create_applied_hardforks_reversible(4, hafd.make_block_id(9, 0), 1);
 
     -- Reversible data for fork 2
-    PERFORM test.create_blocks_reversible(7, 9, 2);
-    PERFORM test.create_transactions_reversible(7, 9, 2);
-    PERFORM test.create_operations_reversible(7, 9, 2);
-    PERFORM test.create_applied_hardforks_reversible(7, 9, 2);
+    PERFORM test.create_blocks_reversible(7, hafd.make_block_id(9, 0), 2);
+    PERFORM test.create_transactions_reversible(7, hafd.make_block_id(9, 0), 2);
+    PERFORM test.create_operations_reversible(7, hafd.make_block_id(9, 0), 2);
+    PERFORM test.create_applied_hardforks_reversible(7, hafd.make_block_id(9, 0), 2);
 
     -- Reversible data for fork 3
-    PERFORM test.create_blocks_reversible(8, 10, 3);
-    PERFORM test.create_transactions_reversible(8, 10, 3);
-    PERFORM test.create_operations_reversible(8, 10, 3);
-    PERFORM test.create_applied_hardforks_reversible(8, 10, 3);
+    PERFORM test.create_blocks_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_transactions_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_operations_reversible(8, hafd.make_block_id(10, 0), 3);
+    PERFORM test.create_applied_hardforks_reversible(8, hafd.make_block_id(10, 0), 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1235,6 +1274,10 @@ COMMENT ON FUNCTION test.setup_applied_hardforks_view_test_scenario() IS
 
 COMMENT ON SCHEMA test IS
 'Test utilities schema containing helper functions for HAF functional tests.
+
+NOTE: This version works with unified tables using block_id encoding.
+There are no separate *_reversible tables. All data goes into unified tables
+with block_id = make_block_id(block_num, fork_id).
 
 USAGE EXAMPLES:
 

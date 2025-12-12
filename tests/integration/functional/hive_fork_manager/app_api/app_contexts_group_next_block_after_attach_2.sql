@@ -14,18 +14,18 @@ BEGIN
 
     PERFORM test.create_blocks(1, 5);
 
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 1)
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0))
     ;
 
     INSERT INTO hafd.transactions
     VALUES
-        ( 1, 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
+        ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.operations
+    INSERT INTO hafd.operations (block_id, seq_in_block, trx_in_block, op_pos, op_type_id, body_binary)
     VALUES
-        ( hafd.operation_id(5, 1, 0), 0, 0, '{"type":"account_create_operation","value":{"fee":{"amount":"0","precision":3,"nai":"@@000000021"},"creator":"initminer","new_account_name":"account_5","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"memo_key":"STM7tjB4CNqUD5kbTHdrJUaHE76xicHMQdpD5N32a7wTr1qnSmG1V","json_metadata":"{}"}}' :: jsonb :: hafd.operation );
+        ( hafd.make_block_id(5, 0), 1, 0, 0, 1, '{"type":"account_create_operation","value":{"fee":{"amount":"0","precision":3,"nai":"@@000000021"},"creator":"initminer","new_account_name":"account_5","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"memo_key":"STM7tjB4CNqUD5kbTHdrJUaHE76xicHMQdpD5N32a7wTr1qnSmG1V","json_metadata":"{}"}}' :: jsonb :: hafd.operation );
 
     PERFORM hive.end_massive_sync(5);
 
@@ -62,14 +62,14 @@ BEGIN
                , NULL
                );
 
-    INSERT INTO hafd.transactions_reversible
+    INSERT INTO hafd.transactions
     VALUES
-        ( 8, 0::SMALLINT, '\xDEED80', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF', 1 )
+        ( hafd.make_block_id(8, 1), 0::SMALLINT, '\xDEED80', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hafd.operations (block_id, seq_in_block, trx_in_block, op_pos, op_type_id, body_binary)
     VALUES
-        ( hafd.operation_id(8, 1, 0), 0, 0, '{"type":"account_create_operation","value":{"fee":{"amount":"0","precision":3,"nai":"@@000000021"},"creator":"initminer","new_account_name":"account_8_rev","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"memo_key":"STM7tjB4CNqUD5kbTHdrJUaHE76xicHMQdpD5N32a7wTr1qnSmG1V","json_metadata":"{}"}}' :: jsonb :: hafd.operation, 1 );
+        ( hafd.make_block_id(8, 1), 1, 0, 0, 1, '{"type":"account_create_operation","value":{"fee":{"amount":"0","precision":3,"nai":"@@000000021"},"creator":"initminer","new_account_name":"account_8_rev","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"memo_key":"STM7tjB4CNqUD5kbTHdrJUaHE76xicHMQdpD5N32a7wTr1qnSmG1V","json_metadata":"{}"}}' :: jsonb :: hafd.operation );
 
 
     PERFORM hive.push_block(
@@ -94,14 +94,14 @@ BEGIN
                , NULL
                );
 
-    INSERT INTO hafd.transactions_reversible
+    INSERT INTO hafd.transactions
     VALUES
-        ( 8, 0::SMALLINT, '\xDEED70', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF', 2 )
+        ( hafd.make_block_id(8, 2), 0::SMALLINT, '\xDEED70', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hafd.operations (block_id, seq_in_block, trx_in_block, op_pos, op_type_id, body_binary)
     VALUES
-        ( hafd.operation_id(8, 1, 0), 0, 0, '{"type":"account_create_operation","value":{"fee":{"amount":"0","precision":3,"nai":"@@000000021"},"creator":"initminer","new_account_name":"account_8","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"memo_key":"STM7tjB4CNqUD5kbTHdrJUaHE76xicHMQdpD5N32a7wTr1qnSmG1V","json_metadata":"{}"}}' :: jsonb :: hafd.operation, 2 );
+        ( hafd.make_block_id(8, 2), 1, 0, 0, 1, '{"type":"account_create_operation","value":{"fee":{"amount":"0","precision":3,"nai":"@@000000021"},"creator":"initminer","new_account_name":"account_8","owner":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"active":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"posting":{"weight_threshold":1,"account_auths":[],"key_auths":[]},"memo_key":"STM7tjB4CNqUD5kbTHdrJUaHE76xicHMQdpD5N32a7wTr1qnSmG1V","json_metadata":"{}"}}' :: jsonb :: hafd.operation );
 
     PERFORM hive.push_block(
                    ( 9, '\xBADD91', '\xCAFE91', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )

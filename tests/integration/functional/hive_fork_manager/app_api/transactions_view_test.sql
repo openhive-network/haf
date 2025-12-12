@@ -13,7 +13,7 @@ BEGIN
 
     -- Create irreversible blocks and transactions
     PERFORM test.create_blocks(1, 5);
-    INSERT INTO hafd.accounts(id, name, block_num) VALUES (5, 'initminer', 1);
+    INSERT INTO hafd.accounts(id, name, block_id) VALUES (5, 'initminer', hafd.make_block_id(1, 0));
     PERFORM test.create_transactions(1, 5);
 
     -- Reversible blocks for fork 1 (blocks 4-7)
@@ -28,7 +28,7 @@ BEGIN
     PERFORM test.create_blocks_reversible(8, 10, 3);
     PERFORM test.create_transactions_reversible(8, 10, 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$
 ;

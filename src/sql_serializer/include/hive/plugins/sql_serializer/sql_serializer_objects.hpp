@@ -130,10 +130,11 @@ namespace hive
           {
             using block_data_with_hash::hash_t;
 
+            int32_t trx_in_block = 0;
             signature_type signature;
 
-            process_transaction_multisig_t(const block_data_with_hash::hash_t& _hash, const int _block_number, const signature_type& _signature)
-            : block_data_with_hash{_hash, _block_number}, signature{_signature}
+            process_transaction_multisig_t(const block_data_with_hash::hash_t& _hash, const int _block_number, const int32_t _trx_in_block, const signature_type& _signature)
+            : block_data_with_hash{_hash, _block_number}, trx_in_block{_trx_in_block}, signature{_signature}
             {}
           };
 

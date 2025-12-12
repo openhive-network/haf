@@ -8,11 +8,11 @@ $BODY$
 BEGIN
     INSERT INTO hafd.blocks
     VALUES
-        ( 50, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+        ( hafd.make_block_id(50, 0), '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 50)
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(50, 0))
     ;
     PERFORM hive.set_irreversible( 50 );
 
