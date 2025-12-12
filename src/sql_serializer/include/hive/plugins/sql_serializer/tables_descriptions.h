@@ -22,7 +22,9 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        return std::to_string(data.block_number) + "," + escape_raw(data.hash) + "," +
+        // block_id = (block_num << 32) | fork_id, fork_id=0 during massive sync
+        int64_t block_id = (static_cast<int64_t>(data.block_number) << 32);
+        return std::to_string(block_id) + "," + escape_raw(data.hash) + "," +
         escape_raw(data.prev_hash) + ", '" + data.created_at.to_iso_string() + "' ," + std::to_string(data.producer_account_id) + "," +
         escape_raw(data.transaction_merkle_root) + "," + escape(data.extensions) + "," + escape_raw(data.witness_signature) + ", '" + static_cast<std::string>(data.signing_key) + "'" + "," +
         std::to_string(data.hbd_interest_rate) + "," +
@@ -48,7 +50,9 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        return std::to_string(data.block_number) + "," + std::to_string(data.trx_in_block) + "," + escape_raw(data.hash) + "," +
+        // block_id = (block_num << 32) | fork_id, fork_id=0 during massive sync
+        int64_t block_id = (static_cast<int64_t>(data.block_number) << 32);
+        return std::to_string(block_id) + "," + std::to_string(data.trx_in_block) + "," + escape_raw(data.hash) + "," +
         std::to_string(data.ref_block_num) + "," + std::to_string(data.ref_block_prefix) + ",'" + data.expiration.to_iso_string() + "'," + escape_raw(data.signature);
       }
       };
@@ -67,7 +71,9 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        return escape_raw(data.hash) + "," + escape_raw(data.signature);
+        // block_id = (block_num << 32) | fork_id, fork_id=0 during massive sync
+        int64_t block_id = (static_cast<int64_t>(data.block_number) << 32);
+        return std::to_string(block_id) + "," + std::to_string(data.trx_in_block) + "," + escape_raw(data.signature);
       }
       };
     };
@@ -88,8 +94,15 @@ namespace hive::plugins::sql_serializer {
       std::string operator()(typename container_t::const_reference data) const
       {
         std::vector<char> opDeserialized = fc::raw::pack_to_vector( data.op );
+        // block_id = (block_num << 32) | fork_id, fork_id=0 during massive sync
+        int64_t block_id = (static_cast<int64_t>(data.block_number) << 32);
+        // Extract seq_in_block and op_type_id from old operation_id encoding:
+        // || block (32b) | seq (24b) | type (8b) ||
+        int32_t seq_in_block = (data.operation_id >> 8) & 0xFFFFFF;
+        int16_t op_type_id = data.operation_id & 0xFF;
 
-        return std::to_string(data.operation_id) + ',' + std::to_string(data.trx_in_block) + ',' +
+        return std::to_string(block_id) + ',' + std::to_string(seq_in_block) + ',' +
+        std::to_string(op_type_id) + ',' + std::to_string(data.trx_in_block) + ',' +
         std::to_string(data.op_in_trx) + "," + escape_raw(opDeserialized) + "::bytea";
       }
       };
@@ -110,8 +123,10 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data)
       {
-        std::string block_num = ( data.block_number == 0 ) ? "NULL" : std::to_string( data.block_number );
-        return std::to_string(data.id) + ',' + escape(data.name) + ',' + block_num;
+        // block_id = (block_num << 32) | fork_id, fork_id=0 during massive sync
+        // block_id is now NOT NULL, so block_number must be valid
+        int64_t block_id = (static_cast<int64_t>(data.block_number) << 32);
+        return std::to_string(data.id) + ',' + escape(data.name) + ',' + std::to_string(block_id);
       }
       };
     };
@@ -130,8 +145,13 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        return std::to_string(data.account_id) + ',' + std::to_string(data.transacting_account_id) + ',' + 
-        std::to_string(data.operation_seq_no) + ',' + std::to_string(data.operation_id);
+        // block_id = (block_num << 32) | fork_id, fork_id=0 during massive sync
+        int64_t block_id = (static_cast<int64_t>(data.block_number) << 32);
+        // Extract seq_in_block from operation_id (middle 24 bits)
+        int32_t seq_in_block = (data.operation_id >> 8) & 0xFFFFFF;
+        return std::to_string(block_id) + ',' + std::to_string(seq_in_block) + ',' +
+        std::to_string(data.account_id) + ',' + std::to_string(data.transacting_account_id) + ',' +
+        std::to_string(data.operation_seq_no);
       }
       };
     };
@@ -149,7 +169,9 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        return std::to_string(data.hardfork_num) + ',' + std::to_string(data.block_number) + ',' + std::to_string(data.hardfork_vop_id);
+        // block_id = (block_num << 32) | fork_id, fork_id=0 during massive sync
+        int64_t block_id = (static_cast<int64_t>(data.block_number) << 32);
+        return std::to_string(block_id) + ',' + std::to_string(data.hardfork_num) + ',' + std::to_string(data.hardfork_vop_id);
       }
       };
     };
