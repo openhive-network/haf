@@ -245,12 +245,30 @@ void indexes_controler::poll_and_create_indexes()
           auto end_time = fc::time_point::now();
           fc::microseconds vacuum_duration = end_time - start_time;
           ilog("Vacuumed table: ${table_name} in ${duration} seconds", (table_name)("duration", vacuum_duration.to_seconds()));
-          tx.exec("UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW() WHERE table_name = '" + table_name + "';");
+          tx.exec_params(
+            "UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW(), error_message = NULL WHERE table_name = $1",
+            table_name
+          );
           ilog("Updated vacuum status for table: ${table_name}", ("table_name", table_name));
         }
         catch (const std::exception& e)
         {
-           elog("Error while vacuuming table: ${table_name}: ${e}", ("table_name", table_name)("e", e.what()));
+          elog("Error while vacuuming table: ${table_name}: ${e}", (table_name)("e", e.what()));
+
+          try
+          {
+            std::string error_msg = e.what();
+
+            tx.exec_params(
+              "UPDATE hafd.vacuum_requests SET status = 'failed', error_message = $1 WHERE table_name = $2",
+              error_msg,
+              table_name
+            );
+          }
+          catch (const std::exception& update_error)
+          {
+            elog("Error while updating vacuum failure status for table ${table_name}: ${e}", ("table_name", table_name)("e", update_error.what()));
+          }
         }
       }
     }
