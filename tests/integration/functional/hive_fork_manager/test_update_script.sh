@@ -162,11 +162,11 @@ check_relation_comment public.good_view foo
 printf "\nTEST: Creating view referencing disallowed type. This should still pass and the view should be recreated.\n"
 prepare_sql_script 0000000000000000000000000000000000000000
 prepare_database --version="0000000000000000000000000000000000000000"
-exec_sql "create view public.bad_type_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create view public.bad_type_view as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where op_type_id=2"
 exec_sql "comment on view public.bad_type_view is 'foo'"
-exec_sql "create view public.bad_domain_view as select id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where hafd.operation_id_to_type_id(id)=42"
+exec_sql "create view public.bad_domain_view as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where op_type_id=42"
 exec_sql "comment on view public.bad_domain_view is 'bar'"
-exec_sql "create view public.bad_mixed_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create view public.bad_mixed_view as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where op_type_id=2"
 exec_sql "comment on view public.bad_mixed_view is 'baz'"
 update_database
 check_table_is_empty hafd.deps_saved_ddl
@@ -179,11 +179,11 @@ check_relation_comment public.bad_mixed_view baz
 
 printf "\nTEST: Creating view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
 prepare_database
-exec_sql "create view public.bad_type_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create view public.bad_type_view_2 as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where op_type_id=2"
 exec_sql "comment on view public.bad_type_view_2 is 'foo'"
-exec_sql "create view public.bad_domain_view_2 as select id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where hafd.operation_id_to_type_id(id)=42"
+exec_sql "create view public.bad_domain_view_2 as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where op_type_id=42"
 exec_sql "comment on view public.bad_domain_view_2 is 'bar'"
-exec_sql "create view public.bad_mixed_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create view public.bad_mixed_view_2 as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where op_type_id=2"
 exec_sql "comment on view public.bad_mixed_view_2 is 'baz'"
 update_database
 check_table_is_empty hafd.deps_saved_ddl
@@ -196,7 +196,7 @@ check_relation_comment public.bad_mixed_view_2 baz
 
 printf "\nTEST: Creating materialized view referencing allowed types. This should pass\n"
 prepare_database
-exec_sql "create materialized view public.good_materialized_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hafd.blocks"
+exec_sql "create materialized view public.good_materialized_view as select hafd.block_id_to_num(block_id) as num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hafd.blocks"
 exec_sql "comment on materialized view public.good_materialized_view is 'foo'"
 update_database
 check_relation_structure public.good_materialized_view "num|integer|||\ntotal_vesting_fund_hive|hafd.hive_amount|||\ntotal_vesting_shares|hafd.vest_amount|||\ncurrent_hbd_supply|hafd.hbd_amount|||\nhbd_interest_rate|hafd.interest_rate|||"
@@ -205,11 +205,11 @@ check_relation_comment public.good_materialized_view foo
 printf "\nTEST: Creating materialized view referencing disallowed type. This should still pass and the view should be recreated.\n"
 prepare_sql_script 0000000000000000000000000000000000000000
 prepare_database --version="0000000000000000000000000000000000000000"
-exec_sql "create materialized view public.bad_type_materialized_view as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create materialized view public.bad_type_materialized_view as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where op_type_id=2"
 exec_sql "comment on materialized view public.bad_type_materialized_view is 'foo'"
-exec_sql "create materialized view public.bad_domain_materialized_view as select id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where hafd.operation_id_to_type_id(id)=42"
+exec_sql "create materialized view public.bad_domain_materialized_view as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where op_type_id=42"
 exec_sql "comment on materialized view public.bad_domain_materialized_view is 'bar'"
-exec_sql "create materialized view public.bad_mixed_materialized_view as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create materialized view public.bad_mixed_materialized_view as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where op_type_id=2"
 exec_sql "comment on materialized view public.bad_mixed_materialized_view is 'baz'"
 update_database
 check_table_is_empty hafd.deps_saved_ddl
@@ -222,11 +222,11 @@ check_relation_comment public.bad_mixed_materialized_view baz
 
 printf "\nTEST: Creating materialized view referencing disallowed type with no update taking place. This should pass and the view should be recreated.\n"
 prepare_database
-exec_sql "create materialized view public.bad_type_materialized_view_2 as select id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create materialized view public.bad_type_materialized_view_2 as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,body_binary::hive.transfer_operation,(body_binary::hive.transfer_operation).amount from hafd.operations where op_type_id=2"
 exec_sql "comment on materialized view public.bad_type_materialized_view_2 is 'foo'"
-exec_sql "create materialized view public.bad_domain_materialized_view_2 as select id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where hafd.operation_id_to_type_id(id)=42"
+exec_sql "create materialized view public.bad_domain_materialized_view_2 as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,(body_binary::hive.witness_set_properties_operation).extensions from hafd.operations where op_type_id=42"
 exec_sql "comment on materialized view public.bad_domain_materialized_view_2 is 'bar'"
-exec_sql "create materialized view public.bad_mixed_materialized_view_2 as select id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where hafd.operation_id_to_type_id(id)=1"
+exec_sql "create materialized view public.bad_mixed_materialized_view_2 as select hafd.operation_id(block_id, seq_in_block, op_type_id) as id,(body_binary::hive.transfer_operation).amount,(body_binary::hive.transfer_operation).memo from hafd.operations where op_type_id=2"
 exec_sql "comment on materialized view public.bad_mixed_materialized_view_2 is 'baz'"
 update_database
 check_table_is_empty hafd.deps_saved_ddl
