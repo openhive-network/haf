@@ -36,11 +36,36 @@ variables:
   # Mirrornet snapshot path on NFS for cross-builder access
   SNAPSHOTS_PATH: /nfs/ci-cache/haf/snapshots_pipeline_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /cache/block_log_5m_mirrornet
+  # PostgreSQL access config for localhost-only jobs
+  PG_ACCESS_LOCAL_TRUST: "host    all              all        127.0.0.1/32    trust"
 
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
   # Do not include common-ci-configuration here, it is already referenced by scripts/ci-helpers/prepare_data_image_job.yml included from Hive
+
+# Reusable YAML anchors
+.artifact_excludes: &artifact_excludes
+  - "**/generated_during_*/**/block_log"
+  - "**/generated_during_*/**/block_log.artifacts"
+  - "**/generated_during_*/**/shared_memory.bin"
+  - "**/generated_during_*/**/*.sst"
+
+.fetch_pipeline_cache: &fetch_pipeline_cache
+  # Get pipeline data from NFS via cache-manager
+  - |
+    echo -e "\e[0Ksection_start:$(date +%s):copy_data[collapsed=true]\r\e[0KFetching pipeline data via cache-manager..."
+    set -e
+    CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
+    echo "Fetching cache: type=${PIPELINE_CACHE_TYPE} key=${PIPELINE_CACHE_KEY}"
+    echo "Destination: ${PIPELINE_DATA_CACHE_LOCAL}"
+
+    # cache-manager handles cleanup, extraction, and permission restoration
+    "$CACHE_MANAGER" get "${PIPELINE_CACHE_TYPE}" "${PIPELINE_CACHE_KEY}" "${PIPELINE_DATA_CACHE_LOCAL}"
+
+    echo "Pipeline data fetch complete."
+    ls -la "$PIPELINE_DATA_CACHE_LOCAL/datadir/"
+    echo -e "\e[0Ksection_end:$(date +%s):copy_data\r\e[0K"
 
 verify_poetry_lock_sanity:
   extends: .verify_poetry_lock_sanity_template
@@ -141,7 +166,7 @@ haf_image_build_mirrornet:
   stage: build_and_test_phase_1
   timeout: 80m
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
   artifacts:
@@ -184,7 +209,7 @@ haf_system_tests:
     name: $HAF_IMAGE_NAME
     entrypoint: [""]
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_system_tests.sh
   artifacts:
@@ -192,11 +217,7 @@ haf_system_tests:
     - "haf_system_tests.log"
     - "**/generated_during_*"
     - "**/generated_by_package_fixtures"
-    exclude:
-    - "**/generated_during_*/**/block_log"
-    - "**/generated_during_*/**/block_log.artifacts"
-    - "**/generated_during_*/**/shared_memory.bin"
-    - "**/generated_during_*/**/*.sst"
+    exclude: *artifact_excludes
     reports:
       junit: tests/integration/system/haf/report.xml
     when: always
@@ -255,7 +276,7 @@ haf_system_tests_mirrornet:
     - *hfm-only-service
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
-    HIVED_PATH: "$$BINARY_CACHE_PATH/hived"
+    HIVED_PATH: "$BINARY_CACHE_PATH/hived"
     COMPRESS_BLOCK_LOG_PATH: "$BINARY_CACHE_PATH/compress_block_log"
     BLOCK_LOG_UTIL_PATH: "$BINARY_CACHE_PATH/block_log_util"
     GET_DEV_KEY_PATH: "$BINARY_CACHE_PATH/get_dev_key"
@@ -283,11 +304,7 @@ haf_system_tests_mirrornet:
     paths:
     - "**/generated_during_*"
     - "**/generated_by_package_fixtures"
-    exclude:
-    - "**/generated_during_*/**/block_log"
-    - "**/generated_during_*/**/block_log.artifacts"
-    - "**/generated_during_*/**/shared_memory.bin"
-    - "**/generated_during_*/**/*.sst"
+    exclude: *artifact_excludes
     reports:
       junit: tests/integration/system/haf/mirrornet_tests/report.xml
     when: always
@@ -307,7 +324,7 @@ applications_system_tests:
     name: $HAF_IMAGE_NAME
     entrypoint: [""]
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_application_system_tests.sh
   artifacts:
@@ -315,11 +332,7 @@ applications_system_tests:
     - "applications_system_tests.log"
     - "**/generated_during_*"
     - "**/generated_by_package_fixtures"
-    exclude:
-    - "**/generated_during_*/**/block_log"
-    - "**/generated_during_*/**/block_log.artifacts"
-    - "**/generated_during_*/**/shared_memory.bin"
-    - "**/generated_during_*/**/*.sst"
+    exclude: *artifact_excludes
     reports:
       junit: tests/integration/system/applications/report.xml
     when: always
@@ -433,7 +446,7 @@ replay_with_update:
     - job: haf_image_build
       artifacts: true
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_update.sh
   artifacts:
@@ -455,7 +468,7 @@ replay_with_keyauths:
     - job: haf_image_build
       artifacts: true
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_keyauth.sh
   artifacts:
@@ -477,7 +490,7 @@ replay_with_json_metadata:
     - job: haf_image_build
       artifacts: true
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_json_metadata.sh
   artifacts:
@@ -499,7 +512,7 @@ replay_with_app:
     - job: haf_image_build
       artifacts: true
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_replay_with_app.sh
   artifacts:
@@ -521,7 +534,7 @@ replay_live_pruned_with_app:
     - job: haf_image_build
       artifacts: true
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_pruned_replay_with_app.sh
   artifacts:
@@ -543,7 +556,7 @@ replay_block_log_pruned_with_app:
     - job: haf_image_build
       artifacts: true
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_reindex_pruned_replay_with_app.sh
   artifacts:
@@ -565,7 +578,7 @@ replay_restarts_with_app:
     - job: haf_image_build
       artifacts: true
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_replay_with_restarts_and_app.sh
   artifacts:
@@ -585,7 +598,7 @@ replay_with_restart:
     - job: haf_image_build
       artifacts: true
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_breaks.sh
   artifacts:
@@ -605,7 +618,7 @@ update_with_wrong_table_schema:
     - job: haf_image_build
       artifacts: true
   variables:
-    PG_ACCESS: "host    all              all        127.0.0.1/32    trust"
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_update_with_wrong_table_schema.sh
   artifacts:
@@ -813,21 +826,7 @@ dead_app_auto_detach:
   variables:
     HIVED_UID: $HIVED_UID
     HAF_COMMIT: $HAF_COMMIT
-  before_script:
-    # Get pipeline data from NFS via cache-manager
-    - |
-      echo -e "\e[0Ksection_start:$(date +%s):copy_data[collapsed=true]\r\e[0KFetching pipeline data via cache-manager..."
-      set -e
-      CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
-      echo "Fetching cache: type=${PIPELINE_CACHE_TYPE} key=${PIPELINE_CACHE_KEY}"
-      echo "Destination: ${PIPELINE_DATA_CACHE_LOCAL}"
-
-      # cache-manager handles cleanup, extraction, and permission restoration
-      "$CACHE_MANAGER" get "${PIPELINE_CACHE_TYPE}" "${PIPELINE_CACHE_KEY}" "${PIPELINE_DATA_CACHE_LOCAL}"
-
-      echo "Pipeline data fetch complete."
-      ls -la "$PIPELINE_DATA_CACHE_LOCAL/datadir/"
-      echo -e "\e[0Ksection_end:$(date +%s):copy_data\r\e[0K"
+  before_script: *fetch_pipeline_cache
   script:
     - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
   artifacts:
@@ -853,21 +852,7 @@ start_haf_as_service:
     HAF_POSTGRES_URL: postgresql://haf_admin@haf-instance:5432/haf_block_log
     HIVED_UID: $HIVED_UID
     HAF_COMMIT: $HAF_COMMIT
-  before_script:
-    # Get pipeline data from NFS via cache-manager
-    - |
-      echo -e "\e[0Ksection_start:$(date +%s):copy_data[collapsed=true]\r\e[0KFetching pipeline data via cache-manager..."
-      set -e
-      CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
-      echo "Fetching cache: type=${PIPELINE_CACHE_TYPE} key=${PIPELINE_CACHE_KEY}"
-      echo "Destination: ${PIPELINE_DATA_CACHE_LOCAL}"
-
-      # cache-manager handles cleanup, extraction, and permission restoration
-      "$CACHE_MANAGER" get "${PIPELINE_CACHE_TYPE}" "${PIPELINE_CACHE_KEY}" "${PIPELINE_DATA_CACHE_LOCAL}"
-
-      echo "Pipeline data fetch complete."
-      ls -la "$PIPELINE_DATA_CACHE_LOCAL/datadir/"
-      echo -e "\e[0Ksection_end:$(date +%s):copy_data\r\e[0K"
+  before_script: *fetch_pipeline_cache
   script:
     - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
     - |
@@ -975,10 +960,7 @@ op_body_filter_tests:
     - "op_body_filter_tests.log"
     - "**/generated_during_*"
     - "**/generated_by_package_fixtures"
-    exclude:
-    - "**/generated_during_*/**/block_log"
-    - "**/generated_during_*/**/block_log.artifacts"
-    - "**/generated_during_*/**/*.sst"
+    exclude: *artifact_excludes
     reports:
       junit: tests/integration/tools/op_body_filter/report.xml
     when: always
