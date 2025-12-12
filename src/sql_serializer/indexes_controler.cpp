@@ -228,46 +228,52 @@ void indexes_controler::poll_and_create_indexes()
     pqxx::nontransaction tx(conn);
     try
     {
-      pqxx::result data = tx.exec("SELECT table_name FROM hafd.vacuum_requests WHERE status = 'requested';"); 
+      pqxx::result data = tx.exec("SELECT schema_name, table_name FROM hafd.vacuum_requests WHERE status = 'requested';"); 
       dlog("Found ${count} tables with vacuum requests.", ("count", data.size()));
 
       for (const auto& record : data)
       {
+        std::string schema_name;
         std::string table_name;
         try
         {
+          schema_name = record["schema_name"].as<std::string>();
           table_name = record["table_name"].as<std::string>();
-          std::string vacuum_command = "VACUUM FULL ANALYZE " + table_name;
+          std::string qualified_table_name = tx.quote_name(schema_name) + "." + tx.quote_name(table_name);
+          std::string vacuum_command = "VACUUM FULL ANALYZE " + qualified_table_name;
+
           ilog("Performing vacuum: ${vacuum_command}", (vacuum_command));
           auto start_time = fc::time_point::now();
-          //vacuum_txn.exec(vacuum_command);
           tx.exec(vacuum_command);
           auto end_time = fc::time_point::now();
           fc::microseconds vacuum_duration = end_time - start_time;
-          ilog("Vacuumed table: ${table_name} in ${duration} seconds", (table_name)("duration", vacuum_duration.to_seconds()));
+          ilog("Vacuumed table: ${schema}.${table} in ${duration} seconds", ("schema", schema_name)("table", table_name)("duration", vacuum_duration.to_seconds()));
+
           tx.exec_params(
-            "UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW(), error_message = NULL WHERE table_name = $1",
+            "UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW(), error_message = NULL WHERE schema_name = $1 AND table_name = $2",
+            schema_name,
             table_name
           );
-          ilog("Updated vacuum status for table: ${table_name}", ("table_name", table_name));
+          ilog("Updated vacuum status for table: ${schema}.${table}", ("schema", schema_name)("table", table_name));
         }
         catch (const std::exception& e)
         {
-          elog("Error while vacuuming table: ${table_name}: ${e}", (table_name)("e", e.what()));
+          elog("Error while vacuuming table: ${schema}.${table}: ${e}", ("schema", schema_name)("table", table_name)("e", e.what()));
 
           try
           {
             std::string error_msg = e.what();
 
             tx.exec_params(
-              "UPDATE hafd.vacuum_requests SET status = 'failed', error_message = $1 WHERE table_name = $2",
+              "UPDATE hafd.vacuum_requests SET status = 'failed', error_message = $1 WHERE schema_name = $2 AND table_name = $3",
               error_msg,
+              schema_name,
               table_name
             );
           }
           catch (const std::exception& update_error)
           {
-            elog("Error while updating vacuum failure status for table ${table_name}: ${e}", ("table_name", table_name)("e", update_error.what()));
+            elog("Error while updating vacuum failure status for table ${schema}.${table}: ${e}", ("schema", schema_name)("table", table_name)("e", update_error.what()));
           }
         }
       }

@@ -16,10 +16,11 @@ SELECT pg_catalog.pg_extension_config_dump('hafd.indexes_constraints', '');
 -- Only one vacuum request per table, and this is only for 'vacuum full analyze' requests
 CREATE TYPE hafd.vacuum_status AS ENUM ('requested', 'vacuumed', 'failed');
 CREATE TABLE IF NOT EXISTS hafd.vacuum_requests (
+    schema_name text NOT NULL,
     table_name text NOT NULL,
     status hafd.vacuum_status NOT NULL DEFAULT 'requested',
     last_vacuumed_time timestamp,
     error_message text,
-    CONSTRAINT pk_hive_vacuum_requests UNIQUE( table_name)
+    CONSTRAINT pk_hive_vacuum_requests UNIQUE( schema_name, table_name )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.vacuum_requests', '');

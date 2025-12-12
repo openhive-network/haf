@@ -818,6 +818,7 @@ $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.app_request_table_vacuum(
+    _schema_name TEXT,
     _table_name TEXT,
     _min_interval INTERVAL DEFAULT NULL
 )
@@ -831,21 +832,52 @@ BEGIN
         IF EXISTS (
             SELECT 1
             FROM hafd.vacuum_requests
-            WHERE table_name = _table_name
+            WHERE schema_name = _schema_name
+            AND table_name = _table_name
             AND last_vacuumed_time > NOW() - _min_interval
         ) THEN
-            RAISE NOTICE 'Vacuum request for table % ignored due to recent vacuum.', _table_name;
+            RAISE NOTICE 'Vacuum request for table %.% ignored due to recent vacuum.', _schema_name, _table_name;
             RETURN;
         END IF;
     END IF;
 
     -- Insert or update the vacuum request
-    INSERT INTO hafd.vacuum_requests (table_name, status)
-    VALUES (_table_name, 'requested')
-    ON CONFLICT (table_name) DO UPDATE
+    INSERT INTO hafd.vacuum_requests (schema_name, table_name, status)
+    VALUES (_schema_name, _table_name, 'requested')
+    ON CONFLICT (schema_name, table_name) DO UPDATE
     SET status = 'requested';
 
-    RAISE NOTICE 'Vacuum request for table % submitted.', _table_name;
+    RAISE NOTICE 'Vacuum request for table %.% submitted.', _schema_name, _table_name;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_request_table_vacuum(
+    _qualified_table_name TEXT,
+    _min_interval INTERVAL DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    _schema_name TEXT;
+    _table_name TEXT;
+    _parsed_ident TEXT[];
+BEGIN
+    _parsed_ident := parse_ident(_qualified_table_name);
+
+    IF array_length(_parsed_ident, 1) = 2 THEN
+        _schema_name := _parsed_ident[1];
+        _table_name := _parsed_ident[2];
+    ELSIF array_length(_parsed_ident, 1) = 1 THEN
+        _schema_name := CURRENT_SCHEMA();
+        _table_name := _parsed_ident[1];
+    ELSE
+        RAISE EXCEPTION 'Invalid table name: %', _qualified_table_name;
+    END IF;
+
+    PERFORM hive.app_request_table_vacuum(_schema_name, _table_name, _min_interval);
 END;
 $BODY$
 ;
