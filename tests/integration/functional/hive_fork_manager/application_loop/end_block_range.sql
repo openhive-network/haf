@@ -8,8 +8,8 @@ BEGIN
     -- here we pretend that 50 is the head block
     PERFORM test.create_blocks(50, 50);
 
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 50)
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(50, 0))
     ;
 
     PERFORM hive.set_irreversible( 50 );

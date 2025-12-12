@@ -14,6 +14,7 @@ ADD_PSQL_EXTENSION(
              types/operation/operation_cmp.sql
              types/operation/operation_casts.sql
              types/operation/operation_id.sql
+             types/block_id.sql
              irreversible_blocks.sql
              reversible_blocks.sql
              state_provider.sql
@@ -38,6 +39,10 @@ ADD_PSQL_EXTENSION(
             types/operation/compatibility_with_old_haf_apps.sql
             types/operation/operation_flow.sql
             types/operation/operation_id.sql
+            # Note: types/block_id.sql is NOT in DEPLOY_SOURCES because:
+            # 1. The domain is created in SCHEMA_SOURCES
+            # 2. DROP DOMAIN ... CASCADE would destroy tables using block_id
+            # 3. The C functions use CREATE OR REPLACE so they can be updated
 
             pruning/prune_irreversible_blocks.sql
 

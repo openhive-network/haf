@@ -9,8 +9,8 @@ BEGIN
     -- Create blocks 1-3
     PERFORM test.create_blocks(1, 3);
 
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 1)
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0))
     ;
 
     -- Create forks at blocks 2 and 3

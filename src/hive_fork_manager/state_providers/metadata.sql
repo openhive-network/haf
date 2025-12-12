@@ -69,9 +69,9 @@ BEGIN
                 __state INT := 0;
             BEGIN
 
-                IF COALESCE( ( SELECT _blockFrom > block_num FROM hafd.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
+                IF COALESCE( ( SELECT _blockFrom > hafd.block_id_to_num(block_id) FROM hafd.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
                     __state := 1;
-                ELSIF COALESCE( ( SELECT _blockTo <= block_num FROM hafd.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
+                ELSIF COALESCE( ( SELECT _blockTo <= hafd.block_id_to_num(block_id) FROM hafd.applied_hardforks WHERE hardfork_num = 21 ), FALSE ) THEN
                     __state := -1;
                 END IF;
 
@@ -99,7 +99,7 @@ BEGIN
                             sm.body_binary,
                             CASE __state
                                 WHEN  1 THEN TRUE
-                                WHEN  0 THEN COALESCE( ( SELECT block_num < sm.block_num FROM hafd.applied_hardforks WHERE hardfork_num = 21 ), FALSE )
+                                WHEN  0 THEN COALESCE( ( SELECT hafd.block_id_to_num(block_id) < sm.block_num FROM hafd.applied_hardforks WHERE hardfork_num = 21 ), FALSE )
                                 WHEN -1 THEN FALSE
                             END
                         )).*,
@@ -170,8 +170,8 @@ $BODY$;
 
 
 CREATE OR REPLACE FUNCTION hive.update_state_provider_metadata(
-    _first_block hafd.blocks.num%TYPE,
-    _last_block hafd.blocks.num%TYPE,
+    _first_block INTEGER,
+    _last_block INTEGER,
     _context hafd.context_name)
     RETURNS void
     LANGUAGE plpgsql
