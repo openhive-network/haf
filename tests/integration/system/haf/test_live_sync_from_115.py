@@ -11,7 +11,7 @@ START_TEST_BLOCK = 115
 
 
 def __is_irreversible_block_in_database(self, block_num: int) -> bool:
-    sql = "SELECT exists(SELECT 1 FROM hafd.blocks WHERE num = :block_num);"
+    sql = "SELECT exists(SELECT 1 FROM hafd.blocks WHERE hafd.block_id_to_num(block_id) = :block_num);"
     return self.query_one(sql, block_num=block_num)
 
 
@@ -43,7 +43,7 @@ def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
     # THEN
     # an irreversible block with transaction shall be dumped
     wait_for_irreversible_in_database(session, expected_dumped_irreversible_block_num)
-    blks_in_database = session.query(Blocks).order_by(Blocks.num).all()
+    blks_in_database = session.query(BlocksView).order_by(BlocksView.num).all()
     block_nums_in_database = [block.num for block in blks_in_database]
     head_block = get_head_block(node_under_test)
 

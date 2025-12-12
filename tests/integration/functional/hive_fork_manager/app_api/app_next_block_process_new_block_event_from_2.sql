@@ -10,8 +10,8 @@ BEGIN
 
     PERFORM test.create_blocks(2, 2);
 
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', NULL)
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(2, 0))
     ;
 
     PERFORM hive.end_massive_sync( 2 );

@@ -4,7 +4,7 @@ from sqlalchemy.sql import text
 import test_tools as tt
 
 from haf_local_tools import wait_for_irreversible_progress, get_irreversible_block, create_app
-from haf_local_tools.tables import BlocksReversible, IrreversibleData
+from haf_local_tools.tables import IrreversibleData
 from haf_local_tools import wait_for_irreversible_in_database
 
 
@@ -112,21 +112,31 @@ def test_application_broken(prepared_networks_and_database_12_8_without_block_lo
     tt.logger.info(f'ctx_stats-after-waiting-2: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
 
     haf_irreversible = session.query(IrreversibleData).one()
-    tt.logger.info(f'consistent_block {haf_irreversible.consistent_block}')
+    # consistent_block is now a block_id (BigInteger encoding block_num and fork_id)
+    # Extract block_num by right-shifting 32 bits
+    consistent_block_num = haf_irreversible.consistent_block >> 32
+    tt.logger.info(f'consistent_block {haf_irreversible.consistent_block} (block_num: {consistent_block_num})')
 
     context_irreversible_block = session.execute( text("SELECT irreversible_block FROM hafd.contexts WHERE NAME = '{}'".format( APPLICATION_CONTEXT )) ).fetchone()[0]
     tt.logger.info(f'context_irreversible_block {context_irreversible_block}')
 
-    assert irreversible_block == haf_irreversible.consistent_block
+    assert irreversible_block == consistent_block_num
     assert irreversible_block == context_irreversible_block
 
     # now when the app was moved forward, hived will be able to remove reversible data with next new irreversible event
     wait_for_irreversible_in_database(session, START_TEST_BLOCK+4)
 
-    blks = session.query(BlocksReversible).order_by(BlocksReversible.num).all()
-    if len(blks) == 0:
+    # Query reversible blocks from unified blocks table
+    result = session.execute(text("""
+        SELECT DISTINCT hafd.block_id_to_num(b.block_id) as num
+        FROM hafd.blocks b, hafd.hive_state hs
+        WHERE hafd.block_id_to_num(b.block_id) > hafd.block_id_to_num(hs.consistent_block)
+        ORDER BY num
+    """)).fetchall()
+    block_nums_reversible = [row[0] for row in result]
+    if len(block_nums_reversible) == 0:
         tt.logger.info(f'OBI can make an immediate irreversible block, so all reversible data can be cleared out')
     else:
-        block_min = min([block.num for block in blks])
+        block_min = min(block_nums_reversible)
         tt.logger.info(f'min of blocks_reversible is {block_min}')
 

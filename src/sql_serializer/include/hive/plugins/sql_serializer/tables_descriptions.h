@@ -20,6 +20,7 @@ namespace hive::plugins::sql_serializer {
       {
       using data2_sql_tuple_base::data2_sql_tuple_base;
 
+      // Used for live sync (push_block) - generates format matching hafd.blocks_type (with num)
       std::string operator()(typename container_t::const_reference data) const
       {
         return std::to_string(data.block_number) + "," + escape_raw(data.hash) + "," +
@@ -46,6 +47,7 @@ namespace hive::plugins::sql_serializer {
       {
       using data2_sql_tuple_base::data2_sql_tuple_base;
 
+      // Used for live sync (push_block) - generates format matching hafd.transactions_type (with block_num)
       std::string operator()(typename container_t::const_reference data) const
       {
         return std::to_string(data.block_number) + "," + std::to_string(data.trx_in_block) + "," + escape_raw(data.hash) + "," +
@@ -65,6 +67,7 @@ namespace hive::plugins::sql_serializer {
       {
       using data2_sql_tuple_base::data2_sql_tuple_base;
 
+      // Used for live sync (push_block) - generates format matching hafd.transactions_multisig_type (with trx_hash)
       std::string operator()(typename container_t::const_reference data) const
       {
         return escape_raw(data.hash) + "," + escape_raw(data.signature);
@@ -85,6 +88,7 @@ namespace hive::plugins::sql_serializer {
       {
       using data2_sql_tuple_base::data2_sql_tuple_base;
 
+      // Used for live sync (push_block) - generates format matching hafd.operations_type (with id)
       std::string operator()(typename container_t::const_reference data) const
       {
         std::vector<char> opDeserialized = fc::raw::pack_to_vector( data.op );
@@ -108,6 +112,7 @@ namespace hive::plugins::sql_serializer {
       {
       using data2_sql_tuple_base::data2_sql_tuple_base;
 
+      // Used for live sync (push_block) - generates format matching hafd.accounts_type (with block_num)
       std::string operator()(typename container_t::const_reference data)
       {
         std::string block_num = ( data.block_number == 0 ) ? "NULL" : std::to_string( data.block_number );
@@ -128,9 +133,10 @@ namespace hive::plugins::sql_serializer {
       {
       using data2_sql_tuple_base::data2_sql_tuple_base;
 
+      // Used for live sync (push_block) - generates format matching hafd.account_operations_type (with operation_id)
       std::string operator()(typename container_t::const_reference data) const
       {
-        return std::to_string(data.account_id) + ',' + std::to_string(data.transacting_account_id) + ',' + 
+        return std::to_string(data.account_id) + ',' + std::to_string(data.transacting_account_id) + ',' +
         std::to_string(data.operation_seq_no) + ',' + std::to_string(data.operation_id);
       }
       };
@@ -147,6 +153,7 @@ namespace hive::plugins::sql_serializer {
       {
       using data2_sql_tuple_base::data2_sql_tuple_base;
 
+      // Used for live sync (push_block) - generates format matching hafd.applied_hardforks_type (with block_num)
       std::string operator()(typename container_t::const_reference data) const
       {
         return std::to_string(data.hardfork_num) + ',' + std::to_string(data.block_number) + ',' + std::to_string(data.hardfork_vop_id);

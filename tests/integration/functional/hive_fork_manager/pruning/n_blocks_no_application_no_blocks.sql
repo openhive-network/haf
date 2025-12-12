@@ -13,7 +13,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    INSERT INTO hafd.accounts( block_num, name, id )
+    INSERT INTO hafd.accounts( id, name, block_id )
     VALUES
            ( NULL, 'u1', 1 )
          , ( NULL, 'u2', 2 )

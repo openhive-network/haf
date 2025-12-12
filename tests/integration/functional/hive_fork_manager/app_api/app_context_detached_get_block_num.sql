@@ -9,12 +9,12 @@ BEGIN
     -- Create blocks 1-2 (block 2 has producer_id 6)
     PERFORM test.create_blocks(1, 1);
     INSERT INTO hafd.blocks VALUES
-        ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:24-07'::timestamp, 6, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
+        ( hafd.make_block_id(2, 0), '\xBADD20', '\xCAFE20', '2016-06-22 19:10:24-07'::timestamp, 6, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
 
     -- Create accounts
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 1)
-         , (6, 'alice', 1);
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0))
+         , (6, 'alice', hafd.make_block_id(1, 0));
 
     CREATE SCHEMA A;
     PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );

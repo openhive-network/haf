@@ -13,7 +13,7 @@ BEGIN
 
     -- check if correct irreversibe block is set
     PERFORM test.create_blocks(101, 101);
-    INSERT INTO hafd.accounts( id, name, block_num ) VALUES (5, 'initminer', 101);
+    INSERT INTO hafd.accounts( id, name, block_id ) VALUES (5, 'initminer', hafd.make_block_id(101, 0));
     PERFORM hive.end_massive_sync( 101 );
 
     PERFORM hive.app_create_context( _name => 'context2', _schema => 'b' );
