@@ -387,7 +387,7 @@ public:
     queries_commit_data_processor block_loader(db_url, "Block loader", "blockload",
                                                 [this](const data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processing_status
       {
-        pqxx::result data = tx.exec("SELECT hb.num AS _max_block FROM hafd.blocks hb ORDER BY hb.num DESC LIMIT 1;");
+        pqxx::result data = tx.exec("SELECT hafd.block_id_to_num(hb.block_id) AS _max_block FROM hafd.blocks hb ORDER BY hb.block_id DESC LIMIT 1;");
         if( !data.empty() )
         {
           FC_ASSERT( data.size() == 1, "Data size" );
@@ -770,6 +770,7 @@ void sql_serializer_plugin_impl::handle_transactions(const vector<std::shared_pt
         currently_caching_data->transactions_multisig.emplace_back(
           hash,
           block_num,
+          trx_in_block,
           *itr
         );
         ++itr;
