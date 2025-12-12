@@ -498,8 +498,8 @@ cmd_put() {
         return 1
     fi
 
-    # Relax pgdata permissions for HAF caches so they can be copied
-    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" || "$cache_type" == "haf_pipeline" ]]; then
+    # Relax pgdata permissions for HAF-based caches so they can be copied
+    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" || "$cache_type" == "haf_pipeline" || "$cache_type" == "hivemind_sync" ]]; then
         _relax_pgdata_permissions "$local_source"
     fi
 
@@ -585,7 +585,7 @@ cmd_put() {
 
     # Build exclusions for HAF caches (saves ~7.5GB by excluding unnecessary WAL and blockchain)
     local tar_excludes=""
-    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" || "$cache_type" == "haf_pipeline" ]]; then
+    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" || "$cache_type" == "haf_pipeline" || "$cache_type" == "hivemind_sync" ]]; then
         tar_excludes=$(_build_haf_tar_excludes "$local_source")
     fi
 
