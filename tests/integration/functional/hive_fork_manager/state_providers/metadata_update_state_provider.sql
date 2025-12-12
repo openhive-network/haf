@@ -18,40 +18,40 @@ BEGIN
          -- non containing keys
     ;
  
-    -- Create blocks 1-5
-    PERFORM test.create_blocks(1, 5);
+    -- Create blocks 1-16
+    PERFORM test.create_blocks(1, 16);
 
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 1),
-    (6, 'test-safari', 1),
-    (7, 'howo', 1),
-    (8, 'bassman077', 1),
-    (9, 'spscontest', 1),
-    (10, 'xenomorphosis', 1),
-    (11, 'sloth.buzz', 1),
-    (12, 'simple-app', 1),
-    (13, 'dorrebeca2', 1),
-    (14, 'margemnlpz08', 1),
-    (15, 'steem.kit', 1),
-    (16, 'jte1023', 1),
-    (17, 'adedayoolumide', 1),
-    (18, 'eos-polska', 1)
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0)),
+    (6, 'test-safari', hafd.make_block_id(1, 0)),
+    (7, 'howo', hafd.make_block_id(1, 0)),
+    (8, 'bassman077', hafd.make_block_id(1, 0)),
+    (9, 'spscontest', hafd.make_block_id(1, 0)),
+    (10, 'xenomorphosis', hafd.make_block_id(1, 0)),
+    (11, 'sloth.buzz', hafd.make_block_id(1, 0)),
+    (12, 'simple-app', hafd.make_block_id(1, 0)),
+    (13, 'dorrebeca2', hafd.make_block_id(1, 0)),
+    (14, 'margemnlpz08', hafd.make_block_id(1, 0)),
+    (15, 'steem.kit', hafd.make_block_id(1, 0)),
+    (16, 'jte1023', hafd.make_block_id(1, 0)),
+    (17, 'adedayoolumide', hafd.make_block_id(1, 0)),
+    (18, 'eos-polska', hafd.make_block_id(1, 0))
     ;
 
     INSERT INTO hafd.transactions
     VALUES
-           ( 1, 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
-         , ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
-         , ( 3, 0::SMALLINT, '\xDEED30', 101, 100, '2016-06-22 19:10:23-07'::timestamp, '\xBEEF' )
-         , ( 4, 0::SMALLINT, '\xDEED40', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF' )
-         , ( 5, 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
+           ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id(2, 0), 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id(3, 0), 0::SMALLINT, '\xDEED30', 101, 100, '2016-06-22 19:10:23-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id(4, 0), 0::SMALLINT, '\xDEED40', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id(5, 0), 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.operations
+    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
     VALUES
     -- account_update2_operation
         -- posting json metadata exists, json metadata empty
-        ( hafd.operation_id(1, 43, 0), 0, 0, '
+        ( hafd.make_block_id(1, 0), 0, 43, 0, 0, '
         {
             "type": "account_update2_operation",
             "value": {
@@ -60,11 +60,11 @@ BEGIN
                 "posting_json_metadata": "{\"profile\":{\"name\":\"Leonardo Da VinciXX\",\"about\":\"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..\",\"website\":\"http://www.davincilife.com/\",\"location\":\"Florence\",\"cover_image\":\"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg\",\"profile_image\":\"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg\"}}",
                 "extensions": []
             }
-        }            
+        }
         '::jsonb::hafd.operation),
 
         --empty json and posting metadata
-        ( hafd.operation_id(2, 43, 0), 0, 0, '
+        ( hafd.make_block_id(2, 0), 0, 43, 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -76,7 +76,7 @@ BEGIN
             }'::jsonb::hafd.operation
         ),
 
-        ( hafd.operation_id(15, 43, 0), 0, 0, '
+        ( hafd.make_block_id(15, 0), 0, 43, 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -90,7 +90,7 @@ BEGIN
 
 
         -- empty posting_metadata, json_metadata exists
-        ( hafd.operation_id(3, 43, 0), 0, 0, '
+        ( hafd.make_block_id(3, 0), 0, 43, 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -103,7 +103,7 @@ BEGIN
         ),
 
         --posting metadata equal to ""
-                ( hafd.operation_id(4, 43, 0), 0, 0, '
+                ( hafd.make_block_id(4, 0), 0, 43, 0, 0, '
         {
             "type": "account_update2_operation",
             "value": {
@@ -115,7 +115,7 @@ BEGIN
         }'::jsonb::hafd.operation),
 
         --posting_metadata equal to {}
-        ( hafd.operation_id(5, 43, 0), 0, 0, '
+        ( hafd.make_block_id(5, 0), 0, 43, 0, 0, '
 
             {
                 "type": "account_update2_operation",
@@ -128,9 +128,9 @@ BEGIN
             }'::jsonb::hafd.operation
         ),
 
-    -- account_create operation 
+    -- account_create operation
         -- empty json metadata
-        ( hafd.operation_id(6, 9, 0), 0, 0, '
+        ( hafd.make_block_id(6, 0), 0, 9, 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -176,7 +176,7 @@ BEGIN
                 }
             }'::jsonb::hafd.operation),
 
-        ( hafd.operation_id(16, 43, 0), 0, 0, '
+        ( hafd.make_block_id(16, 0), 0, 43, 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -189,7 +189,7 @@ BEGIN
         ),
 
         -- json metadata equal to  ""
-        ( hafd.operation_id(7, 9, 0), 0, 0, '
+        ( hafd.make_block_id(7, 0), 0, 9, 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -236,7 +236,7 @@ BEGIN
             }'::jsonb::hafd.operation),
 
         --json metadata equal to {}
-        ( hafd.operation_id(8, 9, 0), 0, 0, '
+        ( hafd.make_block_id(8, 0), 0, 9, 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -283,7 +283,7 @@ BEGIN
             }'::jsonb::hafd.operation),
 
         -- json metadata with a non empty value
-        ( hafd.operation_id(9, 9, 0), 0, 0, '
+        ( hafd.make_block_id(9, 0), 0, 9, 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -330,8 +330,8 @@ BEGIN
             }'::jsonb::hafd.operation
         ),
 
-    -- account_create_with_delegation_operation 
-        ( hafd.operation_id(10, 41, 0), 0, 0, '
+    -- account_create_with_delegation_operation
+        ( hafd.make_block_id(10, 0), 0, 41, 0, 0, '
             {
                 "type": "account_create_with_delegation_operation",
                 "value": {
@@ -400,7 +400,7 @@ BEGIN
         ),
 
     -- account_update2_operation
-        ( hafd.operation_id(11, 43, 0), 0, 0, '
+        ( hafd.make_block_id(11, 0), 0, 43, 0, 0, '
             {
             "type": "account_update2_operation",
                 "value": {
@@ -411,8 +411,8 @@ BEGIN
                 }
             }'::jsonb::hafd.operation),
 
-    -- account_update_operation 
-        ( hafd.operation_id(12, 10, 0), 0, 0, '
+    -- account_update_operation
+        ( hafd.make_block_id(12, 0), 0, 10, 0, 0, '
             {
                 "type": "account_update_operation",
                 "value": {
@@ -482,7 +482,7 @@ BEGIN
             }'::jsonb::hafd.operation),
 
     -- create_claimed_account_operation
-        ( hafd.operation_id(13, 23, 0), 0, 0, '
+        ( hafd.make_block_id(13, 0), 0, 23, 0, 0, '
             {
                 "type": "create_claimed_account_operation",
                 "value": {
@@ -526,7 +526,7 @@ BEGIN
         ),
 
         -- second update for the same account in the blocks range
-        ( hafd.operation_id(14, 43, 0), 0, 0, '
+        ( hafd.make_block_id(14, 0), 0, 43, 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {

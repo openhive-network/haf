@@ -43,7 +43,7 @@ BEGIN
     PERFORM test.create_transactions_reversible(8, 10, 3);
 
     -- Custom reversible operations with specific messages
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id) VALUES
+    INSERT INTO hafd.operations(id, trx_in_block, op_pos, body_binary, fork_id) VALUES
            ( hafd.operation_id(4,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
          , ( hafd.operation_id(5,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FOUR1 OPERATION"}}' :: jsonb :: hafd.operation, 1 )
          , ( hafd.operation_id(6,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hafd.operation, 1 )

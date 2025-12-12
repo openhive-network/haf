@@ -21,13 +21,13 @@ BEGIN
     PERFORM test.create_blocks(1, 5);
 
     -- Create accounts with specific IDs (1-5) and names (u1-u5)
-    INSERT INTO hafd.accounts( block_num, name, id )
+    INSERT INTO hafd.accounts( id, name, block_id )
     VALUES
-    ( 1, 'u1', 1 )
-         , ( 2, 'u2', 2 )
-         , ( 3, 'u3', 3 )
-         , ( 4, 'u4', 4 )
-         , ( 5, 'u5', 5 )
+    ( 1, 'u1', hafd.make_block_id(1, 0) )
+         , ( 2, 'u2', hafd.make_block_id(2, 0) )
+         , ( 3, 'u3', hafd.make_block_id(3, 0) )
+         , ( 4, 'u4', hafd.make_block_id(4, 0) )
+         , ( 5, 'u5', hafd.make_block_id(5, 0) )
     ;
 
     -- Create transactions
@@ -36,11 +36,11 @@ BEGIN
     -- Create transactions_multisig entries
     INSERT INTO hafd.transactions_multisig
     VALUES
-    ( '\xDEED10', '\xBAAD10' )
-         , ( '\xDEED20', '\xBAAD20' )
-         , ( '\xDEED30', '\xBAAD30' )
-         , ( '\xDEED40', '\xBAAD40' )
-         , ( '\xDEED50', '\xBAAD50' )
+    ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xBAAD10' )
+         , ( hafd.make_block_id(2, 0), 0::SMALLINT, '\xBAAD20' )
+         , ( hafd.make_block_id(3, 0), 0::SMALLINT, '\xBAAD30' )
+         , ( hafd.make_block_id(4, 0), 0::SMALLINT, '\xBAAD40' )
+         , ( hafd.make_block_id(5, 0), 0::SMALLINT, '\xBAAD50' )
     ;
 
     -- Create operations
@@ -49,11 +49,11 @@ BEGIN
     -- Create account_operations entries (up to block 4, matching old fill_with_blocks_data)
     INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, operation_id)
     VALUES
-           ( 1, 1, 1, hafd.operation_id(1,1,0) )
-         , ( 1, 1, 2, hafd.operation_id(2,1,0) )
-         , ( 2, 2, 1, hafd.operation_id(2,1,0) )
-         , ( 3, 3, 1, hafd.operation_id(3,1,0) )
-         , ( 4, 4, 1, hafd.operation_id(4,1,0) )
+           ( hafd.make_block_id(1, 0), 1, 1, 1, 1 )
+         , ( hafd.make_block_id(2, 0), 1, 1, 1, 2 )
+         , ( hafd.make_block_id(2, 0), 1, 2, 2, 1 )
+         , ( hafd.make_block_id(3, 0), 1, 3, 3, 1 )
+         , ( hafd.make_block_id(4, 0), 1, 4, 4, 1 )
     ;
 END;
 $BODY$
@@ -75,9 +75,9 @@ AS
 $BODY$
 BEGIN
     ASSERT (SELECT COUNT(*) FROM hafd.blocks) = 3, 'Some blocks stay';
-    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE num = 3), 'block 3 removed';
-    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE num = 4), 'block 4 removed';
-    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE num = 5), 'block 5 removed';
+    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE hafd.block_id_to_num(block_id) = 3), 'block 3 removed';
+    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE hafd.block_id_to_num(block_id) = 4), 'block 4 removed';
+    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE hafd.block_id_to_num(block_id) = 5), 'block 5 removed';
     ASSERT (SELECT COUNT(*) FROM hafd.transactions) = 3, 'Some transactions stay';
     ASSERT (SELECT COUNT(*) FROM hafd.transactions_multisig) = 3, 'Some transactions multisig stay';
     ASSERT (SELECT COUNT(*) FROM hafd.operations) = 3, 'Some operations stay';

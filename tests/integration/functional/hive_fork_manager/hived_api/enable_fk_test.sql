@@ -8,6 +8,7 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.disable_fk_of_irreversible();
+    PERFORM hive.disable_indexes_of_irreversible();
 END;
 $BODY$
 ;
@@ -17,6 +18,8 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
+    -- Must enable indexes first to restore PKs before FKs can be added
+    PERFORM hive.enable_indexes_of_irreversible();
     PERFORM hive.enable_fk_of_irreversible();
 END;
 $BODY$
@@ -92,12 +95,7 @@ BEGIN
 
     ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_transactions', 'FOREIGN KEY' ) ), 'FK fk_1_hive_transactions not exists';
     ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_transactions_multisig', 'FOREIGN KEY' ) ), 'FK fk_1_hive_transactions_multisig not exists';
-
-
-    ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_irreversible_data', 'FOREIGN KEY' ) ), 'FK fk_1_hive_irreversible_data not exists';
     ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_applied_hardforks', 'FOREIGN KEY' ) ), 'FK fk_1_hive_applied_hardforks not exists';
-
-
 
 END;
 $BODY$

@@ -1,5 +1,6 @@
 -- Test to validate test_tools.sql functionality
 -- This test verifies that all test utility functions work correctly
+-- Updated for unified tables with block_id encoding (no *_reversible tables)
 
 -- First, load test_tools.sql
 \ir test_tools.sql
@@ -34,6 +35,7 @@ BEGIN
     PERFORM test.create_operations(1, 5);
 
     -- Test 3: Create reversible data for multiple forks
+    -- In unified table model, these create blocks with fork_id > 0
     PERFORM test.create_blocks_reversible(4, 7, 1);
     PERFORM test.create_transactions_reversible(4, 7, 1);
     PERFORM test.create_operations_reversible(4, 7, 1);
@@ -41,10 +43,6 @@ BEGIN
     PERFORM test.create_blocks_reversible(7, 9, 2);
     PERFORM test.create_transactions_reversible(7, 9, 2);
     PERFORM test.create_operations_reversible(7, 9, 2);
-
-    -- Test 4: High-level function
-    -- Note: This would conflict with data already created, so we'll skip it
-    -- PERFORM test.setup_simple_blockchain(3);
 END;
 $BODY$;
 
@@ -77,33 +75,46 @@ BEGIN
     ASSERT EXISTS (SELECT FROM hafd.fork WHERE id = 3 AND block_num = 7),
         'Missing fork 3 at block 7';
 
-    -- Verify irreversible blocks were created
-    ASSERT (SELECT COUNT(*) FROM hafd.blocks WHERE num BETWEEN 1 AND 9) = 9,
-        'Expected 9 irreversible blocks';
+    -- Verify irreversible blocks were created (fork_id=0)
+    ASSERT (SELECT COUNT(*) FROM hafd.blocks 
+            WHERE hafd.block_id_to_num(block_id) BETWEEN 1 AND 9
+            AND hafd.block_id_to_fork(block_id) = 0) = 9,
+        'Expected 9 irreversible blocks (fork_id=0)';
 
     -- Verify transactions were created
-    ASSERT (SELECT COUNT(*) FROM hafd.transactions WHERE block_num BETWEEN 1 AND 5) = 5,
-        'Expected 5 transactions';
+    ASSERT (SELECT COUNT(*) FROM hafd.transactions 
+            WHERE hafd.block_id_to_num(block_id) BETWEEN 1 AND 5
+            AND hafd.block_id_to_fork(block_id) = 0) = 5,
+        'Expected 5 irreversible transactions';
 
     -- Verify operations were created
-    ASSERT (SELECT COUNT(*) FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) BETWEEN 1 AND 5) = 5,
-        'Expected 5 operations';
+    ASSERT (SELECT COUNT(*) FROM hafd.operations 
+            WHERE hafd.block_id_to_num(block_id) BETWEEN 1 AND 5
+            AND hafd.block_id_to_fork(block_id) = 0) = 5,
+        'Expected 5 irreversible operations';
 
-    -- Verify reversible blocks for fork 1
-    ASSERT (SELECT COUNT(*) FROM hafd.blocks_reversible WHERE fork_id = 1 AND num BETWEEN 4 AND 7) = 4,
-        'Expected 4 reversible blocks for fork 1';
+    -- Verify reversible blocks for fork 1 (stored in same table with fork_id=1)
+    ASSERT (SELECT COUNT(*) FROM hafd.blocks 
+            WHERE hafd.block_id_to_fork(block_id) = 1 
+            AND hafd.block_id_to_num(block_id) BETWEEN 4 AND 7) = 4,
+        'Expected 4 blocks for fork 1 (blocks 4-7)';
 
     -- Verify reversible transactions for fork 1
-    ASSERT (SELECT COUNT(*) FROM hafd.transactions_reversible WHERE fork_id = 1 AND block_num BETWEEN 4 AND 7) = 4,
-        'Expected 4 reversible transactions for fork 1';
+    ASSERT (SELECT COUNT(*) FROM hafd.transactions 
+            WHERE hafd.block_id_to_fork(block_id) = 1 
+            AND hafd.block_id_to_num(block_id) BETWEEN 4 AND 7) = 4,
+        'Expected 4 transactions for fork 1';
 
     -- Verify reversible operations for fork 1
-    ASSERT (SELECT COUNT(*) FROM hafd.operations_reversible WHERE fork_id = 1) = 4,
-        'Expected 4 reversible operations for fork 1';
+    ASSERT (SELECT COUNT(*) FROM hafd.operations 
+            WHERE hafd.block_id_to_fork(block_id) = 1) = 4,
+        'Expected 4 operations for fork 1';
 
     -- Verify reversible blocks for fork 2
-    ASSERT (SELECT COUNT(*) FROM hafd.blocks_reversible WHERE fork_id = 2 AND num BETWEEN 7 AND 9) = 3,
-        'Expected 3 reversible blocks for fork 2';
+    ASSERT (SELECT COUNT(*) FROM hafd.blocks 
+            WHERE hafd.block_id_to_fork(block_id) = 2 
+            AND hafd.block_id_to_num(block_id) BETWEEN 7 AND 9) = 3,
+        'Expected 3 blocks for fork 2 (blocks 7-9)';
 
     -- Verify test schema and functions exist
     ASSERT EXISTS (SELECT FROM pg_namespace WHERE nspname = 'test'),

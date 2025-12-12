@@ -1,3 +1,89 @@
+-- =============================================================================
+-- HIVED API Functions
+-- =============================================================================
+-- These functions are called by hived to push blocks and manage irreversibility.
+-- With unified tables, push_block inserts with block_id and set_irreversible
+-- just deletes orphan forks (CASCADE handles related tables).
+-- =============================================================================
+
+-- =============================================================================
+-- Input types for push_block (match hived's output format)
+-- =============================================================================
+-- These types define what hived sends - they use the old structure with num/block_num
+-- The push_block function transforms these to block_id encoding
+
+DROP TYPE IF EXISTS hafd.blocks_type CASCADE;
+CREATE TYPE hafd.blocks_type AS (
+    num INTEGER,
+    hash bytea,
+    prev bytea,
+    created_at timestamp without time zone,
+    producer_account_id INTEGER,
+    transaction_merkle_root bytea,
+    extensions jsonb,
+    witness_signature bytea,
+    signing_key text,
+    hbd_interest_rate INTEGER,
+    total_vesting_fund_hive NUMERIC,
+    total_vesting_shares NUMERIC,
+    total_reward_fund_hive NUMERIC,
+    virtual_supply NUMERIC,
+    current_supply NUMERIC,
+    current_hbd_supply NUMERIC,
+    dhf_interval_ledger NUMERIC
+);
+
+DROP TYPE IF EXISTS hafd.transactions_type CASCADE;
+CREATE TYPE hafd.transactions_type AS (
+    block_num INTEGER,
+    trx_in_block smallint,
+    trx_hash bytea,
+    ref_block_num integer,
+    ref_block_prefix bigint,
+    expiration timestamp without time zone,
+    signature bytea
+);
+
+DROP TYPE IF EXISTS hafd.transactions_multisig_type CASCADE;
+CREATE TYPE hafd.transactions_multisig_type AS (
+    trx_hash bytea,
+    signature bytea
+);
+
+DROP TYPE IF EXISTS hafd.operations_type CASCADE;
+CREATE TYPE hafd.operations_type AS (
+    id BIGINT,  -- Encoded (block_num | seq_in_block | op_type_id)
+    trx_in_block smallint,
+    op_pos integer,
+    body_binary hafd.operation
+);
+
+DROP TYPE IF EXISTS hafd.accounts_type CASCADE;
+CREATE TYPE hafd.accounts_type AS (
+    id INTEGER,
+    name VARCHAR(16),
+    block_num INTEGER
+);
+
+DROP TYPE IF EXISTS hafd.account_operations_type CASCADE;
+CREATE TYPE hafd.account_operations_type AS (
+    account_id INTEGER,
+    transacting_account_id INTEGER,
+    account_op_seq_no INTEGER,
+    operation_id BIGINT  -- Legacy operation_id
+);
+
+DROP TYPE IF EXISTS hafd.applied_hardforks_type CASCADE;
+CREATE TYPE hafd.applied_hardforks_type AS (
+    hardfork_num smallint,
+    block_num INTEGER,
+    hardfork_vop_id bigint
+);
+
+-- =============================================================================
+-- API Functions
+-- =============================================================================
+
 CREATE OR REPLACE FUNCTION hive.reanalyze_indexes_with_expressions()
     RETURNS void
     LANGUAGE plpgsql
@@ -5,15 +91,13 @@ CREATE OR REPLACE FUNCTION hive.reanalyze_indexes_with_expressions()
 AS
 $BODY$
 BEGIN
-    -- put here analyze for tables which indexes are using expressions
-    -- the function is called after hfm creates/drops indexes
-    -- without this statistics for expressions won't exists and planner
-    -- will choose wrongly execution plans
-
+    -- Analyze tables which indexes use expressions
+    -- Without this, statistics for expressions won't exist and planner
+    -- will choose wrong execution plans
     ANALYZE hafd.operations;
-    ANALYZE hafd.operations_reversible;
     ANALYZE hafd.account_operations;
-    ANALYZE hafd.account_operations_reversible;
+    ANALYZE hafd.blocks;
+    ANALYZE hafd.transactions;
 END;
 $BODY$
 ;
@@ -37,14 +121,19 @@ END;
 $BODY$
 ;
 
+-- =============================================================================
+-- push_block - Insert new block data into unified tables
+-- =============================================================================
+-- Now inserts into unified tables with block_id encoding (block_num, fork_id)
+
 CREATE OR REPLACE FUNCTION hive.push_block(
-      _block hafd.blocks
-    , _transactions hafd.transactions[]
-    , _signatures hafd.transactions_multisig[]
-    , _operations hafd.operations[]
-    , _accounts hafd.accounts[]
-    , _account_operations hafd.account_operations[]
-    , _applied_hardforks hafd.applied_hardforks[]
+      _block hafd.blocks_type
+    , _transactions hafd.transactions_type[]
+    , _signatures hafd.transactions_multisig_type[]
+    , _operations hafd.operations_type[]
+    , _accounts hafd.accounts_type[]
+    , _account_operations hafd.account_operations_type[]
+    , _applied_hardforks hafd.applied_hardforks_type[]
 )
     RETURNS void
     LANGUAGE plpgsql
@@ -53,25 +142,88 @@ AS
 $BODY$
 DECLARE
     __fork_id hafd.fork.id%TYPE;
+    __block_id hafd.block_id;
 BEGIN
+    -- Get current fork_id
     SELECT hf.id
     INTO __fork_id
     FROM hafd.fork hf ORDER BY hf.id DESC LIMIT 1;
 
+    -- Generate block_id encoding (block_num, fork_id)
+    __block_id := hafd.make_block_id(_block.num, __fork_id);
+
+    -- Insert event
     INSERT INTO hafd.events_queue( event, block_num )
         VALUES( 'NEW_BLOCK', _block.num );
 
-    INSERT INTO hafd.blocks_reversible VALUES( _block.*, __fork_id );
-    INSERT INTO hafd.transactions_reversible VALUES( ( unnest( _transactions ) ).*, __fork_id );
-    INSERT INTO hafd.transactions_multisig_reversible VALUES( ( unnest( _signatures ) ).*, __fork_id );
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
-      SELECT id, trx_in_block, op_pos, body_binary, __fork_id FROM unnest( _operations );
-    INSERT INTO hafd.accounts_reversible VALUES( ( unnest( _accounts ) ).*, __fork_id );
-    INSERT INTO hafd.account_operations_reversible VALUES( ( unnest( _account_operations ) ).*, __fork_id );
-    INSERT INTO hafd.applied_hardforks_reversible VALUES( ( unnest( _applied_hardforks ) ).*, __fork_id );
+    -- Insert into unified blocks table
+    INSERT INTO hafd.blocks (
+        block_id, hash, prev, created_at, producer_account_id,
+        transaction_merkle_root, extensions, witness_signature, signing_key,
+        hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares,
+        total_reward_fund_hive, virtual_supply, current_supply,
+        current_hbd_supply, dhf_interval_ledger
+    ) VALUES (
+        __block_id, _block.hash, _block.prev, _block.created_at, _block.producer_account_id,
+        _block.transaction_merkle_root, _block.extensions, _block.witness_signature, _block.signing_key,
+        _block.hbd_interest_rate, _block.total_vesting_fund_hive, _block.total_vesting_shares,
+        _block.total_reward_fund_hive, _block.virtual_supply, _block.current_supply,
+        _block.current_hbd_supply, _block.dhf_interval_ledger
+    );
+
+    -- Insert transactions with block_id
+    INSERT INTO hafd.transactions (block_id, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature)
+    SELECT __block_id, t.trx_in_block, t.trx_hash, t.ref_block_num, t.ref_block_prefix, t.expiration, t.signature
+    FROM unnest(_transactions) t;
+
+    -- Insert multisig signatures with block_id
+    -- Join with transactions to get trx_in_block from trx_hash
+    INSERT INTO hafd.transactions_multisig (block_id, trx_in_block, signature)
+    SELECT __block_id, t.trx_in_block, s.signature
+    FROM unnest(_signatures) s
+    JOIN hafd.transactions t ON t.block_id = __block_id AND t.trx_hash = s.trx_hash;
+
+    -- Insert operations with block_id
+    -- Note: _operations contains (id, trx_in_block, op_pos, body_binary)
+    -- id encodes (block_num, seq_in_block, op_type_id) - we extract seq and type
+    INSERT INTO hafd.operations (block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
+    SELECT __block_id,
+           hafd.operation_id_to_pos(o.id),    -- seq_in_block
+           hafd.operation_id_to_type_id(o.id)::SMALLINT, -- op_type_id
+           o.trx_in_block,
+           o.op_pos,
+           o.body_binary
+    FROM unnest(_operations) o;
+
+    -- Insert accounts with block_id
+    INSERT INTO hafd.accounts (id, name, block_id)
+    SELECT a.id, a.name, __block_id
+    FROM unnest(_accounts) a;
+
+    -- Insert account_operations with block_id
+    -- Note: _account_operations contains (account_id, transacting_account_id, account_op_seq_no, operation_id)
+    -- We need to extract seq_in_block from operation_id
+    INSERT INTO hafd.account_operations (block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
+    SELECT __block_id,
+           hafd.operation_id_to_pos(ao.operation_id),  -- seq_in_block
+           ao.account_id,
+           ao.transacting_account_id,
+           ao.account_op_seq_no
+    FROM unnest(_account_operations) ao;
+
+    -- Insert applied_hardforks with block_id
+    INSERT INTO hafd.applied_hardforks (block_id, hardfork_num, hardfork_vop_id)
+    SELECT __block_id, h.hardfork_num, h.hardfork_vop_id
+    FROM unnest(_applied_hardforks) h;
 END;
 $BODY$
 ;
+
+-- =============================================================================
+-- set_irreversible - Mark blocks as irreversible
+-- =============================================================================
+-- With unified tables, we just DELETE non-canonical blocks.
+-- CASCADE handles all child tables automatically.
 
 CREATE OR REPLACE FUNCTION hive.set_irreversible( _block_num INT )
     RETURNS void
@@ -80,39 +232,31 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible( _block_num INT )
 AS
 $BODY$
 DECLARE
-    __irreversible_head_block hafd.blocks.num%TYPE;
+    __current_irreversible INT;
 BEGIN
-    SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hafd.blocks;
+    SELECT COALESCE(consistent_block, 0) INTO __current_irreversible FROM hafd.hive_state;
 
-    IF ( _block_num < __irreversible_head_block ) THEN
+    IF ( _block_num <= __current_irreversible ) THEN
         RETURN;
     END IF;
 
-    -- copy to irreversible
-    PERFORM hive.copy_blocks_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_transactions_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_operations_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_signatures_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_accounts_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_account_operations_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_applied_hardforks_to_irreversible( __irreversible_head_block, _block_num );
+    -- With unified tables, no copy operations needed!
+    -- Data is already in the main tables.
 
-    -- if we cannot get exclusive lock for contexts row then we return and will back here
-    -- next time, when hived will try to remove blocks with next irreversible block
-    -- the contexts are locked by the apps during attach: hive.app_context_attach
+    -- Try to cleanup orphan forks (non-blocking)
     BEGIN
         LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
         PERFORM hive.remove_unecessary_events( _block_num );
-        -- remove unneeded blocks and events
-        PERFORM hive.remove_obsolete_reversible_data( _block_num );
+        PERFORM hive.remove_orphan_forks( _block_num );
     EXCEPTION WHEN SQLSTATE '55P03' THEN
-        -- 55P03 	lock_not_available https://www.postgresql.org/docs/current/errcodes-appendix.html
+        -- 55P03 lock_not_available - contexts are locked by apps
+        -- Cleanup will happen on next irreversible block
     END;
 
-
-    -- application contexts will use the event to clear data in shadow tables
+    -- Signal applications
     INSERT INTO hafd.events_queue( event, block_num )
     VALUES( 'NEW_IRREVERSIBLE', _block_num );
+
     UPDATE hafd.hive_state SET consistent_block = _block_num;
 END;
 $BODY$
@@ -125,22 +269,16 @@ CREATE OR REPLACE FUNCTION hive.end_massive_sync( _block_num INTEGER )
 AS
 $BODY$
 BEGIN
-    -- if we cannot get exclusive lock for contexts row then we return and will back here
-    -- next time, when hived will try to remove blocks with next irreversible block
-    -- the contexts are locked by the apps during attach: hive.app_context_attach
     BEGIN
-     -- remove all events less than lowest context events_id
         LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
         PERFORM hive.remove_unecessary_events( _block_num );
-        PERFORM hive.remove_obsolete_reversible_data( _block_num );
+        PERFORM hive.remove_orphan_forks( _block_num );
     EXCEPTION WHEN SQLSTATE '55P03' THEN
-        -- 55P03 	lock_not_available https://www.postgresql.org/docs/current/errcodes-appendix.html
+        -- 55P03 lock_not_available
     END;
 
     INSERT INTO hafd.events_queue( event, block_num )
     VALUES ( 'MASSIVE_SYNC'::hafd.event_type, _block_num );
-
-
 
     UPDATE hafd.hive_state SET consistent_block = _block_num;
 END;
@@ -186,6 +324,10 @@ END;
 $BODY$
 ;
 
+-- =============================================================================
+-- Index management functions (unified tables only)
+-- =============================================================================
+
 CREATE OR REPLACE FUNCTION hive.disable_indexes_of_irreversible()
     RETURNS void
     LANGUAGE plpgsql
@@ -205,7 +347,7 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'accounts' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'account_operations' );
 
-    PERFORM hive.reanalyze_indexes_with_expressions(); --I wonder if reanalyzing is really needed when indexes are dropped
+    PERFORM hive.reanalyze_indexes_with_expressions();
 END;
 $BODY$
 ;
@@ -266,10 +408,14 @@ BEGIN
     PERFORM hive.restore_foreign_keys( 'hafd.hive_state' );
     PERFORM hive.restore_foreign_keys( 'hafd.accounts' );
     PERFORM hive.restore_foreign_keys( 'hafd.account_operations' );
-
 END;
 $BODY$
 ;
+
+-- =============================================================================
+-- Reversible index functions - NO-OP with unified tables
+-- =============================================================================
+-- These functions are kept for API compatibility but do nothing
 
 CREATE OR REPLACE FUNCTION hive.disable_indexes_of_reversible()
     RETURNS void
@@ -278,26 +424,8 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'blocks_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_multisig_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'operations_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'applied_hardforks_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'accounts_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'account_operations_reversible' );
-
-
-
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'blocks_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions_multisig_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'operations_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'applied_hardforks_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'accounts_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'account_operations_reversible' );
-
-    PERFORM hive.reanalyze_indexes_with_expressions(); --I wonder if reanalyzing is really needed when indexes are dropped
-
+    -- NO-OP: With unified tables, there are no separate reversible tables
+    NULL;
 END;
 $BODY$
 ;
@@ -309,54 +437,32 @@ CREATE OR REPLACE FUNCTION hive.enable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.restore_indexes( 'hafd.blocks_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.transactions_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.transactions_multisig_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.operations_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.accounts_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.account_operations_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.applied_hardforks_reversible' );
-
-
-
-    PERFORM hive.restore_foreign_keys( 'hafd.blocks_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.transactions_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.transactions_multisig_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.operations_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.accounts_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.account_operations_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.applied_hardforks_reversible' );
-
-    PERFORM hive.reanalyze_indexes_with_expressions();
+    -- NO-OP: With unified tables, there are no separate reversible tables
+    NULL;
 END;
 $BODY$
 ;
 
+-- =============================================================================
+-- Connection and initialization
+-- =============================================================================
 
-
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer )
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num INT, _first_block INT, _pruning integer )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __max_block hafd.blocks.num%TYPE;
+    __max_block INT;
     __last_pruning integer;
 BEGIN
-    -- assumptions:
-    -- sql-serializer WAL was replayed after (re)start
-    -- at the moment of call hived finished restarting and did removing reversible data from state if it was desire
     PERFORM hive.remove_inconsistent_irreversible_data();
     SELECT MAX(num) INTO __max_block FROM hive.blocks_view;
-    -- we need remove with fork event blocks which are greater than head block in hived state(param _block_num)
-    -- because WAL was replayed, we are sure that we have situation before hived close
-    -- when hived did remove reversible data than we have two possibilities:
-    --  1. max(block_num) in HAF is greater than HB in state, lacking blocks are going to replay and HAF must prepare a new fork for them
-    --  2. max(block_num) in HAF is equal HB in state, newly replayed blocks will be new for HAF, no fork required
+
     ASSERT COALESCE(__max_block,0) >= _block_num OR COALESCE(__max_block,0) < _first_block, 'Hived state cannot have more blocks on top micro fork than HAF';
-    -- when hived did not remove reversible data (i.e. is during reply) the situation is the same as for point 2 above -> no fork is required
-    IF __max_block > _block_num OR _block_num = 0 THEN --_block_num = 0 to ensure that at least 1 fork exists
+
+    IF __max_block > _block_num OR _block_num = 0 THEN
         PERFORM hive.back_from_fork( _block_num );
     END IF;
 
@@ -364,15 +470,13 @@ BEGIN
     VALUES( _block_num, _git_sha, now() );
 
     ASSERT ( hive.is_pruning_enabled() = FALSE OR ( hive.is_pruning_enabled() = TRUE AND _pruning > 0 ) )
-           , 'Cannot initialize as non‑pruned: existing database is pruned. Drop/recreate the database or run in pruned mode.';
+           , 'Cannot initialize as non-pruned: existing database is pruned. Drop/recreate the database or run in pruned mode.';
 
     UPDATE hafd.hive_state
     SET pruning = _pruning;
 
     IF hive.is_pruning_enabled() = TRUE THEN
-        -- we need to drop FK to fast remove from hafd.operations
-        -- because it is impossible to back from pruned to non-pruned we do not bother with FK recreations
-        ALTER TABLE hafd.account_operations DROP CONSTRAINT IF EXISTS hive_account_operations_fk_2;
+        ALTER TABLE hafd.account_operations DROP CONSTRAINT IF EXISTS fk_1_hive_account_operations;
     END IF;
 END;
 $BODY$
@@ -388,7 +492,6 @@ DECLARE
     _all_indices_have_status BOOLEAN;
     record hafd.indexes_constraints%ROWTYPE;
 BEGIN
-    -- Debugging: Log the current state of the indexes_constraints table
     RAISE NOTICE 'Current state of hafd.indexes_constraints:';
     FOR record IN
         SELECT * FROM hafd.indexes_constraints
@@ -422,7 +525,6 @@ BEGIN
     ELSE
         RETURN TRUE;
     END IF;
- 
 END;
 $BODY$;
 
@@ -468,7 +570,6 @@ BEGIN
     IF EXISTS ( SELECT 1 FROM hafd.events_queue WHERE id = hive.unreachable_event_id() LIMIT 1 ) THEN
         SELECT MAX(eq.id) + 1 FROM hafd.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
         PERFORM SETVAL( 'hafd.events_queue_id_seq', __events_id, false );
-        -- PERFORM hive_update.create_database_hash();
         RETURN;
     END IF;
 
@@ -480,7 +581,6 @@ BEGIN
 
     INSERT INTO hafd.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
 
-    -- if contexts are created before starting hived
     UPDATE hafd.contexts hc
     SET fork_id = 1, events_id = 0
     FROM hafd.contexts_attachment  hac
@@ -539,16 +639,6 @@ BEGIN
     RETURN;
   END IF;
 
-    -- first we take lock to attachment rows for only outdated contexts
-    -- because we have idle_in_transaction_session_timeout = 1h, we are sure that
-    -- 1) broken app transaction are closed (no locks are made by the context)
-    -- 2) application is still pending and may hold locks for attachments rows
-    -- ad1) detach the context, it is broken, un working application
-    -- ad2) it did not commit during last 4 hours, but still executing some query
-        -- stay it attached, it is possible that the app was waiting for HAF to start
-        -- problem: such apps may be mixed with 1st kind apps
-    -- we cannot stop here because someone holds locks, so SKIP LOCKED is used
-
   SELECT ARRAY_AGG(ctxs.name) INTO __contexts FROM (
     SELECT c.name
     FROM hafd.contexts c
@@ -567,17 +657,6 @@ BEGIN
       SELECT hc.current_block_num INTO __current_block_before_detach
       FROM hafd.contexts hc WHERE hc.name = __ctx;
       PERFORM hive.app_context_detach(__ctx);
-      -- Detach functionality is specifically designed for use within the application's main loop.
-      -- It automatically steps back by one block, which is previously incremented by 'app_next_block.'
-      -- This design removes from applications obligation managing the 'current_block' explicitly.
-      -- However, it's crucial to note that auto-detach is initiated outside the main application loop,
-      -- and as such, it must refrain from modifying the 'current_block.', otherwise
-      -- it can lead to scenarios where re-attached applications will process
-      -- the same block twice after being auto-detached and subsequently restarted.
-      -- there is no need to update block num of applications which are using stages and new loop
-      -- they have stored all information in their state and they will update attachment in the next_loop_iteration procedure
-      -- the only problem is with app_next_block which is executed by the iteration, but the lock taken here
-      -- on the function beginning ensures the iteration loop work consistent
 
       UPDATE hafd.contexts
       SET current_block_num = __current_block_before_detach
@@ -592,7 +671,6 @@ BEGIN
 END;
 $BODY$
 ;
-
 
 CREATE OR REPLACE FUNCTION hive.get_sync_state()
     RETURNS hafd.sync_state

@@ -14,14 +14,14 @@ BEGIN
 
     INSERT INTO hafd.blocks
     VALUES
-       ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-     , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+       ( hafd.make_block_id(1, 0), '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+     , ( hafd.make_block_id(2, 0), '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
     INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
-         , (6, 'alice', 1)
-         , (7, 'bob', 1)
+         , (6, 'alice', hafd.make_block_id(1, 0))
+         , (7, 'bob', hafd.make_block_id(1, 0))
     ;
 
     INSERT INTO hafd.transactions
@@ -44,8 +44,8 @@ BEGIN
 
     INSERT INTO hafd.accounts
     VALUES
-             ( 1, 'userconsistent', 1)
-           , ( 2, 'user', 2)
+             ( 1, 'userconsistent', hafd.make_block_id(1, 0))
+           , ( 2, 'user', hafd.make_block_id(2, 0))
     ;
 
     INSERT INTO hafd.account_operations
@@ -56,8 +56,8 @@ BEGIN
 
     INSERT INTO hafd.applied_hardforks
     VALUES
-        ( 1, 1, hafd.operation_id(1,1,0))
-      , ( 2, 2, hafd.operation_id(2,1,0))
+        ( 1, 1, hafd.operation_id(1,hafd.make_block_id(1, 0),0))
+      , ( 2, 2, hafd.operation_id(2,hafd.make_block_id(1, 0),0))
     ;
 
     -- here we simulate situation when hived claims recently only block 1

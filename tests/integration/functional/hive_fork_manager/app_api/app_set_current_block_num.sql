@@ -8,9 +8,9 @@ $BODY$
 BEGIN
     PERFORM test.create_blocks(1, 2);
 
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 1)
-         , (6, 'alice', 1)
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0))
+         , (6, 'alice', hafd.make_block_id(1, 0))
     ;
 
     CREATE SCHEMA A;
