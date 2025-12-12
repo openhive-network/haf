@@ -153,10 +153,10 @@ check_relation_structure public.good_table "id|integer|||\namount|hafd.hive_amou
 
 printf "\nTEST: Creating view referencing allowed types. This should pass\n"
 prepare_database
-exec_sql "create view public.good_view as select num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hafd.blocks"
+exec_sql "create view public.good_view as select hafd.block_id_to_num(block_id) as block_num, total_vesting_fund_hive, total_vesting_shares, current_hbd_supply, hbd_interest_rate from hafd.blocks"
 exec_sql "comment on view public.good_view is 'foo'"
 update_database
-check_relation_structure public.good_view "num|integer|||\ntotal_vesting_fund_hive|hafd.hive_amount|||\ntotal_vesting_shares|hafd.vest_amount|||\ncurrent_hbd_supply|hafd.hbd_amount|||\nhbd_interest_rate|hafd.interest_rate|||"
+check_relation_structure public.good_view "block_num|integer|||\ntotal_vesting_fund_hive|hafd.hive_amount|||\ntotal_vesting_shares|hafd.vest_amount|||\ncurrent_hbd_supply|hafd.hbd_amount|||\nhbd_interest_rate|hafd.interest_rate|||"
 check_relation_comment public.good_view foo
 
 printf "\nTEST: Creating view referencing disallowed type. This should still pass and the view should be recreated.\n"
