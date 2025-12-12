@@ -19,7 +19,7 @@ variables:
   FF_ENABLE_JOB_CLEANUP: 1
   FF_NETWORK_PER_BUILD: 1
 
-  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10
+  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-pg18-10
   BUILDER_IMAGE_TAG: "$TEST_HAF_IMAGE_TAG"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"

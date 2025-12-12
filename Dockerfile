@@ -31,7 +31,7 @@ RUN apt-get update && \
     echo 'Pin: origin apt.postgresql.org' >> /etc/apt/preferences.d/pgdg.pref && \
     echo 'Pin-Priority: 1001' >> /etc/apt/preferences.d/pgdg.pref && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3-pip postgresql-18 postgresql-18-cron postgresql-18-pgvector postgresql-plpython3-18 libpq5 \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3-pip postgresql-18 postgresql-plpython3-18 libpq5 \
                                                                               libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
     # Add BeautifulSoup for hivesense preprocessing posts (3.1MB)
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3-bs4 python3-lxml && \
@@ -39,9 +39,10 @@ RUN apt-get update && \
     python3.12 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd && \
     # Install ParadeDB pg_search extension for BM25 search
     # Get the latest release URL from GitHub
-    curl -L "https://github.com/paradedb/paradedb/releases/download/v0.19.5/postgresql-17-pg-search_0.19.5-1PARADEDB-noble_amd64.deb" -o /tmp/pg_search.deb && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y /tmp/pg_search.deb && \
-    rm /tmp/pg_search.deb && \
+    # TODO: Uncomment when pg_search is available for PostgreSQL 18
+    # curl -L "https://github.com/paradedb/paradedb/releases/download/v0.19.5/postgresql-18-pg-search_0.19.5-1PARADEDB-noble_amd64.deb" -o /tmp/pg_search.deb && \
+    # DEBIAN_FRONTEND=noninteractive apt-get install -y /tmp/pg_search.deb && \
+    # rm /tmp/pg_search.deb && \
     apt-get remove -y gnupg curl && \
     apt-get autoremove -y && \
     busybox --install -s
