@@ -100,3 +100,109 @@ include:
       - hived_uid.env
     paths:
     - "${CI_PROJECT_DIR}/docker_entrypoint.log"
+
+# =============================================================================
+# Shared templates for HAF-based application test jobs
+# =============================================================================
+
+# Wait for HAF PostgreSQL service to be ready
+# GitLab services don't support health checks like docker-compose, so we must poll.
+#
+# Required variables (set in your job or global variables):
+#   HAF_APP_SCHEMA: The PostgreSQL schema name to verify (e.g., "reptracker_app", "btracker_app", "hafbe_app")
+#
+# Optional variables:
+#   HAF_DB_URL: PostgreSQL connection URL (default: postgresql://haf_admin@haf-instance:5432/haf_block_log)
+#   HAF_POSTGRES_WAIT_TIMEOUT: Max seconds to wait (default: 300)
+#
+# Usage:
+#   my-test-job:
+#     extends: .wait-for-haf-postgres
+#     variables:
+#       HAF_APP_SCHEMA: "my_app"
+#     ...
+.wait-for-haf-postgres:
+  variables:
+    HAF_DB_URL: "postgresql://haf_admin@haf-instance:5432/haf_block_log"
+    HAF_POSTGRES_WAIT_TIMEOUT: "300"
+  before_script:
+  - |
+    echo -e "\e[0Ksection_start:$(date +%s):wait_postgres[collapsed=true]\r\e[0KWaiting for PostgreSQL..."
+    TIMEOUT="${HAF_POSTGRES_WAIT_TIMEOUT:-300}"
+    ELAPSED=0
+    until psql "$HAF_DB_URL" -c "SELECT 1" >/dev/null 2>&1; do
+      if [ $ELAPSED -ge $TIMEOUT ]; then
+        echo "ERROR: PostgreSQL not ready after ${TIMEOUT}s"
+        exit 1
+      fi
+      echo "PostgreSQL not ready, waiting... (${ELAPSED}s/${TIMEOUT}s)"
+      sleep 5
+      ELAPSED=$((ELAPSED + 5))
+    done
+    echo "PostgreSQL is ready (took ${ELAPSED}s)"
+    # Verify app schema exists (sync job should have created it)
+    if [ -n "${HAF_APP_SCHEMA:-}" ]; then
+      if ! psql "$HAF_DB_URL" -t -c "SELECT 1 FROM information_schema.schemata WHERE schema_name = '${HAF_APP_SCHEMA}'" | grep -q 1; then
+        echo "ERROR: ${HAF_APP_SCHEMA} schema not found - sync job may have failed to save data properly"
+        exit 1
+      fi
+      echo "${HAF_APP_SCHEMA} schema verified"
+    fi
+    echo -e "\e[0Ksection_end:$(date +%s):wait_postgres\r\e[0K"
+
+# Wait for PostgreSQL with NFS cache extraction
+# Use this when test jobs need to extract NFS cache for service containers.
+#
+# Required variables:
+#   HAF_APP_SCHEMA: The PostgreSQL schema name to verify
+#   SYNC_CACHE_TYPE: Cache type (e.g., "haf_sync")
+#   SYNC_CACHE_KEY: Cache key (e.g., "${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}")
+#   DATA_CACHE_NFS_PREFIX: NFS cache prefix (e.g., "/nfs/ci-cache")
+#
+# Usage:
+#   my-test-job:
+#     extends: .wait-for-haf-postgres-with-nfs-extraction
+#     variables:
+#       HAF_APP_SCHEMA: "my_app"
+#     ...
+.wait-for-haf-postgres-with-nfs-extraction:
+  variables:
+    HAF_DB_URL: "postgresql://haf_admin@haf-instance:5432/haf_block_log"
+    HAF_POSTGRES_WAIT_TIMEOUT: "300"
+  before_script:
+  - |
+    # Extract NFS cache if local cache doesn't exist
+    LOCAL_CACHE="/cache/${SYNC_CACHE_TYPE}_${SYNC_CACHE_KEY}"
+    NFS_TAR="${DATA_CACHE_NFS_PREFIX}/${SYNC_CACHE_TYPE}/${SYNC_CACHE_KEY}.tar"
+    echo "Checking cache: LOCAL_CACHE=${LOCAL_CACHE}, NFS_TAR=${NFS_TAR}"
+    if [[ ! -d "${LOCAL_CACHE}/datadir" ]] && [[ -f "$NFS_TAR" ]]; then
+      echo "Extracting NFS cache for service container..."
+      mkdir -p "${LOCAL_CACHE}"
+      tar xf "$NFS_TAR" -C "${LOCAL_CACHE}"
+      echo "Extraction complete: ${LOCAL_CACHE}"
+    else
+      echo "Using existing cache or NFS tar not found"
+    fi
+  - |
+    echo -e "\e[0Ksection_start:$(date +%s):wait_postgres[collapsed=true]\r\e[0KWaiting for PostgreSQL..."
+    TIMEOUT="${HAF_POSTGRES_WAIT_TIMEOUT:-300}"
+    ELAPSED=0
+    until psql "$HAF_DB_URL" -c "SELECT 1" >/dev/null 2>&1; do
+      if [ $ELAPSED -ge $TIMEOUT ]; then
+        echo "ERROR: PostgreSQL not ready after ${TIMEOUT}s"
+        exit 1
+      fi
+      echo "PostgreSQL not ready, waiting... (${ELAPSED}s/${TIMEOUT}s)"
+      sleep 5
+      ELAPSED=$((ELAPSED + 5))
+    done
+    echo "PostgreSQL is ready (took ${ELAPSED}s)"
+    # Verify app schema exists (sync job should have created it)
+    if [ -n "${HAF_APP_SCHEMA:-}" ]; then
+      if ! psql "$HAF_DB_URL" -t -c "SELECT 1 FROM information_schema.schemata WHERE schema_name = '${HAF_APP_SCHEMA}'" | grep -q 1; then
+        echo "ERROR: ${HAF_APP_SCHEMA} schema not found - sync job may have failed to save data properly"
+        exit 1
+      fi
+      echo "${HAF_APP_SCHEMA} schema verified"
+    fi
+    echo -e "\e[0Ksection_end:$(date +%s):wait_postgres\r\e[0K"
