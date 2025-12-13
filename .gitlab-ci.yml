@@ -81,7 +81,6 @@ verify_poetry_lock_sanity:
   stage: build_and_test_phase_1
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 haf_image_build:
   extends: .haf_image_build
@@ -90,7 +89,6 @@ haf_image_build:
     HIVE_NETWORK_TYPE: mainnet
   tags:
     - public-runner-docker
-    - hived-for-tests
     - haf-build-mainnet
 
 haf_image_build_testnet:
@@ -100,7 +98,6 @@ haf_image_build_testnet:
     HIVE_NETWORK_TYPE: testnet
   tags:
     - public-runner-docker
-    - hived-for-tests
     - haf-build-testnet
 
 haf_image_build_mirrornet:
@@ -110,7 +107,6 @@ haf_image_build_mirrornet:
     HIVE_NETWORK_TYPE: mirrornet
   tags:
     - public-runner-docker
-    - hived-for-tests
     - haf-build-mirrornet
   # Necessary to tag mirrornet images to be used in Denser's CI
   after_script:
@@ -389,7 +385,6 @@ applications_system_tests:
   interruptible: true
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 replay_with_haf:
   extends: .replay_step
@@ -456,7 +451,6 @@ replay_with_update:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 replay_with_keyauths:
   extends: .job-defaults
@@ -478,7 +472,6 @@ replay_with_keyauths:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 replay_with_json_metadata:
   extends: .job-defaults
@@ -500,7 +493,6 @@ replay_with_json_metadata:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 replay_with_app:
   extends: .job-defaults
@@ -522,7 +514,6 @@ replay_with_app:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 replay_live_pruned_with_app:
   extends: .job-defaults
@@ -544,7 +535,6 @@ replay_live_pruned_with_app:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 replay_block_log_pruned_with_app:
   extends: .job-defaults
@@ -566,7 +556,6 @@ replay_block_log_pruned_with_app:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 replay_restarts_with_app:
   extends: .job-defaults
@@ -586,7 +575,6 @@ replay_restarts_with_app:
       - "node_logs.log"
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 replay_with_restart:
   extends: .job-defaults
@@ -606,7 +594,6 @@ replay_with_restart:
       - "node_logs.log"
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 update_with_wrong_table_schema:
   extends: .job-defaults
@@ -627,7 +614,6 @@ update_with_wrong_table_schema:
       - "node_logs.log"
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 # job responsible for replaying data using preconfigured filtering options specified in given config.ini file
 replay_filtered_haf_data_accounts_body_operations:
@@ -926,7 +912,6 @@ build_and_publish_image:
     - scripts/ci-helpers/build_and_publish_instance.sh
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 double_haf_replay_tests:
   extends: .docker_image_builder_job
@@ -942,7 +927,6 @@ double_haf_replay_tests:
   - docker context ls
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 op_body_filter_tests:
   extends: .job-defaults
