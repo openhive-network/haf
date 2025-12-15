@@ -282,8 +282,8 @@ _fix_pg_tblspc_symlinks() {
     fi
 
     # Get absolute path to tablespace in current location
-    local tablespace_abs_path
-    tablespace_abs_path=$(realpath "$tablespace_dir" 2>/dev/null || echo "$tablespace_dir")
+    # Don't use realpath as it follows symlinks - tablespace_dir may contain symlinks to old locations
+    local tablespace_abs_path="$tablespace_dir"
 
     # Find all symlinks in pg_tblspc and update to point to current tablespace location
     for link in "$pg_tblspc"/*; do
