@@ -490,8 +490,9 @@ cmd_get() {
     if [[ "$use_tar" == "true" ]]; then
         # Extract tar archive to local (fast: reading single file from NFS)
         # No lock needed for reads - tar file is written atomically via mv
+        # Use --numeric-owner --same-owner to preserve original UIDs/GIDs (avoids need for chown)
         _log "Extracting tar archive to local: $local_dest"
-        if ! tar xf "$NFS_TAR_FILE" -C "$local_dest"; then
+        if ! tar xf "$NFS_TAR_FILE" --numeric-owner --same-owner -C "$local_dest"; then
             _error "Failed to extract tar archive"
             return 1
         fi
@@ -640,9 +641,10 @@ cmd_put() {
     _log "Creating tar archive on NFS: $NFS_TAR_FILE"
 
     # Create tar archive with exclusions
+    # Use --numeric-owner to store UIDs/GIDs instead of names (preserves ownership across containers)
     local tar_result=0
     # shellcheck disable=SC2086
-    if ! tar cf "${NFS_TAR_FILE}.tmp" $tar_excludes -C "$local_source" .; then
+    if ! tar cf "${NFS_TAR_FILE}.tmp" --numeric-owner $tar_excludes -C "$local_source" .; then
         tar_result=1
     fi
 
