@@ -15,7 +15,7 @@ CREATE OR REPLACE PROCEDURE alice_impersonal_test_when()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_request_table_vacuum('a.table1');
+    PERFORM hive.app_request_table_vacuum('a', 'table1');
 END;
 $BODY$
 ;
@@ -26,11 +26,11 @@ AS
 $BODY$
 BEGIN
    ASSERT
-       (SELECT COUNT(*) FROM hafd.vacuum_requests WHERE table_name = 'a.table1' ) = 1
+       (SELECT COUNT(*) FROM hafd.vacuum_requests WHERE schema_name = 'a' AND table_name = 'table1' ) = 1
         , 'a.table1 wrong number of requests';
 
    ASSERT
-       (SELECT status FROM hafd.vacuum_requests WHERE table_name = 'a.table1' ) = 'requested'
+       (SELECT status FROM hafd.vacuum_requests WHERE schema_name = 'a' AND table_name = 'table1' ) = 'requested'
        , 'a.table1 status != requested';
 END;
 $BODY$

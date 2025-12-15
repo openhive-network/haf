@@ -235,8 +235,8 @@ An application can request vacuuming of a specific table, ensuring that it has n
 within a given interval. If the table was vacuumed recently, the request will be ignored.
 
 ```sql
--- Request vacuuming for 'my_table' if it has not been vacuumed in the last hour
-SELECT hive.app_request_table_vacuum('my_table', INTERVAL '1 hour');
+-- Request vacuuming for 'my_table' in 'my_schema' if it has not been vacuumed in the last hour
+SELECT hive.app_request_table_vacuum('my_schema', 'my_table', INTERVAL '1 hour');
 ```
 
 #### Using HAF built-in roles
