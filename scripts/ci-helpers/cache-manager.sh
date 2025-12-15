@@ -428,9 +428,9 @@ cmd_get() {
         if [[ "$LOCAL_CACHE_DIR" != "$local_dest" ]]; then
             _log "Copying to destination: $local_dest"
             mkdir -p "$(dirname "$local_dest")"
-            # Use cp -rL to dereference symlinks and avoid permission issues on NFS
-            # (cp -a tries to preserve ownership, cp without -L tries to create symlinks)
-            cp -rL "$LOCAL_CACHE_DIR" "$local_dest"
+            # Use cp -r to preserve symlinks (they'll be fixed by _restore_pgdata_permissions)
+            # Don't use -L (dereferences symlinks) or -a (tries to preserve ownership)
+            cp -r "$LOCAL_CACHE_DIR" "$local_dest"
         else
             _log "Destination is cache dir, no copy needed"
         fi
