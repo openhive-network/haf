@@ -232,7 +232,9 @@ sudo -n --user=hived mkdir -p -m 755 "$HAF_DB_STORE"
 # Only fix ownership if PGDATA already exists (cached data scenario).
 # If PGDATA doesn't exist, leave ownership for the mkdir commands below.
 if [[ -d "$PGDATA" ]]; then
-  sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
+  # Fix ownership silently - service container's copy_datadir.sh doesn't preserve ownership
+  # (uses --no-preserve to avoid NFS errors), so files need to be chowned to postgres
+  sudo -n chown -R postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
 fi
 
 # Check if correct PostgreSQL version is installed
@@ -287,7 +289,8 @@ else
   # Fix ownership of existing database files - required when cache was created in a different
   # container where postgres user had different uid/gid. Without this, PostgreSQL fails with:
   # "Error: The cluster is owned by group id NNN which does not exist"
-  sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
+  # Run silently since copy_datadir.sh doesn't preserve ownership (uses --no-preserve for NFS)
+  sudo -n chown -R postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
   # Fix pgdata permissions - PostgreSQL requires mode 700 or 750
   # Cached data may have relaxed permissions (a+rX) for NFS copying
   sudo -n chmod 700 "$PGDATA" 2>/dev/null || true
