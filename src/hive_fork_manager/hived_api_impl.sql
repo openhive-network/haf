@@ -827,6 +827,11 @@ LANGUAGE plpgsql
 AS
 $BODY$
 BEGIN
+    IF to_regclass(format('%I.%I', _schema_name, _table_name)) IS NULL THEN
+        RAISE EXCEPTION 'Table %.% does not exist', _schema_name, _table_name
+            USING ERRCODE = '42P01';
+    END IF;
+
     IF _min_interval IS NOT NULL THEN
         -- Check if the table has been vacuumed recently
         IF EXISTS (
