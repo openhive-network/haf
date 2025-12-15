@@ -322,11 +322,11 @@ _relax_pgdata_permissions() {
         sudo chmod -R a+rX "$tablespace_path" 2>/dev/null || chmod -R a+rX "$tablespace_path" 2>/dev/null || true
     fi
 
-    # DISABLED: Fix pg_tblspc symlinks to use relative paths
-    # PostgreSQL requires absolute paths for tablespaces. Relative symlinks break
-    # when the data is extracted and reused. We always extract to fixed paths
-    # (/cache/haf_pipeline_*, /cache/haf_sync_*), so portability isn't needed.
-    # _fix_pg_tblspc_symlinks "$source_dir"
+    # Fix pg_tblspc symlinks to use relative paths
+    # PostgreSQL tablespace symlinks use absolute paths (e.g., /home/hived/datadir/haf_db_store/tablespace)
+    # These break when data is extracted to a different path. Convert to relative symlinks (../../tablespace)
+    # which work regardless of where the data is extracted.
+    _fix_pg_tblspc_symlinks "$source_dir"
 }
 
 # Restore PostgreSQL pgdata permissions after cache retrieval
@@ -336,6 +336,9 @@ _restore_pgdata_permissions() {
     local haf_db_store="${dest_dir}/datadir/haf_db_store"
     local pgdata_path="${haf_db_store}/pgdata"
     local tablespace_path="${haf_db_store}/tablespace"
+
+    # Fix tablespace symlinks in case cache was created before symlink fixing was enabled
+    _fix_pg_tblspc_symlinks "$dest_dir"
 
     if [[ -d "$pgdata_path" ]]; then
         _log "Restoring pgdata permissions to mode 700"
