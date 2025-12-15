@@ -10,7 +10,8 @@ variables:
   PYTEST_NUMBER_OF_PROCESSES: 8
   CTEST_NUMBER_OF_JOBS: 4
   # HAF_COMMIT is used as cache key - in HAF's own CI, it's the current commit
-  HAF_COMMIT: $CI_COMMIT_SHA
+  # TEMPORARY: Use existing image/cache from 9ce4243d to skip rebuild
+  HAF_COMMIT: "9ce4243d23b6f27ab9023a401ada586a856b8848"
 
   GIT_STRATEGY: clone
   GIT_DEPTH: 0
