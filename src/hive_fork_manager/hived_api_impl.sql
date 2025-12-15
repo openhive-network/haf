@@ -869,6 +869,7 @@ DECLARE
     _schema_name TEXT;
     _table_name TEXT;
     _parsed_ident TEXT[];
+    _candidate_schema TEXT;
 BEGIN
     _parsed_ident := parse_ident(_qualified_table_name);
 
@@ -876,8 +877,19 @@ BEGIN
         _schema_name := _parsed_ident[1];
         _table_name := _parsed_ident[2];
     ELSIF array_length(_parsed_ident, 1) = 1 THEN
-        _schema_name := CURRENT_SCHEMA();
         _table_name := _parsed_ident[1];
+
+        FOREACH _candidate_schema IN ARRAY array_cat(ARRAY[CURRENT_SCHEMA], current_schemas(false)) LOOP
+            IF to_regclass(format('%I.%I', _candidate_schema, _table_name)) IS NOT NULL THEN
+                _schema_name := _candidate_schema;
+                EXIT;
+            END IF;
+        END LOOP;
+
+        IF _schema_name IS NULL THEN
+            RAISE EXCEPTION 'Table % does not exist in search_path %', _table_name, current_setting('search_path')
+                USING ERRCODE = '42P01';
+        END IF;
     ELSE
         RAISE EXCEPTION 'Invalid table name: %', _qualified_table_name;
     END IF;
