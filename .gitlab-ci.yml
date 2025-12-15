@@ -38,7 +38,10 @@ include:
 prepare_haf_data:
   extends: .prepare_haf_data_5m
   stage: build_and_test_phase_1
-  
+  tags:
+    - data-cache-storage
+    - fast
+
 replay_data_copy:
   extends: .job-defaults
   image: "registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10"
