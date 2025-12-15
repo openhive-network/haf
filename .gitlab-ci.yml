@@ -12,8 +12,6 @@ variables:
   # HAF_COMMIT is used as cache key - in HAF's own CI, it's the current commit
   # TEMPORARY: Use existing image/cache from 9ce4243d to skip rebuild
   HAF_COMMIT: "9ce4243d23b6f27ab9023a401ada586a856b8848"
-  # MINIMAL_TEST: Only run cache-manager test jobs
-  MINIMAL_TEST: "true"
 
   GIT_STRATEGY: clone
   GIT_DEPTH: 0
@@ -87,10 +85,6 @@ verify_poetry_lock_sanity:
 
 haf_image_build:
   extends: .haf_image_build
-  rules:
-    - if: '$MINIMAL_TEST == "true"'
-      when: never
-    - when: on_success
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
@@ -100,10 +94,6 @@ haf_image_build:
 
 haf_image_build_testnet:
   extends: .haf_image_build
-  rules:
-    - if: '$MINIMAL_TEST == "true"'
-      when: never
-    - when: on_success
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
     HIVE_NETWORK_TYPE: testnet
@@ -113,10 +103,6 @@ haf_image_build_testnet:
 
 haf_image_build_mirrornet:
   extends: .haf_image_build
-  rules:
-    - if: '$MINIMAL_TEST == "true"'
-      when: never
-    - when: on_success
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVE_NETWORK_TYPE: mirrornet
@@ -764,8 +750,7 @@ replay_data_copy:
   stage: build_and_test_phase_1
   needs:
     - prepare_haf_data
-    - job: haf_image_build
-      optional: true
+    - haf_image_build
   variables:
     SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   script:
