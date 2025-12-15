@@ -436,7 +436,7 @@ cmd_get() {
             _log "Destination is cache dir, no copy needed"
         fi
         # Restore pgdata permissions for HAF caches
-        if [[ "$cache_type" == "haf" ]]; then
+        if [[ "$cache_type" == "haf" || "$cache_type" == "haf_pipeline" ]]; then
             _restore_pgdata_permissions "$local_dest"
         fi
         # Update LRU if NFS available
@@ -514,7 +514,7 @@ cmd_get() {
     fi
 
     # Restore pgdata permissions for HAF caches
-    if [[ "$cache_type" == "haf" ]]; then
+    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_pipeline" ]]; then
         _restore_pgdata_permissions "$local_dest"
     fi
 
