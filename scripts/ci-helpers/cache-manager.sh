@@ -84,6 +84,8 @@ _nfs_lock() {
     local elapsed=0
     local interval=5
     local pid_file="$lockdir/pid"
+    local stale_break_attempts=0
+    local MAX_BREAK_ATTEMPTS=3
 
     while [[ $elapsed -lt $timeout ]]; do
         if mkdir "$lockdir" 2>/dev/null; then
@@ -100,9 +102,35 @@ _nfs_lock() {
             if [[ -n "$holder_pid" ]]; then
                 local lock_age
                 lock_age=$(( $(date +%s) - $(stat -c %Y "$lockdir" 2>/dev/null || echo "0") ))
+
                 if [[ $lock_age -gt 3600 ]]; then
-                    _log "Stale lock detected (age: ${lock_age}s), breaking it"
-                    rm -rf "$lockdir" 2>/dev/null || true
+                    stale_break_attempts=$((stale_break_attempts + 1))
+
+                    # Limit attempts to prevent infinite loop
+                    if [[ $stale_break_attempts -gt $MAX_BREAK_ATTEMPTS ]]; then
+                        _error "Failed to break stale lock after $MAX_BREAK_ATTEMPTS attempts: $lockdir"
+                        _error "Lock age: ${lock_age}s, created by PID: $holder_pid"
+                        _error "Manual intervention required: sudo rm -rf $lockdir"
+                        return 1
+                    fi
+
+                    _log "Stale lock detected (age: ${lock_age}s), attempt $stale_break_attempts/$MAX_BREAK_ATTEMPTS"
+
+                    # Try regular rm first, then sudo if that fails
+                    if ! rm -rf "$lockdir" 2>/dev/null; then
+                        _log "Regular rm failed, trying sudo..."
+                        if ! sudo rm -rf "$lockdir" 2>/dev/null; then
+                            _error "Cannot remove stale lock even with sudo: $lockdir"
+                            # Don't continue immediately - let elapsed timer advance
+                            sleep "$interval"
+                            elapsed=$((elapsed + interval))
+                            continue
+                        fi
+                    fi
+
+                    _log "Successfully removed stale lock"
+                    # Reset attempt counter after successful removal
+                    stale_break_attempts=0
                     continue
                 fi
             fi
