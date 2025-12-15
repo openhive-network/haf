@@ -94,7 +94,7 @@ start_haf_as_service:
       command: ["--replay-blockchain", "--stop-at-block=5000000"]
   before_script: *fetch_pipeline_cache
   script:
-    - sleep 180
+    - sleep 60
     - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
   tags:
     - data-cache-storage
