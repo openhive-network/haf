@@ -850,7 +850,8 @@ BEGIN
     INSERT INTO hafd.vacuum_requests (schema_name, table_name, status)
     VALUES (_schema_name, _table_name, 'requested')
     ON CONFLICT (schema_name, table_name) DO UPDATE
-    SET status = 'requested';
+    SET status = 'requested',
+        error_message = NULL;
 
     RAISE NOTICE 'Vacuum request for table %.% submitted.', _schema_name, _table_name;
 END;
