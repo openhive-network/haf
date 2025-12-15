@@ -1,785 +1,71 @@
 stages:
   - build_and_test_phase_1
   - build_and_test_phase_2
-  - docker_build
-  - deploy
-  - cleanup
-  - publish
 
 variables:
-  PYTEST_NUMBER_OF_PROCESSES: 8
-  CTEST_NUMBER_OF_JOBS: 4
-  # HAF_COMMIT is used as cache key - in HAF's own CI, it's the current commit
-  # TEMPORARY: Use existing image/cache from 9ce4243d to skip rebuild
   HAF_COMMIT: "9ce4243d23b6f27ab9023a401ada586a856b8848"
-
-  GIT_STRATEGY: clone
-  GIT_DEPTH: 0
-  GIT_SUBMODULE_DEPTH: 0
-  GIT_SUBMODULE_STRATEGY: recursive
-  GIT_SUBMODULE_UPDATE_FLAGS: --jobs 4
-
-  FF_ENABLE_JOB_CLEANUP: 1
-  FF_NETWORK_PER_BUILD: 1
-
-  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10
-  BUILDER_IMAGE_TAG: "$TEST_HAF_IMAGE_TAG"
-  CI_DEBUG_SERVICES: "true"
-  SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
-  TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
-  # Pipeline cache type and key for cache-manager (creates /nfs/ci-cache/haf_pipeline/${CI_PIPELINE_ID}.tar)
   PIPELINE_CACHE_TYPE: "haf_pipeline"
   PIPELINE_CACHE_KEY: "${CI_PIPELINE_ID}"
-  # Local path for pipeline data (extracted from NFS tar by cache-manager)
   PIPELINE_DATA_CACHE_LOCAL: "/cache/haf_pipeline_${CI_PIPELINE_ID}"
-  BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
-  # Mirrornet snapshot path on NFS for cross-builder access
-  SNAPSHOTS_PATH: /nfs/ci-cache/haf/snapshots_pipeline_${CI_PIPELINE_ID}
-  BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /cache/block_log_5m_mirrornet
-  # PostgreSQL access config for localhost-only jobs
-  PG_ACCESS_LOCAL_TRUST: "host    all              all        127.0.0.1/32    trust"
+  GIT_STRATEGY: clone
+  GIT_SUBMODULE_STRATEGY: recursive
 
 include:
-  - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
-  # Do not include common-ci-configuration here, it is already referenced by scripts/ci-helpers/prepare_data_image_job.yml included from Hive
 
-# Reusable YAML anchors
-.artifact_excludes: &artifact_excludes
-  - "**/generated_during_*/**/block_log"
-  - "**/generated_during_*/**/block_log.artifacts"
-  - "**/generated_during_*/**/shared_memory.bin"
-  - "**/generated_during_*/**/*.sst"
+.job-defaults:
+  retry:
+    max: 0
 
 .fetch_pipeline_cache: &fetch_pipeline_cache
-  # Get pipeline data from NFS via cache-manager
   - |
     echo -e "\e[0Ksection_start:$(date +%s):copy_data[collapsed=true]\r\e[0KFetching pipeline data via cache-manager..."
     set -e
     CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
     echo "Fetching cache: type=${PIPELINE_CACHE_TYPE} key=${PIPELINE_CACHE_KEY}"
     echo "Destination: ${PIPELINE_DATA_CACHE_LOCAL}"
-
-    # cache-manager handles cleanup, extraction, and permission restoration
-    "$CACHE_MANAGER" get "${PIPELINE_CACHE_TYPE}" "${PIPELINE_CACHE_KEY}" "${PIPELINE_DATA_CACHE_LOCAL}"
-
-    echo "Pipeline data fetch complete."
-    ls -la "$PIPELINE_DATA_CACHE_LOCAL/datadir/"
+    if "$CACHE_MANAGER" get "${PIPELINE_CACHE_TYPE}" "${PIPELINE_CACHE_KEY}" "${PIPELINE_DATA_CACHE_LOCAL}"; then
+      echo "Pipeline data fetch complete."
+    else
+      echo "ERROR: Failed to fetch pipeline cache"
+      exit 1
+    fi
+    ls -la "${PIPELINE_DATA_CACHE_LOCAL}/datadir" || true
     echo -e "\e[0Ksection_end:$(date +%s):copy_data\r\e[0K"
 
-verify_poetry_lock_sanity:
-  extends: .verify_poetry_lock_sanity_template
-  stage: build_and_test_phase_1
-  variables:
-    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
-
-  tags:
-    - public-runner-docker
-
-.haf_image_build:
-  extends: .prepare_haf_image
-  stage: build_and_test_phase_1
-  tags:
-    - public-runner-docker
-
-haf_image_build:
-  extends: .haf_image_build
-  variables:
-    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
-    HIVE_NETWORK_TYPE: mainnet
-  tags:
-    - public-runner-docker
-    - build-mainnet
-
-haf_image_build_testnet:
-  extends: .haf_image_build
-  variables:
-    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
-    HIVE_NETWORK_TYPE: testnet
-  tags:
-    - public-runner-docker
-    - build-testnet
-
-haf_image_build_mirrornet:
-  extends: .haf_image_build
-  variables:
-    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
-    HIVE_NETWORK_TYPE: mirrornet
-  tags:
-    - public-runner-docker
-    - build-mirrornet
-  # Necessary to tag mirrornet images to be used in Denser's CI
-  after_script:
-    - |
-      source docker_image_name.env
-      echo "Pushing hived image for commits on develop, master and tagged"
-      docker images
-      IMAGE_NAME_PREFIX="$CI_REGISTRY_IMAGE/mirrornet:"
-      if [[ "$CI_COMMIT_BRANCH" == "develop" ]];
-      then
-        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}latest
-        docker push ${IMAGE_NAME_PREFIX}latest
-      elif [[ "$CI_COMMIT_BRANCH" == "master" ]];
-      then
-        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}stable
-        docker push ${IMAGE_NAME_PREFIX}stable
-      elif [[ -n "$CI_COMMIT_TAG" ]];
-      then
-        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
-        docker push ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
-      fi
-
-.haf-service: &haf-service
-  name: $HAF_IMAGE_NAME
-  alias: haf-instance
-  variables:
-    # Allow access from any network to eliminate CI IP addressing problems when hfm runs as service
-    PG_ACCESS: |
-                "host    all              haf_admin        0.0.0.0/0    trust"
-
-    # Use local cache path (copied from NFS by pipeline_data_local_copy job)
-    DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
-    LOG_FILE: $CI_JOB_NAME.log
-  command: ["--replay-blockchain", "--stop-at-block=5000000"]
-
-.hfm-only-service: &hfm-only-service
-  name: $HAF_IMAGE_NAME
-  alias: hfm-only-instance
-  variables:
-    # Allow access from any network to eliminate CI IP addressing problems when hfm runs as service
-    PG_ACCESS: |
-                "host    all              haf_admin        0.0.0.0/0    trust"
-                "host    all              test_app_owner   0.0.0.0/0    trust"
-                "host    all              hived            0.0.0.0/0    trust"
-                "host    all              all              0.0.0.0/0    scram-sha-256"
-  command: [ "--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh" ]
-
-.hfm_functional_tests:
-  extends: .job-defaults
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  stage: build_and_test_phase_1
-  timeout: 80m
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
-  artifacts:
-    paths:
-      - "**/*.log"
-  interruptible: true
-  tags:
-    - public-runner-docker
-    - hived
-
-hfm_functional_tests:
-  extends: .hfm_functional_tests
-  needs:
-    - job: haf_image_build
-      artifacts: true
-
-hfm_functional_tests_testnet:
-  extends: .hfm_functional_tests
-  needs:
-    - job: haf_image_build_testnet
-      artifacts: true
-
-.pytest_based:
-  extends: .job-defaults
-  before_script:
-    - |
-      echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
-      python3 -m venv --system-site-packages venv/
-      . venv/bin/activate
-      (cd $CI_PROJECT_DIR/tests/integration/haf-local-tools && poetry install)
-      echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
-
-haf_system_tests:
-  extends: .job-defaults
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build_testnet
-      artifacts: true
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_system_tests.sh
-  artifacts:
-    paths:
-    - "haf_system_tests.log"
-    - "**/generated_during_*"
-    - "**/generated_by_package_fixtures"
-    exclude: *artifact_excludes
-    reports:
-      junit: tests/integration/system/haf/report.xml
-    when: always
-    expire_in: 1 week
-  interruptible: true
-  tags:
-    - public-runner-docker
-
-dump_snapshot_5m_mirrornet:
-  extends: .job-defaults
-  stage: build_and_test_phase_1
-  needs:
-  - job: haf_image_build_mirrornet
-    artifacts: true
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  variables:
-    MIRRORNET_WORKING_DIR: "$CI_PROJECT_DIR/mirrornet_witness_node"
-    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
-    HIVED_PATH: "$BINARY_CACHE_PATH/hived"
-  script:
-    #Prepare environment for hived run
-    - cd $CI_PROJECT_DIR/docker
-    - mkdir -vp $MIRRORNET_WORKING_DIR
-    - cd $MIRRORNET_WORKING_DIR
-    - mkdir blockchain
-    - cd blockchain
-    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log .
-    #Prepare snapshot storage on NFS (sudo for cross-user write access)
-    - sudo mkdir -vp "$SNAPSHOTS_PATH"
-    - sudo chown -R $(id -u):$(id -g) "$SNAPSHOTS_PATH"
-    - cd "$SNAPSHOTS_PATH"
-    - mkdir -vp 5m_mirrornet/snapshot
-    #Prepare snapshot
-    - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --exit-before-sync --replay --block-log-split=-1
-    - echo "plugin = state_snapshot" >> $MIRRORNET_WORKING_DIR/config.ini
-    - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --dump-snapshot=snapshot --exit-before-sync --block-log-split=-1
-    #Store snapshot in cache (keep snapshot/snapshot structure for relative path calculation in tests)
-    - mv $MIRRORNET_WORKING_DIR/blockchain "$SNAPSHOTS_PATH/5m_mirrornet"
-    - mkdir -p "$SNAPSHOTS_PATH/5m_mirrornet/snapshot"
-    - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot "$SNAPSHOTS_PATH/5m_mirrornet/snapshot/"
-  tags:
-    - data-cache-storage
-    - fast
-
-haf_system_tests_mirrornet:
-  stage: build_and_test_phase_2
-  extends: .pytest_based
-  timeout: 2h
-  needs:
-    - job: haf_image_build_mirrornet
-      artifacts: true
-    - job: dump_snapshot_5m_mirrornet
-      artifacts: false
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  services:
-    - *hfm-only-service
-  variables:
-    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
-    HIVED_PATH: "$BINARY_CACHE_PATH/hived"
-    COMPRESS_BLOCK_LOG_PATH: "$BINARY_CACHE_PATH/compress_block_log"
-    BLOCK_LOG_UTIL_PATH: "$BINARY_CACHE_PATH/block_log_util"
-    GET_DEV_KEY_PATH: "$BINARY_CACHE_PATH/get_dev_key"
-    CLI_WALLET_PATH: "$BINARY_CACHE_PATH/cli_wallet"
-    DB_NAME: haf_block_log
-    DB_URL: "postgresql://haf_admin@hfm-only-instance:5432/$DB_NAME"
-  script:
-    # check that postgres service is ready
-    - psql "$DB_URL" -c "SELECT 1"
-    - mkdir $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
-    # This cp and call to compress_block_log is to keep backcompatibility with pipelines on master branch (where still 1.27.X line is present until next HF will apply),
-    # where nodes does not support new format of block_log.artifacts file;
-    # Issue: https://gitlab.syncad.com/hive/haf/-/issues/151
-    # copy block_log to tmp location
-    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
-    # copy block_log and generate new artifacts with compress_block_log util
-    - time $COMPRESS_BLOCK_LOG_PATH --input-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log/block_log --output-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --decompress
-    # drop tmp location
-    - rm -r $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
-    # prepare environment and run tests
-    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests && ls -la
-    - pytest -vvv --junitxml report.xml --timeout=3600 --block-log-dir-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests --snapshot-path="$SNAPSHOTS_PATH/5m_mirrornet/snapshot/snapshot" -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
-    - du -Sah . | sort -rh
-  artifacts:
-    paths:
-    - "**/generated_during_*"
-    - "**/generated_by_package_fixtures"
-    exclude: *artifact_excludes
-    reports:
-      junit: tests/integration/system/haf/mirrornet_tests/report.xml
-    when: always
-    expire_in: 1 week
-  interruptible: true
-  tags:
-    - data-cache-storage
-    - fast
-
-applications_system_tests:
-  extends: .job-defaults
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build_testnet
-      artifacts: true
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_application_system_tests.sh
-  artifacts:
-    paths:
-    - "applications_system_tests.log"
-    - "**/generated_during_*"
-    - "**/generated_by_package_fixtures"
-    exclude: *artifact_excludes
-    reports:
-      junit: tests/integration/system/applications/report.xml
-    when: always
-    expire_in: 1 week
-  interruptible: true
-  tags:
-    - public-runner-docker
-
-.replay_step:
-  extends: .job-defaults
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  services:
-    - *hfm-only-service
-  variables:
-    PATTERNS_PATH: "" #Should be overriden in derived jobs
-    RO_BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
-    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
-    HIVED_PATH: "$CI_PROJECT_DIR/haf-binaries/hived"
-    DB_NAME: haf_block_log
-    DB_ADMIN: "haf_admin"
-    POSTGRES_HOST: "hfm-only-instance"
-    POSTGRES_PORT: "5432"
-    DB_URL: "postgresql://haf_admin@hfm-only-instance:5432/haf_block_log"
-    REPLAY: "--force-replay"
-  before_script:
-    - !reference [.pytest_based, before_script]
-    - ls -lath $CI_PROJECT_DIR
-    # replay
-    - |
-      echo -e "\e[0Ksection_start:$(date +%s):replay[collapsed=true]\r\e[0KExecuting replay..."
-      test -n "$PATTERNS_PATH"
-      mkdir -vp "${PATTERNS_PATH}/blockchain"
-      cp "${RO_BLOCK_LOG_DIRECTORY}/block_log" "${PATTERNS_PATH}/blockchain/"
-      cd $CI_PROJECT_DIR/tests/integration/replay
-      $HIVED_PATH --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs.log
-      echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
-  script:
-    - pytest --junitxml report.xml
-  artifacts:
-    paths:
-    - "**/node_logs.log"
-    - "**/node_logs1.log"
-    - "**/generated_during_*"
-    - "**/generated_by_package_fixtures"
-    - "**/*.out.csv"
-    reports:
-      junit: tests/integration/replay/report.xml
-    when: always
-    expire_in: 1 week
-  interruptible: true
-  tags:
-    - public-runner-docker
-
-replay_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
-
-replay_with_haf_from_4_9m:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns_4_9m/no_filter"
-
-replay_accounts_filtered_with_haf_from_4_9m:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns_4_9m/accounts_filtered"
-
-replay_accounts_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_filtered"
-
-replay_accounts_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_operations_filtered"
-
-replay_virtual_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/virtual_operations_filtered"
-
-replay_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/operations_filtered"
-
-replay_body_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/body_operations_filtered"
-
-replay_accounts_body_operations_filtered_with_haf:
-  extends: .replay_step
-  variables:
-    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
-
-replay_with_update:
-  extends: .job-defaults
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_update.sh
-  artifacts:
-    paths:
-      - "replay_with_update.log"
-      - "node_logs.log"
-      - "node_logs1.log"
-  tags:
-    - public-runner-docker
-
-replay_with_keyauths:
-  extends: .job-defaults
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_keyauth.sh
-  artifacts:
-    paths:
-      - "replay_with_keyauths.log"
-      - "node_logs.log"
-      - "node_logs1.log"
-  tags:
-    - public-runner-docker
-
-replay_with_json_metadata:
-  extends: .job-defaults
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_json_metadata.sh
-  artifacts:
-    paths:
-      - "replay_with_json_metadata.log"
-      - "node_logs.log"
-      - "node_logs1.log"
-  tags:
-    - public-runner-docker
-
-replay_with_app:
-  extends: .job-defaults
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_replay_with_app.sh
-  artifacts:
-    paths:
-      - "replay_with_app.log"
-      - "node_logs.log"
-      - "node_logs1.log"
-  tags:
-    - public-runner-docker
-
-replay_live_pruned_with_app:
-  extends: .job-defaults
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_pruned_replay_with_app.sh
-  artifacts:
-    paths:
-      - "replay_with_app.log"
-      - "node_logs.log"
-      - "node_logs1.log"
-  tags:
-    - public-runner-docker
-
-replay_block_log_pruned_with_app:
-  extends: .job-defaults
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_reindex_pruned_replay_with_app.sh
-  artifacts:
-    paths:
-      - "replay_with_app.log"
-      - "node_logs.log"
-      - "node_logs1.log"
-  tags:
-    - public-runner-docker
-
-replay_restarts_with_app:
-  extends: .job-defaults
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_replay_with_restarts_and_app.sh
-  artifacts:
-    paths:
-      - "node_logs.log"
-  tags:
-    - public-runner-docker
-
-replay_with_restart:
-  extends: .job-defaults
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_breaks.sh
-  artifacts:
-    paths:
-      - "node_logs.log"
-  tags:
-    - public-runner-docker
-
-update_with_wrong_table_schema:
-  extends: .job-defaults
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_update_with_wrong_table_schema.sh
-  artifacts:
-    paths:
-      - "update_with_wrong_table_schema.log"
-      - "node_logs.log"
-  tags:
-    - public-runner-docker
-
-# job responsible for replaying data using preconfigured filtering options specified in given config.ini file
-replay_filtered_haf_data_accounts_body_operations:
-  extends: .prepare_haf_data_5m
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  stage: build_and_test_phase_1
-  timeout: 80m
-  variables:
-    HIVE_NETWORK_TYPE: mainnet
-    BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
-    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered/config.ini"
-    # Use local cache for replay, then store via cache-manager
-    DATA_CACHE_DIR: "/cache/haf_pipeline_${CI_PIPELINE_ID}_filtered"
-    FILTERED_CACHE_KEY: "${CI_PIPELINE_ID}_filtered"
-  after_script:
-    # Call parent's after_script
-    - rm "${DATA_CACHE_DIR}/replay_running" -f
-    # Store filtered data via cache-manager (creates tar on NFS)
-    - |
-      CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
-      echo "Storing filtered cache: type=${PIPELINE_CACHE_TYPE} key=${FILTERED_CACHE_KEY}"
-      "$CACHE_MANAGER" put "${PIPELINE_CACHE_TYPE}" "${FILTERED_CACHE_KEY}" "${DATA_CACHE_DIR}"
-      echo "Filtered cache stored successfully"
-  tags:
-    - data-cache-storage
-    - fast
-
-block_api_tests:
-  extends: .jmeter_benchmark_job
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-    - job: replay_filtered_haf_data_accounts_body_operations
-      artifacts: true
-
-  variables:
-    BENCHMARK_DIR: "$CI_PROJECT_DIR/hive/tests/python/hive-local-tools/tests_api/benchmarks"
-    # Allow access from any network to eliminate CI IP addressing problems
-    HAF_DB_ACCESS: |
-      "host    all              haf_admin        0.0.0.0/0    trust"
-      "host    all              hived            0.0.0.0/0    trust"
-      "host    all              hafah_user       0.0.0.0/0    trust"
-      "host    all              all              0.0.0.0/0    scram-sha-256"
-
-    BENCHMARK_DB_URL: "postgresql://hived@haf-instance:5432/haf_block_log"
-    HIVED_UID: $HIVED_UID
-    # Local path for filtered replay data (service's copy_datadir.sh handles NFS fallback)
-    FILTERED_DATA_LOCAL: "/cache/haf_pipeline_${CI_PIPELINE_ID}_filtered"
-
-  services:
-    - name: ${HAF_IMAGE_NAME}
-      alias: haf-instance
-      variables:
-        PG_ACCESS: "${HAF_DB_ACCESS}"
-        DATA_SOURCE: "${FILTERED_DATA_LOCAL}"
-        LOG_FILE: $CI_JOB_NAME.log
-      command: ["--replay-blockchain", "--stop-at-block=5000000"]
-  tags:
-    - data-cache-storage
-    - fast
-
-  before_script:
-    # Wait for database to be ready (using Python since psql not available in this image)
-    # Note: The service container copies data from NFS internally via copy_datadir.sh
-    - |
-      echo -e "\e[0Ksection_start:$(date +%s):wait_db[collapsed=true]\r\e[0KWaiting for database..."
-      python3 -c "
-      import socket
-      import time
-      host = 'haf-instance'
-      port = 5432
-      for i in range(120):
-          try:
-              s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-              s.settimeout(2)
-              s.connect((host, port))
-              s.close()
-              print(f'Database is ready after {i+1} attempts')
-              exit(0)
-          except (socket.error, socket.timeout):
-              print(f'Waiting for database... attempt {i+1}/120')
-              time.sleep(5)
-      print('ERROR: Database not ready after 120 attempts')
-      exit(1)
-      "
-      echo -e "\e[0Ksection_end:$(date +%s):wait_db\r\e[0K"
-
-  script:
-    # run pattern tests
-    - |
-      echo -e "\e[0Ksection_start:$(date +%s):blocks_api_test[collapsed=true]\r\e[0KRunning blocks api tests..."
-      cd "$BENCHMARK_DIR"
-      python3 benchmark.py --loops 200 --threads 5 -n blocks_api -p 5432 -c perf_5M_light.csv --skip-version-check -d wdir --postgres $BENCHMARK_DB_URL --call-style postgres 2>&1 | tee -i $CI_PROJECT_DIR/python_benchmark.log
-      echo -e "\e[0Ksection_end:$(date +%s):blocks_api_test\r\e[0K"
-
-    # generate JUNIT report file
-    - |
-      echo -e "\e[0Ksection_start:$(date +%s):report[collapsed=true]\r\e[0KGenerating Junit report..."
-      m2u --input "$BENCHMARK_DIR/wdir/raw_jmeter_report.xml" --output $CI_PROJECT_DIR/report.junit
-      echo -e "\e[0Ksection_end:$(date +%s):report\r\e[0K"
-  artifacts:
-    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
-    reports:
-      junit: $CI_PROJECT_DIR/report.junit
-    paths:
-      - $BENCHMARK_DIR/wdir
-      - $CI_PROJECT_DIR/python_benchmark.log
-    when: always
-    expire_in: 1 week
-
+# Minimal prepare_haf_data - uses existing cache
 prepare_haf_data:
   extends: .prepare_haf_data_5m
-  needs:
-    - job: haf_image_build
-      artifacts: true
   stage: build_and_test_phase_1
-  timeout: 80m
-  variables:
-    HIVE_NETWORK_TYPE: mainnet
-    BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
-    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
-  tags:
-    - data-cache-storage
-    - fast
-
-# Creates a temporary copy of replay data for the exclusive use of current pipeline
+  
 replay_data_copy:
   extends: .job-defaults
-  image: "${CI_REGISTRY_IMAGE}/ci-base-image${BUILDER_IMAGE_TAG}"
+  image: "registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10"
   stage: build_and_test_phase_1
   needs:
     - prepare_haf_data
-    - haf_image_build
   variables:
     SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   script:
     - |
       set -e
       CACHE_MANAGER="$SCRIPTS_PATH/ci-helpers/cache-manager.sh"
-      SOURCE_CACHE="${DATA_CACHE_HAF_PREFIX:?}_${HAF_COMMIT:?}"
-
+      SOURCE_CACHE="${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
       echo "Creating pipeline cache via cache-manager"
-
-      # Find source data - local cache or fetch from NFS
       if [[ -d "$SOURCE_CACHE" ]]; then
         echo "Using local cache: $SOURCE_CACHE"
         DATA_SOURCE="$SOURCE_CACHE"
-      elif [[ -x "$CACHE_MANAGER" ]]; then
+      else
         echo "Local cache not found, fetching from NFS..."
-        LOCAL_CACHE="/cache/haf_${HAF_COMMIT:?}"
-        if "$CACHE_MANAGER" get haf "${HAF_COMMIT:?}" "$LOCAL_CACHE"; then
+        LOCAL_CACHE="/cache/haf_${HAF_COMMIT}"
+        if "$CACHE_MANAGER" get haf "${HAF_COMMIT}" "$LOCAL_CACHE"; then
           DATA_SOURCE="$LOCAL_CACHE"
         else
-          echo "ERROR: Failed to get cache for HAF commit ${HAF_COMMIT:?}"
+          echo "ERROR: Failed to get cache for HAF commit ${HAF_COMMIT}"
           exit 1
         fi
-      else
-        echo "ERROR: No local cache and cache-manager not available"
-        exit 1
       fi
-
-      # Store pipeline data via cache-manager (creates tar on NFS)
       echo "Storing pipeline cache: type=${PIPELINE_CACHE_TYPE} key=${PIPELINE_CACHE_KEY}"
       "$CACHE_MANAGER" put "${PIPELINE_CACHE_TYPE}" "${PIPELINE_CACHE_KEY}" "$DATA_SOURCE"
       echo "Pipeline cache stored successfully"
@@ -787,169 +73,61 @@ replay_data_copy:
     - data-cache-storage
     - fast
 
-dead_app_auto_detach:
-  extends: .job-defaults
-  stage: build_and_test_phase_2
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
-  needs:
-    - job: prepare_haf_data
-      artifacts: true
-    - job: replay_data_copy
-    - job: haf_image_build
-      artifacts: true
-  services:
-    - name: $HAF_IMAGE_NAME
-      alias: haf-instance
-      variables:
-        # Allow access from any network to eliminate CI IP addressing problems when hfm runs as service
-        PG_ACCESS: |
-                    "host    all              haf_admin        0.0.0.0/0    trust"
-                    "host    all              hived            0.0.0.0/0    trust"
-                    "host    all              test_app_owner   0.0.0.0/0    trust"
-
-        DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
-        LOG_FILE: $CI_JOB_NAME.log
-      command: ["--replay-blockchain", "--stop-at-block=1000000"]
-  variables:
-    HIVED_UID: $HIVED_UID
-    HAF_COMMIT: $HAF_COMMIT
-  before_script: *fetch_pipeline_cache
-  script:
-    - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
-  artifacts:
-    paths:
-    - scenario*.log
-  tags:
-    - data-cache-storage
-    - fast
-
 start_haf_as_service:
   extends: .job-defaults
+  image: "registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10"
   stage: build_and_test_phase_2
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
   needs:
-    - job: prepare_haf_data
-      artifacts: true
-    - job: replay_data_copy
-    - job: haf_image_build
-      artifacts: true
+    - prepare_haf_data
+    - replay_data_copy
   services:
-    - *haf-service
-  variables:
-    HAF_POSTGRES_URL: postgresql://haf_admin@haf-instance:5432/haf_block_log
-    HIVED_UID: $HIVED_UID
-    HAF_COMMIT: $HAF_COMMIT
+    - name: "registry.gitlab.syncad.com/hive/haf:9ce4243d"
+      alias: haf-instance
+      variables:
+        PG_ACCESS: |
+          host    all              haf_admin        0.0.0.0/0    trust
+        DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
+        LOG_FILE: $CI_JOB_NAME.log
+      command: ["--replay-blockchain", "--stop-at-block=5000000"]
   before_script: *fetch_pipeline_cache
   script:
+    - sleep 60
     - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
-    - |
-        curl -XPOST -d '{
-        "jsonrpc": "2.0",
-        "method": "database_api.get_dynamic_global_properties",
-        "params": {
-        },
-        "id": 2
-        }' haf-instance:8091
-  after_script:
-    - rm docker_entrypoint.log -f
-    - cp "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir/$CI_JOB_NAME.log" "$CI_PROJECT_DIR/docker_entrypoint.log"
-  artifacts:
-    paths:
-    - docker_entrypoint.log
   tags:
     - data-cache-storage
     - fast
 
-cleanup_haf_cache_manual:
-  extends: .cleanup_cache_manual_template
-  stage: cleanup
-  variables:
-    CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
-  tags:
-    - data-cache-storage
-    - fast
-
-cleanup_haf_snapshot_from_cache:
-  extends: .cleanup_cache_manual_template
-  stage: cleanup
-  variables:
-    CLEANUP_PATH_PATTERN: "/cache/snapshots_pipeline_*"
-  tags:
-    - data-cache-storage
-    - fast
-
-cleanup_old_haf_cache:
-  extends: .cleanup_old_cache_template
-  stage: cleanup
-  variables:
-    CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
-  tags:
-    - data-cache-storage
-    - fast
-
-# Deletes replay data used by the tests and created by replay_data_copy
-cleanup_pipeline_cache:
-  needs:
-    - replay_data_copy
-    - start_haf_as_service
-    - dead_app_auto_detach
-  extends:
-    - .cleanup_cache_manual_template
-  stage: cleanup
-  variables:
-    # Pipeline cache stored via cache-manager at /nfs/ci-cache/haf_pipeline/${CI_PIPELINE_ID}.tar
-    CLEANUP_PATH_PATTERN: "/nfs/ci-cache/haf_pipeline/${CI_PIPELINE_ID}*"
-  when: always
-  tags:
-    - data-cache-storage
-    - fast
-
-build_and_publish_image:
-  stage: publish
-  extends: .publish_docker_image_template
-  before_script:
-    - !reference [.publish_docker_image_template, before_script]
-  script:
-    - scripts/ci-helpers/build_and_publish_instance.sh
-  tags:
-    - public-runner-docker
-
-double_haf_replay_tests:
-  extends: .docker_image_builder_job
-  stage: build_and_test_phase_2
-  variables:
-    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  script:
-  - docker container ps -a
-  - docker images
-  - docker context ls
-  tags:
-    - public-runner-docker
-
-op_body_filter_tests:
+dead_app_auto_detach:
   extends: .job-defaults
+  image: "registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10"
   stage: build_and_test_phase_2
   needs:
-    - job: haf_image_build_testnet
-      artifacts: true
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
+    - prepare_haf_data
+    - replay_data_copy
+  services:
+    - name: "registry.gitlab.syncad.com/hive/haf:9ce4243d"
+      alias: haf-instance
+      variables:
+        PG_ACCESS: |
+          host    all              haf_admin        0.0.0.0/0    trust
+        DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
+        LOG_FILE: $CI_JOB_NAME.log
+      command: ["--replay-blockchain", "--stop-at-block=5000000"]
+  before_script: *fetch_pipeline_cache
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_op_body_filter_tests.sh
-  artifacts:
-    paths:
-    - "op_body_filter_tests.log"
-    - "**/generated_during_*"
-    - "**/generated_by_package_fixtures"
-    exclude: *artifact_excludes
-    reports:
-      junit: tests/integration/tools/op_body_filter/report.xml
-    when: always
-    expire_in: 1 week
-  interruptible: true
+    - cd tests/integration/system/applications/auto_detaching
+    - |
+      python3 -c "
+      import socket, sys, time
+      for _ in range(60):
+          try:
+              socket.create_connection(('haf-instance', 5432), timeout=1)
+              sys.exit(0)
+          except:
+              time.sleep(1)
+      sys.exit(1)
+      "
+    - psql postgresql://haf_admin@haf-instance/haf_block_log -aw -v ON_ERROR_STOP=ON -f test_app.sql
   tags:
-    - public-runner-docker
+    - data-cache-storage
+    - fast
