@@ -249,7 +249,7 @@ BEGIN
         , ( 11, hafd.make_block_id(10, 3), 1 )
     ;
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$
 ;
@@ -341,7 +341,7 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hafd.applied_hardforks WHERE hafd.block_id_to_num(block_id) = 8 AND hafd.block_id_to_fork(block_id) = 3 ) = 1, 'Expected 1 hardfork at block 8 fork 3';
 
     -- Verify consistent_block was updated
-    ASSERT ( SELECT consistent_block FROM hafd.hive_state ) = 8, 'consistent_block should be 8';
+    ASSERT ( SELECT hafd.block_id_to_num(consistent_block) FROM hafd.hive_state ) = 8, 'consistent_block should be 8';
 END;
 $BODY$
 ;

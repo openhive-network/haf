@@ -996,7 +996,7 @@ BEGIN
     PERFORM test.create_blocks_reversible(8, hafd.make_block_id(10, 0), 3);
 
     -- Set consistent block
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1037,7 +1037,7 @@ BEGIN
     PERFORM test.create_blocks_reversible(8, hafd.make_block_id(10, 0), 3);
     PERFORM test.create_transactions_reversible(8, hafd.make_block_id(10, 0), 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1080,7 +1080,7 @@ BEGIN
     PERFORM test.create_transactions_reversible(8, hafd.make_block_id(10, 0), 3);
     PERFORM test.create_operations_reversible(8, hafd.make_block_id(10, 0), 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1121,7 +1121,7 @@ BEGIN
     PERFORM test.create_transactions_reversible(8, hafd.make_block_id(10, 0), 3);
     PERFORM test.create_transaction_signatures_reversible(8, hafd.make_block_id(10, 0), 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1165,7 +1165,7 @@ BEGIN
     VALUES (8, 'frank', hafd.make_block_id(8, 3)),
            (9, 'grace', hafd.make_block_id(9, 3));
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1213,7 +1213,7 @@ BEGIN
     PERFORM test.create_operations_reversible(8, hafd.make_block_id(10, 0), 3);
     PERFORM test.create_account_operations_reversible(8, 10, 5, 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 
@@ -1260,7 +1260,7 @@ BEGIN
     PERFORM test.create_operations_reversible(8, hafd.make_block_id(10, 0), 3);
     PERFORM test.create_applied_hardforks_reversible(8, hafd.make_block_id(10, 0), 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$;
 

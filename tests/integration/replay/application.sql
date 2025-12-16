@@ -22,7 +22,7 @@ $$
 DECLARE
     __result INT := 1;
 BEGIN
-    SELECT consistent_block INTO __result FROM hafd.hive_state;
+    SELECT hafd.block_id_to_num(consistent_block) INTO __result FROM hafd.hive_state;
     RETURN __result;
 END
 $$
@@ -123,7 +123,8 @@ BEGIN
             RAISE NOTICE 'Processing stage %', hive.get_current_stage_name( 'test' );
             RAISE NOTICE 'Processing block %', __next_block_range;
             RAISE NOTICE 'Context is attached %', hive.app_context_is_attached( 'test' );
-            SELECT MAX(num), MIN(num) INTO __max_reversible_block, __min_reversible_block FROM hafd.blocks_reversible WHERE fork_id = __app_fork_id;
+            SELECT hafd.block_id_to_num(consistent_block) + 1 INTO __min_reversible_block FROM hafd.hive_state;
+            SELECT MAX(hafd.block_id_to_num(block_id)) INTO __max_reversible_block FROM hafd.blocks;
             RAISE NOTICE 'Max reversible block: %', __max_reversible_block;
             RAISE NOTICE 'Min reversible block: %', __min_reversible_block;
             ASSERT EXISTS( SELECT 1 FROM hive.blocks_view WHERE num = __next_block_range.first_block ), 'No data for expected block in HAF HEAD BLOCK view';

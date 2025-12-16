@@ -1,15 +1,18 @@
 \ir ../test_tools.sql
 
-CREATE OR REPLACE PROCEDURE hived_test_given()
+CREATE OR REPLACE PROCEDURE test_hived_test_given()
     LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM test.create_blocks(1, 5);
+    PERFORM test.create_blocks(1, 8);
 
     INSERT INTO hafd.accounts( id, name, block_id )
     VALUES (5, 'initminer', hafd.make_block_id(1, 0))
     ;
+
+    -- Set block 8 as irreversible (test needs to attach at block 7)
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(8, 0);
 END;
 $BODY$;
 

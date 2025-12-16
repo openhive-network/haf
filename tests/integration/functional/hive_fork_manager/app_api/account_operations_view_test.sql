@@ -118,7 +118,7 @@ BEGIN
          , ( hafd.make_block_id(10, 3), 0, 1100, 1100, 3 )
     ;
 
-    UPDATE hafd.hive_state SET consistent_block = 4;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(4, 0);
 END;
 $BODY$
 ;

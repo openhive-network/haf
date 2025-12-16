@@ -13,6 +13,9 @@ BEGIN
     INSERT INTO hafd.accounts( id, name, block_id )
     VALUES (5, 'initminer', hafd.make_block_id(1, 0));
 
+    -- Set block 2 as irreversible (required for attach at block 2)
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(2, 0);
+
     -- Create forks at blocks 2 and 3
     PERFORM test.create_forks(ARRAY[2, 3], ARRAY[2, 3]);
 

@@ -9,7 +9,7 @@ FOR _row in
   SELECT (ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::text) FROM hive_update.calculate_schema_hash() AS f
   EXCEPT SELECT unnest(ARRAY[
     '(blocks,9d57c355-782e-8071-9d1a-e983b92b1591,df7ef152-1122-b7df-4ba9-3e897b525177,502c4352-efbb-5ed4-8aec-5e3b0d595c97,a09a9641-2b85-294d-9fc2-604ab76124e4)',
-    '(hive_state,bf284776-38c1-3f99-c380-fff66e6e2205,9e0fb7b6-e6b6-5fc0-85a2-5806719f9239,1ec06445-c874-940f-99b4-7ba919d368b5,db0a6fb3-b072-2629-7a5d-0fa6487b43f5)',
+    '(hive_state,c7eba493-aaad-04d3-b545-49920b1438bd,2a00f809-f4f9-e96b-d4f1-e21c3357f978,1ec06445-c874-940f-99b4-7ba919d368b5,db0a6fb3-b072-2629-7a5d-0fa6487b43f5)',
     '(transactions,310e78b7-5903-1b25-c20c-4724d19ba23d,e95c750f-ecf6-2118-296b-adfd870a8b68,d1456ff1-2474-ca5b-3b82-be0086c298f0,00ebfc60-f9a1-bd77-1193-d409a9fb0700)',
     '(transactions_multisig,69d787b5-4b4c-3ab1-dadf-e75ee550ffd6,3412ea71-575a-bb1b-9d77-9ec843aa6aca,70f65c01-a33c-608b-b0e8-bd29f92615c9,45b569f0-15b7-874e-b810-553d9f1d12a3)',
     '(operation_types,dd6c8768-2bc2-2b76-3246-292b108f744f,cf35886f-de4e-e064-b170-fd4186ea9148,0dc429a2-22b0-2d05-44d6-cc66d48082b6,08d2ba03-e127-e0ad-aaee-657b3aa27bae)',

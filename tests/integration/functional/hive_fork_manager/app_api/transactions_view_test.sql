@@ -28,7 +28,7 @@ BEGIN
     PERFORM test.create_blocks_reversible(8, 10, 3);
     PERFORM test.create_transactions_reversible(8, 10, 3);
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$
 ;
