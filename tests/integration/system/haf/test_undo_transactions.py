@@ -1,7 +1,7 @@
 import test_tools as tt
 
 from haf_local_tools import make_fork, wait_for_irreversible_progress
-from haf_local_tools.tables import Transactions
+from haf_local_tools.tables import TransactionsView
 
 START_TEST_BLOCK = 108
 
@@ -26,6 +26,6 @@ def test_undo_transactions(prepared_networks_and_database_12_8):
 
     # THEN
     wait_for_irreversible_progress(node_under_test, after_fork_block)
-    trxs = session.query(Transactions).filter(Transactions.block_num > START_TEST_BLOCK).all()
+    trxs = session.query(TransactionsView).filter(TransactionsView.block_num > START_TEST_BLOCK).all()
 
     assert trxs == []

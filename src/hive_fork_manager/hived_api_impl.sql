@@ -242,7 +242,7 @@ DECLARE
   __command TEXT;
   __cluster_index_dropped BOOLEAN;
 BEGIN
-
+  -- Check if the clustering index was dropped (uses unique constraint index)
   __cluster_index_dropped := EXISTS(
                 SELECT command FROM hafd.indexes_constraints
                 WHERE table_name = 'hafd.account_operations' AND
@@ -255,7 +255,7 @@ BEGIN
           index_constraint_name = 'hive_account_operations_uq1' LIMIT 1;
     EXECUTE __command;
     RAISE NOTICE 'Clustering hafd.account_operations, this takes a while...';
-    CLUSTER hafd.account_operations using hive_account_operations_uq1;
+    CLUSTER hafd.account_operations USING hive_account_operations_uq1;
     RAISE NOTICE 'Analyzing hafd.account_operations after clustering to update statistics';
     ANALYZE hafd.account_operations;
     UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
@@ -328,7 +328,8 @@ LANGUAGE plpgsql VOLATILE
 -- remove_inconsistent_irreversible_data: Clean up data after crash recovery
 -- =============================================================================
 -- Updated to work with block_id encoding. Uses block_id_to_num() to filter
--- blocks above the consistent block. CASCADE DELETE handles child tables.
+-- blocks above the consistent block. Since there are no FKs between data tables,
+-- we must explicitly delete from all tables.
 -- =============================================================================
 CREATE OR REPLACE FUNCTION hive.remove_inconsistent_irreversible_data()
     RETURNS void
@@ -346,7 +347,28 @@ BEGIN
         RETURN;
     END IF;
 
-    -- Delete blocks above consistent_block (CASCADE handles all child tables)
+    -- Delete from all data tables above consistent_block
+    -- Order: child tables first to avoid any potential FK issues
+    DELETE FROM hafd.account_operations ao
+    WHERE hafd.block_id_to_num(ao.block_id) > __consistent_block;
+
+    DELETE FROM hafd.applied_hardforks ah
+    WHERE hafd.block_id_to_num(ah.block_id) > __consistent_block;
+
+    DELETE FROM hafd.transactions_multisig tm
+    WHERE hafd.block_id_to_num(tm.block_id) > __consistent_block;
+
+    DELETE FROM hafd.operations o
+    WHERE hafd.block_id_to_num(o.block_id) > __consistent_block;
+
+    DELETE FROM hafd.transactions t
+    WHERE hafd.block_id_to_num(t.block_id) > __consistent_block;
+
+    -- Delete accounts created in blocks above consistent_block
+    DELETE FROM hafd.accounts a
+    WHERE hafd.block_id_to_num(a.block_id) > __consistent_block;
+
+    -- Finally delete blocks
     DELETE FROM hafd.blocks hb
     WHERE hafd.block_id_to_num(hb.block_id) > __consistent_block;
 

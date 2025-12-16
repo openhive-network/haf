@@ -46,14 +46,14 @@ BEGIN
         , ( hafd.make_block_id(5, 0), 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    -- transactions_multisig: (block_id, trx_in_block, signature)
-    INSERT INTO hafd.transactions_multisig
+    -- transactions_multisig: (trx_hash, signature, block_id)
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-          ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xBEEF01' )
-        , ( hafd.make_block_id(2, 0), 0::SMALLINT, '\xBEEF01' )
-        , ( hafd.make_block_id(3, 0), 0::SMALLINT, '\xBEEF01' )
-        , ( hafd.make_block_id(3, 0), 1::SMALLINT, '\xBEEF000302' )
-        , ( hafd.make_block_id(3, 0), 1::SMALLINT, '\xBEEF000303' )
+          ( '\xDEED10', '\xBEEF01', hafd.make_block_id(1, 0) )
+        , ( '\xDEED20', '\xBEEF01', hafd.make_block_id(2, 0) )
+        , ( '\xDEED30', '\xBEEF01', hafd.make_block_id(3, 0) )
+        , ( '\xDEED31', '\xBEEF000302', hafd.make_block_id(3, 0) )
+        , ( '\xDEED31', '\xBEEF000303', hafd.make_block_id(3, 0) )
     ;
 
     -- Operations: (block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)

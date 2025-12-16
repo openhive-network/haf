@@ -17,7 +17,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT hive.are_fk_dropped() ) = FALSE, 'Foreign keys are disabled';
+    -- In the new schema, data tables no longer have foreign key constraints.
+    -- The block_id encoding replaces the need for FKs.
+    -- Since there are no FKs to manage, are_fk_dropped() returns TRUE
+    -- (FKs are considered "dropped" because there are none).
+    ASSERT ( SELECT hive.are_fk_dropped() ) = TRUE, 'Foreign keys should be considered dropped when none exist';
 END;
 $BODY$
 ;

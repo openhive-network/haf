@@ -199,7 +199,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
     , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
     , hafd.operation_id( _block_num INTEGER, _type INTEGER, _pos INTEGER )
-    , hafd.operation_id( _block_id hafd.block_id, _seq INT, _type SMALLINT )
+    , hafd.operation_id( _block_id hafd.block_id, _seq INT, _type INT )
     , hafd.operation_id_to_pos( _id BIGINT )
     , hafd.operation_id_to_type_id( _id BIGINT )
     , hafd.operation_id_to_block_num( _id BIGINT )

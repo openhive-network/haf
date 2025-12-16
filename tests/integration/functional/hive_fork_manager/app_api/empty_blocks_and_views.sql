@@ -38,9 +38,9 @@ BEGIN
     ( hafd.make_block_id(1, 0), 0, 0, 0, 1, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
     ;
 
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-           ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xBAAD10' )
+           ( '\xDEED10', '\xBAAD10', hafd.make_block_id(1, 0) )
     ;
 
 
@@ -57,8 +57,8 @@ BEGIN
     ;
 
     -- block 2 on fork 3 has no signatures
-    INSERT INTO hafd.transactions_multisig
-    VALUES ( hafd.make_block_id(2, 2), 0::SMALLINT, '\xBAAD20' )
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
+    VALUES ( '\xDEED20', '\xBAAD20', hafd.make_block_id(2, 2) )
     ;
 
     -- block 2 on fork 3 has no operations
