@@ -285,24 +285,33 @@ _fix_pg_tblspc_symlinks() {
     # Don't use realpath as it follows symlinks - tablespace_dir may contain symlinks to old locations
     local tablespace_abs_path="$tablespace_dir"
 
-    # Find all symlinks in pg_tblspc and update to point to current tablespace location
+    # Find all entries in pg_tblspc and ensure they're symlinks pointing to current tablespace location
     for link in "$pg_tblspc"/*; do
+        [[ -e "$link" ]] || continue  # Skip if glob didn't match anything
+
+        local link_name
+        link_name=$(basename "$link")
+
+        # Handle both symlinks and directories (directories occur when symlinks were dereferenced)
         if [[ -L "$link" ]]; then
-            local link_name
-            link_name=$(basename "$link")
+            # It's a symlink - check if it needs fixing
             local target
             target=$(readlink "$link")
 
             # Check if target contains 'tablespace' (the directory we need to point to)
             if [[ "$target" == *"tablespace"* ]] && [[ -d "$tablespace_abs_path" ]]; then
                 _log "Fixing pg_tblspc symlink: $link_name (was -> $target)"
-                # Remove old symlink and create new one pointing to current tablespace location
-                # Use absolute path so PostgreSQL's setup_postgres.sh validation works
-                # Use sudo since symlink may be owned by postgres (uid 105)
                 sudo rm -f "$link" 2>/dev/null || rm -f "$link"
                 sudo ln -s "$tablespace_abs_path" "$link" 2>/dev/null || ln -s "$tablespace_abs_path" "$link"
                 _log "Fixed pg_tblspc symlink: $link_name -> $tablespace_abs_path"
             fi
+        elif [[ -d "$link" ]] && [[ -d "$tablespace_abs_path" ]]; then
+            # It's a directory but should be a symlink - this happens when symlinks were dereferenced
+            # Replace the directory with a symlink to the correct tablespace location
+            _log "Replacing pg_tblspc directory with symlink: $link_name"
+            sudo rm -rf "$link" 2>/dev/null || rm -rf "$link"
+            sudo ln -s "$tablespace_abs_path" "$link" 2>/dev/null || ln -s "$tablespace_abs_path" "$link"
+            _log "Created pg_tblspc symlink: $link_name -> $tablespace_abs_path"
         fi
     done
 }
