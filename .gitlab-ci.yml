@@ -10,6 +10,8 @@ variables:
   PIPELINE_DATA_CACHE_LOCAL: "/cache/haf_pipeline_${CI_PIPELINE_ID}"
   GIT_STRATEGY: clone
   GIT_SUBMODULE_STRATEGY: recursive
+  FF_NETWORK_PER_BUILD: 1
+  FF_ENABLE_JOB_CLEANUP: 1
 
 include:
   - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
