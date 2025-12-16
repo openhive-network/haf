@@ -72,6 +72,39 @@ include:
       fi
     else
       echo "Cache miss for HAF commit $CACHE_KEY - performing replay"
+
+      # Clean up old local caches to ensure sufficient disk space for replay
+      # Replays to 5M blocks require ~20GB, with indexes and temp files needing more
+      REQUIRED_FREE_GB=50
+      CACHE_BASE_DIR="$(dirname "${DATA_CACHE_DIR}")"
+      CURRENT_FREE_KB=$(df -k "$CACHE_BASE_DIR" 2>/dev/null | tail -1 | awk '{print $4}')
+      CURRENT_FREE_GB=$((CURRENT_FREE_KB / 1024 / 1024))
+      echo "Free space in $CACHE_BASE_DIR: ${CURRENT_FREE_GB}GB (need ${REQUIRED_FREE_GB}GB)"
+
+      if [[ $CURRENT_FREE_GB -lt $REQUIRED_FREE_GB ]]; then
+        echo "Insufficient disk space, cleaning up old HAF caches..."
+        CURRENT_CACHE_NAME="$(basename "${DATA_CACHE_DIR}")"
+        # Clean old replay_data_haf_* (oldest first, skip current and running)
+        for old_cache in $(ls -dt "$CACHE_BASE_DIR"/replay_data_haf_* 2>/dev/null | tail -n +2); do
+          [[ "$(basename "$old_cache")" == "$CURRENT_CACHE_NAME" ]] && continue
+          [[ -f "$old_cache/replay_running" ]] && { echo "Skipping $old_cache (replay running)"; continue; }
+          echo "Removing old cache: $old_cache"
+          sudo rm -rf "$old_cache" || true
+          CURRENT_FREE_KB=$(df -k "$CACHE_BASE_DIR" 2>/dev/null | tail -1 | awk '{print $4}')
+          CURRENT_FREE_GB=$((CURRENT_FREE_KB / 1024 / 1024))
+          [[ $CURRENT_FREE_GB -ge $REQUIRED_FREE_GB ]] && break
+        done
+        # Clean old haf_pipeline_*
+        for old_pipeline in $(ls -dt "$CACHE_BASE_DIR"/haf_pipeline_* 2>/dev/null | tail -n +2); do
+          echo "Removing old pipeline cache: $old_pipeline"
+          sudo rm -rf "$old_pipeline" || true
+          CURRENT_FREE_KB=$(df -k "$CACHE_BASE_DIR" 2>/dev/null | tail -1 | awk '{print $4}')
+          CURRENT_FREE_GB=$((CURRENT_FREE_KB / 1024 / 1024))
+          [[ $CURRENT_FREE_GB -ge $REQUIRED_FREE_GB ]] && break
+        done
+        echo "Cleanup complete. Free space: ${CURRENT_FREE_GB}GB"
+      fi
+
       mkdir "${DATA_CACHE_DIR}/datadir" -pv
       # Don't cd into datadir - build_data.sh creates build_data.log in cwd,
       # and if cwd is on NFS, rm -rf will fail with "Directory not empty"
