@@ -32,10 +32,11 @@ if [[ -n "${DATA_SOURCE:-}" && -d "${DATA_SOURCE}/datadir/haf_db_store" ]]; then
   echo "HAF database copy complete"
 fi
 
+# Create DATADIR if it doesn't exist (needed when DATADIR is overridden and DATA_SOURCE is not set)
 if sudo -Enu hived test ! -d "$DATADIR"
 then
-    echo "Data directory (DATADIR) $DATADIR does not exist. Exiting."
-    exit 2
+    echo "Creating data directory: $DATADIR"
+    sudo -Enu hived mkdir -p "$DATADIR"
 fi
 
 if sudo -Enu hived test ! -d "$SHM_DIR" && test "$SHM_DIR" != "$DATADIR/blockchain"
