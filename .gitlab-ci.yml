@@ -808,12 +808,17 @@ dead_app_auto_detach:
 
         DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
         LOG_FILE: $CI_JOB_NAME.log
-      command: ["--replay-blockchain", "--stop-at-block=1000000"]
   variables:
     HIVED_UID: $HIVED_UID
     HAF_COMMIT: $HAF_COMMIT
   before_script: *fetch_pipeline_cache
   script:
+    - echo "=== Service Container Diagnostics ==="
+    - getent hosts haf-instance || echo "DNS resolution failed"
+    - nc -zv haf-instance 5432 || echo "Port 5432 not reachable"
+    - echo "=== PostgreSQL Connection Warmup ==="
+    - psql postgresql://haf_admin@haf-instance:5432/postgres -c "SELECT version()" || echo "psql connection failed"
+    - echo "=== Running Test ==="
     - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
   artifacts:
     paths:
@@ -840,6 +845,12 @@ start_haf_as_service:
     HAF_COMMIT: $HAF_COMMIT
   before_script: *fetch_pipeline_cache
   script:
+    - echo "=== Service Container Diagnostics ==="
+    - getent hosts haf-instance || echo "DNS resolution failed"
+    - nc -zv haf-instance 5432 || echo "Port 5432 not reachable"
+    - echo "=== PostgreSQL Connection Warmup ==="
+    - psql postgresql://haf_admin@haf-instance:5432/postgres -c "SELECT version()" || echo "psql connection failed"
+    - echo "=== Testing Hived Webserver ==="
     - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
     - |
         curl -XPOST -d '{
