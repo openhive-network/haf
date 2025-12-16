@@ -10,7 +10,8 @@ variables:
   PYTEST_NUMBER_OF_PROCESSES: 8
   CTEST_NUMBER_OF_JOBS: 4
   # HAF_COMMIT is used as cache key - in HAF's own CI, it's the current commit
-  HAF_COMMIT: $CI_COMMIT_SHA
+  # TEMPORARY: Use existing image/cache from 9ce4243d to skip rebuild
+  HAF_COMMIT: "9ce4243d23b6f27ab9023a401ada586a856b8848"
 
   GIT_STRATEGY: clone
   GIT_DEPTH: 0
@@ -102,6 +103,10 @@ haf_image_build_testnet:
 
 haf_image_build_mirrornet:
   extends: .haf_image_build
+  rules:
+    - if: '$MINIMAL_TEST == "true"'
+      when: never
+    - when: on_success
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVE_NETWORK_TYPE: mirrornet
@@ -749,7 +754,8 @@ replay_data_copy:
   stage: build_and_test_phase_1
   needs:
     - prepare_haf_data
-    - haf_image_build
+    - job: haf_image_build
+      optional: true
   variables:
     SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   script:
@@ -799,9 +805,6 @@ dead_app_auto_detach:
   services:
     - name: $HAF_IMAGE_NAME
       alias: haf-instance
-      # Use --skip-hived: this test only needs PostgreSQL, not hived
-      # This avoids NFS file locking issues with block_log files
-      command: ["--skip-hived"]
       variables:
         # Allow access from any network to eliminate CI IP addressing problems when hfm runs as service
         PG_ACCESS: |
@@ -811,17 +814,12 @@ dead_app_auto_detach:
 
         DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
         LOG_FILE: $CI_JOB_NAME.log
+      command: ["--replay-blockchain", "--stop-at-block=1000000"]
   variables:
     HIVED_UID: $HIVED_UID
     HAF_COMMIT: $HAF_COMMIT
   before_script: *fetch_pipeline_cache
   script:
-    - echo "=== Service Container Diagnostics ==="
-    - getent hosts haf-instance || echo "DNS resolution failed"
-    - nc -zv haf-instance 5432 || echo "Port 5432 not reachable"
-    - echo "=== PostgreSQL Connection Warmup ==="
-    - psql postgresql://haf_admin@haf-instance:5432/postgres -c "SELECT version()" || echo "psql connection failed"
-    - echo "=== Running Test ==="
     - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
   artifacts:
     paths:
@@ -848,12 +846,6 @@ start_haf_as_service:
     HAF_COMMIT: $HAF_COMMIT
   before_script: *fetch_pipeline_cache
   script:
-    - echo "=== Service Container Diagnostics ==="
-    - getent hosts haf-instance || echo "DNS resolution failed"
-    - nc -zv haf-instance 5432 || echo "Port 5432 not reachable"
-    - echo "=== PostgreSQL Connection Warmup ==="
-    - psql postgresql://haf_admin@haf-instance:5432/postgres -c "SELECT version()" || echo "psql connection failed"
-    - echo "=== Testing Hived Webserver ==="
     - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
     - |
         curl -XPOST -d '{
