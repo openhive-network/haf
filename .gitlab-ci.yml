@@ -86,7 +86,7 @@ dead_app_auto_detach:
     - prepare_haf_data
     - replay_data_copy
   services:
-    - name: "registry.gitlab.syncad.com/hive/haf:18e1a1d4"
+    - name: "registry.gitlab.syncad.com/hive/haf:69b7246b"
       alias: haf-instance
       variables:
         PG_ACCESS: |
