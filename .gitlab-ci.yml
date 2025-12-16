@@ -53,7 +53,6 @@ haf_image_build:
     HIVE_NETWORK_TYPE: mainnet
   tags:
     - public-runner-docker
-    - hived-for-tests
 
 replay_data_copy:
   extends: .job-defaults
