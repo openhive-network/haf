@@ -21,6 +21,16 @@ SCRIPTSDIR="/home/haf_admin/source/${HIVE_SUBDIR}/scripts"
 
 "$SCRIPTSDIR/copy_datadir.sh"
 
+# Copy HAF database files from cache if DATA_SOURCE is set
+# The hive copy_datadir.sh only copies blockchain and shm_dir, not haf_db_store
+if [[ -n "${DATA_SOURCE:-}" && -d "${DATA_SOURCE}/datadir/haf_db_store" ]]; then
+  echo "Copying HAF database from ${DATA_SOURCE}/datadir/haf_db_store to ${DATADIR}/haf_db_store"
+  sudo -Enu hived mkdir -p "${DATADIR}/haf_db_store"
+  # Use flock to ensure cache isn't being modified while copying
+  # Use --no-preserve to avoid NFS permission issues
+  flock "${DATA_SOURCE}/datadir" sudo -En cp -r --no-preserve=mode,ownership "${DATA_SOURCE}/datadir/haf_db_store"/* "${DATADIR}/haf_db_store/"
+  echo "HAF database copy complete"
+fi
 
 if sudo -Enu hived test ! -d "$DATADIR"
 then
@@ -232,7 +242,9 @@ sudo -n --user=hived mkdir -p -m 755 "$HAF_DB_STORE"
 # Only fix ownership if PGDATA already exists (cached data scenario).
 # If PGDATA doesn't exist, leave ownership for the mkdir commands below.
 if [[ -d "$PGDATA" ]]; then
-  sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
+  # Fix ownership silently - service container's copy_datadir.sh doesn't preserve ownership
+  # (uses --no-preserve to avoid NFS errors), so files need to be chowned to postgres
+  sudo -n chown -R postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
 fi
 
 # Check if correct PostgreSQL version is installed
@@ -287,10 +299,42 @@ else
   # Fix ownership of existing database files - required when cache was created in a different
   # container where postgres user had different uid/gid. Without this, PostgreSQL fails with:
   # "Error: The cluster is owned by group id NNN which does not exist"
-  sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
+  # Run silently since copy_datadir.sh doesn't preserve ownership (uses --no-preserve for NFS)
+  sudo -n chown -R postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
   # Fix pgdata permissions - PostgreSQL requires mode 700 or 750
   # Cached data may have relaxed permissions (a+rX) for NFS copying
   sudo -n chmod 700 "$PGDATA" 2>/dev/null || true
+
+  # Fix PostgreSQL tablespace symlinks when using cached data
+  # Symlinks in pg_tblspc may point to old cache locations and need to be updated
+  pg_tblspc="$PGDATA/pg_tblspc"
+  echo "Checking for PostgreSQL tablespace symlinks at: $pg_tblspc"
+  if sudo -n test -d "$pg_tblspc"; then
+    echo "Fixing PostgreSQL tablespace symlinks..."
+    tablespace_target="/home/hived/datadir/haf_db_store/tablespace"
+    # Run symlink fixing as postgres user to avoid permission issues
+    sudo --user=postgres -n bash -c "
+      for link in '$pg_tblspc'/*; do
+        [[ -e \"\$link\" ]] || [[ -L \"\$link\" ]] || continue
+        link_name=\$(basename \"\$link\")
+        if [[ -L \"\$link\" ]]; then
+          old_target=\$(readlink \"\$link\")
+          if [[ \"\$old_target\" == *\"tablespace\"* ]]; then
+            echo \"  Fixing symlink \$link_name: \$old_target -> $tablespace_target\"
+            rm -f \"\$link\"
+            ln -s \"$tablespace_target\" \"\$link\"
+          fi
+        elif [[ -d \"\$link\" ]]; then
+          echo \"  Replacing directory \$link_name with symlink to $tablespace_target\"
+          rm -rf \"\$link\"
+          ln -s \"$tablespace_target\" \"\$link\"
+        fi
+      done
+    "
+    echo "Tablespace symlink fixing complete"
+  else
+    echo "No tablespace symlinks directory found, skipping fix"
+  fi
 
   # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
   sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh" --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="/home/hived/datadir/haf_db_store/tablespace" --install-extension="${HAF_INSTALL_EXTENSION:-"yes"},/home/haf_admin/build,/usr/share/postgresql/${POSTGRES_VERSION},/usr/lib/postgresql/${POSTGRES_VERSION}"
