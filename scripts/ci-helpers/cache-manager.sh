@@ -307,7 +307,7 @@ _fix_pg_tblspc_symlinks() {
                 sudo rm -f "$link" 2>/dev/null || rm -f "$link"
                 sudo ln -s "$tablespace_abs_path" "$link" 2>/dev/null || ln -s "$tablespace_abs_path" "$link"
                 _log "Fixed pg_tblspc symlink: $link_name -> $tablespace_abs_path"
-                ((fixed_count++))
+                fixed_count=$((fixed_count + 1))
             fi
         elif [[ -d "$link" ]]; then
             # It's a directory but should be a symlink - this happens when symlinks were dereferenced
@@ -316,7 +316,7 @@ _fix_pg_tblspc_symlinks() {
             sudo rm -rf "$link" 2>/dev/null || rm -rf "$link"
             sudo ln -s "$tablespace_abs_path" "$link" 2>/dev/null || ln -s "$tablespace_abs_path" "$link"
             _log "Created pg_tblspc symlink: $link_name -> $tablespace_abs_path"
-            ((fixed_count++))
+            fixed_count=$((fixed_count + 1))
         fi
     done
 
