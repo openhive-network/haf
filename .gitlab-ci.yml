@@ -98,7 +98,8 @@ dead_app_auto_detach:
     - echo "=== Service Container Diagnostics ==="
     - getent hosts haf-instance || echo "DNS resolution failed"
     - nc -zv haf-instance 5432 || echo "Port 5432 not reachable"
-    - docker ps || echo "Cannot list containers"
+    - echo "=== Testing actual PostgreSQL connection ==="
+    - psql postgresql://haf_admin@haf-instance:5432/postgres -c "SELECT version()" || echo "psql connection failed"
     - cd tests/integration/system/applications/auto_detaching
     - |
       python3 -c "
@@ -106,8 +107,10 @@ dead_app_auto_detach:
       for _ in range(60):
           try:
               socket.create_connection(('haf-instance', 5432), timeout=1)
+              print(f'Attempt {_+1}/60: Testing connection...')
               sys.exit(0)
-          except:
+          except Exception as e:
+              print(f'Attempt {_+1}/60 failed: {e}')
               time.sleep(1)
       sys.exit(1)
       "
