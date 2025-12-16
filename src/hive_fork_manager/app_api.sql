@@ -37,7 +37,7 @@ BEGIN
           _name
         , _schema
         , ( SELECT MAX( hf.id ) FROM hafd.fork hf ) -- current fork id
-        , COALESCE( ( SELECT hid.consistent_block FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
+        , COALESCE( ( SELECT hafd.block_id_to_num(hid.consistent_block) FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
         , _is_forking
         , _is_attached
         , NULL
@@ -67,7 +67,7 @@ BEGIN
             _name
         , _schema
         , ( SELECT MAX( hf.id ) FROM hafd.fork hf ) -- current fork id
-        , COALESCE( ( SELECT hid.consistent_block FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
+        , COALESCE( ( SELECT hafd.block_id_to_num(hid.consistent_block) FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
         , _is_forking
         , False
         , _stages
@@ -244,7 +244,7 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = __lead_context;
 
-    SELECT hir.consistent_block INTO __head_of_irreversible_block
+    SELECT hafd.block_id_to_num(hir.consistent_block) INTO __head_of_irreversible_block
     FROM hafd.hive_state hir;
 
     IF __current_block_num > __head_of_irreversible_block THEN
@@ -481,7 +481,7 @@ $BODY$
 DECLARE
     __result hafd.contexts.irreversible_block%TYPE;
 BEGIN
-    SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hafd.hive_state;
+    SELECT COALESCE( hafd.block_id_to_num(consistent_block), 0 ) INTO __result FROM hafd.hive_state;
     RETURN __result;
 END;
 $BODY$;
@@ -506,7 +506,7 @@ BEGIN
         -- the max block_num from blocks with fork_id=0 (original irreversible blocks
         -- created during massive sync).
         SELECT GREATEST(
-            COALESCE(hs.consistent_block, 0),
+            COALESCE(hafd.block_id_to_num(hs.consistent_block), 0),
             COALESCE((SELECT MAX(hafd.block_id_to_num(hb.block_id))
                       FROM hafd.blocks hb
                       WHERE hafd.block_id_to_fork(hb.block_id) = 0), 0)
@@ -872,7 +872,7 @@ CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _contexts hive.contexts_group  )
 AS
 $BODY$
 BEGIN
-    RETURN COALESCE((SELECT BOOL_AND(hc.id IS NOT NULL AND hca.is_attached AND consistent_block - hc.current_block_num <= 1)
+    RETURN COALESCE((SELECT BOOL_AND(hc.id IS NOT NULL AND hca.is_attached AND hafd.block_id_to_num(consistent_block) - hc.current_block_num <= 1)
                      FROM UNNEST(_contexts) AS context_names(name)
                      LEFT JOIN hafd.contexts hc USING(name)
                      JOIN hafd.contexts_attachment hca ON hca.context_id = hc.id

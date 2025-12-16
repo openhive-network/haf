@@ -234,7 +234,7 @@ $BODY$
 DECLARE
     __current_irreversible INT;
 BEGIN
-    SELECT COALESCE(consistent_block, 0) INTO __current_irreversible FROM hafd.hive_state;
+    SELECT COALESCE(hafd.block_id_to_num(consistent_block), 0) INTO __current_irreversible FROM hafd.hive_state;
 
     IF ( _block_num <= __current_irreversible ) THEN
         RETURN;
@@ -257,7 +257,7 @@ BEGIN
     INSERT INTO hafd.events_queue( event, block_num )
     VALUES( 'NEW_IRREVERSIBLE', _block_num );
 
-    UPDATE hafd.hive_state SET consistent_block = _block_num;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(_block_num, (SELECT MAX(id) FROM hafd.fork));
 END;
 $BODY$
 ;
@@ -280,7 +280,7 @@ BEGIN
     INSERT INTO hafd.events_queue( event, block_num )
     VALUES ( 'MASSIVE_SYNC'::hafd.event_type, _block_num );
 
-    UPDATE hafd.hive_state SET consistent_block = _block_num;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(_block_num, (SELECT MAX(id) FROM hafd.fork));
 END;
 $BODY$
 ;

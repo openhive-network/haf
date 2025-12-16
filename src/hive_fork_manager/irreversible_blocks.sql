@@ -64,14 +64,14 @@ CREATE TYPE hafd.sync_state AS ENUM (
 
 CREATE TABLE IF NOT EXISTS hafd.hive_state (
     id integer,
-    consistent_block integer,
+    consistent_block hafd.block_id,
     is_dirty bool NOT NULL,
     state hafd.sync_state NOT NULL DEFAULT 'START',
     pruning integer NOT NULL DEFAULT 0,
     CONSTRAINT pk_irreversible_data PRIMARY KEY ( id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.hive_state', '');
--- Note: FK to blocks removed - consistent_block is just a block_num value, not a block_id
+-- Note: consistent_block stores block_id (encodes both block_num and fork_id)
 
 -- =============================================================================
 -- hafd.transactions - Unified transactions table

@@ -15,6 +15,9 @@ BEGIN
     VALUES (5, 'initminer', hafd.make_block_id(1, 0))
     ;
 
+    -- Set block 2 as irreversible (required for attach at block 2)
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(2, 0);
+
     INSERT INTO hafd.fork VALUES( 2, 2, '2016-06-22 19:10:24-07'::timestamp );
     INSERT INTO hafd.fork VALUES( 3, 3, '2016-06-22 19:10:25-07'::timestamp );
 

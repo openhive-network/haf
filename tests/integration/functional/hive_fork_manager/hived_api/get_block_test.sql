@@ -69,7 +69,7 @@ BEGIN
         , ( hafd.make_block_id(5, 0), 1, 2, -1, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE VOP"}}' :: jsonb :: hafd.operation )  -- Virtual op
     ;
 
-    UPDATE hafd.hive_state SET consistent_block = 5;
+    UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$
 ;
