@@ -308,25 +308,32 @@ else
   # Fix PostgreSQL tablespace symlinks when using cached data
   # Symlinks in pg_tblspc may point to old cache locations and need to be updated
   pg_tblspc="$PGDATA/pg_tblspc"
-  if [[ -d "$pg_tblspc" ]]; then
+  echo "Checking for PostgreSQL tablespace symlinks at: $pg_tblspc"
+  if sudo -n test -d "$pg_tblspc"; then
     echo "Fixing PostgreSQL tablespace symlinks..."
     tablespace_target="/home/hived/datadir/haf_db_store/tablespace"
-    for link in "$pg_tblspc"/*; do
-      [[ -e "$link" ]] || [[ -L "$link" ]] || continue
-      link_name=$(basename "$link")
-      if [[ -L "$link" ]]; then
-        old_target=$(readlink "$link")
-        if [[ "$old_target" == *"tablespace"* ]]; then
-          echo "  Fixing symlink $link_name: $old_target -> $tablespace_target"
-          sudo -n rm -f "$link"
-          sudo -n ln -s "$tablespace_target" "$link"
+    # Run symlink fixing as postgres user to avoid permission issues
+    sudo --user=postgres -n bash -c "
+      for link in '$pg_tblspc'/*; do
+        [[ -e \"\$link\" ]] || [[ -L \"\$link\" ]] || continue
+        link_name=\$(basename \"\$link\")
+        if [[ -L \"\$link\" ]]; then
+          old_target=\$(readlink \"\$link\")
+          if [[ \"\$old_target\" == *\"tablespace\"* ]]; then
+            echo \"  Fixing symlink \$link_name: \$old_target -> $tablespace_target\"
+            rm -f \"\$link\"
+            ln -s \"$tablespace_target\" \"\$link\"
+          fi
+        elif [[ -d \"\$link\" ]]; then
+          echo \"  Replacing directory \$link_name with symlink to $tablespace_target\"
+          rm -rf \"\$link\"
+          ln -s \"$tablespace_target\" \"\$link\"
         fi
-      elif [[ -d "$link" ]]; then
-        echo "  Replacing directory $link_name with symlink to $tablespace_target"
-        sudo -n rm -rf "$link"
-        sudo -n ln -s "$tablespace_target" "$link"
-      fi
-    done
+      done
+    "
+    echo "Tablespace symlink fixing complete"
+  else
+    echo "No tablespace symlinks directory found, skipping fix"
   fi
 
   # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
