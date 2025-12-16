@@ -244,8 +244,8 @@ ENV WAL_DIR=${DATADIR}/blockchain/haf_wal
 
 STOPSIGNAL SIGINT
 
-# JSON rpc service
-# EXPOSE ${HTTP_PORT}  # Commented out to disable GitLab health check - tests have their own readiness checks
+# Expose PostgreSQL port for GitLab health check (faster than hived webserver)
+EXPOSE 5432
 
 ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
 

@@ -107,6 +107,7 @@ dead_app_auto_detach:
           host    all              haf_admin        0.0.0.0/0    trust
         DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
         LOG_FILE: $CI_JOB_NAME.log
+      command: ["--skip-hived"]
   before_script: *fetch_pipeline_cache
   script:
     - cd tests/integration/system/applications/auto_detaching
