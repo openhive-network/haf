@@ -21,6 +21,16 @@ SCRIPTSDIR="/home/haf_admin/source/${HIVE_SUBDIR}/scripts"
 
 "$SCRIPTSDIR/copy_datadir.sh"
 
+# Copy HAF database files from cache if DATA_SOURCE is set
+# The hive copy_datadir.sh only copies blockchain and shm_dir, not haf_db_store
+if [[ -n "${DATA_SOURCE:-}" && -d "${DATA_SOURCE}/datadir/haf_db_store" ]]; then
+  echo "Copying HAF database from ${DATA_SOURCE}/datadir/haf_db_store to ${DATADIR}/haf_db_store"
+  sudo -Enu hived mkdir -p "${DATADIR}/haf_db_store"
+  # Use flock to ensure cache isn't being modified while copying
+  # Use --no-preserve to avoid NFS permission issues
+  flock "${DATA_SOURCE}/datadir" sudo -En cp -r --no-preserve=mode,ownership "${DATA_SOURCE}/datadir/haf_db_store"/* "${DATADIR}/haf_db_store/"
+  echo "HAF database copy complete"
+fi
 
 if sudo -Enu hived test ! -d "$DATADIR"
 then
