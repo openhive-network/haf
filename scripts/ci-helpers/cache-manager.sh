@@ -278,16 +278,19 @@ _fix_pg_tblspc_symlinks() {
     local tablespace_dir="${source_dir}/datadir/haf_db_store/tablespace"
 
     if [[ ! -d "$pg_tblspc" ]]; then
+        _log "pg_tblspc directory not found, skipping symlink fix"
         return 0
     fi
 
     # Get absolute path to tablespace in current location
     # Don't use realpath as it follows symlinks - tablespace_dir may contain symlinks to old locations
     local tablespace_abs_path="$tablespace_dir"
+    _log "Checking tablespace symlinks in $pg_tblspc (target: $tablespace_abs_path)"
 
     # Find all entries in pg_tblspc and ensure they're symlinks pointing to current tablespace location
+    local fixed_count=0
     for link in "$pg_tblspc"/*; do
-        [[ -e "$link" ]] || continue  # Skip if glob didn't match anything
+        [[ -e "$link" ]] || [[ -L "$link" ]] || continue  # Skip if glob didn't match or broken symlink
 
         local link_name
         link_name=$(basename "$link")
@@ -298,22 +301,30 @@ _fix_pg_tblspc_symlinks() {
             local target
             target=$(readlink "$link")
 
-            # Check if target contains 'tablespace' (the directory we need to point to)
-            if [[ "$target" == *"tablespace"* ]] && [[ -d "$tablespace_abs_path" ]]; then
+            # Always fix tablespace symlinks to point to current location, regardless of old target
+            if [[ "$target" == *"tablespace"* ]]; then
                 _log "Fixing pg_tblspc symlink: $link_name (was -> $target)"
                 sudo rm -f "$link" 2>/dev/null || rm -f "$link"
                 sudo ln -s "$tablespace_abs_path" "$link" 2>/dev/null || ln -s "$tablespace_abs_path" "$link"
                 _log "Fixed pg_tblspc symlink: $link_name -> $tablespace_abs_path"
+                ((fixed_count++))
             fi
-        elif [[ -d "$link" ]] && [[ -d "$tablespace_abs_path" ]]; then
+        elif [[ -d "$link" ]]; then
             # It's a directory but should be a symlink - this happens when symlinks were dereferenced
             # Replace the directory with a symlink to the correct tablespace location
             _log "Replacing pg_tblspc directory with symlink: $link_name"
             sudo rm -rf "$link" 2>/dev/null || rm -rf "$link"
             sudo ln -s "$tablespace_abs_path" "$link" 2>/dev/null || ln -s "$tablespace_abs_path" "$link"
             _log "Created pg_tblspc symlink: $link_name -> $tablespace_abs_path"
+            ((fixed_count++))
         fi
     done
+
+    if [[ $fixed_count -gt 0 ]]; then
+        _log "Fixed $fixed_count tablespace symlink(s)"
+    else
+        _log "No tablespace symlinks needed fixing"
+    fi
 }
 
 # Relax PostgreSQL pgdata permissions for caching
