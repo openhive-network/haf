@@ -307,6 +307,36 @@ _fix_pg_tblspc_symlinks() {
     done
 }
 
+# Convert pg_tblspc absolute symlinks to relative symlinks
+# This ensures symlinks work correctly when data is copied to different locations
+_convert_pg_tblspc_to_relative() {
+    local source_dir="$1"
+    local pg_tblspc="${source_dir}/datadir/haf_db_store/pgdata/pg_tblspc"
+
+    if [[ ! -d "$pg_tblspc" ]]; then
+        return 0
+    fi
+
+    # Relative path from pg_tblspc to tablespace is ../../tablespace
+    local relative_path="../../tablespace"
+
+    for link in "$pg_tblspc"/*; do
+        if [[ -L "$link" ]]; then
+            local link_name
+            link_name=$(basename "$link")
+            local target
+            target=$(readlink "$link")
+
+            # Only convert if it's an absolute path pointing to tablespace
+            if [[ "$target" == /* ]] && [[ "$target" == *"tablespace"* ]]; then
+                _log "Converting pg_tblspc symlink to relative: $link_name"
+                sudo rm -f "$link" 2>/dev/null || rm -f "$link"
+                sudo ln -s "$relative_path" "$link" 2>/dev/null || ln -s "$relative_path" "$link"
+            fi
+        fi
+    done
+}
+
 # Relax PostgreSQL pgdata permissions for caching
 # Makes pgdata and tablespace readable so they can be copied to NFS
 _relax_pgdata_permissions() {
@@ -326,10 +356,8 @@ _relax_pgdata_permissions() {
         sudo chmod -R a+rX "$tablespace_path" 2>/dev/null || chmod -R a+rX "$tablespace_path" 2>/dev/null || true
     fi
 
-    # NOTE: Do NOT fix symlinks here during cache storage (put operation)
-    # Symlinks must be fixed during cache retrieval (get operation) to point to the
-    # destination path. Fixing them here would bake the source path into the tar archive.
-    # The _restore_pgdata_permissions() function handles symlink fixing after extraction.
+    # Convert absolute symlinks to relative so they work when copied anywhere
+    _convert_pg_tblspc_to_relative "$source_dir"
 }
 
 # Restore PostgreSQL pgdata permissions after cache retrieval
