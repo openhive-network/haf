@@ -18,28 +18,28 @@ BEGIN
      , ( hafd.make_block_id(2, 0), '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 1)
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0))
          , (6, 'alice', hafd.make_block_id(1, 0))
          , (7, 'bob', hafd.make_block_id(1, 0))
     ;
 
     INSERT INTO hafd.transactions
     VALUES
-           ( 1, 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
-         , ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
+           ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id(2, 0), 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-           ( '\xDEED10', '\xBAAD10' )
-         , ( '\xDEED20', '\xBAAD20' )
+           ( '\xDEED10', '\xBAAD10', hafd.make_block_id(1, 0) )
+         , ( '\xDEED20', '\xBAAD20', hafd.make_block_id(2, 0) )
     ;
 
-    INSERT INTO hafd.operations
+    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
     VALUES
-           ( hafd.operation_id(1,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hafd.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
+           ( hafd.make_block_id(1, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id(2, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
     ;
 
     INSERT INTO hafd.accounts
@@ -48,16 +48,16 @@ BEGIN
            , ( 2, 'user', hafd.make_block_id(2, 0))
     ;
 
-    INSERT INTO hafd.account_operations
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block)
     VALUES
-        ( 1, 1, 1, hafd.operation_id(1,1,0) )
-      , ( 2, 2, 1, hafd.operation_id(2,1,0) )
+        ( 1, 1, 1, hafd.make_block_id(1, 0), 1 )
+      , ( 2, 2, 1, hafd.make_block_id(2, 0), 1 )
     ;
 
-    INSERT INTO hafd.applied_hardforks
+    INSERT INTO hafd.applied_hardforks(hardfork_num, block_id, hardfork_vop_id)
     VALUES
-        ( 1, 1, hafd.operation_id(1,hafd.make_block_id(1, 0),0))
-      , ( 2, 2, hafd.operation_id(2,hafd.make_block_id(1, 0),0))
+        ( 1, hafd.make_block_id(1, 0), hafd.operation_id(1, 1, 0) )
+      , ( 2, hafd.make_block_id(2, 0), hafd.operation_id(2, 1, 0) )
     ;
 
     -- here we simulate situation when hived claims recently only block 1
@@ -93,13 +93,13 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hafd.applied_hardforks ) = 1, 'Unexpected number of applied_hardforks';
 
 
-    ASSERT ( SELECT COUNT(*) FROM hafd.blocks WHERE num = 1 ) = 1, 'No blocks with num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hafd.transactions WHERE block_num = 1 ) = 1, 'No transaction with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hafd.operations WHERE id = hafd.operation_id(1,1,0) ) = 1, 'No operations with block_num = 1';
-    ASSERT ( SELECT COUNT(*) FROM hafd.accounts WHERE block_num = 1 ) = 4, 'No account with block_num = 1';
+    ASSERT ( SELECT COUNT(*) FROM hafd.blocks WHERE hafd.block_id_to_num(block_id) = 1 ) = 1, 'No blocks with num = 1';
+    ASSERT ( SELECT COUNT(*) FROM hafd.transactions WHERE hafd.block_id_to_num(block_id) = 1 ) = 1, 'No transaction with block_num = 1';
+    ASSERT ( SELECT COUNT(*) FROM hafd.operations WHERE hafd.block_id_to_num(block_id) = 1 ) = 1, 'No operations with block_num = 1';
+    ASSERT ( SELECT COUNT(*) FROM hafd.accounts WHERE hafd.block_id_to_num(block_id) = 1 ) = 4, 'No account with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hafd.transactions_multisig WHERE trx_hash = '\xDEED10'::bytea ) = 1, 'No signatures with block_num = 1';
     ASSERT ( SELECT COUNT(*) FROM hafd.account_operations WHERE account_id = 1 ) = 1, 'No account_operations with account_id = 1';
-    ASSERT ( SELECT COUNT(*) FROM hafd.applied_hardforks WHERE block_num = 1 ) = 1, 'No applied_hardforks with block_num = 1';
+    ASSERT ( SELECT COUNT(*) FROM hafd.applied_hardforks WHERE hafd.block_id_to_num(block_id) = 1 ) = 1, 'No applied_hardforks with block_num = 1';
 
 END
 $BODY$

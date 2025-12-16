@@ -33,6 +33,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
                                block.dhf_interval_ledger);
   }
 
+  // Transactions - uses block_id for fork tracking
   template<> const char hive_transactions< std::vector<PSQL::processing_objects::process_transaction_t> >::TABLE[] = "hafd.transactions";
   template<> const char hive_transactions< std::vector<PSQL::processing_objects::process_transaction_t> >::COLS[] = "block_id, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature";
 
@@ -45,41 +46,33 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
                         transaction.signature);
   }
 
+  // Transactions multisig - uses block_id for fork tracking
   const char hive_transactions_multisig::TABLE[] = "hafd.transactions_multisig";
-  const char hive_transactions_multisig::COLS[] = "block_id, trx_in_block, signature";
+  const char hive_transactions_multisig::COLS[] = "trx_hash, signature, block_id";
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_transaction_multisig_t& transaction_multisig)
   {
-    stream.write_values(make_block_id(transaction_multisig.block_number), transaction_multisig.trx_in_block, transaction_multisig.signature);
+    stream.write_values(transaction_multisig.hash, transaction_multisig.signature, make_block_id(transaction_multisig.block_number));
   }
 
+  // Operations - uses block_id, seq_in_block, op_type_id (id is generated column)
   template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::TABLE[] = "hafd.operations";
   template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::COLS[] = "block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary";
 
   template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::TABLE[] = "hafd.operations";
   template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::COLS[] = "block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary";
 
-  // Extract components from old operation_id encoding:
-  // || block (32b) | seq (24b) | type (8b) ||
-  inline int32_t extract_seq_in_block(int64_t operation_id) {
-    return (operation_id >> 8) & 0xFFFFFF;
-  }
-  inline int16_t extract_op_type_id(int64_t operation_id) {
-    return operation_id & 0xFF;
-  }
-
+  // Extract components from encoded operation_id: (block_num << 32) | (seq_in_block << 8) | op_type_id
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_operation_t& operation)
   {
-    stream.write_values(
-      make_block_id(operation.block_number),
-      extract_seq_in_block(operation.operation_id),
-      extract_op_type_id(operation.operation_id),
-      operation.trx_in_block,
-      operation.op_in_trx,
-      operation.op
-    );
+    int32_t block_num = static_cast<int32_t>(operation.operation_id >> 32);
+    int32_t seq_in_block = static_cast<int32_t>((operation.operation_id >> 8) & 0xFFFFFF);
+    int32_t op_type_id = static_cast<int32_t>(operation.operation_id & 0xFF);
+
+    stream.write_values(make_block_id(block_num), seq_in_block, op_type_id, operation.trx_in_block, operation.op_in_trx, operation.op);
   }
 
+  // Accounts - uses block_id for fork tracking
   template<> const char hive_accounts<std::vector<PSQL::processing_objects::account_data_t>>::TABLE[] = "hafd.accounts";
   template<> const char hive_accounts<std::vector<PSQL::processing_objects::account_data_t>>::COLS[] = "id, name, block_id";
 
@@ -88,37 +81,33 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::account_data_t& account)
   {
-    // block_id is required (NOT NULL), so block_number must be valid
-    stream.write_values( account.id, account.name, make_block_id(account.block_number) );
+    // For accounts with block_number == 0 (dumped at startup when psql-first-block > 1),
+    // write NULL since the creation block is unknown/not stored
+    stream.write_values(account.id, account.name, account.block_number == 0 ? fc::optional<int64_t>() : make_block_id(account.block_number));
   }
 
+  // Account operations - uses block_id, seq_in_block
   template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::TABLE[] = "hafd.account_operations";
-  template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::COLS[] = "block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no";
+  template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block";
 
   template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::TABLE[] = "hafd.account_operations";
-  template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::COLS[] = "block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no";
+  template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block";
 
+  // Extract block_num and seq_in_block from encoded operation_id
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::account_operation_data_t& account_operation)
   {
-    // Extract seq_in_block from operation_id (middle 24 bits)
-    int32_t seq_in_block = (account_operation.operation_id >> 8) & 0xFFFFFF;
-    stream.write_values(
-      make_block_id(account_operation.block_number),
-      seq_in_block,
-      account_operation.account_id,
-      account_operation.transacting_account_id,
-      account_operation.operation_seq_no
-    );
+    int32_t block_num = static_cast<int32_t>(account_operation.operation_id >> 32);
+    int32_t seq_in_block = static_cast<int32_t>((account_operation.operation_id >> 8) & 0xFFFFFF);
+
+    stream.write_values(account_operation.account_id, account_operation.transacting_account_id, account_operation.operation_seq_no, make_block_id(block_num), seq_in_block);
   }
 
-
+  // Applied hardforks - uses block_id for fork tracking
   const char hive_applied_hardforks::TABLE[] = "hafd.applied_hardforks";
-  const char hive_applied_hardforks::COLS[] = "block_id, hardfork_num, hardfork_vop_id";
+  const char hive_applied_hardforks::COLS[] = "hardfork_num, block_id, hardfork_vop_id";
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::applied_hardforks_t& applied_hardfork)
   {
-    stream.write_values(make_block_id(applied_hardfork.block_number), applied_hardfork.hardfork_num, applied_hardfork.hardfork_vop_id);
+    stream.write_values(applied_hardfork.hardfork_num, make_block_id(applied_hardfork.block_number), applied_hardfork.hardfork_vop_id);
   }
 
 }}} // namespace hive::plugins::sql_serializer
-
-

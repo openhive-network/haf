@@ -2,7 +2,14 @@
 -- Upper 32 bits = block_num
 -- Lower 32 bits = fork_id
 
-CREATE DOMAIN hafd.block_id AS BIGINT;
+-- Create domain only if it doesn't exist (for idempotent deployment during upgrades)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'block_id' AND typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'hafd')) THEN
+    CREATE DOMAIN hafd.block_id AS BIGINT;
+  END IF;
+END
+$$;
 
 CREATE OR REPLACE FUNCTION hafd.make_block_id( _block_num INTEGER, _fork_id BIGINT )
     RETURNS hafd.block_id

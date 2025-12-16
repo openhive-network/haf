@@ -41,26 +41,26 @@ BEGIN
     PERFORM test.create_transactions(1, 5);
 
     -- Create transactions_multisig entries
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-    ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xBAAD10' )
-         , ( hafd.make_block_id(2, 0), 0::SMALLINT, '\xBAAD20' )
-         , ( hafd.make_block_id(3, 0), 0::SMALLINT, '\xBAAD30' )
-         , ( hafd.make_block_id(4, 0), 0::SMALLINT, '\xBAAD40' )
-         , ( hafd.make_block_id(5, 0), 0::SMALLINT, '\xBAAD50' )
+    ( '\xDEED10', '\xBAAD10', hafd.make_block_id(1, 0) )
+         , ( '\xDEED20', '\xBAAD20', hafd.make_block_id(2, 0) )
+         , ( '\xDEED30', '\xBAAD30', hafd.make_block_id(3, 0) )
+         , ( '\xDEED40', '\xBAAD40', hafd.make_block_id(4, 0) )
+         , ( '\xDEED50', '\xBAAD50', hafd.make_block_id(5, 0) )
     ;
 
     -- Create operations
     PERFORM test.create_operations(1, 5);
 
     -- Create account_operations entries (up to block 4, matching old fill_with_blocks_data)
-    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, operation_id)
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block)
     VALUES
-           ( hafd.make_block_id(1, 0), 1, 1, 1, 1 )
-         , ( hafd.make_block_id(2, 0), 1, 1, 1, 2 )
-         , ( hafd.make_block_id(2, 0), 1, 2, 2, 1 )
-         , ( hafd.make_block_id(3, 0), 1, 3, 3, 1 )
-         , ( hafd.make_block_id(4, 0), 1, 4, 4, 1 )
+           ( 1, 1, 1, hafd.make_block_id(1, 0), 1 )
+         , ( 1, 1, 2, hafd.make_block_id(2, 0), 1 )
+         , ( 2, 2, 1, hafd.make_block_id(2, 0), 1 )
+         , ( 3, 3, 1, hafd.make_block_id(3, 0), 1 )
+         , ( 4, 4, 1, hafd.make_block_id(4, 0), 1 )
     ;
 END;
 $BODY$
@@ -82,7 +82,7 @@ AS
 $BODY$
 BEGIN
     ASSERT (SELECT COUNT(*) FROM hafd.blocks) = 1, 'Some blocks stay';
-    ASSERT (SELECT MAX(num) FROM hafd.blocks) = 5, 'Wrong blocks removed';
+    ASSERT (SELECT MAX(hafd.block_id_to_num(block_id)) FROM hafd.blocks) = 5, 'Wrong blocks removed';
     ASSERT (SELECT COUNT(*) FROM hafd.transactions) = 1, 'Some transactions stay';
     ASSERT (SELECT COUNT(*) FROM hafd.transactions_multisig) = 1, 'Some transactions multisig stay';
     ASSERT (SELECT COUNT(*) FROM hafd.operations) = 1, 'Some operations stay';
