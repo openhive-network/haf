@@ -39,6 +39,21 @@ then
     sudo -Enu hived mkdir -p "$DATADIR"
 fi
 
+# Update SHM_DIR and WAL_DIR to follow DATADIR when DATADIR is overridden
+# These are set in Dockerfile as ${DATADIR}/blockchain and ${DATADIR}/blockchain/haf_wal,
+# but this is evaluated at build time. When DATADIR is changed at runtime, they still
+# point to /home/hived/datadir/... paths. Update them to match the new DATADIR.
+if [[ "$DATADIR" != "/home/hived/datadir" ]]; then
+    if [[ "$SHM_DIR" == "/home/hived/datadir/blockchain" ]]; then
+        echo "Updating SHM_DIR to follow overridden DATADIR: $DATADIR/blockchain"
+        export SHM_DIR="$DATADIR/blockchain"
+    fi
+    if [[ "${WAL_DIR:-}" == "/home/hived/datadir/blockchain/haf_wal" ]]; then
+        echo "Updating WAL_DIR to follow overridden DATADIR: $DATADIR/blockchain/haf_wal"
+        export WAL_DIR="$DATADIR/blockchain/haf_wal"
+    fi
+fi
+
 if sudo -Enu hived test ! -d "$SHM_DIR" && test "$SHM_DIR" != "$DATADIR/blockchain"
 then
     echo "Shared memory file directory (SHM_DIR) $SHM_DIR does not exist. Exiting."
