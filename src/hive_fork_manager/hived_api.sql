@@ -168,9 +168,9 @@ BEGIN
         _block.current_hbd_supply, _block.dhf_interval_ledger
     );
 
-    -- Insert transactions (original compact format with block_num)
-    INSERT INTO hafd.transactions (block_num, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature)
-    SELECT t.block_num, t.trx_in_block, t.trx_hash, t.ref_block_num, t.ref_block_prefix, t.expiration, t.signature
+    -- Insert transactions (original compact format with block_id)
+    INSERT INTO hafd.transactions (block_id, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature)
+    SELECT __block_id, t.trx_in_block, t.trx_hash, t.ref_block_num, t.ref_block_prefix, t.expiration, t.signature
     FROM unnest(_transactions) t;
 
     -- Insert multisig signatures (original compact format with trx_hash)
@@ -178,25 +178,25 @@ BEGIN
     SELECT s.trx_hash, s.signature
     FROM unnest(_signatures) s;
 
-    -- Insert operations (original compact format with encoded id)
-    INSERT INTO hafd.operations (id, trx_in_block, op_pos, body_binary)
-    SELECT o.id, o.trx_in_block, o.op_pos, o.body_binary
+    -- Insert operations (original compact format with encoded id turned into columns)
+    INSERT INTO hafd.operations (block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
+    SELECT __block_id, (o.id >> 8) & 16777215, o.id & 255, o.trx_in_block, o.op_pos, o.body_binary
     FROM unnest(_operations) o;
 
-    -- Insert accounts (original compact format with block_num)
-    INSERT INTO hafd.accounts (id, name, block_num)
-    SELECT a.id, a.name, a.block_num
+    -- Insert accounts (original compact format with block_id)
+    INSERT INTO hafd.accounts (id, name, block_id)
+    SELECT a.id, a.name, __block_id
     FROM unnest(_accounts) a
     ON CONFLICT (id) DO NOTHING;  -- Account may already exist
 
-    -- Insert account_operations (original compact format with operation_id)
-    INSERT INTO hafd.account_operations (account_id, transacting_account_id, account_op_seq_no, operation_id)
-    SELECT ao.account_id, ao.transacting_account_id, ao.account_op_seq_no, ao.operation_id
+    -- Insert account_operations (original compact format with block_id, seq_in_block)
+    INSERT INTO hafd.account_operations (account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block)
+    SELECT ao.account_id, ao.transacting_account_id, ao.account_op_seq_no, __block_id, (ao.operation_id >> 8) & 16777215
     FROM unnest(_account_operations) ao;
 
-    -- Insert applied_hardforks (original compact format with block_num)
-    INSERT INTO hafd.applied_hardforks (hardfork_num, block_num, hardfork_vop_id)
-    SELECT h.hardfork_num, h.block_num, h.hardfork_vop_id
+    -- Insert applied_hardforks (original compact format with block_id)
+    INSERT INTO hafd.applied_hardforks (hardfork_num, block_id, hardfork_vop_id)
+    SELECT h.hardfork_num, __block_id, h.hardfork_vop_id
     FROM unnest(_applied_hardforks) h
     ON CONFLICT (hardfork_num) DO NOTHING;  -- Hardfork may already be recorded
 END;
@@ -494,10 +494,10 @@ BEGIN
       AND hafd.block_id_to_fork(block_id) != __canonical_fork_id;
 
     -- Clean up other tables by block_num (no FK CASCADE needed)
-    DELETE FROM hafd.transactions WHERE block_num = ANY(__orphan_block_nums);
-    DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) = ANY(__orphan_block_nums);
-    DELETE FROM hafd.account_operations WHERE hafd.operation_id_to_block_num(operation_id) = ANY(__orphan_block_nums);
-    DELETE FROM hafd.applied_hardforks WHERE block_num = ANY(__orphan_block_nums);
+    DELETE FROM hafd.transactions WHERE hafd.block_id_to_num(block_id) = ANY(__orphan_block_nums);
+    DELETE FROM hafd.operations WHERE hafd.block_id_to_num(block_id) = ANY(__orphan_block_nums);
+    DELETE FROM hafd.account_operations WHERE hafd.block_id_to_num(block_id) = ANY(__orphan_block_nums);
+    DELETE FROM hafd.applied_hardforks WHERE hafd.block_id_to_num(block_id) = ANY(__orphan_block_nums);
     -- Note: accounts and transactions_multisig don't need cleanup (accounts persist, multisig cascades from transactions)
 END;
 $BODY$
