@@ -31,9 +31,30 @@ std::string db_url_with_app(const std::string& db_url, const char* app_name)
   return db_url + " " + app_kv;
 }
 
+std::string db_url_as_user(const std::string& db_url, const char* user)
+{
+  const std::string user_kv = std::string("user=") + user;
+  const bool is_uri = db_url.rfind("postgres://", 0) == 0 || db_url.rfind("postgresql://", 0) == 0;
+  if (is_uri)
+  {
+    // URI format: replace existing user or add to query params
+    std::regex user_regex(R"(([?&])user=[^&]*)");
+    if (std::regex_search(db_url, user_regex))
+      return std::regex_replace(db_url, user_regex, std::string("$1") + user_kv);
+    const char sep = (db_url.find('?') == std::string::npos) ? '?' : '&';
+    return db_url + sep + user_kv;
+  }
+  else return db_url + " " + user_kv; // Key-value format: append
+}
+
 std::string db_url_with_hived_app(const std::string& db_url)
 {
   return db_url_with_app(db_url, "hived_index");
+}
+
+std::string db_url_with_hived_app_as_haf_maintainer(const std::string& db_url)
+{
+  return db_url_with_hived_app(db_url_as_user(db_url, "haf_maintainer"));
 }
 
 }
@@ -208,7 +229,7 @@ void indexes_controler::poll_and_create_indexes()
 
 
   {
-    pqxx::connection conn(db_url_with_hived_app(_db_url));
+    pqxx::connection conn(db_url_with_hived_app_as_haf_maintainer(_db_url));
     pqxx::nontransaction tx(conn);
     try
     {
@@ -224,7 +245,7 @@ void indexes_controler::poll_and_create_indexes()
   while (!theApp.is_interrupt_request())
   {
     dlog("Checking for table vacuum requests...");
-    pqxx::connection conn(db_url_with_hived_app(_db_url));
+    pqxx::connection conn(db_url_with_hived_app_as_haf_maintainer(_db_url));
     pqxx::nontransaction tx(conn);
     try
     {
@@ -318,7 +339,7 @@ void indexes_controler::poll_and_create_indexes()
           fc::set_thread_name(thread_name.c_str());
           fc::thread::current().set_name(thread_name);
 
-          pqxx::connection conn(db_url_with_hived_app(_db_url));
+          pqxx::connection conn(db_url_with_hived_app_as_haf_maintainer(_db_url));
           pqxx::nontransaction tx(conn);
           pqxx::result data = tx.exec("SELECT index_constraint_name, command FROM hafd.indexes_constraints WHERE status = 'missing' AND table_name = '" + table_name + "';");
           for (const auto& index : data) //iterate over missing indexes and create them concurrently
