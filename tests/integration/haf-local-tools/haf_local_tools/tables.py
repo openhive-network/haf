@@ -28,7 +28,7 @@ class Accounts(HiveDataBase):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    block_id = Column(BigInteger, primary_key=True)
+    block_num = Column(Integer)
 
 
 class AccountsView(HiveBase):
@@ -128,9 +128,9 @@ class OperationsIrreversibleView(HiveBase):
 class Transactions(HiveDataBase):
     __tablename__ = "transactions"
 
-    block_id = Column(BigInteger, primary_key=True)
-    trx_in_block = Column(SmallInteger, primary_key=True)
-    trx_hash = Column(LargeBinary)
+    block_num = Column(Integer)
+    trx_in_block = Column(SmallInteger)
+    trx_hash = Column(LargeBinary, primary_key=True)
     ref_block_num = Column(Integer)
     ref_block_prefix = Column(BigInteger)
     expiration = Column(DateTime)
@@ -152,8 +152,7 @@ class TransactionsView(HiveBase):
 class TransactionsMultisig(HiveDataBase):
     __tablename__ = "transactions_multisig"
 
-    block_id = Column(BigInteger, primary_key=True)
-    trx_in_block = Column(SmallInteger, primary_key=True)
+    trx_hash = Column(LargeBinary, primary_key=True)
     signature = Column(LargeBinary, primary_key=True)
 
 

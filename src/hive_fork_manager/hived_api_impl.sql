@@ -242,7 +242,7 @@ DECLARE
   __command TEXT;
   __cluster_index_dropped BOOLEAN;
 BEGIN
-
+  -- Check if the clustering index was dropped (uses unique constraint index)
   __cluster_index_dropped := EXISTS(
                 SELECT command FROM hafd.indexes_constraints
                 WHERE table_name = 'hafd.account_operations' AND
@@ -255,7 +255,7 @@ BEGIN
           index_constraint_name = 'hive_account_operations_uq1' LIMIT 1;
     EXECUTE __command;
     RAISE NOTICE 'Clustering hafd.account_operations, this takes a while...';
-    CLUSTER hafd.account_operations using hive_account_operations_uq1;
+    CLUSTER hafd.account_operations USING hive_account_operations_uq1;
     RAISE NOTICE 'Analyzing hafd.account_operations after clustering to update statistics';
     ANALYZE hafd.account_operations;
     UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
