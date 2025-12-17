@@ -464,7 +464,7 @@ $BODY$
 -- With hybrid structure, blocks uses block_id. Other tables use block_num.
 -- We delete orphan blocks, then clean up other tables by block_num.
 
-CREATE OR REPLACE FUNCTION hive.remove_orphan_forks( _block_num INT )
+CREATE OR REPLACE FUNCTION hive.remove_orphan_forks( _new_irreversible_block INT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -481,7 +481,7 @@ BEGIN
     SELECT array_agg(DISTINCT hafd.block_id_to_num(block_id))
     INTO __orphan_block_nums
     FROM hafd.blocks
-    WHERE hafd.block_id_to_num(block_id) <= _block_num
+    WHERE hafd.block_id_to_num(block_id) <= _new_irreversible_block
       AND hafd.block_id_to_fork(block_id) != __canonical_fork_id;
 
     IF __orphan_block_nums IS NULL OR array_length(__orphan_block_nums, 1) = 0 THEN
@@ -490,7 +490,7 @@ BEGIN
 
     -- Delete orphan blocks
     DELETE FROM hafd.blocks
-    WHERE hafd.block_id_to_num(block_id) <= _block_num
+    WHERE hafd.block_id_to_num(block_id) <= _new_irreversible_block
       AND hafd.block_id_to_fork(block_id) != __canonical_fork_id;
 
     -- Clean up other tables by block_num (no FK CASCADE needed)
@@ -521,3 +521,255 @@ BEGIN
 END;
 $BODY$
 ;
+
+-- =============================================================================
+-- Index status check functions
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION hive.all_indexes_have_status(_status hafd.index_status)
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    _all_indices_have_status BOOLEAN;
+    record hafd.indexes_constraints%ROWTYPE;
+BEGIN
+    RAISE NOTICE 'Current state of hafd.indexes_constraints:';
+    FOR record IN
+        SELECT * FROM hafd.indexes_constraints
+    LOOP
+        RAISE NOTICE 'index_constraint_name: %, table_name: %, status: %', record.index_constraint_name, record.table_name, record.status;
+    END LOOP;
+
+    SELECT bool_and(status=_status)
+    INTO _all_indices_have_status
+    FROM hafd.indexes_constraints;
+
+    RETURN _all_indices_have_status;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.are_any_indexes_missing()
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __number_of_dropped_indexes INT;
+BEGIN
+    SELECT COUNT(*) FROM hafd.indexes_constraints
+    WHERE is_index AND status = 'missing'
+    INTO __number_of_dropped_indexes;
+    IF ( __number_of_dropped_indexes = 0 ) THEN
+        RETURN FALSE;
+    ELSE
+        RETURN TRUE;
+    END IF;
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.are_indexes_restored()
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+  RETURN COALESCE(hive.all_indexes_have_status('created'), TRUE);
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.are_fk_dropped()
+    RETURNS BOOL
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __a_fk_exists INTEGER;
+BEGIN
+    SELECT COUNT(*)
+    INTO __a_fk_exists
+    FROM hafd.indexes_constraints
+    WHERE is_foreign_key AND status != 'missing';
+
+    RETURN __a_fk_exists = 0;
+END;
+$BODY$
+;
+
+-- =============================================================================
+-- Extension initialization
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION hive.initialize_extension_data()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __events_id BIGINT := 0;
+BEGIN
+    IF EXISTS ( SELECT 1 FROM hafd.events_queue WHERE id = hive.unreachable_event_id() LIMIT 1 ) THEN
+        SELECT MAX(eq.id) + 1 FROM hafd.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
+        PERFORM SETVAL( 'hafd.events_queue_id_seq', __events_id, false );
+        RETURN;
+    END IF;
+
+    INSERT INTO hafd.hive_state VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
+    INSERT INTO hafd.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
+    INSERT INTO hafd.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
+    SELECT MAX(eq.id) + 1 FROM hafd.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
+    PERFORM SETVAL( 'hafd.events_queue_id_seq', __events_id, false );
+
+    INSERT INTO hafd.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
+
+    UPDATE hafd.contexts hc
+    SET fork_id = 1, events_id = 0
+    FROM hafd.contexts_attachment  hac
+    WHERE hac.context_id = hc.id
+    AND hac.is_attached = TRUE;
+
+    UPDATE hafd.contexts hc
+    SET fork_id = 1, events_id = hive.unreachable_event_id()
+    FROM hafd.contexts_attachment  hac
+    WHERE hac.context_id = hc.id
+    AND hac.is_attached = FALSE;
+END;
+$BODY$
+;
+
+-- =============================================================================
+-- WAL sequence number functions
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION hive.update_wal_sequence_number(_new_sequence_number INTEGER)
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    INSERT INTO hafd.write_ahead_log_state VALUES (1, _new_sequence_number)
+    ON CONFLICT (id) DO UPDATE SET last_sequence_number_committed = _new_sequence_number WHERE hafd.write_ahead_log_state.id = 1;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.get_wal_sequence_number()
+    RETURNS INTEGER
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __last_sequence_number_committed INT;
+BEGIN
+    SELECT last_sequence_number_committed FROM hafd.write_ahead_log_state WHERE id = 1 INTO __last_sequence_number_committed;
+    return __last_sequence_number_committed;
+END;
+$BODY$
+;
+
+-- =============================================================================
+-- Dead context auto-detach procedure
+-- =============================================================================
+
+CREATE OR REPLACE PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL DEFAULT '4 hours'::INTERVAL )
+    LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+  __contexts hafd.context_name[];
+  __ctx TEXT;
+  __now TIMESTAMP WITHOUT TIME ZONE := NOW();
+  __current_block_before_detach INT;
+BEGIN
+  IF NOT hive.is_instance_ready() THEN
+    RAISE WARNING 'Skipping auto detach, because HAF is not in live mode';
+    RETURN;
+  END IF;
+
+  SELECT ARRAY_AGG(ctxs.name) INTO __contexts FROM (
+    SELECT c.name
+    FROM hafd.contexts c
+    JOIN hafd.contexts_attachment hca ON hca.context_id = c.id
+    WHERE hca.is_attached
+      AND c.last_active_at < __now - _app_timeout FOR UPDATE SKIP LOCKED
+  ) as ctxs;
+
+  IF CARDINALITY(__contexts) != 0 THEN
+    RAISE WARNING 'Attempting to automatically detach application contexts: %', __contexts;
+
+    FOREACH __ctx IN ARRAY __contexts
+    LOOP
+      BEGIN
+      RAISE WARNING 'Attempting to automatically detach application context: %', __ctx;
+      SELECT hc.current_block_num INTO __current_block_before_detach
+      FROM hafd.contexts hc WHERE hc.name = __ctx;
+      PERFORM hive.app_context_detach(__ctx);
+
+      UPDATE hafd.contexts
+      SET current_block_num = __current_block_before_detach
+      WHERE name = __ctx AND stages IS NULL;
+      RAISE WARNING 'Done automatic detaching of application context: %', __ctx;
+      EXCEPTION
+        WHEN OTHERS THEN
+          RAISE WARNING 'FAILED automatic detaching of application context: %', __ctx;
+      END;
+    END LOOP;
+  END IF;
+END;
+$BODY$
+;
+
+-- =============================================================================
+-- Sync state functions
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION hive.get_sync_state()
+    RETURNS hafd.sync_state
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __result hafd.sync_state;
+BEGIN
+    SELECT state INTO __result
+    FROM hafd.hive_state;
+
+    RETURN __result;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.set_sync_state( _new_state hafd.sync_state )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    UPDATE hafd.hive_state SET state = _new_state;
+END;
+$BODY$
+;
+
+-- =============================================================================
+-- Vacuum helper functions
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION hive.get_vacuum_full_commands(schema_name TEXT DEFAULT 'hafd')
+RETURNS SETOF TEXT
+LANGUAGE sql
+AS $$
+    SELECT format('VACUUM FULL %I.%I;', schemaname, tablename) as vacuum_cmd
+    FROM pg_tables
+    WHERE schemaname = schema_name;
+$$;
