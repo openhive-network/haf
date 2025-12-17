@@ -39,7 +39,7 @@ FROM (
 -- transactions_view - Uses block_num from transactions table
 -- =============================================================================
 CREATE OR REPLACE VIEW hive.transactions_view AS
-SELECT ht.block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
+SELECT hafd.block_id_to_num(ht.block_id) AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
        ht.ref_block_prefix, ht.expiration, ht.signature
 FROM hafd.transactions ht;
 
@@ -49,10 +49,10 @@ FROM hafd.transactions ht;
 CREATE OR REPLACE VIEW hive.operations_view AS
 SELECT
     ho.id,
-    hafd.operation_id_to_block_num(ho.id) AS block_num,
+    hafd.block_id_to_num(ho.block_id) AS block_num,
     ho.trx_in_block,
     ho.op_pos,
-    hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+    ho.op_type_id,
     ho.body_binary,
     ho.body_binary::jsonb AS body
 FROM hafd.operations ho;
@@ -63,29 +63,29 @@ FROM hafd.operations ho;
 CREATE OR REPLACE VIEW hive.operations_view_extended AS
 SELECT
     ho.id,
-    hafd.operation_id_to_block_num(ho.id) AS block_num,
+    hafd.block_id_to_num(ho.block_id) AS block_num,
     ho.trx_in_block,
     ho.op_pos,
-    hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+    ho.op_type_id,
     b.created_at AS timestamp,
     ho.body_binary,
     ho.body_binary::jsonb AS body
 FROM hafd.operations ho
-JOIN hafd.blocks b ON hafd.block_id_to_num(b.block_id) = hafd.operation_id_to_block_num(ho.id)
-                   AND hafd.block_id_to_fork(b.block_id) = 0;
+JOIN hafd.blocks b ON b.block_id = ho.block_id;
 
 -- =============================================================================
 -- account_operations_view - Uses operation_id encoding
 -- =============================================================================
 CREATE OR REPLACE VIEW hive.account_operations_view AS
 SELECT
-    hafd.operation_id_to_block_num(hao.operation_id) AS block_num,
+    hafd.block_id_to_num(hao.block_id) AS block_num,
     hao.account_id,
     hao.transacting_account_id,
     hao.account_op_seq_no,
-    hao.operation_id,
-    hafd.operation_id_to_type_id(hao.operation_id) AS op_type_id
-FROM hafd.account_operations hao;
+    ho.id AS operation_id,
+    ho.op_type_id
+FROM hafd.account_operations hao
+JOIN hafd.operations ho ON ho.block_id = hao.block_id AND ho.seq_in_block = hao.seq_in_block;
 
 -- =============================================================================
 -- accounts_view - Uses block_num from accounts table
@@ -105,7 +105,7 @@ FROM hafd.transactions_multisig htm;
 -- applied_hardforks_view - Uses block_num from applied_hardforks table
 -- =============================================================================
 CREATE OR REPLACE VIEW hive.applied_hardforks_view AS
-SELECT hah.hardfork_num, hah.block_num, hah.hardfork_vop_id
+SELECT hah.hardfork_num, hafd.block_id_to_num(hah.block_id) AS block_num, hah.hardfork_vop_id
 FROM hafd.applied_hardforks hah;
 
 -- =============================================================================
@@ -126,17 +126,17 @@ FROM hafd.blocks hb
 WHERE hafd.block_id_to_fork(hb.block_id) = 0;
 
 CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS
-SELECT ht.block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
+SELECT hafd.block_id_to_num(ht.block_id) AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
        ht.ref_block_prefix, ht.expiration, ht.signature
 FROM hafd.transactions ht;
 
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
 SELECT
     ho.id,
-    hafd.operation_id_to_block_num(ho.id) AS block_num,
+    hafd.block_id_to_num(ho.block_id) AS block_num,
     ho.trx_in_block,
     ho.op_pos,
-    hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+    ho.op_type_id,
     ho.body_binary,
     ho.body_binary::jsonb AS body
 FROM hafd.operations ho;
@@ -144,26 +144,26 @@ FROM hafd.operations ho;
 CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
 SELECT
     ho.id,
-    hafd.operation_id_to_block_num(ho.id) AS block_num,
+    hafd.block_id_to_num(ho.block_id) AS block_num,
     ho.trx_in_block,
     ho.op_pos,
-    hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+    ho.op_type_id,
     b.created_at AS timestamp,
     ho.body_binary,
     ho.body_binary::jsonb AS body
 FROM hafd.operations ho
-JOIN hafd.blocks b ON hafd.block_id_to_num(b.block_id) = hafd.operation_id_to_block_num(ho.id)
-                   AND hafd.block_id_to_fork(b.block_id) = 0;
+JOIN hafd.blocks b ON b.block_id = ho.block_id;
 
 CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS
 SELECT
-    hafd.operation_id_to_block_num(hao.operation_id) AS block_num,
+    hafd.block_id_to_num(hao.block_id) AS block_num,
     hao.account_id,
     hao.transacting_account_id,
     hao.account_op_seq_no,
-    hao.operation_id,
-    hafd.operation_id_to_type_id(hao.operation_id) AS op_type_id
-FROM hafd.account_operations hao;
+    ho.id AS operation_id,
+    ho.op_type_id
+FROM hafd.account_operations hao
+JOIN hafd.operations ho ON ho.block_id = hao.block_id AND ho.seq_in_block = hao.seq_in_block;
 
 CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS
 SELECT ha.id, ha.name
@@ -174,5 +174,5 @@ SELECT htm.trx_hash, htm.signature
 FROM hafd.transactions_multisig htm;
 
 CREATE OR REPLACE VIEW hive.irreversible_applied_hardforks_view AS
-SELECT hah.hardfork_num, hah.block_num, hah.hardfork_vop_id
+SELECT hah.hardfork_num, hafd.block_id_to_num(hah.block_id) AS block_num, hah.hardfork_vop_id
 FROM hafd.applied_hardforks hah;
