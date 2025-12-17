@@ -517,12 +517,19 @@ cmd_get() {
     if [[ "$use_tar" == "true" ]]; then
         # Extract tar archive to local (fast: reading single file from NFS)
         # No lock needed for reads - tar file is written atomically via mv
-        # Use sudo with --numeric-owner --same-owner to preserve UIDs/GIDs from archive
-        # This restores postgres ownership (UID 105) and eliminates need for chown in service container
         _log "Extracting tar archive to local: $local_dest"
-        if ! sudo tar xf "$NFS_TAR_FILE" --numeric-owner --same-owner -C "$local_dest"; then
-            _error "Failed to extract tar archive"
-            return 1
+        # Try GNU tar options first for proper UID/GID preservation, fall back to basic tar for BusyBox
+        if tar --version 2>/dev/null | grep -q "GNU tar"; then
+            if ! sudo tar xf "$NFS_TAR_FILE" --numeric-owner --same-owner -C "$local_dest"; then
+                _error "Failed to extract tar archive"
+                return 1
+            fi
+        else
+            # BusyBox tar: basic extraction, permissions restored by _restore_pgdata_permissions below
+            if ! sudo tar xf "$NFS_TAR_FILE" -C "$local_dest"; then
+                _error "Failed to extract tar archive"
+                return 1
+            fi
         fi
         _log "Extracted tar archive successfully"
     else
