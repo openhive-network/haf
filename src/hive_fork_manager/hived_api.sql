@@ -2,15 +2,14 @@
 -- HIVED API Functions
 -- =============================================================================
 -- These functions are called by hived to push blocks and manage irreversibility.
--- With unified tables, push_block inserts with block_id and set_irreversible
--- just deletes orphan forks (CASCADE handles related tables).
+-- blocks table uses block_id encoding for fork tracking.
+-- Other tables use original compact format for performance during massive sync.
+-- Fork cleanup is done explicitly (rare operation).
 -- =============================================================================
 
 -- =============================================================================
--- Input types for push_block (match hived's output format)
+-- Input types for push_block (match hived's output format - original structure)
 -- =============================================================================
--- These types define what hived sends - they use the old structure with num/block_num
--- The push_block function transforms these to block_id encoding
 
 DROP TYPE IF EXISTS hafd.blocks_type CASCADE;
 CREATE TYPE hafd.blocks_type AS (
@@ -70,7 +69,7 @@ CREATE TYPE hafd.account_operations_type AS (
     account_id INTEGER,
     transacting_account_id INTEGER,
     account_op_seq_no INTEGER,
-    operation_id BIGINT  -- Legacy operation_id
+    operation_id BIGINT  -- Encoded operation_id
 );
 
 DROP TYPE IF EXISTS hafd.applied_hardforks_type CASCADE;
@@ -92,12 +91,9 @@ AS
 $BODY$
 BEGIN
     -- Analyze tables which indexes use expressions
-    -- Without this, statistics for expressions won't exist and planner
-    -- will choose wrong execution plans
     ANALYZE hafd.operations;
     ANALYZE hafd.account_operations;
     ANALYZE hafd.blocks;
-    ANALYZE hafd.transactions;
 END;
 $BODY$
 ;
@@ -122,9 +118,10 @@ $BODY$
 ;
 
 -- =============================================================================
--- push_block - Insert new block data into unified tables
+-- push_block - Insert new block data
 -- =============================================================================
--- Now inserts into unified tables with block_id encoding (block_num, fork_id)
+-- blocks uses block_id encoding for fork tracking.
+-- Other tables use original compact format for maximum performance.
 
 CREATE OR REPLACE FUNCTION hive.push_block(
       _block hafd.blocks_type
@@ -149,14 +146,14 @@ BEGIN
     INTO __fork_id
     FROM hafd.fork hf ORDER BY hf.id DESC LIMIT 1;
 
-    -- Generate block_id encoding (block_num, fork_id)
+    -- Generate block_id encoding (block_num, fork_id) for blocks table
     __block_id := hafd.make_block_id(_block.num, __fork_id);
 
     -- Insert event
     INSERT INTO hafd.events_queue( event, block_num )
         VALUES( 'NEW_BLOCK', _block.num );
 
-    -- Insert into unified blocks table
+    -- Insert into blocks table (uses block_id)
     INSERT INTO hafd.blocks (
         block_id, hash, prev, created_at, producer_account_id,
         transaction_merkle_root, extensions, witness_signature, signing_key,
@@ -171,50 +168,37 @@ BEGIN
         _block.current_hbd_supply, _block.dhf_interval_ledger
     );
 
-    -- Insert transactions with block_id
-    INSERT INTO hafd.transactions (block_id, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature)
-    SELECT __block_id, t.trx_in_block, t.trx_hash, t.ref_block_num, t.ref_block_prefix, t.expiration, t.signature
+    -- Insert transactions (original compact format with block_num)
+    INSERT INTO hafd.transactions (block_num, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature)
+    SELECT t.block_num, t.trx_in_block, t.trx_hash, t.ref_block_num, t.ref_block_prefix, t.expiration, t.signature
     FROM unnest(_transactions) t;
 
-    -- Insert multisig signatures with block_id
-    -- Join with transactions to get trx_in_block from trx_hash
-    INSERT INTO hafd.transactions_multisig (block_id, trx_in_block, signature)
-    SELECT __block_id, t.trx_in_block, s.signature
-    FROM unnest(_signatures) s
-    JOIN hafd.transactions t ON t.block_id = __block_id AND t.trx_hash = s.trx_hash;
+    -- Insert multisig signatures (original compact format with trx_hash)
+    INSERT INTO hafd.transactions_multisig (trx_hash, signature)
+    SELECT s.trx_hash, s.signature
+    FROM unnest(_signatures) s;
 
-    -- Insert operations with block_id
-    -- Note: _operations contains (id, trx_in_block, op_pos, body_binary)
-    -- id encodes (block_num, seq_in_block, op_type_id) - we extract seq and type
-    INSERT INTO hafd.operations (block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
-    SELECT __block_id,
-           hafd.operation_id_to_pos(o.id),    -- seq_in_block
-           hafd.operation_id_to_type_id(o.id)::SMALLINT, -- op_type_id
-           o.trx_in_block,
-           o.op_pos,
-           o.body_binary
+    -- Insert operations (original compact format with encoded id)
+    INSERT INTO hafd.operations (id, trx_in_block, op_pos, body_binary)
+    SELECT o.id, o.trx_in_block, o.op_pos, o.body_binary
     FROM unnest(_operations) o;
 
-    -- Insert accounts with block_id
-    INSERT INTO hafd.accounts (id, name, block_id)
-    SELECT a.id, a.name, __block_id
-    FROM unnest(_accounts) a;
+    -- Insert accounts (original compact format with block_num)
+    INSERT INTO hafd.accounts (id, name, block_num)
+    SELECT a.id, a.name, a.block_num
+    FROM unnest(_accounts) a
+    ON CONFLICT (id) DO NOTHING;  -- Account may already exist
 
-    -- Insert account_operations with block_id
-    -- Note: _account_operations contains (account_id, transacting_account_id, account_op_seq_no, operation_id)
-    -- We need to extract seq_in_block from operation_id
-    INSERT INTO hafd.account_operations (block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
-    SELECT __block_id,
-           hafd.operation_id_to_pos(ao.operation_id),  -- seq_in_block
-           ao.account_id,
-           ao.transacting_account_id,
-           ao.account_op_seq_no
+    -- Insert account_operations (original compact format with operation_id)
+    INSERT INTO hafd.account_operations (account_id, transacting_account_id, account_op_seq_no, operation_id)
+    SELECT ao.account_id, ao.transacting_account_id, ao.account_op_seq_no, ao.operation_id
     FROM unnest(_account_operations) ao;
 
-    -- Insert applied_hardforks with block_id
-    INSERT INTO hafd.applied_hardforks (block_id, hardfork_num, hardfork_vop_id)
-    SELECT __block_id, h.hardfork_num, h.hardfork_vop_id
-    FROM unnest(_applied_hardforks) h;
+    -- Insert applied_hardforks (original compact format with block_num)
+    INSERT INTO hafd.applied_hardforks (hardfork_num, block_num, hardfork_vop_id)
+    SELECT h.hardfork_num, h.block_num, h.hardfork_vop_id
+    FROM unnest(_applied_hardforks) h
+    ON CONFLICT (hardfork_num) DO NOTHING;  -- Hardfork may already be recorded
 END;
 $BODY$
 ;
@@ -222,8 +206,8 @@ $BODY$
 -- =============================================================================
 -- set_irreversible - Mark blocks as irreversible
 -- =============================================================================
--- With unified tables, we just DELETE non-canonical blocks.
--- CASCADE handles all child tables automatically.
+-- With hybrid structure, we delete orphan fork blocks.
+-- Other tables don't have FK CASCADE, so fork cleanup handles them separately.
 
 CREATE OR REPLACE FUNCTION hive.set_irreversible( _block_num INT )
     RETURNS void
@@ -240,9 +224,6 @@ BEGIN
         RETURN;
     END IF;
 
-    -- With unified tables, no copy operations needed!
-    -- Data is already in the main tables.
-
     -- Try to cleanup orphan forks (non-blocking)
     BEGIN
         LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
@@ -250,7 +231,6 @@ BEGIN
         PERFORM hive.remove_orphan_forks( _block_num );
     EXCEPTION WHEN SQLSTATE '55P03' THEN
         -- 55P03 lock_not_available - contexts are locked by apps
-        -- Cleanup will happen on next irreversible block
     END;
 
     -- Signal applications
@@ -325,7 +305,7 @@ $BODY$
 ;
 
 -- =============================================================================
--- Index management functions (unified tables only)
+-- Index management functions
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.disable_indexes_of_irreversible()
@@ -413,9 +393,8 @@ $BODY$
 ;
 
 -- =============================================================================
--- Reversible index functions - NO-OP with unified tables
+-- Reversible index functions - NO-OP with hybrid structure
 -- =============================================================================
--- These functions are kept for API compatibility but do nothing
 
 CREATE OR REPLACE FUNCTION hive.disable_indexes_of_reversible()
     RETURNS void
@@ -424,7 +403,7 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    -- NO-OP: With unified tables, there are no separate reversible tables
+    -- NO-OP: No separate reversible tables
     NULL;
 END;
 $BODY$
@@ -437,7 +416,7 @@ CREATE OR REPLACE FUNCTION hive.enable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    -- NO-OP: With unified tables, there are no separate reversible tables
+    -- NO-OP: No separate reversible tables
     NULL;
 END;
 $BODY$
@@ -457,255 +436,88 @@ DECLARE
     __max_block INT;
     __last_pruning integer;
 BEGIN
-    PERFORM hive.remove_inconsistent_irreversible_data();
-    SELECT MAX(num) INTO __max_block FROM hive.blocks_view;
+    SELECT hafd.block_id_to_num(block_id) INTO __max_block
+    FROM hafd.blocks
+    ORDER BY block_id DESC
+    LIMIT 1;
 
-    ASSERT COALESCE(__max_block,0) >= _block_num OR COALESCE(__max_block,0) < _first_block, 'Hived state cannot have more blocks on top micro fork than HAF';
+    SELECT pruning INTO __last_pruning FROM hafd.hive_state;
 
-    IF __max_block > _block_num OR _block_num = 0 THEN
-        PERFORM hive.back_from_fork( _block_num );
+    IF ( __max_block IS NOT NULL AND __max_block > _block_num ) THEN
+        RAISE EXCEPTION 'Hived data start block (%) is lower than HAF database head block (%). This indicates a hived/HAF mismatch and could result in corrupted data.', _block_num, __max_block;
     END IF;
 
-    INSERT INTO hafd.hived_connections( block_num, git_sha, time )
-    VALUES( _block_num, _git_sha, now() );
+    IF __last_pruning IS NOT NULL AND __last_pruning != 0 AND _pruning != __last_pruning THEN
+        RAISE EXCEPTION 'Not possible to change pruning from % to %', __last_pruning, _pruning;
+    END IF;
 
-    ASSERT ( hive.is_pruning_enabled() = FALSE OR ( hive.is_pruning_enabled() = TRUE AND _pruning > 0 ) )
-           , 'Cannot initialize as non-pruned: existing database is pruned. Drop/recreate the database or run in pruned mode.';
-
-    UPDATE hafd.hive_state
-    SET pruning = _pruning;
-
-    IF hive.is_pruning_enabled() = TRUE THEN
-        ALTER TABLE hafd.account_operations DROP CONSTRAINT IF EXISTS fk_1_hive_account_operations;
+    IF _pruning != 0 THEN
+        UPDATE hafd.hive_state SET pruning = _pruning;
     END IF;
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.all_indexes_have_status(_status hafd.index_status)
-    RETURNS BOOLEAN
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-DECLARE
-    _all_indices_have_status BOOLEAN;
-    record hafd.indexes_constraints%ROWTYPE;
-BEGIN
-    RAISE NOTICE 'Current state of hafd.indexes_constraints:';
-    FOR record IN
-        SELECT * FROM hafd.indexes_constraints
-    LOOP
-        RAISE NOTICE 'index_constraint_name: %, table_name: %, status: %', record.index_constraint_name, record.table_name, record.status;
-    END LOOP;
+-- =============================================================================
+-- remove_orphan_forks - Clean up orphan fork data
+-- =============================================================================
+-- With hybrid structure, blocks uses block_id. Other tables use block_num.
+-- We delete orphan blocks, then clean up other tables by block_num.
 
-    SELECT bool_and(status=_status)
-    INTO _all_indices_have_status
-    FROM hafd.indexes_constraints;
-
-    RETURN _all_indices_have_status;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.are_any_indexes_missing()
-    RETURNS BOOLEAN
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-DECLARE
-    __number_of_dropped_indexes INT;
-BEGIN
-    SELECT COUNT(*) FROM hafd.indexes_constraints
-    WHERE is_index AND status = 'missing'
-    INTO __number_of_dropped_indexes;
-    IF ( __number_of_dropped_indexes = 0 ) THEN
-        RETURN FALSE;
-    ELSE
-        RETURN TRUE;
-    END IF;
-END;
-$BODY$;
-
-CREATE OR REPLACE FUNCTION hive.are_indexes_restored()
-    RETURNS BOOLEAN
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-  RETURN COALESCE(hive.all_indexes_have_status('created'), TRUE);
-END;
-$BODY$;
-
-CREATE OR REPLACE FUNCTION hive.are_fk_dropped()
-    RETURNS BOOL
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-DECLARE
-    __a_fk_exists INTEGER;
-BEGIN
-    SELECT COUNT(*)
-    INTO __a_fk_exists
-    FROM hafd.indexes_constraints
-    WHERE is_foreign_key AND status != 'missing';
-
-    RETURN __a_fk_exists = 0;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.initialize_extension_data()
+CREATE OR REPLACE FUNCTION hive.remove_orphan_forks( _block_num INT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __events_id BIGINT := 0;
+    __canonical_fork_id BIGINT;
+    __orphan_block_nums INT[];
 BEGIN
-    IF EXISTS ( SELECT 1 FROM hafd.events_queue WHERE id = hive.unreachable_event_id() LIMIT 1 ) THEN
-        SELECT MAX(eq.id) + 1 FROM hafd.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
-        PERFORM SETVAL( 'hafd.events_queue_id_seq', __events_id, false );
+    -- Get canonical fork_id
+    SELECT MAX(id) INTO __canonical_fork_id FROM hafd.fork;
+
+    -- Find orphan block_nums (blocks on non-canonical forks)
+    SELECT array_agg(DISTINCT hafd.block_id_to_num(block_id))
+    INTO __orphan_block_nums
+    FROM hafd.blocks
+    WHERE hafd.block_id_to_num(block_id) <= _block_num
+      AND hafd.block_id_to_fork(block_id) != __canonical_fork_id;
+
+    IF __orphan_block_nums IS NULL OR array_length(__orphan_block_nums, 1) = 0 THEN
         RETURN;
     END IF;
 
-    INSERT INTO hafd.hive_state VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
-    INSERT INTO hafd.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
-    INSERT INTO hafd.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
-    SELECT MAX(eq.id) + 1 FROM hafd.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
-    PERFORM SETVAL( 'hafd.events_queue_id_seq', __events_id, false );
+    -- Delete orphan blocks
+    DELETE FROM hafd.blocks
+    WHERE hafd.block_id_to_num(block_id) <= _block_num
+      AND hafd.block_id_to_fork(block_id) != __canonical_fork_id;
 
-    INSERT INTO hafd.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
-
-    UPDATE hafd.contexts hc
-    SET fork_id = 1, events_id = 0
-    FROM hafd.contexts_attachment  hac
-    WHERE hac.context_id = hc.id
-    AND hac.is_attached = TRUE;
-
-    UPDATE hafd.contexts hc
-    SET fork_id = 1, events_id = hive.unreachable_event_id()
-    FROM hafd.contexts_attachment  hac
-    WHERE hac.context_id = hc.id
-    AND hac.is_attached = FALSE;
+    -- Clean up other tables by block_num (no FK CASCADE needed)
+    DELETE FROM hafd.transactions WHERE block_num = ANY(__orphan_block_nums);
+    DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) = ANY(__orphan_block_nums);
+    DELETE FROM hafd.account_operations WHERE hafd.operation_id_to_block_num(operation_id) = ANY(__orphan_block_nums);
+    DELETE FROM hafd.applied_hardforks WHERE block_num = ANY(__orphan_block_nums);
+    -- Note: accounts and transactions_multisig don't need cleanup (accounts persist, multisig cascades from transactions)
 END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.update_wal_sequence_number(_new_sequence_number INTEGER)
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.write_ahead_log_state VALUES (1, _new_sequence_number)
-    ON CONFLICT (id) DO UPDATE SET last_sequence_number_committed = _new_sequence_number WHERE hafd.write_ahead_log_state.id = 1;
-END;
-$BODY$
-;
+-- =============================================================================
+-- Utility functions
+-- =============================================================================
 
-CREATE OR REPLACE FUNCTION hive.get_wal_sequence_number()
-    RETURNS INTEGER
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-DECLARE
-    __last_sequence_number_committed INT;
-BEGIN
-    SELECT last_sequence_number_committed FROM hafd.write_ahead_log_state WHERE id = 1 INTO __last_sequence_number_committed;
-    return __last_sequence_number_committed;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL DEFAULT '4 hours'::INTERVAL )
-    LANGUAGE plpgsql
-AS
-$BODY$
-DECLARE
-  __contexts hafd.context_name[];
-  __ctx TEXT;
-  __now TIMESTAMP WITHOUT TIME ZONE := NOW();
-  __current_block_before_detach INT;
-BEGIN
-  IF NOT hive.is_instance_ready() THEN
-    RAISE WARNING 'Skipping auto detach, because HAF is not in live mode';
-    RETURN;
-  END IF;
-
-  SELECT ARRAY_AGG(ctxs.name) INTO __contexts FROM (
-    SELECT c.name
-    FROM hafd.contexts c
-    JOIN hafd.contexts_attachment hca ON hca.context_id = c.id
-    WHERE hca.is_attached
-      AND c.last_active_at < __now - _app_timeout FOR UPDATE SKIP LOCKED
-  ) as ctxs;
-
-  IF CARDINALITY(__contexts) != 0 THEN
-    RAISE WARNING 'Attempting to automatically detach application contexts: %', __contexts;
-
-    FOREACH __ctx IN ARRAY __contexts
-    LOOP
-      BEGIN
-      RAISE WARNING 'Attempting to automatically detach application context: %', __ctx;
-      SELECT hc.current_block_num INTO __current_block_before_detach
-      FROM hafd.contexts hc WHERE hc.name = __ctx;
-      PERFORM hive.app_context_detach(__ctx);
-
-      UPDATE hafd.contexts
-      SET current_block_num = __current_block_before_detach
-      WHERE name = __ctx AND stages IS NULL;
-      RAISE WARNING 'Done automatic detaching of application context: %', __ctx;
-      EXCEPTION
-        WHEN OTHERS THEN
-          RAISE WARNING 'FAILED automatic detaching of application context: %', __ctx;
-      END;
-    END LOOP;
-  END IF;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.get_sync_state()
-    RETURNS hafd.sync_state
+CREATE OR REPLACE FUNCTION hive.is_pruning_enabled()
+    RETURNS BOOLEAN
     LANGUAGE plpgsql
     STABLE
 AS
 $BODY$
 DECLARE
-    __result hafd.sync_state;
+    __pruning integer;
 BEGIN
-    SELECT state INTO __result
-    FROM hafd.hive_state;
-
-    RETURN __result;
+    SELECT pruning INTO __pruning FROM hafd.hive_state;
+    RETURN __pruning IS NOT NULL AND __pruning != 0;
 END;
 $BODY$
 ;
-
-CREATE OR REPLACE FUNCTION hive.set_sync_state( _new_state hafd.sync_state )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    UPDATE hafd.hive_state SET state = _new_state;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.get_vacuum_full_commands(schema_name TEXT DEFAULT 'hafd')
-RETURNS SETOF TEXT
-LANGUAGE sql
-AS $$
-    SELECT format('VACUUM FULL %I.%I;', schemaname, tablename) as vacuum_cmd
-    FROM pg_tables
-    WHERE schemaname = schema_name;
-$$;

@@ -11,7 +11,7 @@ CREATE DOMAIN hafd.interest_rate AS INT4 NOT NULL;
 --   Upper 32 bits = block_num
 --   Lower 32 bits = fork_id
 -- Same block_num can exist on multiple forks; only one is canonical.
--- On irreversibility: DELETE orphan forks (CASCADE handles children)
+-- Fork cleanup is done explicitly (fork switching is rare).
 
 CREATE TABLE IF NOT EXISTS hafd.blocks (
     block_id hafd.block_id NOT NULL,
@@ -71,47 +71,32 @@ CREATE TABLE IF NOT EXISTS hafd.hive_state (
     CONSTRAINT pk_irreversible_data PRIMARY KEY ( id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.hive_state', '');
--- Note: consistent_block stores block_id (encodes both block_num and fork_id)
 
 -- =============================================================================
--- hafd.transactions - Unified transactions table
+-- hafd.transactions - Original compact structure
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS hafd.transactions (
-    block_id hafd.block_id NOT NULL,
+    block_num integer NOT NULL,
     trx_in_block smallint NOT NULL,
     trx_hash bytea NOT NULL,
     ref_block_num integer NOT NULL,
     ref_block_prefix bigint NOT NULL,
     expiration timestamp without time zone NOT NULL,
     signature bytea DEFAULT NULL,
-    CONSTRAINT pk_hive_transactions PRIMARY KEY ( block_id, trx_in_block ),
-    CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_id) REFERENCES hafd.blocks (block_id) ON DELETE CASCADE NOT VALID
+    CONSTRAINT pk_hive_transactions PRIMARY KEY ( trx_hash )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.transactions', '');
-
--- Index for trx_hash lookups (common query pattern)
-CREATE UNIQUE INDEX IF NOT EXISTS hive_transactions_trx_hash_idx ON hafd.transactions (trx_hash, block_id);
-
--- Functional index for block_num range queries
-CREATE INDEX IF NOT EXISTS hive_transactions_block_num_idx ON hafd.transactions (
-    hafd.block_id_to_num(block_id),
-    block_id DESC
-);
-
 CREATE STATISTICS IF NOT EXISTS transactions_ref_block_dependency_stats (dependencies) ON ref_block_num, ref_block_prefix FROM hafd.transactions;
-CREATE STATISTICS IF NOT EXISTS transactions_block_num_stats ON (hafd.block_id_to_num(block_id)) FROM hafd.transactions;
 
 -- =============================================================================
--- hafd.transactions_multisig - Multi-signature transactions
+-- hafd.transactions_multisig - Original compact structure
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS hafd.transactions_multisig (
-    block_id hafd.block_id NOT NULL,
-    trx_in_block smallint NOT NULL,
+    trx_hash bytea NOT NULL,
     signature bytea NOT NULL,
-    CONSTRAINT pk_hive_transactions_multisig PRIMARY KEY ( block_id, trx_in_block, signature ),
-    CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (block_id, trx_in_block) REFERENCES hafd.transactions (block_id, trx_in_block) ON DELETE CASCADE NOT VALID
+    CONSTRAINT pk_hive_transactions_multisig PRIMARY KEY ( trx_hash, signature )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.transactions_multisig', '');
 
@@ -130,124 +115,84 @@ SELECT pg_catalog.pg_extension_config_dump('hafd.operation_types', '');
 CREATE STATISTICS IF NOT EXISTS operation_types_id_name_dependency_stats (dependencies) ON id, name FROM hafd.operation_types;
 
 -- =============================================================================
--- hafd.operations - Unified operations table
+-- hafd.operations - Original compact structure with encoded id
 -- =============================================================================
--- Changed from encoded id (block_num|seq|type) to composite PK (block_id, seq_in_block)
--- op_type_id is now a separate column for efficient filtering
+-- id is encoded || 32b blocknum | 24b seq | 8b operation type ||
+-- This compact encoding minimizes data volume during massive sync.
+-- No FK to blocks - fork cleanup is done explicitly (rare operation).
 
 CREATE TABLE IF NOT EXISTS hafd.operations (
-    block_id hafd.block_id NOT NULL,
-    seq_in_block integer NOT NULL,           -- sequence within block (was 24 bits in old id)
-    op_type_id smallint NOT NULL,            -- operation type (was 8 bits in old id)
+    id bigint NOT NULL,
     trx_in_block smallint NOT NULL,
     op_pos integer NOT NULL,
     body_binary hafd.operation DEFAULT NULL,
-    CONSTRAINT pk_hive_operations PRIMARY KEY ( block_id, seq_in_block ),
-    CONSTRAINT fk_1_hive_operations FOREIGN KEY (block_id) REFERENCES hafd.blocks (block_id) ON DELETE CASCADE NOT VALID
+    CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
 
--- Index for block_num range queries (most common pattern)
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_idx ON hafd.operations (
-    hafd.block_id_to_num(block_id),
-    block_id DESC,
-    seq_in_block
-);
-
--- Index for operation type filtering with block_num
-CREATE INDEX IF NOT EXISTS hive_operations_type_block_num_idx ON hafd.operations (
-    op_type_id,
-    hafd.block_id_to_num(block_id)
-);
-
--- Index for trx_in_block queries
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations (
-    hafd.block_id_to_num(block_id),
-    trx_in_block,
-    op_type_id
-);
-
-CREATE STATISTICS IF NOT EXISTS operations_block_num_stats ON (hafd.block_id_to_num(block_id)) FROM hafd.operations;
-
 -- =============================================================================
--- hafd.applied_hardforks - Hardfork tracking
+-- hafd.applied_hardforks - Original compact structure
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS hafd.applied_hardforks (
-    block_id hafd.block_id NOT NULL,
     hardfork_num smallint NOT NULL,
-    hardfork_vop_id bigint NOT NULL,  -- Legacy operation_id for compatibility
-    CONSTRAINT pk_hive_applied_hardforks PRIMARY KEY (block_id, hardfork_num),
-    CONSTRAINT fk_1_hive_applied_hardforks FOREIGN KEY (block_id) REFERENCES hafd.blocks(block_id) ON DELETE CASCADE NOT VALID
+    block_num integer NOT NULL,
+    hardfork_vop_id bigint NOT NULL,
+    CONSTRAINT pk_hive_applied_hardforks PRIMARY KEY (hardfork_num)
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.applied_hardforks', '');
 
-CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hafd.applied_hardforks (
-    hafd.block_id_to_num(block_id)
-);
-
-CREATE STATISTICS IF NOT EXISTS applied_hardforks_block_num_stats ON (hafd.block_id_to_num(block_id)) FROM hafd.applied_hardforks;
+CREATE STATISTICS IF NOT EXISTS applied_hardforks_hardfork_block_vop_dependency_stats (dependencies) ON hardfork_num, block_num, hardfork_vop_id FROM hafd.applied_hardforks;
 
 -- =============================================================================
--- hafd.accounts - Account registry
+-- hafd.accounts - Original compact structure
 -- =============================================================================
--- PK changed to (id, block_id) to support same account appearing on different forks
 
 CREATE TABLE IF NOT EXISTS hafd.accounts (
     id INTEGER NOT NULL,
     name VARCHAR(16) NOT NULL,
-    block_id hafd.block_id NOT NULL,
-    CONSTRAINT pk_hive_accounts PRIMARY KEY( id, block_id ),
-    CONSTRAINT fk_1_hive_accounts FOREIGN KEY (block_id) REFERENCES hafd.blocks (block_id) ON DELETE CASCADE NOT VALID
+    block_num INTEGER,
+    CONSTRAINT pk_hive_accounts_id PRIMARY KEY( id ),
+    CONSTRAINT uq_hive_accounts_name UNIQUE ( name )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.accounts', '');
 
--- Index for name lookups (canonical selection via block_id DESC)
-CREATE INDEX IF NOT EXISTS hive_accounts_name_idx ON hafd.accounts (name, block_id DESC);
-
--- Index for block_id FK lookups (needed for CASCADE DELETE efficiency)
-CREATE INDEX IF NOT EXISTS hive_accounts_block_id_idx ON hafd.accounts (block_id);
-
-CREATE STATISTICS IF NOT EXISTS accounts_block_num_stats ON (hafd.block_id_to_num(block_id)) FROM hafd.accounts;
+CREATE STATISTICS IF NOT EXISTS accounts_id_name_blocknum_dependency_stats (dependencies) ON id, name, block_num FROM hafd.accounts;
 
 -- =============================================================================
--- hafd.account_operations - Account operation history
+-- hafd.account_operations - Original compact structure with operation_id
 -- =============================================================================
+-- Uses operation_id reference instead of (block_id, seq_in_block) to minimize data.
+-- No FK CASCADE - fork cleanup is done explicitly (rare operation).
 
 CREATE TABLE IF NOT EXISTS hafd.account_operations (
-    block_id hafd.block_id NOT NULL,
-    seq_in_block integer NOT NULL,
     account_id INTEGER NOT NULL,
     transacting_account_id INTEGER NOT NULL,
     account_op_seq_no INTEGER NOT NULL,
-    CONSTRAINT pk_hive_account_operations PRIMARY KEY ( block_id, seq_in_block, account_id ),
-    CONSTRAINT fk_1_hive_account_operations FOREIGN KEY (block_id, seq_in_block) REFERENCES hafd.operations (block_id, seq_in_block) ON DELETE CASCADE NOT VALID
+    operation_id BIGINT NOT NULL,
+    CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations', '');
 
--- Index for account history queries (most important for get_account_history)
-CREATE INDEX IF NOT EXISTS hive_account_operations_account_seq_idx ON hafd.account_operations (
-    account_id,
-    account_op_seq_no DESC
-);
+-- =============================================================================
+-- Indexes - Original structure
+-- =============================================================================
 
--- Index for operation type filtering by account
-CREATE INDEX IF NOT EXISTS hive_account_operations_account_type_idx ON hafd.account_operations (
-    account_id,
-    block_id,
-    seq_in_block
-);
+CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hafd.applied_hardforks ( block_num );
 
--- Index for block_num range queries
-CREATE INDEX IF NOT EXISTS hive_account_operations_block_num_idx ON hafd.account_operations (
-    hafd.block_id_to_num(block_id),
-    block_id DESC
-);
+CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hafd.transactions ( block_num, trx_in_block );
 
-CREATE STATISTICS IF NOT EXISTS account_operations_block_num_stats ON (hafd.block_id_to_num(block_id)) FROM hafd.account_operations;
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations USING btree( hafd.operation_id_to_block_num(id), id);
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
+CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (hafd.operation_id_to_type_id(id), hafd.operation_id_to_block_num(id));
 
 -- Clustering for get_account_history performance
-CLUSTER hafd.account_operations USING hive_account_operations_account_seq_idx;
+CLUSTER hafd.account_operations USING hive_account_operations_uq1;
+
+-- Index for operation type filtering by account
+CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations( account_id, hafd.operation_id_to_type_id(operation_id) );
+
+CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hafd.accounts USING btree (block_num);
 
 -- =============================================================================
 -- hafd.write_ahead_log_state - WAL tracking (unchanged)
@@ -259,31 +204,3 @@ COMMENT ON COLUMN hafd.write_ahead_log_state.id IS 'an id column.  this table wi
 COMMENT ON COLUMN hafd.write_ahead_log_state.last_sequence_number_committed IS 'The sequence number of the last commited transaction, or NULL if we''re operating in a mode that doesn''t track sequence numbers.  Will always be non-negative';
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.write_ahead_log_state', '');
-
--- =============================================================================
--- Note on blocks -> accounts relationship
--- =============================================================================
--- In the original design, producer_account_id referenced accounts(id) with a
--- deferred FK constraint. With the new multi-fork design where accounts can have
--- multiple rows per id (one per fork), maintaining this FK is complex and would
--- require matching fork_ids between blocks and accounts.
---
--- The constraint is removed because:
--- 1. It was already DEFERRABLE INITIALLY DEFERRED (for bootstrap reasons)
--- 2. With multi-fork data, referential integrity across forks is complex
--- 3. hived ensures producer accounts exist before writing blocks
--- 4. Views already handle canonical row selection via window functions
-
--- =============================================================================
--- Legacy compatibility functions for operation_id
--- =============================================================================
--- These functions compute legacy operation_id from new columns for API compatibility
-
-CREATE OR REPLACE FUNCTION hafd.operation_id(_block_id hafd.block_id, _seq INT, _type SMALLINT)
-RETURNS BIGINT
-IMMUTABLE PARALLEL SAFE
-LANGUAGE SQL AS $$
-    SELECT (hafd.block_id_to_num(_block_id)::BIGINT << 32) | (_seq << 8) | _type;
-$$;
-
-COMMENT ON FUNCTION hafd.operation_id(hafd.block_id, INT, SMALLINT) IS 'Compute legacy operation_id from new (block_id, seq_in_block, op_type_id) columns';
