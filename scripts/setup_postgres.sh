@@ -59,6 +59,24 @@ EOF
 )
 
 if [[ -n "$TABLESPACE_PATH" ]]; then
+  # Resolve relative paths - TABLESPACE_PATH from pg_tablespace_location may be relative (e.g., ../../tablespace)
+  # when symlinks in pg_tblspc use relative paths for Docker container compatibility
+  if [[ "$TABLESPACE_PATH" == ../* || "$TABLESPACE_PATH" == ./* ]]; then
+    # Get the pg_tblspc directory and resolve relative path from there
+    local pg_tblspc_dir
+    pg_tblspc_dir=$(sudo -nu postgres psql --quiet --tuples-only --no-align --no-psqlrc --dbname=postgres --no-password "${pg_access[@]}" --variable=ON_ERROR_STOP=on --file=- <<EOF
+      SHOW data_directory;
+EOF
+)
+    pg_tblspc_dir="${pg_tblspc_dir}/pg_tblspc"
+    # Find the symlink and resolve relative path from its location
+    for link in "$pg_tblspc_dir"/*; do
+      if [[ -L "$link" ]] && [[ "$(readlink "$link")" == "$TABLESPACE_PATH" ]]; then
+        TABLESPACE_PATH=$(cd "$(dirname "$link")" && realpath -m "$TABLESPACE_PATH")
+        break
+      fi
+    done
+  fi
   if [ "$TABLESPACE_PATH" = "$haf_tablespace_abs_path" ]; then
       if [[ ! -d "$haf_tablespace_abs_path" || -z $(ls -A "$haf_tablespace_abs_path") ]]; then
         echo "WARNING: The tablespace $haf_tablespace_name already points to the specified location, but the target directory does not exists or is empty. Creating a new tablespace there."
