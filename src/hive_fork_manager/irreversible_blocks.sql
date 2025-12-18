@@ -150,14 +150,16 @@ CREATE STATISTICS IF NOT EXISTS applied_hardforks_hardfork_block_vop_dependency_
 
 -- =============================================================================
 -- hafd.accounts - Original compact structure
+-- block_id IS NULL means account was dumped at startup (psql-first-block > 1)
+-- Same account can exist on different forks (different block_id values)
+-- NULLS NOT DISTINCT ensures only one (id, NULL) row per account
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS hafd.accounts (
     id INTEGER NOT NULL,
     name VARCHAR(16) NOT NULL,
-    block_id hafd.block_id NOT NULL,
-    CONSTRAINT pk_hive_accounts_id PRIMARY KEY( id, block_id ),
-    CONSTRAINT uq_hive_accounts_name UNIQUE ( name, block_id )
+    block_id hafd.block_id,
+    CONSTRAINT uq_hive_accounts UNIQUE NULLS NOT DISTINCT (id, block_id)
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.accounts', '');
 

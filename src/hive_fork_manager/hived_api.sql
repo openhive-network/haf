@@ -184,10 +184,11 @@ BEGIN
     FROM unnest(_operations) o;
 
     -- Insert accounts (original compact format with block_id)
+    -- Same account can exist on different forks (different block_id values)
     INSERT INTO hafd.accounts (id, name, block_id)
     SELECT a.id, a.name, __block_id
     FROM unnest(_accounts) a
-    ON CONFLICT (id, block_id) DO NOTHING;  -- Account may already exist in this fork
+    ON CONFLICT ON CONSTRAINT uq_hive_accounts DO NOTHING;
 
     -- Insert account_operations (original compact format with block_id, seq_in_block)
     INSERT INTO hafd.account_operations (account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block)
