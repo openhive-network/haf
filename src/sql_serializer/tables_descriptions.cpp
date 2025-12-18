@@ -81,8 +81,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::account_data_t& account)
   {
-    // For accounts with block_number == 0, we still need a valid block_id
-    stream.write_values(account.id, account.name, make_block_id(account.block_number == 0 ? 1 : account.block_number));
+    // For accounts with block_number == 0 (dumped at startup when psql-first-block > 1),
+    // write NULL since the creation block is unknown/not stored
+    stream.write_values(account.id, account.name, account.block_number == 0 ? fc::optional<int64_t>() : make_block_id(account.block_number));
   }
 
   // Account operations - uses block_id, seq_in_block

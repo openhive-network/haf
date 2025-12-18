@@ -28,7 +28,7 @@ class Accounts(HiveDataBase):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    block_id = Column(BigInteger, primary_key=True)
+    block_id = Column(BigInteger, nullable=True)  # NULL for accounts from initial dump
 
 
 class AccountsView(HiveBase):

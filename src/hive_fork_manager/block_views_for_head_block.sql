@@ -130,23 +130,28 @@ FROM (
 ) t WHERE rn = 1;
 
 -- =============================================================================
--- accounts_view - Show accounts from visible blocks only
--- For each block_num, the visible block is the one with highest fork_id
+-- accounts_view - Show accounts from visible (canonical) blocks only
+-- For each account_id, pick the row with highest block_id from visible blocks
+-- NULL block_id means account was dumped at startup (psql-first-block > 1)
 -- =============================================================================
 CREATE OR REPLACE VIEW hive.accounts_view AS
-SELECT ha.id, ha.name
-FROM hafd.accounts ha
-JOIN (
-    SELECT block_id
-    FROM (
-        SELECT block_id,
-            ROW_NUMBER() OVER (
-                PARTITION BY hafd.block_id_to_num(block_id)
-                ORDER BY block_id DESC
-            ) AS rn
-        FROM hafd.blocks
-    ) t WHERE rn = 1
-) visible ON visible.block_id = ha.block_id;
+SELECT id, name FROM (
+    SELECT ha.id, ha.name,
+        ROW_NUMBER() OVER (PARTITION BY ha.id ORDER BY ha.block_id DESC NULLS LAST) AS rn
+    FROM hafd.accounts ha
+    WHERE ha.block_id IS NULL  -- Accounts from initial dump
+       OR ha.block_id IN (
+           SELECT block_id
+           FROM (
+               SELECT block_id,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY hafd.block_id_to_num(block_id)
+                       ORDER BY block_id DESC
+                   ) AS rn
+               FROM hafd.blocks
+           ) t WHERE rn = 1
+       )
+) t WHERE rn = 1;
 
 -- =============================================================================
 -- transactions_multisig_view - Show signatures from visible blocks only
@@ -310,19 +315,17 @@ FROM (
 ) t WHERE rn = 1;
 
 CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS
-SELECT id, name
-FROM (
-    SELECT
-        ha.id,
-        ha.name,
+SELECT id, name FROM (
+    SELECT ha.id, ha.name,
         ROW_NUMBER() OVER (
             PARTITION BY ha.id
-            ORDER BY hafd.block_id_to_fork(ha.block_id) DESC
+            ORDER BY ha.block_id DESC NULLS LAST
         ) AS rn
     FROM hafd.accounts ha
     CROSS JOIN hafd.hive_state hs
-    WHERE hafd.block_id_to_num(ha.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-      AND hafd.block_id_to_fork(ha.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+    WHERE ha.block_id IS NULL  -- Accounts from initial dump (psql-first-block > 1)
+       OR (hafd.block_id_to_num(ha.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+           AND hafd.block_id_to_fork(ha.block_id) <= hafd.block_id_to_fork(hs.consistent_block))
 ) t WHERE rn = 1;
 
 CREATE OR REPLACE VIEW hive.irreversible_transactions_multisig_view AS
