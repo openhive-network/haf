@@ -288,10 +288,10 @@ _write_metadata() {
 EOF
 }
 
-# Fix pg_tblspc symlinks to point to correct absolute path in current location
+# Fix pg_tblspc symlinks to use relative paths
 # PostgreSQL creates symlinks like pg_tblspc/16396 -> /home/hived/datadir/haf_db_store/tablespace
-# These absolute paths become invalid when data is extracted to a different location
-# We update them to point to the tablespace dir in the current location (absolute path)
+# These absolute paths become invalid when data is extracted to a different location or mounted inside containers
+# We update them to use relative paths (../../tablespace) which work in any location
 _fix_pg_tblspc_symlinks() {
     local source_dir="$1"
     local pg_tblspc="${source_dir}/datadir/haf_db_store/pgdata/pg_tblspc"
@@ -301,9 +301,9 @@ _fix_pg_tblspc_symlinks() {
         return 0
     fi
 
-    # Get absolute path to tablespace in current location
-    # Don't use realpath as it follows symlinks - tablespace_dir may contain symlinks to old locations
-    local tablespace_abs_path="$tablespace_dir"
+    # Relative path from pg_tblspc/16396 to tablespace is ../../tablespace
+    # This works both on the host AND inside Docker containers where datadir is mounted at a different path
+    local relative_path="../../tablespace"
 
     # Find all symlinks in pg_tblspc and update to point to current tablespace location
     for link in "$pg_tblspc"/*; do
@@ -314,14 +314,13 @@ _fix_pg_tblspc_symlinks() {
             target=$(readlink "$link")
 
             # Check if target contains 'tablespace' (the directory we need to point to)
-            if [[ "$target" == *"tablespace"* ]] && [[ -d "$tablespace_abs_path" ]]; then
+            if [[ "$target" == *"tablespace"* ]] && [[ -d "$tablespace_dir" ]]; then
                 _log "Fixing pg_tblspc symlink: $link_name (was -> $target)"
-                # Remove old symlink and create new one pointing to current tablespace location
-                # Use absolute path so PostgreSQL's setup_postgres.sh validation works
+                # Remove old symlink and create new one with relative path
                 # Use sudo since symlink may be owned by postgres (uid 105)
                 sudo rm -f "$link" 2>/dev/null || rm -f "$link"
-                sudo ln -s "$tablespace_abs_path" "$link" 2>/dev/null || ln -s "$tablespace_abs_path" "$link"
-                _log "Fixed pg_tblspc symlink: $link_name -> $tablespace_abs_path"
+                sudo ln -s "$relative_path" "$link" 2>/dev/null || ln -s "$relative_path" "$link"
+                _log "Fixed pg_tblspc symlink: $link_name -> $relative_path"
             fi
         fi
     done
