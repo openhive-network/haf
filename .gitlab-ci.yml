@@ -11,6 +11,9 @@ variables:
   CTEST_NUMBER_OF_JOBS: 4
   # HAF_COMMIT is used as cache key - in HAF's own CI, it's the current commit
   HAF_COMMIT: $CI_COMMIT_SHA
+  # Enable CI-specific PostgreSQL config with reduced memory (4GB shared_buffers vs 16GB)
+  # This allows multiple concurrent HAF jobs on builders with limited RAM
+  HAF_CI_MODE: "1"
 
   GIT_STRATEGY: clone
   GIT_DEPTH: 0

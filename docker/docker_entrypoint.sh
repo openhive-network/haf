@@ -205,6 +205,19 @@ create_conf_d_directory_if_necessary() {
     sudo -n mkdir -p "/home/hived/datadir/haf_postgresql_conf.d"
     sudo -n chown -Rc postgres:postgres "/home/hived/datadir/haf_postgresql_conf.d"
   fi
+
+  # In CI mode, install reduced-memory PostgreSQL config to allow multiple concurrent jobs
+  # Set HAF_CI_MODE=1 in CI environment to enable this
+  if [[ "${HAF_CI_MODE:-0}" == "1" ]]; then
+    local ci_config="/home/haf_admin/source/${HIVE_SUBDIR}/docker/ci_postgresql.conf"
+    if [[ -f "$ci_config" ]]; then
+      echo "HAF_CI_MODE enabled: Installing CI-specific PostgreSQL configuration (reduced memory)"
+      sudo -n cp "$ci_config" "/home/hived/datadir/haf_postgresql_conf.d/00-ci-overrides.conf"
+      sudo -n chown postgres:postgres "/home/hived/datadir/haf_postgresql_conf.d/00-ci-overrides.conf"
+    else
+      echo "Warning: HAF_CI_MODE=1 but CI config not found at $ci_config"
+    fi
+  fi
 }
 
 # Be sure those directories exists and have right permissions
