@@ -474,10 +474,18 @@ cmd_get() {
         _log "Cache hit: $LOCAL_CACHE_DIR"
         if [[ "$LOCAL_CACHE_DIR" != "$local_dest" ]]; then
             _log "Copying to destination: $local_dest"
-            mkdir -p "$(dirname "$local_dest")"
-            # Use cp -r to preserve symlinks (they'll be fixed by _restore_pgdata_permissions)
-            # Don't use -L (dereferences symlinks) or -a (tries to preserve ownership)
-            cp -r "$LOCAL_CACHE_DIR" "$local_dest"
+            mkdir -p "$local_dest"
+            chmod 777 "$local_dest" 2>/dev/null || true
+            # Use tar pipe for reliable copying:
+            # - Follows symlinks (LOCAL_CACHE_DIR may be a symlink)
+            # - With sudo, can read files owned by other users (e.g., postgres pgdata with 700)
+            # - Preserves ownership and permissions like NFS tar extraction
+            local resolved_source
+            resolved_source=$(readlink -f "$LOCAL_CACHE_DIR")
+            if ! (cd "$resolved_source" && sudo tar cf - .) | (cd "$local_dest" && sudo tar xf -); then
+                _error "Failed to copy from local cache"
+                return 1
+            fi
         else
             _log "Destination is cache dir, no copy needed"
         fi
