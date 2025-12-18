@@ -49,179 +49,179 @@ BEGIN
 
     INSERT INTO hafd.blocks
     VALUES
-    ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:23-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:24-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 5, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+    ( hafd.make_block_id( 1, 0 ), '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 2, 0 ), '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 3, 0 ), '\xBADD30', '\xCAFE30', '2016-06-22 19:10:23-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 4, 0 ), '\xBADD40', '\xCAFE40', '2016-06-22 19:10:24-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 5, 0 ), '\xBADD50', '\xCAFE50', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hafd.accounts( block_num, name, id )
+    INSERT INTO hafd.accounts( block_id, name, id )
     VALUES
-    ( 1, 'u1', 1 )
-         , ( 2, 'u2', 2 )
-         , ( 3, 'u3', 3 )
-         , ( 4, 'u4', 4 )
-         , ( 5, 'u5', 5 )
+    ( hafd.make_block_id( 1, 0 ), 'u1', 1 )
+         , ( hafd.make_block_id( 2, 0 ), 'u2', 2 )
+         , ( hafd.make_block_id( 3, 0 ), 'u3', 3 )
+         , ( hafd.make_block_id( 4, 0 ), 'u4', 4 )
+         , ( hafd.make_block_id( 5, 0 ), 'u5', 5 )
     ;
 
     INSERT INTO hafd.transactions
     VALUES
-    ( 1, 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
-         , ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
-         , ( 3, 0::SMALLINT, '\xDEED30', 101, 100, '2016-06-22 19:10:23-07'::timestamp, '\xBEEF' )
-         , ( 4, 0::SMALLINT, '\xDEED40', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF' )
-         , ( 5, 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
+    ( hafd.make_block_id( 1, 0 ), 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id( 2, 0 ), 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id( 3, 0 ), 0::SMALLINT, '\xDEED30', 101, 100, '2016-06-22 19:10:23-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id( 4, 0 ), 0::SMALLINT, '\xDEED40', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id( 5, 0 ), 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-    ( '\xDEED10', '\xBAAD10' )
-         , ( '\xDEED20', '\xBAAD20' )
-         , ( '\xDEED30', '\xBAAD30' )
-         , ( '\xDEED40', '\xBAAD40' )
-         , ( '\xDEED50', '\xBAAD50' )
+    ( '\xDEED10', '\xBAAD10', hafd.make_block_id( 1, 0 ) )
+         , ( '\xDEED20', '\xBAAD20', hafd.make_block_id( 2, 0 ) )
+         , ( '\xDEED30', '\xBAAD30', hafd.make_block_id( 3, 0 ) )
+         , ( '\xDEED40', '\xBAAD40', hafd.make_block_id( 4, 0 ) )
+         , ( '\xDEED50', '\xBAAD50', hafd.make_block_id( 5, 0 ) )
     ;
 
-    INSERT INTO hafd.operations
+    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
     VALUES
-    ( hafd.operation_id(1,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hafd.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hafd.operation_id(3,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hafd.operation_id(4,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hafd.operation_id(5,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation )
+    ( hafd.make_block_id( 1, 0 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 2, 0 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 3, 0 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 4, 0 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 5, 0 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation )
     ;
 
-    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, operation_id)
+    INSERT INTO hafd.account_operations(block_id, account_id, transacting_account_id, account_op_seq_no, seq_in_block, op_type_id)
     VALUES
-           ( 1, 1, 1, hafd.operation_id(1,1,0) )
-         , ( 1, 1, 2, hafd.operation_id(2,1,0) )
-         , ( 2, 2, 1, hafd.operation_id(2,1,0) )
-         , ( 3, 3, 1, hafd.operation_id(3,1,0) )
-         , ( 4, 4, 1, hafd.operation_id(4,1,0) )
+           ( hafd.make_block_id( 1, 0 ), 1, 1, 1, 0, 1 )
+         , ( hafd.make_block_id( 2, 0 ), 1, 1, 2, 0, 1 )
+         , ( hafd.make_block_id( 2, 0 ), 2, 2, 1, 0, 1 )
+         , ( hafd.make_block_id( 3, 0 ), 3, 3, 1, 0, 1 )
+         , ( hafd.make_block_id( 4, 0 ), 4, 4, 1, 0, 1 )
     ;
 
     INSERT INTO hafd.applied_hardforks
     VALUES
-    ( 1, 1, hafd.operation_id(1,1,0) )
-         , ( 2, 2, hafd.operation_id(2,1,0) )
-         , ( 3, 3, hafd.operation_id(3,1,0) )
-         , ( 4, 4, hafd.operation_id(4,1,0) )
-         , ( 5, 5, hafd.operation_id(5,1,0) )
+    ( 1, hafd.make_block_id( 1, 0 ), hafd.operation_id(1,1,0) )
+         , ( 2, hafd.make_block_id( 2, 0 ), hafd.operation_id(2,1,0) )
+         , ( 3, hafd.make_block_id( 3, 0 ), hafd.operation_id(3,1,0) )
+         , ( 4, hafd.make_block_id( 4, 0 ), hafd.operation_id(4,1,0) )
+         , ( 5, hafd.make_block_id( 5, 0 ), hafd.operation_id(5,1,0) )
     ;
 
-    INSERT INTO hafd.blocks_reversible
+    INSERT INTO hafd.blocks
     VALUES
-           ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
-         , ( 5, '\xBADD5A', '\xCAFE5A', '2016-06-22 19:10:55-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
-         , ( 6, '\xBADD60', '\xCAFE60', '2016-06-22 19:10:26-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
-         , ( 7, '\xBADD70', '\xCAFE70', '2016-06-22 19:10:37-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
-         , ( 10, '\xBADD11', '\xCAFE11', '2016-06-22 19:10:41-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w',1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
-         , ( 7, '\xBADD70', '\xCAFE70', '2016-06-22 19:10:27-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
-         , ( 8, '\xBADD80', '\xCAFE80', '2016-06-22 19:10:28-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
-         , ( 9, '\xBADD90', '\xCAFE90', '2016-06-22 19:10:29-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
-         , ( 8, '\xBADD83', '\xCAFE80', '2016-06-22 19:10:30-07'::timestamp, 6, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
-         , ( 9, '\xBADD90', '\xCAFE90', '2016-06-22 19:10:31-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
-         , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 7, '\x4007', E'[]', '\x2157', 'STM65w',1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
+           ( hafd.make_block_id( 4, 1 ), '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 5, 1 ), '\xBADD5A', '\xCAFE5A', '2016-06-22 19:10:55-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 6, 1 ), '\xBADD60', '\xCAFE60', '2016-06-22 19:10:26-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 7, 1 ), '\xBADD70', '\xCAFE70', '2016-06-22 19:10:37-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 10, 1 ), '\xBADD11', '\xCAFE11', '2016-06-22 19:10:41-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w',1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 7, 2 ), '\xBADD70', '\xCAFE70', '2016-06-22 19:10:27-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 8, 2 ), '\xBADD80', '\xCAFE80', '2016-06-22 19:10:28-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 9, 2 ), '\xBADD90', '\xCAFE90', '2016-06-22 19:10:29-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 8, 3 ), '\xBADD83', '\xCAFE80', '2016-06-22 19:10:30-07'::timestamp, 6, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 9, 3 ), '\xBADD90', '\xCAFE90', '2016-06-22 19:10:31-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id( 10, 3 ), '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 7, '\x4007', E'[]', '\x2157', 'STM65w',1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+    ;
+ 
+    INSERT INTO hafd.accounts( block_id, name, id)
+    VALUES
+    ( hafd.make_block_id( 4, 1 ), 'u4_1',4 )
+         , ( hafd.make_block_id( 5, 1 ), 'u5_1',5 )
+         , ( hafd.make_block_id( 6, 1 ), 'u6_1',6 )
+         , ( hafd.make_block_id( 7, 1 ), 'u7_1',7 )
+         , ( hafd.make_block_id( 10, 1 ), 'u10_1',8 )
+         , ( hafd.make_block_id( 7, 2 ), 'u7_2', 9 )
+         , ( hafd.make_block_id( 8, 2 ), 'u8_2', 10 )
+         , ( hafd.make_block_id( 9, 2 ), 'u9_2', 11 )
+         , ( hafd.make_block_id( 8, 3 ), 'u8_3',12 )
+         , ( hafd.make_block_id( 9, 3 ), 'u9_3',13 )
+         , ( hafd.make_block_id( 10, 3 ), 'u10_3',14 )
     ;
 
-    INSERT INTO hafd.accounts_reversible( block_num, name, id, fork_id)
+    INSERT INTO hafd.transactions
     VALUES
-    ( 4, 'u4_1',4 , 1 )
-         , ( 5, 'u5_1',5 , 1 )
-         , ( 6, 'u6_1',6 , 1 )
-         , ( 7, 'u7_1',7 , 1 )
-         , ( 10, 'u10_1',8 , 1 )
-         , ( 7, 'u7_2', 9 , 2 )
-         , ( 8, 'u8_2', 10 , 2 )
-         , ( 9, 'u9_2', 11 , 2 )
-         , ( 8, 'u8_3',12 , 3 )
-         , ( 9, 'u9_3',13 , 3 )
-         , ( 10, 'u10_3',14 , 3 )
+    ( hafd.make_block_id( 4, 1 ), 0::SMALLINT, '\xDEED40'::bytea, 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id( 5, 1 ), 0::SMALLINT, '\xDEED55'::bytea, 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id( 6, 1 ), 0::SMALLINT, '\xDEED60'::bytea, 101, 100, '2016-06-22 19:10:26-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id( 7, 1 ), 0::SMALLINT, '\xDEED70'::bytea, 101, 100, '2016-06-22 19:10:37-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id( 10, 1 ), 0::SMALLINT, '\xDEED11'::bytea, 101, 100, '2016-06-22 19:10:41-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id( 7, 2 ), 0::SMALLINT, '\xDEED70'::bytea, 101, 100, '2016-06-22 19:10:27-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id( 8, 2 ), 0::SMALLINT, '\xDEED80'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id( 9, 2 ), 0::SMALLINT, '\xDEED90'::bytea, 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id( 8, 3 ), 0::SMALLINT, '\xDEED88'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id( 9, 3 ), 0::SMALLINT, '\xDEED99'::bytea, 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id( 10, 3 ), 0::SMALLINT, '\xDEED1102'::bytea, 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF'::bytea )
+    ;
+ 
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
+    VALUES
+    ( '\xDEED40'::bytea, '\xBEEF40'::bytea,  hafd.make_block_id( 4, 1 ) )
+         , ( '\xDEED55'::bytea, '\xBEEF55'::bytea,  hafd.make_block_id( 5, 1 ) )
+         , ( '\xDEED60'::bytea, '\xBEEF61'::bytea,  hafd.make_block_id( 6, 1 ) ) --block 6
+         , ( '\xDEED70'::bytea, '\xBEEF7110'::bytea, hafd.make_block_id( 7, 1 ) ) -- block 7
+         , ( '\xDEED70'::bytea, '\xBEEF7120'::bytea, hafd.make_block_id( 7, 1 ) ) -- block 7
+         , ( '\xDEED70'::bytea, '\xBEEF7130'::bytea, hafd.make_block_id( 7, 1 ) ) -- block 7 --must be abandon because of fork 2
+         , ( '\xDEED11'::bytea, '\xBEEF7140'::bytea, hafd.make_block_id( 10, 1 ) )
+         , ( '\xDEED70'::bytea, '\xBEEF72'::bytea,  hafd.make_block_id( 7, 2 ) ) -- block 7
+         , ( '\xDEED70'::bytea, '\xBEEF73'::bytea,  hafd.make_block_id( 7, 2 ) ) -- block 7
+         , ( '\xDEED80'::bytea, '\xBEEF82'::bytea,  hafd.make_block_id( 8, 2 ) ) -- block 8
+         , ( '\xDEED90'::bytea, '\xBEEF92'::bytea,  hafd.make_block_id( 9, 2 ) ) -- block 9
+         , ( '\xDEED88'::bytea, '\xBEEF83'::bytea,  hafd.make_block_id( 8, 3 ) ) -- block 8
+         , ( '\xDEED99'::bytea, '\xBEEF93'::bytea,  hafd.make_block_id( 9, 3 ) ) -- block 9
+         , ( '\xDEED1102'::bytea, '\xBEEF13'::bytea, hafd.make_block_id( 10, 3 ) ) -- block 10
     ;
 
-    INSERT INTO hafd.transactions_reversible
+    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
     VALUES
-    ( 4, 0::SMALLINT, '\xDEED40'::bytea, 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF'::bytea,  1 )
-         , ( 5, 0::SMALLINT, '\xDEED55'::bytea, 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF'::bytea,  1 )
-         , ( 6, 0::SMALLINT, '\xDEED60'::bytea, 101, 100, '2016-06-22 19:10:26-07'::timestamp, '\xBEEF'::bytea,  1 )
-         , ( 7, 0::SMALLINT, '\xDEED70'::bytea, 101, 100, '2016-06-22 19:10:37-07'::timestamp, '\xBEEF'::bytea,  1 )
-         , ( 10, 0::SMALLINT, '\xDEED11'::bytea, 101, 100, '2016-06-22 19:10:41-07'::timestamp, '\xBEEF'::bytea,  1 )
-         , ( 7, 0::SMALLINT, '\xDEED70'::bytea, 101, 100, '2016-06-22 19:10:27-07'::timestamp, '\xBEEF'::bytea,  2 )
-         , ( 8, 0::SMALLINT, '\xDEED80'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea,  2 )
-         , ( 9, 0::SMALLINT, '\xDEED90'::bytea, 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF'::bytea,  2 )
-         , ( 8, 0::SMALLINT, '\xDEED88'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea,  3 )
-         , ( 9, 0::SMALLINT, '\xDEED99'::bytea, 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF'::bytea,  3 )
-         , ( 10, 0::SMALLINT, '\xDEED1102'::bytea, 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF'::bytea, 3 )
+    ( hafd.make_block_id( 4, 1 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 5, 1 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 6, 1 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 7, 1 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 7, 1 ), 1, 1, 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 7, 1 ), 2, 1, 0, 2, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 7, 2 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 7, 2 ), 1, 1, 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 8, 2 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 9, 2 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 8, 3 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 9, 3 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.make_block_id( 10, 3 ), 0, 1, 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation )
     ;
 
-    INSERT INTO hafd.transactions_multisig_reversible
+    INSERT INTO hafd.account_operations(block_id, account_id, transacting_account_id, account_op_seq_no, seq_in_block, op_type_id)
     VALUES
-    ( '\xDEED40'::bytea, '\xBEEF40'::bytea,  1 )
-         , ( '\xDEED55'::bytea, '\xBEEF55'::bytea,  1 )
-         , ( '\xDEED60'::bytea, '\xBEEF61'::bytea,  1 ) --block 6
-         , ( '\xDEED70'::bytea, '\xBEEF7110'::bytea,  1 ) -- block 7
-         , ( '\xDEED70'::bytea, '\xBEEF7120'::bytea,  1 ) -- block 7
-         , ( '\xDEED70'::bytea, '\xBEEF7130'::bytea,  1 ) -- block 7 --must be abandon because of fork 2
-         , ( '\xDEED11'::bytea, '\xBEEF7140'::bytea,  1 )
-         , ( '\xDEED70'::bytea, '\xBEEF72'::bytea,  2 ) -- block 7
-         , ( '\xDEED70'::bytea, '\xBEEF73'::bytea,  2 ) -- block 7
-         , ( '\xDEED80'::bytea, '\xBEEF82'::bytea,  2 ) -- block 8
-         , ( '\xDEED90'::bytea, '\xBEEF92'::bytea,  2 ) -- block 9
-         , ( '\xDEED88'::bytea, '\xBEEF83'::bytea,  3 ) -- block 8
-         , ( '\xDEED99'::bytea, '\xBEEF93'::bytea,  3 ) -- block 9
-         , ( '\xDEED1102'::bytea, '\xBEEF13'::bytea,  3 ) -- block 10
+    ( hafd.make_block_id( 4, 1 ), 4, 4, 1, 0, 1 )
+         , ( hafd.make_block_id( 5, 1 ), 5, 5, 1, 0, 1 )
+         , ( hafd.make_block_id( 6, 1 ), 6, 6, 1, 0, 1 )
+         , ( hafd.make_block_id( 7, 1 ), 7, 7, 1, 0, 1 )
+         , ( hafd.make_block_id( 7, 1 ), 8, 8, 1, 0, 1 )
+         , ( hafd.make_block_id( 7, 1 ), 9, 9, 1, 2, 1 )
+         , ( hafd.make_block_id( 9, 2 ), 7, 7, 2, 0, 1 )
+         , ( hafd.make_block_id( 7, 2 ), 9, 9, 2, 0, 1 ) -- block 7(2)? Original said 9,9,2. But OP ref is 7,1,0 (Fork2). Block 7?
+         , ( hafd.make_block_id( 8, 2 ), 9, 9, 3, 0, 1 ) -- block 8(2)
+         , ( hafd.make_block_id( 7, 2 ), 4, 4, 2, 0, 1 ) -- block 7(2)
+         , ( hafd.make_block_id( 9, 2 ), 10, 10, 2, 0, 1 ) -- block 9(2)
+         , ( hafd.make_block_id( 9, 3 ), 10, 10, 3, 0, 1 ) -- block 9(3)
+         , ( hafd.make_block_id( 9, 3 ), 11, 11, 3, 0, 1 ) -- block 9(3)
     ;
 
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hafd.applied_hardforks
     VALUES
-    ( hafd.operation_id(4,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(5,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(6,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(7,1,2), 0, 2, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
-         , ( hafd.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
-         , ( hafd.operation_id(10,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation, 3 )
-    ;
-
-    INSERT INTO hafd.account_operations_reversible
-    VALUES
-    ( 4, 4, 1, hafd.operation_id(4,1,0),  1 ) -- block 4 (1)
-         , ( 5, 5, 1, hafd.operation_id(5,1,0),  1 ) -- block 5 (1)
-         , ( 6, 6, 1, hafd.operation_id(6,1,0),  1 ) -- block 6 (1)
-         , ( 7, 7, 1, hafd.operation_id(7,1,0),  1 ) -- block 7(1), must be overriden by fork 2
-         , ( 8, 8, 1, hafd.operation_id(7,1,0),  1 ) -- block 7(1), must be overriden by fork 2
-         , ( 9, 9, 1, hafd.operation_id(7,1,2),  1 ) -- block 7(1), must be overriden by fork 2
-         , ( 7, 7, 2, hafd.operation_id(9,1,0),  2 ) -- block 9 (2)
-         , ( 9, 9, 2, hafd.operation_id(7,1,0),  2 ) -- block 7(2)
-         , ( 9, 9, 3, hafd.operation_id(8,1,0),  2 ) -- block 8(2) -- block 8(3) has not operation
-         , ( 4, 4, 2, hafd.operation_id(7,1,0),  2 ) -- block 7(2)
-         , ( 10, 10, 2, hafd.operation_id(9,1,0), 2 ) -- block 9(2)
-         , ( 10, 10, 3, hafd.operation_id(9,1,0), 3 ) -- block 9(3)
-         , ( 11, 11, 3, hafd.operation_id(9,1,0), 3 ) -- block 9(3)
-    ;
-
-    INSERT INTO hafd.applied_hardforks_reversible
-    VALUES
-           ( 4, 4, hafd.operation_id(4,1,0), 1 )
-         , ( 5, 5, hafd.operation_id(5,1,0), 1 )
-         , ( 6, 6, hafd.operation_id(6,1,0), 1 )
-         , ( 7, 7, hafd.operation_id(7,1,0), 1 ) -- must be abandon because of fork2
-         , ( 8, 7, hafd.operation_id(7,1,1), 1 ) -- must be abandon because of fork2
-         , ( 9, 7, hafd.operation_id(7,1,2), 1 ) -- must be abandon because of fork2
-         , ( 7, 7, hafd.operation_id(7,1,0), 2 )
-         , ( 8, 7, hafd.operation_id(7,1,1), 2 )
-         , ( 9, 8, hafd.operation_id(8,1,0), 2 )
-         , ( 10, 9, hafd.operation_id(9,1,0), 2 )
-         , ( 9, 8, hafd.operation_id(8,1,0), 3 )
-         , ( 10, 9, hafd.operation_id(9,1,0), 3 )
-         , ( 11, 10, hafd.operation_id(10,1,0), 3 )
+           ( 4, hafd.make_block_id( 4, 1 ), hafd.operation_id(4,1,0) )
+         , ( 5, hafd.make_block_id( 5, 1 ), hafd.operation_id(5,1,0) )
+         , ( 6, hafd.make_block_id( 6, 1 ), hafd.operation_id(6,1,0) )
+         , ( 7, hafd.make_block_id( 7, 1 ), hafd.operation_id(7,1,0) )
+         , ( 8, hafd.make_block_id( 7, 1 ), hafd.operation_id(7,1,1) )
+         , ( 9, hafd.make_block_id( 7, 1 ), hafd.operation_id(7,1,2) )
+         , ( 7, hafd.make_block_id( 7, 2 ), hafd.operation_id(7,1,0) )
+         , ( 8, hafd.make_block_id( 7, 2 ), hafd.operation_id(7,1,1) )
+         , ( 9, hafd.make_block_id( 8, 2 ), hafd.operation_id(8,1,0) )
+         , ( 10, hafd.make_block_id( 9, 2 ), hafd.operation_id(9,1,0) )
+         , ( 9, hafd.make_block_id( 8, 3 ), hafd.operation_id(8,1,0) )
+         , ( 10, hafd.make_block_id( 9, 3 ), hafd.operation_id(9,1,0) )
+         , ( 11, hafd.make_block_id( 10, 3 ), hafd.operation_id(10,1,0) )
     ;
 
 

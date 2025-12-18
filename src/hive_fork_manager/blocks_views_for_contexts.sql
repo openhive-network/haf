@@ -543,13 +543,12 @@ BEGIN
     WHERE hc.name = _context_name;
 
     IF __is_forking THEN
-        -- Forking context: join with transactions to get block_num filter
+        -- Forking context: join directly on block_id (transactions_multisig has block_id)
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW AS
             SELECT htm.trx_hash, htm.signature
             FROM hafd.transactions_multisig htm
-            JOIN hafd.transactions ht ON ht.trx_hash = htm.trx_hash
-            JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
+            JOIN %s.blocks_view_internal b ON b.block_id = htm.block_id
             ;', __schema, __schema
         );
     ELSE
@@ -558,8 +557,7 @@ BEGIN
             'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW AS
             SELECT htm.trx_hash, htm.signature
             FROM hafd.transactions_multisig htm
-            JOIN hafd.transactions ht ON ht.trx_hash = htm.trx_hash
-            JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
+            JOIN %s.blocks_view_internal b ON b.block_id = htm.block_id
             ;', __schema, __schema
         );
     END IF;
@@ -581,13 +579,12 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: show all signatures (no fork filtering needed)
+    -- All irreversible: show all signatures (join directly on block_id)
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW AS
         SELECT htm.trx_hash, htm.signature
         FROM hafd.transactions_multisig htm
-        JOIN hafd.transactions ht ON ht.trx_hash = htm.trx_hash
-        JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
+        JOIN %s.blocks_view_internal b ON b.block_id = htm.block_id
         ;', __schema, __schema
     );
 

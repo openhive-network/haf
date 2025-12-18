@@ -174,8 +174,8 @@ BEGIN
     FROM unnest(_transactions) t;
 
     -- Insert multisig signatures (original compact format with trx_hash)
-    INSERT INTO hafd.transactions_multisig (trx_hash, signature)
-    SELECT s.trx_hash, s.signature
+    INSERT INTO hafd.transactions_multisig (trx_hash, signature, block_id)
+    SELECT s.trx_hash, s.signature, __block_id
     FROM unnest(_signatures) s;
 
     -- Insert operations (original compact format with encoded id turned into columns)
@@ -187,7 +187,7 @@ BEGIN
     INSERT INTO hafd.accounts (id, name, block_id)
     SELECT a.id, a.name, __block_id
     FROM unnest(_accounts) a
-    ON CONFLICT (id) DO NOTHING;  -- Account may already exist
+    ON CONFLICT (id, block_id) DO NOTHING;  -- Account may already exist in this fork
 
     -- Insert account_operations (original compact format with block_id, seq_in_block)
     INSERT INTO hafd.account_operations (account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block)
@@ -198,7 +198,7 @@ BEGIN
     INSERT INTO hafd.applied_hardforks (hardfork_num, block_id, hardfork_vop_id)
     SELECT h.hardfork_num, __block_id, h.hardfork_vop_id
     FROM unnest(_applied_hardforks) h
-    ON CONFLICT (hardfork_num) DO NOTHING;  -- Hardfork may already be recorded
+    ON CONFLICT (hardfork_num, block_id) DO NOTHING;  -- Hardfork may already be recorded in this fork
 END;
 $BODY$
 ;
@@ -436,6 +436,10 @@ DECLARE
     __max_block INT;
     __last_pruning integer;
 BEGIN
+    -- Clean up any inconsistent data from previous dirty state
+    PERFORM hive.remove_inconsistent_irreversible_data();
+
+    -- Get max block from blocks table after cleanup
     SELECT hafd.block_id_to_num(block_id) INTO __max_block
     FROM hafd.blocks
     ORDER BY block_id DESC
@@ -443,16 +447,30 @@ BEGIN
 
     SELECT pruning INTO __last_pruning FROM hafd.hive_state;
 
-    IF ( __max_block IS NOT NULL AND __max_block > _block_num ) THEN
-        RAISE EXCEPTION 'Hived data start block (%) is lower than HAF database head block (%). This indicates a hived/HAF mismatch and could result in corrupted data.', _block_num, __max_block;
+    -- After cleanup, max_block should be <= _block_num
+    -- Assertion: HAF cannot have more blocks than hived's state (except during startup when _block_num=0)
+    ASSERT COALESCE(__max_block, 0) <= _block_num OR COALESCE(__max_block, 0) < _first_block OR _block_num = 0,
+        format('Hived state cannot have more blocks on top micro fork than HAF. max_block=%s, _block_num=%s', __max_block, _block_num);
+
+    -- If max_block > _block_num, we need to handle fork situation
+    -- _block_num = 0 ensures at least 1 fork exists
+    IF __max_block > _block_num OR _block_num = 0 THEN
+        PERFORM hive.back_from_fork( _block_num );
     END IF;
 
-    IF __last_pruning IS NOT NULL AND __last_pruning != 0 AND _pruning != __last_pruning THEN
-        RAISE EXCEPTION 'Not possible to change pruning from % to %', __last_pruning, _pruning;
-    END IF;
+    -- Record the connection
+    INSERT INTO hafd.hived_connections( block_num, git_sha, time )
+    VALUES( _block_num, _git_sha, now() );
 
-    IF _pruning != 0 THEN
-        UPDATE hafd.hive_state SET pruning = _pruning;
+    -- Pruning validation and setup
+    ASSERT ( hive.is_pruning_enabled() = FALSE OR ( hive.is_pruning_enabled() = TRUE AND _pruning > 0 ) ),
+        'Cannot initialize as non-pruned: existing database is pruned. Drop/recreate the database or run in pruned mode.';
+
+    UPDATE hafd.hive_state SET pruning = _pruning;
+
+    IF hive.is_pruning_enabled() = TRUE THEN
+        -- Drop FK for faster operations on pruned data
+        ALTER TABLE hafd.account_operations DROP CONSTRAINT IF EXISTS hive_account_operations_fk_2;
     END IF;
 END;
 $BODY$
@@ -471,34 +489,37 @@ CREATE OR REPLACE FUNCTION hive.remove_orphan_forks( _new_irreversible_block INT
 AS
 $BODY$
 DECLARE
-    __canonical_fork_id BIGINT;
-    __orphan_block_nums INT[];
+    __blocks_to_delete hafd.block_id[];
 BEGIN
-    -- Get canonical fork_id
-    SELECT MAX(id) INTO __canonical_fork_id FROM hafd.fork;
+    -- Identify blocks to delete:
+    -- For each block_num <= _new_irreversible_block:
+    -- Keep block with HIGHEST fork_id (and all blocks on fork 0).
+    -- Delete others (orphans).
+    
+    WITH orphans AS (
+        SELECT hb.block_id
+        FROM hafd.blocks hb
+        WHERE hafd.block_id_to_num(hb.block_id) <= _new_irreversible_block
+          AND hafd.block_id_to_fork(hb.block_id) != 0
+          AND EXISTS (
+              SELECT 1 FROM hafd.blocks hb2
+              WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+                AND hafd.block_id_to_fork(hb2.block_id) > hafd.block_id_to_fork(hb.block_id)
+          )
+    )
+    SELECT array_agg(block_id) INTO __blocks_to_delete FROM orphans;
 
-    -- Find orphan block_nums (blocks on non-canonical forks)
-    SELECT array_agg(DISTINCT hafd.block_id_to_num(block_id))
-    INTO __orphan_block_nums
-    FROM hafd.blocks
-    WHERE hafd.block_id_to_num(block_id) <= _new_irreversible_block
-      AND hafd.block_id_to_fork(block_id) != __canonical_fork_id;
-
-    IF __orphan_block_nums IS NULL OR array_length(__orphan_block_nums, 1) = 0 THEN
+    IF __blocks_to_delete IS NULL OR cardinality(__blocks_to_delete) = 0 THEN
         RETURN;
     END IF;
 
-    -- Delete orphan blocks
-    DELETE FROM hafd.blocks
-    WHERE hafd.block_id_to_num(block_id) <= _new_irreversible_block
-      AND hafd.block_id_to_fork(block_id) != __canonical_fork_id;
-
-    -- Clean up other tables by block_num (no FK CASCADE needed)
-    DELETE FROM hafd.transactions WHERE hafd.block_id_to_num(block_id) = ANY(__orphan_block_nums);
-    DELETE FROM hafd.operations WHERE hafd.block_id_to_num(block_id) = ANY(__orphan_block_nums);
-    DELETE FROM hafd.account_operations WHERE hafd.block_id_to_num(block_id) = ANY(__orphan_block_nums);
-    DELETE FROM hafd.applied_hardforks WHERE hafd.block_id_to_num(block_id) = ANY(__orphan_block_nums);
-    -- Note: accounts and transactions_multisig don't need cleanup (accounts persist, multisig cascades from transactions)
+    DELETE FROM hafd.operations WHERE block_id = ANY(__blocks_to_delete);
+    DELETE FROM hafd.account_operations WHERE block_id = ANY(__blocks_to_delete);
+    DELETE FROM hafd.transactions_multisig WHERE block_id = ANY(__blocks_to_delete);
+    DELETE FROM hafd.transactions WHERE block_id = ANY(__blocks_to_delete);
+    DELETE FROM hafd.accounts WHERE block_id = ANY(__blocks_to_delete);
+    DELETE FROM hafd.applied_hardforks WHERE block_id = ANY(__blocks_to_delete);
+    DELETE FROM hafd.blocks WHERE block_id = ANY(__blocks_to_delete);
 END;
 $BODY$
 ;
