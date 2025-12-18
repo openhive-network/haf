@@ -83,7 +83,9 @@ variables:
   SNAPSHOTS_PATH: /nfs/ci-cache/haf/snapshots_pipeline_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /cache/block_log_5m_mirrornet
   # PostgreSQL access config for localhost-only jobs
-  PG_ACCESS_LOCAL_TRUST: "host    all              all        127.0.0.1/32    trust"
+  PG_ACCESS_LOCAL_TRUST: |
+    local   all              all                            trust
+    host    all              all        127.0.0.1/32        trust
 
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
