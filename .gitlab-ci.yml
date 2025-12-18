@@ -139,6 +139,8 @@ haf_image_build_mirrornet:
 
     # Use local cache path (copied from NFS by pipeline_data_local_copy job)
     DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
+    # Use local block_log to avoid NFS file locking issues when hived opens the files
+    SHARED_BLOCK_LOG_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     LOG_FILE: $CI_JOB_NAME.log
   command: ["--replay-blockchain", "--stop-at-block=5000000"]
 
