@@ -17,7 +17,7 @@
 #   Replay/build jobs should use: tags: [data-cache-storage, fast]
 #   Fast builders (AMD 5950): hive-builder-8, hive-builder-9, hive-builder-10
 #
-# Cache types: haf, balance_tracker, hivemind, etc.
+# Cache types: Any string identifier (e.g., haf, btracker_sync, hivemind_sync)
 #
 # Environment variables:
 #   CACHE_NFS_PATH      - NFS mount point (default: /nfs/ci-cache)
@@ -26,6 +26,9 @@
 #   CACHE_MAX_AGE_DAYS  - Max cache age (default: 30)
 #   CACHE_LOCK_TIMEOUT  - Lock timeout in seconds (default: 3600)
 #   CACHE_QUIET         - Suppress verbose output (default: false)
+#   CACHE_HANDLING      - Data handling type: "haf" for HAF-based caches (pgdata permissions,
+#                         tar excludes), or empty for default handling. Use "haf" for any cache
+#                         containing PostgreSQL pgdata from HAF replay (e.g., btracker_sync).
 
 set -euo pipefail
 
@@ -160,6 +163,23 @@ CACHE_MAX_SIZE_GB="${CACHE_MAX_SIZE_GB:-2000}"
 CACHE_MAX_AGE_DAYS="${CACHE_MAX_AGE_DAYS:-30}"
 CACHE_LOCK_TIMEOUT="${CACHE_LOCK_TIMEOUT:-3600}"
 CACHE_QUIET="${CACHE_QUIET:-false}"
+CACHE_HANDLING="${CACHE_HANDLING:-}"
+
+# Check if HAF-style handling should be used for the given cache type
+# Returns 0 (true) if HAF handling needed, 1 (false) otherwise
+# HAF handling includes: pgdata permission management, tar excludes for WAL/blockchain
+_needs_haf_handling() {
+    local cache_type="$1"
+    # Explicit handling via environment variable takes precedence
+    if [[ "$CACHE_HANDLING" == "haf" ]]; then
+        return 0
+    fi
+    # Legacy hardcoded types for backwards compatibility
+    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" || "$cache_type" == "haf_pipeline" || "$cache_type" == "hivemind_sync" ]]; then
+        return 0
+    fi
+    return 1
+}
 
 # Logging
 _log() {
@@ -462,8 +482,8 @@ cmd_get() {
         else
             _log "Destination is cache dir, no copy needed"
         fi
-        # Restore pgdata permissions for HAF caches
-        if [[ "$cache_type" == "haf" || "$cache_type" == "haf_pipeline" ]]; then
+        # Restore pgdata permissions for HAF-based caches
+        if _needs_haf_handling "$cache_type"; then
             _restore_pgdata_permissions "$local_dest"
         fi
         # Update LRU if NFS available
@@ -549,8 +569,8 @@ cmd_get() {
         ln -sf "$local_dest" "$LOCAL_CACHE_DIR" 2>/dev/null || true
     fi
 
-    # Restore pgdata permissions for HAF caches
-    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_pipeline" ]]; then
+    # Restore pgdata permissions for HAF-based caches
+    if _needs_haf_handling "$cache_type"; then
         _restore_pgdata_permissions "$local_dest"
     fi
 
@@ -570,7 +590,7 @@ cmd_put() {
     fi
 
     # Relax pgdata permissions for HAF-based caches so they can be copied
-    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" || "$cache_type" == "haf_pipeline" || "$cache_type" == "hivemind_sync" ]]; then
+    if _needs_haf_handling "$cache_type"; then
         _relax_pgdata_permissions "$local_source"
     fi
 
@@ -654,9 +674,9 @@ cmd_put() {
     # Use NFS-safe mkdir-based locking instead of flock (unreliable on NFS)
     local NFS_TAR_LOCK="${NFS_TAR_FILE}.lock.d"
 
-    # Build exclusions for HAF caches (saves ~7.5GB by excluding unnecessary WAL and blockchain)
+    # Build exclusions for HAF-based caches (saves ~7.5GB by excluding unnecessary WAL and blockchain)
     local tar_excludes=""
-    if [[ "$cache_type" == "haf" || "$cache_type" == "haf_sync" || "$cache_type" == "haf_pipeline" || "$cache_type" == "hivemind_sync" ]]; then
+    if _needs_haf_handling "$cache_type"; then
         tar_excludes=$(_build_haf_tar_excludes "$local_source")
     fi
 
