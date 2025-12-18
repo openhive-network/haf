@@ -91,16 +91,16 @@ BEGIN
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hafd.applied_hardforks exists';
 
 
-    -- Updated index name for unified table architecture: hive_operations_block_num_idx
+    -- Updated index name for unified table architecture: hive_operations_block_num_id_idx
     ASSERT EXISTS(
-        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.operations' AND command LIKE '%hive_operations_block_num_idx%'
+        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.operations' AND command LIKE '%hive_operations_block_num_id_idx%'
     ), 'No hafd.operations index (block_num)';
 
-    -- Updated for new schema: account_operations no longer has unique constraint on (account_id, account_op_seq_no)
-    -- Check for the account_seq index instead
+    -- Updated for new schema: account_operations has unique constraint on (account_id, account_op_seq_no, block_id)
+    -- Check for the unique constraint index
     ASSERT EXISTS(
-        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.account_operations' AND command LIKE '%hive_account_operations_account_seq_idx%'
-    ), 'No hafd.account_operations index (account_id, account_op_seq_no)';
+        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.account_operations' AND command LIKE '%hive_account_operations_uq1%'
+    ), 'No hafd.account_operations unique constraint (account_id, account_op_seq_no, block_id)';
 
 END;
 $BODY$

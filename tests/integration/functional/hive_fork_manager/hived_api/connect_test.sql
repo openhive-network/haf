@@ -31,10 +31,10 @@ BEGIN
          , ( hafd.make_block_id(2, 0), 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-           ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xBAAD10' )
-         , ( hafd.make_block_id(2, 0), 0::SMALLINT, '\xBAAD20' )
+           ( '\xDEED10', '\xBAAD10', hafd.make_block_id(1, 0) )
+         , ( '\xDEED20', '\xBAAD20', hafd.make_block_id(2, 0) )
     ;
 
     INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
@@ -49,10 +49,10 @@ BEGIN
         , ( 2, 'user', hafd.make_block_id(2, 0))
     ;
 
-    INSERT INTO hafd.account_operations(block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block)
     VALUES
-          ( hafd.make_block_id(1, 0), 1, 1, 1, 1 )
-        , ( hafd.make_block_id(2, 0), 1, 2, 2, 1 )
+          ( 1, 1, 1, hafd.make_block_id(1, 0), 1 )
+        , ( 2, 2, 1, hafd.make_block_id(2, 0), 1 )
     ;
 
     -- here we simulate situation when hived claims recently only block 1
@@ -69,6 +69,8 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
+    -- connect() internally calls remove_inconsistent_irreversible_data()
+    -- which cleans up block 2 data from the simulated dirty state
     PERFORM hive.connect( '123456789', 1, 1, 10 );
 END
 $BODY$

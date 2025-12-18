@@ -1,3 +1,13 @@
+DROP EXTENSION IF EXISTS hive_fork_manager CASCADE;
+CREATE EXTENSION hive_fork_manager;
+DO $$
+BEGIN
+    RAISE WARNING 'Initial Hive State Count: %', (SELECT COUNT(*) FROM hafd.hive_state);
+    IF (SELECT COUNT(*) FROM hafd.hive_state) = 0 THEN
+        INSERT INTO hafd.hive_state VALUES (1, NULL, FALSE);
+    END IF;
+END $$;
+
 -- Load test utilities
 \ir ../test_tools.sql
 
@@ -63,13 +73,13 @@ BEGIN
         , ( hafd.make_block_id(5, 0), 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-          ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xBAAD10' )
-        , ( hafd.make_block_id(2, 0), 0::SMALLINT, '\xBAAD20' )
-        , ( hafd.make_block_id(3, 0), 0::SMALLINT, '\xBAAD30' )
-        , ( hafd.make_block_id(4, 0), 0::SMALLINT, '\xBAAD40' )
-        , ( hafd.make_block_id(5, 0), 0::SMALLINT, '\xBAAD50' )
+          ( '\xDEED10', '\xBAAD10', hafd.make_block_id(1, 0) )
+        , ( '\xDEED20', '\xBAAD20', hafd.make_block_id(2, 0) )
+        , ( '\xDEED30', '\xBAAD30', hafd.make_block_id(3, 0) )
+        , ( '\xDEED40', '\xBAAD40', hafd.make_block_id(4, 0) )
+        , ( '\xDEED50', '\xBAAD50', hafd.make_block_id(5, 0) )
     ;
 
     INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
@@ -124,12 +134,12 @@ BEGIN
         , ( hafd.make_block_id(9, 1), 0::SMALLINT, '\xDEED91', 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-          ( hafd.make_block_id(6, 1), 0::SMALLINT, '\xBEEF61' )
-        , ( hafd.make_block_id(7, 1), 0::SMALLINT, '\xBEEF71' )
-        , ( hafd.make_block_id(8, 1), 0::SMALLINT, '\xBEEF81' )
-        , ( hafd.make_block_id(9, 1), 0::SMALLINT, '\xBEEF91' )
+          ( '\xDEED61', '\xBEEF61', hafd.make_block_id(6, 1) )
+        , ( '\xDEED71', '\xBEEF71', hafd.make_block_id(7, 1) )
+        , ( '\xDEED81', '\xBEEF81', hafd.make_block_id(8, 1) )
+        , ( '\xDEED91', '\xBEEF91', hafd.make_block_id(9, 1) )
     ;
 
     INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
@@ -176,12 +186,12 @@ BEGIN
         , ( hafd.make_block_id(9, 2), 0::SMALLINT, '\xDEED92', 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-          ( hafd.make_block_id(7, 2), 0::SMALLINT, '\xBEEF72' )
-        , ( hafd.make_block_id(7, 2), 0::SMALLINT, '\xBEEF73' )
-        , ( hafd.make_block_id(8, 2), 0::SMALLINT, '\xBEEF82' )
-        , ( hafd.make_block_id(9, 2), 0::SMALLINT, '\xBEEF92' )
+          ( '\xDEED72', '\xBEEF72', hafd.make_block_id(7, 2) )
+        , ( '\xDEED72', '\xBEEF73', hafd.make_block_id(7, 2) ) -- Same hash, different signature (multisig)
+        , ( '\xDEED82', '\xBEEF82', hafd.make_block_id(8, 2) )
+        , ( '\xDEED92', '\xBEEF92', hafd.make_block_id(9, 2) )
     ;
 
     INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
@@ -228,11 +238,11 @@ BEGIN
         , ( hafd.make_block_id(10, 3), 0::SMALLINT, '\xDEED1102', 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-          ( hafd.make_block_id(8, 3), 0::SMALLINT, '\xBEEF83' )
-        , ( hafd.make_block_id(9, 3), 0::SMALLINT, '\xBEEF93' )
-        , ( hafd.make_block_id(10, 3), 0::SMALLINT, '\xBEEF13' )
+          ( '\xDEED88', '\xBEEF83', hafd.make_block_id(8, 3) )
+        , ( '\xDEED99', '\xBEEF93', hafd.make_block_id(9, 3) )
+        , ( '\xDEED1102', '\xBEEF13', hafd.make_block_id(10, 3) )
     ;
 
     INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
@@ -269,6 +279,8 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
         LANGUAGE 'plpgsql'
 AS
 $BODY$
+DECLARE
+    r RECORD;
 BEGIN
     -- After set_irreversible(8):
     -- For each block_num <= 8, we keep only the block with the highest fork_id.

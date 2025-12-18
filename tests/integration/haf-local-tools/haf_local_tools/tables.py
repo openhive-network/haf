@@ -28,7 +28,7 @@ class Accounts(HiveDataBase):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    block_num = Column(Integer)
+    block_id = Column(BigInteger, primary_key=True)
 
 
 class AccountsView(HiveBase):
@@ -43,7 +43,8 @@ class AccountOperations(HiveDataBase):
     account_id = Column(Integer, primary_key=True)
     transacting_account_id = Column(Integer, primary_key=True)
     account_op_seq_no = Column(Integer, primary_key=True)
-    operation_id = Column(BigInteger)
+    block_id = Column(BigInteger, primary_key=True)
+    seq_in_block = Column(Integer)
 
 
 class Blocks(HiveDataBase):
@@ -77,10 +78,13 @@ class BlocksView(HiveBase):
 class Operations(HiveDataBase):
     __tablename__ = "operations"
 
-    id = Column(BigInteger, primary_key=True)
+    block_id = Column(BigInteger, primary_key=True)
+    seq_in_block = Column(Integer, primary_key=True)
+    op_type_id = Column(Integer, primary_key=True)
     trx_in_block = Column(SmallInteger)
     op_pos = Column(Integer)
     body_binary = Column(HiveOperation)
+    id = Column(BigInteger)
 
 
 class OperationsExtendedView(HiveBase):
@@ -128,8 +132,8 @@ class OperationsIrreversibleView(HiveBase):
 class Transactions(HiveDataBase):
     __tablename__ = "transactions"
 
-    block_num = Column(Integer)
-    trx_in_block = Column(SmallInteger)
+    block_id = Column(BigInteger, primary_key=True)
+    trx_in_block = Column(SmallInteger, primary_key=True)
     trx_hash = Column(LargeBinary, primary_key=True)
     ref_block_num = Column(Integer)
     ref_block_prefix = Column(BigInteger)
@@ -154,6 +158,7 @@ class TransactionsMultisig(HiveDataBase):
 
     trx_hash = Column(LargeBinary, primary_key=True)
     signature = Column(LargeBinary, primary_key=True)
+    block_id = Column(BigInteger, primary_key=True)
 
 
 class EventsQueue(HiveDataBase):

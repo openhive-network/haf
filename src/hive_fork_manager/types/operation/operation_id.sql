@@ -21,7 +21,7 @@ CREATE OR REPLACE FUNCTION hafd.operation_id( _block_num INTEGER, _type INTEGER,
     IMMUTABLE PARALLEL SAFE
 AS 'MODULE_PATHNAME', 'to_operation_id' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hafd.operation_id(_block_id hafd.block_id, _seq INT, _type SMALLINT)
+CREATE OR REPLACE FUNCTION hafd.operation_id(_block_id hafd.block_id, _seq INT, _type INT)
 RETURNS BIGINT
 IMMUTABLE PARALLEL SAFE AS $$
     SELECT (hafd.block_id_to_num(_block_id)::BIGINT << 32) | (_seq << 8) | _type;

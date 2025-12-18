@@ -271,11 +271,11 @@ BEGIN
         sig_suffix := lpad(to_hex(block_num * 16), 2, '0');
         __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0
 
-        INSERT INTO hafd.transactions_multisig
+        INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
         VALUES (
-            __block_id,
-            0::SMALLINT,  -- trx_in_block
-            decode('BAAD' || sig_suffix, 'hex')
+            decode('DEED' || sig_suffix, 'hex'),
+            decode('BAAD' || sig_suffix, 'hex'),
+            __block_id
         );
     END LOOP;
 END;
@@ -303,11 +303,11 @@ BEGIN
         sig_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
         __block_id := hafd.make_block_id(block_num, fork_id);
 
-        INSERT INTO hafd.transactions_multisig
+        INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
         VALUES (
-            __block_id,
-            0::SMALLINT,  -- trx_in_block
-            decode('BEEF' || sig_suffix, 'hex')
+            decode('DEED' || sig_suffix, 'hex'),
+            decode('BEEF' || sig_suffix, 'hex'),
+            __block_id
         );
     END LOOP;
 END;

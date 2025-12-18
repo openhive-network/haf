@@ -35,12 +35,12 @@ BEGIN
     ;
 
     -- Irreversible transactions_multisig (fork_id=0)
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-           ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xBAAD10' )
-         , ( hafd.make_block_id(2, 0), 0::SMALLINT, '\xBAAD20' )
-         , ( hafd.make_block_id(3, 0), 0::SMALLINT, '\xBAAD30' )
-         , ( hafd.make_block_id(4, 0), 0::SMALLINT, '\xBAAD40' )
+           ( '\xDEED10', '\xBAAD10', hafd.make_block_id(1, 0) )
+         , ( '\xDEED20', '\xBAAD20', hafd.make_block_id(2, 0) )
+         , ( '\xDEED30', '\xBAAD30', hafd.make_block_id(3, 0) )
+         , ( '\xDEED40', '\xBAAD40', hafd.make_block_id(4, 0) )
     ;
 
     INSERT INTO hafd.blocks
@@ -75,22 +75,22 @@ BEGIN
     ;
 
     -- Reversible transactions_multisig with fork_id encoded in block_id
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-       ( hafd.make_block_id(4, 1), 0::SMALLINT, '\xBEEF40' )
-     , ( hafd.make_block_id(5, 1), 0::SMALLINT, '\xBEEF55' )
-     , ( hafd.make_block_id(6, 1), 0::SMALLINT, '\xBEEF61' )
-     , ( hafd.make_block_id(7, 1), 0::SMALLINT, '\xBEEF7110' ) --must be abandon because of fork 2
-     , ( hafd.make_block_id(7, 1), 0::SMALLINT, '\xBEEF7120' ) --must be abandon because of fork 2
-     , ( hafd.make_block_id(7, 1), 0::SMALLINT, '\xBEEF7130' ) --must be abandon because of fork 2
-     , ( hafd.make_block_id(10, 1), 0::SMALLINT, '\xBEEF7140' ) --must be abandon because of fork 2
-     , ( hafd.make_block_id(7, 2), 0::SMALLINT, '\xBEEF72' )
-     , ( hafd.make_block_id(7, 2), 0::SMALLINT, '\xBEEF73' )
-     , ( hafd.make_block_id(8, 2), 0::SMALLINT, '\xBEEF82' )
-     , ( hafd.make_block_id(9, 2), 0::SMALLINT, '\xBEEF92' )
-     , ( hafd.make_block_id(8, 3), 0::SMALLINT, '\xBEEF83' )
-     , ( hafd.make_block_id(9, 3), 0::SMALLINT, '\xBEEF93' )
-     , ( hafd.make_block_id(10, 3), 0::SMALLINT, '\xBEEF13' )
+       ( '\xDEED40', '\xBEEF40', hafd.make_block_id(4, 1) )
+     , ( '\xDEED55', '\xBEEF55', hafd.make_block_id(5, 1) )
+     , ( '\xDEED60', '\xBEEF61', hafd.make_block_id(6, 1) )
+     , ( '\xDEED70', '\xBEEF7110', hafd.make_block_id(7, 1) ) --must be abandon because of fork 2
+     , ( '\xDEED70', '\xBEEF7120', hafd.make_block_id(7, 1) ) --must be abandon because of fork 2
+     , ( '\xDEED70', '\xBEEF7130', hafd.make_block_id(7, 1) ) --must be abandon because of fork 2
+     , ( '\xDEED11', '\xBEEF7140', hafd.make_block_id(10, 1) ) --must be abandon because of fork 2
+     , ( '\xDEED70', '\xBEEF72', hafd.make_block_id(7, 2) )
+     , ( '\xDEED70', '\xBEEF73', hafd.make_block_id(7, 2) )
+     , ( '\xDEED80', '\xBEEF82', hafd.make_block_id(8, 2) )
+     , ( '\xDEED90', '\xBEEF92', hafd.make_block_id(9, 2) )
+     , ( '\xDEED88', '\xBEEF83', hafd.make_block_id(8, 3) )
+     , ( '\xDEED99', '\xBEEF93', hafd.make_block_id(9, 3) )
+     , ( '\xDEED1102', '\xBEEF13', hafd.make_block_id(10, 3) )
     ;
 
     UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 9;
