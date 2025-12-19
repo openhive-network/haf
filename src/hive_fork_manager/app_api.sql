@@ -503,13 +503,11 @@ BEGIN
     ELSE
         -- Non-forking contexts use the global consistent_block from hive_state.
         -- Before end_massive_sync, consistent_block may be NULL, so we also consider
-        -- the max block_num from blocks with fork_id=0 (original irreversible blocks
-        -- created during massive sync).
+        -- the max block_num from any blocks (using canonical = highest fork_id).
         SELECT GREATEST(
             COALESCE(hafd.block_id_to_num(hs.consistent_block), 0),
             COALESCE((SELECT MAX(hafd.block_id_to_num(hb.block_id))
-                      FROM hafd.blocks hb
-                      WHERE hafd.block_id_to_fork(hb.block_id) = 0), 0)
+                      FROM hafd.blocks hb), 0)
         ) INTO __result
         FROM hafd.hive_state hs;
     END IF;
