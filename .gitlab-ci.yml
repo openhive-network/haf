@@ -129,7 +129,7 @@ detect_changes:
       CAN_SKIP_BUILD=false
       CAN_SKIP_REPLAY=false
       CACHE_COMMIT=""
-      HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:develop}"
+      HAF_IMG=""
 
       # Handle manual QUICK_TEST mode
       if [[ "$QUICK_TEST" == "true" ]]; then
@@ -144,6 +144,9 @@ detect_changes:
           echo "  ./scripts/ci-helpers/list-haf-caches.sh --recent"
           exit 1
         fi
+        # Use provided image or default to commit-specific tag
+        CACHE_SHORT="${CACHE_COMMIT:0:8}"
+        HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:$CACHE_SHORT}"
         echo "Using cached data from: $CACHE_COMMIT"
         echo "Using HAF image: $HAF_IMG"
       else
@@ -224,13 +227,16 @@ detect_changes:
 
       # Export HAF_COMMIT and HAF_IMAGE_NAME when skipping is possible
       if [[ "$CAN_SKIP_BUILD" == "true" ]]; then
-        echo "HAF_IMAGE_NAME=$HAF_IMG" >> detect_changes.env
         if [[ -n "$CACHE_COMMIT" ]]; then
           echo "HAF_COMMIT=$CACHE_COMMIT" >> detect_changes.env
+          # Use image tag based on cache commit (first 8 chars)
+          CACHE_SHORT="${CACHE_COMMIT:0:8}"
+          HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:$CACHE_SHORT}"
         else
           # SQL-only change: skip build but need fresh replay
           echo "HAF_COMMIT=$CI_COMMIT_SHA" >> detect_changes.env
         fi
+        echo "HAF_IMAGE_NAME=$HAF_IMG" >> detect_changes.env
       fi
 
       echo ""
