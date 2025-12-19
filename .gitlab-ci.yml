@@ -285,6 +285,8 @@ detect_changes:
       when: never
     - when: on_success
   before_script:
+    # Fix git safe.directory issue on some runners (CVE-2022-24765)
+    - git config --global --add safe.directory '*'
     # Early exit if AUTO_SKIP_BUILD is true (from detect_changes dotenv)
     # This allows us to skip the expensive build while still producing required artifacts
     - |
