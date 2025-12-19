@@ -15,6 +15,31 @@ variables:
   # This allows multiple concurrent HAF jobs on builders with limited RAM
   HAF_CI_MODE: "1"
 
+  # =============================================================================
+  # Quick Test / Auto-Skip Mode
+  # =============================================================================
+  # Two ways to skip builds and use cached replay data:
+  #
+  # 1. AUTOMATIC (recommended): When only tests/docs/SQL change, builds are
+  #    automatically skipped and cached data is used. No configuration needed.
+  #
+  # 2. MANUAL: Set QUICK_TEST=true to force skip mode with a specific cache:
+  #    - QUICK_TEST=true
+  #    - QUICK_TEST_HAF_COMMIT=<sha>  (required - find with list-haf-caches.sh)
+  #    - QUICK_TEST_HAF_IMAGE=<image> (optional - defaults to :develop)
+  #    - QUICK_TEST_JOBS=<jobs>       (optional - comma-separated extra jobs)
+  #
+  # Find available caches: ./scripts/ci-helpers/list-haf-caches.sh --recent
+  # =============================================================================
+  QUICK_TEST: "false"
+  QUICK_TEST_HAF_COMMIT: ""   # Required when QUICK_TEST=true
+  QUICK_TEST_HAF_IMAGE: ""    # Optional - defaults to registry.gitlab.syncad.com/hive/haf:develop
+  QUICK_TEST_JOBS: ""         # Optional - additional jobs to run (comma-separated)
+  # Auto-populated by detect_changes job:
+  AUTO_SKIP_BUILD: "false"    # Set to true when only tests/docs/SQL changed
+  AUTO_SKIP_REPLAY: "false"   # Set to true when only tests/docs changed (no SQL)
+  AUTO_CACHE_COMMIT: ""       # Most recent cached HAF commit
+
   GIT_STRATEGY: clone
   GIT_DEPTH: 0
   GIT_SUBMODULE_DEPTH: 0
@@ -79,9 +104,193 @@ verify_poetry_lock_sanity:
   tags:
     - public-runner-docker
 
+# =============================================================================
+# Change Detection - determines if we can skip builds/replays
+# =============================================================================
+# Detects if only tests/docs changed and finds cached replay data to use.
+# Runs early in pipeline to set AUTO_SKIP_BUILD for downstream jobs.
+detect_changes:
+  extends: .job-defaults
+  stage: build_and_test_phase_1
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  rules:
+    # Skip if manual QUICK_TEST mode (user controls everything)
+    - if: $QUICK_TEST == "true"
+      when: never
+    # Skip for tags (always do full build for releases)
+    - if: $CI_COMMIT_TAG
+      when: never
+    - when: on_success
+  script:
+    - |
+      echo "=== Detecting Changed Files ==="
+
+      # Get changed files (MR or branch comparison)
+      if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
+        BASE_SHA="$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+      else
+        # For branch pipelines, compare to parent commit or origin/develop
+        BASE_SHA=$(git merge-base HEAD origin/develop 2>/dev/null || echo "HEAD~1")
+      fi
+
+      echo "Comparing $BASE_SHA to HEAD"
+      CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+
+      echo "Changed files:"
+      echo "$CHANGED_FILES" | head -50
+
+      # Two levels of skip detection:
+      # 1. Skip BUILD: tests, docs, SQL (SQL doesn't affect C++ compilation)
+      # 2. Skip REPLAY: only tests, docs (SQL affects replay behavior)
+
+      SKIP_BUILD_PATTERNS="^tests/|^docs/|\.sql$|^\.md$|README|CHANGELOG|LICENSE|\.txt$"
+      SKIP_REPLAY_PATTERNS="^tests/|^docs/|^\.md$|README|CHANGELOG|LICENSE|\.txt$"
+
+      # Check what requires build vs replay
+      NEEDS_BUILD=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_BUILD_PATTERNS" || true)
+      NEEDS_REPLAY=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_REPLAY_PATTERNS" || true)
+
+      # Determine skip levels
+      CAN_SKIP_BUILD=false
+      CAN_SKIP_REPLAY=false
+
+      if [[ -z "$NEEDS_BUILD" ]]; then
+        CAN_SKIP_BUILD=true
+        echo ""
+        echo "=== Can skip build (only tests/docs/SQL changed) ==="
+      fi
+
+      if [[ -z "$NEEDS_REPLAY" ]]; then
+        CAN_SKIP_REPLAY=true
+        echo "=== Can skip replay (only tests/docs changed, no SQL) ==="
+      elif [[ "$CAN_SKIP_BUILD" == "true" ]]; then
+        echo "=== SQL changed - can skip build but must replay ==="
+        echo "SQL files changed:"
+        echo "$NEEDS_REPLAY" | grep '\.sql$' | head -10
+      fi
+
+      # Find cached data if we can skip replay
+      if [[ "$CAN_SKIP_REPLAY" == "true" ]]; then
+        NFS_CACHE_PATH="/nfs/ci-cache/haf"
+        if [[ -d "$NFS_CACHE_PATH" ]]; then
+          LATEST_TAR=$(ls -t "$NFS_CACHE_PATH"/*.tar 2>/dev/null | head -1 || true)
+          if [[ -n "$LATEST_TAR" ]]; then
+            LATEST_CACHE=$(basename "$LATEST_TAR" .tar)
+          fi
+        fi
+
+        if [[ -n "${LATEST_CACHE:-}" ]]; then
+          echo "Found cached data: $LATEST_CACHE"
+          echo "AUTO_CACHE_COMMIT=$LATEST_CACHE" >> detect_changes.env
+        else
+          echo "WARNING: No cached data found - cannot skip replay"
+          CAN_SKIP_REPLAY=false
+        fi
+      fi
+
+      # Export results
+      echo "AUTO_SKIP_BUILD=$CAN_SKIP_BUILD" >> detect_changes.env
+      echo "AUTO_SKIP_REPLAY=$CAN_SKIP_REPLAY" >> detect_changes.env
+
+      if [[ "$CAN_SKIP_BUILD" == "false" ]]; then
+        echo ""
+        echo "=== Full build required ==="
+        echo "Files requiring build:"
+        echo "$NEEDS_BUILD" | head -20
+      fi
+  artifacts:
+    reports:
+      dotenv: detect_changes.env
+    expire_in: 1 day
+  tags:
+    - data-cache-storage  # Needs NFS access to find caches
+
+# =============================================================================
+# Quick Test Setup - configures skip mode (manual or automatic)
+# =============================================================================
+# Runs when QUICK_TEST=true OR AUTO_SKIP_BUILD=true
+# Exports HAF_COMMIT and HAF_IMAGE_NAME for downstream jobs
+quick_test_setup:
+  extends: .job-defaults
+  stage: build_and_test_phase_1
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  needs:
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Not present in manual QUICK_TEST mode
+  rules:
+    - if: $QUICK_TEST == "true"
+      when: always
+    - if: $AUTO_SKIP_BUILD == "true"
+      when: always
+    - when: never
+  script:
+    - |
+      echo "=== Quick Test / Auto-Skip Setup ==="
+
+      # Set HAF image - use provided or default to develop
+      HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:develop}"
+      echo "HAF_IMAGE_NAME=$HAF_IMG" >> quick_test.env
+
+      # Determine HAF_COMMIT based on mode
+      if [[ "$QUICK_TEST" == "true" ]]; then
+        echo "Mode: Manual QUICK_TEST (skip build + replay)"
+        CACHE_COMMIT="${QUICK_TEST_HAF_COMMIT}"
+        if [[ -z "$CACHE_COMMIT" ]]; then
+          echo "ERROR: QUICK_TEST_HAF_COMMIT must be set when QUICK_TEST=true"
+          echo ""
+          echo "Find available caches:"
+          echo "  ./scripts/ci-helpers/list-haf-caches.sh --recent"
+          exit 1
+        fi
+        echo "HAF_COMMIT=$CACHE_COMMIT" >> quick_test.env
+        echo "Using cached replay data from: $CACHE_COMMIT"
+
+      elif [[ "$AUTO_SKIP_REPLAY" == "true" ]]; then
+        echo "Mode: Auto-skip (only tests/docs changed - skip build + replay)"
+        CACHE_COMMIT="${AUTO_CACHE_COMMIT}"
+        if [[ -z "$CACHE_COMMIT" ]]; then
+          echo "ERROR: No cached data found for auto-skip mode"
+          exit 1
+        fi
+        echo "HAF_COMMIT=$CACHE_COMMIT" >> quick_test.env
+        echo "Using cached replay data from: $CACHE_COMMIT"
+
+      else
+        echo "Mode: Auto-skip build only (SQL changed - skip build, but replay needed)"
+        echo "HAF_COMMIT=$CI_COMMIT_SHA" >> quick_test.env
+        echo "Will perform fresh replay with current commit"
+      fi
+
+      echo ""
+      echo "Configuration:"
+      echo "  HAF_IMAGE_NAME: $HAF_IMG"
+      cat quick_test.env | grep HAF_COMMIT || true
+      if [[ -n "${QUICK_TEST_JOBS:-}" ]]; then
+        echo "  QUICK_TEST_JOBS: $QUICK_TEST_JOBS"
+      fi
+  artifacts:
+    reports:
+      dotenv: quick_test.env
+    expire_in: 1 day
+  tags:
+    - data-cache-storage
+
 .haf_image_build:
   extends: .prepare_haf_image
   stage: build_and_test_phase_1
+  needs:
+    - job: detect_changes
+      artifacts: true
+      optional: true
+  rules:
+    # Skip in manual QUICK_TEST mode
+    - if: $QUICK_TEST == "true"
+      when: never
+    # Skip when auto-detected that only tests/docs changed
+    - if: $AUTO_SKIP_BUILD == "true"
+      when: never
+    - when: on_success
   tags:
     - public-runner-docker
 
@@ -739,6 +948,10 @@ prepare_haf_data:
   needs:
     - job: haf_image_build
       artifacts: true
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: quick_test_setup
+      artifacts: true
+      optional: true  # Only runs in QUICK_TEST/AUTO_SKIP mode
   stage: build_and_test_phase_1
   timeout: 80m
   variables:
@@ -756,7 +969,11 @@ replay_data_copy:
   stage: build_and_test_phase_1
   needs:
     - prepare_haf_data
-    - haf_image_build
+    - job: haf_image_build
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: quick_test_setup
+      artifacts: true
+      optional: true  # Only runs in QUICK_TEST/AUTO_SKIP mode
   variables:
     SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   script:
@@ -803,6 +1020,10 @@ dead_app_auto_detach:
     - job: replay_data_copy
     - job: haf_image_build
       artifacts: true
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: quick_test_setup
+      artifacts: true
+      optional: true  # Only runs in QUICK_TEST/AUTO_SKIP mode
   services:
     - name: $HAF_IMAGE_NAME
       alias: haf-instance
@@ -839,6 +1060,10 @@ start_haf_as_service:
     - job: replay_data_copy
     - job: haf_image_build
       artifacts: true
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: quick_test_setup
+      artifacts: true
+      optional: true  # Only runs in QUICK_TEST/AUTO_SKIP mode
   services:
     - *haf-service
   variables:
