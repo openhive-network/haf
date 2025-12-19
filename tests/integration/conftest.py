@@ -1,3 +1,4 @@
+# Test CI quick-test v4 - should use commit-specific image tag
 import os
 from pathlib import Path
 from typing import Any, Tuple, Iterable
