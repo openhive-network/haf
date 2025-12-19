@@ -118,15 +118,14 @@ BEGIN
                     hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger,
                     ROW_NUMBER() OVER (
                         PARTITION BY hafd.block_id_to_num(hb.block_id)
-                        ORDER BY hb.block_id DESC
+                        ORDER BY 
+                           (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block 
+                            AND hafd.block_id_to_fork(hb.block_id) = COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)) DESC,
+                           hb.block_id DESC
                     ) AS rn
-                FROM hafd.blocks hb, %s.context_data_view c
+                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
-                  AND (
-                    (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block AND hafd.block_id_to_fork(hb.block_id) = 0)
-                    OR
-                    (hafd.block_id_to_num(hb.block_id) > c.irreversible_block AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
-                  )
+                  AND (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block OR hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
             ) t WHERE rn = 1
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
@@ -139,10 +138,12 @@ BEGIN
             ', __schema, __schema, __schema, __schema
         );
     ELSE
-        -- Non-forking context: only show irreversible data (fork_id=0)
+        -- Non-forking context: show blocks up to min_block
+        -- Use DISTINCT ON to pick one block per block_num, prioritizing consistent_block's fork_id
+        -- For irreversible blocks, we want the canonical version (fork_id matching consistent_block or 0)
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
-            SELECT
+            SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
                 hafd.block_id_to_num(hb.block_id) AS num,
                 hb.block_id,
                 hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
@@ -150,9 +151,11 @@ BEGIN
                 hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
                 hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-            FROM hafd.blocks hb, %s.context_data_view c
+            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
             WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
-              AND hafd.block_id_to_fork(hb.block_id) = 0
+            ORDER BY hafd.block_id_to_num(hb.block_id),
+                     (hafd.block_id_to_fork(hb.block_id) = COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)) DESC,
+                     hb.block_id DESC
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
             SELECT num, hash, prev, created_at, producer_account_id,
@@ -184,10 +187,11 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: only show data with fork_id=0
+    -- All irreversible: use DISTINCT ON to pick one block per block_num
+    -- Prioritize consistent_block's fork_id for canonical block selection
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
-        SELECT
+        SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
             hafd.block_id_to_num(hb.block_id) AS num,
             hb.block_id,
             hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
@@ -195,8 +199,11 @@ BEGIN
             hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
             hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
             hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-        FROM hafd.blocks hb
-        WHERE hafd.block_id_to_fork(hb.block_id) = 0
+        FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+        WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+        ORDER BY hafd.block_id_to_num(hb.block_id),
+                 (hafd.block_id_to_fork(hb.block_id) = COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)) DESC,
+                 hb.block_id DESC
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS
         SELECT num, hash, prev, created_at, producer_account_id,
@@ -205,7 +212,7 @@ BEGIN
                    total_vesting_shares, total_reward_fund_hive, virtual_supply,
                    current_supply, current_hbd_supply, dhf_interval_ledger
         FROM %s.blocks_view_internal;
-        ', __schema, __schema, __schema
+        ', __schema, __schema, __schema, __schema
     );
 
     PERFORM hive.adjust_view_ownership(_context_name, 'blocks_view');
