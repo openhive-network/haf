@@ -370,7 +370,21 @@ indexation_state::update_state(
       _indexes_controler.enable_indexes();
       _indexes_controler.enable_constrains();
       std::thread([this]() {
-        _indexes_controler.poll_and_create_indexes();
+        try
+        {
+          _indexes_controler.poll_and_create_indexes();
+        }
+        catch (const std::exception& e)
+        {
+          elog("Fatal error in poll_and_create_indexes thread: ${e}.", ("e", e.what()));
+          elog("Requesting graceful shutdown.");
+          theApp.generate_interrupt_request();
+        }
+        catch (...)
+        {
+          elog("Unknown fatal error in poll_and_create_indexes thread. Requesting graceful shutdown.");
+          theApp.generate_interrupt_request();
+        }
       }).detach();
       _dumper = std::make_unique< livesync_data_dumper >(
         _db_url
