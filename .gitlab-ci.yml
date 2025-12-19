@@ -254,10 +254,22 @@ detect_changes:
     # Skip in manual QUICK_TEST mode (known at pipeline creation)
     - if: $QUICK_TEST == "true"
       when: never
-    # Skip when auto-detected that only tests/docs changed (from detect_changes dotenv)
-    - if: $AUTO_SKIP_BUILD == "true"
-      when: never
     - when: on_success
+  before_script:
+    # Early exit if AUTO_SKIP_BUILD is true (from detect_changes dotenv)
+    # This allows us to skip the expensive build while still producing required artifacts
+    - |
+      if [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
+        echo "=== Skipping build (AUTO_SKIP_BUILD=true) ==="
+        echo "Using cached HAF image: ${HAF_IMAGE_NAME:-registry.gitlab.syncad.com/hive/haf:develop}"
+        # Create dotenv artifact with cached image name
+        echo "HAF_IMAGE_NAME=${HAF_IMAGE_NAME:-registry.gitlab.syncad.com/hive/haf:develop}" > docker_image_name.env
+        # Create empty binary cache directory (downstream jobs may expect it)
+        mkdir -p "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+        touch "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/.skip-marker"
+        echo "Build skipped - artifacts created for compatibility"
+        exit 0
+      fi
   tags:
     - public-runner-docker
 
