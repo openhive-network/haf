@@ -197,24 +197,46 @@ detect_changes:
         fi
 
         # Find cached data/images when we can skip something
+        # Docker login for image verification
+        echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY" 2>/dev/null || true
+
         NFS_CACHE_PATH="/nfs/ci-cache/haf"
         if [[ -d "$NFS_CACHE_PATH" ]]; then
-          LATEST_TAR=$(ls -t "$NFS_CACHE_PATH"/*.tar 2>/dev/null | head -1 || true)
-          if [[ -n "$LATEST_TAR" ]]; then
-            CACHE_COMMIT=$(basename "$LATEST_TAR" .tar)
-            echo "Found cached data: $CACHE_COMMIT"
-          fi
+          # Look through recent cache files to find one with valid Docker images
+          for TAR in $(ls -t "$NFS_CACHE_PATH"/*.tar 2>/dev/null | head -5); do
+            TEST_COMMIT=$(basename "$TAR" .tar)
+            CACHE_SHORT="${TEST_COMMIT:0:8}"
+
+            # Verify Docker images exist for all network types
+            IMAGES_EXIST=true
+            for NETWORK in "" "/testnet" "/mirrornet"; do
+              IMG="registry.gitlab.syncad.com/hive/haf${NETWORK}:${CACHE_SHORT}"
+              if ! docker manifest inspect "$IMG" >/dev/null 2>&1; then
+                echo "Image not found: $IMG"
+                IMAGES_EXIST=false
+                break
+              fi
+            done
+
+            if [[ "$IMAGES_EXIST" == "true" ]]; then
+              CACHE_COMMIT="$TEST_COMMIT"
+              echo "Found cached data with valid images: $CACHE_COMMIT"
+              break
+            else
+              echo "Cache $TEST_COMMIT missing Docker images, trying next..."
+            fi
+          done
         fi
 
-        # For replay skip, we need cached data
+        # For replay skip, we need cached data with images
         if [[ "$CAN_SKIP_REPLAY" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
-          echo "WARNING: No cached data found - cannot skip replay"
+          echo "WARNING: No cached data with valid images found - cannot skip replay"
           CAN_SKIP_REPLAY=false
         fi
 
-        # For build skip, we need a cached commit for image reference
+        # For build skip, we need a cached commit with valid Docker images
         if [[ "$CAN_SKIP_BUILD" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
-          echo "WARNING: No cached images found - cannot skip build"
+          echo "WARNING: No cached data with valid images found - cannot skip build"
           CAN_SKIP_BUILD=false
         fi
 
