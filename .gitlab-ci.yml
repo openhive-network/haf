@@ -196,21 +196,26 @@ detect_changes:
           echo "$NEEDS_REPLAY" | grep '\.sql$' | head -10
         fi
 
-        # Find cached data if we can skip replay
-        if [[ "$CAN_SKIP_REPLAY" == "true" ]]; then
-          NFS_CACHE_PATH="/nfs/ci-cache/haf"
-          if [[ -d "$NFS_CACHE_PATH" ]]; then
-            LATEST_TAR=$(ls -t "$NFS_CACHE_PATH"/*.tar 2>/dev/null | head -1 || true)
-            if [[ -n "$LATEST_TAR" ]]; then
-              CACHE_COMMIT=$(basename "$LATEST_TAR" .tar)
-              echo "Found cached data: $CACHE_COMMIT"
-            fi
+        # Find cached data/images when we can skip something
+        NFS_CACHE_PATH="/nfs/ci-cache/haf"
+        if [[ -d "$NFS_CACHE_PATH" ]]; then
+          LATEST_TAR=$(ls -t "$NFS_CACHE_PATH"/*.tar 2>/dev/null | head -1 || true)
+          if [[ -n "$LATEST_TAR" ]]; then
+            CACHE_COMMIT=$(basename "$LATEST_TAR" .tar)
+            echo "Found cached data: $CACHE_COMMIT"
           fi
+        fi
 
-          if [[ -z "$CACHE_COMMIT" ]]; then
-            echo "WARNING: No cached data found - cannot skip replay"
-            CAN_SKIP_REPLAY=false
-          fi
+        # For replay skip, we need cached data
+        if [[ "$CAN_SKIP_REPLAY" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
+          echo "WARNING: No cached data found - cannot skip replay"
+          CAN_SKIP_REPLAY=false
+        fi
+
+        # For build skip, we need a cached commit for image reference
+        if [[ "$CAN_SKIP_BUILD" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
+          echo "WARNING: No cached images found - cannot skip build"
+          CAN_SKIP_BUILD=false
         fi
 
         if [[ "$CAN_SKIP_BUILD" == "false" ]]; then
@@ -225,17 +230,13 @@ detect_changes:
       echo "AUTO_SKIP_BUILD=$CAN_SKIP_BUILD" >> detect_changes.env
       echo "AUTO_SKIP_REPLAY=$CAN_SKIP_REPLAY" >> detect_changes.env
 
-      # Export HAF_COMMIT and HAF_IMAGE_NAME when skipping is possible
+      # Export HAF_COMMIT and HAF_IMAGE_NAME when skipping build
+      # Note: CAN_SKIP_BUILD is only true if CACHE_COMMIT was found (validated above)
       if [[ "$CAN_SKIP_BUILD" == "true" ]]; then
-        if [[ -n "$CACHE_COMMIT" ]]; then
-          echo "HAF_COMMIT=$CACHE_COMMIT" >> detect_changes.env
-          # Use image tag based on cache commit (first 8 chars)
-          CACHE_SHORT="${CACHE_COMMIT:0:8}"
-          HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:$CACHE_SHORT}"
-        else
-          # SQL-only change: skip build but need fresh replay
-          echo "HAF_COMMIT=$CI_COMMIT_SHA" >> detect_changes.env
-        fi
+        echo "HAF_COMMIT=$CACHE_COMMIT" >> detect_changes.env
+        # Use image tag based on cache commit (first 8 chars)
+        CACHE_SHORT="${CACHE_COMMIT:0:8}"
+        HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:$CACHE_SHORT}"
         echo "HAF_IMAGE_NAME=$HAF_IMG" >> detect_changes.env
       fi
 
@@ -267,9 +268,24 @@ detect_changes:
     - |
       if [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
         echo "=== Skipping build (AUTO_SKIP_BUILD=true) ==="
-        echo "Using cached HAF image: ${HAF_IMAGE_NAME:-registry.gitlab.syncad.com/hive/haf:develop}"
+        # Derive the correct image name based on network type
+        # HAF_COMMIT comes from detect_changes dotenv
+        CACHE_SHORT="${HAF_COMMIT:0:8}"
+        case "${HIVE_NETWORK_TYPE:-mainnet}" in
+          testnet)
+            SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf/testnet:${CACHE_SHORT}"
+            ;;
+          mirrornet)
+            SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf/mirrornet:${CACHE_SHORT}"
+            ;;
+          *)
+            # For mainnet, use HAF_IMAGE_NAME from detect_changes (already correct)
+            SKIP_IMAGE_NAME="${HAF_IMAGE_NAME:-registry.gitlab.syncad.com/hive/haf:develop}"
+            ;;
+        esac
+        echo "Using cached HAF image: ${SKIP_IMAGE_NAME}"
         # Create dotenv artifact with cached image name
-        echo "HAF_IMAGE_NAME=${HAF_IMAGE_NAME:-registry.gitlab.syncad.com/hive/haf:develop}" > docker_image_name.env
+        echo "HAF_IMAGE_NAME=${SKIP_IMAGE_NAME}" > docker_image_name.env
         # Create empty binary cache directory (downstream jobs may expect it)
         mkdir -p "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
         touch "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/.skip-marker"
