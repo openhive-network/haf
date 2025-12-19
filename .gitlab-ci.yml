@@ -125,12 +125,20 @@ detect_changes:
     - |
       echo "=== Detecting Changed Files ==="
 
-      # Get changed files (MR or branch comparison)
+      # Get changed files based on pipeline type
       if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
+        # MR pipeline: compare against MR target branch
         BASE_SHA="$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+        echo "MR pipeline: comparing against target branch"
+      elif [[ "${CI_PIPELINE_SOURCE:-}" == "push" ]]; then
+        # Push pipeline: compare against previous commit to detect incremental changes
+        # This allows test-only commits to skip build even on feature branches
+        BASE_SHA="HEAD~1"
+        echo "Push pipeline: comparing against previous commit"
       else
-        # For branch pipelines, compare to parent commit or origin/develop
+        # Other pipelines (manual, scheduled): compare against develop
         BASE_SHA=$(git merge-base HEAD origin/develop 2>/dev/null || echo "HEAD~1")
+        echo "Other pipeline: comparing against develop"
       fi
 
       echo "Comparing $BASE_SHA to HEAD"
