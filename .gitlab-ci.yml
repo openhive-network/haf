@@ -405,13 +405,15 @@ haf_image_build_mirrornet:
   timeout: 80m
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  # Skip in quick-test mode - this test validates extension upgrades and requires
-  # freshly built extensions with matching version numbers (cached images won't work)
-  rules:
-    - if: '$AUTO_SKIP_BUILD == "true"'
-      when: never
-    - when: on_success
   script:
+    # Skip in quick-test mode - this test validates extension upgrades and requires
+    # freshly built extensions with matching version numbers (cached images won't work)
+    - |
+      if [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
+        echo "Skipping hfm_functional_tests in quick-test mode"
+        echo "This test requires freshly built extensions with matching version numbers"
+        exit 0
+      fi
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
   artifacts:
     paths:
