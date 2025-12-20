@@ -122,8 +122,6 @@ default:
                   rm -rf "$submod" ".git/modules/$submod"
                 fi
               done
-            else
-              echo "pre_get_sources: no .gitmodules file"
             fi
 
             # Handle directory-to-submodule transitions inside submodules
