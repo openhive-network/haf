@@ -46,12 +46,12 @@ export CTEST_NUMBER_OF_JOBS="${CTEST_NUMBER_OF_JOBS:-4}"
 pushd "${HAF_BUILD_DIR}"
 
 # Run functional tests (SQL-based, don't need compiled binaries)
+# The update script generator is created by cmake configure (not ninja build)
 ctest --parallel "${CTEST_NUMBER_OF_JOBS}" --output-on-failure -R test.functional.hive_fork_manager*
 ctest --parallel "${CTEST_NUMBER_OF_JOBS}" --output-on-failure -R test_update_script
+ctest --parallel "${CTEST_NUMBER_OF_JOBS}" --output-on-failure -R test.functional.update.hive_fork_manager*
 ctest --output-on-failure -R test.functional.query_supervisor.*
-# Note: Skipped tests that require compiled binaries:
-# - test.functional.update.* (needs update script generator)
-# - test.unit.* (C++ unit tests need compiled binaries)
+# Note: test.unit.* skipped - C++ tests need compiled binaries (only 4 quick tests)
 
 popd
 
