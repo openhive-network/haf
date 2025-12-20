@@ -310,10 +310,13 @@ detect_changes:
         echo "Using cached HAF image: ${SKIP_IMAGE_NAME}"
         # Create dotenv artifact with cached image name
         echo "HAF_IMAGE_NAME=${SKIP_IMAGE_NAME}" > docker_image_name.env
-        # Create empty binary cache directory (downstream jobs may expect it)
-        mkdir -p "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
-        touch "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/.skip-marker"
-        echo "Build skipped - artifacts created for compatibility"
+        # Extract binaries from cached Docker image (downstream jobs need them)
+        echo "Extracting binaries from cached image..."
+        SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
+        "$SCRIPTS_PATH/ci-helpers/export-data-from-docker-image.sh" "${SKIP_IMAGE_NAME}" "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+        chmod -Rc a+rwx "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+        ls -la "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/"
+        echo "Build skipped - binaries extracted from cached image"
         exit 0
       fi
   tags:
