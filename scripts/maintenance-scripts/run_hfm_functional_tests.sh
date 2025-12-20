@@ -8,7 +8,7 @@ set -xeuo pipefail
 # Packages needed for cmake configure (finds libraries) and running tests
 # Note: We're not building, but cmake still needs to find these during configure
 sudo apt-get update
-sudo apt-get install -y git cmake ninja-build g++ python3 python3-jinja2 postgresql-server-dev-17 \
+sudo apt-get install -y git cmake ninja-build g++ python3 python3-jinja2 python3-pexpect postgresql-server-dev-17 \
   liburing-dev libboost-all-dev libssl-dev libbz2-dev libsnappy-dev libpqxx-dev libreadline-dev
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
