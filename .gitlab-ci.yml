@@ -428,12 +428,16 @@ haf_image_build_mirrornet:
 hfm_functional_tests:
   extends: .hfm_functional_tests
   needs:
+    - job: detect_changes
+      artifacts: true
     - job: haf_image_build
       artifacts: true
 
 hfm_functional_tests_testnet:
   extends: .hfm_functional_tests
   needs:
+    - job: detect_changes
+      artifacts: true
     - job: haf_image_build_testnet
       artifacts: true
 
