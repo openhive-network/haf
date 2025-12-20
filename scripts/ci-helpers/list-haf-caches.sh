@@ -66,6 +66,7 @@ list_tar_caches() {
     local limit="${2:-0}"
 
     local count=0
+    _CACHE_COUNT=0  # Initialize global
     # Sort by modification time (newest first)
     for tar_file in $(ls -t "$HAF_CACHE_PATH"/*.tar 2>/dev/null); do
         [[ -f "$tar_file" ]] || continue
@@ -87,7 +88,8 @@ list_tar_caches() {
         fi
     done
 
-    return $count
+    # Use global variable instead of return (bash return limited to 0-255)
+    _CACHE_COUNT=$count
 }
 
 # List caches as directories (legacy format)
@@ -96,6 +98,7 @@ list_dir_caches() {
     local limit="${2:-0}"
 
     local count=0
+    _CACHE_COUNT=0  # Initialize global
     for dir in $(ls -td "$HAF_CACHE_PATH"/*/ 2>/dev/null); do
         [[ -d "$dir" ]] || continue
         # Skip if there's also a tar file (prefer tar)
@@ -118,7 +121,8 @@ list_dir_caches() {
         fi
     done
 
-    return $count
+    # Use global variable instead of return (bash return limited to 0-255)
+    _CACHE_COUNT=$count
 }
 
 # Check if a specific SHA is cached
@@ -259,10 +263,10 @@ main() {
     [[ "$show_recent" == "true" ]] && limit=10
 
     list_tar_caches "$show_size" "$limit"
-    local tar_count=$?
+    local tar_count=$_CACHE_COUNT
 
     list_dir_caches "$show_size" "$limit"
-    local dir_count=$?
+    local dir_count=$_CACHE_COUNT
 
     local total=$((tar_count + dir_count))
 
