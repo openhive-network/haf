@@ -5,9 +5,9 @@ set -xeuo pipefail
 # The HAF extension is already installed in the Docker image ($HAF_IMAGE_NAME)
 # We only need: source files (already at $CI_PROJECT_DIR) + CMake configure (for ctest)
 
-# Minimal packages - only what's needed for cmake configure and running tests
+# Minimal packages - cmake configure needs a compiler to detect, plus test deps
 sudo apt-get update
-sudo apt-get install -y cmake ninja-build postgresql-server-dev-17
+sudo apt-get install -y cmake ninja-build g++ postgresql-server-dev-17
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
