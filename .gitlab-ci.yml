@@ -310,7 +310,9 @@ detect_changes:
         esac
         echo "Using cached HAF image: ${SKIP_IMAGE_NAME}"
         # Create dotenv artifact with cached image name
+        # Include HAF_INSTANCE for mirrornet after_script compatibility
         echo "HAF_IMAGE_NAME=${SKIP_IMAGE_NAME}" > docker_image_name.env
+        echo "HAF_INSTANCE=${SKIP_IMAGE_NAME}" >> docker_image_name.env
         # Extract binaries from cached Docker image (downstream jobs need them)
         echo "Extracting binaries from cached image..."
         SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
