@@ -175,8 +175,9 @@ detect_changes:
         # 1. Skip BUILD: tests, docs, SQL (SQL doesn't affect C++ compilation)
         # 2. Skip REPLAY: only tests, docs (SQL affects replay behavior)
 
-        SKIP_BUILD_PATTERNS="^tests/|^docs/|\.sql$|^\.md$|README|CHANGELOG|LICENSE|\.txt$"
-        SKIP_REPLAY_PATTERNS="^tests/|^docs/|^\.md$|README|CHANGELOG|LICENSE|\.txt$"
+        # Note: Avoid \.txt$ as it matches CMakeLists.txt
+        SKIP_BUILD_PATTERNS="^tests/|^docs/|\.sql$|\.md$|^README|^CHANGELOG|^LICENSE"
+        SKIP_REPLAY_PATTERNS="^tests/|^docs/|\.md$|^README|^CHANGELOG|^LICENSE"
 
         NEEDS_BUILD=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_BUILD_PATTERNS" || true)
         NEEDS_REPLAY=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_REPLAY_PATTERNS" || true)
