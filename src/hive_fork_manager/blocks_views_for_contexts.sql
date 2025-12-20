@@ -118,11 +118,14 @@ BEGIN
                     hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger,
                     ROW_NUMBER() OVER (
                         PARTITION BY hafd.block_id_to_num(hb.block_id)
-                        ORDER BY hb.block_id DESC
+                        ORDER BY 
+                           (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block 
+                            AND hafd.block_id_to_fork(hb.block_id) = COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)) DESC,
+                           hb.block_id DESC
                     ) AS rn
-                FROM hafd.blocks hb, %s.context_data_view c
+                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
-                  AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id
+                  AND (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block OR hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
             ) t WHERE rn = 1
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
@@ -154,9 +157,12 @@ BEGIN
                     hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger,
                     ROW_NUMBER() OVER (
                         PARTITION BY hafd.block_id_to_num(hb.block_id)
-                        ORDER BY hb.block_id DESC
+                        ORDER BY 
+                           (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block 
+                            AND hafd.block_id_to_fork(hb.block_id) = COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)) DESC,
+                           hb.block_id DESC
                     ) AS rn
-                FROM hafd.blocks hb, %s.context_data_view c
+                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
             ) t WHERE rn = 1
             ;
@@ -209,9 +215,13 @@ BEGIN
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger,
                 ROW_NUMBER() OVER (
                     PARTITION BY hafd.block_id_to_num(hb.block_id)
-                    ORDER BY hb.block_id DESC
+                    ORDER BY 
+                       (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block 
+                        AND hafd.block_id_to_fork(hb.block_id) = COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)) DESC,
+                       hb.block_id DESC
                 ) AS rn
-            FROM hafd.blocks hb
+            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+            WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
         ) t WHERE rn = 1
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS
@@ -221,7 +231,7 @@ BEGIN
                    total_vesting_shares, total_reward_fund_hive, virtual_supply,
                    current_supply, current_hbd_supply, dhf_interval_ledger
         FROM %s.blocks_view_internal;
-        ', __schema, __schema, __schema
+        ', __schema, __schema, __schema, __schema
     );
 
     PERFORM hive.adjust_view_ownership(_context_name, 'blocks_view');
