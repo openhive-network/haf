@@ -424,7 +424,6 @@ haf_image_build_mirrornet:
   interruptible: true
   tags:
     - public-runner-docker
-    - hived
 
 hfm_functional_tests:
   extends: .hfm_functional_tests
