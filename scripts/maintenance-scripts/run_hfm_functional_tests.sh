@@ -49,7 +49,10 @@ pushd "${HAF_BUILD_DIR}"
 # The update script generator is created by cmake configure (not ninja build)
 ctest --parallel "${CTEST_NUMBER_OF_JOBS}" --output-on-failure -R test.functional.hive_fork_manager*
 ctest --parallel "${CTEST_NUMBER_OF_JOBS}" --output-on-failure -R test_update_script
-ctest --parallel "${CTEST_NUMBER_OF_JOBS}" --output-on-failure -R test.functional.update.hive_fork_manager*
+# Run update tests only on protected branches (they double test time but catch upgrade issues)
+if [[ "${CI_COMMIT_BRANCH:-}" == "develop" || "${CI_COMMIT_BRANCH:-}" == "master" ]]; then
+  ctest --parallel "${CTEST_NUMBER_OF_JOBS}" --output-on-failure -R test.functional.update.hive_fork_manager*
+fi
 ctest --output-on-failure -R test.functional.query_supervisor.*
 # Note: test.unit.* skipped - C++ tests need compiled binaries (only 4 quick tests)
 
