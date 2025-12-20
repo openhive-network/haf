@@ -259,3 +259,6 @@ def prepared_networks_and_database_12_8_from_60(database) -> Tuple[networks.Netw
     architecture.load(config)
     yield prepare_network_with_1_session(database, architecture, create_block_log_directory_name('block_log_12_8'), None)
 
+# Test change for quick-test validation
+
+# test

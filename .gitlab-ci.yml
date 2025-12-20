@@ -1,4 +1,5 @@
 stages:
+  - detect                     # detect_changes runs here to set skip variables
   - build_and_test_phase_1
   - build_and_test_phase_2
   - docker_build
@@ -14,6 +15,31 @@ variables:
   # Enable CI-specific PostgreSQL config with reduced memory (4GB shared_buffers vs 16GB)
   # This allows multiple concurrent HAF jobs on builders with limited RAM
   HAF_CI_MODE: "1"
+
+  # =============================================================================
+  # Quick Test / Auto-Skip Mode
+  # =============================================================================
+  # Two ways to skip builds and use cached replay data:
+  #
+  # 1. AUTOMATIC (recommended): When only tests/docs/SQL change, builds are
+  #    automatically skipped and cached data is used. No configuration needed.
+  #
+  # 2. MANUAL: Set QUICK_TEST=true to force skip mode with a specific cache:
+  #    - QUICK_TEST=true
+  #    - QUICK_TEST_HAF_COMMIT=<sha>  (required - find with list-haf-caches.sh)
+  #    - QUICK_TEST_HAF_IMAGE=<image> (optional - defaults to :develop)
+  #    - QUICK_TEST_JOBS=<jobs>       (optional - comma-separated extra jobs)
+  #
+  # Find available caches: ./scripts/ci-helpers/list-haf-caches.sh --recent
+  # =============================================================================
+  QUICK_TEST: "false"
+  QUICK_TEST_HAF_COMMIT: ""   # Required when QUICK_TEST=true
+  QUICK_TEST_HAF_IMAGE: ""    # Optional - defaults to registry.gitlab.syncad.com/hive/haf:develop
+  QUICK_TEST_JOBS: ""         # Optional - additional jobs to run (comma-separated)
+  # Auto-populated by detect_changes job:
+  AUTO_SKIP_BUILD: "false"    # Set to true when only tests/docs/SQL changed
+  AUTO_SKIP_REPLAY: "false"   # Set to true when only tests/docs changed (no SQL)
+  AUTO_CACHE_COMMIT: ""       # Most recent cached HAF commit
 
   GIT_STRATEGY: clone
   GIT_DEPTH: 0
@@ -79,9 +105,220 @@ verify_poetry_lock_sanity:
   tags:
     - public-runner-docker
 
+# =============================================================================
+# Change Detection & Quick Test Setup
+# =============================================================================
+# Detects if only tests/docs changed, finds cached replay data, and exports
+# all necessary variables for downstream jobs:
+#   AUTO_SKIP_BUILD  - true if build can be skipped
+#   AUTO_SKIP_REPLAY - true if replay can be skipped
+#   HAF_COMMIT       - commit SHA for cached data (when skipping)
+#   HAF_IMAGE_NAME   - HAF image to use (when skipping build)
+detect_changes:
+  extends: .job-defaults
+  stage: detect
+  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  rules:
+    # Skip for tags (always do full build for releases)
+    - if: $CI_COMMIT_TAG
+      when: never
+    - when: on_success
+  script:
+    - |
+      # Initialize defaults
+      CAN_SKIP_BUILD=false
+      CAN_SKIP_REPLAY=false
+      CACHE_COMMIT=""
+      HAF_IMG=""
+
+      # Handle manual QUICK_TEST mode
+      if [[ "$QUICK_TEST" == "true" ]]; then
+        echo "=== Manual QUICK_TEST Mode ==="
+        CAN_SKIP_BUILD=true
+        CAN_SKIP_REPLAY=true
+        CACHE_COMMIT="${QUICK_TEST_HAF_COMMIT}"
+        if [[ -z "$CACHE_COMMIT" ]]; then
+          echo "ERROR: QUICK_TEST_HAF_COMMIT must be set when QUICK_TEST=true"
+          echo ""
+          echo "Find available caches:"
+          echo "  ./scripts/ci-helpers/list-haf-caches.sh --recent"
+          exit 1
+        fi
+        # Use provided image or default to commit-specific tag
+        CACHE_SHORT="${CACHE_COMMIT:0:8}"
+        HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:$CACHE_SHORT}"
+        echo "Using cached data from: $CACHE_COMMIT"
+        echo "Using HAF image: $HAF_IMG"
+      else
+        # Automatic detection mode
+        echo "=== Detecting Changed Files ==="
+
+        # Get changed files based on pipeline type
+        if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
+          BASE_SHA="$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+          echo "MR pipeline: comparing against target branch"
+        elif [[ "${CI_PIPELINE_SOURCE:-}" == "push" ]]; then
+          BASE_SHA="HEAD~1"
+          echo "Push pipeline: comparing against previous commit"
+        else
+          BASE_SHA=$(git merge-base HEAD origin/develop 2>/dev/null || echo "HEAD~1")
+          echo "Other pipeline: comparing against develop"
+        fi
+
+        echo "Comparing $BASE_SHA to HEAD"
+        CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+
+        echo "Changed files:"
+        echo "$CHANGED_FILES" | head -50
+
+        # Two levels of skip detection:
+        # 1. Skip BUILD: tests, docs, SQL (SQL doesn't affect C++ compilation)
+        # 2. Skip REPLAY: only tests, docs (SQL affects replay behavior)
+
+        SKIP_BUILD_PATTERNS="^tests/|^docs/|\.sql$|^\.md$|README|CHANGELOG|LICENSE|\.txt$"
+        SKIP_REPLAY_PATTERNS="^tests/|^docs/|^\.md$|README|CHANGELOG|LICENSE|\.txt$"
+
+        NEEDS_BUILD=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_BUILD_PATTERNS" || true)
+        NEEDS_REPLAY=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_REPLAY_PATTERNS" || true)
+
+        if [[ -z "$NEEDS_BUILD" ]]; then
+          CAN_SKIP_BUILD=true
+          echo ""
+          echo "=== Can skip build (only tests/docs/SQL changed) ==="
+        fi
+
+        if [[ -z "$NEEDS_REPLAY" ]]; then
+          CAN_SKIP_REPLAY=true
+          echo "=== Can skip replay (only tests/docs changed, no SQL) ==="
+        elif [[ "$CAN_SKIP_BUILD" == "true" ]]; then
+          echo "=== SQL changed - can skip build but must replay ==="
+          echo "SQL files changed:"
+          echo "$NEEDS_REPLAY" | grep '\.sql$' | head -10
+        fi
+
+        # Find cached data/images when we can skip something
+        # Docker login for image verification
+        echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY" 2>/dev/null || true
+
+        NFS_CACHE_PATH="/nfs/ci-cache/haf"
+        if [[ -d "$NFS_CACHE_PATH" ]]; then
+          # Look through recent cache files to find one with valid Docker images
+          for TAR in $(ls -t "$NFS_CACHE_PATH"/*.tar 2>/dev/null | head -5); do
+            TEST_COMMIT=$(basename "$TAR" .tar)
+            CACHE_SHORT="${TEST_COMMIT:0:8}"
+
+            # Verify Docker images exist for all network types
+            IMAGES_EXIST=true
+            for NETWORK in "" "/testnet" "/mirrornet"; do
+              IMG="registry.gitlab.syncad.com/hive/haf${NETWORK}:${CACHE_SHORT}"
+              if ! docker manifest inspect "$IMG" >/dev/null 2>&1; then
+                echo "Image not found: $IMG"
+                IMAGES_EXIST=false
+                break
+              fi
+            done
+
+            if [[ "$IMAGES_EXIST" == "true" ]]; then
+              CACHE_COMMIT="$TEST_COMMIT"
+              echo "Found cached data with valid images: $CACHE_COMMIT"
+              break
+            else
+              echo "Cache $TEST_COMMIT missing Docker images, trying next..."
+            fi
+          done
+        fi
+
+        # For replay skip, we need cached data with images
+        if [[ "$CAN_SKIP_REPLAY" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
+          echo "WARNING: No cached data with valid images found - cannot skip replay"
+          CAN_SKIP_REPLAY=false
+        fi
+
+        # For build skip, we need a cached commit with valid Docker images
+        if [[ "$CAN_SKIP_BUILD" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
+          echo "WARNING: No cached data with valid images found - cannot skip build"
+          CAN_SKIP_BUILD=false
+        fi
+
+        if [[ "$CAN_SKIP_BUILD" == "false" ]]; then
+          echo ""
+          echo "=== Full build required ==="
+          echo "Files requiring build:"
+          echo "$NEEDS_BUILD" | head -20
+        fi
+      fi
+
+      # Export results
+      echo "AUTO_SKIP_BUILD=$CAN_SKIP_BUILD" >> detect_changes.env
+      echo "AUTO_SKIP_REPLAY=$CAN_SKIP_REPLAY" >> detect_changes.env
+
+      # Export HAF_COMMIT and HAF_IMAGE_NAME when skipping build
+      # Note: CAN_SKIP_BUILD is only true if CACHE_COMMIT was found (validated above)
+      if [[ "$CAN_SKIP_BUILD" == "true" ]]; then
+        echo "HAF_COMMIT=$CACHE_COMMIT" >> detect_changes.env
+        # Use image tag based on cache commit (first 8 chars)
+        CACHE_SHORT="${CACHE_COMMIT:0:8}"
+        HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:$CACHE_SHORT}"
+        echo "HAF_IMAGE_NAME=$HAF_IMG" >> detect_changes.env
+      fi
+
+      echo ""
+      echo "=== Summary ==="
+      cat detect_changes.env
+  artifacts:
+    reports:
+      dotenv: detect_changes.env
+    expire_in: 1 day
+  tags:
+    - data-cache-storage  # Needs NFS access to find caches
+
 .haf_image_build:
   extends: .prepare_haf_image
   stage: build_and_test_phase_1
+  needs:
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Optional for tagged builds where detect_changes is skipped
+  rules:
+    # Skip in manual QUICK_TEST mode (known at pipeline creation)
+    - if: $QUICK_TEST == "true"
+      when: never
+    - when: on_success
+  before_script:
+    # Fix git safe.directory issue on some runners (CVE-2022-24765)
+    - git config --global --add safe.directory '*'
+    # Early exit if AUTO_SKIP_BUILD is true (from detect_changes dotenv)
+    # This allows us to skip the expensive build while still producing required artifacts
+    - |
+      if [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
+        echo "=== Skipping build (AUTO_SKIP_BUILD=true) ==="
+        # Derive the correct image name based on network type
+        # HAF_COMMIT comes from detect_changes dotenv
+        CACHE_SHORT="${HAF_COMMIT:0:8}"
+        case "${HIVE_NETWORK_TYPE:-mainnet}" in
+          testnet)
+            SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf/testnet:${CACHE_SHORT}"
+            ;;
+          mirrornet)
+            SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf/mirrornet:${CACHE_SHORT}"
+            ;;
+          *)
+            # For mainnet, use HAF_IMAGE_NAME from detect_changes (already correct)
+            SKIP_IMAGE_NAME="${HAF_IMAGE_NAME:-registry.gitlab.syncad.com/hive/haf:develop}"
+            ;;
+        esac
+        echo "Using cached HAF image: ${SKIP_IMAGE_NAME}"
+        # Create dotenv artifact with cached image name
+        echo "HAF_IMAGE_NAME=${SKIP_IMAGE_NAME}" > docker_image_name.env
+        # Extract binaries from cached Docker image (downstream jobs need them)
+        echo "Extracting binaries from cached image..."
+        SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
+        "$SCRIPTS_PATH/ci-helpers/export-data-from-docker-image.sh" "${SKIP_IMAGE_NAME}" "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+        chmod -Rc a+rwx "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+        ls -la "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/"
+        echo "Build skipped - binaries extracted from cached image"
+        exit 0
+      fi
   tags:
     - public-runner-docker
 
@@ -169,6 +406,14 @@ haf_image_build_mirrornet:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
+    # Skip in quick-test mode - this test validates extension upgrades and requires
+    # freshly built extensions with matching version numbers (cached images won't work)
+    - |
+      if [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
+        echo "Skipping hfm_functional_tests in quick-test mode"
+        echo "This test requires freshly built extensions with matching version numbers"
+        exit 0
+      fi
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
   artifacts:
     paths:
@@ -739,6 +984,10 @@ prepare_haf_data:
   needs:
     - job: haf_image_build
       artifacts: true
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Skipped for tagged builds
   stage: build_and_test_phase_1
   timeout: 80m
   variables:
@@ -756,7 +1005,11 @@ replay_data_copy:
   stage: build_and_test_phase_1
   needs:
     - prepare_haf_data
-    - haf_image_build
+    - job: haf_image_build
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Skipped for tagged builds
   variables:
     SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   script:
@@ -803,6 +1056,10 @@ dead_app_auto_detach:
     - job: replay_data_copy
     - job: haf_image_build
       artifacts: true
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Skipped for tagged builds
   services:
     - name: $HAF_IMAGE_NAME
       alias: haf-instance
@@ -839,6 +1096,10 @@ start_haf_as_service:
     - job: replay_data_copy
     - job: haf_image_build
       artifacts: true
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Skipped for tagged builds
   services:
     - *haf-service
   variables:
