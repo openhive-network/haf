@@ -24,6 +24,10 @@ HAF_BUILD_DIR="/home/haf_admin/build"
 
 mkdir -p "${HAF_BUILD_DIR}"
 
+# Fix git "dubious ownership" error - CI dir owned by different user
+git config --global --add safe.directory "${HAF_SOURCE_DIR}"
+git config --global --add safe.directory "${HAF_SOURCE_DIR}/hive"
+
 # Configure only - no build needed for functional tests
 # The HAF extension is pre-installed in the Docker image
 pushd "${HAF_BUILD_DIR}"
