@@ -409,12 +409,22 @@ haf_image_build_mirrornet:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
-    # Skip in quick-test mode - this test validates extension upgrades and requires
-    # freshly built extensions with matching version numbers (cached images won't work)
+    # Skip when image commit doesn't match source commit - this test validates extension
+    # upgrades and requires the image and source to be from the same commit.
+    # This happens in quick-test mode OR when only CI config changed (image reused).
     - |
       if [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
-        echo "Skipping hfm_functional_tests in quick-test mode"
-        echo "This test requires freshly built extensions with matching version numbers"
+        echo "Skipping hfm_functional_tests - AUTO_SKIP_BUILD=true"
+        exit 0
+      fi
+      # Extract commit from image tag (e.g., registry.gitlab.syncad.com/hive/haf:756d1886)
+      IMAGE_COMMIT="${HAF_IMAGE_NAME##*:}"
+      SOURCE_COMMIT="${CI_COMMIT_SHORT_SHA}"
+      if [[ "$IMAGE_COMMIT" != "$SOURCE_COMMIT" ]]; then
+        echo "Skipping hfm_functional_tests - image/source commit mismatch"
+        echo "  Image commit:  $IMAGE_COMMIT (from $HAF_IMAGE_NAME)"
+        echo "  Source commit: $SOURCE_COMMIT"
+        echo "This test requires image and source from the same commit."
         exit 0
       fi
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
