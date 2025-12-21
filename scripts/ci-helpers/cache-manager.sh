@@ -246,9 +246,10 @@ _update_lru() {
     local entry="${cache_type}/${cache_key}"
 
     # Acquire NFS-safe global lock for index update
+    # Use 120s timeout to handle NFS latency under load
     local global_lock_dir="${CACHE_NFS_PATH}/.global_lock.d"
-    if ! _nfs_lock "$global_lock_dir" 30; then
-        _error "Failed to acquire global lock for LRU update"
+    if ! _nfs_lock "$global_lock_dir" 120; then
+        _log "Warning: Failed to acquire global lock for LRU update (cache still stored)"
         return 1
     fi
 
@@ -581,7 +582,7 @@ cmd_get() {
         _restore_pgdata_permissions "$local_dest"
     fi
 
-    _update_lru "$cache_type" "$cache_key"
+    _update_lru "$cache_type" "$cache_key" || true
     return 0
 }
 
@@ -611,7 +612,7 @@ cmd_put() {
         # Check if already exists
         if [[ -d "$NFS_CACHE_DIR" && -f "$METADATA_FILE" ]]; then
             _log "Cache already exists on NFS host, updating timestamp"
-            _update_lru "$cache_type" "$cache_key"
+            _update_lru "$cache_type" "$cache_key" || true
             return 0
         fi
 
@@ -643,7 +644,7 @@ cmd_put() {
         fi
 
         _write_metadata "$cache_type" "$cache_key" "$NFS_CACHE_DIR"
-        _update_lru "$cache_type" "$cache_key"
+        _update_lru "$cache_type" "$cache_key" || true
         _log "Cache stored successfully on NFS host"
         _maybe_cleanup &
         return 0
@@ -668,7 +669,7 @@ cmd_put() {
     local NFS_TAR_FILE="${NFS_CACHE_DIR}.tar"
     if [[ -f "$NFS_TAR_FILE" ]] || { [[ -d "$NFS_CACHE_DIR" ]] && [[ -f "$METADATA_FILE" ]]; }; then
         _log "Cache already exists on NFS, updating timestamp"
-        _update_lru "$cache_type" "$cache_key"
+        _update_lru "$cache_type" "$cache_key" || true
         return 0
     fi
 
@@ -734,7 +735,7 @@ cmd_put() {
         _log "Created local cache symlink: $LOCAL_CACHE_DIR -> $local_source"
     fi
 
-    _update_lru "$cache_type" "$cache_key"
+    _update_lru "$cache_type" "$cache_key" || true
     _log "Cache stored successfully (tar archive)"
 
     # Trigger async cleanup check
