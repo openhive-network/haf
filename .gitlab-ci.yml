@@ -90,7 +90,11 @@ include:
     echo "Destination: ${PIPELINE_DATA_CACHE_LOCAL}"
 
     # cache-manager handles cleanup, extraction, and permission restoration
-    "$CACHE_MANAGER" get "${PIPELINE_CACHE_TYPE}" "${PIPELINE_CACHE_KEY}" "${PIPELINE_DATA_CACHE_LOCAL}"
+    if ! "$CACHE_MANAGER" get "${PIPELINE_CACHE_TYPE}" "${PIPELINE_CACHE_KEY}" "${PIPELINE_DATA_CACHE_LOCAL}"; then
+      echo "WARNING: No pipeline cache available - skipping this job"
+      echo -e "\e[0Ksection_end:$(date +%s):copy_data\r\e[0K"
+      exit 0
+    fi
 
     echo "Pipeline data fetch complete."
     ls -la "$PIPELINE_DATA_CACHE_LOCAL/datadir/"
@@ -1032,12 +1036,14 @@ replay_data_copy:
         if "$CACHE_MANAGER" get haf "${HAF_COMMIT:?}" "$LOCAL_CACHE"; then
           DATA_SOURCE="$LOCAL_CACHE"
         else
-          echo "ERROR: Failed to get cache for HAF commit ${HAF_COMMIT:?}"
-          exit 1
+          echo "WARNING: No cache found for HAF commit ${HAF_COMMIT:?}"
+          echo "Skipping - downstream jobs that need replay data will also be skipped"
+          exit 0
         fi
       else
-        echo "ERROR: No local cache and cache-manager not available"
-        exit 1
+        echo "WARNING: No local cache and cache-manager not available"
+        echo "Skipping - downstream jobs that need replay data will also be skipped"
+        exit 0
       fi
 
       # Store pipeline data via cache-manager (creates tar on NFS)
