@@ -1,6 +1,6 @@
 include:
 - project: 'hive/hive'
-  ref: ae82e79b0eb5b2bf8cdc66c0ee253c95ab7e9718   #develop
+  ref: d08a16c3f5a60f9ab5d2d0554f20848d0f0f8256   #develop
   file: '/scripts/ci-helpers/prepare_data_image_job.yml'
 - local: '/scripts/ci-helpers/ci_image_tag_vars.yml'
 
