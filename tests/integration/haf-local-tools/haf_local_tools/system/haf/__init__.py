@@ -48,7 +48,7 @@ def connect_nodes(seed_node: tt.RawNode, peer_node: tt.RawNode) -> None:
     """
     This place have to be removed after solving issue https://gitlab.syncad.com/hive/test-tools/-/issues/10
     """
-    peer_node.config.p2p_seed_node = seed_node.p2p_endpoint.as_string()
+    peer_node.config.p2p_seed_node.append(seed_node.p2p_endpoint)
 
 
 def prepare_and_send_transactions(node: tt.InitNode) -> [dict, dict]:
