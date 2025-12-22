@@ -531,7 +531,20 @@ hfm_functional_tests_testnet:
       echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
       python3 -m venv --system-site-packages venv/
       . venv/bin/activate
-      (cd $CI_PROJECT_DIR/tests/integration/haf-local-tools && poetry install)
+      # Retry poetry install up to 3 times (transient network failures downloading packages)
+      poetry_success=false
+      for attempt in 1 2 3; do
+        if (cd $CI_PROJECT_DIR/tests/integration/haf-local-tools && poetry install); then
+          poetry_success=true
+          break
+        fi
+        echo "Poetry install attempt $attempt failed, retrying in 5s..."
+        sleep 5
+      done
+      if [ "$poetry_success" != "true" ]; then
+        echo "ERROR: Poetry install failed after 3 attempts"
+        exit 1
+      fi
       echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
 haf_system_tests:
