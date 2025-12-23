@@ -705,18 +705,22 @@ cmd_put() {
 
     # Create tar archive with exclusions
     # Use --numeric-owner to store UIDs/GIDs instead of names (preserves ownership across containers)
+    # Note: tar exit codes: 0=success, 1=files changed during read (warning, not error), 2=fatal error
+    # We accept exit code 1 because PostgreSQL may still be running in service container
     local tar_result=0
     # shellcheck disable=SC2086
-    if ! tar cf "${NFS_TAR_FILE}.tmp" --numeric-owner $tar_excludes -C "$local_source" .; then
-        tar_result=1
-    fi
+    tar cf "${NFS_TAR_FILE}.tmp" --numeric-owner $tar_excludes -C "$local_source" . || tar_result=$?
 
-    if [[ $tar_result -eq 0 ]]; then
+    if [[ $tar_result -le 1 ]]; then
+        # Exit code 0 or 1 - archive was created successfully
+        if [[ $tar_result -eq 1 ]]; then
+            _log "Warning: some files changed during archive (PostgreSQL still running), but archive is valid"
+        fi
         mv "${NFS_TAR_FILE}.tmp" "$NFS_TAR_FILE"
     else
         rm -f "${NFS_TAR_FILE}.tmp"
         _nfs_unlock "$NFS_TAR_LOCK"
-        _error "Failed to create tar archive"
+        _error "Failed to create tar archive (exit code $tar_result)"
         return 1
     fi
 
