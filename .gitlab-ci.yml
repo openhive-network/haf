@@ -640,8 +640,9 @@ haf_system_tests_mirrornet:
     # This cp and call to compress_block_log is to keep backcompatibility with pipelines on master branch (where still 1.27.X line is present until next HF will apply),
     # where nodes does not support new format of block_log.artifacts file;
     # Issue: https://gitlab.syncad.com/hive/haf/-/issues/151
-    # copy block_log to tmp location
+    # copy block_log to tmp location (source is read-only, so fix permissions after copy)
     - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
+    - chmod 644 $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log/block_log
     # copy block_log and generate new artifacts with compress_block_log util
     - time $COMPRESS_BLOCK_LOG_PATH --input-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log/block_log --output-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --decompress
     # drop tmp location
