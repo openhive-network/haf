@@ -58,6 +58,76 @@ def pytest_runtest_protocol(item, nextitem):
     _print_test_timing(item.name, elapsed)
 
 
+def _find_node_logs(test_dir: Path) -> list[tuple[str, Path]]:
+    """Find all node log files in a test directory."""
+    logs = []
+    if test_dir.exists():
+        for log_file in test_dir.rglob("latest.log"):
+            node_name = log_file.parent.name
+            logs.append((node_name, log_file))
+    return logs
+
+
+def _print_node_logs_on_failure(item, call):
+    """Print hived logs when a test fails for debugging."""
+    # Only print on actual test call failures (not setup/teardown)
+    if call.when != "call" or call.excinfo is None:
+        return
+
+    # Find the test's generated directory
+    # Test directories follow pattern: generated_during_<test_file>/<test_name>/
+    test_file = Path(item.fspath).stem  # e.g., test_p2p_sync_in_mirrornet
+    generated_base = Path(item.fspath).parent / f"generated_during_{test_file}"
+
+    # Handle parametrized tests - test name might include parameters
+    test_name = item.name
+    # Convert test_name like "test_p2p_sync[disabled_indexes]" to directory pattern
+    # The directory uses "with_parameters_" prefix for parametrized tests
+    if "[" in test_name:
+        base_name = test_name.split("[")[0]
+        param_part = test_name.split("[")[1].rstrip("]")
+        test_dir_name = f"{base_name}_with_parameters_{param_part}"
+    else:
+        test_dir_name = test_name
+
+    test_dir = generated_base / test_dir_name
+
+    logs = _find_node_logs(test_dir)
+    if not logs:
+        tt.logger.warning(f"No node logs found in {test_dir}")
+        return
+
+    tt.logger.info(f"\n{'='*60}")
+    tt.logger.info(f"HIVED LOGS FOR FAILED TEST: {test_name}")
+    tt.logger.info(f"{'='*60}")
+
+    for node_name, log_file in logs:
+        tt.logger.info(f"\n--- {node_name} ({log_file}) ---")
+        try:
+            content = log_file.read_text()
+            # Print last 200 lines to avoid overwhelming output
+            lines = content.splitlines()
+            if len(lines) > 200:
+                tt.logger.info(f"[...truncated, showing last 200 of {len(lines)} lines...]")
+                lines = lines[-200:]
+            for line in lines:
+                tt.logger.info(line)
+        except Exception as e:
+            tt.logger.warning(f"Failed to read log: {e}")
+
+    tt.logger.info(f"{'='*60}\n")
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Hook to print node logs when a test fails."""
+    outcome = yield
+    report = outcome.get_result()
+
+    if report.failed:
+        _print_node_logs_on_failure(item, call)
+
+
 def pytest_addoption(parser):
     parser.addoption("--block-log-dir-path", action="store", type=str, help="specifies path of block_log")
     parser.addoption("--snapshot-path", action="store", type=str, help="specifies path of snapshot")

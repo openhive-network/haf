@@ -147,11 +147,14 @@ default:
             echo "pre_get_sources: syncing HAF-level submodule URLs"
             git submodule sync 2>/dev/null || true
 
-            # If hive submodule version mismatch could cause issues, clean it
-            # This forces GitLab to clone hive fresh, which properly resolves relative URLs
+            # Only clean hive if nested submodules have broken file:// URLs
+            # This happens when cached hive version differs from needed version and
+            # relative URLs (../test-tools.git) resolve incorrectly
             if [ -d "hive/.git" ] || [ -f "hive/.git" ]; then
-              echo "pre_get_sources: cleaning hive submodule to force fresh clone"
-              rm -rf hive .git/modules/hive 2>/dev/null || true
+              if git -C hive config --get-regexp 'submodule\..*\.url' 2>/dev/null | grep -q 'file://'; then
+                echo "pre_get_sources: cleaning hive due to stale file:// submodule URLs"
+                rm -rf hive .git/modules/hive 2>/dev/null || true
+              fi
             fi
 
             echo "pre_get_sources: existing repo OK"
