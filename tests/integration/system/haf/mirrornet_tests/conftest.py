@@ -39,14 +39,13 @@ def pytest_configure(config):
 
 def _print_test_timing(test_name: str, total_time: float):
     """Print timing report for a single test immediately after completion."""
-    print(f"\n{'='*60}")
-    print(f"TIMING: {test_name}")
-    print(f"{'='*60}")
+    tt.logger.info(f"{'='*60}")
+    tt.logger.info(f"TIMING: {test_name}")
     if test_name in _test_timing:
         for step, duration in _test_timing[test_name]:
-            print(f"  {step}: {duration}")
-    print(f"  TOTAL: {total_time:.2f}s")
-    print(f"{'='*60}\n")
+            tt.logger.info(f"  {step}: {duration}")
+    tt.logger.info(f"  TOTAL: {total_time:.2f}s")
+    tt.logger.info(f"{'='*60}")
 
 
 # Timing instrumentation for mirrornet tests
