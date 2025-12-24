@@ -38,7 +38,7 @@ print_help () {
 HIVED_ACCOUNT="hived"
 HIVED_DATADIR=""
 HIVED_ARGS=() # Set of options to be directly passed to the spawned hived.
-HIVED_SHARED_MEM_FILE_SIZE=24G
+HIVED_SHARED_MEM_FILE_SIZE=8G
 
 HAF_DB_NAME="haf_block_log"
 HAF_ADMIN_ACCOUNT="haf_admin"
