@@ -13,9 +13,17 @@ from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_
 # Shared timing file for collecting step-by-step timing from parallel workers
 TIMING_FILE = Path(tempfile.gettempdir()) / "mirrornet_timing.log"
 
+# Store timing data per test (keyed by test name)
+_test_timing = {}
+
 
 def log_timing(test_name: str, step: str, duration: float):
-    """Log timing to shared file (thread/process safe)."""
+    """Log timing step for a test. Will be printed when test completes."""
+    if test_name not in _test_timing:
+        _test_timing[test_name] = []
+    _test_timing[test_name].append((step, f"{duration:.2f}s"))
+
+    # Also write to shared file for cross-worker collection
     line = f"{test_name}|{step}|{duration:.2f}s\n"
     with open(TIMING_FILE, "a") as f:
         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
@@ -29,45 +37,26 @@ def pytest_configure(config):
         TIMING_FILE.unlink()
 
 
-def pytest_sessionfinish(session, exitstatus):
-    """Print collected timing data at end of test session."""
-    if not TIMING_FILE.exists():
-        return
-
-    print("\n" + "=" * 70)
-    print("MIRRORNET TEST TIMING REPORT")
-    print("=" * 70)
-
-    # Group timing by test
-    timing_data = {}
-    with open(TIMING_FILE) as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            parts = line.split("|")
-            if len(parts) == 3:
-                test_name, step, duration = parts
-                if test_name not in timing_data:
-                    timing_data[test_name] = []
-                timing_data[test_name].append((step, duration))
-
-    for test_name in sorted(timing_data.keys()):
-        print(f"\n{test_name}:")
-        for step, duration in timing_data[test_name]:
+def _print_test_timing(test_name: str, total_time: float):
+    """Print timing report for a single test immediately after completion."""
+    print(f"\n{'='*60}")
+    print(f"TIMING: {test_name}")
+    print(f"{'='*60}")
+    if test_name in _test_timing:
+        for step, duration in _test_timing[test_name]:
             print(f"  {step}: {duration}")
-
-    print("\n" + "=" * 70)
+    print(f"  TOTAL: {total_time:.2f}s")
+    print(f"{'='*60}\n")
 
 
 # Timing instrumentation for mirrornet tests
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_protocol(item, nextitem):
-    """Log timing for each test phase."""
+    """Log timing for each test and print report immediately after."""
     start = time.time()
     yield
     elapsed = time.time() - start
-    log_timing(item.name, "TOTAL", elapsed)
+    _print_test_timing(item.name, elapsed)
 
 
 def pytest_addoption(parser):
