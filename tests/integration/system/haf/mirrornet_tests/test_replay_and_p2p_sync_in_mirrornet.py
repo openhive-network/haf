@@ -1,7 +1,15 @@
+import sys
 import time
 import pytest
 
 import test_tools as tt
+
+
+def log_timing(msg):
+    """Write timing to stderr to bypass pytest capture."""
+    sys.stderr.write(f"{msg}\n")
+    sys.stderr.flush()
+
 
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.system.haf import (
@@ -39,7 +47,7 @@ def test_replay_and_p2p_sync(
 
     step_start = time.time()
     block_log_4_5m = block_log_5m.truncate(tmp_path, 4500000)
-    print(f"[TIMING] block_log truncate: {time.time() - step_start:.2f}s", flush=True)
+    log_timing(f"[TIMING] block_log truncate: {time.time() - step_start:.2f}s")
 
     apply_block_log_type_to_monolithic_workaround(mirrornet_witness_node)
 
@@ -51,13 +59,13 @@ def test_replay_and_p2p_sync(
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],
     )
-    print(f"[TIMING] witness_node.run (with snapshot): {time.time() - step_start:.2f}s", flush=True)
+    log_timing(f"[TIMING] witness_node.run (with snapshot): {time.time() - step_start:.2f}s")
 
     head_block_time = mirrornet_witness_node.get_head_block_time()
 
     step_start = time.time()
     connect_nodes(mirrornet_witness_node, haf_node)
-    print(f"[TIMING] connect_nodes: {time.time() - step_start:.2f}s", flush=True)
+    log_timing(f"[TIMING] connect_nodes: {time.time() - step_start:.2f}s")
 
     step_start = time.time()
     haf_node.run(
@@ -67,7 +75,7 @@ def test_replay_and_p2p_sync(
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID],
     )
-    print(f"[TIMING] haf_node.run (replay + sync): {time.time() - step_start:.2f}s", flush=True)
+    log_timing(f"[TIMING] haf_node.run (replay + sync): {time.time() - step_start:.2f}s")
 
     step_start = time.time()
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_1092_BLOCK)
@@ -75,14 +83,14 @@ def test_replay_and_p2p_sync(
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_4500000_BLOCK)
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_4500001_BLOCK)
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_5000000_BLOCK)
-    print(f"[TIMING] transaction assertions: {time.time() - step_start:.2f}s", flush=True)
+    log_timing(f"[TIMING] transaction assertions: {time.time() - step_start:.2f}s")
 
     step_start = time.time()
     assert_are_blocks_sync_with_haf_db(haf_node, 5000000)
-    print(f"[TIMING] assert_are_blocks_sync_with_haf_db: {time.time() - step_start:.2f}s", flush=True)
+    log_timing(f"[TIMING] assert_are_blocks_sync_with_haf_db: {time.time() - step_start:.2f}s")
 
     step_start = time.time()
     assert_are_indexes_restored(haf_node)
-    print(f"[TIMING] assert_are_indexes_restored: {time.time() - step_start:.2f}s", flush=True)
+    log_timing(f"[TIMING] assert_are_indexes_restored: {time.time() - step_start:.2f}s")
 
-    print(f"[TIMING] TOTAL test_replay_and_p2p_sync: {time.time() - test_start:.2f}s", flush=True)
+    log_timing(f"[TIMING] TOTAL test_replay_and_p2p_sync: {time.time() - test_start:.2f}s")
