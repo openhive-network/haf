@@ -147,12 +147,19 @@ default:
             echo "pre_get_sources: syncing HAF-level submodule URLs"
             git submodule sync 2>/dev/null || true
 
-            # Only clean hive if nested submodules have broken file:// URLs
-            # This happens when cached hive version differs from needed version and
-            # relative URLs (../test-tools.git) resolve incorrectly
+            # Check hive submodule health - relative URLs like ../test-tools.git
+            # resolve based on origin URL. If origin is missing/wrong, they become file://
             if [ -d "hive/.git" ] || [ -f "hive/.git" ]; then
-              if git -C hive config --get-regexp 'submodule\..*\.url' 2>/dev/null | grep -q 'file://'; then
-                echo "pre_get_sources: cleaning hive due to stale file:// submodule URLs"
+              HIVE_ORIGIN=$(git -C hive remote get-url origin 2>/dev/null || echo "NONE")
+              echo "pre_get_sources: hive origin = $HIVE_ORIGIN"
+
+              # Check if origin is valid HTTPS/SSH URL (not file://, not empty, not NONE)
+              if echo "$HIVE_ORIGIN" | grep -qE '^(https://|git@)'; then
+                echo "pre_get_sources: hive origin looks valid"
+                # Also sync hive's nested submodule URLs
+                git -C hive submodule sync 2>/dev/null || true
+              else
+                echo "pre_get_sources: hive origin invalid/missing, cleaning to force fresh clone"
                 rm -rf hive .git/modules/hive 2>/dev/null || true
               fi
             fi
