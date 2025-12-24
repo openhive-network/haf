@@ -147,19 +147,22 @@ default:
             echo "pre_get_sources: syncing HAF-level submodule URLs"
             git submodule sync 2>/dev/null || true
 
-            # Fix hive's origin URL and explicitly sync its nested submodules
+            # Fix hive's origin URL and initialize missing submodules
+            # The test_tools submodule may not be initialized in cached workspaces
             if [ -d "hive/.git" ] || [ -f "hive/.git" ]; then
-              # Debug: check if hive submodule git is accessible
-              echo "pre_get_sources: hive/.git type: $(file hive/.git 2>/dev/null || echo 'N/A')"
-              echo "pre_get_sources: hive remotes: $(git -C hive remote -v 2>&1 || echo 'ERROR')"
-              echo "pre_get_sources: hive git dir: $(git -C hive rev-parse --git-dir 2>&1 || echo 'ERROR')"
-              # Try to fix origin URL (will add remote if doesn't exist)
-              echo "pre_get_sources: adding/fixing hive origin URL"
+              # Ensure hive has origin remote set correctly
               git -C hive remote remove origin 2>/dev/null || true
               git -C hive remote add origin https://gitlab.syncad.com/hive/hive.git 2>/dev/null || true
-              echo "pre_get_sources: hive origin AFTER fix: $(git -C hive remote get-url origin 2>&1 || echo 'ERROR')"
-              echo "pre_get_sources: syncing hive nested submodule URLs"
-              git -C hive submodule sync --recursive 2>&1 | head -10 || true
+              echo "pre_get_sources: hive origin set to $(git -C hive remote get-url origin 2>/dev/null || echo 'ERROR')"
+
+              # Initialize and sync all submodules inside hive
+              # This ensures test_tools gets the correct URL before GitLab tries to fetch it
+              echo "pre_get_sources: initializing and syncing hive submodules"
+              git -C hive submodule init 2>&1 | head -5 || true
+              git -C hive submodule sync --recursive 2>&1 | head -5 || true
+
+              # Debug: show what URL test_tools has now
+              echo "pre_get_sources: test_tools URL in hive config: $(git -C hive config --get submodule.test_tools.url 2>/dev/null || echo 'not set')"
             fi
 
             echo "pre_get_sources: existing repo OK"
