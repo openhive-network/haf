@@ -10,10 +10,8 @@ from haf_local_tools.system.haf.mirrornet.constants import (
 )
 
 from sqlalchemy.pool import NullPool
-from sqlalchemy import (
-  create_engine
-  ,text
-  )
+from sqlalchemy import create_engine, text
+
 
 def execute_sql_query(dbUrl, _query):
     engine = create_engine(dbUrl, echo=True, poolclass=NullPool)
@@ -22,38 +20,40 @@ def execute_sql_query(dbUrl, _query):
         query = text(_query)
         con.execute(query)
 
+
 def execute_sql_script(dbUrl, filePath):
     with open(filePath) as file:
         query = file.read()
         execute_sql_query(dbUrl, query)
 
+
 WITNESSES_1M: list[str] = [
-  "datasecuritynode",
-  "steempty",
-  "silversteem",
-  "abit",
-  "jabbasteem",
-  "hr402",
-  "pharesim",
-  "kushed",
-  "smooth.witness",
-  "dele-puppy",
-  "steemed",
-  "nextgencrypto",
-  "clayop",
-  "arhag",
-  "witness.svk",
-  "bhuz",
-  "roadscape",
-  "au1nethyb1",
-  "complexring",
-  "xeldal",
-  "steemychicken1"
+    "datasecuritynode",
+    "steempty",
+    "silversteem",
+    "abit",
+    "jabbasteem",
+    "hr402",
+    "pharesim",
+    "kushed",
+    "smooth.witness",
+    "dele-puppy",
+    "steemed",
+    "nextgencrypto",
+    "clayop",
+    "arhag",
+    "witness.svk",
+    "bhuz",
+    "roadscape",
+    "au1nethyb1",
+    "complexring",
+    "xeldal",
+    "steemychicken1",
 ]
+
 
 @pytest.mark.mirrornet
 def test_app_autodetach(witness_node_with_haf, block_log_5m, tmp_path):
-
     block_log_1m = block_log_5m.truncate(tmp_path, 1000000)
 
     witness_node_with_haf.config.witness = WITNESSES_1M
@@ -68,8 +68,8 @@ def test_app_autodetach(witness_node_with_haf, block_log_5m, tmp_path):
 
     haf_node = witness_node_with_haf
 
-    adminUrl=appUrl=haf_node.session.bind.url.set(username="haf_admin")
-    appUrl=haf_node.session.bind.url.set(username="test_app_owner")
+    adminUrl = appUrl = haf_node.session.bind.url.set(username="haf_admin")
+    appUrl = haf_node.session.bind.url.set(username="test_app_owner")
 
     tt.logger.info(f"Working on database connection: {haf_node.session.bind.url=}, {adminUrl=}")
     tt.logger.info(f"appUrl connection: {appUrl=}")
@@ -84,7 +84,9 @@ def test_app_autodetach(witness_node_with_haf, block_log_5m, tmp_path):
 
     execute_sql_query(appUrl, "CALL test.scenario1_prepare('03:59:00'::interval);")
 
-    awaited_block_count = 20+10 # 1 min is a threshold when auto detach should happen, next 10 blocks for potential shifts
+    awaited_block_count = (
+        20 + 10
+    )  # 1 min is a threshold when auto detach should happen, next 10 blocks for potential shifts
 
     tt.logger.info(f"Waiting for next {awaited_block_count} blocks...")
 

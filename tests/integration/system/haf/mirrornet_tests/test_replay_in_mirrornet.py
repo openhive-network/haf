@@ -28,7 +28,6 @@ from haf_local_tools.system.haf.mirrornet.constants import (
     ],
 )
 def test_replay(witness_node_with_haf, block_log_5m, psql_index_threshold):
-
     witness_node_with_haf.config.psql_index_threshold = psql_index_threshold
 
     apply_block_log_type_to_monolithic_workaround(witness_node_with_haf)
