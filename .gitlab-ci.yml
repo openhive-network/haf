@@ -154,9 +154,19 @@ default:
               git -C hive remote set-url origin https://gitlab.syncad.com/hive/hive.git 2>/dev/null || true
               echo "pre_get_sources: syncing hive nested submodule URLs"
               git -C hive submodule sync --recursive 2>/dev/null || true
-              # Debug: show what URL test-tools has now
-              echo "pre_get_sources: test-tools URL after sync:"
-              git -C hive config --get submodule.test_tools.url 2>/dev/null || echo "(not in hive's config)"
+              # Debug: show where test-tools URL is stored
+              echo "pre_get_sources: checking test-tools URL locations:"
+              echo "  submodule.test_tools.url: $(git -C hive config --get submodule.test_tools.url 2>/dev/null || echo 'N/A')"
+              # For already-initialized submodules, URL is in the module's remote.origin.url
+              if [ -d ".git/modules/hive/modules" ]; then
+                echo "  modules dir exists, checking test_tools:"
+                ls -la .git/modules/hive/modules/ 2>/dev/null | head -5
+                if [ -f ".git/modules/hive/modules/test_tools/config" ]; then
+                  echo "  test_tools origin URL: $(git config -f .git/modules/hive/modules/test_tools/config --get remote.origin.url 2>/dev/null || echo 'N/A')"
+                fi
+              else
+                echo "  .git/modules/hive/modules/ does not exist"
+              fi
             fi
 
             echo "pre_get_sources: existing repo OK"
