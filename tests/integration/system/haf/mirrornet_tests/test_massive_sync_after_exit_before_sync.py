@@ -16,8 +16,8 @@ from haf_local_tools.system.haf.mirrornet.constants import (
 
 
 @pytest.mark.mirrornet
-def test_massive_sync(mirrornet_witness_node, haf_node, block_log_5m, mirrornet_snapshot):
-    test_name = "test_massive_sync"
+def test_massive_sync(mirrornet_witness_node, haf_node, block_log_5m, mirrornet_snapshot, request):
+    test_name = request.node.name
 
     apply_block_log_type_to_monolithic_workaround(mirrornet_witness_node)
 

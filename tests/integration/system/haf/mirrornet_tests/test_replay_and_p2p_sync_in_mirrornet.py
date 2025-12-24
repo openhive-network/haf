@@ -33,10 +33,10 @@ from haf_local_tools.system.haf.mirrornet.constants import (
     ],
 )
 def test_replay_and_p2p_sync(
-    mirrornet_witness_node, haf_node, block_log_5m, tmp_path, psql_index_threshold, mirrornet_snapshot
+    mirrornet_witness_node, haf_node, block_log_5m, tmp_path, psql_index_threshold, mirrornet_snapshot, request
 ):
-    # Include parameter in test name for clarity
-    test_name = f"test_replay_and_p2p_sync[threshold={psql_index_threshold}]"
+    # Use pytest's node name so it matches the hook for timing output
+    test_name = request.node.name
     haf_node.config.psql_index_threshold = psql_index_threshold
 
     step_start = time.time()
