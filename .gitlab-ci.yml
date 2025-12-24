@@ -154,19 +154,17 @@ default:
               git -C hive remote set-url origin https://gitlab.syncad.com/hive/hive.git 2>/dev/null || true
               echo "pre_get_sources: syncing hive nested submodule URLs"
               git -C hive submodule sync --recursive 2>/dev/null || true
-              # Debug: show where test-tools URL is stored
-              echo "pre_get_sources: checking test-tools URL locations:"
-              echo "  submodule.test_tools.url: $(git -C hive config --get submodule.test_tools.url 2>/dev/null || echo 'N/A')"
-              # For already-initialized submodules, URL is in the module's remote.origin.url
-              if [ -d ".git/modules/hive/modules" ]; then
-                echo "  modules dir exists, checking test_tools:"
-                ls -la .git/modules/hive/modules/ 2>/dev/null | head -5
-                if [ -f ".git/modules/hive/modules/test_tools/config" ]; then
-                  echo "  test_tools origin URL: $(git config -f .git/modules/hive/modules/test_tools/config --get remote.origin.url 2>/dev/null || echo 'N/A')"
+              # Debug: show full modules structure to find where test-tools URL is stored
+              echo "pre_get_sources: .git/modules/hive/ structure:"
+              find .git/modules/hive/modules -type d -maxdepth 4 2>/dev/null | head -20
+              # Try to find the test-tools config file anywhere
+              echo "pre_get_sources: looking for test-tools config:"
+              find .git/modules/hive -name "config" -type f 2>/dev/null | while read cfg; do
+                url=$(git config -f "$cfg" --get remote.origin.url 2>/dev/null)
+                if echo "$url" | grep -q "test"; then
+                  echo "  Found: $cfg -> $url"
                 fi
-              else
-                echo "  .git/modules/hive/modules/ does not exist"
-              fi
+              done || true
             fi
 
             echo "pre_get_sources: existing repo OK"
