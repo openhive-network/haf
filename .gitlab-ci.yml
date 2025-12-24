@@ -143,9 +143,12 @@ default:
             # This fixes stale nested submodule URLs when switching hive versions
             echo "pre_get_sources: syncing submodule URLs"
             git submodule sync --recursive 2>/dev/null || true
-            # Also sync inside hive submodule for its nested submodules
+            # Fix hive's origin URL and sync its nested submodules
+            # Relative URLs (../test-tools.git) resolve based on origin, so if
+            # origin is stale (file://), nested submodules fail with 'transport file not allowed'
             if [ -d "hive/.git" ] || [ -f "hive/.git" ]; then
-              echo "pre_get_sources: syncing hive nested submodule URLs"
+              echo "pre_get_sources: fixing hive origin and syncing nested submodule URLs"
+              git -C hive remote set-url origin https://gitlab.syncad.com/hive/hive.git 2>/dev/null || true
               git -C hive submodule sync --recursive 2>/dev/null || true
             fi
 
