@@ -139,6 +139,11 @@ default:
               done
             fi
 
+            # Sync submodule URLs to prevent 'transport file not allowed' errors
+            # This fixes stale nested submodule URLs when switching hive versions
+            echo "pre_get_sources: syncing submodule URLs"
+            git submodule sync --recursive 2>/dev/null || true
+
             echo "pre_get_sources: existing repo OK"
           fi
         else
