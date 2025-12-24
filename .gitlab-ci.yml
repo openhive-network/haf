@@ -148,15 +148,18 @@ default:
             git submodule sync 2>/dev/null || true
 
             # Fix hive's origin URL and explicitly sync its nested submodules
-            # The HAF-level recursive sync may not properly propagate into nested submodules
             if [ -d "hive/.git" ] || [ -f "hive/.git" ]; then
-              # Debug: show hive's origin URL BEFORE fix
-              echo "pre_get_sources: hive origin BEFORE fix: $(git -C hive remote get-url origin 2>/dev/null || echo 'N/A')"
-              echo "pre_get_sources: fixing hive origin URL to HTTPS"
-              git -C hive remote set-url origin https://gitlab.syncad.com/hive/hive.git 2>/dev/null || true
-              echo "pre_get_sources: hive origin AFTER fix: $(git -C hive remote get-url origin 2>/dev/null || echo 'N/A')"
+              # Debug: check if hive submodule git is accessible
+              echo "pre_get_sources: hive/.git type: $(file hive/.git 2>/dev/null || echo 'N/A')"
+              echo "pre_get_sources: hive remotes: $(git -C hive remote -v 2>&1 || echo 'ERROR')"
+              echo "pre_get_sources: hive git dir: $(git -C hive rev-parse --git-dir 2>&1 || echo 'ERROR')"
+              # Try to fix origin URL (will add remote if doesn't exist)
+              echo "pre_get_sources: adding/fixing hive origin URL"
+              git -C hive remote remove origin 2>/dev/null || true
+              git -C hive remote add origin https://gitlab.syncad.com/hive/hive.git 2>/dev/null || true
+              echo "pre_get_sources: hive origin AFTER fix: $(git -C hive remote get-url origin 2>&1 || echo 'ERROR')"
               echo "pre_get_sources: syncing hive nested submodule URLs"
-              git -C hive submodule sync --recursive 2>/dev/null || true
+              git -C hive submodule sync --recursive 2>&1 | head -10 || true
             fi
 
             echo "pre_get_sources: existing repo OK"
