@@ -31,14 +31,14 @@ from haf_local_tools.system.haf.mirrornet.constants import (
     ],
 )
 def test_replay_and_p2p_sync(
-    mirrornet_witness_node, haf_node, block_log_5m, tmp_path, psql_index_threshold, snapshot_path
+    mirrornet_witness_node, haf_node, block_log_5m, tmp_path, psql_index_threshold, mirrornet_snapshot
 ):
     haf_node.config.psql_index_threshold = psql_index_threshold
 
     block_log_4_5m = block_log_5m.truncate(tmp_path, 4500000)
     apply_block_log_type_to_monolithic_workaround(mirrornet_witness_node)
     mirrornet_witness_node.run(
-        load_snapshot_from=snapshot_path,
+        load_snapshot_from=mirrornet_snapshot,
         time_control=tt.StartTimeControl(start_time="head_block_time"),
         wait_for_live=True,
         timeout=3600,

@@ -31,6 +31,18 @@ def snapshot_path(request):
 
 
 @pytest.fixture
+def mirrornet_snapshot(snapshot_path, block_log_5m) -> tt.Snapshot:
+    """
+    Snapshot configured to use local block_log instead of NFS.
+
+    The snapshot itself is on NFS (shared between CI jobs), but the block_log
+    is available locally on all runners. This avoids slow NFS copies of the
+    block_log when loading the snapshot.
+    """
+    return tt.Snapshot(Path(snapshot_path), block_log_5m)
+
+
+@pytest.fixture
 def mirrornet_witness_node():
     witness_node = tt.RawNode()
     witness_node.config.witness = WITNESSES_5M

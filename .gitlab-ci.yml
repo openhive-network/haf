@@ -604,9 +604,8 @@ dump_snapshot_5m_mirrornet:
     - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --exit-before-sync --replay --block-log-split=-1
     - echo "plugin = state_snapshot" >> $MIRRORNET_WORKING_DIR/config.ini
     - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --dump-snapshot=snapshot --exit-before-sync --block-log-split=-1
-    #Store snapshot in cache (keep snapshot/snapshot structure for relative path calculation in tests)
-    - mv $MIRRORNET_WORKING_DIR/blockchain "$SNAPSHOTS_PATH/5m_mirrornet"
-    - mkdir -p "$SNAPSHOTS_PATH/5m_mirrornet/snapshot"
+    #Store only the snapshot in NFS cache (block_log is available locally on all runners)
+    #Tests use mirrornet_snapshot fixture which combines NFS snapshot with local block_log
     - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot "$SNAPSHOTS_PATH/5m_mirrornet/snapshot/"
   tags:
     - data-cache-storage
