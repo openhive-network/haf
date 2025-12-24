@@ -144,15 +144,20 @@ default:
             # submodules resolve based on parent's origin URL. If that URL is stale
             # (file://), fetches fail. We must fix origin URLs BEFORE syncing.
 
-            # First, fix hive's origin URL so nested submodule URLs resolve correctly
+            echo "pre_get_sources: syncing HAF-level submodule URLs"
+            git submodule sync 2>/dev/null || true
+
+            # Fix hive's origin URL and explicitly sync its nested submodules
+            # The HAF-level recursive sync may not properly propagate into nested submodules
             if [ -d "hive/.git" ] || [ -f "hive/.git" ]; then
               echo "pre_get_sources: fixing hive origin URL to HTTPS"
               git -C hive remote set-url origin https://gitlab.syncad.com/hive/hive.git 2>/dev/null || true
+              echo "pre_get_sources: syncing hive nested submodule URLs"
+              git -C hive submodule sync --recursive 2>/dev/null || true
+              # Debug: show what URL test-tools has now
+              echo "pre_get_sources: test-tools URL after sync:"
+              git -C hive config --get submodule.test_tools.url 2>/dev/null || echo "(not in hive's config)"
             fi
-
-            # Now sync all submodule URLs (recursive sync will use corrected hive origin)
-            echo "pre_get_sources: syncing all submodule URLs recursively"
-            git submodule sync --recursive 2>/dev/null || true
 
             echo "pre_get_sources: existing repo OK"
           fi
