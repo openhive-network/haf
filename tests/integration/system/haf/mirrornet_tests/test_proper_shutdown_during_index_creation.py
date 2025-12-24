@@ -49,7 +49,7 @@ def test_proper_shutdown_during_index_creation(mirrornet_witness_node, haf_node,
     search_timeout = 60  # seconds
     start_time = time.time()
 
-    with open(str(haf_node.directory / "stderr_1.log"), "r") as f:
+    with open(str(haf_node.directory / "hived.log"), "r") as f:
         f.seek(0, 0)
 
         while time.time() - start_time < search_timeout:
