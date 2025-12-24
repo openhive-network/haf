@@ -227,9 +227,10 @@ USER haf_admin
 WORKDIR /home/haf_admin
 
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/docker_entrypoint.sh" .
-RUN mkdir -p /home/haf_admin/source/scripts /home/haf_admin/source/hive/scripts && chown -R haf_admin:users /home/haf_admin/source
+RUN mkdir -p /home/haf_admin/source/scripts /home/haf_admin/source/hive/scripts /home/haf_admin/source/docker && chown -R haf_admin:users /home/haf_admin/source
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/scripts/" /home/haf_admin/source/scripts
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/hive/scripts/" /home/haf_admin/source/hive/scripts
+COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/ci_postgresql.conf" /home/haf_admin/source/docker/
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/postgresql.conf" /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.conf" /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
 
