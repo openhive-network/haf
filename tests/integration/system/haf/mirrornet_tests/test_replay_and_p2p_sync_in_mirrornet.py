@@ -1,16 +1,9 @@
-import sys
 import time
 import pytest
 
 import test_tools as tt
 
-
-def log_timing(msg):
-    """Write timing to stderr to bypass pytest capture."""
-    sys.stderr.write(f"{msg}\n")
-    sys.stderr.flush()
-
-
+from conftest import log_timing
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.system.haf import (
     connect_nodes,
@@ -42,12 +35,13 @@ from haf_local_tools.system.haf.mirrornet.constants import (
 def test_replay_and_p2p_sync(
     mirrornet_witness_node, haf_node, block_log_5m, tmp_path, psql_index_threshold, mirrornet_snapshot
 ):
-    test_start = time.time()
+    # Include parameter in test name for clarity
+    test_name = f"test_replay_and_p2p_sync[threshold={psql_index_threshold}]"
     haf_node.config.psql_index_threshold = psql_index_threshold
 
     step_start = time.time()
     block_log_4_5m = block_log_5m.truncate(tmp_path, 4500000)
-    log_timing(f"[TIMING] block_log truncate: {time.time() - step_start:.2f}s")
+    log_timing(test_name, "block_log truncate", time.time() - step_start)
 
     apply_block_log_type_to_monolithic_workaround(mirrornet_witness_node)
 
@@ -59,13 +53,13 @@ def test_replay_and_p2p_sync(
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],
     )
-    log_timing(f"[TIMING] witness_node.run (with snapshot): {time.time() - step_start:.2f}s")
+    log_timing(test_name, "witness_node.run (with snapshot)", time.time() - step_start)
 
     head_block_time = mirrornet_witness_node.get_head_block_time()
 
     step_start = time.time()
     connect_nodes(mirrornet_witness_node, haf_node)
-    log_timing(f"[TIMING] connect_nodes: {time.time() - step_start:.2f}s")
+    log_timing(test_name, "connect_nodes", time.time() - step_start)
 
     step_start = time.time()
     haf_node.run(
@@ -75,7 +69,7 @@ def test_replay_and_p2p_sync(
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID],
     )
-    log_timing(f"[TIMING] haf_node.run (replay + sync): {time.time() - step_start:.2f}s")
+    log_timing(test_name, "haf_node.run (replay + sync)", time.time() - step_start)
 
     step_start = time.time()
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_1092_BLOCK)
@@ -83,14 +77,12 @@ def test_replay_and_p2p_sync(
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_4500000_BLOCK)
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_4500001_BLOCK)
     assert_is_transaction_in_database(haf_node, TRANSACTION_IN_5000000_BLOCK)
-    log_timing(f"[TIMING] transaction assertions: {time.time() - step_start:.2f}s")
+    log_timing(test_name, "transaction assertions", time.time() - step_start)
 
     step_start = time.time()
     assert_are_blocks_sync_with_haf_db(haf_node, 5000000)
-    log_timing(f"[TIMING] assert_are_blocks_sync_with_haf_db: {time.time() - step_start:.2f}s")
+    log_timing(test_name, "assert_are_blocks_sync_with_haf_db", time.time() - step_start)
 
     step_start = time.time()
     assert_are_indexes_restored(haf_node)
-    log_timing(f"[TIMING] assert_are_indexes_restored: {time.time() - step_start:.2f}s")
-
-    log_timing(f"[TIMING] TOTAL test_replay_and_p2p_sync: {time.time() - test_start:.2f}s")
+    log_timing(test_name, "assert_are_indexes_restored", time.time() - step_start)

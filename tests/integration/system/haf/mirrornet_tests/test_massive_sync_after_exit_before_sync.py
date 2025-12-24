@@ -1,16 +1,9 @@
-import sys
 import time
 import pytest
 
 import test_tools as tt
 
-
-def log_timing(msg):
-    """Write timing to stderr to bypass pytest capture."""
-    sys.stderr.write(f"{msg}\n")
-    sys.stderr.flush()
-
-
+from conftest import log_timing
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 from haf_local_tools.system.haf import (
     connect_nodes,
@@ -24,7 +17,7 @@ from haf_local_tools.system.haf.mirrornet.constants import (
 
 @pytest.mark.mirrornet
 def test_massive_sync(mirrornet_witness_node, haf_node, block_log_5m, mirrornet_snapshot):
-    test_start = time.time()
+    test_name = "test_massive_sync"
 
     apply_block_log_type_to_monolithic_workaround(mirrornet_witness_node)
 
@@ -36,13 +29,13 @@ def test_massive_sync(mirrornet_witness_node, haf_node, block_log_5m, mirrornet_
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],
     )
-    log_timing(f"[TIMING] witness_node.run (with snapshot): {time.time() - step_start:.2f}s")
+    log_timing(test_name, "witness_node.run (with snapshot)", time.time() - step_start)
 
     head_block_time = mirrornet_witness_node.get_head_block_time()
 
     step_start = time.time()
     connect_nodes(mirrornet_witness_node, haf_node)
-    log_timing(f"[TIMING] connect_nodes: {time.time() - step_start:.2f}s")
+    log_timing(test_name, "connect_nodes", time.time() - step_start)
 
     step_start = time.time()
     haf_node.run(
@@ -52,7 +45,7 @@ def test_massive_sync(mirrornet_witness_node, haf_node, block_log_5m, mirrornet_
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID],
     )
-    log_timing(f"[TIMING] haf_node.run (replay, exit before sync): {time.time() - step_start:.2f}s")
+    log_timing(test_name, "haf_node.run (replay, exit before sync)", time.time() - step_start)
 
     head_block_time = mirrornet_witness_node.get_head_block_time()
 
@@ -63,14 +56,12 @@ def test_massive_sync(mirrornet_witness_node, haf_node, block_log_5m, mirrornet_
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID],
     )
-    log_timing(f"[TIMING] haf_node.run (sync only): {time.time() - step_start:.2f}s")
+    log_timing(test_name, "haf_node.run (sync only)", time.time() - step_start)
 
     step_start = time.time()
     mirrornet_witness_node.wait_number_of_blocks(10)
-    log_timing(f"[TIMING] wait_number_of_blocks(10): {time.time() - step_start:.2f}s")
+    log_timing(test_name, "wait_number_of_blocks(10)", time.time() - step_start)
 
     step_start = time.time()
     assert_are_indexes_restored(haf_node)
-    log_timing(f"[TIMING] assert_are_indexes_restored: {time.time() - step_start:.2f}s")
-
-    log_timing(f"[TIMING] TOTAL test_massive_sync: {time.time() - test_start:.2f}s")
+    log_timing(test_name, "assert_are_indexes_restored", time.time() - step_start)

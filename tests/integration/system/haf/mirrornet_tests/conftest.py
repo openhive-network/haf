@@ -1,5 +1,7 @@
 from pathlib import Path
+import tempfile
 import time
+import fcntl
 import pytest
 
 import test_tools as tt
@@ -8,15 +10,64 @@ from haf_local_tools.system.haf.mirrornet.constants import SKELETON_KEY, WITNESS
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 
 
+# Shared timing file for collecting step-by-step timing from parallel workers
+TIMING_FILE = Path(tempfile.gettempdir()) / "mirrornet_timing.log"
+
+
+def log_timing(test_name: str, step: str, duration: float):
+    """Log timing to shared file (thread/process safe)."""
+    line = f"{test_name}|{step}|{duration:.2f}s\n"
+    with open(TIMING_FILE, "a") as f:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        f.write(line)
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+
+def pytest_configure(config):
+    """Clear timing file at start of test session."""
+    if TIMING_FILE.exists():
+        TIMING_FILE.unlink()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Print collected timing data at end of test session."""
+    if not TIMING_FILE.exists():
+        return
+
+    print("\n" + "=" * 70)
+    print("MIRRORNET TEST TIMING REPORT")
+    print("=" * 70)
+
+    # Group timing by test
+    timing_data = {}
+    with open(TIMING_FILE) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split("|")
+            if len(parts) == 3:
+                test_name, step, duration = parts
+                if test_name not in timing_data:
+                    timing_data[test_name] = []
+                timing_data[test_name].append((step, duration))
+
+    for test_name in sorted(timing_data.keys()):
+        print(f"\n{test_name}:")
+        for step, duration in timing_data[test_name]:
+            print(f"  {step}: {duration}")
+
+    print("\n" + "=" * 70)
+
+
 # Timing instrumentation for mirrornet tests
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_protocol(item, nextitem):
     """Log timing for each test phase."""
     start = time.time()
-    tt.logger.info(f"[TIMING] Starting test: {item.name}")
     yield
     elapsed = time.time() - start
-    tt.logger.info(f"[TIMING] Completed test: {item.name} in {elapsed:.2f}s")
+    log_timing(item.name, "TOTAL", elapsed)
 
 
 def pytest_addoption(parser):
@@ -49,18 +100,11 @@ def mirrornet_snapshot(snapshot_path, block_log_5m) -> tt.Snapshot:
     is available locally on all runners. This avoids slow NFS copies of the
     block_log when loading the snapshot.
     """
-    start = time.time()
-    tt.logger.info(f"[TIMING] Creating mirrornet_snapshot fixture from: {snapshot_path}")
-    snapshot = tt.Snapshot(Path(snapshot_path), block_log_5m)
-    elapsed = time.time() - start
-    tt.logger.info(f"[TIMING] mirrornet_snapshot fixture created in {elapsed:.2f}s")
-    return snapshot
+    return tt.Snapshot(Path(snapshot_path), block_log_5m)
 
 
 @pytest.fixture
 def mirrornet_witness_node():
-    start = time.time()
-    tt.logger.info("[TIMING] Creating mirrornet_witness_node fixture")
     witness_node = tt.RawNode()
     witness_node.config.witness = WITNESSES_5M
     witness_node.config.private_key = SKELETON_KEY
@@ -71,8 +115,6 @@ def mirrornet_witness_node():
     witness_node.config.plugin.append("witness")
     witness_node.config.plugin.append("account_by_key")
     apply_block_log_type_to_monolithic_workaround(witness_node)
-    elapsed = time.time() - start
-    tt.logger.info(f"[TIMING] mirrornet_witness_node fixture created in {elapsed:.2f}s")
     return witness_node
 
 
@@ -89,9 +131,5 @@ def witness_node_with_haf(haf_node):
 
 @pytest.fixture
 def haf_node(haf_node):
-    start = time.time()
-    tt.logger.info("[TIMING] Configuring haf_node fixture")
     haf_node.config.shared_file_size = "2G"
-    elapsed = time.time() - start
-    tt.logger.info(f"[TIMING] haf_node fixture configured in {elapsed:.2f}s")
     yield haf_node
