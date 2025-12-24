@@ -150,21 +150,13 @@ default:
             # Fix hive's origin URL and explicitly sync its nested submodules
             # The HAF-level recursive sync may not properly propagate into nested submodules
             if [ -d "hive/.git" ] || [ -f "hive/.git" ]; then
+              # Debug: show hive's origin URL BEFORE fix
+              echo "pre_get_sources: hive origin BEFORE fix: $(git -C hive remote get-url origin 2>/dev/null || echo 'N/A')"
               echo "pre_get_sources: fixing hive origin URL to HTTPS"
               git -C hive remote set-url origin https://gitlab.syncad.com/hive/hive.git 2>/dev/null || true
+              echo "pre_get_sources: hive origin AFTER fix: $(git -C hive remote get-url origin 2>/dev/null || echo 'N/A')"
               echo "pre_get_sources: syncing hive nested submodule URLs"
               git -C hive submodule sync --recursive 2>/dev/null || true
-              # Debug: show full modules structure to find where test-tools URL is stored
-              echo "pre_get_sources: .git/modules/hive/ structure:"
-              find .git/modules/hive/modules -type d -maxdepth 4 2>/dev/null | head -20
-              # Try to find the test-tools config file anywhere
-              echo "pre_get_sources: looking for test-tools config:"
-              find .git/modules/hive -name "config" -type f 2>/dev/null | while read cfg; do
-                url=$(git config -f "$cfg" --get remote.origin.url 2>/dev/null)
-                if echo "$url" | grep -q "test"; then
-                  echo "  Found: $cfg -> $url"
-                fi
-              done || true
             fi
 
             echo "pre_get_sources: existing repo OK"
