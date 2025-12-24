@@ -420,39 +420,21 @@ _build_haf_tar_excludes() {
         _log "Excluding datadir/blockchain (use shared block_log instead)"
     fi
 
-    # Exclude pg_wal files except the checkpoint WAL file
-    # PostgreSQL only needs the WAL file containing the latest checkpoint
-    # Saves ~5.8GB (375 files × 16MB)
+    # Exclude all pg_wal files - not needed after clean CHECKPOINT
+    # HAF's docker_entrypoint.sh runs CHECKPOINT before shutdown, so all data
+    # is in the main data files. WAL files are only for crash recovery.
+    # Saves ~6GB (375 files × 16MB)
     local pgdata_path="${source_dir}/datadir/haf_db_store/pgdata"
     local pg_wal_path="${pgdata_path}/pg_wal"
 
     if [[ -d "$pg_wal_path" ]]; then
-        # Find checkpoint WAL file using pg_controldata via docker
-        local checkpoint_wal=""
-        if command -v docker &>/dev/null; then
-            checkpoint_wal=$(docker run --rm -v "${pgdata_path}:/pgdata:ro" postgres:17 \
-                pg_controldata /pgdata 2>/dev/null | \
-                grep "REDO WAL file" | awk '{print $NF}')
-        fi
-
-        if [[ -n "$checkpoint_wal" ]]; then
-            _log "Keeping checkpoint WAL: $checkpoint_wal, excluding others"
-            # Build exclusions for all WAL files except checkpoint
-            local wal_count=0
-            local excluded_count=0
-            for wal_file in "$pg_wal_path"/0*; do
-                if [[ -f "$wal_file" ]]; then
-                    wal_count=$((wal_count + 1))
-                    local wal_name=$(basename "$wal_file")
-                    if [[ "$wal_name" != "$checkpoint_wal" ]]; then
-                        excludes="$excludes --exclude=./datadir/haf_db_store/pgdata/pg_wal/$wal_name"
-                        excluded_count=$((excluded_count + 1))
-                    fi
-                fi
-            done
-            _log "Excluding $excluded_count of $wal_count WAL files"
-        else
-            _log "Could not determine checkpoint WAL, keeping all WAL files"
+        local wal_count=0
+        for wal_file in "$pg_wal_path"/0*; do
+            [[ -f "$wal_file" ]] && wal_count=$((wal_count + 1))
+        done
+        if [[ $wal_count -gt 0 ]]; then
+            excludes="$excludes --exclude=./datadir/haf_db_store/pgdata/pg_wal/0*"
+            _log "Excluding all $wal_count WAL files (CHECKPOINT ensures data integrity)"
         fi
     fi
 

@@ -56,6 +56,11 @@ MAINTENANCE_SCRIPT_NAME=""
 stop_postresql() {
 echo "Attempting to stop Postgresql..."
 
+# Force checkpoint before stopping to ensure all data is written to disk
+# Without this, data may be lost when cache-manager excludes WAL files
+echo "Forcing PostgreSQL checkpoint before shutdown..."
+psql -U haf_admin -d haf_block_log -c "CHECKPOINT;" || echo "Warning: CHECKPOINT failed (PostgreSQL may not be running)"
+
 postgres_pid=0
 if [ -f "/var/run/postgresql/$POSTGRES_VERSION-main.pid" ];
 then
