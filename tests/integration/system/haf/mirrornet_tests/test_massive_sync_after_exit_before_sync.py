@@ -28,13 +28,13 @@ def test_massive_sync(mirrornet_witness_node, haf_node, block_log_5m, mirrornet_
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],
     )
-    tt.logger.info(f"[TIMING] witness_node.run (with snapshot): {time.time() - step_start:.2f}s")
+    print(f"[TIMING] witness_node.run (with snapshot): {time.time() - step_start:.2f}s", flush=True)
 
     head_block_time = mirrornet_witness_node.get_head_block_time()
 
     step_start = time.time()
     connect_nodes(mirrornet_witness_node, haf_node)
-    tt.logger.info(f"[TIMING] connect_nodes: {time.time() - step_start:.2f}s")
+    print(f"[TIMING] connect_nodes: {time.time() - step_start:.2f}s", flush=True)
 
     step_start = time.time()
     haf_node.run(
@@ -44,7 +44,7 @@ def test_massive_sync(mirrornet_witness_node, haf_node, block_log_5m, mirrornet_
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID],
     )
-    tt.logger.info(f"[TIMING] haf_node.run (replay, exit before sync): {time.time() - step_start:.2f}s")
+    print(f"[TIMING] haf_node.run (replay, exit before sync): {time.time() - step_start:.2f}s", flush=True)
 
     head_block_time = mirrornet_witness_node.get_head_block_time()
 
@@ -55,14 +55,14 @@ def test_massive_sync(mirrornet_witness_node, haf_node, block_log_5m, mirrornet_
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID],
     )
-    tt.logger.info(f"[TIMING] haf_node.run (sync only): {time.time() - step_start:.2f}s")
+    print(f"[TIMING] haf_node.run (sync only): {time.time() - step_start:.2f}s", flush=True)
 
     step_start = time.time()
     mirrornet_witness_node.wait_number_of_blocks(10)
-    tt.logger.info(f"[TIMING] wait_number_of_blocks(10): {time.time() - step_start:.2f}s")
+    print(f"[TIMING] wait_number_of_blocks(10): {time.time() - step_start:.2f}s", flush=True)
 
     step_start = time.time()
     assert_are_indexes_restored(haf_node)
-    tt.logger.info(f"[TIMING] assert_are_indexes_restored: {time.time() - step_start:.2f}s")
+    print(f"[TIMING] assert_are_indexes_restored: {time.time() - step_start:.2f}s", flush=True)
 
-    tt.logger.info(f"[TIMING] TOTAL test_massive_sync: {time.time() - test_start:.2f}s")
+    print(f"[TIMING] TOTAL test_massive_sync: {time.time() - test_start:.2f}s", flush=True)
