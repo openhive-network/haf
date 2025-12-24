@@ -62,10 +62,25 @@ def _find_node_logs(test_dir: Path) -> list[tuple[str, Path]]:
     """Find all node log files in a test directory."""
     logs = []
     if test_dir.exists():
-        for log_file in test_dir.rglob("latest.log"):
-            node_name = log_file.parent.name
-            logs.append((node_name, log_file))
+        # Look for both hived.log (actual hived output) and latest.log (test-tools wrapper)
+        for pattern in ["hived.log", "latest.log"]:
+            for log_file in test_dir.rglob(pattern):
+                node_name = log_file.parent.name
+                logs.append((node_name, log_file))
     return logs
+
+
+def _configure_hived_file_logging(node):
+    """Configure hived to write logs to a file for debugging."""
+    # File appender that writes to hived.log in the node's data directory
+    node.config.log_file_appender = (
+        '{"appender":"file","file":"hived.log","time_format":"iso_8601_milliseconds","flush":true}'
+    )
+    # Logger that sends all messages to our file appender
+    node.config.log_logger = (
+        '{"name":"default","level":"info","appenders":["file"]}'
+        ' {"name":"user","level":"debug","appenders":["file"]}'
+    )
 
 
 def _print_node_logs_on_failure(item, call):
@@ -173,6 +188,7 @@ def mirrornet_witness_node():
     witness_node.config.plugin.append("witness")
     witness_node.config.plugin.append("account_by_key")
     apply_block_log_type_to_monolithic_workaround(witness_node)
+    _configure_hived_file_logging(witness_node)
     return witness_node
 
 
@@ -184,10 +200,12 @@ def witness_node_with_haf(haf_node):
     haf_node.config.shared_file_size = "2G"
     haf_node.config.enable_stale_production = True
     haf_node.config.required_participation = 0
+    _configure_hived_file_logging(haf_node)
     yield haf_node
 
 
 @pytest.fixture
 def haf_node(haf_node):
     haf_node.config.shared_file_size = "2G"
+    _configure_hived_file_logging(haf_node)
     yield haf_node
