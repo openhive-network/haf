@@ -107,9 +107,9 @@ def register_index_dependency(haf_node, context, create_index_command):
             text("SELECT hive.register_index_dependency(:ctx, :cmd)"), {'ctx': context, 'cmd': create_index_command})
 
 
-def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Transaction, TransactionId]):
+def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Transaction, TransactionId], timeout: float = 10):
     try:
-        haf_node.wait_for_transaction_in_database(transaction=transaction, timeout=0)
+        haf_node.wait_for_transaction_in_database(transaction=transaction, timeout=timeout)
     except TimeoutError:
         assert False, "Transaction NOT exist in database"
     return True

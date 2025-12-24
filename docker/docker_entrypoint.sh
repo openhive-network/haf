@@ -56,6 +56,11 @@ MAINTENANCE_SCRIPT_NAME=""
 stop_postresql() {
 echo "Attempting to stop Postgresql..."
 
+# Force checkpoint before stopping to ensure all data is written to disk
+# Without this, data may be lost when cache-manager excludes WAL files
+echo "Forcing PostgreSQL checkpoint before shutdown..."
+psql -U haf_admin -d haf_block_log -c "CHECKPOINT;" || echo "Warning: CHECKPOINT failed (PostgreSQL may not be running)"
+
 postgres_pid=0
 if [ -f "/var/run/postgresql/$POSTGRES_VERSION-main.pid" ];
 then
@@ -119,7 +124,8 @@ echo "Attempting to execute hived using additional command line arguments:" "${H
 set -euo pipefail
 
 if [ ! -f "$DATADIR/config.ini" ]; then
-  echo "No config file exists, creating a default config file"
+  echo "WARNING: No config file exists at $DATADIR/config.ini, creating a default config file"
+  echo "WARNING: Default config uses larger shared memory - consider providing config_5M.ini for CI builds"
 
   /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
     --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --psql-wal-directory="$WAL_DIR" \
@@ -132,7 +138,12 @@ if [ ! -f "$DATADIR/config.ini" ]; then
   # set a default logging config.  We will log the usual output both to stderr and to a log file in the
   # haf-datadir/logs/hived/default directory.  Rotate daily, keep for 30 days.
   sed -i 's|^[# \t]*log-appender = .*$|log-appender = {"appender":"stderr","stream":"std_error","time_format":"iso_8601_microseconds"} {"appender":"p2p","file":"logs/hived/p2p/p2p.log","truncate":false,"time_format":"iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000} {"appender": "default", "file": "logs/hived/default/default.log","truncate":false, "time_format": "iso_8601_milliseconds", "rotation_interval": 86400, "rotation_limit": 2592000}|;s|^[# \t]*log-logger = .*$|log-logger = {"name":"default","level":"info","appenders":["stderr", "default"]} {"name":"user","level":"debug","appenders":["stderr", "default"]} {"name":"p2p","level":"warn","appenders":["p2p"]}|' "$DATADIR/config.ini"
+else
+  echo "Using existing config file: $DATADIR/config.ini"
 fi
+
+# Log shared memory configuration for debugging
+echo "Config shared-file-size: \$(grep -E '^shared-file-size' "$DATADIR/config.ini" 2>/dev/null || echo 'not set')"
 
 /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
   --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --psql-wal-directory="$WAL_DIR" \

@@ -49,6 +49,12 @@ variables:
   GIT_SUBMODULE_DEPTH: 0
   GIT_SUBMODULE_STRATEGY: recursive
   GIT_SUBMODULE_UPDATE_FLAGS: --jobs 4
+  # Force HTTPS for submodule URLs (helps with nested submodules)
+  GIT_SUBMODULE_FORCE_HTTPS: "true"
+  # Allow file:// protocol for nested submodules (required for test-tools in hive)
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: "protocol.file.allow"
+  GIT_CONFIG_VALUE_0: "always"
   # Temporary: separate clone path prevents clone-strategy jobs from erasing
   # fetch workspaces during transition. Remove once all projects use fetch.
   GIT_CLONE_PATH: $CI_BUILDS_DIR/fetch/$CI_RUNNER_SHORT_TOKEN/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
@@ -604,9 +610,8 @@ dump_snapshot_5m_mirrornet:
     - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --exit-before-sync --replay --block-log-split=-1
     - echo "plugin = state_snapshot" >> $MIRRORNET_WORKING_DIR/config.ini
     - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --dump-snapshot=snapshot --exit-before-sync --block-log-split=-1
-    #Store snapshot in cache (keep snapshot/snapshot structure for relative path calculation in tests)
-    - mv $MIRRORNET_WORKING_DIR/blockchain "$SNAPSHOTS_PATH/5m_mirrornet"
-    - mkdir -p "$SNAPSHOTS_PATH/5m_mirrornet/snapshot"
+    #Store only the snapshot in NFS cache (block_log is available locally on all runners)
+    #Tests use mirrornet_snapshot fixture which combines NFS snapshot with local block_log
     - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot "$SNAPSHOTS_PATH/5m_mirrornet/snapshot/"
   tags:
     - data-cache-storage
@@ -615,7 +620,7 @@ dump_snapshot_5m_mirrornet:
 haf_system_tests_mirrornet:
   stage: build_and_test_phase_2
   extends: .pytest_based
-  timeout: 2h
+  timeout: 25m
   needs:
     - job: haf_image_build_mirrornet
       artifacts: true
@@ -625,6 +630,7 @@ haf_system_tests_mirrornet:
   services:
     - *hfm-only-service
   variables:
+    PYTEST_NUMBER_OF_PROCESSES: "10"
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVED_PATH: "$BINARY_CACHE_PATH/hived"
     COMPRESS_BLOCK_LOG_PATH: "$BINARY_CACHE_PATH/compress_block_log"
@@ -640,15 +646,16 @@ haf_system_tests_mirrornet:
     # This cp and call to compress_block_log is to keep backcompatibility with pipelines on master branch (where still 1.27.X line is present until next HF will apply),
     # where nodes does not support new format of block_log.artifacts file;
     # Issue: https://gitlab.syncad.com/hive/haf/-/issues/151
-    # copy block_log to tmp location
+    # copy block_log to tmp location (source is read-only, so fix permissions after copy)
     - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
+    - chmod 644 $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log/block_log
     # copy block_log and generate new artifacts with compress_block_log util
     - time $COMPRESS_BLOCK_LOG_PATH --input-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log/block_log --output-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --decompress
     # drop tmp location
     - rm -r $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests && ls -la
-    - pytest -vvv --junitxml report.xml --timeout=3600 --block-log-dir-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests --snapshot-path="$SNAPSHOTS_PATH/5m_mirrornet/snapshot/snapshot" -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
+    - pytest -vvv --junitxml report.xml --timeout=1200 --block-log-dir-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests --snapshot-path="$SNAPSHOTS_PATH/5m_mirrornet/snapshot/snapshot" -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
     - du -Sah . | sort -rh
   artifacts:
     paths:
