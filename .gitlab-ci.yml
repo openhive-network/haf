@@ -143,6 +143,11 @@ default:
             # This fixes stale nested submodule URLs when switching hive versions
             echo "pre_get_sources: syncing submodule URLs"
             git submodule sync --recursive 2>/dev/null || true
+            # Also sync inside hive submodule for its nested submodules
+            if [ -d "hive/.git" ] || [ -f "hive/.git" ]; then
+              echo "pre_get_sources: syncing hive nested submodule URLs"
+              git -C hive submodule sync --recursive 2>/dev/null || true
+            fi
 
             echo "pre_get_sources: existing repo OK"
           fi
