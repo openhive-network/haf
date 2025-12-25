@@ -616,7 +616,6 @@ dump_snapshot_5m_mirrornet:
     - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot "$SNAPSHOTS_PATH/5m_mirrornet/snapshot/"
   tags:
     - data-cache-storage
-    - fast
 
 haf_system_tests_mirrornet:
   stage: build_and_test_phase_2
@@ -670,7 +669,6 @@ haf_system_tests_mirrornet:
   interruptible: true
   tags:
     - data-cache-storage
-    - fast
 
 applications_system_tests:
   extends: .job-defaults
