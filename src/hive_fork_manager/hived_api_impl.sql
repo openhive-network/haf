@@ -341,7 +341,7 @@ DECLARE
     __consistent_block INTEGER := NULL;
     __is_dirty BOOL := TRUE;
 BEGIN
-    SELECT hafd.block_id_to_num(consistent_block), is_dirty INTO __consistent_block, __is_dirty FROM hafd.hive_state;
+    SELECT COALESCE(hafd.block_id_to_num(consistent_block), 0), is_dirty INTO __consistent_block, __is_dirty FROM hafd.hive_state;
 
     IF ( __is_dirty = FALSE ) THEN
         RETURN;
