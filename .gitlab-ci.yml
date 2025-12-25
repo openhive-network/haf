@@ -470,6 +470,7 @@ haf_image_build_mirrornet:
   name: $HAF_IMAGE_NAME
   alias: hfm-only-instance
   variables:
+    HAF_CI_MODE: "1"
     # Allow access from any network to eliminate CI IP addressing problems when hfm runs as service
     PG_ACCESS: |
                 "host    all              haf_admin        0.0.0.0/0    trust"
