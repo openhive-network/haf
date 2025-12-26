@@ -543,10 +543,16 @@ cmd_get() {
         _log "Copied from directory successfully"
     fi
 
-    # Cache locally for future use (symlink to avoid copy)
+    # Cache locally for future use (copy to avoid cross-contamination)
+    # Previously used symlinks, but this caused contamination when downstream jobs
+    # modified the destination - both paths would point to the same modified data
     if [[ "$LOCAL_CACHE_DIR" != "$local_dest" && ! -e "$LOCAL_CACHE_DIR" ]]; then
-        mkdir -p "$(dirname "$LOCAL_CACHE_DIR")"
-        ln -sf "$local_dest" "$LOCAL_CACHE_DIR" 2>/dev/null || true
+        _log "Creating local cache copy at $LOCAL_CACHE_DIR"
+        mkdir -p "$LOCAL_CACHE_DIR"
+        if ! (cd "$local_dest" && sudo tar cf - .) | (cd "$LOCAL_CACHE_DIR" && sudo tar xf -); then
+            _log "Warning: Failed to create local cache copy (non-fatal)"
+            rm -rf "$LOCAL_CACHE_DIR" 2>/dev/null || true
+        fi
     fi
 
     # Restore pgdata permissions for HAF-based caches
@@ -704,11 +710,16 @@ cmd_put() {
     _write_metadata "$cache_type" "$cache_key" "$local_source"
     mv "$METADATA_FILE" "$TAR_METADATA" 2>/dev/null || true
 
-    # Create local symlink to source for future local hits (instant, no copy)
+    # Create local cache copy for future local hits (copy to avoid cross-contamination)
+    # Previously used symlinks, but this caused contamination when downstream jobs
+    # modified the source - both paths would point to the same modified data
     if [[ "$LOCAL_CACHE_DIR" != "$local_source" && ! -e "$LOCAL_CACHE_DIR" ]]; then
-        mkdir -p "$(dirname "$LOCAL_CACHE_DIR")"
-        ln -sf "$local_source" "$LOCAL_CACHE_DIR" 2>/dev/null || true
-        _log "Created local cache symlink: $LOCAL_CACHE_DIR -> $local_source"
+        _log "Creating local cache copy at $LOCAL_CACHE_DIR"
+        mkdir -p "$LOCAL_CACHE_DIR"
+        if ! (cd "$local_source" && sudo tar cf - .) | (cd "$LOCAL_CACHE_DIR" && sudo tar xf -); then
+            _log "Warning: Failed to create local cache copy (non-fatal)"
+            rm -rf "$LOCAL_CACHE_DIR" 2>/dev/null || true
+        fi
     fi
 
     _update_lru "$cache_type" "$cache_key" || true
