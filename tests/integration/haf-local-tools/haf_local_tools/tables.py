@@ -79,12 +79,10 @@ class Operations(HiveDataBase):
     __tablename__ = "operations"
 
     block_id = Column(BigInteger, primary_key=True)
-    seq_in_block = Column(Integer, primary_key=True)
-    op_type_id = Column(Integer, primary_key=True)
     trx_in_block = Column(SmallInteger)
     op_pos = Column(Integer)
     body_binary = Column(HiveOperation)
-    id = Column(BigInteger)
+    id = Column(BigInteger, primary_key=True)
 
 
 class OperationsExtendedView(HiveBase):

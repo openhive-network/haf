@@ -111,6 +111,7 @@ DO_SYSTEM_TEST() {
         export HIVE_BUILD_ROOT_PATH=/tmp/haf/build/hive
         export DB_NAME=haf_block_log
         export DB_URL=\"postgresql://haf_admin@127.0.0.1:5432/\$DB_NAME\"
+        export SETUP_SCRIPTS_PATH=/tmp/haf/scripts
         cd /tmp/haf/tests/integration/system/haf
         pytest $TEST_NAME $VERBOSE_OPT -s
     "
