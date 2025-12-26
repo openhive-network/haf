@@ -81,10 +81,12 @@ include:
         --data-cache="${DATA_CACHE_DIR}" --block-log-source-dir="$BLOCK_LOG_SOURCE_DIR" \
         --config-ini-source="$CONFIG_INI_SOURCE")
 
-      # Push to NFS cache for future use
+      # Push to NFS cache for future use (skip if job uses custom cache key)
       # Note: cache-manager.sh handles pgdata permission relaxation/restoration automatically
-      if [[ -x "$CACHE_MANAGER" ]]; then
+      if [[ -x "$CACHE_MANAGER" ]] && [[ -z "${FILTERED_CACHE_KEY:-}" ]]; then
         "$CACHE_MANAGER" put haf "$CACHE_KEY" "${DATA_CACHE_DIR}" || echo "Warning: Failed to push to NFS cache"
+      elif [[ -n "${FILTERED_CACHE_KEY:-}" ]]; then
+        echo "Skipping main HAF cache push (job uses FILTERED_CACHE_KEY)"
       fi
     fi
   - cp "${DATA_CACHE_DIR}/datadir/hived_uid.env" "$CI_PROJECT_DIR/hived_uid.env"
