@@ -9,6 +9,11 @@
 --   - account_operations: uses operation_id
 --   - accounts: uses block_num
 --   - applied_hardforks: uses block_num
+--
+-- Performance note: We use inline bit operations instead of function calls:
+--   - (block_id >> 32)::int extracts block_num (upper 32 bits)
+--   - (block_id & x'FFFFFFFF'::bigint)::int extracts fork_id (lower 32 bits)
+-- This avoids C function call overhead and allows better query optimization.
 -- =============================================================================
 
 -- =============================================================================
@@ -17,52 +22,52 @@
 -- Uses DISTINCT ON for efficient predicate pushdown when filtering by block_num.
 -- For each block_num, picks the block with highest block_id (latest fork version).
 CREATE OR REPLACE VIEW hive.blocks_view AS
-SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-    hafd.block_id_to_num(hb.block_id) AS num,
+SELECT DISTINCT ON ((hb.block_id >> 32)::int)
+    (hb.block_id >> 32)::int AS num,
     hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
     hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
     hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
     hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
     hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
 FROM hafd.blocks hb
-ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC;
+ORDER BY (hb.block_id >> 32)::int, hb.block_id DESC;
 
 -- =============================================================================
 -- transactions_view - For each (block_num, trx_in_block), show highest fork_id version
 -- =============================================================================
 -- Uses DISTINCT ON for efficient predicate pushdown when filtering by block_num.
 CREATE OR REPLACE VIEW hive.transactions_view AS
-SELECT DISTINCT ON (hafd.block_id_to_num(ht.block_id), ht.trx_in_block)
-    hafd.block_id_to_num(ht.block_id) AS block_num,
+SELECT DISTINCT ON ((ht.block_id >> 32)::int, ht.trx_in_block)
+    (ht.block_id >> 32)::int AS block_num,
     ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
     ht.ref_block_prefix, ht.expiration, ht.signature
 FROM hafd.transactions ht
-ORDER BY hafd.block_id_to_num(ht.block_id), ht.trx_in_block, ht.block_id DESC;
+ORDER BY (ht.block_id >> 32)::int, ht.trx_in_block, ht.block_id DESC;
 
 -- =============================================================================
 -- operations_view - For each (block_num, seq_in_block), show highest fork_id version
 -- =============================================================================
 -- Uses DISTINCT ON for efficient predicate pushdown when filtering by block_num.
 CREATE OR REPLACE VIEW hive.operations_view AS
-SELECT DISTINCT ON (hafd.block_id_to_num(ho.block_id), ho.seq_in_block)
+SELECT DISTINCT ON ((ho.block_id >> 32)::int, ho.seq_in_block)
     ho.id,
-    hafd.block_id_to_num(ho.block_id) AS block_num,
+    (ho.block_id >> 32)::int AS block_num,
     ho.trx_in_block,
     ho.op_pos,
     ho.op_type_id,
     ho.body_binary,
     ho.body_binary::jsonb AS body
 FROM hafd.operations ho
-ORDER BY hafd.block_id_to_num(ho.block_id), ho.seq_in_block, ho.block_id DESC;
+ORDER BY (ho.block_id >> 32)::int, ho.seq_in_block, ho.block_id DESC;
 
 -- =============================================================================
 -- operations_view_extended - For each (block_num, seq_in_block), show highest fork_id version with timestamp
 -- =============================================================================
 -- Uses DISTINCT ON for efficient predicate pushdown when filtering by block_num.
 CREATE OR REPLACE VIEW hive.operations_view_extended AS
-SELECT DISTINCT ON (hafd.block_id_to_num(ho.block_id), ho.seq_in_block)
+SELECT DISTINCT ON ((ho.block_id >> 32)::int, ho.seq_in_block)
     ho.id,
-    hafd.block_id_to_num(ho.block_id) AS block_num,
+    (ho.block_id >> 32)::int AS block_num,
     ho.trx_in_block,
     ho.op_pos,
     ho.op_type_id,
@@ -71,7 +76,7 @@ SELECT DISTINCT ON (hafd.block_id_to_num(ho.block_id), ho.seq_in_block)
     ho.body_binary::jsonb AS body
 FROM hafd.operations ho
 JOIN hafd.blocks b ON b.block_id = ho.block_id
-ORDER BY hafd.block_id_to_num(ho.block_id), ho.seq_in_block, ho.block_id DESC;
+ORDER BY (ho.block_id >> 32)::int, ho.seq_in_block, ho.block_id DESC;
 
 -- =============================================================================
 -- account_operations_view - Show account_ops from visible blocks,
@@ -80,7 +85,7 @@ ORDER BY hafd.block_id_to_num(ho.block_id), ho.seq_in_block, ho.block_id DESC;
 -- Uses DISTINCT ON for efficient predicate pushdown.
 CREATE OR REPLACE VIEW hive.account_operations_view AS
 SELECT DISTINCT ON (hao.account_id, hao.account_op_seq_no)
-    hafd.block_id_to_num(hao.block_id) AS block_num,
+    (hao.block_id >> 32)::int AS block_num,
     hao.account_id,
     hao.transacting_account_id,
     hao.account_op_seq_no,
@@ -89,9 +94,9 @@ SELECT DISTINCT ON (hao.account_id, hao.account_op_seq_no)
 FROM hafd.account_operations hao
 JOIN hafd.operations ho ON ho.block_id = hao.block_id AND ho.seq_in_block = hao.seq_in_block
 JOIN (
-    SELECT DISTINCT ON (hafd.block_id_to_num(block_id)) block_id
+    SELECT DISTINCT ON ((block_id >> 32)::int) block_id
     FROM hafd.blocks
-    ORDER BY hafd.block_id_to_num(block_id), block_id DESC
+    ORDER BY (block_id >> 32)::int, block_id DESC
 ) visible ON visible.block_id = hao.block_id
 ORDER BY hao.account_id, hao.account_op_seq_no, hao.block_id DESC;
 
@@ -107,9 +112,9 @@ SELECT DISTINCT ON (ha.id)
 FROM hafd.accounts ha
 WHERE ha.block_id IS NULL  -- Accounts from initial dump
    OR ha.block_id IN (
-       SELECT DISTINCT ON (hafd.block_id_to_num(block_id)) block_id
+       SELECT DISTINCT ON ((block_id >> 32)::int) block_id
        FROM hafd.blocks
-       ORDER BY hafd.block_id_to_num(block_id), block_id DESC
+       ORDER BY (block_id >> 32)::int, block_id DESC
    )
 ORDER BY ha.id, ha.block_id DESC NULLS LAST;
 
@@ -121,9 +126,9 @@ CREATE OR REPLACE VIEW hive.transactions_multisig_view AS
 SELECT htm.trx_hash, htm.signature
 FROM hafd.transactions_multisig htm
 JOIN (
-    SELECT DISTINCT ON (hafd.block_id_to_num(block_id)) block_id
+    SELECT DISTINCT ON ((block_id >> 32)::int) block_id
     FROM hafd.blocks
-    ORDER BY hafd.block_id_to_num(block_id), block_id DESC
+    ORDER BY (block_id >> 32)::int, block_id DESC
 ) visible ON visible.block_id = htm.block_id;
 
 -- =============================================================================
@@ -134,13 +139,13 @@ JOIN (
 CREATE OR REPLACE VIEW hive.applied_hardforks_view AS
 SELECT DISTINCT ON (hah.hardfork_num)
     hah.hardfork_num,
-    hafd.block_id_to_num(hah.block_id) AS block_num,
+    (hah.block_id >> 32)::int AS block_num,
     hah.hardfork_vop_id
 FROM hafd.applied_hardforks hah
 JOIN (
-    SELECT DISTINCT ON (hafd.block_id_to_num(block_id)) block_id
+    SELECT DISTINCT ON ((block_id >> 32)::int) block_id
     FROM hafd.blocks
-    ORDER BY hafd.block_id_to_num(block_id), block_id DESC
+    ORDER BY (block_id >> 32)::int, block_id DESC
 ) visible ON visible.block_id = hah.block_id
 ORDER BY hah.hardfork_num, hah.block_id DESC;
 
@@ -154,8 +159,8 @@ ORDER BY hah.hardfork_num, hah.block_id DESC;
 
 -- Uses DISTINCT ON for efficient predicate pushdown.
 CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS
-SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-    hafd.block_id_to_num(hb.block_id) AS num,
+SELECT DISTINCT ON ((hb.block_id >> 32)::int)
+    (hb.block_id >> 32)::int AS num,
     hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
     hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
     hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
@@ -163,27 +168,27 @@ SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
     hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
 FROM hafd.blocks hb
 CROSS JOIN hafd.hive_state hs
-WHERE hafd.block_id_to_num(hb.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(hb.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-ORDER BY hafd.block_id_to_num(hb.block_id), hafd.block_id_to_fork(hb.block_id) DESC;
+WHERE (hb.block_id >> 32)::int <= (hs.consistent_block >> 32)::int
+  AND (hb.block_id & x'FFFFFFFF'::bigint)::int <= (hs.consistent_block & x'FFFFFFFF'::bigint)::int
+ORDER BY (hb.block_id >> 32)::int, (hb.block_id & x'FFFFFFFF'::bigint)::int DESC;
 
 -- Uses DISTINCT ON for efficient predicate pushdown.
 CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS
-SELECT DISTINCT ON (hafd.block_id_to_num(ht.block_id), ht.trx_in_block)
-    hafd.block_id_to_num(ht.block_id) AS block_num,
+SELECT DISTINCT ON ((ht.block_id >> 32)::int, ht.trx_in_block)
+    (ht.block_id >> 32)::int AS block_num,
     ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
     ht.ref_block_prefix, ht.expiration, ht.signature
 FROM hafd.transactions ht
 CROSS JOIN hafd.hive_state hs
-WHERE hafd.block_id_to_num(ht.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(ht.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-ORDER BY hafd.block_id_to_num(ht.block_id), ht.trx_in_block, hafd.block_id_to_fork(ht.block_id) DESC;
+WHERE (ht.block_id >> 32)::int <= (hs.consistent_block >> 32)::int
+  AND (ht.block_id & x'FFFFFFFF'::bigint)::int <= (hs.consistent_block & x'FFFFFFFF'::bigint)::int
+ORDER BY (ht.block_id >> 32)::int, ht.trx_in_block, (ht.block_id & x'FFFFFFFF'::bigint)::int DESC;
 
 -- Uses DISTINCT ON for efficient predicate pushdown.
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
-SELECT DISTINCT ON (hafd.block_id_to_num(ho.block_id), ho.seq_in_block)
+SELECT DISTINCT ON ((ho.block_id >> 32)::int, ho.seq_in_block)
     ho.id,
-    hafd.block_id_to_num(ho.block_id) AS block_num,
+    (ho.block_id >> 32)::int AS block_num,
     ho.trx_in_block,
     ho.op_pos,
     ho.op_type_id,
@@ -191,15 +196,15 @@ SELECT DISTINCT ON (hafd.block_id_to_num(ho.block_id), ho.seq_in_block)
     ho.body_binary::jsonb AS body
 FROM hafd.operations ho
 CROSS JOIN hafd.hive_state hs
-WHERE hafd.block_id_to_num(ho.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(ho.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-ORDER BY hafd.block_id_to_num(ho.block_id), ho.seq_in_block, hafd.block_id_to_fork(ho.block_id) DESC;
+WHERE (ho.block_id >> 32)::int <= (hs.consistent_block >> 32)::int
+  AND (ho.block_id & x'FFFFFFFF'::bigint)::int <= (hs.consistent_block & x'FFFFFFFF'::bigint)::int
+ORDER BY (ho.block_id >> 32)::int, ho.seq_in_block, (ho.block_id & x'FFFFFFFF'::bigint)::int DESC;
 
 -- Uses DISTINCT ON for efficient predicate pushdown.
 CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
-SELECT DISTINCT ON (hafd.block_id_to_num(ho.block_id), ho.seq_in_block)
+SELECT DISTINCT ON ((ho.block_id >> 32)::int, ho.seq_in_block)
     ho.id,
-    hafd.block_id_to_num(ho.block_id) AS block_num,
+    (ho.block_id >> 32)::int AS block_num,
     ho.trx_in_block,
     ho.op_pos,
     ho.op_type_id,
@@ -209,14 +214,14 @@ SELECT DISTINCT ON (hafd.block_id_to_num(ho.block_id), ho.seq_in_block)
 FROM hafd.operations ho
 JOIN hafd.blocks b ON b.block_id = ho.block_id
 CROSS JOIN hafd.hive_state hs
-WHERE hafd.block_id_to_num(ho.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(ho.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-ORDER BY hafd.block_id_to_num(ho.block_id), ho.seq_in_block, hafd.block_id_to_fork(ho.block_id) DESC;
+WHERE (ho.block_id >> 32)::int <= (hs.consistent_block >> 32)::int
+  AND (ho.block_id & x'FFFFFFFF'::bigint)::int <= (hs.consistent_block & x'FFFFFFFF'::bigint)::int
+ORDER BY (ho.block_id >> 32)::int, ho.seq_in_block, (ho.block_id & x'FFFFFFFF'::bigint)::int DESC;
 
 -- Uses DISTINCT ON for efficient predicate pushdown.
 CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS
 SELECT DISTINCT ON (hao.account_id, hao.account_op_seq_no)
-    hafd.block_id_to_num(hao.block_id) AS block_num,
+    (hao.block_id >> 32)::int AS block_num,
     hao.account_id,
     hao.transacting_account_id,
     hao.account_op_seq_no,
@@ -225,9 +230,9 @@ SELECT DISTINCT ON (hao.account_id, hao.account_op_seq_no)
 FROM hafd.account_operations hao
 JOIN hafd.operations ho ON ho.block_id = hao.block_id AND ho.seq_in_block = hao.seq_in_block
 CROSS JOIN hafd.hive_state hs
-WHERE hafd.block_id_to_num(hao.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(hao.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-ORDER BY hao.account_id, hao.account_op_seq_no, hafd.block_id_to_fork(hao.block_id) DESC;
+WHERE (hao.block_id >> 32)::int <= (hs.consistent_block >> 32)::int
+  AND (hao.block_id & x'FFFFFFFF'::bigint)::int <= (hs.consistent_block & x'FFFFFFFF'::bigint)::int
+ORDER BY hao.account_id, hao.account_op_seq_no, (hao.block_id & x'FFFFFFFF'::bigint)::int DESC;
 
 -- Uses DISTINCT ON for efficient predicate pushdown.
 CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS
@@ -236,8 +241,8 @@ SELECT DISTINCT ON (ha.id)
 FROM hafd.accounts ha
 CROSS JOIN hafd.hive_state hs
 WHERE ha.block_id IS NULL  -- Accounts from initial dump (psql-first-block > 1)
-   OR (hafd.block_id_to_num(ha.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-       AND hafd.block_id_to_fork(ha.block_id) <= hafd.block_id_to_fork(hs.consistent_block))
+   OR ((ha.block_id >> 32)::int <= (hs.consistent_block >> 32)::int
+       AND (ha.block_id & x'FFFFFFFF'::bigint)::int <= (hs.consistent_block & x'FFFFFFFF'::bigint)::int)
 ORDER BY ha.id, ha.block_id DESC NULLS LAST;
 
 -- Uses DISTINCT ON for efficient predicate pushdown.
@@ -247,18 +252,18 @@ SELECT DISTINCT ON (htm.trx_hash, htm.signature)
     htm.signature
 FROM hafd.transactions_multisig htm
 CROSS JOIN hafd.hive_state hs
-WHERE hafd.block_id_to_num(htm.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(htm.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-ORDER BY htm.trx_hash, htm.signature, hafd.block_id_to_fork(htm.block_id) DESC;
+WHERE (htm.block_id >> 32)::int <= (hs.consistent_block >> 32)::int
+  AND (htm.block_id & x'FFFFFFFF'::bigint)::int <= (hs.consistent_block & x'FFFFFFFF'::bigint)::int
+ORDER BY htm.trx_hash, htm.signature, (htm.block_id & x'FFFFFFFF'::bigint)::int DESC;
 
 -- Uses DISTINCT ON for efficient predicate pushdown.
 CREATE OR REPLACE VIEW hive.irreversible_applied_hardforks_view AS
 SELECT DISTINCT ON (hah.hardfork_num)
     hah.hardfork_num,
-    hafd.block_id_to_num(hah.block_id) AS block_num,
+    (hah.block_id >> 32)::int AS block_num,
     hah.hardfork_vop_id
 FROM hafd.applied_hardforks hah
 CROSS JOIN hafd.hive_state hs
-WHERE hafd.block_id_to_num(hah.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(hah.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-ORDER BY hah.hardfork_num, hafd.block_id_to_fork(hah.block_id) DESC;
+WHERE (hah.block_id >> 32)::int <= (hs.consistent_block >> 32)::int
+  AND (hah.block_id & x'FFFFFFFF'::bigint)::int <= (hs.consistent_block & x'FFFFFFFF'::bigint)::int
+ORDER BY hah.hardfork_num, (hah.block_id & x'FFFFFFFF'::bigint)::int DESC;
