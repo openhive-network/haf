@@ -189,7 +189,21 @@ CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hafd.applied_
 
 CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hafd.transactions ( block_id, trx_in_block );
 
+-- Expression index for transactions_view DISTINCT ON queries
+CREATE INDEX IF NOT EXISTS hive_transactions_block_id_to_num_idx ON hafd.transactions (
+    hafd.block_id_to_num(block_id),
+    trx_in_block,
+    block_id DESC
+);
+
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations USING btree( hafd.operation_id_to_block_num(id), id);
+
+-- Expression index for operations_view DISTINCT ON queries
+CREATE INDEX IF NOT EXISTS hive_operations_block_id_to_num_idx ON hafd.operations (
+    hafd.block_id_to_num(block_id),
+    seq_in_block,
+    block_id DESC
+);
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
 CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (hafd.operation_id_to_type_id(id), hafd.operation_id_to_block_num(id));
 
