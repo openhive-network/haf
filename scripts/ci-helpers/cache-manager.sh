@@ -407,8 +407,12 @@ _restore_pgdata_permissions() {
 }
 
 # Build tar exclusion arguments for HAF caches to reduce size
-# Excludes: blockchain (use shared block_log), old WAL files
-# Saves ~7.5GB on typical HAF cache
+# Excludes: blockchain (use shared block_log)
+# NOTE: We keep ALL WAL files to ensure safe PostgreSQL recovery.
+# Previously we tried to exclude WAL files except the checkpoint WAL to save ~5.8GB,
+# but this caused data corruption when PostgreSQL started crash recovery on extracted data.
+# The tar may be created while PostgreSQL is still running (docker-compose down takes time),
+# so we need all WAL files for proper recovery.
 _build_haf_tar_excludes() {
     local source_dir="$1"
     local excludes=""
@@ -420,41 +424,9 @@ _build_haf_tar_excludes() {
         _log "Excluding datadir/blockchain (use shared block_log instead)"
     fi
 
-    # Exclude pg_wal files except the checkpoint WAL file
-    # PostgreSQL only needs the WAL file containing the latest checkpoint
-    # Saves ~5.8GB (375 files × 16MB)
-    local pgdata_path="${source_dir}/datadir/haf_db_store/pgdata"
-    local pg_wal_path="${pgdata_path}/pg_wal"
-
-    if [[ -d "$pg_wal_path" ]]; then
-        # Find checkpoint WAL file using pg_controldata via docker
-        local checkpoint_wal=""
-        if command -v docker &>/dev/null; then
-            checkpoint_wal=$(docker run --rm -v "${pgdata_path}:/pgdata:ro" postgres:17 \
-                pg_controldata /pgdata 2>/dev/null | \
-                grep "REDO WAL file" | awk '{print $NF}')
-        fi
-
-        if [[ -n "$checkpoint_wal" ]]; then
-            _log "Keeping checkpoint WAL: $checkpoint_wal, excluding others"
-            # Build exclusions for all WAL files except checkpoint
-            local wal_count=0
-            local excluded_count=0
-            for wal_file in "$pg_wal_path"/0*; do
-                if [[ -f "$wal_file" ]]; then
-                    wal_count=$((wal_count + 1))
-                    local wal_name=$(basename "$wal_file")
-                    if [[ "$wal_name" != "$checkpoint_wal" ]]; then
-                        excludes="$excludes --exclude=./datadir/haf_db_store/pgdata/pg_wal/$wal_name"
-                        excluded_count=$((excluded_count + 1))
-                    fi
-                fi
-            done
-            _log "Excluding $excluded_count of $wal_count WAL files"
-        else
-            _log "Could not determine checkpoint WAL, keeping all WAL files"
-        fi
-    fi
+    # Keep ALL WAL files - required for safe PostgreSQL recovery
+    # Excluding WAL files causes data corruption when PostgreSQL starts crash recovery
+    _log "Keeping all WAL files for safe PostgreSQL recovery"
 
     echo "$excludes"
 }
