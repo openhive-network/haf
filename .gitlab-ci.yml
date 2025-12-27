@@ -611,6 +611,8 @@ haf_system_tests:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   before_script:
+    # Install git for submodule init (not included in HAF production image)
+    - sudo apt-get update -qq && sudo apt-get install -y -qq git >/dev/null 2>&1 || true
     - !reference [.init_submodules, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_system_tests.sh
@@ -734,6 +736,8 @@ applications_system_tests:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   before_script:
+    # Install git for submodule init (not included in HAF production image)
+    - sudo apt-get update -qq && sudo apt-get install -y -qq git >/dev/null 2>&1 || true
     - !reference [.init_submodules, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_application_system_tests.sh
@@ -1301,6 +1305,8 @@ op_body_filter_tests:
     name: $HAF_IMAGE_NAME
     entrypoint: [""]
   before_script:
+    # Install git for submodule init (not included in HAF production image)
+    - sudo apt-get update -qq && sudo apt-get install -y -qq git >/dev/null 2>&1 || true
     - !reference [.init_submodules, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_op_body_filter_tests.sh
