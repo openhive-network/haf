@@ -1,0 +1,111 @@
+# Example: Quick Test CI Configuration for HAF
+#
+# This is a minimal CI configuration for quick testing of HAF changes
+# that don't require rebuilding images or replaying data.
+#
+# HOW TO USE:
+# ===========
+# 1. Create a new branch for your changes (e.g., "quick/fix-symlink-issue")
+# 2. Copy this file to .gitlab-ci.yml in your branch
+# 3. Update QUICK_TEST_HAF_COMMIT to a valid cache key (see below)
+# 4. Push and run the pipeline
+#
+# FINDING A CACHE KEY:
+# ====================
+#   ./scripts/ci-helpers/list-haf-caches.sh --recent
+#
+# Or via SSH:
+#   ssh -A steem-18 "ssh hive-builder-10 'ls -lt /nfs/ci-cache/haf/*.tar | head -5'"
+#
+# WHAT'S DIFFERENT FROM FULL CI:
+# ==============================
+# - No image builds (uses existing image from registry)
+# - No replay (uses cached data from NFS)
+# - Only runs the specific tests you need
+# - Runs in ~2-5 minutes instead of ~60+ minutes
+#
+
+stages:
+  - build_and_test_phase_1
+  - build_and_test_phase_2
+
+variables:
+  # ============================================================
+  # CONFIGURE THESE FOR YOUR QUICK TEST
+  # ============================================================
+
+  # The HAF commit SHA that has cached replay data
+  # Find available keys with: ./scripts/ci-helpers/list-haf-caches.sh
+  QUICK_TEST_HAF_COMMIT: "9ce4243d23b6f27ab9023a401ada586a856b8848"
+
+  # The HAF image to use (from registry)
+  # Options:
+  #   - registry.gitlab.syncad.com/hive/haf:develop  (latest develop)
+  #   - registry.gitlab.syncad.com/hive/haf:<sha>    (specific commit)
+  QUICK_TEST_HAF_IMAGE: "registry.gitlab.syncad.com/hive/haf:develop"
+
+  # ============================================================
+  # Standard variables (usually don't need to change)
+  # ============================================================
+  HAF_COMMIT: "${QUICK_TEST_HAF_COMMIT}"
+  HAF_IMAGE_NAME: "${QUICK_TEST_HAF_IMAGE}"
+  HAF_DATA_CACHE_LOCAL: "/cache/haf_${HAF_COMMIT}"
+  GIT_STRATEGY: clone
+  GIT_SUBMODULE_STRATEGY: recursive
+  FF_NETWORK_PER_BUILD: 1
+  FF_ENABLE_JOB_CLEANUP: 1
+
+# Include the quick-test template
+include:
+  - local: '/scripts/ci-helpers/quick-test.yml'
+
+# ============================================================
+# JOBS TO RUN
+# Comment out jobs you don't need
+# ============================================================
+
+# Prepare cached data (required - runs first)
+prepare_haf_data:
+  extends: .quick_prepare_haf_data
+
+# Example test: dead_app_auto_detach
+dead_app_auto_detach:
+  extends: .quick_dead_app_auto_detach
+  needs:
+    - prepare_haf_data
+
+# Example test: start_haf_as_service
+# Uncomment to enable:
+# start_haf_as_service:
+#   extends: .quick_start_haf_as_service
+#   needs:
+#     - prepare_haf_data
+
+# ============================================================
+# ADDING CUSTOM TESTS
+# ============================================================
+# You can add your own test jobs that use the cached data.
+# Use the .quick_test_fetch_cache template for the before_script.
+#
+# Example:
+#
+# my_custom_test:
+#   extends: .quick_test_fetch_cache
+#   stage: build_and_test_phase_2
+#   image: "registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10"
+#   needs:
+#     - prepare_haf_data
+#   services:
+#     - name: "${HAF_IMAGE_NAME}"
+#       alias: haf-instance
+#       variables:
+#         PG_ACCESS: |
+#           host    all              haf_admin        0.0.0.0/0    trust
+#         DATA_SOURCE: "${HAF_DATA_CACHE_LOCAL}"
+#       command: ["--replay-blockchain", "--stop-at-block=5000000"]
+#   script:
+#     - psql postgresql://haf_admin@haf-instance:5432/haf_block_log -c "SELECT COUNT(*) FROM hive.blocks"
+#     - # Your test commands here
+#   tags:
+#     - data-cache-storage
+#     - fast

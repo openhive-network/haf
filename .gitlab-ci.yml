@@ -67,12 +67,9 @@ variables:
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
-  DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
-  # Pipeline cache type and key for cache-manager (creates /nfs/ci-cache/haf_pipeline/${CI_PIPELINE_ID}.tar)
-  PIPELINE_CACHE_TYPE: "haf_pipeline"
-  PIPELINE_CACHE_KEY: "${CI_PIPELINE_ID}"
-  # Local path for pipeline data (extracted from NFS tar by cache-manager)
-  PIPELINE_DATA_CACHE_LOCAL: "/cache/haf_pipeline_${CI_PIPELINE_ID}"
+  DATA_CACHE_HAF_PREFIX: "/cache/haf"
+  # Local path for HAF data cache (fetched from NFS by cache-manager)
+  HAF_DATA_CACHE_LOCAL: "/cache/haf_${HAF_COMMIT}"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   # Mirrornet snapshot path on NFS for cross-builder access
   SNAPSHOTS_PATH: /nfs/ci-cache/haf/snapshots_pipeline_${CI_PIPELINE_ID}
@@ -159,20 +156,20 @@ default:
   - "**/generated_during_*/**/shared_memory.bin"
   - "**/generated_during_*/**/*.sst"
 
-.fetch_pipeline_cache: &fetch_pipeline_cache
-  # Get pipeline data from NFS via cache-manager
+.fetch_haf_cache: &fetch_haf_cache
+  # Get HAF data from NFS via cache-manager (commit-specific cache)
   - |
-    echo -e "\e[0Ksection_start:$(date +%s):copy_data[collapsed=true]\r\e[0KFetching pipeline data via cache-manager..."
+    echo -e "\e[0Ksection_start:$(date +%s):copy_data[collapsed=true]\r\e[0KFetching HAF data via cache-manager..."
     set -e
     CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
-    echo "Fetching cache: type=${PIPELINE_CACHE_TYPE} key=${PIPELINE_CACHE_KEY}"
-    echo "Destination: ${PIPELINE_DATA_CACHE_LOCAL}"
+    echo "Fetching cache: type=haf key=${HAF_COMMIT}"
+    echo "Destination: ${HAF_DATA_CACHE_LOCAL}"
 
-    # cache-manager handles cleanup, extraction, and permission restoration
-    "$CACHE_MANAGER" get "${PIPELINE_CACHE_TYPE}" "${PIPELINE_CACHE_KEY}" "${PIPELINE_DATA_CACHE_LOCAL}"
+    # cache-manager handles extraction and permission restoration
+    "$CACHE_MANAGER" get "haf" "${HAF_COMMIT}" "${HAF_DATA_CACHE_LOCAL}"
 
-    echo "Pipeline data fetch complete."
-    ls -la "$PIPELINE_DATA_CACHE_LOCAL/datadir/"
+    echo "HAF data fetch complete."
+    ls -la "$HAF_DATA_CACHE_LOCAL/datadir/"
     echo -e "\e[0Ksection_end:$(date +%s):copy_data\r\e[0K"
 
 verify_poetry_lock_sanity:
@@ -459,8 +456,8 @@ haf_image_build_mirrornet:
     PG_ACCESS: |
                 "host    all              haf_admin        0.0.0.0/0    trust"
 
-    # Use local cache path (copied from NFS by pipeline_data_local_copy job)
-    DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
+    # Use local cache path (fetched from NFS by cache-manager)
+    DATA_SOURCE: "${HAF_DATA_CACHE_LOCAL}"
     # Use local block_log to avoid NFS file locking issues when hived opens the files
     SHARED_BLOCK_LOG_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     LOG_FILE: $CI_JOB_NAME.log
@@ -998,8 +995,8 @@ replay_filtered_haf_data_accounts_body_operations:
     # Store filtered data via cache-manager (creates tar on NFS)
     - |
       CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
-      echo "Storing filtered cache: type=${PIPELINE_CACHE_TYPE} key=${FILTERED_CACHE_KEY}"
-      "$CACHE_MANAGER" put "${PIPELINE_CACHE_TYPE}" "${FILTERED_CACHE_KEY}" "${DATA_CACHE_DIR}"
+      echo "Storing filtered cache: type=haf_filtered key=${FILTERED_CACHE_KEY}"
+      "$CACHE_MANAGER" put "haf_filtered" "${FILTERED_CACHE_KEY}" "${DATA_CACHE_DIR}"
       echo "Filtered cache stored successfully"
   tags:
     - data-cache-storage
@@ -1108,54 +1105,6 @@ prepare_haf_data:
     - data-cache-storage
     - fast
 
-# Creates a temporary copy of replay data for the exclusive use of current pipeline
-replay_data_copy:
-  extends: .job-defaults
-  image: "${CI_REGISTRY_IMAGE}/ci-base-image${BUILDER_IMAGE_TAG}"
-  stage: build_and_test_phase_1
-  needs:
-    - prepare_haf_data
-    - job: haf_image_build
-      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
-    - job: detect_changes
-      artifacts: true
-      optional: true  # Skipped for tagged builds
-  variables:
-    SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
-  script:
-    - |
-      set -e
-      CACHE_MANAGER="$SCRIPTS_PATH/ci-helpers/cache-manager.sh"
-      SOURCE_CACHE="${DATA_CACHE_HAF_PREFIX:?}_${HAF_COMMIT:?}"
-
-      echo "Creating pipeline cache via cache-manager"
-
-      # Find source data - local cache or fetch from NFS
-      if [[ -d "$SOURCE_CACHE" ]]; then
-        echo "Using local cache: $SOURCE_CACHE"
-        DATA_SOURCE="$SOURCE_CACHE"
-      elif [[ -x "$CACHE_MANAGER" ]]; then
-        echo "Local cache not found, fetching from NFS..."
-        LOCAL_CACHE="/cache/haf_${HAF_COMMIT:?}"
-        if "$CACHE_MANAGER" get haf "${HAF_COMMIT:?}" "$LOCAL_CACHE"; then
-          DATA_SOURCE="$LOCAL_CACHE"
-        else
-          echo "ERROR: Failed to get cache for HAF commit ${HAF_COMMIT:?}"
-          exit 1
-        fi
-      else
-        echo "ERROR: No local cache and cache-manager not available"
-        exit 1
-      fi
-
-      # Store pipeline data via cache-manager (creates tar on NFS)
-      echo "Storing pipeline cache: type=${PIPELINE_CACHE_TYPE} key=${PIPELINE_CACHE_KEY}"
-      "$CACHE_MANAGER" put "${PIPELINE_CACHE_TYPE}" "${PIPELINE_CACHE_KEY}" "$DATA_SOURCE"
-      echo "Pipeline cache stored successfully"
-  tags:
-    - data-cache-storage
-    - fast
-
 dead_app_auto_detach:
   extends: .job-defaults
   stage: build_and_test_phase_2
@@ -1163,7 +1112,6 @@ dead_app_auto_detach:
   needs:
     - job: prepare_haf_data
       artifacts: true
-    - job: replay_data_copy
     - job: haf_image_build
       artifacts: true
       optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
@@ -1180,13 +1128,13 @@ dead_app_auto_detach:
                     "host    all              hived            0.0.0.0/0    trust"
                     "host    all              test_app_owner   0.0.0.0/0    trust"
 
-        DATA_SOURCE: "${PIPELINE_DATA_CACHE_LOCAL}"
+        DATA_SOURCE: "${HAF_DATA_CACHE_LOCAL}"
         LOG_FILE: $CI_JOB_NAME.log
       command: ["--replay-blockchain", "--stop-at-block=1000000"]
   variables:
     HIVED_UID: $HIVED_UID
     HAF_COMMIT: $HAF_COMMIT
-  before_script: *fetch_pipeline_cache
+  before_script: *fetch_haf_cache
   script:
     - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
   artifacts:
@@ -1203,7 +1151,6 @@ start_haf_as_service:
   needs:
     - job: prepare_haf_data
       artifacts: true
-    - job: replay_data_copy
     - job: haf_image_build
       artifacts: true
       optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
@@ -1216,7 +1163,7 @@ start_haf_as_service:
     HAF_POSTGRES_URL: postgresql://haf_admin@haf-instance:5432/haf_block_log
     HIVED_UID: $HIVED_UID
     HAF_COMMIT: $HAF_COMMIT
-  before_script: *fetch_pipeline_cache
+  before_script: *fetch_haf_cache
   script:
     - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
     - |
@@ -1229,7 +1176,7 @@ start_haf_as_service:
         }' haf-instance:8091
   after_script:
     - rm docker_entrypoint.log -f
-    - cp "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir/$CI_JOB_NAME.log" "$CI_PROJECT_DIR/docker_entrypoint.log"
+    - cp "${HAF_DATA_CACHE_LOCAL}/datadir/$CI_JOB_NAME.log" "$CI_PROJECT_DIR/docker_entrypoint.log"
   artifacts:
     paths:
     - docker_entrypoint.log
@@ -1260,24 +1207,6 @@ cleanup_old_haf_cache:
   stage: cleanup
   variables:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
-  tags:
-    - data-cache-storage
-    - fast
-
-# Deletes replay data used by the tests and created by replay_data_copy
-cleanup_pipeline_cache:
-  extends:
-    - .cleanup_cache_manual_template
-  stage: cleanup
-  # NOTE: needs must be AFTER extends to override the template's needs: []
-  needs:
-    - replay_data_copy
-    - start_haf_as_service
-    - dead_app_auto_detach
-  variables:
-    # Pipeline cache stored via cache-manager at /nfs/ci-cache/haf_pipeline/${CI_PIPELINE_ID}.tar
-    CLEANUP_PATH_PATTERN: "/nfs/ci-cache/haf_pipeline/${CI_PIPELINE_ID}*"
-  when: always
   tags:
     - data-cache-storage
     - fast

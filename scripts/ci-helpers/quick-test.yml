@@ -1,0 +1,182 @@
+# Quick Test Mode for HAF CI
+#
+# This template enables "quick pipeline" mode for testing code changes without
+# running full rebuilds or replays. It uses cached data from previous successful
+# pipelines to dramatically speed up test iteration.
+#
+# USAGE:
+# ======
+#
+# Method 1: CI Variable (recommended for one-off quick tests)
+#   Go to CI/CD -> Run Pipeline and set these variables:
+#     QUICK_TEST: "true"
+#     QUICK_TEST_HAF_COMMIT: "<commit-sha-with-cached-data>"
+#     QUICK_TEST_HAF_IMAGE: "<registry-image-tag>"  (optional, defaults to develop)
+#
+# Method 2: Branch-based (for iterative development)
+#   Create a branch with prefix "quick/" and set HAF_COMMIT in .gitlab-ci.yml
+#
+# FINDING AVAILABLE CACHE KEYS:
+# =============================
+#   ssh -A steem-18 "ssh hive-builder-10 'ls /nfs/ci-cache/haf/'"
+#   # Or use the helper script:
+#   ./scripts/ci-helpers/list-haf-caches.sh
+#
+# WHAT THIS DOES:
+# ===============
+# - Skips all image builds (uses existing HAF image from registry)
+# - Skips replay (uses cached 5M block replay data from NFS)
+# - Only runs the specific test jobs you need
+#
+# LIMITATIONS:
+# ============
+# - Cannot test changes to hived/HAF core (requires rebuild)
+# - Cannot test changes that require fresh replay
+# - Best for: SQL changes, test code changes, HAF application changes
+#
+# EXAMPLE - Testing dead_app_auto_detach:
+# =======================================
+#   QUICK_TEST=true
+#   QUICK_TEST_HAF_COMMIT=9ce4243d23b6f27ab9023a401ada586a856b8848
+#   QUICK_TEST_JOBS=dead_app_auto_detach
+#
+
+# =============================================================================
+# Quick Test Variables
+# =============================================================================
+
+.quick_test_variables:
+  variables:
+    # Override HAF_COMMIT to use cached data instead of current commit
+    # This MUST be set to a commit that has cached replay data in NFS
+    HAF_COMMIT: "${QUICK_TEST_HAF_COMMIT}"
+
+    # Use existing HAF image from registry (skip rebuild)
+    # Default to develop branch image if not specified
+    HAF_IMAGE_NAME: "${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:develop}"
+
+    # Local path for HAF data cache (fetched from NFS by cache-manager)
+    HAF_DATA_CACHE_LOCAL: "/cache/haf_${HAF_COMMIT}"
+
+# =============================================================================
+# Quick Test Job Templates
+# =============================================================================
+
+# Fetch cached data from NFS - base for all quick test jobs
+.quick_test_fetch_cache:
+  before_script:
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):quick_test_info[collapsed=false]\r\e[0K=== QUICK TEST MODE ==="
+      echo "Using cached data from HAF commit: ${HAF_COMMIT}"
+      echo "Using HAF image: ${HAF_IMAGE_NAME}"
+      echo "Local cache path: ${HAF_DATA_CACHE_LOCAL}"
+      echo -e "\e[0Ksection_end:$(date +%s):quick_test_info\r\e[0K"
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):copy_data[collapsed=true]\r\e[0KFetching HAF data via cache-manager..."
+      set -e
+      CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
+      echo "Fetching cache: type=haf key=${HAF_COMMIT}"
+      echo "Destination: ${HAF_DATA_CACHE_LOCAL}"
+      "$CACHE_MANAGER" get "haf" "${HAF_COMMIT}" "${HAF_DATA_CACHE_LOCAL}" || {
+        echo "ERROR: No cached data found for HAF commit ${HAF_COMMIT}"
+        echo "Available caches can be listed with: ./scripts/ci-helpers/list-haf-caches.sh"
+        exit 1
+      }
+      echo "HAF data fetch complete."
+      ls -la "${HAF_DATA_CACHE_LOCAL}/datadir/" || true
+      echo -e "\e[0Ksection_end:$(date +%s):copy_data\r\e[0K"
+
+# =============================================================================
+# Quick Test Jobs
+# These are the jobs that can be run in quick-test mode
+# =============================================================================
+
+# Prepare data job for quick mode - just fetches from cache
+.quick_prepare_haf_data:
+  extends:
+    - .quick_test_variables
+  stage: build_and_test_phase_1
+  image: "registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10"
+  script:
+    - |
+      set -e
+      CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
+
+      echo "=== Quick Test Mode: Fetching cached data ==="
+      echo "HAF_COMMIT: ${HAF_COMMIT}"
+      echo "Destination: ${HAF_DATA_CACHE_LOCAL}"
+
+      "$CACHE_MANAGER" get haf "${HAF_COMMIT}" "${HAF_DATA_CACHE_LOCAL}" || {
+        echo "ERROR: No cached data for ${HAF_COMMIT}"
+        echo ""
+        echo "Available HAF caches:"
+        "$CACHE_MANAGER" list haf 2>/dev/null | head -20 || echo "(cache-manager list failed)"
+        exit 1
+      }
+      echo "HAF data ready at: ${HAF_DATA_CACHE_LOCAL}"
+  tags:
+    - data-cache-storage
+    - fast
+
+# Quick test version of dead_app_auto_detach
+.quick_dead_app_auto_detach:
+  extends:
+    - .quick_test_variables
+    - .quick_test_fetch_cache
+  stage: build_and_test_phase_2
+  image: "registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10"
+  services:
+    - name: "${HAF_IMAGE_NAME}"
+      alias: haf-instance
+      variables:
+        PG_ACCESS: |
+          host    all              haf_admin        0.0.0.0/0    trust
+          host    all              hived            0.0.0.0/0    trust
+          host    all              test_app_owner   0.0.0.0/0    trust
+        DATA_SOURCE: "${HAF_DATA_CACHE_LOCAL}"
+        LOG_FILE: dead_app_auto_detach.log
+      command: ["--replay-blockchain", "--stop-at-block=1000000"]
+  script:
+    - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
+  artifacts:
+    paths:
+      - scenario*.log
+    when: always
+  tags:
+    - data-cache-storage
+    - fast
+
+# Quick test version of start_haf_as_service
+.quick_start_haf_as_service:
+  extends:
+    - .quick_test_variables
+    - .quick_test_fetch_cache
+  stage: build_and_test_phase_2
+  image: "registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10"
+  services:
+    - name: "${HAF_IMAGE_NAME}"
+      alias: haf-instance
+      variables:
+        PG_ACCESS: |
+          host    all              haf_admin        0.0.0.0/0    trust
+        DATA_SOURCE: "${HAF_DATA_CACHE_LOCAL}"
+        LOG_FILE: start_haf_as_service.log
+      command: ["--replay-blockchain", "--stop-at-block=5000000"]
+  variables:
+    HAF_POSTGRES_URL: postgresql://haf_admin@haf-instance:5432/haf_block_log
+  script:
+    - |
+      echo "Waiting for HAF service..."
+      for i in $(seq 1 60); do
+        if psql "$HAF_POSTGRES_URL" -c "SELECT 1" 2>/dev/null; then
+          echo "HAF service is ready"
+          break
+        fi
+        echo "Waiting... ($i/60)"
+        sleep 5
+      done
+    - psql "$HAF_POSTGRES_URL" -c "SELECT * FROM hive.contexts LIMIT 5"
+    - psql "$HAF_POSTGRES_URL" -c "SELECT COUNT(*) FROM hive.blocks"
+  tags:
+    - data-cache-storage
+    - fast
