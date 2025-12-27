@@ -610,6 +610,8 @@ haf_system_tests:
     entrypoint: [""]
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  before_script:
+    - !reference [.init_submodules, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_system_tests.sh
   artifacts:
@@ -731,6 +733,8 @@ applications_system_tests:
     entrypoint: [""]
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  before_script:
+    - !reference [.init_submodules, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_application_system_tests.sh
   artifacts:
@@ -1296,6 +1300,8 @@ op_body_filter_tests:
   image:
     name: $HAF_IMAGE_NAME
     entrypoint: [""]
+  before_script:
+    - !reference [.init_submodules, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_op_body_filter_tests.sh
   artifacts:
