@@ -569,8 +569,8 @@ hfm_functional_tests_testnet:
   before_script:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
-      # Install libpq-dev for psycopg2-binary compilation (no Python 3.14 wheels available)
-      sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev >/dev/null 2>&1 || true
+      # Install build-essential and libpq-dev for compiling C extensions (no Python 3.14 wheels available yet)
+      sudo apt-get update -qq && sudo apt-get install -y -qq build-essential libpq-dev >/dev/null 2>&1 || true
       python3 -m venv --system-site-packages venv/
       . venv/bin/activate
       cd $CI_PROJECT_DIR/tests/integration/haf-local-tools
@@ -633,6 +633,9 @@ dump_snapshot_5m_mirrornet:
     MIRRORNET_WORKING_DIR: "$CI_PROJECT_DIR/mirrornet_witness_node"
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVED_PATH: "$BINARY_CACHE_PATH/hived"
+  before_script:
+    # Install libpq5 runtime for hived (linked against PostgreSQL)
+    - sudo apt-get update -qq && sudo apt-get install -y -qq libpq5 >/dev/null 2>&1 || true
   script:
     #Prepare environment for hived run
     - cd $CI_PROJECT_DIR/docker
