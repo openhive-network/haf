@@ -92,7 +92,7 @@ WORKDIR /home/haf_admin
 # Install additionally packages located in user directory
 RUN /usr/local/src/scripts/setup_ubuntu.sh --user
 
-FROM ${CI_REGISTRY_IMAGE}ci-base-image:$CI_IMAGE_TAG AS build
+FROM ci-base-image AS build
 
 ARG BUILD_HIVE_TESTNET=OFF
 ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
