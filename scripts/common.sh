@@ -31,7 +31,14 @@ do_clone_commit() {
     if [[ -n "$HIVE_BRANCH" ]]; then
       echo "Initializing hive submodule from feature branch: $HIVE_BRANCH"
       HIVE_COMMIT=$(git ls-tree HEAD hive | awk '{print $3}')
-      git submodule init hive
+      HIVE_URL=$(git config -f .gitmodules submodule.hive.url)
+      # Convert relative URL to absolute if needed
+      if [[ "$HIVE_URL" == ../* ]]; then
+        HIVE_URL="https://gitlab.syncad.com/hive/hive.git"
+      fi
+      # Clone the hive submodule, then fetch feature branch and checkout commit
+      rm -rf hive
+      git clone --no-checkout "$HIVE_URL" hive
       pushd hive
       git fetch origin "$HIVE_BRANCH" --depth=1
       git fetch --depth=1 origin "$HIVE_COMMIT" || true
