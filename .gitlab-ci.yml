@@ -145,6 +145,12 @@ default:
                   rm -rf "$nested_path"
                 fi
               done
+              # Fix permissions on plugins directory for cross-user CI jobs
+              # Different jobs may run as different users with fetch strategy reusing workspaces
+              if [ -d "hive/libraries/plugins" ]; then
+                echo "pre_get_sources: fixing permissions on hive/libraries/plugins"
+                chmod -R a+w "hive/libraries/plugins" 2>/dev/null || true
+              fi
             fi
 
             echo "pre_get_sources: existing repo OK"
@@ -400,22 +406,33 @@ detect_changes:
     - job: detect_changes
       artifacts: true
       optional: true  # Optional for tagged builds where detect_changes is skipped
-  rules:
-    # Skip in manual QUICK_TEST mode (known at pipeline creation)
-    - if: $QUICK_TEST == "true"
-      when: never
-    - when: on_success
   before_script:
     # Fix git safe.directory issue on some runners (CVE-2022-24765)
     - git config --global --add safe.directory '*'
-    # Early exit if AUTO_SKIP_BUILD is true (from detect_changes dotenv)
+    # Early exit if QUICK_TEST or AUTO_SKIP_BUILD is true
     # This allows us to skip the expensive build while still producing required artifacts
     - |
-      if [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
+      SKIP_BUILD=false
+      CACHE_COMMIT=""
+
+      # Check for manual QUICK_TEST mode
+      if [[ "${QUICK_TEST:-false}" == "true" ]]; then
+        echo "=== Skipping build (QUICK_TEST=true) ==="
+        SKIP_BUILD=true
+        CACHE_COMMIT="${QUICK_TEST_HAF_COMMIT}"
+        if [[ -z "$CACHE_COMMIT" ]]; then
+          echo "ERROR: QUICK_TEST=true but QUICK_TEST_HAF_COMMIT not set"
+          exit 1
+        fi
+      # Check for automatic skip mode (from detect_changes)
+      elif [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
         echo "=== Skipping build (AUTO_SKIP_BUILD=true) ==="
-        # Derive the correct image name based on network type
-        # HAF_COMMIT comes from detect_changes dotenv
-        CACHE_SHORT="${HAF_COMMIT:0:8}"
+        SKIP_BUILD=true
+        CACHE_COMMIT="${HAF_COMMIT}"
+      fi
+
+      if [[ "$SKIP_BUILD" == "true" ]]; then
+        CACHE_SHORT="${CACHE_COMMIT:0:8}"
         case "${HIVE_NETWORK_TYPE:-mainnet}" in
           testnet)
             SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf/testnet:${CACHE_SHORT}"
@@ -424,13 +441,11 @@ detect_changes:
             SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf/mirrornet:${CACHE_SHORT}"
             ;;
           *)
-            # For mainnet, use HAF_IMAGE_NAME from detect_changes (already correct)
-            SKIP_IMAGE_NAME="${HAF_IMAGE_NAME:-registry.gitlab.syncad.com/hive/haf:develop}"
+            SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf:${CACHE_SHORT}"
             ;;
         esac
         echo "Using cached HAF image: ${SKIP_IMAGE_NAME}"
         # Create dotenv artifact with cached image name
-        # Include HAF_INSTANCE for mirrornet after_script compatibility
         echo "HAF_IMAGE_NAME=${SKIP_IMAGE_NAME}" > docker_image_name.env
         echo "HAF_INSTANCE=${SKIP_IMAGE_NAME}" >> docker_image_name.env
         # Extract binaries from cached Docker image (downstream jobs need them)
@@ -548,6 +563,9 @@ haf_image_build_mirrornet:
         echo "This test requires image and source from the same commit."
         exit 0
       fi
+    # Fix workspace permissions - CI fetch strategy may leave directories owned by different users
+    # Remove the sql_serializer symlink location to let CMake recreate it with current user permissions
+    - rm -rf $CI_PROJECT_DIR/hive/libraries/plugins/sql_serializer 2>/dev/null || true
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
   artifacts:
     paths:

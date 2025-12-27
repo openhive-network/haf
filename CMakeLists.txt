@@ -15,7 +15,29 @@ INCLUDE(hive_build_types)
 PROJECT( haf )
 
 SET( HAF_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-FILE( CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/src/sql_serializer ${CMAKE_CURRENT_SOURCE_DIR}/hive/libraries/plugins/sql_serializer SYMBOLIC )
+
+# Create symlink for sql_serializer plugin
+# Handles CI edge cases: broken symlinks, stale symlinks, missing parent directories
+SET( SQL_SERIALIZER_LINK ${CMAKE_CURRENT_SOURCE_DIR}/hive/libraries/plugins/sql_serializer )
+SET( SQL_SERIALIZER_TARGET ${CMAKE_CURRENT_SOURCE_DIR}/src/sql_serializer )
+
+# Check if symlink already exists and points to correct target (fast path)
+set(symlink_needs_update TRUE)
+if(IS_SYMLINK ${SQL_SERIALIZER_LINK})
+    file(READ_SYMLINK ${SQL_SERIALIZER_LINK} existing_target)
+    if(existing_target STREQUAL SQL_SERIALIZER_TARGET)
+        set(symlink_needs_update FALSE)
+    endif()
+endif()
+
+if(symlink_needs_update)
+    # Get parent directory and ensure it exists
+    get_filename_component(SQL_SERIALIZER_LINK_DIR ${SQL_SERIALIZER_LINK} DIRECTORY)
+    file(MAKE_DIRECTORY ${SQL_SERIALIZER_LINK_DIR})
+    # Remove any existing file/symlink and create fresh symlink
+    file(REMOVE ${SQL_SERIALIZER_LINK})
+    file(CREATE_LINK ${SQL_SERIALIZER_TARGET} ${SQL_SERIALIZER_LINK} SYMBOLIC)
+endif()
 
 list( APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" )
 
