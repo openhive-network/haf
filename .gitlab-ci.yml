@@ -167,12 +167,15 @@ default:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):init_submodules[collapsed=true]\r\e[0KInitializing submodules..."
     git config --global --add safe.directory '*'
-    # First, initialize (but don't update) the hive submodule to create the directory
-    git submodule init hive
-    # Now fetch the feature branch from hive
-    git -C hive fetch https://gitlab.syncad.com/hive/hive.git feature/python-3.14-api-generation --depth=1
-    # Update hive submodule to the desired commit
-    git submodule update hive
+    # Clone hive submodule manually from the feature branch
+    HIVE_URL="https://gitlab.syncad.com/hive/hive.git"
+    HIVE_COMMIT=$(git config --file .gitmodules --get submodule.hive.url >/dev/null && git ls-tree HEAD hive | awk '{print $3}')
+    echo "Cloning hive submodule at commit $HIVE_COMMIT"
+    git clone --no-checkout "$HIVE_URL" hive
+    cd hive
+    git fetch origin feature/python-3.14-api-generation
+    git checkout $HIVE_COMMIT
+    cd ..
     # Now recursively init and update nested submodules
     git submodule update --init --recursive --jobs 4
     echo -e "\e[0Ksection_end:$(date +%s):init_submodules\r\e[0K"
