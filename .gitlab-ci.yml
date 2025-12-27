@@ -212,6 +212,8 @@ verify_poetry_lock_sanity:
   variables:
     PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
   before_script:
+    # Initialize submodules (hive is on a feature branch with updated test-tools)
+    - !reference [.init_submodules, before_script]
     # Regenerate poetry.lock for Python 3.14 compatibility
     - poetry -C "${PYPROJECT_DIR}" env use python3
     - source $(poetry -C "${PYPROJECT_DIR}" env info --path)/bin/activate
