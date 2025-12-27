@@ -163,29 +163,30 @@ default:
   - "**/generated_during_*/**/*.sst"
 
 # Manual submodule initialization - needed because hive submodule is on a feature branch
-.init_submodules: &init_submodules
-  - |
-    echo -e "\e[0Ksection_start:$(date +%s):init_submodules[collapsed=true]\r\e[0KInitializing submodules..."
-    git config --global --add safe.directory '*'
-    # Get the commit we need from the hive submodule
-    HIVE_URL="https://gitlab.syncad.com/hive/hive.git"
-    HIVE_COMMIT=$(git ls-tree HEAD hive | awk '{print $3}')
-    echo "Need hive submodule at commit $HIVE_COMMIT"
-    # Remove existing hive directory if it exists (can be stale from GIT_STRATEGY=fetch)
-    # Use sudo to handle files created by different users in previous jobs
-    sudo rm -rf hive 2>/dev/null || rm -rf hive
-    # Clone and fetch from feature branch
-    git clone --no-checkout "$HIVE_URL" hive
-    cd hive
-    git fetch origin feature/python-3.14-api-generation
-    git checkout $HIVE_COMMIT
-    # Initialize nested submodules inside hive (test-tools, tests_api, etc.)
-    # This is required because we manually cloned hive instead of using submodule update
-    git submodule update --init --recursive --jobs 4
-    cd ..
-    # Update any remaining HAF submodules (the hive directory is already handled above)
-    git submodule update --init --recursive --jobs 4
-    echo -e "\e[0Ksection_end:$(date +%s):init_submodules\r\e[0K"
+.init_submodules:
+  before_script: &init_submodules
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):init_submodules[collapsed=true]\r\e[0KInitializing submodules..."
+      git config --global --add safe.directory '*'
+      # Get the commit we need from the hive submodule
+      HIVE_URL="https://gitlab.syncad.com/hive/hive.git"
+      HIVE_COMMIT=$(git ls-tree HEAD hive | awk '{print $3}')
+      echo "Need hive submodule at commit $HIVE_COMMIT"
+      # Remove existing hive directory if it exists (can be stale from GIT_STRATEGY=fetch)
+      # Use sudo to handle files created by different users in previous jobs
+      sudo rm -rf hive 2>/dev/null || rm -rf hive
+      # Clone and fetch from feature branch
+      git clone --no-checkout "$HIVE_URL" hive
+      cd hive
+      git fetch origin feature/python-3.14-api-generation
+      git checkout $HIVE_COMMIT
+      # Initialize nested submodules inside hive (test-tools, tests_api, etc.)
+      # This is required because we manually cloned hive instead of using submodule update
+      git submodule update --init --recursive --jobs 4
+      cd ..
+      # Update any remaining HAF submodules (the hive directory is already handled above)
+      git submodule update --init --recursive --jobs 4
+      echo -e "\e[0Ksection_end:$(date +%s):init_submodules\r\e[0K"
 
 .fetch_haf_cache: &fetch_haf_cache
   # Get HAF data from NFS via cache-manager (commit-specific cache)
@@ -570,6 +571,8 @@ hfm_functional_tests_testnet:
 .pytest_based:
   extends: .job-defaults
   before_script:
+    # Initialize submodules (hive is on a feature branch)
+    - !reference [.init_submodules, before_script]
     - |
       echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
       # Install build-essential and libpq-dev for compiling C extensions (no Python 3.14 wheels available yet)
