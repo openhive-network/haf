@@ -172,7 +172,8 @@ default:
     HIVE_COMMIT=$(git ls-tree HEAD hive | awk '{print $3}')
     echo "Need hive submodule at commit $HIVE_COMMIT"
     # Remove existing hive directory if it exists (can be stale from GIT_STRATEGY=fetch)
-    rm -rf hive
+    # Use sudo to handle files created by different users in previous jobs
+    sudo rm -rf hive 2>/dev/null || rm -rf hive
     # Clone and fetch from feature branch
     git clone --no-checkout "$HIVE_URL" hive
     cd hive
