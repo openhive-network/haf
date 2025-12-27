@@ -179,8 +179,11 @@ default:
     cd hive
     git fetch origin feature/python-3.14-api-generation
     git checkout $HIVE_COMMIT
+    # Initialize nested submodules inside hive (test-tools, tests_api, etc.)
+    # This is required because we manually cloned hive instead of using submodule update
+    git submodule update --init --recursive --jobs 4
     cd ..
-    # Now recursively init and update nested submodules
+    # Update any remaining HAF submodules (the hive directory is already handled above)
     git submodule update --init --recursive --jobs 4
     echo -e "\e[0Ksection_end:$(date +%s):init_submodules\r\e[0K"
 
