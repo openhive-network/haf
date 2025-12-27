@@ -1266,13 +1266,14 @@ cleanup_old_haf_cache:
 
 # Deletes replay data used by the tests and created by replay_data_copy
 cleanup_pipeline_cache:
+  extends:
+    - .cleanup_cache_manual_template
+  stage: cleanup
+  # NOTE: needs must be AFTER extends to override the template's needs: []
   needs:
     - replay_data_copy
     - start_haf_as_service
     - dead_app_auto_detach
-  extends:
-    - .cleanup_cache_manual_template
-  stage: cleanup
   variables:
     # Pipeline cache stored via cache-manager at /nfs/ci-cache/haf_pipeline/${CI_PIPELINE_ID}.tar
     CLEANUP_PATH_PATTERN: "/nfs/ci-cache/haf_pipeline/${CI_PIPELINE_ID}*"
