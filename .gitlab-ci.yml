@@ -63,13 +63,12 @@ variables:
   FF_ENABLE_JOB_CLEANUP: 1
   FF_NETWORK_PER_BUILD: 1
 
-  # Use hive's Python 3.14 ci-base-image directly until HAF's image is rebuilt
-  # uses registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu24.04-py3.14-1
+  # Use Python 3.14 ci-base-image from common-ci-configuration
+  # uses registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py3.14-1
   BUILDER_IMAGE_TAG: ":ubuntu24.04-py3.14-1"
-  # Point to hive's registry for Python 3.14 ci-base-image (HAF's image will be rebuilt later)
-  HIVE_CI_BASE_IMAGE: "registry.gitlab.syncad.com/hive/hive/ci-base-image${BUILDER_IMAGE_TAG}"
+  HIVE_CI_BASE_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
   # Override PYTHON_IMAGE from common-ci-configuration to use Python 3.14
-  PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/hive/ci-base-image${BUILDER_IMAGE_TAG}"
+  PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
