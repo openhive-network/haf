@@ -167,10 +167,13 @@ default:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):init_submodules[collapsed=true]\r\e[0KInitializing submodules..."
     git config --global --add safe.directory '*'
-    # Clone hive submodule manually from the feature branch
+    # Get the commit we need from the hive submodule
     HIVE_URL="https://gitlab.syncad.com/hive/hive.git"
-    HIVE_COMMIT=$(git config --file .gitmodules --get submodule.hive.url >/dev/null && git ls-tree HEAD hive | awk '{print $3}')
-    echo "Cloning hive submodule at commit $HIVE_COMMIT"
+    HIVE_COMMIT=$(git ls-tree HEAD hive | awk '{print $3}')
+    echo "Need hive submodule at commit $HIVE_COMMIT"
+    # Remove existing hive directory if it exists (can be stale from GIT_STRATEGY=fetch)
+    rm -rf hive
+    # Clone and fetch from feature branch
     git clone --no-checkout "$HIVE_URL" hive
     cd hive
     git fetch origin feature/python-3.14-api-generation
