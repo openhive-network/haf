@@ -74,7 +74,12 @@
     - |
       echo -e "\e[0Ksection_start:$(date +%s):copy_data[collapsed=true]\r\e[0KFetching HAF data via cache-manager..."
       set -e
-      CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
+      # Fetch cache-manager from common-ci-configuration
+      CACHE_MANAGER="/tmp/cache-manager.sh"
+      if [[ ! -x "$CACHE_MANAGER" ]]; then
+        curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
+        chmod +x "$CACHE_MANAGER"
+      fi
       echo "Fetching cache: type=haf key=${HAF_COMMIT}"
       echo "Destination: ${HAF_DATA_CACHE_LOCAL}"
       "$CACHE_MANAGER" get "haf" "${HAF_COMMIT}" "${HAF_DATA_CACHE_LOCAL}" || {
@@ -100,7 +105,12 @@
   script:
     - |
       set -e
-      CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
+      # Fetch cache-manager from common-ci-configuration
+      CACHE_MANAGER="/tmp/cache-manager.sh"
+      if [[ ! -x "$CACHE_MANAGER" ]]; then
+        curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
+        chmod +x "$CACHE_MANAGER"
+      fi
 
       echo "=== Quick Test Mode: Fetching cached data ==="
       echo "HAF_COMMIT: ${HAF_COMMIT}"

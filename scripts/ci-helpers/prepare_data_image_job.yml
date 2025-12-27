@@ -43,7 +43,12 @@ include:
   script:
   - |
     # Check for cached data: local first, then NFS
-    CACHE_MANAGER="$SCRIPTS_PATH/ci-helpers/cache-manager.sh"
+    # Fetch cache-manager from common-ci-configuration
+    CACHE_MANAGER="/tmp/cache-manager.sh"
+    if [[ ! -x "$CACHE_MANAGER" ]]; then
+      curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
+      chmod +x "$CACHE_MANAGER"
+    fi
     CACHE_KEY="${HAF_COMMIT}"
     CACHE_HIT=false
 
