@@ -27,12 +27,12 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg curl ca-certificates && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3-pip postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.14 python3-pip postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 \
                                                                               libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
     # Add BeautifulSoup for hivesense preprocessing posts (3.1MB)
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3-bs4 python3-lxml && \
     # Install Tokenizers (~48MB) for hivesense
-    python3.12 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd && \
+    python3.14 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd && \
     # Install ParadeDB pg_search extension for BM25 search
     # Get the latest release URL from GitHub
     curl -L "https://github.com/paradedb/paradedb/releases/download/v0.19.5/postgresql-17-pg-search_0.19.5-1PARADEDB-noble_amd64.deb" -o /tmp/pg_search.deb && \
@@ -65,7 +65,7 @@ RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service 
 USER haf_admin
 WORKDIR /home/haf_admin
 
-FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu24.04-3 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu24.04-py3.14-1 AS ci-base-image
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 

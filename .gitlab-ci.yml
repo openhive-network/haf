@@ -62,8 +62,13 @@ variables:
   FF_ENABLE_JOB_CLEANUP: 1
   FF_NETWORK_PER_BUILD: 1
 
-  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10
-  BUILDER_IMAGE_TAG: "$TEST_HAF_IMAGE_TAG"
+  # Use hive's Python 3.14 ci-base-image directly until HAF's image is rebuilt
+  # uses registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu24.04-py3.14-1
+  BUILDER_IMAGE_TAG: ":ubuntu24.04-py3.14-1"
+  # Point to hive's registry for Python 3.14 ci-base-image (HAF's image will be rebuilt later)
+  HIVE_CI_BASE_IMAGE: "registry.gitlab.syncad.com/hive/hive/ci-base-image${BUILDER_IMAGE_TAG}"
+  # Override PYTHON_IMAGE from common-ci-configuration to use Python 3.14
+  PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/hive/ci-base-image${BUILDER_IMAGE_TAG}"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
@@ -177,7 +182,12 @@ verify_poetry_lock_sanity:
   stage: build_and_test_phase_1
   variables:
     PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
-
+  before_script:
+    # Regenerate poetry.lock for Python 3.14 compatibility
+    - poetry -C "${PYPROJECT_DIR}" env use python3
+    - source $(poetry -C "${PYPROJECT_DIR}" env info --path)/bin/activate
+    - poetry -C "${PYPROJECT_DIR}" lock --no-update 2>/dev/null || poetry -C "${PYPROJECT_DIR}" lock
+    - poetry -C "${PYPROJECT_DIR}" install
   tags:
     - public-runner-docker
 
@@ -193,7 +203,7 @@ verify_poetry_lock_sanity:
 detect_changes:
   extends: .job-defaults
   stage: detect
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   rules:
     # Skip for tags (always do full build for releases)
     - if: $CI_COMMIT_TAG
@@ -535,10 +545,13 @@ hfm_functional_tests_testnet:
       echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
       python3 -m venv --system-site-packages venv/
       . venv/bin/activate
+      cd $CI_PROJECT_DIR/tests/integration/haf-local-tools
+      # Regenerate poetry.lock for Python 3.14 compatibility
+      poetry lock --no-update 2>/dev/null || poetry lock
       # Retry poetry install up to 3 times (transient network failures downloading packages)
       poetry_success=false
       for attempt in 1 2 3; do
-        if (cd $CI_PROJECT_DIR/tests/integration/haf-local-tools && poetry install); then
+        if poetry install; then
           poetry_success=true
           break
         fi
@@ -549,6 +562,7 @@ hfm_functional_tests_testnet:
         echo "ERROR: Poetry install failed after 3 attempts"
         exit 1
       fi
+      cd $CI_PROJECT_DIR
       echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
 haf_system_tests:
@@ -586,7 +600,7 @@ dump_snapshot_5m_mirrornet:
   needs:
   - job: haf_image_build_mirrornet
     artifacts: true
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   variables:
     MIRRORNET_WORKING_DIR: "$CI_PROJECT_DIR/mirrornet_witness_node"
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
@@ -624,7 +638,7 @@ haf_system_tests_mirrornet:
       artifacts: true
     - job: dump_snapshot_5m_mirrornet
       artifacts: false
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   services:
     - *hfm-only-service
   variables:
@@ -702,7 +716,7 @@ applications_system_tests:
   needs:
     - job: haf_image_build
       artifacts: true
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   services:
     - *hfm-only-service
   variables:
@@ -1108,7 +1122,7 @@ prepare_haf_data:
 dead_app_auto_detach:
   extends: .job-defaults
   stage: build_and_test_phase_2
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   needs:
     - job: prepare_haf_data
       artifacts: true
@@ -1147,7 +1161,7 @@ dead_app_auto_detach:
 start_haf_as_service:
   extends: .job-defaults
   stage: build_and_test_phase_2
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   needs:
     - job: prepare_haf_data
       artifacts: true
