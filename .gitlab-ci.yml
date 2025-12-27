@@ -47,8 +47,9 @@ variables:
   GIT_STRATEGY: fetch
   GIT_DEPTH: 0
   GIT_SUBMODULE_DEPTH: 0
-  GIT_SUBMODULE_STRATEGY: recursive
-  GIT_SUBMODULE_UPDATE_FLAGS: --jobs 4
+  # Disable automatic submodule fetching - we handle it manually in before_script
+  # This is needed because the hive submodule is on a feature branch
+  GIT_SUBMODULE_STRATEGY: none
   # Force HTTPS for submodule URLs (helps with nested submodules)
   GIT_SUBMODULE_FORCE_HTTPS: "true"
   # Allow file:// protocol for nested submodules (required for test-tools in hive)
@@ -161,6 +162,20 @@ default:
   - "**/generated_during_*/**/shared_memory.bin"
   - "**/generated_during_*/**/*.sst"
 
+# Manual submodule initialization - needed because hive submodule is on a feature branch
+.init_submodules: &init_submodules
+  - |
+    echo -e "\e[0Ksection_start:$(date +%s):init_submodules[collapsed=true]\r\e[0KInitializing submodules..."
+    git config --global --add safe.directory '*'
+    # Fetch hive from feature branch if needed
+    cd hive
+    git fetch origin feature/python-3.14-api-generation --depth=1 2>/dev/null || true
+    cd ..
+    # Initialize and update submodules recursively
+    git submodule sync --recursive
+    git submodule update --init --recursive --jobs 4
+    echo -e "\e[0Ksection_end:$(date +%s):init_submodules\r\e[0K"
+
 .fetch_haf_cache: &fetch_haf_cache
   # Get HAF data from NFS via cache-manager (commit-specific cache)
   - |
@@ -209,6 +224,7 @@ detect_changes:
     - if: $CI_COMMIT_TAG
       when: never
     - when: on_success
+  before_script: *init_submodules
   script:
     - |
       # Initialize defaults
