@@ -569,6 +569,8 @@ hfm_functional_tests_testnet:
   before_script:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
+      # Install libpq-dev for psycopg2-binary compilation (no Python 3.14 wheels available)
+      sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev >/dev/null 2>&1 || true
       python3 -m venv --system-site-packages venv/
       . venv/bin/activate
       cd $CI_PROJECT_DIR/tests/integration/haf-local-tools
