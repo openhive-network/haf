@@ -4,7 +4,8 @@ set -xeuo pipefail
 # Install Python 3.14 from deadsnakes PPA (HAF image has Python 3.12)
 sudo apt-get update
 sudo apt-get install -y software-properties-common
-sudo add-apt-repository -y ppa:deadsnakes/ppa
+# Use python3.12 explicitly since apt_pkg is compiled for it
+sudo /usr/bin/python3.12 /usr/bin/add-apt-repository -y ppa:deadsnakes/ppa
 sudo apt-get update
 sudo apt-get install -y git python3.14 python3.14-venv python3.14-dev
 
