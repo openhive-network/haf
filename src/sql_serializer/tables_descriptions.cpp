@@ -55,21 +55,26 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     stream.write_values(transaction_multisig.hash, transaction_multisig.signature, make_block_id(transaction_multisig.block_number));
   }
 
-  // Operations - uses block_id, seq_in_block, op_type_id (id is generated column)
+  // Operations - uses block_id, seq_in_block, op_type_id, and pre-computed id for performance
   template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::TABLE[] = "hafd.operations";
-  template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::COLS[] = "block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary";
+  template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::COLS[] = "block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id";
 
   template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::TABLE[] = "hafd.operations";
-  template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::COLS[] = "block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary";
+  template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::COLS[] = "block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id";
 
   // Extract components from encoded operation_id: (block_num << 32) | (seq_in_block << 8) | op_type_id
+  // Pre-compute id in C++ for performance (avoids STORED generated column overhead)
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_operation_t& operation)
   {
     int32_t block_num = static_cast<int32_t>(operation.operation_id >> 32);
     int32_t seq_in_block = static_cast<int32_t>((operation.operation_id >> 8) & 0xFFFFFF);
     int32_t op_type_id = static_cast<int32_t>(operation.operation_id & 0xFF);
 
-    stream.write_values(make_block_id(block_num), seq_in_block, op_type_id, operation.trx_in_block, operation.op_in_trx, operation.op);
+    // Compute id: preserves original encoding (block_num << 32) | (seq_in_block << 8) | op_type_id
+    // This matches the original operation_id format for backward compatibility
+    int64_t id = (static_cast<int64_t>(block_num) << 32) | (seq_in_block << 8) | op_type_id;
+
+    stream.write_values(make_block_id(block_num), seq_in_block, op_type_id, operation.trx_in_block, operation.op_in_trx, operation.op, id);
   }
 
   // Accounts - uses block_id for fork tracking
