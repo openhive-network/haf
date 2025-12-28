@@ -179,8 +179,9 @@ BEGIN
     FROM unnest(_signatures) s;
 
     -- Insert operations (original compact format with encoded id turned into columns)
-    INSERT INTO hafd.operations (block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
-    SELECT __block_id, (o.id >> 8) & 16777215, o.id & 255, o.trx_in_block, o.op_pos, o.body_binary
+    -- o.id is the original operation_id encoding: (block_num << 32) | (seq_in_block << 8) | op_type_id
+    INSERT INTO hafd.operations (block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id)
+    SELECT __block_id, (o.id >> 8) & 16777215, o.id & 255, o.trx_in_block, o.op_pos, o.body_binary, o.id
     FROM unnest(_operations) o;
 
     -- Insert accounts (original compact format with block_id)

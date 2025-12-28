@@ -129,10 +129,31 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     trx_in_block smallint NOT NULL,
     op_pos integer NOT NULL,
     body_binary hafd.operation DEFAULT NULL,
-    id BIGINT GENERATED ALWAYS AS ( ( ( CAST(block_id AS BIGINT) & -4294967296 ) | (seq_in_block << 8) | op_type_id ) ) STORED,
+    -- id is pre-computed in C++ for massive sync performance, but has DEFAULT for test convenience
+    -- Encoding: (block_num << 32) | (seq_in_block << 8) | op_type_id
+    id BIGINT NOT NULL DEFAULT 0,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( block_id, seq_in_block, op_type_id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
+
+-- Trigger to compute id when not provided (id=0)
+-- This allows tests to omit id while C++ bulk inserts provide it explicitly for performance
+CREATE OR REPLACE FUNCTION hafd.operations_compute_id()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.id = 0 THEN
+        NEW.id := (hafd.block_id_to_num(NEW.block_id)::BIGINT << 32) | (NEW.seq_in_block << 8) | NEW.op_type_id;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER operations_compute_id_trigger
+BEFORE INSERT ON hafd.operations
+FOR EACH ROW
+EXECUTE FUNCTION hafd.operations_compute_id();
 
 -- =============================================================================
 -- hafd.applied_hardforks - Original compact structure
