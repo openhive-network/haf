@@ -180,10 +180,10 @@ default:
       # Remove existing hive directory if it exists (can be stale from GIT_STRATEGY=fetch)
       # Use sudo to handle files created by different users in previous jobs
       sudo rm -rf hive 2>/dev/null || rm -rf hive
-      # Clone and fetch from feature branch
+      # Clone and fetch from develop branch
       git clone --no-checkout "$HIVE_URL" hive
       cd hive
-      git fetch origin feature/python-3.14-api-generation
+      git fetch origin develop
       git checkout $HIVE_COMMIT
       # Initialize nested submodules inside hive (test-tools, tests_api, etc.)
       # This is required because we manually cloned hive instead of using submodule update
