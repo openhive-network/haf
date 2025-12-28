@@ -3,7 +3,7 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=ubuntu24.04-10
+ARG CI_IMAGE_TAG=ubuntu24.04-py3.14-1
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
@@ -22,23 +22,28 @@ COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 
 # create required accounts
 RUN bash -x ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived" && rm -rf /var/lib/apt/lists/*
-# install postgres
+# install postgres and Python 3.14 from deadsnakes PPA
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg curl ca-certificates && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg curl ca-certificates software-properties-common && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
+    # Add deadsnakes PPA for Python 3.14
+    add-apt-repository -y ppa:deadsnakes/ppa && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3-pip postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.14 python3.14-venv python3-pip postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 \
                                                                               libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
+    # Make Python 3.14 the default python3
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.14 1 && \
+    update-alternatives --set python3 /usr/bin/python3.14 && \
     # Add BeautifulSoup for hivesense preprocessing posts (3.1MB)
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3-bs4 python3-lxml && \
     # Install Tokenizers (~48MB) for hivesense
-    python3.12 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd && \
+    python3.14 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd && \
     # Install ParadeDB pg_search extension for BM25 search
     # Get the latest release URL from GitHub
     curl -L "https://github.com/paradedb/paradedb/releases/download/v0.19.5/postgresql-17-pg-search_0.19.5-1PARADEDB-noble_amd64.deb" -o /tmp/pg_search.deb && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y /tmp/pg_search.deb && \
     rm /tmp/pg_search.deb && \
-    apt-get remove -y gnupg curl && \
+    apt-get remove -y gnupg curl software-properties-common && \
     apt-get autoremove -y && \
     busybox --install -s && \
     # installing the postgresql-{ver} package does an initdb, remove the ~30MB database, we'll never use it
@@ -65,7 +70,7 @@ RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service 
 USER haf_admin
 WORKDIR /home/haf_admin
 
-FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu24.04-3 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu24.04-py3.14-1 AS ci-base-image
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
@@ -87,7 +92,7 @@ WORKDIR /home/haf_admin
 # Install additionally packages located in user directory
 RUN /usr/local/src/scripts/setup_ubuntu.sh --user
 
-FROM ${CI_REGISTRY_IMAGE}ci-base-image:$CI_IMAGE_TAG AS build
+FROM ci-base-image AS build
 
 ARG BUILD_HIVE_TESTNET=OFF
 ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
@@ -131,7 +136,7 @@ RUN <<-EOF
   sudo chown -R hived "${INSTALLATION_DIR}/"*
 EOF
 
-FROM registry.gitlab.syncad.com/hive/haf/minimal-runtime:ubuntu24.04-10 AS instance
+FROM minimal-runtime AS instance
 
 ARG BUILD_HIVE_TESTNET=OFF
 ENV BUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}
@@ -145,7 +150,7 @@ ENV HIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}
 ARG HIVE_LINT=OFF
 ENV HIVE_LINT=${HIVE_LINT}
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-10}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-py3.14-1}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}

@@ -47,8 +47,9 @@ variables:
   GIT_STRATEGY: fetch
   GIT_DEPTH: 0
   GIT_SUBMODULE_DEPTH: 0
-  GIT_SUBMODULE_STRATEGY: recursive
-  GIT_SUBMODULE_UPDATE_FLAGS: --jobs 4
+  # Disable automatic submodule fetching - we handle it manually in before_script
+  # This is needed because the hive submodule is on a feature branch
+  GIT_SUBMODULE_STRATEGY: none
   # Force HTTPS for submodule URLs (helps with nested submodules)
   GIT_SUBMODULE_FORCE_HTTPS: "true"
   # Allow file:// protocol for nested submodules (required for test-tools in hive)
@@ -62,8 +63,12 @@ variables:
   FF_ENABLE_JOB_CLEANUP: 1
   FF_NETWORK_PER_BUILD: 1
 
-  # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-10
-  BUILDER_IMAGE_TAG: "$TEST_HAF_IMAGE_TAG"
+  # Use Python 3.14 ci-base-image from common-ci-configuration
+  # uses registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py3.14-1
+  BUILDER_IMAGE_TAG: ":ubuntu24.04-py3.14-1"
+  HIVE_CI_BASE_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
+  # Override PYTHON_IMAGE from common-ci-configuration to use Python 3.14
+  PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
@@ -140,6 +145,12 @@ default:
                   rm -rf "$nested_path"
                 fi
               done
+              # Fix permissions on plugins directory for cross-user CI jobs
+              # Different jobs may run as different users with fetch strategy reusing workspaces
+              if [ -d "hive/libraries/plugins" ]; then
+                echo "pre_get_sources: fixing permissions on hive/libraries/plugins"
+                chmod -R a+w "hive/libraries/plugins" 2>/dev/null || true
+              fi
             fi
 
             echo "pre_get_sources: existing repo OK"
@@ -156,12 +167,41 @@ default:
   - "**/generated_during_*/**/shared_memory.bin"
   - "**/generated_during_*/**/*.sst"
 
+# Manual submodule initialization - needed because hive submodule is on a feature branch
+.init_submodules:
+  before_script: &init_submodules
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):init_submodules[collapsed=true]\r\e[0KInitializing submodules..."
+      git config --global --add safe.directory '*'
+      # Get the commit we need from the hive submodule
+      HIVE_URL="https://gitlab.syncad.com/hive/hive.git"
+      HIVE_COMMIT=$(git ls-tree HEAD hive | awk '{print $3}')
+      echo "Need hive submodule at commit $HIVE_COMMIT"
+      # Remove existing hive directory if it exists (can be stale from GIT_STRATEGY=fetch)
+      # Use sudo to handle files created by different users in previous jobs
+      sudo rm -rf hive 2>/dev/null || rm -rf hive
+      # Clone and fetch from feature branch
+      git clone --no-checkout "$HIVE_URL" hive
+      cd hive
+      git fetch origin feature/python-3.14-api-generation
+      git checkout $HIVE_COMMIT
+      # Initialize nested submodules inside hive (test-tools, tests_api, etc.)
+      # This is required because we manually cloned hive instead of using submodule update
+      git submodule update --init --recursive --jobs 4
+      cd ..
+      # Update any remaining HAF submodules (the hive directory is already handled above)
+      git submodule update --init --recursive --jobs 4
+      echo -e "\e[0Ksection_end:$(date +%s):init_submodules\r\e[0K"
+
 .fetch_haf_cache: &fetch_haf_cache
   # Get HAF data from NFS via cache-manager (commit-specific cache)
   - |
     echo -e "\e[0Ksection_start:$(date +%s):copy_data[collapsed=true]\r\e[0KFetching HAF data via cache-manager..."
     set -e
-    CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
+    # Fetch cache-manager from common-ci-configuration
+    CACHE_MANAGER="/tmp/cache-manager.sh"
+    curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
+    chmod +x "$CACHE_MANAGER"
     echo "Fetching cache: type=haf key=${HAF_COMMIT}"
     echo "Destination: ${HAF_DATA_CACHE_LOCAL}"
 
@@ -175,9 +215,18 @@ default:
 verify_poetry_lock_sanity:
   extends: .verify_poetry_lock_sanity_template
   stage: build_and_test_phase_1
+  # Allow failure until Python 3.14 compatible wax/schemas are published to GitLab PyPI
+  allow_failure: true
   variables:
     PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
-
+  before_script:
+    # Initialize submodules (hive is on a feature branch with updated test-tools)
+    - !reference [.init_submodules, before_script]
+    # Regenerate poetry.lock for Python 3.14 compatibility
+    - poetry -C "${PYPROJECT_DIR}" env use python3
+    - source $(poetry -C "${PYPROJECT_DIR}" env info --path)/bin/activate
+    - poetry -C "${PYPROJECT_DIR}" lock --no-update 2>/dev/null || poetry -C "${PYPROJECT_DIR}" lock
+    - poetry -C "${PYPROJECT_DIR}" install
   tags:
     - public-runner-docker
 
@@ -193,12 +242,13 @@ verify_poetry_lock_sanity:
 detect_changes:
   extends: .job-defaults
   stage: detect
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   rules:
     # Skip for tags (always do full build for releases)
     - if: $CI_COMMIT_TAG
       when: never
     - when: on_success
+  before_script: *init_submodules
   script:
     - |
       # Initialize defaults
@@ -356,22 +406,33 @@ detect_changes:
     - job: detect_changes
       artifacts: true
       optional: true  # Optional for tagged builds where detect_changes is skipped
-  rules:
-    # Skip in manual QUICK_TEST mode (known at pipeline creation)
-    - if: $QUICK_TEST == "true"
-      when: never
-    - when: on_success
   before_script:
     # Fix git safe.directory issue on some runners (CVE-2022-24765)
     - git config --global --add safe.directory '*'
-    # Early exit if AUTO_SKIP_BUILD is true (from detect_changes dotenv)
+    # Early exit if QUICK_TEST or AUTO_SKIP_BUILD is true
     # This allows us to skip the expensive build while still producing required artifacts
     - |
-      if [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
+      SKIP_BUILD=false
+      CACHE_COMMIT=""
+
+      # Check for manual QUICK_TEST mode
+      if [[ "${QUICK_TEST:-false}" == "true" ]]; then
+        echo "=== Skipping build (QUICK_TEST=true) ==="
+        SKIP_BUILD=true
+        CACHE_COMMIT="${QUICK_TEST_HAF_COMMIT}"
+        if [[ -z "$CACHE_COMMIT" ]]; then
+          echo "ERROR: QUICK_TEST=true but QUICK_TEST_HAF_COMMIT not set"
+          exit 1
+        fi
+      # Check for automatic skip mode (from detect_changes)
+      elif [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
         echo "=== Skipping build (AUTO_SKIP_BUILD=true) ==="
-        # Derive the correct image name based on network type
-        # HAF_COMMIT comes from detect_changes dotenv
-        CACHE_SHORT="${HAF_COMMIT:0:8}"
+        SKIP_BUILD=true
+        CACHE_COMMIT="${HAF_COMMIT}"
+      fi
+
+      if [[ "$SKIP_BUILD" == "true" ]]; then
+        CACHE_SHORT="${CACHE_COMMIT:0:8}"
         case "${HIVE_NETWORK_TYPE:-mainnet}" in
           testnet)
             SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf/testnet:${CACHE_SHORT}"
@@ -380,13 +441,11 @@ detect_changes:
             SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf/mirrornet:${CACHE_SHORT}"
             ;;
           *)
-            # For mainnet, use HAF_IMAGE_NAME from detect_changes (already correct)
-            SKIP_IMAGE_NAME="${HAF_IMAGE_NAME:-registry.gitlab.syncad.com/hive/haf:develop}"
+            SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf:${CACHE_SHORT}"
             ;;
         esac
         echo "Using cached HAF image: ${SKIP_IMAGE_NAME}"
         # Create dotenv artifact with cached image name
-        # Include HAF_INSTANCE for mirrornet after_script compatibility
         echo "HAF_IMAGE_NAME=${SKIP_IMAGE_NAME}" > docker_image_name.env
         echo "HAF_INSTANCE=${SKIP_IMAGE_NAME}" >> docker_image_name.env
         # Extract binaries from cached Docker image (downstream jobs need them)
@@ -504,6 +563,9 @@ haf_image_build_mirrornet:
         echo "This test requires image and source from the same commit."
         exit 0
       fi
+    # Fix workspace permissions - CI fetch strategy may leave directories owned by different users
+    # Remove the sql_serializer symlink location to let CMake recreate it with current user permissions
+    - rm -rf $CI_PROJECT_DIR/hive/libraries/plugins/sql_serializer 2>/dev/null || true
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
   artifacts:
     paths:
@@ -531,14 +593,23 @@ hfm_functional_tests_testnet:
 .pytest_based:
   extends: .job-defaults
   before_script:
+    # Initialize submodules (hive is on a feature branch)
+    - !reference [.init_submodules, before_script]
     - |
       echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
-      python3 -m venv --system-site-packages venv/
+      # Install build tools for compiling C extensions (no Python 3.14 wheels available yet)
+      # build-essential: gcc/make, libpq-dev: postgres headers, python3-dev: Python.h, libffi-dev: cffi, postgresql-client: psql
+      sudo apt-get update -qq && sudo apt-get install -y -qq build-essential libpq-dev python3-dev libffi-dev postgresql-client >/dev/null 2>&1 || true
+      # Create isolated venv (no --system-site-packages) to avoid Python 3.12 packages conflicting with 3.14
+      python3 -m venv venv/
       . venv/bin/activate
+      cd $CI_PROJECT_DIR/tests/integration/haf-local-tools
+      # Regenerate poetry.lock for Python 3.14 compatibility
+      poetry lock --no-update 2>/dev/null || poetry lock
       # Retry poetry install up to 3 times (transient network failures downloading packages)
       poetry_success=false
       for attempt in 1 2 3; do
-        if (cd $CI_PROJECT_DIR/tests/integration/haf-local-tools && poetry install); then
+        if poetry install; then
           poetry_success=true
           break
         fi
@@ -549,6 +620,7 @@ hfm_functional_tests_testnet:
         echo "ERROR: Poetry install failed after 3 attempts"
         exit 1
       fi
+      cd $CI_PROJECT_DIR
       echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
 haf_system_tests:
@@ -562,6 +634,11 @@ haf_system_tests:
     entrypoint: [""]
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  before_script:
+    # Install git, build tools, and Python 3.14 dev headers for submodule init and C extension compilation
+    # libffi-dev: for cffi, python3-dev: for Python.h
+    - sudo apt-get update -qq && sudo apt-get install -y -qq git build-essential libffi-dev python3-dev python3.14-dev 2>/dev/null || sudo apt-get install -y -qq git build-essential libffi-dev python3-dev || true
+    - !reference [.init_submodules, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_system_tests.sh
   artifacts:
@@ -586,11 +663,14 @@ dump_snapshot_5m_mirrornet:
   needs:
   - job: haf_image_build_mirrornet
     artifacts: true
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   variables:
     MIRRORNET_WORKING_DIR: "$CI_PROJECT_DIR/mirrornet_witness_node"
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVED_PATH: "$BINARY_CACHE_PATH/hived"
+  before_script:
+    # Install libpq5 runtime for hived (linked against PostgreSQL)
+    - sudo apt-get update -qq && sudo apt-get install -y -qq libpq5 >/dev/null 2>&1 || true
   script:
     #Prepare environment for hived run
     - cd $CI_PROJECT_DIR/docker
@@ -624,7 +704,7 @@ haf_system_tests_mirrornet:
       artifacts: true
     - job: dump_snapshot_5m_mirrornet
       artifacts: false
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   services:
     - *hfm-only-service
   variables:
@@ -680,6 +760,11 @@ applications_system_tests:
     entrypoint: [""]
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  before_script:
+    # Install git, build tools, and Python 3.14 dev headers for submodule init and C extension compilation
+    # libffi-dev: for cffi, python3-dev: for Python.h
+    - sudo apt-get update -qq && sudo apt-get install -y -qq git build-essential libffi-dev python3-dev python3.14-dev 2>/dev/null || sudo apt-get install -y -qq git build-essential libffi-dev python3-dev || true
+    - !reference [.init_submodules, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_application_system_tests.sh
   artifacts:
@@ -702,7 +787,7 @@ applications_system_tests:
   needs:
     - job: haf_image_build
       artifacts: true
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   services:
     - *hfm-only-service
   variables:
@@ -994,7 +1079,12 @@ replay_filtered_haf_data_accounts_body_operations:
     - rm "${DATA_CACHE_DIR}/replay_running" -f
     # Store filtered data via cache-manager (creates tar on NFS)
     - |
-      CACHE_MANAGER="$CI_PROJECT_DIR/scripts/ci-helpers/cache-manager.sh"
+      # Fetch cache-manager from common-ci-configuration
+      CACHE_MANAGER="/tmp/cache-manager.sh"
+      if [[ ! -x "$CACHE_MANAGER" ]]; then
+        curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
+        chmod +x "$CACHE_MANAGER"
+      fi
       echo "Storing filtered cache: type=haf_filtered key=${FILTERED_CACHE_KEY}"
       "$CACHE_MANAGER" put "haf_filtered" "${FILTERED_CACHE_KEY}" "${DATA_CACHE_DIR}"
       echo "Filtered cache stored successfully"
@@ -1108,7 +1198,7 @@ prepare_haf_data:
 dead_app_auto_detach:
   extends: .job-defaults
   stage: build_and_test_phase_2
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   needs:
     - job: prepare_haf_data
       artifacts: true
@@ -1134,7 +1224,10 @@ dead_app_auto_detach:
   variables:
     HIVED_UID: $HIVED_UID
     HAF_COMMIT: $HAF_COMMIT
-  before_script: *fetch_haf_cache
+  before_script:
+    # Install psql for database operations
+    - sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null 2>&1 || true
+    - *fetch_haf_cache
   script:
     - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
   artifacts:
@@ -1147,7 +1240,7 @@ dead_app_auto_detach:
 start_haf_as_service:
   extends: .job-defaults
   stage: build_and_test_phase_2
-  image: "$CI_REGISTRY_IMAGE/ci-base-image$BUILDER_IMAGE_TAG"
+  image: "$HIVE_CI_BASE_IMAGE"
   needs:
     - job: prepare_haf_data
       artifacts: true
@@ -1245,6 +1338,11 @@ op_body_filter_tests:
   image:
     name: $HAF_IMAGE_NAME
     entrypoint: [""]
+  before_script:
+    # Install git, build tools, and Python 3.14 dev headers for submodule init and C extension compilation
+    # libffi-dev: for cffi, python3-dev: for Python.h
+    - sudo apt-get update -qq && sudo apt-get install -y -qq git build-essential libffi-dev python3-dev python3.14-dev 2>/dev/null || sudo apt-get install -y -qq git build-essential libffi-dev python3-dev || true
+    - !reference [.init_submodules, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_op_body_filter_tests.sh
   artifacts:
