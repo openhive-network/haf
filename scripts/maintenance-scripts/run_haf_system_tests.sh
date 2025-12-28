@@ -32,7 +32,7 @@ export PYTEST_NUMBER_OF_PROCESSES="${PYTEST_NUMBER_OF_PROCESSES:-8}"
 export DB_URL="postgresql://haf_admin@127.0.0.1:5432/$DB_NAME"
 
 echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
-python3.14 -m venv --system-site-packages venv/
+python3.14 -m venv venv/
 # shellcheck disable=SC1091
 . venv/bin/activate
 python3.14 -m pip install pipx
