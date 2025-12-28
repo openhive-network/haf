@@ -1,4 +1,4 @@
 [submodule "hive"]
 	path = hive
 	url = ../hive.git
-	branch = feature/python-3.14-api-generation
+	branch = develop
