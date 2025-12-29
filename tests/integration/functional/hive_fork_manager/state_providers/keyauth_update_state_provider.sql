@@ -54,7 +54,7 @@ BEGIN
          , ( hafd.make_block_id(5, 0), 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-   INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
+   INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id)
     VALUES
         -- one key from owner, one from active, one from posting
           ( hafd.make_block_id(1, 0), 0, 1, 0, 0, '
@@ -102,7 +102,7 @@ BEGIN
                     "json_metadata": ""
                 }
             }
-            '::jsonb::hafd.operation )
+            '::jsonb::hafd.operation, hafd.operation_id(hafd.make_block_id(1, 0), 0, 1::SMALLINT) )
 
         -- three keys from one owner
             , ( hafd.make_block_id(2, 0), 0, 2, 0, 0, '
@@ -150,7 +150,7 @@ BEGIN
                         "json_metadata": ""
                     }
                 }
-            '::jsonb::hafd.operation)
+            '::jsonb::hafd.operation, hafd.operation_id(hafd.make_block_id(2, 0), 0, 2::SMALLINT))
 
         -- recover_account_operation
             , ( hafd.make_block_id(3, 0), 0, 1, 0, 0, '
@@ -181,7 +181,7 @@ BEGIN
                         "extensions": []
                     }
                 }
-            '::jsonb::hafd.operation )
+            '::jsonb::hafd.operation, hafd.operation_id(hafd.make_block_id(3, 0), 0, 1::SMALLINT) )
 
             -- request_account_recovery_operation
             , ( hafd.make_block_id(4, 0), 0, 1, 0, 0, '
@@ -203,7 +203,7 @@ BEGIN
                         "extensions": []
                     }
                 }
-            '::jsonb::hafd.operation )
+            '::jsonb::hafd.operation, hafd.operation_id(hafd.make_block_id(4, 0), 0, 1::SMALLINT) )
             , ( hafd.make_block_id(5, 0), 0, 1, 0, 0,
             '
                 {
@@ -231,7 +231,7 @@ BEGIN
                         "memo_key": "STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB",
                         "json_metadata": ""
                     }
-                }            ' :: jsonb :: hafd.operation )
+                }            ' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(5, 0), 0, 1::SMALLINT) )
 
             -- witness_set_properties_operation
             , ( hafd.make_block_id(5, 0), 1, 7, 0, 1,
@@ -252,8 +252,8 @@ BEGIN
                     ],
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation)
-            , ( hafd.make_block_id(5, 0), 2, 6, 0, 1, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hafd.operation )
+            }'::jsonb::hafd.operation, hafd.operation_id(hafd.make_block_id(5, 0), 1, 7::SMALLINT))
+            , ( hafd.make_block_id(5, 0), 2, 6, 0, 1, '{"type":"system_warning_operation","value":{"message":"other"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(5, 0), 2, 6::SMALLINT) )
             , ( hafd.make_block_id(5, 0), 3, 1, 0, 2,
             '
             {
@@ -300,10 +300,10 @@ BEGIN
                     "json_metadata": ""
                 }
             }
-            ':: jsonb :: hafd.operation )
+            ':: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(5, 0), 3, 1::SMALLINT) )
 
 
-                        
+
             , ( hafd.make_block_id(6, 0), 0, 1, 0, 0,
             '
                 {
@@ -335,9 +335,9 @@ BEGIN
                         "memo_key": "STM4xmWJcNo2UyJMbWZ6cjVpi4NYuL1ViyPrPgmqCDMKdckkeagEB",
                         "json_metadata": ""
                     }
-                }            ' :: jsonb :: hafd.operation )
+                }            ' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(6, 0), 0, 1::SMALLINT) )
 
-                
+
                 -- for snail-157 account: create_account operation(above) establishes 4 keys
                 -- the pow operation(below) changes only ACTIVE key
                 , ( hafd.make_block_id(6, 0), 1, 8, 0, 1,
@@ -365,7 +365,7 @@ BEGIN
                         }
                     }
                 }
-                ':: jsonb :: hafd.operation )
+                ':: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(6, 0), 1, 8::SMALLINT) )
 
         ;
 
