@@ -1,5 +1,4 @@
 import pytest
-import time
 
 import test_tools as tt
 
@@ -8,13 +7,11 @@ from haf_local_tools.system.haf import (
     connect_nodes,
     assert_are_blocks_sync_with_haf_db,
     assert_are_indexes_restored,
-    assert_is_transaction_in_database,
+    assert_transaction_exists_in_block,
 )
 from haf_local_tools.system.haf.mirrornet.constants import (
     SKELETON_KEY,
     CHAIN_ID,
-    TRANSACTION_IN_1092_BLOCK,
-    TRANSACTION_IN_999892_BLOCK,
 )
 from haf_local_tools import (
     wait_for_block_in_database,
@@ -52,8 +49,9 @@ def test_p2p_sync(mirrornet_witness_node, haf_node, block_log_5m, tmp_path, psql
     )
 
     wait_for_block_in_database(haf_node.session, 1000000)
-    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_1092_BLOCK)
-    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_999892_BLOCK)
+    # Verify transactions are properly indexed by checking blocks known to contain transactions
+    assert_transaction_exists_in_block(haf_node, 1092)
+    assert_transaction_exists_in_block(haf_node, 999892)
     assert_are_indexes_restored(haf_node)
 
     haf_node.close()  # wait for node to flush wal and close

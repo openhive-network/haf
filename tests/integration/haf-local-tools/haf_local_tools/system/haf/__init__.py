@@ -115,6 +115,23 @@ def assert_is_transaction_in_database(haf_node: HafNode, transaction:  Union[Tra
     return True
 
 
+def assert_transaction_exists_in_block(haf_node: HafNode, block_num: int, timeout: float = 10):
+    """Verify that at least one transaction exists in the specified block.
+
+    This is more robust than checking for specific transaction hashes, as it doesn't
+    depend on block_log-specific transaction IDs that may change when the mirrornet
+    block_log is regenerated.
+    """
+    sql = "SELECT exists(SELECT 1 FROM hive.transactions_view WHERE block_num = :block_num)"
+    end_time = time.time() + timeout
+    while time.time() < end_time:
+        result = haf_node.session.execute(text(sql), {"block_num": block_num}).scalar()
+        if result:
+            return True
+        time.sleep(0.5)
+    assert False, f"No transaction found in block {block_num}"
+
+
 def get_truncated_block_log(node, block_count: int):
     output_block_log_path = tt.context.get_current_directory() / "block_log"
     output_block_log_path.unlink(missing_ok=True)

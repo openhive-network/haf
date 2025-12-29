@@ -5,16 +5,11 @@ from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_
 from haf_local_tools.system.haf import (
     assert_are_blocks_sync_with_haf_db,
     assert_are_indexes_restored,
-    assert_is_transaction_in_database,
+    assert_transaction_exists_in_block,
 )
 from haf_local_tools.system.haf.mirrornet.constants import (
     SKELETON_KEY,
     CHAIN_ID,
-    TRANSACTION_IN_1092_BLOCK,
-    TRANSACTION_IN_999892_BLOCK,
-    TRANSACTION_IN_4500000_BLOCK,
-    TRANSACTION_IN_4500001_BLOCK,
-    TRANSACTION_IN_5000000_BLOCK,
 )
 
 
@@ -39,11 +34,12 @@ def test_replay(witness_node_with_haf, block_log_5m, psql_index_threshold):
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],
     )
 
-    assert_is_transaction_in_database(witness_node_with_haf, TRANSACTION_IN_1092_BLOCK)
-    assert_is_transaction_in_database(witness_node_with_haf, TRANSACTION_IN_999892_BLOCK)
-    assert_is_transaction_in_database(witness_node_with_haf, TRANSACTION_IN_4500000_BLOCK)
-    assert_is_transaction_in_database(witness_node_with_haf, TRANSACTION_IN_4500001_BLOCK)
-    assert_is_transaction_in_database(witness_node_with_haf, TRANSACTION_IN_5000000_BLOCK)
+    # Verify transactions are properly indexed by checking blocks known to contain transactions
+    assert_transaction_exists_in_block(witness_node_with_haf, 1092)
+    assert_transaction_exists_in_block(witness_node_with_haf, 999892)
+    assert_transaction_exists_in_block(witness_node_with_haf, 4500000)
+    assert_transaction_exists_in_block(witness_node_with_haf, 4500001)
+    assert_transaction_exists_in_block(witness_node_with_haf, 5000000)
 
     assert_are_blocks_sync_with_haf_db(witness_node_with_haf, 5000000)
     assert_are_indexes_restored(witness_node_with_haf)

@@ -9,16 +9,11 @@ from haf_local_tools.system.haf import (
     connect_nodes,
     assert_are_blocks_sync_with_haf_db,
     assert_are_indexes_restored,
-    assert_is_transaction_in_database,
+    assert_transaction_exists_in_block,
 )
 from haf_local_tools.system.haf.mirrornet.constants import (
     CHAIN_ID,
     SKELETON_KEY,
-    TRANSACTION_IN_1092_BLOCK,
-    TRANSACTION_IN_999892_BLOCK,
-    TRANSACTION_IN_4500000_BLOCK,
-    TRANSACTION_IN_4500001_BLOCK,
-    TRANSACTION_IN_5000000_BLOCK,
 )
 
 
@@ -72,11 +67,12 @@ def test_replay_and_p2p_sync(
     log_timing(test_name, "haf_node.run (replay + sync)", time.time() - step_start)
 
     step_start = time.time()
-    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_1092_BLOCK)
-    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_999892_BLOCK)
-    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_4500000_BLOCK)
-    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_4500001_BLOCK)
-    assert_is_transaction_in_database(haf_node, TRANSACTION_IN_5000000_BLOCK)
+    # Verify transactions are properly indexed by checking blocks known to contain transactions
+    assert_transaction_exists_in_block(haf_node, 1092)
+    assert_transaction_exists_in_block(haf_node, 999892)
+    assert_transaction_exists_in_block(haf_node, 4500000)
+    assert_transaction_exists_in_block(haf_node, 4500001)
+    assert_transaction_exists_in_block(haf_node, 5000000)
     log_timing(test_name, "transaction assertions", time.time() - step_start)
 
     step_start = time.time()
