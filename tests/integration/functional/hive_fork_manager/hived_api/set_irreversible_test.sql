@@ -82,13 +82,13 @@ BEGIN
         , ( '\xDEED50', '\xBAAD50', hafd.make_block_id(5, 0) )
     ;
 
-    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
+    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id)
     VALUES
-          ( hafd.make_block_id(1, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(2, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(3, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(4, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(5, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation )
+          ( hafd.make_block_id(1, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(1, 1, 0) )
+        , ( hafd.make_block_id(2, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(2, 1, 0) )
+        , ( hafd.make_block_id(3, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(3, 1, 0) )
+        , ( hafd.make_block_id(4, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(4, 1, 0) )
+        , ( hafd.make_block_id(5, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(5, 1, 0) )
     ;
 
     INSERT INTO hafd.account_operations(block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
@@ -142,12 +142,12 @@ BEGIN
         , ( '\xDEED91', '\xBEEF91', hafd.make_block_id(9, 1) )
     ;
 
-    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
+    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id)
     VALUES
-          ( hafd.make_block_id(6, 1), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX1 OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(7, 1), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN1 OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(8, 1), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT1 OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(9, 1), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE1 OPERATION"}}' :: jsonb :: hafd.operation )
+          ( hafd.make_block_id(6, 1), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX1 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(6, 1, 0) )
+        , ( hafd.make_block_id(7, 1), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN1 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(7, 1, 0) )
+        , ( hafd.make_block_id(8, 1), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT1 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(8, 1, 0) )
+        , ( hafd.make_block_id(9, 1), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE1 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(9, 1, 0) )
     ;
 
     INSERT INTO hafd.account_operations(block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
@@ -194,12 +194,12 @@ BEGIN
         , ( '\xDEED92', '\xBEEF92', hafd.make_block_id(9, 2) )
     ;
 
-    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
+    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id)
     VALUES
-          ( hafd.make_block_id(7, 2), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(7, 2), 2, 1, 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(8, 2), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT2 OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(9, 2), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation )
+          ( hafd.make_block_id(7, 2), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(7, 1, 0) )
+        , ( hafd.make_block_id(7, 2), 2, 1, 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(7, 2, 1) )
+        , ( hafd.make_block_id(8, 2), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT2 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(8, 1, 0) )
+        , ( hafd.make_block_id(9, 2), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(9, 1, 0) )
     ;
 
     INSERT INTO hafd.account_operations(block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
@@ -245,11 +245,11 @@ BEGIN
         , ( '\xDEED1102', '\xBEEF13', hafd.make_block_id(10, 3) )
     ;
 
-    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
+    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id)
     VALUES
-          ( hafd.make_block_id(8, 3), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(9, 3), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(10, 3), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation )
+          ( hafd.make_block_id(8, 3), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(8, 1, 0) )
+        , ( hafd.make_block_id(9, 3), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(9, 1, 0) )
+        , ( hafd.make_block_id(10, 3), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(10, 1, 0) )
     ;
 
     INSERT INTO hafd.applied_hardforks(hardfork_num, block_id, hardfork_vop_id)

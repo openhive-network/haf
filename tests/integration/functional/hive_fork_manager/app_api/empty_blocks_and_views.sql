@@ -33,9 +33,9 @@ BEGIN
            ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.operations (block_id, seq_in_block, trx_in_block, op_pos, op_type_id, body_binary)
+    INSERT INTO hafd.operations (block_id, seq_in_block, trx_in_block, op_pos, op_type_id, body_binary, id)
     VALUES
-    ( hafd.make_block_id(1, 0), 0, 0, 0, 1, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
+    ( hafd.make_block_id(1, 0), 0, 0, 0, 1, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(1, 0), 0, 1::SMALLINT) )
     ;
 
     INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
@@ -62,9 +62,9 @@ BEGIN
     ;
 
     -- block 2 on fork 3 has no operations
-    INSERT INTO hafd.operations (block_id, seq_in_block, trx_in_block, op_pos, op_type_id, body_binary)
+    INSERT INTO hafd.operations (block_id, seq_in_block, trx_in_block, op_pos, op_type_id, body_binary, id)
     VALUES
-        ( hafd.make_block_id(2, 2), 0, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
+        ( hafd.make_block_id(2, 2), 0, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(2, 2), 0, 0::SMALLINT) )
     ;
 
     UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 1, current_block_num = 2;

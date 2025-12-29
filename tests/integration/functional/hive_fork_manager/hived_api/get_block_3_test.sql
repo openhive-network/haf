@@ -56,18 +56,18 @@ BEGIN
         , ( '\xDEED31', '\xBEEF000303', hafd.make_block_id(3, 0) )
     ;
 
-    -- Operations: (block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
+    -- Operations: (block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id)
     -- Note: op_type_id 3 is a virtual op (is_virtual=TRUE), so use non-virtual types (0,1,2) for regular operations
-    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary)
+    INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id)
     VALUES
-          ( hafd.make_block_id(1, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(2, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(3, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 00"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(3, 0), 2, 1, 0, 1, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 01"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(3, 0), 3, 2, 1, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 10"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(3, 0), 4, 2, 1, 1, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 11"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(4, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation )
-        , ( hafd.make_block_id(5, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation )
+          ( hafd.make_block_id(1, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(1, 0), 1, 0::SMALLINT) )
+        , ( hafd.make_block_id(2, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(2, 0), 1, 0::SMALLINT) )
+        , ( hafd.make_block_id(3, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 00"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(3, 0), 1, 0::SMALLINT) )
+        , ( hafd.make_block_id(3, 0), 2, 1, 0, 1, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 01"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(3, 0), 2, 1::SMALLINT) )
+        , ( hafd.make_block_id(3, 0), 3, 2, 1, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 10"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(3, 0), 3, 2::SMALLINT) )
+        , ( hafd.make_block_id(3, 0), 4, 2, 1, 1, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION 11"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(3, 0), 4, 2::SMALLINT) )
+        , ( hafd.make_block_id(4, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(4, 0), 1, 0::SMALLINT) )
+        , ( hafd.make_block_id(5, 0), 1, 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(5, 0), 1, 0::SMALLINT) )
     ;
 
     -- Reversible blocks with fork_id > 0 (unified table)
