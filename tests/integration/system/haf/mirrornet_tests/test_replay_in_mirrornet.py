@@ -16,6 +16,7 @@ from haf_local_tools.system.haf.mirrornet.constants import (
     TRANSACTION_IN_4500001_BLOCK,
     TRANSACTION_IN_5000000_BLOCK,
 )
+from test_p2p_sync_in_mirrornet import debug_transaction_state
 
 
 @pytest.mark.mirrornet
@@ -38,6 +39,9 @@ def test_replay(witness_node_with_haf, block_log_5m, psql_index_threshold):
         timeout=3600,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],
     )
+
+    # Debug: Check transaction indexing state before assertions
+    debug_transaction_state(witness_node_with_haf, TRANSACTION_IN_1092_BLOCK)
 
     assert_is_transaction_in_database(witness_node_with_haf, TRANSACTION_IN_1092_BLOCK)
     assert_is_transaction_in_database(witness_node_with_haf, TRANSACTION_IN_999892_BLOCK)
