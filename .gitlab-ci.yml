@@ -1072,7 +1072,8 @@ replay_filtered_haf_data_accounts_body_operations:
     BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered/config.ini"
     # Use local cache for replay, then store via cache-manager
-    DATA_CACHE_DIR: "/cache/haf_pipeline_${CI_PIPELINE_ID}_filtered"
+    # Local path must match cache type (haf_filtered) for NFS fallback to work
+    DATA_CACHE_DIR: "/cache/haf_filtered_${CI_PIPELINE_ID}_filtered"
     FILTERED_CACHE_KEY: "${CI_PIPELINE_ID}_filtered"
   after_script:
     # Call parent's after_script
@@ -1113,7 +1114,8 @@ block_api_tests:
     BENCHMARK_DB_URL: "postgresql://hived@haf-instance:5432/haf_block_log"
     HIVED_UID: $HIVED_UID
     # Local path for filtered replay data (service's copy_datadir.sh handles NFS fallback)
-    FILTERED_DATA_LOCAL: "/cache/haf_pipeline_${CI_PIPELINE_ID}_filtered"
+    # Must match DATA_CACHE_DIR in replay_filtered_haf_data_accounts_body_operations
+    FILTERED_DATA_LOCAL: "/cache/haf_filtered_${CI_PIPELINE_ID}_filtered"
 
   services:
     - name: ${HAF_IMAGE_NAME}

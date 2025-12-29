@@ -2,6 +2,7 @@
 
 import sys
 import sqlalchemy
+from sqlalchemy import text
 
 APPLICATION_CONTEXT = "trx_histogram_ctx"
 SQL_CREATE_HISTOGRAM_TABLE = """
@@ -43,18 +44,18 @@ def create_db_engine(db_name, pg_port):
                 echo=False)
 
 def prepare_application_data( db_connection ):
-        db_connection.execute( "CREATE SCHEMA IF NOT EXISTS applications" )
+        db_connection.execute( text("CREATE SCHEMA IF NOT EXISTS applications") )
         # create a new context only if it not already exists
-        exist = db_connection.execute( "SELECT hive.app_context_exists( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone();
+        exist = db_connection.execute( text("SELECT hive.app_context_exists( '{}' )".format( APPLICATION_CONTEXT )) ).fetchone();
         if exist[ 0 ] == False:
-            db_connection.execute( "SELECT hive.app_create_context( '{}', _schema => 'applications', _is_forking => FALSE )".format( APPLICATION_CONTEXT ) )
+            db_connection.execute( text("SELECT hive.app_create_context( '{}', _schema => 'applications', _is_forking => FALSE )".format( APPLICATION_CONTEXT )) )
 
 
         # create and register a table
-        db_connection.execute( SQL_CREATE_HISTOGRAM_TABLE )
+        db_connection.execute( text(SQL_CREATE_HISTOGRAM_TABLE) )
 
         # create SQL function to do the application's task
-        db_connection.execute( SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION )
+        db_connection.execute( text(SQL_CREATE_UPDATE_HISTOGRAM_FUNCTION) )
 
 def main_loop( db_connection ):
     # forever loop
@@ -62,7 +63,7 @@ def main_loop( db_connection ):
         # start a new transaction
         with db_connection.begin():
             # get blocks range
-            blocks_range = db_connection.execute( "SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT ) ).fetchone()
+            blocks_range = db_connection.execute( text("SELECT * FROM hive.app_next_block( '{}' )".format( APPLICATION_CONTEXT )) ).fetchone()
 
             print( "Blocks range {}".format( blocks_range ) )
             (first_block, last_block) = blocks_range;
@@ -76,23 +77,24 @@ def main_loop( db_connection ):
             if ( last_block - first_block ) > 100:
                 # Yes, massive sync is required
                 # detach context
-                db_connection.execute( "SELECT hive.app_context_detach( '{}' )".format( APPLICATION_CONTEXT ) )
+                db_connection.execute( text("SELECT hive.app_context_detach( '{}' )".format( APPLICATION_CONTEXT )) )
 
                 # update massivly the application's table - one commit transaction for whole massive edition
-                db_connection.execute( "SELECT applications.update_histogram( {}, {} )".format( first_block, last_block ) )
+                db_connection.execute( text("SELECT applications.update_histogram( {}, {} )".format( first_block, last_block )) )
 
                 # attach context and moves it to last synced block
-                db_connection.execute( "SELECT hive.app_set_current_block_num( '{}', {} )".format( APPLICATION_CONTEXT, last_block ) )
-                db_connection.execute( "SELECT hive.app_context_attach( '{}', {} )".format( APPLICATION_CONTEXT, last_block ) )
+                db_connection.execute( text("SELECT hive.app_set_current_block_num( '{}', {} )".format( APPLICATION_CONTEXT, last_block )) )
+                db_connection.execute( text("SELECT hive.app_context_attach( '{}', {} )".format( APPLICATION_CONTEXT, last_block )) )
                 continue
 
             # process the first block in range - one commit after each block
-            db_connection.execute( "SELECT applications.update_histogram( {}, {} )".format( first_block, last_block ) )
+            db_connection.execute( text("SELECT applications.update_histogram( {}, {} )".format( first_block, last_block )) )
 
 def start_application(db_name, pg_port):
     engine = create_db_engine(db_name, pg_port)
     with engine.connect() as db_connection:
         prepare_application_data( db_connection )
+        db_connection.commit()
         main_loop( db_connection )
 
 if __name__ == '__main__':

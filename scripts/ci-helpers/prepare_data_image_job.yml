@@ -1,6 +1,6 @@
 include:
 - project: 'hive/hive'
-  ref: 668c9da69e93a11a34b6b03d4c9d11a3fcdf10ea   # feature/cache-manager-integration
+  ref: 8d24f312c29a3d61cf684b5bf707cc3b65d304cf   # Update common-ci-configuration refs (includes util-linux for NFS flock)
   file: '/scripts/ci-helpers/prepare_data_image_job.yml'
 - local: '/scripts/ci-helpers/ci_image_tag_vars.yml'
 
