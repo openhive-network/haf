@@ -46,8 +46,7 @@ include:
     # Fetch cache-manager from common-ci-configuration
     CACHE_MANAGER="/tmp/cache-manager.sh"
     if [[ ! -x "$CACHE_MANAGER" ]]; then
-      # Temporary: use fix branch until MR !119 is merged to develop
-      curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/fix/cache-manager-errexit/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
+      curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
       chmod +x "$CACHE_MANAGER"
     fi
     CACHE_KEY="${HAF_COMMIT}"
