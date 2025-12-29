@@ -96,6 +96,7 @@ def start_application(db_name, pg_port):
     engine = create_db_engine(db_name, pg_port)
     with engine.connect() as db_connection:
         prepare_application_data( db_connection )
+        db_connection.commit()
         main_loop( db_connection )
 
 if __name__ == '__main__':
