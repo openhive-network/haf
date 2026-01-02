@@ -1202,6 +1202,13 @@ block_api_tests:
       curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
       chmod +x "$CACHE_MANAGER"
       echo "Fetching cache: type=haf_filtered key=${CI_PIPELINE_ID}_filtered"
+
+      # Clean up old extracted directory to ensure service waits for fresh extraction
+      if [[ -d "${FILTERED_DATA_LOCAL}/datadir" ]]; then
+        echo "Removing stale extracted data at ${FILTERED_DATA_LOCAL}"
+        sudo rm -rf "${FILTERED_DATA_LOCAL}/datadir" "${FILTERED_DATA_LOCAL}/shm_dir" 2>/dev/null || true
+      fi
+
       "$CACHE_MANAGER" get "haf_filtered" "${CI_PIPELINE_ID}_filtered" "${FILTERED_DATA_LOCAL}"
       echo "Filtered data fetch complete."
       ls -la "${FILTERED_DATA_LOCAL}/datadir/" || echo "Warning: datadir not found"
