@@ -15,6 +15,17 @@ include:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
   script:
+  - |
+    # Fetch required scripts from hive repo (symlinks don't work without submodule checkout)
+    HIVE_RAW_URL="https://gitlab.syncad.com/hive/hive/-/raw/${HIVE_SCRIPTS_REF}/scripts/ci-helpers"
+    for script in get_image4submodule.sh docker_image_utils.sh; do
+      TARGET="$SCRIPTS_PATH/ci-helpers/$script"
+      # Remove dangling symlink before fetching
+      rm -f "$TARGET"
+      echo "Fetching $script from hive@${HIVE_SCRIPTS_REF}..."
+      curl -fsSL "${HIVE_RAW_URL}/${script}" -o "$TARGET"
+      chmod +x "$TARGET"
+    done
   - $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh "$SUBMODULE_DIR" registry.gitlab.syncad.com/hive/haf
     HAF "$REGISTRY_USER" "$REGISTRY_PASS" --export-binaries="$BINARY_CACHE_PATH" --network-type="$HIVE_NETWORK_TYPE"
   - chmod -Rc a+rwx "$BINARY_CACHE_PATH"
@@ -41,6 +52,17 @@ include:
     CACHE_NFS_PATH: "/nfs/ci-cache"
     CACHE_LOCAL_PATH: "/cache"
   script:
+  - |
+    # Fetch required scripts from hive repo (symlinks don't work without submodule checkout)
+    HIVE_RAW_URL="https://gitlab.syncad.com/hive/hive/-/raw/${HIVE_SCRIPTS_REF}/scripts/ci-helpers"
+    for script in build_data.sh prepare_data_and_shm_dir.sh; do
+      TARGET="$SCRIPTS_PATH/ci-helpers/$script"
+      # Remove dangling symlink before fetching
+      rm -f "$TARGET"
+      echo "Fetching $script from hive@${HIVE_SCRIPTS_REF}..."
+      curl -fsSL "${HIVE_RAW_URL}/${script}" -o "$TARGET"
+      chmod +x "$TARGET"
+    done
   - |
     # Check for cached data: local first, then NFS
     # Fetch cache-manager from common-ci-configuration

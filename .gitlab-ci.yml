@@ -15,6 +15,9 @@ variables:
   # Enable CI-specific PostgreSQL config with reduced memory (4GB shared_buffers vs 16GB)
   # This allows multiple concurrent HAF jobs on builders with limited RAM
   HAF_CI_MODE: "1"
+  # Hive ref for fetching CI helper scripts at runtime (symlinks don't work without submodule checkout)
+  # Should match the ref used in scripts/ci-helpers/prepare_data_image_job.yml include
+  HIVE_SCRIPTS_REF: "8d24f312c29a3d61cf684b5bf707cc3b65d304cf"
 
   # =============================================================================
   # Quick Test / Auto-Skip Mode
@@ -409,6 +412,18 @@ detect_changes:
   before_script:
     # Fix git safe.directory issue on some runners (CVE-2022-24765)
     - git config --global --add safe.directory '*'
+    # Fetch required scripts from hive repo (symlinks don't work without submodule checkout)
+    - |
+      HIVE_RAW_URL="https://gitlab.syncad.com/hive/hive/-/raw/${HIVE_SCRIPTS_REF}/scripts/ci-helpers"
+      SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
+      for script in export-data-from-docker-image.sh; do
+        TARGET="$SCRIPTS_PATH/ci-helpers/$script"
+        # Remove dangling symlink before fetching
+        rm -f "$TARGET"
+        echo "Fetching $script from hive@${HIVE_SCRIPTS_REF}..."
+        curl -fsSL "${HIVE_RAW_URL}/${script}" -o "$TARGET"
+        chmod +x "$TARGET"
+      done
     # Early exit if QUICK_TEST or AUTO_SKIP_BUILD is true
     # This allows us to skip the expensive build while still producing required artifacts
     - |
@@ -1312,6 +1327,13 @@ build_and_publish_image:
   before_script:
     - !reference [.publish_docker_image_template, before_script]
   script:
+    # Fetch required script from hive repo (symlinks don't work without submodule checkout)
+    - |
+      HIVE_RAW_URL="https://gitlab.syncad.com/hive/hive/-/raw/${HIVE_SCRIPTS_REF}/scripts/ci-helpers"
+      # Remove dangling symlink before fetching
+      rm -f scripts/ci-helpers/build_and_publish_instance.sh
+      curl -fsSL "${HIVE_RAW_URL}/build_and_publish_instance.sh" -o scripts/ci-helpers/build_and_publish_instance.sh
+      chmod +x scripts/ci-helpers/build_and_publish_instance.sh
     - scripts/ci-helpers/build_and_publish_instance.sh
   tags:
     - public-runner-docker
