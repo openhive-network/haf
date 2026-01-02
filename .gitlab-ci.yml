@@ -533,6 +533,10 @@ haf_image_build_mirrornet:
         docker push ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
       fi
 
+# Service anchor with wait-for-data logic
+# GitLab services start BEFORE job's before_script runs, but we need the cache
+# to be extracted first. This entrypoint waits for the data directory to appear
+# before running the original entrypoint.
 .haf-service: &haf-service
   name: $HAF_IMAGE_NAME
   alias: haf-instance
@@ -546,6 +550,39 @@ haf_image_build_mirrornet:
     # Use local block_log to avoid NFS file locking issues when hived opens the files
     SHARED_BLOCK_LOG_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     LOG_FILE: $CI_JOB_NAME.log
+  # Override entrypoint to wait for job's before_script to extract the cache
+  entrypoint:
+    - '/bin/bash'
+    - '-c'
+    - |
+      set -e
+      echo "HAF service: waiting for data extraction by job..."
+      TIMEOUT=300
+      WAITED=0
+      DATA_PATH="${DATA_SOURCE:-/cache/haf_data}"
+
+      # Wait for either:
+      # 1. The datadir to appear (job extracted the cache)
+      # 2. A .tar file to exist (NFS fallback can handle it)
+      while [[ ! -d "${DATA_PATH}/datadir" ]] && [[ ! -f "${DATA_PATH}.tar" ]]; do
+        if [[ $WAITED -ge $TIMEOUT ]]; then
+          echo "ERROR: Timeout waiting for data at ${DATA_PATH}"
+          echo "Job's before_script should extract cache to this path"
+          exit 1
+        fi
+        echo "Waiting for data... ($WAITED/${TIMEOUT}s) - checking ${DATA_PATH}"
+        sleep 5
+        WAITED=$((WAITED + 5))
+      done
+
+      if [[ -d "${DATA_PATH}/datadir" ]]; then
+        echo "Data directory found at ${DATA_PATH}/datadir - proceeding"
+      else
+        echo "Tar file found at ${DATA_PATH}.tar - copy_datadir.sh will extract"
+      fi
+
+      # Run original entrypoint with any command arguments
+      exec /home/haf_admin/docker_entrypoint.sh "$@"
   command: ["--replay-blockchain", "--stop-at-block=5000000"]
 
 .hfm-only-service: &hfm-only-service
@@ -1154,8 +1191,7 @@ block_api_tests:
         PG_ACCESS: "${HAF_DB_ACCESS}"
         DATA_SOURCE: "${FILTERED_DATA_LOCAL}"
         LOG_FILE: $CI_JOB_NAME.log
-      # Data is already replayed by replay_filtered_haf_data_accounts_body_operations
-      # Just keep PostgreSQL running for the tests - no need to start hived
+      # Use native entrypoint - copy_datadir.sh handles NFS fallback automatically
       command: ["--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh"]
   tags:
     - data-cache-storage
@@ -1255,6 +1291,7 @@ dead_app_auto_detach:
 
         DATA_SOURCE: "${HAF_DATA_CACHE_LOCAL}"
         LOG_FILE: $CI_JOB_NAME.log
+      # Use native entrypoint - copy_datadir.sh handles NFS fallback automatically
       command: ["--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh"]
   variables:
     HIVED_UID: $HIVED_UID
