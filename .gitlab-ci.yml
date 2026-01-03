@@ -208,6 +208,17 @@ default:
     echo "Fetching cache: type=haf key=${HAF_COMMIT}"
     echo "Destination: ${HAF_DATA_CACHE_LOCAL}"
 
+    # Clean up stale cache directory if it exists with permission issues
+    # This prevents extraction failures when previous runs left bad state
+    if [[ -d "${HAF_DATA_CACHE_LOCAL}" ]]; then
+      if ! touch "${HAF_DATA_CACHE_LOCAL}/.write_test" 2>/dev/null; then
+        echo "Stale cache with permission issues detected, cleaning up..."
+        sudo rm -rf "${HAF_DATA_CACHE_LOCAL}" || rm -rf "${HAF_DATA_CACHE_LOCAL}" || true
+      else
+        rm -f "${HAF_DATA_CACHE_LOCAL}/.write_test"
+      fi
+    fi
+
     # cache-manager handles extraction and permission restoration
     "$CACHE_MANAGER" get "haf" "${HAF_COMMIT}" "${HAF_DATA_CACHE_LOCAL}"
 
