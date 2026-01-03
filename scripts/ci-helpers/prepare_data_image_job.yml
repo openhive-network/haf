@@ -1,237 +1,48 @@
+# =============================================================================
+# HAF Data Preparation Job Templates
+# =============================================================================
+# This file provides HAF-specific job templates by including from common-ci
+# and adding HAF-specific configuration.
+#
+# Templates available after including this file:
+#   From common-ci-configuration:
+#     - .haf_docker_image_builder_job
+#     - .prepare_haf_image (base)
+#     - .prepare_haf_data_5m (base)
+#     - .wait-for-haf-postgres
+#     - .wait-for-haf-postgres-with-nfs-extraction
+#
+#   From hive (via docker_image_jobs.gitlab-ci.yml):
+#     - .docker_image_builder_job_template
+#     - .docker_image_cleanup_job_template
+# =============================================================================
+
 include:
-- project: 'hive/hive'
-  ref: 8d24f312c29a3d61cf684b5bf707cc3b65d304cf   # Update common-ci-configuration refs (includes util-linux for NFS flock)
-  file: '/scripts/ci-helpers/prepare_data_image_job.yml'
-- local: '/scripts/ci-helpers/ci_image_tag_vars.yml'
-
-.prepare_haf_image:
-  extends: .docker_image_builder_job
-
-  variables:
-    SUBMODULE_DIR: "$CI_PROJECT_DIR"
-    SCRIPTS_PATH: "$SUBMODULE_DIR/scripts"
-    REGISTRY_USER: "$CI_IMG_BUILDER_USER"
-    REGISTRY_PASS: $CI_IMG_BUILDER_PASSWORD
-    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
-    HIVE_NETWORK_TYPE: mainnet
-  script:
-  - |
-    # Fetch required scripts from hive repo (symlinks don't work without submodule checkout)
-    HIVE_RAW_URL="https://gitlab.syncad.com/hive/hive/-/raw/${HIVE_SCRIPTS_REF}/scripts/ci-helpers"
-    for script in get_image4submodule.sh docker_image_utils.sh; do
-      TARGET="$SCRIPTS_PATH/ci-helpers/$script"
-      # Remove dangling symlink before fetching
-      rm -f "$TARGET"
-      echo "Fetching $script from hive@${HIVE_SCRIPTS_REF}..."
-      curl -fsSL "${HIVE_RAW_URL}/${script}" -o "$TARGET"
-      chmod +x "$TARGET"
-    done
-  - $SCRIPTS_PATH/ci-helpers/get_image4submodule.sh "$SUBMODULE_DIR" registry.gitlab.syncad.com/hive/haf
-    HAF "$REGISTRY_USER" "$REGISTRY_PASS" --export-binaries="$BINARY_CACHE_PATH" --network-type="$HIVE_NETWORK_TYPE"
-  - chmod -Rc a+rwx "$BINARY_CACHE_PATH"
-  - ls -la $BINARY_CACHE_PATH/*
-
-  artifacts:
-    reports:
-      dotenv: docker_image_name.env
-    paths:
-    - $BINARY_CACHE_PATH/*
-    - ./docker_image_name.env
-
-.prepare_haf_data_5m:
-  extends: .docker_image_builder_job
-
-  variables:
-    SUBMODULE_DIR: "$CI_PROJECT_DIR"
-    SCRIPTS_PATH: "$SUBMODULE_DIR/scripts"
-    BLOCK_LOG_SOURCE_DIR: ""
-    CONFIG_INI_SOURCE: ""
-    HIVE_NETWORK_TYPE: mainnet
-    DATA_CACHE_DIR: "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
-    # NFS cache configuration
-    CACHE_NFS_PATH: "/nfs/ci-cache"
-    CACHE_LOCAL_PATH: "/cache"
-  script:
-  - |
-    # Fetch required scripts from hive repo (symlinks don't work without submodule checkout)
-    HIVE_RAW_URL="https://gitlab.syncad.com/hive/hive/-/raw/${HIVE_SCRIPTS_REF}/scripts/ci-helpers"
-    for script in build_data.sh prepare_data_and_shm_dir.sh; do
-      TARGET="$SCRIPTS_PATH/ci-helpers/$script"
-      # Remove dangling symlink before fetching
-      rm -f "$TARGET"
-      echo "Fetching $script from hive@${HIVE_SCRIPTS_REF}..."
-      curl -fsSL "${HIVE_RAW_URL}/${script}" -o "$TARGET"
-      chmod +x "$TARGET"
-    done
-  - |
-    # Check for cached data: local first, then NFS
-    # Fetch cache-manager from common-ci-configuration
-    CACHE_MANAGER="/tmp/cache-manager.sh"
-    if [[ ! -x "$CACHE_MANAGER" ]]; then
-      curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
-      chmod +x "$CACHE_MANAGER"
-    fi
-    CACHE_KEY="${HAF_COMMIT}"
-    CACHE_HIT=false
-
-    # 1. Check if local cache already exists at the expected path
-    if [[ -d "${DATA_CACHE_DIR}/datadir" && -f "${DATA_CACHE_DIR}/datadir/status" ]]; then
-      LOCAL_STATUS=$(cat "${DATA_CACHE_DIR}/datadir/status" 2>/dev/null || echo "1")
-      if [[ "$LOCAL_STATUS" == "0" ]]; then
-        echo "Local cache hit for HAF commit $CACHE_KEY at ${DATA_CACHE_DIR}"
-        CACHE_HIT=true
-      fi
-    fi
-
-    # 2. If no local cache, try to get from NFS via cache-manager
-    if [[ "$CACHE_HIT" != "true" ]] && [[ -x "$CACHE_MANAGER" ]]; then
-      if "$CACHE_MANAGER" get haf "$CACHE_KEY" "${DATA_CACHE_DIR}"; then
-        echo "NFS cache hit for HAF commit $CACHE_KEY"
-        CACHE_HIT=true
-      fi
-    fi
-
-    if [[ "$CACHE_HIT" == "true" ]]; then
-      echo "Cache hit for HAF commit $CACHE_KEY"
-      # Ensure hived_uid.env exists
-      if [[ ! -f "${DATA_CACHE_DIR}/datadir/hived_uid.env" ]]; then
-        echo "HIVED_UID=$(id -u)" > "${DATA_CACHE_DIR}/datadir/hived_uid.env"
-      fi
-    else
-      echo "Cache miss for HAF commit $CACHE_KEY - performing replay"
-      mkdir "${DATA_CACHE_DIR}/datadir" -pv
-      # Don't cd into datadir - build_data.sh creates build_data.log in cwd,
-      # and if cwd is on NFS, rm -rf will fail with "Directory not empty"
-      # because the open file descriptor creates .nfs* files
-      # Run in subshell to prevent build_data.sh's exit from terminating the script block
-      (flock "${DATA_CACHE_DIR}/datadir" $SCRIPTS_PATH/ci-helpers/build_data.sh $HAF_IMAGE_NAME \
-        --data-cache="${DATA_CACHE_DIR}" --block-log-source-dir="$BLOCK_LOG_SOURCE_DIR" \
-        --config-ini-source="$CONFIG_INI_SOURCE")
-
-      # Push to NFS cache for future use (skip if job uses custom cache key)
-      # Note: cache-manager.sh handles pgdata permission relaxation/restoration automatically
-      if [[ -x "$CACHE_MANAGER" ]] && [[ -z "${FILTERED_CACHE_KEY:-}" ]]; then
-        "$CACHE_MANAGER" put haf "$CACHE_KEY" "${DATA_CACHE_DIR}" || echo "Warning: Failed to push to NFS cache"
-      elif [[ -n "${FILTERED_CACHE_KEY:-}" ]]; then
-        echo "Skipping main HAF cache push (job uses FILTERED_CACHE_KEY)"
-      fi
-    fi
-  - cp "${DATA_CACHE_DIR}/datadir/hived_uid.env" "$CI_PROJECT_DIR/hived_uid.env"
-  - cp "${DATA_CACHE_DIR}/datadir/docker_entrypoint.log" "${CI_PROJECT_DIR}/docker_entrypoint.log" 2>/dev/null || true
-  - ls -la "${DATA_CACHE_DIR}/datadir/"
-  after_script:
-  - rm "${DATA_CACHE_DIR}/replay_running" -f
-
-  artifacts:
-    reports:
-      dotenv:
-      - docker_image_name.env
-      - hived_uid.env
-    paths:
-    - "${CI_PROJECT_DIR}/docker_entrypoint.log"
+  # All templates from common-ci-configuration
+  - project: 'hive/common-ci-configuration'
+    ref: develop  # TODO: Pin to specific ref after testing
+    file:
+      - '/templates/base.gitlab-ci.yml'
+      - '/templates/docker_image_jobs.gitlab-ci.yml'
+      - '/templates/haf_data_preparation.gitlab-ci.yml'
+      - '/templates/cache_cleanup.gitlab-ci.yml'
+      - '/templates/python_projects.gitlab-ci.yml'
+      - '/templates/test_jobs.gitlab-ci.yml'
+  # Local CI image tag variables
+  - local: '/scripts/ci-helpers/ci_image_tag_vars.yml'
 
 # =============================================================================
-# Shared templates for HAF-based application test jobs
+# Base docker builder job for HAF
 # =============================================================================
-
-# Wait for HAF PostgreSQL service to be ready
-# GitLab services don't support health checks like docker-compose, so we must poll.
-#
-# Required variables (set in your job or global variables):
-#   HAF_APP_SCHEMA: The PostgreSQL schema name to verify (e.g., "reptracker_app", "btracker_app", "hafbe_app")
-#
-# Optional variables:
-#   HAF_DB_URL: PostgreSQL connection URL (default: postgresql://haf_admin@haf-instance:5432/haf_block_log)
-#   HAF_POSTGRES_WAIT_TIMEOUT: Max seconds to wait (default: 300)
-#
-# Usage:
-#   my-test-job:
-#     extends: .wait-for-haf-postgres
-#     variables:
-#       HAF_APP_SCHEMA: "my_app"
-#     ...
-.wait-for-haf-postgres:
+# Extends the common-ci template with HAF-specific setup.
+# Other HAF CI jobs should extend this.
+.docker_image_builder_job:
+  extends: .docker_image_builder_job_template
   variables:
-    HAF_DB_URL: "postgresql://haf_admin@haf-instance:5432/haf_block_log"
-    HAF_POSTGRES_WAIT_TIMEOUT: "300"
+    FF_NETWORK_PER_BUILD: "true"
   before_script:
-  - |
-    echo -e "\e[0Ksection_start:$(date +%s):wait_postgres[collapsed=true]\r\e[0KWaiting for PostgreSQL..."
-    TIMEOUT="${HAF_POSTGRES_WAIT_TIMEOUT:-300}"
-    ELAPSED=0
-    until psql "$HAF_DB_URL" -c "SELECT 1" >/dev/null 2>&1; do
-      if [ $ELAPSED -ge $TIMEOUT ]; then
-        echo "ERROR: PostgreSQL not ready after ${TIMEOUT}s"
-        exit 1
-      fi
-      echo "PostgreSQL not ready, waiting... (${ELAPSED}s/${TIMEOUT}s)"
-      sleep 5
-      ELAPSED=$((ELAPSED + 5))
-    done
-    echo "PostgreSQL is ready (took ${ELAPSED}s)"
-    # Verify app schema exists (sync job should have created it)
-    if [ -n "${HAF_APP_SCHEMA:-}" ]; then
-      if ! psql "$HAF_DB_URL" -t -c "SELECT 1 FROM information_schema.schemata WHERE schema_name = '${HAF_APP_SCHEMA}'" | grep -q 1; then
-        echo "ERROR: ${HAF_APP_SCHEMA} schema not found - sync job may have failed to save data properly"
-        exit 1
-      fi
-      echo "${HAF_APP_SCHEMA} schema verified"
-    fi
-    echo -e "\e[0Ksection_end:$(date +%s):wait_postgres\r\e[0K"
+    - !reference [.docker_image_builder_job_template, before_script]
+    - git config --global --add safe.directory '*'
 
-# Wait for PostgreSQL with NFS cache extraction
-# Use this when test jobs need to extract NFS cache for service containers.
-#
-# Required variables:
-#   HAF_APP_SCHEMA: The PostgreSQL schema name to verify
-#   SYNC_CACHE_TYPE: Cache type (e.g., "haf_sync")
-#   SYNC_CACHE_KEY: Cache key (e.g., "${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}")
-#   DATA_CACHE_NFS_PREFIX: NFS cache prefix (e.g., "/nfs/ci-cache")
-#
-# Usage:
-#   my-test-job:
-#     extends: .wait-for-haf-postgres-with-nfs-extraction
-#     variables:
-#       HAF_APP_SCHEMA: "my_app"
-#     ...
-.wait-for-haf-postgres-with-nfs-extraction:
-  variables:
-    HAF_DB_URL: "postgresql://haf_admin@haf-instance:5432/haf_block_log"
-    HAF_POSTGRES_WAIT_TIMEOUT: "300"
-  before_script:
-  - |
-    # Extract NFS cache if local cache doesn't exist
-    LOCAL_CACHE="/cache/${SYNC_CACHE_TYPE}_${SYNC_CACHE_KEY}"
-    NFS_TAR="${DATA_CACHE_NFS_PREFIX}/${SYNC_CACHE_TYPE}/${SYNC_CACHE_KEY}.tar"
-    echo "Checking cache: LOCAL_CACHE=${LOCAL_CACHE}, NFS_TAR=${NFS_TAR}"
-    if [[ ! -d "${LOCAL_CACHE}/datadir" ]] && [[ -f "$NFS_TAR" ]]; then
-      echo "Extracting NFS cache for service container..."
-      mkdir -p "${LOCAL_CACHE}"
-      tar xf "$NFS_TAR" -C "${LOCAL_CACHE}"
-      echo "Extraction complete: ${LOCAL_CACHE}"
-    else
-      echo "Using existing cache or NFS tar not found"
-    fi
-  - |
-    echo -e "\e[0Ksection_start:$(date +%s):wait_postgres[collapsed=true]\r\e[0KWaiting for PostgreSQL..."
-    TIMEOUT="${HAF_POSTGRES_WAIT_TIMEOUT:-300}"
-    ELAPSED=0
-    until psql "$HAF_DB_URL" -c "SELECT 1" >/dev/null 2>&1; do
-      if [ $ELAPSED -ge $TIMEOUT ]; then
-        echo "ERROR: PostgreSQL not ready after ${TIMEOUT}s"
-        exit 1
-      fi
-      echo "PostgreSQL not ready, waiting... (${ELAPSED}s/${TIMEOUT}s)"
-      sleep 5
-      ELAPSED=$((ELAPSED + 5))
-    done
-    echo "PostgreSQL is ready (took ${ELAPSED}s)"
-    # Verify app schema exists (sync job should have created it)
-    if [ -n "${HAF_APP_SCHEMA:-}" ]; then
-      if ! psql "$HAF_DB_URL" -t -c "SELECT 1 FROM information_schema.schemata WHERE schema_name = '${HAF_APP_SCHEMA}'" | grep -q 1; then
-        echo "ERROR: ${HAF_APP_SCHEMA} schema not found - sync job may have failed to save data properly"
-        exit 1
-      fi
-      echo "${HAF_APP_SCHEMA} schema verified"
-    fi
-    echo -e "\e[0Ksection_end:$(date +%s):wait_postgres\r\e[0K"
+.docker_image_cleanup_job:
+  extends: .docker_image_cleanup_job_template
