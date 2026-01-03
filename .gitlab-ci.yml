@@ -1139,7 +1139,9 @@ block_api_tests:
         PG_ACCESS: "${HAF_DB_ACCESS}"
         DATA_SOURCE: "${FILTERED_DATA_LOCAL}"
         LOG_FILE: $CI_JOB_NAME.log
-      command: ["--replay-blockchain", "--stop-at-block=5000000"]
+      # Data is already replayed by replay_filtered_haf_data_accounts_body_operations
+      # Just keep PostgreSQL running for the tests - no need to start hived
+      command: ["--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh"]
   tags:
     - data-cache-storage
     - fast
