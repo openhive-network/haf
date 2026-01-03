@@ -22,10 +22,12 @@ include:
   - project: 'hive/common-ci-configuration'
     ref: develop  # TODO: Pin to specific ref after testing
     file:
+      - '/templates/base.gitlab-ci.yml'
       - '/templates/docker_image_jobs.gitlab-ci.yml'
       - '/templates/haf_data_preparation.gitlab-ci.yml'
       - '/templates/cache_cleanup.gitlab-ci.yml'
       - '/templates/python_projects.gitlab-ci.yml'
+      - '/templates/test_jobs.gitlab-ci.yml'
   # Local CI image tag variables
   - local: '/scripts/ci-helpers/ci_image_tag_vars.yml'
 
