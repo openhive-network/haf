@@ -1195,25 +1195,6 @@ block_api_tests:
     - fast
 
   before_script:
-    # Extract filtered cache so service container can find it
-    - |
-      echo -e "\e[0Ksection_start:$(date +%s):fetch_cache[collapsed=true]\r\e[0KFetching filtered HAF data..."
-      CACHE_MANAGER="/tmp/cache-manager.sh"
-      curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
-      chmod +x "$CACHE_MANAGER"
-      echo "Fetching cache: type=haf_filtered key=${CI_PIPELINE_ID}_filtered"
-
-      # Clean up old extracted directory to ensure service waits for fresh extraction
-      # Remove the entire extracted directory (not just subdirs) to avoid permission issues
-      if [[ -d "${FILTERED_DATA_LOCAL}" ]]; then
-        echo "Removing stale extracted data at ${FILTERED_DATA_LOCAL}"
-        sudo rm -rf "${FILTERED_DATA_LOCAL}" 2>/dev/null || true
-      fi
-
-      "$CACHE_MANAGER" get "haf_filtered" "${CI_PIPELINE_ID}_filtered" "${FILTERED_DATA_LOCAL}"
-      echo "Filtered data fetch complete."
-      ls -la "${FILTERED_DATA_LOCAL}/datadir/" || echo "Warning: datadir not found"
-      echo -e "\e[0Ksection_end:$(date +%s):fetch_cache\r\e[0K"
     # Wait for database to be ready
     - |
       echo -e "\e[0Ksection_start:$(date +%s):wait_db[collapsed=true]\r\e[0KWaiting for database..."
@@ -1314,7 +1295,6 @@ dead_app_auto_detach:
   before_script:
     # Install psql for database operations
     - sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null 2>&1 || true
-    - *fetch_haf_cache
   script:
     - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
   artifacts:

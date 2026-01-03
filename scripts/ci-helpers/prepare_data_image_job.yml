@@ -72,30 +72,40 @@ include:
       chmod +x "$CACHE_MANAGER"
     fi
     CACHE_KEY="${HAF_COMMIT}"
-    CACHE_HIT=false
+    LOCAL_CACHE_HIT=false
+    NFS_CACHE_HIT=false
 
     # 1. Check if local cache already exists at the expected path
     if [[ -d "${DATA_CACHE_DIR}/datadir" && -f "${DATA_CACHE_DIR}/datadir/status" ]]; then
       LOCAL_STATUS=$(cat "${DATA_CACHE_DIR}/datadir/status" 2>/dev/null || echo "1")
       if [[ "$LOCAL_STATUS" == "0" ]]; then
         echo "Local cache hit for HAF commit $CACHE_KEY at ${DATA_CACHE_DIR}"
-        CACHE_HIT=true
+        LOCAL_CACHE_HIT=true
       fi
     fi
 
     # 2. If no local cache, try to get from NFS via cache-manager
-    if [[ "$CACHE_HIT" != "true" ]] && [[ -x "$CACHE_MANAGER" ]]; then
+    if [[ "$LOCAL_CACHE_HIT" != "true" ]] && [[ -x "$CACHE_MANAGER" ]]; then
       if "$CACHE_MANAGER" get haf "$CACHE_KEY" "${DATA_CACHE_DIR}"; then
         echo "NFS cache hit for HAF commit $CACHE_KEY"
-        CACHE_HIT=true
+        NFS_CACHE_HIT=true
       fi
     fi
 
-    if [[ "$CACHE_HIT" == "true" ]]; then
+    if [[ "$LOCAL_CACHE_HIT" == "true" ]] || [[ "$NFS_CACHE_HIT" == "true" ]]; then
       echo "Cache hit for HAF commit $CACHE_KEY"
       # Ensure hived_uid.env exists
       if [[ ! -f "${DATA_CACHE_DIR}/datadir/hived_uid.env" ]]; then
         echo "HIVED_UID=$(id -u)" > "${DATA_CACHE_DIR}/datadir/hived_uid.env"
+      fi
+
+      # If we got local cache but NFS doesn't have it, push to NFS for cross-builder jobs
+      if [[ "$LOCAL_CACHE_HIT" == "true" ]] && [[ "$NFS_CACHE_HIT" != "true" ]]; then
+        NFS_TAR="${CACHE_NFS_PATH}/haf/${CACHE_KEY}.tar"
+        if [[ -x "$CACHE_MANAGER" ]] && [[ -z "${FILTERED_CACHE_KEY:-}" ]] && [[ ! -f "$NFS_TAR" ]]; then
+          echo "Local cache exists but NFS cache missing - pushing to NFS for cross-builder jobs"
+          "$CACHE_MANAGER" put haf "$CACHE_KEY" "${DATA_CACHE_DIR}" || echo "Warning: Failed to push to NFS cache"
+        fi
       fi
     else
       echo "Cache miss for HAF commit $CACHE_KEY - performing replay"
