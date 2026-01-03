@@ -110,6 +110,11 @@ include:
     else
       echo "Cache miss for HAF commit $CACHE_KEY - performing replay"
       mkdir "${DATA_CACHE_DIR}/datadir" -pv
+      # Fetch prepare_data_and_shm_dir.sh from common-ci-configuration (has fix for symlink issue)
+      PREPARE_SCRIPT="$SCRIPTS_PATH/ci-helpers/prepare_data_and_shm_dir.sh"
+      rm -f "$PREPARE_SCRIPT"  # Remove symlink if exists
+      curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/prepare_data_and_shm_dir.sh" -o "$PREPARE_SCRIPT"
+      chmod +x "$PREPARE_SCRIPT"
       # Don't cd into datadir - build_data.sh creates build_data.log in cwd,
       # and if cwd is on NFS, rm -rf will fail with "Directory not empty"
       # because the open file descriptor creates .nfs* files
