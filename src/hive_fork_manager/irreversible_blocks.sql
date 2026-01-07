@@ -121,11 +121,10 @@ CREATE STATISTICS IF NOT EXISTS operation_types_id_name_dependency_stats (depend
 -- id is encoded || 32b blocknum | 24b seq | 8b operation type ||
 -- This compact encoding minimizes data volume during massive sync.
 -- No FK to blocks - fork cleanup is done explicitly (rare operation).
+-- Use hafd.operation_id_to_seq(id) and hafd.operation_id_to_type_id(id) to extract components.
 
 CREATE TABLE IF NOT EXISTS hafd.operations (
     block_id hafd.block_id NOT NULL,
-    seq_in_block integer NOT NULL,
-    op_type_id integer NOT NULL,
     trx_in_block smallint NOT NULL,
     op_pos integer NOT NULL,
     body_binary hafd.operation DEFAULT NULL,
@@ -133,7 +132,7 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     -- Encoding: (block_num << 32) | (seq_in_block << 8) | op_type_id
     -- Tests should use hafd.operation_id(block_num, seq_in_block, op_type_id) helper
     id BIGINT NOT NULL,
-    CONSTRAINT pk_hive_operations PRIMARY KEY ( block_id, seq_in_block, op_type_id )
+    CONSTRAINT pk_hive_operations PRIMARY KEY ( block_id, id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
 
@@ -204,7 +203,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations U
 -- Expression index for operations_view DISTINCT ON queries
 CREATE INDEX IF NOT EXISTS hive_operations_block_id_to_num_idx ON hafd.operations (
     hafd.block_id_to_num(block_id),
-    seq_in_block,
+    hafd.operation_id_to_pos(id),
     block_id DESC
 );
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
