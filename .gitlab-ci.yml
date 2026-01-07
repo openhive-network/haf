@@ -840,7 +840,7 @@ applications_system_tests:
       mkdir -vp "${PATTERNS_PATH}/blockchain"
       cp "${RO_BLOCK_LOG_DIRECTORY}/block_log" "${PATTERNS_PATH}/blockchain/"
       cd $CI_PROJECT_DIR/tests/integration/replay
-      $HIVED_PATH --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs.log
+      $HIVED_PATH --data-dir $PATTERNS_PATH $REPLAY --exit-at-block=5000000 --psql-url $DB_URL 2>&1 | tee -i node_logs.log
       echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
   script:
     - pytest --junitxml report.xml
