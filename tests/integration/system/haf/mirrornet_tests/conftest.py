@@ -71,10 +71,16 @@ def _find_node_logs(test_dir: Path) -> list[tuple[str, Path]]:
 
 
 def _configure_hived_file_logging(node):
-    """Configure hived to write logs to both console and file for debugging."""
+    """Configure hived to write logs to both console and file for debugging.
+
+    Uses iso_8601_realtime_microseconds time format to get real wall-clock timestamps
+    that bypass libfaketime interception. This enables accurate timing analysis of
+    hived initialization steps during mirrornet tests.
+    """
     # File appender that writes to hived.log in the node's data directory
+    # Using realtime timestamps to bypass libfaketime for debugging intermittent timeouts
     node.config.log_file_appender = (
-        '{"appender":"file","file":"hived.log","time_format":"iso_8601_milliseconds","flush":true}'
+        '{"appender":"file","file":"hived.log","time_format":"iso_8601_realtime_microseconds","flush":true}'
     )
     # Logger sends to both console (needed for beekeepy port discovery) and file (for debugging)
     node.config.log_logger = (
