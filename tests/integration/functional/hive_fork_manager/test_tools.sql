@@ -340,15 +340,13 @@ BEGIN
         message := 'OPERATION BLOCK ' || block_num::TEXT;
         __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0
 
-        INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id)
+        INSERT INTO hafd.operations(block_id, trx_in_block, op_pos, body_binary, id)
         VALUES (
             __block_id,
-            trx_in_block,  -- seq_in_block
-            op_pos,        -- op_type_id
             trx_in_block - 1,
             op_pos,
             ('{"type":"system_warning_operation","value":{"message":"' || message || '"}}')::jsonb::hafd.operation,
-            (block_num::BIGINT << 32) | (trx_in_block << 8) | op_pos  -- id encoding
+            hafd.operation_id(block_num, trx_in_block, op_pos)  -- id encoding
         );
     END LOOP;
 END;
@@ -378,15 +376,13 @@ BEGIN
         message := 'OPERATION BLOCK ' || block_num::TEXT || ' FORK ' || fork_id::TEXT;
         __block_id := hafd.make_block_id(block_num, fork_id);
 
-        INSERT INTO hafd.operations(block_id, seq_in_block, op_type_id, trx_in_block, op_pos, body_binary, id)
+        INSERT INTO hafd.operations(block_id, trx_in_block, op_pos, body_binary, id)
         VALUES (
             __block_id,
-            trx_in_block,  -- seq_in_block
-            op_pos,        -- op_type_id
             trx_in_block - 1,
             op_pos,
             ('{"type":"system_warning_operation","value":{"message":"' || message || '"}}')::jsonb::hafd.operation,
-            (block_num::BIGINT << 32) | (trx_in_block << 8) | op_pos  -- id encoding
+            hafd.operation_id(block_num, trx_in_block, op_pos)  -- id encoding
         );
     END LOOP;
 END;
