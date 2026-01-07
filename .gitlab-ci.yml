@@ -493,7 +493,7 @@ haf_image_build:
     HIVE_NETWORK_TYPE: mainnet
   tags:
     - public-runner-docker
-    - build-mainnet
+    - bigjob
 
 haf_image_build_testnet:
   extends: .haf_image_build
@@ -502,7 +502,7 @@ haf_image_build_testnet:
     HIVE_NETWORK_TYPE: testnet
   tags:
     - public-runner-docker
-    - build-testnet
+    - bigjob
 
 haf_image_build_mirrornet:
   extends: .haf_image_build
@@ -511,7 +511,7 @@ haf_image_build_mirrornet:
     HIVE_NETWORK_TYPE: mirrornet
   tags:
     - public-runner-docker
-    - build-mirrornet
+    - bigjob
   # Necessary to tag mirrornet images to be used in Denser's CI
   after_script:
     - |
@@ -599,6 +599,7 @@ haf_image_build_mirrornet:
   interruptible: true
   tags:
     - public-runner-docker
+    - fastest
 
 hfm_functional_tests:
   extends: .hfm_functional_tests
@@ -720,6 +721,7 @@ dump_snapshot_5m_mirrornet:
   tags:
     - data-cache-storage
     - fast
+    - fastest
 
 haf_system_tests_mirrornet:
   stage: build_and_test_phase_2
@@ -774,6 +776,7 @@ haf_system_tests_mirrornet:
   tags:
     - data-cache-storage
     - fast
+    - bigjob
 
 applications_system_tests:
   extends: .job-defaults
@@ -1118,6 +1121,7 @@ replay_filtered_haf_data_accounts_body_operations:
   tags:
     - data-cache-storage
     - fast
+    - fastest
 
 block_api_tests:
   extends: .jmeter_benchmark_job
@@ -1224,6 +1228,7 @@ prepare_haf_data:
   tags:
     - data-cache-storage
     - fast
+    - fastest
 
 dead_app_auto_detach:
   extends: .job-defaults
