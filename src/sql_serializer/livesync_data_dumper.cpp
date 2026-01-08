@@ -2,6 +2,10 @@
 #include <transactions_controller/transaction_controllers.hpp>
 
 #include <hive/chain/database.hpp>
+#include <hive/chain/notifications.hpp>
+#include <hive/utilities/signal.hpp>
+
+#include <fc/thread/thread.hpp>
 
 namespace hive{ namespace plugins{ namespace sql_serializer {
 
@@ -175,7 +179,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void livesync_data_dumper::connect_irreversible_event() {
-    if ( _on_irreversible_block_conn.connected() ) {
+    if ( _on_irreversible_block_conn ) {
       return;
     }
 
@@ -186,11 +190,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void livesync_data_dumper::disconnect_irreversible_event() {
-    _on_irreversible_block_conn.disconnect();
+    hive::utilities::disconnect_signal(_on_irreversible_block_conn);
   }
 
   void livesync_data_dumper::connect_fork_event() {
-    if ( _on_switch_fork_conn.connected() ) {
+    if ( _on_switch_fork_conn ) {
       return;
     }
 
@@ -201,7 +205,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void livesync_data_dumper::connect_block_fail_event() {
-    if ( _on_block_fail_conn.connected() ) {
+    if ( _on_block_fail_conn ) {
       return;
     }
 
@@ -212,11 +216,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void livesync_data_dumper::disconnect_fork_event() {
-    _on_switch_fork_conn.disconnect();
+    hive::utilities::disconnect_signal(_on_switch_fork_conn);
   }
 
   void livesync_data_dumper::disconnect_block_fail_event() {
-    _on_block_fail_conn.disconnect();
+    hive::utilities::disconnect_signal(_on_block_fail_conn);
   }
 
   livesync_data_dumper::processing_thread::processing_thread(std::shared_ptr<transaction_controllers::transaction_controller> transactions_controller,

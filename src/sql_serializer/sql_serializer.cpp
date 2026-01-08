@@ -16,6 +16,7 @@
 #include <hive/chain/util/type_registrar_definition.hpp>
 
 #include <hive/chain/notifications.hpp>
+#include <hive/chain/witness_objects.hpp>
 #include <hive/chain/index.hpp>
 
 #include <hive/protocol/config.hpp>

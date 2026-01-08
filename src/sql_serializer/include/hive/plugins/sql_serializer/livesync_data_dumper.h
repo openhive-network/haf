@@ -10,6 +10,8 @@
 #include <hive/plugins/sql_serializer/cached_data.h>
 #include <hive/plugins/sql_serializer/write_ahead_log.hpp>
 
+#include <hive/chain/database.hpp>
+
 #include <boost/signals2.hpp>
 #include <boost/scope_exit.hpp>
 
@@ -117,9 +119,9 @@ namespace hive::plugins::sql_serializer {
     std::string _accounts;
     std::string _applied_hardforks;
 
-    boost::signals2::connection _on_irreversible_block_conn;
-    boost::signals2::connection _on_switch_fork_conn;
-    boost::signals2::connection _on_block_fail_conn;
+    hive::chain::database::signal_connection_ptr _on_irreversible_block_conn;
+    hive::chain::database::signal_connection_ptr _on_switch_fork_conn;
+    hive::chain::database::signal_connection_ptr _on_block_fail_conn;
     std::shared_ptr< transaction_controllers::transaction_controller > transactions_controller;
 
     const uint32_t _psql_first_block;

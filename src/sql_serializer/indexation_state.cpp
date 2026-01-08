@@ -128,7 +128,6 @@ public:
   }
 private:
   flush_data_callback _flush_data_callback;
-  boost::signals2::connection _on_irreversible_block_conn;
 
   int32_t last_flushed_block_num;
 };

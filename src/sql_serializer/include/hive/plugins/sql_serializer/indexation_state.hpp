@@ -3,6 +3,8 @@
 #include <hive/plugins/sql_serializer/indexes_controler.h>
 #include <hive/plugins/sql_serializer/write_ahead_log.hpp>
 
+#include <hive/chain/database.hpp>
+
 #include <boost/signals2.hpp>
 #include <fc/time.hpp>
 
@@ -102,7 +104,7 @@ namespace hive::plugins::sql_serializer {
       const uint32_t _psql_first_block;
       const uint32_t _psql_pruning_tail_size;
 
-      boost::signals2::connection _on_irreversible_block_conn;
+      hive::chain::database::signal_connection_ptr _on_irreversible_block_conn;
       std::shared_ptr< data_dumper > _dumper;
       std::shared_ptr< flush_trigger > _trigger;
       int32_t _irreversible_block_num;
