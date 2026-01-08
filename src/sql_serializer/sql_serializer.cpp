@@ -19,6 +19,8 @@
 #include <hive/chain/witness_objects.hpp>
 #include <hive/chain/index.hpp>
 
+#include <chainbase/chainbase.hpp>
+
 #include <hive/protocol/config.hpp>
 #include <hive/protocol/operations.hpp>
 
@@ -946,3 +948,6 @@ void sql_serializer_plugin::plugin_shutdown()
 
 
 HIVE_DEFINE_TYPE_REGISTRAR_REGISTER_TYPE(hive::plugins::sql_serializer::account_ops_seq_index)
+
+// Explicit template instantiation for chainbase index methods
+template chainbase::generic_index<hive::plugins::sql_serializer::account_ops_seq_index>& chainbase::database::get_mutable_index<hive::plugins::sql_serializer::account_ops_seq_index>();
