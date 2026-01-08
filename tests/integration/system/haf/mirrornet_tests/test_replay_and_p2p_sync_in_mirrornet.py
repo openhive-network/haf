@@ -57,9 +57,9 @@ def test_replay_and_p2p_sync(
     haf_replay_blocks = int(mirrornet_block_count * 0.9)
 
     step_start = time.time()
-    block_log_for_haf = block_log.truncate(
-        tmp_path / "haf_block_log", haf_replay_blocks
-    )
+    haf_block_log_dir = tmp_path / "haf_block_log"
+    haf_block_log_dir.mkdir(exist_ok=True)
+    block_log_for_haf = block_log.truncate(haf_block_log_dir, haf_replay_blocks)
     log_timing(test_name, "block_log truncate", time.time() - step_start)
 
     apply_block_log_type_to_monolithic_workaround(mirrornet_witness_node)
