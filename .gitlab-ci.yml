@@ -570,6 +570,9 @@ haf_image_build_mirrornet:
   timeout: 80m
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  before_script:
+    # Initialize hive submodule - needed for CMake build in maintenance script
+    - !reference [.init_submodules, before_script]
   script:
     # Skip when image commit doesn't match source commit - this test validates extension
     # upgrades and requires the image and source to be from the same commit.
