@@ -950,4 +950,5 @@ void sql_serializer_plugin::plugin_shutdown()
 HIVE_DEFINE_TYPE_REGISTRAR_REGISTER_TYPE(hive::plugins::sql_serializer::account_ops_seq_index)
 
 // Explicit template instantiation for chainbase index methods
+template const chainbase::generic_index<hive::plugins::sql_serializer::account_ops_seq_index>& chainbase::database::get_index<hive::plugins::sql_serializer::account_ops_seq_index>() const;
 template chainbase::generic_index<hive::plugins::sql_serializer::account_ops_seq_index>& chainbase::database::get_mutable_index<hive::plugins::sql_serializer::account_ops_seq_index>();
