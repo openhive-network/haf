@@ -103,6 +103,11 @@ def test_replay_and_p2p_sync(
     )
     log_timing(test_name, "haf_node.run (replay + sync)", time.time() - step_start)
 
+    # Wait for HAF to sync to the expected block count (P2P sync may still be in progress after wait_for_live)
+    step_start = time.time()
+    haf_node.wait_for_block_with_number(mirrornet_block_count, timeout=300)
+    log_timing(test_name, "wait_for_block_with_number", time.time() - step_start)
+
     step_start = time.time()
     # Verify transactions are properly indexed by checking blocks known to contain transactions
     for block_num in get_blocks_to_verify(mirrornet_block_count):
