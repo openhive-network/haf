@@ -19,7 +19,7 @@
 #include <hive/chain/witness_objects.hpp>
 #include <hive/chain/index.hpp>
 
-#include <chainbase/chainbase.hpp>
+#include <chainbase/chainbase.inl>
 
 #include <hive/protocol/config.hpp>
 #include <hive/protocol/operations.hpp>
