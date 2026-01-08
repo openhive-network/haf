@@ -80,7 +80,9 @@ ORDER BY hafd.operation_id_to_block_num(ho.id), hafd.operation_id_to_pos(ho.id),
 -- account_operations_view - Show account_ops from visible blocks,
 -- then for each (account_id, account_op_seq_no), pick highest block_id
 -- =============================================================================
--- Uses DISTINCT ON for efficient predicate pushdown.
+-- Uses MAX subquery for efficient canonical block check.
+-- A block is canonical if it's the MAX(block_id) for its block_num.
+-- MAX returns NULL if block doesn't exist, correctly filtering orphaned rows.
 CREATE OR REPLACE VIEW hive.account_operations_view AS
 SELECT DISTINCT ON (hao.account_id, hao.account_op_seq_no)
     hafd.block_id_to_num(hao.block_id) AS block_num,
@@ -91,11 +93,10 @@ SELECT DISTINCT ON (hao.account_id, hao.account_op_seq_no)
     hafd.operation_id_to_type_id(ho.id) AS op_type_id
 FROM hafd.account_operations hao
 JOIN hafd.operations ho ON ho.block_id = hao.block_id AND hafd.operation_id_to_pos(ho.id) = hao.seq_in_block
-JOIN (
-    SELECT DISTINCT ON (hafd.block_id_to_num(block_id)) block_id
-    FROM hafd.blocks
-    ORDER BY hafd.block_id_to_num(block_id), block_id DESC
-) visible ON visible.block_id = hao.block_id
+WHERE hao.block_id = (
+    SELECT MAX(b.block_id) FROM hafd.blocks b
+    WHERE hafd.block_id_to_num(b.block_id) = hafd.block_id_to_num(hao.block_id)
+)
 ORDER BY hao.account_id, hao.account_op_seq_no, hao.block_id DESC;
 
 -- =============================================================================
@@ -103,48 +104,47 @@ ORDER BY hao.account_id, hao.account_op_seq_no, hao.block_id DESC;
 -- For each account_id, pick the row with highest block_id from visible blocks
 -- NULL block_id means account was dumped at startup (psql-first-block > 1)
 -- =============================================================================
--- Uses DISTINCT ON for efficient predicate pushdown.
+-- Uses MAX subquery for efficient canonical block check.
+-- A block is canonical if it's the MAX(block_id) for its block_num.
+-- MAX returns NULL if block doesn't exist, correctly filtering orphaned rows.
 CREATE OR REPLACE VIEW hive.accounts_view AS
 SELECT DISTINCT ON (ha.id)
     ha.id, ha.name
 FROM hafd.accounts ha
 WHERE ha.block_id IS NULL  -- Accounts from initial dump
-   OR ha.block_id IN (
-       SELECT DISTINCT ON (hafd.block_id_to_num(block_id)) block_id
-       FROM hafd.blocks
-       ORDER BY hafd.block_id_to_num(block_id), block_id DESC
+   OR ha.block_id = (
+       SELECT MAX(b.block_id) FROM hafd.blocks b
+       WHERE hafd.block_id_to_num(b.block_id) = hafd.block_id_to_num(ha.block_id)
    )
 ORDER BY ha.id, ha.block_id DESC NULLS LAST;
 
 -- =============================================================================
 -- transactions_multisig_view - Show signatures from visible blocks only
 -- =============================================================================
--- Uses DISTINCT ON for efficient predicate pushdown.
+-- Uses MAX subquery for efficient canonical block check.
 CREATE OR REPLACE VIEW hive.transactions_multisig_view AS
 SELECT htm.trx_hash, htm.signature
 FROM hafd.transactions_multisig htm
-JOIN (
-    SELECT DISTINCT ON (hafd.block_id_to_num(block_id)) block_id
-    FROM hafd.blocks
-    ORDER BY hafd.block_id_to_num(block_id), block_id DESC
-) visible ON visible.block_id = htm.block_id;
+WHERE htm.block_id = (
+    SELECT MAX(b.block_id) FROM hafd.blocks b
+    WHERE hafd.block_id_to_num(b.block_id) = hafd.block_id_to_num(htm.block_id)
+);
 
 -- =============================================================================
 -- applied_hardforks_view - Show hardforks from visible blocks,
 -- then for each hardfork_num, pick the highest block_id
 -- =============================================================================
--- Uses DISTINCT ON for efficient predicate pushdown.
+-- Uses MAX subquery for efficient canonical block check.
 CREATE OR REPLACE VIEW hive.applied_hardforks_view AS
 SELECT DISTINCT ON (hah.hardfork_num)
     hah.hardfork_num,
     hafd.block_id_to_num(hah.block_id) AS block_num,
     hah.hardfork_vop_id
 FROM hafd.applied_hardforks hah
-JOIN (
-    SELECT DISTINCT ON (hafd.block_id_to_num(block_id)) block_id
-    FROM hafd.blocks
-    ORDER BY hafd.block_id_to_num(block_id), block_id DESC
-) visible ON visible.block_id = hah.block_id
+WHERE hah.block_id = (
+    SELECT MAX(b.block_id) FROM hafd.blocks b
+    WHERE hafd.block_id_to_num(b.block_id) = hafd.block_id_to_num(hah.block_id)
+)
 ORDER BY hah.hardfork_num, hah.block_id DESC;
 
 -- =============================================================================
