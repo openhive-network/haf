@@ -15,6 +15,7 @@
 #include <hive/chain/util/supplement_operations.hpp>
 #include <hive/chain/util/type_registrar_definition.hpp>
 
+#include <hive/chain/notifications.hpp>
 #include <hive/chain/index.hpp>
 
 #include <hive/protocol/config.hpp>
@@ -280,16 +281,16 @@ public:
   void collect_account_operations(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
   bool is_database_initialized();
 
-  boost::signals2::connection _on_pre_apply_operation_con;
+  hive::chain::database::signal_connection_ptr _on_pre_apply_operation_con;
   std::unique_ptr< boost::signals2::shared_connection_block > _pre_apply_operation_blocker;
-  boost::signals2::connection __on_pre_apply_block_con_initialization;
-  boost::signals2::connection _on_pre_apply_block_con_unblock_operations;
-  boost::signals2::connection _on_post_apply_block_con_block_operations;
-  boost::signals2::connection _on_starting_reindex;
-  boost::signals2::connection _on_finished_reindex;
-  boost::signals2::connection _on_end_of_syncing_con;
-  boost::signals2::connection _on_switch_fork_conn;
-  boost::signals2::connection _on_block_failed;
+  hive::chain::database::signal_connection_ptr __on_pre_apply_block_con_initialization;
+  hive::chain::database::signal_connection_ptr _on_pre_apply_block_con_unblock_operations;
+  hive::chain::database::signal_connection_ptr _on_post_apply_block_con_block_operations;
+  hive::chain::database::signal_connection_ptr _on_starting_reindex;
+  hive::chain::database::signal_connection_ptr _on_finished_reindex;
+  hive::chain::database::signal_connection_ptr _on_end_of_syncing_con;
+  hive::chain::database::signal_connection_ptr _on_switch_fork_conn;
+  hive::chain::database::signal_connection_ptr _on_block_failed;
 
   std::string db_url;
   hive::chain::database& chain_db;
@@ -475,7 +476,7 @@ void sql_serializer_plugin_impl::connect_signals()
 {
   // data collection
   _on_pre_apply_operation_con = chain_db.add_pre_apply_operation_handler([&](const operation_notification& note) { on_pre_apply_operation(note); }, main_plugin);
-  _pre_apply_operation_blocker = std::make_unique< boost::signals2::shared_connection_block >( _on_pre_apply_operation_con );
+  _pre_apply_operation_blocker = std::make_unique< boost::signals2::shared_connection_block >( *_on_pre_apply_operation_con );
 
   __on_pre_apply_block_con_initialization = chain_db.add_pre_apply_block_handler([&](const block_notification& note) { on_pre_apply_block(note); }, main_plugin);
   _on_finished_reindex = chain_db.add_post_reindex_handler([&](const reindex_notification& note) { on_post_reindex(note); }, main_plugin);
@@ -497,22 +498,15 @@ void sql_serializer_plugin_impl::connect_signals()
 
 void sql_serializer_plugin_impl::disconnect_signals()
 {
-  if(__on_pre_apply_block_con_initialization.connected())
-    hive::utilities::disconnect_signal(__on_pre_apply_block_con_initialization);
-  if(_on_pre_apply_operation_con.connected())
-    hive::utilities::disconnect_signal(_on_pre_apply_operation_con);
-  if(_on_starting_reindex.connected())
-    hive::utilities::disconnect_signal(_on_starting_reindex);
-  if(_on_finished_reindex.connected())
-    hive::utilities::disconnect_signal(_on_finished_reindex);
-  if ( _on_end_of_syncing_con.connected() )
-    hive::utilities::disconnect_signal(_on_end_of_syncing_con);
-  if ( _on_switch_fork_conn.connected() )
-    hive::utilities::disconnect_signal(_on_switch_fork_conn);
-  if ( _on_pre_apply_operation_con.connected() )
-    hive::utilities::disconnect_signal(_on_pre_apply_operation_con);
-  if ( _on_block_failed.connected() )
-    hive::utilities::disconnect_signal(_on_block_failed);
+  hive::utilities::disconnect_signal(__on_pre_apply_block_con_initialization);
+  hive::utilities::disconnect_signal(_on_pre_apply_operation_con);
+  hive::utilities::disconnect_signal(_on_starting_reindex);
+  hive::utilities::disconnect_signal(_on_finished_reindex);
+  hive::utilities::disconnect_signal(_on_end_of_syncing_con);
+  hive::utilities::disconnect_signal(_on_switch_fork_conn);
+  hive::utilities::disconnect_signal(_on_pre_apply_block_con_unblock_operations);
+  hive::utilities::disconnect_signal(_on_post_apply_block_con_block_operations);
+  hive::utilities::disconnect_signal(_on_block_failed);
 }
 
 void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& note)
@@ -526,8 +520,7 @@ void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& no
   }
 
   if ( can_collect_blocks() ) {
-    if(__on_pre_apply_block_con_initialization.connected())
-      hive::utilities::disconnect_signal(__on_pre_apply_block_con_initialization);
+    hive::utilities::disconnect_signal(__on_pre_apply_block_con_initialization);
   }
 }
 
