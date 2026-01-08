@@ -1264,7 +1264,7 @@ dead_app_auto_detach:
   before_script:
     # Install psql for database operations
     - sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null 2>&1 || true
-    - *fetch_haf_cache
+    # Note: No fetch_haf_cache needed - service container already extracts to ${HAF_DATA_CACHE_LOCAL}
   script:
     - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
   artifacts:
@@ -1293,7 +1293,7 @@ start_haf_as_service:
     HAF_POSTGRES_URL: postgresql://haf_admin@haf-instance:5432/haf_block_log
     HIVED_UID: $HIVED_UID
     HAF_COMMIT: $HAF_COMMIT
-  before_script: *fetch_haf_cache
+  # Note: No before_script/fetch_haf_cache needed - service container already extracts to ${HAF_DATA_CACHE_LOCAL}
   script:
     - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
     - |
