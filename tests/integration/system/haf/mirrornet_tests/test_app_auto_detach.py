@@ -71,7 +71,9 @@ def test_app_autodetach(witness_node_with_haf, block_log_5m, tmp_path):
     adminUrl = appUrl = haf_node.session.bind.url.set(username="haf_admin")
     appUrl = haf_node.session.bind.url.set(username="test_app_owner")
 
-    tt.logger.info(f"Working on database connection: {haf_node.session.bind.url=}, {adminUrl=}")
+    tt.logger.info(
+        f"Working on database connection: {haf_node.session.bind.url=}, {adminUrl=}"
+    )
     tt.logger.info(f"appUrl connection: {appUrl=}")
 
     execute_sql_script(adminUrl, "../../applications/auto_detaching/test_app.sql")
@@ -93,6 +95,14 @@ def test_app_autodetach(witness_node_with_haf, block_log_5m, tmp_path):
     haf_node.wait_number_of_blocks(awaited_block_count)
     awaited_block_num = haf_node.get_last_block_number()
     tt.logger.info("Detaching dead app contexts")
-    execute_sql_query(adminUrl, "CALL hive.proc_perform_dead_app_contexts_auto_detach('2hrs'::interval);")
-    tt.logger.info(f"Block: {awaited_block_num} reached. Performing a context state verification")
-    execute_sql_query(appUrl, "SET ROLE test_app_owner; CALL test.scenario1_verify('03:59:00'::interval);")
+    execute_sql_query(
+        adminUrl,
+        "CALL hive.proc_perform_dead_app_contexts_auto_detach('2hrs'::interval);",
+    )
+    tt.logger.info(
+        f"Block: {awaited_block_num} reached. Performing a context state verification"
+    )
+    execute_sql_query(
+        appUrl,
+        "SET ROLE test_app_owner; CALL test.scenario1_verify('03:59:00'::interval);",
+    )

@@ -7,7 +7,9 @@ import pytest
 import test_tools as tt
 
 from haf_local_tools.system.haf.mirrornet.constants import SKELETON_KEY, WITNESSES_5M
-from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
+from haf_local_tools.haf_node.monolithic_workaround import (
+    apply_block_log_type_to_monolithic_workaround,
+)
 
 
 # Shared timing file for collecting step-by-step timing from parallel workers
@@ -79,9 +81,7 @@ def _configure_hived_file_logging(node):
     """
     # File appender that writes to hived.log in the node's data directory
     # Using realtime timestamps to bypass libfaketime for debugging intermittent timeouts
-    node.config.log_file_appender = (
-        '{"appender":"file","file":"hived.log","time_format":"iso_8601_realtime_microseconds","flush":true}'
-    )
+    node.config.log_file_appender = '{"appender":"file","file":"hived.log","time_format":"iso_8601_realtime_microseconds","flush":true}'
     # Logger sends to both console (needed for beekeepy port discovery) and file (for debugging)
     node.config.log_logger = (
         '{"name":"default","level":"info","appenders":["console","file"]}'
@@ -129,7 +129,9 @@ def _print_node_logs_on_failure(item, call):
             # Print last 200 lines to avoid overwhelming output
             lines = content.splitlines()
             if len(lines) > 200:
-                tt.logger.info(f"[...truncated, showing last 200 of {len(lines)} lines...]")
+                tt.logger.info(
+                    f"[...truncated, showing last 200 of {len(lines)} lines...]"
+                )
                 lines = lines[-200:]
             for line in lines:
                 tt.logger.info(line)
@@ -150,8 +152,31 @@ def pytest_runtest_makereport(item, call):
 
 
 def pytest_addoption(parser):
-    parser.addoption("--block-log-dir-path", action="store", type=str, help="specifies path of block_log")
-    parser.addoption("--snapshot-path", action="store", type=str, help="specifies path of snapshot")
+    parser.addoption(
+        "--block-log-dir-path",
+        action="store",
+        type=str,
+        help="specifies path of block_log",
+    )
+    parser.addoption(
+        "--snapshot-path", action="store", type=str, help="specifies path of snapshot"
+    )
+    parser.addoption(
+        "--mirrornet-block-count",
+        action="store",
+        type=int,
+        default=1_000_000,
+        help="Number of blocks to use for mirrornet tests (default: 1000000). Use 5000000 for full coverage.",
+    )
+
+
+@pytest.fixture
+def mirrornet_block_count(request: pytest.FixtureRequest) -> int:
+    """Return the configured block count for mirrornet tests.
+
+    Default is 1M blocks for faster tests. Use --mirrornet-block-count=5000000 for full coverage.
+    """
+    return request.config.getoption("--mirrornet-block-count")
 
 
 @pytest.fixture
@@ -161,8 +186,24 @@ def block_log_5m(request: pytest.FixtureRequest) -> tt.BlockLog:
         block_log_dir_path / tt.BlockLog.MONO_BLOCK_FILE_NAME
     ).exists(), f"block_log file does not exists in: {block_log_dir_path.as_posix()}"
     block_log = tt.BlockLog(block_log_dir_path, mode="monolithic")
-    assert len(block_log.block_files) > 0, f"block log files does not exists in: {block_log_dir_path.as_posix()}"
+    assert (
+        len(block_log.block_files) > 0
+    ), f"block log files does not exists in: {block_log_dir_path.as_posix()}"
     return block_log
+
+
+@pytest.fixture
+def block_log(block_log_5m, mirrornet_block_count, tmp_path) -> tt.BlockLog:
+    """Return a block log truncated to the configured block count.
+
+    If mirrornet_block_count >= 5M, returns the original block_log_5m.
+    Otherwise, truncates to the requested size.
+    """
+    if mirrornet_block_count >= 5_000_000:
+        return block_log_5m
+    return block_log_5m.truncate(
+        tmp_path / "truncated_block_log", mirrornet_block_count
+    )
 
 
 @pytest.fixture
