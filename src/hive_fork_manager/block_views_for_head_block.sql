@@ -40,12 +40,13 @@ FROM hafd.transactions ht
 ORDER BY hafd.block_id_to_num(ht.block_id), ht.trx_in_block, ht.block_id DESC;
 
 -- =============================================================================
--- operations_view - For each (block_num, op_pos), show highest fork_id version
+-- operations_view - For each (block_num, seq_in_block), show highest fork_id version
 -- =============================================================================
--- Uses DISTINCT ON with operation_id_to_block_num(id) to match expression index,
+-- Uses DISTINCT ON with operation_id functions to match expression index,
 -- enabling predicate pushdown when filtering by block_num.
+-- operation_id_to_pos extracts the unique sequence number within a block.
 CREATE OR REPLACE VIEW hive.operations_view AS
-SELECT DISTINCT ON (hafd.operation_id_to_block_num(ho.id), ho.op_pos)
+SELECT DISTINCT ON (hafd.operation_id_to_block_num(ho.id), hafd.operation_id_to_pos(ho.id))
     ho.id,
     hafd.operation_id_to_block_num(ho.id) AS block_num,
     ho.trx_in_block,
@@ -54,15 +55,15 @@ SELECT DISTINCT ON (hafd.operation_id_to_block_num(ho.id), ho.op_pos)
     ho.body_binary,
     ho.body_binary::jsonb AS body
 FROM hafd.operations ho
-ORDER BY hafd.operation_id_to_block_num(ho.id), ho.op_pos, ho.block_id DESC;
+ORDER BY hafd.operation_id_to_block_num(ho.id), hafd.operation_id_to_pos(ho.id), ho.block_id DESC;
 
 -- =============================================================================
--- operations_view_extended - For each (block_num, op_pos), show highest fork_id version with timestamp
+-- operations_view_extended - For each (block_num, seq_in_block), show highest fork_id version with timestamp
 -- =============================================================================
--- Uses DISTINCT ON with operation_id_to_block_num(id) to match expression index,
+-- Uses DISTINCT ON with operation_id functions to match expression index,
 -- enabling predicate pushdown when filtering by block_num.
 CREATE OR REPLACE VIEW hive.operations_view_extended AS
-SELECT DISTINCT ON (hafd.operation_id_to_block_num(ho.id), ho.op_pos)
+SELECT DISTINCT ON (hafd.operation_id_to_block_num(ho.id), hafd.operation_id_to_pos(ho.id))
     ho.id,
     hafd.operation_id_to_block_num(ho.id) AS block_num,
     ho.trx_in_block,
@@ -73,7 +74,7 @@ SELECT DISTINCT ON (hafd.operation_id_to_block_num(ho.id), ho.op_pos)
     ho.body_binary::jsonb AS body
 FROM hafd.operations ho
 JOIN hafd.blocks b ON b.block_id = ho.block_id
-ORDER BY hafd.operation_id_to_block_num(ho.id), ho.op_pos, ho.block_id DESC;
+ORDER BY hafd.operation_id_to_block_num(ho.id), hafd.operation_id_to_pos(ho.id), ho.block_id DESC;
 
 -- =============================================================================
 -- account_operations_view - Show account_ops from visible blocks,
@@ -181,9 +182,9 @@ WHERE hafd.block_id_to_num(ht.block_id) <= hafd.block_id_to_num(hs.consistent_bl
   AND hafd.block_id_to_fork(ht.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
 ORDER BY hafd.block_id_to_num(ht.block_id), ht.trx_in_block, hafd.block_id_to_fork(ht.block_id) DESC;
 
--- Uses DISTINCT ON with operation_id_to_block_num(id) to match expression index.
+-- Uses DISTINCT ON with operation_id functions to match expression index.
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
-SELECT DISTINCT ON (hafd.operation_id_to_block_num(ho.id), ho.op_pos)
+SELECT DISTINCT ON (hafd.operation_id_to_block_num(ho.id), hafd.operation_id_to_pos(ho.id))
     ho.id,
     hafd.operation_id_to_block_num(ho.id) AS block_num,
     ho.trx_in_block,
@@ -195,11 +196,11 @@ FROM hafd.operations ho
 CROSS JOIN hafd.hive_state hs
 WHERE hafd.operation_id_to_block_num(ho.id) <= hafd.block_id_to_num(hs.consistent_block)
   AND hafd.block_id_to_fork(ho.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-ORDER BY hafd.operation_id_to_block_num(ho.id), ho.op_pos, ho.block_id DESC;
+ORDER BY hafd.operation_id_to_block_num(ho.id), hafd.operation_id_to_pos(ho.id), ho.block_id DESC;
 
--- Uses DISTINCT ON with operation_id_to_block_num(id) to match expression index.
+-- Uses DISTINCT ON with operation_id functions to match expression index.
 CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
-SELECT DISTINCT ON (hafd.operation_id_to_block_num(ho.id), ho.op_pos)
+SELECT DISTINCT ON (hafd.operation_id_to_block_num(ho.id), hafd.operation_id_to_pos(ho.id))
     ho.id,
     hafd.operation_id_to_block_num(ho.id) AS block_num,
     ho.trx_in_block,
@@ -213,7 +214,7 @@ JOIN hafd.blocks b ON b.block_id = ho.block_id
 CROSS JOIN hafd.hive_state hs
 WHERE hafd.operation_id_to_block_num(ho.id) <= hafd.block_id_to_num(hs.consistent_block)
   AND hafd.block_id_to_fork(ho.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-ORDER BY hafd.operation_id_to_block_num(ho.id), ho.op_pos, ho.block_id DESC;
+ORDER BY hafd.operation_id_to_block_num(ho.id), hafd.operation_id_to_pos(ho.id), ho.block_id DESC;
 
 -- Uses DISTINCT ON for efficient predicate pushdown.
 CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS

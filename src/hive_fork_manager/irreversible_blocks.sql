@@ -201,11 +201,11 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_id_to_num_idx ON hafd.transac
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations USING btree( hafd.operation_id_to_block_num(id), id);
 
 -- Expression index for operations_view DISTINCT ON queries
--- Matches ORDER BY: operation_id_to_block_num(id), op_pos, block_id DESC
+-- Matches ORDER BY: operation_id_to_block_num(id), operation_id_to_pos(id), block_id DESC
 -- Enables index scan for DISTINCT ON and predicate pushdown on block_num
 CREATE INDEX IF NOT EXISTS hive_operations_view_idx ON hafd.operations (
     hafd.operation_id_to_block_num(id),
-    op_pos,
+    hafd.operation_id_to_pos(id),
     block_id DESC
 );
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
