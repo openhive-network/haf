@@ -88,28 +88,17 @@ BEGIN
             WHERE htv.block_num BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
             ORDER BY htv.block_num ASC, htv.trx_in_block ASC
         ),
-        -- Query hafd.operations directly instead of through hive.operations_view
-        -- This allows the expression index on hafd.operation_id_to_block_num(id) to be used
-        -- The DISTINCT ON handles fork resolution (picks highest block_id per block_num/op_pos)
-        operations AS MATERIALIZED (
+        operations AS (
                 SELECT
-                       filtered.block_num
-                     , filtered.trx_in_block
-                     , ARRAY_AGG(filtered.body_binary ORDER BY filtered.op_pos ASC) bodies
-                FROM (
-                    SELECT DISTINCT ON (hafd.operation_id_to_block_num(ho.id), ho.op_pos)
-                           hafd.operation_id_to_block_num(ho.id) as block_num
-                         , ho.trx_in_block
-                         , ho.op_pos
-                         , ho.body_binary
-                    FROM hafd.operations ho
-                    WHERE
-                        hafd.operation_id_to_type_id(ho.id) <= (SELECT ot.id FROM hafd.operation_types ot WHERE (_include_virtual OR ot.is_virtual = FALSE) ORDER BY ot.id DESC LIMIT 1)
-                        AND hafd.operation_id_to_block_num(ho.id) BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
-                    ORDER BY hafd.operation_id_to_block_num(ho.id), ho.op_pos, ho.block_id DESC
-                ) filtered
-                GROUP BY filtered.block_num, filtered.trx_in_block
-                ORDER BY filtered.block_num ASC, filtered.trx_in_block ASC
+                       hafd.operation_id_to_block_num(ho.id) as block_num
+                     , ho.trx_in_block
+                     , ARRAY_AGG(ho.body_binary ORDER BY op_pos ASC) bodies
+                FROM hive.operations_view ho
+                WHERE
+                    hafd.operation_id_to_type_id(ho.id) <= (SELECT ot.id FROM hafd.operation_types ot WHERE (_include_virtual OR ot.is_virtual = FALSE) ORDER BY ot.id DESC LIMIT 1)
+                    AND hafd.operation_id_to_block_num(ho.id) BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
+                GROUP BY hafd.operation_id_to_block_num(ho.id), ho.trx_in_block
+                ORDER BY hafd.operation_id_to_block_num(ho.id) ASC, trx_in_block ASC
         ),
         -- Combine transaction details with multisig signatures in one step to avoid
         -- expensive cartesian product from self-join (was causing 33M+ row intermediate results)
