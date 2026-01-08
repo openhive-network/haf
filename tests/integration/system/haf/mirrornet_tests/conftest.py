@@ -201,9 +201,9 @@ def block_log(block_log_5m, mirrornet_block_count, tmp_path) -> tt.BlockLog:
     """
     if mirrornet_block_count >= 5_000_000:
         return block_log_5m
-    return block_log_5m.truncate(
-        tmp_path / "truncated_block_log", mirrornet_block_count
-    )
+    output_dir = tmp_path / "truncated_block_log"
+    output_dir.mkdir(exist_ok=True)
+    return block_log_5m.truncate(output_dir, mirrornet_block_count)
 
 
 @pytest.fixture
