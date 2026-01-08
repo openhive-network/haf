@@ -329,8 +329,9 @@ BEGIN
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'applied_hardforks' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'accounts' );
     PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'account_operations' );
-
-    PERFORM hive.reanalyze_indexes_with_expressions();
+    -- NOTE: reanalyze_indexes_with_expressions() removed from here.
+    -- ANALYZE is only needed after indexes are RESTORED (in enable_indexes_of_irreversible),
+    -- not after they are dropped. Statistics for dropped indexes are irrelevant.
 END;
 $BODY$
 ;
