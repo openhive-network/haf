@@ -728,7 +728,7 @@ dump_snapshot_5m_mirrornet:
 haf_system_tests_mirrornet:
   stage: build_and_test_phase_2
   extends: .pytest_based
-  timeout: 25m
+  timeout: 35m
   needs:
     - job: haf_image_build_mirrornet
       artifacts: true

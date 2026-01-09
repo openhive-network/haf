@@ -45,7 +45,7 @@ def test_replay_and_p2p_sync(
         load_snapshot_from=mirrornet_snapshot,
         time_control=tt.StartTimeControl(start_time="head_block_time"),
         wait_for_live=True,
-        timeout=3600,
+        timeout=1800,
         arguments=["--chain-id", CHAIN_ID, "--skeleton-key", SKELETON_KEY],
     )
     log_timing(test_name, "witness_node.run (with snapshot)", time.time() - step_start)
@@ -61,7 +61,7 @@ def test_replay_and_p2p_sync(
         replay_from=block_log_4_5m,
         time_control=tt.StartTimeControl(start_time=head_block_time),
         wait_for_live=True,
-        timeout=3600,
+        timeout=1800,
         arguments=["--chain-id", CHAIN_ID],
     )
     log_timing(test_name, "haf_node.run (replay + sync)", time.time() - step_start)
