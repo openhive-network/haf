@@ -361,6 +361,12 @@ detect_changes:
             done
 
             if [[ "$IMAGES_EXIST" == "true" ]]; then
+              # Verify cache commit is reachable from current branch to avoid schema mismatches
+              # This prevents using caches from feature branches with incompatible schema changes
+              if ! git merge-base --is-ancestor "$TEST_COMMIT" HEAD 2>/dev/null; then
+                echo "Cache $TEST_COMMIT not ancestor of HEAD - skipping (incompatible branch)"
+                continue
+              fi
               CACHE_COMMIT="$TEST_COMMIT"
               echo "Found cached data with valid images: $CACHE_COMMIT"
               break
