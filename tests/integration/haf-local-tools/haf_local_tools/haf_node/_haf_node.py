@@ -53,6 +53,13 @@ class HafNode(PreconfiguredNode):
         self.config.log_logger = '{"name":"default","level":"info","appender":"stderr"}'
         self.__make_database()
 
+        # HAF nodes with sql_serializer need extended initialization timeout because:
+        # 1. During P2P sync startup, sql_serializer dumps blocks to PostgreSQL
+        # 2. This can take 20+ seconds for large block counts (e.g., 40000 blocks)
+        # 3. Default beekeepy timeout of 5 seconds is insufficient
+        with self.update_settings() as settings:
+            settings.initialization_timeout = timedelta(seconds=60)
+
     @property
     def session(self) -> Session:
         assert self.__session, "Session is not available since node was not run yet! Call the 'run()' method first."
