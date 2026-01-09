@@ -312,11 +312,12 @@ detect_changes:
         echo "$CHANGED_FILES" | head -50
 
         # Two levels of skip detection:
-        # 1. Skip BUILD: tests, docs, SQL (SQL doesn't affect C++ compilation)
+        # 1. Skip BUILD: only tests and docs (SQL is installed in extension, requires rebuild)
         # 2. Skip REPLAY: only tests, docs (SQL affects replay behavior)
 
         # Note: Avoid \.txt$ as it matches CMakeLists.txt
-        SKIP_BUILD_PATTERNS="^tests/|^docs/|\.sql$|\.md$|^README|^CHANGELOG|^LICENSE"
+        # Note: SQL files require rebuild - they're installed in the hive_fork_manager extension
+        SKIP_BUILD_PATTERNS="^tests/|^docs/|\.md$|^README|^CHANGELOG|^LICENSE"
         SKIP_REPLAY_PATTERNS="^tests/|^docs/|\.md$|^README|^CHANGELOG|^LICENSE"
 
         NEEDS_BUILD=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_BUILD_PATTERNS" || true)
@@ -325,16 +326,12 @@ detect_changes:
         if [[ -z "$NEEDS_BUILD" ]]; then
           CAN_SKIP_BUILD=true
           echo ""
-          echo "=== Can skip build (only tests/docs/SQL changed) ==="
+          echo "=== Can skip build (only tests/docs changed) ==="
         fi
 
         if [[ -z "$NEEDS_REPLAY" ]]; then
           CAN_SKIP_REPLAY=true
-          echo "=== Can skip replay (only tests/docs changed, no SQL) ==="
-        elif [[ "$CAN_SKIP_BUILD" == "true" ]]; then
-          echo "=== SQL changed - can skip build but must replay ==="
-          echo "SQL files changed:"
-          echo "$NEEDS_REPLAY" | grep '\.sql$' | head -10
+          echo "=== Can skip replay (only tests/docs changed) ==="
         fi
 
         # Find cached data/images when we can skip something
