@@ -696,6 +696,7 @@ haf_system_tests:
   tags:
     - public-runner-docker
     - standard
+    - fastest
 
 dump_snapshot_5m_mirrornet:
   extends: .job-defaults
@@ -734,7 +735,6 @@ dump_snapshot_5m_mirrornet:
   tags:
     - data-cache-storage
     - standard
-    - fast
     - fastest
 
 haf_system_tests_mirrornet:
@@ -1146,7 +1146,6 @@ replay_filtered_haf_data_accounts_body_operations:
   tags:
     - data-cache-storage
     - standard
-    - fast
     - fastest
 
 block_api_tests:
@@ -1255,7 +1254,6 @@ prepare_haf_data:
   tags:
     - data-cache-storage
     - standard
-    - fast
     - fastest
 
 dead_app_auto_detach:

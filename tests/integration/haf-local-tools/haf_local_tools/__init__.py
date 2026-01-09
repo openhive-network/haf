@@ -217,7 +217,11 @@ def wait_until_irreversible(node_under_test, session):
             filter(EventsQueue.block_num == head_block).\
             all()
 
-        if result[ len(result) - 1 ].event == 'NEW_IRREVERSIBLE':
+        # Skip if no events yet for this block (race condition with SQL serializer)
+        if not result:
+            continue
+
+        if result[-1].event == 'NEW_IRREVERSIBLE':
             return
 
 
