@@ -7,6 +7,7 @@ from conftest import log_timing
 from haf_local_tools.haf_node.monolithic_workaround import (
     apply_block_log_type_to_monolithic_workaround,
 )
+from haf_local_tools import wait_for_block_in_database
 from haf_local_tools.system.haf import (
     connect_nodes,
     assert_are_blocks_sync_with_haf_db,
@@ -103,10 +104,10 @@ def test_replay_and_p2p_sync(
     )
     log_timing(test_name, "haf_node.run (replay + sync)", time.time() - step_start)
 
-    # Wait for HAF to sync to the expected block count (P2P sync may still be in progress after wait_for_live)
+    # Wait for HAF to commit the expected block to PostgreSQL (not just process it in hived)
     step_start = time.time()
-    haf_node.wait_for_block_with_number(mirrornet_block_count, timeout=300)
-    log_timing(test_name, "wait_for_block_with_number", time.time() - step_start)
+    wait_for_block_in_database(haf_node.session, mirrornet_block_count, timeout=300)
+    log_timing(test_name, "wait_for_block_in_database", time.time() - step_start)
 
     step_start = time.time()
     # Verify transactions are properly indexed by checking blocks known to contain transactions
