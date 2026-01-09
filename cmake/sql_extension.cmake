@@ -64,11 +64,7 @@ CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/${extension_control_file}"
 ADD_CUSTOM_COMMAND(
         OUTPUT "${extension_path}/${update_control_script}"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMAND ${CMAKE_COMMAND} -E copy "${extension_path}/.update_header.sql" "${extension_path}/${update_control_script}"
-        COMMAND ${CMAKE_COMMAND}
-            -DOUTPUT_FILE="${extension_path}/${update_control_script}"
-            -DINPUT_FILES="${DEPLOY_SOURCES_STR}"
-            -P "${CMAKE_SOURCE_DIR}/cmake/concatenate_sql.cmake"
+        COMMAND ${CMAKE_COMMAND} -E cat "${extension_path}/.update_header.sql" ${EXTENSION_DEPLOY_SOURCES} > "${extension_path}/${update_control_script}"
         DEPENDS ${EXTENSION_DEPLOY_SOURCES}
         COMMENT "Generating ${EXTENSION_NAME} update script to ${extension_path}/${update_control_script}"
 )
@@ -77,11 +73,7 @@ ADD_CUSTOM_COMMAND(
 ADD_CUSTOM_COMMAND(
         OUTPUT "${extension_path}/${extension_control_script}"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMAND ${CMAKE_COMMAND} -E echo "" > "${extension_path}/${extension_control_script}"
-        COMMAND ${CMAKE_COMMAND}
-            -DOUTPUT_FILE="${extension_path}/${extension_control_script}"
-            -DINPUT_FILES="${SCHEMA_SOURCES_STR}"
-            -P "${CMAKE_SOURCE_DIR}/cmake/concatenate_sql.cmake"
+        COMMAND ${CMAKE_COMMAND} -E cat ${EXTENSION_SCHEMA_SOURCES} > "${extension_path}/${extension_control_script}"
         DEPENDS ${EXTENSION_DEPLOY_SOURCES} ${EXTENSION_SCHEMA_SOURCES}
         COMMENT "Generating ${EXTENSION_NAME} extension script to ${extension_path}/${extension_control_script}"
 )
