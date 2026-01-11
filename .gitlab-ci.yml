@@ -621,6 +621,7 @@ hfm_functional_tests:
   needs:
     - job: detect_changes
       artifacts: true
+      optional: true  # Required for tag pipelines where detect_changes is skipped
     - job: haf_image_build
       artifacts: true
 
@@ -629,6 +630,7 @@ hfm_functional_tests_testnet:
   needs:
     - job: detect_changes
       artifacts: true
+      optional: true  # Required for tag pipelines where detect_changes is skipped
     - job: haf_image_build_testnet
       artifacts: true
 
