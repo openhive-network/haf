@@ -20,7 +20,7 @@
 include:
   # All templates from common-ci-configuration
   - project: 'hive/common-ci-configuration'
-    ref: develop  # TODO: Pin to specific ref after testing
+    ref: feature/upstream-git-cleanup-templates  # TODO: Change to develop after common-ci-configuration!191 is merged
     file:
       - '/templates/base.gitlab-ci.yml'
       - '/templates/docker_image_jobs.gitlab-ci.yml'
