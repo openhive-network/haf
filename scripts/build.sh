@@ -6,7 +6,7 @@ export LOG_FILE=build.log
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 # shellcheck source=./common.sh
-source "$SCRIPTPATH/../hive/scripts/common.sh"
+source "$SCRIPTPATH/common.sh"
 
 log_exec_params "$@"
 
