@@ -218,6 +218,7 @@ CLUSTER hafd.account_operations USING hive_account_operations_uq1;
 -- CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations( account_id, hafd.operation_id_to_type_id(operation_id) );
 
 CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hafd.accounts USING btree (block_id);
+CREATE INDEX IF NOT EXISTS hive_accounts_name_idx ON hafd.accounts USING btree (name);
 
 -- =============================================================================
 -- hafd.write_ahead_log_state - WAL tracking (unchanged)
