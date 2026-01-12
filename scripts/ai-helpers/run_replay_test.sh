@@ -26,6 +26,8 @@ print_help() {
     echo "  replay_live_pruned          - Live pruned replay with app"
     echo "  replay_reindex_pruned       - Reindex pruned replay with app"
     echo "  replay_with_restarts        - Live replay with restarts"
+    echo "  replay_with_keyauth         - Replay with keyauth state provider"
+    echo "  hfm_functional_tests        - HAF Fork Manager functional tests"
     echo
     echo "OPTIONS:"
     echo "  --block-log=PATH    Path to block_log directory (default: /storage_nvme/blocks/block_log_5m)"
@@ -65,6 +67,12 @@ get_maintenance_script() {
             ;;
         replay_with_restarts)
             echo "run_live_replay_with_restarts_and_app.sh"
+            ;;
+        replay_with_keyauth)
+            echo "state_provider:run_replay_with_keyauth.sh"
+            ;;
+        hfm_functional_tests)
+            echo "run_hfm_functional_tests.sh"
             ;;
         *)
             echo ""
@@ -202,6 +210,18 @@ chmod 666 "${HAF_DIR}"/*_update_*.txt 2>/dev/null || true
 echo "Making source readable for container..."
 chmod -R a+rX "${HAF_DIR}" 2>/dev/null || true
 
+# Make tests/integration/functional writable for virtual environment creation
+echo "Making test directory writable for container..."
+chmod -R a+rwX "${HAF_DIR}/tests/integration/functional" 2>/dev/null || true
+
+# Determine the script path based on prefix
+if [[ "$MAINTENANCE_SCRIPT" == state_provider:* ]]; then
+    SCRIPT_NAME="${MAINTENANCE_SCRIPT#state_provider:}"
+    SCRIPT_PATH="/home/haf_admin/source/tests/integration/state_provider/${SCRIPT_NAME}"
+else
+    SCRIPT_PATH="/home/haf_admin/source/scripts/maintenance-scripts/${MAINTENANCE_SCRIPT}"
+fi
+
 # Run the container with the maintenance script
 # Mount:
 #   - HAF source at /home/haf_admin/source (read-write for test artifacts)
@@ -222,7 +242,7 @@ docker run --name "$CONTAINER_NAME" \
     -e "DB_ADMIN=haf_admin" \
     -e "HIVED_PATH=/home/hived/bin/hived" \
     "$HAF_IMAGE" \
-    --execute-maintenance-script="/home/haf_admin/source/scripts/maintenance-scripts/${MAINTENANCE_SCRIPT}"
+    --execute-maintenance-script="${SCRIPT_PATH}"
 
 echo ""
 echo "=== Test completed ==="
