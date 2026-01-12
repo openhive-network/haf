@@ -278,8 +278,6 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    IF __is_forking THEN
-        -- Forking context: filter by context block range
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.transactions_view AS
             SELECT b.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
@@ -288,17 +286,6 @@ BEGIN
             JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
             ;', __schema, __schema
         );
-    ELSE
-        -- Non-forking context: filter by min_block
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.transactions_view AS
-            SELECT b.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
-                   ht.ref_block_prefix, ht.expiration, ht.signature
-            FROM hafd.transactions ht
-            JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
-            ;', __schema, __schema
-        );
-    END IF;
     PERFORM hive.adjust_view_ownership(_context_name, 'transactions_view');
 END;
 $BODY$
@@ -324,7 +311,9 @@ BEGIN
                ht.ref_block_prefix, ht.expiration, ht.signature
         FROM hafd.transactions ht
         JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
-        ;', __schema, __schema
+        , %s.context_data_view c
+        WHERE b.num <= c.irreversible_block
+        ;', __schema, __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'transactions_view');
 END;
@@ -366,8 +355,6 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    IF __is_forking THEN
-        -- Forking context: filter by context block range
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view AS
             SELECT
@@ -381,22 +368,6 @@ BEGIN
             JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
             ;', __schema, __schema
         );
-    ELSE
-        -- Non-forking context: filter by min_block
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.operations_view AS
-            SELECT
-                ho.id,
-                b.num AS block_num,
-                ho.trx_in_block, ho.op_pos,
-                hafd.operation_id_to_type_id(ho.id) AS op_type_id,
-                ho.body_binary,
-                ho.body_binary::jsonb AS body
-            FROM hafd.operations ho
-            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
-            ;', __schema, __schema
-        );
-    END IF;
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
 END;
 $BODY$
@@ -416,8 +387,6 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    IF __is_forking THEN
-        -- Forking context: filter by context block range
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view_extended AS
             SELECT
@@ -432,23 +401,6 @@ BEGIN
             JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
             ;', __schema, __schema
         );
-    ELSE
-        -- Non-forking context: filter by min_block
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.operations_view_extended AS
-            SELECT
-                ho.id,
-                b.num AS block_num,
-                ho.trx_in_block, ho.op_pos,
-                hafd.operation_id_to_type_id(ho.id) AS op_type_id,
-                b.created_at AS timestamp,
-                ho.body_binary,
-                ho.body_binary::jsonb AS body
-            FROM hafd.operations ho
-            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
-            ;', __schema, __schema
-        );
-    END IF;
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
 END;
 $BODY$
@@ -479,7 +431,9 @@ BEGIN
             ho.body_binary::jsonb AS body
         FROM hafd.operations ho
         JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
-        ;', __schema, __schema
+        , %s.context_data_view c
+        WHERE b.num <= c.irreversible_block
+        ;', __schema, __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
 END;
@@ -512,7 +466,9 @@ BEGIN
             ho.body_binary::jsonb AS body
         FROM hafd.operations ho
         JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
-        ;', __schema, __schema
+        , %s.context_data_view c
+        WHERE b.num <= c.irreversible_block
+        ;', __schema, __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
 END;
@@ -571,8 +527,6 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    IF __is_forking THEN
-        -- Forking context: join directly on block_id (transactions_multisig has block_id)
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW AS
             SELECT htm.trx_hash, htm.signature
@@ -580,16 +534,6 @@ BEGIN
             JOIN %s.blocks_view_internal b ON b.block_id = htm.block_id
             ;', __schema, __schema
         );
-    ELSE
-        -- Non-forking context: filter by min_block
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW AS
-            SELECT htm.trx_hash, htm.signature
-            FROM hafd.transactions_multisig htm
-            JOIN %s.blocks_view_internal b ON b.block_id = htm.block_id
-            ;', __schema, __schema
-        );
-    END IF;
     PERFORM hive.adjust_view_ownership(_context_name, 'TRANSACTIONS_MULTISIG_VIEW');
 END;
 $BODY$
@@ -614,7 +558,9 @@ BEGIN
         SELECT htm.trx_hash, htm.signature
         FROM hafd.transactions_multisig htm
         JOIN %s.blocks_view_internal b ON b.block_id = htm.block_id
-        ;', __schema, __schema
+        , %s.context_data_view c
+        WHERE b.num <= c.irreversible_block
+        ;', __schema, __schema, __schema
     );
 
     PERFORM hive.adjust_view_ownership(_context_name, 'TRANSACTIONS_MULTISIG_VIEW');
@@ -657,8 +603,6 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    IF __is_forking THEN
-        -- Forking context: filter by context block range
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.accounts_view AS
             SELECT ha.id, ha.name
@@ -668,18 +612,6 @@ BEGIN
             WHERE ha.block_id IS NULL OR b.block_id IS NOT NULL
             ;', __schema, __schema, __schema
         );
-    ELSE
-        -- Non-forking context: filter by min_block
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.accounts_view AS
-            SELECT ha.id, ha.name
-            FROM hafd.accounts ha
-            LEFT JOIN %s.blocks_view_internal b ON b.block_id = ha.block_id
-            , %s.context_data_view c
-            WHERE ha.block_id IS NULL OR b.block_id IS NOT NULL
-            ;', __schema, __schema, __schema
-        );
-    END IF;
     PERFORM hive.adjust_view_ownership(_context_name, 'accounts_view');
 END;
 $BODY$
@@ -704,8 +636,10 @@ BEGIN
         SELECT ha.id, ha.name
         FROM hafd.accounts ha
         LEFT JOIN %s.blocks_view_internal b ON b.block_id = ha.block_id
-        WHERE ha.block_id IS NULL OR b.block_id IS NOT NULL
-        ;', __schema, __schema
+        , %s.context_data_view c
+        WHERE (ha.block_id IS NULL OR b.block_id IS NOT NULL)
+        AND b.num <= c.irreversible_block
+        ;', __schema, __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'accounts_view');
 END;
@@ -747,8 +681,6 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    IF __is_forking THEN
-        -- Forking context: filter by context block range
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.account_operations_view AS
             SELECT
@@ -761,21 +693,6 @@ BEGIN
             JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
             ;', __schema, __schema
         );
-    ELSE
-        -- Non-forking context: filter by min_block
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.account_operations_view AS
-            SELECT
-                b.num AS block_num,
-                hao.account_id, hao.transacting_account_id, hao.account_op_seq_no,
-                ho.id AS operation_id,
-                hafd.operation_id_to_type_id(ho.id) AS op_type_id
-            FROM hafd.account_operations hao
-            JOIN hafd.operations ho ON ho.block_id = hao.block_id AND hafd.operation_id_to_pos(ho.id) = hao.seq_in_block
-            JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
-            ;', __schema, __schema
-        );
-    END IF;
     PERFORM hive.adjust_view_ownership(_context_name, 'account_operations_view');
 END;
 $BODY$
@@ -805,7 +722,9 @@ BEGIN
         FROM hafd.account_operations hao
         JOIN hafd.operations ho ON ho.block_id = hao.block_id AND hafd.operation_id_to_pos(ho.id) = hao.seq_in_block
         JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
-        ;', __schema, __schema
+        , %s.context_data_view c
+        WHERE b.num <= c.irreversible_block
+        ;', __schema, __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'account_operations_view');
 END;
@@ -847,8 +766,6 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    IF __is_forking THEN
-        -- Forking context: filter by context block range
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.applied_hardforks_view AS
             SELECT hah.hardfork_num, b.num AS block_num, hah.hardfork_vop_id
@@ -856,16 +773,6 @@ BEGIN
             JOIN %s.blocks_view_internal b ON b.block_id = hah.block_id
             ;', __schema, __schema
         );
-    ELSE
-        -- Non-forking context: filter by min_block
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.applied_hardforks_view AS
-            SELECT hah.hardfork_num, b.num AS block_num, hah.hardfork_vop_id
-            FROM hafd.applied_hardforks hah
-            JOIN %s.blocks_view_internal b ON b.block_id = hah.block_id
-            ;', __schema, __schema
-        );
-    END IF;
     PERFORM hive.adjust_view_ownership(_context_name, 'applied_hardforks_view');
 END;
 $BODY$
@@ -890,7 +797,9 @@ BEGIN
         SELECT hah.hardfork_num, b.num AS block_num, hah.hardfork_vop_id
         FROM hafd.applied_hardforks hah
         JOIN %s.blocks_view_internal b ON b.block_id = hah.block_id
-        ;', __schema, __schema
+        , %s.context_data_view c
+        WHERE b.num <= c.irreversible_block
+        ;', __schema, __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'applied_hardforks_view');
 END;
