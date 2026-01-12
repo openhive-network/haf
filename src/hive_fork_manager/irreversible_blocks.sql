@@ -49,6 +49,15 @@ CREATE INDEX IF NOT EXISTS hive_blocks_block_num_idx ON hafd.blocks (
     block_id DESC
 );
 
+-- Covering index for NOT EXISTS canonical block lookup
+-- Includes fork_id to support fork visibility filtering without table access
+-- Used by blocks_view_internal to efficiently find if a higher block_id exists
+CREATE INDEX IF NOT EXISTS hive_blocks_canonical_idx ON hafd.blocks (
+    hafd.block_id_to_num(block_id),
+    hafd.block_id_to_fork(block_id),
+    block_id DESC
+);
+
 CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hafd.blocks (producer_account_id);
 CREATE INDEX IF NOT EXISTS hive_blocks_created_at_idx ON hafd.blocks USING btree ( created_at );
 
