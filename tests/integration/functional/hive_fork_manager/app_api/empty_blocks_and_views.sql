@@ -21,50 +21,50 @@ BEGIN
 
     INSERT INTO hafd.blocks
     VALUES
-           ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+           ( hafd.make_block_id(1, 0), '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 1)
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0))
     ;
 
     INSERT INTO hafd.transactions
     VALUES
-           ( 1, 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
+           ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.operations
+    INSERT INTO hafd.operations (block_id, trx_in_block, op_pos, body_binary, id)
     VALUES
-    ( hafd.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
+    ( hafd.make_block_id(1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(1, 0), 0, 1::SMALLINT) )
     ;
 
-    INSERT INTO hafd.transactions_multisig
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
     VALUES
-           ( '\xDEED10', '\xBAAD10' )
+           ( '\xDEED10', '\xBAAD10', hafd.make_block_id(1, 0) )
     ;
 
 
-    INSERT INTO hafd.blocks_reversible
+    INSERT INTO hafd.blocks
     VALUES
-           ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
-         , ( 2, '\xBADD23', '\xCAFE23', '2016-06-22 19:10:23-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
+           ( hafd.make_block_id(2, 2), '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id(2, 3), '\xBADD23', '\xCAFE23', '2016-06-22 19:10:23-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
     -- block 2 on fork 3 has no transactions
-    INSERT INTO hafd.transactions_reversible
+    INSERT INTO hafd.transactions
     VALUES
-           ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF', 2 )
+           ( hafd.make_block_id(2, 2), 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
     ;
 
     -- block 2 on fork 3 has no signatures
-    INSERT INTO hafd.transactions_multisig_reversible
-    VALUES ( '\xDEED20', '\xBAAD20', 2 )
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
+    VALUES ( '\xDEED20', '\xBAAD20', hafd.make_block_id(2, 2) )
     ;
 
     -- block 2 on fork 3 has no operations
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hafd.operations (block_id, trx_in_block, op_pos, body_binary, id)
     VALUES
-        ( hafd.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+        ( hafd.make_block_id(2, 2), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(2, 2), 0, 0::SMALLINT) )
     ;
 
     UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 1, current_block_num = 2;

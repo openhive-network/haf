@@ -1,363 +1,358 @@
-CREATE OR REPLACE VIEW hive.account_operations_view AS
- (
-  SELECT ha.account_id,
-         ha.transacting_account_id,
-         ha.account_op_seq_no,
-         ha.operation_id,
-         hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id,
-         hafd.operation_id_to_block_num( ha.operation_id ) as block_num
-  FROM hafd.account_operations ha
- )
-UNION ALL
-(
-WITH 
-consistent_block AS
-(SELECT COALESCE(hid.consistent_block, 0) AS consistent_block FROM hafd.hive_state hid LIMIT 1)
-,forks AS
-(
-  SELECT hbr.num, max(hbr.fork_id) AS max_fork_id
-  FROM hafd.blocks_reversible hbr, consistent_block cb
-  WHERE hbr.num > cb.consistent_block
-  GROUP BY hbr.num
-)
-SELECT har.account_id,
-       har.transacting_account_id,
-       har.account_op_seq_no,
-       har.operation_id,
-       hafd.operation_id_to_type_id( har.operation_id ) as op_type_id,
-       hafd.operation_id_to_block_num( har.operation_id ) as block_num
-FROM forks 
-JOIN hafd.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hafd.operation_id_to_block_num(hor.id)
-JOIN hafd.account_operations_reversible har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
+-- =============================================================================
+-- Head Block Views for hive schema
+-- =============================================================================
+-- These views show all data including reversible blocks.
+-- Uses NOT EXISTS pattern for efficient ORDER BY DESC LIMIT queries.
+-- NOT EXISTS allows early termination when scanning index backward.
+--
+-- With the hybrid schema:
+--   - blocks: uses block_id (for fork tracking)
+--   - transactions: uses block_num (original compact format)
+--   - operations: uses id (encoded block_num|seq|type)
+--   - account_operations: uses operation_id
+--   - accounts: uses block_num
+--   - applied_hardforks: uses block_num
+-- =============================================================================
+
+-- =============================================================================
+-- blocks_view - Uses block_id from blocks table
+-- =============================================================================
+-- Uses NOT EXISTS to filter to canonical rows (highest block_id per block_num).
+-- This enables efficient ORDER BY num DESC LIMIT 1 queries via index backward scan.
+CREATE OR REPLACE VIEW hive.blocks_view AS
+SELECT
+    hafd.block_id_to_num(hb.block_id) AS num,
+    hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
+    hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
+    hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
+    hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
+    hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
+FROM hafd.blocks hb
+WHERE NOT EXISTS (
+    SELECT 1 FROM hafd.blocks hb2
+    WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+      AND hb2.block_id > hb.block_id
 );
 
-CREATE OR REPLACE VIEW hive.accounts_view AS
-SELECT
-    t.id,
-    t.name
-FROM
-(
-    SELECT
-        ha.id,
-        ha.name
-    FROM hafd.accounts ha
-    UNION ALL
-    SELECT
-        reversible.id,
-        reversible.name
-    FROM (
-        SELECT
-            har.id,
-            har.name,
-            har.fork_id
-        FROM hafd.accounts_reversible har
-        JOIN (
-            SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
-            GROUP by hbr.num
-        ) as forks ON forks.max_fork_id = har.fork_id AND forks.num = har.block_num
-    ) reversible
-) t
-;
-
-CREATE OR REPLACE VIEW hive.blocks_view
-AS
-SELECT t.num,
-       t.hash,
-       t.prev,
-       t.created_at,
-       t.producer_account_id,
-       t.transaction_merkle_root,
-       t.extensions,
-       t.witness_signature,
-       t.signing_key,
-       t.hbd_interest_rate,
-       t.total_vesting_fund_hive,
-       t.total_vesting_shares,
-       t.total_reward_fund_hive,
-       t.virtual_supply,
-       t.current_supply,
-       t.current_hbd_supply,
-       t.dhf_interval_ledger
-FROM (
-    SELECT hb.num,
-        hb.hash,
-        hb.prev,
-        hb.created_at,
-        hb.producer_account_id,
-        hb.transaction_merkle_root,
-        hb.extensions,
-        hb.witness_signature,
-        hb.signing_key,
-        hb.hbd_interest_rate,
-        hb.total_vesting_fund_hive,
-        hb.total_vesting_shares,
-        hb.total_reward_fund_hive,
-        hb.virtual_supply,
-        hb.current_supply,
-        hb.current_hbd_supply,
-        hb.dhf_interval_ledger
-    FROM hafd.blocks hb
-    UNION ALL
-    SELECT hbr.num,
-        hbr.hash,
-        hbr.prev,
-        hbr.created_at,
-        hbr.producer_account_id,
-        hbr.transaction_merkle_root,
-        hbr.extensions,
-        hbr.witness_signature,
-        hbr.signing_key,
-        hbr.hbd_interest_rate,
-        hbr.total_vesting_fund_hive,
-        hbr.total_vesting_shares,
-        hbr.total_reward_fund_hive,
-        hbr.virtual_supply,
-        hbr.current_supply,
-        hbr.current_hbd_supply,
-        hbr.dhf_interval_ledger
-    FROM hafd.blocks_reversible hbr
-    JOIN
-    (
-         SELECT rb.num, MAX(rb.fork_id) AS max_fork_id
-         FROM hafd.blocks_reversible rb
-         WHERE rb.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
-         GROUP BY rb.num
-    ) visible_blks ON visible_blks.num = hbr.num AND visible_blks.max_fork_id = hbr.fork_id
-) t
-;
-
+-- =============================================================================
+-- transactions_view - For each (block_num, trx_in_block), show highest fork_id version
+-- =============================================================================
+-- Uses NOT EXISTS for efficient queries.
 CREATE OR REPLACE VIEW hive.transactions_view AS
 SELECT
-   t.block_num,
-   t.trx_in_block,
-   t.trx_hash,
-   t.ref_block_num,
-   t.ref_block_prefix,
-   t.expiration,
-   t.signature
-FROM
-(
-    SELECT ht.block_num,
-           ht.trx_in_block,
-           ht.trx_hash,
-           ht.ref_block_num,
-           ht.ref_block_prefix,
-           ht.expiration,
-           ht.signature
-    FROM hafd.transactions ht
-    UNION ALL
-    SELECT reversible.block_num,
-            reversible.trx_in_block,
-            reversible.trx_hash,
-            reversible.ref_block_num,
-            reversible.ref_block_prefix,
-            reversible.expiration,
-            reversible.signature
-    FROM ( SELECT
-            htr.block_num,
-            htr.trx_in_block,
-            htr.trx_hash,
-            htr.ref_block_num,
-            htr.ref_block_prefix,
-            htr.expiration,
-            htr.signature,
-            htr.fork_id
-    FROM hafd.transactions_reversible htr
-    JOIN (
-        SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-        FROM hafd.blocks_reversible hbr
-        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
-        GROUP by hbr.num
-    ) as forks ON forks.max_fork_id = htr.fork_id AND forks.num = htr.block_num
-    ) reversible
-) t
-;
-
-CREATE OR REPLACE VIEW hive.operations_view_extended
-AS
-SELECT t.id,
-       hafd.operation_id_to_block_num( t.id ) as block_num,
-       t.trx_in_block,
-       t.op_pos,
-       hafd.operation_id_to_type_id( t.id ) as op_type_id,
-       t.timestamp,
-       t.body_binary as body_binary,
-       t.body
-FROM
-(
-    SELECT
-          ho.id,
-          ho.trx_in_block,
-          ho.op_pos,
-          b.created_at timestamp,
-          ho.body_binary,
-          ho.body_binary::jsonb AS body
-    FROM hafd.operations ho
-    JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
-    UNION ALL
-      SELECT
-        o.id,
-        o.trx_in_block,
-        o.op_pos,
-        visible_ops_timestamp.created_at timestamp,
-        o.body_binary,
-        o.body_binary::jsonb AS body
-        FROM hafd.operations_reversible o
-      -- Reversible operations view must show ops comming from newest fork (specific to app-context)
-      -- and also hide ops present at earlier forks for given block
-      JOIN
-      (
-        SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-        FROM hafd.blocks_reversible hbr
-        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
-        GROUP by hbr.num
-      ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
-      JOIN
-      (
-        SELECT hbr.num, created_at
-        FROM hafd.blocks_reversible hbr
-      ) visible_ops_timestamp ON visible_ops_timestamp.num = visible_ops.num
-) t
-;
-
-CREATE OR REPLACE VIEW hive.operations_view
-AS
-SELECT t.id,
-       hafd.operation_id_to_block_num( t.id ) as block_num,
-       t.trx_in_block,
-       t.op_pos,
-       hafd.operation_id_to_type_id( t.id ) as op_type_id,
-       t.body_binary as body_binary,
-       t.body
-FROM
-(
-    SELECT
-          ho.id,
-          ho.trx_in_block,
-          ho.op_pos,
-          ho.body_binary,
-          ho.body_binary::jsonb AS body
-    FROM hafd.operations ho
-    UNION ALL
-      SELECT
-        o.id,
-        o.trx_in_block,
-        o.op_pos,
-        o.body_binary,
-        o.body_binary::jsonb AS body
-      FROM hafd.operations_reversible o
-      -- Reversible operations view must show ops comming from newest fork (specific to app-context)
-      -- and also hide ops present at earlier forks for given block
-      JOIN
-      (
-        SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-        FROM hafd.blocks_reversible hbr
-        WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
-        GROUP by hbr.num
-      ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
-) t
-;
-
-CREATE OR REPLACE VIEW hive.transactions_multisig_view
-AS
-SELECT
-      t.trx_hash
-    , t.signature
-FROM (
-    SELECT
-          htm.trx_hash
-        , htm.signature
-    FROM hafd.transactions_multisig htm
-    UNION ALL
-    SELECT
-           reversible.trx_hash
-         , reversible.signature
-    FROM (
-        SELECT
-               htmr.trx_hash
-             , htmr.signature
-        FROM hafd.transactions_multisig_reversible htmr
-        JOIN (
-                SELECT htr.trx_hash, forks.max_fork_id
-                FROM hafd.transactions_reversible htr
-                JOIN (
-                    SELECT hbr.num, MAX(hbr.fork_id) as max_fork_id
-                    FROM hafd.blocks_reversible hbr
-                    WHERE hbr.num > ( SELECT COALESCE( hid.consistent_block, 0 ) FROM hafd.hive_state hid )
-                    GROUP by hbr.num
-                ) as forks ON forks.max_fork_id = htr.fork_id AND forks.num = htr.block_num
-        ) as trr ON trr.trx_hash = htmr.trx_hash AND trr.max_fork_id = htmr.fork_id
-    ) reversible
-) t;
-
-CREATE OR REPLACE VIEW hive.applied_hardforks_view AS
- (
-  SELECT hr.hardfork_num,
-         hr.block_num,
-         hr.hardfork_vop_id
-  FROM hafd.applied_hardforks hr
- )
-UNION ALL
-(
-WITH 
-consistent_block AS
-(SELECT COALESCE(hid.consistent_block, 0) AS consistent_block FROM hafd.hive_state hid LIMIT 1)
-,forks AS
-(
-  SELECT hbr.num, max(hbr.fork_id) AS max_fork_id
-  FROM hafd.blocks_reversible hbr, consistent_block cb
-  WHERE hbr.num > cb.consistent_block
-  GROUP BY hbr.num
-)
-SELECT hjr.hardfork_num,
-       hjr.block_num,
-       hjr.hardfork_vop_id
-FROM forks 
-JOIN hafd.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hafd.operation_id_to_block_num(hor.id)
-JOIN hafd.applied_hardforks_reversible hjr ON forks.max_fork_id = hjr.fork_id AND hjr.hardfork_vop_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
+    hafd.block_id_to_num(ht.block_id) AS block_num,
+    ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
+    ht.ref_block_prefix, ht.expiration, ht.signature
+FROM hafd.transactions ht
+WHERE NOT EXISTS (
+    SELECT 1 FROM hafd.transactions ht2
+    WHERE hafd.block_id_to_num(ht2.block_id) = hafd.block_id_to_num(ht.block_id)
+      AND ht2.trx_in_block = ht.trx_in_block
+      AND ht2.block_id > ht.block_id
 );
 
--- only irreversible data
-CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS
-    SELECT
-       ha.account_id,
-       ha.transacting_account_id,
-       ha.account_op_seq_no,
-       ha.operation_id,
-       hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id,
-       hafd.operation_id_to_block_num( ha.operation_id ) as block_num
-    FROM hafd.account_operations ha;
+-- =============================================================================
+-- operations_view - For each (block_num, seq_in_block), show highest fork_id version
+-- =============================================================================
+-- Uses NOT EXISTS for efficient queries.
+-- operation_id_to_pos extracts the unique sequence number within a block.
+CREATE OR REPLACE VIEW hive.operations_view AS
+SELECT
+    ho.id,
+    hafd.operation_id_to_block_num(ho.id) AS block_num,
+    ho.trx_in_block,
+    ho.op_pos,
+    hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+    ho.body_binary,
+    ho.body_binary::jsonb AS body
+FROM hafd.operations ho
+WHERE NOT EXISTS (
+    SELECT 1 FROM hafd.operations ho2
+    WHERE hafd.operation_id_to_block_num(ho2.id) = hafd.operation_id_to_block_num(ho.id)
+      AND hafd.operation_id_to_pos(ho2.id) = hafd.operation_id_to_pos(ho.id)
+      AND ho2.block_id > ho.block_id
+);
 
-CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS SELECT ha.id, ha.name FROM  hafd.accounts ha;
-CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS SELECT * FROM hafd.blocks;
-CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS SELECT * FROM hafd.transactions;
+-- =============================================================================
+-- operations_view_extended - For each (block_num, seq_in_block), show highest fork_id version with timestamp
+-- =============================================================================
+-- Uses NOT EXISTS for efficient queries.
+CREATE OR REPLACE VIEW hive.operations_view_extended AS
+SELECT
+    ho.id,
+    hafd.operation_id_to_block_num(ho.id) AS block_num,
+    ho.trx_in_block,
+    ho.op_pos,
+    hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+    b.created_at AS timestamp,
+    ho.body_binary,
+    ho.body_binary::jsonb AS body
+FROM hafd.operations ho
+JOIN hafd.blocks b ON b.block_id = ho.block_id
+WHERE NOT EXISTS (
+    SELECT 1 FROM hafd.operations ho2
+    WHERE hafd.operation_id_to_block_num(ho2.id) = hafd.operation_id_to_block_num(ho.id)
+      AND hafd.operation_id_to_pos(ho2.id) = hafd.operation_id_to_pos(ho.id)
+      AND ho2.block_id > ho.block_id
+);
 
-CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
-    SELECT
-        op.id,
-        hafd.operation_id_to_block_num( op.id ) as block_num,
-        op.trx_in_block,
-        op.op_pos,
-        hafd.operation_id_to_type_id( op.id ) as op_type_id,
-        b.created_at timestamp,
-        op.body_binary as body_binary,
-        op.body_binary::jsonb AS body
-    FROM hafd.operations op
-    JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(op.id);
+-- =============================================================================
+-- account_operations_view - Show account_ops from canonical blocks only
+-- For each (account_id, account_op_seq_no), pick highest block_id from canonical blocks
+-- =============================================================================
+-- Uses NOT EXISTS for canonical block check and row selection.
+CREATE OR REPLACE VIEW hive.account_operations_view AS
+SELECT
+    hafd.block_id_to_num(hao.block_id) AS block_num,
+    hao.account_id,
+    hao.transacting_account_id,
+    hao.account_op_seq_no,
+    ho.id AS operation_id,
+    hafd.operation_id_to_type_id(ho.id) AS op_type_id
+FROM hafd.account_operations hao
+JOIN hafd.operations ho ON ho.block_id = hao.block_id AND hafd.operation_id_to_pos(ho.id) = hao.seq_in_block
+WHERE NOT EXISTS (
+    -- No newer version of this block exists (canonical block check)
+    SELECT 1 FROM hafd.blocks b2
+    WHERE hafd.block_id_to_num(b2.block_id) = hafd.block_id_to_num(hao.block_id)
+      AND b2.block_id > hao.block_id
+)
+AND NOT EXISTS (
+    -- No newer version of this account_op exists
+    SELECT 1 FROM hafd.account_operations hao2
+    WHERE hao2.account_id = hao.account_id
+      AND hao2.account_op_seq_no = hao.account_op_seq_no
+      AND hao2.block_id > hao.block_id
+);
 
+-- =============================================================================
+-- accounts_view - Show accounts from visible (canonical) blocks only
+-- For each account_id, pick the row with highest block_id from visible blocks
+-- NULL block_id means account was dumped at startup (psql-first-block > 1)
+-- =============================================================================
+-- Uses NOT EXISTS for efficient canonical check.
+-- For accounts, we need to:
+-- 1. Only show accounts from canonical blocks (highest fork_id for each block_num)
+-- 2. For each account_id, pick the one from highest block_id among canonical blocks
+CREATE OR REPLACE VIEW hive.accounts_view AS
+SELECT ha.id, ha.name
+FROM hafd.accounts ha
+WHERE (ha.block_id IS NULL  -- Accounts from initial dump
+   OR NOT EXISTS (
+       -- Account's block must be canonical
+       SELECT 1 FROM hafd.blocks b2
+       WHERE hafd.block_id_to_num(b2.block_id) = hafd.block_id_to_num(ha.block_id)
+         AND b2.block_id > ha.block_id
+   ))
+AND NOT EXISTS (
+    -- No newer version of this account exists in a CANONICAL block
+    SELECT 1 FROM hafd.accounts ha2
+    WHERE ha2.id = ha.id
+      AND ha2.block_id IS NOT NULL
+      AND (ha.block_id IS NULL OR ha2.block_id > ha.block_id)
+      -- ha2's block must also be canonical
+      AND NOT EXISTS (
+          SELECT 1 FROM hafd.blocks b3
+          WHERE hafd.block_id_to_num(b3.block_id) = hafd.block_id_to_num(ha2.block_id)
+            AND b3.block_id > ha2.block_id
+      )
+);
+
+-- =============================================================================
+-- transactions_multisig_view - Show signatures from visible blocks only
+-- =============================================================================
+-- Uses NOT EXISTS for efficient canonical block check.
+CREATE OR REPLACE VIEW hive.transactions_multisig_view AS
+SELECT htm.trx_hash, htm.signature
+FROM hafd.transactions_multisig htm
+WHERE NOT EXISTS (
+    SELECT 1 FROM hafd.blocks b2
+    WHERE hafd.block_id_to_num(b2.block_id) = hafd.block_id_to_num(htm.block_id)
+      AND b2.block_id > htm.block_id
+);
+
+-- =============================================================================
+-- applied_hardforks_view - Show hardforks from visible blocks,
+-- then for each hardfork_num, pick the highest block_id
+-- =============================================================================
+-- Uses NOT EXISTS for efficient queries.
+CREATE OR REPLACE VIEW hive.applied_hardforks_view AS
+SELECT
+    hah.hardfork_num,
+    hafd.block_id_to_num(hah.block_id) AS block_num,
+    hah.hardfork_vop_id
+FROM hafd.applied_hardforks hah
+WHERE NOT EXISTS (
+    -- No newer version of this block exists (canonical block check)
+    SELECT 1 FROM hafd.blocks b2
+    WHERE hafd.block_id_to_num(b2.block_id) = hafd.block_id_to_num(hah.block_id)
+      AND b2.block_id > hah.block_id
+)
+AND NOT EXISTS (
+    -- No newer version of this hardfork exists
+    SELECT 1 FROM hafd.applied_hardforks hah2
+    WHERE hah2.hardfork_num = hah.hardfork_num
+      AND hah2.block_id > hah.block_id
+);
+
+-- =============================================================================
+-- Irreversible views - Only show data from irreversible blocks
+-- A row is irreversible if:
+--   1. block_num <= block_id_to_num(consistent_block)
+--   2. For that block_num, it has the MAX(fork_id) where fork_id <= block_id_to_fork(consistent_block)
+-- Each table needs its own windowing since rows have their own block_ids.
+-- =============================================================================
+
+-- Uses NOT EXISTS for efficient queries with irreversibility constraints.
+CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS
+SELECT
+    hafd.block_id_to_num(hb.block_id) AS num,
+    hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
+    hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
+    hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
+    hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
+    hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
+FROM hafd.blocks hb
+CROSS JOIN hafd.hive_state hs
+WHERE hafd.block_id_to_num(hb.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+  AND hafd.block_id_to_fork(hb.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.blocks hb2
+      WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+        AND hafd.block_id_to_fork(hb2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+        AND hb2.block_id > hb.block_id
+  );
+
+-- Uses NOT EXISTS for efficient queries.
+CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS
+SELECT
+    hafd.block_id_to_num(ht.block_id) AS block_num,
+    ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
+    ht.ref_block_prefix, ht.expiration, ht.signature
+FROM hafd.transactions ht
+CROSS JOIN hafd.hive_state hs
+WHERE hafd.block_id_to_num(ht.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+  AND hafd.block_id_to_fork(ht.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.transactions ht2
+      WHERE hafd.block_id_to_num(ht2.block_id) = hafd.block_id_to_num(ht.block_id)
+        AND ht2.trx_in_block = ht.trx_in_block
+        AND hafd.block_id_to_fork(ht2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+        AND ht2.block_id > ht.block_id
+  );
+
+-- Uses NOT EXISTS for efficient queries.
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
-    SELECT
-        op.id,
-        hafd.operation_id_to_block_num( op.id ) as block_num,
-        op.trx_in_block,
-        op.op_pos,
-        hafd.operation_id_to_type_id( op.id ) as op_type_id,
-        op.body_binary as body_binary,
-        op.body_binary::jsonb AS body
-    FROM hafd.operations op;
+SELECT
+    ho.id,
+    hafd.operation_id_to_block_num(ho.id) AS block_num,
+    ho.trx_in_block,
+    ho.op_pos,
+    hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+    ho.body_binary,
+    ho.body_binary::jsonb AS body
+FROM hafd.operations ho
+CROSS JOIN hafd.hive_state hs
+WHERE hafd.operation_id_to_block_num(ho.id) <= hafd.block_id_to_num(hs.consistent_block)
+  AND hafd.block_id_to_fork(ho.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.operations ho2
+      WHERE hafd.operation_id_to_block_num(ho2.id) = hafd.operation_id_to_block_num(ho.id)
+        AND hafd.operation_id_to_pos(ho2.id) = hafd.operation_id_to_pos(ho.id)
+        AND hafd.block_id_to_fork(ho2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+        AND ho2.block_id > ho.block_id
+  );
 
+-- Uses NOT EXISTS for efficient queries.
+CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
+SELECT
+    ho.id,
+    hafd.operation_id_to_block_num(ho.id) AS block_num,
+    ho.trx_in_block,
+    ho.op_pos,
+    hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+    b.created_at AS timestamp,
+    ho.body_binary,
+    ho.body_binary::jsonb AS body
+FROM hafd.operations ho
+JOIN hafd.blocks b ON b.block_id = ho.block_id
+CROSS JOIN hafd.hive_state hs
+WHERE hafd.operation_id_to_block_num(ho.id) <= hafd.block_id_to_num(hs.consistent_block)
+  AND hafd.block_id_to_fork(ho.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.operations ho2
+      WHERE hafd.operation_id_to_block_num(ho2.id) = hafd.operation_id_to_block_num(ho.id)
+        AND hafd.operation_id_to_pos(ho2.id) = hafd.operation_id_to_pos(ho.id)
+        AND hafd.block_id_to_fork(ho2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+        AND ho2.block_id > ho.block_id
+  );
 
-CREATE OR REPLACE VIEW hive.irreversible_transactions_multisig_view AS SELECT * FROM hafd.transactions_multisig;
-CREATE OR REPLACE VIEW hive.irreversible_applied_hardforks_view AS SELECT * FROM hafd.applied_hardforks;
+-- Uses NOT EXISTS for efficient queries.
+CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS
+SELECT
+    hafd.block_id_to_num(hao.block_id) AS block_num,
+    hao.account_id,
+    hao.transacting_account_id,
+    hao.account_op_seq_no,
+    ho.id AS operation_id,
+    hafd.operation_id_to_type_id(ho.id) AS op_type_id
+FROM hafd.account_operations hao
+JOIN hafd.operations ho ON ho.block_id = hao.block_id AND hafd.operation_id_to_pos(ho.id) = hao.seq_in_block
+CROSS JOIN hafd.hive_state hs
+WHERE hafd.block_id_to_num(hao.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+  AND hafd.block_id_to_fork(hao.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.account_operations hao2
+      WHERE hao2.account_id = hao.account_id
+        AND hao2.account_op_seq_no = hao.account_op_seq_no
+        AND hafd.block_id_to_fork(hao2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+        AND hao2.block_id > hao.block_id
+  );
+
+-- Uses NOT EXISTS for efficient queries.
+CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS
+SELECT ha.id, ha.name
+FROM hafd.accounts ha
+CROSS JOIN hafd.hive_state hs
+WHERE (ha.block_id IS NULL  -- Accounts from initial dump (psql-first-block > 1)
+   OR (hafd.block_id_to_num(ha.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+       AND hafd.block_id_to_fork(ha.block_id) <= hafd.block_id_to_fork(hs.consistent_block)))
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.accounts ha2
+      WHERE ha2.id = ha.id
+        AND ha2.block_id IS NOT NULL
+        AND (ha.block_id IS NULL OR ha2.block_id > ha.block_id)
+        AND hafd.block_id_to_fork(ha2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+  );
+
+-- Uses NOT EXISTS for efficient queries.
+CREATE OR REPLACE VIEW hive.irreversible_transactions_multisig_view AS
+SELECT htm.trx_hash, htm.signature
+FROM hafd.transactions_multisig htm
+CROSS JOIN hafd.hive_state hs
+WHERE hafd.block_id_to_num(htm.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+  AND hafd.block_id_to_fork(htm.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.transactions_multisig htm2
+      WHERE htm2.trx_hash = htm.trx_hash
+        AND htm2.signature = htm.signature
+        AND hafd.block_id_to_fork(htm2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+        AND htm2.block_id > htm.block_id
+  );
+
+-- Uses NOT EXISTS for efficient queries.
+CREATE OR REPLACE VIEW hive.irreversible_applied_hardforks_view AS
+SELECT
+    hah.hardfork_num,
+    hafd.block_id_to_num(hah.block_id) AS block_num,
+    hah.hardfork_vop_id
+FROM hafd.applied_hardforks hah
+CROSS JOIN hafd.hive_state hs
+WHERE hafd.block_id_to_num(hah.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+  AND hafd.block_id_to_fork(hah.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.applied_hardforks hah2
+      WHERE hah2.hardfork_num = hah.hardfork_num
+        AND hafd.block_id_to_fork(hah2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+        AND hah2.block_id > hah.block_id
+  );

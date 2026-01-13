@@ -12,12 +12,56 @@
 --          remove 4 blocks
 --          check if accounts are not removed
 
+-- Load test utilities
+\ir ../test_tools.sql
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    PERFORM test.fill_with_blocks_data();
+    -- Create infrastructure matching old fill_with_blocks_data()
+    PERFORM test.create_operation_types();
+    PERFORM test.create_forks();
+
+    -- Create blocks 1-5
+    PERFORM test.create_blocks(1, 5);
+
+    -- Create accounts with specific IDs (1-5) and names (u1-u5)
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES
+    ( 1, 'u1', hafd.make_block_id(1, 0) )
+         , ( 2, 'u2', hafd.make_block_id(2, 0) )
+         , ( 3, 'u3', hafd.make_block_id(3, 0) )
+         , ( 4, 'u4', hafd.make_block_id(4, 0) )
+         , ( 5, 'u5', hafd.make_block_id(5, 0) )
+    ;
+
+    -- Create transactions
+    PERFORM test.create_transactions(1, 5);
+
+    -- Create transactions_multisig entries
+    INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
+    VALUES
+    ( '\xDEED10', '\xBAAD10', hafd.make_block_id(1, 0) )
+         , ( '\xDEED20', '\xBAAD20', hafd.make_block_id(2, 0) )
+         , ( '\xDEED30', '\xBAAD30', hafd.make_block_id(3, 0) )
+         , ( '\xDEED40', '\xBAAD40', hafd.make_block_id(4, 0) )
+         , ( '\xDEED50', '\xBAAD50', hafd.make_block_id(5, 0) )
+    ;
+
+    -- Create operations
+    PERFORM test.create_operations(1, 5);
+
+    -- Create account_operations entries (up to block 4, matching old fill_with_blocks_data)
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block)
+    VALUES
+           ( 1, 1, 1, hafd.make_block_id(1, 0), 1 )
+         , ( 1, 1, 2, hafd.make_block_id(2, 0), 1 )
+         , ( 2, 2, 1, hafd.make_block_id(2, 0), 1 )
+         , ( 3, 3, 1, hafd.make_block_id(3, 0), 1 )
+         , ( 4, 4, 1, hafd.make_block_id(4, 0), 1 )
+    ;
 END;
 $BODY$
 ;
@@ -38,7 +82,7 @@ AS
 $BODY$
 BEGIN
     ASSERT (SELECT COUNT(*) FROM hafd.blocks) = 1, 'Some blocks stay';
-    ASSERT (SELECT MAX(num) FROM hafd.blocks) = 5, 'Wrong blocks removed';
+    ASSERT (SELECT MAX(hafd.block_id_to_num(block_id)) FROM hafd.blocks) = 5, 'Wrong blocks removed';
     ASSERT (SELECT COUNT(*) FROM hafd.transactions) = 1, 'Some transactions stay';
     ASSERT (SELECT COUNT(*) FROM hafd.transactions_multisig) = 1, 'Some transactions multisig stay';
     ASSERT (SELECT COUNT(*) FROM hafd.operations) = 1, 'Some operations stay';

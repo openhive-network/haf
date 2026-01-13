@@ -1,3 +1,6 @@
+-- Load test utilities
+\ir ../test_tools.sql
+
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
@@ -12,8 +15,8 @@ BEGIN
 
     INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
-         , (6, 'alice', 1)
-         , (7, 'bob', 1)
+         , (6, 'alice', hafd.make_block_id(1, 0))
+         , (7, 'bob', hafd.make_block_id(1, 0))
     ;
 
     PERFORM hive.end_massive_sync( 1 );

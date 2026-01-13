@@ -1,3 +1,6 @@
+-- Load test utilities
+\ir ../test_tools.sql
+
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
@@ -11,8 +14,8 @@ BEGIN
 
     INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
-         , (6, 'alice', 1)
-         , (7, 'bob', 1)
+         , (6, 'alice', hafd.make_block_id(1, 0))
+         , (7, 'bob', hafd.make_block_id(1, 0))
     ;
 
     PERFORM hive.end_massive_sync( 1 );
@@ -76,7 +79,7 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT COUNT(*) FROM hafd.events_queue ) = 4, 'Wrong number of events';
-    ASSERT ( SELECT hid.consistent_block FROM hafd.hive_state hid ) = 3 , 'Wrong consisten irreversible block';
+    ASSERT ( SELECT hafd.block_id_to_num(hid.consistent_block) FROM hafd.hive_state hid ) = 3 , 'Wrong consisten irreversible block';
     ASSERT EXISTS ( SELECT * FROM hafd.events_queue WHERE event = 'NEW_BLOCK' AND block_num=4 ), 'No NEW_BLOCK event 4';
     ASSERT EXISTS ( SELECT * FROM hafd.events_queue WHERE event = 'NEW_IRREVERSIBLE' AND block_num=3 ), 'No NEW_IRREVERSIBLE event';
 END;

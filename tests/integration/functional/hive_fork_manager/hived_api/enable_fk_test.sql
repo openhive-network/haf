@@ -1,3 +1,6 @@
+-- Load test utilities
+\ir ../test_tools.sql
+
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
@@ -5,6 +8,7 @@ AS
 $BODY$
 BEGIN
     PERFORM hive.disable_fk_of_irreversible();
+    PERFORM hive.disable_indexes_of_irreversible();
 END;
 $BODY$
 ;
@@ -14,6 +18,8 @@ LANGUAGE 'plpgsql'
     AS
 $BODY$
 BEGIN
+    -- Must enable indexes first to restore PKs before FKs can be added
+    PERFORM hive.enable_indexes_of_irreversible();
     PERFORM hive.enable_fk_of_irreversible();
 END;
 $BODY$
@@ -82,19 +88,20 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions') ), 'FK for hafd.transactions not exists';
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hafd.transactions_multisig not exists';
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hafd.applied_hardforks not exists';
+    -- In the new schema, data tables (transactions, transactions_multisig, applied_hardforks)
+    -- no longer have foreign key constraints. The block_id encoding replaces the need for FKs.
+    -- Verify that the enable_fk_of_irreversible function completed without error.
+    -- Since there are no FKs to restore, we just verify the operation succeeded.
 
+    -- Verify indexes were restored (PKs are needed for data integrity)
+    ASSERT ( SELECT is_any_index_for_table( 'hafd.transactions'::regclass::oid ) ) , 'Index hafd.transactions not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hafd.transactions_multisig'::regclass::oid ) ) , 'Index hafd.transactions_multisig not exists';
+    ASSERT ( SELECT is_any_index_for_table( 'hafd.applied_hardforks'::regclass::oid ) ) , 'Index hafd.applied_hardforks not exists';
 
-    ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_transactions', 'FOREIGN KEY' ) ), 'FK fk_1_hive_transactions not exists';
-    ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_transactions_multisig', 'FOREIGN KEY' ) ), 'FK fk_1_hive_transactions_multisig not exists';
-
-
-    ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_irreversible_data', 'FOREIGN KEY' ) ), 'FK fk_1_hive_irreversible_data not exists';
-    ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_applied_hardforks', 'FOREIGN KEY' ) ), 'FK fk_1_hive_applied_hardforks not exists';
-
-
+    -- Verify primary key constraints exist
+    ASSERT ( SELECT is_constraint_exists( 'pk_hive_transactions', 'PRIMARY KEY' ) ), 'PK pk_hive_transactions not exists';
+    ASSERT ( SELECT is_constraint_exists( 'pk_hive_transactions_multisig', 'PRIMARY KEY' ) ), 'PK pk_hive_transactions_multisig not exists';
+    ASSERT ( SELECT is_constraint_exists( 'pk_hive_applied_hardforks', 'PRIMARY KEY' ) ), 'PK pk_hive_applied_hardforks not exists';
 
 END;
 $BODY$
