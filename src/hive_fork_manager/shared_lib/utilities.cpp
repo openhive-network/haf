@@ -9,6 +9,7 @@
 
 #include <fc/io/json.hpp>
 #include <fc/string.hpp>
+#include <fc/crypto/hex.hpp>
 
 #include <psql_utils/pg_cxx.hpp>
 #include <psql_utils/logger.hpp>
@@ -68,6 +69,8 @@ void issue_error(const fc::string& msg)
 {
   issue_error(msg.c_str());
 }
+
+extern "C" void issue_error_with_code(int sql_errcode, const char* msg);
 
 collected_keyauth_collection_t collect_keyauths(const hive::protocol::operation& op)
 {
@@ -335,6 +338,11 @@ extern "C"
 void issue_error(const char* msg)
 {
   ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("%s", msg))); //NOLINT
+}
+
+void issue_error_with_code(int sql_errcode, const char* msg)
+{
+  ereport(ERROR, (errcode(sql_errcode), errmsg("%s", msg))); //NOLINT
 }
 
 #pragma pop_macro("elog")
@@ -1007,6 +1015,82 @@ Datum asset_symbol_from_nai_string(PG_FUNCTION_ARGS)
     }, ERRCODE_DATA_EXCEPTION);
 
   PG_RETURN_INT64(retval);
+}
+
+/**
+CREATE OR REPLACE FUNCTION hive.transaction_sig_digest(
+  IN _transaction_json TEXT,
+  IN _chain_id TEXT DEFAULT NULL
+) RETURNS TEXT
+*/
+PG_FUNCTION_INFO_V1(transaction_sig_digest);
+
+Datum transaction_sig_digest(PG_FUNCTION_ARGS)
+{
+  if (PG_ARGISNULL(0))
+  {
+    issue_error_with_code(ERRCODE_NULL_VALUE_NOT_ALLOWED, "transaction_sig_digest requires non-null _transaction_json argument");
+  }
+
+  const char* transaction_json = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+  hive::protocol::chain_id_type chain_id = HIVE_CHAIN_ID;
+
+  if (!PG_ARGISNULL(1))
+  {
+    const char* chain_id_str = text_to_cstring(PG_GETARG_TEXT_PP(1));
+
+    PsqlTools::PsqlUtils::pg_call_cxx([&chain_id_str, &chain_id]() {
+      chain_id = hive::protocol::chain_id_type(chain_id_str);
+    });
+  }
+
+  std::string retval;
+
+  PsqlTools::PsqlUtils::pg_call_cxx([&transaction_json, &chain_id, &retval]() {
+    hive::protocol::transaction trx;
+    fc::variant v = fc::json::from_string(transaction_json, fc::json::format_validation_mode::full);
+    fc::from_variant(v, trx);
+
+    hive::protocol::digest_type digest = trx.sig_digest(chain_id, hive::protocol::serialization_mode_controller::get_current_pack());
+    retval = digest.str();
+  });
+
+  PG_RETURN_TEXT_P(cstring_to_text(retval.c_str()));
+}
+
+/**
+CREATE OR REPLACE FUNCTION hive.pubkey_from_signature(
+  IN _signature TEXT,
+  IN _digest TEXT
+) RETURNS TEXT
+*/
+PG_FUNCTION_INFO_V1(pubkey_from_signature);
+
+Datum pubkey_from_signature(PG_FUNCTION_ARGS)
+{
+  if (PG_ARGISNULL(0) || PG_ARGISNULL(1))
+  {
+    issue_error_with_code(ERRCODE_NULL_VALUE_NOT_ALLOWED, "pubkey_from_signature requires non-null _signature and _digest arguments");
+  }
+
+  const char* signature = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  const char* digest = text_to_cstring(PG_GETARG_TEXT_PP(1));
+
+  std::string retval;
+
+  PsqlTools::PsqlUtils::pg_call_cxx([&signature, &digest, &retval]() {
+    hive::protocol::signature_type sig;
+    fc::from_hex(signature, (char*)sig.begin(), sig.size());
+
+    hive::protocol::digest_type digest_hash(digest);
+
+    fc::ecc::public_key recovered_key(sig, digest_hash);
+    hive::protocol::public_key_type pubkey(recovered_key);
+    retval = std::string(pubkey);
+  });
+
+  PG_RETURN_TEXT_P(cstring_to_text(retval.c_str()));
 }
 
 } /// extern "C"

@@ -73,6 +73,7 @@ ADD_PSQL_EXTENSION(
             types/process_operation.sql
 
             asset_utils.sql
+            transaction_utils.sql
 
             application_loop/stages_functions.sql
             application_loop/loop.sql
