@@ -912,6 +912,8 @@ replay_with_update:
       artifacts: true
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  before_script:
+    - !reference [.init_submodules, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_update.sh
   artifacts:
@@ -1169,6 +1171,7 @@ block_api_tests:
     - fast
 
   before_script:
+    - !reference [.init_submodules, before_script]
     # Wait for database to be ready (using Python since psql not available in this image)
     # Note: The service container copies data from NFS internally via copy_datadir.sh
     - |
