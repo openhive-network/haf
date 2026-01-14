@@ -1174,7 +1174,8 @@ block_api_tests:
 
   before_script:
     # Install git (not in benchmark-test-runner image) for submodule init
-    - apt-get update -qq && apt-get install -y -qq git 2>/dev/null || true
+    # Try apt-get (Debian/Ubuntu) then apk (Alpine)
+    - (apt-get update -qq && apt-get install -y -qq git 2>/dev/null) || (apk add --no-cache git 2>/dev/null) || true
     - !reference [.init_submodules, before_script]
     # Wait for database to be ready (using Python since psql not available in this image)
     # Note: The service container copies data from NFS internally via copy_datadir.sh
