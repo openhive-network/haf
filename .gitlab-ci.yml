@@ -448,6 +448,8 @@ haf_image_build:
     - |
       source docker_image_name.env
       echo "Adding latest/stable/version tags for mainnet image..."
+      # Pull image to local daemon (may not be loaded when using cached builds)
+      docker pull $HAF_INSTANCE || echo "Warning: docker pull failed"
       docker images
       if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
         docker tag $HAF_INSTANCE ${CI_REGISTRY_IMAGE}:latest
@@ -473,6 +475,8 @@ haf_image_build_testnet:
     - |
       source docker_image_name.env
       echo "Adding latest/stable/version tags for testnet image..."
+      # Pull image to local daemon (may not be loaded when using cached builds)
+      docker pull $HAF_INSTANCE || echo "Warning: docker pull failed"
       docker images
       IMAGE_NAME_PREFIX="${CI_REGISTRY_IMAGE}/testnet:"
       if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
@@ -500,6 +504,8 @@ haf_image_build_mirrornet:
     - |
       source docker_image_name.env
       echo "Adding latest/stable/version tags for mirrornet image..."
+      # Pull image to local daemon (may not be loaded when using cached builds)
+      docker pull $HAF_INSTANCE || echo "Warning: docker pull failed"
       docker images
       IMAGE_NAME_PREFIX="${CI_REGISTRY_IMAGE}/mirrornet:"
       if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
