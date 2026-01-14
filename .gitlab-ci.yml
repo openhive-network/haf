@@ -444,6 +444,22 @@ haf_image_build:
   tags:
     - public-runner-docker
     - bigjob
+  after_script:
+    - |
+      source docker_image_name.env
+      echo "Adding latest/stable/version tags for mainnet image..."
+      docker images
+      if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
+        docker tag $HAF_INSTANCE ${CI_REGISTRY_IMAGE}:latest
+        docker push ${CI_REGISTRY_IMAGE}:latest
+      elif [[ "$CI_COMMIT_BRANCH" == "master" ]]; then
+        docker tag $HAF_INSTANCE ${CI_REGISTRY_IMAGE}:stable
+        docker push ${CI_REGISTRY_IMAGE}:stable
+      fi
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_REF_PROTECTED" == "true" ]]; then
+        docker tag $HAF_INSTANCE ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+        docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+      fi
 
 haf_image_build_testnet:
   extends: .haf_image_build
@@ -453,6 +469,23 @@ haf_image_build_testnet:
   tags:
     - public-runner-docker
     - bigjob
+  after_script:
+    - |
+      source docker_image_name.env
+      echo "Adding latest/stable/version tags for testnet image..."
+      docker images
+      IMAGE_NAME_PREFIX="${CI_REGISTRY_IMAGE}/testnet:"
+      if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}latest
+        docker push ${IMAGE_NAME_PREFIX}latest
+      elif [[ "$CI_COMMIT_BRANCH" == "master" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}stable
+        docker push ${IMAGE_NAME_PREFIX}stable
+      fi
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_REF_PROTECTED" == "true" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
+        docker push ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
+      fi
 
 haf_image_build_mirrornet:
   extends: .haf_image_build
@@ -462,23 +495,21 @@ haf_image_build_mirrornet:
   tags:
     - public-runner-docker
     - bigjob
-  # Necessary to tag mirrornet images to be used in Denser's CI
+  # Tag mirrornet images for Denser's CI and external publishing
   after_script:
     - |
       source docker_image_name.env
-      echo "Pushing hived image for commits on develop, master and tagged"
+      echo "Adding latest/stable/version tags for mirrornet image..."
       docker images
-      IMAGE_NAME_PREFIX="$CI_REGISTRY_IMAGE/mirrornet:"
-      if [[ "$CI_COMMIT_BRANCH" == "develop" ]];
-      then
+      IMAGE_NAME_PREFIX="${CI_REGISTRY_IMAGE}/mirrornet:"
+      if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
         docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}latest
         docker push ${IMAGE_NAME_PREFIX}latest
-      elif [[ "$CI_COMMIT_BRANCH" == "master" ]];
-      then
+      elif [[ "$CI_COMMIT_BRANCH" == "master" ]]; then
         docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}stable
         docker push ${IMAGE_NAME_PREFIX}stable
-      elif [[ -n "$CI_COMMIT_TAG" ]];
-      then
+      fi
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_REF_PROTECTED" == "true" ]]; then
         docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
         docker push ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
       fi
@@ -1314,23 +1345,12 @@ cleanup_old_haf_cache:
     - standard
     - fast
 
-build_and_publish_image:
-  stage: publish
-  extends: .publish_docker_image_template
-  before_script:
-    - !reference [.publish_docker_image_template, before_script]
-  script:
-    # Fetch required script from hive repo (symlinks don't work without submodule checkout)
-    - |
-      HIVE_RAW_URL="https://gitlab.syncad.com/hive/hive/-/raw/${HIVE_SCRIPTS_REF}/scripts/ci-helpers"
-      # Remove dangling symlink before fetching
-      rm -f scripts/ci-helpers/build_and_publish_instance.sh
-      curl -fsSL "${HIVE_RAW_URL}/build_and_publish_instance.sh" -o scripts/ci-helpers/build_and_publish_instance.sh
-      chmod +x scripts/ci-helpers/build_and_publish_instance.sh
-    - scripts/ci-helpers/build_and_publish_instance.sh
-  tags:
-    - public-runner-docker
-    - standard
+publish_images:
+  extends: .docker_publish_job_template
+  variables:
+    # Publish mainnet (root) and mirrornet images to registry.hive.blog
+    # Note: testnet is not published externally (internal use only)
+    PUBLISH_IMAGES: "haf mirrornet"
 
 double_haf_replay_tests:
   extends: .docker_image_builder_job
