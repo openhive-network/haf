@@ -913,6 +913,8 @@ replay_with_update:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   before_script:
+    # Install git (not in minimal HAF image) for submodule init
+    - sudo apt-get update -qq && sudo apt-get install -y -qq git 2>/dev/null || true
     - !reference [.init_submodules, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_update.sh
@@ -1171,6 +1173,8 @@ block_api_tests:
     - fast
 
   before_script:
+    # Install git (not in benchmark-test-runner image) for submodule init
+    - apt-get update -qq && apt-get install -y -qq git 2>/dev/null || true
     - !reference [.init_submodules, before_script]
     # Wait for database to be ready (using Python since psql not available in this image)
     # Note: The service container copies data from NFS internally via copy_datadir.sh
