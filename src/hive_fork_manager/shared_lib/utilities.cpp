@@ -1021,7 +1021,7 @@ Datum asset_symbol_from_nai_string(PG_FUNCTION_ARGS)
 CREATE OR REPLACE FUNCTION hive.transaction_sig_digest(
   IN _transaction JSONB,
   IN _chain_id TEXT DEFAULT NULL
-) RETURNS TEXT
+) RETURNS BYTEA
 */
 PG_FUNCTION_INFO_V1(transaction_sig_digest);
 
@@ -1046,24 +1046,28 @@ Datum transaction_sig_digest(PG_FUNCTION_ARGS)
     });
   }
 
-  std::string retval;
+  hive::protocol::digest_type retval;
 
   PsqlTools::PsqlUtils::pg_call_cxx([&transaction_json, &chain_id, &retval]() {
     hive::protocol::transaction trx;
     fc::variant v = fc::json::from_string(transaction_json, fc::json::format_validation_mode::full);
     fc::from_variant(v, trx);
 
-    hive::protocol::digest_type digest = trx.sig_digest(chain_id, hive::protocol::serialization_mode_controller::get_current_pack());
-    retval = digest.str();
+    retval = trx.sig_digest(chain_id, hive::protocol::serialization_mode_controller::get_current_pack());
   });
 
-  PG_RETURN_TEXT_P(cstring_to_text(retval.c_str()));
+  int size = retval.data_size() + VARHDRSZ;
+  bytea* result = (bytea*)palloc(size);
+  SET_VARSIZE(result, size);
+  memcpy(VARDATA(result), retval.data(), retval.data_size());
+
+  PG_RETURN_BYTEA_P(result);
 }
 
 /**
 CREATE OR REPLACE FUNCTION hive.pubkey_from_signature(
-  IN _signature TEXT,
-  IN _digest TEXT
+  IN _signature BYTEA,
+  IN _digest BYTEA
 ) RETURNS TEXT
 */
 PG_FUNCTION_INFO_V1(pubkey_from_signature);
@@ -1075,16 +1079,27 @@ Datum pubkey_from_signature(PG_FUNCTION_ARGS)
     issue_error_with_code(ERRCODE_NULL_VALUE_NOT_ALLOWED, "pubkey_from_signature requires non-null _signature and _digest arguments");
   }
 
-  const char* signature = text_to_cstring(PG_GETARG_TEXT_PP(0));
-  const char* digest = text_to_cstring(PG_GETARG_TEXT_PP(1));
+  bytea* signature = PG_GETARG_BYTEA_PP(0);
+  bytea* digest = PG_GETARG_BYTEA_PP(1);
+
+  size_t signature_len = VARSIZE(signature) - VARHDRSZ;
+  size_t digest_len = VARSIZE(digest) - VARHDRSZ;
+
+  if (signature_len != sizeof(hive::protocol::signature_type)) {
+    issue_error_with_code(ERRCODE_INVALID_PARAMETER_VALUE, "Invalid signature size");
+  }
+
+  if (digest_len != sizeof(hive::protocol::digest_type)) {
+    issue_error_with_code(ERRCODE_INVALID_PARAMETER_VALUE, "Invalid digest size");
+  }
 
   std::string retval;
 
-  PsqlTools::PsqlUtils::pg_call_cxx([&signature, &digest, &retval]() {
+  PsqlTools::PsqlUtils::pg_call_cxx([&signature, &signature_len, &digest, &digest_len, &retval]() {
     hive::protocol::signature_type sig;
-    fc::from_hex(signature, (char*)sig.begin(), sig.size());
+    memcpy(sig.begin(), VARDATA(signature), signature_len);
 
-    hive::protocol::digest_type digest_hash(digest);
+    hive::protocol::digest_type digest_hash(VARDATA(digest), digest_len);
 
     fc::ecc::public_key recovered_key(sig, digest_hash);
     hive::protocol::public_key_type pubkey(recovered_key);
