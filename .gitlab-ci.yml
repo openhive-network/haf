@@ -184,7 +184,6 @@ verify_poetry_lock_sanity:
     - poetry -C "${PYPROJECT_DIR}" install
   tags:
     - public-runner-docker
-    - standard
 
 # =============================================================================
 # Change Detection & Quick Test Setup
@@ -360,7 +359,6 @@ detect_changes:
     expire_in: 1 day
   tags:
     - data-cache-storage  # Needs NFS access to find caches
-    - standard
 
 .haf_image_build:
   extends: .prepare_haf_image
@@ -434,7 +432,6 @@ detect_changes:
       fi
   tags:
     - public-runner-docker
-    - standard
 
 haf_image_build:
   extends: .haf_image_build
@@ -586,7 +583,6 @@ haf_image_build_mirrornet:
   interruptible: true
   tags:
     - public-runner-docker
-    - standard
     - fastest
 
 hfm_functional_tests:
@@ -673,7 +669,6 @@ haf_system_tests:
   interruptible: true
   tags:
     - public-runner-docker
-    - standard
     - fastest
 
 dump_snapshot_5m_mirrornet:
@@ -712,7 +707,6 @@ dump_snapshot_5m_mirrornet:
     - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot "$SNAPSHOTS_PATH/5m_mirrornet/snapshot/"
   tags:
     - data-cache-storage
-    - standard
     - fastest
 
 haf_system_tests_mirrornet:
@@ -801,7 +795,6 @@ applications_system_tests:
   interruptible: true
   tags:
     - public-runner-docker
-    - standard
 
 .replay_step:
   extends: .job-defaults
@@ -851,7 +844,6 @@ applications_system_tests:
   interruptible: true
   tags:
     - public-runner-docker
-    - standard
 
 replay_with_haf:
   extends: .replay_step
@@ -922,7 +914,6 @@ replay_with_update:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - standard
 
 replay_with_keyauths:
   extends: .job-defaults
@@ -944,7 +935,6 @@ replay_with_keyauths:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - standard
 
 replay_with_json_metadata:
   extends: .job-defaults
@@ -966,7 +956,6 @@ replay_with_json_metadata:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - standard
 
 replay_with_app:
   extends: .job-defaults
@@ -988,7 +977,6 @@ replay_with_app:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - standard
 
 replay_live_pruned_with_app:
   extends: .job-defaults
@@ -1010,7 +998,6 @@ replay_live_pruned_with_app:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - standard
 
 replay_block_log_pruned_with_app:
   extends: .job-defaults
@@ -1032,7 +1019,6 @@ replay_block_log_pruned_with_app:
       - "node_logs1.log"
   tags:
     - public-runner-docker
-    - standard
 
 replay_restarts_with_app:
   extends: .job-defaults
@@ -1052,7 +1038,6 @@ replay_restarts_with_app:
       - "node_logs.log"
   tags:
     - public-runner-docker
-    - standard
 
 replay_with_restart:
   extends: .job-defaults
@@ -1072,7 +1057,6 @@ replay_with_restart:
       - "node_logs.log"
   tags:
     - public-runner-docker
-    - standard
 
 update_with_wrong_table_schema:
   extends: .job-defaults
@@ -1093,7 +1077,6 @@ update_with_wrong_table_schema:
       - "node_logs.log"
   tags:
     - public-runner-docker
-    - standard
 
 # job responsible for replaying data using preconfigured filtering options specified in given config.ini file
 replay_filtered_haf_data_accounts_body_operations:
@@ -1127,7 +1110,6 @@ replay_filtered_haf_data_accounts_body_operations:
       echo "Filtered cache stored successfully"
   tags:
     - data-cache-storage
-    - standard
     - fastest
 
 block_api_tests:
@@ -1166,7 +1148,6 @@ block_api_tests:
       command: ["--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh"]
   tags:
     - data-cache-storage
-    - standard
     - fast
 
   before_script:
@@ -1239,7 +1220,6 @@ prepare_haf_data:
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
   tags:
     - data-cache-storage
-    - standard
     - fastest
 
 dead_app_auto_detach:
@@ -1282,7 +1262,6 @@ dead_app_auto_detach:
     - scenario*.log
   tags:
     - data-cache-storage
-    - standard
     - fast
 
 start_haf_as_service:
@@ -1323,7 +1302,6 @@ start_haf_as_service:
     - docker_entrypoint.log
   tags:
     - data-cache-storage
-    - standard
     - fast
 
 cleanup_haf_cache_manual:
@@ -1333,7 +1311,6 @@ cleanup_haf_cache_manual:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
   tags:
     - data-cache-storage
-    - standard
     - fast
 
 cleanup_haf_snapshot_from_cache:
@@ -1343,7 +1320,6 @@ cleanup_haf_snapshot_from_cache:
     CLEANUP_PATH_PATTERN: "/cache/snapshots_pipeline_*"
   tags:
     - data-cache-storage
-    - standard
     - fast
 
 cleanup_old_haf_cache:
@@ -1353,7 +1329,6 @@ cleanup_old_haf_cache:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
   tags:
     - data-cache-storage
-    - standard
     - fast
 
 publish_images:
@@ -1377,7 +1352,6 @@ double_haf_replay_tests:
   - docker context ls
   tags:
     - public-runner-docker
-    - standard
 
 op_body_filter_tests:
   extends: .job-defaults
@@ -1408,4 +1382,3 @@ op_body_filter_tests:
   interruptible: true
   tags:
     - public-runner-docker
-    - standard
