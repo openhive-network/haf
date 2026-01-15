@@ -419,12 +419,12 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST(application_log/hive_log_contexts_simple.sql)
  ADD_SQL_FUNCTIONAL_TEST(application_log/remove_context.sql)
 
- # NEEDS_UPDATE: ADD_SQL_FUNCTIONAL_TEST(pruning/application_no_blocks.sql)
- # NEEDS_UPDATE: ADD_SQL_FUNCTIONAL_TEST(pruning/no_application_no_blocks.sql)
- # NEEDS_UPDATE: ADD_SQL_FUNCTIONAL_TEST(pruning/no_application_blocks.sql)
- # NEEDS_UPDATE: ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_no_application_blocks.sql )
- # NEEDS_UPDATE: ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_application_blocks.sql )
- # NEEDS_UPDATE: ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_no_application_no_blocks.sql)
+ ADD_SQL_FUNCTIONAL_TEST(pruning/application_no_blocks.sql)
+ ADD_SQL_FUNCTIONAL_TEST(pruning/no_application_no_blocks.sql)
+ ADD_SQL_FUNCTIONAL_TEST(pruning/no_application_blocks.sql)
+ ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_no_application_blocks.sql)
+ ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_application_blocks.sql)
+ ADD_SQL_FUNCTIONAL_TEST(pruning/n_blocks_no_application_no_blocks.sql)
  ADD_SQL_FUNCTIONAL_TEST(pruning/tail_lower_than_0.sql)
 
  # Refactored test examples using test_tools.sql

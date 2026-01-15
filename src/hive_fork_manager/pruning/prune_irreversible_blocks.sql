@@ -2,7 +2,7 @@
 -- Pruning Functions for HAF
 -- =============================================================================
 -- Updated to work with unified tables using block_id encoding.
--- CASCADE DELETE handles most cleanup automatically.
+-- No FK CASCADE exists, so we must explicitly delete from all child tables.
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.is_pruning_enabled()
@@ -52,13 +52,38 @@ BEGIN
 
     __upper_bound_block_num = __upper_bound_block_num - _tail_size;
 
-    -- With CASCADE DELETE on blocks, we just need to delete from blocks
-    -- and all child tables (operations, transactions, etc.) are cleaned automatically
-    DELETE FROM hafd.blocks hb
-    WHERE hafd.block_id_to_num(hb.block_id) <= __upper_bound_block_num;
+    -- No FK CASCADE exists, so we must explicitly delete from all child tables.
+    -- Order matters: delete from child tables before parent tables.
 
-    -- Note: accounts have a special case - we may want to keep account names even
-    -- after pruning the block they were created in. For now, CASCADE handles it.
+    -- Delete account_operations (references operations)
+    DELETE FROM hafd.account_operations ao
+    WHERE hafd.block_id_to_num(ao.block_id) <= __upper_bound_block_num;
+
+    -- Delete applied_hardforks (references operations and blocks)
+    DELETE FROM hafd.applied_hardforks ah
+    WHERE hafd.block_id_to_num(ah.block_id) <= __upper_bound_block_num;
+
+    -- Delete operations
+    DELETE FROM hafd.operations o
+    WHERE hafd.block_id_to_num(o.block_id) <= __upper_bound_block_num;
+
+    -- Delete transactions_multisig (references transactions)
+    DELETE FROM hafd.transactions_multisig tm
+    WHERE hafd.block_id_to_num(tm.block_id) <= __upper_bound_block_num;
+
+    -- Delete transactions
+    DELETE FROM hafd.transactions t
+    WHERE hafd.block_id_to_num(t.block_id) <= __upper_bound_block_num;
+
+    -- Accounts: set block_id to NULL to preserve account names
+    -- (accounts may be referenced by other data, we just forget which block created them)
+    UPDATE hafd.accounts a
+    SET block_id = NULL
+    WHERE hafd.block_id_to_num(a.block_id) <= __upper_bound_block_num;
+
+    -- Finally delete blocks
+    DELETE FROM hafd.blocks b
+    WHERE hafd.block_id_to_num(b.block_id) <= __upper_bound_block_num;
 
 END;
 $BODY$
