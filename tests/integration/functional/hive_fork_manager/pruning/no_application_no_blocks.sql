@@ -13,11 +13,11 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    -- Create 2 accounts with NULL block_num (not associated with any block)
+    -- Create 2 accounts with NULL block_id (not associated with any block)
     INSERT INTO hafd.accounts( id, name, block_id )
     VALUES
-    ( NULL, 'u1', 1 )
-         , ( NULL, 'u2', 2 )
+      ( 1, 'u1', NULL )
+    , ( 2, 'u2', NULL )
     ;
 END;
 $BODY$
