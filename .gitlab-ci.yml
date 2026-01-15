@@ -442,7 +442,6 @@ haf_image_build:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
   tags:
-    - public-runner-docker
     - bigjob
   after_script:
     - |
@@ -469,7 +468,6 @@ haf_image_build_testnet:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
     HIVE_NETWORK_TYPE: testnet
   tags:
-    - public-runner-docker
     - bigjob
   after_script:
     - |
@@ -497,7 +495,6 @@ haf_image_build_mirrornet:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVE_NETWORK_TYPE: mirrornet
   tags:
-    - public-runner-docker
     - bigjob
   # Tag mirrornet images for Denser's CI and external publishing
   after_script:
