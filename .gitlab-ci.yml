@@ -574,6 +574,9 @@ haf_image_build:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
+    # Required for Docker build - global GIT_SUBMODULE_STRATEGY is 'none' but
+    # build needs hive submodule with nested rocksdb for cmake modules
+    GIT_SUBMODULE_STRATEGY: recursive
   tags:
     - bigjob
   after_script:
@@ -600,6 +603,7 @@ haf_image_build_testnet:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
     HIVE_NETWORK_TYPE: testnet
+    GIT_SUBMODULE_STRATEGY: recursive
   tags:
     - bigjob
   after_script:
@@ -627,6 +631,7 @@ haf_image_build_mirrornet:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVE_NETWORK_TYPE: mirrornet
+    GIT_SUBMODULE_STRATEGY: recursive
   tags:
     - bigjob
   # Tag mirrornet images for Denser's CI and external publishing
