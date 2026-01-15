@@ -72,6 +72,12 @@ FIX_DATADIR_PERMISSIONS() {
     docker exec ai_env sudo chmod 755 /home/hived /home/hived/datadir /home/hived/datadir/haf_db_store 2>/dev/null || true
 }
 
+INSTALL_PYTHON_TEST_DEPS() {
+    echo "Installing Python test dependencies (pexpect)..."
+    # Install pexpect for Python example tests (same as CI does)
+    docker exec ai_env sudo pip3 install --break-system-packages pexpect
+}
+
 DO_RECOMPILE() {
     BUILD_HAF
 }
@@ -138,9 +144,12 @@ DO_INIT() {
     fi
     
     START_CONTAINER
-    
+
     # Build HAF first so we can install the extension libraries
     BUILD_HAF
+
+    # Install Python test dependencies (pexpect for example tests)
+    INSTALL_PYTHON_TEST_DEPS
 
     CONFIGURE_POSTGRES
     
@@ -174,6 +183,9 @@ DO_INIT_TESTNET() {
 
     # Build HAF with testnet support for system tests
     BUILD_HAF_TESTNET
+
+    # Install Python test dependencies (pexpect for example tests)
+    INSTALL_PYTHON_TEST_DEPS
 
     CONFIGURE_POSTGRES
 
