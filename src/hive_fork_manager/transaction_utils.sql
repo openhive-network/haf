@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION hive.transaction_sig_digest(
-  IN _transaction_json TEXT,
+  IN _transaction JSONB,
   IN _chain_id TEXT DEFAULT NULL
 )
 RETURNS TEXT

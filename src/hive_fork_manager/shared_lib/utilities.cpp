@@ -1019,7 +1019,7 @@ Datum asset_symbol_from_nai_string(PG_FUNCTION_ARGS)
 
 /**
 CREATE OR REPLACE FUNCTION hive.transaction_sig_digest(
-  IN _transaction_json TEXT,
+  IN _transaction JSONB,
   IN _chain_id TEXT DEFAULT NULL
 ) RETURNS TEXT
 */
@@ -1029,10 +1029,11 @@ Datum transaction_sig_digest(PG_FUNCTION_ARGS)
 {
   if (PG_ARGISNULL(0))
   {
-    issue_error_with_code(ERRCODE_NULL_VALUE_NOT_ALLOWED, "transaction_sig_digest requires non-null _transaction_json argument");
+    issue_error_with_code(ERRCODE_NULL_VALUE_NOT_ALLOWED, "transaction_sig_digest requires non-null _transaction argument");
   }
 
-  const char* transaction_json = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  Datum json_text = DirectFunctionCall1(jsonb_out, JsonbPGetDatum(PG_GETARG_JSONB_P(0)));
+  const char* transaction_json = DatumGetCString(json_text);
 
   hive::protocol::chain_id_type chain_id = HIVE_CHAIN_ID;
 
