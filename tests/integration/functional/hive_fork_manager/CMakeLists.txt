@@ -116,8 +116,8 @@ ADD_TEST( NAME test_update_script
 
  ADD_SQL_FUNCTIONAL_TEST( hived_api/schema_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/back_from_fork_test.sql )
-# OBSOLETE: push_block_test uses old blocks_reversible schema and hafd.blocks_type which expects num INTEGER
-# ADD_SQL_FUNCTIONAL_TEST( hived_api/push_block_test.sql )
+# Updated for unified table architecture
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/push_block_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/set_irreversible_test.sql )
  # OBSOLETE: copy_*_to_irreversible tests removed - unified tables architecture no longer copies data
  # ADD_SQL_FUNCTIONAL_TEST( hived_api/copy_blocks_to_irreversible.sql )
@@ -125,13 +125,13 @@ ADD_TEST( NAME test_update_script
  # ADD_SQL_FUNCTIONAL_TEST( hived_api/copy_operations_to_irreversible_test.sql )
  # ADD_SQL_FUNCTIONAL_TEST( hived_api/copy_signatures_to_irreversible_test.sql )
  # ADD_SQL_FUNCTIONAL_TEST( hived_api/copy_applied_hardforks_to_irreversible_test.sql )
- # OBSOLETE: remove_obsolete_blocks_with_set_irreversible tests removed - function removed
- # ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_blocks_with_set_irreversible.sql )
- # ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_blocks_with_set_irreversible_3_contexts.sql )
- # ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_blocks_with_set_irreversible_no_contexts.sql )
+ # Updated to test remove_orphan_forks with unified table architecture
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_blocks_with_set_irreversible.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_blocks_with_set_irreversible_3_contexts.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_blocks_with_set_irreversible_no_contexts.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/end_massive_sync_test.sql )
-# OBSOLETE: set_irreversible_cleaning_events_test references old reversible tables
-# ADD_SQL_FUNCTIONAL_TEST( hived_api/set_irreversible_cleaning_events_test.sql )
+# Updated for unified table architecture
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/set_irreversible_cleaning_events_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/disable_indexes_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/enable_indexes_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/enable_indexes_compare_saved_statement_test.sql )
