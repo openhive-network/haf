@@ -137,6 +137,12 @@ RUN <<-EOF
   --flat-binary-directory="${INSTALLATION_DIR}" \
   --clean-after-build
 
+  # Show sccache statistics to verify distributed caching is working
+  if command -v sccache &> /dev/null; then
+    echo "=== sccache statistics ==="
+    sccache --show-stats || true
+  fi
+
   sudo chown -R hived "${INSTALLATION_DIR}/"*
 EOF
 
