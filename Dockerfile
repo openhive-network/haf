@@ -4,8 +4,6 @@
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
 ARG CI_IMAGE_TAG=ubuntu24.04-py3.14-5
-# ci-base-image from common-ci-configuration (includes sccache for distributed caching)
-ARG CI_BASE_IMAGE=registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py3.14-5
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
@@ -73,7 +71,7 @@ RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service 
 USER haf_admin
 WORKDIR /home/haf_admin
 
-FROM ${CI_BASE_IMAGE} AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py3.14-5 AS ci-base-image
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
@@ -212,7 +210,7 @@ COPY --from=build --chown=hived:users \
 # This should be removed before merge
 # COPY --from=build --chown=haf_admin:users /home/haf_admin/build /home/haf_admin/build/
 
-COPY --from=build --chown=hived_admin:users /home/hived_admin/hive_base_config/faketime/src/libfaketime*.so.1 \
+COPY --from=build --chown=hived_admin:users /home/haf_admin/hive_base_config/faketime/src/libfaketime*.so.1 \
   /home/hived_admin/hive_base_config/faketime/src/
 COPY --from=build --chown=root:root /usr/local/lib/faketime/* /usr/local/lib/faketime/
 
