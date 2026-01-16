@@ -208,6 +208,26 @@ Key tables using `block_id`:
 - `hafd.accounts` - Account creation records
 - `hafd.account_operations` - Account-operation mappings
 
+### Migration Example: Hivemind
+
+Hivemind MR !992 shows the pattern for adapting to unified tables:
+
+```sql
+-- Before (old schema with block_num column)
+INSERT INTO hafd.blocks (num, hash, prev, ...)
+VALUES (:num, :hash, :prev, ...);
+
+-- After (new schema with block_id)
+INSERT INTO hafd.blocks (block_id, hash, prev, ...)
+VALUES (hafd.make_block_id(:num, 0), :hash, :prev, ...);
+
+-- Querying block numbers (extract from block_id)
+SELECT *, hafd.block_id_to_num(block_id) AS num
+FROM hafd.blocks ORDER BY block_id DESC LIMIT 1;
+```
+
+Note: Fork ID 0 is used for irreversible/massive sync data. Applications inserting mock data or during massive sync should use fork 0.
+
 ## Troubleshooting
 
 ### Service Container Issues
