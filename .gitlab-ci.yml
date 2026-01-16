@@ -86,6 +86,11 @@ variables:
   # Mirrornet snapshot path on NFS for cross-builder access
   SNAPSHOTS_PATH: /nfs/ci-cache/haf/snapshots_pipeline_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /cache/block_log_5m_mirrornet
+
+  # sccache distributed compiler cache (Redis backend on builder-10)
+  SCCACHE_REDIS: "redis://192.168.50.109:6379"
+  SCCACHE_CACHE_SIZE: "50G"
+
   # PostgreSQL access config for localhost-only jobs
   PG_ACCESS_LOCAL_TRUST: |
     local   all              all                            trust
