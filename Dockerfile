@@ -26,8 +26,9 @@ RUN bash -x ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-ac
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg curl ca-certificates software-properties-common && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
-    # Add deadsnakes PPA for Python 3.14
-    add-apt-repository -y ppa:deadsnakes/ppa && \
+    # Add deadsnakes PPA for Python 3.14 manually (avoid add-apt-repository which fails in DinD due to IPv6/Launchpad API issues)
+    echo "deb https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu noble main" > /etc/apt/sources.list.d/deadsnakes-ppa.list && \
+    curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF23C5A6CF475977595C89F51BA6932366A755776" | gpg --dearmor -o /etc/apt/trusted.gpg.d/deadsnakes-ppa.gpg && \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.14 python3.14-venv python3-pip postgresql-17 postgresql-17-cron postgresql-17-pgvector postgresql-plpython3-17 libpq5 \
                                                                               libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
