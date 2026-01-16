@@ -139,6 +139,75 @@ SELECT * FROM hive.registered_tables;
       └── tablespace/         # PG tablespace
 ```
 
+## HAF Ecosystem & Dependencies
+
+HAF is a core component that many other Hive projects depend on. When making changes to HAF, consider the impact on these downstream projects.
+
+### Direct HAF Dependencies
+
+These projects directly use HAF (as a submodule or direct database dependency):
+
+| Project | Repository | Description |
+|---------|------------|-------------|
+| **hivemind** | `hive/hivemind` | Social layer for Hive blockchain, provides community/follow/reblog APIs |
+| **haf_block_explorer** | `hive/haf_block_explorer` | Block explorer built on HAF |
+| **HAfAH** | `hive/HAfAH` | HAF API Helper - provides standardized API endpoints |
+| **reputation_tracker** | `hive/reputation_tracker` | Tracks and calculates account reputation scores |
+| **nft_tracker** | `hive/nft_tracker` | Tracks NFT-related operations and ownership |
+| **balance_tracker** | `hive/balance_tracker` | Tracks account balances and token movements |
+| **denser** | `hive/denser` | Frontend application for Hive |
+| **haf_api_node** | `hive/haf_api_node` | HAF API node infrastructure/deployment |
+| **hafsql** | `hive/hafsql` | SQL interface layer to HAF |
+| **hafsql-api** | `hive/hafsql-api` | API layer for hafsql |
+
+### Indirect HAF Dependencies
+
+These projects depend on HAF through other projects:
+
+| Project | Depends On | Path to HAF |
+|---------|------------|-------------|
+| **hivesense** | hivemind | hivesense → hivemind → HAF |
+| **haf_block_explorer** | HAfAH, reputation_tracker, balance_tracker | Uses multiple HAF apps |
+| **hivemind** | HAfAH, reputation_tracker | Uses helper HAF apps |
+| **haf_api_node** | hivemind | Deploys hivemind which uses HAF |
+
+### Impact of HAF Changes
+
+When modifying HAF internals:
+
+- **`hafd.*` schema changes** - Internal tables. Applications using `hive.*` views are isolated from these changes.
+- **`hive.*` schema changes** - Public API. Changes here may require updates to dependent applications.
+- **View changes** - `hive.blocks_view`, `hive.operations_view`, etc. are the stable interface for applications.
+- **Function signature changes** - `hive.app_next_block()`, `hive.app_create_context()`, etc. affect all HAF applications.
+
+### Architecture: Unified Tables with block_id
+
+HAF uses a unified table architecture where all block data (irreversible and reversible) is stored in single tables using `block_id` encoding:
+
+```sql
+-- block_id encodes both block number and fork ID
+-- block_id = (block_num << 32) | fork_id
+-- Fork 0 = irreversible, Fork 1+ = reversible forks
+
+-- Create block_id
+SELECT hafd.make_block_id(block_num, fork_id);
+
+-- Extract components
+SELECT hafd.block_id_to_num(block_id);  -- Get block number
+SELECT hafd.block_id_to_fork(block_id); -- Get fork ID
+
+-- Applications use views that abstract away block_id:
+SELECT * FROM hive.blocks_view;        -- Returns block_num, not block_id
+SELECT * FROM hive.operations_view;    -- Filtered by context's fork
+```
+
+Key tables using `block_id`:
+- `hafd.blocks` - Block headers
+- `hafd.transactions` - Transactions
+- `hafd.operations` - Operations
+- `hafd.accounts` - Account creation records
+- `hafd.account_operations` - Account-operation mappings
+
 ## Troubleshooting
 
 ### Service Container Issues
