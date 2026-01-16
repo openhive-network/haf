@@ -117,6 +117,7 @@ default:
   - "**/generated_during_*/**/*.sst"
 
 # Manual submodule initialization - needed because hive submodule is on a feature branch
+# This version only clones test-related submodules (test-tools, tests_api) - use for test jobs
 .init_submodules:
   before_script: &init_submodules
     - |
@@ -136,6 +137,31 @@ default:
       git checkout $HIVE_COMMIT
       # Initialize only test-related submodules inside hive (skip rocksdb, zstd, fc, appbase, compression_dictionaries)
       git submodule update --init tests/python/hive-local-tools/test-tools tests/python/hive-local-tools/tests_api
+      cd ..
+      # Update any remaining HAF submodules (currently none besides hive which is handled above)
+      git submodule update --init
+      echo -e "\e[0Ksection_end:$(date +%s):init_submodules\r\e[0K"
+
+# Full submodule initialization - use for jobs that need to rebuild HAF (requires rocksdb, zstd, etc.)
+.init_submodules_full:
+  before_script: &init_submodules_full
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):init_submodules[collapsed=true]\r\e[0KInitializing submodules (full)..."
+      git config --global --add safe.directory '*'
+      # Get the commit we need from the hive submodule
+      HIVE_URL="https://gitlab.syncad.com/hive/hive.git"
+      HIVE_COMMIT=$(git ls-tree HEAD hive | awk '{print $3}')
+      echo "Need hive submodule at commit $HIVE_COMMIT"
+      # Remove existing hive directory if it exists (can be stale from GIT_STRATEGY=fetch)
+      # Use sudo to handle files created by different users in previous jobs
+      sudo rm -rf hive 2>/dev/null || rm -rf hive
+      # Clone and fetch from develop branch
+      git clone --no-checkout "$HIVE_URL" hive
+      cd hive
+      git fetch origin develop
+      git checkout $HIVE_COMMIT
+      # Initialize ALL submodules recursively (needed for rebuilding HAF)
+      git submodule update --init --recursive
       cd ..
       # Update any remaining HAF submodules (currently none besides hive which is handled above)
       git submodule update --init
@@ -915,7 +941,8 @@ replay_with_update:
   before_script:
     # Install git (not in minimal HAF image) for submodule init
     - sudo apt-get update -qq && sudo apt-get install -y -qq git 2>/dev/null || true
-    - !reference [.init_submodules, before_script]
+    # This job rebuilds HAF from source, so it needs full submodules (including rocksdb)
+    - !reference [.init_submodules_full, before_script]
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_update.sh
   artifacts:
