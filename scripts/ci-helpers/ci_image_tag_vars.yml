@@ -1,5 +1,5 @@
 variables:
   # pin to specific docker images for build repeatability
-  # Using hive's Python 3.14 ci-base-image until HAF's image is rebuilt
-  # uses registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu24.04-py3.14-1
-  TEST_HAF_IMAGE_TAG: ":ubuntu24.04-py3.14-1"
+  # Uses common-ci-configuration ci-base-image (includes sccache for distributed caching)
+  # registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py3.14-5
+  TEST_HAF_IMAGE_TAG: ":ubuntu24.04-py3.14-5"
