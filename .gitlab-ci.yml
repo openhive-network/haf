@@ -367,6 +367,10 @@ detect_changes:
 .haf_image_build:
   extends: .prepare_haf_image
   stage: build_and_test_phase_1
+  variables:
+    # Build jobs need ALL submodules (including rocksdb, zstd) for compilation
+    # Override the global 'none' strategy with 'recursive' for builds
+    GIT_SUBMODULE_STRATEGY: recursive
   needs:
     - job: detect_changes
       artifacts: true
