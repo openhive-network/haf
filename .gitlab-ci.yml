@@ -134,12 +134,11 @@ default:
       cd hive
       git fetch origin develop
       git checkout $HIVE_COMMIT
-      # Initialize nested submodules inside hive (test-tools, tests_api, etc.)
-      # This is required because we manually cloned hive instead of using submodule update
-      git submodule update --init --recursive --jobs 4
+      # Initialize only test-related submodules inside hive (skip rocksdb, zstd, fc, appbase, compression_dictionaries)
+      git submodule update --init tests/python/hive-local-tools/test-tools tests/python/hive-local-tools/tests_api
       cd ..
-      # Update any remaining HAF submodules (the hive directory is already handled above)
-      git submodule update --init --recursive --jobs 4
+      # Update any remaining HAF submodules (currently none besides hive which is handled above)
+      git submodule update --init
       echo -e "\e[0Ksection_end:$(date +%s):init_submodules\r\e[0K"
 
 .fetch_haf_cache: &fetch_haf_cache
