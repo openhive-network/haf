@@ -2,10 +2,11 @@
 set -xeuo pipefail
 
 # Install Python 3.14 from deadsnakes PPA (HAF image has Python 3.12)
+# Add PPA manually to avoid add-apt-repository which fails in DinD due to IPv6/Launchpad API issues
 sudo apt-get update
-sudo apt-get install -y software-properties-common
-# Use python3.12 explicitly since apt_pkg is compiled for it
-sudo /usr/bin/python3.12 /usr/bin/add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt-get install -y gnupg curl
+echo "deb https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu noble main" | sudo tee /etc/apt/sources.list.d/deadsnakes-ppa.list
+curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF23C5A6CF475977595C89F51BA6932366A755776" | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/deadsnakes-ppa.gpg
 sudo apt-get update
 sudo apt-get install -y git python3.14 python3.14-venv python3.14-dev
 
