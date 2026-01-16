@@ -435,6 +435,9 @@ detect_changes:
         echo "Build skipped - binaries extracted from cached image"
         exit 0
       fi
+    # Initialize submodules for fresh build (required for nested submodules like rocksdb)
+    # Uses the same robust approach as other HAF jobs - handles feature branch submodules
+    - !reference [.init_submodules, before_script]
   tags:
     - public-runner-docker
 
