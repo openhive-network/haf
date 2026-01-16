@@ -203,8 +203,8 @@ struct members_to_datum_visitor {
     members_to_datum_visitor(const T& obj, Datum* values, bool* nulls) : obj(obj), values(values), nulls(nulls)
     {}
 
-    template<typename Member, class Class, Member (Class::*member)>
-    void operator()(const char*) const
+    template<typename Member, class Class>
+    void operator()(Member Class::*member, const char*) const
     {
       const std::optional<Datum> datum = to_datum(obj.*member);
       if (datum.has_value())

@@ -141,8 +141,8 @@ class member_to_jsonb_visitor
       obj(obj), parseState(state)
     {}
 
-    template<typename Member, class Class, Member (Class::*member)>
-    void operator()(const char* name) const
+    template<typename Member, class Class>
+    void operator()(Member Class::*member, const char* name) const
     {
       push_key_to_jsonb(name, parseState);
       to_jsonb(obj.*member, WJB_VALUE, parseState);

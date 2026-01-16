@@ -378,8 +378,8 @@ class member_from_jsonb_visitor
       FC_ASSERT(JsonContainerIsObject(jsonb.val.binary.data));
     }
 
-    template<typename Member, class Class, Member (Class::*member)>
-    void operator()(const char* name) const
+    template<typename Member, class Class>
+    void operator()(Member Class::*member, const char* name) const
     {
       JsonbValue value {};
       if (PsqlTools::PsqlUtils::cxx_call_pg(getKeyJsonValueFromContainer, jsonb.val.binary.data, name, strlen(name), &value))
