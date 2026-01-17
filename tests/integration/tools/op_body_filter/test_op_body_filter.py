@@ -2,7 +2,6 @@ import os
 import subprocess
 from typing import Iterable
 
-import test_tools as tt
 
 def run_and_get_output(*args: str) -> str:
     op_body_filter_path_from_envs = os.getenv("OP_BODY_FILTER_PATH", None)
@@ -20,7 +19,7 @@ def compare( output: Iterable[str], patterns: Iterable[str]):
         cnt += 1
 
 def test_find_transfers_greater_than_10_hive():
-    tt.logger.info('Start `test_find_transfers_greater_than_10_hive` test')
+    print('Start `test_find_transfers_greater_than_10_hive` test')
 
     output = run_and_get_output(r"--op-type", r"transfer_operation", r"--op-body-regex", r"\"amount\":\"[0-9]{5,}\"", r"--ops-file", r"blocks/3286849.json")
     output = output.splitlines()
@@ -37,7 +36,7 @@ def test_find_transfers_greater_than_10_hive():
     compare(output, patterns)
 
 def test_find_transfers_greater_than_1_hive_less_than_10():
-    tt.logger.info('Start `test_find_transfers_greater_than_1_hive_less_than_10` test')
+    print('Start `test_find_transfers_greater_than_1_hive_less_than_10` test')
 
     output = run_and_get_output(r"--op-type", r"transfer_operation", r"--op-body-regex", r"(\"to\":\"d)(.*)(\"amount\":\")([0-9]{4}\")", r"--ops-file", r"blocks/3286849.json")
     output = output.splitlines()
@@ -49,7 +48,7 @@ def test_find_transfers_greater_than_1_hive_less_than_10():
     compare(output, patterns)
 
 def test_find_comments_with_filled_title():
-    tt.logger.info('Start `test_find_comments_with_filled_title` test')
+    print('Start `test_find_comments_with_filled_title` test')
 
     output = run_and_get_output(r"--op-type", r"comment_operation", r"--op-body-regex", r"(\"title\")(\s*:\s*\")([A-Za-z0-9\s]+)(.*)(\"body\")", r"--ops-file", r"blocks/6531076.json")
     output = output.splitlines()
@@ -62,7 +61,7 @@ def test_find_comments_with_filled_title():
     compare(output, patterns)
 
 def test_find_follow_for_particular_accounts():
-    tt.logger.info('Start `test_find_follow_for_particular_accounts` test')
+    print('Start `test_find_follow_for_particular_accounts` test')
 
     output = run_and_get_output(r"--op-type", r"custom_json_operation", r"--op-body-regex", r"(\"id\")(\s*:\s*)(\"follow\")(\s*,\s*)(\"json\")(.*)(\\\"following)(.{1}\")(\s*:\s*)(.{1}\")((xiaokongcom)|(jfelton5))(.{1}\")", r"--ops-file", r"blocks/5771683.json")
     output = output.splitlines()

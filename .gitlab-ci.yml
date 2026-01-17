@@ -1418,11 +1418,8 @@ op_body_filter_tests:
   image:
     name: $HAF_IMAGE_NAME
     entrypoint: [""]
-  before_script:
-    # Install git, build tools, and Python 3.14 dev headers for submodule init and C extension compilation
-    # libffi-dev: for cffi, python3-dev: for Python.h
-    - sudo apt-get update -qq && sudo apt-get install -y -qq git build-essential libffi-dev python3-dev python3.14-dev 2>/dev/null || sudo apt-get install -y -qq git build-essential libffi-dev python3-dev || true
-    - !reference [.init_submodules, before_script]
+  # No submodule initialization needed - this test only uses the op_body_filter binary
+  # and pytest with no external dependencies (test_tools dependency removed)
   script:
     - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_op_body_filter_tests.sh
   artifacts:
