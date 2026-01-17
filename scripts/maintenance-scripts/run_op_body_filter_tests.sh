@@ -49,6 +49,8 @@ python3.14 -m pip install --quiet pytest pytest-xdist
 echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
 cd "${REPO_DIR}/tests/integration/tools/op_body_filter"
-pytest --junitxml report.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "not mirrornet" "${ARGS[@]}"
+# Use --confcutdir to prevent loading conftest.py from parent directories
+# (the parent conftest imports sqlalchemy and test_tools which we don't need)
+pytest --confcutdir=. --junitxml report.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "not mirrornet" "${ARGS[@]}"
 
 test_end
