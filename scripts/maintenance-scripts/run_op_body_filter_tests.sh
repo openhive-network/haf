@@ -1,6 +1,12 @@
 #! /bin/bash
 set -xeuo pipefail
 
+# Install git (needed by ci_common.sh for logging commit hash)
+if ! command -v git &>/dev/null; then
+  sudo apt-get update -qq
+  sudo apt-get install -y -qq git >/dev/null 2>&1
+fi
+
 # Install Python 3.14 if not already available (HAF image should have it)
 if ! command -v python3.14 &>/dev/null; then
   # Add PPA manually to avoid add-apt-repository which fails in DinD due to IPv6/Launchpad API issues
