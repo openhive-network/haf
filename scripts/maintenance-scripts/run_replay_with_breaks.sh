@@ -1,4 +1,12 @@
 #! /bin/bash
+#
+# DISABLED: This test needs redesign - see https://gitlab.syncad.com/hive/haf/-/issues/314
+# The test attempts to verify crash recovery but doesn't account for:
+# - PostgreSQL WAL recovery (ensures consistent state after crash)
+# - hived's sql_serializer WAL (also ensures consistency)
+# These WAL mechanisms mean the database will recover to a consistent state after crash,
+# which invalidates some of this test's assumptions about detecting corruption.
+#
 # Test scenario
 # This is a durability test which checks if syncing blocks
 # works correctly when during replay the hived is broken with SIG_INT
