@@ -466,8 +466,8 @@ detect_changes:
         exit 0
       fi
     # Initialize submodules for fresh build (required for nested submodules like rocksdb)
-    # Uses the same robust approach as other HAF jobs - handles feature branch submodules
-    - !reference [.init_submodules, before_script]
+    # Uses full submodule init since builds need rocksdb, zstd, fc, etc.
+    - !reference [.init_submodules_full, before_script]
   tags:
     - public-runner-docker
 
