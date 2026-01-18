@@ -78,6 +78,32 @@ def test_live_sync_apply_block_fail(haf_node):
 
     haf_node.api.debug_node.debug_throw_exception(throw_exception=False)
 
+    # Check for fork record BEFORE generating new blocks - the fork should already be recorded
+    # Wait for block 6 to be processed first (the last successful block before the failed one)
+    wait_for_block_in_database(haf_node.session, 6, timeout=10)
+
+    # Wait for the fork record - check immediately after the failed block, not after recovery
+    # The fork at block 6 should be recorded as soon as block 7 fails
+    sql_check = "SELECT exists(SELECT 1 FROM hafd.fork WHERE block_num = 6);"
+    sql_debug = "SELECT * FROM hafd.fork ORDER BY block_num;"
+    fork_detected = False
+    for i in range(60):  # Try up to 60 times with 0.5s delay (30s total for slow CI)
+        if haf_node.query_one(sql_check):
+            fork_detected = True
+            tt.logger.info(f"Fork at block 6 detected after {(i+1)*0.5}s")
+            break
+        time.sleep(0.5)
+
+    if not fork_detected:
+        # Diagnostic output on failure
+        fork_records = haf_node.query_all(sql_debug)
+        tt.logger.error(f"Fork table contents: {fork_records}")
+        head, irr = display_blocks_information(haf_node)
+        tt.logger.error(f"Head block: {head}, Irreversible: {irr}")
+
+    assert fork_detected, "Fork at block 6 was not detected in the database within 30s"
+
+    # Now continue with generating new blocks after fork is confirmed
     haf_node.api.debug_node.debug_generate_blocks(
         debug_key=tt.Account("initminer").private_key,
         count=4, # blocks 7,8,9,10
@@ -87,16 +113,4 @@ def test_live_sync_apply_block_fail(haf_node):
     )
 
     wait_for_block_in_database(haf_node.session, 10, timeout=10)
-
-    # check if fork on block 7(back to block 6) was detected
-    # Wait for the fork record to be written - it may take a moment after block processing
-    # Use longer timeout (15s) to handle slow CI environments
-    sql = "SELECT exists(SELECT 1 FROM hafd.fork WHERE block_num = 6);"
-    fork_detected = False
-    for _ in range(30):  # Try up to 30 times with 0.5s delay (15s total)
-        if haf_node.query_one(sql):
-            fork_detected = True
-            break
-        time.sleep(0.5)
-    assert fork_detected, "Fork at block 6 was not detected in the database"
 
