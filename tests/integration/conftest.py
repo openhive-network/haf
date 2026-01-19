@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Tuple, Iterable
 from random import randbytes
@@ -12,6 +13,8 @@ from sqlalchemy.orm import sessionmaker, close_all_sessions
 from sqlalchemy.pool import NullPool
 
 from test_tools.__private.scope.scope_fixtures import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from test_tools.__private.user_handles.get_implementation import get_implementation
+from test_tools.__private.node import Node
 import test_tools as tt
 
 import shared_tools.networks_architecture as networks
@@ -33,6 +36,13 @@ class SQLNodesPreparer(NodesPreparer):
             node.config.psql_url = str(self.db_url(cnt))
             node.config.psql_first_block = self.start_block
             apply_block_log_type_to_monolithic_workaround(node)
+
+            # Increase initialization timeout for nodes with sql_serializer.
+            # Under CI load with parallel tests, the default 5-second beekeepy timeout
+            # is insufficient for port detection. This matches HafNode behavior.
+            node_impl = get_implementation(node, Node)
+            with node_impl.update_settings() as settings:
+                settings.initialization_timeout = timedelta(seconds=30)
 
         for node in builder.nodes:
             apply_block_log_type_to_monolithic_workaround(node)
