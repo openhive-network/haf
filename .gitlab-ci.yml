@@ -389,6 +389,7 @@ detect_changes:
       dotenv: detect_changes.env
     expire_in: 1 day
   tags:
+    - public-runner-docker
     - data-cache-storage  # Needs NFS access to find caches
 
 .haf_image_build:
@@ -750,6 +751,7 @@ dump_snapshot_5m_mirrornet:
     #Tests use mirrornet_snapshot fixture which combines NFS snapshot with local block_log
     - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot "$SNAPSHOTS_PATH/5m_mirrornet/snapshot/"
   tags:
+    - public-runner-docker
     - data-cache-storage
     - fastest
 
@@ -1158,6 +1160,7 @@ replay_filtered_haf_data_accounts_body_operations:
       "$CACHE_MANAGER" put "haf_filtered" "${FILTERED_CACHE_KEY}" "${DATA_CACHE_DIR}"
       echo "Filtered cache stored successfully"
   tags:
+    - public-runner-docker
     - data-cache-storage
     - fastest
 
@@ -1200,6 +1203,7 @@ block_api_tests:
       # Just keep PostgreSQL running for the tests - no need to start hived
       command: ["--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh"]
   tags:
+    - public-runner-docker
     - data-cache-storage
     - fast
 
@@ -1272,6 +1276,7 @@ prepare_haf_data:
     BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
   tags:
+    - public-runner-docker
     - data-cache-storage
     - fastest
 
@@ -1317,6 +1322,7 @@ dead_app_auto_detach:
     paths:
     - scenario*.log
   tags:
+    - public-runner-docker
     - data-cache-storage
     - fast
 
@@ -1357,6 +1363,7 @@ start_haf_as_service:
     paths:
     - docker_entrypoint.log
   tags:
+    - public-runner-docker
     - data-cache-storage
     - fast
 
@@ -1366,6 +1373,7 @@ cleanup_haf_cache_manual:
   variables:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
   tags:
+    - public-runner-docker
     - data-cache-storage
     - fast
 
@@ -1375,6 +1383,7 @@ cleanup_haf_snapshot_from_cache:
   variables:
     CLEANUP_PATH_PATTERN: "/cache/snapshots_pipeline_*"
   tags:
+    - public-runner-docker
     - data-cache-storage
     - fast
 
@@ -1384,6 +1393,7 @@ cleanup_old_haf_cache:
   variables:
     CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
   tags:
+    - public-runner-docker
     - data-cache-storage
     - fast
 
