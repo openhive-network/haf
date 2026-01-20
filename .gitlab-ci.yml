@@ -55,7 +55,7 @@ variables:
   GIT_SUBMODULE_STRATEGY: none
   # Force HTTPS for submodule URLs (helps with nested submodules)
   GIT_SUBMODULE_FORCE_HTTPS: "true"
-  # Allow file:// protocol for nested submodules (required for test-tools in hive)
+  # Allow file:// protocol for nested submodules
   GIT_CONFIG_COUNT: 1
   GIT_CONFIG_KEY_0: "protocol.file.allow"
   GIT_CONFIG_VALUE_0: "always"
@@ -118,7 +118,7 @@ default:
   - "**/generated_during_*/**/*.sst"
 
 # Manual submodule initialization - needed because hive submodule is on a feature branch
-# This version only clones test-related submodules (test-tools, tests_api) - use for test jobs
+# This version only clones test-related submodules (tests_api) - use for test jobs
 .init_submodules:
   before_script: &init_submodules
     - |
@@ -137,7 +137,7 @@ default:
       git fetch origin develop
       git checkout $HIVE_COMMIT
       # Initialize only test-related submodules inside hive (skip rocksdb, zstd, fc, appbase, compression_dictionaries)
-      git submodule update --init tests/python/hive-local-tools/test-tools tests/python/hive-local-tools/tests_api
+      git submodule update --init tests/python/hive-local-tools/tests_api
       cd ..
       # Update any remaining HAF submodules (currently none besides hive which is handled above)
       git submodule update --init
@@ -206,7 +206,7 @@ verify_poetry_lock_sanity:
   variables:
     PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
   before_script:
-    # Initialize submodules (hive is on a feature branch with updated test-tools)
+    # Initialize submodules
     - !reference [.init_submodules, before_script]
     # Regenerate poetry.lock for Python 3.14 compatibility
     - poetry -C "${PYPROJECT_DIR}" env use python3
