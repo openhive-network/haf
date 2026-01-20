@@ -494,12 +494,21 @@ AS
 $BODY$
 DECLARE
     __blocks_to_delete hafd.block_id[];
+    __current_state hafd.sync_state;
 BEGIN
+    -- Early exit: During massive sync (REINDEX state), all blocks are on fork 0,
+    -- so there can't be any orphan forks. This avoids expensive full table scans.
+    -- Forks only happen during P2P/LIVE sync when receiving blocks from network.
+    SELECT state INTO __current_state FROM hafd.hive_state;
+    IF __current_state = 'REINDEX' THEN
+        RETURN;
+    END IF;
+
     -- Identify blocks to delete:
     -- For each block_num <= _new_irreversible_block:
     -- Keep block with HIGHEST fork_id (and all blocks on fork 0).
     -- Delete others (orphans).
-    
+
     WITH orphans AS (
         SELECT hb.block_id
         FROM hafd.blocks hb

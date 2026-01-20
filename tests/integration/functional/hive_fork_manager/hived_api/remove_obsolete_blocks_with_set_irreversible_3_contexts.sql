@@ -69,6 +69,10 @@ BEGIN
     -- SUMMARY:
     -- We have 3 forks: 1 (blocks: 4,5,6,7,10), 2 (blocks: 7,8,9), 3 (blocks: 8,9,10)
     -- 3 contexts working on fork/block: 1/6, 2/8, 3/9
+
+    -- Set state to P2P to simulate live sync where forks can happen
+    -- (remove_orphan_forks skips execution during REINDEX state)
+    UPDATE hafd.hive_state SET state = 'P2P';
 END;
 $BODY$
 ;
