@@ -106,6 +106,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void livesync_data_dumper::trigger_data_flush( cached_data_t& cached_data, int last_block_num ) {
     FC_ASSERT( cached_data.blocks.size() == 1, "LIVE sync can only process one block" );
+    _currently_processing_block = last_block_num;
     _block_writer->trigger( std::move( cached_data.blocks ), last_block_num );
     _operation_writer->trigger( std::move( cached_data.operations ), last_block_num );
     _transaction_writer->trigger( std::move( cached_data.transactions ), last_block_num);
@@ -121,6 +122,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_writer->complete_data_processing();
     _account_operations_writer->complete_data_processing();
     _applied_hardforks_writer->complete_data_processing();
+    _currently_processing_block = 0;
     if (app.is_interrupt_request())
     {
       cancel();
@@ -170,8 +172,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     // when servicing on_post_apply signal, it is possible that we already passed this block
     // to wal (or even dump to the db), applications could already process it, so we cannot simply
     // remove it from db, we need to start an artificial fork to allow apps to rewind from it
-    if ( _last_dumped_block != block_num ) {
-      // the block failed before we dumped it to the db, so we don't need to do anything
+    uint32_t processing_block = _currently_processing_block.load();
+    ilog("on_block_fail(${b}): processing=${p}, last_dumped=${l}",
+         ("b", block_num)("p", processing_block)("l", _last_dumped_block));
+    if ( processing_block != block_num && _last_dumped_block != block_num ) {
+      // the block failed before we started processing it, so we don't need to do anything
       return;
     }
 
