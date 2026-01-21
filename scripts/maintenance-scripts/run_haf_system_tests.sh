@@ -41,7 +41,7 @@ python3.14 -m venv venv/
 . venv/bin/activate
 python3.14 -m pip install pipx
 python3.14 -m pipx ensurepath
-pipx install poetry
+pipx install poetry==2.1.3
 (cd "${REPO_DIR}/tests/integration/haf-local-tools" && poetry install)
 echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
