@@ -39,10 +39,7 @@ echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreati
 python3.14 -m venv venv/
 # shellcheck disable=SC1091
 . venv/bin/activate
-python3.14 -m pip install pipx
-python3.14 -m pipx ensurepath
-pipx install poetry==2.1.3
-(cd "${REPO_DIR}/tests/integration/haf-local-tools" && poetry install)
+(cd "${REPO_DIR}/tests/integration/haf-local-tools" && /home/hived_admin/.local/bin/poetry install)
 echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
 # Run process_openapi script unit tests
