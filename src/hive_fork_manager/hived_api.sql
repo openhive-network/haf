@@ -496,11 +496,12 @@ DECLARE
     __blocks_to_delete hafd.block_id[];
     __current_state hafd.sync_state;
 BEGIN
-    -- Early exit: During massive sync (REINDEX state), all blocks are on fork 0,
-    -- so there can't be any orphan forks. This avoids expensive full table scans.
-    -- Forks only happen during P2P/LIVE sync when receiving blocks from network.
+    -- Early exit: Forks only happen during LIVE mode when receiving blocks from
+    -- the network in real-time. During REINDEX (block log replay) and P2P (catching
+    -- up from network), all blocks are on a single fork, so there can't be any
+    -- orphan forks. This avoids expensive full table scans.
     SELECT state INTO __current_state FROM hafd.hive_state;
-    IF __current_state = 'REINDEX' THEN
+    IF __current_state != 'LIVE' THEN
         RETURN;
     END IF;
 
