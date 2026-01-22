@@ -260,6 +260,10 @@ BEGIN
     ;
 
     UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
+
+    -- Set state to LIVE to enable orphan fork cleanup
+    -- (remove_orphan_forks only executes during LIVE state)
+    UPDATE hafd.hive_state SET state = 'LIVE';
 END;
 $BODY$
 ;
