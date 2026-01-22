@@ -241,6 +241,13 @@ ENV HAF_INSTALL_EXTENSION=no
 USER haf_admin
 WORKDIR /home/haf_admin
 
+# Install Poetry for CI tests
+ARG POETRY_VERSION=2.1.3
+RUN curl -sSL https://install.python-poetry.org | python3 - && \
+    /home/haf_admin/.local/bin/poetry self update ${POETRY_VERSION} && \
+    /home/haf_admin/.local/bin/poetry self add "poetry-dynamic-versioning[plugin]@>=1.0.0,<2.2.0"
+ENV PATH="/home/haf_admin/.local/bin:$PATH"
+
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/docker_entrypoint.sh" .
 RUN mkdir -p /home/haf_admin/source/scripts /home/haf_admin/source/hive/scripts /home/haf_admin/source/docker && chown -R haf_admin:users /home/haf_admin/source
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/scripts/" /home/haf_admin/source/scripts

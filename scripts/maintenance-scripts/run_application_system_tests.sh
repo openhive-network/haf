@@ -36,24 +36,9 @@ export PYTEST_NUMBER_OF_PROCESSES="${PYTEST_NUMBER_OF_PROCESSES:-8}"
 export DB_URL="postgresql://haf_admin@127.0.0.1:5432/$DB_NAME"
 
 echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
-
-# Debug: show PATH and poetry location
-echo "DEBUG: Current PATH: $PATH"
-echo "DEBUG: Looking for poetry in common locations..."
-ls -la /home/hived_admin/.local/bin/poetry 2>/dev/null || echo "DEBUG: /home/hived_admin/.local/bin/poetry not found"
-ls -la /home/haf_admin/.local/bin/poetry 2>/dev/null || echo "DEBUG: /home/haf_admin/.local/bin/poetry not found"
-which poetry 2>/dev/null || echo "DEBUG: poetry not in PATH"
-
-# Add ci-base-image poetry location to PATH
-export PATH="/home/hived_admin/.local/bin:$PATH"
-echo "DEBUG: Updated PATH: $PATH"
-which poetry || echo "DEBUG: poetry still not found after PATH update"
-
 python3.14 -m venv venv/
 # shellcheck disable=SC1091
 . venv/bin/activate
-echo "DEBUG: PATH after venv activation: $PATH"
-which poetry || echo "DEBUG: poetry not found after venv activation"
 (cd "${REPO_DIR}/tests/integration/haf-local-tools" && poetry install)
 echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
