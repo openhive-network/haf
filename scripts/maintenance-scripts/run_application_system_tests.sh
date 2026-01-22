@@ -39,7 +39,7 @@ echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreati
 python3.14 -m venv venv/
 # shellcheck disable=SC1091
 . venv/bin/activate
-(cd "${REPO_DIR}/tests/integration/haf-local-tools" && /home/hived_admin/.local/bin/poetry install)
+(cd "${REPO_DIR}/tests/integration/haf-local-tools" && poetry install)
 echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
 
