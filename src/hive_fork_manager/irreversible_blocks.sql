@@ -200,13 +200,13 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_id_to_num_idx ON hafd.transac
 
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations USING btree( hafd.operation_id_to_block_num(id), id);
 
--- Expression index for operations_view DISTINCT ON queries
--- Matches ORDER BY: operation_id_to_block_num(id), operation_id_to_pos(id), block_id DESC
--- Enables index scan for DISTINCT ON and predicate pushdown on block_num
+-- Optimized expression index for operations_view canonical block selection
+-- Uses (id >> 8) to combine block_num and seq_in_block into single 8-byte value
+-- Uses fork_id only (not full block_id) since block_num is already in first column
+-- This reduces index size by ~50% compared to 3-column version (~12 bytes/row vs ~24 bytes/row)
 CREATE INDEX IF NOT EXISTS hive_operations_view_idx ON hafd.operations (
-    hafd.operation_id_to_block_num(id),
-    hafd.operation_id_to_pos(id),
-    block_id DESC
+    (id >> 8),                              -- combines (block_num << 24) | seq_in_block
+    hafd.block_id_to_fork(block_id) DESC    -- just fork_id, not full block_id
 );
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
 CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (hafd.operation_id_to_type_id(id), hafd.operation_id_to_block_num(id));

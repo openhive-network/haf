@@ -54,8 +54,9 @@ WHERE NOT EXISTS (
 -- =============================================================================
 -- operations_view - For each (block_num, seq_in_block), show highest fork_id version
 -- =============================================================================
--- Uses NOT EXISTS for efficient queries.
--- operation_id_to_pos extracts the unique sequence number within a block.
+-- Uses NOT EXISTS with optimized index pattern:
+-- - (id >> 8) combines block_num and seq_in_block into single value (masks out type_id)
+-- - Compares fork_id only (not full block_id) since block_num is already matched
 CREATE OR REPLACE VIEW hive.operations_view AS
 SELECT
     ho.id,
@@ -68,15 +69,14 @@ SELECT
 FROM hafd.operations ho
 WHERE NOT EXISTS (
     SELECT 1 FROM hafd.operations ho2
-    WHERE hafd.operation_id_to_block_num(ho2.id) = hafd.operation_id_to_block_num(ho.id)
-      AND hafd.operation_id_to_pos(ho2.id) = hafd.operation_id_to_pos(ho.id)
-      AND ho2.block_id > ho.block_id
+    WHERE (ho2.id >> 8) = (ho.id >> 8)
+      AND hafd.block_id_to_fork(ho2.block_id) > hafd.block_id_to_fork(ho.block_id)
 );
 
 -- =============================================================================
 -- operations_view_extended - For each (block_num, seq_in_block), show highest fork_id version with timestamp
 -- =============================================================================
--- Uses NOT EXISTS for efficient queries.
+-- Uses NOT EXISTS with optimized index pattern (same as operations_view).
 CREATE OR REPLACE VIEW hive.operations_view_extended AS
 SELECT
     ho.id,
@@ -91,9 +91,8 @@ FROM hafd.operations ho
 JOIN hafd.blocks b ON b.block_id = ho.block_id
 WHERE NOT EXISTS (
     SELECT 1 FROM hafd.operations ho2
-    WHERE hafd.operation_id_to_block_num(ho2.id) = hafd.operation_id_to_block_num(ho.id)
-      AND hafd.operation_id_to_pos(ho2.id) = hafd.operation_id_to_pos(ho.id)
-      AND ho2.block_id > ho.block_id
+    WHERE (ho2.id >> 8) = (ho.id >> 8)
+      AND hafd.block_id_to_fork(ho2.block_id) > hafd.block_id_to_fork(ho.block_id)
 );
 
 -- =============================================================================
@@ -241,7 +240,7 @@ WHERE hafd.block_id_to_num(ht.block_id) <= hafd.block_id_to_num(hs.consistent_bl
         AND ht2.block_id > ht.block_id
   );
 
--- Uses NOT EXISTS for efficient queries.
+-- Uses NOT EXISTS with optimized index pattern.
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
 SELECT
     ho.id,
@@ -257,13 +256,12 @@ WHERE hafd.operation_id_to_block_num(ho.id) <= hafd.block_id_to_num(hs.consisten
   AND hafd.block_id_to_fork(ho.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
   AND NOT EXISTS (
       SELECT 1 FROM hafd.operations ho2
-      WHERE hafd.operation_id_to_block_num(ho2.id) = hafd.operation_id_to_block_num(ho.id)
-        AND hafd.operation_id_to_pos(ho2.id) = hafd.operation_id_to_pos(ho.id)
+      WHERE (ho2.id >> 8) = (ho.id >> 8)
         AND hafd.block_id_to_fork(ho2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-        AND ho2.block_id > ho.block_id
+        AND hafd.block_id_to_fork(ho2.block_id) > hafd.block_id_to_fork(ho.block_id)
   );
 
--- Uses NOT EXISTS for efficient queries.
+-- Uses NOT EXISTS with optimized index pattern.
 CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
 SELECT
     ho.id,
@@ -281,10 +279,9 @@ WHERE hafd.operation_id_to_block_num(ho.id) <= hafd.block_id_to_num(hs.consisten
   AND hafd.block_id_to_fork(ho.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
   AND NOT EXISTS (
       SELECT 1 FROM hafd.operations ho2
-      WHERE hafd.operation_id_to_block_num(ho2.id) = hafd.operation_id_to_block_num(ho.id)
-        AND hafd.operation_id_to_pos(ho2.id) = hafd.operation_id_to_pos(ho.id)
+      WHERE (ho2.id >> 8) = (ho.id >> 8)
         AND hafd.block_id_to_fork(ho2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-        AND ho2.block_id > ho.block_id
+        AND hafd.block_id_to_fork(ho2.block_id) > hafd.block_id_to_fork(ho.block_id)
   );
 
 -- Uses NOT EXISTS for efficient queries.

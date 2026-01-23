@@ -199,7 +199,6 @@ HAF uses a unified table architecture where all block data (irreversible and rev
 ```sql
 -- block_id encodes both block number and fork ID
 -- block_id = (block_num << 32) | fork_id
--- Fork 0 = irreversible, Fork 1+ = reversible forks
 
 -- Create block_id
 SELECT hafd.make_block_id(block_num, fork_id);
@@ -220,6 +219,34 @@ Key tables using `block_id`:
 - `hafd.accounts` - Account creation records
 - `hafd.account_operations` - Account-operation mappings
 
+### Fork Model (IMPORTANT)
+
+**There is NO special fork_id that indicates "canonical" or "irreversible".**
+
+- Fork IDs are assigned sequentially as new forks are detected (1, 2, 3, ...)
+- When the fork resolution algorithm chooses a new canonical fork, that fork's blocks become the canonical chain
+- **Irreversible blocks keep their original fork_id** - they stay with the fork_id on which they were produced
+- Non-canonical (orphan) blocks are cleaned up by `hive.remove_orphan_forks()` during LIVE mode
+- After cleanup, each block_num has exactly ONE version (the canonical one)
+
+**Canonical block selection**: For any given block_num, the canonical version is the one with the **highest fork_id** (highest block_id). This is because newer forks supersede older ones.
+
+```sql
+-- To find canonical version of a block: pick highest block_id per block_num
+-- The views (hive.blocks_view, hive.operations_view) handle this automatically
+
+-- Example: operations_view uses NOT EXISTS to find canonical operations
+WHERE NOT EXISTS (
+    SELECT 1 FROM hafd.operations ho2
+    WHERE same_block_num_and_pos(ho2, ho)
+      AND ho2.block_id > ho.block_id  -- newer fork exists
+);
+```
+
+**Sync states and forks**:
+- REINDEX/P2P: Only one fork exists (fork_id=1 typically), no deduplication needed
+- LIVE: Multiple forks can exist temporarily, deduplication needed for views
+
 ### Migration Example: Hivemind
 
 Hivemind MR !992 shows the pattern for adapting to unified tables:
@@ -231,14 +258,12 @@ VALUES (:num, :hash, :prev, ...);
 
 -- After (new schema with block_id)
 INSERT INTO hafd.blocks (block_id, hash, prev, ...)
-VALUES (hafd.make_block_id(:num, 0), :hash, :prev, ...);
+VALUES (hafd.make_block_id(:num, 1), :hash, :prev, ...);
 
 -- Querying block numbers (extract from block_id)
 SELECT *, hafd.block_id_to_num(block_id) AS num
 FROM hafd.blocks ORDER BY block_id DESC LIMIT 1;
 ```
-
-Note: Fork ID 0 is used for irreversible/massive sync data. Applications inserting mock data or during massive sync should use fork 0.
 
 ## Troubleshooting
 
