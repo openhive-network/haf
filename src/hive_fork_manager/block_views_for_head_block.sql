@@ -17,7 +17,8 @@
 -- =============================================================================
 -- blocks_view - Uses block_id from blocks table
 -- =============================================================================
--- Uses NOT EXISTS to filter to canonical rows (highest block_id per block_num).
+-- Uses NOT EXISTS with optimized index pattern:
+-- - Compares fork_id only (not full block_id) since block_num is already matched
 -- This enables efficient ORDER BY num DESC LIMIT 1 queries via index backward scan.
 CREATE OR REPLACE VIEW hive.blocks_view AS
 SELECT
@@ -31,13 +32,14 @@ FROM hafd.blocks hb
 WHERE NOT EXISTS (
     SELECT 1 FROM hafd.blocks hb2
     WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
-      AND hb2.block_id > hb.block_id
+      AND hafd.block_id_to_fork(hb2.block_id) > hafd.block_id_to_fork(hb.block_id)
 );
 
 -- =============================================================================
 -- transactions_view - For each (block_num, trx_in_block), show highest fork_id version
 -- =============================================================================
--- Uses NOT EXISTS for efficient queries.
+-- Uses NOT EXISTS with optimized index pattern:
+-- - Compares fork_id only (not full block_id) since block_num is already matched
 CREATE OR REPLACE VIEW hive.transactions_view AS
 SELECT
     hafd.block_id_to_num(ht.block_id) AS block_num,
@@ -48,7 +50,7 @@ WHERE NOT EXISTS (
     SELECT 1 FROM hafd.transactions ht2
     WHERE hafd.block_id_to_num(ht2.block_id) = hafd.block_id_to_num(ht.block_id)
       AND ht2.trx_in_block = ht.trx_in_block
-      AND ht2.block_id > ht.block_id
+      AND hafd.block_id_to_fork(ht2.block_id) > hafd.block_id_to_fork(ht.block_id)
 );
 
 -- =============================================================================
@@ -202,7 +204,7 @@ AND NOT EXISTS (
 -- Each table needs its own windowing since rows have their own block_ids.
 -- =============================================================================
 
--- Uses NOT EXISTS for efficient queries with irreversibility constraints.
+-- Uses NOT EXISTS with optimized index pattern.
 CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS
 SELECT
     hafd.block_id_to_num(hb.block_id) AS num,
@@ -219,10 +221,10 @@ WHERE hafd.block_id_to_num(hb.block_id) <= hafd.block_id_to_num(hs.consistent_bl
       SELECT 1 FROM hafd.blocks hb2
       WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
         AND hafd.block_id_to_fork(hb2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-        AND hb2.block_id > hb.block_id
+        AND hafd.block_id_to_fork(hb2.block_id) > hafd.block_id_to_fork(hb.block_id)
   );
 
--- Uses NOT EXISTS for efficient queries.
+-- Uses NOT EXISTS with optimized index pattern.
 CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS
 SELECT
     hafd.block_id_to_num(ht.block_id) AS block_num,
@@ -237,7 +239,7 @@ WHERE hafd.block_id_to_num(ht.block_id) <= hafd.block_id_to_num(hs.consistent_bl
       WHERE hafd.block_id_to_num(ht2.block_id) = hafd.block_id_to_num(ht.block_id)
         AND ht2.trx_in_block = ht.trx_in_block
         AND hafd.block_id_to_fork(ht2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-        AND ht2.block_id > ht.block_id
+        AND hafd.block_id_to_fork(ht2.block_id) > hafd.block_id_to_fork(ht.block_id)
   );
 
 -- Uses NOT EXISTS with optimized index pattern.
