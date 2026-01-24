@@ -46,8 +46,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     bool is_creating_account = true;
 
     // check if pow_operation is creating new account
-    if( _chain_db.find_account(op.get_worker_account()) != nullptr ) {
-        impacted_account = op.get_worker_account();
+    if( _chain_db.find_account(op.worker_account) != nullptr ) {
+        impacted_account = op.worker_account;
         is_creating_account = false;
     }
 
