@@ -73,14 +73,14 @@ Cache keys are HAF commit SHAs. The cache-manager handles:
 ## Code Style
 
 ### Python
-- Use `black` formatter before pushing
+- Use `ruff format` before pushing
 - Poetry for dependency management
 - Tests use pytest
 
 ```bash
 cd tests/integration/haf-local-tools
 poetry install
-poetry run black .
+poetry run ruff format .
 ```
 
 ### SQL
