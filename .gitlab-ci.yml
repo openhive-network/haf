@@ -1445,3 +1445,10 @@ op_body_filter_tests:
   interruptible: true
   tags:
     - public-runner-docker
+
+# Test override: pin prepare_haf_data to builder-12 only
+prepare_haf_data:
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - hive-builder-12
