@@ -219,14 +219,11 @@ WHERE hah.block_id = (
 
 -- =============================================================================
 -- Irreversible views - Only show data from irreversible blocks
--- A row is irreversible if:
---   1. block_num <= block_id_to_num(consistent_block)
---   2. For that block_num, it has the MAX(fork_id) where fork_id <= block_id_to_fork(consistent_block)
--- Each table needs its own windowing since rows have their own block_ids.
+-- Uses NOT EXISTS pattern for canonical selection - fast when only one version
+-- exists (typical case), still correct when multiple fork versions exist.
 -- =============================================================================
 
--- Uses correlated MAX subquery for canonical selection within irreversible range.
--- Allows predicate pushdown for efficient queries.
+-- NOT EXISTS pattern: keeps row only if no higher fork_id version exists
 CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS
 SELECT
     hafd.block_id_to_num(hb.block_id) AS num,
@@ -238,16 +235,14 @@ SELECT
 FROM hafd.blocks hb
 CROSS JOIN hafd.hive_state hs
 WHERE hafd.block_id_to_num(hb.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(hb.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-  AND hb.block_id = (
-      SELECT MAX(hb2.block_id)
-      FROM hafd.blocks hb2
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.blocks hb2
       WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
-        AND hafd.block_id_to_fork(hb2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+        AND hb2.block_id > hb.block_id
+        AND hafd.block_id_to_num(hb2.block_id) <= hafd.block_id_to_num(hs.consistent_block)
   );
 
--- Uses correlated MAX subquery for canonical selection within irreversible range.
--- Allows predicate pushdown for efficient queries.
+-- NOT EXISTS pattern for transactions
 CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS
 SELECT
     hafd.block_id_to_num(ht.block_id) AS block_num,
@@ -256,17 +251,16 @@ SELECT
 FROM hafd.transactions ht
 CROSS JOIN hafd.hive_state hs
 WHERE hafd.block_id_to_num(ht.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(ht.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-  AND ht.block_id = (
-      SELECT MAX(ht2.block_id)
-      FROM hafd.transactions ht2
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.transactions ht2
       WHERE hafd.block_id_to_num(ht2.block_id) = hafd.block_id_to_num(ht.block_id)
         AND ht2.trx_in_block = ht.trx_in_block
-        AND hafd.block_id_to_fork(ht2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+        AND ht2.block_id > ht.block_id
+        AND hafd.block_id_to_num(ht2.block_id) <= hafd.block_id_to_num(hs.consistent_block)
   );
 
--- Uses correlated MAX subquery for canonical selection within irreversible range.
--- Allows predicate pushdown for efficient range queries.
+-- NOT EXISTS pattern for operations - optimized for full table scans
+-- Short-circuits quickly when only one version exists (typical case)
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
 SELECT
     ho.id,
@@ -279,16 +273,14 @@ SELECT
 FROM hafd.operations ho
 CROSS JOIN hafd.hive_state hs
 WHERE hafd.operation_id_to_block_num(ho.id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(ho.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-  AND ho.block_id = (
-      SELECT MAX(ho2.block_id)
-      FROM hafd.operations ho2
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.operations ho2
       WHERE (ho2.id >> 8) = (ho.id >> 8)
-        AND hafd.operation_id_to_block_num(ho2.id) = hafd.operation_id_to_block_num(ho.id)
-        AND hafd.block_id_to_fork(ho2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+        AND ho2.block_id > ho.block_id
+        AND hafd.operation_id_to_block_num(ho2.id) <= hafd.block_id_to_num(hs.consistent_block)
   );
 
--- Uses DISTINCT ON for canonical selection within irreversible range.
+-- Extended operations view with timestamp
 CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
 SELECT
     ov.id,
@@ -296,15 +288,18 @@ SELECT
     ov.trx_in_block,
     ov.op_pos,
     ov.op_type_id,
-    b.created_at AS timestamp,
+    hb.created_at AS timestamp,
     ov.body_binary,
     ov.body
 FROM hive.irreversible_operations_view ov
-JOIN hafd.blocks b ON b.block_id = (
-    SELECT ho.block_id FROM hafd.operations ho WHERE ho.id = ov.id
-);
+JOIN hafd.blocks hb ON hafd.block_id_to_num(hb.block_id) = ov.block_num
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.blocks hb2
+      WHERE hafd.block_id_to_num(hb2.block_id) = ov.block_num
+        AND hb2.block_id > hb.block_id
+  );
 
--- Uses correlated MAX subquery for canonical selection within irreversible range.
+-- NOT EXISTS pattern for account_operations
 CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS
 SELECT
     hafd.block_id_to_num(hao.block_id) AS block_num,
@@ -317,22 +312,15 @@ FROM hafd.account_operations hao
 JOIN hafd.operations ho ON ho.block_id = hao.block_id AND hafd.operation_id_to_pos(ho.id) = hao.seq_in_block
 CROSS JOIN hafd.hive_state hs
 WHERE hafd.block_id_to_num(hao.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(hao.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-  AND hao.block_id = (
-      SELECT MAX(hao2.block_id)
-      FROM hafd.account_operations hao2
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.account_operations hao2
       WHERE hao2.account_id = hao.account_id
         AND hao2.account_op_seq_no = hao.account_op_seq_no
+        AND hao2.block_id > hao.block_id
         AND hafd.block_id_to_num(hao2.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-        AND hafd.block_id_to_fork(hao2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-        AND hao2.block_id = (
-            SELECT MAX(hb.block_id) FROM hafd.blocks hb
-            WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(hao2.block_id)
-              AND hafd.block_id_to_fork(hb.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-        )
   );
 
--- Uses correlated MAX subquery for canonical selection within irreversible range.
+-- NOT EXISTS pattern for accounts with NULL block_id handling
 CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS
 SELECT ha.id, ha.name
 FROM hafd.accounts ha
@@ -344,53 +332,36 @@ WHERE (
         SELECT 1 FROM hafd.accounts ha2
         WHERE ha2.id = ha.id AND ha2.block_id IS NOT NULL
           AND hafd.block_id_to_num(ha2.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-          AND hafd.block_id_to_fork(ha2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-          AND ha2.block_id = (
-              SELECT MAX(hb.block_id) FROM hafd.blocks hb
-              WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha2.block_id)
-                AND hafd.block_id_to_fork(hb.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-          )
     )
 )
 OR (
-    -- Account is from a canonical block in irreversible range AND is the highest block_id version
+    -- Account is from an irreversible block AND no higher block_id version exists
     ha.block_id IS NOT NULL
     AND hafd.block_id_to_num(ha.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-    AND hafd.block_id_to_fork(ha.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-    AND ha.block_id = (
-        SELECT MAX(hb.block_id) FROM hafd.blocks hb
-        WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha.block_id)
-          AND hafd.block_id_to_fork(hb.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-    )
-    AND ha.block_id = (
-        SELECT MAX(ha2.block_id)
-        FROM hafd.accounts ha2
+    AND NOT EXISTS (
+        SELECT 1 FROM hafd.accounts ha2
         WHERE ha2.id = ha.id
           AND ha2.block_id IS NOT NULL
+          AND ha2.block_id > ha.block_id
           AND hafd.block_id_to_num(ha2.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-          AND hafd.block_id_to_fork(ha2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-          AND ha2.block_id = (
-              SELECT MAX(hb.block_id) FROM hafd.blocks hb
-              WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha2.block_id)
-                AND hafd.block_id_to_fork(hb.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-          )
     )
 );
 
--- Uses correlated MAX subquery for canonical selection within irreversible range.
+-- NOT EXISTS pattern for transactions_multisig
 CREATE OR REPLACE VIEW hive.irreversible_transactions_multisig_view AS
 SELECT htm.trx_hash, htm.signature
 FROM hafd.transactions_multisig htm
 CROSS JOIN hafd.hive_state hs
 WHERE hafd.block_id_to_num(htm.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(htm.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-  AND htm.block_id = (
-      SELECT MAX(hb.block_id) FROM hafd.blocks hb
-      WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(htm.block_id)
-        AND hafd.block_id_to_fork(hb.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.transactions_multisig htm2
+      WHERE htm2.trx_hash = htm.trx_hash
+        AND htm2.signature = htm.signature
+        AND htm2.block_id > htm.block_id
+        AND hafd.block_id_to_num(htm2.block_id) <= hafd.block_id_to_num(hs.consistent_block)
   );
 
--- Uses correlated MAX subquery for canonical selection within irreversible range.
+-- NOT EXISTS pattern for applied_hardforks
 CREATE OR REPLACE VIEW hive.irreversible_applied_hardforks_view AS
 SELECT
     hah.hardfork_num,
@@ -399,16 +370,9 @@ SELECT
 FROM hafd.applied_hardforks hah
 CROSS JOIN hafd.hive_state hs
 WHERE hafd.block_id_to_num(hah.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-  AND hafd.block_id_to_fork(hah.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-  AND hah.block_id = (
-      SELECT MAX(hah2.block_id)
-      FROM hafd.applied_hardforks hah2
+  AND NOT EXISTS (
+      SELECT 1 FROM hafd.applied_hardforks hah2
       WHERE hah2.hardfork_num = hah.hardfork_num
+        AND hah2.block_id > hah.block_id
         AND hafd.block_id_to_num(hah2.block_id) <= hafd.block_id_to_num(hs.consistent_block)
-        AND hafd.block_id_to_fork(hah2.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-        AND hah2.block_id = (
-            SELECT MAX(hb.block_id) FROM hafd.blocks hb
-            WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(hah2.block_id)
-              AND hafd.block_id_to_fork(hb.block_id) <= hafd.block_id_to_fork(hs.consistent_block)
-        )
   );
