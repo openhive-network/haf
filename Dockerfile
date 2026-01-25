@@ -3,7 +3,7 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG CI_IMAGE_TAG=ubuntu24.04-py3.14-5
+ARG CI_IMAGE_TAG=ubuntu24.04-py3.14-7
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
@@ -71,7 +71,7 @@ RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service 
 USER haf_admin
 WORKDIR /home/haf_admin
 
-FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py3.14-5 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py3.14-7 AS ci-base-image
 
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 

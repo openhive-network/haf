@@ -93,17 +93,7 @@ install_all_dev_packages() {
 
   sudo usermod -a -G users -c "PostgreSQL daemon account" postgres
 
-  pushd /tmp
-  git clone --depth 1 --branch 7.8.1 https://github.com/jtv/libpqxx.git
-  pushd libpqxx
-  mkdir build
-  pushd build
-  cmake -DCMAKE_BUILD_TYPE=Release -GNinja -DBUILD_TEST=OFF ..
-  ninja install
-  popd
-  popd
-  rm -r libpqxx
-  popd
+  # Note: libpqxx is now pre-installed in ci-base-image (ubuntu24.04-py3.14-7+)
 }
 
 install_user_packages() {
