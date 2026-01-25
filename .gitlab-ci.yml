@@ -404,6 +404,9 @@ detect_changes:
       artifacts: true
       optional: true  # Optional for tagged builds where detect_changes is skipped
   before_script:
+    # Set up docker-container buildx builder (required for registry caching)
+    # This is needed because the default docker driver doesn't support cache export
+    - !reference [.docker_image_builder_job_template, before_script]
     # Fix git safe.directory issue on some runners (CVE-2022-24765)
     - git config --global --add safe.directory '*'
     # Fetch required scripts from hive repo (symlinks don't work without submodule checkout)
