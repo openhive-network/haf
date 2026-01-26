@@ -508,6 +508,7 @@ files = []
 develop = true
 
 [package.dependencies]
+hiveio-test-tools = "0.0.1.dev1404+dbfbe3b"
 msgspec = "^0.20.0"
 pytest = "8.3.5"
 pytest-asyncio = "0.25.3"
@@ -517,7 +518,6 @@ pytest-timeout = "2.3.1"
 pytest-xdist = "3.6.1"
 shared-tools = {path = "shared-tools", develop = true}
 tavern = "3.0.2"
-test-tools = "0.0.1.dev1399+49adc69"
 tests_api = {path = "tests_api", develop = true}
 types-PyYAML = "6.0.12.11"
 
@@ -586,6 +586,31 @@ msgspec = "0.20.0"
 type = "legacy"
 url = "https://gitlab.syncad.com/api/v4/projects/362/packages/pypi/simple"
 reference = "gitlab-schemas"
+
+[[package]]
+name = "hiveio-test-tools"
+version = "0.0.1.dev1404+dbfbe3b"
+description = "Tools for testing hive software"
+optional = false
+python-versions = ">=3.12,<4"
+groups = ["main"]
+files = [
+    {file = "hiveio_test_tools-0.0.1.dev1404+dbfbe3b-py3-none-any.whl", hash = "sha256:ce1a1cf89dd5e69d9ffd82e994d9a15f82d5cc8eb90bf77afd2256935b8274a4"},
+]
+
+[package.dependencies]
+abstractcp = "0.9.9"
+hiveio-beekeepy = "1.28.4.dev24+dd092e5"
+hiveio-schemas = ">=1.28.1.dev14"
+hiveio-wax = "1.28.4rc1.dev124+72cfe8ea"
+loguru = "0.7.2"
+msgspec = ">=0.20.0,<0.21.0"
+python-dateutil = "2.8.2"
+
+[package.source]
+type = "legacy"
+url = "https://gitlab.syncad.com/api/v4/projects/300/packages/pypi/simple"
+reference = "gitlab-test-tools"
 
 [[package]]
 name = "hiveio-wax"
@@ -2119,31 +2144,6 @@ dev = ["Faker", "allure-pytest", "colorlog", "coverage[toml]", "exceptiongroup",
 docs = ["commonmark", "docutils", "pygments", "recommonmark", "sphinx (>=7,<8)", "sphinx-markdown-tables", "sphinx_rtd_theme"]
 grpc = ["google-api-python-client", "grpcio", "grpcio-reflection", "grpcio-status", "proto-plus", "protobuf (>=5,<6)"]
 mqtt = ["paho-mqtt (>=1.3.1,<=1.6.1)"]
-
-[[package]]
-name = "test-tools"
-version = "0.0.1.dev1399+49adc69"
-description = "Tools for testing hive software"
-optional = false
-python-versions = ">=3.12,<4"
-groups = ["main"]
-files = [
-    {file = "test_tools-0.0.1.dev1399+49adc69-py3-none-any.whl", hash = "sha256:1388a16510c665111e0fe90fb47660523383c12f28a4529fe2427563c5507d61"},
-]
-
-[package.dependencies]
-abstractcp = "0.9.9"
-hiveio-beekeepy = "1.28.4.dev24+dd092e5"
-hiveio-schemas = ">=1.28.1.dev14"
-hiveio-wax = "1.28.4rc1.dev124+72cfe8ea"
-loguru = "0.7.2"
-msgspec = ">=0.20.0,<0.21.0"
-python-dateutil = "2.8.2"
-
-[package.source]
-type = "legacy"
-url = "https://gitlab.syncad.com/api/v4/projects/300/packages/pypi/simple"
-reference = "gitlab-test-tools"
 
 [[package]]
 name = "tests-api"
