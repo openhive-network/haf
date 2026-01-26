@@ -648,35 +648,21 @@ AS
 $BODY$
 DECLARE
     __schema TEXT;
-    __is_forking BOOL;
 BEGIN
-    SELECT hc.schema, hc.is_forking INTO __schema, __is_forking
+    SELECT hc.schema INTO __schema
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    IF __is_forking THEN
-        -- Forking context: filter by context block range
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.accounts_view AS
-            SELECT ha.id, ha.name
-            FROM hafd.accounts ha
-            LEFT JOIN %s.blocks_view_internal b ON b.block_id = ha.block_id
-            , %s.context_data_view c
-            WHERE ha.block_id IS NULL OR b.block_id IS NOT NULL
-            ;', __schema, __schema, __schema
-        );
-    ELSE
-        -- Non-forking context: filter by min_block
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.accounts_view AS
-            SELECT ha.id, ha.name
-            FROM hafd.accounts ha
-            LEFT JOIN %s.blocks_view_internal b ON b.block_id = ha.block_id
-            , %s.context_data_view c
-            WHERE ha.block_id IS NULL OR b.block_id IS NOT NULL
-            ;', __schema, __schema, __schema
-        );
-    END IF;
+    -- Both forking and non-forking contexts use the same query:
+    -- blocks_view_internal already handles the context-specific filtering
+    EXECUTE format(
+        'CREATE OR REPLACE VIEW %s.accounts_view AS
+        SELECT ha.id, ha.name
+        FROM hafd.accounts ha
+        LEFT JOIN %s.blocks_view_internal b ON b.block_id = ha.block_id
+        WHERE ha.block_id IS NULL OR b.block_id IS NOT NULL
+        ;', __schema, __schema
+    );
     PERFORM hive.adjust_view_ownership(_context_name, 'accounts_view');
 END;
 $BODY$
