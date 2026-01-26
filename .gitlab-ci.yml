@@ -78,6 +78,9 @@ variables:
   PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
+
+  # Set to "true" to run poetry update and test with latest dependency versions
+  TEST_WITH_LATEST_DEPENDENCIES: "false"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
   DATA_CACHE_HAF_PREFIX: "/cache/haf"
   # Local path for HAF data cache (fetched from NFS by cache-manager)
@@ -210,6 +213,11 @@ verify_poetry_lock_sanity:
     - !reference [.init_submodules, before_script]
     - poetry -C "${PYPROJECT_DIR}" env use python3
     - source $(poetry -C "${PYPROJECT_DIR}" env info --path)/bin/activate
+    - |
+      if [ "${TEST_WITH_LATEST_DEPENDENCIES}" = "true" ]; then
+        echo "TEST_WITH_LATEST_DEPENDENCIES is enabled - running poetry update to get latest dependencies"
+        poetry -C "${PYPROJECT_DIR}" update
+      fi
     - poetry -C "${PYPROJECT_DIR}" install
   tags:
     - public-runner-docker
@@ -760,6 +768,11 @@ hfm_functional_tests_testnet:
       python3 -m venv venv/
       . venv/bin/activate
       cd $CI_PROJECT_DIR/tests/integration/haf-local-tools
+      # Update to latest dependencies if requested
+      if [ "${TEST_WITH_LATEST_DEPENDENCIES}" = "true" ]; then
+        echo "TEST_WITH_LATEST_DEPENDENCIES is enabled - running poetry update to get latest dependencies"
+        poetry update
+      fi
       # Retry poetry install up to 3 times (transient network failures downloading packages)
       poetry_success=false
       for attempt in 1 2 3; do

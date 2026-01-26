@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/python-poetry/poetry
+    rev: 1.8.3
+    hooks:
+      - id: poetry-lock
+        name: checking if poetry.lock is consistent with pyproject.toml
+        args: [--check]
+
+  - repo: local
+    hooks:
+      - id: ruff
+        name: linting code with Ruff
+        entry: ruff check --fix
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: format code using Ruff formatter
+        entry: ruff format
+        language: system
+        types: [python]
+      - id: mypy
+        name: type check with mypy
+        entry: mypy
+        language: system
+        types: [python]
