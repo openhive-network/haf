@@ -36,7 +36,7 @@ hive_local_tools = { path = "../../../hive/tests/python/hive-local-tools", devel
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.3.5"
-pytest-asyncio = ">=0.25.3"
+pytest-asyncio = ">=0.26.0"
 
 [tool.poetry.group.static-analysis.dependencies]
 mypy = ">=1.19.1"
