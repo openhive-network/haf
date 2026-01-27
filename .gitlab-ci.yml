@@ -506,8 +506,8 @@ detect_changes:
       echo "Build decision: BUILD_ACTION=${BUILD_ACTION}"
       echo -e "\e[0Ksection_end:$(date +%s):smart_build\r\e[0K"
 
-      # Export for use in later script blocks
-      export BUILD_ACTION CACHED_IMAGE IMAGE_NAME IMAGE_COMMIT
+      # Export for use in later script blocks (avoid IMAGE_NAME - conflicts with other scripts)
+      export BUILD_ACTION CACHED_IMAGE_NAME IMAGE_COMMIT
     # Handle skip and retag cases - exit early if not building
     - |
       source smart_build_decision.env
@@ -530,26 +530,28 @@ detect_changes:
           exit 0
           ;;
         retag)
+          # Get target image name from env file (use local var to avoid conflicts)
+          TARGET_IMAGE="${IMAGE_NAME}"
           echo "=== Re-tagging cached image to current commit ==="
           echo "Source: ${CACHED_IMAGE_NAME}"
-          echo "Target: ${IMAGE_NAME}"
+          echo "Target: ${TARGET_IMAGE}"
 
           # Login to registry
           echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
 
           # Pull, tag, and push
           docker pull "${CACHED_IMAGE_NAME}"
-          docker tag "${CACHED_IMAGE_NAME}" "${IMAGE_NAME}"
-          docker push "${IMAGE_NAME}"
+          docker tag "${CACHED_IMAGE_NAME}" "${TARGET_IMAGE}"
+          docker push "${TARGET_IMAGE}"
 
           # Create dotenv artifact with new image name
-          echo "HAF_IMAGE_NAME=${IMAGE_NAME}" > docker_image_name.env
-          echo "HAF_INSTANCE=${IMAGE_NAME}" >> docker_image_name.env
+          echo "HAF_IMAGE_NAME=${TARGET_IMAGE}" > docker_image_name.env
+          echo "HAF_INSTANCE=${TARGET_IMAGE}" >> docker_image_name.env
           echo "BUILD_ACTION=retag" >> docker_image_name.env
           # Extract binaries from the image (downstream jobs need them)
           echo "Extracting binaries from re-tagged image..."
           SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
-          "$SCRIPTS_PATH/ci-helpers/export-data-from-docker-image.sh" "${IMAGE_NAME}" "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          "$SCRIPTS_PATH/ci-helpers/export-data-from-docker-image.sh" "${TARGET_IMAGE}" "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
           chmod -Rc a+rwx "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
           ls -la "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/"
           echo "Image re-tagged and binaries extracted"
