@@ -399,6 +399,11 @@ detect_changes:
     # Build jobs need ALL submodules (including rocksdb, zstd) for compilation
     # Override the global 'none' strategy with 'recursive' for builds
     GIT_SUBMODULE_STRATEGY: recursive
+    # Smart image build thresholds - re-tag when gap > 20, rebuild when > 25
+    RETAG_THRESHOLD: "20"
+    SEARCH_DEPTH: "25"
+    # Source patterns that trigger rebuilds (from source-patterns.sh)
+    SOURCE_PATTERNS: "src/,hive/,cmake/,CMakeLists.txt,Dockerfile,docker/,scripts/,common_includes/,.gitmodules"
   needs:
     - job: detect_changes
       artifacts: true
@@ -421,54 +426,144 @@ detect_changes:
         curl -fsSL "${HIVE_RAW_URL}/${script}" -o "$TARGET"
         chmod +x "$TARGET"
       done
-    # Early exit if QUICK_TEST or AUTO_SKIP_BUILD is true
-    # This allows us to skip the expensive build while still producing required artifacts
+    # Fetch smart-image-build.sh from common-ci-configuration
     - |
-      SKIP_BUILD=false
-      CACHE_COMMIT=""
+      COMMON_CI_URL="https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/bash"
+      echo "Fetching smart-image-build.sh from common-ci-configuration..."
+      curl -fsSL "${COMMON_CI_URL}/smart-image-build.sh" -o /tmp/smart-image-build.sh
+      chmod +x /tmp/smart-image-build.sh
+    # Determine build action using smart-image-build.sh
+    # This handles: build (full), retag (re-tag cached image), skip (use cached as-is)
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):smart_build[collapsed=true]\r\e[0KDetermining build action..."
+
+      # Determine if build can be skipped and get cached commit
+      SKIP_BUILD_ALLOWED=false
+      CACHED_COMMIT=""
+      CACHED_IMAGE=""
 
       # Check for manual QUICK_TEST mode
       if [[ "${QUICK_TEST:-false}" == "true" ]]; then
-        echo "=== Skipping build (QUICK_TEST=true) ==="
-        SKIP_BUILD=true
-        CACHE_COMMIT="${QUICK_TEST_HAF_COMMIT}"
-        if [[ -z "$CACHE_COMMIT" ]]; then
+        SKIP_BUILD_ALLOWED=true
+        CACHED_COMMIT="${QUICK_TEST_HAF_COMMIT}"
+        if [[ -z "$CACHED_COMMIT" ]]; then
           echo "ERROR: QUICK_TEST=true but QUICK_TEST_HAF_COMMIT not set"
           exit 1
         fi
       # Check for automatic skip mode (from detect_changes)
       elif [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
-        echo "=== Skipping build (AUTO_SKIP_BUILD=true) ==="
-        SKIP_BUILD=true
-        CACHE_COMMIT="${HAF_COMMIT}"
+        SKIP_BUILD_ALLOWED=true
+        CACHED_COMMIT="${HAF_COMMIT}"
       fi
 
-      if [[ "$SKIP_BUILD" == "true" ]]; then
-        CACHE_SHORT="${CACHE_COMMIT:0:8}"
+      # Build cached image name if we have a cached commit
+      if [[ -n "$CACHED_COMMIT" ]]; then
+        CACHE_SHORT="${CACHED_COMMIT:0:8}"
         case "${HIVE_NETWORK_TYPE:-mainnet}" in
           testnet)
-            SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf/testnet:${CACHE_SHORT}"
+            CACHED_IMAGE="registry.gitlab.syncad.com/hive/haf/testnet:${CACHE_SHORT}"
+            IMAGE_SUBPATH="testnet"
             ;;
           mirrornet)
-            SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf/mirrornet:${CACHE_SHORT}"
+            CACHED_IMAGE="registry.gitlab.syncad.com/hive/haf/mirrornet:${CACHE_SHORT}"
+            IMAGE_SUBPATH="mirrornet"
             ;;
           *)
-            SKIP_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf:${CACHE_SHORT}"
+            CACHED_IMAGE="registry.gitlab.syncad.com/hive/haf:${CACHE_SHORT}"
+            IMAGE_SUBPATH=""
             ;;
         esac
-        echo "Using cached HAF image: ${SKIP_IMAGE_NAME}"
-        # Create dotenv artifact with cached image name
-        echo "HAF_IMAGE_NAME=${SKIP_IMAGE_NAME}" > docker_image_name.env
-        echo "HAF_INSTANCE=${SKIP_IMAGE_NAME}" >> docker_image_name.env
-        # Extract binaries from cached Docker image (downstream jobs need them)
-        echo "Extracting binaries from cached image..."
-        SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
-        "$SCRIPTS_PATH/ci-helpers/export-data-from-docker-image.sh" "${SKIP_IMAGE_NAME}" "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
-        chmod -Rc a+rwx "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
-        ls -la "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/"
-        echo "Build skipped - binaries extracted from cached image"
-        exit 0
       fi
+
+      # Build smart-image-build arguments
+      BUILD_ARGS=(
+        --registry="registry.gitlab.syncad.com/hive/haf"
+        --patterns="${SOURCE_PATTERNS}"
+        --commit="${CI_COMMIT_SHA}"
+        --retag-threshold="${RETAG_THRESHOLD}"
+        --search-depth="${SEARCH_DEPTH}"
+        --output=smart_build_decision.env
+      )
+
+      # Add image subpath for testnet/mirrornet
+      if [[ -n "${IMAGE_SUBPATH:-}" ]]; then
+        BUILD_ARGS+=(--image="${IMAGE_SUBPATH}")
+      fi
+
+      # Add skip-build info if we can skip
+      if [[ "$SKIP_BUILD_ALLOWED" == "true" && -n "$CACHED_COMMIT" && -n "$CACHED_IMAGE" ]]; then
+        BUILD_ARGS+=(
+          --skip-build
+          --cached-commit="${CACHED_COMMIT}"
+          --cached-image="${CACHED_IMAGE}"
+        )
+      fi
+
+      # Run smart-image-build to determine action
+      /tmp/smart-image-build.sh "${BUILD_ARGS[@]}"
+      source smart_build_decision.env
+      echo ""
+      echo "Build decision: BUILD_ACTION=${BUILD_ACTION}"
+      echo -e "\e[0Ksection_end:$(date +%s):smart_build\r\e[0K"
+
+      # Export for use in later script blocks
+      export BUILD_ACTION CACHED_IMAGE IMAGE_NAME IMAGE_COMMIT
+    # Handle skip and retag cases - exit early if not building
+    - |
+      source smart_build_decision.env
+
+      case "$BUILD_ACTION" in
+        skip)
+          echo "=== Using cached image (no re-tag needed) ==="
+          echo "Cached image: ${CACHED_IMAGE_NAME}"
+          # Create dotenv artifact with cached image name
+          echo "HAF_IMAGE_NAME=${CACHED_IMAGE_NAME}" > docker_image_name.env
+          echo "HAF_INSTANCE=${CACHED_IMAGE_NAME}" >> docker_image_name.env
+          echo "BUILD_ACTION=skip" >> docker_image_name.env
+          # Extract binaries from cached Docker image (downstream jobs need them)
+          echo "Extracting binaries from cached image..."
+          SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
+          "$SCRIPTS_PATH/ci-helpers/export-data-from-docker-image.sh" "${CACHED_IMAGE_NAME}" "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          chmod -Rc a+rwx "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          ls -la "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/"
+          echo "Build skipped - binaries extracted from cached image"
+          exit 0
+          ;;
+        retag)
+          echo "=== Re-tagging cached image to current commit ==="
+          echo "Source: ${CACHED_IMAGE_NAME}"
+          echo "Target: ${IMAGE_NAME}"
+
+          # Login to registry
+          echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+
+          # Pull, tag, and push
+          docker pull "${CACHED_IMAGE_NAME}"
+          docker tag "${CACHED_IMAGE_NAME}" "${IMAGE_NAME}"
+          docker push "${IMAGE_NAME}"
+
+          # Create dotenv artifact with new image name
+          echo "HAF_IMAGE_NAME=${IMAGE_NAME}" > docker_image_name.env
+          echo "HAF_INSTANCE=${IMAGE_NAME}" >> docker_image_name.env
+          echo "BUILD_ACTION=retag" >> docker_image_name.env
+          # Extract binaries from the image (downstream jobs need them)
+          echo "Extracting binaries from re-tagged image..."
+          SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
+          "$SCRIPTS_PATH/ci-helpers/export-data-from-docker-image.sh" "${IMAGE_NAME}" "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          chmod -Rc a+rwx "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          ls -la "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/"
+          echo "Image re-tagged and binaries extracted"
+          exit 0
+          ;;
+        build)
+          echo "=== Full build required ==="
+          # Continue to submodule init and actual build
+          ;;
+        *)
+          echo "ERROR: Unknown BUILD_ACTION: $BUILD_ACTION"
+          exit 1
+          ;;
+      esac
     # Initialize submodules for fresh build (required for nested submodules like rocksdb)
     # Uses full submodule init since builds need rocksdb, zstd, fc, etc.
     - !reference [.init_submodules_full, before_script]

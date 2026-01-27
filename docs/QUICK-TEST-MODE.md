@@ -80,6 +80,40 @@ Total: ~50 min               └────────────────
 3. **prepare_haf_data**: Fetches cached replay data from NFS instead of replaying
 4. **Tests**: Run using the cached data
 
+## Smart Image Re-tagging
+
+When only test/doc changes are made over multiple commits, the cached image may become "stale" - meaning downstream repos searching for the image by commit history won't find it because too many commits have been pushed.
+
+The build system uses smart re-tagging to prevent this:
+
+```
+                Gap = commits between cached image and current HEAD
+                (only counting source-changing commits)
+
+┌─────────────────────┬─────────────────────┬─────────────────────┐
+│ Gap <= 20           │ 20 < Gap <= 25      │ Gap > 25            │
+│ (Small)             │ (Medium)            │ (Large)             │
+├─────────────────────┼─────────────────────┼─────────────────────┤
+│ Use cached image    │ Re-tag cached       │ Force full rebuild  │
+│ as-is               │ image to current    │ (fail-safe)         │
+│                     │ commit SHA          │                     │
+│                     │                     │                     │
+│ Downstream search   │ Keeps image         │ Ensures image       │
+│ will find it        │ findable within     │ always exists       │
+│                     │ search depth        │                     │
+└─────────────────────┴─────────────────────┴─────────────────────┘
+```
+
+**Configuration variables:**
+- `RETAG_THRESHOLD=20` - Re-tag when gap exceeds this
+- `SEARCH_DEPTH=25` - Force rebuild when gap exceeds this
+
+**Why this matters:**
+- Downstream repos (like HAfAH, hivemind) search HAF's git history to find images
+- Default search depth is 25 commits (counting only source-changing commits)
+- If many test-only commits are pushed, the cached image may fall outside this window
+- Smart re-tagging ensures images are always findable without unnecessary rebuilds
+
 ## Finding Available Cache Keys
 
 ### Option 1: Use the helper script
