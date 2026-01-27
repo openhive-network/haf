@@ -81,6 +81,7 @@ variables:
 
   # Set to "true" to run poetry update and test with latest dependency versions
   TEST_WITH_LATEST_DEPENDENCIES: "false"
+  STATIC_ANALYSIS_WITH_LATEST_DEPENDENCIES: "false"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
   DATA_CACHE_HAF_PREFIX: "/cache/haf"
   # Local path for HAF data cache (fetched from NFS by cache-manager)
@@ -213,11 +214,7 @@ verify_poetry_lock_sanity:
     - !reference [.init_submodules, before_script]
     - poetry -C "${PYPROJECT_DIR}" env use python3
     - source $(poetry -C "${PYPROJECT_DIR}" env info --path)/bin/activate
-    - |
-      if [ "${TEST_WITH_LATEST_DEPENDENCIES}" = "true" ]; then
-        echo "TEST_WITH_LATEST_DEPENDENCIES is enabled - running poetry update to get latest dependencies"
-        poetry -C "${PYPROJECT_DIR}" update
-      fi
+    - !reference [.update_deps_for_static_analysis, script]
     - poetry -C "${PYPROJECT_DIR}" install
   tags:
     - public-runner-docker
@@ -767,12 +764,11 @@ hfm_functional_tests_testnet:
       # Create isolated venv (no --system-site-packages) to avoid Python 3.12 packages conflicting with 3.14
       python3 -m venv venv/
       . venv/bin/activate
+      # Set PYPROJECT_DIR for anchor reference
+      export PYPROJECT_DIR="$CI_PROJECT_DIR/tests/integration/haf-local-tools"
+    - !reference [.update_all_deps, script]
+    - |
       cd $CI_PROJECT_DIR/tests/integration/haf-local-tools
-      # Update to latest dependencies if requested
-      if [ "${TEST_WITH_LATEST_DEPENDENCIES}" = "true" ]; then
-        echo "TEST_WITH_LATEST_DEPENDENCIES is enabled - running poetry update to get latest dependencies"
-        poetry update
-      fi
       # Retry poetry install up to 3 times (transient network failures downloading packages)
       poetry_success=false
       for attempt in 1 2 3; do
