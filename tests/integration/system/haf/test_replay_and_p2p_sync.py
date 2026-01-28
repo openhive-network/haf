@@ -1,6 +1,10 @@
+from datetime import timedelta
+
 import pytest
 
 import test_tools as tt
+from test_tools.__private.node import Node
+from test_tools.__private.user_handles.get_implementation import get_implementation
 
 from haf_local_tools.system.haf import (
     assert_are_blocks_sync_with_haf_db,
@@ -28,6 +32,11 @@ def test_replay_and_p2p_sync(haf_node, psql_index_threshold):
 
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
 
+    # Increase close_timeout for plain hived nodes. Under parallel test execution,
+    # hived can take 10+ seconds to respond to SIGINT due to resource contention.
+    node_impl = get_implementation(init_node, Node)
+    with node_impl.update_settings() as settings:
+        settings.close_timeout = timedelta(seconds=30)
     init_node.close()
     block_log = get_truncated_block_log(init_node, transaction_0["block_num"] + 1)
 
