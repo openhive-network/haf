@@ -1,3 +1,19 @@
+-- Migration: Add last_shadow_vacuum_block to application_loop_state if missing
+-- This handles upgrades from versions before commit 5577ed554
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_attribute a
+        JOIN pg_class c ON a.attrelid = c.oid
+        JOIN pg_namespace n ON c.relnamespace = n.oid
+        WHERE n.nspname = 'hafd'
+        AND c.relname = 'application_loop_state'
+        AND a.attname = 'last_shadow_vacuum_block'
+    ) THEN
+        ALTER TYPE hafd.application_loop_state ADD ATTRIBUTE last_shadow_vacuum_block INTEGER;
+    END IF;
+END $$;
+
 CREATE OR REPLACE FUNCTION hive.set_waiting_for_haf_stage(
     _contexts hive.contexts_group
 )
