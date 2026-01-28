@@ -1246,10 +1246,9 @@ replay_filtered_haf_data_accounts_body_operations:
     DATA_CACHE_DIR: "/cache/haf_filtered_${CI_PIPELINE_ID}_filtered"
     FILTERED_CACHE_KEY: "${CI_PIPELINE_ID}_filtered"
   after_script:
-    # Call parent's after_script
     - rm "${DATA_CACHE_DIR}/replay_running" -f
-    # Store filtered data via cache-manager (creates tar on NFS)
     - |
+      # Store filtered data via cache-manager (creates tar on NFS)
       # Fetch cache-manager from common-ci-configuration
       CACHE_MANAGER="/tmp/cache-manager.sh"
       if [[ ! -x "$CACHE_MANAGER" ]]; then
@@ -1375,6 +1374,8 @@ prepare_haf_data:
     HIVE_NETWORK_TYPE: mainnet
     BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+  after_script:
+    - echo "Cleanup complete"
   tags:
     - public-runner-docker
     - data-cache-storage
