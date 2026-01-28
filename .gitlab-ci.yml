@@ -1448,6 +1448,29 @@ start_haf_as_service:
     HAF_COMMIT: $HAF_COMMIT
   # Note: No before_script/fetch_haf_cache needed - service container already extracts to ${HAF_DATA_CACHE_LOCAL}
   script:
+    # Wait for hived API to be ready (adapted from block_api_tests pattern)
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):wait_hived[collapsed=true]\r\e[0KWaiting for hived API..."
+      python3 -c "
+      import socket
+      import time
+      host = 'haf-instance'
+      port = 8091
+      for i in range(120):
+          try:
+              s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+              s.settimeout(2)
+              s.connect((host, port))
+              s.close()
+              print(f'hived API ready after {i+1} attempts')
+              exit(0)
+          except (socket.error, socket.timeout):
+              print(f'Waiting for hived API... attempt {i+1}/120')
+              time.sleep(5)
+      print('ERROR: hived API not ready after 120 attempts')
+      exit(1)
+      "
+      echo -e "\e[0Ksection_end:$(date +%s):wait_hived\r\e[0K"
     - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
     - |
         curl -XPOST -d '{
