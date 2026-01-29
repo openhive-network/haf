@@ -71,6 +71,7 @@ ADD_PSQL_EXTENSION(
             types/casts.sql
             types/operation/operation_flow.sql
             types/process_operation.sql
+            types/rc_delegation_types.sql
 
             asset_utils.sql
             transaction_utils.sql
