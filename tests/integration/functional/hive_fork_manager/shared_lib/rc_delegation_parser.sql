@@ -57,6 +57,46 @@ BEGIN
     ASSERT _count = 1, 'max_rc=0 (removal) should return 1 row';
 
     -- ==========================================================================
+    -- TEST: Multiple operations in single custom_json
+    -- Format: [["delegate_rc", {...}], ["delegate_rc", {...}], ...]
+    -- ==========================================================================
+
+    -- Two delegate_rc operations with different max_rc values
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[["delegate_rc",{"from":"alice","delegatees":["bob"],"max_rc":1000}],["delegate_rc",{"from":"alice","delegatees":["carol"],"max_rc":2000}]]'
+    );
+    ASSERT _count = 2, 'Two operations should return 2 rows, got ' || _count;
+
+    -- Verify different max_rc values are preserved
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[["delegate_rc",{"from":"alice","delegatees":["bob"],"max_rc":1000}],["delegate_rc",{"from":"alice","delegatees":["carol"],"max_rc":2000}]]'
+    ) WHERE max_rc = 1000;
+    ASSERT _count = 1, 'Should have 1 row with max_rc=1000';
+
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[["delegate_rc",{"from":"alice","delegatees":["bob"],"max_rc":1000}],["delegate_rc",{"from":"alice","delegatees":["carol"],"max_rc":2000}]]'
+    ) WHERE max_rc = 2000;
+    ASSERT _count = 1, 'Should have 1 row with max_rc=2000';
+
+    -- Multiple operations with multiple delegatees each
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[["delegate_rc",{"from":"alice","delegatees":["bob","carol"],"max_rc":1000}],["delegate_rc",{"from":"dave","delegatees":["eve","frank","grace"],"max_rc":5000}]]'
+    );
+    ASSERT _count = 5, 'Two operations with 2+3 delegatees should return 5 rows, got ' || _count;
+
+    -- Mixed operations: only delegate_rc should be parsed
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[["other_op",{"some":"data"}],["delegate_rc",{"from":"alice","delegatees":["bob"],"max_rc":1000}]]'
+    );
+    ASSERT _count = 1, 'Should only parse delegate_rc, ignoring other ops, got ' || _count;
+
+    -- Multiple operations where one is invalid (self-delegation) - should still parse valid ones
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[["delegate_rc",{"from":"alice","delegatees":["alice"],"max_rc":1000}],["delegate_rc",{"from":"bob","delegatees":["carol"],"max_rc":2000}]]'
+    );
+    ASSERT _count = 1, 'Should skip invalid op and return 1 row for valid op, got ' || _count;
+
+    -- ==========================================================================
     -- Invalid cases - should return empty set (0 rows)
     -- ==========================================================================
 
