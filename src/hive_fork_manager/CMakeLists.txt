@@ -61,6 +61,7 @@ ADD_PSQL_EXTENSION(
             authorization.sql
             get_impacted_accounts.sql
             get_impacted_balances.sql
+            rc_delegation.sql
             convert_blocks.sql
             get_legacy_style_operation.sql
             extract_set_witness_properties.sql
@@ -71,7 +72,6 @@ ADD_PSQL_EXTENSION(
             types/casts.sql
             types/operation/operation_flow.sql
             types/process_operation.sql
-            types/rc_delegation_types.sql
 
             asset_utils.sql
             transaction_utils.sql
