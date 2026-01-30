@@ -52,7 +52,6 @@ CREATE INDEX IF NOT EXISTS hive_blocks_block_num_idx ON hafd.blocks (
 );
 
 CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hafd.blocks (producer_account_id);
-CREATE INDEX IF NOT EXISTS hive_blocks_created_at_idx ON hafd.blocks USING btree ( created_at );
 
 CREATE STATISTICS IF NOT EXISTS blocks_block_num_stats ON (hafd.block_id_to_num(block_id)) FROM hafd.blocks;
 
@@ -191,8 +190,6 @@ SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations', '');
 
 CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hafd.applied_hardforks ( block_id );
 
-CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hafd.transactions ( block_id, trx_in_block );
-
 -- Optimized expression index for transactions_view canonical block selection
 -- Uses fork_id only (not full block_id) since block_num is already in first column
 -- This reduces index size by ~28% compared to using full block_id (~10 bytes/row vs ~14 bytes/row)
@@ -202,17 +199,19 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_id_to_num_idx ON hafd.transac
     hafd.block_id_to_fork(block_id) DESC
 );
 
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations USING btree( hafd.operation_id_to_block_num(id), id);
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
-CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (hafd.operation_id_to_type_id(id), hafd.operation_id_to_block_num(id));
+
+-- Index for account_operations_view join: enables efficient lookup by (block_id, seq_in_block)
+-- This is critical for get_account_history performance
+CREATE INDEX IF NOT EXISTS hive_operations_block_id_pos_idx ON hafd.operations (block_id, hafd.operation_id_to_pos(id));
 
 -- Clustering for get_account_history performance
 CLUSTER hafd.account_operations USING hive_account_operations_uq1;
 
--- Index for operation type filtering by account
--- CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations( account_id, hafd.operation_id_to_type_id(operation_id) );
+-- Index for block_num range queries on account_operations
+-- Enables efficient analytics queries like "most active accounts in block range"
+CREATE INDEX IF NOT EXISTS hive_account_operations_block_num_idx ON hafd.account_operations (hafd.block_id_to_num(block_id));
 
-CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hafd.accounts USING btree (block_id);
 CREATE INDEX IF NOT EXISTS hive_accounts_name_idx ON hafd.accounts USING btree (name);
 
 -- =============================================================================

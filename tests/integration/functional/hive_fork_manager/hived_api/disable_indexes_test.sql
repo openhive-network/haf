@@ -91,10 +91,10 @@ BEGIN
     ASSERT NOT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hafd.applied_hardforks exists';
 
 
-    -- Updated index name for unified table architecture: hive_operations_block_num_id_idx
+    -- Check for operations index (block_num, trx_in_block, op_type)
     ASSERT EXISTS(
-        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.operations' AND command LIKE '%hive_operations_block_num_id_idx%'
-    ), 'No hafd.operations index (block_num)';
+        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.operations' AND command LIKE '%hive_operations_block_num_trx_in_block_idx%'
+    ), 'No hafd.operations index (block_num_trx_in_block)';
 
     -- Updated for new schema: account_operations has unique constraint on (account_id, account_op_seq_no, block_id)
     -- Check for the unique constraint index
