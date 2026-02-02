@@ -95,30 +95,30 @@ BEGIN
          , ( 11, 'alice103', hafd.make_block_id(10, 3) )
     ;
 
-    INSERT INTO hafd.account_operations (block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
+    INSERT INTO hafd.account_operations (block_id, operation_id, account_id, transacting_account_id, account_op_seq_no)
     VALUES
-           ( hafd.make_block_id(1, 0), 0, 1, 1, 1 )
-         , ( hafd.make_block_id(2, 0), 0, 1, 1, 2 )
-         , ( hafd.make_block_id(2, 0), 0, 2, 2, 1 )
-         , ( hafd.make_block_id(3, 0), 0, 3, 3, 1 )
+           ( hafd.make_block_id(1, 0), hafd.operation_id(hafd.make_block_id(1, 0), 0, 1), 1, 1, 1 )
+         , ( hafd.make_block_id(2, 0), hafd.operation_id(hafd.make_block_id(2, 0), 0, 1), 1, 1, 2 )
+         , ( hafd.make_block_id(2, 0), hafd.operation_id(hafd.make_block_id(2, 0), 0, 1), 2, 2, 1 )
+         , ( hafd.make_block_id(3, 0), hafd.operation_id(hafd.make_block_id(3, 0), 0, 1), 3, 3, 1 )
     ;
 
-    INSERT INTO hafd.account_operations (block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
+    INSERT INTO hafd.account_operations (block_id, operation_id, account_id, transacting_account_id, account_op_seq_no)
     VALUES
-           ( hafd.make_block_id(4, 1), 0, 4, 4, 1 )
-         , ( hafd.make_block_id(5, 1), 0, 5, 5, 1 )
-         , ( hafd.make_block_id(6, 1), 0, 6, 6, 1 )
-         , ( hafd.make_block_id(7, 1), 0, 7, 7, 1 ) -- must be overriden by fork 2
-         , ( hafd.make_block_id(7, 1), 1, 8, 8, 1 ) -- must be overriden by fork 2
-         , ( hafd.make_block_id(7, 1), 2, 9, 9, 1 ) -- must be overriden by fork 2
-         , ( hafd.make_block_id(7, 2), 0, 7, 7, 2 )
-         , ( hafd.make_block_id(7, 2), 1, 8, 8, 2 ) -- will be abandoned since fork 3 doesn not have this account operation
-         , ( hafd.make_block_id(8, 2), 0, 9, 9, 2 )
-         , ( hafd.make_block_id(7, 2), 0, 9, 9, 3 )
-         , ( hafd.make_block_id(9, 2), 0, 10, 10, 2 )
-         , ( hafd.make_block_id(8, 3), 0, 9, 9, 3 )
-         , ( hafd.make_block_id(9, 3), 0, 10, 10, 3 )
-         , ( hafd.make_block_id(10, 3), 0, 11, 11, 3 )
+           ( hafd.make_block_id(4, 1), hafd.operation_id(hafd.make_block_id(4, 1), 0, 1), 4, 4, 1 )
+         , ( hafd.make_block_id(5, 1), hafd.operation_id(hafd.make_block_id(5, 1), 0, 1), 5, 5, 1 )
+         , ( hafd.make_block_id(6, 1), hafd.operation_id(hafd.make_block_id(6, 1), 0, 1), 6, 6, 1 )
+         , ( hafd.make_block_id(7, 1), hafd.operation_id(hafd.make_block_id(7, 1), 0, 1), 7, 7, 1 ) -- must be overriden by fork 2
+         , ( hafd.make_block_id(7, 1), hafd.operation_id(hafd.make_block_id(7, 1), 1, 1), 8, 8, 1 ) -- must be overriden by fork 2
+         , ( hafd.make_block_id(7, 1), hafd.operation_id(hafd.make_block_id(7, 1), 2, 1), 9, 9, 1 ) -- must be overriden by fork 2
+         , ( hafd.make_block_id(7, 2), hafd.operation_id(hafd.make_block_id(7, 2), 0, 1), 7, 7, 2 )
+         , ( hafd.make_block_id(7, 2), hafd.operation_id(hafd.make_block_id(7, 2), 1, 1), 8, 8, 2 ) -- will be abandoned since fork 3 doesn not have this account operation
+         , ( hafd.make_block_id(8, 2), hafd.operation_id(hafd.make_block_id(8, 2), 0, 1), 9, 9, 2 )
+         , ( hafd.make_block_id(7, 2), hafd.operation_id(hafd.make_block_id(7, 2), 0, 1), 9, 9, 3 )
+         , ( hafd.make_block_id(9, 2), hafd.operation_id(hafd.make_block_id(9, 2), 0, 1), 10, 10, 2 )
+         , ( hafd.make_block_id(8, 3), hafd.operation_id(hafd.make_block_id(8, 3), 0, 1), 9, 9, 3 )
+         , ( hafd.make_block_id(9, 3), hafd.operation_id(hafd.make_block_id(9, 3), 0, 1), 10, 10, 3 )
+         , ( hafd.make_block_id(10, 3), hafd.operation_id(hafd.make_block_id(10, 3), 0, 1), 11, 11, 3 )
     ;
 
 UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8;

@@ -91,32 +91,36 @@ BEGIN
          , ( 1100, 'alice103', hafd.make_block_id(10, 3) )
     ;
 
-    INSERT INTO hafd.account_operations (block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
+    INSERT INTO hafd.account_operations (block_id, operation_id, account_id, transacting_account_id, account_op_seq_no)
     VALUES
-           ( hafd.make_block_id(1, 0), 0, 100, 100, 1 )
-         , ( hafd.make_block_id(2, 0), 0, 100, 100, 2 )
-         , ( hafd.make_block_id(2, 0), 0, 200, 200, 1 )
-         , ( hafd.make_block_id(3, 0), 0, 300, 300, 1 )
-         , ( hafd.make_block_id(4, 0), 0, 400, 400, 1 )
+           ( hafd.make_block_id(1, 0), hafd.operation_id(hafd.make_block_id(1, 0), 0, 1), 100, 100, 1 )
+         , ( hafd.make_block_id(2, 0), hafd.operation_id(hafd.make_block_id(2, 0), 0, 1), 100, 100, 2 )
+         , ( hafd.make_block_id(2, 0), hafd.operation_id(hafd.make_block_id(2, 0), 0, 1), 200, 200, 1 )
+         , ( hafd.make_block_id(3, 0), hafd.operation_id(hafd.make_block_id(3, 0), 0, 1), 300, 300, 1 )
+         , ( hafd.make_block_id(4, 0), hafd.operation_id(hafd.make_block_id(4, 0), 0, 1), 400, 400, 1 )
     ;
 
-    INSERT INTO hafd.account_operations (block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
+    INSERT INTO hafd.account_operations (block_id, operation_id, account_id, transacting_account_id, account_op_seq_no)
     VALUES
-           ( hafd.make_block_id(4, 1), 0, 400, 400, 1 )
-         , ( hafd.make_block_id(5, 1), 0, 500, 500, 1 )
-         , ( hafd.make_block_id(6, 1), 0, 600, 600, 1 )
-         , ( hafd.make_block_id(7, 1), 0, 700, 700, 1 ) -- must be overriden by fork 2
-         , ( hafd.make_block_id(7, 1), 1, 800, 800, 1 ) -- must be overriden by fork 2
-         , ( hafd.make_block_id(7, 1), 2, 900, 900, 1 ) -- must be overriden by fork 2
-         , ( hafd.make_block_id(7, 2), 0, 700, 700, 2 )
-         , ( hafd.make_block_id(7, 2), 1, 800, 800, 2 ) -- will be abandoned since fork 3 doesn not have this account operation
-         , ( hafd.make_block_id(8, 2), 0, 900, 900, 2 )
-         , ( hafd.make_block_id(7, 2), 0, 900, 900, 3 )
-         , ( hafd.make_block_id(9, 2), 0, 1000, 1000, 2 )
-         , ( hafd.make_block_id(9, 3), 0, 900, 900, 3 )
-         , ( hafd.make_block_id(10, 3), 0, 100, 100, 3 )
-         , ( hafd.make_block_id(10, 3), 0, 1100, 1100, 3 )
+           ( hafd.make_block_id(4, 1), hafd.operation_id(hafd.make_block_id(4, 1), 0, 1), 400, 400, 1 )
+         , ( hafd.make_block_id(5, 1), hafd.operation_id(hafd.make_block_id(5, 1), 0, 1), 500, 500, 1 )
+         , ( hafd.make_block_id(6, 1), hafd.operation_id(hafd.make_block_id(6, 1), 0, 1), 600, 600, 1 )
+         , ( hafd.make_block_id(7, 1), hafd.operation_id(hafd.make_block_id(7, 1), 0, 1), 700, 700, 1 ) -- must be overriden by fork 2
+         , ( hafd.make_block_id(7, 1), hafd.operation_id(hafd.make_block_id(7, 1), 1, 1), 800, 800, 1 ) -- must be overriden by fork 2
+         , ( hafd.make_block_id(7, 1), hafd.operation_id(hafd.make_block_id(7, 1), 2, 1), 900, 900, 1 ) -- must be overriden by fork 2
+         , ( hafd.make_block_id(7, 2), hafd.operation_id(hafd.make_block_id(7, 2), 0, 1), 700, 700, 2 )
+         , ( hafd.make_block_id(7, 2), hafd.operation_id(hafd.make_block_id(7, 2), 1, 1), 800, 800, 2 ) -- will be abandoned since fork 3 doesn not have this account operation
+         , ( hafd.make_block_id(8, 2), hafd.operation_id(hafd.make_block_id(8, 2), 0, 1), 900, 900, 2 )
+         , ( hafd.make_block_id(7, 2), hafd.operation_id(hafd.make_block_id(7, 2), 0, 1), 900, 900, 3 )
+         , ( hafd.make_block_id(9, 2), hafd.operation_id(hafd.make_block_id(9, 2), 0, 1), 1000, 1000, 2 )
+         , ( hafd.make_block_id(9, 3), hafd.operation_id(hafd.make_block_id(9, 3), 0, 1), 900, 900, 3 )
+         , ( hafd.make_block_id(10, 3), hafd.operation_id(hafd.make_block_id(10, 3), 0, 1), 100, 100, 3 )
+         , ( hafd.make_block_id(10, 3), hafd.operation_id(hafd.make_block_id(10, 3), 0, 1), 1100, 1100, 3 )
     ;
+
+    -- Mark blocks that have multiple fork versions as conflicts
+    INSERT INTO hafd.block_conflicts (block_num)
+    VALUES (4), (5), (7), (8), (9);
 
     UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(4, 0);
 END;

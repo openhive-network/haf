@@ -20,6 +20,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , uint32_t psql_first_block
     , write_ahead_log_manager& write_ahead_log
     , uint32_t pruning
+    , uint32_t wal_queue_depth
     )
   : _plugin( plugin )
   , _chain_db( chain_db )
@@ -27,7 +28,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   , transactions_controller(transaction_controllers::build_own_transaction_controller(db_url, "Livesync dumper", app, true /*sync_commits*/))
   , _psql_first_block( psql_first_block )
   , _write_ahead_log(write_ahead_log)
-  , _processing_thread(transactions_controller, write_ahead_log, app, pruning)
+  , _processing_thread(transactions_controller, write_ahead_log, app, pruning, wal_queue_depth)
   , _pruning(pruning)
   {
     auto blocks_callback = [this]( std::string&& _text ){
@@ -231,11 +232,13 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   livesync_data_dumper::processing_thread::processing_thread(std::shared_ptr<transaction_controllers::transaction_controller> transactions_controller,
                                                              write_ahead_log_manager& write_ahead_log,
                                                              appbase::application& app,
-                                                             uint32_t pruning) :
+                                                             uint32_t pruning,
+                                                             size_t max_queue_depth) :
     _transactions_controller(transactions_controller),
     _write_ahead_log(write_ahead_log),
     _app(app),
-    _pruning(pruning)
+    _pruning(pruning),
+    _max_queue_depth(max_queue_depth)
   {
     _future = std::async([this]() { run(); });
   }

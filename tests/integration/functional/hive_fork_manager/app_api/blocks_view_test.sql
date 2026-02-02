@@ -33,6 +33,10 @@ BEGIN
     -- Reversible blocks for fork 3: blocks 8-10
     PERFORM test.create_blocks_reversible(8, 10, 3);
 
+    -- Mark blocks that have multiple fork versions as conflicts
+    INSERT INTO hafd.block_conflicts (block_num)
+    VALUES (4), (5), (7), (8), (9);
+
     UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$

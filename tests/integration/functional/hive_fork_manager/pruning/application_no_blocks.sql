@@ -53,13 +53,13 @@ BEGIN
     PERFORM test.create_operations(1, 5);
 
     -- Create account_operations entries (up to block 4, matching old fill_with_blocks_data)
-    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block)
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, operation_id)
     VALUES
-           ( 1, 1, 1, hafd.make_block_id(1, 0), 1 )
-         , ( 1, 1, 2, hafd.make_block_id(2, 0), 1 )
-         , ( 2, 2, 1, hafd.make_block_id(2, 0), 1 )
-         , ( 3, 3, 1, hafd.make_block_id(3, 0), 1 )
-         , ( 4, 4, 1, hafd.make_block_id(4, 0), 1 )
+           ( 1, 1, 1, hafd.make_block_id(1, 0), hafd.operation_id(1, 0, 1) )
+         , ( 1, 1, 2, hafd.make_block_id(2, 0), hafd.operation_id(2, 0, 1) )
+         , ( 2, 2, 1, hafd.make_block_id(2, 0), hafd.operation_id(2, 0, 1) )
+         , ( 3, 3, 1, hafd.make_block_id(3, 0), hafd.operation_id(3, 0, 1) )
+         , ( 4, 4, 1, hafd.make_block_id(4, 0), hafd.operation_id(4, 0, 1) )
     ;
 
     PERFORM hive.prune_blocks_data(4); -- remove all blocks that could be removed

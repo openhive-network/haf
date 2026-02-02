@@ -39,6 +39,10 @@ BEGIN
         , ( hafd.make_block_id(10, 3), '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
+    -- Mark blocks that have multiple fork versions as conflicts
+    INSERT INTO hafd.block_conflicts (block_num)
+    VALUES (4), (5), (7), (8), (9);
+
     UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$

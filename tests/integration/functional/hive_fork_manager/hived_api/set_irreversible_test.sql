@@ -91,13 +91,13 @@ BEGIN
         , ( hafd.make_block_id(5, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(5, 1, 0) )
     ;
 
-    INSERT INTO hafd.account_operations(block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
+    INSERT INTO hafd.account_operations(block_id, operation_id, account_id, transacting_account_id, account_op_seq_no)
     VALUES
-          ( hafd.make_block_id(1, 0), 1, 1, 1, 1 )
-        , ( hafd.make_block_id(2, 0), 1, 1, 1, 2 )
-        , ( hafd.make_block_id(2, 0), 1, 2, 2, 1 )
-        , ( hafd.make_block_id(3, 0), 1, 3, 3, 1 )
-        , ( hafd.make_block_id(4, 0), 1, 4, 4, 1 )
+          ( hafd.make_block_id(1, 0), hafd.operation_id(1, 1, 0), 1, 1, 1 )
+        , ( hafd.make_block_id(2, 0), hafd.operation_id(2, 1, 0), 1, 1, 2 )
+        , ( hafd.make_block_id(2, 0), hafd.operation_id(2, 1, 0), 2, 2, 1 )
+        , ( hafd.make_block_id(3, 0), hafd.operation_id(3, 1, 0), 3, 3, 1 )
+        , ( hafd.make_block_id(4, 0), hafd.operation_id(4, 1, 0), 4, 4, 1 )
     ;
 
     INSERT INTO hafd.applied_hardforks(hardfork_num, block_id, hardfork_vop_id)
@@ -150,9 +150,9 @@ BEGIN
         , ( hafd.make_block_id(9, 1), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE1 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(9, 1, 0) )
     ;
 
-    INSERT INTO hafd.account_operations(block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
+    INSERT INTO hafd.account_operations(block_id, operation_id, account_id, transacting_account_id, account_op_seq_no)
     VALUES
-          ( hafd.make_block_id(6, 1), 1, 6, 6, 1 )
+          ( hafd.make_block_id(6, 1), hafd.operation_id(6, 1, 0), 6, 6, 1 )
     ;
 
     INSERT INTO hafd.applied_hardforks(hardfork_num, block_id, hardfork_vop_id)
@@ -202,10 +202,10 @@ BEGIN
         , ( hafd.make_block_id(9, 2), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(9, 1, 0) )
     ;
 
-    INSERT INTO hafd.account_operations(block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
+    INSERT INTO hafd.account_operations(block_id, operation_id, account_id, transacting_account_id, account_op_seq_no)
     VALUES
-          ( hafd.make_block_id(7, 2), 1, 4, 4, 2 )
-        , ( hafd.make_block_id(7, 2), 1, 7, 7, 1 )
+          ( hafd.make_block_id(7, 2), hafd.operation_id(7, 1, 0), 4, 4, 2 )
+        , ( hafd.make_block_id(7, 2), hafd.operation_id(7, 1, 0), 7, 7, 1 )
     ;
 
     INSERT INTO hafd.applied_hardforks(hardfork_num, block_id, hardfork_vop_id)

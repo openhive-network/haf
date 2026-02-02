@@ -48,10 +48,10 @@ BEGIN
            , ( 2, 'user', hafd.make_block_id(2, 0))
     ;
 
-    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block)
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, operation_id)
     VALUES
-        ( 1, 1, 1, hafd.make_block_id(1, 0), 1 )
-      , ( 2, 2, 1, hafd.make_block_id(2, 0), 1 )
+        ( 1, 1, 1, hafd.make_block_id(1, 0), hafd.operation_id(1, 1, 0) )
+      , ( 2, 2, 1, hafd.make_block_id(2, 0), hafd.operation_id(2, 1, 0) )
     ;
 
     INSERT INTO hafd.applied_hardforks(hardfork_num, block_id, hardfork_vop_id)

@@ -732,29 +732,29 @@ BEGIN
 
     IF __is_forking THEN
         -- Forking context: filter by context block range
+        -- operation_id is stored directly in account_operations (no JOIN needed)
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.account_operations_view AS
             SELECT
                 b.num AS block_num,
                 hao.account_id, hao.transacting_account_id, hao.account_op_seq_no,
-                ho.id AS operation_id,
-                hafd.operation_id_to_type_id(ho.id) AS op_type_id
+                hao.operation_id,
+                hafd.operation_id_to_type_id(hao.operation_id) AS op_type_id
             FROM hafd.account_operations hao
-            JOIN hafd.operations ho ON ho.block_id = hao.block_id AND hafd.operation_id_to_pos(ho.id) = hao.seq_in_block
             JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
             ;', __schema, __schema
         );
     ELSE
         -- Non-forking context: filter by min_block
+        -- operation_id is stored directly in account_operations (no JOIN needed)
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.account_operations_view AS
             SELECT
                 b.num AS block_num,
                 hao.account_id, hao.transacting_account_id, hao.account_op_seq_no,
-                ho.id AS operation_id,
-                hafd.operation_id_to_type_id(ho.id) AS op_type_id
+                hao.operation_id,
+                hafd.operation_id_to_type_id(hao.operation_id) AS op_type_id
             FROM hafd.account_operations hao
-            JOIN hafd.operations ho ON ho.block_id = hao.block_id AND hafd.operation_id_to_pos(ho.id) = hao.seq_in_block
             JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
             ;', __schema, __schema
         );
@@ -778,15 +778,15 @@ BEGIN
     WHERE hc.name = _context_name;
 
     -- All irreversible: show all account operations
+    -- operation_id is stored directly in account_operations (no JOIN needed)
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.account_operations_view AS
         SELECT
             b.num AS block_num,
             hao.account_id, hao.transacting_account_id, hao.account_op_seq_no,
-            ho.id AS operation_id,
-            hafd.operation_id_to_type_id(ho.id) AS op_type_id
+            hao.operation_id,
+            hafd.operation_id_to_type_id(hao.operation_id) AS op_type_id
         FROM hafd.account_operations hao
-        JOIN hafd.operations ho ON ho.block_id = hao.block_id AND hafd.operation_id_to_pos(ho.id) = hao.seq_in_block
         JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
         ;', __schema, __schema
     );

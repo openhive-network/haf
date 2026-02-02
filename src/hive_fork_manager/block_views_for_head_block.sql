@@ -139,6 +139,9 @@ JOIN hive.blocks_view b ON b.num = ov.block_num;
 -- Uses stored operation_id to avoid JOIN with operations table.
 -- This is critical for get_account_history performance (enables LIMIT pushdown).
 -- OPTIMIZATION: When block_conflicts is empty, skips canonical selection entirely.
+-- NOTE: Two-level filtering:
+-- 1. Block-level: row's block must be canonical (highest block_id for block_num)
+-- 2. Account-op level: among canonical rows, keep only highest block_id per (account_id, account_op_seq_no)
 CREATE OR REPLACE VIEW hive.account_operations_view AS
 SELECT
     hafd.block_id_to_num(hao.block_id) AS block_num,
@@ -151,21 +154,46 @@ FROM hafd.account_operations hao
 WHERE
     -- Fast path: no conflicts exist, return all rows directly
     NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
-    OR
-    -- Block has no conflict, return directly
-    NOT EXISTS (
-        SELECT 1 FROM hafd.block_conflicts bc
-        WHERE bc.block_num = hafd.block_id_to_num(hao.block_id)
-    )
-    OR
-    -- Block has conflict, select canonical version (highest block_id for this account_op)
-    hao.block_id = (
-        SELECT hao2.block_id
-        FROM hafd.account_operations hao2
-        WHERE hao2.account_id = hao.account_id
-          AND hao2.account_op_seq_no = hao.account_op_seq_no
-        ORDER BY hao2.block_id DESC
-        LIMIT 1
+    OR (
+        -- Row passes if BOTH conditions are true:
+        -- 1. This row's block is canonical (highest block_id for its block_num)
+        -- 2. No other canonical row has higher block_id for same (account_id, account_op_seq_no)
+        (
+            -- Block has no conflict, or block is canonical
+            NOT EXISTS (
+                SELECT 1 FROM hafd.block_conflicts bc
+                WHERE bc.block_num = hafd.block_id_to_num(hao.block_id)
+            )
+            OR
+            hao.block_id = (
+                SELECT MAX(b.block_id)
+                FROM hafd.blocks b
+                WHERE hafd.block_id_to_num(b.block_id) = hafd.block_id_to_num(hao.block_id)
+            )
+        )
+        AND
+        -- No other row for same (account_id, account_op_seq_no) with higher block_id
+        -- where that row's block is also canonical
+        NOT EXISTS (
+            SELECT 1
+            FROM hafd.account_operations hao2
+            WHERE hao2.account_id = hao.account_id
+              AND hao2.account_op_seq_no = hao.account_op_seq_no
+              AND hao2.block_id > hao.block_id
+              -- And hao2's block is also canonical
+              AND (
+                  NOT EXISTS (
+                      SELECT 1 FROM hafd.block_conflicts bc
+                      WHERE bc.block_num = hafd.block_id_to_num(hao2.block_id)
+                  )
+                  OR
+                  hao2.block_id = (
+                      SELECT MAX(b.block_id)
+                      FROM hafd.blocks b
+                      WHERE hafd.block_id_to_num(b.block_id) = hafd.block_id_to_num(hao2.block_id)
+                  )
+              )
+        )
     );
 
 -- =============================================================================

@@ -107,18 +107,18 @@ BEGIN
     ;
 
     -- Insert account_operations with block_id
-    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block)
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, operation_id)
     VALUES
-           ( 1, 1, 1, hafd.make_block_id(4, 1), 1 )
-         , ( 2, 2, 1, hafd.make_block_id(5, 1), 1 )
-         , ( 3, 3, 1, hafd.make_block_id(6, 1), 1 )
-         , ( 4, 4, 1, hafd.make_block_id(7, 1), 1 )
-         , ( 6, 6, 1, hafd.make_block_id(7, 2), 1 )
-         , ( 7, 7, 1, hafd.make_block_id(8, 2), 1 )
-         , ( 8, 8, 1, hafd.make_block_id(9, 2), 1 )
-         , ( 9, 9, 1, hafd.make_block_id(8, 3), 1 )
-         , ( 10, 10, 1, hafd.make_block_id(9, 3), 1 )
-         , ( 11, 11, 1, hafd.make_block_id(10, 3), 1 )
+           ( 1, 1, 1, hafd.make_block_id(4, 1), hafd.operation_id(4, 1, 0) )
+         , ( 2, 2, 1, hafd.make_block_id(5, 1), hafd.operation_id(5, 1, 0) )
+         , ( 3, 3, 1, hafd.make_block_id(6, 1), hafd.operation_id(6, 1, 0) )
+         , ( 4, 4, 1, hafd.make_block_id(7, 1), hafd.operation_id(7, 1, 0) )
+         , ( 6, 6, 1, hafd.make_block_id(7, 2), hafd.operation_id(7, 1, 0) )
+         , ( 7, 7, 1, hafd.make_block_id(8, 2), hafd.operation_id(8, 1, 0) )
+         , ( 8, 8, 1, hafd.make_block_id(9, 2), hafd.operation_id(9, 1, 0) )
+         , ( 9, 9, 1, hafd.make_block_id(8, 3), hafd.operation_id(8, 1, 0) )
+         , ( 10, 10, 1, hafd.make_block_id(9, 3), hafd.operation_id(9, 2, 0) )
+         , ( 11, 11, 1, hafd.make_block_id(10, 3), hafd.operation_id(10, 1, 0) )
     ;
 
     -- Insert applied_hardforks with block_id

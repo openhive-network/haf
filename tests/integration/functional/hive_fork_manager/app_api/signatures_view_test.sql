@@ -96,6 +96,10 @@ BEGIN
        , ( '\xDEED1102', '\xBEEF13', hafd.make_block_id( 10, 3 ) )
     ON CONFLICT DO NOTHING;
 
+    -- Mark blocks that have multiple fork versions as conflicts
+    INSERT INTO hafd.block_conflicts (block_num)
+    VALUES (4), (5), (7), (8), (9), (10);
+
     UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 END;
 $BODY$
