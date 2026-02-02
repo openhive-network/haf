@@ -8,14 +8,15 @@ BEGIN
 FOR _row in
   SELECT (ROW(f.table_name, f.table_schema_hash, f.columns_hash, f.constraints_hash, f.indexes_hash)::text) FROM hive_update.calculate_schema_hash() AS f
   EXCEPT SELECT unnest(ARRAY[
-    '(blocks,9a06ecc0-af15-991d-9015-70aca51e2997,df7ef152-1122-b7df-4ba9-3e897b525177,502c4352-efbb-5ed4-8aec-5e3b0d595c97,ebd9ec1c-a959-5e4f-0dc1-bb93a125a3e2)',
+    '(block_conflicts,c0baccac-c8e1-1f65-85d1-57a56f687de0,48df8c18-7794-573e-601d-580e1e12f738,35e2417f-017e-56a7-7e7d-11ec98cd9dc9,d9ced447-ace5-bef7-b48d-7a3e74843543)',
+    '(blocks,f25219a3-4e13-04aa-656c-36e5f5a4f5f2,df7ef152-1122-b7df-4ba9-3e897b525177,502c4352-efbb-5ed4-8aec-5e3b0d595c97,8bc54892-1c23-1bf6-b665-8e6b979d342d)',
     '(hive_state,c7eba493-aaad-04d3-b545-49920b1438bd,2a00f809-f4f9-e96b-d4f1-e21c3357f978,1ec06445-c874-940f-99b4-7ba919d368b5,db0a6fb3-b072-2629-7a5d-0fa6487b43f5)',
-    '(transactions,95f78de4-1d78-81d0-d3df-944e5aabddfe,e95c750f-ecf6-2118-296b-adfd870a8b68,aa080da1-a419-ee7e-f9ba-24b2f7304c39,ae2065bb-1b70-c252-790d-fc758889e42b)',
+    '(transactions,ad3efcab-27ed-bb9e-c19c-37642e2bb653,e95c750f-ecf6-2118-296b-adfd870a8b68,aa080da1-a419-ee7e-f9ba-24b2f7304c39,db5eb531-5870-96a0-623e-07f6ee2b386d)',
     '(transactions_multisig,928f3485-398c-deec-d3bc-3d18d4f0b424,e35319f3-c226-337c-47b5-3f1509cc1d9f,e5266700-fa13-5b11-ad67-84a67c73b89e,7156512e-e9bd-d975-1379-68f0ac1b7fe7)',
     '(operation_types,dd6c8768-2bc2-2b76-3246-292b108f744f,cf35886f-de4e-e064-b170-fd4186ea9148,0dc429a2-22b0-2d05-44d6-cc66d48082b6,08d2ba03-e127-e0ad-aaee-657b3aa27bae)',
-    '(operations,d52ffd34-4e8d-3f35-7972-09d74f30ca2f,408f8edf-a2a8-27e1-220c-a5274bdb1ac2,3f9db4b1-53fd-5fb9-947d-36bdc19afa06,df606940-6935-c37d-0f25-3a3d54ff20b1)',
+    '(operations,20d6d3da-06db-6875-f3d4-c05ed3403763,408f8edf-a2a8-27e1-220c-a5274bdb1ac2,3f9db4b1-53fd-5fb9-947d-36bdc19afa06,2b791ba3-31bd-8920-8923-c6919f97aeb4)',
     '(applied_hardforks,62db9435-9194-e1a1-4836-d1e6fada7743,807eb203-0aef-3c9d-d4db-25a0201b229c,f0495fa5-8a19-51a1-9ac9-d47bc89deeb0,654806b4-c223-2b06-c4c5-44b320bf7068)',
-    '(accounts,4ee597e0-d7e8-77b2-c160-6a53f7f7bf70,18dd421d-3f9d-0b0f-b5f6-87a84d08a72b,95d7e032-99aa-eb63-87a0-1519f1fc374c,3e179e58-acaf-eaed-f9c3-5ff09cae7190)',
+    '(accounts,4592b799-551e-f242-cf3c-b913011ecb58,18dd421d-3f9d-0b0f-b5f6-87a84d08a72b,95d7e032-99aa-eb63-87a0-1519f1fc374c,7100edc3-37dc-5285-a155-82256ffea50c)',
     '(account_operations,ea2f3c09-5cde-b0a1-3de0-d04750fc2f91,c0e7b33f-e15c-1adf-ed93-6ad96aca206c,57b01225-7781-ef33-d57c-10bc2cb854d3,48960a86-efb0-b9ba-7108-b1daa4a0dc9f)',
     '(fork,a86a9a09-df69-083b-d60d-e08267dd4055,7a370e3d-dce9-c286-ed72-fc52c5ba6dcd,197844f1-1317-5bc9-731b-6a445868da98,8bc60323-f3d8-b277-4470-7d395f37fef8)',
     '(contexts_attachment,c99e00c4-bc99-eb5d-1071-310575d2655a,0007a55e-0b74-b8b1-fb0d-a2e2b82a05bd,3e2b74cd-8a9a-2768-c01b-c8a307e8267d,90df8e77-2984-5c96-2a9f-908b8e7604dc)',

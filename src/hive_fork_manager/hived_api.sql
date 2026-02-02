@@ -192,9 +192,9 @@ BEGIN
     FROM unnest(_accounts) a
     ON CONFLICT ON CONSTRAINT uq_hive_accounts DO NOTHING;
 
-    -- Insert account_operations (original compact format with block_id, seq_in_block)
-    INSERT INTO hafd.account_operations (account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block)
-    SELECT ao.account_id, ao.transacting_account_id, ao.account_op_seq_no, __block_id, (ao.operation_id >> 8) & 16777215
+    -- Insert account_operations with operation_id stored directly (avoids JOIN in views)
+    INSERT INTO hafd.account_operations (account_id, transacting_account_id, account_op_seq_no, block_id, operation_id)
+    SELECT ao.account_id, ao.transacting_account_id, ao.account_op_seq_no, __block_id, ao.operation_id
     FROM unnest(_account_operations) ao;
 
     -- Insert applied_hardforks (original compact format with block_id)
@@ -202,6 +202,17 @@ BEGIN
     SELECT h.hardfork_num, __block_id, h.hardfork_vop_id
     FROM unnest(_applied_hardforks) h
     ON CONFLICT (hardfork_num, block_id) DO NOTHING;  -- Hardfork may already be recorded in this fork
+
+    -- Track conflict if this block_num already has another version (different fork)
+    -- This enables views to skip canonical selection for non-conflicted blocks (fast path)
+    INSERT INTO hafd.block_conflicts (block_num)
+    SELECT _block.num
+    WHERE EXISTS (
+        SELECT 1 FROM hafd.blocks hb
+        WHERE hafd.block_id_to_num(hb.block_id) = _block.num
+          AND hb.block_id != __block_id
+    )
+    ON CONFLICT (block_num) DO NOTHING;
 END;
 $BODY$
 ;
@@ -534,6 +545,14 @@ BEGIN
     DELETE FROM hafd.accounts WHERE block_id = ANY(__blocks_to_delete);
     DELETE FROM hafd.applied_hardforks WHERE block_id = ANY(__blocks_to_delete);
     DELETE FROM hafd.blocks WHERE block_id = ANY(__blocks_to_delete);
+
+    -- Clear conflicts for block_nums that were in deleted blocks
+    -- After deleting orphan blocks, these block_nums have only one version remaining
+    DELETE FROM hafd.block_conflicts
+    WHERE block_num IN (
+        SELECT hafd.block_id_to_num(block_id)
+        FROM unnest(__blocks_to_delete) AS block_id
+    );
 END;
 $BODY$
 ;

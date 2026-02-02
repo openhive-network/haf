@@ -74,6 +74,30 @@ CREATE TABLE IF NOT EXISTS hafd.hive_state (
 SELECT pg_catalog.pg_extension_config_dump('hafd.hive_state', '');
 
 -- =============================================================================
+-- hafd.block_conflicts - Tracks block_nums with multiple fork versions
+-- =============================================================================
+-- During LIVE mode, when a block arrives on a new fork while another version
+-- already exists, that block_num is recorded here. Views can use this to
+-- potentially skip canonical selection for non-conflicted blocks.
+--
+-- Size: Tiny (~200 rows max during active fork scenarios)
+-- Updated by: hive.push_block() inserts, hive.remove_orphan_forks() deletes
+
+CREATE TABLE IF NOT EXISTS hafd.block_conflicts (
+    block_num INTEGER PRIMARY KEY
+);
+SELECT pg_catalog.pg_extension_config_dump('hafd.block_conflicts', '');
+
+-- Check if a block_num has conflicts (multiple fork versions)
+CREATE OR REPLACE FUNCTION hafd.block_conflicts_has(_block_num INTEGER)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT EXISTS (SELECT 1 FROM hafd.block_conflicts WHERE block_num = _block_num);
+$$;
+
+-- =============================================================================
 -- hafd.transactions - Original compact structure
 -- =============================================================================
 
@@ -169,9 +193,10 @@ SELECT pg_catalog.pg_extension_config_dump('hafd.accounts', '');
 CREATE STATISTICS IF NOT EXISTS accounts_id_name_blocknum_dependency_stats (dependencies) ON id, name, block_id FROM hafd.accounts;
 
 -- =============================================================================
--- hafd.account_operations - Original compact structure with operation_id
+-- hafd.account_operations - Account to operation mapping with operation_id
 -- =============================================================================
--- Uses operation_id reference instead of (block_id, seq_in_block) to minimize data.
+-- Stores operation_id directly to avoid JOIN with operations table in views.
+-- This is critical for get_account_history performance.
 -- No FK CASCADE - fork cleanup is done explicitly (rare operation).
 
 CREATE TABLE IF NOT EXISTS hafd.account_operations (
@@ -179,7 +204,7 @@ CREATE TABLE IF NOT EXISTS hafd.account_operations (
     transacting_account_id INTEGER NOT NULL,
     account_op_seq_no INTEGER NOT NULL,
     block_id hafd.block_id NOT NULL,
-    seq_in_block INTEGER NOT NULL,
+    operation_id BIGINT NOT NULL,
     CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no, block_id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations', '');
@@ -201,16 +226,15 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_id_to_num_idx ON hafd.transac
 
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
 
--- Index for account_operations_view join: enables efficient lookup by (block_id, seq_in_block)
--- This is critical for get_account_history performance
-CREATE INDEX IF NOT EXISTS hive_operations_block_id_pos_idx ON hafd.operations (block_id, hafd.operation_id_to_pos(id));
+-- Index for operations_view canonical selection: finds highest block_id per (block_num, seq_in_block)
+-- Uses (id >> 8) which extracts the position key (block_num|seq_in_block without op_type)
+CREATE INDEX IF NOT EXISTS hive_operations_pos_key_block_id_idx ON hafd.operations ((id >> 8), block_id DESC);
+
+-- Index for id-only lookups when PK is (block_id, id)
+CREATE INDEX IF NOT EXISTS hive_operations_id_idx ON hafd.operations (id);
 
 -- Clustering for get_account_history performance
 CLUSTER hafd.account_operations USING hive_account_operations_uq1;
-
--- Index for block_num range queries on account_operations
--- Enables efficient analytics queries like "most active accounts in block range"
-CREATE INDEX IF NOT EXISTS hive_account_operations_block_num_idx ON hafd.account_operations (hafd.block_id_to_num(block_id));
 
 CREATE INDEX IF NOT EXISTS hive_accounts_name_idx ON hafd.accounts USING btree (name);
 
