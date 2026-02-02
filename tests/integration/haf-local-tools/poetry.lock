@@ -508,7 +508,7 @@ files = []
 develop = true
 
 [package.dependencies]
-hiveio-test-tools = "0.0.1.dev1404+dbfbe3b"
+hiveio-test-tools = "0.0.1.dev1411+aeaf775"
 msgspec = "^0.20.0"
 pytest = "8.3.5"
 pytest-asyncio = "0.25.3"
@@ -527,17 +527,17 @@ url = "../../../hive/tests/python/hive-local-tools"
 
 [[package]]
 name = "hiveio-api"
-version = "1.28.2.dev456+49e3d841e"
+version = "1.28.2.dev497+bda263314"
 description = "Hive JSON-RPC API client package with lazy-loaded submodules for all Hive APIs"
 optional = false
 python-versions = ">=3.12,<4"
 groups = ["main"]
 files = [
-    {file = "hiveio_api-1.28.2.dev456+49e3d841e-py3-none-any.whl", hash = "sha256:08ff258a42b131eb2c285745c572f1827f0618e0cbf5f120373f723b6db2f567"},
+    {file = "hiveio_api-1.28.2.dev497+bda263314-py3-none-any.whl", hash = "sha256:17767bd614437f982998cb736864f95a89a1a42ceeb27b1aa17672cdb638b007"},
 ]
 
 [package.dependencies]
-hiveio-beekeepy = ">=1.28.4.dev24"
+hiveio-beekeepy = "1.0.1.dev27+c16c766"
 
 [package.source]
 type = "legacy"
@@ -546,13 +546,13 @@ reference = "gitlab-hive"
 
 [[package]]
 name = "hiveio-beekeepy"
-version = "1.28.4.dev24+dd092e5"
+version = "1.0.1.dev27+c16c766"
 description = "All in one package for beekeeper interaction via Python interface."
 optional = false
 python-versions = ">=3.12,<4"
 groups = ["main"]
 files = [
-    {file = "hiveio_beekeepy-1.28.4.dev24+dd092e5-py3-none-any.whl", hash = "sha256:53eeffdeda2ac7b1c353eb7e4f4cde0d4bd30ee4192b557c2360994c4aaaa2f9"},
+    {file = "hiveio_beekeepy-1.0.1.dev27+c16c766-py3-none-any.whl", hash = "sha256:792006370e84afe9100aff09031649ad182b103d2238093836da52d0bf6bc7ed"},
 ]
 
 [package.dependencies]
@@ -565,8 +565,8 @@ requests = "2.32.3"
 
 [package.source]
 type = "legacy"
-url = "https://gitlab.syncad.com/api/v4/projects/434/packages/pypi/simple"
-reference = "gitlab-helpy"
+url = "https://gitlab.syncad.com/api/v4/projects/558/packages/pypi/simple"
+reference = "gitlab-beekeepy"
 
 [[package]]
 name = "hiveio-schemas"
@@ -589,20 +589,20 @@ reference = "gitlab-schemas"
 
 [[package]]
 name = "hiveio-test-tools"
-version = "0.0.1.dev1404+dbfbe3b"
+version = "0.0.1.dev1411+aeaf775"
 description = "Tools for testing hive software"
 optional = false
 python-versions = ">=3.12,<4"
 groups = ["main"]
 files = [
-    {file = "hiveio_test_tools-0.0.1.dev1404+dbfbe3b-py3-none-any.whl", hash = "sha256:ce1a1cf89dd5e69d9ffd82e994d9a15f82d5cc8eb90bf77afd2256935b8274a4"},
+    {file = "hiveio_test_tools-0.0.1.dev1411+aeaf775-py3-none-any.whl", hash = "sha256:a0fc5fec858db25b09b73d96f094d3a7fcef8e3183585bcdd2eb3342aeb431b9"},
 ]
 
 [package.dependencies]
 abstractcp = "0.9.9"
-hiveio-beekeepy = "1.28.4.dev24+dd092e5"
+hiveio-beekeepy = "1.0.1.dev27+c16c766"
 hiveio-schemas = ">=1.28.1.dev14"
-hiveio-wax = "1.28.4rc1.dev124+72cfe8ea"
+hiveio-wax = "1.28.4rc1.dev150+c95dfe89"
 loguru = "0.7.2"
 msgspec = ">=0.20.0,<0.21.0"
 python-dateutil = "2.8.2"
@@ -614,18 +614,18 @@ reference = "gitlab-test-tools"
 
 [[package]]
 name = "hiveio-wax"
-version = "1.28.4rc1.dev124+72cfe8ea"
+version = "1.28.4rc1.dev150+c95dfe89"
 description = ""
 optional = false
 python-versions = ">=3.12,<4"
 groups = ["main"]
 files = [
-    {file = "hiveio_wax-1.28.4rc1.dev124+72cfe8ea-cp312-cp312-manylinux_2_39_x86_64.whl", hash = "sha256:6992435441c7cfdcffa68d75a3be47a6283729ca8ee5a08edd1fd8a1ffa0a50c"},
-    {file = "hiveio_wax-1.28.4rc1.dev124+72cfe8ea-cp314-cp314-manylinux_2_39_x86_64.whl", hash = "sha256:b097fbcb5262ac6237aa3cb45368dbce509a0c80b0ebbb9fc8ce82021586f2ae"},
+    {file = "hiveio_wax-1.28.4rc1.dev150+c95dfe89-cp312-cp312-manylinux_2_39_x86_64.whl", hash = "sha256:73d7049add16b5d5f77c8ac5d242087a5f55013fcd41252c9a5cc8365429ee23"},
+    {file = "hiveio_wax-1.28.4rc1.dev150+c95dfe89-cp314-cp314-manylinux_2_39_x86_64.whl", hash = "sha256:39f8b96e49f63c3a2454964f3bbf0c0a9b2544453e9e0aa44d6fd430c3dad03a"},
 ]
 
 [package.dependencies]
-hiveio-api = ">=1.28.2.dev450,<2.0.0"
+hiveio-api = "1.28.2.dev497+bda263314"
 httpx = {version = "0.23.3", extras = ["http2"]}
 loguru = "0.7.2"
 protobuf = "6.33.0"
@@ -2396,4 +2396,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.14,<4"
-content-hash = "75f1aec16d945436cabd0c95dead840e232f81e1ce07d6511d0705e21a79d7cb"
+content-hash = "a6e98ca398c4d0f791fbb2ce067369c862204a6640eb477b1018b68bfada9473"
