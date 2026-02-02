@@ -220,6 +220,7 @@ public:
     , uint32_t _psql_first_block
     , uint32_t _pruning_tail_size
     , bool     _psql_enable_filter
+    , uint32_t _psql_wal_queue_depth
   )
   :   db_url{url},
       chain_db{_chain_db},
@@ -239,7 +240,8 @@ public:
                          _psql_livesync_threshold,
                          _psql_first_block,
                          _pruning_tail_size,
-                         write_ahead_log),
+                         write_ahead_log,
+                         _psql_wal_queue_depth),
       _vacuum_cleaner( db_url )
   {
     HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
@@ -845,6 +847,7 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
                     ("psql-enable-filter", appbase::bpo::value<bool>()->default_value( true ), "enable filtering accounts and operations")
                     ("psql-first-block", appbase::bpo::value<uint32_t>()->default_value( 1u ), "first synced block")
                     ("psql-wal-directory", boost::program_options::value<bfs::path>(), "write-ahead log for data sent from hived to PostgreSQL")
+                    ("psql-wal-queue-depth", appbase::bpo::value<uint32_t>()->default_value( 200 ), "maximum WAL commands queued before blocking (default: 200). During live sync there are ~2 commands per block, so 200 ~ 100 blocks ~ 5 minutes")
                     ("psql-prune-blocks", appbase::bpo::value<uint32_t>()->default_value( 0 ), "number of recent blocks to keep; older processed blocks are pruned. 0 disables pruning")
                     ;
 }
@@ -879,6 +882,7 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , options["psql-first-block"].as<uint32_t>()
     , options["psql-prune-blocks"].as<uint32_t>()
     , options["psql-enable-filter"].as<bool>()
+    , options["psql-wal-queue-depth"].as<uint32_t>()
   );
 
   // settings

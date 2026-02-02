@@ -143,14 +143,21 @@ namespace hive::plugins::sql_serializer {
 
     FC_ASSERT(data.empty() == false, "Data empty 3");
 
-    std::string query = "";
+    // Pre-allocate buffer: 256 is the estimated average bytes per SQL value-tuple
+    // (e.g. block/transaction/operation row rendered as "(col1,col2,...)\n").
+    std::string query;
+    query.reserve(data.size() * 256);
 
     auto dataI = data.cbegin();
-    query += '(' + conv(*dataI) + ")\n";
+    query += '(';
+    query += conv(*dataI);
+    query += ")\n";
 
     for(++dataI; dataI != data.cend(); ++dataI)
     {
-      query += ",(" + conv(*dataI) + ")\n";
+      query += ",(";
+      query += conv(*dataI);
+      query += ")\n";
     }
 
     callback( std::move(query) );

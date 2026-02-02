@@ -45,6 +45,7 @@ namespace hive::plugins::sql_serializer {
       , uint32_t start_block_num
       , write_ahead_log_manager& write_ahead_log
       , uint32_t pruning
+      , uint32_t wal_queue_depth = processing_thread::DEFAULT_MAX_QUEUE_DEPTH
     );
 
     ~livesync_data_dumper();
@@ -150,15 +151,16 @@ namespace hive::plugins::sql_serializer {
       // should be enough to smooth out any temporary periods of slow processing, but not so big that it's
       // weeks before we notice a problem.  During typical livesync operation, there are two commands
       // per block (push block & update irreversible), so 200 commands ~ 100 blocks ~ 5 minutes
-      static constexpr size_t _max_queue_depth = 200;
+      const size_t _max_queue_depth;
       std::shared_ptr<transaction_controllers::transaction_controller> _transactions_controller;
       write_ahead_log_manager& _write_ahead_log;
       appbase::application& _app;
       const uint32_t _pruning; // <=0 no pruning, > 0 tail of blocks
     public:
+      static constexpr size_t DEFAULT_MAX_QUEUE_DEPTH = 200;
       processing_thread(std::shared_ptr<transaction_controllers::transaction_controller> transactions_controller,
                         write_ahead_log_manager& write_ahead_log,
-                        appbase::application& app, uint32_t pruning);
+                        appbase::application& app, uint32_t pruning, size_t max_queue_depth = DEFAULT_MAX_QUEUE_DEPTH);
       ~processing_thread();
       void run();
       void enqueue(std::string&& sql_command);

@@ -146,6 +146,7 @@ indexation_state::indexation_state(
   , uint32_t psql_first_block
   , uint32_t pruning_tail_size
   , write_ahead_log_manager& write_ahead_log
+  , uint32_t wal_queue_depth
 )
   : _main_plugin( main_plugin )
   , _chain_db( chain_db )
@@ -157,9 +158,10 @@ indexation_state::indexation_state(
   , _psql_livesync_threshold( psql_livesync_threshold )
   , _psql_first_block( psql_first_block )
   , _psql_pruning_tail_size( pruning_tail_size )
+  , _psql_wal_queue_depth( wal_queue_depth )
   , _irreversible_block_num( NO_IRREVERSIBLE_BLOCK )
   , _indexes_controler( db_url, psql_index_threshold, app )
-  , _write_ahead_log{write_ahead_log} 
+  , _write_ahead_log{write_ahead_log}
 {
   FC_ASSERT( _psql_first_block >= 1, "psql-first-block=${v} < 1", ("v", _psql_first_block) );
   cached_data_t empty_data{0};
@@ -397,6 +399,7 @@ indexation_state::update_state(
         , _psql_first_block
         , _write_ahead_log
         , _psql_pruning_tail_size
+        , _psql_wal_queue_depth
         );
       _trigger = std::make_unique< live_flush_trigger >(
         [this]( cached_data_t& cached_data, int last_block_num ) {

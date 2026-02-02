@@ -27,6 +27,8 @@ namespace hive::plugins::sql_serializer {
       class flush_trigger;
       static constexpr auto NO_IRREVERSIBLE_BLOCK = std::numeric_limits< int32_t >::max();
 
+      static constexpr uint32_t DEFAULT_WAL_QUEUE_DEPTH = 200;
+
       indexation_state(
           const sql_serializer_plugin& main_plugin
         , hive::chain::database& chain_db
@@ -40,6 +42,7 @@ namespace hive::plugins::sql_serializer {
         , uint32_t psql_first_block
         , uint32_t pruning_tail_size
         , write_ahead_log_manager& write_ahead_log
+        , uint32_t wal_queue_depth = DEFAULT_WAL_QUEUE_DEPTH
       );
       ~indexation_state() = default;
       indexation_state& operator=( indexation_state& ) = delete;
@@ -103,6 +106,7 @@ namespace hive::plugins::sql_serializer {
       const uint32_t _psql_livesync_threshold;
       const uint32_t _psql_first_block;
       const uint32_t _psql_pruning_tail_size;
+      const uint32_t _psql_wal_queue_depth;
 
       hive::chain::database::signal_connection_ptr _on_irreversible_block_conn;
       std::shared_ptr< data_dumper > _dumper;

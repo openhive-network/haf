@@ -1,8 +1,8 @@
 #pragma once
 
+#include <boost/unordered/concurrent_flat_map.hpp>
+
 #include <functional>
-#include <mutex>
-#include <unordered_map>
 
 namespace hive::plugins::sql_serializer {
 
@@ -11,6 +11,12 @@ namespace hive::plugins::sql_serializer {
    *  finish commititing data for the same batch of blocks
    *  - _number_of_threads how many threads need to report about commit the same batch of blocks
    *  - _triggered_function function which needs to be call when number of threads confirms finishing batch of blocks
+   *
+   *  Uses a single concurrent map path for both live sync and replay.
+   *
+   *  Invariant: for each block_num, exactly m_number_of_threads threads must call
+   *  report_complete_thread_stage(), each exactly once. Violating this (e.g. double-reporting
+   *  or missing a report) will either fire the trigger too early or leave a stale map entry.
    */
 class block_num_rendezvous_trigger {
 public:
@@ -31,8 +37,8 @@ public:
 private:
   const NUMBER_OF_COMPLETED_THREADS m_number_of_threads;
   TRIGGERRED_FUNCTION m_triggered_function;
-  std::unordered_map< BLOCK_NUM, NUMBER_OF_COMPLETED_THREADS > m_completed_threads;
-  std::mutex m_mutex;
+
+  boost::unordered::concurrent_flat_map< BLOCK_NUM, NUMBER_OF_COMPLETED_THREADS > m_completed_threads;
 };
 
 } // namespace hive::plugins::sql_serializer
