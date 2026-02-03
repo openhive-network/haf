@@ -111,7 +111,9 @@ ARG HIVE_SUBDIR=.
 ENV HIVE_SUBDIR=${HIVE_SUBDIR}
 
 ARG SCCACHE_REDIS=""
-ENV SCCACHE_REDIS=${SCCACHE_REDIS}
+# Only set SCCACHE_REDIS env var if the build arg is non-empty
+# When empty, sccache will use local disk cache instead of Redis
+ENV SCCACHE_REDIS=${SCCACHE_REDIS:+${SCCACHE_REDIS}}
 
 ENV HAF_SOURCE_DIR="/home/haf_admin/source/${HIVE_SUBDIR}"
 
@@ -125,6 +127,12 @@ COPY --chown=haf_admin:users . /home/haf_admin/source
 
 RUN <<-EOF
   set -e
+
+  # If SCCACHE_REDIS is empty, unset it so sccache uses local disk cache
+  # instead of trying to connect to Redis with a malformed URL
+  if [ -z "${SCCACHE_REDIS}" ]; then
+    unset SCCACHE_REDIS
+  fi
 
   INSTALLATION_DIR="/home/hived/bin"
   sudo --user=hived mkdir -p "${INSTALLATION_DIR}"

@@ -381,6 +381,8 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/transaction_sig_digest.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/pubkey_from_signature.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/rc_delegation_parser.sql )
+ ADD_SQL_FUNCTIONAL_TEST( shared_lib/generate_asset_unique_id.sql )
+ ADD_SQL_FUNCTIONAL_TEST( shared_lib/asset_unique_id_decoders.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( sanity_check/test_tables_and_sequences_properly_flagged_for_dump.sql )
 

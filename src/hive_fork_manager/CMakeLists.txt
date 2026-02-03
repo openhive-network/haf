@@ -14,6 +14,7 @@ ADD_PSQL_EXTENSION(
              types/operation/operation_cmp.sql
              types/operation/operation_casts.sql
              types/operation/operation_id.sql
+             types/asset_unique_id.sql
              irreversible_blocks.sql
              reversible_blocks.sql
              state_provider.sql
@@ -38,6 +39,7 @@ ADD_PSQL_EXTENSION(
             types/operation/compatibility_with_old_haf_apps.sql
             types/operation/operation_flow.sql
             types/operation/operation_id.sql
+            types/asset_unique_id.sql
 
             pruning/prune_irreversible_blocks.sql
 

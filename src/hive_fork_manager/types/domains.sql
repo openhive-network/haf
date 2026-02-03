@@ -42,5 +42,8 @@ CREATE DOMAIN hafd.custom_id_type AS VARCHAR(32);
 DROP DOMAIN IF EXISTS hafd.asset_symbol CASCADE;
 CREATE DOMAIN hafd.asset_symbol AS int8; -- uint32_t: 4 byte, but unsigned (int8)
 
+DROP DOMAIN IF EXISTS hafd.asset_unique_id CASCADE;
+CREATE DOMAIN hafd.asset_unique_id AS NUMERIC; -- 128-bit unique asset identifier
+
 DROP DOMAIN IF EXISTS hafd.proposal_subject CASCADE;
 CREATE DOMAIN hafd.proposal_subject AS VARCHAR(80);
