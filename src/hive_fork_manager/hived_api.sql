@@ -623,6 +623,8 @@ END;
 $BODY$
 ;
 
+DROP FUNCTION IF EXISTS hive.get_vacuum_full_commands(TEXT);
+
 CREATE OR REPLACE FUNCTION hive.get_vacuum_full_prune_commands(schema_name TEXT DEFAULT 'hafd')
 RETURNS SETOF TEXT
 LANGUAGE sql

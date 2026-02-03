@@ -13,8 +13,7 @@ public:
   void vacuum( bool is_pruning_enabled, uint32_t block_num );
 
 private:
-  void vacuum_prune();
-  void vacuum_periodic();
+  void execute_vacuum_commands( const std::string& query );
 
   std::string _db_url;
 };
