@@ -19,9 +19,10 @@ SET( extension_control_file ${EXTENSION_NAME}.control.in )
 
 SET( extension_control_script ${EXTENSION_NAME}--${HAF_GIT_REVISION_SHA}.sql )
 
-FILE(WRITE ${extension_path}/${update_control_script} "")
-
-FILE(WRITE ${extension_path}/${extension_control_script} "")
+# Note: Do NOT pre-create empty files here with FILE(WRITE).
+# The custom commands below will create them at build time.
+# Pre-creating empty files causes issues when reconfiguring - the empty file
+# may have a newer timestamp than sources, causing ninja to skip regeneration.
 
 SET( temp_deploy_sources deploy_sources.sql )
 
