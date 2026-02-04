@@ -22,8 +22,8 @@ BEGIN
     -- Setup: Get custom asset symbols with precision 0
     -- NAI=447575128 (from HTM tests)
     customAssetSymbol1 := (SELECT hive.asset_symbol_from_nai_string('@@447575128', 0::smallint));
-    -- NAI=123456789 (another custom asset)
-    customAssetSymbol2 := (SELECT hive.asset_symbol_from_nai_string('@@123456789', 0::smallint));
+    -- NAI=123456786 (another custom asset)
+    customAssetSymbol2 := (SELECT hive.asset_symbol_from_nai_string('@@123456786', 0::smallint));
 
     -- Verify NAIs via decode
     assetInfo := (SELECT hive.decode_asset_symbol(customAssetSymbol1));
@@ -31,7 +31,7 @@ BEGIN
     ASSERT assetInfo.precision = 0, format('Custom1 precision should be 0, got %s', assetInfo.precision);
 
     assetInfo := (SELECT hive.decode_asset_symbol(customAssetSymbol2));
-    ASSERT assetInfo.nai = 123456789, format('Custom2 NAI should be 123456789, got %s', assetInfo.nai);
+    ASSERT assetInfo.nai = 123456786, format('Custom2 NAI should be 123456786, got %s', assetInfo.nai);
     ASSERT assetInfo.precision = 0, format('Custom2 precision should be 0, got %s', assetInfo.precision);
 
     -- ==========================================================================
@@ -64,10 +64,10 @@ BEGIN
 
     -- ==========================================================================
     -- Test 5: Second custom asset (NAI=123456789), op=5000, sub=10
-    -- Expected: (5000 << 64) | (123456789 << 32) | 10 = 92234250611418982252554
+    -- Expected: (5000 << 64) | (123456786 << 32) | 10 = 92234250611406097350666
     -- ==========================================================================
     asset_id := (SELECT hafd.generate_asset_unique_id(customAssetSymbol2, 5000::BIGINT, 10::BIGINT));
-    ASSERT asset_id = 92234250611418982252554::NUMERIC, format('Expected 92234250611418982252554, got %s', asset_id);
+    ASSERT asset_id = 92234250611406097350666::NUMERIC, format('Expected 92234250611406097350666, got %s', asset_id);
     ASSERT (asset_id % 4294967296)::BIGINT = 10, 'Lower 32 bits should be subsequent_no=10';
 
     -- ==========================================================================

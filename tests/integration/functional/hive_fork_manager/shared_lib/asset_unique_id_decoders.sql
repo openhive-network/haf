@@ -22,7 +22,7 @@ DECLARE
 BEGIN
     -- Setup: Get custom asset symbols with precision 0
     customAssetSymbol1 := (SELECT hive.asset_symbol_from_nai_string('@@447575128', 0::smallint));
-    customAssetSymbol2 := (SELECT hive.asset_symbol_from_nai_string('@@123456789', 0::smallint));
+    customAssetSymbol2 := (SELECT hive.asset_symbol_from_nai_string('@@123456786', 0::smallint));
 
     -- ==========================================================================
     -- Test 1: Round-trip with custom asset
@@ -51,7 +51,7 @@ BEGIN
 
     decoded_symbol := (SELECT hafd.asset_unique_id_to_asset_symbol(asset_id));
     assetInfo := (SELECT hive.decode_asset_symbol(decoded_symbol));
-    ASSERT assetInfo.nai = 123456789, format('NAI: Expected 123456789, got %s', assetInfo.nai);
+    ASSERT assetInfo.nai = 123456786, format('NAI: Expected 123456786, got %s', assetInfo.nai);
 
     decoded_sub_no := (SELECT hafd.asset_unique_id_to_subsequent_no(asset_id));
     ASSERT decoded_sub_no = 10, format('subsequent_no: Expected 10, got %s', decoded_sub_no);
