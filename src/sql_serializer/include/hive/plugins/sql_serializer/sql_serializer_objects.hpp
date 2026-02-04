@@ -148,6 +148,7 @@ namespace hive
             int32_t trx_in_block = 0;
             int32_t op_in_trx = 0;
             operation op;
+            fc::optional<int16_t> custom_json_type_id;
 
             process_operation_t(
                 int64_t _operation_id
@@ -155,10 +156,12 @@ namespace hive
               , const int32_t _trx_in_block
               , const int32_t _op_in_trx
               , const operation &_op
+              , fc::optional<int16_t> _custom_json_type_id = fc::optional<int16_t>()
             )
             : block_data_base( _block_number )
             , operation_id{_operation_id }, trx_in_block{_trx_in_block}
-            , op_in_trx{_op_in_trx}, op{_op} {
+            , op_in_trx{_op_in_trx}, op{_op}
+            , custom_json_type_id{_custom_json_type_id} {
             }
           };
 

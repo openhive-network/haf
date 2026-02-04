@@ -184,7 +184,8 @@ SELECT t.id,
        hafd.operation_id_to_type_id( t.id ) as op_type_id,
        t.timestamp,
        t.body_binary as body_binary,
-       t.body
+       t.body,
+       t.custom_json_type_id
 FROM
 (
     SELECT
@@ -193,7 +194,8 @@ FROM
           ho.op_pos,
           b.created_at timestamp,
           ho.body_binary,
-          ho.body_binary::jsonb AS body
+          ho.body_binary::jsonb AS body,
+          ho.custom_json_type_id
     FROM hafd.operations ho
     JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
     UNION ALL
@@ -203,7 +205,8 @@ FROM
         o.op_pos,
         visible_ops_timestamp.created_at timestamp,
         o.body_binary,
-        o.body_binary::jsonb AS body
+        o.body_binary::jsonb AS body,
+        o.custom_json_type_id
         FROM hafd.operations_reversible o
       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
       -- and also hide ops present at earlier forks for given block
@@ -230,7 +233,8 @@ SELECT t.id,
        t.op_pos,
        hafd.operation_id_to_type_id( t.id ) as op_type_id,
        t.body_binary as body_binary,
-       t.body
+       t.body,
+       t.custom_json_type_id
 FROM
 (
     SELECT
@@ -238,7 +242,8 @@ FROM
           ho.trx_in_block,
           ho.op_pos,
           ho.body_binary,
-          ho.body_binary::jsonb AS body
+          ho.body_binary::jsonb AS body,
+          ho.custom_json_type_id
     FROM hafd.operations ho
     UNION ALL
       SELECT
@@ -246,7 +251,8 @@ FROM
         o.trx_in_block,
         o.op_pos,
         o.body_binary,
-        o.body_binary::jsonb AS body
+        o.body_binary::jsonb AS body,
+        o.custom_json_type_id
       FROM hafd.operations_reversible o
       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
       -- and also hide ops present at earlier forks for given block
@@ -343,7 +349,8 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
         hafd.operation_id_to_type_id( op.id ) as op_type_id,
         b.created_at timestamp,
         op.body_binary as body_binary,
-        op.body_binary::jsonb AS body
+        op.body_binary::jsonb AS body,
+        op.custom_json_type_id
     FROM hafd.operations op
     JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(op.id);
 
@@ -355,7 +362,8 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
         op.op_pos,
         hafd.operation_id_to_type_id( op.id ) as op_type_id,
         op.body_binary as body_binary,
-        op.body_binary::jsonb AS body
+        op.body_binary::jsonb AS body,
+        op.custom_json_type_id
     FROM hafd.operations op;
 
 

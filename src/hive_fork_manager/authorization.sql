@@ -34,6 +34,7 @@ $$
 
 
 ALTER TABLE hafd.operation_types OWNER TO hived_group;
+ALTER TABLE hafd.custom_json_types OWNER TO hived_group;
 ALTER TABLE hafd.blocks OWNER TO hived_group;
 ALTER TABLE hafd.transactions OWNER TO hived_group;
 ALTER TABLE hafd.operations OWNER TO hived_group;

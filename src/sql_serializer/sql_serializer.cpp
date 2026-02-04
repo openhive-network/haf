@@ -24,6 +24,7 @@
 
 #include <hive/protocol/config.hpp>
 #include <hive/protocol/operations.hpp>
+#include <hive/protocol/hive_operations.hpp>
 
 #include <hive/utilities/signal.hpp>
 
@@ -41,6 +42,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace hive
@@ -197,6 +199,87 @@ using hive::plugins::sql_serializer::all_accounts_dumper;
 
 constexpr size_t default_reservation_size{ 16'000u };
 
+class custom_json_type_cache
+{
+public:
+  void load_from_db( const std::string& db_url, appbase::application& app )
+  {
+    queries_commit_data_processor loader(
+      db_url, "Load custom_json_types", "cjload",
+      [this](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+        pqxx::result data = tx.exec("SELECT id, custom_json_id FROM hafd.custom_json_types");
+        for( const auto& row : data )
+        {
+          int16_t id = row["id"].as<int16_t>();
+          std::string cj_id = row["custom_json_id"].as<std::string>();
+          _mapping[cj_id] = id;
+          if( id >= _next_id )
+            _next_id = id + 1;
+        }
+        ilog("Loaded ${n} custom_json_type mappings from database", ("n", _mapping.size()));
+        return data_processor::data_processing_status();
+      },
+      nullptr, app
+    );
+    loader.trigger(data_processor::data_chunk_ptr(), 0);
+    loader.join();
+  }
+
+  fc::optional<int16_t> get_type_id( const std::string& custom_json_id )
+  {
+    if( custom_json_id.empty() )
+      return fc::optional<int16_t>();
+
+    auto it = _mapping.find( custom_json_id );
+    if( it != _mapping.end() )
+      return it->second;
+
+    // assign next id and queue for insertion
+    int16_t new_id = _next_id++;
+    _mapping[custom_json_id] = new_id;
+    _pending_inserts.emplace_back( new_id, custom_json_id );
+    return new_id;
+  }
+
+  void flush_pending( const std::string& db_url, appbase::application& app )
+  {
+    if( _pending_inserts.empty() )
+      return;
+
+    auto pending = std::move( _pending_inserts );
+    _pending_inserts.clear();
+
+    queries_commit_data_processor flusher(
+      db_url, "Flush custom_json_types", "cjflush",
+      [&pending](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+        for( const auto& [id, cj_id] : pending )
+        {
+          // custom_json ids are protocol-validated (max 32 chars, no special chars)
+          // but escape single quotes defensively
+          std::string escaped_id;
+          escaped_id.reserve(cj_id.size() + 2);
+          for( char c : cj_id )
+          {
+            if( c == '\'' ) escaped_id += "''";
+            else escaped_id += c;
+          }
+          tx.exec("INSERT INTO hafd.custom_json_types(id, custom_json_id) OVERRIDING SYSTEM VALUE VALUES("
+            + std::to_string(id) + ", '" + escaped_id + "') ON CONFLICT DO NOTHING");
+        }
+        return data_processor::data_processing_status();
+      },
+      nullptr, app
+    );
+    flusher.trigger(data_processor::data_chunk_ptr(), 0);
+    flusher.join();
+  }
+
+private:
+  std::unordered_map<std::string, int16_t> _mapping;
+  std::vector<std::pair<int16_t, std::string>> _pending_inserts;
+  int16_t _next_id = 1;
+};
+
 namespace detail
 {
 
@@ -329,6 +412,7 @@ public:
   indexation_state _indexation_state;
   bool _is_database_initialized;
   vacuum_cleaner _vacuum_cleaner;
+  custom_json_type_cache _custom_json_cache;
 
   void log_statistics()
   {
@@ -411,6 +495,8 @@ public:
     block_loader.join();
 
     ilog("psql block number: ${pbn}.", ("pbn", psql_block_number));
+
+    _custom_json_cache.load_from_db( db_url, theApp );
   }
 
   bool can_collect_blocks();
@@ -631,12 +717,20 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
       );
     }
 
+    fc::optional<int16_t> cj_type_id;
+    if( note.op.which() == hive::protocol::operation::tag<hive::protocol::custom_json_operation>::value )
+    {
+      const auto& cj_op = note.op.get<hive::protocol::custom_json_operation>();
+      cj_type_id = _custom_json_cache.get_type_id( cj_op.id );
+    }
+
     cdtf->operations.emplace_back(
       operation_id,
       note.block,
       note.trx_in_block,
       note.op_in_trx,
-      note.op
+      note.op,
+      cj_type_id
     );
   }
   ++op_in_block_number;
@@ -685,6 +779,8 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
       dgpo.current_hbd_supply,
       dgpo.init_hbd_supply
       );
+
+    _custom_json_cache.flush_pending( db_url, theApp );
 
     _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
 

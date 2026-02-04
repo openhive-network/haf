@@ -89,6 +89,7 @@ BEGIN
          , hor.trx_in_block
          , hor.op_pos
          , hor.body_binary
+         , hor.custom_json_type_id
     FROM
         hafd.operations_reversible hor
         JOIN (

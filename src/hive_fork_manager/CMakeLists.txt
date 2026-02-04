@@ -25,7 +25,8 @@ ADD_PSQL_EXTENSION(
              save_restore_view_data.sql
              application_loop/contexts_log.sql
 
-    DEPLOY_SOURCES trigger_switch/trigger_off.sql
+    DEPLOY_SOURCES custom_json_type_schema_update.sql
+            trigger_switch/trigger_off.sql
             context_rewind/sink_id_functions.sql
             context_rewind/names.sql
             context_rewind/triggers.sql

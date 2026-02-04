@@ -48,14 +48,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::TABLE[] = "hafd.operations";
-  template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::COLS[] = "id, trx_in_block, op_pos, body_binary";
+  template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::COLS[] = "id, trx_in_block, op_pos, body_binary, custom_json_type_id";
 
   template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::TABLE[] = "hafd.operations";
-  template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::COLS[] = "id, trx_in_block, op_pos, body_binary";
+  template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::COLS[] = "id, trx_in_block, op_pos, body_binary, custom_json_type_id";
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_operation_t& operation)
   {
-    stream.write_values(operation.operation_id, operation.trx_in_block, operation.op_in_trx, operation.op);
+    stream.write_values(operation.operation_id, operation.trx_in_block, operation.op_in_trx, operation.op, operation.custom_json_type_id);
   }
 
   template<> const char hive_accounts<std::vector<PSQL::processing_objects::account_data_t>>::TABLE[] = "hafd.accounts";
