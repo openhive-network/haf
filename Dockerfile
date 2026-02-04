@@ -111,9 +111,7 @@ ARG HIVE_SUBDIR=.
 ENV HIVE_SUBDIR=${HIVE_SUBDIR}
 
 ARG SCCACHE_REDIS=""
-# Only set SCCACHE_REDIS env var if the build arg is non-empty
-# When empty, sccache will use local disk cache instead of Redis
-ENV SCCACHE_REDIS=${SCCACHE_REDIS:+${SCCACHE_REDIS}}
+ENV SCCACHE_REDIS=${SCCACHE_REDIS}
 
 ENV HAF_SOURCE_DIR="/home/haf_admin/source/${HIVE_SUBDIR}"
 

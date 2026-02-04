@@ -18,18 +18,18 @@ AS 'MODULE_PATHNAME', 'generate_asset_unique_id' LANGUAGE C;
 -- Decoder: Extract operation_id from asset_unique_id
 CREATE OR REPLACE FUNCTION hafd.asset_unique_id_to_operation_id(_id hafd.asset_unique_id)
     RETURNS BIGINT
-    IMMUTABLE PARALLEL SAFE LEAKPROOF
+    IMMUTABLE STRICT PARALLEL SAFE LEAKPROOF
 AS 'MODULE_PATHNAME', 'asset_unique_id_to_operation_id' LANGUAGE C;
 
 -- Decoder: Extract asset_symbol from asset_unique_id
 -- Note: Returns asset_symbol reconstructed from NAI with precision 0
 CREATE OR REPLACE FUNCTION hafd.asset_unique_id_to_asset_symbol(_id hafd.asset_unique_id)
     RETURNS hafd.asset_symbol
-    IMMUTABLE PARALLEL SAFE LEAKPROOF
+    IMMUTABLE STRICT PARALLEL SAFE LEAKPROOF
 AS 'MODULE_PATHNAME', 'asset_unique_id_to_asset_symbol' LANGUAGE C;
 
 -- Decoder: Extract subsequent_no from asset_unique_id
 CREATE OR REPLACE FUNCTION hafd.asset_unique_id_to_subsequent_no(_id hafd.asset_unique_id)
     RETURNS BIGINT
-    IMMUTABLE PARALLEL SAFE LEAKPROOF
+    IMMUTABLE STRICT PARALLEL SAFE LEAKPROOF
 AS 'MODULE_PATHNAME', 'asset_unique_id_to_subsequent_no' LANGUAGE C;
