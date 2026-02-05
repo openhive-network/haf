@@ -19,9 +19,9 @@ source = [
 
 [tool.poetry.dependencies]
 python = ">=3.14,<4"
-pandas = "^2.2.3"
-psycopg2-binary = "^2.9.11"
-msgspec = "^0.20.0"
-sqlalchemy = "^2.0.39"
-sqlalchemy-utils = "0.41.2"
+pandas = ">=2.2.3"
+psycopg2-binary = ">=2.9.11"
+msgspec = ">=0.20.0"
+sqlalchemy = ">=2.0.39"
+sqlalchemy-utils = ">=0.41.2"
 hive_local_tools = { path = "../../../hive/tests/python/hive-local-tools", develop = true }
