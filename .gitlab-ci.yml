@@ -44,6 +44,10 @@ variables:
   AUTO_SKIP_REPLAY: "false"   # Set to true when only tests/docs changed (no SQL)
   AUTO_CACHE_COMMIT: ""       # Most recent cached HAF commit
 
+  # Set to "true" to run poetry update and test with latest dependency versions
+  TEST_WITH_LATEST_DEPENDENCIES: "false"
+  STATIC_ANALYSIS_WITH_LATEST_DEPENDENCIES: "false"
+
   # Fetch strategy reuses workspace between jobs, reducing GitLab server load.
   # Full clone (depth 0) enables efficient incremental fetches - shallow clones
   # don't reduce server CPU and make fetch less effective.
@@ -841,21 +845,22 @@ hfm_functional_tests_testnet:
 
 .pytest_based:
   extends: .job-defaults
+  variables:
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
   before_script:
     # Initialize submodules (hive is on a feature branch)
     - !reference [.init_submodules, before_script]
+    - echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
+    # Install build tools for compiling C extensions (no Python 3.14 wheels available yet)
+    - sudo apt-get update -qq && sudo apt-get install -y -qq build-essential libpq-dev python3-dev libffi-dev postgresql-client >/dev/null 2>&1 || true
+    # Create isolated venv (no --system-site-packages) to avoid Python 3.12 packages conflicting with 3.14
+    - python3 -m venv venv/
+    - . venv/bin/activate
+    - cd ${PYPROJECT_DIR}
+    # Regenerate poetry.lock for Python 3.14 compatibility
+    - poetry lock --no-update 2>/dev/null || poetry lock
+    # Retry poetry install up to 3 times (transient network failures downloading packages)
     - |
-      echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
-      # Install build tools for compiling C extensions (no Python 3.14 wheels available yet)
-      # build-essential: gcc/make, libpq-dev: postgres headers, python3-dev: Python.h, libffi-dev: cffi, postgresql-client: psql
-      sudo apt-get update -qq && sudo apt-get install -y -qq build-essential libpq-dev python3-dev libffi-dev postgresql-client >/dev/null 2>&1 || true
-      # Create isolated venv (no --system-site-packages) to avoid Python 3.12 packages conflicting with 3.14
-      python3 -m venv venv/
-      . venv/bin/activate
-      cd $CI_PROJECT_DIR/tests/integration/haf-local-tools
-      # Regenerate poetry.lock for Python 3.14 compatibility
-      poetry lock --no-update 2>/dev/null || poetry lock
-      # Retry poetry install up to 3 times (transient network failures downloading packages)
       poetry_success=false
       for attempt in 1 2 3; do
         if poetry install; then
@@ -869,8 +874,9 @@ hfm_functional_tests_testnet:
         echo "ERROR: Poetry install failed after 3 attempts"
         exit 1
       fi
-      cd $CI_PROJECT_DIR
-      echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
+    - !reference [.update_deps_for_tests, script]
+    - cd $CI_PROJECT_DIR
+    - echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
 haf_system_tests:
   extends: .job-defaults
