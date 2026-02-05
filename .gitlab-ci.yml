@@ -619,11 +619,13 @@ detect_changes:
           echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
 
           # Build thin overlay using Dockerfile.sql-overlay
+          # CACHED_COMMIT contains the base image's commit (needed for .so symlink)
           echo "Building thin overlay Docker image..."
           docker build \
             -f "${CI_PROJECT_DIR}/Dockerfile.sql-overlay" \
             --build-arg BASE_IMAGE="${CACHED_IMAGE_NAME}" \
             --build-arg GIT_SHA="${CI_COMMIT_SHA}" \
+            --build-arg BASE_COMMIT="${CACHED_COMMIT}" \
             --build-arg POSTGRES_VERSION=17 \
             -t "${TARGET_IMAGE}" \
             "${CI_PROJECT_DIR}"

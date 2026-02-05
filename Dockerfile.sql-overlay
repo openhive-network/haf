@@ -24,6 +24,7 @@ ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 ARG GIT_SHA
+ARG BASE_COMMIT
 ARG POSTGRES_VERSION=17
 
 USER root
@@ -31,6 +32,20 @@ USER root
 # Copy pre-generated extension SQL files
 # These were created by scripts/generate_extension_sql.sh
 COPY extension_sql/ /usr/share/postgresql/${POSTGRES_VERSION}/extension/
+
+# Create symlink for the shared library (.so file)
+# The base image has libhfm-<BASE_COMMIT>.so, but the new control file references
+# libhfm-<GIT_SHA>.so. We create a symlink so both names work.
+RUN cd /usr/lib/postgresql/${POSTGRES_VERSION}/lib && \
+    if [ -n "${BASE_COMMIT}" ] && [ "${BASE_COMMIT}" != "${GIT_SHA}" ]; then \
+        BASE_SO=$(ls libhfm-${BASE_COMMIT}*.so 2>/dev/null | head -1) && \
+        if [ -n "${BASE_SO}" ]; then \
+            ln -sf "${BASE_SO}" "libhfm-${GIT_SHA}.so" && \
+            echo "Created symlink: libhfm-${GIT_SHA}.so -> ${BASE_SO}"; \
+        else \
+            echo "Warning: Base .so file not found for commit ${BASE_COMMIT}"; \
+        fi; \
+    fi
 
 # Fix permissions on extension files (match original Dockerfile)
 RUN chmod 644 /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager*.sql \
