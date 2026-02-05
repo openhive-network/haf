@@ -175,7 +175,12 @@ cp "$SRC_DIR/update.sql" "$OUTPUT_DIR/"
 UPDATE_GEN_TEMPLATE="$SRC_DIR/hive_fork_manager_update_script_generator.sh.in"
 UPDATE_GEN_OUTPUT="$OUTPUT_DIR/hive_fork_manager_update_script_generator.sh"
 if [[ -f "$UPDATE_GEN_TEMPLATE" ]]; then
-    sed "s/@HAF_GIT_REVISION_SHA@/${GIT_SHA}/g" "$UPDATE_GEN_TEMPLATE" > "$UPDATE_GEN_OUTPUT"
+    # Substitute all template variables
+    # POSTGRES_SHAREDIR is where PostgreSQL extensions are installed
+    POSTGRES_SHAREDIR="/usr/share/postgresql/17"
+    sed -e "s|@HAF_GIT_REVISION_SHA@|${GIT_SHA}|g" \
+        -e "s|@POSTGRES_SHAREDIR@|${POSTGRES_SHAREDIR}|g" \
+        "$UPDATE_GEN_TEMPLATE" > "$UPDATE_GEN_OUTPUT"
     chmod +x "$UPDATE_GEN_OUTPUT"
 fi
 
