@@ -389,11 +389,12 @@ detect_changes:
         CACHE_SHORT="${CACHE_COMMIT:0:8}"
         HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:$CACHE_SHORT}"
         echo "CACHED_BASE_IMAGE=$HAF_IMG" >> detect_changes.env
+        # HAF_COMMIT must point to cache commit for data cache paths (HAF_DATA_CACHE_LOCAL)
+        echo "HAF_COMMIT=$CACHE_COMMIT" >> detect_changes.env
       fi
 
-      # For complete build skip, also export HAF_COMMIT and HAF_IMAGE_NAME
+      # For complete build skip, also export HAF_IMAGE_NAME (uses cached image directly)
       if [[ "$CAN_SKIP_BUILD" == "true" ]]; then
-        echo "HAF_COMMIT=$CACHE_COMMIT" >> detect_changes.env
         echo "HAF_IMAGE_NAME=$HAF_IMG" >> detect_changes.env
       fi
 
