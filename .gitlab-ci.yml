@@ -283,30 +283,42 @@ detect_changes:
         echo "Changed files:"
         echo "$CHANGED_FILES" | head -50
 
-        # Two levels of skip detection:
-        # 1. Skip BUILD: tests, docs, SQL (SQL doesn't affect C++ compilation)
-        # 2. Skip REPLAY: only tests, docs (SQL affects replay behavior)
+        # Three levels of change detection:
+        # 1. Skip BUILD completely: only tests/docs changed (no SQL, no source)
+        # 2. SQL-only change: SQL changed but no C++ source - use thin overlay build
+        # 3. Full build: C++ source changed - requires full compilation
 
         # Note: Avoid \.txt$ as it matches CMakeLists.txt
-        SKIP_BUILD_PATTERNS="^tests/|^docs/|\.sql$|\.md$|^README|^CHANGELOG|^LICENSE"
-        SKIP_REPLAY_PATTERNS="^tests/|^docs/|\.md$|^README|^CHANGELOG|^LICENSE"
+        # Patterns for files that don't require any build
+        SKIP_ALL_PATTERNS="^tests/|^docs/|\.md$|^README|^CHANGELOG|^LICENSE"
+        # SQL files need thin overlay build but not full C++ compilation
+        SQL_PATTERNS="\.sql$"
 
-        NEEDS_BUILD=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_BUILD_PATTERNS" || true)
-        NEEDS_REPLAY=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_REPLAY_PATTERNS" || true)
+        # Check what files changed
+        NON_SKIP_FILES=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_ALL_PATTERNS" || true)
+        SQL_CHANGED=$(echo "$NON_SKIP_FILES" | grep -E "$SQL_PATTERNS" || true)
+        NON_SQL_SOURCE=$(echo "$NON_SKIP_FILES" | grep -vE "$SQL_PATTERNS" || true)
 
-        if [[ -z "$NEEDS_BUILD" ]]; then
+        # Determine build mode
+        SQL_ONLY_CHANGE=false
+        if [[ -z "$NON_SKIP_FILES" ]]; then
+          # Only tests/docs changed - can skip build entirely
           CAN_SKIP_BUILD=true
-          echo ""
-          echo "=== Can skip build (only tests/docs/SQL changed) ==="
-        fi
-
-        if [[ -z "$NEEDS_REPLAY" ]]; then
           CAN_SKIP_REPLAY=true
-          echo "=== Can skip replay (only tests/docs changed, no SQL) ==="
-        elif [[ "$CAN_SKIP_BUILD" == "true" ]]; then
-          echo "=== SQL changed - can skip build but must replay ==="
+          echo ""
+          echo "=== Can skip build entirely (only tests/docs changed) ==="
+        elif [[ -z "$NON_SQL_SOURCE" && -n "$SQL_CHANGED" ]]; then
+          # Only SQL files changed (plus maybe tests/docs) - use thin overlay
+          SQL_ONLY_CHANGE=true
+          echo ""
+          echo "=== SQL-only change detected - will use thin overlay build ==="
           echo "SQL files changed:"
-          echo "$NEEDS_REPLAY" | grep '\.sql$' | head -10
+          echo "$SQL_CHANGED" | head -10
+        else
+          echo ""
+          echo "=== Full build required (C++ source changed) ==="
+          echo "Source files requiring build:"
+          echo "$NON_SQL_SOURCE" | head -20
         fi
 
         # Find cached data/images when we can skip something
@@ -347,37 +359,41 @@ detect_changes:
           done
         fi
 
-        # For replay skip, we need cached data with images
-        if [[ "$CAN_SKIP_REPLAY" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
-          echo "WARNING: No cached data with valid images found - cannot skip replay"
-          CAN_SKIP_REPLAY=false
-        fi
-
-        # For build skip, we need a cached commit with valid Docker images
+        # For complete skip, we need cached data with images
         if [[ "$CAN_SKIP_BUILD" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
           echo "WARNING: No cached data with valid images found - cannot skip build"
           CAN_SKIP_BUILD=false
         fi
 
-        if [[ "$CAN_SKIP_BUILD" == "false" ]]; then
-          echo ""
-          echo "=== Full build required ==="
-          echo "Files requiring build:"
-          echo "$NEEDS_BUILD" | head -20
+        # For SQL-only change, we need a base image to overlay on
+        if [[ "$SQL_ONLY_CHANGE" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
+          echo "WARNING: No cached image found for thin overlay - falling back to full build"
+          SQL_ONLY_CHANGE=false
+        fi
+
+        if [[ "$CAN_SKIP_REPLAY" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
+          echo "WARNING: No cached data found - cannot skip replay"
+          CAN_SKIP_REPLAY=false
         fi
       fi
 
       # Export results
       echo "AUTO_SKIP_BUILD=$CAN_SKIP_BUILD" >> detect_changes.env
       echo "AUTO_SKIP_REPLAY=$CAN_SKIP_REPLAY" >> detect_changes.env
+      echo "SQL_ONLY_CHANGE=$SQL_ONLY_CHANGE" >> detect_changes.env
 
-      # Export HAF_COMMIT and HAF_IMAGE_NAME when skipping build
-      # Note: CAN_SKIP_BUILD is only true if CACHE_COMMIT was found (validated above)
-      if [[ "$CAN_SKIP_BUILD" == "true" ]]; then
-        echo "HAF_COMMIT=$CACHE_COMMIT" >> detect_changes.env
+      # Export HAF_COMMIT and cached image info when we can use cached data
+      if [[ "$CAN_SKIP_BUILD" == "true" || "$SQL_ONLY_CHANGE" == "true" ]]; then
+        echo "AUTO_CACHE_COMMIT=$CACHE_COMMIT" >> detect_changes.env
         # Use image tag based on cache commit (first 8 chars)
         CACHE_SHORT="${CACHE_COMMIT:0:8}"
         HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:$CACHE_SHORT}"
+        echo "CACHED_BASE_IMAGE=$HAF_IMG" >> detect_changes.env
+      fi
+
+      # For complete build skip, also export HAF_COMMIT and HAF_IMAGE_NAME
+      if [[ "$CAN_SKIP_BUILD" == "true" ]]; then
+        echo "HAF_COMMIT=$CACHE_COMMIT" >> detect_changes.env
         echo "HAF_IMAGE_NAME=$HAF_IMG" >> detect_changes.env
       fi
 
@@ -437,8 +453,9 @@ detect_changes:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):smart_build[collapsed=true]\r\e[0KDetermining build action..."
 
-      # Determine if build can be skipped and get cached commit
+      # Determine build mode and get cached commit
       SKIP_BUILD_ALLOWED=false
+      SQL_OVERLAY_BUILD=false
       CACHED_COMMIT=""
       CACHED_IMAGE=""
 
@@ -454,6 +471,11 @@ detect_changes:
       elif [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
         SKIP_BUILD_ALLOWED=true
         CACHED_COMMIT="${HAF_COMMIT}"
+      # Check for SQL-only change mode (from detect_changes)
+      elif [[ "${SQL_ONLY_CHANGE:-false}" == "true" ]]; then
+        SQL_OVERLAY_BUILD=true
+        CACHED_COMMIT="${AUTO_CACHE_COMMIT}"
+        echo "SQL-only change detected - will build thin overlay"
       fi
 
       # Build cached image name if we have a cached commit
@@ -502,12 +524,21 @@ detect_changes:
       # Run smart-image-build to determine action
       /tmp/smart-image-build.sh "${BUILD_ARGS[@]}"
       source smart_build_decision.env
+
+      # Override BUILD_ACTION if SQL-only change detected
+      if [[ "$SQL_OVERLAY_BUILD" == "true" && -n "$CACHED_COMMIT" && -n "$CACHED_IMAGE" ]]; then
+        BUILD_ACTION="sql_overlay"
+        CACHED_IMAGE_NAME="$CACHED_IMAGE"
+        echo "BUILD_ACTION=sql_overlay" >> smart_build_decision.env
+        echo "CACHED_IMAGE_NAME=$CACHED_IMAGE" >> smart_build_decision.env
+      fi
+
       echo ""
       echo "Build decision: BUILD_ACTION=${BUILD_ACTION}"
       echo -e "\e[0Ksection_end:$(date +%s):smart_build\r\e[0K"
 
       # Export for use in later script blocks (avoid IMAGE_NAME - conflicts with other scripts)
-      export BUILD_ACTION CACHED_IMAGE_NAME IMAGE_COMMIT
+      export BUILD_ACTION CACHED_IMAGE_NAME IMAGE_COMMIT SQL_OVERLAY_BUILD
     # Handle skip and retag cases - exit early if not building
     - |
       source smart_build_decision.env
@@ -555,6 +586,63 @@ detect_changes:
           chmod -Rc a+rwx "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
           ls -la "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/"
           echo "Image re-tagged and binaries extracted"
+          exit 0
+          ;;
+        sql_overlay)
+          # Thin overlay build for SQL-only changes
+          # This is fast (~30 seconds) because it only updates extension SQL files
+          echo "=== Building thin SQL overlay ==="
+          echo "Base image: ${CACHED_IMAGE_NAME}"
+
+          # Determine target image name (current commit)
+          COMMIT_SHORT="${CI_COMMIT_SHORT_SHA}"
+          case "${HIVE_NETWORK_TYPE:-mainnet}" in
+            testnet)
+              TARGET_IMAGE="registry.gitlab.syncad.com/hive/haf/testnet:${COMMIT_SHORT}"
+              ;;
+            mirrornet)
+              TARGET_IMAGE="registry.gitlab.syncad.com/hive/haf/mirrornet:${COMMIT_SHORT}"
+              ;;
+            *)
+              TARGET_IMAGE="registry.gitlab.syncad.com/hive/haf:${COMMIT_SHORT}"
+              ;;
+          esac
+          echo "Target image: ${TARGET_IMAGE}"
+
+          # Generate extension SQL files using the local script
+          echo "Generating extension SQL files..."
+          SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
+          mkdir -p "${CI_PROJECT_DIR}/extension_sql"
+          "${SCRIPTS_PATH}/generate_extension_sql.sh" "${CI_COMMIT_SHA}" "${CI_PROJECT_DIR}/extension_sql"
+
+          # Login to registry
+          echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+
+          # Build thin overlay using Dockerfile.sql-overlay
+          echo "Building thin overlay Docker image..."
+          docker build \
+            -f "${CI_PROJECT_DIR}/Dockerfile.sql-overlay" \
+            --build-arg BASE_IMAGE="${CACHED_IMAGE_NAME}" \
+            --build-arg GIT_SHA="${CI_COMMIT_SHA}" \
+            --build-arg POSTGRES_VERSION=17 \
+            -t "${TARGET_IMAGE}" \
+            "${CI_PROJECT_DIR}"
+
+          # Push the new image
+          docker push "${TARGET_IMAGE}"
+
+          # Create dotenv artifact with new image name
+          echo "HAF_IMAGE_NAME=${TARGET_IMAGE}" > docker_image_name.env
+          echo "HAF_INSTANCE=${TARGET_IMAGE}" >> docker_image_name.env
+          echo "BUILD_ACTION=sql_overlay" >> docker_image_name.env
+
+          # Extract binaries from the base image (they're unchanged, but downstream jobs need them)
+          echo "Extracting binaries from base image..."
+          "$SCRIPTS_PATH/ci-helpers/export-data-from-docker-image.sh" "${CACHED_IMAGE_NAME}" "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          chmod -Rc a+rwx "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          ls -la "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/"
+
+          echo "SQL overlay build complete"
           exit 0
           ;;
         build)

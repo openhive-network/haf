@@ -1,0 +1,50 @@
+# Thin overlay for SQL-only changes
+#
+# This Dockerfile creates a thin layer on top of an existing HAF image
+# that only updates the PostgreSQL extension SQL files. This is used
+# when only SQL files changed (no C++ code changes), allowing fast
+# builds (~30 seconds) without full recompilation.
+#
+# Usage:
+#   # First generate the extension SQL files
+#   ./scripts/generate_extension_sql.sh "$GIT_SHA" extension_sql/
+#
+#   # Then build the thin overlay
+#   docker build -f Dockerfile.sql-overlay \
+#     --build-arg BASE_IMAGE=registry.gitlab.syncad.com/hive/haf:abc12345 \
+#     --build-arg GIT_SHA=def67890 \
+#     -t registry.gitlab.syncad.com/hive/haf:def67890 .
+#
+# The resulting image has:
+# - All binaries from the base image (unchanged)
+# - Updated extension SQL files for the new commit
+# - Updated HAF_COMMIT label/env
+
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+ARG GIT_SHA
+ARG POSTGRES_VERSION=17
+
+USER root
+
+# Copy pre-generated extension SQL files
+# These were created by scripts/generate_extension_sql.sh
+COPY extension_sql/ /usr/share/postgresql/${POSTGRES_VERSION}/extension/
+
+# Fix permissions on extension files (match original Dockerfile)
+RUN chmod 644 /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager*.sql \
+              /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager.control \
+              /usr/share/postgresql/${POSTGRES_VERSION}/extension/update.sql 2>/dev/null || true && \
+    chmod 755 /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh 2>/dev/null || true
+
+# Switch back to haf_admin (default user in HAF images)
+USER haf_admin
+WORKDIR /home/haf_admin
+
+# Update labels and environment to reflect the new commit
+LABEL io.hive.image.revision="${GIT_SHA}"
+LABEL io.hive.image.sql_overlay="true"
+LABEL io.hive.image.sql_overlay.description="Thin overlay with updated SQL extension files"
+
+ENV HAF_COMMIT=${GIT_SHA}
