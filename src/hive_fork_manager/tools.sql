@@ -20,4 +20,4 @@ END;
 $BODY$
 ;
 
-
+-- Test SQL overlay build: this comment triggers thin overlay instead of full rebuild
