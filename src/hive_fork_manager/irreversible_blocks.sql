@@ -163,9 +163,13 @@ CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operatio
 -- Function to create an optimized partial index for specific custom_json types.
 -- This should be called after replay when the custom_json_types table is populated.
 -- Example: SELECT hive.create_custom_json_type_index(ARRAY['follow', 'reblog', 'community', 'notify']);
+-- Note: SECURITY DEFINER allows HAF apps (like hivemind) to create indexes on hafd.operations
+-- without needing direct ownership of the table.
 CREATE OR REPLACE FUNCTION hive.create_custom_json_type_index(_custom_json_ids TEXT[])
 RETURNS VOID
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
 AS $$
 DECLARE
     _type_ids SMALLINT[];
