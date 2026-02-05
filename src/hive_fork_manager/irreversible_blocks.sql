@@ -156,7 +156,54 @@ CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations U
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
 CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (hafd.operation_id_to_type_id(id), hafd.operation_id_to_block_num(id));
 
-CREATE INDEX IF NOT EXISTS hive_operations_custom_json_type_id_idx ON hafd.operations (custom_json_type_id) WHERE custom_json_type_id IS NOT NULL;
+-- Generic partial index for all custom_json operations is NOT created by default.
+-- Apps should call hive.create_custom_json_type_index() with the specific types they need.
+-- This avoids indexing high-volume types like Splinterlands that most apps don't use.
+
+-- Function to create an optimized partial index for specific custom_json types.
+-- This should be called after replay when the custom_json_types table is populated.
+-- Example: SELECT hive.create_custom_json_type_index(ARRAY['follow', 'reblog', 'community', 'notify']);
+CREATE OR REPLACE FUNCTION hive.create_custom_json_type_index(_custom_json_ids TEXT[])
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    _type_ids SMALLINT[];
+    _index_name TEXT;
+    _where_clause TEXT;
+BEGIN
+    -- Look up the numeric IDs for the given custom_json_id strings
+    SELECT array_agg(id ORDER BY id)
+    INTO _type_ids
+    FROM hafd.custom_json_types
+    WHERE custom_json_id = ANY(_custom_json_ids);
+
+    IF _type_ids IS NULL OR array_length(_type_ids, 1) IS NULL THEN
+        RAISE NOTICE 'No matching custom_json_type_ids found for: %', _custom_json_ids;
+        RETURN;
+    END IF;
+
+    -- Build a deterministic index name from the sorted IDs
+    _index_name := 'hive_operations_custom_json_types_' || array_to_string(_type_ids, '_') || '_idx';
+
+    -- Build the WHERE clause
+    _where_clause := 'custom_json_type_id IN (' || array_to_string(_type_ids, ',') || ')';
+
+    -- Check if index already exists
+    IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = _index_name) THEN
+        RAISE NOTICE 'Index % already exists', _index_name;
+        RETURN;
+    END IF;
+
+    -- Create the partial index
+    RAISE NOTICE 'Creating index % for custom_json types: % (IDs: %)', _index_name, _custom_json_ids, _type_ids;
+    EXECUTE format(
+        'CREATE INDEX %I ON hafd.operations (custom_json_type_id) WHERE %s',
+        _index_name,
+        _where_clause
+    );
+END;
+$$;
 
 --Clustering to speedup get_account_history queries (returns ordered set of operations for a specific account)
 --Clustering takes 2 hours on a fast system with 4 maintenance works
