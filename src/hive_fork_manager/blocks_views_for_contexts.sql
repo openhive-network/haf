@@ -434,7 +434,7 @@ BEGIN
                     hafd.operation_id_to_block_num( t.id ) as block_num,
                     t.trx_in_block,
                     t.op_pos,
-                    hafd.operation_id_to_type_id( t.id ) as op_type_id,
+                    t.op_type_id,
                     t.timestamp,
                     t.body_binary as body_binary,
                     t.body_binary::jsonb AS body,
@@ -446,6 +446,7 @@ BEGIN
                       ho.id,
                       ho.trx_in_block,
                       ho.op_pos,
+                      ho.op_type_id,
                       b.created_at timestamp,
                       ho.body_binary,
                       ho.custom_json_type_id
@@ -457,6 +458,7 @@ BEGIN
                         o.id,
                         o.trx_in_block,
                         o.op_pos,
+                        o.op_type_id,
                         visible_ops_timestamp.created_at timestamp,
                         o.body_binary,
                         o.custom_json_type_id
@@ -486,7 +488,7 @@ BEGIN
                         hafd.operation_id_to_block_num( t.id ) as block_num,
                         t.trx_in_block,
                         t.op_pos,
-                        hafd.operation_id_to_type_id( t.id ) as op_type_id,
+                        t.op_type_id,
                         t.timestamp,
                         t.body_binary as body_binary,
                         t.body_binary::jsonb AS body,
@@ -498,6 +500,7 @@ BEGIN
                           ho.id,
                           ho.trx_in_block,
                           ho.op_pos,
+                          ho.op_type_id,
                           b.created_at timestamp,
                           ho.body_binary,
                           ho.custom_json_type_id
@@ -535,7 +538,7 @@ BEGIN
                     hafd.operation_id_to_block_num( t.id ) as block_num,
                     t.trx_in_block,
                     t.op_pos,
-                    hafd.operation_id_to_type_id( t.id ) as op_type_id,
+                    t.op_type_id,
                     t.body_binary as body_binary,
                     t.body_binary::jsonb AS body,
                     t.custom_json_type_id
@@ -546,6 +549,7 @@ BEGIN
                       ho.id,
                       ho.trx_in_block,
                       ho.op_pos,
+                      ho.op_type_id,
                       ho.body_binary,
                       ho.custom_json_type_id
                       FROM hafd.operations ho
@@ -555,6 +559,7 @@ BEGIN
                         o.id,
                         o.trx_in_block,
                         o.op_pos,
+                        o.op_type_id,
                         o.body_binary,
                         o.custom_json_type_id
                       FROM hafd.operations_reversible o
@@ -578,7 +583,7 @@ BEGIN
                     hafd.operation_id_to_block_num( t.id ) as block_num,
                     t.trx_in_block,
                     t.op_pos,
-                    hafd.operation_id_to_type_id( t.id ) as op_type_id,
+                    t.op_type_id,
                     t.body_binary as body_binary,
                     t.body_binary::jsonb AS body,
                     t.custom_json_type_id
@@ -589,6 +594,7 @@ BEGIN
                       ho.id,
                       ho.trx_in_block,
                       ho.op_pos,
+                      ho.op_type_id,
                       ho.body_binary,
                       ho.custom_json_type_id
                       FROM hafd.operations ho
@@ -622,7 +628,7 @@ EXECUTE format(
             hafd.operation_id_to_block_num( ho.id ) as block_num,
             ho.trx_in_block,
             ho.op_pos,
-            hafd.operation_id_to_type_id( ho.id ) as op_type_id,
+            ho.op_type_id,
             b.created_at timestamp,
             ho.body_binary as body_binary,
             ho.body_binary::jsonb AS body,
@@ -656,7 +662,7 @@ EXECUTE format(
             hafd.operation_id_to_block_num( ho.id ) as block_num,
             ho.trx_in_block,
             ho.op_pos,
-            hafd.operation_id_to_type_id( ho.id ) as op_type_id,
+            ho.op_type_id,
             ho.body_binary as body_binary,
             ho.body_binary::jsonb AS body,
             ho.custom_json_type_id
@@ -959,7 +965,7 @@ BEGIN
                    t.transacting_account_id,
                    t.account_op_seq_no,
                    t.operation_id,
-                   hafd.operation_id_to_type_id( t.operation_id ) as op_type_id
+                   t.op_type_id
                 FROM %s.context_data_view c,
                 LATERAL
                 (
@@ -967,7 +973,8 @@ BEGIN
                          ha.account_id,
                          ha.transacting_account_id,
                          ha.account_op_seq_no,
-                         ha.operation_id
+                         ha.operation_id,
+                         ha.op_type_id
                         FROM hafd.account_operations ha
                         WHERE hafd.operation_id_to_block_num(ha.operation_id) <= c.min_block
                         UNION ALL
@@ -975,12 +982,14 @@ BEGIN
                             reversible.account_id,
                             reversible.transacting_account_id,
                             reversible.account_op_seq_no,
-                            reversible.operation_id
+                            reversible.operation_id,
+                            reversible.op_type_id
                         FROM ( SELECT
                             har.account_id,
                             har.transacting_account_id,
                             har.account_op_seq_no,
                             har.operation_id,
+                            har.op_type_id,
                             har.fork_id
                         FROM hafd.account_operations_reversible har
                         JOIN (
@@ -1003,7 +1012,7 @@ BEGIN
                    t.transacting_account_id,
                    t.account_op_seq_no,
                    t.operation_id,
-                   hafd.operation_id_to_type_id( t.operation_id ) as op_type_id
+                   t.op_type_id
                 FROM %s.context_data_view c,
                 LATERAL
                 (
@@ -1011,7 +1020,8 @@ BEGIN
                          ha.account_id,
                          ha.transacting_account_id,
                          ha.account_op_seq_no,
-                         ha.operation_id
+                         ha.operation_id,
+                         ha.op_type_id
                         FROM hafd.account_operations ha
                         WHERE hafd.operation_id_to_block_num(ha.operation_id) <= c.min_block
                 ) t
@@ -1044,7 +1054,7 @@ EXECUTE format(
            ha.transacting_account_id,
            ha.account_op_seq_no,
            ha.operation_id,
-           hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id
+           ha.op_type_id
         FROM hafd.account_operations ha
         ;'
     , __schema

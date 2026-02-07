@@ -42,21 +42,21 @@ BEGIN
     ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF',  1 )
     ;
 
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_type_id, op_pos, body_binary, fork_id)
     VALUES
-    ( hafd.operation_id(2,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+    ( hafd.operation_id(2, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
     ;
 
     INSERT INTO hafd.account_operations_reversible
-    VALUES ( 1, 1, 1, hafd.operation_id(2,1,0), 1 )
+    VALUES ( 1, 1, 1, hafd.operation_id(2, 0), 1, 1 )
     ;
 
     INSERT INTO hafd.transactions_multisig_reversible
     VALUES
-    ( '\xDEED20', '\xBEEF20',  1 );
+    ( '\xDEED20', '\xBEEF20', 1 );
 
       INSERT INTO hafd.applied_hardforks_reversible
-    VALUES ( 1, 2, hafd.operation_id(2,1,0), 1 )
+    VALUES ( 1, 2, hafd.operation_id(2, 0), 1 )
     ;
 
 

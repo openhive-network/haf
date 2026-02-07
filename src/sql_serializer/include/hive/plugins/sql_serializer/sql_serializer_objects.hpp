@@ -137,8 +137,8 @@ namespace hive
             {}
           };
 
-          inline uint64_t get_operation_id( uint32_t _block, const operation& _op, uint32_t _number_in_block ) {
-            return to_operation_id( _block, _op.which(), _number_in_block );
+          inline uint64_t get_operation_id( uint32_t _block, uint32_t _number_in_block ) {
+            return to_operation_id( _block, _number_in_block );
           }
 
           struct process_operation_t
@@ -146,6 +146,7 @@ namespace hive
           {
             int64_t operation_id = 0;
             int32_t trx_in_block = 0;
+            int16_t op_type_id = 0;
             int32_t op_in_trx = 0;
             operation op;
             fc::optional<int16_t> custom_json_type_id;
@@ -154,12 +155,14 @@ namespace hive
                 int64_t _operation_id
               , int32_t _block_number
               , const int32_t _trx_in_block
+              , const int16_t _op_type_id
               , const int32_t _op_in_trx
               , const operation &_op
               , fc::optional<int16_t> _custom_json_type_id = fc::optional<int16_t>()
             )
             : block_data_base( _block_number )
             , operation_id{_operation_id }, trx_in_block{_trx_in_block}
+            , op_type_id{_op_type_id}
             , op_in_trx{_op_in_trx}, op{_op}
             , custom_json_type_id{_custom_json_type_id} {
             }

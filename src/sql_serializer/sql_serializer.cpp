@@ -698,7 +698,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   const bool is_virtual = hive::protocol::is_virtual_operation(note.op);
   FC_ASSERT( is_virtual || note.trx_in_block >= 0,  "Non is_producing real operation with trx_in_block = -1" );
 
-  const auto operation_id = PSQL::processing_objects::get_operation_id( note.block, note.op, op_in_block_number );
+  const auto operation_id = PSQL::processing_objects::get_operation_id( note.block, op_in_block_number );
   collect_account_operations( operation_id, note.op, note.block );
 
   if( collector->is_op_accepted() )
@@ -728,6 +728,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
       operation_id,
       note.block,
       note.trx_in_block,
+      static_cast<int16_t>( note.op.which() ),
       note.op_in_trx,
       note.op,
       cj_type_id

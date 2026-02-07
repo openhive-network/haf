@@ -45,28 +45,28 @@ BEGIN
 
     INSERT INTO hafd.operations
     VALUES
-           ( hafd.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hafd.operation_id(2, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hafd.operation_id(3, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hafd.operation_id(4, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hafd.operation_id(5, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation )
+           ( hafd.operation_id(1, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.operation_id(2, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.operation_id(3, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.operation_id(4, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation )
+         , ( hafd.operation_id(5, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation )
     ;
 
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_pos, body_binary, fork_id)
+    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_type_id, op_pos, body_binary, fork_id)
     VALUES
-           ( hafd.operation_id(4,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(5,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(6,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
-         , ( hafd.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
-         , ( hafd.operation_id(7,1,2), 0, 2, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
-         , ( hafd.operation_id(7,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(7,1,1), 0, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(8,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
-         , ( hafd.operation_id(9,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
-         , ( hafd.operation_id(10,1,0), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation, 3 )
+           ( hafd.operation_id(4, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hafd.operation_id(5, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hafd.operation_id(6, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hafd.operation, 1 )
+         , ( hafd.operation_id(7, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
+         , ( hafd.operation_id(7, 1), 0, 1, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
+         , ( hafd.operation_id(7, 2), 0, 1, 2, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
+         , ( hafd.operation_id(7, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hafd.operation_id(7, 1), 0, 1, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hafd.operation_id(8, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hafd.operation_id(9, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
+         , ( hafd.operation_id(8, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
+         , ( hafd.operation_id(9, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
+         , ( hafd.operation_id(10, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation, 3 )
     ;
 
     INSERT INTO hafd.accounts
@@ -94,31 +94,31 @@ BEGIN
          , ( 1100, 'alice103', 10, 3 )
     ;
 
-    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, operation_id)
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, operation_id, op_type_id)
     VALUES
-           ( 100, 100, 1, hafd.operation_id(1, 1, 0) )
-         , ( 100, 100, 2, hafd.operation_id(2, 1, 0) )
-         , ( 200, 200, 1, hafd.operation_id(2, 1, 0) )
-         , ( 300, 300, 1, hafd.operation_id(3, 1, 0) )
-         , ( 400, 400, 1, hafd.operation_id(4, 1, 0) )
+           ( 100, 100, 1, hafd.operation_id(1, 0) , 1)
+         , ( 100, 100, 2, hafd.operation_id(2, 0) , 1)
+         , ( 200, 200, 1, hafd.operation_id(2, 0) , 1)
+         , ( 300, 300, 1, hafd.operation_id(3, 0) , 1)
+         , ( 400, 400, 1, hafd.operation_id(4, 0) , 1)
     ;
 
     INSERT INTO hafd.account_operations_reversible
     VALUES
-           ( 400, 400, 1, hafd.operation_id(4,1,0), 1 )
-         , ( 500, 500, 1, hafd.operation_id(5,1,0), 1 )
-         , ( 600, 600, 1, hafd.operation_id(6,1,0), 1 )
-         , ( 700, 700, 1, hafd.operation_id(7,1,0), 1 ) -- must be overriden by fork 2
-         , ( 800, 800, 1, hafd.operation_id(7,1,1), 1 ) -- must be overriden by fork 2
-         , ( 900, 900, 1, hafd.operation_id(7,1,2), 1 ) -- must be overriden by fork 2
-         , ( 700, 700, 2, hafd.operation_id(7,1,0), 2 )
-         , ( 800, 800, 2, hafd.operation_id(7,1,1), 2 ) -- will be abandoned since fork 3 doesn not have this account operation
-         , ( 900, 900, 2, hafd.operation_id(8,1,0), 2 )
-         , ( 900, 900, 3, hafd.operation_id(7,1,0), 2 )
-         , ( 1000, 1000, 2, hafd.operation_id(9,1,0), 2 )
-         , ( 900, 900, 3, hafd.operation_id(9,1,0), 3 )
-         , ( 100, 100, 3, hafd.operation_id(10,1,0), 3 )
-         , ( 1100, 1100, 3, hafd.operation_id(10,1,0), 3 )
+           ( 400, 400, 1, hafd.operation_id(4, 0), 1, 1 )
+         , ( 500, 500, 1, hafd.operation_id(5, 0), 1, 1 )
+         , ( 600, 600, 1, hafd.operation_id(6, 0), 1, 1 )
+         , ( 700, 700, 1, hafd.operation_id(7, 0), 1, 1 ) -- must be overriden by fork 2
+         , ( 800, 800, 1, hafd.operation_id(7, 1), 1, 1 ) -- must be overriden by fork 2
+         , ( 900, 900, 1, hafd.operation_id(7, 2), 1, 1 ) -- must be overriden by fork 2
+         , ( 700, 700, 2, hafd.operation_id(7, 0), 1, 2 )
+         , ( 800, 800, 2, hafd.operation_id(7, 1), 1, 2 ) -- will be abandoned since fork 3 doesn not have this account operation
+         , ( 900, 900, 2, hafd.operation_id(8, 0), 1, 2 )
+         , ( 900, 900, 3, hafd.operation_id(7, 0), 1, 2 )
+         , ( 1000, 1000, 2, hafd.operation_id(9, 0), 1, 2 )
+         , ( 900, 900, 3, hafd.operation_id(9, 0), 1, 3 )
+         , ( 100, 100, 3, hafd.operation_id(10, 0), 1, 3 )
+         , ( 1100, 1100, 3, hafd.operation_id(10, 0), 1, 3 )
     ;
 
     UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8;
@@ -146,11 +146,11 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM a.account_operations_view
         EXCEPT SELECT * FROM ( VALUES
-               ( 1, 100, 100, 1, hafd.operation_id(1, 1, 0), 1 )
-             , ( 2, 100, 100, 2, hafd.operation_id(2, 1, 0), 1 )
-             , ( 2, 200, 200, 1, hafd.operation_id(2, 1, 0), 1 )
-             , ( 3, 300, 300, 1, hafd.operation_id(3, 1, 0), 1 )
-             , ( 4, 400, 400, 1, hafd.operation_id(4, 1, 0), 1 )
+               ( 1, 100, 100, 1, hafd.operation_id(1, 0), 1 )
+             , ( 2, 100, 100, 2, hafd.operation_id(2, 0), 1 )
+             , ( 2, 200, 200, 1, hafd.operation_id(2, 0), 1 )
+             , ( 3, 300, 300, 1, hafd.operation_id(3, 0), 1 )
+             , ( 4, 400, 400, 1, hafd.operation_id(4, 0), 1 )
         ) as pattern
     ) , 'Unexpected rows in the view';
 

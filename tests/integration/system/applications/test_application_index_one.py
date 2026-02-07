@@ -31,7 +31,7 @@ def test_application_index_one(haf_node):
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),"
             r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')"
             r")"
-            r"WHERE hafd.operation_id_to_type_id(id) = 0")
+            r"WHERE op_type_id = 0")
     session.commit()
 
     # THEN
