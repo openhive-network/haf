@@ -90,7 +90,7 @@ namespace hive::plugins::sql_serializer {
         std::vector<char> opDeserialized = fc::raw::pack_to_vector( data.op );
 
         std::string result = std::to_string(data.operation_id) + ',' + std::to_string(data.trx_in_block) + ',' +
-        std::to_string(data.op_in_trx) + "," + escape_raw(opDeserialized) + "::bytea,";
+        std::to_string(data.op_type_id) + ',' + std::to_string(data.op_in_trx) + "," + escape_raw(opDeserialized) + "::bytea,";
         if( data.custom_json_type_id.valid() )
           result += std::to_string( *data.custom_json_type_id );
         else
@@ -135,8 +135,9 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        return std::to_string(data.account_id) + ',' + std::to_string(data.transacting_account_id) + ',' + 
-        std::to_string(data.operation_seq_no) + ',' + std::to_string(data.operation_id);
+        return std::to_string(data.account_id) + ',' + std::to_string(data.transacting_account_id) + ',' +
+        std::to_string(data.operation_seq_no) + ',' + std::to_string(data.operation_id) + ',' +
+        std::to_string(data.op_type_id);
       }
       };
     };

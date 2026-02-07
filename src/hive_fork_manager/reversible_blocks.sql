@@ -106,8 +106,8 @@ ALTER TABLE hafd.applied_hardforks_reversible
 CREATE INDEX IF NOT EXISTS hive_applied_hardforks_reversible_block_num_idx ON hafd.applied_hardforks_reversible( block_num );
 CREATE INDEX IF NOT EXISTS hive_applied_hardforks_reversible_fork_id_idx ON hafd.applied_hardforks_reversible( fork_id );
 CREATE INDEX IF NOT EXISTS hive_transactions_reversible_block_num_trx_in_block_fork_id_idx ON hafd.transactions_reversible( block_num, trx_in_block, fork_id );
-CREATE INDEX IF NOT EXISTS hive_operations_reversible_block_num_type_id_trx_in_block_fork_id_idx ON hafd.operations_reversible( hafd.operation_id_to_block_num(id), hafd.operation_id_to_type_id(id), trx_in_block, fork_id );
+CREATE INDEX IF NOT EXISTS hive_operations_reversible_block_num_type_id_trx_in_block_fork_id_idx ON hafd.operations_reversible( hafd.operation_id_to_block_num(id), op_type_id, trx_in_block, fork_id );
 CREATE INDEX IF NOT EXISTS hive_operations_reversible_block_num_id_idx ON hafd.operations_reversible USING btree(hafd.operation_id_to_block_num(id), id, fork_id);
 CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_operation_id_idx ON hafd.account_operations_reversible(operation_id, fork_id);
-CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_type_account_id_op_seq_idx ON hafd.account_operations_reversible( hafd.operation_id_to_type_id( operation_id ), account_id, account_op_seq_no DESC, transacting_account_id, operation_id, hafd.operation_id_to_block_num(operation_id) );
+CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_type_account_id_op_seq_idx ON hafd.account_operations_reversible( op_type_id, account_id, account_op_seq_no DESC, transacting_account_id, operation_id, hafd.operation_id_to_block_num(operation_id) );
 

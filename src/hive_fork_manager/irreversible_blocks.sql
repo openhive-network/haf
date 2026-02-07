@@ -96,9 +96,10 @@ SELECT pg_catalog.pg_extension_config_dump('hafd.custom_json_types', '');
 CREATE STATISTICS IF NOT EXISTS operation_types_id_name_dependency_stats (dependencies) ON id, name FROM hafd.operation_types;
 
 CREATE TABLE IF NOT EXISTS hafd.operations (
-    -- id is encoded || 32b blocknum | 24b seq | 8b operation type ||
+    -- id is encoded || 32b blocknum | 32b seq ||
     id bigint not null,
     trx_in_block smallint NOT NULL,
+    op_type_id smallint NOT NULL,
     op_pos integer NOT NULL,
     body_binary hafd.operation  DEFAULT NULL,
     custom_json_type_id SMALLINT DEFAULT NULL,
@@ -138,6 +139,7 @@ CREATE TABLE IF NOT EXISTS hafd.account_operations
     , transacting_account_id INTEGER NOT NULL --- Identifier of account that performed the operation.
     , account_op_seq_no INTEGER NOT NULL --- Operation sequence number specific to given account.
     , operation_id BIGINT NOT NULL --- Id of operation held in hive_opreations table.
+    , op_type_id SMALLINT NOT NULL --- Operation type identifier.
     , CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no )
     -- Hopefully not needed anymore, let's find out
     --, CONSTRAINT hive_account_operations_uq2 UNIQUE ( account,operation_id )
@@ -153,8 +155,61 @@ CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hafd.applied_
 CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hafd.transactions ( block_num, trx_in_block );
 
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations USING btree( hafd.operation_id_to_block_num(id), id);
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
-CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (hafd.operation_id_to_type_id(id), hafd.operation_id_to_block_num(id));
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, op_type_id);
+CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (op_type_id, hafd.operation_id_to_block_num(id));
+
+-- Generic partial index for all custom_json operations is NOT created by default.
+-- Apps should call hive.create_custom_json_type_index() with the specific types they need.
+-- This avoids indexing high-volume types like Splinterlands that most apps don't use.
+
+-- Function to create an optimized partial index for specific custom_json types.
+-- This should be called after replay when the custom_json_types table is populated.
+-- Example: SELECT hive.create_custom_json_type_index(ARRAY['follow', 'reblog', 'community', 'notify']);
+-- Note: SECURITY DEFINER allows HAF apps (like hivemind) to create indexes on hafd.operations
+-- without needing direct ownership of the table.
+CREATE OR REPLACE FUNCTION hive.create_custom_json_type_index(_custom_json_ids TEXT[])
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
+AS $$
+DECLARE
+    _type_ids SMALLINT[];
+    _index_name TEXT;
+    _where_clause TEXT;
+BEGIN
+    -- Look up the numeric IDs for the given custom_json_id strings
+    SELECT array_agg(id ORDER BY id)
+    INTO _type_ids
+    FROM hafd.custom_json_types
+    WHERE custom_json_id = ANY(_custom_json_ids);
+
+    IF _type_ids IS NULL OR array_length(_type_ids, 1) IS NULL THEN
+        RAISE NOTICE 'No matching custom_json_type_ids found for: %', _custom_json_ids;
+        RETURN;
+    END IF;
+
+    -- Build a deterministic index name from the sorted IDs
+    _index_name := 'hive_operations_custom_json_types_' || array_to_string(_type_ids, '_') || '_idx';
+
+    -- Build the WHERE clause
+    _where_clause := 'custom_json_type_id IN (' || array_to_string(_type_ids, ',') || ')';
+
+    -- Check if index already exists
+    IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = _index_name) THEN
+        RAISE NOTICE 'Index % already exists', _index_name;
+        RETURN;
+    END IF;
+
+    -- Create the partial index
+    RAISE NOTICE 'Creating index % for custom_json types: % (IDs: %)', _index_name, _custom_json_ids, _type_ids;
+    EXECUTE format(
+        'CREATE INDEX %I ON hafd.operations (custom_json_type_id) WHERE %s',
+        _index_name,
+        _where_clause
+    );
+END;
+$$;
 
 -- Generic partial index for all custom_json operations is NOT created by default.
 -- Apps should call hive.create_custom_json_type_index() with the specific types they need.
@@ -218,7 +273,7 @@ CLUSTER hafd.account_operations using hive_account_operations_uq1;
 
 --This index is probably only needed for block_explorer queries right now, but maybe useful for other apps,
 --so decided to add here rather than as part of hafbe as it isn't huge.
-CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations( account_id, hafd.operation_id_to_type_id(operation_id ) );
+CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations( account_id, op_type_id );
 
 CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hafd.accounts USING btree (block_num);
 

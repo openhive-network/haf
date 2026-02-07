@@ -113,6 +113,7 @@ class Operations(HiveDataBase):
 
     id = Column(BigInteger, primary_key=True)
     trx_in_block = Column(SmallInteger)
+    op_type_id = Column(SmallInteger)
     op_pos = Column(Integer)
     body_binary = Column(HiveOperation)
 
@@ -122,6 +123,7 @@ class OperationsReversible(HiveDataBase):
 
     id = Column(BigInteger, primary_key=True)
     trx_in_block = Column(SmallInteger)
+    op_type_id = Column(SmallInteger)
     op_pos = Column(Integer)
     body_binary = Column(HiveOperation)
     fork_id = Column(BigInteger, primary_key=True)

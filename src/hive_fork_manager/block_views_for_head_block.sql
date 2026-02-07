@@ -4,13 +4,13 @@ CREATE OR REPLACE VIEW hive.account_operations_view AS
          ha.transacting_account_id,
          ha.account_op_seq_no,
          ha.operation_id,
-         hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id,
+         ha.op_type_id,
          hafd.operation_id_to_block_num( ha.operation_id ) as block_num
   FROM hafd.account_operations ha
  )
 UNION ALL
 (
-WITH 
+WITH
 consistent_block AS
 (SELECT COALESCE(hid.consistent_block, 0) AS consistent_block FROM hafd.hive_state hid LIMIT 1)
 ,forks AS
@@ -24,9 +24,9 @@ SELECT har.account_id,
        har.transacting_account_id,
        har.account_op_seq_no,
        har.operation_id,
-       hafd.operation_id_to_type_id( har.operation_id ) as op_type_id,
+       har.op_type_id,
        hafd.operation_id_to_block_num( har.operation_id ) as block_num
-FROM forks 
+FROM forks
 JOIN hafd.operations_reversible hor ON forks.max_fork_id = hor.fork_id AND forks.num = hafd.operation_id_to_block_num(hor.id)
 JOIN hafd.account_operations_reversible har ON forks.max_fork_id = har.fork_id AND har.operation_id = hor.id -- We can consider to extend account_operations_reversible by block_num column and eliminate need to join operations_reversible
 );
@@ -181,7 +181,7 @@ SELECT t.id,
        hafd.operation_id_to_block_num( t.id ) as block_num,
        t.trx_in_block,
        t.op_pos,
-       hafd.operation_id_to_type_id( t.id ) as op_type_id,
+       t.op_type_id,
        t.timestamp,
        t.body_binary as body_binary,
        t.body,
@@ -192,6 +192,7 @@ FROM
           ho.id,
           ho.trx_in_block,
           ho.op_pos,
+          ho.op_type_id,
           b.created_at timestamp,
           ho.body_binary,
           ho.body_binary::jsonb AS body,
@@ -203,6 +204,7 @@ FROM
         o.id,
         o.trx_in_block,
         o.op_pos,
+        o.op_type_id,
         visible_ops_timestamp.created_at timestamp,
         o.body_binary,
         o.body_binary::jsonb AS body,
@@ -231,7 +233,7 @@ SELECT t.id,
        hafd.operation_id_to_block_num( t.id ) as block_num,
        t.trx_in_block,
        t.op_pos,
-       hafd.operation_id_to_type_id( t.id ) as op_type_id,
+       t.op_type_id,
        t.body_binary as body_binary,
        t.body,
        t.custom_json_type_id
@@ -241,6 +243,7 @@ FROM
           ho.id,
           ho.trx_in_block,
           ho.op_pos,
+          ho.op_type_id,
           ho.body_binary,
           ho.body_binary::jsonb AS body,
           ho.custom_json_type_id
@@ -250,6 +253,7 @@ FROM
         o.id,
         o.trx_in_block,
         o.op_pos,
+        o.op_type_id,
         o.body_binary,
         o.body_binary::jsonb AS body,
         o.custom_json_type_id
@@ -332,7 +336,7 @@ CREATE OR REPLACE VIEW hive.irreversible_account_operations_view AS
        ha.transacting_account_id,
        ha.account_op_seq_no,
        ha.operation_id,
-       hafd.operation_id_to_type_id( ha.operation_id ) as op_type_id,
+       ha.op_type_id,
        hafd.operation_id_to_block_num( ha.operation_id ) as block_num
     FROM hafd.account_operations ha;
 
@@ -346,7 +350,7 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
         hafd.operation_id_to_block_num( op.id ) as block_num,
         op.trx_in_block,
         op.op_pos,
-        hafd.operation_id_to_type_id( op.id ) as op_type_id,
+        op.op_type_id,
         b.created_at timestamp,
         op.body_binary as body_binary,
         op.body_binary::jsonb AS body,
@@ -360,7 +364,7 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
         hafd.operation_id_to_block_num( op.id ) as block_num,
         op.trx_in_block,
         op.op_pos,
-        hafd.operation_id_to_type_id( op.id ) as op_type_id,
+        op.op_type_id,
         op.body_binary as body_binary,
         op.body_binary::jsonb AS body,
         op.custom_json_type_id

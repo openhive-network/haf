@@ -95,7 +95,7 @@ BEGIN
                      , ARRAY_AGG(ho.body_binary ORDER BY op_pos ASC) bodies
                 FROM hive.operations_view ho
                 WHERE
-                    hafd.operation_id_to_type_id(ho.id) <= (SELECT ot.id FROM hafd.operation_types ot WHERE (_include_virtual OR ot.is_virtual = FALSE) ORDER BY ot.id DESC LIMIT 1)
+                    ho.op_type_id <= (SELECT ot.id FROM hafd.operation_types ot WHERE (_include_virtual OR ot.is_virtual = FALSE) ORDER BY ot.id DESC LIMIT 1)
                     AND hafd.operation_id_to_block_num(ho.id) BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
                 GROUP BY hafd.operation_id_to_block_num(ho.id), ho.trx_in_block
                 ORDER BY hafd.operation_id_to_block_num(ho.id) ASC, trx_in_block ASC

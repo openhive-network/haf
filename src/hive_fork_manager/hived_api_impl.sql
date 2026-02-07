@@ -87,6 +87,7 @@ BEGIN
     SELECT
            hor.id
          , hor.trx_in_block
+         , hor.op_type_id
          , hor.op_pos
          , hor.body_binary
          , hor.custom_json_type_id
@@ -216,6 +217,7 @@ BEGIN
          , haor.transacting_account_id
          , haor.account_op_seq_no
          , haor.operation_id
+         , haor.op_type_id
     FROM
         hafd.account_operations_reversible haor
         JOIN (
