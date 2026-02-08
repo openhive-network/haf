@@ -38,7 +38,7 @@ BEGIN
         WITH get_last_operation AS 
         ( 
             SELECT ov.trx_in_block FROM hive.operations_view ov  
-            WHERE ov.block_num = _block_num AND ov.trx_in_block >= 0 ORDER BY ov.id DESC LIMIT 1
+            WHERE ov.block_num = _block_num AND ov.trx_in_block >= 0 ORDER BY ov.op_pos_in_block DESC LIMIT 1
         )
         SELECT CASE 
             WHEN (SELECT trx_in_block FROM get_last_operation) IS NULL THEN
@@ -62,7 +62,7 @@ BEGIN
         WITH get_last_operation AS 
         ( 
             SELECT ov.trx_in_block FROM test.operations_view ov  
-            WHERE ov.block_num = _block_num AND ov.trx_in_block >= 0 ORDER BY ov.id DESC LIMIT 1
+            WHERE ov.block_num = _block_num AND ov.trx_in_block >= 0 ORDER BY ov.op_pos_in_block DESC LIMIT 1
         )
         SELECT CASE 
             WHEN (SELECT trx_in_block FROM get_last_operation) IS NULL THEN
