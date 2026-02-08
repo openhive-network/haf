@@ -487,15 +487,15 @@ BEGIN
                     'CREATE OR REPLACE VIEW %s.operations_view_extended
                      AS
                      SELECT
-                        ho.block_num,
-                        ho.op_pos_in_block,
-                        ho.trx_in_block,
-                        ho.op_pos,
-                        ho.op_type_id,
-                        b.created_at timestamp,
-                        ho.body_binary as body_binary,
-                        ho.body_binary::jsonb AS body,
-                        ho.custom_json_type_id
+                        t.block_num,
+                        t.op_pos_in_block,
+                        t.trx_in_block,
+                        t.op_pos,
+                        t.op_type_id,
+                        t.timestamp,
+                        t.body_binary as body_binary,
+                        t.body_binary::jsonb AS body,
+                        t.custom_json_type_id
                     FROM %s.context_data_view c,
                     LATERAL
                     (

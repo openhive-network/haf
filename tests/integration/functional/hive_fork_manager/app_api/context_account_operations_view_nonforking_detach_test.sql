@@ -146,11 +146,11 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM a.account_operations_view
         EXCEPT SELECT * FROM ( VALUES
-               ( 1, 100, 100, 1, 1, 0, 1 )
-             , ( 2, 100, 100, 2, 2, 0, 1 )
-             , ( 2, 200, 200, 1, 2, 0, 1 )
-             , ( 3, 300, 300, 1, 3, 0, 1 )
-             , ( 4, 400, 400, 1, 4, 0, 1 )
+               ( 1, 0, 100, 100, 1, 1 )
+             , ( 2, 0, 100, 100, 2, 1 )
+             , ( 2, 0, 200, 200, 1, 1 )
+             , ( 3, 0, 300, 300, 1, 1 )
+             , ( 4, 0, 400, 400, 1, 1 )
         ) as pattern
     ) , 'Unexpected rows in the view';
 

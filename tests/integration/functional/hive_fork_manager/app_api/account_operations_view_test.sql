@@ -131,22 +131,21 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='account_operations_view' ), 'No account operations view';
 
     ASSERT NOT EXISTS (
-        SELECT aov.block_num, aov.account_id, aov.transacting_account_id, aov.account_op_seq_no, aov.block_num, aov.op_pos_in_block, aov.op_type_id
-        FROM hive.account_operations_view aov
+        SELECT * FROM hive.account_operations_view
         EXCEPT SELECT * FROM ( VALUES
-              ( 1,  100, 100, 1, 1, 0, 1 )
-            , ( 2,  100, 100, 2, 2, 0, 1 )
-            , ( 2,  200, 200, 1, 2, 0, 1 )
-            , ( 3,  300, 300, 1, 3, 0, 1 )
-            , ( 4,  400, 400, 1, 4, 0, 1 )
-            , ( 5,  500, 500, 1, 5, 0, 1 )
-            , ( 6,  600, 600, 1, 6, 0, 1 )
-            , ( 7,  700, 700, 2, 7, 0, 1 )
-            , ( 7,  800, 800, 2, 7, 1, 1 )
-            , ( 7,  900, 900, 3, 7, 0, 1 )
-            , ( 9,  900, 900, 3, 9, 0, 1 )
-            , (10,  100, 100, 3, 10, 0, 1 )
-            , (10, 1100, 1100, 3, 10, 0, 1 )
+              ( 100, 100, 1, 1, 0, 1 )
+            , ( 100, 100, 2, 2, 0, 1 )
+            , ( 200, 200, 1, 2, 0, 1 )
+            , ( 300, 300, 1, 3, 0, 1 )
+            , ( 400, 400, 1, 4, 0, 1 )
+            , ( 500, 500, 1, 5, 0, 1 )
+            , ( 600, 600, 1, 6, 0, 1 )
+            , ( 700, 700, 2, 7, 0, 1 )
+            , ( 800, 800, 2, 7, 1, 1 )
+            , ( 900, 900, 3, 7, 0, 1 )
+            , ( 900, 900, 3, 9, 0, 1 )
+            , ( 100, 100, 3, 10, 0, 1 )
+            , (1100, 1100, 3, 10, 0, 1 )
         ) as pattern
     ) , 'Unexpected rows in the view';
 
@@ -155,14 +154,13 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hive' AND table_name='irreversible_account_operations_view' ), 'No account operations view';
 
     ASSERT NOT EXISTS (
-        SELECT aov.block_num, aov.account_id, aov.transacting_account_id, aov.account_op_seq_no, aov.block_num, aov.op_pos_in_block, aov.op_type_id
-        FROM hive.irreversible_account_operations_view aov
+        SELECT * FROM hive.irreversible_account_operations_view
         EXCEPT SELECT * FROM ( VALUES
-                                  ( 1, 100, 100, 1, 1, 0, 1 )
-                                , ( 2, 100, 100, 2, 2, 0, 1 )
-                                , ( 2, 200, 200, 1, 2, 0, 1 )
-                                , ( 3, 300, 300, 1, 3, 0, 1 )
-                                , ( 4, 400, 400, 1, 4, 0, 1 )
+                                  ( 100, 100, 1, 1, 0, 1 )
+                                , ( 100, 100, 2, 2, 0, 1 )
+                                , ( 200, 200, 1, 2, 0, 1 )
+                                , ( 300, 300, 1, 3, 0, 1 )
+                                , ( 400, 400, 1, 4, 0, 1 )
                              ) as pattern
     ) , 'Unexpected rows in the irreversible view';
 

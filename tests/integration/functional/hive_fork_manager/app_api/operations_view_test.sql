@@ -103,17 +103,17 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.operations_view
         EXCEPT SELECT * FROM ( VALUES
-              ( 1, 0, 1, 0, 0, 1, '\x520e5a45524f204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb, NULL::SMALLINT )
-            , ( 2, 0, 2, 0, 0, 1, '\x520d4f4e45204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb, NULL::SMALLINT )
-            , ( 3, 0, 3, 0, 0, 1, '\x520d54574f204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb, NULL::SMALLINT )
-            , ( 4, 0, 4, 0, 0, 1, '\x520f5448524545204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb, NULL::SMALLINT )
-            , ( 5, 0, 5, 0, 0, 1, '\x520e46495645204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb, NULL::SMALLINT )
-            , ( 6, 0, 6, 0, 0, 1, '\x520d534958204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb, NULL::SMALLINT )
-            , ( 7, 0, 7, 0, 0, 1, '\x5210534556454e32204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb, NULL::SMALLINT )
-            , ( 7, 1, 7, 0, 1, 1, '\x5211534556454e3231204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb, NULL::SMALLINT )
-            , ( 8, 0, 8, 0, 0, 1, '\x5210454947485433204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb, NULL::SMALLINT )
-            , ( 9, 0, 9, 0, 0, 1, '\x520f4e494e4533204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb, NULL::SMALLINT )
-            , ( 10, 0, 10, 0, 0, 1,'\x520d54454e204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb, NULL::SMALLINT )
+              ( 1, 0, 0, 0, 1, '\x520e5a45524f204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb, NULL::SMALLINT )
+            , ( 2, 0, 0, 0, 1, '\x520d4f4e45204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb, NULL::SMALLINT )
+            , ( 3, 0, 0, 0, 1, '\x520d54574f204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb, NULL::SMALLINT )
+            , ( 4, 0, 0, 0, 1, '\x520f5448524545204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb, NULL::SMALLINT )
+            , ( 5, 0, 0, 0, 1, '\x520e46495645204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb, NULL::SMALLINT )
+            , ( 6, 0, 0, 0, 1, '\x520d534958204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb, NULL::SMALLINT )
+            , ( 7, 0, 0, 0, 1, '\x5210534556454e32204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb, NULL::SMALLINT )
+            , ( 7, 1, 0, 1, 1, '\x5211534556454e3231204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb, NULL::SMALLINT )
+            , ( 8, 0, 0, 0, 1, '\x5210454947485433204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb, NULL::SMALLINT )
+            , ( 9, 0, 0, 0, 1, '\x520f4e494e4533204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb, NULL::SMALLINT )
+            , ( 10, 0, 0, 0, 1, '\x520d54454e204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb, NULL::SMALLINT )
         ) as pattern
     ) , 'Unexpected rows in the view';
 
@@ -124,11 +124,11 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.irreversible_operations_view
         EXCEPT SELECT * FROM ( VALUES
-                                  ( 1, 0, 1, 0, 0, 1, '\x520e5a45524f204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb, NULL::SMALLINT )
-                                , ( 2, 0, 2, 0, 0, 1, '\x520d4f4e45204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb, NULL::SMALLINT )
-                                , ( 3, 0, 3, 0, 0, 1, '\x520d54574f204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb, NULL::SMALLINT )
-                                , ( 4, 0, 4, 0, 0, 1, '\x520f5448524545204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb, NULL::SMALLINT )
-                                , ( 5, 0, 5, 0, 0, 1, '\x520e46495645204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb, NULL::SMALLINT )
+                                  ( 1, 0, 0, 0, 1, '\x520e5a45524f204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb, NULL::SMALLINT )
+                                , ( 2, 0, 0, 0, 1, '\x520d4f4e45204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb, NULL::SMALLINT )
+                                , ( 3, 0, 0, 0, 1, '\x520d54574f204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"TWO OPERATION"}}' :: jsonb, NULL::SMALLINT )
+                                , ( 4, 0, 0, 0, 1, '\x520f5448524545204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb, NULL::SMALLINT )
+                                , ( 5, 0, 0, 0, 1, '\x520e46495645204f5045524154494f4e' :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb, NULL::SMALLINT )
 
                              ) as pattern
     ) , 'Unexpected rows in the irreversible view';
