@@ -564,9 +564,20 @@ BEGIN
             ),
         effective_key_or_account_auth_records as materialized
         (
-            SELECT DISTINCT ON (s.account_id, s.key_kind) s.*
-            FROM extended_auth_records s
-            ORDER BY s.account_id, s.key_kind, s.op_serial_block_num DESC, s.op_serial_pos_in_block DESC
+            WITH effective_tuple_ids as materialized
+            (
+                SELECT DISTINCT ON (s.account_id, s.key_kind)
+                       s.account_id, s.key_kind,
+                       s.op_serial_block_num, s.op_serial_pos_in_block
+                FROM extended_auth_records s
+                ORDER BY s.account_id, s.key_kind, s.op_serial_block_num DESC, s.op_serial_pos_in_block DESC
+            )
+            SELECT s1.*
+            FROM extended_auth_records s1
+            JOIN effective_tuple_ids e ON e.account_id = s1.account_id
+                AND e.key_kind = s1.key_kind
+                AND s1.op_serial_block_num = e.op_serial_block_num
+                AND s1.op_serial_pos_in_block = e.op_serial_pos_in_block
         ),
         --- PROCESSING OF KEY BASED AUTHORITIES ---
             supplement_key_dictionary as materialized

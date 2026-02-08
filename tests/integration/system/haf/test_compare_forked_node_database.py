@@ -41,9 +41,9 @@ def test_compare_forked_node_database(prepared_networks_and_database_12_8_with_2
         assert trx.trx_hash == trx_ref.trx_hash
 
     ops = (sessions[0].query(OperationsIrreversibleView).filter(OperationsIrreversibleView.block_num < after_fork_block)
-           .order_by(OperationsIrreversibleView.id).all())
+           .order_by(OperationsIrreversibleView.block_num, OperationsIrreversibleView.op_pos_in_block).all())
     ops_ref = (sessions[1].query(OperationsIrreversibleView).filter(OperationsIrreversibleView.block_num < after_fork_block)
-           .order_by(OperationsIrreversibleView.id).all())
+           .order_by(OperationsIrreversibleView.block_num, OperationsIrreversibleView.op_pos_in_block).all())
 
     for op, op_ref in zip(ops, ops_ref):
         assert op.body_binary == op_ref.body_binary
