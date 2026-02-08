@@ -430,8 +430,8 @@ BEGIN
         EXECUTE format(
                 'CREATE OR REPLACE VIEW %s.operations_view_extended
                  AS
-                 SELECT t.id,
-                    hafd.operation_id_to_block_num( t.id ) as block_num,
+                 SELECT t.block_num,
+                    t.op_pos_in_block,
                     t.trx_in_block,
                     t.op_pos,
                     t.op_type_id,
@@ -443,7 +443,8 @@ BEGIN
                   LATERAL
                   (
                     SELECT
-                      ho.id,
+                      ho.block_num,
+                      ho.op_pos_in_block,
                       ho.trx_in_block,
                       ho.op_pos,
                       ho.op_type_id,
@@ -451,11 +452,12 @@ BEGIN
                       ho.body_binary,
                       ho.custom_json_type_id
                       FROM hafd.operations ho
-                      JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
-                      WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
+                      JOIN hafd.blocks b ON b.num = ho.block_num
+                      WHERE ho.block_num <= c.min_block
                     UNION ALL
                       SELECT
-                        o.id,
+                        o.block_num,
+                        o.op_pos_in_block,
                         o.trx_in_block,
                         o.op_pos,
                         o.op_type_id,
@@ -471,7 +473,7 @@ BEGIN
                         FROM hafd.blocks_reversible hbr
                         WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
                         GROUP by hbr.num
-                      ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
+                      ) visible_ops on visible_ops.num = o.block_num and visible_ops.max_fork_id = o.fork_id
                       JOIN
                       (
                         SELECT hbr.num, created_at
@@ -484,20 +486,22 @@ BEGIN
             EXECUTE format(
                     'CREATE OR REPLACE VIEW %s.operations_view_extended
                      AS
-                     SELECT t.id,
-                        hafd.operation_id_to_block_num( t.id ) as block_num,
-                        t.trx_in_block,
-                        t.op_pos,
-                        t.op_type_id,
-                        t.timestamp,
-                        t.body_binary as body_binary,
-                        t.body_binary::jsonb AS body,
-                        t.custom_json_type_id
+                     SELECT
+                        ho.block_num,
+                        ho.op_pos_in_block,
+                        ho.trx_in_block,
+                        ho.op_pos,
+                        ho.op_type_id,
+                        b.created_at timestamp,
+                        ho.body_binary as body_binary,
+                        ho.body_binary::jsonb AS body,
+                        ho.custom_json_type_id
                     FROM %s.context_data_view c,
                     LATERAL
                     (
                         SELECT
-                          ho.id,
+                          ho.block_num,
+                          ho.op_pos_in_block,
                           ho.trx_in_block,
                           ho.op_pos,
                           ho.op_type_id,
@@ -505,8 +509,8 @@ BEGIN
                           ho.body_binary,
                           ho.custom_json_type_id
                         FROM hafd.operations ho
-                        JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
-                        WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
+                        JOIN hafd.blocks b ON b.num = ho.block_num
+                        WHERE ho.block_num <= c.min_block
                     ) t
                     ;', __schema, __schema
                     );
@@ -534,8 +538,8 @@ BEGIN
         EXECUTE format(
                 'CREATE OR REPLACE VIEW %s.operations_view
                  AS
-                 SELECT t.id,
-                    hafd.operation_id_to_block_num( t.id ) as block_num,
+                 SELECT t.block_num,
+                    t.op_pos_in_block,
                     t.trx_in_block,
                     t.op_pos,
                     t.op_type_id,
@@ -546,17 +550,19 @@ BEGIN
                   LATERAL
                   (
                     SELECT
-                      ho.id,
+                      ho.block_num,
+                      ho.op_pos_in_block,
                       ho.trx_in_block,
                       ho.op_pos,
                       ho.op_type_id,
                       ho.body_binary,
                       ho.custom_json_type_id
                       FROM hafd.operations ho
-                      WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
+                      WHERE ho.block_num <= c.min_block
                     UNION ALL
                       SELECT
-                        o.id,
+                        o.block_num,
+                        o.op_pos_in_block,
                         o.trx_in_block,
                         o.op_pos,
                         o.op_type_id,
@@ -571,7 +577,7 @@ BEGIN
                         FROM hafd.blocks_reversible hbr
                         WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
                         GROUP by hbr.num
-                      ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
+                      ) visible_ops on visible_ops.num = o.block_num and visible_ops.max_fork_id = o.fork_id
                 ) t
                 ;', __schema, __schema
             );
@@ -579,8 +585,8 @@ BEGIN
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view
                  AS
-                 SELECT t.id,
-                    hafd.operation_id_to_block_num( t.id ) as block_num,
+                 SELECT t.block_num,
+                    t.op_pos_in_block,
                     t.trx_in_block,
                     t.op_pos,
                     t.op_type_id,
@@ -591,14 +597,15 @@ BEGIN
                   LATERAL
                   (
                     SELECT
-                      ho.id,
+                      ho.block_num,
+                      ho.op_pos_in_block,
                       ho.trx_in_block,
                       ho.op_pos,
                       ho.op_type_id,
                       ho.body_binary,
                       ho.custom_json_type_id
                       FROM hafd.operations ho
-                      WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
+                      WHERE ho.block_num <= c.min_block
                   ) t
                 ;', __schema, __schema
         );
@@ -624,8 +631,8 @@ EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view_extended
          AS
          SELECT
-            ho.id,
-            hafd.operation_id_to_block_num( ho.id ) as block_num,
+            ho.block_num,
+            ho.op_pos_in_block,
             ho.trx_in_block,
             ho.op_pos,
             ho.op_type_id,
@@ -634,7 +641,7 @@ EXECUTE format(
             ho.body_binary::jsonb AS body,
             ho.custom_json_type_id
         FROM hafd.operations ho
-        JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
+        JOIN hafd.blocks b ON b.num = ho.block_num
         ;', __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
@@ -658,8 +665,8 @@ EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view
          AS
          SELECT
-            ho.id,
-            hafd.operation_id_to_block_num( ho.id ) as block_num,
+            ho.block_num,
+            ho.op_pos_in_block,
             ho.trx_in_block,
             ho.op_pos,
             ho.op_type_id,
@@ -960,35 +967,38 @@ BEGIN
         EXECUTE format(
                 'CREATE OR REPLACE VIEW %s.account_operations_view AS
                 SELECT
-                   hafd.operation_id_to_block_num( t.operation_id ) as block_num,
+                   t.block_num,
+                   t.op_pos_in_block,
                    t.account_id,
                    t.transacting_account_id,
                    t.account_op_seq_no,
-                   t.operation_id,
                    t.op_type_id
                 FROM %s.context_data_view c,
                 LATERAL
                 (
                   SELECT
+                         ha.block_num,
+                         ha.op_pos_in_block,
                          ha.account_id,
                          ha.transacting_account_id,
                          ha.account_op_seq_no,
-                         ha.operation_id,
                          ha.op_type_id
                         FROM hafd.account_operations ha
-                        WHERE hafd.operation_id_to_block_num(ha.operation_id) <= c.min_block
+                        WHERE ha.block_num <= c.min_block
                         UNION ALL
                         SELECT
+                            reversible.block_num,
+                            reversible.op_pos_in_block,
                             reversible.account_id,
                             reversible.transacting_account_id,
                             reversible.account_op_seq_no,
-                            reversible.operation_id,
                             reversible.op_type_id
                         FROM ( SELECT
+                            har.block_num,
+                            har.op_pos_in_block,
                             har.account_id,
                             har.transacting_account_id,
                             har.account_op_seq_no,
-                            har.operation_id,
                             har.op_type_id,
                             har.fork_id
                         FROM hafd.account_operations_reversible har
@@ -997,7 +1007,7 @@ BEGIN
                                 FROM hafd.blocks_reversible hbr
                                 WHERE c.reversible_range AND hbr.num > c.irreversible_block AND hbr.fork_id <= c.fork_id AND hbr.num <= c.current_block_num
                                 GROUP by hbr.num
-                        ) as arr ON arr.max_fork_id = har.fork_id AND arr.num = hafd.operation_id_to_block_num( har.operation_id )
+                        ) as arr ON arr.max_fork_id = har.fork_id AND arr.num = har.block_num
                      ) reversible
                 ) t
                 ;'
@@ -1007,23 +1017,24 @@ BEGIN
         EXECUTE format(
                 'CREATE OR REPLACE VIEW %s.account_operations_view AS
                 SELECT
-                   hafd.operation_id_to_block_num( t.operation_id ) as block_num,
+                   t.block_num,
+                   t.op_pos_in_block,
                    t.account_id,
                    t.transacting_account_id,
                    t.account_op_seq_no,
-                   t.operation_id,
                    t.op_type_id
                 FROM %s.context_data_view c,
                 LATERAL
                 (
                   SELECT
+                         ha.block_num,
+                         ha.op_pos_in_block,
                          ha.account_id,
                          ha.transacting_account_id,
                          ha.account_op_seq_no,
-                         ha.operation_id,
                          ha.op_type_id
                         FROM hafd.account_operations ha
-                        WHERE hafd.operation_id_to_block_num(ha.operation_id) <= c.min_block
+                        WHERE ha.block_num <= c.min_block
                 ) t
                 ;'
             , __schema, __schema
@@ -1049,11 +1060,11 @@ BEGIN
 EXECUTE format(
         'CREATE OR REPLACE VIEW %s.account_operations_view AS
         SELECT
-           hafd.operation_id_to_block_num( ha.operation_id ) as block_num,
+           ha.block_num,
+           ha.op_pos_in_block,
            ha.account_id,
            ha.transacting_account_id,
            ha.account_op_seq_no,
-           ha.operation_id,
            ha.op_type_id
         FROM hafd.account_operations ha
         ;'
@@ -1102,24 +1113,28 @@ BEGIN
                 SELECT
                    t.hardfork_num,
                    t.block_num,
-                   t.hardfork_vop_id
+                   t.hardfork_vop_id_block_num,
+                   t.hardfork_vop_id_op_pos_in_block
                 FROM %s.context_data_view c,
                 LATERAL
                 (
                   SELECT hr.hardfork_num,
                          hr.block_num,
-                         hr.hardfork_vop_id
+                         hr.hardfork_vop_id_block_num,
+                         hr.hardfork_vop_id_op_pos_in_block
                         FROM hafd.applied_hardforks hr
                         WHERE hr.block_num <= c.min_block
                         UNION ALL
                         SELECT
                             reversible.hardfork_num,
                             reversible.block_num,
-                            reversible.hardfork_vop_id
+                            reversible.hardfork_vop_id_block_num,
+                            reversible.hardfork_vop_id_op_pos_in_block
                         FROM ( SELECT
                             hjr.hardfork_num,
                             hjr.block_num,
-                            hjr.hardfork_vop_id,
+                            hjr.hardfork_vop_id_block_num,
+                            hjr.hardfork_vop_id_op_pos_in_block,
                             hjr.fork_id
                         FROM hafd.applied_hardforks_reversible hjr
                         JOIN (
@@ -1139,13 +1154,15 @@ BEGIN
                 SELECT
                    t.hardfork_num,
                    t.block_num,
-                   t.hardfork_vop_id
+                   t.hardfork_vop_id_block_num,
+                   t.hardfork_vop_id_op_pos_in_block
                 FROM %s.context_data_view c,
                 LATERAL
                 (
                   SELECT hr.hardfork_num,
                          hr.block_num,
-                         hr.hardfork_vop_id
+                         hr.hardfork_vop_id_block_num,
+                         hr.hardfork_vop_id_op_pos_in_block
                         FROM hafd.applied_hardforks hr
                         WHERE hr.block_num <= c.min_block
                 ) t
@@ -1176,7 +1193,8 @@ EXECUTE format(
         SELECT
                  hr.hardfork_num,
                  hr.block_num,
-                 hr.hardfork_vop_id
+                 hr.hardfork_vop_id_block_num,
+                 hr.hardfork_vop_id_op_pos_in_block
         FROM hafd.applied_hardforks hr
         ;'
     , __schema

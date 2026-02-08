@@ -85,7 +85,8 @@ $BODY$
 BEGIN
     INSERT INTO hafd.operations
     SELECT
-           hor.id
+           hor.block_num
+         , hor.op_pos_in_block
          , hor.trx_in_block
          , hor.op_type_id
          , hor.op_pos
@@ -102,7 +103,7 @@ BEGIN
                   hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
             ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON hafd.operation_id_to_block_num(hor.id) = num_and_forks.num AND hor.fork_id = num_and_forks.fork_id
+        ) as num_and_forks ON hor.block_num = num_and_forks.num AND hor.fork_id = num_and_forks.fork_id
     ;
 END;
 $BODY$
@@ -122,7 +123,8 @@ BEGIN
     SELECT
            hjr.hardfork_num
          , hjr.block_num
-         , hjr.hardfork_vop_id
+         , hjr.hardfork_vop_id_block_num
+         , hjr.hardfork_vop_id_op_pos_in_block
     FROM
         hafd.applied_hardforks_reversible hjr
         JOIN (
@@ -216,7 +218,8 @@ BEGIN
            haor.account_id
          , haor.transacting_account_id
          , haor.account_op_seq_no
-         , haor.operation_id
+         , haor.block_num
+         , haor.op_pos_in_block
          , haor.op_type_id
     FROM
         hafd.account_operations_reversible haor
@@ -229,7 +232,7 @@ BEGIN
                 hbr.num <= _new_irreversible_block
               AND hbr.num > _head_block_of_irreversible_blocks
             ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON haor.fork_id = num_and_forks.fork_id AND hafd.operation_id_to_block_num( haor.operation_id ) = num_and_forks.num
+        ) as num_and_forks ON haor.fork_id = num_and_forks.fork_id AND haor.block_num = num_and_forks.num
     ;
 END;
 $BODY$
@@ -267,11 +270,7 @@ BEGIN
     __max_block_num := LEAST(__lowest_irreversible_block, _new_irreversible_block);
 
     DELETE FROM hafd.account_operations_reversible har
-    USING hafd.operations_reversible hor
-    WHERE
-            har.operation_id = hor.id
-        AND har.fork_id = hor.fork_id
-        AND ( hafd.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
+    WHERE har.block_num <= __max_block_num OR har.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
     DELETE FROM hafd.applied_hardforks_reversible hjr
@@ -279,7 +278,7 @@ BEGIN
     ;
 
     DELETE FROM hafd.operations_reversible hor
-    WHERE hafd.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    WHERE hor.block_num <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
     ;
 
 
@@ -599,11 +598,11 @@ BEGIN
     END IF;
 
     DELETE FROM hafd.account_operations hao
-    WHERE hafd.operation_id_to_block_num(hao.operation_id) > __consistent_block;
+    WHERE hao.block_num > __consistent_block;
 
     DELETE FROM hafd.applied_hardforks WHERE block_num > __consistent_block;
 
-    DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > __consistent_block;
+    DELETE FROM hafd.operations WHERE block_num > __consistent_block;
 
     DELETE FROM hafd.transactions_multisig htm
     USING hafd.transactions ht

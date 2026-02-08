@@ -128,34 +128,12 @@ BEGIN
     -- Create the partial index: key is block_num for range queries, partial on op_type_id
     RAISE NOTICE 'Creating index % for operation type IDs: %', _index_name, _valid_ids;
     EXECUTE format(
-        'CREATE INDEX %I ON hafd.operations (hafd.operation_id_to_block_num(id)) WHERE %s',
+        'CREATE INDEX %I ON hafd.operations (block_num) WHERE %s',
         _index_name,
         _where_clause
     );
 END;
 $$;
 
--- Migration: Add op_type_id column to account_operations tables
--- This column stores the operation type, previously derivable from operation_id encoding.
--- After the encoding change (removing type from operation_id), it must be stored explicitly.
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'hafd' AND table_name = 'account_operations' AND column_name = 'op_type_id'
-    ) THEN
-        ALTER TABLE hafd.account_operations ADD COLUMN op_type_id SMALLINT;
-        -- Backfill from old encoding where type was stored in lowest 8 bits
-        UPDATE hafd.account_operations SET op_type_id = (operation_id & 255)::smallint WHERE op_type_id IS NULL;
-        ALTER TABLE hafd.account_operations ALTER COLUMN op_type_id SET NOT NULL;
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'hafd' AND table_name = 'account_operations_reversible' AND column_name = 'op_type_id'
-    ) THEN
-        ALTER TABLE hafd.account_operations_reversible ADD COLUMN op_type_id SMALLINT;
-        UPDATE hafd.account_operations_reversible SET op_type_id = (operation_id & 255)::smallint WHERE op_type_id IS NULL;
-        ALTER TABLE hafd.account_operations_reversible ALTER COLUMN op_type_id SET NOT NULL;
-    END IF;
-END $$;
+-- op_type_id column is now defined directly in the table definitions.
+-- No migration needed — full replay is required.

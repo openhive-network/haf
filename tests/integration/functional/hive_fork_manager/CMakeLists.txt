@@ -278,7 +278,6 @@ ADD_TEST( NAME test_update_script
 
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_create_and_hole_in_events.sql )
 
- ADD_SQL_FUNCTIONAL_TEST( app_api/operation_id.sql )
  ADD_SQL_FUNCTIONAL_TEST(app_api/vacuum_request.sql)
 
  ADD_SQL_FUNCTIONAL_TEST( application_loop/validate_stages.sql )

@@ -137,14 +137,10 @@ namespace hive
             {}
           };
 
-          inline uint64_t get_operation_id( uint32_t _block, uint32_t _number_in_block ) {
-            return to_operation_id( _block, _number_in_block );
-          }
-
           struct process_operation_t
             : public block_data_base
           {
-            int64_t operation_id = 0;
+            uint32_t op_pos_in_block = 0;
             int32_t trx_in_block = 0;
             int16_t op_type_id = 0;
             int32_t op_in_trx = 0;
@@ -152,8 +148,8 @@ namespace hive
             fc::optional<int16_t> custom_json_type_id;
 
             process_operation_t(
-                int64_t _operation_id
-              , int32_t _block_number
+                int32_t _block_number
+              , uint32_t _op_pos_in_block
               , const int32_t _trx_in_block
               , const int16_t _op_type_id
               , const int32_t _op_in_trx
@@ -161,7 +157,7 @@ namespace hive
               , fc::optional<int16_t> _custom_json_type_id = fc::optional<int16_t>()
             )
             : block_data_base( _block_number )
-            , operation_id{_operation_id }, trx_in_block{_trx_in_block}
+            , op_pos_in_block{_op_pos_in_block}, trx_in_block{_trx_in_block}
             , op_type_id{_op_type_id}
             , op_in_trx{_op_in_trx}, op{_op}
             , custom_json_type_id{_custom_json_type_id} {
@@ -173,12 +169,14 @@ namespace hive
             : public block_data_base
           {
             int32_t hardfork_num = 0;
-            int64_t hardfork_vop_id = 0;
+            int32_t hardfork_vop_id_block_num = 0;
+            uint32_t hardfork_vop_id_op_pos_in_block = 0;
 
-            applied_hardforks_t(int32_t _hardfork_num, int32_t _block_number, int64_t _hardfork_vop_id)
+            applied_hardforks_t(int32_t _hardfork_num, int32_t _block_number, int32_t _hardfork_vop_id_block_num, uint32_t _hardfork_vop_id_op_pos_in_block)
             : block_data_base( _block_number )
             , hardfork_num{_hardfork_num}
-            , hardfork_vop_id{_hardfork_vop_id}
+            , hardfork_vop_id_block_num{_hardfork_vop_id_block_num}
+            , hardfork_vop_id_op_pos_in_block{_hardfork_vop_id_op_pos_in_block}
             {}
           };
 
@@ -199,15 +197,15 @@ namespace hive
           struct account_operation_data_t
             : public block_data_base
           {
-            int64_t operation_id;
+            uint32_t op_pos_in_block;
             int32_t account_id;
             int32_t transacting_account_id;
             int32_t operation_seq_no;
             int32_t op_type_id;
 
-            account_operation_data_t(int32_t _block_number, int64_t _operation_id, int32_t _account_id, int32_t _transacting_account_id, int32_t _operation_seq_no, int32_t _op_type_id)
+            account_operation_data_t(int32_t _block_number, uint32_t _op_pos_in_block, int32_t _account_id, int32_t _transacting_account_id, int32_t _operation_seq_no, int32_t _op_type_id)
             : block_data_base( _block_number )
-            , operation_id{ _operation_id }
+            , op_pos_in_block{ _op_pos_in_block }
             , account_id{ _account_id }
             , transacting_account_id{ _transacting_account_id }
             , operation_seq_no{ _operation_seq_no }

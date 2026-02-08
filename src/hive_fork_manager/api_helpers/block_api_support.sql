@@ -90,15 +90,15 @@ BEGIN
         ),
         operations AS (
                 SELECT
-                       hafd.operation_id_to_block_num(ho.id) as block_num
+                       ho.block_num
                      , ho.trx_in_block
                      , ARRAY_AGG(ho.body_binary ORDER BY op_pos ASC) bodies
                 FROM hive.operations_view ho
                 WHERE
                     ho.op_type_id <= (SELECT ot.id FROM hafd.operation_types ot WHERE (_include_virtual OR ot.is_virtual = FALSE) ORDER BY ot.id DESC LIMIT 1)
-                    AND hafd.operation_id_to_block_num(ho.id) BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
-                GROUP BY hafd.operation_id_to_block_num(ho.id), ho.trx_in_block
-                ORDER BY hafd.operation_id_to_block_num(ho.id) ASC, trx_in_block ASC
+                    AND ho.block_num BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
+                GROUP BY ho.block_num, ho.trx_in_block
+                ORDER BY ho.block_num ASC, trx_in_block ASC
         ),
         -- Combine transaction details with multisig signatures in one step to avoid
         -- expensive cartesian product from self-join (was causing 33M+ row intermediate results)

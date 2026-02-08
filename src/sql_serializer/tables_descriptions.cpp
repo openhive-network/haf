@@ -48,14 +48,14 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::TABLE[] = "hafd.operations";
-  template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::COLS[] = "id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id";
+  template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::COLS[] = "block_num, op_pos_in_block, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id";
 
   template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::TABLE[] = "hafd.operations";
-  template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::COLS[] = "id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id";
+  template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::COLS[] = "block_num, op_pos_in_block, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id";
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_operation_t& operation)
   {
-    stream.write_values(operation.operation_id, operation.trx_in_block, operation.op_type_id, operation.op_in_trx, operation.op, operation.custom_json_type_id);
+    stream.write_values(operation.block_number, operation.op_pos_in_block, operation.trx_in_block, operation.op_type_id, operation.op_in_trx, operation.op, operation.custom_json_type_id);
   }
 
   template<> const char hive_accounts<std::vector<PSQL::processing_objects::account_data_t>>::TABLE[] = "hafd.accounts";
@@ -70,22 +70,22 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::TABLE[] = "hafd.account_operations";
-  template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, operation_id, op_type_id";
+  template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, block_num, op_pos_in_block, op_type_id";
 
   template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::TABLE[] = "hafd.account_operations";
-  template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, operation_id, op_type_id";
+  template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, block_num, op_pos_in_block, op_type_id";
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::account_operation_data_t& account_operation)
   {
-    stream.write_values(account_operation.account_id, account_operation.transacting_account_id, account_operation.operation_seq_no, account_operation.operation_id, account_operation.op_type_id);
+    stream.write_values(account_operation.account_id, account_operation.transacting_account_id, account_operation.operation_seq_no, account_operation.block_number, account_operation.op_pos_in_block, account_operation.op_type_id);
   }
 
 
   const char hive_applied_hardforks::TABLE[] = "hafd.applied_hardforks";
-  const char hive_applied_hardforks::COLS[] = "hardfork_num, block_num, hardfork_vop_id";
+  const char hive_applied_hardforks::COLS[] = "hardfork_num, block_num, hardfork_vop_id_block_num, hardfork_vop_id_op_pos_in_block";
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::applied_hardforks_t& applied_hardfork)
   {
-    stream.write_values(applied_hardfork.hardfork_num, applied_hardfork.block_number, applied_hardfork.hardfork_vop_id);
+    stream.write_values(applied_hardfork.hardfork_num, applied_hardfork.block_number, applied_hardfork.hardfork_vop_id_block_num, applied_hardfork.hardfork_vop_id_op_pos_in_block);
   }
 
 }}} // namespace hive::plugins::sql_serializer

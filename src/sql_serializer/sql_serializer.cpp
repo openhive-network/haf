@@ -368,7 +368,7 @@ public:
   void inform_hfm_about_starting();
   bool need_initialize_database( uint32_t block_num );
   void initialize_db();
-  void collect_account_operations(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
+  void collect_account_operations(uint32_t op_pos_in_block, const hive::protocol::operation& op, uint32_t block_num);
   bool is_database_initialized();
 
   hive::chain::database::signal_connection_ptr _on_pre_apply_operation_con;
@@ -698,8 +698,7 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   const bool is_virtual = hive::protocol::is_virtual_operation(note.op);
   FC_ASSERT( is_virtual || note.trx_in_block >= 0,  "Non is_producing real operation with trx_in_block = -1" );
 
-  const auto operation_id = PSQL::processing_objects::get_operation_id( note.block, op_in_block_number );
-  collect_account_operations( operation_id, note.op, note.block );
+  collect_account_operations( op_in_block_number, note.op, note.block );
 
   if( collector->is_op_accepted() )
   {
@@ -713,7 +712,8 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
       cdtf->applied_hardforks.emplace_back(
         hardfork_num,
         note.block,
-        operation_id
+        note.block,
+        op_in_block_number
       );
     }
 
@@ -725,8 +725,8 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
     }
 
     cdtf->operations.emplace_back(
-      operation_id,
       note.block,
+      op_in_block_number,
       note.trx_in_block,
       static_cast<int16_t>( note.op.which() ),
       note.op_in_trx,
@@ -892,12 +892,12 @@ bool sql_serializer_plugin_impl::can_collect_blocks() {
 }
 
 void sql_serializer_plugin_impl::collect_account_operations(
-    int64_t operation_id
+    uint32_t op_pos_in_block
   , const hive::protocol::operation& op
   , uint32_t block_num
 )
 {
-  collector->collect(operation_id, op, block_num);
+  collector->collect(op_pos_in_block, op, block_num);
 }
 
 bool

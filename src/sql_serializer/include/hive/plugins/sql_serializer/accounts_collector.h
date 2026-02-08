@@ -32,7 +32,7 @@ namespace hive::plugins::sql_serializer {
 
     virtual ~accounts_collector(){}
 
-    void collect(int64_t operation_id, const hive::protocol::operation& op, uint32_t block_num);
+    void collect(uint32_t op_pos_in_block, const hive::protocol::operation& op, uint32_t block_num);
 
     void operator()(const hive::protocol::account_create_operation& op);
 
@@ -74,7 +74,7 @@ namespace hive::plugins::sql_serializer {
           owner_name = account_name; // fallback if no owner at all
         }
 
-        on_new_operation(account_name, owner_name, _processed_operation_id, _processed_operation_type_id);
+        on_new_operation(account_name, owner_name, _processed_op_pos_in_block, _processed_operation_type_id);
       }
     }
 
@@ -83,18 +83,18 @@ namespace hive::plugins::sql_serializer {
 
       void on_new_account(const hive::protocol::account_name_type& account_name);
 
-      void on_new_operation(const hive::protocol::account_name_type& account_name, const hive::protocol::account_name_type& account_owner_name, int64_t operation_id, int32_t operation_type_id, bool is_current_operation = true);
+      void on_new_operation(const hive::protocol::account_name_type& account_name, const hive::protocol::account_name_type& account_owner_name, uint32_t op_pos_in_block, int32_t operation_type_id, bool is_current_operation = true);
 
     private:
       hive::chain::database& _chain_db;
       cached_data_t& _cached_data;
-      int64_t _processed_operation_id = -1;
+      uint32_t _processed_op_pos_in_block = 0;
       int32_t _processed_operation_type_id = -1;
 
       uint32_t _block_num = 0;
 
       int32_t _creation_operation_type_id = -1;
-      fc::optional<int64_t> _creation_operation_id;
+      fc::optional<uint32_t> _creation_op_pos_in_block;
 
       flat_set<hive::protocol::account_name_type> _impacted;
       flat_set<hive::protocol::account_name_type> _owner_impacted;

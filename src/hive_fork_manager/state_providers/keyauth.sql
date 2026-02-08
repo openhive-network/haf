@@ -164,7 +164,8 @@ BEGIN
         , key_kind hafd.key_type
         , key_serial_id INTEGER
         , w INTEGER
-        , op_serial_id  BIGINT NOT NULL
+        , op_serial_block_num INTEGER NOT NULL
+        , op_serial_pos_in_block INTEGER NOT NULL
         , block_num INTEGER NOT NULL
         , timestamp TIMESTAMP NOT NULL
         , CONSTRAINT pk_%1$s_keyauth_a PRIMARY KEY  ( account_id, key_kind, key_serial_id )
@@ -178,7 +179,8 @@ BEGIN
         account_id INTEGER
         , key_kind hafd.key_type
         , weight_threshold INTEGER
-        , op_serial_id  BIGINT NOT NULL
+        , op_serial_block_num INTEGER NOT NULL
+        , op_serial_pos_in_block INTEGER NOT NULL
         , CONSTRAINT pk_%1$s_authority_definition PRIMARY KEY ( account_id, key_kind )
         );
     $$
@@ -190,7 +192,8 @@ BEGIN
         , key_kind hafd.key_type
         , account_auth_id INTEGER
         , w INTEGER
-        , op_serial_id  BIGINT NOT NULL
+        , op_serial_block_num INTEGER NOT NULL
+        , op_serial_pos_in_block INTEGER NOT NULL
         , block_num INTEGER NOT NULL
         , timestamp TIMESTAMP NOT NULL
         , CONSTRAINT pk_%1$s_accountauth_a PRIMARY KEY  ( account_id, key_kind, account_auth_id )
@@ -262,7 +265,6 @@ BEGIN
         __HARDFORK_9_block_num INT  := 3202773;
         __HARDFORK_21_block_num INT := 35921786;
         __HARDFORK_24_block_num INT := 47797680;
-        __op_serial_id_dummy BIGINT    := 13755805291514172; -- operation with typeid=hive::protocol::hardfork_operation, old id=5036543)
 
         BEGIN
 
@@ -279,10 +281,10 @@ BEGIN
                 NULL as account_auth,
                 g.weight_threshold,
                 g.w,
-                __op_serial_id_dummy as op_serial_id,
+                1 as op_serial_block_num,
+                2147483647 as op_serial_pos_in_block,
                 1 as block_num,
-                (SELECT b.created_at FROM hafd.blocks b WHERE b.num = 1) as timestamp,
-                1
+                (SELECT b.created_at FROM hafd.blocks b WHERE b.num = 1) as timestamp
                 FROM hive.get_genesis_keyauths() as g
             WHERE  _first_block <= 1 AND 1 <= _last_block
         ),
@@ -293,10 +295,10 @@ BEGIN
             SELECT
             (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id,
             *,
-            __op_serial_id_dummy as op_serial_id,
+            __HARDFORK_9_block_num as op_serial_block_num,
+            2147483647 as op_serial_pos_in_block,
             __HARDFORK_9_block_num as block_num,
-            (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_9_block_num) as timestamp,
-            hafd.operation_id( __HARDFORK_9_block_num, 0x7FFFFFFF ) as op_stable_id
+            (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_9_block_num) as timestamp
             FROM hive.get_hf09_keyauths() h
             WHERE  _first_block <= __HARDFORK_9_block_num AND __HARDFORK_9_block_num <= _last_block
         ),
@@ -306,10 +308,10 @@ BEGIN
             SELECT
             (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id,
             *,
-            __op_serial_id_dummy as op_serial_id,
+            __HARDFORK_21_block_num as op_serial_block_num,
+            2147483647 as op_serial_pos_in_block,
             __HARDFORK_21_block_num as block_num,
-            (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_21_block_num) as timestamp,
-            hafd.operation_id( __HARDFORK_21_block_num, 0x7FFFFFFF ) as op_stable_id
+            (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_21_block_num) as timestamp
             FROM hive.get_hf21_keyauths() h
             WHERE  _first_block <= __HARDFORK_21_block_num AND __HARDFORK_21_block_num <= _last_block
         ),
@@ -319,10 +321,10 @@ BEGIN
             SELECT
             (SELECT a.id FROM %2$s.accounts_view a WHERE a.name = h.account_name) as account_id,
             *,
-            __op_serial_id_dummy as op_serial_id,
+            __HARDFORK_24_block_num as op_serial_block_num,
+            2147483647 as op_serial_pos_in_block,
             __HARDFORK_24_block_num as block_num,
-            (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_24_block_num) as timestamp,
-            hafd.operation_id( __HARDFORK_24_block_num, 0x7FFFFFFF ) as op_stable_id
+            (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_24_block_num) as timestamp
             FROM hive.get_hf24_keyauths() h
             WHERE  _first_block <= __HARDFORK_24_block_num AND __HARDFORK_24_block_num <= _last_block
         ),
@@ -340,8 +342,8 @@ BEGIN
         (
             SELECT
                     ov.body_binary,
-                    ov.id,
                     ov.block_num,
+                    ov.op_pos_in_block,
                     ov.trx_in_block,
                     ov.op_pos,
                     ov.timestamp,
@@ -352,10 +354,10 @@ BEGIN
         pow_raw_auth_records AS MATERIALIZED
         (
             SELECT  (hive.get_keyauths(ov.body_binary)).*,
-                    ov.id as op_serial_id,
+                    ov.block_num as op_serial_block_num,
+                    ov.op_pos_in_block as op_serial_pos_in_block,
                     ov.block_num,
-                    ov.timestamp,
-                    ov.id as op_stable_id
+                    ov.timestamp
             FROM pow_matching_ops ov
         ),
 
@@ -399,8 +401,8 @@ BEGIN
             (
                 SELECT
                         ov.body_binary,
-                        ov.id,
                         ov.block_num,
+                        ov.op_pos_in_block,
                         ov.trx_in_block,
                         ov.op_pos,
                         ov.timestamp,
@@ -412,10 +414,10 @@ BEGIN
             (
                 SELECT
                         (hive.get_keyauths(ov.body_binary)).*,
-                        ov.id as op_serial_id,
+                        ov.block_num as op_serial_block_num,
+                        ov.op_pos_in_block as op_serial_pos_in_block,
                         ov.block_num,
-                        ov.timestamp,
-                        ov.id as op_stable_id
+                        ov.timestamp
                     FROM matching_ops ov
                 ),
             min_block_per_pow_account AS
@@ -450,10 +452,10 @@ BEGIN
                     pow.account_auth,
                     pow.weight_threshold,
                     pow.w,
-                    pow.op_serial_id,
+                    pow.op_serial_block_num,
+                    pow.op_serial_pos_in_block,
                     pow.block_num,
                     pow.timestamp,
-                    pow.op_stable_id,
                     mb.min_block_num,
                     pow_min_block_num,
                     mb_table.min_block_num_from_stored_table
@@ -475,10 +477,10 @@ BEGIN
                     account_auth,
                     weight_threshold,
                     w,
-                    op_serial_id,
+                    op_serial_block_num,
+                    op_serial_pos_in_block,
                     block_num,
-                    timestamp,
-                    op_stable_id
+                    timestamp
                 FROM pow_extended_auth_records_with_min_block
                 WHERE LEAST(pow_min_block_num, min_block_num, min_block_num_from_stored_table) = block_num OR key_kind = 'ACTIVE'
             ),
@@ -499,10 +501,10 @@ BEGIN
                 account_auth,
                 weight_threshold,
                 w,
-                op_serial_id,
+                op_serial_block_num,
+                op_serial_pos_in_block,
                 block_num,
-                timestamp,
-                op_stable_id
+                timestamp
             FROM
                 HARDFORK_9_fixed_auth_records
 
@@ -515,10 +517,10 @@ BEGIN
                 account_auth,
                 weight_threshold,
                 w,
-                op_serial_id,
+                op_serial_block_num,
+                op_serial_pos_in_block,
                 block_num,
-                timestamp,
-                op_stable_id
+                timestamp
             FROM
                 HARDFORK_21_fixed_auth_records
 
@@ -531,10 +533,10 @@ BEGIN
                 account_auth,
                 weight_threshold,
                 w,
-                op_serial_id,
+                op_serial_block_num,
+                op_serial_pos_in_block,
                 block_num,
-                timestamp,
-                op_stable_id
+                timestamp
             FROM
                 HARDFORK_24_fixed_auth_records
 
@@ -562,15 +564,9 @@ BEGIN
             ),
         effective_key_or_account_auth_records as materialized
         (
-            WITH effective_tuple_ids as materialized 
-            (
-                SELECt s.account_id, s.key_kind, max(s.op_stable_id) as op_stable_id
-                FROM extended_auth_records s
-                GROUP BY s.account_id, s.key_kind
-            )
-            SELECT s1.*
-            FROM extended_auth_records s1
-            JOIN effective_tuple_ids e ON e.account_id = s1.account_id and e.key_kind = s1.key_kind and e.op_stable_id = s1.op_stable_id
+            SELECT DISTINCT ON (s.account_id, s.key_kind) s.*
+            FROM extended_auth_records s
+            ORDER BY s.account_id, s.key_kind, s.op_serial_block_num DESC, s.op_serial_pos_in_block DESC
         ),
         --- PROCESSING OF KEY BASED AUTHORITIES ---
             supplement_key_dictionary as materialized
@@ -602,14 +598,15 @@ BEGIN
         store_key_auth_records as materialized
         (
             INSERT INTO hafd.%1$s_keyauth_a AS auth_entries
-            ( account_id, key_kind, key_serial_id, w, op_serial_id, block_num, timestamp )
-            SELECT s.account_id, s.key_kind, s.key_id, s.w, s.op_serial_id, s.block_num, s.timestamp
+            ( account_id, key_kind, key_serial_id, w, op_serial_block_num, op_serial_pos_in_block, block_num, timestamp )
+            SELECT s.account_id, s.key_kind, s.key_id, s.w, s.op_serial_block_num, s.op_serial_pos_in_block, s.block_num, s.timestamp
             FROM extended_key_auth_records s
         --		LEFT JOIN delete_obsolete_key_auth_records d ON d.cleaned_account_id = s.account_id and d.cleaned_key_kind = s.key_kind
             ON CONFLICT ON CONSTRAINT pk_%1$s_keyauth_a DO UPDATE SET
             key_serial_id = EXCLUDED.key_serial_id,
             w =                   EXCLUDED.w,
-            op_serial_id =        EXCLUDED.op_serial_id,
+            op_serial_block_num = EXCLUDED.op_serial_block_num,
+            op_serial_pos_in_block = EXCLUDED.op_serial_pos_in_block,
             block_num =           EXCLUDED.block_num,
             timestamp =           EXCLUDED.timestamp
             RETURNING (xmax = 0) as is_new_entry, auth_entries.account_id, auth_entries.key_kind, auth_entries.key_serial_id as cleaned_key_id
@@ -649,31 +646,33 @@ BEGIN
         store_account_auth_records as
         (
             INSERT INTO hafd.%1$s_accountauth_a AS ae
-            ( account_id, key_kind, account_auth_id, w, op_serial_id, block_num, timestamp )
-            SELECT s.account_id, s.key_kind, s.account_auth_id, s.w, s.op_serial_id, s.block_num, s.timestamp
+            ( account_id, key_kind, account_auth_id, w, op_serial_block_num, op_serial_pos_in_block, block_num, timestamp )
+            SELECT s.account_id, s.key_kind, s.account_auth_id, s.w, s.op_serial_block_num, s.op_serial_pos_in_block, s.block_num, s.timestamp
             FROM extended_account_auth_records s
             ON CONFLICT ON CONSTRAINT pk_%1$s_accountauth_a DO UPDATE SET
             account_auth_id = EXCLUDED.account_auth_id,
             w =                   EXCLUDED.w,
-            op_serial_id =        EXCLUDED.op_serial_id,
+            op_serial_block_num = EXCLUDED.op_serial_block_num,
+            op_serial_pos_in_block = EXCLUDED.op_serial_pos_in_block,
             block_num =           EXCLUDED.block_num,
             timestamp =           EXCLUDED.timestamp
             RETURNING (xmax = 0) as is_new_entry, ae.account_id, ae.key_kind, ae.account_auth_id as cleaned_account_auth_id
         ),
         changed_authority_definitions as
         (
-            SELECT DISTINCT s.account_id, s.key_kind, s.weight_threshold, s.op_serial_id
+            SELECT DISTINCT s.account_id, s.key_kind, s.weight_threshold, s.op_serial_block_num, s.op_serial_pos_in_block
             from effective_key_or_account_auth_records s
         ),
         store_authority_definition_records as
         (
             INSERT INTO hafd.%1$s_authority_definition AS ae
-            ( account_id, key_kind, weight_threshold, op_serial_id)
-            SELECT s.account_id, s.key_kind, s.weight_threshold, s.op_serial_id
+            ( account_id, key_kind, weight_threshold, op_serial_block_num, op_serial_pos_in_block)
+            SELECT s.account_id, s.key_kind, s.weight_threshold, s.op_serial_block_num, s.op_serial_pos_in_block
             FROM changed_authority_definitions s
             ON CONFLICT ON CONSTRAINT pk_%1$s_authority_definition DO UPDATE SET
             weight_threshold =    EXCLUDED.weight_threshold,
-            op_serial_id =        EXCLUDED.op_serial_id
+            op_serial_block_num = EXCLUDED.op_serial_block_num,
+            op_serial_pos_in_block = EXCLUDED.op_serial_pos_in_block
             RETURNING (xmax = 0) as is_new_entry, ae.account_id, ae.key_kind, ae.weight_threshold
         )
 

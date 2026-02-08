@@ -52,7 +52,8 @@ class AccountOperations(HiveDataBase):
     account_id = Column(Integer, primary_key=True)
     transacting_account_id = Column(Integer, primary_key=True)
     account_op_seq_no = Column(Integer, primary_key=True)
-    operation_id = Column(BigInteger)
+    block_num = Column(Integer)
+    op_pos_in_block = Column(Integer)
 
 
 class AccountOperationsReversible(HiveDataBase):
@@ -61,7 +62,8 @@ class AccountOperationsReversible(HiveDataBase):
     account_id = Column(Integer, primary_key=True)
     transacting_account_id = Column(Integer, primary_key=True)
     account_op_seq_no = Column(Integer, primary_key=True)
-    operation_id = Column(BigInteger)
+    block_num = Column(Integer)
+    op_pos_in_block = Column(Integer)
     fork_id = Column(Integer, primary_key=True)
 
 
@@ -111,7 +113,8 @@ class BlocksView(HiveBase):
 class Operations(HiveDataBase):
     __tablename__ = "operations"
 
-    id = Column(BigInteger, primary_key=True)
+    block_num = Column(Integer, primary_key=True)
+    op_pos_in_block = Column(Integer, primary_key=True)
     trx_in_block = Column(SmallInteger)
     op_type_id = Column(SmallInteger)
     op_pos = Column(Integer)
@@ -121,7 +124,8 @@ class Operations(HiveDataBase):
 class OperationsReversible(HiveDataBase):
     __tablename__ = "operations_reversible"
 
-    id = Column(BigInteger, primary_key=True)
+    block_num = Column(Integer, primary_key=True)
+    op_pos_in_block = Column(Integer, primary_key=True)
     trx_in_block = Column(SmallInteger)
     op_type_id = Column(SmallInteger)
     op_pos = Column(Integer)
@@ -131,8 +135,8 @@ class OperationsReversible(HiveDataBase):
 class OperationsExtendedView(HiveBase):
     __tablename__ = "operations_view_extended"
 
-    id = Column(BigInteger, primary_key=True)
-    block_num = Column(Integer)
+    block_num = Column(Integer, primary_key=True)
+    op_pos_in_block = Column(Integer, primary_key=True)
     trx_in_block = Column(SmallInteger)
     op_pos = Column(Integer)
     op_type_id = Column(SmallInteger)
@@ -142,8 +146,8 @@ class OperationsExtendedView(HiveBase):
 class OperationsView(HiveBase):
     __tablename__ = "operations_view"
 
-    id = Column(BigInteger, primary_key=True)
-    block_num = Column(Integer)
+    block_num = Column(Integer, primary_key=True)
+    op_pos_in_block = Column(Integer, primary_key=True)
     trx_in_block = Column(SmallInteger)
     op_pos = Column(Integer)
     op_type_id = Column(SmallInteger)
@@ -152,8 +156,8 @@ class OperationsView(HiveBase):
 class OperationsIrreversibleViewExtended(HiveBase):
     __tablename__ = "irreversible_operations_view_extended"
 
-    id = Column(BigInteger, primary_key=True)
-    block_num = Column(Integer)
+    block_num = Column(Integer, primary_key=True)
+    op_pos_in_block = Column(Integer, primary_key=True)
     trx_in_block = Column(SmallInteger)
     op_pos = Column(Integer)
     op_type_id = Column(SmallInteger)
@@ -163,8 +167,8 @@ class OperationsIrreversibleViewExtended(HiveBase):
 class OperationsIrreversibleView(HiveBase):
     __tablename__ = "irreversible_operations_view"
 
-    id = Column(BigInteger, primary_key=True)
-    block_num = Column(Integer)
+    block_num = Column(Integer, primary_key=True)
+    op_pos_in_block = Column(Integer, primary_key=True)
     trx_in_block = Column(SmallInteger)
     op_pos = Column(Integer)
     op_type_id = Column(SmallInteger)

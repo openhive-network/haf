@@ -89,8 +89,8 @@ BEGIN
 
 
     ASSERT EXISTS(
-        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.operations' AND command LIKE 'CREATE INDEX hive_operations_block_num_id_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id), id)'
-    ), 'No hafd.operation index (block_num, id)';
+        SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.operations' AND command LIKE 'CREATE INDEX hive_operations_block_num_op_pos_in_block_idx ON hafd.operations USING btree (block_num, op_pos_in_block)'
+    ), 'No hafd.operation index (block_num, op_pos_in_block)';
 
     ASSERT EXISTS(
         SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.account_operations' AND command LIKE 'ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE (account_id, account_op_seq_no)'

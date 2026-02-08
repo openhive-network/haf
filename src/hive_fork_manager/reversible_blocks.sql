@@ -49,8 +49,7 @@ CREATE TABLE IF NOT EXISTS hafd.operations_reversible(
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations_reversible', '');
 ALTER TABLE hafd.operations_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
-    ADD CONSTRAINT pk_operations_reversible PRIMARY KEY( id, fork_id ),
-    ADD CONSTRAINT uq_operations_reversible UNIQUE( id, fork_id )
+    ADD CONSTRAINT pk_operations_reversible PRIMARY KEY( block_num, op_pos_in_block, fork_id )
     --ADD CONSTRAINT fk_1_hive_operations_reversible FOREIGN KEY (block_num, fork_id) REFERENCES hafd.blocks_reversible(num, fork_id),
     --ADD CONSTRAINT fk_2_hive_operations_reversible FOREIGN KEY (op_type_id) REFERENCES hafd.operation_types (id)
 ;
@@ -83,7 +82,7 @@ CREATE TABLE IF NOT EXISTS hafd.account_operations_reversible(
 SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations_reversible', '');
 ALTER TABLE hafd.account_operations_reversible
     ADD COLUMN IF NOT EXISTS fork_id BIGINT NOT NULL,
-    ADD CONSTRAINT fk_1_hive_account_operations_reversible FOREIGN KEY ( operation_id, fork_id ) REFERENCES hafd.operations_reversible( id, fork_id ),
+    ADD CONSTRAINT fk_1_hive_account_operations_reversible FOREIGN KEY ( block_num, op_pos_in_block, fork_id ) REFERENCES hafd.operations_reversible( block_num, op_pos_in_block, fork_id ),
     ADD CONSTRAINT pk_hive_account_operations_reversible PRIMARY KEY( account_id, account_op_seq_no, transacting_account_id, fork_id )
 ;
 
@@ -106,8 +105,8 @@ ALTER TABLE hafd.applied_hardforks_reversible
 CREATE INDEX IF NOT EXISTS hive_applied_hardforks_reversible_block_num_idx ON hafd.applied_hardforks_reversible( block_num );
 CREATE INDEX IF NOT EXISTS hive_applied_hardforks_reversible_fork_id_idx ON hafd.applied_hardforks_reversible( fork_id );
 CREATE INDEX IF NOT EXISTS hive_transactions_reversible_block_num_trx_in_block_fork_id_idx ON hafd.transactions_reversible( block_num, trx_in_block, fork_id );
-CREATE INDEX IF NOT EXISTS hive_operations_reversible_block_num_type_id_trx_in_block_fork_id_idx ON hafd.operations_reversible( hafd.operation_id_to_block_num(id), op_type_id, trx_in_block, fork_id );
-CREATE INDEX IF NOT EXISTS hive_operations_reversible_block_num_id_idx ON hafd.operations_reversible USING btree(hafd.operation_id_to_block_num(id), id, fork_id);
-CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_operation_id_idx ON hafd.account_operations_reversible(operation_id, fork_id);
-CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_type_account_id_op_seq_idx ON hafd.account_operations_reversible( op_type_id, account_id, account_op_seq_no DESC, transacting_account_id, operation_id, hafd.operation_id_to_block_num(operation_id) );
+CREATE INDEX IF NOT EXISTS hive_operations_reversible_block_num_type_id_trx_in_block_fork_id_idx ON hafd.operations_reversible( block_num, op_type_id, trx_in_block, fork_id );
+-- PK on (block_num, op_pos_in_block, fork_id) already covers lookups by block_num
+CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_block_num_op_pos_idx ON hafd.account_operations_reversible(block_num, op_pos_in_block, fork_id);
+CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_type_account_id_op_seq_idx ON hafd.account_operations_reversible( op_type_id, account_id, account_op_seq_no DESC, transacting_account_id, block_num, op_pos_in_block );
 

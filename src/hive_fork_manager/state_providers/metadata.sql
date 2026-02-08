@@ -78,8 +78,8 @@ BEGIN
                 WITH select_metadata AS MATERIALIZED (
                 SELECT
                     ov.body_binary,
-                    ov.id,
-                    ov.block_num
+                    ov.block_num,
+                    ov.op_pos_in_block
                 FROM
                     %s.operations_view ov
                 WHERE
@@ -103,7 +103,8 @@ BEGIN
                                 WHEN -1 THEN FALSE
                             END
                         )).*,
-                        sm.id
+                        sm.block_num,
+                        sm.op_pos_in_block
                     FROM select_metadata sm
                 ),
                 prepare_accounts AS MATERIALIZED
@@ -122,7 +123,7 @@ BEGIN
                 WHERE metadata.json_metadata != ''''
                 ORDER BY
                     metadata.account_name,
-                    metadata.id DESC
+                    metadata.block_num DESC, metadata.op_pos_in_block DESC
                 ),
                 select_posting_json_metadata AS MATERIALIZED
                 (
@@ -133,7 +134,7 @@ BEGIN
                 WHERE metadata.posting_json_metadata != ''''
                 ORDER BY
                     metadata.account_name,
-                    metadata.id DESC
+                    metadata.block_num DESC, metadata.op_pos_in_block DESC
                 )
                 INSERT INTO
                     hafd.%s_metadata(account_id, json_metadata, posting_json_metadata)

@@ -36,16 +36,16 @@ BEGIN
     __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G' , 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
     __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
     __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED' );
-    __operation1_1 = ( hafd.operation_id(101, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, NULL );
-    __operation2_1 = ( hafd.operation_id(101, 1), 1, 2, 1, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, NULL );
+    __operation1_1 = ( 101, 0, 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, NULL );
+    __operation2_1 = ( 101, 1, 1, 2, 1, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, NULL );
     __signatures1 = ( '\xDEED', '\xFEED' );
     __signatures2 = ( '\xBEEF', '\xBABE' );
     __account1 = ( 1, 'alice', 101 );
     __account2 = ( 2, 'bob', 101 );
-    __account_operation1 = ( 1, 1, 1, hafd.operation_id(101, 0), 1 );
-    __account_operation2 = ( 2, 1, 1, hafd.operation_id(101, 1), 2 );
-    __applied_hardforks1 = (1, 101, 1);
-    __applied_hardforks2 = (2, 101, 2);
+    __account_operation1 = ( 1, 1, 1, 101, 0, 1 );
+    __account_operation2 = ( 2, 1, 1, 101, 1, 2 );
+    __applied_hardforks1 = (1, 101, 101, 0);
+    __applied_hardforks2 = (2, 101, 101, 1);
     PERFORM hive.push_block(
           __block
         , ARRAY[ __transaction1, __transaction2 ]
@@ -121,7 +121,8 @@ BEGIN
 
     ASSERT ( SELECT COUNT(*) FROM hafd.operations_reversible
         WHERE
-                  id = hafd.operation_id(101, 0)
+                  block_num = 101
+              AND op_pos_in_block = 0
               AND trx_in_block = 0
               AND op_pos = 0
               AND body_binary = '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation
@@ -130,7 +131,8 @@ BEGIN
 
     ASSERT ( SELECT COUNT(*) FROM hafd.operations_reversible
          WHERE
-               id = hafd.operation_id(101, 1)
+               block_num = 101
+           AND op_pos_in_block = 1
            AND trx_in_block = 1
            AND op_pos = 1
            AND body_binary = '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation
@@ -154,28 +156,32 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hafd.account_operations_reversible
         WHERE account_id = 1
         AND account_op_seq_no = 1
-        AND operation_id = hafd.operation_id(101, 0)
+        AND block_num = 101
+        AND op_pos_in_block = 0
         AND fork_id = 1
     ) = 1 ,'No alice operation';
 
     ASSERT ( SELECT COUNT(*) FROM hafd.account_operations_reversible
         WHERE account_id = 2
         AND account_op_seq_no = 1
-        AND operation_id = hafd.operation_id(101, 1)
+        AND block_num = 101
+        AND op_pos_in_block = 1
         AND fork_id = 1
     ) = 1 ,'No bob operation';
 
     ASSERT ( SELECT COUNT(*) FROM hafd.applied_hardforks_reversible
         WHERE hardfork_num = 1
         AND block_num = 101
-        AND hardfork_vop_id = 1
+        AND hardfork_vop_id_block_num = 101
+        AND hardfork_vop_id_op_pos_in_block = 0
         AND fork_id = 1
     ) = 1, 'Wrong data of hardfork 1';
 
     ASSERT ( SELECT COUNT(*) FROM hafd.applied_hardforks_reversible
         WHERE hardfork_num = 2
         AND block_num = 101
-        AND hardfork_vop_id = 2
+        AND hardfork_vop_id_block_num = 101
+        AND hardfork_vop_id_op_pos_in_block = 1
         AND fork_id = 1
     ) = 1, 'Wrong data of hardfork 2';
 

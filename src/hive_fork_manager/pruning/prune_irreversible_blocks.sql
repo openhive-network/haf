@@ -49,10 +49,7 @@ BEGIN
     --                   without repeating tables names each time
 
     DELETE FROM hafd.account_operations har
-        USING hafd.operations hor
-    WHERE
-        har.operation_id = hor.id
-      AND ( hafd.operation_id_to_block_num(hor.id) <= __upper_bound_block_num )
+    WHERE har.block_num <= __upper_bound_block_num
     ;
 
     DELETE FROM hafd.applied_hardforks hjr
@@ -60,7 +57,7 @@ BEGIN
     ;
 
     DELETE FROM hafd.operations hor
-    WHERE hafd.operation_id_to_block_num(hor.id) <= __upper_bound_block_num
+    WHERE hor.block_num <= __upper_bound_block_num
     ;
 
     DELETE FROM hafd.transactions_multisig htmr
