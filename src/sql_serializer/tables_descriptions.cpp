@@ -85,20 +85,19 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     stream.write_values(account.id, account.name, account.block_number == 0 ? fc::optional<int64_t>() : make_block_id(account.block_number));
   }
 
-  // Account operations - uses block_id, seq_in_block
+  // Account operations - uses block_id and operation_id for direct join to operations
   template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::TABLE[] = "hafd.account_operations";
-  template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block";
+  template<> const char hive_account_operations< std::vector<PSQL::processing_objects::account_operation_data_t> >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, block_id, operation_id";
 
   template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::TABLE[] = "hafd.account_operations";
-  template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, block_id, seq_in_block";
+  template<> const char hive_account_operations< container_view< std::vector<PSQL::processing_objects::account_operation_data_t> > >::COLS[] = "account_id, transacting_account_id, account_op_seq_no, block_id, operation_id";
 
-  // Extract block_num and seq_in_block from encoded operation_id
+  // Write account_operation with block_id and full operation_id for efficient join to operations table
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::account_operation_data_t& account_operation)
   {
     int32_t block_num = static_cast<int32_t>(account_operation.operation_id >> 32);
-    int32_t seq_in_block = static_cast<int32_t>((account_operation.operation_id >> 8) & 0xFFFFFF);
 
-    stream.write_values(account_operation.account_id, account_operation.transacting_account_id, account_operation.operation_seq_no, make_block_id(block_num), seq_in_block);
+    stream.write_values(account_operation.account_id, account_operation.transacting_account_id, account_operation.operation_seq_no, make_block_id(block_num), account_operation.operation_id);
   }
 
   // Applied hardforks - uses block_id for fork tracking
