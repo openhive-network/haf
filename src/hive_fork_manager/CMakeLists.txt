@@ -41,10 +41,7 @@ ADD_PSQL_EXTENSION(
             types/operation/operation_flow.sql
             types/operation/operation_id.sql
             types/asset_unique_id.sql
-            # Note: types/block_id.sql is NOT in DEPLOY_SOURCES because:
-            # 1. The domain is created in SCHEMA_SOURCES
-            # 2. DROP DOMAIN ... CASCADE would destroy tables using block_id
-            # 3. The C functions use CREATE OR REPLACE so they can be updated
+            types/block_id.sql
 
             pruning/prune_irreversible_blocks.sql
 
