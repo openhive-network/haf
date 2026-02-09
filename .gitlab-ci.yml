@@ -1049,6 +1049,7 @@ applications_system_tests:
   services:
     - *hfm-only-service
   variables:
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
     PATTERNS_PATH: "" #Should be overriden in derived jobs
     RO_BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
