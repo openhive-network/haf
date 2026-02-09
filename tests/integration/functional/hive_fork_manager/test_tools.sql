@@ -419,10 +419,10 @@ BEGIN
     FOR block_num IN start_block..end_block LOOP
         __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0
 
-        INSERT INTO hafd.account_operations(block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
+        INSERT INTO hafd.account_operations(block_id, operation_id, account_id, transacting_account_id, account_op_seq_no)
         VALUES (
             __block_id,
-            trx_in_block,  -- seq_in_block (matches operation)
+            hafd.operation_id(__block_id, trx_in_block, 0),  -- operation_id encodes block_num, seq, type
             account_id,
             trans_acc_id,
             seq_no
@@ -460,10 +460,10 @@ BEGIN
     FOR block_num IN start_block..end_block LOOP
         __block_id := hafd.make_block_id(block_num, fork_id);
 
-        INSERT INTO hafd.account_operations(block_id, seq_in_block, account_id, transacting_account_id, account_op_seq_no)
+        INSERT INTO hafd.account_operations(block_id, operation_id, account_id, transacting_account_id, account_op_seq_no)
         VALUES (
             __block_id,
-            trx_in_block,  -- seq_in_block (matches operation)
+            hafd.operation_id(__block_id, trx_in_block, 0),  -- operation_id encodes block_num, seq, type
             account_id,
             trans_acc_id,
             seq_no

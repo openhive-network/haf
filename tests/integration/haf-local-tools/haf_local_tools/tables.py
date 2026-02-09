@@ -44,7 +44,7 @@ class AccountOperations(HiveDataBase):
     transacting_account_id = Column(Integer, primary_key=True)
     account_op_seq_no = Column(Integer, primary_key=True)
     block_id = Column(BigInteger, primary_key=True)
-    seq_in_block = Column(Integer)
+    operation_id = Column(BigInteger)
 
 
 class Blocks(HiveDataBase):
