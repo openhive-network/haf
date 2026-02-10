@@ -1,6 +1,6 @@
 #include "psql_utils/postgres_includes.hpp"
 
-#include "include/operation_id.hpp"
+#include <hive/protocol/operation_id.hpp>
 
 #include "psql_utils/pg_cxx.hpp"
 

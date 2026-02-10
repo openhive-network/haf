@@ -1,6 +1,6 @@
 #pragma once
 
-#include "operation_id.hpp"
+#include <hive/protocol/operation_id.hpp>
 
 // STL
 #include <sstream>
