@@ -1,311 +1,18 @@
-CREATE OR REPLACE FUNCTION hive.copy_blocks_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.blocks
-    SELECT
-          DISTINCT ON ( hbr.num ) hbr.num
-        , hbr.hash
-        , hbr.prev
-        , hbr.created_at
-        , hbr.producer_account_id
-        , hbr.transaction_merkle_root
-        , hbr.extensions
-        , hbr.witness_signature
-        , hbr.signing_key
+-- =============================================================================
+-- HAF API Implementation Functions (Refactored for unified tables with block_id)
+-- =============================================================================
+--
+-- This file contains implementation functions for the HAF API.
+-- The copy_*_to_irreversible functions have been removed since we now use
+-- unified tables with block_id encoding instead of separate reversible tables.
+--
+-- Note: remove_orphan_forks is defined in hived_api.sql (not here) because
+-- it needs explicit delete from all child tables (no CASCADE DELETE FKs exist).
+-- =============================================================================
 
-        , hbr.hbd_interest_rate
-
-        , hbr.total_vesting_fund_hive
-        , hbr.total_vesting_shares
-
-        , hbr.total_reward_fund_hive
-        , hbr.virtual_supply
-        , hbr.current_supply
-        , hbr.current_hbd_supply
-        , hbr.dhf_interval_ledger
-
-    FROM
-        hafd.blocks_reversible hbr
-    WHERE
-        hbr.num <= _new_irreversible_block
-    AND hbr.num > _head_block_of_irreversible_blocks
-    ORDER BY hbr.num ASC, hbr.fork_id DESC;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.copy_transactions_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.transactions
-    SELECT
-          htr.block_num
-        , htr.trx_in_block
-        , htr.trx_hash
-        , htr.ref_block_num
-        , htr.ref_block_prefix
-        , htr.expiration
-        , htr.signature
-    FROM
-        hafd.transactions_reversible htr
-    JOIN ( SELECT
-              DISTINCT ON ( hbr.num ) hbr.num
-            , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                    hbr.num <= _new_irreversible_block
-                AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-    ) as num_and_forks ON htr.block_num = num_and_forks.num AND htr.fork_id = num_and_forks.fork_id
-    ;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.copy_operations_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.operations
-    SELECT
-           hor.id
-         , hor.trx_in_block
-         , hor.op_type_id
-         , hor.op_pos
-         , hor.body_binary
-         , hor.custom_json_type_id
-    FROM
-        hafd.operations_reversible hor
-        JOIN (
-            SELECT
-                  DISTINCT ON ( hbr.num ) hbr.num
-                , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                  hbr.num <= _new_irreversible_block
-              AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON hafd.operation_id_to_block_num(hor.id) = num_and_forks.num AND hor.fork_id = num_and_forks.fork_id
-    ;
-END;
-$BODY$
-;
-
-
-CREATE OR REPLACE FUNCTION hive.copy_applied_hardforks_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.applied_hardforks
-    SELECT
-           hjr.hardfork_num
-         , hjr.block_num
-         , hjr.hardfork_vop_id
-    FROM
-        hafd.applied_hardforks_reversible hjr
-        JOIN (
-            SELECT
-                  DISTINCT ON ( hbr.num ) hbr.num
-                , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                  hbr.num <= _new_irreversible_block
-              AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON hjr.block_num = num_and_forks.num AND hjr.fork_id = num_and_forks.fork_id
-    ;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.copy_signatures_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.transactions_multisig
-    SELECT
-          tsr.trx_hash
-        , tsr.signature
-    FROM
-        hafd.transactions_multisig_reversible tsr
-        JOIN hafd.transactions_reversible htr ON htr.trx_hash = tsr.trx_hash AND htr.fork_id = tsr.fork_id
-        JOIN (
-            SELECT
-                  DISTINCT ON ( hbr.num ) hbr.num
-                , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                    hbr.num <= _new_irreversible_block
-                AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON htr.block_num = num_and_forks.num AND htr.fork_id = num_and_forks.fork_id
-    ;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.copy_accounts_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.accounts
-    SELECT
-           har.id
-         , har.name
-         , har.block_num
-    FROM
-        hafd.accounts_reversible har
-        JOIN (
-            SELECT
-                  DISTINCT ON ( hbr.num ) hbr.num
-                , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                  hbr.num <= _new_irreversible_block
-              AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON har.block_num = num_and_forks.num AND har.fork_id = num_and_forks.fork_id
-    ;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.copy_account_operations_to_irreversible(
-      _head_block_of_irreversible_blocks INT
-    , _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-BEGIN
-    INSERT INTO hafd.account_operations
-    SELECT
-           haor.account_id
-         , haor.transacting_account_id
-         , haor.account_op_seq_no
-         , haor.operation_id
-         , haor.op_type_id
-    FROM
-        hafd.account_operations_reversible haor
-        JOIN (
-            SELECT
-                  DISTINCT ON ( hbr.num ) hbr.num
-                , hbr.fork_id
-            FROM hafd.blocks_reversible hbr
-            WHERE
-                hbr.num <= _new_irreversible_block
-              AND hbr.num > _head_block_of_irreversible_blocks
-            ORDER BY hbr.num ASC, hbr.fork_id DESC
-        ) as num_and_forks ON haor.fork_id = num_and_forks.fork_id AND hafd.operation_id_to_block_num( haor.operation_id ) = num_and_forks.num
-    ;
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.remove_obsolete_reversible_data( _new_irreversible_block INT )
-    RETURNS void
-    LANGUAGE plpgsql
-    VOLATILE
-AS
-$BODY$
-DECLARE
-    -- up limit
-    __max_fork_id hafd.fork.id%TYPE;
-    -- down limit
-    __min_ctx_fork_id hafd.fork.id%TYPE := hive.max_fork_id();
-    __lowest_irreversible_block hafd.blocks.num%TYPE := hive.max_block_num();
-    __max_block_num hafd.blocks.num%TYPE;
-BEGIN
-    SELECT max(hf.id) INTO __max_fork_id
-    FROM hafd.fork hf;
-
-    -- can only delete data from  blocks and forks already
-    -- consumed by all the context, pair of lowest fork id and
-    -- lowest irreversible block is a upper bound of deletion
-
-    SELECT COALESCE( min(hc.fork_id), __min_ctx_fork_id )
-         , COALESCE( min(irreversible_block), __lowest_irreversible_block )
-    INTO __min_ctx_fork_id, __lowest_irreversible_block
-    FROM hafd.contexts hc
-    JOIN hafd.contexts_attachment hca ON hca.context_id = hc.id
-    WHERE hca.is_attached = TRUE
-    AND hc.is_forking = TRUE;
-
-    __max_block_num := LEAST(__lowest_irreversible_block, _new_irreversible_block);
-
-    DELETE FROM hafd.account_operations_reversible har
-    USING hafd.operations_reversible hor
-    WHERE
-            har.operation_id = hor.id
-        AND har.fork_id = hor.fork_id
-        AND ( hafd.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
-    ;
-
-    DELETE FROM hafd.applied_hardforks_reversible hjr
-    WHERE hjr.block_num <= __max_block_num OR hjr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
-    ;
-
-    DELETE FROM hafd.operations_reversible hor
-    WHERE hafd.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
-    ;
-
-
-    DELETE FROM hafd.transactions_multisig_reversible htmr
-    USING hafd.transactions_reversible htr
-    WHERE
-            htr.fork_id = htmr.fork_id
-        AND htr.trx_hash = htmr.trx_hash
-        AND ( htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
-    ;
-
-    DELETE FROM hafd.transactions_reversible htr
-    WHERE  htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
-    ;
-
-    DELETE FROM hafd.accounts_reversible har
-    WHERE har.block_num <= __max_block_num OR har.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
-    ;
-
-    DELETE FROM hafd.blocks_reversible hbr
-    WHERE hbr.num <= __max_block_num OR hbr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
-    ;
-END;
-$BODY$
-;
-
+-- =============================================================================
+-- remove_unecessary_events: Clean up old events from the queue
+-- =============================================================================
 CREATE OR REPLACE FUNCTION hive.remove_unecessary_events( _new_irreversible_block INT )
     RETURNS void
     LANGUAGE plpgsql
@@ -316,7 +23,7 @@ DECLARE
     __upper_bound_events_id BIGINT := NULL;
     __max_block_num INTEGER := NULL;
 BEGIN
-    SELECT consistent_block INTO __max_block_num FROM hafd.hive_state;
+    SELECT hafd.block_id_to_num(consistent_block) INTO __max_block_num FROM hafd.hive_state;
 
     -- find the upper bound of events possible to remove
     SELECT MIN(heq.id) INTO __upper_bound_events_id
@@ -344,6 +51,10 @@ BEGIN
 END;
 $BODY$
 ;
+
+-- =============================================================================
+-- Index/Constraint Management Functions
+-- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.save_and_drop_indexes_constraints( in _schema TEXT, in _table TEXT )
     RETURNS VOID
@@ -500,7 +211,7 @@ DECLARE
   __command TEXT;
   __cluster_index_dropped BOOLEAN;
 BEGIN
-
+  -- Check if the clustering index was dropped (uses unique constraint index)
   __cluster_index_dropped := EXISTS(
                 SELECT command FROM hafd.indexes_constraints
                 WHERE table_name = 'hafd.account_operations' AND
@@ -510,10 +221,10 @@ BEGIN
     RAISE NOTICE 'Cluster index dropped, restoring it before other indexes for faster clustering';
     SELECT command INTO __command FROM hafd.indexes_constraints
     WHERE table_name = 'hafd.account_operations' AND
-          index_constraint_name = 'hive_account_operations_uq1' LIMIT 1;      
+          index_constraint_name = 'hive_account_operations_uq1' LIMIT 1;
     EXECUTE __command;
     RAISE NOTICE 'Clustering hafd.account_operations, this takes a while...';
-    CLUSTER hafd.account_operations using hive_account_operations_uq1;
+    CLUSTER hafd.account_operations USING hive_account_operations_uq1;
     RAISE NOTICE 'Analyzing hafd.account_operations after clustering to update statistics';
     ANALYZE hafd.account_operations;
     UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
@@ -582,6 +293,13 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
+-- =============================================================================
+-- remove_inconsistent_irreversible_data: Clean up data after crash recovery
+-- =============================================================================
+-- Updated to work with block_id encoding. Uses block_id_to_num() to filter
+-- blocks above the consistent block. Since there are no FKs between data tables,
+-- we must explicitly delete from all tables.
+-- =============================================================================
 CREATE OR REPLACE FUNCTION hive.remove_inconsistent_irreversible_data()
     RETURNS void
     LANGUAGE plpgsql
@@ -592,33 +310,45 @@ DECLARE
     __consistent_block INTEGER := NULL;
     __is_dirty BOOL := TRUE;
 BEGIN
-    SELECT consistent_block, is_dirty INTO __consistent_block, __is_dirty FROM hafd.hive_state;
+    SELECT COALESCE(hafd.block_id_to_num(consistent_block), 0), is_dirty INTO __consistent_block, __is_dirty FROM hafd.hive_state;
 
     IF ( __is_dirty = FALSE ) THEN
         RETURN;
     END IF;
 
-    DELETE FROM hafd.account_operations hao
-    WHERE hafd.operation_id_to_block_num(hao.operation_id) > __consistent_block;
+    -- Delete from all data tables above consistent_block
+    -- Order: child tables first to avoid any potential FK issues
+    DELETE FROM hafd.account_operations ao
+    WHERE hafd.block_id_to_num(ao.block_id) > __consistent_block;
 
-    DELETE FROM hafd.applied_hardforks WHERE block_num > __consistent_block;
+    DELETE FROM hafd.applied_hardforks ah
+    WHERE hafd.block_id_to_num(ah.block_id) > __consistent_block;
 
-    DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > __consistent_block;
+    DELETE FROM hafd.transactions_multisig tm
+    WHERE hafd.block_id_to_num(tm.block_id) > __consistent_block;
 
-    DELETE FROM hafd.transactions_multisig htm
-    USING hafd.transactions ht
-    WHERE ht.block_num > __consistent_block AND ht.trx_hash = htm.trx_hash;
+    DELETE FROM hafd.operations o
+    WHERE hafd.block_id_to_num(o.block_id) > __consistent_block;
 
-    DELETE FROM hafd.transactions WHERE block_num > __consistent_block;
+    DELETE FROM hafd.transactions t
+    WHERE hafd.block_id_to_num(t.block_id) > __consistent_block;
 
-    DELETE FROM hafd.accounts WHERE block_num > __consistent_block;
+    -- Delete accounts created in blocks above consistent_block
+    DELETE FROM hafd.accounts a
+    WHERE hafd.block_id_to_num(a.block_id) > __consistent_block;
 
-    DELETE FROM hafd.blocks WHERE num > __consistent_block;
+    -- Finally delete blocks
+    DELETE FROM hafd.blocks hb
+    WHERE hafd.block_id_to_num(hb.block_id) > __consistent_block;
 
     UPDATE hafd.hive_state SET is_dirty = FALSE;
 END;
 $BODY$
 ;
+
+-- =============================================================================
+-- Index Dependency Management Functions
+-- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.register_index_dependency(
     _context_name TEXT,
@@ -651,23 +381,23 @@ BEGIN
 
     -- Upsert the index dependency
     INSERT INTO hafd.indexes_constraints (
-        table_name, 
-        index_constraint_name, 
-        command, 
-        is_constraint, 
-        is_index, 
-        is_foreign_key, 
-        status, 
+        table_name,
+        index_constraint_name,
+        command,
+        is_constraint,
+        is_index,
+        is_foreign_key,
+        status,
         contexts
     )
     VALUES (
-        __table_name, 
-        __index_name, 
-        __canonicalized_command, 
-        FALSE, 
-        TRUE, 
-        FALSE, 
-        'missing', 
+        __table_name,
+        __index_name,
+        __canonicalized_command,
+        FALSE,
+        TRUE,
+        FALSE,
+        'missing',
         ARRAY[__context_id]
     )
     ON CONFLICT (table_name, index_constraint_name) DO UPDATE
@@ -676,41 +406,6 @@ BEGIN
 END;
 $BODY$
 ;
-/*
-CREATE OR REPLACE FUNCTION hive.wait_till_registered_indexes_created(
-    _app_context TEXT
-)
-RETURNS void
-LANGUAGE plpgsql
-AS
-$BODY$
-DECLARE
-    index_record RECORD;
-    __start_time TIMESTAMP;
-    __end_time TIMESTAMP;
-    __duration INTERVAL;
-BEGIN
-    RAISE NOTICE 'Starting to wait for registered indexes to be created for context %', _app_context;
-    __start_time := clock_timestamp();
-
-    LOOP
-        EXIT WHEN NOT EXISTS (
-        SELECT 1
-        FROM hafd.indexes_constraints
-        WHERE contexts @> ARRAY[(SELECT id FROM hafd.contexts WHERE name = _app_context)] AND status <> 'created'
-        );
-        RAISE NOTICE 'Sleeping for 10 seconds waiting for indexes to be created';
-        PERFORM pg_sleep(10);
-    END LOOP;
-
-
-    __end_time := clock_timestamp();
-    __duration := __end_time - __start_time;
-    RAISE NOTICE 'Finished waiting for registered indexes to be created for context % in % seconds', _app_context, EXTRACT(EPOCH FROM __duration);
-END;
-$BODY$
-;
-*/
 
 CREATE OR REPLACE FUNCTION hive.check_if_registered_indexes_created(
     _app_context TEXT
@@ -820,6 +515,10 @@ END;
 $BODY$
 ;
 
+-- =============================================================================
+-- Vacuum Request Functions
+-- =============================================================================
+
 CREATE OR REPLACE FUNCTION hive.app_request_table_vacuum(
     _schema_name TEXT,
     _table_name TEXT,
@@ -902,54 +601,3 @@ BEGIN
 END;
 $BODY$
 ;
-/*
-CREATE OR REPLACE FUNCTION hive.app_wait_for_table_vacuum(
-    _table_name TEXT
-)
-RETURNS void
-LANGUAGE plpgsql
-AS
-$BODY$
-DECLARE
-    __start_time TIMESTAMP;
-    __end_time TIMESTAMP;
-    __duration INTERVAL;
-BEGIN
-    RAISE NOTICE 'Waiting for vacuum to complete for table %', _table_name;
-    __start_time := clock_timestamp();
-
-    LOOP
-        EXIT WHEN NOT EXISTS (
-            SELECT 1
-            FROM hafd.vacuum_requests
-            WHERE table_name = _table_name
-            AND status <> 'vacuumed'            
-        );
-        RAISE NOTICE 'Sleeping for 1 seconds waiting for vacuum to be done';
-        PERFORM pg_sleep(1);
-    END LOOP;
-
-    __end_time := clock_timestamp();
-    __duration := __end_time - __start_time;
-    RAISE NOTICE 'Vacuum completed for table % in % seconds', _table_name, EXTRACT(EPOCH FROM __duration);
-END;
-$BODY$
-;
-
-CREATE OR REPLACE FUNCTION hive.test_vacuum_functions()
-RETURNS void
-LANGUAGE plpgsql
-AS
-$BODY$
-BEGIN
-    -- Request a vacuum for the table hafbe_app_keyauth_a
-    PERFORM hive.app_request_table_vacuum('hafbe_app_keyauth_a', '1 hour'::INTERVAL);
-
-    -- Wait for the vacuum to complete
-    PERFORM hive.app_wait_for_table_vacuum('hafbe_app_keyauth_a');
-
-    RAISE NOTICE 'Test for vacuum functions on table hafbe_app_keyauth_a completed successfully.';
-END;
-$BODY$
-;
-*/

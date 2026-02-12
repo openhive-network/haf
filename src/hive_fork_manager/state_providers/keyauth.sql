@@ -281,7 +281,7 @@ BEGIN
                 g.w,
                 __op_serial_id_dummy as op_serial_id,
                 1 as block_num,
-                (SELECT b.created_at FROM hafd.blocks b WHERE b.num = 1) as timestamp,
+                (SELECT b.created_at FROM hafd.blocks b WHERE hafd.block_id_to_num(b.block_id) = 1 ORDER BY b.block_id DESC LIMIT 1) as timestamp,
                 1
                 FROM hive.get_genesis_keyauths() as g
             WHERE  _first_block <= 1 AND 1 <= _last_block
@@ -295,8 +295,8 @@ BEGIN
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_9_block_num as block_num,
-            (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_9_block_num) as timestamp,
-            hafd.operation_id( __HARDFORK_9_block_num, 0x7FFFFFFF ) as op_stable_id
+            (SELECT b.created_at FROM hafd.blocks b WHERE hafd.block_id_to_num(b.block_id) = __HARDFORK_9_block_num ORDER BY b.block_id DESC LIMIT 1) as timestamp,
+            hafd.operation_id( __HARDFORK_9_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf09_keyauths() h
             WHERE  _first_block <= __HARDFORK_9_block_num AND __HARDFORK_9_block_num <= _last_block
         ),
@@ -308,8 +308,8 @@ BEGIN
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_21_block_num as block_num,
-            (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_21_block_num) as timestamp,
-            hafd.operation_id( __HARDFORK_21_block_num, 0x7FFFFFFF ) as op_stable_id
+            (SELECT b.created_at FROM hafd.blocks b WHERE hafd.block_id_to_num(b.block_id) = __HARDFORK_21_block_num ORDER BY b.block_id DESC LIMIT 1) as timestamp,
+            hafd.operation_id( __HARDFORK_21_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf21_keyauths() h
             WHERE  _first_block <= __HARDFORK_21_block_num AND __HARDFORK_21_block_num <= _last_block
         ),
@@ -321,8 +321,8 @@ BEGIN
             *,
             __op_serial_id_dummy as op_serial_id,
             __HARDFORK_24_block_num as block_num,
-            (SELECT b.created_at FROM hafd.blocks b WHERE b.num = __HARDFORK_24_block_num) as timestamp,
-            hafd.operation_id( __HARDFORK_24_block_num, 0x7FFFFFFF ) as op_stable_id
+            (SELECT b.created_at FROM hafd.blocks b WHERE hafd.block_id_to_num(b.block_id) = __HARDFORK_24_block_num ORDER BY b.block_id DESC LIMIT 1) as timestamp,
+            hafd.operation_id( __HARDFORK_24_block_num, 60, 0xFFFFFF ) as op_stable_id
             FROM hive.get_hf24_keyauths() h
             WHERE  _first_block <= __HARDFORK_24_block_num AND __HARDFORK_24_block_num <= _last_block
         ),
@@ -695,8 +695,8 @@ END;
 $BODY$;
 
 CREATE OR REPLACE FUNCTION hive.update_state_provider_keyauth(
-    _first_block hafd.blocks.num%TYPE,
-    _last_block hafd.blocks.num%TYPE,
+    _first_block INTEGER,
+    _last_block INTEGER,
     _context hafd.context_name)
     RETURNS void
     LANGUAGE plpgsql

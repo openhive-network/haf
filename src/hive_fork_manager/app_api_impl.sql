@@ -62,9 +62,9 @@ AS
 $BODY$
 DECLARE
     __curent_events_id hafd.events_queue.id%TYPE;
-    __newest_irreversible_block_num hafd.blocks.num%TYPE;
-    __current_context_block_num hafd.blocks.num%TYPE;
-    __current_context_irreversible_block hafd.blocks.num%TYPE;
+    __newest_irreversible_block_num INTEGER;
+    __current_context_block_num INTEGER;
+    __current_context_irreversible_block INTEGER;
     __current_fork_id hafd.fork.id%TYPE;
     __lead_context hafd.context_name := _contexts[ 1 ];
     __result hafd.events_queue%ROWTYPE;
@@ -77,7 +77,7 @@ BEGIN
          , hc.fork_id
     INTO __curent_events_id, __current_context_block_num, __current_context_irreversible_block, __current_fork_id
     FROM hafd.contexts hc WHERE hc.name = __lead_context;
-    SELECT consistent_block INTO __newest_irreversible_block_num FROM hafd.hive_state;
+    SELECT hafd.block_id_to_num(consistent_block) INTO __newest_irreversible_block_num FROM hafd.hive_state;
 
     -- hived can at any moment commit new events
     -- because of read committed, we need to be ready such situations
@@ -215,7 +215,7 @@ BEGIN
     FROM hafd.contexts as hc
     WHERE hc.name = __lead_context;
 
-    SELECT consistent_block INTO __newest_irreversible_block_num FROM hafd.hive_state;
+    SELECT hafd.block_id_to_num(consistent_block) INTO __newest_irreversible_block_num FROM hafd.hive_state;
 
     IF __current_block_num <= __irreversible_block_num
        AND  __newest_irreversible_block_num IS NOT NULL THEN
@@ -452,9 +452,9 @@ BEGIN
     SELECT hc.irreversible_block INTO _context_state.irreversible_block_num
     FROM hafd.contexts hc WHERE hc.name = _context;
 
-    SELECT MIN( hb.num ), MAX( hb.num )
+    SELECT MIN( hafd.block_id_to_num(hb.block_id) ), MAX( hafd.block_id_to_num(hb.block_id) )
     FROM hafd.blocks hb
-    WHERE hb.num > _context_state.current_block_num AND hb.num <= _context_state.irreversible_block_num
+    WHERE hafd.block_id_to_num(hb.block_id) > _context_state.current_block_num AND hafd.block_id_to_num(hb.block_id) <= _context_state.irreversible_block_num
     INTO __next_block_to_process, __last_block_to_process;
 
     IF __next_block_to_process IS NULL THEN
@@ -490,9 +490,9 @@ DECLARE
     __last_block_to_process INT;
     __result hive.blocks_range;
 BEGIN
-    SELECT MIN( hb.num ), MAX( hb.num )
+    SELECT MIN( hafd.block_id_to_num(hb.block_id) ), MAX( hafd.block_id_to_num(hb.block_id) )
     FROM hafd.blocks hb
-    WHERE hb.num > _context_state.current_block_num AND hb.num <= _context_state.irreversible_block_num
+    WHERE hafd.block_id_to_num(hb.block_id) > _context_state.current_block_num AND hafd.block_id_to_num(hb.block_id) <= _context_state.irreversible_block_num
     INTO __next_block_to_process, __last_block_to_process;
 
     IF __next_block_to_process IS NULL THEN
@@ -589,7 +589,7 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _state_provider hafd.state_providers, _context hafd.context_name )
+CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block INTEGER, _last_block INTEGER, _state_provider hafd.state_providers, _context hafd.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
