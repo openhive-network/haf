@@ -78,7 +78,7 @@ def test_live_sync_transaction_error(haf_node):
     haf_node.wait_number_of_blocks(7)
 
     # no transaction should be added because blocks with them failed
-    sql = "SELECT exists(SELECT 1 FROM hafd.transactions  WHERE block_num > 6) = FALSE;"
+    sql = "SELECT exists(SELECT 1 FROM hafd.transactions WHERE hafd.block_id_to_num(block_id) > 6) = FALSE;"
     assert haf_node.query_one(sql)
 
     # no fork on block 7(back to block 6) shall be added because blocks

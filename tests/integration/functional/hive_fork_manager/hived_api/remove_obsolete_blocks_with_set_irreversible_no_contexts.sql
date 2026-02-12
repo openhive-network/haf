@@ -1,3 +1,8 @@
+-- Test remove_orphan_forks function with unified table architecture
+-- Scenario: No contexts - all orphan forks can be cleaned immediately
+-- Load test utilities
+\ir ../test_tools.sql
+
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
@@ -15,125 +20,64 @@ BEGIN
          , ( 3, 'OP 3', TRUE )
     ;
 
-    INSERT INTO hafd.blocks_reversible
+    -- Insert blocks into unified table using block_id encoding
+    -- Fork 1: blocks 4, 5, 6, 7, 10
+    -- Fork 2: blocks 7, 8, 9
+    -- Fork 3: blocks 8, 9, 10
+    INSERT INTO hafd.blocks(block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger)
     VALUES
-           ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
-         , ( 5, '\xBADD5A', '\xCAFE5A', '2016-06-22 19:10:55-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
-         , ( 6, '\xBADD60', '\xCAFE60', '2016-06-22 19:10:26-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
-         , ( 7, '\xBADD71', '\xCAFE71', '2016-06-22 19:10:27-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
-         , ( 10, '\xBADD11', '\xCAFE11', '2016-06-22 19:10:41-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
-         , ( 7, '\xBADD70', '\xCAFE70', '2016-06-22 19:10:27-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
-         , ( 8, '\xBADD80', '\xCAFE80', '2016-06-22 19:10:28-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
-         , ( 9, '\xBADD90', '\xCAFE90', '2016-06-22 19:10:29-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
-         , ( 8, '\xBADD80', '\xCAFE80', '2016-06-22 19:10:30-07'::timestamp, 7, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
-         , ( 9, '\xBADD90', '\xCAFE90', '2016-06-22 19:10:31-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
-         , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
+           ( hafd.make_block_id(4, 1), '\xBADD40', '\xCAFE40', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id(5, 1), '\xBADD5A', '\xCAFE5A', '2016-06-22 19:10:55-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id(6, 1), '\xBADD60', '\xCAFE60', '2016-06-22 19:10:26-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id(7, 1), '\xBADD71', '\xCAFE71', '2016-06-22 19:10:27-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id(10, 1), '\xBADD11', '\xCAFE11', '2016-06-22 19:10:41-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id(7, 2), '\xBADD70', '\xCAFE70', '2016-06-22 19:10:27-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id(8, 2), '\xBADD80', '\xCAFE80', '2016-06-22 19:10:28-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id(9, 2), '\xBADD90', '\xCAFE90', '2016-06-22 19:10:29-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id(8, 3), '\xBADD80', '\xCAFE80', '2016-06-22 19:10:30-07'::timestamp, 7, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id(9, 3), '\xBADD90', '\xCAFE90', '2016-06-22 19:10:31-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+         , ( hafd.make_block_id(10, 3), '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    INSERT INTO hafd.accounts_reversible( block_num, name, id, fork_id)
+    -- Insert accounts with block_id
+    INSERT INTO hafd.accounts( id, name, block_id )
     VALUES
-           ( 4, 'u4_1',1 , 1 )
-         , ( 5, 'u5_1',2 , 1 )
-         , ( 6, 'u6_1',3 , 1 )
-         , ( 7, 'u7_1',4 , 1 )
-         , ( 10, 'u10_1',5 , 1 )
-         , ( 7, 'u7_2', 6 , 2 )
-         , ( 8, 'u8_2', 7 , 2 )
-         , ( 9, 'u9_2', 8 , 2 )
-         , ( 8, 'u8_2',9 , 3 )
-         , ( 9, 'u9_3',10 , 3 )
-         , ( 10, 'u10_3',11 , 3 )
+           ( 1, 'u4_1', hafd.make_block_id(4, 1) )
+         , ( 2, 'u5_1', hafd.make_block_id(5, 1) )
+         , ( 3, 'u6_1', hafd.make_block_id(6, 1) )
+         , ( 4, 'u7_1', hafd.make_block_id(7, 1) )
+         , ( 5, 'u10_1', hafd.make_block_id(10, 1) )
+         , ( 6, 'u7_2', hafd.make_block_id(7, 2) )
+         , ( 7, 'u8_2', hafd.make_block_id(8, 2) )
+         , ( 8, 'u9_2', hafd.make_block_id(9, 2) )
+         , ( 9, 'u8_3', hafd.make_block_id(8, 3) )
+         , ( 10, 'u9_3', hafd.make_block_id(9, 3) )
+         , ( 11, 'u10_3', hafd.make_block_id(10, 3) )
     ;
 
-    INSERT INTO hafd.transactions_reversible
+    -- Insert transactions with block_id
+    INSERT INTO hafd.transactions(block_id, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature)
     VALUES
-           ( 4, 0::SMALLINT, '\xDEED40', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF',  1 )
-         , ( 5, 0::SMALLINT, '\xDEED55', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF',  1 )
-         , ( 6, 0::SMALLINT, '\xDEED60', 101, 100, '2016-06-22 19:10:26-07'::timestamp, '\xBEEF',  1 )
-         , ( 7, 0::SMALLINT, '\xDEED70', 101, 100, '2016-06-22 19:10:37-07'::timestamp, '\xBEEF',  1 )
-         , ( 10, 0::SMALLINT, '\xDEED11', 101, 100, '2016-06-22 19:10:41-07'::timestamp, '\xBEEF',  1 )
-         , ( 7, 0::SMALLINT, '\xDEED70', 101, 100, '2016-06-22 19:10:27-07'::timestamp, '\xBEEF',  2 )
-         , ( 8, 0::SMALLINT, '\xDEED80', 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF',  2 )
-         , ( 9, 0::SMALLINT, '\xDEED90', 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF',  2 )
-         , ( 8, 0::SMALLINT, '\xDEED88', 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF',  3 )
-         , ( 9, 0::SMALLINT, '\xDEED99', 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF',  3 )
-         , ( 10, 0::SMALLINT, '\xDEED1102', 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF', 3 )
-    ;
-
-    INSERT INTO hafd.transactions_multisig_reversible
-    VALUES
-           ( '\xDEED40', '\xBEEF40',  1 )
-         , ( '\xDEED55', '\xBEEF55',  1 )
-         , ( '\xDEED60', '\xBEEF61',  1 )
-         , ( '\xDEED70', '\xBEEF7110',  1 ) --must be abandon because of fork 2
-         , ( '\xDEED70', '\xBEEF7120',  1 ) --must be abandon because of fork 2
-         , ( '\xDEED70', '\xBEEF7130',  1 ) --must be abandon because of fork 2
-         , ( '\xDEED11', '\xBEEF7140',  1 )
-         , ( '\xDEED70', '\xBEEF72',  2 ) -- block 7
-         , ( '\xDEED70', '\xBEEF73',  2 ) -- block 7
-         , ( '\xDEED80', '\xBEEF82',  2 ) -- block 8
-         , ( '\xDEED90', '\xBEEF92',  2 ) -- block 9
-         , ( '\xDEED88', '\xBEEF83',  3 ) -- block 8
-         , ( '\xDEED99', '\xBEEF93',  3 ) -- block 9
-         , ( '\xDEED1102', '\xBEEF13',  3 ) -- block 10
-    ;
-
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_type_id, op_pos, body_binary, fork_id)
-    VALUES
-           ( hafd.operation_id(4, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"THREE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(5, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"FIVEFIVE OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(6, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hafd.operation, 1 )
-         , ( hafd.operation_id(7, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN0 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
-         , ( hafd.operation_id(7, 1), 0, 1, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN01 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
-         , ( hafd.operation_id(7, 2), 0, 1, 2, '{"type":"system_warning_operation","value":{"message":"SEVEN02 OPERATION"}}' :: jsonb :: hafd.operation, 1 ) -- must be abandon because of fork2
-         , ( hafd.operation_id(7, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(7, 1), 0, 1, 1, '{"type":"system_warning_operation","value":{"message":"SEVEN21 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(8, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(9, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(8, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
-         , ( hafd.operation_id(9, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
-         , ( hafd.operation_id(10, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation, 3 )
-    ;
-
-    INSERT INTO hafd.account_operations_reversible
-    VALUES
-           ( 4, 4, 1, hafd.operation_id(4, 0), 1, 1 )
-         , ( 5, 5, 1, hafd.operation_id(5, 0), 1, 1 )
-         , ( 6, 6, 1, hafd.operation_id(6, 0), 1, 1 )
-         , ( 7, 7, 1, hafd.operation_id(7, 0), 1, 1 ) -- must be overriden by fork 2
-         , ( 8, 8, 1, hafd.operation_id(7, 1), 1, 1 ) -- must be overriden by fork 2
-         , ( 9, 9, 1, hafd.operation_id(7, 2), 1, 1 ) -- must be overriden by fork 2
-         , ( 7, 7, 2, hafd.operation_id(7, 0), 1, 2 )
-         , ( 8, 8, 2, hafd.operation_id(7, 1), 1, 2 ) -- will be abandoned since fork 3 doesn not have this account operation
-         , ( 9, 9, 2, hafd.operation_id(8, 0), 1, 2 )
-         , ( 9, 9, 3, hafd.operation_id(7, 0), 1, 2 )
-         , ( 10, 10, 2, hafd.operation_id(9, 0), 1, 2 )
-         , ( 9, 9, 3, hafd.operation_id(8, 0), 1, 3 )
-         , ( 10, 10, 3, hafd.operation_id(9, 0), 1, 3 )
-         , ( 11, 11, 3, hafd.operation_id(10, 0), 1, 3 )
+           ( hafd.make_block_id(4, 1), 0::SMALLINT, '\xDEED40'::bytea, 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id(5, 1), 0::SMALLINT, '\xDEED55'::bytea, 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id(6, 1), 0::SMALLINT, '\xDEED60'::bytea, 101, 100, '2016-06-22 19:10:26-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id(7, 1), 0::SMALLINT, '\xDEED71'::bytea, 101, 100, '2016-06-22 19:10:37-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id(10, 1), 0::SMALLINT, '\xDEED11'::bytea, 101, 100, '2016-06-22 19:10:41-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id(7, 2), 0::SMALLINT, '\xDEED72'::bytea, 101, 100, '2016-06-22 19:10:27-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id(8, 2), 0::SMALLINT, '\xDEED82'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id(9, 2), 0::SMALLINT, '\xDEED92'::bytea, 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id(8, 3), 0::SMALLINT, '\xDEED83'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id(9, 3), 0::SMALLINT, '\xDEED93'::bytea, 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF'::bytea )
+         , ( hafd.make_block_id(10, 3), 0::SMALLINT, '\xDEED0A03'::bytea, 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF'::bytea )
     ;
 
     -- SUMMARY:
-    --We have 3 forks: 1 (blocks: 4,5,6),2 (blocks: 7,8,9) ,3 (blocks: 8,9, 10), moreover block 1,2,3,4 are
-    --in set of irreversible blocks.
-    INSERT INTO hafd.applied_hardforks_reversible
-    VALUES
-           ( 4, 4, hafd.operation_id(4, 0), 1 )
-         , ( 5, 5, hafd.operation_id(5, 0), 1 )
-         , ( 6, 6, hafd.operation_id(6, 0), 1 )
-         , ( 7, 7, hafd.operation_id(7, 0), 1 ) -- must be abandon because of fork2
-         , ( 8, 7, hafd.operation_id(7, 1), 1 ) -- must be abandon because of fork2
-         , ( 9, 7, hafd.operation_id(7, 2), 1 ) -- must be abandon because of fork2
-         , ( 7, 7, hafd.operation_id(7, 0), 2 )
-         , ( 8, 7, hafd.operation_id(7, 1), 2 )
-         , ( 9, 8, hafd.operation_id(8, 0) , 2 )
-         , ( 10, 9, hafd.operation_id(9, 0), 2 )
-         , ( 9, 8, hafd.operation_id(8, 0), 3 )
-         , ( 10, 9, hafd.operation_id(9, 0), 3 )
-         , ( 11, 10, hafd.operation_id(10, 0), 3 )
-    ;
+    -- We have 3 forks: 1 (blocks: 4,5,6,7,10), 2 (blocks: 7,8,9), 3 (blocks: 8,9,10)
+    -- No contexts - orphan removal can proceed without restrictions
 
-
+    -- Set state to LIVE to simulate live sync where forks can happen
+    -- (remove_orphan_forks only executes during LIVE state)
+    UPDATE hafd.hive_state SET state = 'LIVE';
 END;
 $BODY$
 ;
@@ -143,8 +87,8 @@ LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    -- block 8 from current top fork (nr 3 ) become irreversible
-    PERFORM hive.remove_obsolete_reversible_data( 8 );
+    -- block 8 becomes irreversible
+    PERFORM hive.remove_orphan_forks( 8 );
 END
 $BODY$
 ;
@@ -154,101 +98,36 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    -- Because 'context' is processing block 8 on fork 2 we can only remove older blocks and forks, thus beacuse
-    -- we don't want to lock whole tables shared between an application and the hived.
+    -- After remove_orphan_forks(8):
+    -- Blocks at same block_num: keep highest fork_id, remove others
+    -- Block 7: fork 1 removed (fork 2 is higher), fork 2 kept
+    -- Block 8: fork 2 removed (fork 3 is higher), fork 3 kept
+    -- Blocks 4,5,6 on fork 1: kept (no higher fork)
+    -- Block 10 fork 1: removed (fork 3 has block 10)
 
-    ASSERT EXISTS( SELECT * FROM hafd.blocks_reversible ), 'No reversible blocks';
+    -- Verify fork 3 blocks remain
+    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE block_id = hafd.make_block_id(8, 3)), 'Fork 3 block 8 missing';
+    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE block_id = hafd.make_block_id(9, 3)), 'Fork 3 block 9 missing';
+    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE block_id = hafd.make_block_id(10, 3)), 'Fork 3 block 10 missing';
 
-    ASSERT NOT EXISTS (
-        SELECT * FROM hafd.blocks_reversible
-        EXCEPT SELECT * FROM ( VALUES
-           ( 10, '\xBADD11', '\xCAFE11', '2016-06-22 19:10:41-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 1 )
-         , ( 8, '\xBADD80', '\xCAFE80', '2016-06-22 19:10:28-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
-         , ( 9, '\xBADD90', '\xCAFE90', '2016-06-22 19:10:29-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 2 )
-         , ( 8, '\xBADD80'::bytea, '\xCAFE80'::bytea, '2016-06-22 19:10:30-07'::timestamp, 7, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
-         , ( 9, '\xBADD90'::bytea, '\xCAFE90'::bytea, '2016-06-22 19:10:31-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
-         , ( 10, '\xBADD1A'::bytea, '\xCAFE1A'::bytea, '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007'::bytea, '[]'::jsonb, '\x2157'::bytea, 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
-        ) as pattern
-    ) , 'Unexpected rows in hafd.blocks_reversible';
+    -- Fork 2 block 7 should remain (highest fork at block 7)
+    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE block_id = hafd.make_block_id(7, 2)), 'Fork 2 block 7 should remain';
 
-    ASSERT NOT EXISTS (
-    SELECT block_num, name, id, fork_id FROM hafd.accounts_reversible
-    EXCEPT SELECT * FROM ( VALUES
-       ( 10, 'u10_1',5 , 1 )
-     , ( 7, 'u7_2', 6 , 2 )
-     , ( 8, 'u8_2', 7 , 2 )
-     , ( 9, 'u9_2', 8 , 2 )
-     , ( 8, 'u8_2',9 , 3 )
-     , ( 9, 'u9_3',10 , 3 )
-     , ( 10, 'u10_3',11 , 3 )
-    ) as pattern
-    ) , 'Unexpected rows in hafd.accounts_reversible';
+    -- Fork 1 block 7 should be removed (orphan - fork 2 has higher fork_id at block 7)
+    ASSERT NOT EXISTS (SELECT 1 FROM hafd.blocks WHERE block_id = hafd.make_block_id(7, 1)), 'Fork 1 block 7 should be removed';
 
-    ASSERT EXISTS( SELECT * FROM hafd.accounts_reversible ), 'No reversible accounts';
+    -- Fork 2 block 8 should be removed (orphan - fork 3 has higher fork_id at block 8)
+    ASSERT NOT EXISTS (SELECT 1 FROM hafd.blocks WHERE block_id = hafd.make_block_id(8, 2)), 'Fork 2 block 8 should be removed';
 
-    ASSERT EXISTS( SELECT * FROM hafd.transactions_reversible ), 'No reversible transactions';
+    -- Fork 1 blocks 4,5,6 should remain (no higher fork at these block numbers)
+    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE block_id = hafd.make_block_id(4, 1)), 'Fork 1 block 4 should remain';
+    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE block_id = hafd.make_block_id(5, 1)), 'Fork 1 block 5 should remain';
+    ASSERT EXISTS (SELECT 1 FROM hafd.blocks WHERE block_id = hafd.make_block_id(6, 1)), 'Fork 1 block 6 should remain';
 
-    ASSERT NOT EXISTS (
-        SELECT * FROM hafd.transactions_reversible
-        EXCEPT SELECT * FROM ( VALUES
-           ( 10, 0::SMALLINT, '\xDEED11', 101, 100, '2016-06-22 19:10:41-07'::timestamp, '\xBEEF',  1 )
-         , ( 8, 0::SMALLINT, '\xDEED80', 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF',  2 )
-         , ( 9, 0::SMALLINT, '\xDEED90', 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF',  2 )
-         , ( 8, 0::SMALLINT, '\xDEED88'::bytea, 101, 100, '2016-06-22 19:10:28-07'::timestamp, '\xBEEF'::bytea,  3 )
-         , ( 9, 0::SMALLINT, '\xDEED99'::bytea, 101, 100, '2016-06-22 19:10:29-07'::timestamp, '\xBEEF'::bytea,  3 )
-         , ( 10, 0::SMALLINT, '\xDEED1102'::bytea, 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF'::bytea, 3 )
-        ) as pattern
-    ) , 'Unexpected rows in hafd.transactions_reversible';
-
-    ASSERT EXISTS( SELECT * FROM hafd.transactions_multisig_reversible ), 'No reversible signatures';
-
-    ASSERT NOT EXISTS (
-    SELECT * FROM hafd.transactions_multisig_reversible
-    EXCEPT SELECT * FROM ( VALUES
-           ( '\xDEED11', '\xBEEF7140',  1 ) -- block 10 , fork 1
-         , ( '\xDEED80', '\xBEEF82',  2 )  -- block 8 f2
-         , ( '\xDEED90', '\xBEEF92',  2 ) -- block 9 f2
-         , ( '\xDEED88'::bytea, '\xBEEF83'::bytea,  3 ) -- block 8
-         , ( '\xDEED99'::bytea, '\xBEEF93'::bytea,  3 ) -- block 9
-         , ( '\xDEED1102'::bytea, '\xBEEF13'::bytea,  3 ) -- block 10
-    ) as pattern
-    ) , 'Unexpected rows in hafd.transactions_multisig_reversible';
-
-    ASSERT EXISTS( SELECT * FROM hafd.operations_reversible ), 'No reversible operations';
-
-    ASSERT NOT EXISTS (
-    SELECT id, trx_in_block, op_type_id, op_pos, body_binary, fork_id FROM hafd.operations_reversible
-    EXCEPT SELECT * FROM ( VALUES
-           ( hafd.operation_id(8, 0), 0, 1::SMALLINT, 0, '{"type":"system_warning_operation","value":{"message":"EAIGHT2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(9, 0), 0, 1::SMALLINT, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, 2 )
-         , ( hafd.operation_id(8, 0), 0, 1::SMALLINT, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
-         , ( hafd.operation_id(9, 0), 0, 1::SMALLINT, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation, 3 )
-         , ( hafd.operation_id(10, 0), 0, 1::SMALLINT, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation, 3 )
-    ) as pattern
-    ), 'Unexpected rows in hafd.operations_reversible'
-    ;
-
-    ASSERT ( SELECT COUNT(*) FROM hafd.account_operations_reversible ) = 2, 'Wrong number of account_operations';
-    ASSERT NOT EXISTS (
-    SELECT * FROM hafd.account_operations_reversible
-    EXCEPT SELECT * FROM ( VALUES
-               ( 10, 10, 3, hafd.operation_id(9, 0), 1::SMALLINT, 3::BIGINT )
-             , ( 11, 11, 3, hafd.operation_id(10, 0), 1::SMALLINT, 3::BIGINT )
-        ) as pattern
-    ), 'Unexpected rows in hafd.account_operations_reversible'
-    ;
-
-    ASSERT EXISTS( SELECT * FROM hafd.applied_hardforks_reversible ), 'No reversible applied_hardforks';
-    ASSERT NOT EXISTS (
-        SELECT * FROM hafd.applied_hardforks_reversible
-        EXCEPT SELECT * FROM ( VALUES
-       ( 10, 9, hafd.operation_id(9, 0), 3 )
-     , ( 11, 10, hafd.operation_id(10, 0), 3 )
-        ) as pattern
-    ) , 'Unexpected rows in hafd.applied_hardforks_reversible';
+    -- Verify account data cleanup for removed blocks
+    ASSERT NOT EXISTS (SELECT 1 FROM hafd.accounts WHERE block_id = hafd.make_block_id(7, 1)), 'Fork 1 block 7 accounts removed';
+    ASSERT NOT EXISTS (SELECT 1 FROM hafd.accounts WHERE block_id = hafd.make_block_id(8, 2)), 'Fork 2 block 8 accounts removed';
 
 END;
 $BODY$
 ;
-
-

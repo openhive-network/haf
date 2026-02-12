@@ -1,3 +1,6 @@
+-- Load test utilities
+\ir ../test_tools.sql
+
 -- check if there is no registered state_provider, then hash is not computed
 
 

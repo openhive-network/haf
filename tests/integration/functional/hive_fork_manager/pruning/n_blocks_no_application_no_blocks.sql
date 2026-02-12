@@ -5,15 +5,19 @@
 --          remove 5 blocks
 --          check if accounts are not removed
 
+-- Load test utilities
+\ir ../test_tools.sql
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
     LANGUAGE 'plpgsql'
 AS
 $BODY$
 BEGIN
-    INSERT INTO hafd.accounts( block_num, name, id )
+    -- Create 2 accounts with NULL block_id (not associated with any block)
+    INSERT INTO hafd.accounts( id, name, block_id )
     VALUES
-           ( NULL, 'u1', 1 )
-         , ( NULL, 'u2', 2 )
+      ( 1, 'u1', NULL )
+    , ( 2, 'u2', NULL )
     ;
 END;
 $BODY$

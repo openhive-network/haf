@@ -1,7 +1,7 @@
 import test_tools as tt
 
 from haf_local_tools import make_fork, wait_for_irreversible_progress
-from haf_local_tools.tables import Blocks, Transactions, OperationsIrreversibleView
+from haf_local_tools.tables import BlocksView, TransactionsView, OperationsIrreversibleView
 
 
 START_TEST_BLOCK = 108
@@ -28,14 +28,14 @@ def test_compare_forked_node_database(prepared_networks_and_database_12_8_with_2
     # THEN
     wait_for_irreversible_progress(node_under_test, after_fork_block)
 
-    blks = sessions[0].query(Blocks).filter(Blocks.num < after_fork_block).order_by(Blocks.num).all()
-    blks_ref = sessions[1].query(Blocks).filter(Blocks.num < after_fork_block).order_by(Blocks.num).all()
+    blks = sessions[0].query(BlocksView).filter(BlocksView.num < after_fork_block).order_by(BlocksView.num).all()
+    blks_ref = sessions[1].query(BlocksView).filter(BlocksView.num < after_fork_block).order_by(BlocksView.num).all()
 
     for block, block_ref in zip(blks, blks_ref):
         assert block.hash == block_ref.hash
 
-    trxs = sessions[0].query(Transactions).filter(Transactions.block_num < after_fork_block).order_by(Transactions.trx_hash).all()
-    trxs_ref = sessions[1].query(Transactions).filter(Transactions.block_num < after_fork_block).order_by(Transactions.trx_hash).all()
+    trxs = sessions[0].query(TransactionsView).filter(TransactionsView.block_num < after_fork_block).order_by(TransactionsView.trx_hash).all()
+    trxs_ref = sessions[1].query(TransactionsView).filter(TransactionsView.block_num < after_fork_block).order_by(TransactionsView.trx_hash).all()
 
     for trx, trx_ref in zip(trxs, trxs_ref):
         assert trx.trx_hash == trx_ref.trx_hash

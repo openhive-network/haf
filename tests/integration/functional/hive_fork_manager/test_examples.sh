@@ -5,10 +5,13 @@ test_path="$2"
 setup_scripts_dir_path="$3"
 postgres_port="$4"
 
+# Derive extension_path from examples_folder (go up from doc/examples to hive_fork_manager)
+extension_path=$(dirname "$(dirname "$examples_folder")")
+
 # shellcheck source=/dev/null
 . ./tools/common.sh
 
-setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
+setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path" "$extension_path"
 
 psql -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
 

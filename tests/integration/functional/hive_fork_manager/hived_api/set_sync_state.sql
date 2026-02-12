@@ -1,3 +1,6 @@
+-- Load test utilities
+\ir ../test_tools.sql
+
 CREATE OR REPLACE PROCEDURE test_hived_test_given()
     LANGUAGE 'plpgsql'
 AS
