@@ -48,7 +48,7 @@ CREATE OR REPLACE FUNCTION hive.get_created_from_account_create_operations(IN _a
 RETURNS TEXT
 AS 'MODULE_PATHNAME', 'get_created_from_account_create_operations' LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _context hafd.context_name )
+CREATE OR REPLACE FUNCTION hive.update_state_provider_accounts( _first_block INTEGER, _last_block INTEGER, _context hafd.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE

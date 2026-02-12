@@ -111,7 +111,7 @@ BEGIN
                 htv.expiration,
                 htv.trx_hash,
                 htv.signature,
-                ARRAY_AGG(htmv.signature) AS multisig_signatures
+                ARRAY_AGG(htmv.signature ORDER BY htmv.signature) AS multisig_signatures
             FROM trx_details htv
             LEFT JOIN hive.transactions_multisig_view htmv ON htv.trx_hash = htmv.trx_hash
             GROUP BY htv.block_num, htv.trx_in_block, htv.ref_block_num, htv.ref_block_prefix,
