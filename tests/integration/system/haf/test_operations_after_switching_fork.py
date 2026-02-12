@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 import test_tools as tt
 
 from haf_local_tools import make_fork, wait_for_irreversible_progress
-from haf_local_tools.tables import Transactions, OperationsIrreversibleView
+from haf_local_tools.tables import TransactionsView, OperationsIrreversibleView
 
 
 START_TEST_BLOCK = 108
@@ -34,7 +34,7 @@ def test_operations_after_switchng_fork(prepared_networks_and_database_12_8):
 
     # THEN
     wait_for_irreversible_progress(node_under_test, after_fork_block)
-    trx = session.query(Transactions).filter(Transactions.block_num > START_TEST_BLOCK).one()
+    trx = session.query(TransactionsView).filter(TransactionsView.block_num > START_TEST_BLOCK).one()
 
     ops = (session.query(OperationsIrreversibleView)
            .add_columns(cast(OperationsIrreversibleView.body_binary, JSONB).label('body'), OperationsIrreversibleView.block_num)

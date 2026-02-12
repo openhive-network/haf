@@ -13,7 +13,7 @@ BEGIN
     -- Vacuum triggers when: is_livesync AND current_block_num % 1200 = 0
     INSERT INTO hafd.blocks
     SELECT
-           gs AS block_num
+           hafd.make_block_id(gs, 0)  -- block_id = (block_num << 32) | fork_id
          , '\xBADD10'
          , '\xCAFE10'
          , '2016-06-22 19:10:21-07'::timestamp
@@ -25,8 +25,8 @@ BEGIN
          , 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000
     FROM generate_series(1, 1202) AS gs;
 
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 1);
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0));
 
     -- Set all blocks as irreversible
     PERFORM hive.set_irreversible( 1202 );
