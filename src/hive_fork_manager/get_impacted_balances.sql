@@ -32,7 +32,7 @@ CREATE OR REPLACE FUNCTION hive.get_impacted_balances(IN _operation_body hafd.op
 AS
 $BODY$
 DECLARE
-is_hf01 BOOLEAN := (SELECT (block_num < _operation_block_number) FROM hafd.applied_hardforks WHERE hardfork_num = 1);
+is_hf01 BOOLEAN := (SELECT (hafd.block_id_to_num(block_id) < _operation_block_number) FROM hafd.applied_hardforks WHERE hardfork_num = 1);
 BEGIN
 
 RETURN QUERY SELECT * FROM hive.get_impacted_balances(_operation_body, is_hf01);

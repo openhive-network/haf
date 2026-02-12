@@ -8,6 +8,7 @@ ADD_PSQL_EXTENSION(
              forks.sql
              app_context.sql
              types/domains.sql
+             types/block_id.sql
              types/operation/operation.sql
              types/operation/operation_flow.sql
              types/operation/operation_impl.sql
@@ -41,6 +42,7 @@ ADD_PSQL_EXTENSION(
             types/operation/operation_flow.sql
             types/operation/operation_id.sql
             types/asset_unique_id.sql
+            types/block_id.sql
 
             pruning/prune_irreversible_blocks.sql
 
