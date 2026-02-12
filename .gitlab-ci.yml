@@ -672,6 +672,9 @@ haf_image_build:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
+    # Required for Docker build - global GIT_SUBMODULE_STRATEGY is 'none' but
+    # build needs hive submodule with nested rocksdb for cmake modules
+    GIT_SUBMODULE_STRATEGY: recursive
   tags:
     - bigjob
   after_script:
@@ -699,6 +702,7 @@ haf_image_build_testnet:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
     HIVE_NETWORK_TYPE: testnet
+    GIT_SUBMODULE_STRATEGY: recursive
   tags:
     - bigjob
   after_script:
@@ -727,6 +731,7 @@ haf_image_build_mirrornet:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVE_NETWORK_TYPE: mirrornet
+    GIT_SUBMODULE_STRATEGY: recursive
   tags:
     - bigjob
   # Tag mirrornet images for Denser's CI and external publishing
@@ -1071,7 +1076,7 @@ applications_system_tests:
       mkdir -vp "${PATTERNS_PATH}/blockchain"
       cp "${RO_BLOCK_LOG_DIRECTORY}/block_log" "${PATTERNS_PATH}/blockchain/"
       cd $CI_PROJECT_DIR/tests/integration/replay
-      $HIVED_PATH --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs.log
+      $HIVED_PATH --data-dir $PATTERNS_PATH $REPLAY --exit-at-block=5000000 --psql-url $DB_URL 2>&1 | tee -i node_logs.log
       echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
   script:
     - pytest --junitxml report.xml
@@ -1368,6 +1373,8 @@ block_api_tests:
       artifacts: true
 
   variables:
+    # CI images don't have git - let GitLab init submodules
+    GIT_SUBMODULE_STRATEGY: recursive
     BENCHMARK_DIR: "$CI_PROJECT_DIR/hive/tests/python/hive-local-tools/tests_api/benchmarks"
     # Allow access from any network (IPv4 and IPv6) to eliminate CI IP addressing problems
     HAF_DB_ACCESS: |
