@@ -679,7 +679,8 @@ haf_image_build:
       source docker_image_name.env
       echo "Adding latest/stable/version tags for mainnet image..."
       # Pull image to local daemon (may not be loaded when using cached builds)
-      docker pull $HAF_INSTANCE || echo "Warning: docker pull failed"
+      # timeout prevents hangs when Docker daemon is overloaded
+      timeout 300 docker pull $HAF_INSTANCE || echo "Warning: docker pull failed or timed out"
       docker images
       if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
         docker tag $HAF_INSTANCE ${CI_REGISTRY_IMAGE}:latest
@@ -705,7 +706,8 @@ haf_image_build_testnet:
       source docker_image_name.env
       echo "Adding latest/stable/version tags for testnet image..."
       # Pull image to local daemon (may not be loaded when using cached builds)
-      docker pull $HAF_INSTANCE || echo "Warning: docker pull failed"
+      # timeout prevents hangs when Docker daemon is overloaded
+      timeout 300 docker pull $HAF_INSTANCE || echo "Warning: docker pull failed or timed out"
       docker images
       IMAGE_NAME_PREFIX="${CI_REGISTRY_IMAGE}/testnet:"
       if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
@@ -733,7 +735,8 @@ haf_image_build_mirrornet:
       source docker_image_name.env
       echo "Adding latest/stable/version tags for mirrornet image..."
       # Pull image to local daemon (may not be loaded when using cached builds)
-      docker pull $HAF_INSTANCE || echo "Warning: docker pull failed"
+      # timeout prevents hangs when Docker daemon is overloaded
+      timeout 300 docker pull $HAF_INSTANCE || echo "Warning: docker pull failed or timed out"
       docker images
       IMAGE_NAME_PREFIX="${CI_REGISTRY_IMAGE}/mirrornet:"
       if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
@@ -757,8 +760,8 @@ haf_image_build_mirrornet:
                 "host    all              haf_admin        0.0.0.0/0    trust"
                 "host    all              haf_admin        ::/0         trust"
 
-    # Use local cache path (fetched from NFS by cache-manager)
-    DATA_SOURCE: "${HAF_DATA_CACHE_LOCAL}"
+    # Use direct path (avoids nested variable expansion failure in API-triggered pipelines)
+    DATA_SOURCE: "/cache/haf_${HAF_COMMIT}"
     # Use local block_log to avoid NFS file locking issues when hived opens the files
     SHARED_BLOCK_LOG_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     LOG_FILE: $CI_JOB_NAME.log
@@ -1394,7 +1397,8 @@ block_api_tests:
       alias: haf-instance
       variables:
         PG_ACCESS: "${HAF_DB_ACCESS}"
-        DATA_SOURCE: "${FILTERED_DATA_LOCAL}"
+        # Use direct path (avoids nested variable expansion failure in API-triggered pipelines)
+        DATA_SOURCE: "/cache/haf_filtered_${CI_PIPELINE_ID}_filtered"
         LOG_FILE: $CI_JOB_NAME.log
       # Data is already replayed by replay_filtered_haf_data_accounts_body_operations
       # Just keep PostgreSQL running for the tests - no need to start hived
@@ -1505,7 +1509,8 @@ dead_app_auto_detach:
                     "host    all              test_app_owner   0.0.0.0/0    trust"
                     "host    all              test_app_owner   ::/0         trust"
 
-        DATA_SOURCE: "${HAF_DATA_CACHE_LOCAL}"
+        # Use direct path (avoids nested variable expansion failure in API-triggered pipelines)
+        DATA_SOURCE: "/cache/haf_${HAF_COMMIT}"
         LOG_FILE: $CI_JOB_NAME.log
       command: ["--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh"]
   variables:
