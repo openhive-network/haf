@@ -8,7 +8,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 DECLARE
-    __account hafd.accounts%ROWTYPE;
+    __account hafd.accounts_type;
     _context_stages hafd.application_stages := ARRAY[ hive.stage('stage2',1 ,2 ), hafd.live_stage() ];
     __blocks hive.blocks_range;
 BEGIN
@@ -23,7 +23,7 @@ BEGIN
         , NULL
         , NULL
         , NULL
-        , ARRAY[ __account ]
+        , ARRAY[ __account ]::hafd.accounts_type[]
         , NULL
         , NULL
     );

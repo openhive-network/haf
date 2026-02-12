@@ -1,3 +1,6 @@
+-- Load test utilities
+\ir ../test_tools.sql
+
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
@@ -15,57 +18,40 @@ BEGIN
          -- non containing keys
     ;
  
-    INSERT INTO hafd.blocks
-    VALUES
-           ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:22-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:23-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 4, '\xBADD40', '\xCAFE40', '2016-06-22 19:10:24-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 5, '\xBADD50', '\xCAFE50', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 6, '\xBADD60', '\xCAFE60', '2016-06-22 19:10:26-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 7, '\xBADD70', '\xCAFE70', '2016-06-22 19:10:27-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 8, '\xBADD80', '\xCAFE80', '2016-06-22 19:10:28-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , ( 9, '\xBADD90', '\xCAFE90', '2016-06-22 19:10:29-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , (10, '\xBADDA0', '\xCAFEA0', '2016-06-22 19:10:30-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , (11, '\xBADDB0', '\xCAFEB0', '2016-06-22 19:10:31-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , (12, '\xBADDC0', '\xCAFEC0', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , (13, '\xBADDD0', '\xCAFED0', '2016-06-22 19:10:33-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , (14, '\xBADDD0', '\xCAFED0', '2016-06-22 19:10:33-09'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , (15, '\xBADDD0', '\xCAFED0', '2016-06-22 19:10:33-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-         , (16, '\xBADDD0', '\xCAFED0', '2016-06-22 19:10:33-09'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-     ;
+    -- Create blocks 1-16
+    PERFORM test.create_blocks(1, 16);
 
-    INSERT INTO hafd.accounts( id, name, block_num )
-    VALUES (5, 'initminer', 1),
-    (6, 'test-safari', 1),
-    (7, 'howo', 1),
-    (8, 'bassman077', 1),
-    (9, 'spscontest', 1),
-    (10, 'xenomorphosis', 1),
-    (11, 'sloth.buzz', 1),
-    (12, 'simple-app', 1),
-    (13, 'dorrebeca2', 1),
-    (14, 'margemnlpz08', 1),
-    (15, 'steem.kit', 1),
-    (16, 'jte1023', 1),
-    (17, 'adedayoolumide', 1),
-    (18, 'eos-polska', 1)
+    INSERT INTO hafd.accounts( id, name, block_id )
+    VALUES (5, 'initminer', hafd.make_block_id(1, 0)),
+    (6, 'test-safari', hafd.make_block_id(1, 0)),
+    (7, 'howo', hafd.make_block_id(1, 0)),
+    (8, 'bassman077', hafd.make_block_id(1, 0)),
+    (9, 'spscontest', hafd.make_block_id(1, 0)),
+    (10, 'xenomorphosis', hafd.make_block_id(1, 0)),
+    (11, 'sloth.buzz', hafd.make_block_id(1, 0)),
+    (12, 'simple-app', hafd.make_block_id(1, 0)),
+    (13, 'dorrebeca2', hafd.make_block_id(1, 0)),
+    (14, 'margemnlpz08', hafd.make_block_id(1, 0)),
+    (15, 'steem.kit', hafd.make_block_id(1, 0)),
+    (16, 'jte1023', hafd.make_block_id(1, 0)),
+    (17, 'adedayoolumide', hafd.make_block_id(1, 0)),
+    (18, 'eos-polska', hafd.make_block_id(1, 0))
     ;
 
     INSERT INTO hafd.transactions
     VALUES
-           ( 1, 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
-         , ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
-         , ( 3, 0::SMALLINT, '\xDEED30', 101, 100, '2016-06-22 19:10:23-07'::timestamp, '\xBEEF' )
-         , ( 4, 0::SMALLINT, '\xDEED40', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF' )
-         , ( 5, 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
+           ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id(2, 0), 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id(3, 0), 0::SMALLINT, '\xDEED30', 101, 100, '2016-06-22 19:10:23-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id(4, 0), 0::SMALLINT, '\xDEED40', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF' )
+         , ( hafd.make_block_id(5, 0), 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.operations
+    INSERT INTO hafd.operations(block_id, trx_in_block, op_pos, body_binary, id)
     VALUES
     -- account_update2_operation
         -- posting json metadata exists, json metadata empty
-        ( hafd.operation_id(1, 0), 0, 43, 0, '
+        ( hafd.make_block_id(1, 0), 0, 0, '
         {
             "type": "account_update2_operation",
             "value": {
@@ -74,11 +60,11 @@ BEGIN
                 "posting_json_metadata": "{\"profile\":{\"name\":\"Leonardo Da VinciXX\",\"about\":\"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..\",\"website\":\"http://www.davincilife.com/\",\"location\":\"Florence\",\"cover_image\":\"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg\",\"profile_image\":\"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg\"}}",
                 "extensions": []
             }
-        }            
-        '::jsonb::hafd.operation),
+        }
+        '::jsonb::hafd.operation, hafd.operation_id(1, 43, 0)),
 
         --empty json and posting metadata
-        ( hafd.operation_id(2, 0), 0, 43, 0, '
+        ( hafd.make_block_id(2, 0), 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -87,10 +73,10 @@ BEGIN
                     "posting_json_metadata": "\"\"",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation
+            }'::jsonb::hafd.operation, hafd.operation_id(2, 43, 0)
         ),
 
-        ( hafd.operation_id(15, 0), 0, 43, 0, '
+        ( hafd.make_block_id(15, 0), 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -99,12 +85,12 @@ BEGIN
                     "posting_json_metadata": "{}",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation
+            }'::jsonb::hafd.operation, hafd.operation_id(15, 43, 0)
         ),
 
 
         -- empty posting_metadata, json_metadata exists
-        ( hafd.operation_id(3, 0), 0, 43, 0, '
+        ( hafd.make_block_id(3, 0), 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -113,11 +99,11 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation
+            }'::jsonb::hafd.operation, hafd.operation_id(3, 43, 0)
         ),
 
         --posting metadata equal to ""
-                ( hafd.operation_id(4, 0), 0, 43, 0, '
+                ( hafd.make_block_id(4, 0), 0, 0, '
         {
             "type": "account_update2_operation",
             "value": {
@@ -126,10 +112,10 @@ BEGIN
                 "posting_json_metadata": "\"\"",
                 "extensions": []
             }
-        }'::jsonb::hafd.operation),
+        }'::jsonb::hafd.operation, hafd.operation_id(4, 43, 0)),
 
         --posting_metadata equal to {}
-        ( hafd.operation_id(5, 0), 0, 43, 0, '
+        ( hafd.make_block_id(5, 0), 0, 0, '
 
             {
                 "type": "account_update2_operation",
@@ -139,12 +125,12 @@ BEGIN
                     "posting_json_metadata": "{}",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation
+            }'::jsonb::hafd.operation, hafd.operation_id(5, 43, 0)
         ),
 
-    -- account_create operation 
+    -- account_create operation
         -- empty json metadata
-        ( hafd.operation_id(6, 0), 0, 9, 0, '
+        ( hafd.make_block_id(6, 0), 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -188,9 +174,9 @@ BEGIN
                     "memo_key": "STM84bJQnKmM7rMAbsFPXZpQTQi5rBscbpuXkJ6XuVYEundE2Q1yx",
                     "json_metadata": "{}"
                 }
-            }'::jsonb::hafd.operation),
+            }'::jsonb::hafd.operation, hafd.operation_id(6, 9, 0)),
 
-        ( hafd.operation_id(16, 0), 0, 43, 0, '
+        ( hafd.make_block_id(16, 0), 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -199,11 +185,11 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation
+            }'::jsonb::hafd.operation, hafd.operation_id(16, 43, 0)
         ),
 
         -- json metadata equal to  ""
-        ( hafd.operation_id(7, 0), 0, 9, 0, '
+        ( hafd.make_block_id(7, 0), 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -247,10 +233,10 @@ BEGIN
                     "memo_key": "STM6NrLK9cwh9aAdouhSL3KhucAXU4ejReXF1vPvCeWXKrisMcoa8",
                     "json_metadata": "\"\""
                 }
-            }'::jsonb::hafd.operation),
+            }'::jsonb::hafd.operation, hafd.operation_id(7, 9, 0)),
 
         --json metadata equal to {}
-        ( hafd.operation_id(8, 0), 0, 9, 0, '
+        ( hafd.make_block_id(8, 0), 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -294,10 +280,10 @@ BEGIN
                     "memo_key": "STM5eK3sJ42oUd6KB5AZU5AHXdxBBK6tcfw69rTx7phnHH3yBmQxk",
                     "json_metadata": "{}"
                 }
-            }'::jsonb::hafd.operation),
+            }'::jsonb::hafd.operation, hafd.operation_id(8, 9, 0)),
 
         -- json metadata with a non empty value
-        ( hafd.operation_id(9, 0), 0, 9, 0, '
+        ( hafd.make_block_id(9, 0), 0, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -341,11 +327,11 @@ BEGIN
                     "memo_key": "STM5Da24pp7ZztCipiUjp32eYxHXiQPDApY43PiMTfs9ivbhBrdgX",
                     "json_metadata": "{\"profile\":{\"about\":\"This account was instantly created via @hivewallet.app - available for iOS and Android!\",\"website\":\"https://hivewallet.app\"}}"
                 }
-            }'::jsonb::hafd.operation
+            }'::jsonb::hafd.operation, hafd.operation_id(9, 9, 0)
         ),
 
-    -- account_create_with_delegation_operation 
-        ( hafd.operation_id(10, 0), 0, 41, 0, '
+    -- account_create_with_delegation_operation
+        ( hafd.make_block_id(10, 0), 0, 0, '
             {
                 "type": "account_create_with_delegation_operation",
                 "value": {
@@ -410,11 +396,11 @@ BEGIN
                     "json_metadata": "{\"owner\":\"genievot\"}",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation
+            }'::jsonb::hafd.operation, hafd.operation_id(10, 41, 0)
         ),
 
     -- account_update2_operation
-        ( hafd.operation_id(11, 0), 0, 43, 0, '
+        ( hafd.make_block_id(11, 0), 0, 0, '
             {
             "type": "account_update2_operation",
                 "value": {
@@ -423,10 +409,10 @@ BEGIN
                     "posting_json_metadata": "{\"profile\":{\"name\":\"Jeremy\",\"about\":\"               \",\"cover_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg\",\"profile_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg\",\"website\":\" \",\"location\":\"NC, USA\",\"pinned\":\"\",\"version\":2,\"portfolio\":\"enabled\",\"trail\":true,\"collections\":\"enabled\"}}",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation),
+            }'::jsonb::hafd.operation, hafd.operation_id(11, 43, 0)),
 
-    -- account_update_operation 
-        ( hafd.operation_id(12, 0), 0, 10, 0, '
+    -- account_update_operation
+        ( hafd.make_block_id(12, 0), 0, 0, '
             {
                 "type": "account_update_operation",
                 "value": {
@@ -493,10 +479,10 @@ BEGIN
                     "memo_key": "STM6jwfUrLcnd47hX87JQv6Q78UwUZm7RPAfjqjtQ2K7793Jsjuoy",
                     "json_metadata": "{\"beneficiaries\":[{\"name\":\"threespeak\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}"
                 }
-            }'::jsonb::hafd.operation),
+            }'::jsonb::hafd.operation, hafd.operation_id(12, 10, 0)),
 
     -- create_claimed_account_operation
-        ( hafd.operation_id(13, 0), 0, 23, 0, '
+        ( hafd.make_block_id(13, 0), 0, 0, '
             {
                 "type": "create_claimed_account_operation",
                 "value": {
@@ -536,11 +522,11 @@ BEGIN
                     "json_metadata": "{\"beneficiaries\":[{\"name\":\"fractalnode\",\"weight\":300,\"label\":\"referrer\"},{\"name\":\"ocdb\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation
+            }'::jsonb::hafd.operation, hafd.operation_id(13, 23, 0)
         ),
 
         -- second update for the same account in the blocks range
-        ( hafd.operation_id(14, 0), 0, 43, 0, '
+        ( hafd.make_block_id(14, 0), 0, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -549,7 +535,7 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation
+            }'::jsonb::hafd.operation, hafd.operation_id(14, 43, 0)
         )
 
 
