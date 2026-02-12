@@ -340,13 +340,14 @@ BEGIN
         message := 'OPERATION BLOCK ' || block_num::TEXT;
         __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0
 
-        INSERT INTO hafd.operations(block_id, trx_in_block, op_pos, body_binary, id)
+        INSERT INTO hafd.operations(block_id, trx_in_block, op_type_id, op_pos, body_binary, id)
         VALUES (
             __block_id,
             trx_in_block - 1,
+            0,  -- op_type_id: default test type
             op_pos,
             ('{"type":"system_warning_operation","value":{"message":"' || message || '"}}')::jsonb::hafd.operation,
-            hafd.operation_id(block_num, trx_in_block, op_pos)  -- id encoding
+            hafd.operation_id(block_num, op_pos)  -- id encoding: (block_num << 32) | pos_in_block
         );
     END LOOP;
 END;
@@ -376,13 +377,14 @@ BEGIN
         message := 'OPERATION BLOCK ' || block_num::TEXT || ' FORK ' || fork_id::TEXT;
         __block_id := hafd.make_block_id(block_num, fork_id);
 
-        INSERT INTO hafd.operations(block_id, trx_in_block, op_pos, body_binary, id)
+        INSERT INTO hafd.operations(block_id, trx_in_block, op_type_id, op_pos, body_binary, id)
         VALUES (
             __block_id,
             trx_in_block - 1,
+            0,  -- op_type_id: default test type
             op_pos,
             ('{"type":"system_warning_operation","value":{"message":"' || message || '"}}')::jsonb::hafd.operation,
-            hafd.operation_id(block_num, trx_in_block, op_pos)  -- id encoding
+            hafd.operation_id(block_num, op_pos)  -- id encoding: (block_num << 32) | pos_in_block
         );
     END LOOP;
 END;
@@ -419,13 +421,14 @@ BEGIN
     FOR block_num IN start_block..end_block LOOP
         __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0
 
-        INSERT INTO hafd.account_operations(block_id, operation_id, account_id, transacting_account_id, account_op_seq_no)
+        INSERT INTO hafd.account_operations(block_id, operation_id, account_id, transacting_account_id, account_op_seq_no, op_type_id)
         VALUES (
             __block_id,
-            hafd.operation_id(__block_id, trx_in_block, 0),  -- operation_id encodes block_num, seq, type
+            hafd.operation_id(hafd.block_id_to_num(__block_id), op_pos),  -- operation_id: (block_num << 32) | pos_in_block
             account_id,
             trans_acc_id,
-            seq_no
+            seq_no,
+            0  -- op_type_id: default test type
         );
         seq_no := seq_no + 1;
     END LOOP;
@@ -460,13 +463,14 @@ BEGIN
     FOR block_num IN start_block..end_block LOOP
         __block_id := hafd.make_block_id(block_num, fork_id);
 
-        INSERT INTO hafd.account_operations(block_id, operation_id, account_id, transacting_account_id, account_op_seq_no)
+        INSERT INTO hafd.account_operations(block_id, operation_id, account_id, transacting_account_id, account_op_seq_no, op_type_id)
         VALUES (
             __block_id,
-            hafd.operation_id(__block_id, trx_in_block, 0),  -- operation_id encodes block_num, seq, type
+            hafd.operation_id(hafd.block_id_to_num(__block_id), op_pos),  -- operation_id: (block_num << 32) | pos_in_block
             account_id,
             trans_acc_id,
-            seq_no
+            seq_no,
+            0  -- op_type_id: default test type
         );
         seq_no := seq_no + 1;
     END LOOP;

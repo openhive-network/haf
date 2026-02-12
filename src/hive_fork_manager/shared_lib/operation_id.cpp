@@ -47,4 +47,3 @@ Datum operation_id_to_pos(PG_FUNCTION_ARGS) {
 }
 
 } // extern "C"
-

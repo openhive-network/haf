@@ -149,10 +149,10 @@ CREATE STATISTICS IF NOT EXISTS operation_types_id_name_dependency_stats (depend
 -- =============================================================================
 -- hafd.operations - Original compact structure with encoded id
 -- =============================================================================
--- id is encoded || 32b blocknum | 24b seq | 8b operation type ||
+-- id is encoded || 32b block_num | 32b pos_in_block ||
 -- This compact encoding minimizes data volume during massive sync.
 -- No FK to blocks - fork cleanup is done explicitly (rare operation).
--- Use hafd.operation_id_to_seq(id) and hafd.operation_id_to_type_id(id) to extract components.
+-- op_type_id is stored as a separate column (not encoded in id).
 
 CREATE TABLE IF NOT EXISTS hafd.operations (
     block_id hafd.block_id NOT NULL,
@@ -161,8 +161,7 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     op_pos integer NOT NULL,
     body_binary hafd.operation DEFAULT NULL,
     -- id is pre-computed in C++ for massive sync performance
-    -- Encoding: (block_num << 32) | (seq_in_block << 8) | op_type_id
-    -- Tests should use hafd.operation_id(block_num, seq_in_block, op_type_id) helper
+    -- Encoding: (block_num << 32) | pos_in_block
     id BIGINT NOT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( block_id, id )
 );
@@ -212,6 +211,7 @@ CREATE TABLE IF NOT EXISTS hafd.account_operations (
     account_op_seq_no INTEGER NOT NULL,
     block_id hafd.block_id NOT NULL,
     operation_id BIGINT NOT NULL,
+    op_type_id smallint NOT NULL,
     CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no, block_id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations', '');
@@ -231,11 +231,11 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_id_to_num_idx ON hafd.transac
     hafd.block_id_to_fork(block_id) DESC
 );
 
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, op_type_id);
 
--- Index for operations_view canonical selection: finds highest block_id per (block_num, seq_in_block)
--- Uses (id >> 8) which extracts the position key (block_num|seq_in_block without op_type)
-CREATE INDEX IF NOT EXISTS hive_operations_pos_key_block_id_idx ON hafd.operations ((id >> 8), block_id DESC);
+-- Index for operations_view canonical selection: finds highest block_id per (block_num, pos_in_block)
+-- id encodes (block_num|pos), so same id = same operation across forks
+CREATE INDEX IF NOT EXISTS hive_operations_id_block_id_idx ON hafd.operations (id, block_id DESC);
 
 -- Index for id-only lookups when PK is (block_id, id)
 CREATE INDEX IF NOT EXISTS hive_operations_id_idx ON hafd.operations (id);

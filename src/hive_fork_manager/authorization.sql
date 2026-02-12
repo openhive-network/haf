@@ -199,10 +199,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.get_wal_sequence_number()
     , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
     , hive.update_wal_sequence_number(_new_sequence_number INTEGER)
-    , hafd.operation_id( _block_num INTEGER, _type INTEGER, _pos INTEGER )
-    , hafd.operation_id( _block_id hafd.block_id, _seq INT, _type INT )
+    , hafd.operation_id( _block_num INTEGER, _pos_in_block INTEGER )
     , hafd.operation_id_to_pos( _id BIGINT )
-    , hafd.operation_id_to_type_id( _id BIGINT )
     , hafd.operation_id_to_block_num( _id BIGINT )
     , hive.reanalyze_indexes_with_expressions()
 TO hived_group;

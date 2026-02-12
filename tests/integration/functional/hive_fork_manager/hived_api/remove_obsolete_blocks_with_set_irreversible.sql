@@ -92,45 +92,45 @@ BEGIN
     ;
 
     -- Insert operations with block_id
-    INSERT INTO hafd.operations(block_id, trx_in_block, op_pos, body_binary, id)
+    INSERT INTO hafd.operations(block_id, trx_in_block, op_type_id, op_pos, body_binary, id)
     VALUES
-           ( hafd.make_block_id(4, 1), 0, 0, '{"type":"system_warning_operation","value":{"message":"FOUR OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(4,1,0) )
-         , ( hafd.make_block_id(5, 1), 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(5,1,0) )
-         , ( hafd.make_block_id(6, 1), 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(6,1,0) )
-         , ( hafd.make_block_id(7, 1), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN1 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(7,1,0) )
-         , ( hafd.make_block_id(7, 2), 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(7,2,0) )
-         , ( hafd.make_block_id(8, 2), 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT2 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(8,1,0) )
-         , ( hafd.make_block_id(9, 2), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(9,1,0) )
-         , ( hafd.make_block_id(8, 3), 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(8,2,0) )
-         , ( hafd.make_block_id(9, 3), 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(9,2,0) )
-         , ( hafd.make_block_id(10, 3), 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN3 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(10,1,0) )
+           ( hafd.make_block_id(4, 1), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"FOUR OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(4,1) )
+         , ( hafd.make_block_id(5, 1), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"FIVE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(5,1) )
+         , ( hafd.make_block_id(6, 1), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"SIX OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(6,1) )
+         , ( hafd.make_block_id(7, 1), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN1 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(7,1) )
+         , ( hafd.make_block_id(7, 2), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"SEVEN2 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(7,2) )
+         , ( hafd.make_block_id(8, 2), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT2 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(8,1) )
+         , ( hafd.make_block_id(9, 2), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE2 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(9,1) )
+         , ( hafd.make_block_id(8, 3), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"EIGHT3 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(8,2) )
+         , ( hafd.make_block_id(9, 3), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"NINE3 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(9,2) )
+         , ( hafd.make_block_id(10, 3), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN3 OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(10,1) )
     ;
 
     -- Insert account_operations with block_id
-    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, operation_id)
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, operation_id, op_type_id)
     VALUES
-           ( 1, 1, 1, hafd.make_block_id(4, 1), hafd.operation_id(4, 1, 0) )
-         , ( 2, 2, 1, hafd.make_block_id(5, 1), hafd.operation_id(5, 1, 0) )
-         , ( 3, 3, 1, hafd.make_block_id(6, 1), hafd.operation_id(6, 1, 0) )
-         , ( 4, 4, 1, hafd.make_block_id(7, 1), hafd.operation_id(7, 1, 0) )
-         , ( 6, 6, 1, hafd.make_block_id(7, 2), hafd.operation_id(7, 1, 0) )
-         , ( 7, 7, 1, hafd.make_block_id(8, 2), hafd.operation_id(8, 1, 0) )
-         , ( 8, 8, 1, hafd.make_block_id(9, 2), hafd.operation_id(9, 1, 0) )
-         , ( 9, 9, 1, hafd.make_block_id(8, 3), hafd.operation_id(8, 1, 0) )
-         , ( 10, 10, 1, hafd.make_block_id(9, 3), hafd.operation_id(9, 2, 0) )
-         , ( 11, 11, 1, hafd.make_block_id(10, 3), hafd.operation_id(10, 1, 0) )
+           ( 1, 1, 1, hafd.make_block_id(4, 1), hafd.operation_id(4, 1), 0 )
+         , ( 2, 2, 1, hafd.make_block_id(5, 1), hafd.operation_id(5, 1), 0 )
+         , ( 3, 3, 1, hafd.make_block_id(6, 1), hafd.operation_id(6, 1), 0 )
+         , ( 4, 4, 1, hafd.make_block_id(7, 1), hafd.operation_id(7, 1), 0 )
+         , ( 6, 6, 1, hafd.make_block_id(7, 2), hafd.operation_id(7, 1), 0 )
+         , ( 7, 7, 1, hafd.make_block_id(8, 2), hafd.operation_id(8, 1), 0 )
+         , ( 8, 8, 1, hafd.make_block_id(9, 2), hafd.operation_id(9, 1), 0 )
+         , ( 9, 9, 1, hafd.make_block_id(8, 3), hafd.operation_id(8, 1), 0 )
+         , ( 10, 10, 1, hafd.make_block_id(9, 3), hafd.operation_id(9, 2), 0 )
+         , ( 11, 11, 1, hafd.make_block_id(10, 3), hafd.operation_id(10, 1), 0 )
     ;
 
     -- Insert applied_hardforks with block_id
     INSERT INTO hafd.applied_hardforks(hardfork_num, block_id, hardfork_vop_id)
     VALUES
-           ( 4, hafd.make_block_id(4, 1), hafd.operation_id(4,1,0) )
-         , ( 5, hafd.make_block_id(5, 1), hafd.operation_id(5,1,0) )
-         , ( 6, hafd.make_block_id(6, 1), hafd.operation_id(6,1,0) )
-         , ( 7, hafd.make_block_id(7, 2), hafd.operation_id(7,2,0) )
-         , ( 8, hafd.make_block_id(8, 3), hafd.operation_id(8,2,0) )
-         , ( 9, hafd.make_block_id(9, 3), hafd.operation_id(9,2,0) )
-         , ( 10, hafd.make_block_id(10, 3), hafd.operation_id(10,1,0) )
+           ( 4, hafd.make_block_id(4, 1), hafd.operation_id(4,1) )
+         , ( 5, hafd.make_block_id(5, 1), hafd.operation_id(5,1) )
+         , ( 6, hafd.make_block_id(6, 1), hafd.operation_id(6,1) )
+         , ( 7, hafd.make_block_id(7, 2), hafd.operation_id(7,2) )
+         , ( 8, hafd.make_block_id(8, 3), hafd.operation_id(8,2) )
+         , ( 9, hafd.make_block_id(9, 3), hafd.operation_id(9,2) )
+         , ( 10, hafd.make_block_id(10, 3), hafd.operation_id(10,1) )
     ;
 
     -- Context working on fork 2 at block 8
