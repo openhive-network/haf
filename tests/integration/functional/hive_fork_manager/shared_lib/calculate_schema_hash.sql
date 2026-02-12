@@ -14,10 +14,10 @@ FOR _row in
     '(transactions,ad3efcab-27ed-bb9e-c19c-37642e2bb653,e95c750f-ecf6-2118-296b-adfd870a8b68,aa080da1-a419-ee7e-f9ba-24b2f7304c39,db5eb531-5870-96a0-623e-07f6ee2b386d)',
     '(transactions_multisig,928f3485-398c-deec-d3bc-3d18d4f0b424,e35319f3-c226-337c-47b5-3f1509cc1d9f,e5266700-fa13-5b11-ad67-84a67c73b89e,7156512e-e9bd-d975-1379-68f0ac1b7fe7)',
     '(operation_types,dd6c8768-2bc2-2b76-3246-292b108f744f,cf35886f-de4e-e064-b170-fd4186ea9148,0dc429a2-22b0-2d05-44d6-cc66d48082b6,08d2ba03-e127-e0ad-aaee-657b3aa27bae)',
-    '(operations,d4efaf77-db7c-566a-6510-a70dd45ee674,408f8edf-a2a8-27e1-220c-a5274bdb1ac2,3f9db4b1-53fd-5fb9-947d-36bdc19afa06,76bb51d3-d77c-d7b6-9b72-663e0c601586)',
+    '(operations,6ff5a57a-b9f2-dae7-7565-a5bafeadff08,555761cf-ad2c-edd7-eff8-1e18473592de,3f9db4b1-53fd-5fb9-947d-36bdc19afa06,5eed2567-42d4-de86-31e8-ed2a3e2a5067)',
     '(applied_hardforks,62db9435-9194-e1a1-4836-d1e6fada7743,807eb203-0aef-3c9d-d4db-25a0201b229c,f0495fa5-8a19-51a1-9ac9-d47bc89deeb0,654806b4-c223-2b06-c4c5-44b320bf7068)',
     '(accounts,4592b799-551e-f242-cf3c-b913011ecb58,18dd421d-3f9d-0b0f-b5f6-87a84d08a72b,95d7e032-99aa-eb63-87a0-1519f1fc374c,7100edc3-37dc-5285-a155-82256ffea50c)',
-    '(account_operations,7e409234-acff-f19f-83b2-2dac8a60d345,31caff01-2311-630a-7e10-cd7e7b886514,57b01225-7781-ef33-d57c-10bc2cb854d3,48960a86-efb0-b9ba-7108-b1daa4a0dc9f)',
+    '(account_operations,5cad119d-bcb5-dd51-4557-47d2d482f8a5,91571750-5efe-4b10-e6ea-52531f659231,57b01225-7781-ef33-d57c-10bc2cb854d3,48960a86-efb0-b9ba-7108-b1daa4a0dc9f)',
     '(fork,a86a9a09-df69-083b-d60d-e08267dd4055,7a370e3d-dce9-c286-ed72-fc52c5ba6dcd,197844f1-1317-5bc9-731b-6a445868da98,8bc60323-f3d8-b277-4470-7d395f37fef8)',
     '(contexts_attachment,c99e00c4-bc99-eb5d-1071-310575d2655a,0007a55e-0b74-b8b1-fb0d-a2e2b82a05bd,3e2b74cd-8a9a-2768-c01b-c8a307e8267d,90df8e77-2984-5c96-2a9f-908b8e7604dc)',
     '(contexts,a1841d23-3612-d633-60d9-5ab41612d85c,5dc37b1c-1cb2-f279-92d4-cf025c786f4e,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)',
@@ -32,7 +32,8 @@ FOR _row in
     '(deps_saved_ddl,ea91c6c0-eb6a-b473-eb1c-e426eadb1d09,549ba4bd-64d6-c554-11f4-d27e4b37b6e6,d3176a21-5841-14c3-0d52-6566cf12299e,cc8a1233-564b-27fd-3ffd-ce376cd366f7)',
     '(registered_tables,01d11432-b7d9-fb8e-a345-2e412e782cfd,ff824909-7631-1102-16f9-5b6ba2f88b74,07ad4206-ab16-75cc-4aaa-18ed4006d4f6,fe6f193c-4d9c-266a-3f43-0a67d8a6dcfb)',
     '(events_queue,47c432ad-9eab-ba67-7956-1c14fa210dec,0a710f7b-0af2-9ec6-b1eb-37e181e01473,a5e6d444-fbcd-9518-618b-cc3479932005,48a3b028-2a9e-c01e-0615-0737d43b7b81)',
-    '(state_providers_registered,b41e740b-372c-cbf5-c89e-121fc30ae222,e5256de7-28e9-0079-dd6d-c410fb648f41,47f62787-773b-c098-9df3-4a9bae4b65c0,3b033100-aacc-10b4-16f9-1dcf276565ff)'
+    '(state_providers_registered,b41e740b-372c-cbf5-c89e-121fc30ae222,e5256de7-28e9-0079-dd6d-c410fb648f41,47f62787-773b-c098-9df3-4a9bae4b65c0,3b033100-aacc-10b4-16f9-1dcf276565ff)',
+    '(custom_json_types,6bd7060c-a1f3-21fd-013d-cdba0fd46c8e,f5fe705b-9760-b531-d8a0-3d795733a6df,c66fbf43-cb33-301a-20b3-685c2f3e4c4c,5ec0224a-2b65-f83a-6d9d-61363595386f)'
   ])
 LOOP
     RAISE NOTICE 'new schema hash: %', _row;

@@ -371,7 +371,7 @@ BEGIN
                 ho.id,
                 b.num AS block_num,
                 ho.trx_in_block, ho.op_pos,
-                hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+                ho.op_type_id,
                 ho.body_binary,
                 ho.body_binary::jsonb AS body
             FROM hafd.operations ho
@@ -386,7 +386,7 @@ BEGIN
                 ho.id,
                 b.num AS block_num,
                 ho.trx_in_block, ho.op_pos,
-                hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+                ho.op_type_id,
                 ho.body_binary,
                 ho.body_binary::jsonb AS body
             FROM hafd.operations ho
@@ -421,7 +421,7 @@ BEGIN
                 ho.id,
                 b.num AS block_num,
                 ho.trx_in_block, ho.op_pos,
-                hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+                ho.op_type_id,
                 b.created_at AS timestamp,
                 ho.body_binary,
                 ho.body_binary::jsonb AS body
@@ -437,7 +437,7 @@ BEGIN
                 ho.id,
                 b.num AS block_num,
                 ho.trx_in_block, ho.op_pos,
-                hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+                ho.op_type_id,
                 b.created_at AS timestamp,
                 ho.body_binary,
                 ho.body_binary::jsonb AS body
@@ -471,7 +471,7 @@ BEGIN
             ho.id,
             b.num AS block_num,
             ho.trx_in_block, ho.op_pos,
-            hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+            ho.op_type_id,
             ho.body_binary,
             ho.body_binary::jsonb AS body
         FROM hafd.operations ho
@@ -503,7 +503,7 @@ BEGIN
             ho.id,
             b.num AS block_num,
             ho.trx_in_block, ho.op_pos,
-            hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+            ho.op_type_id,
             b.created_at AS timestamp,
             ho.body_binary,
             ho.body_binary::jsonb AS body
@@ -739,7 +739,7 @@ BEGIN
                 b.num AS block_num,
                 hao.account_id, hao.transacting_account_id, hao.account_op_seq_no,
                 hao.operation_id,
-                hafd.operation_id_to_type_id(hao.operation_id) AS op_type_id
+                hao.op_type_id
             FROM hafd.account_operations hao
             JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
             ;', __schema, __schema
@@ -753,7 +753,7 @@ BEGIN
                 b.num AS block_num,
                 hao.account_id, hao.transacting_account_id, hao.account_op_seq_no,
                 hao.operation_id,
-                hafd.operation_id_to_type_id(hao.operation_id) AS op_type_id
+                hao.op_type_id
             FROM hafd.account_operations hao
             JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
             ;', __schema, __schema
@@ -785,7 +785,7 @@ BEGIN
             b.num AS block_num,
             hao.account_id, hao.transacting_account_id, hao.account_op_seq_no,
             hao.operation_id,
-            hafd.operation_id_to_type_id(hao.operation_id) AS op_type_id
+            hao.op_type_id
         FROM hafd.account_operations hao
         JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
         ;', __schema, __schema

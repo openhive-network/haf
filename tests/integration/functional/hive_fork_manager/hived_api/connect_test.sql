@@ -37,10 +37,10 @@ BEGIN
          , ( '\xDEED20', '\xBAAD20', hafd.make_block_id(2, 0) )
     ;
 
-    INSERT INTO hafd.operations(block_id, trx_in_block, op_pos, body_binary, id)
+    INSERT INTO hafd.operations(block_id, trx_in_block, op_type_id, op_pos, body_binary, id)
     VALUES
-           ( hafd.make_block_id(1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(1, 1, 0) )
-         , ( hafd.make_block_id(2, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(2, 1, 0) )
+           ( hafd.make_block_id(1, 0), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(1, 1) )
+         , ( hafd.make_block_id(2, 0), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(2, 1) )
     ;
 
     INSERT INTO hafd.accounts
@@ -49,10 +49,10 @@ BEGIN
         , ( 2, 'user', hafd.make_block_id(2, 0))
     ;
 
-    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, operation_id)
+    INSERT INTO hafd.account_operations(account_id, transacting_account_id, account_op_seq_no, block_id, operation_id, op_type_id)
     VALUES
-          ( 1, 1, 1, hafd.make_block_id(1, 0), hafd.operation_id(1, 1, 0) )
-        , ( 2, 2, 1, hafd.make_block_id(2, 0), hafd.operation_id(2, 1, 0) )
+          ( 1, 1, 1, hafd.make_block_id(1, 0), hafd.operation_id(1, 1), 0 )
+        , ( 2, 2, 1, hafd.make_block_id(2, 0), hafd.operation_id(2, 1), 0 )
     ;
 
     -- here we simulate situation when hived claims recently only block 1

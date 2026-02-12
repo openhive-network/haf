@@ -33,9 +33,9 @@ BEGIN
            ( hafd.make_block_id(1, 0), 0::SMALLINT, '\xDEED10', 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.operations (block_id, trx_in_block, op_pos, body_binary, id)
+    INSERT INTO hafd.operations(block_id, trx_in_block, op_type_id, op_pos, body_binary, id)
     VALUES
-    ( hafd.make_block_id(1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(1, 0), 0, 1::SMALLINT) )
+    ( hafd.make_block_id(1, 0), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(1, 0) )
     ;
 
     INSERT INTO hafd.transactions_multisig(trx_hash, signature, block_id)
@@ -62,9 +62,9 @@ BEGIN
     ;
 
     -- block 2 on fork 3 has no operations
-    INSERT INTO hafd.operations (block_id, trx_in_block, op_pos, body_binary, id)
+    INSERT INTO hafd.operations(block_id, trx_in_block, op_type_id, op_pos, body_binary, id)
     VALUES
-        ( hafd.make_block_id(2, 2), 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(hafd.make_block_id(2, 2), 0, 0::SMALLINT) )
+        ( hafd.make_block_id(2, 2), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(2, 0) )
     ;
 
     UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 1, current_block_num = 2;
@@ -82,14 +82,14 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT o.id, o.trx_in_block, o.op_pos, o.body_binary, o.body FROM a.operations_view o
         EXCEPT SELECT * FROM ( VALUES
-              ( hafd.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
+              ( hafd.operation_id(1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
         ) as pattern
     ) , 'Unexpected rows in the operations view';
 
 
     ASSERT NOT EXISTS (
         SELECT * FROM ( VALUES
-              ( hafd.operation_id(1, 1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
+              ( hafd.operation_id(1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb )
         ) as pattern
         EXCEPT SELECT o.id, o.trx_in_block, o.op_pos, o.body_binary, o.body FROM a.operations_view o
     ) , 'Unexpected rows in the operations view2';
@@ -126,7 +126,3 @@ BEGIN
 END;
 $BODY$
 ;
-
-
-
-
