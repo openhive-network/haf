@@ -95,7 +95,7 @@ SELECT
     hafd.operation_id_to_block_num(ho.id) AS block_num,
     ho.trx_in_block,
     ho.op_pos,
-    hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+    ho.op_type_id,
     ho.body_binary,
     ho.body_binary::jsonb AS body
 FROM hafd.operations ho
@@ -111,7 +111,7 @@ WHERE
         ho.block_id = (
             SELECT ho2.block_id
             FROM hafd.operations ho2
-            WHERE (ho2.id >> 8) = (ho.id >> 8)
+            WHERE ho2.id = ho.id
             ORDER BY ho2.block_id DESC
             LIMIT 1
         )
@@ -149,7 +149,7 @@ SELECT
     hao.transacting_account_id,
     hao.account_op_seq_no,
     hao.operation_id,
-    hafd.operation_id_to_type_id(hao.operation_id) AS op_type_id
+    hao.op_type_id
 FROM hafd.account_operations hao
 WHERE
     -- Fast path: no conflicts exist, return all rows directly
@@ -358,7 +358,7 @@ SELECT
     hafd.operation_id_to_block_num(ho.id) AS block_num,
     ho.trx_in_block,
     ho.op_pos,
-    hafd.operation_id_to_type_id(ho.id) AS op_type_id,
+    ho.op_type_id,
     ho.body_binary,
     ho.body_binary::jsonb AS body
 FROM hafd.operations ho
@@ -367,7 +367,7 @@ WHERE hafd.operation_id_to_block_num(ho.id) <= hafd.block_id_to_num(hs.consisten
   AND ho.block_id = (
       SELECT ho2.block_id
       FROM hafd.operations ho2
-      WHERE (ho2.id >> 8) = (ho.id >> 8)
+      WHERE ho2.id = ho.id
         AND hafd.operation_id_to_block_num(ho2.id) <= hafd.block_id_to_num(hs.consistent_block)
       ORDER BY ho2.block_id DESC
       LIMIT 1
@@ -393,7 +393,7 @@ SELECT
     hao.transacting_account_id,
     hao.account_op_seq_no,
     hao.operation_id,
-    hafd.operation_id_to_type_id(hao.operation_id) AS op_type_id
+    hao.op_type_id
 FROM hafd.account_operations hao
 CROSS JOIN hafd.hive_state hs
 WHERE hao.block_id = (

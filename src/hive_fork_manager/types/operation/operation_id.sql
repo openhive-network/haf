@@ -1,4 +1,6 @@
 -- contains encoding from operation id to block num and seq. in block
+-- Encoding: || 32b block_num | 32b pos_in_block ||
+-- Type is NOT encoded in operation_id - it is stored as a separate column.
 
 CREATE OR REPLACE FUNCTION hafd.operation_id_to_block_num( _id BIGINT )
     RETURNS INTEGER
@@ -15,9 +17,3 @@ CREATE OR REPLACE FUNCTION hafd.operation_id( _block_num INTEGER, _pos_in_block 
     RETURNS BIGINT
     IMMUTABLE PARALLEL SAFE
 AS 'MODULE_PATHNAME', 'to_operation_id' LANGUAGE C;
-
-CREATE OR REPLACE FUNCTION hafd.operation_id(_block_id hafd.block_id, _seq INT, _type INT)
-RETURNS BIGINT
-IMMUTABLE PARALLEL SAFE AS $$
-    SELECT (hafd.block_id_to_num(_block_id)::BIGINT << 32) | (_seq << 8) | _type;
-$$ LANGUAGE SQL;

@@ -47,11 +47,11 @@ BEGIN
          , ( hafd.make_block_id(5, 0), 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' )
     ;
 
-    INSERT INTO hafd.operations(block_id, trx_in_block, op_pos, body_binary, id)
+    INSERT INTO hafd.operations(block_id, trx_in_block, op_type_id, op_pos, body_binary, id)
     VALUES
     -- account_update2_operation
         -- posting json metadata exists, json metadata empty
-        ( hafd.make_block_id(1, 0), 0, 0, '
+        ( hafd.make_block_id(1, 0), 0, 43, 0, '
         {
             "type": "account_update2_operation",
             "value": {
@@ -61,10 +61,10 @@ BEGIN
                 "extensions": []
             }
         }
-        '::jsonb::hafd.operation, hafd.operation_id(1, 43, 0)),
+        '::jsonb::hafd.operation, hafd.operation_id(1, 43)),
 
         --empty json and posting metadata
-        ( hafd.make_block_id(2, 0), 0, 0, '
+        ( hafd.make_block_id(2, 0), 0, 43, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -73,10 +73,10 @@ BEGIN
                     "posting_json_metadata": "\"\"",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(2, 43, 0)
+            }'::jsonb::hafd.operation, hafd.operation_id(2, 43)
         ),
 
-        ( hafd.make_block_id(15, 0), 0, 0, '
+        ( hafd.make_block_id(15, 0), 0, 43, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -85,12 +85,12 @@ BEGIN
                     "posting_json_metadata": "{}",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(15, 43, 0)
+            }'::jsonb::hafd.operation, hafd.operation_id(15, 43)
         ),
 
 
         -- empty posting_metadata, json_metadata exists
-        ( hafd.make_block_id(3, 0), 0, 0, '
+        ( hafd.make_block_id(3, 0), 0, 43, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -99,11 +99,11 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(3, 43, 0)
+            }'::jsonb::hafd.operation, hafd.operation_id(3, 43)
         ),
 
         --posting metadata equal to ""
-                ( hafd.make_block_id(4, 0), 0, 0, '
+                ( hafd.make_block_id(4, 0), 0, 43, 0, '
         {
             "type": "account_update2_operation",
             "value": {
@@ -112,10 +112,10 @@ BEGIN
                 "posting_json_metadata": "\"\"",
                 "extensions": []
             }
-        }'::jsonb::hafd.operation, hafd.operation_id(4, 43, 0)),
+        }'::jsonb::hafd.operation, hafd.operation_id(4, 43)),
 
         --posting_metadata equal to {}
-        ( hafd.make_block_id(5, 0), 0, 0, '
+        ( hafd.make_block_id(5, 0), 0, 43, 0, '
 
             {
                 "type": "account_update2_operation",
@@ -125,12 +125,12 @@ BEGIN
                     "posting_json_metadata": "{}",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(5, 43, 0)
+            }'::jsonb::hafd.operation, hafd.operation_id(5, 43)
         ),
 
     -- account_create operation
         -- empty json metadata
-        ( hafd.make_block_id(6, 0), 0, 0, '
+        ( hafd.make_block_id(6, 0), 0, 9, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -174,9 +174,9 @@ BEGIN
                     "memo_key": "STM84bJQnKmM7rMAbsFPXZpQTQi5rBscbpuXkJ6XuVYEundE2Q1yx",
                     "json_metadata": "{}"
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(6, 9, 0)),
+            }'::jsonb::hafd.operation, hafd.operation_id(6, 9)),
 
-        ( hafd.make_block_id(16, 0), 0, 0, '
+        ( hafd.make_block_id(16, 0), 0, 43, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -185,11 +185,11 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(16, 43, 0)
+            }'::jsonb::hafd.operation, hafd.operation_id(16, 43)
         ),
 
         -- json metadata equal to  ""
-        ( hafd.make_block_id(7, 0), 0, 0, '
+        ( hafd.make_block_id(7, 0), 0, 9, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -233,10 +233,10 @@ BEGIN
                     "memo_key": "STM6NrLK9cwh9aAdouhSL3KhucAXU4ejReXF1vPvCeWXKrisMcoa8",
                     "json_metadata": "\"\""
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(7, 9, 0)),
+            }'::jsonb::hafd.operation, hafd.operation_id(7, 9)),
 
         --json metadata equal to {}
-        ( hafd.make_block_id(8, 0), 0, 0, '
+        ( hafd.make_block_id(8, 0), 0, 9, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -280,10 +280,10 @@ BEGIN
                     "memo_key": "STM5eK3sJ42oUd6KB5AZU5AHXdxBBK6tcfw69rTx7phnHH3yBmQxk",
                     "json_metadata": "{}"
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(8, 9, 0)),
+            }'::jsonb::hafd.operation, hafd.operation_id(8, 9)),
 
         -- json metadata with a non empty value
-        ( hafd.make_block_id(9, 0), 0, 0, '
+        ( hafd.make_block_id(9, 0), 0, 9, 0, '
             {
                 "type": "account_create_operation",
                 "value": {
@@ -327,11 +327,11 @@ BEGIN
                     "memo_key": "STM5Da24pp7ZztCipiUjp32eYxHXiQPDApY43PiMTfs9ivbhBrdgX",
                     "json_metadata": "{\"profile\":{\"about\":\"This account was instantly created via @hivewallet.app - available for iOS and Android!\",\"website\":\"https://hivewallet.app\"}}"
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(9, 9, 0)
+            }'::jsonb::hafd.operation, hafd.operation_id(9, 9)
         ),
 
     -- account_create_with_delegation_operation
-        ( hafd.make_block_id(10, 0), 0, 0, '
+        ( hafd.make_block_id(10, 0), 0, 41, 0, '
             {
                 "type": "account_create_with_delegation_operation",
                 "value": {
@@ -396,11 +396,11 @@ BEGIN
                     "json_metadata": "{\"owner\":\"genievot\"}",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(10, 41, 0)
+            }'::jsonb::hafd.operation, hafd.operation_id(10, 41)
         ),
 
     -- account_update2_operation
-        ( hafd.make_block_id(11, 0), 0, 0, '
+        ( hafd.make_block_id(11, 0), 0, 43, 0, '
             {
             "type": "account_update2_operation",
                 "value": {
@@ -409,10 +409,10 @@ BEGIN
                     "posting_json_metadata": "{\"profile\":{\"name\":\"Jeremy\",\"about\":\"               \",\"cover_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg\",\"profile_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg\",\"website\":\" \",\"location\":\"NC, USA\",\"pinned\":\"\",\"version\":2,\"portfolio\":\"enabled\",\"trail\":true,\"collections\":\"enabled\"}}",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(11, 43, 0)),
+            }'::jsonb::hafd.operation, hafd.operation_id(11, 43)),
 
     -- account_update_operation
-        ( hafd.make_block_id(12, 0), 0, 0, '
+        ( hafd.make_block_id(12, 0), 0, 10, 0, '
             {
                 "type": "account_update_operation",
                 "value": {
@@ -479,10 +479,10 @@ BEGIN
                     "memo_key": "STM6jwfUrLcnd47hX87JQv6Q78UwUZm7RPAfjqjtQ2K7793Jsjuoy",
                     "json_metadata": "{\"beneficiaries\":[{\"name\":\"threespeak\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}"
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(12, 10, 0)),
+            }'::jsonb::hafd.operation, hafd.operation_id(12, 10)),
 
     -- create_claimed_account_operation
-        ( hafd.make_block_id(13, 0), 0, 0, '
+        ( hafd.make_block_id(13, 0), 0, 23, 0, '
             {
                 "type": "create_claimed_account_operation",
                 "value": {
@@ -522,11 +522,11 @@ BEGIN
                     "json_metadata": "{\"beneficiaries\":[{\"name\":\"fractalnode\",\"weight\":300,\"label\":\"referrer\"},{\"name\":\"ocdb\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(13, 23, 0)
+            }'::jsonb::hafd.operation, hafd.operation_id(13, 23)
         ),
 
         -- second update for the same account in the blocks range
-        ( hafd.make_block_id(14, 0), 0, 0, '
+        ( hafd.make_block_id(14, 0), 0, 43, 0, '
             {
                 "type": "account_update2_operation",
                 "value": {
@@ -535,7 +535,7 @@ BEGIN
                     "posting_json_metadata": "",
                     "extensions": []
                 }
-            }'::jsonb::hafd.operation, hafd.operation_id(14, 43, 0)
+            }'::jsonb::hafd.operation, hafd.operation_id(14, 43)
         )
 
 
