@@ -51,8 +51,9 @@ CREATE TYPE hafd.transactions_multisig_type AS (
 
 DROP TYPE IF EXISTS hafd.operations_type CASCADE;
 CREATE TYPE hafd.operations_type AS (
-    id BIGINT,  -- Encoded (block_num | seq_in_block | op_type_id)
+    id BIGINT,  -- Encoded (block_num | pos_in_block)
     trx_in_block smallint,
+    op_type_id smallint,
     op_pos integer,
     body_binary hafd.operation
 );
@@ -69,7 +70,8 @@ CREATE TYPE hafd.account_operations_type AS (
     account_id INTEGER,
     transacting_account_id INTEGER,
     account_op_seq_no INTEGER,
-    operation_id BIGINT  -- Encoded operation_id
+    operation_id BIGINT,  -- Encoded (block_num | pos_in_block)
+    op_type_id smallint
 );
 
 DROP TYPE IF EXISTS hafd.applied_hardforks_type CASCADE;
@@ -196,10 +198,10 @@ BEGIN
     FROM unnest(_signatures) s;
 
     -- Insert operations (original compact format with encoded id)
-    -- o.id encodes: (block_num << 32) | (seq_in_block << 8) | op_type_id
-    -- Use hafd.operation_id_to_pos(id) and hafd.operation_id_to_type_id(id) to extract
-    INSERT INTO hafd.operations (block_id, trx_in_block, op_pos, body_binary, id)
-    SELECT __block_id, o.trx_in_block, o.op_pos, o.body_binary, o.id
+    -- o.id encodes: (block_num << 32) | pos_in_block
+    -- op_type_id is stored as a separate column
+    INSERT INTO hafd.operations (block_id, trx_in_block, op_type_id, op_pos, body_binary, id)
+    SELECT __block_id, o.trx_in_block, o.op_type_id, o.op_pos, o.body_binary, o.id
     FROM unnest(_operations) o;
 
     -- Insert accounts (original compact format with block_id)
@@ -210,8 +212,8 @@ BEGIN
     ON CONFLICT ON CONSTRAINT uq_hive_accounts DO NOTHING;
 
     -- Insert account_operations with operation_id stored directly (avoids JOIN in views)
-    INSERT INTO hafd.account_operations (account_id, transacting_account_id, account_op_seq_no, block_id, operation_id)
-    SELECT ao.account_id, ao.transacting_account_id, ao.account_op_seq_no, __block_id, ao.operation_id
+    INSERT INTO hafd.account_operations (account_id, transacting_account_id, account_op_seq_no, block_id, operation_id, op_type_id)
+    SELECT ao.account_id, ao.transacting_account_id, ao.account_op_seq_no, __block_id, ao.operation_id, ao.op_type_id
     FROM unnest(_account_operations) ao;
 
     -- Insert applied_hardforks (original compact format with block_id)

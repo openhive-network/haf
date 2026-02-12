@@ -59,14 +59,14 @@ BEGIN
     -- Operations: (block_id, trx_in_block, op_pos, body_binary, id)
     -- Block 3 has two operations: one regular op (in trx_in_block=0) and one virtual op (trx_in_block=-1)
     -- The second op for block 3 is a virtual op (op_type_id=2 which is a vop), not part of transaction
-    INSERT INTO hafd.operations(block_id, trx_in_block, op_pos, body_binary, id)
+    INSERT INTO hafd.operations(block_id, trx_in_block, op_type_id, op_pos, body_binary, id)
     VALUES
-          ( hafd.make_block_id(1, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK ONE OP"}}' :: jsonb :: hafd.operation, hafd.operation_id(1, 1, 0) )
-        , ( hafd.make_block_id(2, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK TWO OP"}}' :: jsonb :: hafd.operation, hafd.operation_id(2, 1, 0) )
-        , ( hafd.make_block_id(3, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hafd.operation, hafd.operation_id(3, 1, 0) )
-        , ( hafd.make_block_id(3, 0), -1, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE VOP"}}' :: jsonb :: hafd.operation, hafd.operation_id(3, 2, 2) )  -- Virtual op (type 2), trx_in_block=-1
-        , ( hafd.make_block_id(4, 0), 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK FOUR OP"}}' :: jsonb :: hafd.operation, hafd.operation_id(4, 1, 1) )
-        , ( hafd.make_block_id(5, 0), -1, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE VOP"}}' :: jsonb :: hafd.operation, hafd.operation_id(5, 1, 2) )  -- Virtual op
+          ( hafd.make_block_id(1, 0), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK ONE OP"}}' :: jsonb :: hafd.operation, hafd.operation_id(1, 1) )
+        , ( hafd.make_block_id(2, 0), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK TWO OP"}}' :: jsonb :: hafd.operation, hafd.operation_id(2, 1) )
+        , ( hafd.make_block_id(3, 0), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE OP"}}' :: jsonb :: hafd.operation, hafd.operation_id(3, 1) )
+        , ( hafd.make_block_id(3, 0), -1, 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK THREE VOP"}}' :: jsonb :: hafd.operation, hafd.operation_id(3, 2) )  -- Virtual op (type 2), trx_in_block=-1
+        , ( hafd.make_block_id(4, 0), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK FOUR OP"}}' :: jsonb :: hafd.operation, hafd.operation_id(4, 1) )
+        , ( hafd.make_block_id(5, 0), -1, 0, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK FIVE VOP"}}' :: jsonb :: hafd.operation, hafd.operation_id(5, 1) )  -- Virtual op
     ;
 
     UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
