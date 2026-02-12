@@ -51,35 +51,23 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     auto NUMBER_OF_PROCESSORS_THREADS = ONE_THREAD_WRITERS_NUMBER + operations_threads + transactions_threads + account_operation_threads;
     auto execute_push_block = [this](block_num_rendezvous_trigger::BLOCK_NUM _block_num ){
       if ( !_block.empty() ) {
-        // Pre-allocate buffer for SQL command to reduce allocations
-        // Typical block SQL command is ~64KB, reserve extra for safety
-        const std::string& transactions_str = _transaction_writer->get_merged_strings();
-        const std::string& operations_str = _operation_writer->get_merged_strings();
-        const std::string& account_operations_str = _account_operations_writer->get_merged_strings();
+        std::string block_to_dump = _block + "::hafd.blocks_type";
+        std::string transactions_to_dump = "ARRAY[" + _transaction_writer->get_merged_strings() + "]::hafd.transactions_type[]";
+        std::string signatures_to_dump = "ARRAY[" + std::move( _transactions_multisig ) + "]::hafd.transactions_multisig_type[]";
+        std::string operations_to_dump = "ARRAY[" + _operation_writer->get_merged_strings() + "]::hafd.operations_type[]";
+        std::string accounts_to_dump = "ARRAY[" + std::move( _accounts ) + "]::hafd.accounts_type[]";
+        std::string account_operations_to_dump = "ARRAY[" + _account_operations_writer->get_merged_strings() + "]::hafd.account_operations_type[]";
+        std::string applied_hardforks_to_dump = "ARRAY[" + std::move( _applied_hardforks ) + "]::hafd.applied_hardforks_type[]";
 
-        const size_t estimated_size = 128 + _block.size() + transactions_str.size() +
-                                      _transactions_multisig.size() + operations_str.size() +
-                                      _accounts.size() + account_operations_str.size() +
-                                      _applied_hardforks.size();
-
-        std::string sql_command;
-        sql_command.reserve(estimated_size);
-
-        sql_command += "SELECT hive.push_block(";
-        sql_command += _block;
-        sql_command += "::hafd.blocks,ARRAY[";
-        sql_command += transactions_str;
-        sql_command += "]::hafd.transactions[],ARRAY[";
-        sql_command += _transactions_multisig;
-        sql_command += "]::hafd.transactions_multisig[],ARRAY[";
-        sql_command += operations_str;
-        sql_command += "]::hafd.operations[],ARRAY[";
-        sql_command += _accounts;
-        sql_command += "]::hafd.accounts[],ARRAY[";
-        sql_command += account_operations_str;
-        sql_command += "]::hafd.account_operations[],ARRAY[";
-        sql_command += _applied_hardforks;
-        sql_command += "]::hafd.applied_hardforks[])";
+        std::string sql_command = "SELECT hive.push_block(" +
+                block_to_dump +
+          "," + transactions_to_dump +
+          "," + signatures_to_dump +
+          "," + operations_to_dump +
+          "," + accounts_to_dump +
+          "," + account_operations_to_dump +
+          "," + applied_hardforks_to_dump +
+          ")";
 
         _processing_thread.enqueue(std::move(sql_command));
         _last_dumped_block = _block_num;
@@ -246,13 +234,12 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
                                                              appbase::application& app,
                                                              uint32_t pruning,
                                                              size_t max_queue_depth) :
-    _max_queue_depth(max_queue_depth),
     _transactions_controller(transactions_controller),
     _write_ahead_log(write_ahead_log),
     _app(app),
-    _pruning(pruning)
+    _pruning(pruning),
+    _max_queue_depth(max_queue_depth)
   {
-    ilog("WAL processing thread created with max queue depth: ${depth}", ("depth", _max_queue_depth));
     _future = std::async([this]() { run(); });
   }
 
@@ -348,7 +335,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       {
         std::unique_lock<std::mutex> lock(_mutex);
         _condition_variable.wait(lock, [&](){ return _command_queue.size() < _max_queue_depth; });
-        _command_queue.emplace_back(sequence_number, std::move(sql_command));
+        _command_queue.emplace_back(sequence_number, sql_command);
       }
       _condition_variable.notify_one();
     }

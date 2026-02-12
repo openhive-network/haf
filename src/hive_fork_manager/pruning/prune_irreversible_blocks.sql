@@ -1,3 +1,10 @@
+-- =============================================================================
+-- Pruning Functions for HAF
+-- =============================================================================
+-- Updated to work with unified tables using block_id encoding.
+-- No FK CASCADE exists, so we must explicitly delete from all child tables.
+-- =============================================================================
+
 CREATE OR REPLACE FUNCTION hive.is_pruning_enabled()
     RETURNS BOOLEAN
     LANGUAGE plpgsql
@@ -32,7 +39,8 @@ BEGIN
         RETURN; -- 0 means no pruning
     END IF;
 
-    SELECT num INTO __max_block_num FROM hafd.blocks ORDER BY num DESC LIMIT 1;
+    -- Get max block_num using block_id_to_num
+    SELECT MAX(hafd.block_id_to_num(block_id)) INTO __max_block_num FROM hafd.blocks;
 
     SELECT COALESCE( min(current_block_num), __max_block_num )
     INTO __upper_bound_block_num
@@ -44,44 +52,38 @@ BEGIN
 
     __upper_bound_block_num = __upper_bound_block_num - _tail_size;
 
-    --TODO(mickiewicz@syncad.com): too much times the same schema occur: all hafd blocks tables are modified
-    --                   need to add some container to make it automatically (table with oid of hafd tables ?)
-    --                   without repeating tables names each time
+    -- No FK CASCADE exists, so we must explicitly delete from all child tables.
+    -- Order matters: delete from child tables before parent tables.
 
-    DELETE FROM hafd.account_operations har
-        USING hafd.operations hor
-    WHERE
-        har.operation_id = hor.id
-      AND ( hafd.operation_id_to_block_num(hor.id) <= __upper_bound_block_num )
-    ;
+    -- Delete account_operations (references operations)
+    DELETE FROM hafd.account_operations ao
+    WHERE hafd.block_id_to_num(ao.block_id) <= __upper_bound_block_num;
 
-    DELETE FROM hafd.applied_hardforks hjr
-    WHERE hjr.block_num <= __upper_bound_block_num
-    ;
+    -- Delete applied_hardforks (references operations and blocks)
+    DELETE FROM hafd.applied_hardforks ah
+    WHERE hafd.block_id_to_num(ah.block_id) <= __upper_bound_block_num;
 
-    DELETE FROM hafd.operations hor
-    WHERE hafd.operation_id_to_block_num(hor.id) <= __upper_bound_block_num
-    ;
+    -- Delete operations
+    DELETE FROM hafd.operations o
+    WHERE hafd.block_id_to_num(o.block_id) <= __upper_bound_block_num;
 
-    DELETE FROM hafd.transactions_multisig htmr
-        USING hafd.transactions htr
-    WHERE
-        htr.trx_hash = htmr.trx_hash
-      AND ( htr.block_num <= __upper_bound_block_num )
-    ;
+    -- Delete transactions_multisig (references transactions)
+    DELETE FROM hafd.transactions_multisig tm
+    WHERE hafd.block_id_to_num(tm.block_id) <= __upper_bound_block_num;
 
-    DELETE FROM hafd.transactions htr
-    WHERE htr.block_num <= __upper_bound_block_num
-    ;
+    -- Delete transactions
+    DELETE FROM hafd.transactions t
+    WHERE hafd.block_id_to_num(t.block_id) <= __upper_bound_block_num;
 
-    UPDATE hafd.accounts ha
-    SET block_num = NULL
-    WHERE ha.block_num <= __upper_bound_block_num
-    ;
+    -- Accounts: set block_id to NULL to preserve account names
+    -- (accounts may be referenced by other data, we just forget which block created them)
+    UPDATE hafd.accounts a
+    SET block_id = NULL
+    WHERE hafd.block_id_to_num(a.block_id) <= __upper_bound_block_num;
 
-    DELETE FROM hafd.blocks hbr
-    WHERE hbr.num <= __upper_bound_block_num
-    ;
+    -- Finally delete blocks
+    DELETE FROM hafd.blocks b
+    WHERE hafd.block_id_to_num(b.block_id) <= __upper_bound_block_num;
 
 END;
 $BODY$
@@ -115,7 +117,9 @@ BEGIN
     FROM hafd.contexts ctx
     WHERE ctx.stages IS NOT NULL;
 
-    SELECT num INTO __irreversible_head_block FROM hafd.blocks ORDER BY num DESC LIMIT 1;
+    -- Get max block_num using block_id_to_num
+    SELECT MAX(hafd.block_id_to_num(block_id)) INTO __irreversible_head_block FROM hafd.blocks;
+
     FOR i IN 1..1000 LOOP -- after 10s back to close transaction
         SELECT COALESCE( MIN( current_block_num ), 0 ) INTO __slowest_context_block FROM hafd.contexts;
 

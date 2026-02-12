@@ -4,80 +4,131 @@ CREATE DOMAIN hafd.hbd_amount AS NUMERIC NOT NULL;
 --- Interest rate (in BPS - basis points)
 CREATE DOMAIN hafd.interest_rate AS INT4 NOT NULL;
 
+-- =============================================================================
+-- hafd.blocks - Unified table for both irreversible and reversible blocks
+-- =============================================================================
+-- block_id encodes (block_num, fork_id) in 64 bits:
+--   Upper 32 bits = block_num
+--   Lower 32 bits = fork_id
+-- Same block_num can exist on multiple forks; only one is canonical.
+-- Fork cleanup is done explicitly (fork switching is rare).
+
 CREATE TABLE IF NOT EXISTS hafd.blocks (
-       num integer NOT NULL,
-       hash bytea NOT NULL,
-       prev bytea NOT NULL,
-       created_at timestamp without time zone NOT NULL,
-       producer_account_id INTEGER NOT NULL,
-       transaction_merkle_root bytea NOT NULL,
-       extensions jsonb DEFAULT NULL,
-       witness_signature bytea NOT NULL,
-       signing_key text NOT NULL,
+    block_id hafd.block_id NOT NULL,
+    hash bytea NOT NULL,
+    prev bytea NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    producer_account_id INTEGER NOT NULL,
+    transaction_merkle_root bytea NOT NULL,
+    extensions jsonb DEFAULT NULL,
+    witness_signature bytea NOT NULL,
+    signing_key text NOT NULL,
 
-       --- Data specific to parts of blockchain DGPO 
+    --- Data specific to parts of blockchain DGPO
 
-       hbd_interest_rate hafd.interest_rate,
+    hbd_interest_rate hafd.interest_rate,
 
-       total_vesting_fund_hive hafd.hive_amount,
-       total_vesting_shares hafd.vest_amount,
+    total_vesting_fund_hive hafd.hive_amount,
+    total_vesting_shares hafd.vest_amount,
 
-       total_reward_fund_hive hafd.hive_amount,
-       
-       virtual_supply hafd.hive_amount,
-       current_supply hafd.hive_amount,
+    total_reward_fund_hive hafd.hive_amount,
 
-       current_hbd_supply hafd.hbd_amount,
-       dhf_interval_ledger hafd.hbd_amount,
+    virtual_supply hafd.hive_amount,
+    current_supply hafd.hive_amount,
 
-       CONSTRAINT pk_hive_blocks PRIMARY KEY( num )
+    current_hbd_supply hafd.hbd_amount,
+    dhf_interval_ledger hafd.hbd_amount,
+
+    CONSTRAINT pk_hive_blocks PRIMARY KEY( block_id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.blocks', '');
 
-CREATE STATISTICS IF NOT EXISTS blocks_num_hash_prev_dependency_stats (dependencies) ON num, hash, prev, created_at FROM hafd.blocks;
+-- Optimized expression index for blocks_view canonical block selection
+-- Uses fork_id only (not full block_id) since block_num is already in first column
+-- This reduces index size by ~33% compared to using full block_id (~8 bytes/row vs ~12 bytes/row)
+CREATE INDEX IF NOT EXISTS hive_blocks_block_num_idx ON hafd.blocks (
+    hafd.block_id_to_num(block_id),
+    hafd.block_id_to_fork(block_id) DESC
+);
+
+CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hafd.blocks (producer_account_id);
+
+CREATE STATISTICS IF NOT EXISTS blocks_block_num_stats ON (hafd.block_id_to_num(block_id)) FROM hafd.blocks;
+
+-- =============================================================================
+-- hafd.hive_state - System state tracking
+-- =============================================================================
 
 CREATE TYPE hafd.sync_state AS ENUM (
     'START', 'WAIT', 'REINDEX_WAIT', 'REINDEX', 'P2P', 'LIVE'
 );
 
-
 CREATE TABLE IF NOT EXISTS hafd.hive_state (
-      id integer,
-      consistent_block integer,
-      is_dirty bool NOT NULL,
-      state hafd.sync_state NOT NULL DEFAULT 'START',
-      pruning integer NOT NULL DEFAULT 0,
-      CONSTRAINT pk_irreversible_data PRIMARY KEY ( id )
+    id integer,
+    consistent_block hafd.block_id,
+    is_dirty bool NOT NULL,
+    state hafd.sync_state NOT NULL DEFAULT 'START',
+    pruning integer NOT NULL DEFAULT 0,
+    CONSTRAINT pk_irreversible_data PRIMARY KEY ( id )
 );
-
--- We use ADD CONSTRAINT with ALTER TABLE followed by NOT VALID because the NOT VALID option isn't documented
--- or supported within CREATE TABLE, and thus, seems not to work there.
--- This applies to the following tables as well.
-ALTER TABLE hafd.hive_state ADD CONSTRAINT fk_1_hive_irreversible_data FOREIGN KEY (consistent_block) REFERENCES hafd.blocks (num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.hive_state', '');
 
+-- =============================================================================
+-- hafd.block_conflicts - Tracks block_nums with multiple fork versions
+-- =============================================================================
+-- During LIVE mode, when a block arrives on a new fork while another version
+-- already exists, that block_num is recorded here. Views can use this to
+-- potentially skip canonical selection for non-conflicted blocks.
+--
+-- Size: Tiny (~200 rows max during active fork scenarios)
+-- Updated by: hive.push_block() inserts, hive.remove_orphan_forks() deletes
+
+CREATE TABLE IF NOT EXISTS hafd.block_conflicts (
+    block_num INTEGER PRIMARY KEY
+);
+SELECT pg_catalog.pg_extension_config_dump('hafd.block_conflicts', '');
+
+-- Check if a block_num has conflicts (multiple fork versions)
+CREATE OR REPLACE FUNCTION hafd.block_conflicts_has(_block_num INTEGER)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT EXISTS (SELECT 1 FROM hafd.block_conflicts WHERE block_num = _block_num);
+$$;
+
+-- =============================================================================
+-- hafd.transactions - Original compact structure
+-- =============================================================================
+
 CREATE TABLE IF NOT EXISTS hafd.transactions (
-    block_num integer NOT NULL,
+    block_id hafd.block_id NOT NULL,
     trx_in_block smallint NOT NULL,
     trx_hash bytea NOT NULL,
     ref_block_num integer NOT NULL,
     ref_block_prefix bigint NOT NULL,
     expiration timestamp without time zone NOT NULL,
     signature bytea DEFAULT NULL,
-    CONSTRAINT pk_hive_transactions PRIMARY KEY ( trx_hash )
+    CONSTRAINT pk_hive_transactions PRIMARY KEY ( trx_hash, block_id )
 );
-ALTER TABLE hafd.transactions ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hafd.blocks (num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.transactions', '');
 CREATE STATISTICS IF NOT EXISTS transactions_ref_block_dependency_stats (dependencies) ON ref_block_num, ref_block_prefix FROM hafd.transactions;
 
+-- =============================================================================
+-- hafd.transactions_multisig - Original compact structure
+-- =============================================================================
 
 CREATE TABLE IF NOT EXISTS hafd.transactions_multisig (
     trx_hash bytea NOT NULL,
     signature bytea NOT NULL,
-    CONSTRAINT pk_hive_transactions_multisig PRIMARY KEY ( trx_hash, signature )
+    block_id hafd.block_id NOT NULL,
+    CONSTRAINT pk_hive_transactions_multisig PRIMARY KEY ( trx_hash, signature, block_id )
 );
-ALTER TABLE hafd.transactions_multisig ADD CONSTRAINT fk_1_hive_transactions_multisig FOREIGN KEY (trx_hash) REFERENCES hafd.transactions (trx_hash) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.transactions_multisig', '');
+
+-- =============================================================================
+-- hafd.operation_types - Operation type definitions (unchanged)
+-- =============================================================================
 
 CREATE TABLE IF NOT EXISTS hafd.operation_types (
     id smallint NOT NULL,
@@ -95,192 +146,108 @@ CREATE TABLE IF NOT EXISTS hafd.custom_json_types (
 SELECT pg_catalog.pg_extension_config_dump('hafd.custom_json_types', '');
 CREATE STATISTICS IF NOT EXISTS operation_types_id_name_dependency_stats (dependencies) ON id, name FROM hafd.operation_types;
 
+-- =============================================================================
+-- hafd.operations - Original compact structure with encoded id
+-- =============================================================================
+-- id is encoded || 32b blocknum | 24b seq | 8b operation type ||
+-- This compact encoding minimizes data volume during massive sync.
+-- No FK to blocks - fork cleanup is done explicitly (rare operation).
+-- Use hafd.operation_id_to_seq(id) and hafd.operation_id_to_type_id(id) to extract components.
+
 CREATE TABLE IF NOT EXISTS hafd.operations (
-    -- id is encoded || 32b blocknum | 32b seq ||
-    id bigint not null,
+    block_id hafd.block_id NOT NULL,
     trx_in_block smallint NOT NULL,
     op_type_id smallint NOT NULL,
     op_pos integer NOT NULL,
-    body_binary hafd.operation  DEFAULT NULL,
-    custom_json_type_id SMALLINT DEFAULT NULL,
-    CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
+    body_binary hafd.operation DEFAULT NULL,
+    -- id is pre-computed in C++ for massive sync performance
+    -- Encoding: (block_num << 32) | (seq_in_block << 8) | op_type_id
+    -- Tests should use hafd.operation_id(block_num, seq_in_block, op_type_id) helper
+    id BIGINT NOT NULL,
+    CONSTRAINT pk_hive_operations PRIMARY KEY ( block_id, id )
 );
-
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
+
+-- =============================================================================
+-- hafd.applied_hardforks - Original compact structure
+-- =============================================================================
 
 CREATE TABLE IF NOT EXISTS hafd.applied_hardforks (
     hardfork_num smallint NOT NULL,
-    block_num integer NOT NULL,
+    block_id hafd.block_id NOT NULL,
     hardfork_vop_id bigint NOT NULL,
-    CONSTRAINT pk_hive_applied_hardforks PRIMARY KEY (hardfork_num)
+    CONSTRAINT pk_hive_applied_hardforks PRIMARY KEY (hardfork_num, block_id)
 );
-ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_1_hive_applied_hardforks FOREIGN KEY (hardfork_vop_id) REFERENCES hafd.operations(id) NOT VALID;
-ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_2_hive_applied_hardforks FOREIGN KEY (block_num) REFERENCES hafd.blocks(num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.applied_hardforks', '');
 
-CREATE STATISTICS IF NOT EXISTS applied_hardforks_hardfork_block_vop_dependency_stats (dependencies) ON hardfork_num, block_num, hardfork_vop_id FROM hafd.applied_hardforks;
+CREATE STATISTICS IF NOT EXISTS applied_hardforks_hardfork_block_vop_dependency_stats (dependencies) ON hardfork_num, block_id, hardfork_vop_id FROM hafd.applied_hardforks;
+
+-- =============================================================================
+-- hafd.accounts - Original compact structure
+-- block_id IS NULL means account was dumped at startup (psql-first-block > 1)
+-- Same account can exist on different forks (different block_id values)
+-- NULLS NOT DISTINCT ensures only one (id, NULL) row per account
+-- =============================================================================
 
 CREATE TABLE IF NOT EXISTS hafd.accounts (
-      id INTEGER NOT NULL
-    , name VARCHAR(16) NOT NULL
-    , block_num INTEGER
-    , CONSTRAINT pk_hive_accounts_id PRIMARY KEY( id )
-    , CONSTRAINT uq_hive_accounst_name UNIQUE ( name )
-    
+    id INTEGER NOT NULL,
+    name VARCHAR(16) NOT NULL,
+    block_id hafd.block_id,
+    CONSTRAINT uq_hive_accounts UNIQUE NULLS NOT DISTINCT (id, block_id)
 );
-ALTER TABLE hafd.accounts ADD CONSTRAINT fk_1_hive_accounts FOREIGN KEY (block_num) REFERENCES hafd.blocks (num) MATCH FULL NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.accounts', '');
 
-CREATE STATISTICS IF NOT EXISTS accounts_id_name_blocknum_dependency_stats (dependencies) ON id, name, block_num FROM hafd.accounts;
+CREATE STATISTICS IF NOT EXISTS accounts_id_name_blocknum_dependency_stats (dependencies) ON id, name, block_id FROM hafd.accounts;
 
-CREATE TABLE IF NOT EXISTS hafd.account_operations
-(
-      account_id INTEGER NOT NULL --- Identifier of account involved in given operation.
-    , transacting_account_id INTEGER NOT NULL --- Identifier of account that performed the operation.
-    , account_op_seq_no INTEGER NOT NULL --- Operation sequence number specific to given account.
-    , operation_id BIGINT NOT NULL --- Id of operation held in hive_opreations table.
-    , op_type_id SMALLINT NOT NULL --- Operation type identifier.
-    , CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no )
-    -- Hopefully not needed anymore, let's find out
-    --, CONSTRAINT hive_account_operations_uq2 UNIQUE ( account,operation_id )
+-- =============================================================================
+-- hafd.account_operations - Account to operation mapping with operation_id
+-- =============================================================================
+-- Stores operation_id directly to avoid JOIN with operations table in views.
+-- This is critical for get_account_history performance.
+-- No FK CASCADE - fork cleanup is done explicitly (rare operation).
+
+CREATE TABLE IF NOT EXISTS hafd.account_operations (
+    account_id INTEGER NOT NULL,
+    transacting_account_id INTEGER NOT NULL,
+    account_op_seq_no INTEGER NOT NULL,
+    block_id hafd.block_id NOT NULL,
+    operation_id BIGINT NOT NULL,
+    CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no, block_id )
 );
-ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_1 FOREIGN KEY (account_id) REFERENCES hafd.accounts(id) NOT VALID;
-ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hafd.operations(id) NOT VALID;
-ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_3 FOREIGN KEY (transacting_account_id) REFERENCES hafd.accounts(id) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations', '');
 
+-- =============================================================================
+-- Indexes - Original structure
+-- =============================================================================
 
-CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hafd.applied_hardforks ( block_num );
+CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hafd.applied_hardforks ( block_id );
 
-CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hafd.transactions ( block_num, trx_in_block );
+-- Optimized expression index for transactions_view canonical block selection
+-- Uses fork_id only (not full block_id) since block_num is already in first column
+-- This reduces index size by ~28% compared to using full block_id (~10 bytes/row vs ~14 bytes/row)
+CREATE INDEX IF NOT EXISTS hive_transactions_block_id_to_num_idx ON hafd.transactions (
+    hafd.block_id_to_num(block_id),
+    trx_in_block,
+    hafd.block_id_to_fork(block_id) DESC
+);
 
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations USING btree( hafd.operation_id_to_block_num(id), id);
-CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, op_type_id);
-CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (op_type_id, hafd.operation_id_to_block_num(id));
+CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, hafd.operation_id_to_type_id(id));
 
--- Generic partial index for all custom_json operations is NOT created by default.
--- Apps should call hive.create_custom_json_type_index() with the specific types they need.
--- This avoids indexing high-volume types like Splinterlands that most apps don't use.
+-- Index for operations_view canonical selection: finds highest block_id per (block_num, seq_in_block)
+-- Uses (id >> 8) which extracts the position key (block_num|seq_in_block without op_type)
+CREATE INDEX IF NOT EXISTS hive_operations_pos_key_block_id_idx ON hafd.operations ((id >> 8), block_id DESC);
 
--- Function to create an optimized partial index for specific custom_json types.
--- This should be called after replay when the custom_json_types table is populated.
--- Example: SELECT hive.create_custom_json_type_index(ARRAY['follow', 'reblog', 'community', 'notify']);
--- Note: SECURITY DEFINER allows HAF apps (like hivemind) to create indexes on hafd.operations
--- without needing direct ownership of the table.
-CREATE OR REPLACE FUNCTION hive.create_custom_json_type_index(_custom_json_ids TEXT[])
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = hive, hafd, pg_catalog
-AS $$
-DECLARE
-    _type_ids SMALLINT[];
-    _index_name TEXT;
-    _where_clause TEXT;
-BEGIN
-    -- Look up the numeric IDs for the given custom_json_id strings
-    SELECT array_agg(id ORDER BY id)
-    INTO _type_ids
-    FROM hafd.custom_json_types
-    WHERE custom_json_id = ANY(_custom_json_ids);
+-- Index for id-only lookups when PK is (block_id, id)
+CREATE INDEX IF NOT EXISTS hive_operations_id_idx ON hafd.operations (id);
 
-    IF _type_ids IS NULL OR array_length(_type_ids, 1) IS NULL THEN
-        RAISE NOTICE 'No matching custom_json_type_ids found for: %', _custom_json_ids;
-        RETURN;
-    END IF;
+-- Clustering for get_account_history performance
+CLUSTER hafd.account_operations USING hive_account_operations_uq1;
 
-    -- Build a deterministic index name from the sorted IDs
-    _index_name := 'hive_operations_custom_json_types_' || array_to_string(_type_ids, '_') || '_idx';
+CREATE INDEX IF NOT EXISTS hive_accounts_name_idx ON hafd.accounts USING btree (name);
 
-    -- Build the WHERE clause
-    _where_clause := 'custom_json_type_id IN (' || array_to_string(_type_ids, ',') || ')';
-
-    -- Check if index already exists
-    IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = _index_name) THEN
-        RAISE NOTICE 'Index % already exists', _index_name;
-        RETURN;
-    END IF;
-
-    -- Create the partial index
-    RAISE NOTICE 'Creating index % for custom_json types: % (IDs: %)', _index_name, _custom_json_ids, _type_ids;
-    EXECUTE format(
-        'CREATE INDEX %I ON hafd.operations (custom_json_type_id) WHERE %s',
-        _index_name,
-        _where_clause
-    );
-END;
-$$;
-
--- Generic partial index for all custom_json operations is NOT created by default.
--- Apps should call hive.create_custom_json_type_index() with the specific types they need.
--- This avoids indexing high-volume types like Splinterlands that most apps don't use.
-
--- Function to create an optimized partial index for specific custom_json types.
--- This should be called after replay when the custom_json_types table is populated.
--- Example: SELECT hive.create_custom_json_type_index(ARRAY['follow', 'reblog', 'community', 'notify']);
--- Note: SECURITY DEFINER allows HAF apps (like hivemind) to create indexes on hafd.operations
--- without needing direct ownership of the table.
-CREATE OR REPLACE FUNCTION hive.create_custom_json_type_index(_custom_json_ids TEXT[])
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = hive, hafd, pg_catalog
-AS $$
-DECLARE
-    _type_ids SMALLINT[];
-    _index_name TEXT;
-    _where_clause TEXT;
-BEGIN
-    -- Look up the numeric IDs for the given custom_json_id strings
-    SELECT array_agg(id ORDER BY id)
-    INTO _type_ids
-    FROM hafd.custom_json_types
-    WHERE custom_json_id = ANY(_custom_json_ids);
-
-    IF _type_ids IS NULL OR array_length(_type_ids, 1) IS NULL THEN
-        RAISE NOTICE 'No matching custom_json_type_ids found for: %', _custom_json_ids;
-        RETURN;
-    END IF;
-
-    -- Build a deterministic index name from the sorted IDs
-    _index_name := 'hive_operations_custom_json_types_' || array_to_string(_type_ids, '_') || '_idx';
-
-    -- Build the WHERE clause
-    _where_clause := 'custom_json_type_id IN (' || array_to_string(_type_ids, ',') || ')';
-
-    -- Check if index already exists
-    IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = _index_name) THEN
-        RAISE NOTICE 'Index % already exists', _index_name;
-        RETURN;
-    END IF;
-
-    -- Create the partial index
-    RAISE NOTICE 'Creating index % for custom_json types: % (IDs: %)', _index_name, _custom_json_ids, _type_ids;
-    EXECUTE format(
-        'CREATE INDEX %I ON hafd.operations (custom_json_type_id) WHERE %s',
-        _index_name,
-        _where_clause
-    );
-END;
-$$;
-
---Clustering to speedup get_account_history queries (returns ordered set of operations for a specific account)
---Clustering takes 2 hours on a fast system with 4 maintenance works
---Clustering is actually done by hived, and the line below could technically be removed.
---Eventually we need functions on haf side to perform the clustering and make it part
---of adding indexes to the account_operations table to allow for more parallelism.
-CLUSTER hafd.account_operations using hive_account_operations_uq1;
-
---This index is probably only needed for block_explorer queries right now, but maybe useful for other apps,
---so decided to add here rather than as part of hafbe as it isn't huge.
-CREATE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_idx ON hafd.account_operations( account_id, op_type_id );
-
-CREATE INDEX IF NOT EXISTS hive_accounts_block_num_idx ON hafd.accounts USING btree (block_num);
-
-CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hafd.blocks (producer_account_id);
-CREATE INDEX IF NOT EXISTS hive_blocks_created_at_idx ON hafd.blocks USING btree ( created_at );
-
-ALTER TABLE hafd.blocks ADD CONSTRAINT fk_1_hive_blocks FOREIGN KEY (producer_account_id) REFERENCES hafd.accounts (id) NOT VALID DEFERRABLE INITIALLY DEFERRED;
+-- =============================================================================
+-- hafd.write_ahead_log_state - WAL tracking (unchanged)
+-- =============================================================================
 
 CREATE TABLE hafd.write_ahead_log_state (id SMALLINT NOT NULL UNIQUE CHECK (id = 1), last_sequence_number_committed INTEGER);
 COMMENT ON TABLE hafd.write_ahead_log_state IS 'Tracks the sequence numbers in hived''s write-ahead log';

@@ -37,7 +37,7 @@ BEGIN
           _name
         , _schema
         , ( SELECT MAX( hf.id ) FROM hafd.fork hf ) -- current fork id
-        , COALESCE( ( SELECT hid.consistent_block FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
+        , COALESCE( ( SELECT hafd.block_id_to_num(hid.consistent_block) FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
         , _is_forking
         , _is_attached
         , NULL
@@ -67,7 +67,7 @@ BEGIN
             _name
         , _schema
         , ( SELECT MAX( hf.id ) FROM hafd.fork hf ) -- current fork id
-        , COALESCE( ( SELECT hid.consistent_block FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
+        , COALESCE( ( SELECT hafd.block_id_to_num(hid.consistent_block) FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
         , _is_forking
         , False
         , _stages
@@ -228,7 +228,7 @@ CREATE OR REPLACE FUNCTION hive.app_context_attach( _contexts hive.contexts_grou
 AS
 $BODY$
 DECLARE
-    __head_of_irreversible_block hafd.blocks.num%TYPE:=0;
+    __head_of_irreversible_block INTEGER:=0;
     __current_block_num INT;
     __fork_id hafd.fork.id%TYPE := 1;
     __lead_context hafd.context_name := _contexts[1];
@@ -244,7 +244,7 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = __lead_context;
 
-    SELECT hir.consistent_block INTO __head_of_irreversible_block
+    SELECT hafd.block_id_to_num(hir.consistent_block) INTO __head_of_irreversible_block
     FROM hafd.hive_state hir;
 
     IF __current_block_num > __head_of_irreversible_block THEN
@@ -481,7 +481,7 @@ $BODY$
 DECLARE
     __result hafd.contexts.irreversible_block%TYPE;
 BEGIN
-    SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hafd.hive_state;
+    SELECT COALESCE( hafd.block_id_to_num(consistent_block), 0 ) INTO __result FROM hafd.hive_state;
     RETURN __result;
 END;
 $BODY$;
@@ -501,7 +501,18 @@ BEGIN
         FROM hafd.contexts hc
         WHERE hc.name = _context_name;
     ELSE
-        __result := COALESCE((SELECT hb.num from hafd.blocks hb ORDER BY num DESC LIMIT 1), 0);
+        -- Non-forking contexts use the global consistent_block from hive_state.
+        -- Before end_massive_sync, consistent_block may be NULL, so we also consider
+        -- the max block_num from any blocks (using canonical = highest fork_id).
+        SELECT GREATEST(
+            COALESCE(hafd.block_id_to_num(hs.consistent_block), 0),
+            CASE 
+                WHEN hs.consistent_block IS NULL THEN
+                    COALESCE((SELECT MAX(hafd.block_id_to_num(hb.block_id)) FROM hafd.blocks hb), 0)
+                ELSE 0
+            END
+        ) INTO __result
+        FROM hafd.hive_state hs;
     END IF;
 
     RETURN __result;
@@ -729,7 +740,7 @@ $BODY$
 ;
 
 
-CREATE OR REPLACE FUNCTION hive.app_state_providers_update( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _context hafd.context_name )
+CREATE OR REPLACE FUNCTION hive.app_state_providers_update( _first_block INTEGER, _last_block INTEGER, _context hafd.context_name )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -738,7 +749,7 @@ $BODY$
 DECLARE
     __context_id hafd.contexts.id%TYPE;
     __is_attached BOOL;
-    __current_block_num hafd.blocks.num%TYPE;
+    __current_block_num INTEGER;
 BEGIN
     SELECT hac.id, hca.is_attached, hac.current_block_num
     FROM hafd.contexts hac
@@ -862,7 +873,7 @@ CREATE OR REPLACE FUNCTION hive.is_app_in_sync( _contexts hive.contexts_group  )
 AS
 $BODY$
 BEGIN
-    RETURN COALESCE((SELECT BOOL_AND(hc.id IS NOT NULL AND hca.is_attached AND consistent_block - hc.current_block_num <= 1)
+    RETURN COALESCE((SELECT BOOL_AND(hc.id IS NOT NULL AND hca.is_attached AND hafd.block_id_to_num(consistent_block) - hc.current_block_num <= 1)
                      FROM UNNEST(_contexts) AS context_names(name)
                      LEFT JOIN hafd.contexts hc USING(name)
                      JOIN hafd.contexts_attachment hca ON hca.context_id = hc.id
@@ -890,12 +901,11 @@ CREATE OR REPLACE FUNCTION hive.get_app_current_block_age(_contexts hive.context
     STABLE
 AS $BODY$
 BEGIN
-    RETURN now() - (select min(coalesce(hafd.blocks.created_at, hafd.blocks_reversible.created_at, to_timestamp(0))) from
-                    UNNEST(_contexts) AS context_names(name)
+    -- With unified tables, use hive.blocks_view which handles canonical row selection
+    RETURN now() - (SELECT min(coalesce(hb.created_at, to_timestamp(0)))
+                    FROM UNNEST(_contexts) AS context_names(name)
                     LEFT JOIN hafd.contexts USING(name)
-                    LEFT JOIN hafd.blocks on hafd.blocks.num = hafd.contexts.current_block_num
-                    LEFT JOIN hafd.blocks_reversible on hafd.blocks_reversible.num = hafd.contexts.current_block_num AND
-                                                        hafd.blocks_reversible.fork_id = hafd.contexts.fork_id
+                    LEFT JOIN hive.blocks_view hb ON hb.num = hafd.contexts.current_block_num
                     );
 END;
 $BODY$;
