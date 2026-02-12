@@ -1346,16 +1346,12 @@ replay_filtered_haf_data_accounts_body_operations:
     # Local path must match cache type (haf_filtered) for NFS fallback to work
     DATA_CACHE_DIR: "/cache/haf_filtered_${CI_PIPELINE_ID}_filtered"
     FILTERED_CACHE_KEY: "${CI_PIPELINE_ID}_filtered"
-  after_script:
-    - rm "${DATA_CACHE_DIR}/replay_running" -f
+  script:
+    - !reference [.prepare_haf_data_5m, script]
     - |
       # Store filtered data via cache-manager (creates tar on NFS)
-      # Fetch cache-manager from common-ci-configuration
+      # cache-manager.sh was already fetched by .prepare_haf_data_5m script
       CACHE_MANAGER="/tmp/cache-manager.sh"
-      if [[ ! -x "$CACHE_MANAGER" ]]; then
-        curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
-        chmod +x "$CACHE_MANAGER"
-      fi
       echo "Storing filtered cache: type=haf_filtered key=${FILTERED_CACHE_KEY}"
       "$CACHE_MANAGER" put "haf_filtered" "${FILTERED_CACHE_KEY}" "${DATA_CACHE_DIR}"
       echo "Filtered cache stored successfully"
