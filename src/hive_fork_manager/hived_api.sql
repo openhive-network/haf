@@ -583,19 +583,30 @@ BEGIN
         RETURN;
     END IF;
 
-    -- Identify blocks to delete:
-    -- For each block_num <= _new_irreversible_block:
-    -- Keep block with HIGHEST fork_id (and all blocks on fork 0).
-    -- Delete others (orphans).
+    -- Fast path: if no block conflicts recorded, there are no orphan forks.
+    -- block_conflicts is populated by push_block() when a block_num arrives
+    -- on a different fork. If empty, skip the expensive full-table scan.
+    IF NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1) THEN
+        RETURN;
+    END IF;
 
-    WITH orphans AS (
+    -- Identify blocks to delete:
+    -- Only look at block_nums listed in block_conflicts (those with multiple versions).
+    -- For each conflicted block_num <= _new_irreversible_block:
+    -- Keep block with HIGHEST fork_id. Delete others (orphans).
+
+    WITH conflicted_blocks AS (
+        SELECT bc.block_num
+        FROM hafd.block_conflicts bc
+        WHERE bc.block_num <= _new_irreversible_block
+    ),
+    orphans AS (
         SELECT hb.block_id
         FROM hafd.blocks hb
-        WHERE hafd.block_id_to_num(hb.block_id) <= _new_irreversible_block
-          AND hafd.block_id_to_fork(hb.block_id) != 0
-          AND EXISTS (
+        JOIN conflicted_blocks cb ON hafd.block_id_to_num(hb.block_id) = cb.block_num
+        WHERE EXISTS (
               SELECT 1 FROM hafd.blocks hb2
-              WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+              WHERE hafd.block_id_to_num(hb2.block_id) = cb.block_num
                 AND hafd.block_id_to_fork(hb2.block_id) > hafd.block_id_to_fork(hb.block_id)
           )
     )
