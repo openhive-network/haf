@@ -732,8 +732,8 @@ develop = true
 
 [package.dependencies]
 hiveio-beekeepy = ">=1.28.5"
-hiveio-test-tools = ">=0.0.2"
-hiveio-wax = ">=2.0.0rc0"
+hiveio-test-tools = ">=2.0.1"
+hiveio-wax = ">=2.0.1"
 msgspec = ">=0.20.0"
 pytest = ">=8.3.5"
 pytest-asyncio = ">=0.25.3"
@@ -815,20 +815,20 @@ reference = "gitlab-hive"
 
 [[package]]
 name = "hiveio-test-tools"
-version = "0.0.2"
+version = "2.0.1.post20260213121258"
 description = "Tools for testing hive software"
 optional = false
 python-versions = ">=3.12,<4"
 groups = ["main"]
 files = [
-    {file = "hiveio_test_tools-0.0.2-py3-none-any.whl", hash = "sha256:e338e1af5f2d848685d02cf89effb7efa98c765c743cefafb17a62a7a90439a6"},
+    {file = "hiveio_test_tools-2.0.1.post20260213121258-py3-none-any.whl", hash = "sha256:7900e08b1655ac198d28d638ddbd6d4a9543a1eccc1f41c5d80f18dc56a6e52b"},
 ]
 
 [package.dependencies]
 abstractcp = ">=0.9.9"
 hiveio-beekeepy = ">=1.28.5"
 hiveio-schemas = ">=1.28.1"
-hiveio-wax = ">=1.28.4rc0"
+hiveio-wax = ">=2.0.1.post20260213121258"
 loguru = ">=0.7.2"
 msgspec = ">=0.20.0"
 python-dateutil = ">=2.8.2"
@@ -840,14 +840,14 @@ reference = "gitlab-hive"
 
 [[package]]
 name = "hiveio-wax"
-version = "2.0.1"
+version = "2.0.1.post20260213121258"
 description = ""
 optional = false
 python-versions = ">=3.12,<4"
 groups = ["main"]
 files = [
-    {file = "hiveio_wax-2.0.1-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:b606be4e28be1e63ceda9d50343416f91fc0ff9e23dd13f2afe2b4cd800ba1f4"},
-    {file = "hiveio_wax-2.0.1-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:de742ac5b11c3e6d7b553996ecfadc23ee5b330d8a8fb362699930ba8f3b9a03"},
+    {file = "hiveio_wax-2.0.1.post20260213121258-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:540cb621209b2486c59d8bed70acea79c44dc53804960ec9c76b8434f6ad30ef"},
+    {file = "hiveio_wax-2.0.1.post20260213121258-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:ed447cc9bbb9efad21fe0264e8e7916b0f2a81637df8537340dc37dfe294597e"},
 ]
 
 [package.dependencies]
