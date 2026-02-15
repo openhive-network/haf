@@ -140,6 +140,10 @@ BEGIN
     -- We have 3 forks: 1 (blocks: 4,5,6,7,10), 2 (blocks: 7,8,9), 3 (blocks: 8,9,10)
     -- Context is working on block 8 on fork 2
 
+    -- Record block conflicts (block_nums with multiple fork versions)
+    -- In production, push_block() populates this when a block arrives on a different fork
+    INSERT INTO hafd.block_conflicts(block_num) VALUES (7), (8), (9), (10);
+
     -- Set state to LIVE to simulate live sync where forks can happen
     -- (remove_orphan_forks only executes during LIVE state)
     UPDATE hafd.hive_state SET state = 'LIVE';
