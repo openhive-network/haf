@@ -205,8 +205,6 @@ default:
 verify_poetry_lock_sanity:
   extends: .verify_poetry_lock_sanity_template
   stage: build_and_test_phase_1
-  # Allow failure until Python 3.14 compatible wax/schemas are published to GitLab PyPI
-  allow_failure: true
   variables:
     PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
   before_script:
