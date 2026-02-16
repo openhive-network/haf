@@ -218,6 +218,14 @@ verify_poetry_lock_sanity:
   tags:
     - public-runner-docker
 
+verify_poetry_lock_stability:
+  extends: .verify_poetry_lock_stability_template
+  stage: build_and_test_phase_1
+  variables:
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
+  tags:
+    - public-runner-docker
+
 # =============================================================================
 # Change Detection & Quick Test Setup
 # =============================================================================
