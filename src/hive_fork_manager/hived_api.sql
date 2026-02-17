@@ -55,7 +55,8 @@ CREATE TYPE hafd.operations_type AS (
     trx_in_block smallint,
     op_type_id smallint,
     op_pos integer,
-    body_binary hafd.operation
+    body_binary hafd.operation,
+    custom_json_type_id INTEGER
 );
 
 DROP TYPE IF EXISTS hafd.accounts_type CASCADE;
@@ -200,8 +201,8 @@ BEGIN
     -- Insert operations (original compact format with encoded id)
     -- o.id encodes: (block_num << 32) | pos_in_block
     -- op_type_id is stored as a separate column
-    INSERT INTO hafd.operations (block_id, trx_in_block, op_type_id, op_pos, body_binary, id)
-    SELECT __block_id, o.trx_in_block, o.op_type_id, o.op_pos, o.body_binary, o.id
+    INSERT INTO hafd.operations (block_id, trx_in_block, op_type_id, op_pos, body_binary, id, custom_json_type_id)
+    SELECT __block_id, o.trx_in_block, o.op_type_id, o.op_pos, o.body_binary, o.id, o.custom_json_type_id
     FROM unnest(_operations) o;
 
     -- Insert accounts (original compact format with block_id)

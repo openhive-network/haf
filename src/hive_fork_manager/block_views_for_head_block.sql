@@ -97,7 +97,8 @@ SELECT
     ho.op_pos,
     ho.op_type_id,
     ho.body_binary,
-    ho.body_binary::jsonb AS body
+    ho.body_binary::jsonb AS body,
+    ho.custom_json_type_id
 FROM hafd.operations ho
 WHERE
     NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
@@ -129,7 +130,8 @@ SELECT
     ov.op_type_id,
     b.created_at AS timestamp,
     ov.body_binary,
-    ov.body
+    ov.body,
+    ov.custom_json_type_id
 FROM hive.operations_view ov
 JOIN hive.blocks_view b ON b.num = ov.block_num;
 
@@ -360,7 +362,8 @@ SELECT
     ho.op_pos,
     ho.op_type_id,
     ho.body_binary,
-    ho.body_binary::jsonb AS body
+    ho.body_binary::jsonb AS body,
+    ho.custom_json_type_id
 FROM hafd.operations ho
 CROSS JOIN hafd.hive_state hs
 WHERE hafd.operation_id_to_block_num(ho.id) <= hafd.block_id_to_num(hs.consistent_block)
@@ -382,7 +385,8 @@ SELECT
     ov.op_type_id,
     hb.created_at AS timestamp,
     ov.body_binary,
-    ov.body
+    ov.body,
+    ov.custom_json_type_id
 FROM hive.irreversible_operations_view ov
 JOIN hive.irreversible_blocks_view hb ON hb.num = ov.block_num;
 

@@ -373,7 +373,8 @@ BEGIN
                 ho.trx_in_block, ho.op_pos,
                 ho.op_type_id,
                 ho.body_binary,
-                ho.body_binary::jsonb AS body
+                ho.body_binary::jsonb AS body,
+                ho.custom_json_type_id
             FROM hafd.operations ho
             JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
             ;', __schema, __schema
@@ -388,7 +389,8 @@ BEGIN
                 ho.trx_in_block, ho.op_pos,
                 ho.op_type_id,
                 ho.body_binary,
-                ho.body_binary::jsonb AS body
+                ho.body_binary::jsonb AS body,
+                ho.custom_json_type_id
             FROM hafd.operations ho
             JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
             ;', __schema, __schema
@@ -424,7 +426,8 @@ BEGIN
                 ho.op_type_id,
                 b.created_at AS timestamp,
                 ho.body_binary,
-                ho.body_binary::jsonb AS body
+                ho.body_binary::jsonb AS body,
+                ho.custom_json_type_id
             FROM hafd.operations ho
             JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
             ;', __schema, __schema
@@ -440,7 +443,8 @@ BEGIN
                 ho.op_type_id,
                 b.created_at AS timestamp,
                 ho.body_binary,
-                ho.body_binary::jsonb AS body
+                ho.body_binary::jsonb AS body,
+                ho.custom_json_type_id
             FROM hafd.operations ho
             JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
             ;', __schema, __schema
@@ -473,7 +477,8 @@ BEGIN
             ho.trx_in_block, ho.op_pos,
             ho.op_type_id,
             ho.body_binary,
-            ho.body_binary::jsonb AS body
+            ho.body_binary::jsonb AS body,
+            ho.custom_json_type_id
         FROM hafd.operations ho
         JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
         ;', __schema, __schema
@@ -506,7 +511,8 @@ BEGIN
             ho.op_type_id,
             b.created_at AS timestamp,
             ho.body_binary,
-            ho.body_binary::jsonb AS body
+            ho.body_binary::jsonb AS body,
+            ho.custom_json_type_id
         FROM hafd.operations ho
         JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
         ;', __schema, __schema
