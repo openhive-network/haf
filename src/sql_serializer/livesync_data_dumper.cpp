@@ -335,7 +335,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       {
         std::unique_lock<std::mutex> lock(_mutex);
         _condition_variable.wait(lock, [&](){ return _command_queue.size() < _max_queue_depth; });
-        _command_queue.emplace_back(sequence_number, sql_command);
+        _command_queue.emplace_back(sequence_number, std::move(sql_command));
       }
       _condition_variable.notify_one();
     }

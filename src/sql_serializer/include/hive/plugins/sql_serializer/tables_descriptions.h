@@ -89,13 +89,18 @@ namespace hive::plugins::sql_serializer {
       using data2_sql_tuple_base::data2_sql_tuple_base;
 
       // Used for live sync (push_block) - generates format matching hafd.operations_type
-      // Format: (id, trx_in_block, op_type_id, op_pos, body_binary)
+      // Format: (id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id)
       std::string operator()(typename container_t::const_reference data) const
       {
         std::vector<char> opDeserialized = fc::raw::pack_to_vector( data.op );
 
-        return std::to_string(data.operation_id) + ',' + std::to_string(data.trx_in_block) + ',' +
-        std::to_string(data.op_type_id) + ',' + std::to_string(data.op_in_trx) + "," + escape_raw(opDeserialized) + "::bytea";
+        std::string result = std::to_string(data.operation_id) + ',' + std::to_string(data.trx_in_block) + ',' +
+        std::to_string(data.op_type_id) + ',' + std::to_string(data.op_in_trx) + "," + escape_raw(opDeserialized) + "::bytea,";
+        if( data.custom_json_type_id.valid() )
+          result += std::to_string( *data.custom_json_type_id );
+        else
+          result += "NULL";
+        return result;
       }
       };
     };
