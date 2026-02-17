@@ -59,17 +59,17 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   // id encoding: (block_num << 32) | pos_in_block (type NOT in id)
   // op_type_id is stored as a separate column
   template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::TABLE[] = "hafd.operations";
-  template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::COLS[] = "block_id, trx_in_block, op_type_id, op_pos, body_binary, id";
+  template<> const char hive_operations< container_view< std::vector<PSQL::processing_objects::process_operation_t> > >::COLS[] = "block_id, trx_in_block, op_type_id, op_pos, body_binary, id, custom_json_type_id";
 
   template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::TABLE[] = "hafd.operations";
-  template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::COLS[] = "block_id, trx_in_block, op_type_id, op_pos, body_binary, id";
+  template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::COLS[] = "block_id, trx_in_block, op_type_id, op_pos, body_binary, id, custom_json_type_id";
 
   // id encoding: (block_num << 32) | pos_in_block
   // op_type_id is stored separately (not encoded in id)
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_operation_t& operation)
   {
     int32_t block_num = static_cast<int32_t>(operation.operation_id >> 32);
-    stream.write_values(make_block_id(block_num), operation.trx_in_block, operation.op_type_id, operation.op_in_trx, operation.op, operation.operation_id);
+    stream.write_values(make_block_id(block_num), operation.trx_in_block, operation.op_type_id, operation.op_in_trx, operation.op, operation.operation_id, operation.custom_json_type_id);
   }
 
   // Accounts - uses block_id for fork tracking
