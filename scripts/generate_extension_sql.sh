@@ -35,6 +35,7 @@ SCHEMA_SOURCES=(
     forks.sql
     app_context.sql
     types/domains.sql
+    types/block_id.sql
     types/operation/operation.sql
     types/operation/operation_flow.sql
     types/operation/operation_impl.sql
@@ -71,6 +72,7 @@ DEPLOY_SOURCES=(
     types/operation/operation_flow.sql
     types/operation/operation_id.sql
     types/asset_unique_id.sql
+    types/block_id.sql
     pruning/prune_irreversible_blocks.sql
     tools.sql
     block_views_for_head_block.sql
