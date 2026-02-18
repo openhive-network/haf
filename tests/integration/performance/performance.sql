@@ -94,11 +94,18 @@
 --   - Witness statistics
 --   Source: hive/haf_block_explorer/
 --
--- SECTION 7: AGGREGATIONS
+-- SECTION 7: BLOCK EXPLORER - TRANSACTION STATISTICS
+--   Tests blocks_view created_at patterns used by get_transaction_aggregation().
+--   Exercises the covering index (created_at) INCLUDE (block_id) for:
+--   - Date range GROUP BY (daily/monthly aggregation over ~1M blocks)
+--   - LATERAL join finding nearest block by timestamp
+--   These patterns caused 15s+ timeouts without proper index coverage.
+--
+-- SECTION 8: AGGREGATIONS
 --   Common analytical queries used by dashboards and statistics endpoints.
 --   Tests GROUP BY performance on large datasets.
 --
--- SECTION 8: BLOCK API (hived block_api)
+-- SECTION 9: BLOCK API (hived block_api)
 --   Core block retrieval API provided by hived, tested via JMeter benchmarks.
 --   Key patterns:
 --   - get_block: Full block retrieval with operations/transactions
@@ -335,31 +342,71 @@ SELECT _run_benchmark('6.EXPLORER', '6.5 witness statistics',
      GROUP BY a.name ORDER BY blocks_produced DESC LIMIT 21');
 
 -- =============================================================================
--- SECTION 7: AGGREGATION QUERIES
+-- SECTION 7: BLOCK EXPLORER - TRANSACTION STATISTICS (created_at patterns)
+-- =============================================================================
+-- These queries exercise the blocks_view created_at index, critical for
+-- hafbe_backend.get_transaction_aggregation() which uses:
+--   1. date_trunc GROUP BY on created_at (date range scan over ~1M blocks)
+--   2. LATERAL join finding nearest block by created_at (per-period lookup)
+-- Without the covering index (created_at) INCLUDE (block_id), these queries
+-- regress from ~120ms to >15s due to heap access in the block_conflicts filter.
+
+SELECT _run_benchmark('7.TXN_STATS', '7.1 blocks_view group by created_at (1 month)',
+    'SELECT date_trunc(''day'', b.created_at) as date, count(*) as block_count
+     FROM hive.blocks_view b
+     WHERE b.created_at >= ''2016-08-01''::timestamp
+       AND b.created_at <  ''2016-09-01''::timestamp
+     GROUP BY 1 ORDER BY 1');
+
+SELECT _run_benchmark('7.TXN_STATS', '7.2 LATERAL join find block by created_at',
+    'SELECT * FROM (
+       SELECT date_trunc(''day'', b.created_at) as date, NULL::INT as last_block_num
+       FROM hive.blocks_view b
+       WHERE b.created_at >= ''2016-08-01''::timestamp
+         AND b.created_at <  ''2016-09-01''::timestamp
+       GROUP BY 1 ORDER BY 1
+     ) fb
+     LEFT JOIN LATERAL (
+       SELECT b.num AS last_block_num
+       FROM hive.blocks_view b
+       WHERE b.created_at <= fb.date + interval ''1 day''
+       ORDER BY b.created_at DESC
+       LIMIT 1
+     ) jl ON fb.last_block_num IS NULL');
+
+SELECT _run_benchmark('7.TXN_STATS', '7.3 blocks_view group by created_at (1 year)',
+    'SELECT date_trunc(''month'', b.created_at) as date, count(*) as block_count
+     FROM hive.blocks_view b
+     WHERE b.created_at >= ''2016-01-01''::timestamp
+       AND b.created_at <  ''2017-01-01''::timestamp
+     GROUP BY 1 ORDER BY 1');
+
+-- =============================================================================
+-- SECTION 8: AGGREGATION QUERIES
 -- =============================================================================
 
-SELECT _run_benchmark('7.AGGREGATE', '7.1 op type distribution',
+SELECT _run_benchmark('8.AGGREGATE', '8.1 op type distribution',
     'SELECT ot.name, COUNT(*) as op_count FROM hive.operations_view o
      JOIN hafd.operation_types ot ON ot.id = o.op_type_id
      WHERE o.block_num BETWEEN 20000000 AND 20010000
      GROUP BY ot.name ORDER BY op_count DESC LIMIT 20');
 
-SELECT _run_benchmark('7.AGGREGATE', '7.2 most active accounts',
+SELECT _run_benchmark('8.AGGREGATE', '8.2 most active accounts',
     'SELECT a.name, COUNT(*) as op_count FROM hive.account_operations_view ao
      JOIN hive.accounts_view a ON a.id = ao.account_id
      WHERE ao.block_num BETWEEN 20000000 AND 20010000
      GROUP BY a.name ORDER BY op_count DESC LIMIT 20');
 
 -- =============================================================================
--- SECTION 8: BLOCK API QUERIES (hived block_api)
+-- SECTION 9: BLOCK API QUERIES (hived block_api)
 -- =============================================================================
 
-SELECT _run_benchmark('8.BLOCK_API', '8.1 get_block full',
+SELECT _run_benchmark('9.BLOCK_API', '9.1 get_block full',
     'SELECT b.num, b.hash, b.prev, b.created_at, b.producer_account_id,
        b.transaction_merkle_root, b.extensions, b.witness_signature, b.signing_key
      FROM hive.blocks_view b WHERE b.num = 25000000');
 
-SELECT _run_benchmark('8.BLOCK_API', '8.2 get_block with ops',
+SELECT _run_benchmark('9.BLOCK_API', '9.2 get_block with ops',
     'WITH block_data AS (
        SELECT num, hash, prev, created_at, producer_account_id
        FROM hive.blocks_view WHERE num = 25000000)
@@ -368,28 +415,28 @@ SELECT _run_benchmark('8.BLOCK_API', '8.2 get_block with ops',
      LEFT JOIN hive.operations_view o ON o.block_num = bd.num
      ORDER BY o.trx_in_block, o.op_pos');
 
-SELECT _run_benchmark('8.BLOCK_API', '8.3 get_block with txs',
+SELECT _run_benchmark('9.BLOCK_API', '9.3 get_block with txs',
     'SELECT b.num, b.hash, b.created_at, t.trx_hash, t.trx_in_block,
        t.ref_block_num, t.ref_block_prefix, t.expiration
      FROM hive.blocks_view b
      LEFT JOIN hive.transactions_view t ON t.block_num = b.num
      WHERE b.num = 25000000 ORDER BY t.trx_in_block');
 
-SELECT _run_benchmark('8.BLOCK_API', '8.4 get_block_header',
+SELECT _run_benchmark('9.BLOCK_API', '9.4 get_block_header',
     'SELECT b.num, b.prev, b.created_at, b.producer_account_id, b.transaction_merkle_root
      FROM hive.blocks_view b WHERE b.num = 25000000');
 
-SELECT _run_benchmark('8.BLOCK_API', '8.5 get_block_range 10',
+SELECT _run_benchmark('9.BLOCK_API', '9.5 get_block_range 10',
     'SELECT b.num, b.hash, b.prev, b.created_at, b.producer_account_id
      FROM hive.blocks_view b
      WHERE b.num >= 20000000 AND b.num < 20000010 ORDER BY b.num');
 
-SELECT _run_benchmark('8.BLOCK_API', '8.6 get_block_range 50',
+SELECT _run_benchmark('9.BLOCK_API', '9.6 get_block_range 50',
     'SELECT b.num, b.hash, b.prev, b.created_at, b.producer_account_id
      FROM hive.blocks_view b
      WHERE b.num >= 20000000 AND b.num < 20000050 ORDER BY b.num');
 
-SELECT _run_benchmark('8.BLOCK_API', '8.7 get_block_range+ops',
+SELECT _run_benchmark('9.BLOCK_API', '9.7 get_block_range+ops',
     'SELECT b.num as block_num, b.hash, b.created_at,
        o.id as op_id, o.trx_in_block, o.op_pos, o.op_type_id, o.body_binary
      FROM hive.blocks_view b
@@ -397,7 +444,7 @@ SELECT _run_benchmark('8.BLOCK_API', '8.7 get_block_range+ops',
      WHERE b.num >= 20000000 AND b.num < 20000010
      ORDER BY b.num, o.trx_in_block, o.op_pos');
 
-SELECT _run_benchmark('8.BLOCK_API', '8.8 random block access',
+SELECT _run_benchmark('9.BLOCK_API', '9.8 random block access',
     'SELECT num, hash, created_at, producer_account_id
      FROM hive.blocks_view WHERE num IN (4139328, 3890821, 4694222, 3609093, 4029605)');
 
