@@ -53,6 +53,12 @@ CREATE INDEX IF NOT EXISTS hive_blocks_block_num_idx ON hafd.blocks (
 
 CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hafd.blocks (producer_account_id);
 
+-- Timestamp index for queries that filter/sort blocks by created_at
+-- (e.g. LATERAL joins in get_transaction_statistics, convert_to_block_num)
+-- INCLUDE (block_id) enables Index Only Scan even with the block_conflicts
+-- filter in blocks_view, avoiding heap access (~3.1 GB at 30M blocks)
+CREATE INDEX IF NOT EXISTS hive_blocks_created_at_idx ON hafd.blocks USING btree ( created_at ) INCLUDE ( block_id );
+
 CREATE STATISTICS IF NOT EXISTS blocks_block_num_stats ON (hafd.block_id_to_num(block_id)) FROM hafd.blocks;
 
 -- =============================================================================
