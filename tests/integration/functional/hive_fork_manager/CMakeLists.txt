@@ -135,16 +135,11 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( hived_api/disable_indexes_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/enable_indexes_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/enable_indexes_compare_saved_statement_test.sql )
- # OBSOLETE: remove_obsolete_end_massive_sync tests use old schema and removed functions
- # ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_end_massive_sync_test.sql )
- # ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_end_massive_sync_with_app_test.sql )
- # OBSOLETE: These test files don't exist or test removed functionality
- # ADD_SQL_FUNCTIONAL_TEST( hived_api/set_irreversible_not_copy_reversible_data_from_old_fork_test.sql )
- # ADD_SQL_FUNCTIONAL_TEST( hived_api/set_irreversible_not_copy_reversible_data_from_top_fork_test.sql )
- # ADD_SQL_FUNCTIONAL_TEST( hived_api/set_irreversible_cleaning_old_fork_data_test.sql )
- # OBSOLETE: removing_inconsistent tests use old schema
- # ADD_SQL_FUNCTIONAL_TEST( hived_api/removing_inconsistent_irreversibele_data.sql )
- # ADD_SQL_FUNCTIONAL_TEST( hived_api/not_removing_inconsistent_irreversibele_data.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_end_massive_sync_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_end_massive_sync_with_app_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/set_irreversible_cleaning_old_fork_data_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/removing_inconsistent_irreversibele_data.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/not_removing_inconsistent_irreversibele_data.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/connect_test.sql )
  # OBSOLETE: copy_* tests removed - unified tables architecture no longer copies data
  # ADD_SQL_FUNCTIONAL_TEST( hived_api/copy_accounts_to_irreversible.sql )
@@ -168,8 +163,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( hived_api/are_fk_dropped_2_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/are_fk_dropped_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/autodetach.sql )
- # OBSOLETE: connect_test_not_remove_reversible tests reversible tables that no longer exist
- # ADD_SQL_FUNCTIONAL_TEST( hived_api/connect_test_not_remove_reversible.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/connect_test_not_remove_reversible.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/set_sync_state.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/get_sync_state.sql )
 
@@ -431,8 +425,5 @@ SET_TESTS_PROPERTIES(
 
  # Refactored test examples using test_tools.sql
  # These demonstrate the test refactoring approach and validate test_tools functions
- # OBSOLETE: copy_*_REFACTORED tests removed - unified tables architecture no longer copies data
- # ADD_SQL_FUNCTIONAL_TEST(examples_refactored/copy_blocks_to_irreversible_REFACTORED.sql)
- # ADD_SQL_FUNCTIONAL_TEST(examples_refactored/copy_operations_to_irreversible_REFACTORED.sql)
  ADD_SQL_FUNCTIONAL_TEST(examples_refactored/app_next_block_process_new_block_event_REFACTORED.sql)
  ADD_SQL_FUNCTIONAL_TEST(examples_refactored/two_iterations_REFACTORED.sql)
