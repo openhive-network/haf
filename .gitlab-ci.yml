@@ -208,13 +208,7 @@ verify_poetry_lock_sanity:
   variables:
     PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
   before_script:
-    # Initialize submodules
     - !reference [.init_submodules, before_script]
-    # Regenerate poetry.lock for Python 3.14 compatibility
-    - poetry -C "${PYPROJECT_DIR}" env use python3
-    - source $(poetry -C "${PYPROJECT_DIR}" env info --path)/bin/activate
-    - poetry -C "${PYPROJECT_DIR}" lock --no-update 2>/dev/null || poetry -C "${PYPROJECT_DIR}" lock
-    - poetry -C "${PYPROJECT_DIR}" install
   tags:
     - public-runner-docker
 
@@ -866,8 +860,6 @@ hfm_functional_tests_testnet:
     - python3 -m venv venv/
     - . venv/bin/activate
     - cd ${PYPROJECT_DIR}
-    # Regenerate poetry.lock for Python 3.14 compatibility
-    - poetry lock --no-update 2>/dev/null || poetry lock
     # Retry poetry install up to 3 times (transient network failures downloading packages)
     - |
       poetry_success=false
