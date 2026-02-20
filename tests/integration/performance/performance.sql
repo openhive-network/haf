@@ -119,9 +119,6 @@
 \pset pager off
 \set QUIET on
 
--- Set statement timeout to 60 seconds to avoid hanging on slow queries
-SET statement_timeout = '60s';
-
 -- Create temporary table to store benchmark results
 DROP TABLE IF EXISTS _perf_results;
 CREATE TEMP TABLE _perf_results (
@@ -149,8 +146,20 @@ DECLARE
     v_buffers_hit BIGINT;
     v_buffers_read BIGINT;
 BEGIN
-    -- Run EXPLAIN ANALYZE with JSON output
-    EXECUTE 'EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ' || p_query INTO v_explain_json;
+    -- Run benchmark query with per-query timeout (SET LOCAL scoped to this transaction)
+    BEGIN
+        SET LOCAL statement_timeout = '60s';
+        EXECUTE 'EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ' || p_query INTO v_explain_json;
+        SET LOCAL statement_timeout = 0;
+    EXCEPTION
+        WHEN query_canceled THEN
+            -- Query timed out — reset timeout and record failure
+            SET LOCAL statement_timeout = 0;
+            INSERT INTO _perf_results (section, query_name, exec_time_ms, plan_time_ms, rows_returned, buffers_hit, buffers_read)
+            VALUES (p_section, p_query_name, -1, -1, -1, -1, -1);
+            RAISE NOTICE 'TIMEOUT: % - % (exceeded 60s)', p_section, p_query_name;
+            RETURN;
+    END;
 
     -- Extract metrics from JSON
     v_exec_time := (v_explain_json->0->>'Execution Time')::NUMERIC;
@@ -167,11 +176,6 @@ BEGIN
     RAISE NOTICE 'Completed: % - % (% ms)', p_section, p_query_name, ROUND(v_exec_time, 3);
 
 EXCEPTION
-    WHEN query_canceled THEN
-        -- Query timed out
-        INSERT INTO _perf_results (section, query_name, exec_time_ms, plan_time_ms, rows_returned, buffers_hit, buffers_read)
-        VALUES (p_section, p_query_name, -1, -1, -1, -1, -1);
-        RAISE NOTICE 'TIMEOUT: % - % (exceeded 60s)', p_section, p_query_name;
     WHEN OTHERS THEN
         -- Other error
         INSERT INTO _perf_results (section, query_name, exec_time_ms, plan_time_ms, rows_returned, buffers_hit, buffers_read)
