@@ -478,7 +478,7 @@ $BODY$
 -- =============================================================================
 
 
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer, _lite_mode boolean DEFAULT FALSE )
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num INT, _first_block INT, _pruning integer, _lite_mode boolean DEFAULT FALSE )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
