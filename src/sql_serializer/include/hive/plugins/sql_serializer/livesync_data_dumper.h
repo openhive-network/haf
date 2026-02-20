@@ -126,14 +126,6 @@ namespace hive::plugins::sql_serializer {
     std::shared_ptr< transaction_controllers::transaction_controller > transactions_controller;
 
     const uint32_t _psql_first_block;
-    const uint32_t _pruning; // <=0 no pruning, > 0 tail of blocks
-
-    // block num of the last block scheduled to WAL, 0 means no block was scheduled yet
-    uint32_t _last_dumped_block = 0;
-
-    // block num currently being processed (set before async processing starts, cleared after)
-    // used to detect block failures during processing before _last_dumped_block is updated
-    std::atomic<uint32_t> _currently_processing_block{0};
 
     // worker thread that executes sql commands in the background
     // when enqueued, commands are written to a write-ahead log from the main thread.
@@ -169,6 +161,14 @@ namespace hive::plugins::sql_serializer {
 
     write_ahead_log_manager& _write_ahead_log;
     processing_thread _processing_thread;
+    const uint32_t _pruning; // <=0 no pruning, > 0 tail of blocks
+
+    // block num of the last block scheduled to WAL, 0 means no block was scheduled yet
+    uint32_t _last_dumped_block = 0;
+
+    // block num currently being processed (set before async processing starts, cleared after)
+    // used to detect block failures during processing before _last_dumped_block is updated
+    std::atomic<uint32_t> _currently_processing_block{0};
   };
 
 } // namespace hive::plugins::sql_serializer
