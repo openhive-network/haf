@@ -13,7 +13,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION hafd.make_block_id( _block_num INTEGER, _fork_id BIGINT )
     RETURNS hafd.block_id
-    IMMUTABLE PARALLEL SAFE LEAKPROOF
+    IMMUTABLE PARALLEL SAFE LEAKPROOF STRICT
 AS 'MODULE_PATHNAME', 'make_block_id' LANGUAGE C;
 
 CREATE OR REPLACE FUNCTION hafd.block_id_to_num( _id hafd.block_id )
