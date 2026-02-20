@@ -2,6 +2,7 @@
 #include <hive/plugins/sql_serializer/pqxx_conversions.hpp>
 
 #include <block_id.hpp>
+#include <hive/protocol/operation_id.hpp>
 
 namespace hive{ namespace plugins{ namespace sql_serializer {
 
@@ -64,7 +65,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   // op_type_id is stored separately (not encoded in id)
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_operation_t& operation)
   {
-    int32_t block_num = static_cast<int32_t>(operation.operation_id >> 32);
+    int32_t block_num = operation_id_to_block_num(operation.operation_id);
     stream.write_values(make_haf_block_id(block_num, 0), operation.trx_in_block, operation.op_type_id, operation.op_in_trx, operation.op, operation.operation_id, operation.custom_json_type_id);
   }
 
@@ -93,7 +94,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   // Write account_operation with block_id, operation_id, and op_type_id
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::account_operation_data_t& account_operation)
   {
-    int32_t block_num = static_cast<int32_t>(account_operation.operation_id >> 32);
+    int32_t block_num = operation_id_to_block_num(account_operation.operation_id);
 
     stream.write_values(account_operation.account_id, account_operation.transacting_account_id, account_operation.operation_seq_no, make_haf_block_id(block_num, 0), account_operation.operation_id, account_operation.op_type_id);
   }
