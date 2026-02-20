@@ -1,20 +1,16 @@
 #include <hive/plugins/sql_serializer/tables_descriptions.h>
 #include <hive/plugins/sql_serializer/pqxx_conversions.hpp>
 
+#include <block_id.hpp>
+
 namespace hive{ namespace plugins{ namespace sql_serializer {
 
   const char hive_blocks::TABLE[] = "hafd.blocks";
   const char hive_blocks::COLS[] = "block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger ";
 
-  // Convert block_number to block_id: block_id = (block_num << 32) | fork_id
-  // During massive sync, fork_id is always 0
-  inline int64_t make_block_id(int32_t block_num, int32_t fork_id = 0) {
-    return (static_cast<int64_t>(block_num) << 32) | static_cast<int64_t>(fork_id);
-  }
-
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_block_t& block)
   {
-    return stream.write_values(make_block_id(block.block_number),
+    return stream.write_values(make_haf_block_id(block.block_number, 0),
                                block.hash,
                                block.prev_hash,
                                block.created_at,
@@ -42,7 +38,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_transaction_t& transaction)
   {
-    stream.write_values(make_block_id(transaction.block_number), transaction.trx_in_block, transaction.hash, transaction.ref_block_num, transaction.ref_block_prefix, transaction.expiration,
+    stream.write_values(make_haf_block_id(transaction.block_number, 0), transaction.trx_in_block, transaction.hash, transaction.ref_block_num, transaction.ref_block_prefix, transaction.expiration,
                         transaction.signature);
   }
 
@@ -52,7 +48,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_transaction_multisig_t& transaction_multisig)
   {
-    stream.write_values(transaction_multisig.hash, transaction_multisig.signature, make_block_id(transaction_multisig.block_number));
+    stream.write_values(transaction_multisig.hash, transaction_multisig.signature, make_haf_block_id(transaction_multisig.block_number, 0));
   }
 
   // Operations - uses block_id and pre-computed id for performance
@@ -69,7 +65,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_operation_t& operation)
   {
     int32_t block_num = static_cast<int32_t>(operation.operation_id >> 32);
-    stream.write_values(make_block_id(block_num), operation.trx_in_block, operation.op_type_id, operation.op_in_trx, operation.op, operation.operation_id, operation.custom_json_type_id);
+    stream.write_values(make_haf_block_id(block_num, 0), operation.trx_in_block, operation.op_type_id, operation.op_in_trx, operation.op, operation.operation_id, operation.custom_json_type_id);
   }
 
   // Accounts - uses block_id for fork tracking
@@ -83,7 +79,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     // For accounts with block_number == 0 (dumped at startup when psql-first-block > 1),
     // write NULL since the creation block is unknown/not stored
-    stream.write_values(account.id, account.name, account.block_number == 0 ? fc::optional<int64_t>() : make_block_id(account.block_number));
+    stream.write_values(account.id, account.name, account.block_number == 0 ? fc::optional<int64_t>() : make_haf_block_id(account.block_number, 0));
   }
 
   // Account operations - uses block_id and operation_id for direct join to operations
@@ -99,7 +95,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     int32_t block_num = static_cast<int32_t>(account_operation.operation_id >> 32);
 
-    stream.write_values(account_operation.account_id, account_operation.transacting_account_id, account_operation.operation_seq_no, make_block_id(block_num), account_operation.operation_id, account_operation.op_type_id);
+    stream.write_values(account_operation.account_id, account_operation.transacting_account_id, account_operation.operation_seq_no, make_haf_block_id(block_num, 0), account_operation.operation_id, account_operation.op_type_id);
   }
 
   // Applied hardforks - uses block_id for fork tracking
@@ -107,7 +103,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   const char hive_applied_hardforks::COLS[] = "hardfork_num, block_id, hardfork_vop_id";
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::applied_hardforks_t& applied_hardfork)
   {
-    stream.write_values(applied_hardfork.hardfork_num, make_block_id(applied_hardfork.block_number), applied_hardfork.hardfork_vop_id);
+    stream.write_values(applied_hardfork.hardfork_num, make_haf_block_id(applied_hardfork.block_number, 0), applied_hardfork.hardfork_vop_id);
   }
 
 }}} // namespace hive::plugins::sql_serializer
