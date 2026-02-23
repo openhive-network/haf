@@ -120,7 +120,8 @@ BEGIN
 
     -- Mark blocks that have multiple fork versions as conflicts
     INSERT INTO hafd.block_conflicts (block_num)
-    VALUES (4), (5), (7), (8), (9);
+    VALUES (4), (5), (7), (8), (9)
+    ON CONFLICT DO NOTHING;
 
     UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(4, 0);
 END;

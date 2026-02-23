@@ -167,12 +167,46 @@ BEGIN
             'STM65w',
             1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000
         );
+
+        -- Track conflict if this block_num already has another version (matches push_block behavior)
+        INSERT INTO hafd.block_conflicts (block_num)
+        SELECT block_num
+        WHERE EXISTS (
+            SELECT 1 FROM hafd.blocks hb
+            WHERE hafd.block_id_to_num(hb.block_id) = block_num
+              AND hb.block_id != __block_id
+        )
+        ON CONFLICT DO NOTHING;
     END LOOP;
 END;
 $BODY$;
 
 COMMENT ON FUNCTION test.create_blocks_reversible(INT, INT, INT, INT, TIMESTAMP) IS
-'Creates a range of reversible blocks in hafd.blocks table with specified fork_id';
+'Creates a range of reversible blocks in hafd.blocks table with specified fork_id.
+Also populates hafd.block_conflicts when a block_num already has another version,
+matching hive.push_block() production behavior.';
+
+
+-- Populate block_conflicts from existing blocks data
+-- Call this after inserting blocks with overlapping block_nums across forks
+-- when using raw INSERT (not create_blocks_reversible which handles this automatically)
+CREATE OR REPLACE FUNCTION test.populate_block_conflicts()
+RETURNS void
+LANGUAGE 'plpgsql' AS
+$BODY$
+BEGIN
+    INSERT INTO hafd.block_conflicts (block_num)
+    SELECT hafd.block_id_to_num(block_id)
+    FROM hafd.blocks
+    GROUP BY hafd.block_id_to_num(block_id)
+    HAVING COUNT(*) > 1
+    ON CONFLICT DO NOTHING;
+END;
+$BODY$;
+
+COMMENT ON FUNCTION test.populate_block_conflicts() IS
+'Derives block_conflicts from existing blocks data. Call after raw INSERT
+into hafd.blocks when blocks have multiple fork versions.';
 
 
 -- ============================================================================
