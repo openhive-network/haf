@@ -454,20 +454,19 @@ DECLARE
     __max_block INT;
     __last_pruning integer;
 BEGIN
-    -- Clean up any inconsistent data from previous dirty state
+    -- assumptions:
+    -- sql-serializer WAL was replayed after (re)start
+    -- at the moment of call hived finished restarting and did removing reversible data from state if it was desired
     PERFORM hive.remove_inconsistent_irreversible_data();
 
-    -- Get max block from blocks table after cleanup
-    SELECT hafd.block_id_to_num(block_id) INTO __max_block
-    FROM hafd.blocks
-    ORDER BY block_id DESC
-    LIMIT 1;
+    SELECT MAX(num) INTO __max_block FROM hive.blocks_view;
 
     SELECT pruning INTO __last_pruning FROM hafd.hive_state;
 
-    -- After cleanup, max_block should be <= _block_num
-    -- Assertion: HAF cannot have more blocks than hived's state (except during startup when _block_num=0)
-    ASSERT COALESCE(__max_block, 0) <= _block_num OR COALESCE(__max_block, 0) < _first_block OR _block_num = 0,
+    -- After WAL replay, HAF should have at least as many blocks as hived's state reports.
+    -- If HAF has fewer blocks than hived, something is wrong (data loss).
+    -- Exception: when max_block < _first_block (pruned scenario) this is expected.
+    ASSERT COALESCE(__max_block, 0) >= _block_num OR COALESCE(__max_block, 0) < _first_block,
         format('Hived state cannot have more blocks on top micro fork than HAF. max_block=%s, _block_num=%s', __max_block, _block_num);
 
     -- If max_block > _block_num, we need to handle fork situation
