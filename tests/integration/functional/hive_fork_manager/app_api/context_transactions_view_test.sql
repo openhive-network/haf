@@ -70,6 +70,14 @@ BEGIN
     ;
 
     UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8;
+
+    -- Populate block_conflicts for fork resolution optimization
+    INSERT INTO hafd.block_conflicts (block_num)
+    SELECT hafd.block_id_to_num(block_id)
+    FROM hafd.blocks
+    GROUP BY hafd.block_id_to_num(block_id)
+    HAVING COUNT(*) > 1
+    ON CONFLICT DO NOTHING;
 END;
 $BODY$
 ;

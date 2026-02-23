@@ -263,7 +263,7 @@ BEGIN
 
     -- Record block conflicts (block_nums with multiple fork versions)
     -- In production, push_block() populates this when a block arrives on a different fork
-    INSERT INTO hafd.block_conflicts(block_num) VALUES (7), (8), (9);
+    INSERT INTO hafd.block_conflicts(block_num) VALUES (7), (8), (9) ON CONFLICT DO NOTHING;
 
     -- Set state to LIVE to enable orphan fork cleanup
     -- (remove_orphan_forks only executes during LIVE state)
