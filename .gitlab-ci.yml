@@ -303,6 +303,18 @@ detect_changes:
         SQL_CHANGED=$(echo "$NON_SKIP_FILES" | grep -E "$SQL_PATTERNS" || true)
         NON_SQL_SOURCE=$(echo "$NON_SKIP_FILES" | grep -vE "$SQL_PATTERNS" || true)
 
+        # Detect hfm functional test changes - these are under tests/ (skipped by
+        # SKIP_ALL_PATTERNS) but must still trigger the hfm_functional_tests job
+        HFM_TEST_FILES=$(echo "$CHANGED_FILES" | grep -E "^tests/integration/functional/hive_fork_manager/" || true)
+        if [[ -n "$HFM_TEST_FILES" ]]; then
+          HFM_TESTS_CHANGED=true
+          echo ""
+          echo "=== HFM functional test files changed ==="
+          echo "$HFM_TEST_FILES" | head -10
+        else
+          HFM_TESTS_CHANGED=false
+        fi
+
         # Determine build mode
         SQL_ONLY_CHANGE=false
         if [[ -z "$NON_SKIP_FILES" ]]; then
@@ -385,6 +397,7 @@ detect_changes:
       echo "AUTO_SKIP_BUILD=$CAN_SKIP_BUILD" >> detect_changes.env
       echo "AUTO_SKIP_REPLAY=$CAN_SKIP_REPLAY" >> detect_changes.env
       echo "SQL_ONLY_CHANGE=$SQL_ONLY_CHANGE" >> detect_changes.env
+      echo "HFM_TESTS_CHANGED=${HFM_TESTS_CHANGED:-false}" >> detect_changes.env
 
       # Export HAF_COMMIT and cached image info when we can use cached data
       if [[ "$CAN_SKIP_BUILD" == "true" || "$SQL_ONLY_CHANGE" == "true" ]]; then
@@ -803,23 +816,26 @@ haf_image_build_mirrornet:
     # Let GitLab init submodules - HAF runtime image doesn't have git
     GIT_SUBMODULE_STRATEGY: recursive
   script:
-    # Skip when image commit doesn't match source commit - this test validates extension
-    # upgrades and requires the image and source to be from the same commit.
-    # This happens in quick-test mode OR when only CI config changed (image reused).
+    # Skip logic: skip when no relevant changes AND image doesn't match source.
+    # But NEVER skip when hfm functional test files changed — test SQL files are
+    # read from the source tree (not the image), so a cached image is fine.
     - |
-      if [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
-        echo "Skipping hfm_functional_tests - AUTO_SKIP_BUILD=true"
+      if [[ "${HFM_TESTS_CHANGED:-false}" == "true" ]]; then
+        echo "HFM functional test files changed - will run tests even with cached image"
+      elif [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
+        echo "Skipping hfm_functional_tests - AUTO_SKIP_BUILD=true and no HFM test changes"
         exit 0
-      fi
-      # Extract commit from image tag (e.g., registry.gitlab.syncad.com/hive/haf:756d1886)
-      IMAGE_COMMIT="${HAF_IMAGE_NAME##*:}"
-      SOURCE_COMMIT="${CI_COMMIT_SHORT_SHA}"
-      if [[ "$IMAGE_COMMIT" != "$SOURCE_COMMIT" ]]; then
-        echo "Skipping hfm_functional_tests - image/source commit mismatch"
-        echo "  Image commit:  $IMAGE_COMMIT (from $HAF_IMAGE_NAME)"
-        echo "  Source commit: $SOURCE_COMMIT"
-        echo "This test requires image and source from the same commit."
-        exit 0
+      else
+        # Extract commit from image tag (e.g., registry.gitlab.syncad.com/hive/haf:756d1886)
+        IMAGE_COMMIT="${HAF_IMAGE_NAME##*:}"
+        SOURCE_COMMIT="${CI_COMMIT_SHORT_SHA}"
+        if [[ "$IMAGE_COMMIT" != "$SOURCE_COMMIT" ]]; then
+          echo "Skipping hfm_functional_tests - image/source commit mismatch"
+          echo "  Image commit:  $IMAGE_COMMIT (from $HAF_IMAGE_NAME)"
+          echo "  Source commit: $SOURCE_COMMIT"
+          echo "This test requires image and source from the same commit."
+          exit 0
+        fi
       fi
     # Fix workspace permissions - CI fetch strategy may leave directories owned by different users
     # Remove the sql_serializer symlink location to let CMake recreate it with current user permissions
