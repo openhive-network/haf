@@ -326,12 +326,12 @@ SELECT
     hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
 FROM hafd.blocks hb
 CROSS JOIN hafd.hive_state hs
-WHERE hafd.block_id_to_num(hb.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+WHERE hb.block_id <= hs.consistent_block
   AND hb.block_id = (
       SELECT hb2.block_id
       FROM hafd.blocks hb2
       WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
-        AND hafd.block_id_to_num(hb2.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+        AND hb2.block_id <= hs.consistent_block
       ORDER BY hb2.block_id DESC
       LIMIT 1
   );
@@ -343,13 +343,13 @@ SELECT
     ht.ref_block_prefix, ht.expiration, ht.signature
 FROM hafd.transactions ht
 CROSS JOIN hafd.hive_state hs
-WHERE hafd.block_id_to_num(ht.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+WHERE ht.block_id <= hs.consistent_block
   AND ht.block_id = (
       SELECT ht2.block_id
       FROM hafd.transactions ht2
       WHERE hafd.block_id_to_num(ht2.block_id) = hafd.block_id_to_num(ht.block_id)
         AND ht2.trx_in_block = ht.trx_in_block
-        AND hafd.block_id_to_num(ht2.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+        AND ht2.block_id <= hs.consistent_block
       ORDER BY ht2.block_id DESC
       LIMIT 1
   );
@@ -366,12 +366,12 @@ SELECT
     ho.custom_json_type_id
 FROM hafd.operations ho
 CROSS JOIN hafd.hive_state hs
-WHERE hafd.operation_id_to_block_num(ho.id) <= hafd.block_id_to_num(hs.consistent_block)
+WHERE ho.block_id <= hs.consistent_block
   AND ho.block_id = (
       SELECT ho2.block_id
       FROM hafd.operations ho2
       WHERE ho2.id = ho.id
-        AND hafd.operation_id_to_block_num(ho2.id) <= hafd.block_id_to_num(hs.consistent_block)
+        AND ho2.block_id <= hs.consistent_block
       ORDER BY ho2.block_id DESC
       LIMIT 1
   );
@@ -400,7 +400,8 @@ SELECT
     hao.op_type_id
 FROM hafd.account_operations hao
 CROSS JOIN hafd.hive_state hs
-WHERE hao.block_id = (
+WHERE hao.block_id <= hs.consistent_block
+  AND hao.block_id = (
     SELECT hao2.block_id
     FROM hafd.account_operations hao2
     WHERE hao2.account_id = hao.account_id
@@ -484,12 +485,12 @@ SELECT
     hah.hardfork_vop_id
 FROM hafd.applied_hardforks hah
 CROSS JOIN hafd.hive_state hs
-WHERE hafd.block_id_to_num(hah.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+WHERE hah.block_id <= hs.consistent_block
   AND hah.block_id = (
       SELECT hah2.block_id
       FROM hafd.applied_hardforks hah2
       WHERE hah2.hardfork_num = hah.hardfork_num
-        AND hafd.block_id_to_num(hah2.block_id) <= hafd.block_id_to_num(hs.consistent_block)
+        AND hah2.block_id <= hs.consistent_block
       ORDER BY hah2.block_id DESC
       LIMIT 1
   );
