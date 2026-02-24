@@ -104,9 +104,13 @@ BEGIN
         --   - Irreversible (block_num <= irreversible_block): from any fork <= consistent_block's fork_id
         --   - Reversible (block_num > irreversible_block): from any fork <= context's fork_id
         -- For each block_num, pick highest block_id among visible blocks
-        -- NOT EXISTS pattern short-circuits quickly when only one version exists (typical case)
+        -- CTE-gated NOT EXISTS: conflicts CTE materializes block_conflicts (empty during replay/sync)
+        -- When empty, the NOT EXISTS inner join with conflicts produces 0 rows, skipping all dedup
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
+            WITH conflicts AS MATERIALIZED (
+                SELECT block_num FROM hafd.block_conflicts
+            )
             SELECT
                 hafd.block_id_to_num(hb.block_id) AS num,
                 hb.block_id,
@@ -125,8 +129,9 @@ BEGIN
                    AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
               )
               AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                  WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+                  SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                  WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
+                    AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                     AND hb2.block_id > hb.block_id
                     AND (
                         (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
@@ -147,12 +152,13 @@ BEGIN
             ', __schema, __schema, __schema, __schema
         );
     ELSE
-        -- Non-forking context: show blocks up to min_block using NOT EXISTS
-        -- Uses same fork visibility rule as forking contexts for irreversible:
-        --   fork_id <= consistent_block's fork_id
-        -- NOT EXISTS pattern short-circuits quickly when only one version exists (typical case)
+        -- Non-forking context: show blocks up to min_block
+        -- CTE-gated NOT EXISTS: conflicts CTE materializes block_conflicts (empty during replay/sync)
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
+            WITH conflicts AS MATERIALIZED (
+                SELECT block_num FROM hafd.block_conflicts
+            )
             SELECT
                 hafd.block_id_to_num(hb.block_id) AS num,
                 hb.block_id,
@@ -165,8 +171,9 @@ BEGIN
             WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
               AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
               AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                  WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+                  SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                  WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
+                    AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                     AND hb2.block_id > hb.block_id
                     AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
               )
@@ -201,11 +208,13 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: canonical block selection using NOT EXISTS pattern
-    -- Uses fork visibility rule: fork_id <= consistent_block's fork_id
-    -- NOT EXISTS pattern short-circuits quickly when only one version exists (typical case)
+    -- All irreversible: canonical block selection
+    -- CTE-gated NOT EXISTS: conflicts CTE materializes block_conflicts (empty during replay/sync)
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
+        WITH conflicts AS MATERIALIZED (
+            SELECT block_num FROM hafd.block_conflicts
+        )
         SELECT
             hafd.block_id_to_num(hb.block_id) AS num,
             hb.block_id,
@@ -218,8 +227,9 @@ BEGIN
         WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
           AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
           AND NOT EXISTS (
-              SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-              WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+              SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+              WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
+                AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                 AND hb2.block_id > hb.block_id
                 AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
           )
