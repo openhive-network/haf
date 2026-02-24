@@ -104,7 +104,10 @@ BEGIN
         --   - Irreversible (block_num <= irreversible_block): from any fork <= consistent_block's fork_id
         --   - Reversible (block_num > irreversible_block): from any fork <= context's fork_id
         -- For each block_num, pick highest block_id among visible blocks
-        -- NOT EXISTS pattern short-circuits quickly when only one version exists (typical case)
+        -- OPTIMIZATION: 3-level conflict check (same pattern as hive.blocks_view):
+        -- 1. block_conflicts empty → skip all dedup (replay/REINDEX fast path)
+        -- 2. This block_num not in block_conflicts → skip dedup for this block
+        -- 3. Block has conflicts → run expensive anti-join for canonical selection
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
             SELECT
@@ -124,17 +127,23 @@ BEGIN
                   (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
                    AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
               )
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                  WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
-                    AND hb2.block_id > hb.block_id
-                    AND (
-                        (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
-                         AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
-                        OR
-                        (hafd.block_id_to_num(hb2.block_id) > c.irreversible_block
-                         AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
-                    )
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hafd.block_id_to_num(hb.block_id))
+                  OR
+                  NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
+                      WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+                        AND hb2.block_id > hb.block_id
+                        AND (
+                            (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
+                            OR
+                            (hafd.block_id_to_num(hb2.block_id) > c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
+                        )
+                  )
               )
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
@@ -147,10 +156,10 @@ BEGIN
             ', __schema, __schema, __schema, __schema
         );
     ELSE
-        -- Non-forking context: show blocks up to min_block using NOT EXISTS
+        -- Non-forking context: show blocks up to min_block
         -- Uses same fork visibility rule as forking contexts for irreversible:
         --   fork_id <= consistent_block's fork_id
-        -- NOT EXISTS pattern short-circuits quickly when only one version exists (typical case)
+        -- OPTIMIZATION: 3-level conflict check (same pattern as hive.blocks_view)
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
             SELECT
@@ -164,11 +173,17 @@ BEGIN
             FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
             WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
               AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                  WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
-                    AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hafd.block_id_to_num(hb.block_id))
+                  OR
+                  NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
+                      WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+                        AND hb2.block_id > hb.block_id
+                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                  )
               )
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
@@ -201,9 +216,9 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: canonical block selection using NOT EXISTS pattern
+    -- All irreversible: canonical block selection
     -- Uses fork visibility rule: fork_id <= consistent_block's fork_id
-    -- NOT EXISTS pattern short-circuits quickly when only one version exists (typical case)
+    -- OPTIMIZATION: 3-level conflict check (same pattern as hive.blocks_view)
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
         SELECT
@@ -217,11 +232,17 @@ BEGIN
         FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
         WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
           AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-          AND NOT EXISTS (
-              SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-              WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
-                AND hb2.block_id > hb.block_id
-                AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+          AND (
+              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+              OR
+              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hafd.block_id_to_num(hb.block_id))
+              OR
+              NOT EXISTS (
+                  SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
+                  WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+                    AND hb2.block_id > hb.block_id
+                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+              )
           )
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS

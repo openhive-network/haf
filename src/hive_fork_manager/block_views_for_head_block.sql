@@ -265,23 +265,23 @@ WHERE
 CREATE OR REPLACE VIEW hive.transactions_multisig_view AS
 SELECT htm.trx_hash, htm.signature
 FROM hafd.transactions_multisig htm
-WHERE
-    NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
-    OR
-    (
-        NOT EXISTS (
-            SELECT 1 FROM hafd.block_conflicts bc
-            WHERE bc.block_num = hafd.block_id_to_num(htm.block_id)
-        )
-        OR
-        htm.block_id = (
-            SELECT hb.block_id
-            FROM hafd.blocks hb
-            WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(htm.block_id)
-            ORDER BY hb.block_id DESC
-            LIMIT 1
-        )
-    );
+WHERE (
+    -- Fast path: no conflict for this block_num
+    NOT EXISTS (
+        SELECT 1 FROM hafd.block_conflicts bc
+        WHERE bc.block_num = hafd.block_id_to_num(htm.block_id)
+    )
+)
+OR (
+    -- Slow path: conflict exists, use canonical selection
+    htm.block_id = (
+        SELECT hb.block_id
+        FROM hafd.blocks hb
+        WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(htm.block_id)
+        ORDER BY hb.block_id DESC
+        LIMIT 1
+    )
+);
 
 -- =============================================================================
 -- applied_hardforks_view - Canonical hardforks with conflict-based optimization
@@ -292,23 +292,23 @@ SELECT
     hafd.block_id_to_num(hah.block_id) AS block_num,
     hah.hardfork_vop_id
 FROM hafd.applied_hardforks hah
-WHERE
-    NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
-    OR
-    (
-        NOT EXISTS (
-            SELECT 1 FROM hafd.block_conflicts bc
-            WHERE bc.block_num = hafd.block_id_to_num(hah.block_id)
-        )
-        OR
-        hah.block_id = (
-            SELECT hah2.block_id
-            FROM hafd.applied_hardforks hah2
-            WHERE hah2.hardfork_num = hah.hardfork_num
-            ORDER BY hah2.block_id DESC
-            LIMIT 1
-        )
-    );
+WHERE (
+    -- Fast path: no conflict for this block_num
+    NOT EXISTS (
+        SELECT 1 FROM hafd.block_conflicts bc
+        WHERE bc.block_num = hafd.block_id_to_num(hah.block_id)
+    )
+)
+OR (
+    -- Slow path: conflict exists, use canonical selection
+    hah.block_id = (
+        SELECT hah2.block_id
+        FROM hafd.applied_hardforks hah2
+        WHERE hah2.hardfork_num = hah.hardfork_num
+        ORDER BY hah2.block_id DESC
+        LIMIT 1
+    )
+);
 
 -- =============================================================================
 -- Irreversible views - Only show data from irreversible blocks
